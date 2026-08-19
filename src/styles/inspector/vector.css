@@ -65,7 +65,7 @@
     border-radius: 6px;
     background: rgba(2,4,9,0.9);
     color: var(--ui-text-primary);
-    font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    font-family: var(--di-sans);
     font-size: 10px;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;

@@ -11,6 +11,7 @@ import {
 } from '../services/projectsApi.js'
 import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
+import { XR_READY, xrAvailability } from '../../algoVrithm/xrAvailability.js'
 import StudioViewport from '../../studio/components/StudioViewport.jsx'
 import {
     buildPresentationPreviewDocument,
@@ -204,6 +205,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
     const previewDocument = buildPresentationPreviewDocument(rawHtml)
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
+    // Same opt-in shape as the walker's `?inputdebug=1`.
+    const xrDebug = typeof window !== 'undefined'
+        && new URLSearchParams(window.location.search).has('xrdebug')
     const xr = useXrAr({
         default3DView: cameraView || resolveViewerCamera(document || {}),
         controlsRef,
@@ -338,6 +342,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     enableNavigation={entryView !== 'fixed-camera' && !isPreview}
                     showChrome={!isPreview}
                     lowPower={isPreview}
+                    playTimelines
                 />
             ) : null}
 
@@ -398,7 +403,35 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 if (xrDefaultMode === 'off') return null
                 const wantsVr = xrDefaultMode === 'vr'
                 const supported = wantsVr ? xr.supportedXrModes.vr : xr.supportedXrModes.ar
-                if (!supported) return null
+                if (!supported) {
+                    // An absent button is the same picture whether the cause is a
+                    // missing headset, plain http, or a browser without WebXR --
+                    // which reads as "the VR is broken" when usually nothing is.
+                    // `?xrdebug=1` turns that silence into a sentence, on the
+                    // headset itself where no console is reachable. Opt-in, so an
+                    // exhibition audience still gets the clean chrome.
+                    if (!xrDebug) return null
+                    const availability = xrAvailability(
+                        xr.getXrDiagnosticsSnapshot().environment,
+                        xr.supportedXrModes
+                    )
+                    if (availability.state === XR_READY) return null
+                    return (
+                        <div style={{ position: 'absolute', right: '1rem', bottom: '1rem', maxWidth: '22rem', zIndex: 20 }}>
+                            <div style={overlayCardStyle}>
+                                <strong>No {wantsVr ? 'VR' : 'AR'} here — {availability.reason}</strong>
+                                <div style={{ marginTop: '0.4rem', opacity: 0.8 }}>{availability.fix}</div>
+                                <button
+                                    type="button"
+                                    style={{ ...overlayButtonStyle, marginTop: '0.6rem' }}
+                                    onClick={() => xr.refreshXrSupport()}
+                                >
+                                    Recheck
+                                </button>
+                            </div>
+                        </div>
+                    )
+                }
                 return (
                     <div
                         style={{

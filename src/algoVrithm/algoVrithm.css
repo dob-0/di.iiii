@@ -45,7 +45,7 @@
 }
 
 .algo-vrithm-title {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--di-sans);
     font-size: 18px;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -53,7 +53,7 @@
 }
 
 .algo-vrithm-sub {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--di-sans);
     font-size: 11px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -70,7 +70,7 @@
 }
 
 .algo-vrithm-actions button {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--di-sans);
     font-size: 11px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -154,7 +154,7 @@
     background: rgba(5, 6, 15, 0.88);
     border-top: 1px solid rgba(77, 249, 255, 0.35);
     backdrop-filter: blur(6px);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--di-sans);
     font-size: 11px;
     color: rgba(255, 255, 255, 0.72);
     user-select: none;
@@ -660,7 +660,7 @@
 
 .algo-vrithm-stage-view button {
     pointer-events: auto;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--di-sans);
     font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -707,7 +707,7 @@
 
 .algo-vrithm-stage-select button,
 .algo-vrithm-stage-empty {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--di-sans);
     font-size: 10px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -1091,7 +1091,7 @@
    one sequence's material, not to the piece. Sits above the director in the
    same bottom stack and inherits its typography. */
 .algo-vrithm-dispersion {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--di-sans);
     font-size: 10px;
     letter-spacing: 0.08em;
     color: rgba(255, 255, 255, 0.72);

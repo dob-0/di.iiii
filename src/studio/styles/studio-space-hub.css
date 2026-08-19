@@ -220,7 +220,7 @@
 
 .ssh-space-id {
     font-size: 0.72rem;
-    font-family: monospace;
+    font-family: var(--di-sans);
     color: var(--di-text-muted, rgba(200,230,240,0.45));
     letter-spacing: 0.04em;
 }
@@ -309,7 +309,7 @@
 
 .ssh-live-url {
     font-size: 0.7rem;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-sans);
     color: #53d79b;
     text-decoration: none;
     overflow: hidden;

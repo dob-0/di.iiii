@@ -230,7 +230,9 @@ const buildDefaultComponentsForType = (type = 'box') => {
       base.media = { assetId: null, fit: 'contain', autoplay: false, loop: false, muted: true }
       break
     case 'video':
-      base.media = { assetId: null, fit: 'contain', autoplay: true, loop: true, muted: true, volume: 0.8 }
+      // spatial is off by default: routing a video's audio through a panner
+      // changes how an existing space sounds, so it is opted into per video.
+      base.media = { assetId: null, fit: 'contain', autoplay: true, loop: true, muted: true, volume: 0.8, spatial: false, distance: 6, maxDistance: 40 }
       break
     case 'audio':
       base.media = { assetId: null, autoplay: true, loop: true, muted: false, volume: 0.8, distance: 8 }
@@ -283,6 +285,26 @@ const buildDefaultComponentsForType = (type = 'box') => {
   return base
 }
 
+/**
+ * What a NEWLY ADDED entity starts with — deliberately separate from
+ * buildDefaultComponentsForType, which is also the fallback normalizeEntity
+ * applies to every document ever saved.
+ *
+ * The two must not be merged. Turning a default on in the builder above would
+ * switch that behaviour on retroactively for every existing space the moment
+ * its document was next loaded; changing it here only affects things added from
+ * now on. Anything a creator would expect "in the box" belongs here.
+ */
+const buildCreationComponentsForType = (type = 'box') => {
+  const base = buildDefaultComponentsForType(type)
+  if (type === 'video') {
+    // A video added to a space is expected to bring its sound with it,
+    // placed in the room rather than playing flat at a constant volume.
+    base.media = { ...base.media, spatial: true, muted: false }
+  }
+  return base
+}
+
 const normalizeAsset = (asset = {}) => ({
   id: ensureString(asset.id, generateId('asset')),
   name: ensureString(asset.name, 'Untitled Asset'),
@@ -321,6 +343,27 @@ const normalizeWindowLayout = (layout = {}) => {
   return {
     activeWindowId: windows[requestedActive] ? requestedActive : defaultWindowLayout.activeWindowId,
     windows
+  }
+}
+
+// Portal label fonts are chosen by name from a fixed set, never by URL — the
+// renderer fetches whatever it is given and a document is untrusted input.
+const LABEL_FONT_NAMES = ['default', 'helvetica']
+
+const TEXT_REVEAL_MODES = ['none', 'typewriter']
+
+// A text entity's optional reveal. Absent (or 'none') means the text draws in
+// full immediately, which is what every text entity authored before this did.
+const normalizeTextReveal = (source) => {
+  const mode = TEXT_REVEAL_MODES.includes(source?.mode) ? source.mode : 'none'
+  if (mode === 'none') return { mode: 'none' }
+  return {
+    mode,
+    speed: Math.min(400, Math.max(1, ensureNumber(source.speed, 28))),
+    delay: Math.max(0, ensureNumber(source.delay, 0.4)),
+    lineDelay: Math.max(0, ensureNumber(source.lineDelay, 0.35)),
+    hold: Math.max(0, ensureNumber(source.hold, 3)),
+    loop: ensureBoolean(source.loop, false)
   }
 }
 
@@ -391,7 +434,8 @@ const normalizeEntity = (entity = {}) => {
       ...nextComponents.text,
       value: typeof nextComponents.text.value === 'string' ? nextComponents.text.value : defaultComponents.text.value,
       variant: ensureString(nextComponents.text.variant, defaultComponents.text.variant || '2d'),
-      billboard: ensureBoolean(nextComponents.text.billboard, defaultComponents.text?.billboard ?? false)
+      billboard: ensureBoolean(nextComponents.text.billboard, defaultComponents.text?.billboard ?? false),
+      reveal: normalizeTextReveal(nextComponents.text.reveal)
     }
   }
   if (nextComponents.media) {
@@ -399,6 +443,16 @@ const normalizeEntity = (entity = {}) => {
       ...defaultComponents.media,
       ...nextComponents.media,
       assetId: nextComponents.media.assetId || null
+    }
+    // Spatial-sound fields only exist where the defaults introduced them, so
+    // an image or model's media object is left exactly as it was.
+    if ('spatial' in (defaultComponents.media || {})) {
+      const media = nextComponents.media
+      media.spatial = ensureBoolean(media.spatial, defaultComponents.media.spatial ?? false)
+      // A zero or negative reference distance makes the panner divide by
+      // zero and the sound never attenuates.
+      media.distance = Math.max(0.1, ensureNumber(media.distance, defaultComponents.media.distance ?? 6))
+      media.maxDistance = Math.max(media.distance, ensureNumber(media.maxDistance, defaultComponents.media.maxDistance ?? 40))
     }
   }
   if (sourceComponents.link || defaultComponents.link) {
@@ -415,7 +469,13 @@ const normalizeEntity = (entity = {}) => {
       spaceId: ensureString(refSource.spaceId, refDefault.spaceId || ''),
       projectId: ensureString(refSource.projectId, refDefault.projectId || ''),
       mode: ['embed', 'portal'].includes(refMode) ? refMode : 'portal',
-      label: ensureString(refSource.label, refDefault.label || '')
+      label: ensureString(refSource.label, refDefault.label || ''),
+      // Label styling. Defaults reproduce the original look exactly (white
+      // type on a dark plate, renderer's built-in font), so a portal
+      // authored before these existed is untouched.
+      labelColor: ensureString(refSource.labelColor, refDefault.labelColor || '#ffffff'),
+      labelPlate: ensureBoolean(refSource.labelPlate, refDefault.labelPlate ?? true),
+      labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default'
     }
   }
   if (sourceComponents.runtime || defaultComponents.runtime) {
@@ -1177,6 +1237,7 @@ module.exports = {
   defaultWindowLayout,
   defaultWorkspaceState,
   buildDefaultComponentsForType,
+  buildCreationComponentsForType,
   cloneValue,
   ensureVector,
   generateId,

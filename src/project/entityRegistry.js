@@ -1,5 +1,5 @@
 import {
-    buildDefaultComponentsForType,
+    buildCreationComponentsForType,
     generateId,
     normalizeEntity
 } from '../shared/projectSchema.js'
@@ -270,7 +270,10 @@ const DEFINITIONS = {
                     { label: 'Autoplay', component: 'media', path: ['autoplay'], type: 'checkbox' },
                     { label: 'Loop', component: 'media', path: ['loop'], type: 'checkbox' },
                     { label: 'Muted', component: 'media', path: ['muted'], type: 'checkbox' },
-                    { label: 'Volume', component: 'media', path: ['volume'], type: 'number', min: 0, max: 1, step: 0.05 }
+                    { label: 'Volume', component: 'media', path: ['volume'], type: 'number', min: 0, max: 1, step: 0.05 },
+                    { label: 'Spatial sound', component: 'media', path: ['spatial'], type: 'checkbox' },
+                    { label: 'Full-volume radius', component: 'media', path: ['distance'], type: 'number', min: 0.5, max: 40, step: 0.5 },
+                    { label: 'Falloff ends at', component: 'media', path: ['maxDistance'], type: 'number', min: 1, max: 200, step: 1 }
                 ]
             }
         ]
@@ -404,7 +407,10 @@ export const createEntityOfType = (type = 'box', overrides = {}) => {
         name: overrides.name || definition.label,
         parentId: overrides.parentId || null,
         components: {
-            ...buildDefaultComponentsForType(type),
+            // Creation defaults, NOT normalization fallbacks — see
+            // buildCreationComponentsForType. A clone or paste passes the
+            // source's own components as overrides, so it keeps its settings.
+            ...buildCreationComponentsForType(type),
             ...(overrides.components || {})
         }
     })

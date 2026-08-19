@@ -20,7 +20,7 @@
     background: var(--ui-surface-raised);
     border: 1px solid var(--ui-border);
     border-radius: 12px;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
     font-size: 16px;
     color: var(--ui-text-primary);
     box-shadow: var(--ui-shadow);
@@ -60,7 +60,7 @@
     background: var(--ui-surface-raised);
     border: 2px dashed var(--ui-border-strong);
     border-radius: 12px;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
     font-size: 16px;
     color: var(--ui-text-primary);
     box-shadow: var(--ui-shadow);
@@ -80,7 +80,7 @@
     background: var(--ui-surface-raised);
     border-radius: 12px;
     border: 1px solid var(--ui-border);
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
     font-size: 14px;
     color: var(--ui-text-primary);
     box-shadow: var(--ui-shadow);

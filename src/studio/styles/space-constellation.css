@@ -48,14 +48,14 @@
 .scon-label--on { opacity: 1; }
 .scon-label--dim { opacity: 0.4; }
 .scon-label-id {
-    font-family: 'Space Mono', monospace;
+    font-family: var(--di-sans);
     font-size: 0.5rem;
     letter-spacing: 0.16em;
     text-transform: lowercase;
     color: var(--di-dim, #5f6b7a);
 }
 .scon-label-name {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--di-sans);
     font-weight: 300;
     font-size: 0.82rem;
     color: #eaf3fb;
@@ -63,7 +63,7 @@
 }
 
 .scon-sat-label {
-    font-family: 'Space Mono', monospace;
+    font-family: var(--di-sans);
     font-size: 0.52rem;
     letter-spacing: 0.08em;
     color: #c3d0dc;
@@ -134,7 +134,7 @@
     justify-content: space-between;
 }
 .scon-badge {
-    font-family: 'Space Mono', monospace;
+    font-family: var(--di-sans);
     font-size: 0.56rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -173,7 +173,7 @@
     gap: 6px;
 }
 .scon-btn {
-    font-family: 'Space Mono', monospace;
+    font-family: var(--di-sans);
     font-size: 0.6rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -221,7 +221,7 @@
     background: none;
     border: none;
     color: #c3d0dc;
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--di-sans);
     font-size: 0.82rem;
     cursor: pointer;
     padding: 2px 0;
@@ -257,7 +257,7 @@
     margin-right: 10px;
 }
 .ssh-view-toggle button {
-    font-family: 'Space Mono', monospace;
+    font-family: var(--di-sans);
     font-size: 0.6rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;

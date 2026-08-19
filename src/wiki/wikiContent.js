@@ -195,6 +195,65 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-02'
     },
     {
+        id: 'spatial-video-sound',
+        category: 'Editing',
+        title: 'Video sound you can walk toward',
+        summary: 'A video can place its sound in the room, so it swells as a visitor approaches and falls away behind them.',
+        body: [
+            'Add a video to a space and it brings its sound with it, placed at the video’s position: walking toward it makes it louder, walking away lets it recede. Several videos in one room stop competing, because the one you are facing is the one you hear.',
+            'Videos added before this existed stay exactly as they were — silent and flat — because turning sound on retroactively would have changed how every space already built sounds. Switch it on per video when you want it.',
+            { list: [
+                'spatial — on for videos added from now on, off for older ones. Turning it off returns a video to playing flat at a constant volume.',
+                'muted — a muted video has no sound to place, so this has to be off for spatial to do anything.',
+                'distance — the reference distance. Inside it the sound is at full volume; past it the sound starts falling away. Smaller values make a work more intimate, and keep neighbouring works from bleeding into each other.',
+                'maxDistance — where the falloff stops getting quieter.'
+            ] },
+            'Sound comes from the video’s own track rather than a separate file, so picture and sound cannot drift apart no matter how long the clip runs.',
+            'Two things to expect. A browser will not let any sound start until the visitor clicks, taps or presses a key — until then the scene is silent, which is a browser rule and not something a space can opt out of. And past maxDistance the sound gets no quieter rather than stopping altogether, so in a space with many videos a distant murmur can build up; keep distance small when several works share a room.'
+        ],
+        tags: ['video', 'sound', 'audio', 'spatial', 'vr', 'exhibition'],
+        updated: '2026-08-07'
+    },
+    {
+        id: 'portal-labels',
+        category: 'Editing',
+        title: 'Naming an embedded work',
+        summary: 'A portal that embeds another project floats its name above it — and how that name is set.',
+        body: [
+            'A portal in embed mode pulls another project into this scene and floats its label above it. By default the label is white type on a dark plate, which stays readable over whatever happens to be behind it — the safe choice when you do not know what the backdrop will be.',
+            'When you do know the backdrop, the plate is often the thing spoiling the look. Three settings on the portal control that:',
+            { list: [
+                'labelColor — the type colour. Defaults to white.',
+                'labelPlate — the dark plate behind the type. Set it off to let the name sit directly on the scene. The type outline goes with it, since an outline only exists to separate the letters from a plate.',
+                'labelFont — “default” (the renderer’s own) or “helvetica”. Helvetica here is Arimo, which is metrically identical to Helvetica and Arial and openly licensed, so it can ship with the platform. Real Helvetica and Arial cannot: they are proprietary, and 3D labels cannot reach the fonts installed on a visitor’s machine the way a web page can.'
+            ] },
+            'Fonts are chosen by name from a fixed list rather than by URL on purpose — the renderer will fetch whatever address it is handed, and a project document should not be able to point it at an arbitrary site.',
+            'Left alone, every one of these keeps the original look, so existing portals are unaffected.'
+        ],
+        tags: ['portal', 'label', 'typography', 'embed', 'exhibition'],
+        updated: '2026-08-07'
+    },
+    {
+        id: 'text-reveal',
+        category: 'Editing',
+        title: 'Text that types itself',
+        summary: 'A text entity can reveal itself one character at a time instead of appearing all at once.',
+        body: [
+            'A text entity normally draws in full the moment the scene loads. Setting a reveal on it types the text out instead, line by line, which suits work made of questions or statements the visitor is meant to read in order rather than take in at a glance.',
+            { list: [
+                'mode — “none” (the default, and what every existing text does) or “typewriter”.',
+                'speed — characters per second. Around 30 reads as deliberate; 60–80 feels like normal typing. A long text at a slow speed can run for half a minute, so count the characters before choosing.',
+                'delay — dead seconds before the first character, so a visitor has time to arrive and look at the right thing.',
+                'lineDelay — an extra pause at the end of each line. Blank lines cost only this pause, so they act as beats between stanzas.',
+                'loop and hold — off by default. When loop is on, the finished text holds for hold seconds and then types again from the top.'
+            ] },
+            'The reveal starts when the text comes into the scene, not when the visitor looks at it, and it is purely visual — the text is always fully present in the document, so copy, search and translation are unaffected.',
+            'Only the line currently being typed is redrawn; finished lines are drawn once and left alone. That keeps a long text cheap enough for a headset, where redrawing a whole block of type every frame would not be.'
+        ],
+        tags: ['text', 'typography', 'animation', 'entities', 'exhibition'],
+        updated: '2026-08-07'
+    },
+    {
         id: 'admin-manage',
         category: 'Spaces & access',
         title: 'Admin / Manage console',
@@ -407,6 +466,25 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['algovrithm', 'vr', 'webxr', 'three.js', 'linked-space', 'code', 'lighting', 'spatial-audio'],
         updated: '2026-08-04'
+    },
+    {
+        id: 'platform-typeface',
+        category: 'For developers',
+        title: 'The platform typeface',
+        summary: 'Every interface surface is set in Montserrat, self-hosted, from one CSS variable.',
+        body: [
+            'All platform chrome — Studio, the viewer overlays, panels and menus, the landing page, the wiki, the WCC exhibition pages and algovrithm — is set in Montserrat. It is self-hosted from the @fontsource-variable/montserrat package (one variable file covering weights 100–900), imported once in src/index.jsx, so nothing is fetched from a third-party font CDN at run time and the interface looks the same on a venue network that blocks one.',
+            'There is a single source of truth: the --di-sans custom property in src/styles/base.css. Change that one line and every surface follows.',
+            { list: [
+                'Before this, the platform had no font. Roughly 265 hardcoded font-family declarations named Inter, JetBrains Mono and Fira Code, but no @font-face and no font files existed anywhere in the repo — so every one of them silently fell through to whatever the visitor’s operating system happened to install. What you saw was a fallback, not a choice.',
+                'Montserrat has no Armenian subset. Noto Sans Armenian sits behind it in the stack, so the exhibition’s Armenian copy still renders; the WCC pages keep loading that one face from Google Fonts for exactly this reason.',
+                'MUI needs telling separately. Material UI injects its own typography through emotion, which outranks ordinary stylesheet rules — a surface rendering MUI components without a ThemeProvider silently reverts to Roboto no matter what the CSS says. src/styles/muiTheme.js exports a theme that sets typography.fontFamily to var(--di-sans) and nothing else; it is applied in StudioApp and AuthGate rather than at the app root, because RootApp lazy-loads MUI on purpose and must not import it eagerly.',
+                'Form controls do not inherit fonts. Browsers give button, input, select and textarea their own UA font (Arial on Chrome/Windows), so base.css resets them to inherit — without it, every unstyled button opts out of the platform font on its own.'
+            ] },
+            'Two places deliberately keep their own type: the font picker for text entities (that list is the author’s choice, not the interface’s) and the presentation templates, one of which is set in a serif on purpose.'
+        ],
+        tags: ['typography', 'montserrat', 'design-system', 'css', 'mui', 'fonts'],
+        updated: '2026-08-10'
     }
 ]
 

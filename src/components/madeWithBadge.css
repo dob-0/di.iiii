@@ -8,7 +8,7 @@
        site and a dark one alike, instead of a fixed cyan pill that only
        suited the platform's own dark theme. */
     color: rgba(255, 255, 255, 0.85);
-    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-family: var(--di-sans);
     font-size: 0.65rem;
     letter-spacing: 0.03em;
     text-decoration: none;

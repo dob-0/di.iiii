@@ -21,7 +21,7 @@
     padding: 4px;
     border: 1px solid var(--ui-border);
     border-radius: 4px;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
     resize: vertical;
     background: rgba(255,255,255,0.02);
     color: var(--ui-text-primary);

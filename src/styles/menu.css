@@ -5,7 +5,7 @@
     min-width: 220px;
     border-radius: 14px;
     overflow: hidden;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
     font-size: 13px;
     background: linear-gradient(165deg, rgba(18,26,42,0.96), rgba(7,11,20,0.92));
     border: 1px solid rgba(255,255,255,0.08);
@@ -117,7 +117,7 @@
     font-size: 12px;
     background: rgba(0,0,0,0.35);
     color: var(--ui-text-primary);
-    font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    font-family: var(--di-sans);
 }
 .menu-snaps input[type="number"]:focus-visible {
     outline: 2px solid #00c6ff;

@@ -7,7 +7,7 @@
     padding: 16px;
     background: var(--di-black);
     color: var(--ui-text-primary);
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
 }
 
 .preferences-page::before {

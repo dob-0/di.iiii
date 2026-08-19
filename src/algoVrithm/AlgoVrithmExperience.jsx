@@ -15,7 +15,7 @@ import ViewerDolly from './ViewerDolly.jsx'
 import TransformGizmo, { GIZMO_MODES, gizmoModesFor } from './TransformGizmo.jsx'
 import SpatialScore from './SpatialScore.jsx'
 import { isDirectorEnabled } from './directorFlag.js'
-import { reelPlayers } from './reelPlayers.js'
+import { reelPlayers, DESKTOP_MAX_PLAYERS, HEADSET_MAX_PLAYERS } from './reelPlayers.js'
 import { XR_AR_ONLY, xrAvailability } from './xrAvailability.js'
 import { describeEyeHeight } from './xrStandpoint.js'
 import { totalDurationSec } from './editList.js'
@@ -406,14 +406,43 @@ export default function AlgoVrithmExperience() {
     //
     // requestIdleCallback is not in Safari, so the timeout is the real path on
     // an iPhone rather than a fallback nobody takes.
+    //
+    // The pool's SIZE is decided here too, and only here — see the two ceilings
+    // in reelPlayers.js. A standalone headset cannot allocate thirty-one video
+    // decoders, and the way it fails is silent: the elements never produce a
+    // frame, so those cells draw black and the globe looks like it has holes in
+    // it. `immersive-vr` support is the honest test for "this is a headset" —
+    // the Quest browser runs on the device and reports true, a desktop with no
+    // headset attached reports false and keeps the whole folder.
+    //
+    // Asked here rather than read from the component's XR hook because that is
+    // declared further down; this is self-contained and resolves in
+    // milliseconds, well inside the idle deferral below.
     useEffect(() => {
-        const warm = () => { reelPlayers() }
+        let cancelled = false
+        const warm = async () => {
+            let ceiling = DESKTOP_MAX_PLAYERS
+            try {
+                const isHeadset = await navigator.xr?.isSessionSupported?.('immersive-vr')
+                if (isHeadset) ceiling = HEADSET_MAX_PLAYERS
+            } catch {
+                // A check that throws is not a headset answer — keep the desktop
+                // ceiling rather than quietly degrading everyone's globe.
+            }
+            if (!cancelled) reelPlayers(ceiling)
+        }
         if (typeof window.requestIdleCallback === 'function') {
             const handle = window.requestIdleCallback(warm, { timeout: 2500 })
-            return () => window.cancelIdleCallback?.(handle)
+            return () => {
+                cancelled = true
+                window.cancelIdleCallback?.(handle)
+            }
         }
         const handle = window.setTimeout(warm, 1200)
-        return () => window.clearTimeout(handle)
+        return () => {
+            cancelled = true
+            window.clearTimeout(handle)
+        }
     }, [])
 
     // The live edit list. Starts as the committed one and is only ever changed

@@ -143,6 +143,8 @@ export default function EntityContent({ entity, assetMap }) {
                     fontWeight={entity.components?.text?.fontWeight}
                     fontStyle={entity.components?.text?.fontStyle}
                     align={entity.components?.text?.align}
+                    reveal={entity.components?.text?.reveal}
+                    opacity={appearance.opacity}
                 />
             )
     case 'image':
@@ -156,6 +158,9 @@ export default function EntityContent({ entity, assetMap }) {
                 muted={media.muted !== false}
                 volume={media.volume}
                 loop={media.loop !== false}
+                spatial={media.spatial === true}
+                distance={media.distance}
+                maxDistance={media.maxDistance}
             />
         )
     case 'audio':

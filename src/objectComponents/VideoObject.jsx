@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Html } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
 import { attachVideoPlaybackRetry, attachVideoSound, configureVideoElement } from '../utils/videoPlayback.js'
+import {
+    attachPositionalVideoSound,
+    getOrCreateAudioListener,
+    resumeContextOnGesture
+} from '../utils/positionalVideoSound.js'
 
 function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = true } = {}) {
     const [texture, setTexture] = useState(null)
@@ -56,16 +62,42 @@ function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = tru
         return attachVideoSound(video, { muted, volume })
     }, [texture, muted, volume, loop])
 
-    return { texture, playbackBlocked }
+    return { texture, playbackBlocked, videoRef }
 }
 
-export default function VideoObject({ assetRef, data, opacity = 1, linkActive, muted = true, volume = 1, loop = true }) {
+export default function VideoObject({
+    assetRef, data, opacity = 1, linkActive, muted = true, volume = 1, loop = true,
+    spatial = false, distance, maxDistance
+}) {
     const assetUrl = useAssetUrl(assetRef, { preferRemoteSource: true })
     const isVideoType = !assetRef?.mimeType || assetRef.mimeType.startsWith('video/')
     const rawSource = (isVideoType ? assetUrl : null) || data || null
     const sourceUrl = typeof rawSource === 'string' ? rawSource.trim() : null
     const [size, setSize] = useState([1, 1])
-    const { texture, playbackBlocked } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
+    const { texture, playbackBlocked, videoRef } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
+    const meshRef = useRef(null)
+    const { camera } = useThree()
+
+    // Spatial sound is opt-in: routing every video through a panner would change
+    // how every existing space sounds. A muted video has no audio to place.
+    useEffect(() => {
+        if (!spatial || muted !== false || !texture) return undefined
+        const video = videoRef.current
+        const target = meshRef.current
+        if (!video || !target) return undefined
+
+        const listener = getOrCreateAudioListener(camera)
+        const stopWaiting = resumeContextOnGesture(listener)
+        const detach = attachPositionalVideoSound(target, video, listener, {
+            volume,
+            refDistance: distance,
+            maxDistance
+        })
+        return () => {
+            stopWaiting()
+            detach?.()
+        }
+    }, [spatial, muted, texture, camera, volume, distance, maxDistance, videoRef])
 
     useEffect(() => {
         const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
@@ -93,7 +125,7 @@ export default function VideoObject({ assetRef, data, opacity = 1, linkActive, m
     }
 
     return (
-        <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
+        <mesh ref={meshRef} position-y={0.01} rotation-x={-Math.PI / 2}>
             <planeGeometry args={size} />
             <meshBasicMaterial map={texture} toneMapped={false} transparent opacity={opacity} side={THREE.DoubleSide} />
             {playbackBlocked && (

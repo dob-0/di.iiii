@@ -262,7 +262,7 @@
     border: 1px solid var(--di-cyan, #4fd6ff);
     border-radius: 999px;
     color: var(--di-cyan, #4fd6ff);
-    font-family: ui-monospace, monospace;
+    font-family: var(--di-sans);
     font-size: 11px;
 }
 
@@ -384,7 +384,7 @@
     padding: 1px 6px;
     font-size: 11px;
     white-space: nowrap;
-    font-family: ui-monospace, monospace;
+    font-family: var(--di-sans);
 }
 
 .sh-help-shortcut-row span {

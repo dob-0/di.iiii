@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Box, Button, Stack, Typography } from '@mui/material'
+import { Box, Button, Stack, ThemeProvider, Typography } from '@mui/material'
+import { diFontTheme } from '../styles/muiTheme.js'
 import GridFloorBackground from '../components/GridFloorBackground.jsx'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
@@ -179,6 +180,7 @@ export default function LandingPage() {
     const showBackground = entered || heroInView
 
     return (
+        <ThemeProvider theme={diFontTheme}>
         <Box className="lp-root" data-page="landing">
 
             {/* ── NAV ──────────────────────────────────────────── */}
@@ -542,5 +544,6 @@ export default function LandingPage() {
             )}
 
         </Box>
+        </ThemeProvider>
     )
 }

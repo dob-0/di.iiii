@@ -9,6 +9,7 @@ import {
     STUDIO_PAGE_PROJECT,
     DEFAULT_STUDIO_SPACE_ID,
 } from './utils/studioRouting.js'
+import { DI_FONT_FAMILY } from '../styles/muiTheme.js'
 import './styles/studio.css'
 
 const studioTheme = createTheme({
@@ -30,7 +31,7 @@ const studioTheme = createTheme({
         borderRadius: 8
     },
     typography: {
-        fontFamily: '"Inter", "Segoe UI", sans-serif',
+        fontFamily: DI_FONT_FAMILY,
         button: {
             textTransform: 'none',
             fontWeight: 600
