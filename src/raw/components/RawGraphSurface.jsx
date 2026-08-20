@@ -673,11 +673,14 @@ export default function RawGraphSurface({
 
     // Nearest compatible input port to a release point, or null. Distance is
     // measured in screen pixels so the tolerance stays constant as you zoom.
-    const resolveWireDrop = (clientX, clientY) => {
+    const resolveWireDrop = (clientX, clientY, { touch = false } = {}) => {
         const wire = pendingWireRef.current
         if (!wire) return null
         const point = clientPointToGraphPoint(clientX, clientY)
-        const radius = PORT_DROP_RADIUS_PX / viewportRef.current.zoom
+        // A fingertip is not a cursor: double the snap for touch releases
+        // (the S24 audit's "flick fails silently" was largely endpoint
+        // accuracy against a 36px radius and ~19-physical-px dots).
+        const radius = (PORT_DROP_RADIUS_PX * (touch ? 2 : 1)) / viewportRef.current.zoom
         let best = null
         let bestDistance = radius
         for (const node of nodes) {
@@ -692,6 +695,33 @@ export default function RawGraphSurface({
             }
         }
         return best
+    }
+
+    // A transient, positioned one-liner for a wire that died on release —
+    // names the incompatible pair when one was under the finger, otherwise
+    // says the plain thing. Self-clears; a new notice replaces the old.
+    const [wireNotice, setWireNotice] = useState(null)
+    const wireNoticeTimer = useRef(null)
+    useEffect(() => () => clearTimeout(wireNoticeTimer.current), [])
+    const announceDeadDrop = (wire, clientX, clientY, touch) => {
+        const point = clientPointToGraphPoint(clientX, clientY)
+        const radius = (PORT_DROP_RADIUS_PX * (touch ? 2 : 1)) / viewportRef.current.zoom
+        let near = null
+        for (const node of nodes) {
+            if (node.id === wire.fromNodeId) continue
+            for (const port of getNodeInputs(node, portScopeNodes)) {
+                const center = inputPortCenter(node, port.id, portScopeNodes)
+                if (Math.hypot(center.x - point.x, center.y - point.y) <= radius) { near = { node, port }; break }
+            }
+            if (near) break
+        }
+        const fromType = getPortType(wire.fromPortType)
+        const text = near
+            ? `${fromType.label} can’t feed ${near.port.label} (${getPortType(near.port.type).label})`
+            : 'Wire dropped — release it on a lit port'
+        setWireNotice({ x: clientX, y: clientY, text })
+        clearTimeout(wireNoticeTimer.current)
+        wireNoticeTimer.current = setTimeout(() => setWireNotice(null), 2600)
     }
 
     const isDraggingWire = Boolean(pendingWire)
@@ -787,10 +817,17 @@ export default function RawGraphSurface({
         }
         const up = (event) => {
             const wire = pendingWireRef.current
-            const target = resolveWireDrop(event.clientX, event.clientY)
+            const touch = event.pointerType !== 'mouse'
+            const target = resolveWireDrop(event.clientX, event.clientY, { touch })
             pendingWireRef.current = null
             setPendingWire(null)
-            if (!wire || !target) return
+            if (!wire) return
+            if (!target) {
+                // The wire died — say why, where it died. Two silent failure
+                // modes (missed vs incompatible) looked identical on touch.
+                announceDeadDrop(wire, event.clientX, event.clientY, touch)
+                return
+            }
             onCreateEdge?.({
                 fromNodeId: wire.fromNodeId,
                 fromPort: wire.fromPort,
@@ -921,9 +958,16 @@ export default function RawGraphSurface({
             // a card plus the door on the left, and half a card on the right.
             const halfCard = CARD_WIDTH / 2
             const topLeft = clientPointToGraphPoint(rect.left + GRAPH_FIT_PADDING_PX, rect.top + GRAPH_FIT_PADDING_PX)
+            // On a coarse pointer the docked inspector is ABOUT to appear
+            // (creating selects the new card), covering the lower band of the
+            // canvas — reserve that band now or the card lands occluded (3 of
+            // 3 creations on the S24 audit: cube invisible, ports behind the
+            // zoom bar, door behind the zoom bar).
+            const coarsePointer = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)')?.matches
+            const reservedBottom = Math.max(Math.max(0, bottomInset), coarsePointer ? rect.height * 0.45 : 0)
             const bottomRight = clientPointToGraphPoint(
                 rect.right - GRAPH_FIT_PADDING_PX,
-                rect.bottom - GRAPH_FIT_PADDING_PX - Math.max(0, bottomInset)
+                rect.bottom - GRAPH_FIT_PADDING_PX - reservedBottom
             )
             const minX = topLeft.x + halfCard + (DOOR_WIDTH_PX / viewportRef.current.zoom)
             const maxX = bottomRight.x - halfCard
@@ -995,6 +1039,11 @@ export default function RawGraphSurface({
             }}
             onPointerCancel={doubleTap.cancel}
         >
+            {wireNotice ? (
+                <div className="raw-wire-notice" style={{ left: `${wireNotice.x}px`, top: `${wireNotice.y}px` }} role="status">
+                    {wireNotice.text}
+                </div>
+            ) : null}
             <div className={`raw-graph-zoom-controls${chromeless ? ' is-chromeless' : ''}`}>
                 <button type="button" aria-label="Zoom out" onClick={() => updateZoom(zoom - GRAPH_ZOOM_STEP)}>-</button>
                 <span className="raw-graph-zoom-value">{Math.round(zoom * 100)}%</span>

@@ -540,6 +540,37 @@ describe('RawEditor chrome sweep (plan PR 1.6)', () => {
     })
 })
 
+describe('RawEditor hardware Back (mobile finding #3)', () => {
+    const KEY = 'test-back-root'
+    afterEach(() => { window.localStorage.removeItem(KEY) })
+
+    it('Back at ROOT keeps the canvas — no false-empty data-loss state', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [{ id: 'c1', typeId: 'geom.cube', label: 'Cube', values: {} }],
+            edges: [], workspaceState: {}
+        }))
+        render(<RawEditor localStorageKey={KEY} />)
+        expect(screen.getByRole('button', { name: '1 nodes' })).toBeTruthy()
+        act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
+        // the node count survives — the old guard navigated to index -1 and
+        // rendered "place your first node" over an intact document
+        expect(screen.getByRole('button', { name: '1 nodes' })).toBeTruthy()
+        expect(screen.queryByText(/place your first node/i)).toBeNull()
+    })
+
+    it('Back inside a scope still pops one level', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [{ id: 'geo', typeId: 'geom.geo', label: 'Geo', values: {} }],
+            edges: [], workspaceState: {}
+        }))
+        render(<RawEditor localStorageKey={KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+        expect(screen.getByText(/inside/)).toBeTruthy()
+        act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
+        expect(screen.queryByText(/inside/)).toBeNull()
+    })
+})
+
 describe('RawEditor Create window back-compat (plan PR 1.7)', () => {
     const KEY = 'test-create-backcompat'
     afterEach(() => { window.localStorage.removeItem(KEY) })
