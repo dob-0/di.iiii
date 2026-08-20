@@ -625,6 +625,18 @@ describe('the Camera', () => {
         expect(container.querySelectorAll('conegeometry').length).toBe(0)
     })
 
+    // The /out projector view: "handlers not passed" was never enough,
+    // because OrbitControls mounts its own DOM listeners — the audience could
+    // orbit and zoom the "read-only" output (found 2026-08-20).
+    it('interactive={false} never mounts orbit, even with no authored camera', () => {
+        const { container } = render(<RawViewport
+            document={camDoc([{ id: 'c1', typeId: 'geom.cube', parentId: null, label: 'Cube', values: {} }])}
+            scopeId={null}
+            interactive={false}
+        />)
+        expect(container.querySelector('[data-testid="mock-orbit"]')).toBeNull()
+    })
+
     it("a camera marked in another scope is not this room's eye", () => {
         // cam stands INSIDE the geo and is marked active for the geo's scope —
         // at root, orbit keeps the view and the housing renders inside the geo.
