@@ -1266,7 +1266,7 @@ export const NODE_TYPES = {
 
     'view.director': {
         id: 'view.director',
-        label: 'Director (algovrithm)',
+        label: 'Director',
         category: 'view',
         runtime: 'any',
         singleton: false,
@@ -1742,7 +1742,7 @@ export const NODE_TYPES = {
 
     'node.null': {
         id: 'node.null',
-        label: 'Node',
+        label: 'Null',
         category: 'custom',
         runtime: 'any',
         singleton: false,

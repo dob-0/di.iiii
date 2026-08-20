@@ -145,6 +145,43 @@ call, after asking a plainer question: *which name is professional?*
 The lesson worth keeping: **a name that reads well in your own copy is not the same as a name
 your field already uses.** Check both before settling one.
 
+## The node table — every label, settled (2026-08-20)
+
+The full census, extending the 2026-08-19 label settlements to all 68 registered types.
+Rules for labels: bare nouns, no articles, no parentheticals, ≤2 words, British spelling,
+the field's own term where the field has one (TouchDesigner, Blender, three.js). Type ids
+NEVER change — labels, keywords and prose only.
+
+Changed by this table:
+| Type id | Was | Now | Why |
+| --- | --- | --- | --- |
+| `view.director` | `Director (algovrithm)` | **Director** | The parenthetical was a code pointer, not a name. |
+| `node.null` | `Node` | **Null** | TD's exact term for the blank pass-through primitive; "Node" named it after its whole category. (Still a shell, hidden from the palette.) |
+
+Confirmed as they stand (the census found no better professional word):
+- **make**: Cube · Sphere · Plane · Merge · Constructor · Text · Browser · Image · Create *(paletteHidden in the node editor — objects belong to Studio)*
+- **numbers**: Number · Colour · Vector · Boolean · String · Time · Add · Subtract · Multiply · Divide · Modulo · Power · Sin · Mix · Clamp
+- **the scene**: Scene · Kiosk · Geo · Constructor's siblings 3D Desk / 2D Desk *(deliberate survivors — see the 2026-08-19 note; 3D Desk retires from the palette with the container pass)* · Light *(splits into Light + Environment in the Light pass — reserved below)* · Camera · Background · Grid · In · Out · Studio · Node 0 / Activate Node / Universe Link *(shells, hidden)*
+- **watch**: Monitor · Inspector · Outliner · Timeline · Director
+- **bring in**: Model · Video · Sound *(kept over "Audio": a Sound is a thing standing in the scene, matching Blender's Speaker idea; "audio" is reserved for the analysis outputs coming with the show operators)* · Webcam · Microphone · MIDI In · the capture shells (AR Camera, Insta360 Camera, Stereo Camera, RealSense D405, OSC In, PTZ Camera)
+- **send out** *(all shells today)*: MIDI Out · OSC Out — and the streaming four keep their labels until built
+- **agents**: Agent · Keeper · Agent Run · Work Status *(dev-local, low-stakes; renamed only if they ever ship)*
+
+Reserved names — settle NOW so the build waves don't invent their own:
+| For | Reserved label | Source |
+| --- | --- | --- |
+| `world.environment` (Light split) | **Environment** | TD Environment Light; the scene's ambient/directional settings |
+| `light.point` (Light split) | **Light** | the lamp you place; the legacy dual-identity `world.light` goes paletteHidden with a non-colliding label decided in that pass |
+| logic trio (show operators) | **Compare · Gate · Switch** | TD CHOP names |
+| `signal.lag` | **Lag** | TD Lag CHOP |
+| `value.noise` | **Noise** | TD Noise CHOP (its variation input is "Variant" — `seed` is banned copy) |
+| `geom.array` | **Array** | the standard modifier name |
+| streaming four, when built | **Composite · Switch (texture) · Output · Record** | TD TOP names; if number-Switch and texture-Switch would meet in one palette, the texture one ships as **Composite**'s sibling and the collision is resolved in that PR, not silently |
+
+Guard: `src/nodeLabelVocabulary.test.js` — labels must carry no banned word, no
+parenthetical, no leading article, and stay within two words. The prose guard
+(`src/copyVocabulary.test.js`) already covers every string a person reads.
+
 ## The rule for anything new
 
 Before adding a word to the product, check it here. If it is not in the dictionary and not
