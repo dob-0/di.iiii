@@ -688,3 +688,14 @@ describe('the line and circle wave (TD audit)', () => {
         expect(out.children[0].children[0].kind).toBe('line')
     })
 })
+
+describe('device.midi.out status', () => {
+    it('reads the feed report from the live side channel, empty when unmounted', () => {
+        const doc = { nodes: [node('mo', 'device.midi.out')], edges: [] }
+        expect(evalPort(doc, 'mo', 'status')).toBe('')
+        const target = doc.nodes[0]
+        const live = new Map([['mo:status', 'Sending to 2 devices']])
+        const context = createNodeGraphContext(doc, { liveOutputs: live })
+        expect(evaluateNodeOutput(target, 'status', context)).toBe('Sending to 2 devices')
+    })
+})

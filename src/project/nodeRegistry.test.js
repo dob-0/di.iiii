@@ -333,9 +333,9 @@ describe('unimplemented node types', () => {
     it('withholds types with nothing behind them from the palette', () => {
         const offered = listNodeTypes().map((type) => type.id)
         // device.midi.in left this list on 2026-08-08 — Web MIDI is real in the
-        // page, so it is implemented. device.midi.out stands in its place: it
-        // has no sender yet.
-        for (const id of ['source.ar', 'device.midi.out', 'stream.compositor', 'universe.link']) {
+        // page, so it is implemented. Same for device.midi.out since 2026-08-21.
+        // device.osc.out stands in their place: no UDP without the bridge.
+        for (const id of ['source.ar', 'device.osc.out', 'stream.compositor', 'universe.link']) {
             expect(offered).not.toContain(id)
         }
     })
@@ -347,6 +347,7 @@ describe('unimplemented node types', () => {
         // the palette offers Environment and Light (light.point) instead.
         for (const id of [
             'value.number', 'math.add', 'geom.cube', 'light.point',
+            'device.midi.out',
             'world.environment', 'universe.world', 'view.image', 'view.browser', 'time',
             'source.webcam', 'source.mic', 'agent.keeper', 'device.midi.in'
         ]) {

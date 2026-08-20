@@ -164,7 +164,7 @@ Confirmed as they stand (the census found no better professional word):
 - **the scene**: Scene · Kiosk · Geo · Constructor's siblings 3D Desk / 2D Desk *(deliberate survivors — see the 2026-08-19 note; 3D Desk retires from the palette with the container pass)* · Light *(splits into Light + Environment in the Light pass — reserved below)* · Camera · Background · Grid · In · Out · Studio · Node 0 / Activate Node / Universe Link *(shells, hidden)*
 - **watch**: Monitor · Inspector · Outliner · Timeline · Director
 - **bring in**: Button · Keyboard *(the operator's hands, 2026-08-20 — the desk's Go and a chosen key; Keyboard ignores keys typed into fields)* · Model · Video · Sound *(kept over "Audio": a Sound is a thing standing in the scene, matching Blender's Speaker idea; "audio" is reserved for the analysis outputs coming with the show operators)* · Webcam · Microphone · MIDI In · the capture shells (AR Camera, Insta360 Camera, Stereo Camera, RealSense D405, OSC In, PTZ Camera)
-- **send out** *(all shells today)*: MIDI Out · OSC Out — and the streaming four keep their labels until built
+- **send out**: MIDI Out *(REAL since 2026-08-21 — Web MIDI send: Trigger holds the note, a change while held re-strikes, a changed Value goes out as CC; Status answers what it is doing)* · OSC Out *(shell — no UDP without the bridge)* — and the streaming four keep their labels until built
 - **agents**: Agent · Keeper · Agent Run · Work Status *(dev-local, low-stakes; renamed only if they ever ship)*
 
 Reserved names — settle NOW so the build waves don't invent their own:

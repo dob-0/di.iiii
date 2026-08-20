@@ -587,21 +587,23 @@ export const NODE_TYPES = {
         id: 'device.midi.out',
         label: 'MIDI Out',
         category: 'device',
-        runtime: 'local',
-        authoringOnly: true,
+        runtime: 'web',
         singleton: false,
+        keywords: ['midi', 'out', 'send', 'note', 'cc', 'controller', 'synth', 'lighting'],
         inputs: [
             { id: 'note',     type: 'number', label: 'Note',     default: 60 },
             { id: 'velocity', type: 'number', label: 'Velocity', default: 100 },
             { id: 'cc',       type: 'number', label: 'CC',       default: 1 },
             { id: 'value',    type: 'number', label: 'Value',    default: 0 },
-            { id: 'trigger',  type: 'signal', label: 'Trigger' },
+            // `any`, not `signal`: a Button, a Compare, a Toggle are exactly
+            // what should hold a note — and MIDI In's rising count re-strikes.
+            { id: 'trigger',  type: 'any',    label: 'Trigger' },
+            { id: 'channel',  type: 'number', label: 'Channel',  default: 1 },
         ],
         outputs: [
             { id: 'status', type: 'string', label: 'Status' },
         ],
         defaultValues: {
-            hostHint: 'windows',
             channel: 1,
         },
         render: 'hidden',
@@ -2767,13 +2769,12 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'source.insta360',
     'source.stereo',
     'source.realsense.d405',
-    // devices — no OSC client (UDP, needs the local bridge), and MIDI Out has
-    // no sender yet. device.midi.in came off this list on 2026-08-08: Web MIDI
-    // is real in the page, so that one is implemented.
+    // devices — no OSC client (UDP, needs the local bridge).
+    // device.midi.in came off this list on 2026-08-08, device.midi.out on
+    // 2026-08-21: Web MIDI is real in the page in BOTH directions now.
     'device.ptz.osc',
     'device.osc.in',
     'device.osc.out',
-    'device.midi.out',
     // streaming — no compositor, no transport
     'stream.compositor',
     'stream.switcher',
