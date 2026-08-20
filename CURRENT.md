@@ -13,8 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- What changed
-- What changed
+- Findings, from a real-device audit driven over adb
 
 Full detail: `PROGRESS.md`.
 
