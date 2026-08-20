@@ -14,6 +14,7 @@ import { getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewpor
 import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
 import { MAX_GEOMETRY_DEPTH, MAX_GEOMETRY_PIECES, isGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
+import { createTapTracker } from '../utils/useDoubleTap.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
@@ -611,6 +612,12 @@ function SceneContent({
     // animation frame is a real, safe win with no change in drag feel.
     const dragRafRef = useRef(null)
     const dragPendingRef = useRef(null)
+    // Touch double-tap on the floor = place here, same as double-click. The
+    // browser cannot be trusted to synthesize dblclick from touch (dead on
+    // the 08-20 real-phone test); the tracker also guards Chromium's double
+    // fire. R3F pointer events carry pointerType/clientX/clientY and the
+    // floor raycast point, which is all the tracker and the palette need.
+    const roomTap = useMemo(() => createTapTracker(), [])
     useEffect(() => () => {
         if (dragRafRef.current !== null) cancelAnimationFrame(dragRafRef.current)
     }, [])
@@ -648,11 +655,15 @@ function SceneContent({
                 onDoubleClick={interactive ? (event) => {
                     event.stopPropagation()
                     if (draggingNodeId) return
+                    if (roomTap.justFired()) return
                     onWorldDoubleClick?.({
                         point: event.point?.toArray?.() || [0, 0, 0],
                         clientX: event.nativeEvent?.clientX || 0,
                         clientY: event.nativeEvent?.clientY || 0
                     })
+                } : undefined}
+                onPointerDown={interactive ? (event) => {
+                    roomTap.down(event)
                 } : undefined}
                 onPointerMove={interactive ? (event) => {
                     if (!draggingNodeId) return
@@ -708,6 +719,14 @@ function SceneContent({
                     }
                 } : undefined}
                 onPointerUp={interactive ? (event) => {
+                    if (roomTap.up(event) && !draggingNodeId) {
+                        onWorldDoubleClick?.({
+                            point: event.point?.toArray?.() || [0, 0, 0],
+                            clientX: event.nativeEvent?.clientX ?? 0,
+                            clientY: event.nativeEvent?.clientY ?? 0
+                        })
+                        return
+                    }
                     if (!draggingNodeId) return
                     event.stopPropagation()
                     if (dragRafRef.current !== null) {
