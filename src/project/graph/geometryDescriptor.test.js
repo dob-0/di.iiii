@@ -3,7 +3,8 @@ import {
     MAX_GEOMETRY_PIECES,
     countGeometryPieces,
     isGeometryDescriptor,
-    mergeGeometry
+    mergeGeometry,
+    pruneGeometryDescriptor
 } from './geometryDescriptor.js'
 import { createEdge, createNode } from '../nodeRegistry.js'
 import { createNodeGraphContext, evaluateNodeOutput } from './nodeGraphRuntime.js'
@@ -210,5 +211,45 @@ describe('what a Constructor wears', () => {
         const context = ctxOf(nodes, edges)
         const worn = wearConstructorGeometry(outer, nodes, context)
         expect(worn?.kind).toBe('box')
+    })
+})
+
+describe('pruneGeometryDescriptor — the pure walk behind the renderer', () => {
+    const box = () => ({ kind: 'box', size: [1, 1, 1] })
+    const group = (children, extra = {}) => ({ kind: 'group', children, ...extra })
+    const countLeaves = (d) => {
+        if (!d) return 0
+        if (d.kind !== 'group') return 1
+        return d.children.reduce((n, c) => n + countLeaves(c), 0)
+    }
+
+    it('caps leaves ACROSS sibling branches, not per branch — the reason the old budget was shared', () => {
+        const pruned = pruneGeometryDescriptor(group([group([box(), box(), box()]), group([box(), box(), box()])]), { maxPieces: 4 })
+        expect(countLeaves(pruned)).toBe(4)
+    })
+
+    it('caps depth down a branch', () => {
+        let deep = box()
+        for (let i = 0; i < 6; i += 1) deep = group([deep], { position: [0, 1, 0] })
+        expect(countLeaves(pruneGeometryDescriptor(deep, { maxDepth: 4 }))).toBe(0)
+        expect(countLeaves(pruneGeometryDescriptor(deep, { maxDepth: 10 }))).toBe(1)
+    })
+
+    it('is idempotent — a double-invoked render prunes twice and draws the same thing', () => {
+        const tree = group([group([box(), box()]), box(), box()])
+        const once = pruneGeometryDescriptor(tree, { maxPieces: 3 })
+        const twice = pruneGeometryDescriptor(once, { maxPieces: 3 })
+        expect(twice).toEqual(once)
+    })
+
+    it('keeps group transforms while pruning their contents', () => {
+        const pruned = pruneGeometryDescriptor(group([box(), box()], { position: [1, 2, 3] }), { maxPieces: 1 })
+        expect(pruned.position).toEqual([1, 2, 3])
+        expect(countLeaves(pruned)).toBe(1)
+    })
+
+    it('answers null for what is not geometry', () => {
+        expect(pruneGeometryDescriptor(undefined)).toBeNull()
+        expect(pruneGeometryDescriptor({ kind: 'nonsense' })).toBeNull()
     })
 })
