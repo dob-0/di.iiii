@@ -29,9 +29,10 @@ vi.mock('./services/serverSpaces.js', () => ({
 }))
 
 vi.mock('./components/AuthGate.jsx', () => ({
-    default: function MockAuthGate({ children, requiredSpaceId = null }) {
+    default: function MockAuthGate({ children, requiredSpaceId = null, showAccountButton = true }) {
         const { requireAuth, authenticated, spaces } = mockUseAuthSession()
-        if (!requireAuth) return children
+        const chip = showAccountButton ? <div>mock-account-chip</div> : null
+        if (!requireAuth) return <>{chip}{children}</>
         if (!authenticated) {
             return <div>Enter your access token to continue.</div>
         }
@@ -49,6 +50,12 @@ vi.mock('./SpaceSurfaceApp.jsx', () => ({
                 space-surface-app:{routeState?.page}:{routeState?.spaceId || 'main'}
             </div>
         )
+    }
+}))
+
+vi.mock('./raw/RawApp.jsx', () => ({
+    default: function MockRawApp({ initialRoute }) {
+        return <div>raw-app:{initialRoute.page}</div>
     }
 }))
 
@@ -143,6 +150,28 @@ describe('RootApp', () => {
 
 // docs/architecture/SPEC_space_urls_and_portability.md — the bare
 // /{space}/{project} public link shape.
+describe('RootApp /out chrome', () => {
+    afterEach(() => {
+        window.history.pushState({}, '', '/')
+    })
+
+    // The projector image: the gate stays, the floating account chip must not
+    // hang over the show (plan PR 1.2).
+    it('renders no account chip over the /out route', async () => {
+        window.history.pushState({}, '', '/gallery/raw/out')
+        render(<RootApp />)
+        expect(await screen.findByText('raw-app:out')).toBeInTheDocument()
+        expect(screen.queryByText('mock-account-chip')).toBeNull()
+    })
+
+    it('keeps the account chip on the ordinary editor route', async () => {
+        window.history.pushState({}, '', '/gallery/raw')
+        render(<RootApp />)
+        expect(await screen.findByText('raw-app:hub')).toBeInTheDocument()
+        expect(screen.getByText('mock-account-chip')).toBeInTheDocument()
+    })
+})
+
 describe('RootApp vanity project links', () => {
     afterEach(() => {
         window.history.pushState({}, '', '/')
