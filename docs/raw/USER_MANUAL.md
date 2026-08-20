@@ -68,6 +68,12 @@ deleting its line from `UNIMPLEMENTED_NODE_TYPES` in `src/project/nodeRegistry.j
 `time` was the first built off that queue: it emits `elapsed`, `sin`, `cos`, and
 `beat`, and its clock only runs when a Time node actually exists in the document.
 
+One more withholding, in the other direction: the **Create** window (which makes
+objects — things with no card, no ports and no wires) is no longer offered by
+the node palette. Objects belong to the Studio side; documents that already have
+a Create window keep it, and objects always stand in the TOP room — a container's
+inside shows only what you placed in that container.
+
 ## Recommended first exercises
 
 ### First text panel

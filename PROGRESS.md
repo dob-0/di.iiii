@@ -5,6 +5,198 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+# Chrome sweep + one room, one sky (plan PR 1.6)
+
+## What changed
+
+- Escape at the top of the stack exits the fullscreen room (it used to die
+  silently there); deeper down, scope-popping keeps priority so fullscreen
+  survives the walk as designed.
+- The topbar count is THIS room's card count, not the whole document; the
+  Outliner palette hint stops claiming "this scope" for a project-wide list.
+- The ⋯ menu no longer offers "Streaming Prototype" — one click built nine
+  nodes of which eight are unimplemented shells; handler deleted.
+- WINDOW_DEFAULT_POSITIONS lost its six phantoms (view.assets/activity/
+  project, legacy-world.*) and is exported with a guard test: every key must
+  name a registered type.
+- One room, one sky: WorldPanelWindow now passes the scope's ●-resolved
+  world to its viewport (was its own node), so two open Scene windows in one
+  room can no longer show two different skies. A non-live window's Sky field
+  is inert until ● marks it — that is what ● means.
+
+## Verified
+
+By eye (screenshots read): two Scene windows with different stored skies
+render ONE sky (the ●-marked one, its ● lit); Escape closes the fullscreen
+room; ⋯ menu clean; topbar shows the scope count. Full suite 2457/2457,
+lint at baseline, build/anatomy/wiki green.
+
+# Objects stand at root only; Create leaves the palette (plan PR 1.7)
+
+## What was wrong
+
+document.entities rendered UNSCOPED in every room at every depth — every
+object haunted every container's inside. And the Create window (view.library,
+family make) sat in the node palette making OBJECTS: things with no card, no
+ports, no outliner row, which the node vocabulary cannot describe.
+
+## What changed
+
+- RawViewport renders entities only when scopeId is root (null/undefined) —
+  objects have no parent concept; the top room is where they stand.
+- view.library gains `paletteHidden: true` (a new class: implemented but not
+  offered — distinct from the shells) honoured by listNodeTypes. Existing
+  documents with a Create window still render it; the Studio container node
+  keeps its interior Create (that is the sanctioned home for objects; its
+  guard test now says exactly that).
+- all-nodes example drops the Create panel; manual + wiki state the rule.
+
+## Safety check against real data
+
+Scanned today's di-spaces snapshot (git ~/di-spaces, PARTIAL 2026-08-20):
+zero projects mix entities and nodes, so no real document relied on the leak.
+(VPS DB query was blocked by permissions; the snapshot stands in for it.)
+
+## Verified
+
+By eye (screenshots read): root room shows a legacy box object; inside a Geo
+the room is clean of it; palette query "create" returns nothing; an existing
+Create window still renders. Full suite 2461/2461, build/anatomy/wiki green.
+
+# The surface axis retires; selection lives in its scope (plan PR 1.5)
+
+## What was wrong
+
+Selection visibility was filtered by node TYPE against a retired
+World/View/Graph "surface" axis. `activeSurface` defaults to 'world' in every
+document, so selecting a panel node (Text, Image, Monitor) produced NO
+inspector and NO Delete — the type filter ate it. And because navigation never
+cleared `selectedNodeId`, a red Delete FAB stayed armed for a node invisible
+in the current scope. The axis itself survived only as vestige: rawGuide and
+the Help dialog taught three switchable surfaces that no longer exist.
+
+## What changed
+
+- One predicate replaces the type filter: `isNodeInScope(node, scopeId)`
+  (useNodeGraphScope.js) — selection is visible only in the scope where the
+  node stands; entities count at root only.
+- Scope walks clear the selection (handleEnterNode/handleNavigateToScope),
+  so the stale id never travels.
+- Keyboard delete in RawEditor now serves OBJECTS only — node deletion is
+  RawGraphSurface's own scope-checked handler; both firing double-opped.
+- `activeSurface` is gone: schema default + clamp removed, normalize sheds
+  the key (mirrored in shared/projectSchema.cjs — the ESM/CJS sync test
+  caught the first attempt). No migration: it was UI state.
+- Deleted nodeSurfaceFilters.js + surfaceWorkflow.js (+tests). NodePalette
+  lost its surface filter (full palette everywhere). rawGuide trimmed to ONE
+  truthful section (make/wire/enter/Room); the Help dialog lost the three
+  surface diagrams and its surface prop. Full teach rewrite waits for the
+  naming wave's words.
+- Dead code out: workflowRef/workflowHeight (measured a ref never attached).
+
+## Verified
+
+By eye on the local build (screenshots read): a selected Note panel shows
+inspector + Delete (previously nothing); a stale foreign-scope selection
+shows no Delete; entering a Geo clears the stored selection to null. Full
+suite 2439/2439 (schema CJS mirror synced), lint below baseline, build,
+anatomy, wiki checks green.
+
+# Phone double-tap has a real handler (plan PR 1.9)
+
+## What was wrong
+
+The graph and the room relied on the browser synthesizing `dblclick` from
+two touch taps on `touch-action: none` elements. Chromium synthesizes it;
+the 2026-08-20 real-phone test found the canvas dead at step one.
+
+## What changed
+
+New `createTapTracker` (src/raw/utils/useDoubleTap.js): a pure state
+machine — touch only, second finger poisons (pinch), slide beyond 12px is a
+pan, two taps within 350ms/24px complete on the second up. `up()` returns
+whether a double-tap completed, so callers fire their own freshest handler;
+`justFired()` guards Chromium firing BOTH the tracker and its synthesized
+dblclick. Wired into RawGraphSurface (palette at the tap) and the room's
+floor plane (place at the raycast point, interactive views only). Thresholds
+exported for one-line tuning after the device pass.
+
+## Verified
+
+8 unit tests on the machine (interval, radius, slide, pinch-poison + recover,
+mouse ignored, double-fire guard, triple-tap fires once). Emulated iPhone
+(hasTouch, Chromium): double-tap opens the palette, cube created, screenshots
+read. REAL-DEVICE CHECK OWED: Chromium emulation cannot prove iOS — the owner
+must double-tap staging on their phone before this is called fixed;
+thresholds are exported constants for the tuning that may follow.
+
+# GeometryPieces: pure walk, no shared budget (plan PR 1.4)
+
+## What was wrong
+
+GeometryPieces carried one shared mutable countdown through recursion —
+self-documented as safe only while R3F v8 keeps StrictMode out of the
+Canvas. The R3F v9 upgrade would silently halve the piece cap in dev via
+double-invoked renders.
+
+## What changed
+
+New pure `pruneGeometryDescriptor(descriptor, {maxPieces, maxDepth})` in
+geometryDescriptor.js — returns a tree already inside the caps (leaves
+counted across sibling branches, exactly the old walk's accounting).
+GeometryPieces renders the pruned tree with no budget of its own; a
+double-invoked render prunes twice to the same tree (idempotence tested).
+
+## Verified
+
+Unit tests: cross-branch cap, depth cap, idempotence, transform-preserving
+prune, non-geometry → null. By eye on the local build: a Constructor wearing
+cube+sphere through a Merge renders exactly as before (screenshot read).
+Full suite 2441/2441, lint clean, build, anatomy current.
+
+# /out is truly read-only (plan PR 1.1)
+
+## What was wrong
+
+The overnight audit's sharpest new find: RawOutSurface claimed safety by
+"handlers simply not passed", but RawViewport mounted OrbitControls whenever
+no camera was ●-active — drei attaches its own DOM listeners, so the audience
+could orbit and zoom the projector image.
+
+## What changed
+
+RawViewport gained `interactive` (default true). When false: OrbitControls
+never mounts (camera or not), onPointerMissed is not attached, the floor
+plane carries no click/double-click/drag handlers, and node bodies take no
+pointer grabs. RawOutSurface passes `interactive={false}`.
+
+## Verified
+
+Screenshot-hash proof on the local build: /out before vs after a 340px drag +
+wheel zoom — identical hashes (LOCKED); the editor's fullscreen room with the
+same gesture — different hashes (still orbits). Screenshots read. Full suite
+2437/2437, lint, build, anatomy current.
+
+# No account chip over /out (plan PR 1.2)
+
+## What was wrong
+
+The whole Raw route — /out included — is wrapped in ProtectedSurface, whose
+AuthGate renders the floating account chip by default. A projector page with
+a login chip hanging over the image.
+
+## What changed
+
+RootApp passes `showAccountButton={rawState.page !== RAW_PAGE_OUT}` on the
+Raw ProtectedSurface. The auth gate itself stays — a stranger still meets
+the gate, never content.
+
+## Verified
+
+RootApp route tests: /gallery/raw/out renders RawApp with no chip;
+/gallery/raw keeps it. Full suite 2438/2438, lint, build. Staging /out
+checked as guest after deploy.
+
 # Raw: separate geos — the room picks up the place
 
 ## What the owner hit

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { listNodeTypes, NODE_FAMILIES, FAMILY_BY_TYPE } from '../../project/nodeRegistry.js'
-import { filterNodeTypesForSurface } from '../../project/graph/nodeSurfaceFilters.js'
 
 const PALETTE_WIDTH = 280
 // Must match .raw-node-palette's max-height in raw.css — they disagreed by
@@ -14,7 +13,6 @@ const toDefinitionShim = (type) => {
     for (const port of type.inputs || []) {
         if (port.default !== undefined && defaults[port.id] === undefined) defaults[port.id] = port.default
     }
-    const surface = type.render === 'panel-2d' ? 'view' : 'world'
     const mode = type.render === 'spatial-3d'
         ? 'spatial'
         : type.render === 'panel-2d'
@@ -24,7 +22,6 @@ const toDefinitionShim = (type) => {
         id: type.id,
         label: type.label,
         family: FAMILY_BY_TYPE[type.id] || null,
-        surface,
         mode,
         authoringOnly: Boolean(type.authoringOnly),
         devLocalOnly: Boolean(type.devLocalOnly),
@@ -50,7 +47,6 @@ function getPalettePosition(clickX, clickY) {
 
 export default function NodePalette({
     open,
-    surface = 'world',
     placement = null,
     onClose,
     onCreate,
@@ -71,7 +67,7 @@ export default function NodePalette({
         item?.scrollIntoView({ block: 'nearest' })
     }, [])
 
-    const nodeEntries = filterNodeTypesForSurface(listNodeTypes({ query }), surface)
+    const nodeEntries = listNodeTypes({ query })
         .map(toDefinitionShim)
         .filter(Boolean)
         .map((definition) => ({ kind: 'node', id: definition.id, label: definition.label, hint: definition.id, definition }))

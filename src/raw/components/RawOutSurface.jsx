@@ -92,6 +92,10 @@ export default function RawOutSurface({ projectId = null, localStorageKey = '', 
                     scopeId={scopeId || null}
                     worldNode={worldNode}
                     liveOutputs={null}
+                    // Not just "handlers not passed": OrbitControls mounts its
+                    // own DOM listeners, so without this the audience could
+                    // orbit and zoom the projector image (measured).
+                    interactive={false}
                 />
             )}
         </div>

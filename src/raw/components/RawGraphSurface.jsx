@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createTapTracker } from '../utils/useDoubleTap.js'
 import {
     arePortsCompatible,
     getNodeFamily,
@@ -934,6 +935,11 @@ export default function RawGraphSurface({
         onDoubleClick({ clientX: event.clientX, clientY: event.clientY, graphX: clamped.x, graphY: clamped.y })
     }
 
+    // Two taps on a phone must equal a double-click — the browser cannot be
+    // trusted to synthesize dblclick from touch (dead on the 08-20 real-phone
+    // test). The tracker also guards against Chromium firing BOTH paths.
+    const doubleTap = useMemo(() => createTapTracker(), [])
+
     const handleSectionKeyDown = (event) => {
         if ((event.key === '+' || event.key === '=') && (event.metaKey || event.ctrlKey)) {
             event.preventDefault()
@@ -975,9 +981,19 @@ export default function RawGraphSurface({
                 '--raw-bottom-chrome': `${bottomInset}px`,
                 cursor: (draggingNodeId || isPanMoving) ? 'grabbing' : undefined
             }}
-            onDoubleClick={handleSectionDoubleClick}
+            onDoubleClick={(event) => {
+                if (doubleTap.justFired()) return
+                handleSectionDoubleClick(event)
+            }}
             onKeyDown={handleSectionKeyDown}
-            onPointerDown={handleSurfacePointerDown}
+            onPointerDown={(event) => {
+                doubleTap.down(event)
+                handleSurfacePointerDown(event)
+            }}
+            onPointerUp={(event) => {
+                if (doubleTap.up(event)) handleSectionDoubleClick(event)
+            }}
+            onPointerCancel={doubleTap.cancel}
         >
             <div className={`raw-graph-zoom-controls${chromeless ? ' is-chromeless' : ''}`}>
                 <button type="button" aria-label="Zoom out" onClick={() => updateZoom(zoom - GRAPH_ZOOM_STEP)}>-</button>
