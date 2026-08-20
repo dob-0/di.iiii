@@ -5,6 +5,58 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+# Phone double-tap has a real handler (plan PR 1.9)
+
+## What was wrong
+
+The graph and the room relied on the browser synthesizing `dblclick` from
+two touch taps on `touch-action: none` elements. Chromium synthesizes it;
+the 2026-08-20 real-phone test found the canvas dead at step one.
+
+## What changed
+
+New `createTapTracker` (src/raw/utils/useDoubleTap.js): a pure state
+machine — touch only, second finger poisons (pinch), slide beyond 12px is a
+pan, two taps within 350ms/24px complete on the second up. `up()` returns
+whether a double-tap completed, so callers fire their own freshest handler;
+`justFired()` guards Chromium firing BOTH the tracker and its synthesized
+dblclick. Wired into RawGraphSurface (palette at the tap) and the room's
+floor plane (place at the raycast point, interactive views only). Thresholds
+exported for one-line tuning after the device pass.
+
+## Verified
+
+8 unit tests on the machine (interval, radius, slide, pinch-poison + recover,
+mouse ignored, double-fire guard, triple-tap fires once). Emulated iPhone
+(hasTouch, Chromium): double-tap opens the palette, cube created, screenshots
+read. REAL-DEVICE CHECK OWED: Chromium emulation cannot prove iOS — the owner
+must double-tap staging on their phone before this is called fixed;
+thresholds are exported constants for the tuning that may follow.
+
+# GeometryPieces: pure walk, no shared budget (plan PR 1.4)
+
+## What was wrong
+
+GeometryPieces carried one shared mutable countdown through recursion —
+self-documented as safe only while R3F v8 keeps StrictMode out of the
+Canvas. The R3F v9 upgrade would silently halve the piece cap in dev via
+double-invoked renders.
+
+## What changed
+
+New pure `pruneGeometryDescriptor(descriptor, {maxPieces, maxDepth})` in
+geometryDescriptor.js — returns a tree already inside the caps (leaves
+counted across sibling branches, exactly the old walk's accounting).
+GeometryPieces renders the pruned tree with no budget of its own; a
+double-invoked render prunes twice to the same tree (idempotence tested).
+
+## Verified
+
+Unit tests: cross-branch cap, depth cap, idempotence, transform-preserving
+prune, non-geometry → null. By eye on the local build: a Constructor wearing
+cube+sphere through a Merge renders exactly as before (screenshot read).
+Full suite 2441/2441, lint clean, build, anatomy current.
+
 # /out is truly read-only (plan PR 1.1)
 
 ## What was wrong
