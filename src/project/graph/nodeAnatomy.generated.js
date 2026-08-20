@@ -366,8 +366,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 360,
-            toLine: 378,
+            fromLine: 382,
+            toLine: 400,
             sharedWith: []
         },
         panel: null,
@@ -785,12 +785,29 @@ export const NODE_ANATOMY = {
         panel: null,
         alsoNeeds: null
     },
-    'world.camera': {
+    'world.environment': {
+        computes: null,
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'light.point': {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
             fromLine: 332,
-            toLine: 359,
+            toLine: 353,
+            sharedWith: []
+        },
+        panel: null,
+        alsoNeeds: null
+    },
+    'world.camera': {
+        computes: null,
+        draws: {
+            file: 'src/raw/components/RawViewport.jsx',
+            fromLine: 354,
+            toLine: 381,
             sharedWith: []
         },
         panel: null,
@@ -846,6 +863,6 @@ export const DOORWAY_PLACE = {
 
 export const SOURCE_FINGERPRINTS = {
     'src/project/graph/nodeGraphRuntime.js': '12270da9',
-    'src/raw/components/RawViewport.jsx': '6c951292',
-    'src/raw/components/RawEditor.jsx': '4c5f14ef'
+    'src/raw/components/RawViewport.jsx': '17a4c32b',
+    'src/raw/components/RawEditor.jsx': '7871d79a'
 }
