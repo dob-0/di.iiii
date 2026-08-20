@@ -54,9 +54,9 @@ const readVersion = async () => {
     return (fromArg ? fromArg.split('=')[1] : null) || pkg.version || '0.0.0'
 }
 
-const copy = async (from, to) => {
+const copy = async (from, to, filter = null) => {
     await fsp.mkdir(path.dirname(to), { recursive: true })
-    await fsp.cp(from, to, { recursive: true })
+    await fsp.cp(from, to, { recursive: true, ...(filter ? { filter } : {}) })
 }
 
 const main = async () => {
@@ -105,6 +105,11 @@ const main = async () => {
     await copy(path.join(ROOT, 'serverXR', 'package.json'), path.join(stage, 'serverXR', 'package.json'))
     await copy(path.join(ROOT, 'serverXR', 'package-lock.json'), path.join(stage, 'serverXR', 'package-lock.json'))
     await copy(path.join(ROOT, 'scripts', 'di'), path.join(stage, 'cli'))
+    // The SDK travels with the install, or `di mcp` is a command that only
+    // works in a checkout — which would make "an agent can drive your own
+    // di.iiii" true for developers and false for everyone the installer is
+    // actually for. Tests stay behind; nothing at runtime imports them.
+    await copy(path.join(ROOT, 'sdk'), path.join(stage, 'sdk'), (src) => !/\.(test|spec)\.(js|mjs)$/.test(src))
     for (const script of ['space-bundle.mjs', 'install-bundle.mjs']) {
         await copy(path.join(ROOT, 'scripts', script), path.join(stage, 'scripts', script))
     }

@@ -369,6 +369,25 @@ looked nothing like a real install — see below.
   Pick the rc file from `$SHELL`, not from which files happen to exist —
   `.zshenv` for zsh, `.bash_profile` before `.bashrc` on macOS.
 
+## Handing it to an agent
+
+`di mcp` speaks MCP over stdio, so Claude — or anything else that speaks it —
+can drive this di.iiii with the same moves a person has.
+
+```
+claude mcp add di -- di mcp
+```
+
+Reading is free. Anything that opens a door — making a space public, minting an
+invite, deleting a space — is **refused outright** unless the person who
+launched the server set `DI_MCP_ALLOW_PUBLIC=1`, and even then every such call
+must carry `confirm: true`. The decision to let an agent publish is made once,
+by a human, outside the conversation that would ask for it.
+
+The moves themselves are `sdk/` — one core, used by the library face and the
+MCP face alike. `sdk/README.md` has the whole list and the traps it encodes.
+The CLI does not run on that core yet; that is its own change.
+
 ## Not here yet
 
 `di venue` with a QR for the room (phase 3) and the VJ output nodes (phase 4).

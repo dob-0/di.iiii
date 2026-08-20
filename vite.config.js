@@ -569,7 +569,8 @@ export default {
             // explicitly — same reason serverXR is listed above. Without this a
             // test file under scripts/ is silently never collected, which is
             // worse than having no test at all: it looks covered and is not.
-            '../scripts/**/*.{test,spec}.{js,mjs}'
+            '../scripts/**/*.{test,spec}.{js,mjs}',
+            '../sdk/**/*.{test,spec}.{js,mjs}'
         ],
         environment: 'jsdom',
         setupFiles: './setupTests.js',

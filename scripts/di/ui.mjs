@@ -243,6 +243,8 @@ export const ui = {
         `  ${CMD} restore FILE  read one back in`,
         `  ${CMD} restore --snapshot   the copies taken automatically before an update`,
         '',
+        `  ${CMD} mcp           hand this di.iiii to Claude, or any agent that speaks MCP`,
+        '',
         `  ${CMD} link SPACE --remote URL   connect one space to an online di.iiii`,
         `  ${CMD} sync SPACE    compare it with its online copy — writes nothing`,
         '',

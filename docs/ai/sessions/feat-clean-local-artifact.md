@@ -182,3 +182,69 @@ literals across 22 files** into `var(--di-cyan)` first (155 uses already go
 through the token), or the app ships half-repainted. That is its own reviewable
 chore — identical hosted pixels before and after — and the token flip becomes
 one line once it is true.
+
+## 2026-08-21 (later) — the SDK: one core, and a gate on the doors
+
+Three projects in this studio each hand-rolled their own way to talk to di.iiii
+— 241, 103 and 101 lines doing the same eight moves. All three re-derived the
+same traps; two of them got a token by reading
+`/home/nooo/di.iiii/serverXR/.env.local` **by absolute path**, which is a
+project depending on the platform's working tree — the exact boundary this
+branch spent a day drawing. And an agent calling the same API knew none of it.
+
+`sdk/` is that written once. Fourteen moves, three faces: a library
+(`connect()`), an MCP server for Claude (`sdk/mcp.mjs`, `di mcp`), and — not
+yet — the CLI, which predates the core and is its own change. `sdk/README.md`
+says so rather than claiming three.
+
+**Reach is the safety model, and it is one word per move.** `read` shows
+nothing to anyone new, `private` writes where the caller can already reach,
+`public` opens a door. Public moves are refused unless something explicitly
+confirmed them, and **a refusal never touches the network** (guarded: the fake
+server records zero requests). Reach can depend on the arguments —
+`space.ensure` is private, `space.ensure({isPublic:true})` is not — because a
+reach read from the name alone can be walked straight past. Closing a door
+never asks; only opening one does.
+
+**No confirm means refused, not performed.** An agent holding a token with
+nobody watching must not publish by omission. Over MCP the default is harder
+still: public moves are refused outright unless whoever launched the server set
+`DI_MCP_ALLOW_PUBLIC=1`, and even then each call needs `confirm: true` — the
+decision to let an agent publish is made once, by a person, outside the
+conversation that would ask for it. The honest limit is in the README: once
+that flag is on, nothing stops a model confirming itself; what it buys is that
+the intent is in the transcript. The hard guarantee is the default.
+
+**Six traps stopped being comments and became code:** a space id comes from the
+LABEL (mismatch refused by name); asset ids are per-server (cache keyed by host,
+plus one HEAD before trusting a cached run — the failure it prevents is a page
+that loads perfectly with all 51 PDFs dead); `PUT` normalises silently (read,
+merge, write, read back, compare byte for byte); **202 is not success** but an
+armed approval gate; a token-created space belongs to nobody; and everything is
+born `permanent: true` or the 30-day sweep eats it.
+
+`sdk/credentials.js` exists so the `.env.local`-by-absolute-path habit has
+somewhere to go: `DI_TOKEN`, then per-tier, then `~/.config/di/credentials.json`,
+**never a repository**. Loopback needs no token — a `di up` install runs with
+auth off, and demanding one would break the SDK exactly where it is safest.
+
+Two things this turned up that were nothing to do with the SDK:
+
+- **A new top-level tree is not linted just because eslint.config.js has a block
+  for it.** `npm run lint` names its trees, and `sdk` was not among them — so
+  `npx eslint sdk` reported zero problems while checking nothing. This is the
+  same failure `scripts/lint-scope.test.js` was written about; `sdk` is now in
+  the script, the config and that test's list, and the gate was watched to fail
+  by breaking a file on purpose.
+- **The gate quoted `undefined` back at the person it was asking.** The moves
+  are keyed by name in an object literal and carry no `name` field, so every
+  refusal read "undefined would open a door" — a safety prompt nobody can act
+  on is not a safety prompt. The names are stamped on at module load.
+
+Seen, not asserted: driven over real stdio against the running install on :4000
+(initialize → 14 tools → real space list → a public move refused); the whole
+catalogue exercised end to end against a scratch space (ensure → project →
+writeHtml verified byte for byte → front door → invite → delete), and then
+**out of the packed 3.1 MB artifact**, where `di mcp` resolves `sdk/` beside
+`cli/` and answers — because a command that only works in a checkout works for
+whoever wrote it and nobody else.

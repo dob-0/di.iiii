@@ -934,3 +934,24 @@ This does **not** fully solve node-to-node label collision (two labels can still
 **How:** This is unenforced — a person (or a stale temp path) is the only thing that notices when it's skipped, the same shape as the verification rule in "A rule no build can see is a convention, not a protocol" above. Treat it with the same discipline: image-by-path references are perishable evidence, not durable input. Read first, investigate second. If a path is already gone when you get to it, say so plainly and ask for a resend rather than guessing at what it showed.
 
 **Files:** none — process discipline, not code.
+
+### Reach: read freely, ask before you open a door
+
+Every move an agent or a script can make against di.iiii declares how far it
+reaches — `read` (shows nothing to anyone new), `private` (writes where the
+caller can already reach), `public` (**a new audience can now see, edit or reach
+something**). Public moves are refused unless something explicitly confirmed
+them, and a refusal never touches the network. `sdk/reach.js`.
+
+Public is not a place, it is a door that has been opened. Making a space
+public, minting an invite link, publishing a page, pushing to a public
+repository, deploying, sharing a Drive file — all the same act.
+
+**No confirm means refused, not performed.** An agent holding a token with
+nobody watching must not be able to publish by omission: opting in is a decision
+someone makes, opting out must never be something they forget.
+
+The asymmetry is the whole argument. A wrong read costs a minute. A wrong
+publish cannot be taken back — the pitch deck was fixed upstream in one commit
+and is still served by two forked repositories three weeks later. What is
+already open, and every move that opens something, is `di-atlas/PUBLIC_PRIVATE.md`.

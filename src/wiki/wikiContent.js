@@ -697,7 +697,8 @@ export const WIKI_ARTICLES = [
                 'di update --from FILE — updates from a file on this machine, for a venue with no network',
                 'di restore --snapshot — the copies di.iiii takes of your work by itself, before an update that changes how it is stored',
                 'di status — what is running, on which address, and how much space your work takes',
-                'di doctor — what this machine can and cannot do, and what to install if something is missing'
+                'di doctor — what this machine can and cannot do, and what to install if something is missing',
+                'di mcp — hands this di.iiii to Claude, or any other agent that speaks MCP'
             ] },
             'Before an update changes anything, the new version opens a COPY of your work and checks it can read it — if it cannot, the update stops and you are still on the version you were. And when an update changes how the work is stored, di.iiii keeps a copy of it first, so going back is always possible: di restore --snapshot lists them. Going back to a version too old to read your work is refused rather than done, because that would not fail, it would quietly misread it.',
             'It does not need admin rights, and it does not ask for a password. It runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away. Docker is there too, but only if you ask for it (di install --docker) — a container cannot reach things on your machine, so the surfaces that talk to your own tools (the agent board, a Claude installed on this computer) work in the ordinary mode and not in the container one.',

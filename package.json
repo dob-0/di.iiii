@@ -57,7 +57,7 @@
         "wcc:promote": "node scripts/promote-wcc-projects.mjs",
         "check:input": "node scripts/input-check.mjs",
         "preview": "vite preview",
-        "lint": "eslint src serverXR scripts shared vite.config.js eslint.config.js",
+        "lint": "eslint src serverXR scripts sdk shared vite.config.js eslint.config.js",
         "test": "vitest run",
         "di": "node scripts/di/cli.mjs",
         "di:pack": "node scripts/pack-runtime.mjs",

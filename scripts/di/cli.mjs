@@ -21,6 +21,7 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 import { decideMode } from './detect.mjs'
 import {
@@ -663,6 +664,26 @@ const promptSecret = (question) => new Promise((resolve) => {
 
 const cmdVersion = () => { say(installedVersion(HOME()) || 'not installed') }
 
+// `di mcp` — hand this di.iiii to an agent.
+//
+// Not a server you leave running: an MCP client starts it, speaks to it over
+// stdin, and it dies with the conversation. Public moves are refused unless
+// DI_MCP_ALLOW_PUBLIC=1 is in the environment the client launched it with, so
+// the decision to let an agent publish is made once, by a person, outside the
+// conversation that would ask for it.
+const cmdMcp = async (args) => {
+    // In an install the SDK sits beside cli/; in a checkout it is two levels
+    // up. Try both rather than assume, or this command works for whoever
+    // wrote it and nobody else.
+    const here = path.dirname(fileURLToPath(import.meta.url))
+    const candidates = [path.join(here, '..', 'sdk', 'mcp.mjs'), path.join(here, '..', '..', 'sdk', 'mcp.mjs')]
+    const entry = candidates.find((p) => fs.existsSync(p))
+    if (!entry) { fail('this di.iiii has no sdk/ — it was packed before `di mcp` existed'); process.exitCode = 1; return }
+    const port = resolvePort(HOME(), args.flags?.port)
+    const child = spawn(process.execPath, [entry, '--base', `http://localhost:${port}/serverXR`], { stdio: 'inherit' })
+    await new Promise((resolve) => child.on('exit', resolve))
+}
+
 // ── routing ───────────────────────────────────────────────────────────────
 
 const COMMANDS = {
@@ -684,6 +705,7 @@ const COMMANDS = {
     update: cmdUpdate,
     uninstall: cmdUninstall,
     version: cmdVersion,
+    mcp: cmdMcp,
     help: () => say(ui.help())
 }
 
