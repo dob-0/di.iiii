@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, act, cleanup, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TextPanelWindow from './TextPanelWindow.jsx'
 
@@ -1208,5 +1208,49 @@ describe('RawEditor — the room behind the graph', () => {
         // …and the on-surface exit works without any chrome at all.
         fireEvent.click(document.querySelector('.raw-room-exit'))
         expect(screen.queryByRole('button', { name: '← Graph' })).toBeNull()
+    })
+})
+
+describe('RawEditor show clock stamp', () => {
+    // applyLocalOps is a no-op mock in this harness, so the document never
+    // actually gains the epoch — the contract under test is the op itself:
+    // fired once with a wall-clock stamp, and only when it should be.
+    const CLOCK_KEY = 'test-show-clock'
+    const timeDoc = () => makeWorkspaceDoc([{ id: 't1', typeId: 'time', label: 'Time', values: {} }])
+    const stampCalls = () => mockApplyLocalOps.mock.calls
+        .flat(2)
+        .filter((op) => op?.type === 'setShowState')
+
+    afterEach(() => {
+        window.localStorage.removeItem(CLOCK_KEY)
+    })
+
+    it('stamps showState.clockEpoch once when a Time node exists', async () => {
+        mockApplyLocalOps.mockClear()
+        const start = Date.now()
+        window.localStorage.setItem(CLOCK_KEY, timeDoc())
+        render(<RawEditor localStorageKey={CLOCK_KEY} />)
+        await waitFor(() => expect(stampCalls().length).toBe(1))
+        const epoch = stampCalls()[0].payload?.patch?.clockEpoch
+        expect(epoch).toBeGreaterThanOrEqual(start)
+        expect(epoch).toBeLessThanOrEqual(Date.now())
+    })
+
+    it('never re-stamps an already-stamped clock', async () => {
+        mockApplyLocalOps.mockClear()
+        const doc = JSON.parse(timeDoc())
+        doc.showState = { clockEpoch: 1700000000000 }
+        window.localStorage.setItem(CLOCK_KEY, JSON.stringify(doc))
+        render(<RawEditor localStorageKey={CLOCK_KEY} />)
+        await act(async () => { await Promise.resolve() })
+        expect(stampCalls()).toEqual([])
+    })
+
+    it('leaves a document without a Time node unstamped', async () => {
+        mockApplyLocalOps.mockClear()
+        window.localStorage.setItem(CLOCK_KEY, makeWorkspaceDoc([makeNodeZero()]))
+        render(<RawEditor localStorageKey={CLOCK_KEY} />)
+        await act(async () => { await Promise.resolve() })
+        expect(stampCalls()).toEqual([])
     })
 })
