@@ -4470,7 +4470,8 @@
 /* Zen's third resident — the wordmark, ambient on the workspace surface.
    Fixed so it neither pans with the graph nor collides with the windows;
    bottom-centre keeps it clear of the zoom cluster (left), the account
-   button and delete FAB (right). Non-interactive by design. */
+   button and delete FAB (right). Since the 2026-08-21 doors audit it is
+   the way home — a link wearing the same ambient clothes. */
 /* Ambient, and only where there is room to be ambient: on a phone it sat on
    top of the cards (measured in the audit). */
 @media (max-width: 640px) {
@@ -4487,9 +4488,19 @@
     font-size: 15px;
     letter-spacing: -0.02em;
     color: rgba(255, 255, 255, 0.28);
-    pointer-events: none;
     user-select: none;
     z-index: 1200;
+    text-decoration: none;
+}
+
+.raw-surface-wordmark:hover {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.raw-surface-wordmark:focus-visible {
+    outline: 1px solid var(--di-cyan);
+    outline-offset: 4px;
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .raw-surface-wordmark span {

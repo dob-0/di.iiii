@@ -302,6 +302,21 @@ describe('RawEditor delete/reset confirmations', () => {
         expect(window.localStorage.getItem(GUARD_STORAGE_KEY)).not.toBeNull()
     })
 
+    // Doors audit 2026-08-21: the canvas was a sealed room — no way back to
+    // the platform. The wordmark is the way home, and the ⋯ menu carries the
+    // Spaces and Wiki exits.
+    it('keeps the platform exits: wordmark links home, ⋯ offers Spaces and Wiki', () => {
+        seedSelectedNodeZero()
+        render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
+
+        const wordmark = screen.getByRole('link', { name: 'di.iiii — home' })
+        expect(wordmark.getAttribute('href')).toBe('/')
+
+        fireEvent.click(screen.getByText('⋯'))
+        expect(screen.getByText('Spaces')).toBeInTheDocument()
+        expect(screen.getByText('Wiki')).toBeInTheDocument()
+    })
+
     // Doors audit 2026-08-21: one project, two editors, and no door between
     // them — "Open in Studio" is the Raw side of that door. The local canvas
     // has no Studio twin, so the entry must not appear there.
