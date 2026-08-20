@@ -172,6 +172,14 @@ export const defaultPublishState = {
     lastExportAt: 0
 }
 
+export const defaultShowState = {
+    // Wall-clock ms stamped once, the first time a Time node exists in the
+    // document. Every window (editor, second tab, /out) derives the same
+    // elapsed value from it, so one show has ONE clock. 0 = not stamped yet;
+    // the clock falls back to each window's own monotonic time.
+    clockEpoch: 0
+}
+
 export const defaultWorkspaceState = {
     selectedNodeId: null,
     // Which universe.world node is the "live"/output one for a given scope — a flat
@@ -202,6 +210,7 @@ export const defaultProjectDocument = {
     xrState: defaultXrState,
     presentationState: defaultPresentationState,
     publishState: defaultPublishState,
+    showState: defaultShowState,
     windowLayout: defaultWindowLayout,
     assets: []
 }
@@ -590,6 +599,13 @@ export const normalizePublishState = (publish = {}) => {
     }
 }
 
+export const normalizeShowState = (show = {}) => {
+    const source = show && typeof show === 'object' ? show : {}
+    return {
+        clockEpoch: Math.max(0, ensureNumber(source.clockEpoch, defaultShowState.clockEpoch))
+    }
+}
+
 export const normalizeProjectMeta = (meta = {}) => {
     const source = meta && typeof meta === 'object' ? meta : {}
     const now = Date.now()
@@ -745,6 +761,7 @@ export const normalizeProjectDocument = (document = {}) => {
         xrState: normalizeXrState(source.xrState),
         presentationState: normalizePresentationState(source.presentationState, worldState),
         publishState: normalizePublishState(source.publishState),
+        showState: normalizeShowState(source.showState),
         windowLayout: normalizeWindowLayout(source.windowLayout),
         assets: Array.isArray(source.assets) ? source.assets.map(normalizeAsset) : []
     }
@@ -970,6 +987,10 @@ export const applyProjectOps = (document, ops = []) => {
             }
             case 'setPublishState': {
                 nextDocument.publishState = normalizePublishState(mergePatch(nextDocument.publishState, payload.patch || {}))
+                break
+            }
+            case 'setShowState': {
+                nextDocument.showState = normalizeShowState(mergePatch(nextDocument.showState, payload.patch || {}))
                 break
             }
             case 'setWindowState': {
@@ -1214,6 +1235,7 @@ const invertSingleOp = (document, op) => {
         case 'setXrState': return patchInverse('setXrState', document.xrState)
         case 'setPresentationState': return patchInverse('setPresentationState', document.presentationState)
         case 'setPublishState': return patchInverse('setPublishState', document.publishState)
+        case 'setShowState': return patchInverse('setShowState', document.showState)
         case 'setWindowState': {
             const windowId = ensureString(payload.windowId)
             const windows = document.windowLayout?.windows || {}

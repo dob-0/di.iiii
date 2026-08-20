@@ -632,3 +632,25 @@ describe('invertProjectOps', () => {
         expect(invertProjectOps(base, [{ type: 'createEntity', payload: { entity: { type: 'box' } } }])).toEqual([])
     })
 })
+
+describe('showState — the one show clock', () => {
+    it('normalizes junk to a clean, unstamped clock', () => {
+        expect(normalizeProjectDocument({}).showState).toEqual({ clockEpoch: 0 })
+        expect(normalizeProjectDocument({ showState: null }).showState).toEqual({ clockEpoch: 0 })
+        expect(normalizeProjectDocument({ showState: { clockEpoch: -5, junk: true } }).showState).toEqual({ clockEpoch: 0 })
+        expect(normalizeProjectDocument({ showState: { clockEpoch: 'soon' } }).showState).toEqual({ clockEpoch: 0 })
+    })
+
+    it('keeps a stamped epoch through normalize', () => {
+        expect(normalizeProjectDocument({ showState: { clockEpoch: 1755000000000 } }).showState.clockEpoch).toBe(1755000000000)
+    })
+
+    it('setShowState stamps the epoch and inverts back to unstamped', () => {
+        const base = normalizeProjectDocument({})
+        const op = { type: 'setShowState', payload: { patch: { clockEpoch: 1755000000000 } } }
+        const inverse = invertProjectOps(base, [op])
+        const stamped = applyProjectOps(base, [op])
+        expect(stamped.showState.clockEpoch).toBe(1755000000000)
+        expect(applyProjectOps(stamped, inverse).showState.clockEpoch).toBe(0)
+    })
+})

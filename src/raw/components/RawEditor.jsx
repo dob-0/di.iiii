@@ -32,7 +32,8 @@ import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSe
 import { readNode } from '../../project/graph/nodeReading.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
-import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
+import { hasClockNode } from '../../project/graph/useGraphClock.js'
+import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
 import { isNodeInScope, useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
@@ -229,7 +230,7 @@ export default function RawEditor({
         projectId,
         document: state.document,
         applyLocalOps: _applyLocalOps,
-        ignoreTypes: ['setWorkspaceState']
+        ignoreTypes: ['setWorkspaceState', 'setShowState']
     })
 
     const document = state.document
@@ -1071,7 +1072,17 @@ export default function RawEditor({
     const assetMap = useMemo(() => new Map((document.assets || []).map((asset) => [asset.id, asset])), [document.assets])
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
-    const clockNow = useGraphClock(hasClockNode(document.nodes))
+    const clockNow = useDocumentClock(document)
+    // Stamp the show clock ONCE, the first time a Time node lands in the
+    // document. From then on every window — editor, second tab, /out —
+    // derives the same elapsed time from the document instead of its own
+    // page-load clock. Never re-stamped, never in undo history.
+    const hasShowClock = hasClockNode(document.nodes)
+    const showClockEpoch = document.showState?.clockEpoch || 0
+    useEffect(() => {
+        if (!hasShowClock || showClockEpoch > 0) return
+        applyLocalOps({ type: 'setShowState', payload: { patch: { clockEpoch: Date.now() } } })
+    }, [hasShowClock, showClockEpoch, applyLocalOps])
     // Live, non-serializable node outputs (a captured webcam's VideoTexture)
     // that can't live in node.values — see createNodeGraphContext's liveOutputs.
     const [liveOutputs, setLiveOutputs] = useState(() => new Map())

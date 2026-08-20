@@ -202,10 +202,11 @@ and never touch it — the desk stays your control room.
   that scope and the output holds the authored shot.
 
 The page asks the screen to stay awake, and nothing on it takes a click.
-Honest limits, today: webcam/mic/MIDI feeds live in the window that owns
-them — capture on the output machine itself, or drive numbers only; and
-Time-driven motion runs on each window's own clock, so two windows can be
-offset. Both are known and on the list.
+An honest limit, today: webcam/mic/MIDI feeds live in the window that owns
+them — capture on the output machine itself, or drive numbers only.
+Time-driven motion is shared: the first time a Time node exists the document
+stamps one show clock, and every window — this page included — reads the
+same elapsed time from it.
 
 ## The Monitor — watch a wire
 

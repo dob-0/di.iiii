@@ -11,7 +11,7 @@ const COALESCE_WINDOW_MS = 800
 const COALESCIBLE_TYPES = new Set([
     'updateEntity', 'updateComponent', 'updateNode', 'updateEdge',
     'setWorldState', 'setRenderSettings', 'setXrState', 'setPresentationState',
-    'setPublishState', 'setWindowState', 'setWorkspaceState', 'setProjectMeta'
+    'setPublishState', 'setShowState', 'setWindowState', 'setWorkspaceState', 'setProjectMeta'
 ])
 
 const entrySignature = (ops) => {
@@ -41,6 +41,7 @@ const SETTINGS_OP_LABELS = {
     setXrState: 'XR settings',
     setPresentationState: 'Presentation settings',
     setPublishState: 'Publish settings',
+    setShowState: 'Show clock',
     setWindowState: 'Window layout',
     setWorkspaceState: 'Canvas',
     setProjectMeta: 'Project settings',

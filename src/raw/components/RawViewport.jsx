@@ -15,7 +15,7 @@ import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
 import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
 import { createTapTracker } from '../utils/useDoubleTap.js'
-import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
+import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
@@ -520,7 +520,7 @@ function SceneContent({
     const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
-    const clockNow = useGraphClock(hasClockNode(document.nodes))
+    const clockNow = useDocumentClock(document)
     const graphContext = useMemo(
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs }),
         [document, clockNow, liveOutputs]
