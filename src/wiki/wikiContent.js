@@ -115,7 +115,7 @@ export const WIKI_ARTICLES = [
             'Someone sent you a link to a space. You do not need to install anything, clone anything, or open a terminal: a browser is the entire toolchain. (The repo has a developer setup guide as well — that is a different door, for people who want to run the platform itself, and you can ignore it.)',
             { list: [
                 '1 — Open the link. It carries the invite; the space opens as soon as access is granted.',
-                '2 — Sign in with GitHub or Google when asked. You can accept an invite as a guest, but a guest session lives in one browser and lasts about a week — the same week its sandbox survives idleness; signing in makes the access permanent and carries any work you already did onto your account.',
+                '2 — Sign in with GitHub or Google when asked. Sign-in brings you back to the page you started from, invite link intact. You can accept an invite as a guest, but a guest session lives in one browser and lasts about a week — the same week its sandbox survives idleness; signing in makes the access permanent and carries any work you already did onto your account.',
                 '3 — You land in the space. /<space>/studio is its project hub: every project in the space, plus ＋ New to start one.',
                 '4 — Open a project and build. There is no Save button — every change is written as you make it, and anyone else in the same project sees it live.',
                 '5 — Stuck? The ? button in the Studio (or Shift+?) opens the illustrated guides and the full shortcut list.'
@@ -126,7 +126,7 @@ export const WIKI_ARTICLES = [
             'If the link says it is invalid or has expired, it is not you — invites last 7 days. Ask for a fresh one.'
         ],
         tags: ['invite', 'collaboration', 'onboarding', 'getting started', 'no install', 'editor', 'access'],
-        updated: '2026-08-10'
+        updated: '2026-08-21'
     },
     {
         id: 'free-spaces',
