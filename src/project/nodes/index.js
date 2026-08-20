@@ -1,3 +1,4 @@
+import { computeOutput as geomArray } from './geom.array/runtime.js'
 import { computeOutput as logicCompare } from './logic.compare/runtime.js'
 import { computeOutput as logicGate } from './logic.gate/runtime.js'
 import { computeOutput as logicSwitch } from './logic.switch/runtime.js'
@@ -12,6 +13,7 @@ import { computeOutput as valueNoise } from './value.noise/runtime.js'
 // { input, asNumber, context }) — and import nothing from the graph runtime,
 // which keeps the dependency one-way.
 export const NODE_RUNTIMES = new Map([
+    ['geom.array', geomArray],
     ['logic.compare', logicCompare],
     ['logic.gate', logicGate],
     ['logic.switch', logicSwitch],

@@ -189,6 +189,7 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
         return colocated(node, portId, {
             input: (id) => evaluateNodeInput(node, id, context, nextStack),
             asNumber,
+            asVec3,
             context
         })
     }
