@@ -164,6 +164,16 @@ describe('all-nodes example graph', () => {
                 const context = createNodeGraphContext({ nodes: [geo, cube], edges: [] })
                 return { node: geo, context }
             },
+            // Same law as the Array: fed the cube's shape, the Transform speaks.
+            'geom.transform.out': () => {
+                const transform = createNode('geom.transform', { id: 'proof-transform' })
+                const cube = createNode('geom.cube', { id: 'proof-transform-cube' })
+                const context = createNodeGraphContext({
+                    nodes: [transform, cube],
+                    edges: [createEdge('proof-transform-cube', 'geometry', 'proof-transform', 'geometry')]
+                })
+                return { node: transform, context }
+            },
             // A cube's geometry value fed in is what brings the Array alive.
             'geom.array.out': () => {
                 const array = createNode('geom.array', { id: 'proof-array' })

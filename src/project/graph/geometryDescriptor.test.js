@@ -13,11 +13,13 @@ import { wearConstructorGeometry } from './constructorGeometry.js'
 const ctxOf = (nodes, edges = []) => createNodeGraphContext({ nodes, edges }, { now: 0 })
 
 describe('the geometry descriptor', () => {
-    it('accepts the four kinds and rejects everything else', () => {
+    it('accepts the declared kinds and rejects everything else', () => {
         expect(isGeometryDescriptor({ kind: 'box', size: [1, 1, 1] })).toBe(true)
         expect(isGeometryDescriptor({ kind: 'group', children: [] })).toBe(true)
         expect(isGeometryDescriptor({ kind: 'group' })).toBe(false)
-        expect(isGeometryDescriptor({ kind: 'torus' })).toBe(false)
+        // torus joined the kinds with the 2026-08-20 geometry wave
+        expect(isGeometryDescriptor({ kind: 'torus' })).toBe(true)
+        expect(isGeometryDescriptor({ kind: 'teapot' })).toBe(false)
         expect(isGeometryDescriptor([1, 2, 3])).toBe(false)
         expect(isGeometryDescriptor('box')).toBe(false)
         expect(isGeometryDescriptor(null)).toBe(false)

@@ -2,6 +2,9 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
+import ConeObject from '../../objectComponents/ConeObject.jsx'
+import CylinderObject from '../../objectComponents/CylinderObject.jsx'
+import TorusObject from '../../objectComponents/TorusObject.jsx'
 import PrimitiveMaterial from '../../objectComponents/PrimitiveMaterial.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
@@ -159,6 +162,37 @@ function GeometryPieces({ descriptor, pruned = false }) {
                     <meshStandardMaterial color={asColor(descriptorLeaf.color, '#ffffff')} side={2} />
                 </mesh>
             )
+        case 'cylinder':
+            return (
+                <group {...place}>
+                    <CylinderObject
+                        color={asColor(descriptorLeaf.color, '#5fa8ff')}
+                        cylinderRadiusTop={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5))))}
+                        cylinderRadiusBottom={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5))))}
+                        cylinderHeight={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.height, 1.5))))}
+                    />
+                </group>
+            )
+        case 'cone':
+            return (
+                <group {...place}>
+                    <ConeObject
+                        color={asColor(descriptorLeaf.color, '#5fa8ff')}
+                        coneRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5))))}
+                        coneHeight={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.height, 1.5))))}
+                    />
+                </group>
+            )
+        case 'torus':
+            return (
+                <group {...place}>
+                    <TorusObject
+                        color={asColor(descriptorLeaf.color, '#5fa8ff')}
+                        torusRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5))))}
+                        torusTube={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.tube, 0.18))))}
+                    />
+                </group>
+            )
         default:
             return null
     }
@@ -236,6 +270,37 @@ export function renderNodeBody(node, values, assetMap = null) {
                 <SphereObject
                     color={values.color || '#5fa8ff'}
                     sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.6))))}
+                    opacity={asFiniteNumber(values.opacity, 1)}
+                    material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
+                />
+            )
+        case 'geom.cylinder':
+            return (
+                <CylinderObject
+                    color={values.color || '#5fa8ff'}
+                    cylinderRadiusTop={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.5))))}
+                    cylinderRadiusBottom={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.5))))}
+                    cylinderHeight={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.height, 1.5))))}
+                    opacity={asFiniteNumber(values.opacity, 1)}
+                    material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
+                />
+            )
+        case 'geom.cone':
+            return (
+                <ConeObject
+                    color={values.color || '#5fa8ff'}
+                    coneRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.5))))}
+                    coneHeight={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.height, 1.5))))}
+                    opacity={asFiniteNumber(values.opacity, 1)}
+                    material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
+                />
+            )
+        case 'geom.torus':
+            return (
+                <TorusObject
+                    color={values.color || '#5fa8ff'}
+                    torusRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.5))))}
+                    torusTube={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.tube, 0.18))))}
                     opacity={asFiniteNumber(values.opacity, 1)}
                     material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
                 />

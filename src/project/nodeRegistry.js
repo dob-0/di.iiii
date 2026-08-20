@@ -88,6 +88,10 @@ export const FAMILY_BY_TYPE = {
     'geom.plane': 'make',
     'shape.merge': 'make',
     'geom.array': 'make',
+    'geom.cylinder': 'make',
+    'geom.cone': 'make',
+    'geom.torus': 'make',
+    'geom.transform': 'make',
     'geom.constructor': 'make',
     'view.text': 'make',
     // Create sits with the things it makes, not with the panels it looks like.
@@ -2196,6 +2200,106 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'out', type: 'color', label: 'Colour' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The geometry wave (TD audit, 2026-08-20): three primitives the entity
+    // system always had, finally spoken as nodes — plus Transform, Array's
+    // sibling for a single re-framed copy.
+    'geom.cylinder': {
+        id: 'geom.cylinder',
+        label: 'Cylinder',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['cylinder', 'tube', 'column', 'pillar', 'drum'],
+        inputs: [
+            { id: 'color',    type: 'color',  label: 'Colour',   default: '#5fa8ff'   },
+            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5         },
+            { id: 'height',   type: 'number', label: 'Height',   default: 1.5         },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.75, 0] },
+            { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
+        ],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'geom.cone': {
+        id: 'geom.cone',
+        label: 'Cone',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['cone', 'spike', 'funnel', 'point'],
+        inputs: [
+            { id: 'color',    type: 'color',  label: 'Colour',   default: '#5fa8ff'   },
+            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5         },
+            { id: 'height',   type: 'number', label: 'Height',   default: 1.5         },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.75, 0] },
+            { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
+        ],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'geom.torus': {
+        id: 'geom.torus',
+        label: 'Torus',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['torus', 'ring', 'donut', 'hoop', 'loop'],
+        inputs: [
+            { id: 'color',    type: 'color',  label: 'Colour',   default: '#5fa8ff'  },
+            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5        },
+            { id: 'tube',     type: 'number', label: 'Tube',     default: 0.18       },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
+            { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
+        ],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'geom.transform': {
+        id: 'geom.transform',
+        label: 'Transform',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['transform', 'move', 'rotate', 'scale', 'reframe', 'offset', 'place'],
+        inputs: [
+            // No default on geometry: a Transform re-frames what arrives, and
+            // a bare Transform honestly carries nothing (PASS_THROUGH_PORTS).
+            { id: 'geometry', type: 'geometry', label: 'Geometry'                    },
+            { id: 'position', type: 'vec3',     label: 'Position', default: [0, 0, 0] },
+            { id: 'rotation', type: 'vec3',     label: 'Rotation', default: [0, 0, 0] },
+            { id: 'scale',    type: 'vec3',     label: 'Scale',    default: [1, 1, 1] },
+        ],
+        outputs: [
+            { id: 'out', type: 'geometry', label: 'Out' },
         ],
         defaultValues: {},
         render: 'hidden',
