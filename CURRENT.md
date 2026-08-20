@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- What changed
+- the anatomy manifest is measured, not committed
 
 Full detail: `PROGRESS.md`.
 
