@@ -153,6 +153,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-21'
     },
     {
+        id: 'text-window',
+        category: 'Editing',
+        title: 'Writing on a Text window',
+        summary: 'A Text window is a note you can type straight into — unless something is wired to it.',
+        body: [
+            'A Text window holds writing: a title for a desk, instructions for whoever opens the project next, a list you are still working out. Click into it and type. What you write saves as you go, the same way every other edit does, and undo works on it.',
+            'Anyone who can edit the project can write in one, including a collaborator who arrived by invite. If two of you are in the project at once you will see each other\'s changes.',
+            'One case is different. A Text window\'s content can be fed by another node — wired in, like a colour is wired into a scene. When it is, the window shows the text but will not let you type, and says so: the value belongs to the node upstream, and anything typed here would be replaced the moment that node changed. Unplug the wire and the window becomes writable again.',
+            'The window is a node like any other: close it, minimize it to a bar, move it, or open it up from the graph card that carries the same name.'
+        ],
+        tags: ['text', 'note', 'writing', 'window', 'node', 'raw', 'board', 'editing'],
+        updated: '2026-08-21'
+    },
+    {
         id: 'free-spaces',
         category: 'Spaces & access',
         title: '3 free spaces per account',

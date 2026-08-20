@@ -1550,6 +1550,24 @@ export default function RawEditor({
         // how the streaming preset's stream.monitor/stream.controller ended up
         // looking like working features. Anything added above this line must be
         // real; anything below it is a text box wearing another name.
+        if (node.typeId === 'view.text') {
+            // A note is written where it is read. The wire check keeps the box
+            // read-only when an edge feeds `content` — see TextPanelWindow.
+            const driven = (graphContext?.edges || []).some(
+                (edge) => edge.toNodeId === node.id && edge.toPort === 'content'
+            )
+            return (
+                <TextPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    driven={driven}
+                    onChange={(content) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId: node.id, patch: { values: { ...node.values, content } } }
+                    })}
+                />
+            )
+        }
         return <TextPanelWindow node={node} values={resolvedValues} />
     }
 

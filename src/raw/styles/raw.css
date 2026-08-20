@@ -2101,11 +2101,50 @@
     max-width: 100%;
 }
 
+/* The editable Text panel. `align-items: flex-start` on the parent would
+   shrink-wrap the box to its content, so the writing area is stretched back
+   to the window: a note is written by clicking anywhere in it, not by
+   hunting the last line of text. */
+.raw-text-panel-input {
+    align-self: stretch;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    resize: none;
+    font: inherit;
+    font-size: 20px;
+    line-height: 1.5;
+    color: #f4f7fb;
+    overflow-wrap: anywhere;
+}
+
+.raw-text-panel-input::placeholder {
+    color: rgba(244, 247, 251, 0.35);
+}
+
+.raw-text-panel-input:focus-visible {
+    outline: 1px solid rgba(110, 231, 249, 0.85);
+    outline-offset: 4px;
+}
+
+.raw-text-panel-driven {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: rgba(244, 247, 251, 0.55);
+}
+
 /* 20px is a presentation size on a desk; on a 390px phone it turns three
    sentences into a scrolling column, which is how the starter desk's last
    line — the one naming the way into Studio — ended up below the fold. */
 @media (max-width: 640px) {
-    .raw-text-panel-content {
+    .raw-text-panel-content,
+    .raw-text-panel-input {
         font-size: 17px;
         line-height: 1.45;
     }
