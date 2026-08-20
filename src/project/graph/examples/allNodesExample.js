@@ -61,6 +61,10 @@ export const PASS_THROUGH_PORTS = [
         why: 'gives out what the Geo collects; empty it carries nothing — an empty place is not an invisible shape'
     },
     {
+        port: 'geom.array.out',
+        why: 'repeats what arrives; with nothing wired it carries nothing — an empty array is not an invisible shape'
+    },
+    {
         port: 'logic.gate.out',
         why: 'passes through what arrives while open; bare or closed it carries nothing — a closed gate is an unplugged wire, not a zero'
     }
@@ -150,6 +154,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('switch', 'logic.switch', { label: 'Switch', col: 1, row: 11 })
     add('lag', 'signal.lag', { label: 'Lag', col: 1, row: 12 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
+    add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
     // --- column 2: scene settings ---------------------------------------------
     // world.light is the RETIRED dual-identity node (paletteHidden; the
@@ -320,6 +325,10 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // Lag smooths the raw sine — the glide every window computes its own
         // way (frameMemory is per-window), converging on the same target.
         wire('sin', 'out', 'lag', 'in'),
+
+        // Array repeats the cube's own geometry value — the proving fixture
+        // for its pass-through out (bare, an Array carries nothing).
+        wire('cube', 'geometry', 'array', 'geometry'),
 
         // A wire OUT of a container — new on 2026-08-19, and the thing that
         // used to be impossible: every container declared zero outputs, so

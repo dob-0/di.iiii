@@ -170,3 +170,38 @@ describe('value.noise', () => {
         }
     })
 })
+
+describe('geom.array', () => {
+    it('repeats the source in transform groups, i × offset apart', () => {
+        const doc = {
+            nodes: [node('c', 'geom.cube'), node('a', 'geom.array', { count: 3, offset: [2, 0, 1] })],
+            edges: [edge('c', 'geometry', 'a', 'geometry')]
+        }
+        const out = evalPort(doc, 'a', 'out')
+        expect(out.kind).toBe('group')
+        expect(out.children).toHaveLength(3)
+        expect(out.children[0].position).toEqual([0, 0, 0])
+        expect(out.children[2].position).toEqual([4, 0, 2])
+        // each copy carries the SAME source descriptor — pure trees alias freely
+        expect(out.children[0].children[0]).toBe(out.children[1].children[0])
+        expect(out.children[0].children[0].kind).toBe('box')
+    })
+
+    it('clamps count into 1..MAX_GEOMETRY_PIECES', () => {
+        const doc = (count) => ({
+            nodes: [node('c', 'geom.cube'), node('a', 'geom.array', { count })],
+            edges: [edge('c', 'geometry', 'a', 'geometry')]
+        })
+        expect(evalPort(doc(0), 'a', 'out').children).toHaveLength(1)
+        expect(evalPort(doc(99999), 'a', 'out').children).toHaveLength(256)
+    })
+
+    it('bare — or fed a non-geometry — it honestly carries nothing', () => {
+        expect(evalPort({ nodes: [node('a', 'geom.array')], edges: [] }, 'a', 'out')).toBeUndefined()
+        const junk = {
+            nodes: [node('n', 'value.number', { value: 5 }), node('a', 'geom.array')],
+            edges: [edge('n', 'out', 'a', 'geometry')]
+        }
+        expect(evalPort(junk, 'a', 'out')).toBeUndefined()
+    })
+})

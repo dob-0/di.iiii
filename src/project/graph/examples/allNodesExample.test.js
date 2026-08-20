@@ -164,6 +164,16 @@ describe('all-nodes example graph', () => {
                 const context = createNodeGraphContext({ nodes: [geo, cube], edges: [] })
                 return { node: geo, context }
             },
+            // A cube's geometry value fed in is what brings the Array alive.
+            'geom.array.out': () => {
+                const array = createNode('geom.array', { id: 'proof-array' })
+                const cube = createNode('geom.cube', { id: 'proof-array-cube' })
+                const context = createNodeGraphContext({
+                    nodes: [array, cube],
+                    edges: [createEdge('proof-array-cube', 'geometry', 'proof-array', 'geometry')]
+                })
+                return { node: array, context }
+            },
             // Feeding the value is enough — Open defaults true, so the wired
             // gate speaks; the bare-dead half is proven by the main sweep.
             'logic.gate.out': () => {

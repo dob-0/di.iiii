@@ -87,6 +87,7 @@ export const FAMILY_BY_TYPE = {
     'geom.sphere': 'make',
     'geom.plane': 'make',
     'shape.merge': 'make',
+    'geom.array': 'make',
     'geom.constructor': 'make',
     'view.text': 'make',
     // Create sits with the things it makes, not with the panels it looks like.
@@ -1715,6 +1716,27 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'geom.array': {
+        id: 'geom.array',
+        label: 'Array',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['array', 'repeat', 'copies', 'row', 'grid', 'duplicate', 'pattern'],
+        inputs: [
+            // No default on geometry: an Array repeats what arrives, and a
+            // bare Array honestly carries nothing (PASS_THROUGH_PORTS).
+            { id: 'geometry', type: 'geometry', label: 'Geometry'                    },
+            { id: 'count',    type: 'number',   label: 'Count',  default: 3          },
+            { id: 'offset',   type: 'vec3',     label: 'Offset', default: [1.5, 0, 0] },
+        ],
+        outputs: [
+            { id: 'out', type: 'geometry', label: 'Out' },
         ],
         defaultValues: {},
         render: 'hidden',
