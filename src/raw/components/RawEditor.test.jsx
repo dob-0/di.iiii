@@ -3,7 +3,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import TextPanelWindow from './TextPanelWindow.jsx'
 
 // Mock 3D deps before importing RawEditor to avoid ResizeObserver errors in jsdom
-vi.mock('./RawViewport.jsx', () => ({ default: () => <div data-testid="mock-viewport" /> }))
+const viewportMountProps = []
+vi.mock('./RawViewport.jsx', () => ({
+    default: (props) => {
+        viewportMountProps.push(props)
+        return <div data-testid="mock-viewport" />
+    }
+}))
 vi.mock('./RawGraphSurface.jsx', () => ({
     default: (props) => (
         <div data-testid="mock-graph" role="presentation" onDoubleClick={() => props.onDoubleClick?.({})}>
@@ -54,7 +60,8 @@ vi.mock('./WebcamSourcePanel.jsx', () => ({
     }
 }))
 
-import RawEditor from './RawEditor.jsx'
+import RawEditor, { WINDOW_DEFAULT_POSITIONS } from './RawEditor.jsx'
+import { getNodeType } from '../../project/nodeRegistry.js'
 
 const OUTLINER_STORAGE_KEY = 'test-outliner-ws'
 const makeWorkspaceDoc = (nodes = []) => JSON.stringify({
@@ -461,6 +468,72 @@ describe('RawEditor clear desk — no backdrop, ever', () => {
         fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Room' } })
         fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
         expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
+    })
+})
+
+describe('RawEditor chrome sweep (plan PR 1.6)', () => {
+    const KEY = 'test-chrome-sweep'
+    afterEach(() => {
+        window.localStorage.removeItem(KEY)
+        viewportMountProps.length = 0
+    })
+
+    it('Escape at the top of the stack exits the fullscreen room', () => {
+        window.localStorage.setItem(KEY, makeWorkspaceDoc([
+            { id: 'c-1', typeId: 'geom.cube', label: 'Cube', values: {} }
+        ]))
+        render(<RawEditor localStorageKey={KEY} canvasMode />)
+        fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Room' } })
+        fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
+        expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(screen.queryByRole('button', { name: '← Graph' })).toBeNull()
+    })
+
+    it('every default window position names a registered type — no phantoms', () => {
+        for (const typeId of Object.keys(WINDOW_DEFAULT_POSITIONS)) {
+            expect(getNodeType(typeId), typeId).toBeTruthy()
+        }
+    })
+
+    it('the ⋯ menu no longer offers the Streaming Prototype (eight shells in one click)', () => {
+        window.localStorage.setItem(KEY, makeWorkspaceDoc([
+            { id: 'c-1', typeId: 'geom.cube', label: 'Cube', values: {} }
+        ]))
+        render(<RawEditor localStorageKey={KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: '⋯' }))
+        expect(screen.queryByRole('button', { name: 'Streaming Prototype' })).toBeNull()
+    })
+
+    it('two Scene windows in one room show ONE sky — both viewports get the scope-resolved world', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [
+                { id: 'w1', typeId: 'universe.world', label: 'Scene', values: { bgColor: '#101010', frame: { visible: true, x: 20, y: 80, width: 300, height: 200 } } },
+                { id: 'w2', typeId: 'universe.world', label: 'Scene', values: { bgColor: '#909090', frame: { visible: true, x: 360, y: 80, width: 300, height: 200 } } }
+            ],
+            edges: [],
+            workspaceState: { liveWorldNodeIdByScope: { '': 'w2' } }
+        }))
+        render(<RawEditor localStorageKey={KEY} />)
+        const worldIds = viewportMountProps.map((props) => props.worldNode?.id).filter(Boolean)
+        expect(worldIds.length).toBeGreaterThanOrEqual(2)
+        expect(new Set(worldIds).size).toBe(1)
+        expect(worldIds[0]).toBe('w2')
+    })
+
+    it('the topbar count is THIS room, not the whole document', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [
+                { id: 'geo', typeId: 'geom.geo', label: 'Geo', values: {} },
+                { id: 'a', typeId: 'geom.cube', label: 'Cube', parentId: 'geo', values: {} },
+                { id: 'b', typeId: 'geom.cube', label: 'Cube', parentId: 'geo', values: {} }
+            ],
+            edges: [],
+            workspaceState: {}
+        }))
+        render(<RawEditor localStorageKey={KEY} />)
+        expect(screen.getByRole('button', { name: '1 nodes' })).toBeTruthy()
     })
 })
 
