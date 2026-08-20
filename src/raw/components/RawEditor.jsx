@@ -1397,9 +1397,14 @@ export default function RawEditor({
                 <TimelinePanelWindow
                     node={node}
                     values={resolvedValues}
+                    clockNow={clockNow}
                     onChange={(clips) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId: node.id, patch: { values: { ...node.values, clips } } }
+                    })}
+                    onTransport={(patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId: node.id, patch: { values: { ...node.values, ...patch } } }
                     })}
                 />
             )

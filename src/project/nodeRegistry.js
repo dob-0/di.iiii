@@ -1337,16 +1337,27 @@ export const NODE_TYPES = {
         category: 'view',
         runtime: 'any',
         singleton: false,
-        // Ports stripped per review (dead-port rule): no runtime carries
-        // playhead/fps in or frame/clip out yet. Wire via nodeGraphRuntime
-        // when the data is real; the panel keeps its own playhead locally.
+        // Inputs still stripped per the dead-port rule; the OUTPUTS became
+        // real with the transport (2026-08-20): playhead/playing derive from
+        // the document clock in the colocated runtime, so every window and
+        // /out agree about where the show stands.
         inputs: [],
-        outputs: [],
+        outputs: [
+            { id: 'playhead', type: 'number',  label: 'Playhead' },
+            { id: 'playing',  type: 'boolean', label: 'Playing'  },
+        ],
         // Clips are integer frames throughout — see src/project/timeline/
         // timelineCore.js for why seconds are not stored anywhere.
         defaultValues: {
             fps: 60,
             clips: [],
+            // The transport. playheadFrame is where the paused head stands;
+            // playing + playFromFrame + playStartClockMs derive the moving
+            // head from the document clock (see the colocated runtime).
+            playing: false,
+            playheadFrame: 0,
+            playFromFrame: 0,
+            playStartClockMs: 0,
         },
         defaultFrame: { width: 900, height: 260 },
         render: 'panel-2d',

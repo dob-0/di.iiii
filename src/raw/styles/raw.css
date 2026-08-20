@@ -4185,6 +4185,21 @@
     letter-spacing: 0.04em;
 }
 
+.raw-timeline-transport {
+    background: none;
+    border: 1px solid #2c3a4d;
+    border-radius: 4px;
+    color: #4f9eff;
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1;
+    padding: 4px 8px;
+}
+
+.raw-timeline-transport:hover {
+    border-color: #4f9eff;
+}
+
 .raw-timeline-readout {
     color: #4f9eff;
     font-variant-numeric: tabular-nums;

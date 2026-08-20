@@ -583,12 +583,21 @@ export const NODE_ANATOMY = {
         alsoNeeds: null
     },
     'view.timeline': {
-        computes: null,
+        computes: {
+            file: 'src/project/nodes/view.timeline/runtime.js',
+            fromLine: 1,
+            toLine: 15,
+            answers: [
+                'playing',
+                'playhead'
+            ],
+            sharedWith: []
+        },
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
             fromLine: 1395,
-            toLine: 1406,
+            toLine: 1411,
             sharedWith: []
         },
         alsoNeeds: null
@@ -609,8 +618,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1411,
-            toLine: 1419,
+            fromLine: 1416,
+            toLine: 1424,
             sharedWith: []
         },
         alsoNeeds: null
@@ -620,8 +629,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1420,
-            toLine: 1422,
+            fromLine: 1425,
+            toLine: 1427,
             sharedWith: []
         },
         alsoNeeds: null
@@ -631,8 +640,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1423,
-            toLine: 1436,
+            fromLine: 1428,
+            toLine: 1441,
             sharedWith: []
         },
         alsoNeeds: null
@@ -642,8 +651,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1437,
-            toLine: 1447,
+            fromLine: 1442,
+            toLine: 1452,
             sharedWith: []
         },
         alsoNeeds: null
@@ -964,7 +973,7 @@ export const DOORWAY_PLACE = {
 export const SOURCE_FINGERPRINTS = {
     'src/project/graph/nodeGraphRuntime.js': '6db6899e',
     'src/raw/components/RawViewport.jsx': '79724ac5',
-    'src/raw/components/RawEditor.jsx': '279f1dc2',
+    'src/raw/components/RawEditor.jsx': '3213bfc3',
     'src/project/nodes/geom.array/runtime.js': '6958f9d9',
     'src/project/nodes/logic.compare/runtime.js': 'ad9e4fb8',
     'src/project/nodes/logic.gate/runtime.js': 'edb3f61d',
@@ -972,5 +981,6 @@ export const SOURCE_FINGERPRINTS = {
     'src/project/nodes/media.audio/runtime.js': '99d3c007',
     'src/project/nodes/media.video/runtime.js': 'c059ce96',
     'src/project/nodes/signal.lag/runtime.js': '8a4020f7',
-    'src/project/nodes/value.noise/runtime.js': '194f9400'
+    'src/project/nodes/value.noise/runtime.js': '194f9400',
+    'src/project/nodes/view.timeline/runtime.js': '453edf40'
 }

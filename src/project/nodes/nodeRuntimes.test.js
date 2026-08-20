@@ -234,3 +234,30 @@ describe('media.audio levels', () => {
         expect(evaluateNodeOutput(sound, 'mid', silent)).toBe(0)
     })
 })
+
+describe('view.timeline transport', () => {
+    const timeline = (values) => node('t', 'view.timeline', { fps: 60, clips: [], ...values })
+
+    it('paused, the head stands where it was left', () => {
+        const doc = { nodes: [timeline({ playing: false, playheadFrame: 90 })], edges: [] }
+        const context = createNodeGraphContext(doc, { now: 99999 })
+        expect(evaluateNodeOutput(doc.nodes[0], 'playhead', context)).toBe(90)
+        expect(evaluateNodeOutput(doc.nodes[0], 'playing', context)).toBe(false)
+    })
+
+    it('playing, the head derives from the document clock — every window agrees', () => {
+        const values = { playing: true, playFromFrame: 60, playStartClockMs: 10000, fps: 60 }
+        const doc = { nodes: [timeline(values)], edges: [] }
+        // 2.5 seconds after the press, at 60fps: 60 + 150 frames
+        const context = createNodeGraphContext(doc, { now: 12500 })
+        expect(evaluateNodeOutput(doc.nodes[0], 'playhead', context)).toBe(210)
+        expect(evaluateNodeOutput(doc.nodes[0], 'playing', context)).toBe(true)
+    })
+
+    it('never runs backwards past its anchor on a clock skew', () => {
+        const values = { playing: true, playFromFrame: 60, playStartClockMs: 10000 }
+        const doc = { nodes: [timeline(values)], edges: [] }
+        const context = createNodeGraphContext(doc, { now: 500 })
+        expect(evaluateNodeOutput(doc.nodes[0], 'playhead', context)).toBe(60)
+    })
+})

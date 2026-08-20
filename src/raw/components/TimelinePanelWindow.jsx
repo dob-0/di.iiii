@@ -27,15 +27,28 @@ const laneSpan = (clips, fps) =>
 
 const pct = (value, span) => `${(value / span) * 100}%`
 
-export default function TimelinePanelWindow({ node, values = null, onChange = null }) {
+export default function TimelinePanelWindow({ node, values = null, onChange = null, onTransport = null, clockNow = 0 }) {
     const resolved = values ? { ...node.values, ...values } : node.values || {}
     const fps = Number(resolved.fps) || 60
     const clips = useMemo(() => sortByStart(resolved.clips || []), [resolved.clips])
 
     const [selectedId, setSelectedId] = useState(null)
-    const [playhead, setPlayhead] = useState(0)
+    const [playhead, setPlayhead] = useState(() => Math.max(0, Number(node.values?.playheadFrame) || 0))
     const [drag, setDrag] = useState(null)
     const laneRef = useRef(null)
+    const lastScrubRef = useRef(null)
+
+    // The transport. Paused, the head is the local scrub state; playing, it
+    // derives from the DOCUMENT clock, so a second window and /out watch the
+    // same head move. Writes go through node.values (onTransport) — pressing
+    // Play is an authored act every window must agree about.
+    const playing = resolved.playing === true
+    const canTransport = typeof onTransport === 'function'
+    const liveFrame = playing
+        ? Math.max(0, (Number(resolved.playFromFrame) || 0)
+            + Math.max(0, clockNow - (Number(resolved.playStartClockMs) || 0)) / 1000 * fps)
+        : playhead
+    const displayFrame = Math.round(liveFrame)
 
     const span = laneSpan(clips, fps)
     const analysis = useMemo(() => analyseTimeline(clips), [clips])
@@ -63,6 +76,7 @@ export default function TimelinePanelWindow({ node, values = null, onChange = nu
             const frame = frameAtPointer(event)
             if (drag.mode === 'scrub') {
                 setPlayhead(frame)
+                lastScrubRef.current = frame
                 return
             }
             if (!editable) return
@@ -72,7 +86,17 @@ export default function TimelinePanelWindow({ node, values = null, onChange = nu
                 onChange(trimClip(clips, drag.id, drag.mode, frame))
             }
         }
-        const up = () => setDrag(null)
+        const up = () => {
+            // A finished scrub is a statement about WHERE the show stands —
+            // written to values so wires and other windows see it. Scrubbing
+            // while playing re-anchors the run from the new frame.
+            if (drag.mode === 'scrub' && canTransport && lastScrubRef.current !== null) {
+                if (playing) onTransport({ playFromFrame: lastScrubRef.current, playStartClockMs: clockNow })
+                else onTransport({ playheadFrame: lastScrubRef.current })
+                lastScrubRef.current = null
+            }
+            setDrag(null)
+        }
 
         window.addEventListener('pointermove', move)
         window.addEventListener('pointerup', up)
@@ -80,7 +104,7 @@ export default function TimelinePanelWindow({ node, values = null, onChange = nu
             window.removeEventListener('pointermove', move)
             window.removeEventListener('pointerup', up)
         }
-    }, [drag, clips, editable, onChange, frameAtPointer])
+    }, [drag, clips, editable, onChange, frameAtPointer, canTransport, clockNow, onTransport, playing])
 
     const startDrag = (event, mode, clip) => {
         event.stopPropagation()
@@ -112,7 +136,20 @@ export default function TimelinePanelWindow({ node, values = null, onChange = nu
         <div className="raw-timeline-panel">
             <header className="raw-timeline-bar">
                 <span className="raw-timeline-title">{resolved.title || node.label || 'Timeline'}</span>
-                <span className="raw-timeline-readout">{formatFrames(playhead, fps)}</span>
+                {canTransport && (
+                    <button
+                        type="button"
+                        className="raw-timeline-transport"
+                        aria-label={playing ? 'Pause' : 'Play'}
+                        onClick={() => {
+                            if (playing) onTransport({ playing: false, playheadFrame: displayFrame })
+                            else onTransport({ playing: true, playFromFrame: displayFrame, playStartClockMs: clockNow })
+                        }}
+                    >
+                        {playing ? '❚❚' : '▶'}
+                    </button>
+                )}
+                <span className="raw-timeline-readout">{formatFrames(displayFrame, fps)}</span>
                 <span className="raw-timeline-meta">
                     {clips.length} clips · {formatFrames(analysis.total, fps)} · {fps}fps
                 </span>
@@ -183,7 +220,7 @@ export default function TimelinePanelWindow({ node, values = null, onChange = nu
                     />
                 ))}
 
-                <div className="raw-timeline-playhead" style={{ left: pct(playhead, span) }} />
+                <div className="raw-timeline-playhead" style={{ left: pct(displayFrame, span) }} />
             </div>
 
             <footer className="raw-timeline-tools">
@@ -201,15 +238,15 @@ export default function TimelinePanelWindow({ node, values = null, onChange = nu
                         let n = clips.length + 1
                         while (used.has(`clip-${n}`)) n += 1
                         const id = `clip-${n}`
-                        apply(sortByStart([...clips, { id, at: playhead, dur: fps }]))
+                        apply(sortByStart([...clips, { id, at: displayFrame, dur: fps }]))
                         setSelectedId(id)
                     }}
                 >add clip</button>
                 <button
                     type="button"
                     className="raw-timeline-tool"
-                    disabled={!editable || !selected || !canSplitClip(clips, selectedId, playhead)}
-                    onClick={() => apply(splitClip(clips, selectedId, playhead))}
+                    disabled={!editable || !selected || !canSplitClip(clips, selectedId, displayFrame)}
+                    onClick={() => apply(splitClip(clips, selectedId, displayFrame))}
                 >razor</button>
                 <button
                     type="button"
