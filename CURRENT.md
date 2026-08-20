@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- The defect wave from the 08-21 deep audit — nine verified fixes plus the rename verb
+- The doors point where they say
 
 Full detail: `PROGRESS.md`.
 
