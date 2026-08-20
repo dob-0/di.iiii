@@ -23,6 +23,14 @@ const SOURCES = {
     'src/raw/components/RawViewport.jsx': () => import('../components/RawViewport.jsx?raw')
 }
 
+// Colocated runtimes (src/project/nodes/<typeId>/runtime.js) are each a few
+// hundred bytes and each its own lazy chunk — the glob keeps the map honest
+// as types migrate out of the switch, with no hand-kept list to rot.
+const COLOCATED = import.meta.glob('../../project/nodes/*/runtime.js', { query: '?raw' })
+for (const [globPath, load] of Object.entries(COLOCATED)) {
+    SOURCES[globPath.replace('../../project/nodes/', 'src/project/nodes/')] = load
+}
+
 // The sheet may show a longer slice's location but not quote it — eighty lines
 // in a 400px window is a scrollbar wearing a code block.
 export const MAX_QUOTED_LINES = 80

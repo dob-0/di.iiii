@@ -205,3 +205,19 @@ describe('geom.array', () => {
         expect(evalPort(junk, 'a', 'out')).toBeUndefined()
     })
 })
+
+describe('media.video frame', () => {
+    it('reads the live texture the rendering window published', () => {
+        const video = node('v', 'media.video')
+        const fakeTexture = { isTexture: true }
+        const liveOutputs = new Map([['v:frame', fakeTexture]])
+        const context = createNodeGraphContext({ nodes: [video], edges: [] }, { liveOutputs })
+        expect(evaluateNodeOutput(video, 'frame', context)).toBe(fakeTexture)
+    })
+
+    it('is null — no frame, not a frozen one — where nothing renders the video', () => {
+        const video = node('v', 'media.video')
+        const context = createNodeGraphContext({ nodes: [video], edges: [] })
+        expect(evaluateNodeOutput(video, 'frame', context)).toBe(null)
+    })
+})

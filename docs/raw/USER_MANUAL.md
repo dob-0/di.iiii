@@ -210,8 +210,8 @@ same elapsed time from it.
 
 ## The Monitor — watch a wire
 
-Place a **Monitor** and wire any texture into its Source (a Webcam's Frame,
-for now). The window shows the feed live while you keep wiring — the viewer
+Place a **Monitor** and wire any texture into its Source — a Webcam's Frame,
+or a Video's. The window shows the feed live while you keep wiring — the viewer
 TouchDesigner puts on every tile, as one window you place where you want it.
 It only watches: rooms have the World window, the Room button, and `/out`.
 
