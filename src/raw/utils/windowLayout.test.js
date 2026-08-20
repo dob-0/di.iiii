@@ -88,6 +88,43 @@ describe('windowLayout', () => {
         }))
     })
 
+    it('places a minimized window by the bar it actually is, not by the height it would open to', () => {
+        // The reported shape: a collapsed bar authored low on the surface, whose
+        // stored height is a full panel. Clamped by the stored height it was
+        // dragged hundreds of pixels up, onto the cards. 810 - 56 - 132 = 622,
+        // so y: 640 lands at 622 rather than at 810 - 430 - 132 = 248.
+        expect(clampWindowFrame({
+            x: 24,
+            y: 640,
+            width: 300,
+            height: 430,
+            minimized: true
+        }, {
+            allowOverflowLeft: true,
+            allowOverflowTop: true,
+            viewportWidth: 1440,
+            viewportHeight: 810
+        })).toEqual(expect.objectContaining({
+            y: 622,
+            // the authored height survives, so expanding restores the real panel
+            height: 430
+        }))
+    })
+
+    it('still clamps an OPEN window by its full height', () => {
+        expect(clampWindowFrame({
+            x: 24,
+            y: 640,
+            width: 300,
+            height: 430
+        }, {
+            allowOverflowLeft: true,
+            allowOverflowTop: true,
+            viewportWidth: 1440,
+            viewportHeight: 810
+        })).toEqual(expect.objectContaining({ y: 248, height: 430 }))
+    })
+
     it('allows view windows to overflow left while still clamping top and right edges', () => {
         expect(clampWindowFrame({
             x: -120,
