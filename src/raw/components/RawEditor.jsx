@@ -44,7 +44,8 @@ import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/n
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
 import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
-import { buildStudioProjectPath } from '../../studio/utils/studioRouting.js'
+import { buildStudioProjectPath, buildStudioSpacesPath } from '../../studio/utils/studioRouting.js'
+import { buildWikiPath } from '../../utils/spaceRouting.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
@@ -1806,6 +1807,10 @@ export default function RawEditor({
                                                 Open in Studio
                                             </button>
                                         )}
+                                        {/* The platform exits — the canvas was a
+                                            sealed room before the doors audit. */}
+                                        <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildStudioSpacesPath()) }}>Spaces</button>
+                                        <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildWikiPath()) }}>Wiki</button>
                                         {/* Configuration, not work — the ⋯ is
                                             where the audit sent it. */}
                                         <div className="raw-topbar-scale-control">
@@ -1919,9 +1924,17 @@ export default function RawEditor({
                     activeMarkerTypeIds={activeMarkerTypeIds}
                 />
                 {/* Zen's three residents are surface, nodes, wordmark — this is
-                    the wordmark. Ambient, non-interactive, kept when chrome is
-                    summoned too. */}
-                <div className="raw-surface-wordmark" aria-hidden="true">di<span>.</span>iiii</div>
+                    the wordmark. Ambient, kept when the toolbar is summoned too.
+                    It became the way home in the 2026-08-21 doors audit: the
+                    canvas was a sealed room (no nav, no path back to the
+                    platform), and a wordmark that links home is the one exit
+                    that adds no furniture. Same resting look, quiet hover. */}
+                <a
+                    className="raw-surface-wordmark"
+                    href="/"
+                    aria-label="di.iiii — home"
+                    onClick={(e) => { e.preventDefault(); navigateToRawPath('/') }}
+                >di<span>.</span>iiii</a>
                 {dropState.over && (
                     <div className="raw-drop-veil" aria-hidden="true">
                         <span>drop to bring it in</span>

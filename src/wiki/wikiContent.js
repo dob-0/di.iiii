@@ -796,7 +796,8 @@ export const WIKI_ARTICLES = [
             'That panel creates nodes and summons everything else from the same list. "Help", "Chat", "Outliner", any window you closed, and "Show the toolbar" to bring it back. Summoning rows sit at the top, so with the toolbar hidden they are never more than a keystroke away.',
             'Zoom still works as it always did: the wheel on a computer, and on a phone the zoom buttons stay in the corner — faded until you reach for them, because on a touch screen they are the only way to zoom.',
             'The bare start lasts exactly as long as the canvas is bare: the moment your first node lands, the toolbar appears on its own — the Scene button and the node count belong on screen once there is a scene to look at. A toolbar you explicitly turned off stays off; only the automatic bare start lifts itself.',
-            'Each canvas remembers its own choice, on this device. A canvas you already arranged keeps its toolbar; only new ones start bare. Turning the toolbar on or off on one canvas never changes another, and never changes what anyone else sees.'
+            'Each canvas remembers its own choice, on this device. A canvas you already arranged keeps its toolbar; only new ones start bare. Turning the toolbar on or off on one canvas never changes another, and never changes what anyone else sees.',
+            'The faint di.iiii wordmark at the bottom is the way home — it links to the landing page. With the toolbar up, the ⋯ menu also offers Spaces and the Wiki, so the canvas is never a room without doors.'
         ],
         tags: ['raw', 'canvas', 'workspace', 'zen', 'minimal', 'palette', 'shortcuts', 'ui', 'starter'],
         updated: '2026-08-21'
