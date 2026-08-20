@@ -176,7 +176,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
                 </form>
             ) : (
                 <button type="button" className="spp-new" disabled={busy} onClick={() => setCreating(true)}>
-                    ＋ New project
+                    + New project
                 </button>
             )}
             {status && <div className="spp-status">{status}</div>}

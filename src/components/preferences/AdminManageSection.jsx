@@ -537,7 +537,7 @@ function SpaceDetail({
                         value={draftProject}
                         onChange={(e) => setDraftProject(e.target.value)}
                     />
-                    <button type="submit" className="toggle-button" disabled={!draftProject.trim()}>Add project</button>
+                    <button type="submit" className="toggle-button" disabled={!draftProject.trim()}>Create project</button>
                 </form>
             </ModuleSection>
 

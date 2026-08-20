@@ -27,15 +27,25 @@ true under the current dictionary.
 
 Two rows added to `docs/ai/known-fixes.md`.
 
-**Deliberately not done here:**
+## 2026-08-21 — the last two create buttons, on the owner's call to fix all of them
 
-- `AdminManageSection.jsx` ("Add project") and `StudioProjectsPanel.jsx` ("＋ New project")
-  were in the audit's list but are already qualified about level. Changing them is verb
-  and glyph tidying, not the defect, so they were left alone.
+- **`AdminManageSection.jsx`: "Add project" → "Create project".** NOT the audit's suggested
+  "+ New project": that console uses bare verbs throughout — Create space, Save, Cancel,
+  Rename, Search — and no `+` anywhere, so a plus would have broken its register. "Create
+  project" now matches its own "Create space" in the New Space form. Seen on screen.
+- **`StudioProjectsPanel.jsx`: `＋ New project` → `+ New project`.** The fullwidth `＋` was
+  the only one in the whole studio tree; every sibling create button uses ASCII. **Not seen
+  on screen** — that panel does not surface from any route reachable with the local dev
+  data, and I would not write test projects into another session's dev database to force
+  it. The same string renders correctly in `StudioHub`, which was verified, so the glyph
+  itself is proven; its placement in that panel is not.
+
+**Not done here:**
+
 - `scripts/works-boundary.mjs` — the one place the repo states `project ⊇ space`, the exact
   inverse of the dictionary — is **not on `dev`**. It lives only on
-  `feat/clean-local-artifact`, which is checked out in another worktree. Still owed, on
-  that branch or after it merges.
+  `feat/clean-local-artifact`, which is checked out in another worktree, so the fix went to
+  its own branch `fix/works-boundary-wording` rather than into someone else's in-flight work.
 - The audit's larger finding is untouched and is the real one: production runs **12 spaces,
   26 projects, median 1, mode 1 — 8 of 12 spaces hold exactly one project**, and `wcc`, the
   one genuine multi, already fakes nesting with 10 portal entities inside its `main`
