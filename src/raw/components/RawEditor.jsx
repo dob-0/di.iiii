@@ -1760,7 +1760,15 @@ export default function RawEditor({
             {state.loading ? <div className="raw-overlay-message">Loading project…</div> : null}
             {state.loadError ? <div className="raw-overlay-message is-error">{state.loadError}</div> : null}
             {visibleSelection && (
-                <button type="button" className="raw-delete-fab" onClick={handleDeleteSelected}>
+                <button
+                    type="button"
+                    className="raw-delete-fab"
+                    // The phone rule rides this: Delete sits just above the
+                    // docked sheet, not top-right where Android notification
+                    // banners steal the tap (measured on the S24, 2026-08-20).
+                    style={{ '--raw-sheet-inset': `${graphBottomInset}px` }}
+                    onClick={handleDeleteSelected}
+                >
                     Delete
                 </button>
             )}
