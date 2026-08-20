@@ -191,6 +191,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('circle', 'geom.circle', { label: 'Circle', col: 3, row: 14, values: { position: [-5.5, 0.5, -2] } })
     add('go', 'view.button', { label: 'Go', col: 4, row: 0 })
     add('keys', 'device.keyboard', { label: 'Keyboard', col: 4, row: 1 })
+    add('midiOut', 'device.midi.out', { label: 'MIDI Out', col: 4, row: 2 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
@@ -427,6 +428,13 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // chosen key samples the sine.
         wire('go', 'presses', 'counter', 'step'),
         wire('keys', 'pressed', 'hold', 'sample'),
+
+        // The desk's hand on a cable: the comparator's verdict holds the
+        // note; the sine rides out as CC. The wiring shows the lanes without
+        // pretending hardware is attached.
+        wire('compare', 'greater', 'midiOut', 'trigger'),
+        wire('numB', 'out', 'midiOut', 'note'),
+        wire('sin', 'out', 'midiOut', 'value'),
 
         // A wire OUT of a container — new on 2026-08-19, and the thing that
         // used to be impossible: every container declared zero outputs, so

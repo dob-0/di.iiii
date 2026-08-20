@@ -769,6 +769,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-08'
     },
     {
+        id: 'midi-out-node',
+        category: 'Editing',
+        title: 'MIDI Out: the graph plays your gear',
+        summary: 'Wire numbers out to a synth, a sampler, or a lighting desk that speaks MIDI.',
+        body: [
+            'Add a MIDI Out node from the palette. It asks the browser for MIDI access and sends to every connected device; its Status port says what it is doing, so a Text panel wired to Status is an honest meter.',
+            'Notes: while Trigger is on, the note is held. The moment Trigger rises the node strikes Note at Velocity; the moment it falls it releases exactly the note it struck, even if Note has moved since. A Button, a Compare, a Toggle — anything true-or-false — makes a good Trigger.',
+            'A Trigger that stays on but keeps changing — MIDI In\'s rising count, a Counter — re-strikes on every change. That is the same idiom the rest of the desk uses: something happened because the number changed.',
+            'Knobs: whenever Value changes it leaves as a control change on the CC number. Wire an Oscillator through Range into Value and a filter sweeps itself. Nothing is sent while Value merely stays what it was.',
+            'Channel picks the MIDI channel (1-16). This needs Chrome or Edge; Safari and Firefox have no Web MIDI and Status says so instead of sitting blank. Devices plugged in later appear without a reload.'
+        ],
+        tags: ['raw', 'nodes', 'midi', 'device', 'synth', 'lighting', 'performance'],
+        updated: '2026-08-21'
+    },
+    {
         id: 'raw-zen-workspace',
         category: 'Editing',
         title: 'A canvas with nothing on it',

@@ -17,6 +17,7 @@ import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import VideoFrameFeed from './VideoFrameFeed.jsx'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
+import MidiOutFeed from './MidiOutFeed.jsx'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
@@ -1120,6 +1121,9 @@ export default function RawEditor({
         handleLiveOutputChange(nodeId, 'pressed', pressed)
         handleLiveOutputChange(nodeId, 'count', count)
     }, [handleLiveOutputChange])
+    const handleMidiOutStatus = useCallback((nodeId, status) => {
+        handleLiveOutputChange(nodeId, 'status', status)
+    }, [handleLiveOutputChange])
     const handleSoundOutputChange = useCallback((nodeId, levels) => {
         handleLiveOutputChange(nodeId, 'volume', levels?.volume ?? null)
         handleLiveOutputChange(nodeId, 'low', levels?.low ?? null)
@@ -2048,6 +2052,16 @@ export default function RawEditor({
                 .filter((node) => node.typeId === 'device.keyboard')
                 .map((node) => (
                     <KeyboardFeed key={node.id} node={node} onKeyState={handleKeyState} />
+                ))}
+            {nodes
+                .filter((node) => node.typeId === 'device.midi.out')
+                .map((node) => (
+                    <MidiOutFeed
+                        key={node.id}
+                        node={node}
+                        inputs={evaluateNodeInputs(node, graphContext)}
+                        onStatus={handleMidiOutStatus}
+                    />
                 ))}
 
             {/* Fullscreen room — takes over the full viewport. Any scope,
