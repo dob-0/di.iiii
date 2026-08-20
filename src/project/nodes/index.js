@@ -5,6 +5,7 @@ import { computeOutput as logicSwitch } from './logic.switch/runtime.js'
 import { computeOutput as mediaAudioLevels } from './media.audio/runtime.js'
 import { computeOutput as mediaVideoFrame } from './media.video/runtime.js'
 import { computeOutput as signalLag } from './signal.lag/runtime.js'
+import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
 import { computeOutput as valueNoise } from './value.noise/runtime.js'
 
 // Colocated node runtimes — the lookup-first side of the registry plan.
@@ -23,4 +24,5 @@ export const NODE_RUNTIMES = new Map([
     ['media.video', mediaVideoFrame],
     ['signal.lag', signalLag],
     ['value.noise', valueNoise],
+    ['view.timeline', viewTimeline],
 ])

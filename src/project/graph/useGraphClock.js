@@ -5,7 +5,12 @@ import { useEffect, useState } from 'react'
 // Lag glides between answers; Noise wanders; both read context.now.
 export const CLOCK_DRIVEN_TYPE_IDS = new Set(['time', 'signal.lag', 'value.noise'])
 
-export const hasClockNode = (nodes = []) => nodes.some((node) => CLOCK_DRIVEN_TYPE_IDS.has(node?.typeId))
+export const hasClockNode = (nodes = []) => nodes.some((node) => (
+    CLOCK_DRIVEN_TYPE_IDS.has(node?.typeId)
+    // A PLAYING timeline is clock-driven; a paused one costs nothing. The
+    // per-node condition keeps the rAF gate honest both ways.
+    || (node?.typeId === 'view.timeline' && node?.values?.playing === true)
+))
 
 // Drives the `time` node. Returns a monotonic millisecond clock that advances
 // once per animation frame, or a constant 0 when nothing needs it.
