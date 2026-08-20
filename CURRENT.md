@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- The canvas gets its doors
+- Links say where they go, and copy what they mean
 
 Full detail: `PROGRESS.md`.
 
