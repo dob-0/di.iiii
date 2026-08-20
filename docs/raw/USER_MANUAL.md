@@ -13,9 +13,9 @@ graph value into it.
 
 Visitors should not need to understand node authoring first.
 
-1. Open the public space or a prepared Raw project.
-2. Look at `World` for the scene and `View` for the interface.
-3. Open `Help` if you want the current surface explained in plain steps.
+1. Open the public space or a prepared project.
+2. Drag to look around the scene; tap panels to read them.
+3. Open `Help` for the moves in plain steps.
 
 ### For creators
 
@@ -25,7 +25,7 @@ Creators should start with one visible result and one connection.
 2. Start with a visible node like `Text`, `Image`, `Cube`, or `Sphere`.
 3. Add one graph value node and wire it into that visible node.
 
-## The desk and the room
+## The canvas and the scene
 
 The desk is clear — always. Cards on flat paper, nothing behind them. The
 room is a view you open, three ways:
@@ -42,10 +42,7 @@ Scene nodes (Cube, Sphere, Plane, Geo, a Light inside a place) stand in the
 room; panels open as floating windows; value and math nodes drive both,
 through wires.
 
-## What is different in Raw (vs Beta)
-
-Raw and Beta are independent forks, not shared components. A fix in one does not
-appear in the other.
+## Three rules the node editor lives by
 
 - **No singletons anywhere.** Every node type nests freely — you can put a world
   inside a world inside a world. There is no "you already have one of these"
@@ -78,32 +75,27 @@ inside shows only what you placed in that container.
 
 ### First text panel
 
-1. Open `View`.
-2. Create a `Text` node.
-3. Enter text in the `Content` field.
-4. Confirm the panel appears in View.
+1. Double-click the canvas and type `Text`.
+2. Enter text in the `Content` field — the panel window shows it live.
 
-### First world object
+### First scene object
 
-1. Open `World`.
-2. Create a `Cube` node.
-3. Change its color and size in the inspector.
-4. Drag it in the viewport to reposition it.
+1. Double-click the canvas and type `Cube`.
+2. Change its colour and size in the inspector.
+3. Open the scene (type `Full screen` in the palette, or place a `Scene`
+   node) and drag the cube to reposition it.
 
 ### First connection
 
-1. Create a `Text` node in `View`.
-2. Open `Graph`.
-3. Create a `String` value node.
-4. Connect the string output into the text node's `content` input.
-5. Edit the string value and confirm the text panel updates.
+1. Make a `Text` node and a `String` node.
+2. Drag the string's output port onto the text node's `Content` input.
+3. Edit the string value and watch the panel follow.
 
 ### First animation
 
-1. Open `Graph`.
-2. Create a `Time` node and a `Number` or math node.
-3. Wire `sin` into something visible — a cube's position, a color channel.
-4. It moves on its own; delete the Time node and the clock stops.
+1. Make a `Time` node and wire `sin` into something visible — a cube's
+   position, a colour channel.
+2. It moves on its own; delete the Time node and the clock stops.
 
 ## Finding out what a node is
 
