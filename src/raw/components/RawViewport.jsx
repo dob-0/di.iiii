@@ -10,7 +10,7 @@ import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
-import { getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
+import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
 import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
@@ -329,6 +329,28 @@ export function renderNodeBody(node, values, assetMap = null) {
                     </mesh>
                 </group>
             )
+        case 'light.point':
+            // The lamp half of the old dual Light, standing on its own two
+            // feet: a real point light wherever it is — root included, which
+            // is exactly what the legacy node refused to be.
+            return (
+                <group>
+                    <pointLight
+                        color={asColor(values.color, '#ffe9c4')}
+                        intensity={Math.max(0, asFiniteNumber(values.intensity, 6))}
+                        distance={0}
+                        decay={2}
+                    />
+                    <mesh>
+                        <sphereGeometry args={[0.07, 12, 12]} />
+                        <meshStandardMaterial
+                            color={asColor(values.color, '#ffe9c4')}
+                            emissive={asColor(values.color, '#ffe9c4')}
+                            emissiveIntensity={2}
+                        />
+                    </mesh>
+                </group>
+            )
         case 'world.camera': {
             // The eye you can pick up: a small housing with a lens cone aimed
             // at its Look At. Only INACTIVE cameras are drawn — the active one
@@ -551,9 +573,9 @@ function SceneContent({
         }
         return byParent
     }, [document.nodes, graphContext])
-    const lightNode = useMemo(
-        () => pickActiveTypeNode(document.nodes, 'world.light', { scopeId, activeMap: document.workspaceState?.activeNodeIdByTypeScope }),
-        [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
+    const resolvedLight = useMemo(
+        () => resolveSceneLighting(document, graphContext, { scopeId }),
+        [document, graphContext, scopeId]
     )
     // The authored eye: the scope's active Camera node drives the view every
     // frame (position, Look At, FOV — all wireable, so a Time→Sin dolly works
@@ -581,7 +603,6 @@ function SceneContent({
         () => pickActiveTypeNode(document.nodes, 'world.grid', { scopeId, activeMap: document.workspaceState?.activeNodeIdByTypeScope }),
         [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
     )
-    const resolvedLight = lightNode ? evaluateNodeInputs(lightNode, graphContext) : null
     const resolvedGrid = gridNode ? evaluateNodeInputs(gridNode, graphContext) : null
     const [draggingNodeId, setDraggingNodeId] = useState(null)
     // Orbit yields while a node is being dragged: the controls listen on the

@@ -112,6 +112,8 @@ export const FAMILY_BY_TYPE = {
     'math.clamp': 'numbers',
     // the scene — light, sky, grid, scenes, desks, containers
     'world.light': 'room',
+    'world.environment': 'room',
+    'light.point': 'room',
     'world.camera': 'room',
     'world.background': 'room',
     'world.grid': 'room',
@@ -1615,30 +1617,69 @@ export const NODE_TYPES = {
     // WORLD — nodes that define the space itself
     // -----------------------------------------------------------------------
 
+    // RETIRED FROM THE PALETTE (2026-08-20, the Light split): one node was
+    // two things — per-scope ambient/directional settings AND a placeable
+    // lamp, deciding which by whether it had a parent. New documents use
+    // `world.environment` (the settings) and `light.point` (the lamp). This
+    // type keeps BOTH behaviours untouched so every existing document renders
+    // exactly as it did; it is simply never offered again.
     'world.light': {
         id: 'world.light',
         label: 'Light',
         category: 'world',
         runtime: 'any',
+        paletteHidden: true,
         inputs: [
-            { id: 'ambientColor',           type: 'color',  label: 'Ambient Color',     default: '#ffffff'  },
+            { id: 'ambientColor',           type: 'color',  label: 'Ambient Colour',     default: '#ffffff'  },
             { id: 'ambientIntensity',        type: 'number', label: 'Ambient Intensity', default: 0.8        },
-            { id: 'directionalColor',        type: 'color',  label: 'Dir Color',         default: '#fff7ea'  },
-            { id: 'directionalIntensity',    type: 'number', label: 'Dir Intensity',     default: 1.05       },
-            { id: 'directionalPosition',     type: 'vec3',   label: 'Dir Position',      default: [8, 12, 4] },
-            // The point-light half: what a Light IS when it stands inside a
-            // container ("collect what you need — object, light…"). The
-            // ambient/directional fields above stay the per-scope settings
-            // they always were.
-            { id: 'color',     type: 'color',  label: 'Color',     default: '#ffe9c4'  },
+            { id: 'directionalColor',        type: 'color',  label: 'Sun Colour',         default: '#fff7ea'  },
+            { id: 'directionalIntensity',    type: 'number', label: 'Sun Intensity',      default: 1.05       },
+            { id: 'directionalPosition',     type: 'vec3',   label: 'Sun Position',       default: [8, 12, 4] },
+            { id: 'color',     type: 'color',  label: 'Colour',    default: '#ffe9c4'  },
             { id: 'intensity', type: 'number', label: 'Intensity', default: 6          },
             { id: 'position',  type: 'vec3',   label: 'Position',  default: [0, 1.6, 0] },
         ],
         outputs: [],
         defaultValues: {},
-        // spatial so it can STAND somewhere: draggable, contained, carried by
-        // its parent. Unparented at root it draws nothing (see renderNodeBody)
-        // so every existing document looks exactly as it did.
+        render: 'spatial-3d',
+    },
+
+    // The scene's lighting SETTINGS, and only that: ambient wash + one sun.
+    // TD's Environment Light, Blender's World + Sun. One per scope does the
+    // work; the ● toggle picks the active one when several stand together.
+    'world.environment': {
+        id: 'world.environment',
+        label: 'Environment',
+        category: 'world',
+        runtime: 'any',
+        keywords: ['environment', 'lighting', 'ambient', 'sun', 'mood', 'wash', 'daylight'],
+        inputs: [
+            { id: 'ambientColor',        type: 'color',  label: 'Ambient Colour',    default: '#ffffff'  },
+            { id: 'ambientIntensity',    type: 'number', label: 'Ambient Intensity', default: 0.8        },
+            { id: 'directionalColor',    type: 'color',  label: 'Sun Colour',        default: '#fff7ea'  },
+            { id: 'directionalIntensity', type: 'number', label: 'Sun Intensity',     default: 1.05       },
+            { id: 'directionalPosition', type: 'vec3',   label: 'Sun Position',      default: [8, 12, 4] },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The lamp, and only that: a real point light standing where you put it —
+    // root or inside any container, no dual identity, no disappearing act.
+    'light.point': {
+        id: 'light.point',
+        label: 'Light',
+        category: 'world',
+        runtime: 'any',
+        keywords: ['light', 'lamp', 'point', 'glow', 'practical'],
+        inputs: [
+            { id: 'color',     type: 'color',  label: 'Colour',    default: '#ffe9c4'   },
+            { id: 'intensity', type: 'number', label: 'Intensity', default: 6           },
+            { id: 'position',  type: 'vec3',   label: 'Position',  default: [0, 1.6, 0] },
+        ],
+        outputs: [],
+        defaultValues: {},
         render: 'spatial-3d',
     },
 

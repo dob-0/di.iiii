@@ -153,8 +153,12 @@ a Constructor's door and the Constructor wears both scenes as one object; a
 Geo standing inside a Geo carries through the chain. Empty, the socket
 carries nothing — an empty place is not an invisible shape.
 
-A Light placed inside any container is a real point light (colour, intensity,
-position). At the top level it stays what it was: the room's light settings.
+Light and Environment are two nodes, because they were always two things. A
+**Light** is a lamp: a real point light standing wherever you put it — top
+level or inside a container. An **Environment** is the scene's settings: the
+ambient wash and one sun, one per level, ● picking the active one. Projects
+made before the split keep their old Light nodes and light exactly as they
+did.
 
 ## Building a node out of nodes
 

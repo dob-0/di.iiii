@@ -200,7 +200,7 @@ describe('all-nodes example graph', () => {
         expect(typeof color).toBe('string')
         expect(color).toMatch(/^#[0-9a-f]{6}$/i)
 
-        const light = nodes.find((node) => node.typeId === 'world.light')
+        const light = nodes.find((node) => node.typeId === 'world.environment')
         const intensity = evaluateNodeInputs(light, context).directionalIntensity
         // Not merely finite: Math.pow of a negative base by a fractional
         // exponent is NaN, which would black the light out without erroring.

@@ -57,6 +57,18 @@ export function resolveScopeWorldNode(nodes, scopeId, liveWorldNodeIdByScope) {
     }
 }
 
+// The scene's lighting, resolved through the split (2026-08-20): an active
+// `world.environment` in the scope wins; with none, the legacy `world.light`
+// (the retired dual-identity node) still drives — so every old document
+// lights exactly as it did. Returns resolved input values or null (callers
+// keep their worldState/hardcoded fallbacks).
+export function resolveSceneLighting(document, graphContext = null, { scopeId } = {}) {
+    const activeMap = document?.workspaceState?.activeNodeIdByTypeScope
+    const envNode = pickActiveTypeNode(document?.nodes, 'world.environment', { scopeId, activeMap })
+    const node = envNode || pickActiveTypeNode(document?.nodes, 'world.light', { scopeId, activeMap })
+    return node ? evaluateNodeInputs(node, graphContext) : null
+}
+
 // scopeId undefined = unscoped (old behavior, matches any world.background node
 // anywhere). scopeId null or a real id = only match a world.background node that's
 // a sibling of the given scope (parentId === scopeId) — root scope is `null`, not

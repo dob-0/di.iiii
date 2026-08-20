@@ -141,10 +141,14 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('subtract', 'math.subtract', { label: 'Subtract', col: 1, row: 7 })
     add('pow', 'math.pow', { label: 'Power', col: 1, row: 8 })
 
-    // --- column 2: world settings ---------------------------------------------
-    add('light', 'world.light', { label: 'Light', col: 2, row: 0 })
+    // --- column 2: scene settings ---------------------------------------------
+    // world.light is the RETIRED dual-identity node (paletteHidden; the
+    // split's back-compat path) — the example shows what the palette offers:
+    // Environment for the wash and sun, Light (light.point) for a lamp.
+    add('environment', 'world.environment', { label: 'Environment', col: 2, row: 0 })
     add('background', 'world.background', { label: 'Background', col: 2, row: 1 })
     add('grid', 'world.grid', { label: 'Grid', col: 2, row: 2 })
+    add('lamp', 'light.point', { label: 'Light', col: 2, row: 3, values: { position: [1.5, 1.6, 0.5] } })
 
     // --- column 3: geometry ----------------------------------------------------
     add('cube', 'geom.cube', { label: 'Cube', col: 3, row: 0 })
@@ -287,7 +291,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('time', 'cos', 'subtract', 'b'),
         wire('subtract', 'out', 'pow', 'a'),
         wire('numB', 'out', 'pow', 'b'),
-        wire('pow', 'out', 'light', 'directionalIntensity'),
+        wire('pow', 'out', 'environment', 'directionalIntensity'),
 
         // A wire OUT of a container — new on 2026-08-19, and the thing that
         // used to be impossible: every container declared zero outputs, so
@@ -299,8 +303,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('world', 'title', 'text', 'content'),
 
         // Static world settings.
-        wire('colorA', 'out', 'light', 'ambientColor'),
-        wire('numB', 'out', 'light', 'ambientIntensity'),
+        wire('colorA', 'out', 'environment', 'ambientColor'),
+        wire('numB', 'out', 'environment', 'ambientIntensity'),
         wire('vec', 'out', 'light', 'directionalPosition'),
         wire('colorB', 'out', 'light', 'directionalColor'),
         wire('colorB', 'out', 'background', 'color'),

@@ -425,6 +425,45 @@ describe('RawViewport', () => {
     })
 })
 
+describe('the Light split', () => {
+    it('a Light (light.point) at ROOT is a real lamp — the disappearing act is over', () => {
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [{ id: 'l1', typeId: 'light.point', parentId: null, label: 'Light', values: { position: [1, 1.6, 0] } }], edges: [], entities: [] }}
+                scopeId={null}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        // the ambient+directional pair always exists; the lamp adds a third light
+        expect(container.querySelectorAll('pointlight').length).toBe(1)
+    })
+
+    it('the retired dual Light keeps BOTH old behaviours: unparented draws nothing', () => {
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [{ id: 'leg', typeId: 'world.light', parentId: null, label: 'Light', values: {} }], edges: [], entities: [] }}
+                scopeId={null}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        expect(container.querySelectorAll('pointlight').length).toBe(0)
+    })
+
+    it('an Environment drives the scene wash exactly as the legacy settings did', () => {
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [{ id: 'env', typeId: 'world.environment', parentId: null, label: 'Environment', values: { ambientIntensity: 0.33, directionalIntensity: 2.5 } }], edges: [], entities: [] }}
+                scopeId={null}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        const ambient = container.querySelector('ambientlight')
+        expect(ambient?.getAttribute('intensity')).toBe('0.33')
+        const directional = container.querySelector('directionallight')
+        expect(directional?.getAttribute('intensity')).toBe('2.5')
+    })
+})
+
 describe('objects stand at root only', () => {
     // document.entities used to render UNSCOPED — every object haunted every
     // interior at every depth (audit, 2026-08-20). Objects have no parent
