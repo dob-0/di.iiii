@@ -59,6 +59,10 @@ export const PASS_THROUGH_PORTS = [
     {
         port: 'geom.geo.geometry',
         why: 'gives out what the Geo collects; empty it carries nothing — an empty place is not an invisible shape'
+    },
+    {
+        port: 'logic.gate.out',
+        why: 'passes through what arrives while open; bare or closed it carries nothing — a closed gate is an unplugged wire, not a zero'
     }
 ]
 
@@ -123,6 +127,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('numA', 'value.number', { label: 'Number A · 1.5', col: 0, row: 0, values: { value: 1.5 } })
     add('numB', 'value.number', { label: 'Number B · 0.5', col: 0, row: 1, values: { value: 0.5 } })
     add('numC', 'value.number', { label: 'Number C · 1.0', col: 0, row: 8, values: { value: 1 } })
+    add('numHalf', 'value.number', { label: 'Number ½', col: 0, row: 8, values: { value: 0.5 } })
     add('colorA', 'value.color', { label: 'Color A · cyan', col: 0, row: 2, values: { value: '#4df9ff' } })
     add('colorB', 'value.color', { label: 'Color B · magenta', col: 0, row: 3, values: { value: '#ff4dd8' } })
     add('vec', 'value.vec3', { label: 'Vector · position', col: 0, row: 4, values: { value: [0, 1, 0] } })
@@ -140,6 +145,9 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('mix', 'math.mix', { label: 'Mix', col: 1, row: 6 })
     add('subtract', 'math.subtract', { label: 'Subtract', col: 1, row: 7 })
     add('pow', 'math.pow', { label: 'Power', col: 1, row: 8 })
+    add('compare', 'logic.compare', { label: 'Compare', col: 1, row: 9 })
+    add('gate', 'logic.gate', { label: 'Gate', col: 1, row: 10 })
+    add('switch', 'logic.switch', { label: 'Switch', col: 1, row: 11 })
 
     // --- column 2: scene settings ---------------------------------------------
     // world.light is the RETIRED dual-identity node (paletteHidden; the
@@ -294,6 +302,18 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('subtract', 'out', 'pow', 'a'),
         wire('numB', 'out', 'pow', 'b'),
         wire('pow', 'out', 'environment', 'directionalIntensity'),
+
+        // The logic trio, driven by the same clock: Compare watches the
+        // sawtooth cross its midpoint, its verdict opens the Gate (proving
+        // the pass-through: Gate.out carries the sine only while open) and
+        // flips the Switch between the two colours.
+        wire('divide', 'out', 'compare', 'a'),
+        wire('numHalf', 'out', 'compare', 'b'),
+        wire('sin', 'out', 'gate', 'value'),
+        wire('compare', 'greater', 'gate', 'open'),
+        wire('colorA', 'out', 'switch', 'a'),
+        wire('colorB', 'out', 'switch', 'b'),
+        wire('compare', 'less', 'switch', 'pick'),
 
         // A wire OUT of a container — new on 2026-08-19, and the thing that
         // used to be impossible: every container declared zero outputs, so

@@ -1,5 +1,6 @@
 import { DOORWAY_OUT_TYPE_ID, getNodeInputs, getNodeType } from '../nodeRegistry.js'
 import { isGeometryDescriptor, mergeGeometry } from './geometryDescriptor.js'
+import { NODE_RUNTIMES } from '../nodes/index.js'
 
 const asNumber = (value, fallback = 0) => {
     const next = Number(value)
@@ -173,6 +174,17 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
     // and because a doorway's id can never collide with a declared port id.
     const door = context?.doorwayOutByParent?.get(node.id)?.get(portId)
     if (door) return evaluateNodeInput(door, 'value', context, nextStack)
+
+    // Colocated runtimes first (src/project/nodes/) — the switch below is the
+    // legacy home and shrinks as types migrate out; a type never lives in both.
+    const colocated = NODE_RUNTIMES.get(node.typeId)
+    if (colocated) {
+        return colocated(node, portId, {
+            input: (id) => evaluateNodeInput(node, id, context, nextStack),
+            asNumber,
+            context
+        })
+    }
 
     switch (node.typeId) {
         case 'time': {
