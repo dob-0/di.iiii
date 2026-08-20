@@ -366,8 +366,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 363,
-            toLine: 381,
+            fromLine: 360,
+            toLine: 378,
             sharedWith: []
         },
         panel: null,
@@ -398,8 +398,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 227,
-            toLine: 228,
+            fromLine: 224,
+            toLine: 225,
             sharedWith: []
         },
         panel: null,
@@ -417,8 +417,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 229,
-            toLine: 230,
+            fromLine: 226,
+            toLine: 227,
             sharedWith: []
         },
         panel: null,
@@ -436,8 +436,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 231,
-            toLine: 254,
+            fromLine: 228,
+            toLine: 251,
             sharedWith: []
         },
         panel: null,
@@ -469,8 +469,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 283,
-            toLine: 309,
+            fromLine: 280,
+            toLine: 306,
             sharedWith: []
         },
         panel: null,
@@ -480,8 +480,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 262,
-            toLine: 282,
+            fromLine: 259,
+            toLine: 279,
             sharedWith: []
         },
         panel: null,
@@ -511,8 +511,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 184,
-            toLine: 198,
+            fromLine: 181,
+            toLine: 195,
             sharedWith: []
         },
         panel: null,
@@ -522,8 +522,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 199,
-            toLine: 211,
+            fromLine: 196,
+            toLine: 208,
             sharedWith: []
         },
         panel: null,
@@ -533,8 +533,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 212,
-            toLine: 226,
+            fromLine: 209,
+            toLine: 223,
             sharedWith: []
         },
         panel: null,
@@ -778,8 +778,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 310,
-            toLine: 334,
+            fromLine: 307,
+            toLine: 331,
             sharedWith: []
         },
         panel: null,
@@ -789,8 +789,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 335,
-            toLine: 362,
+            fromLine: 332,
+            toLine: 359,
             sharedWith: []
         },
         panel: null,
@@ -846,6 +846,6 @@ export const DOORWAY_PLACE = {
 
 export const SOURCE_FINGERPRINTS = {
     'src/project/graph/nodeGraphRuntime.js': '12270da9',
-    'src/raw/components/RawViewport.jsx': '103322db',
+    'src/raw/components/RawViewport.jsx': 'd6b21f77',
     'src/raw/components/RawEditor.jsx': '9951d36a'
 }
