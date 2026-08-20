@@ -127,3 +127,58 @@ Also worth knowing for anyone doing this next: `di up` treats a healthy port as
 have been deleted out from under it — is indistinguishable from the real one. It
 looked exactly like a working install writing to a database that no longer existed.
 Not fixed here.
+
+## 2026-08-21 — which di.iiii is this?
+
+Two di.iiii that render identically are two di.iiii you will eventually
+confuse, and that confusion has already cost work: di-library published a PROD
+page whose 51 PDFs every one 404'd, because an asset cache written against
+STAGING looked correct on screen and asset ids are per-server. The address bar
+always held the answer; nothing on the page ever did.
+
+- `src/utils/deployMode.js` — pure, **hostname-first**. Loopback, private v4,
+  `.local`, and any name with no dot (a LAN or tailnet machine) read local;
+  a first label starting `staging` reads staging; everything else is the live
+  site. Hostname first because the answer has to be right on the FIRST paint —
+  a mark that changes its mind once a request lands is a mark nobody trusts.
+- The server's `local` flag still wins when it has spoken. A `di up` install
+  reached over a tailnet name (`aylmo.tail1234.ts.net`) is indistinguishable
+  from a public host by address alone, and that is exactly the case where being
+  told "hosted" would be a lie. Read from `/api/config`, never
+  `/api/auth/session` — learning where you are must not mint a guest session
+  for someone who only opened a public space.
+- `ModeMark` (mounted once in `RootApp`, so there is nowhere in di.iiii you can
+  stand and not know where you are): a 2px frame at the viewport edge plus a
+  mono chip bottom-left with the mode and the host. **Local green `#4df9c0`,
+  staging amber `#ffb347`, hosted nothing at all** — existing tokens, no new
+  colours, and the live site renders exactly what it rendered before, so an
+  audience sees no chrome that was not already there.
+- `z-index: 10001`, above the loading screen (9999) and the auth notice
+  (10000): "which di.iiii is this" must be answerable in the half-second a
+  surface is still black, which is precisely when someone types into the wrong
+  one. `pointer-events: none` throughout — it tells you where you are, it is
+  not a control.
+- Suppressed inside an iframe and under `?preview=1`: Studio space cards render
+  the app as a thumbnail, and a frame drawn inside every card is noise rather
+  than an answer.
+- The `getServerConfig()` call is wrapped in try/catch, not only `.catch()`.
+  This overlay sits above the entire app, so anything it throws synchronously
+  takes every surface down with it — which is not hypothetical: it is exactly
+  what happened to all 12 `RootApp` route tests the first time it ran against a
+  mock that had no `getServerConfig`. A decorative mark that can kill di.iiii
+  is worse than no mark.
+
+Seen, not asserted: screenshotted on the landing page, Studio, Raw and a 3D
+space of a REAL packed install (`di-runtime-0.4.0.tar.gz`, scratch `DI_HOME`,
+port 4100) with a live backend and zero console errors; on a 390px phone
+viewport at DPR 3, where the address drops and the badge stays; and on all
+three tiers by mapping `staging.di-studio.xyz` and `di-studio.xyz` to 127.0.0.1
+in Chromium, confirming amber, green, and — on the live hostname — no element
+in the DOM at all.
+
+**Deliberately not done:** the accent itself is untouched. Repainting the UI
+green would mean folding **261 hardcoded `#4df9ff` / `rgba(77,249,255,…)`
+literals across 22 files** into `var(--di-cyan)` first (155 uses already go
+through the token), or the app ships half-repainted. That is its own reviewable
+chore — identical hosted pixels before and after — and the token flip becomes
+one line once it is true.

@@ -20,6 +20,8 @@ const mockVanityResolutions = {}
 
 vi.mock('./services/serverSpaces.js', () => ({
     supportsServerSpaces: true,
+    // ModeMark asks which di.iiii this is on every surface.
+    getServerConfig: () => Promise.resolve({ local: true }),
     getServerSpace: (spaceId) => Promise.resolve({
         id: spaceId,
         isPublic: spaceId === 'pub' || Boolean(mockSpacePublicOverrides[spaceId])
