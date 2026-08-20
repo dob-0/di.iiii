@@ -137,7 +137,7 @@ export const GUIDE_SECTIONS = [
             ['Open', "Type Full screen in the palette, or place a Scene node"],
             ['Size', "Drag the Scene window's corner glyph"],
             ['Look around', 'Drag orbits — until a Camera is marked ●'],
-            ['Output', 'Add /out to the address for a locked, clean view']
+            ['Output', 'Copy projector link in the ⋯ menu — a locked, clean view']
         ],
         steps: [
             'Environment sets the wash and sun; Light is a lamp you place.',

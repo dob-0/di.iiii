@@ -294,14 +294,14 @@ export function SpacePreviewRow({ space, isActive, onOpenRoute, onCopy }) {
                     className="preferences-inline-action"
                     onClick={() => onOpenRoute?.(routes?.publicPath)}
                 >
-                    Public
+                    View live
                 </button>
                 <button
                     type="button"
                     className="preferences-inline-action"
                     onClick={() => onOpenRoute?.(routes?.studioPath)}
                 >
-                    Studio
+                    Projects
                 </button>
                 <button
                     type="button"

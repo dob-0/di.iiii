@@ -274,7 +274,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         </>
                     )}
                     <span className="sh-sep">·</span>
-                    <button className="sh-link" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>Live</button>
+                    <button className="sh-link" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>View live</button>
                     {archivedProjects.length > 0 && (
                         <>
                             <span className="sh-sep">·</span>
