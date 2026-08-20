@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Provenance
+- What changed
 
 Full detail: `PROGRESS.md`.
 
