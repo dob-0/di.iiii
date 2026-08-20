@@ -92,6 +92,25 @@ describe('202 is not success', () => {
     })
 })
 
+describe('reading a space', () => {
+    it('lists the projects inside it', async () => {
+        const { connect: open } = local({
+            'GET /serverXR/api/spaces/x/projects': { body: { projects: [{ id: 'p1', slug: 'page', projectMeta: { title: 'A Page' } }] } }
+        })
+        await expect((await open()).run('project.list', { space: 'x' })).resolves.toEqual([
+            { id: 'p1', slug: 'page', title: 'A Page', updatedAt: null }
+        ])
+    })
+
+    it('is the same reading project.ensure uses, not a second copy of it', async () => {
+        const { connect: open, seen } = local({
+            'GET /serverXR/api/spaces/x/projects': { body: { projects: [{ id: 'p1' }] } }
+        })
+        await expect((await open()).run('project.ensure', { space: 'x', project: 'p1' })).resolves.toMatchObject({ created: false })
+        expect(seen.filter((s) => s.method === 'POST')).toHaveLength(0)
+    })
+})
+
 describe('the traps, encoded', () => {
     // The id comes from the LABEL. Hardcoding one created "library" no matter
     // what was asked for, and every later call 404'd against the name asked for.

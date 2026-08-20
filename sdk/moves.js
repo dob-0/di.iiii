@@ -79,6 +79,18 @@ export const MOVES = {
         run: async (ctx, { project }) => (await ctx.http.get(`/api/projects/${project}/document`)).body?.document || null
     },
 
+    'project.list': {
+        reach: READ,
+        summary: 'the projects inside a space',
+        input: { space: 'string' },
+        run: async (ctx, { space }) => asList(await ctx.http.get(`/api/spaces/${space}/projects`), 'projects').map((p) => ({
+            id: p.id,
+            slug: p.slug || null,
+            title: p.projectMeta?.title || p.title || null,
+            updatedAt: p.updatedAt || null
+        }))
+    },
+
     'space.invites': {
         reach: READ,
         summary: 'who has been handed a way in, and whether they used it',
@@ -144,7 +156,7 @@ export const MOVES = {
         summary: 'find a project inside a space or make it',
         input: { space: 'string', project: 'string', title: 'string?' },
         run: async (ctx, { space, project, title = null }) => {
-            const projects = asList(await ctx.http.get(`/api/spaces/${space}/projects`), 'projects')
+            const projects = await MOVES['project.list'].run(ctx, { space })
             const found = projects.find((p) => p.id === project || p.slug === project)
             if (found) return { ...found, created: false }
             const made = await ctx.http.post(`/api/spaces/${space}/projects`, { title: title || project, slug: project })
