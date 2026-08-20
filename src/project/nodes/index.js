@@ -1,6 +1,7 @@
 import { computeOutput as colourCombine } from './colour.combine/runtime.js'
 import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
+import { computeOutput as deviceKeyboard } from './device.keyboard/runtime.js'
 import { computeOutput as geomArray } from './geom.array/runtime.js'
 import { computeOutput as geomCone } from './geom.cone/runtime.js'
 import { computeOutput as geomCylinder } from './geom.cylinder/runtime.js'
@@ -36,6 +37,7 @@ import { computeOutput as signalLfo } from './signal.lfo/runtime.js'
 import { computeOutput as signalSpeed } from './signal.speed/runtime.js'
 import { computeOutput as signalTimer } from './signal.timer/runtime.js'
 import { computeOutput as signalTrigger } from './signal.trigger/runtime.js'
+import { computeOutput as viewButton } from './view.button/runtime.js'
 import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
 import { computeOutput as valueNoise } from './value.noise/runtime.js'
 import { computeOutput as vectorCombine } from './vector.combine/runtime.js'
@@ -53,6 +55,7 @@ export const NODE_RUNTIMES = new Map([
     ['colour.combine', colourCombine],
     ['colour.ramp', colourRamp],
     ['colour.split', colourSplit],
+    ['device.keyboard', deviceKeyboard],
     ['geom.array', geomArray],
     ['geom.cone', geomCone],
     ['geom.cylinder', geomCylinder],
@@ -92,5 +95,6 @@ export const NODE_RUNTIMES = new Map([
     ['vector.combine', vectorCombine],
     ['vector.distance', vectorDistance],
     ['vector.split', vectorSplit],
+    ['view.button', viewButton],
     ['view.timeline', viewTimeline],
 ])
