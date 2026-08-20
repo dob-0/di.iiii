@@ -261,3 +261,68 @@ describe('view.timeline transport', () => {
         expect(evaluateNodeOutput(doc.nodes[0], 'playhead', context)).toBe(60)
     })
 })
+
+describe('the numbers wave (TD audit)', () => {
+    it('Range remaps a span, zero-width span answers the out start', () => {
+        const doc = (v, values = {}) => ({
+            nodes: [node('n', 'value.number', { value: v }), node('r', 'math.range', values)],
+            edges: [edge('n', 'out', 'r', 'in')]
+        })
+        expect(evalPort(doc(0.5, { inMin: 0, inMax: 1, outMin: 0, outMax: 100 }), 'r', 'out')).toBe(50)
+        expect(evalPort(doc(5, { inMin: 0, inMax: 10, outMin: 1, outMax: -1 }), 'r', 'out')).toBe(0)
+        expect(evalPort(doc(7, { inMin: 3, inMax: 3, outMin: 42, outMax: 99 }), 'r', 'out')).toBe(42)
+    })
+
+    it('Oscillator speaks four shapes of one clock, phase in cycles', () => {
+        const lfo = node('o', 'signal.lfo', { frequency: 1, phase: 0 })
+        const at = (now) => createNodeGraphContext({ nodes: [lfo], edges: [] }, { now })
+        expect(evaluateNodeOutput(lfo, 'sine', at(0))).toBeCloseTo(0, 10)
+        expect(evaluateNodeOutput(lfo, 'square', at(250))).toBe(1)
+        expect(evaluateNodeOutput(lfo, 'square', at(750))).toBe(-1)
+        expect(evaluateNodeOutput(lfo, 'triangle', at(500))).toBeCloseTo(1, 10)
+        expect(evaluateNodeOutput(lfo, 'saw', at(500))).toBeCloseTo(0, 10)
+    })
+
+    it('Logic answers all four questions about two booleans', () => {
+        const doc = (a, b) => ({
+            nodes: [node('x', 'value.boolean', { value: a }), node('y', 'value.boolean', { value: b }), node('l', 'logic.combine')],
+            edges: [edge('x', 'out', 'l', 'a'), edge('y', 'out', 'l', 'b')]
+        })
+        expect(evalPort(doc(true, true), 'l', 'both')).toBe(true)
+        expect(evalPort(doc(true, false), 'l', 'both')).toBe(false)
+        expect(evalPort(doc(true, false), 'l', 'either')).toBe(true)
+        expect(evalPort(doc(true, true), 'l', 'one')).toBe(false)
+        expect(evalPort(doc(false, false), 'l', 'neither')).toBe(true)
+    })
+
+    it('Extremes, Absolute and Round answer bare and wired alike', () => {
+        const single = (typeId, port, v) => {
+            const doc = {
+                nodes: [node('n', 'value.number', { value: v }), node('t', typeId)],
+                edges: [edge('n', 'out', 't', 'in')]
+            }
+            return evalPort(doc, 't', port)
+        }
+        expect(single('math.abs', 'out', -3.5)).toBe(3.5)
+        expect(single('math.round', 'nearest' in {} ? 'nearest' : 'round', 2.6)).toBe(3)
+        expect(single('math.round', 'floor', 2.6)).toBe(2)
+        expect(single('math.round', 'ceiling', 2.1)).toBe(3)
+        const pair = {
+            nodes: [node('p', 'value.number', { value: 4 }), node('q', 'value.number', { value: -2 }), node('e', 'math.extremes')],
+            edges: [edge('p', 'out', 'e', 'a'), edge('q', 'out', 'e', 'b')]
+        }
+        expect(evalPort(pair, 'e', 'least')).toBe(-2)
+        expect(evalPort(pair, 'e', 'greatest')).toBe(4)
+    })
+
+    it('Ease clamps its progress and bounces to exactly one', () => {
+        const doc = (v) => ({
+            nodes: [node('n', 'value.number', { value: v }), node('e', 'signal.ease')],
+            edges: [edge('n', 'out', 'e', 'in')]
+        })
+        expect(evalPort(doc(0.5), 'e', 'smooth')).toBeCloseTo(0.5, 10)
+        expect(evalPort(doc(2), 'e', 'easeIn')).toBe(1)
+        expect(evalPort(doc(-1), 'e', 'easeOut')).toBe(0)
+        expect(evalPort(doc(1), 'e', 'bounce')).toBeCloseTo(1, 6)
+    })
+})

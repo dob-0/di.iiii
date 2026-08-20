@@ -116,6 +116,13 @@ export const FAMILY_BY_TYPE = {
     'logic.switch': 'numbers',
     'signal.lag': 'numbers',
     'value.noise': 'numbers',
+    'math.range': 'numbers',
+    'signal.lfo': 'numbers',
+    'logic.combine': 'numbers',
+    'math.extremes': 'numbers',
+    'math.abs': 'numbers',
+    'math.round': 'numbers',
+    'signal.ease': 'numbers',
     // the scene — light, sky, grid, scenes, desks, containers
     'world.light': 'room',
     'world.environment': 'room',
@@ -1782,6 +1789,146 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'out', type: 'geometry', label: 'Out' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The numbers wave (TD audit, 2026-08-20). All pure, all wire-first —
+    // where TD offers a menu these offer one output per meaning.
+    'math.range': {
+        id: 'math.range',
+        label: 'Range',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['range', 'remap', 'map', 'rescale', 'normalise', 'span'],
+        inputs: [
+            { id: 'in',     type: 'number', label: 'Value',     default: 0 },
+            { id: 'inMin',  type: 'number', label: 'From Low',  default: 0 },
+            { id: 'inMax',  type: 'number', label: 'From High', default: 1 },
+            { id: 'outMin', type: 'number', label: 'To Low',    default: 0 },
+            { id: 'outMax', type: 'number', label: 'To High',   default: 1 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.lfo': {
+        id: 'signal.lfo',
+        label: 'Oscillator',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['lfo', 'oscillator', 'wave', 'sine', 'square', 'triangle', 'saw', 'pulse', 'cycle'],
+        inputs: [
+            { id: 'frequency', type: 'number', label: 'Frequency', default: 1 },
+            { id: 'phase',     type: 'number', label: 'Phase',     default: 0 },
+        ],
+        outputs: [
+            { id: 'sine',     type: 'number', label: 'Sine'     },
+            { id: 'square',   type: 'number', label: 'Square'   },
+            { id: 'triangle', type: 'number', label: 'Triangle' },
+            { id: 'saw',      type: 'number', label: 'Saw'      },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'logic.combine': {
+        id: 'logic.combine',
+        label: 'Logic',
+        category: 'logic',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['logic', 'and', 'or', 'xor', 'nor', 'boolean', 'combine'],
+        inputs: [
+            { id: 'a', type: 'boolean', label: 'A', default: false },
+            { id: 'b', type: 'boolean', label: 'B', default: false },
+        ],
+        outputs: [
+            { id: 'both',    type: 'boolean', label: 'Both'    },
+            { id: 'either',  type: 'boolean', label: 'Either'  },
+            { id: 'one',     type: 'boolean', label: 'One'     },
+            { id: 'neither', type: 'boolean', label: 'Neither' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'math.extremes': {
+        id: 'math.extremes',
+        label: 'Extremes',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['min', 'max', 'least', 'greatest', 'smallest', 'largest', 'extremes'],
+        inputs: [
+            { id: 'a', type: 'number', label: 'A', default: 0 },
+            { id: 'b', type: 'number', label: 'B', default: 0 },
+        ],
+        outputs: [
+            { id: 'least',    type: 'number', label: 'Least'    },
+            { id: 'greatest', type: 'number', label: 'Greatest' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'math.abs': {
+        id: 'math.abs',
+        label: 'Absolute',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['abs', 'absolute', 'magnitude', 'positive'],
+        inputs: [
+            { id: 'in', type: 'number', label: 'Value', default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'math.round': {
+        id: 'math.round',
+        label: 'Round',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['round', 'floor', 'ceil', 'ceiling', 'integer', 'quantise', 'snap'],
+        inputs: [
+            { id: 'in', type: 'number', label: 'Value', default: 0 },
+        ],
+        outputs: [
+            { id: 'round',   type: 'number', label: 'Nearest' },
+            { id: 'floor',   type: 'number', label: 'Floor'   },
+            { id: 'ceiling', type: 'number', label: 'Ceiling' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.ease': {
+        id: 'signal.ease',
+        label: 'Ease',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['ease', 'easing', 'tween', 'smooth', 'smoothstep', 'bounce', 'curve', 'motion'],
+        inputs: [
+            { id: 'in', type: 'number', label: 'Progress', default: 0 },
+        ],
+        outputs: [
+            { id: 'smooth',  type: 'number', label: 'Smooth'   },
+            { id: 'easeIn',  type: 'number', label: 'Ease In'  },
+            { id: 'easeOut', type: 'number', label: 'Ease Out' },
+            { id: 'bounce',  type: 'number', label: 'Bounce'   },
         ],
         defaultValues: {},
         render: 'hidden',

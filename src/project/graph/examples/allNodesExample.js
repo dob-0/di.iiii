@@ -153,6 +153,13 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('gate', 'logic.gate', { label: 'Gate', col: 1, row: 10 })
     add('switch', 'logic.switch', { label: 'Switch', col: 1, row: 11 })
     add('lag', 'signal.lag', { label: 'Lag', col: 1, row: 12 })
+    add('range', 'math.range', { label: 'Range', col: 1, row: 13 })
+    add('lfo', 'signal.lfo', { label: 'Oscillator', col: 0, row: 10 })
+    add('logicCombine', 'logic.combine', { label: 'Logic', col: 1, row: 14 })
+    add('extremes', 'math.extremes', { label: 'Extremes', col: 1, row: 15 })
+    add('abs', 'math.abs', { label: 'Absolute', col: 1, row: 16 })
+    add('round', 'math.round', { label: 'Round', col: 1, row: 17 })
+    add('ease', 'signal.ease', { label: 'Ease', col: 1, row: 18 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
@@ -325,6 +332,18 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // Lag smooths the raw sine — the glide every window computes its own
         // way (frameMemory is per-window), converging on the same target.
         wire('sin', 'out', 'lag', 'in'),
+
+        // The numbers wave, fed by the same clock: the oscillator's triangle
+        // remaps through Range, its verdicts combine in Logic, and the
+        // sawtooth eases — every new operator provably alive on a wire.
+        wire('lfo', 'triangle', 'range', 'in'),
+        wire('compare', 'greater', 'logicCombine', 'a'),
+        wire('compare', 'less', 'logicCombine', 'b'),
+        wire('sin', 'out', 'extremes', 'a'),
+        wire('lfo', 'sine', 'extremes', 'b'),
+        wire('lfo', 'saw', 'abs', 'in'),
+        wire('lfo', 'square', 'round', 'in'),
+        wire('divide', 'out', 'ease', 'in'),
 
         // Array repeats the cube's own geometry value — the proving fixture
         // for its pass-through out (bare, an Array carries nothing).

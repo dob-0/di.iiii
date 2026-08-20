@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 // Every type whose output moves with the clock alone — placing ANY of these
 // starts the per-frame rebuild (and the show-clock stamp), not just Time.
 // Lag glides between answers; Noise wanders; both read context.now.
-export const CLOCK_DRIVEN_TYPE_IDS = new Set(['time', 'signal.lag', 'value.noise'])
+export const CLOCK_DRIVEN_TYPE_IDS = new Set(['time', 'signal.lag', 'signal.lfo', 'value.noise'])
 
 export const hasClockNode = (nodes = []) => nodes.some((node) => (
     CLOCK_DRIVEN_TYPE_IDS.has(node?.typeId)
