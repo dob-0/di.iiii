@@ -177,6 +177,12 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('compose', 'colour.combine', { label: 'Compose', col: 2, row: 13 })
     add('vdistance', 'vector.distance', { label: 'Distance', col: 2, row: 14 })
     add('ramp', 'colour.ramp', { label: 'Ramp', col: 2, row: 15 })
+    add('dot', 'vector.dot', { label: 'Dot', col: 2, row: 16 })
+    add('crossN', 'vector.cross', { label: 'Cross', col: 2, row: 17 })
+    add('direction', 'vector.direction', { label: 'Direction', col: 2, row: 18 })
+    add('vrotation', 'vector.rotation', { label: 'Rotation', col: 2, row: 19 })
+    add('aim', 'vector.aim', { label: 'Aim', col: 2, row: 20 })
+    add('random', 'value.random', { label: 'Random', col: 2, row: 21 })
     add('cylinder', 'geom.cylinder', { label: 'Cylinder', col: 3, row: 9, values: { position: [2.5, 0.75, -2] } })
     add('cone', 'geom.cone', { label: 'Cone', col: 3, row: 10, values: { position: [4, 0.75, -2] } })
     add('torus', 'geom.torus', { label: 'Torus', col: 3, row: 11, values: { position: [5.5, 0.5, -2] } })
@@ -389,6 +395,20 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('divide', 'out', 'ramp', 'position'),
         wire('colorA', 'out', 'ramp', 'a'),
         wire('colorB', 'out', 'ramp', 'c'),
+
+        // The second vector wave: the same authored vector measured against
+        // the recombined one, pointed, spun by the sine, and aimed at — with
+        // one fixed random draw between the two numbers already on the desk.
+        wire('vec', 'out', 'dot', 'a'),
+        wire('vcombine', 'out', 'dot', 'b'),
+        wire('vec', 'out', 'crossN', 'a'),
+        wire('vcombine', 'out', 'crossN', 'b'),
+        wire('vec', 'out', 'direction', 'vector'),
+        wire('vec', 'out', 'vrotation', 'vector'),
+        wire('sin', 'out', 'vrotation', 'angle'),
+        wire('vec', 'out', 'aim', 'to'),
+        wire('numA', 'out', 'random', 'variant'),
+        wire('numB', 'out', 'random', 'greatest'),
 
         // Array repeats the cube's own geometry value — the proving fixture
         // for its pass-through out (bare, an Array carries nothing).

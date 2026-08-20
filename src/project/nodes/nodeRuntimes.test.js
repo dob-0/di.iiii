@@ -533,3 +533,117 @@ describe('the operator hands wave (TD audit)', () => {
         expect(evaluateNodeOutput(keys, 'count', out)).toBe(0)
     })
 })
+
+describe('the second vector wave (TD audit)', () => {
+    const vec = (id, value) => node(id, 'value.vec3', { value })
+    const num = (id, value) => node(id, 'value.number', { value })
+
+    it('Dot answers agreement and the angle in degrees', () => {
+        const doc = {
+            nodes: [vec('a', [1, 0, 0]), vec('b', [0, 1, 0]), node('d', 'vector.dot')],
+            edges: [edge('a', 'out', 'd', 'a'), edge('b', 'out', 'd', 'b')]
+        }
+        expect(evalPort(doc, 'd', 'dot')).toBe(0)
+        expect(evalPort(doc, 'd', 'angle')).toBeCloseTo(90)
+    })
+
+    it('Dot with a zero-length side answers angle 0, not NaN', () => {
+        const doc = {
+            nodes: [vec('a', [0, 0, 0]), vec('b', [0, 1, 0]), node('d', 'vector.dot')],
+            edges: [edge('a', 'out', 'd', 'a'), edge('b', 'out', 'd', 'b')]
+        }
+        expect(evalPort(doc, 'd', 'angle')).toBe(0)
+    })
+
+    it('Cross of the first two axes is the third', () => {
+        const doc = {
+            nodes: [vec('a', [1, 0, 0]), vec('b', [0, 1, 0]), node('c', 'vector.cross')],
+            edges: [edge('a', 'out', 'c', 'a'), edge('b', 'out', 'c', 'b')]
+        }
+        expect(evalPort(doc, 'c', 'out')).toEqual([0, 0, 1])
+    })
+
+    it('Direction shrinks any vector to length 1 and leaves zero alone', () => {
+        const doc = {
+            nodes: [vec('v', [3, 0, 4]), node('d', 'vector.direction')],
+            edges: [edge('v', 'out', 'd', 'vector')]
+        }
+        expect(evalPort(doc, 'd', 'out')).toEqual([0.6, 0, 0.8])
+        const zero = {
+            nodes: [vec('v', [0, 0, 0]), node('d', 'vector.direction')],
+            edges: [edge('v', 'out', 'd', 'vector')]
+        }
+        expect(evalPort(zero, 'd', 'out')).toEqual([0, 0, 0])
+    })
+
+    it('Rotation spins a quarter turn around the default axis, in degrees', () => {
+        const doc = {
+            nodes: [vec('v', [1, 0, 0]), num('a', 90), node('r', 'vector.rotation')],
+            edges: [edge('v', 'out', 'r', 'vector'), edge('a', 'out', 'r', 'angle')]
+        }
+        const out = evalPort(doc, 'r', 'out')
+        expect(out[0]).toBeCloseTo(0)
+        expect(out[1]).toBeCloseTo(0)
+        expect(out[2]).toBeCloseTo(-1)
+    })
+
+    it('Rotation with a zero axis passes the vector through untouched', () => {
+        const doc = {
+            nodes: [vec('v', [1, 2, 3]), vec('ax', [0, 0, 0]), num('a', 45), node('r', 'vector.rotation')],
+            edges: [edge('v', 'out', 'r', 'vector'), edge('ax', 'out', 'r', 'axis'), edge('a', 'out', 'r', 'angle')]
+        }
+        expect(evalPort(doc, 'r', 'out')).toEqual([1, 2, 3])
+    })
+
+    it('Aim matches three\'s lookAt euler exactly — the wire IS a rotation', async () => {
+        const THREE = await import('three')
+        const o = new THREE.Object3D()
+        const cases = [
+            [[0, 0, 0], [0, 0, 5]],
+            [[0, 0, 0], [5, 0, 0]],
+            [[0, 0, 0], [0, 5, 0]],
+            [[0, 0, 0], [0, -5, 0]],
+            [[1, 2, 3], [4, 0, -2]],
+            [[0, 0, 0], [3, 4, 5]],
+            [[-2, 1, 7], [3, -4, -1]],
+        ]
+        for (const [from, to] of cases) {
+            const doc = {
+                nodes: [vec('f', from), vec('t', to), node('aim', 'vector.aim')],
+                edges: [edge('f', 'out', 'aim', 'from'), edge('t', 'out', 'aim', 'to')]
+            }
+            const out = evalPort(doc, 'aim', 'out')
+            o.position.set(...from)
+            o.rotation.set(0, 0, 0)
+            o.lookAt(new THREE.Vector3(...to))
+            expect(out[0], `x for ${JSON.stringify([from, to])}`).toBeCloseTo(o.rotation.x, 3)
+            expect(out[1], `y for ${JSON.stringify([from, to])}`).toBeCloseTo(o.rotation.y, 3)
+            expect(out[2], `z for ${JSON.stringify([from, to])}`).toBeCloseTo(o.rotation.z, 3)
+        }
+    })
+
+    it('Aim standing on its target answers no rotation at all', () => {
+        const doc = {
+            nodes: [vec('f', [1, 1, 1]), vec('t', [1, 1, 1]), node('aim', 'vector.aim')],
+            edges: [edge('f', 'out', 'aim', 'from'), edge('t', 'out', 'aim', 'to')]
+        }
+        expect(evalPort(doc, 'aim', 'out')).toEqual([0, 0, 0])
+    })
+
+    it('Random is fixed per variant, different across variants, inside the span', () => {
+        const draw = (variant) => {
+            const doc = {
+                nodes: [num('v', variant), num('hi', 10), node('r', 'value.random')],
+                edges: [edge('v', 'out', 'r', 'variant'), edge('hi', 'out', 'r', 'greatest')]
+            }
+            return evalPort(doc, 'r', 'out')
+        }
+        expect(draw(3)).toBe(draw(3))
+        expect(draw(3)).not.toBe(draw(4))
+        for (const variant of [0, 1, 2, 3, 4]) {
+            const value = draw(variant)
+            expect(value).toBeGreaterThanOrEqual(0)
+            expect(value).toBeLessThanOrEqual(10)
+        }
+    })
+})
