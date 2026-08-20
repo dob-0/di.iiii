@@ -17,9 +17,9 @@ import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
-import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
+import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { ALGO_VRITHM_SPACE_ID, isAlgoVrithmSegment } from './algoVrithm/algoVrithmRouting.js'
-import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, getAppLocationState } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
@@ -74,21 +74,87 @@ function SpaceSurfaceRoute({ appState }) {
 // route, same as today — /somespace/randomtext never breaks, it just stops
 // being a project deep-link and becomes a normal space visit.
 function SlugProjectRoute({ appState }) {
+    const rrNavigate = useNavigate()
+    const { search, hash } = useLocation()
     const { result, error } = useResolveSlugProject(appState.spaceId, appState.projectSlugSegment)
+    const resolvedSpaceId = result?.space?.id || null
+    const resolvedProjectId = result?.project?.id || null
+    const tool = appState.toolSegment || null
+    const hasUnknownTail = Boolean(appState.hasUnknownTail)
+
+    // The doorway. /{space}/{project}/studio|raw is a way to TYPE an address, not an
+    // address: once the slug resolves to real ids we hand the visitor the lane's own
+    // canonical path and heal the bar — the same treatment the retired /seed segment
+    // gets. replace(), so Back leaves the doorway behind instead of bouncing through
+    // it. A tail we do not recognise heals to the published project, because the safe
+    // destination for an undefined path is never an authoring surface.
+    //
+    // search + hash are carried across deliberately. Every existing heal in this file
+    // drops them, which silently eats ?embed=1 and any deep link a published page
+    // hands over — the one thing a URL people type by hand is most likely to carry.
+    useEffect(() => {
+        if (!resolvedSpaceId || !resolvedProjectId) return
+        const keep = `${search || ''}${hash || ''}`
+        if (tool === TOOL_SEGMENT_STUDIO) {
+            rrNavigate(`${buildStudioProjectPath(resolvedProjectId, resolvedSpaceId)}${keep}`, { replace: true })
+        } else if (tool === TOOL_SEGMENT_RAW) {
+            rrNavigate(`${buildRawProjectPath(resolvedProjectId, resolvedSpaceId)}${keep}`, { replace: true })
+        } else if (hasUnknownTail) {
+            rrNavigate(`${buildVanityProjectPath(appState.spaceId, appState.projectSlugSegment)}${keep}`, { replace: true })
+        }
+    }, [resolvedSpaceId, resolvedProjectId, tool, hasUnknownTail, search, hash,
+        appState.spaceId, appState.projectSlugSegment, rrNavigate])
 
     if (result === undefined && !error) {
         return <RouteSurfaceFallback label="Loading" detail="" />
     }
 
-    if (result?.space?.id && result?.project?.id) {
+    if (resolvedSpaceId && resolvedProjectId) {
+        // A doorway renders nothing of its own — the effect above is already moving
+        // the visitor on. Showing the published page here would flash the wrong
+        // surface on the way to the editor.
+        if (tool || hasUnknownTail) {
+            return (
+                <RouteSurfaceFallback
+                    label={tool === TOOL_SEGMENT_RAW
+                        ? 'Loading the node editor'
+                        : tool === TOOL_SEGMENT_STUDIO ? 'Loading Studio' : 'Loading'}
+                    detail=""
+                />
+            )
+        }
         return (
             <SpaceSurfaceRoute
-                appState={{ page: APP_PAGE_EDITOR, spaceId: result.space.id, projectId: result.project.id }}
+                appState={{ page: APP_PAGE_EDITOR, spaceId: resolvedSpaceId, projectId: resolvedProjectId }}
             />
         )
     }
 
     return <SpaceSurfaceRoute appState={{ page: appState.page, spaceId: appState.spaceId }} />
+}
+
+// The doorway on the /{space}/p/{id} form: ids are already real, so this is a heal
+// with no resolve step. Kept as its own component because the redirect must run in an
+// effect, and the dispatch site it is called from is not a component boundary.
+function ProjectToolDoorway({ appState }) {
+    const rrNavigate = useNavigate()
+    const { search, hash } = useLocation()
+    const { spaceId, projectId, toolSegment } = appState
+
+    useEffect(() => {
+        const keep = `${search || ''}${hash || ''}`
+        const target = toolSegment === TOOL_SEGMENT_RAW
+            ? buildRawProjectPath(projectId, spaceId)
+            : buildStudioProjectPath(projectId, spaceId)
+        rrNavigate(`${target}${keep}`, { replace: true })
+    }, [spaceId, projectId, toolSegment, search, hash, rrNavigate])
+
+    return (
+        <RouteSurfaceFallback
+            label={toolSegment === TOOL_SEGMENT_RAW ? 'Loading the node editor' : 'Loading Studio'}
+            detail=""
+        />
+    )
 }
 
 // wcc is a real space like any other — route it through the same
@@ -274,6 +340,14 @@ function AppRouter() {
 
     if (appState.projectSlugSegment) {
         return <SlugProjectRoute appState={appState} />
+    }
+
+    // The same doorway on the /{space}/p/{id} form. It needs no resolve step — the id
+    // is already real — so it is a straight heal to the lane's canonical path. Without
+    // this, "append the tool word" would be true of the pretty link and quietly false
+    // of the permanent one, which is the form published links actually use.
+    if (appState.projectId && appState.toolSegment) {
+        return <ProjectToolDoorway appState={appState} />
     }
 
     return <SpaceSurfaceRoute appState={appState} />

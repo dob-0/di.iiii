@@ -40,6 +40,44 @@ Two rows added to `docs/ai/known-fixes.md`.
   it. The same string renders correctly in `StudioHub`, which was verified, so the glyph
   itself is proven; its placement in that panel is not.
 
+## 2026-08-21 — the tool doorway: append a word to a project link and it opens there
+
+The owner's shape, in his words: *"it great when you can go in studio with just easy add
+where you go and it run"*. And, on raw: *"raw and studio is for building so we can add layer
+layer"* — so the project is the address and the tool is a view of it.
+
+    /wcc/mery-petrosyan          the project, published        (already worked)
+    /wcc/mery-petrosyan/studio   the same project, in Studio    NEW
+    /wcc/mery-petrosyan/raw      the same project, node editor  NEW
+    /wcc/p/<id>/studio           the same, on the permanent form  NEW
+
+**A doorway, not an address.** The slug resolves, then the router `replace:`s the bar with
+the lane's existing canonical path. No new permanent URL is minted, so nothing new has to be
+supported forever — and it does not prejudge §7.1 of the URL spec, unsigned since 08-04,
+which stages an addressing model where this level stops existing.
+
+**It fixed a real silent fall-through.** `getAppLocationState` classified the two-segment
+shape and never read `segments[2]`, so `/wcc/x/studio` AND `/wcc/x/banana` both rendered the
+published project at HTTP 200 with the wrong URL in the bar. Measured on prod by rendering,
+because the SPA answers 200 for every path.
+
+Two things added beyond the plan the design agents produced, both from their own adversarial
+pass: **`?query` and `#hash` are carried across** (every other heal in `RootApp` drops them,
+which silently eats `?embed=1`), and **the `/p/` form gets the doorway too**, or "append the
+tool" would have been true of the pretty link and quietly false of the permanent one — the
+form published links actually use.
+
+Three parts of that plan were deliberately **dropped**: a robots.txt change (it would have
+de-indexed URLs the sitemap advertises — the pass's only blocker), an og:image rewrite, and a
+server-side reserved-word guard on project creation that would have turned imports and backup
+restores into hard 400s.
+
+Verified in a browser against production data: all eight cases land correctly, and
+`/wcc/mery-petrosyan/studio` reaches the editor's **auth gate** — "Sign in to open the editor
+for wcc" — not the viewer. The doorway respects the permission model rather than routing past
+it. Full suite: 269 client files pass, +10 new tests, failure set identical to baseline (12
+serverXR files that cannot import `express` in this worktree).
+
 **Not done here:**
 
 - `scripts/works-boundary.mjs` — the one place the repo states `project ⊇ space`, the exact

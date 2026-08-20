@@ -60,12 +60,13 @@ export const WIKI_ARTICLES = [
             { list: [
                 '/<space>/studio — the project hub for a space',
                 '/<space>/studio/projects/<id> — the editor for one project',
+                '/<space>/<project>/studio — the same project, open for editing. Add /raw instead for the node editor. This works on any project link: take the address you are looking at and add the word. It is a shortcut, not a second address — the bar heals to the editor’s own link once it opens.',
                 '/<space> — the public viewer for a space’s published project',
                 '/<space>/p/<id> — the public viewer for any single project (on a public space, no login needed — share a draft or a second project without moving the published pointer)'
             ] }
         ],
         tags: ['spaces', 'projects', 'basics'],
-        updated: '2026-08-19'
+        updated: '2026-08-21'
     },
     {
         id: 'spaces-map-view',
