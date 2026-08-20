@@ -366,8 +366,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 382,
-            toLine: 400,
+            fromLine: 412,
+            toLine: 430,
             sharedWith: []
         },
         panel: null,
@@ -398,8 +398,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 224,
-            toLine: 225,
+            fromLine: 225,
+            toLine: 233,
             sharedWith: []
         },
         panel: null,
@@ -417,8 +417,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 226,
-            toLine: 227,
+            fromLine: 234,
+            toLine: 242,
             sharedWith: []
         },
         panel: null,
@@ -436,8 +436,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 228,
-            toLine: 251,
+            fromLine: 243,
+            toLine: 281,
             sharedWith: []
         },
         panel: null,
@@ -469,8 +469,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 280,
-            toLine: 306,
+            fromLine: 310,
+            toLine: 336,
             sharedWith: []
         },
         panel: null,
@@ -480,8 +480,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 259,
-            toLine: 279,
+            fromLine: 289,
+            toLine: 309,
             sharedWith: []
         },
         panel: null,
@@ -511,8 +511,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 181,
-            toLine: 195,
+            fromLine: 182,
+            toLine: 196,
             sharedWith: []
         },
         panel: null,
@@ -530,8 +530,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 196,
-            toLine: 208,
+            fromLine: 197,
+            toLine: 209,
             sharedWith: []
         },
         panel: null,
@@ -547,8 +547,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 209,
-            toLine: 223,
+            fromLine: 210,
+            toLine: 224,
             sharedWith: []
         },
         panel: null,
@@ -878,8 +878,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 307,
-            toLine: 331,
+            fromLine: 337,
+            toLine: 361,
             sharedWith: []
         },
         panel: null,
@@ -895,8 +895,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 332,
-            toLine: 353,
+            fromLine: 362,
+            toLine: 383,
             sharedWith: []
         },
         panel: null,
@@ -906,8 +906,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 354,
-            toLine: 381,
+            fromLine: 384,
+            toLine: 411,
             sharedWith: []
         },
         panel: null,
@@ -963,7 +963,7 @@ export const DOORWAY_PLACE = {
 
 export const SOURCE_FINGERPRINTS = {
     'src/project/graph/nodeGraphRuntime.js': '6db6899e',
-    'src/raw/components/RawViewport.jsx': '2c8fe092',
+    'src/raw/components/RawViewport.jsx': '79724ac5',
     'src/raw/components/RawEditor.jsx': '279f1dc2',
     'src/project/nodes/geom.array/runtime.js': '6958f9d9',
     'src/project/nodes/logic.compare/runtime.js': 'ad9e4fb8',

@@ -8,7 +8,7 @@ import { asColor } from '../utils/colorValue.js'
 // metalness 0, no emission) so documents authored before these appearance
 // fields existed render exactly as they always did. `color` keeps acting as
 // a tint when a texture is set — pick white to show the image unmodified.
-export default function PrimitiveMaterial({ color, wireframe = false, opacity = 1, textureAsset = null, roughness, metalness, emissive, emissiveIntensity, side }) {
+export default function PrimitiveMaterial({ color, wireframe = false, opacity = 1, textureAsset = null, textureLive = null, roughness, metalness, emissive, emissiveIntensity, side }) {
     const assetUrl = useAssetUrl(textureAsset, { preferRemoteSource: true })
     const sourceUrl = textureAsset ? (assetUrl || textureAsset.url || null) : null
     const [map, setMap] = useState(null)
@@ -44,12 +44,15 @@ export default function PrimitiveMaterial({ color, wireframe = false, opacity = 
         }
     }, [sourceUrl])
 
+    // A live THREE.Texture (a webcam's or video's Frame) wins over anything
+    // loaded from a URL — it is already a texture, not a place to fetch one.
+    const liveMap = textureLive?.isTexture ? textureLive : null
     return (
         <meshStandardMaterial
             // toggling map on/off needs a shader recompile — remount instead
-            key={map ? map.uuid : 'flat'}
+            key={liveMap ? liveMap.uuid : (map ? map.uuid : 'flat')}
             color={asColor(color)}
-            map={map}
+            map={liveMap || map}
             wireframe={wireframe}
             transparent={wireframe || opacity < 1}
             opacity={opacity}

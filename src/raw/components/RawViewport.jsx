@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
+import PrimitiveMaterial from '../../objectComponents/PrimitiveMaterial.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
@@ -222,9 +223,23 @@ export function renderNodeBody(node, values, assetMap = null) {
             )
         }
         case 'geom.cube':
-            return <BoxObject color={values.color || '#5fa8ff'} boxSize={asPositiveVec3(values.size, [1, 1, 1])} />
+            return (
+                <BoxObject
+                    color={values.color || '#5fa8ff'}
+                    boxSize={asPositiveVec3(values.size, [1, 1, 1])}
+                    opacity={asFiniteNumber(values.opacity, 1)}
+                    material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
+                />
+            )
         case 'geom.sphere':
-            return <SphereObject color={values.color || '#5fa8ff'} sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.6))))} />
+            return (
+                <SphereObject
+                    color={values.color || '#5fa8ff'}
+                    sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.6))))}
+                    opacity={asFiniteNumber(values.opacity, 1)}
+                    material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
+                />
+            )
         case 'geom.plane': {
             const w = Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.width, 1))))
             const h = Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.height, 1))))
@@ -235,7 +250,15 @@ export function renderNodeBody(node, values, assetMap = null) {
                 return (
                     <mesh>
                         <planeGeometry args={[w, h]} />
-                        <meshStandardMaterial map={values.texture} color="#ffffff" side={2} />
+                        <PrimitiveMaterial
+                            color="#ffffff"
+                            textureLive={values.texture}
+                            opacity={asFiniteNumber(values.opacity, 1)}
+                            roughness={asFiniteNumber(values.roughness, 1)}
+                            metalness={asFiniteNumber(values.metalness, 0)}
+                            emissive={values.emissive}
+                            side={2}
+                        />
                     </mesh>
                 )
             }
@@ -245,7 +268,14 @@ export function renderNodeBody(node, values, assetMap = null) {
             return (
                 <mesh>
                     <planeGeometry args={[w, h]} />
-                    <meshStandardMaterial color={asColor(values.color, '#5fa8ff')} side={2} />
+                    <PrimitiveMaterial
+                        color={asColor(values.color, '#5fa8ff')}
+                        opacity={asFiniteNumber(values.opacity, 1)}
+                        roughness={asFiniteNumber(values.roughness, 1)}
+                        metalness={asFiniteNumber(values.metalness, 0)}
+                        emissive={values.emissive}
+                        side={2}
+                    />
                 </mesh>
             )
         }

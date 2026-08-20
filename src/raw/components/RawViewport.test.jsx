@@ -744,3 +744,27 @@ describe('selection pills', () => {
         expect(container.querySelector('.raw-selection-pill')).toBeNull()
     })
 })
+
+describe('material inputs reach the primitive bodies (material pass 1)', () => {
+    it('cube and sphere carry roughness/metalness/emission/opacity through', () => {
+        const cube = renderNodeBody(
+            { id: 'c1', typeId: 'geom.cube' },
+            { color: '#ff0000', roughness: 0.2, metalness: 1, emissive: '#220000', opacity: 0.5 }
+        )
+        expect(cube.props.opacity).toBe(0.5)
+        expect(cube.props.material).toEqual({ roughness: 0.2, metalness: 1, emissive: '#220000' })
+
+        const sphere = renderNodeBody(
+            { id: 's1', typeId: 'geom.sphere' },
+            { roughness: 0, metalness: 0.5, emissive: '#00ff00', opacity: 1 }
+        )
+        expect(sphere.props.material.metalness).toBe(0.5)
+        expect(sphere.props.material.emissive).toBe('#00ff00')
+    })
+
+    it('defaults mirror a bare material, so old documents render identically', () => {
+        const cube = renderNodeBody({ id: 'c1', typeId: 'geom.cube' }, {})
+        expect(cube.props.opacity).toBe(1)
+        expect(cube.props.material).toEqual({ roughness: 1, metalness: 0, emissive: undefined })
+    })
+})
