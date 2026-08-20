@@ -30,7 +30,7 @@ import { createEntityOfType, getInspectorSections } from '../../project/entityRe
 import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { readNode } from '../../project/graph/nodeReading.js'
-import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode } from '../../project/graph/useGraphClock.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
@@ -1222,15 +1222,24 @@ export default function RawEditor({
         )
         selectNode(copy.id)
     }, [applyLocalOps, authoredNodes, selectNode, workspaceState.selectedNodeId])
+    // Between-pass node state (a Lag's last answer) — this window's own,
+    // never React state, dropped whole when the document changes.
+    const [frameMemory] = useState(() => createFrameMemory())
+    useEffect(() => { frameMemory.clear() }, [frameMemory, projectId])
     const graphContext = useMemo(
-        () => createNodeGraphContext(document, { now: clockNow, liveOutputs }),
-        [document, clockNow, liveOutputs]
+        () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
+        [document, clockNow, liveOutputs, frameMemory]
     )
 
     // The sheet's own context, built from the SAME three inputs as the one the
     // room draws with — evaluation is pure, so same document + same clock +
     // same liveOutputs is the same answer, and the sheet cannot hold a second
     // opinion about what a port is carrying.
+    //
+    // With one exception, now that Lag exists: frameMemory is impure by
+    // design, so the sheet carries its OWN memory — sharing the room's would
+    // write it twice per frame at two different clocks and corrupt the glide.
+    // Its rows converge on the room's value within a lag constant.
     //
     // The one input it deliberately quantises is the clock. graphContext is
     // rebuilt 60 times a second while a Time node exists, and a sine read at
@@ -1239,6 +1248,7 @@ export default function RawEditor({
     // and it is a legibility decision, not a cost one: these rows are text
     // somebody is reading, not a frame being drawn.
     const anatomyNow = Math.floor((clockNow || 0) / 125) * 125
+    const [anatomyMemory] = useState(() => createFrameMemory())
     const anatomyReading = useMemo(() => {
         if (!anatomyFrame || !scopeNode) return null
         return readNode(scopeNode, {
@@ -1246,11 +1256,11 @@ export default function RawEditor({
             // from doorway nodes living in a different scope, and the scoped
             // list finds none of them, silently, with every test still green.
             allNodes: authoredNodes,
-            context: createNodeGraphContext(document, { now: anatomyNow, liveOutputs }),
+            context: createNodeGraphContext(document, { now: anatomyNow, liveOutputs, frameMemory: anatomyMemory }),
             document,
             childCount: childCounts.get(scopeNode.id) || 0
         })
-    }, [anatomyFrame, scopeNode, authoredNodes, document, liveOutputs, childCounts, anatomyNow])
+    }, [anatomyFrame, scopeNode, authoredNodes, document, liveOutputs, anatomyMemory, childCounts, anatomyNow])
 
     const handleShowFeedingCard = useCallback((nodeId) => {
         // What feeds the node you are standing in is a card in the scope

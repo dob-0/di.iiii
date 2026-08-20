@@ -113,6 +113,8 @@ export const FAMILY_BY_TYPE = {
     'logic.compare': 'numbers',
     'logic.gate': 'numbers',
     'logic.switch': 'numbers',
+    'signal.lag': 'numbers',
+    'value.noise': 'numbers',
     // the scene — light, sky, grid, scenes, desks, containers
     'world.light': 'room',
     'world.environment': 'room',
@@ -1676,6 +1678,43 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'out', type: 'any', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // Motion operators (show operators, 2026-08-20). Lag is the one node
+    // whose state lives between passes (context.frameMemory); Noise is pure —
+    // deterministic in the document clock, so every window sees one wander.
+    'signal.lag': {
+        id: 'signal.lag',
+        label: 'Lag',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'in',  type: 'number', label: 'Value',   default: 0   },
+            { id: 'lag', type: 'number', label: 'Lag (s)', default: 0.5 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'value.noise': {
+        id: 'value.noise',
+        label: 'Noise',
+        category: 'value',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'speed',   type: 'number', label: 'Speed',   default: 1 },
+            { id: 'variant', type: 'number', label: 'Variant', default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
         ],
         defaultValues: {},
         render: 'hidden',
