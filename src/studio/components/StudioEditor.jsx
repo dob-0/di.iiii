@@ -116,7 +116,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         userIdStorageKey: 'dii.studio.userId',
         legacyDisplayNameStorageKeys: ['dii.beta.displayName'],
         legacyUserIdStorageKeys: ['dii.beta.userId'],
-        anonymousLabel: 'Studio',
+        anonymousLabel: 'Guest',
         userIdPrefix: 'studio-user'
     })
     const document = state.document
@@ -294,7 +294,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         applyLocalOps({
             type: 'createEntity',
             payload: { entity }
-        }, { activityMessage: `Created ${entity.type} entity.` })
+        }, { activityMessage: `Created ${entity.type} object.` })
         dispatch({ type: 'select-entity', entityId: entity.id })
     }
 
@@ -352,7 +352,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             ? 'It will be removed from this project and from the space files.'
             : item.inSpace ? 'It will be removed from the space files.' : 'It will be removed from this project.'
         const usedNote = item.usedByCount
-            ? ` ${item.usedByCount} entit${item.usedByCount === 1 ? 'y uses' : 'ies use'} it in this scene and will lose their file.`
+            ? ` ${item.usedByCount} object${item.usedByCount === 1 ? ' uses' : 's use'} it here and will lose their file.`
             : ''
         if (!window.confirm(`Delete "${item.name || item.id}"? ${scopeNote}${usedNote}`)) return
         try {
@@ -464,7 +464,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             {
                 activityMessage: targets.length === 1
                     ? `Deleted ${targets[0].name}.`
-                    : `Deleted ${targets.length} entities.`,
+                    : `Deleted ${targets.length} objects.`,
                 activityLevel: 'warning'
             }
         )
@@ -483,7 +483,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             {
                 activityMessage: targets.length === 1
                     ? `Duplicated ${targets[0].name}.`
-                    : `Duplicated ${targets.length} entities.`
+                    : `Duplicated ${targets.length} objects.`
             }
         )
         dispatch({ type: 'select-entities', entityIds: cloneGroups.map((group) => group[0].id) })
@@ -507,7 +507,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             {
                 activityMessage: cloneGroups.length === 1
                     ? `Pasted ${source.subtrees[0][0].name}.`
-                    : `Pasted ${cloneGroups.length} entities.`
+                    : `Pasted ${cloneGroups.length} objects.`
             }
         )
         dispatch({ type: 'select-entities', entityIds: cloneGroups.map((group) => group[0].id) })
@@ -578,7 +578,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 }
             })
         }
-        applyLocalOps(ops, { activityMessage: `Grouped ${targets.length} entities.` })
+        applyLocalOps(ops, { activityMessage: `Grouped ${targets.length} objects.` })
         dispatch({ type: 'select-entity', entityId: group.id })
     }
 
@@ -1026,7 +1026,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         : [
             {
                 id: 'worldState',
-                label: 'World',
+                label: 'Scene',
                 fields: [
                     { label: 'Background', component: 'worldState', path: ['backgroundColor'], type: 'color' },
                     { label: 'Grid Visible', component: 'worldState', path: ['gridVisible'], type: 'checkbox' },

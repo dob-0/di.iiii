@@ -50,5 +50,5 @@ export const describeRejectedFiles = (rejected = []) => {
     const list = names.length > 3
         ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`
         : names.join(', ')
-    return `Raw has no node for ${list}. It takes 3D models (.glb, .gltf, .obj, .stl, .fbx), video, sound and images.`
+    return `There is no node for ${list}. Drops take 3D models (.glb, .gltf, .obj, .stl, .fbx), video, sound and images.`
 }

@@ -1031,10 +1031,10 @@ export default function RawGraphSurface({
                             to a different one. Both optional: Studio wraps this
                             component read-only and passes no handlers. */}
                         {onExplainScope ? (
-                            <button type="button" onClick={onExplainScope}>Show me what it&apos;s made of</button>
+                            <button type="button" onClick={onExplainScope}>What it&apos;s made of</button>
                         ) : null}
                         {onMakeScene ? (
-                            <button type="button" onClick={onMakeScene}>Make me a scene</button>
+                            <button type="button" onClick={onMakeScene}>Build an example</button>
                         ) : null}
                     </div>
                 </div>
@@ -1193,7 +1193,7 @@ export default function RawGraphSurface({
                                         <button
                                             type="button"
                                             className={`raw-graph-node-active-toggle${isNodeActive(node) ? ' is-active' : ''}`}
-                                            title={isNodeActive(node) ? 'Active in this scope' : 'Make active in this scope'}
+                                            title={isNodeActive(node) ? 'Active here' : 'Make this the active one'}
                                             onPointerDown={(event) => event.stopPropagation()}
                                             onClick={(event) => { event.stopPropagation(); onSetActive(node) }}
                                         >

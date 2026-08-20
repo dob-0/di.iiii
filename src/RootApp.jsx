@@ -162,7 +162,7 @@ function AppRouter() {
         rrNavigate(target, { replace: true })
     }, [legacyRawPath, rawState.page, rawState.projectId, rawState.spaceId, rrNavigate])
     if (legacyRawPath) {
-        return <RouteSurfaceFallback label="Loading Raw" detail="" />
+        return <RouteSurfaceFallback label="Loading the node editor" detail="" />
     }
 
     if (isStudioLocation(studioState)) {
@@ -172,7 +172,7 @@ function AppRouter() {
                     fallback={
                         <RouteSurfaceFallback
                             label="Loading Studio"
-                            detail="Preparing the main authoring workspace..."
+                            detail=""
                         />
                     }
                 >
@@ -200,8 +200,8 @@ function AppRouter() {
                 <Suspense
                     fallback={
                         <RouteSurfaceFallback
-                            label="Loading Raw"
-                            detail="Preparing the node-graph workspace..."
+                            label="Loading the node editor"
+                            detail=""
                         />
                     }
                 >

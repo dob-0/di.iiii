@@ -18,8 +18,8 @@ const DEFAULT_SHEET_STATE = {
 
 const EMPTY_STATES = {
     scene: {
-        title: 'Scene tools are empty',
-        description: 'Scene controls will appear here when they are available.'
+        title: 'Room tools are empty',
+        description: 'Room controls will appear here when they are available.'
     },
     files: {
         title: 'No file tools yet',
@@ -27,10 +27,10 @@ const EMPTY_STATES = {
     },
     selected: {
         title: 'Nothing selected',
-        description: 'Tap an object in the scene and its controls will appear here.'
+        description: 'Tap an object in the room and its controls will appear here.'
     },
     more: {
-        title: 'Workspace tools',
+        title: 'Project tools',
         description: 'Project actions and activity will appear here when they are available.'
     }
 }
@@ -252,7 +252,7 @@ export default function MobileEditorShell({
     const isWorkbenchOpen = Boolean(activeGroup)
     const activeWorkbenchTitle =
         activeGroup === 'more'
-            ? 'Workspace'
+            ? 'Project'
             : activePanelEntry?.mobileLabel ||
               activePanelEntry?.label ||
               GROUP_LABELS[activeGroup] ||
@@ -428,7 +428,7 @@ export default function MobileEditorShell({
                                     title={EMPTY_STATES[activeGroup]?.title || 'Nothing here yet'}
                                     description={
                                         EMPTY_STATES[activeGroup]?.description ||
-                                        'This workspace section is currently empty.'
+                                        'This section is currently empty.'
                                     }
                                 />
                             )}

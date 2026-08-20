@@ -39,7 +39,7 @@ export function useSceneActions({
 } = {}) {
     const handleClear = useCallback(async ({ skipConfirm = false, silent = false } = {}) => {
         if (!skipConfirm) {
-            const confirmed = window.confirm('Clear the local scene? This removes unsaved changes on this device only.')
+            const confirmed = window.confirm('Clear your unsaved changes? This removes edits made on this device only, and nothing that is published.')
             if (!confirmed) return
         }
         setObjects?.(defaultScene.objects)

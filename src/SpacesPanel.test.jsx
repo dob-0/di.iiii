@@ -50,7 +50,7 @@ describe('SpacesPanel', () => {
 
         expect(screen.getByLabelText('Open After Create')).toBeInTheDocument()
         expect(screen.getByRole('option', { name: 'Public route' })).toBeInTheDocument()
-        expect(screen.getByRole('option', { name: 'Studio workspace' })).toBeInTheDocument()
+        expect(screen.getByRole('option', { name: 'Studio' })).toBeInTheDocument()
         expect(screen.getByRole('option', { name: 'Admin page' })).toBeInTheDocument()
 
         fireEvent.change(screen.getByLabelText('Open After Create'), {

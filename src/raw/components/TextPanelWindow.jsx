@@ -1,5 +1,5 @@
 const getTextPanelContent = (node) =>
-    node.values?.content ?? node.values?.text ?? 'This panel is ready for authored UI.'
+    node.values?.content ?? node.values?.text ?? 'Nothing written here yet.'
 
 export default function TextPanelWindow({ node, values = null }) {
     const sourceNode = values ? { ...node, values } : node

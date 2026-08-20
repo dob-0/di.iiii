@@ -127,7 +127,7 @@ export default function KeeperPanelWindow({ node, values, onReplyChange, onConfi
                 />
             </label>
             {wiredPrompt && (
-                <div className="raw-keeper-panel-note">Driven by the wired prompt port.</div>
+                <div className="raw-keeper-panel-note">Driven by whatever is wired into the prompt port.</div>
             )}
 
             <div className="raw-keeper-panel-actions">

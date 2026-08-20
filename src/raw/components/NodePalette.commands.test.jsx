@@ -10,11 +10,11 @@ const open = (props = {}) => render(
 
 describe('NodePalette as the workspace summons', () => {
     it('lists commands ABOVE node types', () => {
-        // With the chrome hidden these rows are the only way back to it, so
+        // With the toolbar hidden these rows are the only way back to it, so
         // they must not sit below a scroll of node types.
-        open({ commands: [{ id: 'chrome', label: 'Show the chrome', hint: 'topbar', run: () => {} }] })
+        open({ commands: [{ id: 'chrome', label: 'Show the toolbar', hint: 'topbar', run: () => {} }] })
         const rows = screen.getAllByRole('button')
-        expect(rows[0]).toHaveTextContent('Show the chrome')
+        expect(rows[0]).toHaveTextContent('Show the toolbar')
     })
 
     it('runs a command and closes, rather than creating a node', () => {
@@ -44,9 +44,9 @@ describe('NodePalette as the workspace summons', () => {
     })
 
     it('finds a command by its hint, not only its label', () => {
-        open({ commands: [{ id: 'chrome', label: 'Show the chrome', hint: 'topbar, controls', run: () => {} }] })
+        open({ commands: [{ id: 'chrome', label: 'Show the toolbar', hint: 'topbar, controls', run: () => {} }] })
         fireEvent.change(screen.getByPlaceholderText(/type a node or panel name/i), { target: { value: 'topbar' } })
-        expect(screen.getByText('Show the chrome')).toBeInTheDocument()
+        expect(screen.getByText('Show the toolbar')).toBeInTheDocument()
     })
 
     it('Enter runs the highlighted command', () => {

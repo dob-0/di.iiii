@@ -51,8 +51,8 @@ const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', 
 
 const STEPS = [
     { n: '01', title: 'Open a space', body: 'Click "Step inside" or go to any space URL. No account required to view. Sign in only to edit.' },
-    { n: '02', title: 'Add objects', body: 'Use the Library panel to add 3D shapes, text, images, or 3D models. Drag to position them.' },
-    { n: '03', title: 'Customize your world', body: 'Change colors, lighting, camera angle, and background. Tweak with the Inspector on the right.' },
+    { n: '02', title: 'Add objects', body: 'A space holds projects — open one, then use the Create window for 3D shapes, text, images, or 3D models. Drag to position them.' },
+    { n: '03', title: 'Set up the scene', body: 'The Scene window sets the sky, background and lighting. Select an object and edit it in the Objects window.' },
     { n: '04', title: 'Share or publish', body: 'Copy the space link to invite collaborators, or publish to make it live for the public.' }
 ]
 
@@ -66,7 +66,7 @@ const AUDIENCES = [
             </svg>
         ),
         label: 'Artists & Creators',
-        desc: 'Build visual worlds, 3D exhibitions, and immersive installations directly in the browser. No 3D software experience needed.'
+        desc: 'Build rooms, 3D exhibitions, and immersive installations directly in the browser. No 3D software experience needed.'
     },
     {
         icon: (
@@ -108,11 +108,11 @@ const AUDIENCES = [
 ]
 
 const FEATURES = [
-    { icon: '◈', title: 'Node-based scene graph', desc: 'Every object is a typed node. Wire them, group them, script them.' },
+    { icon: '◈', title: 'Everything is a node', desc: 'Every object is a typed node. Wire them, group them, script them.' },
     { icon: '◉', title: 'Real-time collaboration', desc: 'See teammates\' cursors and changes live, in the same space.' },
     { icon: '⬡', title: 'WebXR ready', desc: 'Enter VR or AR from any supported browser — no app install.' },
     { icon: '◫', title: 'Asset pipeline', desc: 'Upload images, 3D models, audio. Optimized and served automatically.' },
-    { icon: '◳', title: 'Spaces system', desc: 'Multiple isolated workspaces. Share by link. Lock editing or leave open.' },
+    { icon: '◳', title: 'Spaces', desc: 'A space is a place that is yours — its own address, its own guest list, and the projects you make in it. Share by link. Lock editing or leave it open.' },
     { icon: '◐', title: 'Publish anywhere', desc: 'Each space has a public URL. Export JSON. Embed or link directly.' },
     { icon: '◍', title: 'Guest & sandbox modes', desc: 'Visitors explore without an account — a shared global space, or a private sandbox each.' },
     { icon: '✦', title: '3 free spaces', desc: 'Sign in and create up to three of your own spaces for free. Admins are unlimited.' }
@@ -120,12 +120,12 @@ const FEATURES = [
 
 const ROUTES = [
     { path: '/', label: 'Landing — this page' },
-    { path: '/studio', label: 'Studio — main authoring editor' },
+    { path: '/studio', label: 'Your spaces' },
     // Space-scoped, not the bare /raw this used to list. A bare lane route
     // defaults to the restricted 'main' space, where a guest session has no
     // write scope, so a visitor who clicked this from the route map landed on
     // "sign in to open the editor" instead of an editor.
-    { path: '/open/raw', label: 'Raw — experimental node-first editor' },
+    { path: '/open/raw', label: 'The node editor, on the open space' },
     { path: '/:spaceId', label: 'Public space viewer' },
     { path: '/serverXR/api/health', label: 'Backend health (JSON)' },
     { path: '/serverXR/api/auth/session', label: 'Auth session state (JSON)' },
@@ -284,8 +284,8 @@ export default function LandingPage() {
                         to a hub that wants an account, "Enter Space" to the
                         restricted 'main' space, where a guest is bounced to the
                         read-only viewer. Studio is now depth behind the one
-                        door (it is a room on the seeded desk), not a rival to
-                        it. "Look around" is the decorative walkable void this
+                        door (a room you enter once you are inside), not a rival
+                        to it. "Look around" is the decorative walkable void this
                         page renders itself — it only exists where there is no
                         real main space to enter, otherwise it is another door
                         wearing a preview's clothes. */}
@@ -301,7 +301,7 @@ export default function LandingPage() {
                     </Stack>
 
                     <Typography className="lp-cta-sub">
-                        no account, no install. Studio is a room on the same desk.
+                        no account, no install. Studio is one of the rooms inside.
                         <br />
                         <a href={studioHref}>Already have spaces? Open Studio →</a>
                     </Typography>
@@ -330,7 +330,7 @@ export default function LandingPage() {
                 {entered && (
                     <>
                         <button type="button" className="lp-enter-exit" onClick={() => { setEntered(false); setViewMode(false) }}>
-                            ← Exit space
+                            ← Back
                         </button>
                         <button type="button" className="lp-enter-exit lp-enter-viewtoggle" onClick={() => setViewMode((v) => !v)}>
                             {viewMode ? '→ Walk / fly' : '◐ View mode'}
@@ -356,7 +356,7 @@ export default function LandingPage() {
                     <Typography className="lp-section-body">
                         di.iiii is a collaborative 3D spatial editor that runs entirely in your web browser.
                         Think of it as a shared whiteboard — but in three dimensions.
-                        Build scenes, place objects, set up lighting and cameras,
+                        Build rooms, place objects, set up lighting and cameras,
                         and invite others to join the same space in real time.
                     </Typography>
 
@@ -392,7 +392,7 @@ export default function LandingPage() {
                                     </Box>
                                 ),
                                 title: 'Publish',
-                                body: 'Every space has a public URL. Share the link — visitors see your world in their browser or in VR/AR headsets.'
+                                body: 'Every space has a public URL. Share the link — visitors see your work in their browser or in a VR/AR headset.'
                             }
                         ].map((col) => (
                             <Box key={col.title} className="lp-col-card">
@@ -411,7 +411,7 @@ export default function LandingPage() {
                     <Typography className="lp-section-eyebrow">Getting started</Typography>
                     <Typography className="lp-section-title" component="h2">How to use di.iiii</Typography>
                     <Typography className="lp-section-body">
-                        You can be building your first 3D scene in under two minutes.
+                        You can be building your first 3D room in under two minutes.
                     </Typography>
 
                     <Box className="lp-steps">
@@ -429,7 +429,7 @@ export default function LandingPage() {
                     <Box className="lp-tip">
                         <Typography className="lp-tip-icon" component="span" aria-hidden="true">→</Typography>
                         <Typography className="lp-tip-text" component="span">
-                            Keyboard shortcuts: <kbd>H</kbd> toggles the UI, <kbd>F</kbd> frames the scene, <kbd>Ctrl/⌘</kbd>+<kbd>Z</kbd> undoes the last action.
+                            Keyboard shortcuts: <kbd>H</kbd> toggles the UI, <kbd>F</kbd> frames the selection, <kbd>Ctrl/⌘</kbd>+<kbd>Z</kbd> undoes the last action.
                         </Typography>
                     </Box>
                 </Box>
@@ -576,7 +576,7 @@ export default function LandingPage() {
                         Start building your space.
                     </Typography>
                     <Typography className="lp-enter-body">
-                        The desk is already set: a live 3D room, the node that drives its sky,
+                        Nothing is empty when you arrive: a live 3D room, the node that drives its sky,
                         and Studio as a room you can walk into.
                         Everything runs in your browser — no sign-up required to explore.
                     </Typography>
@@ -602,8 +602,12 @@ export default function LandingPage() {
                         when Privacy/Terms/Instagram joined; .lp-footer-inner
                         already wraps, this lets the links themselves follow */}
                     <nav className="lp-footer-nav" aria-label="Footer navigation" style={{ flexWrap: 'wrap' }}>
-                        <a href={RAW_LANE_HREF} className="lp-footer-link">Raw</a>
-                        <a href={studioHref} className="lp-footer-link">Studio</a>
+                        {/* One door here too. This row used to read "Raw · Studio"
+                            — two peer lanes, which is the choice the hero exists
+                            to spare a first visitor. The entrance is the entrance;
+                            "Spaces" is a destination like Wiki, matching the nav. */}
+                        <a href={RAW_LANE_HREF} className="lp-footer-link">Step inside</a>
+                        <a href={studioHref} className="lp-footer-link">Spaces</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
                         <a href="/privacy" className="lp-footer-link">Privacy</a>
                         <a href="/terms" className="lp-footer-link">Terms</a>

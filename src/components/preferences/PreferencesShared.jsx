@@ -308,7 +308,7 @@ export function SpacePreviewRow({ space, isActive, onOpenRoute, onCopy }) {
                     className="preferences-inline-action"
                     onClick={() => onOpenRoute?.(routes?.rawPath)}
                 >
-                    Raw
+                    Nodes
                 </button>
                 <button
                     type="button"

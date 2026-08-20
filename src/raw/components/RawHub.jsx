@@ -33,25 +33,25 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const { role } = useAuthSession()
     const [projects, setProjects] = useState([])
     const [title, setTitle] = useState('Untitled Project')
-    const [status, setStatus] = useState('Loading raw projects...')
+    const [status, setStatus] = useState('Loading projects...')
     const [isBusy, setIsBusy] = useState(false)
     const [importWarnings, setImportWarnings] = useState([])
     const titleInputRef = useRef(null)
     const workflowSteps = [
-        'Create or open the space from the admin surface or spaces panel.',
-        'Start a raw project or import a legacy scene for experimental work.',
-        'Keep the node-first iteration here while you test layout, routing, and sync.',
-        'Move stable work into Studio and publish it to the public space route.'
+        'Create or open a space from admin.',
+        'Start a project, or import one you made earlier.',
+        'Build it on the canvas: add nodes, wire them together.',
+        "Publish it at the space's public address."
     ]
 
     const loadProjects = useCallback(async () => {
-        setStatus('Loading raw projects...')
+        setStatus('Loading projects...')
         try {
             const nextProjects = await listProjects(spaceId)
             setProjects(nextProjects)
-            setStatus(nextProjects.length ? '' : 'No raw projects in this space yet.')
+            setStatus(nextProjects.length ? '' : 'No projects in this space yet.')
         } catch (error) {
-            setStatus(error.message || 'Unable to load raw projects.')
+            setStatus(error.message || 'Unable to load projects.')
         }
     }, [spaceId])
 
@@ -65,7 +65,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
     const handleCreate = async () => {
         setIsBusy(true)
-        setStatus('Creating raw project...')
+        setStatus('Creating project...')
         try {
             const response = await createProject(spaceId, {
                 title,
@@ -111,7 +111,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
             setImportWarnings(warnings)
             openProject(response.project.id)
         } catch (error) {
-            setStatus(error.message || 'Unable to import legacy scene.')
+            setStatus(error.message || 'Unable to import that project.')
         } finally {
             setIsBusy(false)
             event.target.value = ''
@@ -208,11 +208,11 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         <span className="raw-hub-di-sq" />
                         <span className="raw-hub-di-sq" />
                     </div>
-                    <h1 className="raw-hub-title">di.iiii raw</h1>
+                    <h1 className="raw-hub-title">di.iiii</h1>
                     <p className="raw-hub-tagline">space · {spaceId}</p>
                 </header>
 
-                <section className="raw-hub-onboarding" aria-label="Raw onboarding">
+                <section className="raw-hub-onboarding" aria-label="Getting started">
                     <div className="raw-hub-onboarding-copy">
                         <span className="raw-window-kicker">First Landing</span>
                         <h2>Choose a path.</h2>
@@ -246,7 +246,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                 <span>↔</span>
                             </div>
                             <span className="raw-window-kicker">Workflow</span>
-                            <h3>Space → Raw → Studio</h3>
+                            <h3>Space → project → publish</h3>
                             <div className="raw-hub-onboarding-chip-row">
                                 <span className="raw-hub-onboarding-chip">space</span>
                                 <span className="raw-hub-onboarding-chip">project</span>
@@ -258,7 +258,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                 ))}
                             </ol>
                             <button type="button" onClick={handleOpenStudio} disabled={isBusy}>
-                                open studio
+                                open the Studio node
                             </button>
                         </section>
                     </div>
@@ -309,7 +309,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                 <SpaceSyncPanel spaceId={spaceId} />
 
                 <footer className="raw-hub-footer">
-                    <button type="button" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>studio</button>
+                    <button type="button" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>studio projects</button>
                     <button type="button" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>public</button>
                     {role === 'admin' && (
                         <button type="button" onClick={() => appNavigate(buildPreferencesPath(spaceId))}>admin</button>

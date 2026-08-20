@@ -142,7 +142,7 @@ describe('StudioHub', () => {
             render(<StudioHub spaceId="algovrithm" />)
 
             expect(await screen.findByText('algovrithm')).toBeTruthy()
-            expect(screen.getByText('code space')).toBeTruthy()
+            expect(screen.getByText('built from code')).toBeTruthy()
             expect(screen.queryByText('No projects yet')).toBeNull()
             expect(screen.queryByRole('button', { name: '+ Create your first project' })).toBeNull()
         })
@@ -191,7 +191,7 @@ describe('StudioHub', () => {
             render(<StudioHub spaceId="gallery" />)
 
             expect(await screen.findByText('No projects yet')).toBeTruthy()
-            expect(screen.queryByText('code space')).toBeNull()
+            expect(screen.queryByText('built from code')).toBeNull()
         })
     })
 

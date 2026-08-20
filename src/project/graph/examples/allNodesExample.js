@@ -160,8 +160,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('sound', 'media.audio', { label: 'Sound', col: 3, row: 5 })
 
     // --- column 4: universe containers and panels ------------------------------
-    add('world', 'universe.world', { label: 'World', col: 4, row: 0 })
-    add('space', 'universe.space', { label: 'Space', col: 4, row: 1 })
+    add('world', 'universe.world', { label: 'Scene', col: 4, row: 0 })
+    add('space', 'universe.space', { label: 'Stage', col: 4, row: 1 })
     add('desk', 'universe.desk.3d', { label: '3D Desk', col: 4, row: 2 })
 
     // The doorways. They sit INSIDE the 3D Desk, which is what makes them mean

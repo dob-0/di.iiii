@@ -195,7 +195,7 @@ export default function DesktopWindow({
                     {onEnter && (
                         <button
                             type="button"
-                            title="Enter this node's scope to place children inside it"
+                            title="Go inside this node to put things in it"
                             onClick={(event) => { event.stopPropagation(); onEnter() }}
                         >
                             Enter ›

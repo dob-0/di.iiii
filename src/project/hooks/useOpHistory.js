@@ -1,3 +1,4 @@
+import { getNodeType } from '../nodeRegistry.js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { applyProjectOps, cloneValue, invertProjectOps } from '../../shared/projectSchema.js'
 
@@ -35,33 +36,37 @@ const entrySignature = (ops) => {
 const stripOp = (op) => ({ type: op.type, payload: cloneValue(op.payload || {}) })
 
 const SETTINGS_OP_LABELS = {
-    setWorldState: 'World settings',
+    setWorldState: 'Scene settings',
     setRenderSettings: 'Render settings',
     setXrState: 'XR settings',
     setPresentationState: 'Presentation settings',
     setPublishState: 'Publish settings',
     setWindowState: 'Window layout',
-    setWorkspaceState: 'Workspace',
+    setWorkspaceState: 'Canvas',
     setProjectMeta: 'Project settings',
-    replaceDocument: 'Replace document'
+    replaceDocument: 'Replace everything'
 }
+
+// A history row is read by a person, so it carries the label the palette shows,
+// never the type id — "Create universe.world node" is not a sentence.
+const nodeLabel = (typeId) => (typeId ? (getNodeType(typeId)?.label || typeId) : 'node')
 
 const entityName = (doc, entityId) => {
     const entity = (doc?.entities || []).find((e) => e.id === entityId)
-    return entity?.name || entity?.type || 'entity'
+    return entity?.name || entity?.type || 'object'
 }
 
 const describeOp = (doc, op) => {
     const payload = op?.payload || {}
     switch (op?.type) {
-        case 'createEntity': return `Create ${payload.entity?.type || 'entity'}`
+        case 'createEntity': return `Create ${payload.entity?.type || 'object'}`
         case 'updateEntity': return `Edit ${entityName(doc, payload.entityId)}`
         case 'updateComponent': {
             const name = entityName(doc, payload.entityId)
             return payload.component === 'transform' ? `Transform ${name}` : `Edit ${name} ${payload.component || 'component'}`
         }
         case 'deleteEntity': return `Delete ${entityName(doc, payload.entityId)}`
-        case 'createNode': return `Create ${payload.node?.typeId || 'node'} node`
+        case 'createNode': return `Create ${nodeLabel(payload.node?.typeId)} node`
         case 'updateNode': return 'Edit node'
         case 'deleteNode': return 'Delete node'
         case 'createEdge': return 'Connect nodes'

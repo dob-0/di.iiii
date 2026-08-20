@@ -187,7 +187,7 @@ export function useStatusItems({
         if (sceneFlushError) {
             list.push({
                 key: 'scene-flush',
-                label: 'Scene changes not saved',
+                label: 'Changes not saved',
                 detail: `${sceneFlushError} Retrying automatically.`,
                 showBar: false,
                 percent: 0

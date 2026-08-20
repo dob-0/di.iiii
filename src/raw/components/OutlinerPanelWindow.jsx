@@ -2,7 +2,7 @@ import { getFamilyColorForType, getNodeType } from '../../project/nodeRegistry.j
 
 export default function OutlinerPanelWindow({ nodes, selectedNodeId, onSelectNode }) {
     if (!nodes.length) {
-        return <div className="raw-empty-state">No nodes on this surface.</div>
+        return <div className="raw-empty-state">No nodes here yet.</div>
     }
     return (
         <ul className="raw-outliner raw-window-stack">

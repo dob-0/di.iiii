@@ -258,7 +258,7 @@ export default function NodePalette({
                                         <span className="raw-node-palette-tag is-command">panel</span>
                                     )}
                                     {entry.kind === 'node' && entry.definition.authoringOnly && (
-                                        <span className="raw-node-palette-tag" title="Places and holds its ports — computes nothing yet">
+                                        <span className="raw-node-palette-tag" title="Holds its ports — computes nothing yet">
                                             shell
                                         </span>
                                     )}

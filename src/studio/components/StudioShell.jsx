@@ -34,8 +34,8 @@ import {
 // The five Studio windows, as a phone bottom nav (order = frequency of use).
 const MOBILE_PANELS = [
     ['create', 'Create'],
-    ['scene', 'Scene'],
-    ['world', 'World'],
+    ['scene', 'Objects'],
+    ['world', 'Scene'],
     ['publish', 'Share'],
     ['files', 'Code']
 ]
@@ -493,7 +493,7 @@ export default function StudioShell({
                             />
                             {(selectedEntity || selectedEntityIds.length > 0) ? (
                                 <StudioInspector
-                                    title={selectedEntityIds.length > 1 ? `${selectedEntityIds.length} selected` : (selectedEntity ? selectedEntity.name : 'World')}
+                                    title={selectedEntityIds.length > 1 ? `${selectedEntityIds.length} selected` : (selectedEntity ? selectedEntity.name : 'Scene')}
                                     subtitle={selectedEntityIds.length > 1 ? `Primary: ${selectedEntity?.name || selectedEntityId}` : (selectedEntity ? selectedEntity.type : 'Project defaults')}
                                     sections={inspectorSections}
                                     values={inspectorValues}
@@ -503,7 +503,7 @@ export default function StudioShell({
                                     footer={inspectorFooter}
                                 />
                             ) : (
-                                <p className="sfp-empty">Select an entity above or in the viewport to edit it.</p>
+                                <p className="sfp-empty">Select an object above or in the viewport to edit it.</p>
                             )}
                             {selectedEntity && selectedEntityIds.length <= 1 && (
                                 <TimelinePanel
@@ -563,7 +563,7 @@ export default function StudioShell({
                         </StudioFloatingPanel>
                     )}
                     {!jamMinimal && isOpen('scene') && (
-                        <StudioFloatingPanel key={`scene-${layoutKey}`} title="Scene" onClose={() => toggle('scene')} initialWidth={300} {...panelChrome('scene')}>
+                        <StudioFloatingPanel key={`scene-${layoutKey}`} title="Objects" onClose={() => toggle('scene')} initialWidth={300} {...panelChrome('scene')}>
                             {panelBodies.scene}
                         </StudioFloatingPanel>
                     )}
@@ -578,7 +578,7 @@ export default function StudioShell({
                         </StudioFloatingPanel>
                     )}
                     {!jamMinimal && isOpen('world') && (
-                        <StudioFloatingPanel key={`world-${layoutKey}`} title="World" onClose={() => toggle('world')} initialWidth={280} {...panelChrome('world')}>
+                        <StudioFloatingPanel key={`world-${layoutKey}`} title="Scene" onClose={() => toggle('world')} initialWidth={280} {...panelChrome('world')}>
                             {panelBodies.world}
                         </StudioFloatingPanel>
                     )}

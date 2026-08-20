@@ -48,7 +48,7 @@ export const STUDIO_GUIDE_SECTIONS = [
         callouts: [
             { icon: '⇄', title: 'Tab', detail: 'Switch between Navigate and Edit mode.' },
             { icon: '✥', title: 'G · R · S', detail: 'Grab, rotate, scale the selection.' },
-            { icon: '◫', title: 'Scene window', detail: 'Exact values live in the inspector.' }
+            { icon: '◫', title: 'Objects window', detail: 'Exact values live in the inspector.' }
         ],
         steps: [
             'Click an object to select it',
@@ -81,7 +81,7 @@ export const STUDIO_SHORTCUT_SECTIONS = [
     {
         title: 'Selection',
         rows: [
-            ['Click', 'Select entity'],
+            ['Click', 'Select object'],
             ['Ctrl / Shift + Click', 'Multi-select'],
             ['A', 'Select all'],
             ['Alt+A', 'Deselect all'],

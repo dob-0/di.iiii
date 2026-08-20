@@ -230,8 +230,8 @@ describe('PreferencesPage', () => {
         expect(within(inspector).getByText('socket jitter detected')).toBeInTheDocument()
         expect(within(inspector).getByText('Copy Log')).toBeInTheDocument()
 
-        // Scene radar renders in the same Inspect section.
-        expect(screen.getByText('Scene Radar')).toBeInTheDocument()
+        // Object radar renders in the same Inspect section.
+        expect(screen.getByText('Object Radar')).toBeInTheDocument()
 
         // Per-space route shortcuts, also under Inspect.
         const spacesHeading = screen.getAllByText('Spaces').find((node) => node.tagName === 'H2')
@@ -240,7 +240,7 @@ describe('PreferencesPage', () => {
         expect(spacesSection).toBeTruthy()
         expect(within(spacesSection).getByRole('button', { name: 'Public' })).toBeInTheDocument()
         expect(within(spacesSection).getByRole('button', { name: 'Studio' })).toBeInTheDocument()
-        expect(within(spacesSection).getByRole('button', { name: 'Raw' })).toBeInTheDocument()
+        expect(within(spacesSection).getByRole('button', { name: 'Nodes' })).toBeInTheDocument()
         expect(within(spacesSection).getByRole('button', { name: 'Admin' })).toBeInTheDocument()
     })
 

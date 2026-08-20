@@ -12,7 +12,7 @@ export function useSpaceLabel({ spaceId, onCopyLink }) {
         }
         return {
             key: 'space-label',
-            label: 'Local Scene',
+            label: 'Not in a space',
             disabled: true
         }
     }, [spaceId, onCopyLink])

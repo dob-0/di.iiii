@@ -205,7 +205,7 @@ export default function RawEditor({
         displayName,
         displayNameStorageKey: DISPLAY_NAME_KEY,
         userIdStorageKey: USER_ID_KEY,
-        anonymousLabel: 'Raw',
+        anonymousLabel: 'Guest',
         userIdPrefix: 'raw-user'
     })
     useEffect(() => {
@@ -427,7 +427,7 @@ export default function RawEditor({
             if (localSaveFailedRef.current) return
             localSaveFailedRef.current = true
             console.error('[local-workspace] save failed — browser storage is full or unavailable')
-            alert('This workspace can no longer be saved to browser storage (it is full or unavailable). Export your work — reloading will lose changes made from now on.')
+            alert('This canvas can no longer be saved to browser storage (it is full or unavailable). Export your work — reloading will lose changes made from now on.')
         }, 400)
         return () => clearTimeout(timer)
     }, [document, isLocalWorkspace, localStorageKey])
@@ -656,13 +656,13 @@ export default function RawEditor({
 
     const handleResetLocalWorkspace = () => {
         if (!isLocalWorkspace) return
-        if (!window.confirm('Reset Workspace? This wipes the entire local workspace — every node, edge, and window — and cannot be undone.')) return
+        if (!window.confirm('Clear this canvas? This wipes everything you have made here — every node, wire and window, including anything nested inside them — and cannot be undone.')) return
         clearLocalWorkspaceDocument(localStorageKey)
         dispatch({ type: 'replace-document', document: {}, version: 0 })
         dispatch({
             type: 'append-activity',
             level: 'warning',
-            message: 'Reset blank workspace.'
+            message: 'Cleared the canvas.'
         })
     }
 
@@ -1524,7 +1524,7 @@ export default function RawEditor({
     const paletteCommands = [
         {
             id: 'chrome',
-            label: zen ? 'Show the chrome' : 'Hide the chrome',
+            label: zen ? 'Show the toolbar' : 'Hide the toolbar',
             hint: zen ? 'topbar, controls' : 'zen — surface and nodes only',
             run: () => setZenPreference(!zen)
         },
@@ -1532,7 +1532,7 @@ export default function RawEditor({
         // backdrop retired (the desk is clear, always) this is the zen
         // route in; the audit called its absence critical back when the
         // backdrop still papered over it.
-        { id: 'room', label: 'Room', hint: 'the 3D view, fullscreen', run: () => setIsWorldFullscreen(true) },
+        { id: 'room', label: 'Full screen', hint: 'the 3D view, fullscreen', run: () => setIsWorldFullscreen(true) },
         { id: 'help', label: 'Help', hint: 'what the keys do', run: () => setHelpOpen(true) },
         { id: 'chat', label: 'Chat', hint: 'talk to whoever is here', run: () => setChatOpen(true) },
         { id: 'outliner', label: 'Outliner', hint: 'every node in the project', run: () => setOutlinerOpen(true) },
@@ -1553,7 +1553,7 @@ export default function RawEditor({
     // "Blank White Workspace" was neither blank nor white nor, in the
     // product's vocabulary, a workspace. It is the canvas that lives in this
     // browser.
-    const workspaceTitle = isLocalWorkspace ? 'Local canvas' : (document.projectMeta?.title || 'Raw Project')
+    const workspaceTitle = isLocalWorkspace ? 'Local canvas' : (document.projectMeta?.title || 'Untitled project')
     const graphTopInset = chromeVisible ? workspaceTop : 0
     // Windows float over the graph, so the fit has to dodge the docked ones or
     // it centres the card cluster underneath one — see getGraphEdgeInsets.
@@ -1637,7 +1637,7 @@ export default function RawEditor({
                                     // most needed to see what they were building.
                                     onClick={() => setIsWorldFullscreen((current) => !current)}
                                 >
-                                    {isWorldFullscreen ? '← Graph' : 'Room'}
+                                    {isWorldFullscreen ? '← Graph' : 'Scene'}
                                 </button>
                             </div>
                         </div>
@@ -1696,10 +1696,10 @@ export default function RawEditor({
                                                 ))}
                                             </select>
                                         </div>
-                                        <button type="button" onClick={() => { handleCreateSceneExample(); setOverflowOpen(false) }}>Make me a scene</button>
+                                        <button type="button" onClick={() => { handleCreateSceneExample(); setOverflowOpen(false) }}>Build an example</button>
                                         <button type="button" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
                                         {isLocalWorkspace && (
-                                            <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Reset Workspace</button>
+                                            <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Clear the canvas</button>
                                         )}
                                         {presence.users.length > 0 && presence.users.map((user) => (
                                             <span key={user.socketId || user.userId} className="raw-user-pill">
@@ -1914,6 +1914,7 @@ export default function RawEditor({
                         className="raw-scope-marker-out"
                         onClick={() => handleNavigateToScope(navStack.length - 2)}
                         title="Leave"
+                        aria-label="Leave"
                     >
                         ‹
                     </button>

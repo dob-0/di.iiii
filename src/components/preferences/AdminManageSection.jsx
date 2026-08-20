@@ -28,7 +28,7 @@ import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } fro
 
 const ROLES = [
     { key: 'viewer', hint: 'Read-only access' },
-    { key: 'editor', hint: 'Can edit scenes' },
+    { key: 'editor', hint: 'Can edit projects' },
     { key: 'admin', hint: 'Full control + this console' }
 ]
 
@@ -486,7 +486,7 @@ function SpaceDetail({
                         <button type="button" className={`toggle-button ${space.isPublic ? 'active success-button' : ''}`} onClick={() => onPatch({ isPublic: !space.isPublic })}>
                             {space.isPublic ? 'Public ✓' : 'Private'}
                         </button>
-                        <button type="button" className={`toggle-button ${isDefault ? 'active' : ''}`} onClick={onSetDefault} disabled={isDefault} title="Also what the landing page's 'Enter Space' button opens">
+                        <button type="button" className={`toggle-button ${isDefault ? 'active' : ''}`} onClick={onSetDefault} disabled={isDefault} title="The space a URL that names no space falls back to">
                             {isDefault ? 'Main space ✓' : 'Set as main'}
                         </button>
                         <button type="button" className={`toggle-button ${isGlobal ? 'active success-button' : ''}`} onClick={onSetGlobal} title="Signed-out visitors land in this shared space">

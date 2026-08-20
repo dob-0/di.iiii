@@ -234,7 +234,7 @@ describe('RawEditor canvas mode', () => {
 
 // Product decision 2026-07-17: Node 0 is an ordinary node — deleting it (via
 // either the Delete FAB or the graph canvas's own delete path) behaves exactly
-// like deleting any other node, no special confirmation. Only Reset Workspace
+// like deleting any other node, no special confirmation. Only Clear the canvas
 // (a document-wide wipe) still confirms.
 describe('RawEditor delete/reset confirmations', () => {
     const GUARD_STORAGE_KEY = 'test-node0-delete-guard'
@@ -287,28 +287,28 @@ describe('RawEditor delete/reset confirmations', () => {
         expect(deletedNode0).toBe(true)
     })
 
-    // Regression test for the 2026-07-17 audit: "Reset Workspace" wipes the
+    // Regression test for the 2026-07-17 audit: "Clear the canvas" wipes the
     // entire local document (every node/edge/window) and previously had NO
     // confirmation at all — this guard is unrelated to Node 0 and stays.
-    it('asks for confirmation before Reset Workspace, and aborts on cancel', () => {
+    it('asks for confirmation before clearing the canvas, and aborts on cancel', () => {
         seedSelectedNodeZero()
         const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
         render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
 
         fireEvent.click(screen.getByText('⋯'))
-        fireEvent.click(screen.getByText('Reset Workspace'))
+        fireEvent.click(screen.getByText('Clear the canvas'))
 
-        expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/Reset Workspace/))
+        expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/Clear this canvas/))
         expect(window.localStorage.getItem(GUARD_STORAGE_KEY)).not.toBeNull()
     })
 
-    it('resets the workspace via the overflow menu once the user confirms', () => {
+    it('clears the canvas via the overflow menu once the user confirms', () => {
         seedSelectedNodeZero()
         vi.spyOn(window, 'confirm').mockReturnValue(true)
         render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
 
         fireEvent.click(screen.getByText('⋯'))
-        fireEvent.click(screen.getByText('Reset Workspace'))
+        fireEvent.click(screen.getByText('Clear the canvas'))
 
         expect(screen.queryByText('Node 0')).toBeNull()
     })
@@ -395,7 +395,7 @@ describe('RawEditor live-world toggle', () => {
     const makeWorldNode = (id, parentId = null) => ({
         id,
         typeId: 'universe.world',
-        label: 'World',
+        label: 'Scene',
         parentId,
         values: { frame: { x: 0, y: 0, width: 200, height: 200, visible: true } }
     })
@@ -408,7 +408,7 @@ describe('RawEditor live-world toggle', () => {
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={LIVE_STORAGE_KEY} />)
 
-        fireEvent.click(screen.getByRole('button', { name: /Mark as live output for this scope/i }))
+        fireEvent.click(screen.getByRole('button', { name: /Make this the live Scene here/i }))
 
         const setLiveOp = mockApplyLocalOps.mock.calls
             .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
@@ -428,7 +428,7 @@ describe('RawEditor live-world toggle', () => {
         )
         render(<RawEditor localStorageKey={LIVE_STORAGE_KEY} />)
 
-        expect(screen.getByRole('button', { name: /^Live output for this scope/i })).toBeTruthy()
+        expect(screen.getByRole('button', { name: /^The live Scene here/i })).toBeTruthy()
     })
 })
 
@@ -458,14 +458,17 @@ describe('RawEditor clear desk — no backdrop, ever', () => {
         expect(container.querySelector('.raw-surface-shell.is-world-overlay')).toBeNull()
     })
 
-    // With the wallpaper gone, the palette is the zen route into the room.
-    it('the palette offers Room, and running it opens the fullscreen room', () => {
+    // With the wallpaper gone, the palette is the zen route into the scene.
+    // The command is "Full screen", NOT "Scene": the palette also lists the
+    // node type Scene (universe.world), and two entries answering to one word
+    // meant typing it ran the command instead of placing the node.
+    it('the palette offers Full screen, and running it opens the fullscreen scene', () => {
         window.localStorage.setItem(ROOM_STORAGE_KEY, makeWorkspaceDoc([
             { id: 'c-1', typeId: 'geom.cube', label: 'Cube', values: {} }
         ]))
         render(<RawEditor localStorageKey={ROOM_STORAGE_KEY} canvasMode />)
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
-        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Room' } })
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Full screen' } })
         fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
         expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
     })
@@ -478,13 +481,13 @@ describe('RawEditor chrome sweep (plan PR 1.6)', () => {
         viewportMountProps.length = 0
     })
 
-    it('Escape at the top of the stack exits the fullscreen room', () => {
+    it('Escape at the top of the stack exits the fullscreen scene', () => {
         window.localStorage.setItem(KEY, makeWorkspaceDoc([
             { id: 'c-1', typeId: 'geom.cube', label: 'Cube', values: {} }
         ]))
         render(<RawEditor localStorageKey={KEY} canvasMode />)
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
-        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Room' } })
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Full screen' } })
         fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
         expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
         fireEvent.keyDown(window, { key: 'Escape' })
@@ -657,14 +660,14 @@ describe('RawEditor free-nesting palette create', () => {
         window.localStorage.setItem(
             FREE_NEST_STORAGE_KEY,
             makeWorkspaceDoc([
-                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+                { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: {} }
             ])
         )
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={FREE_NEST_STORAGE_KEY} />)
 
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
-        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'World' } })
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Scene' } })
         fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
 
         expect(screen.queryByText(/Only one World per scope/)).toBeNull()
@@ -733,7 +736,7 @@ describe('RawEditor world title wiring', () => {
             makeWorkspaceDoc(
                 [
                     { id: 'title-1', typeId: 'value.string', label: 'Title', parentId: null, values: { value: 'Wired Title' } },
-                    { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: { title: 'Static Title' } }
+                    { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: { title: 'Static Title' } }
                 ]
             ).replace('"edges":[]', '"edges":[{"id":"e1","fromNodeId":"title-1","fromPort":"out","toNodeId":"world-1","toPort":"title"}]')
         )
@@ -800,7 +803,7 @@ describe('RawEditor stream.monitor panel', () => {
 })
 
 // A window and its graph card are two views of ONE node, and nothing used to
-// say so: the card said "the room" in the family's colour while the window said
+// say so: the card said "the scene" in the family's colour while the window said
 // UNIVERSE.WORLD in grey, and both wore the same cyan frame. The window now
 // carries the family's word and the family's hue.
 describe('RawEditor window identity', () => {
@@ -814,13 +817,13 @@ describe('RawEditor window identity', () => {
         window.localStorage.setItem(
             IDENTITY_KEY,
             makeWorkspaceDoc([
-                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+                { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: {} }
             ])
         )
         render(<RawEditor localStorageKey={IDENTITY_KEY} />)
 
-        const dialog = screen.getByRole('dialog', { name: 'World' })
-        expect(dialog.textContent).toContain('the room')
+        const dialog = screen.getByRole('dialog', { name: 'Scene' })
+        expect(dialog.textContent).toContain('the scene')
         expect(dialog.textContent).not.toContain('universe.world')
     })
 
@@ -828,12 +831,12 @@ describe('RawEditor window identity', () => {
         window.localStorage.setItem(
             IDENTITY_KEY,
             makeWorkspaceDoc([
-                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+                { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: {} }
             ])
         )
         render(<RawEditor localStorageKey={IDENTITY_KEY} />)
 
-        const dialog = screen.getByRole('dialog', { name: 'World' })
+        const dialog = screen.getByRole('dialog', { name: 'Scene' })
         // getNodeFamily('universe.world') → the 'room' family
         expect(dialog.style.getPropertyValue('--window-accent')).toBe('#bd93f9')
     })
@@ -904,7 +907,7 @@ describe('RawEditor world scope entry', () => {
         window.localStorage.setItem(
             ENTER_STORAGE_KEY,
             makeWorkspaceDoc([
-                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+                { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: {} }
             ])
         )
         render(<RawEditor localStorageKey={ENTER_STORAGE_KEY} />)
@@ -920,7 +923,7 @@ describe('RawEditor world scope entry', () => {
         window.localStorage.setItem(
             ENTER_STORAGE_KEY,
             makeWorkspaceDoc([
-                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+                { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: {} }
             ])
         )
         mockApplyLocalOps.mockClear()
@@ -1164,10 +1167,10 @@ describe('RawEditor — the room behind the graph', () => {
     // Fullscreen used to cancel on every scope step, so the render and the
     // graph could never be part of one journey. Now a door swaps which room
     // fills the screen — the TouchDesigner go-inside/come-out feel.
-    it('keeps the fullscreen room across scope navigation', () => {
+    it('keeps the fullscreen scene across scope navigation', () => {
         window.localStorage.setItem(ANATOMY_STORAGE_KEY, makeDoorwayDoc())
         render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
-        fireEvent.click(screen.getByRole('button', { name: 'Room' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Scene' }))
         expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
         fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
         expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()

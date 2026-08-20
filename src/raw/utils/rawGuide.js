@@ -3,7 +3,7 @@ const MANUAL_PATH = 'docs/raw/USER_MANUAL.md'
 // The in-product help's DATA. Deliberately one truthful section: the old
 // World/View/Graph trio taught a surface-switching product that was retired
 // in August; teaching it here armed the one dialog a confused visitor
-// actually opens. The full rewrite (scope walks, the Room, /out) lands with
+// actually opens. The full rewrite (scope walks, the scene, /out) lands with
 // the naming wave — until then, short and true beats long and wrong.
 export const GUIDE_AUDIENCES = [
     {
@@ -53,7 +53,7 @@ export const GUIDE_SECTIONS = [
             ['Wire', 'Drag an output port to an input port'],
             ['Enter', 'Press › on a card, or double-click it'],
             ['Leave', 'Escape, or ‹ at the top'],
-            ['See the 3D view', 'Type Room in the palette'],
+            ['See the 3D view', 'Type Full screen in the palette, or open a Scene window'],
             ['Delete', 'Select, then Delete or Backspace'],
             ['Close', 'Esc closes help']
         ],
@@ -65,7 +65,7 @@ export const GUIDE_SECTIONS = [
         ],
         tips: [
             'Best starters: Cube, Geo, Text.',
-            'The 3D view is a window: open it from the palette, size it by its corner.'
+            'The scene is a window: open it from the palette, size it by its corner.'
         ]
     }
 ]

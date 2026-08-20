@@ -34,7 +34,7 @@ const formatSource = (source = '') => {
     switch (source) {
         case 'studio-v3': return 'Studio'
         case 'legacy-import-studio': return 'Imported'
-        case 'beta-v2': return 'Beta'
+        case 'beta-v2': return 'Legacy'
         case 'legacy-import': return 'Legacy'
         default: return 'Project'
     }
@@ -181,7 +181,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                 try {
                     await updateServerSpace(spaceId, { publishedProjectId: null })
                 } catch (unpublishError) {
-                    setStatus(`Project deleted, but the space's live pointer could not be cleared: ${unpublishError.message || unpublishError}`)
+                    setStatus(`Project deleted, but this space still points at it as its live project: ${unpublishError.message || unpublishError}`)
                 }
             }
             await loadProjects()
@@ -211,10 +211,10 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         <div className="sh-top-actions">
                             <button
                                 className="sh-btn-outline"
-                                title="Raw — the experimental node-first editor"
+                                title="The node editor"
                                 onClick={() => appNavigate(buildRawHubPath(spaceId))}
                             >
-                                Raw
+                                Nodes
                             </button>
                             <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
                                 + New
@@ -299,7 +299,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     <div className="sh-empty-state">
                         <p className="sh-empty-title">No projects yet</p>
                         <p className="sh-empty-hint">
-                            A project is one scene you can build and publish.
+                            A project is one thing you build and publish.
                             Create your first one — you can rename or delete it anytime.
                         </p>
                         <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
@@ -323,7 +323,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                 onKeyDown={e => e.key === 'Enter' && appNavigate(codeSpace.path)}
                             >
                                 <p className="sh-project-title">{codeSpace.label}</p>
-                                <span className="sh-code-badge">code space</span>
+                                <span className="sh-code-badge">built from code</span>
                                 <p className="sh-code-blurb">{codeSpace.blurb}</p>
                                 <div className="sh-code-actions">
                                     <button
