@@ -164,6 +164,36 @@ describe('RawGraphSurface', () => {
         fireEvent.pointerUp(numberInputDot, clientForGraphPoint(container, port.x, port.y))
 
         expect(onCreateEdge).not.toHaveBeenCalled()
+        // …and the death is SPOKEN, not silent: the two failure modes
+        // (missed vs incompatible) were indistinguishable on touch.
+        expect(container.querySelector('.raw-wire-notice')?.textContent).toMatch(/can’t feed/)
+    })
+
+    it('reserves the lower band on a coarse pointer — new cards must not land under the incoming inspector', () => {
+        // 3/3 creations on the S24 audit landed occluded: the docked
+        // inspector mounts the moment the new card selects, over exactly
+        // where a thumb double-taps.
+        const originalMatchMedia = window.matchMedia
+        window.matchMedia = vi.fn(() => ({ matches: true, addListener: () => {}, removeListener: () => {} }))
+        const rect = { left: 0, top: 0, right: 800, bottom: 800, width: 800, height: 800 }
+        const spy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue(rect)
+        try {
+            const onDoubleClick = vi.fn()
+            const { container } = render(
+                <RawGraphSurface nodes={[]} edges={[]} onDoubleClick={onDoubleClick} />
+            )
+            const surface = container.querySelector('.raw-graph-surface')
+            fireEvent.doubleClick(surface, { clientX: 400, clientY: 780 })
+            expect(onDoubleClick).toHaveBeenCalled()
+            const { graphY } = onDoubleClick.mock.calls[0][0]
+            // 45% of the 800px canvas is reserved: the clamped graph point
+            // must sit above ~440 (rect bottom 800 - 360 reserved - padding
+            // - header), never at the raw 780 tap line.
+            expect(graphY).toBeLessThan(450)
+        } finally {
+            spy.mockRestore()
+            window.matchMedia = originalMatchMedia
+        }
     })
 
     it('renders visible wires for existing edges', () => {

@@ -5060,3 +5060,49 @@
     padding: 0 18px;
     text-align: center;
 }
+
+/* The view owns its gestures. R3F writes an inline touch-action: auto on
+   the canvas element itself (measured on the S24, 2026-08-20 — a class
+   rule loses to it, hence !important), while its wrapper div carries an
+   inline none. Effective touch-action is the intersection down the
+   ancestor chain, so browser pan/zoom is already blocked; this rule makes
+   the shell and the canvas SAY so too, as defence in depth against R3F
+   changing its inline styles. The drag itself was revived by riding the
+   grabbed object's own pointer capture, not by CSS. */
+.raw-viewport-shell {
+    touch-action: none;
+}
+
+.raw-viewport-shell canvas {
+    touch-action: none !important;
+}
+
+/* A wire that died on release says why, where it died. */
+.raw-wire-notice {
+    position: fixed;
+    transform: translate(-50%, -130%);
+    background: rgba(10, 14, 22, 0.95);
+    border: 1px solid rgba(255, 107, 122, 0.55);
+    color: #ffb3bc;
+    font-family: var(--raw-mono, ui-monospace, monospace);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 3px;
+    pointer-events: none;
+    z-index: 60;
+    max-width: 260px;
+}
+
+/* A fingertip is not a cursor: on coarse pointers every port dot carries an
+   invisible touch halo (~44px total target, Android's minimum), without
+   changing what the eye sees. */
+@media (pointer: coarse) {
+    .raw-graph-port-dot {
+        position: relative;
+    }
+    .raw-graph-port-dot::after {
+        content: '';
+        position: absolute;
+        inset: -14px;
+    }
+}

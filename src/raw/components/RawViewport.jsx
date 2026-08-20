@@ -416,6 +416,8 @@ function NodeVisual({
     selected,
     onSelect,
     onPointerDown,
+    onPointerMove = null,
+    onPointerUp = null,
     nodeScale = 1,
     assetMap = null,
     childMap = null,
@@ -445,6 +447,8 @@ function NodeVisual({
             rotation={asVec3(values.rotation, [0, 0, 0])}
             scale={nodeScaleFactor}
             onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove || undefined}
+            onPointerUp={onPointerUp || undefined}
             // The room selects what stands in THIS room. A nested node gets no
             // click of its own (onSelect null) so the click bubbles to the
             // scope-level node — clicking a cube inside a Geo picks up the GEO,
@@ -639,50 +643,12 @@ function SceneContent({
         if (dragRafRef.current !== null) cancelAnimationFrame(dragRafRef.current)
     }, [])
 
-    return (
-        <>
-            <color attach="background" args={[getRawWorldBackgroundColor(document, graphContext, { scopeId, worldNode })]} />
-            <ambientLight
-                color={resolvedLight?.ambientColor ?? document.worldState?.ambientLight?.color ?? '#ffffff'}
-                intensity={resolvedLight?.ambientIntensity ?? document.worldState?.ambientLight?.intensity ?? 0.8}
-            />
-            <directionalLight
-                color={resolvedLight?.directionalColor ?? document.worldState?.directionalLight?.color ?? '#fff7ea'}
-                intensity={resolvedLight?.directionalIntensity ?? document.worldState?.directionalLight?.intensity ?? 1.05}
-                position={resolvedLight?.directionalPosition ?? document.worldState?.directionalLight?.position ?? [8, 12, 4]}
-            />
-            {(resolvedGrid?.visible ?? document.worldState?.gridVisible) !== false ? (
-                <Grid
-                    args={[resolvedGrid?.size ?? document.worldState?.gridSize ?? 24, resolvedGrid?.size ?? document.worldState?.gridSize ?? 24]}
-                    cellColor={resolvedGrid?.color ?? 'rgba(255,255,255,0.10)'}
-                    sectionColor={resolvedGrid?.color ?? 'rgba(255,255,255,0.22)'}
-                    position={[0, 0, 0]}
-                    fadeDistance={60}
-                    fadeStrength={1}
-                />
-            ) : null}
-            <mesh
-                rotation={[-Math.PI / 2, 0, 0]}
-                position={[0, 0, 0]}
-                onClick={interactive ? (event) => {
-                    if (draggingNodeId) return
-                    if ((event.delta ?? 0) > 4) return
-                    onClearSelection?.()
-                } : undefined}
-                onDoubleClick={interactive ? (event) => {
-                    event.stopPropagation()
-                    if (draggingNodeId) return
-                    if (roomTap.justFired()) return
-                    onWorldDoubleClick?.({
-                        point: event.point?.toArray?.() || [0, 0, 0],
-                        clientX: event.nativeEvent?.clientX || 0,
-                        clientY: event.nativeEvent?.clientY || 0
-                    })
-                } : undefined}
-                onPointerDown={interactive ? (event) => {
-                    roomTap.down(event)
-                } : undefined}
-                onPointerMove={interactive ? (event) => {
+    // The drag's move/end logic, shared: it hangs on the floor plane AND on
+    // the grabbed object itself. On real touch hardware the browser can route
+    // the moves to the pressed object only — with the handler in both places
+    // the drag survives whichever one receives them (idempotent: same ray,
+    // same frame, last write wins in dragPendingRef).
+    const handleDragMove = (event) => {
                     if (!draggingNodeId) return
                     event.stopPropagation()
                     // Same plane the grab measured on — the object's height —
@@ -734,8 +700,8 @@ function SceneContent({
                             if (dragPendingRef.current) onMoveNode?.(draggingNodeId, dragPendingRef.current)
                         })
                     }
-                } : undefined}
-                onPointerUp={interactive ? (event) => {
+    }
+    const handleDragEnd = (event) => {
                     if (roomTap.up(event) && !draggingNodeId) {
                         onWorldDoubleClick?.({
                             point: event.point?.toArray?.() || [0, 0, 0],
@@ -753,7 +719,54 @@ function SceneContent({
                     }
                     dragPendingRef.current = null
                     setDraggingNodeId(null)
+    }
+
+
+    return (
+        <>
+            <color attach="background" args={[getRawWorldBackgroundColor(document, graphContext, { scopeId, worldNode })]} />
+            <ambientLight
+                color={resolvedLight?.ambientColor ?? document.worldState?.ambientLight?.color ?? '#ffffff'}
+                intensity={resolvedLight?.ambientIntensity ?? document.worldState?.ambientLight?.intensity ?? 0.8}
+            />
+            <directionalLight
+                color={resolvedLight?.directionalColor ?? document.worldState?.directionalLight?.color ?? '#fff7ea'}
+                intensity={resolvedLight?.directionalIntensity ?? document.worldState?.directionalLight?.intensity ?? 1.05}
+                position={resolvedLight?.directionalPosition ?? document.worldState?.directionalLight?.position ?? [8, 12, 4]}
+            />
+            {(resolvedGrid?.visible ?? document.worldState?.gridVisible) !== false ? (
+                <Grid
+                    args={[resolvedGrid?.size ?? document.worldState?.gridSize ?? 24, resolvedGrid?.size ?? document.worldState?.gridSize ?? 24]}
+                    cellColor={resolvedGrid?.color ?? 'rgba(255,255,255,0.10)'}
+                    sectionColor={resolvedGrid?.color ?? 'rgba(255,255,255,0.22)'}
+                    position={[0, 0, 0]}
+                    fadeDistance={60}
+                    fadeStrength={1}
+                />
+            ) : null}
+            <mesh
+                rotation={[-Math.PI / 2, 0, 0]}
+                position={[0, 0, 0]}
+                onClick={interactive ? (event) => {
+                    if (draggingNodeId) return
+                    if ((event.delta ?? 0) > 4) return
+                    onClearSelection?.()
                 } : undefined}
+                onDoubleClick={interactive ? (event) => {
+                    event.stopPropagation()
+                    if (draggingNodeId) return
+                    if (roomTap.justFired()) return
+                    onWorldDoubleClick?.({
+                        point: event.point?.toArray?.() || [0, 0, 0],
+                        clientX: event.nativeEvent?.clientX || 0,
+                        clientY: event.nativeEvent?.clientY || 0
+                    })
+                } : undefined}
+                onPointerDown={interactive ? (event) => {
+                    roomTap.down(event)
+                } : undefined}
+                onPointerMove={interactive ? handleDragMove : undefined}
+                onPointerUp={interactive ? handleDragEnd : undefined}
             >
                 <planeGeometry args={[400, 400]} />
                 <meshBasicMaterial transparent opacity={0} />
@@ -789,6 +802,8 @@ function SceneContent({
                             nodeScale={nodeScale}
                             assetMap={assetMap}
                             showSelectionPills={showSelectionPills}
+                            onPointerMove={interactive ? handleDragMove : undefined}
+                            onPointerUp={interactive ? handleDragEnd : undefined}
                             onPointerDown={interactive ? (event) => {
                                 if (event.button !== 0) return
                                 event.stopPropagation()

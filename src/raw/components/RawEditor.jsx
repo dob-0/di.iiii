@@ -561,8 +561,17 @@ export default function RawEditor({
     useEffect(() => {
         if (typeof window === 'undefined') return undefined
         const onPop = () => {
-            if (scopeDepthRef.current > 0) {
+            // Depth 1 IS the root ([null]) — the old `> 0` guard was always
+            // true, so Back at root navigated to stack index -1 and rendered
+            // a false-empty canvas that read as total data loss on a phone
+            // (the document was intact all along; measured on the S24).
+            if (scopeDepthRef.current > 1) {
                 navigateUpRef.current()
+                window.history.pushState({ rawScope: true }, '')
+            } else {
+                // At root, Back stays put: re-arm the guard entry so the app
+                // neither blanks nor silently exits mid-edit. Leaving is what
+                // ← Projects and the tab are for.
                 window.history.pushState({ rawScope: true }, '')
             }
         }
