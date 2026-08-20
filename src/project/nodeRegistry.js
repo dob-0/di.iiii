@@ -786,7 +786,7 @@ export const NODE_TYPES = {
 
     'universe.space': {
         id: 'universe.space',
-        label: 'Container',
+        label: 'Kiosk',
         category: 'universe',
         runtime: 'any',
         // Not authoringOnly: showChrome is consumed for real (RawEditor's
@@ -900,14 +900,14 @@ export const NODE_TYPES = {
 
     'universe.link': {
         id: 'universe.link',
-        label: 'Container Link',
+        label: 'Kiosk Link',
         category: 'universe',
         runtime: 'any',
         authoringOnly: true,
         singleton: false,
         inputs: [
-            { id: 'from', type: 'string', label: 'From Container', default: '' },
-            { id: 'to',   type: 'string', label: 'To Container',   default: '' },
+            { id: 'from', type: 'string', label: 'From Kiosk', default: '' },
+            { id: 'to',   type: 'string', label: 'To Kiosk',   default: '' },
         ],
         outputs: [
             { id: 'route',  type: 'string', label: 'Route'  },

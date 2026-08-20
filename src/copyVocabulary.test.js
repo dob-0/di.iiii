@@ -337,12 +337,15 @@ describe('node labels match the contract', () => {
         expect(NODE_TYPES['universe.world']?.label).toBe('Scene')
     })
 
-    it('labels universe.space Container', () => {
+    it('labels universe.space Kiosk', () => {
         // Not a space and not a universe: a container you enter, whose one
         // setting hides the editor's furniture for everything inside it.
-        // Named Container because the port menu and the wiki already say
-        // "container" for this exact thing — three surfaces, one word.
-        expect(NODE_TYPES['universe.space']?.label).toBe('Container')
+        // NOT "Container": Geo shipped as "the plain container" while this
+        // pass was in flight, so two palette entries would answer to one word
+        // and Geo is the one people should reach for. Kiosk names what only
+        // this node does — a view with the machinery hidden — and is the word
+        // its own registry comment already used.
+        expect(NODE_TYPES['universe.space']?.label).toBe('Kiosk')
     })
 
     it('names that container\'s one setting in plain words', () => {

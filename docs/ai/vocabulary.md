@@ -49,7 +49,7 @@ used consistently, and every node tool a visitor might arrive from uses one or t
 | `desk` | A metaphor used six times, never defined, colliding with a node label. | say the true thing |
 | `chrome` (the UI) | Developer jargon. | **toolbar** |
 | `linked space` · `code space` | Implementation notes. A visitor sees a space. | **space** |
-| `Universe` | Promised a world, delivered a toolbar switch. | **Container** (see below) |
+| `Universe` | Promised a world, delivered a toolbar switch. | **Kiosk** (see below) |
 | `di.i` | The retired name. | **di.iiii** |
 
 `raw` in its ordinary English sense (*unparsed, unformatted*) is fine in code, but never in a
@@ -60,7 +60,7 @@ user-visible string where it can be mistaken for the lane — rewrite those.
 | Type id (unchanged) | Was | Now | Why |
 | --- | --- | --- | --- |
 | `universe.world` | `World`, and `Scene` inside Studio | **Scene** | One type wearing three names. Scene is what Blender, Unity, Godot and three.js — the engine actually underneath this — all call the 3D place, and what serverXR's own `/api/spaces/:spaceId/scene` calls it. It is also the rare word native to both 3D and theatre. |
-| `universe.space` | `Universe` | **Container** | It is not a space and not a universe: it is a container you enter whose one setting hides the editor's furniture for everything inside it. The port menu and the wiki already said "container" for this exact thing — now three surfaces agree. |
+| `universe.space` | `Universe` | **Kiosk** | It is not a space and not a universe: it is a container you enter whose one setting hides the editor's furniture for everything inside it. Not "Container": Geo shipped as "the plain container" while this pass was in flight, so two palette entries would have answered to one word — and Geo is the one people should reach for. Kiosk names what only this node does, and is the word its own registry comment already used. |
 | `universe.space` input | `Show Chrome` | **Show the toolbar** | |
 
 `universe.desk.2d` / `universe.desk.3d` keep their labels. The ambiguity was the *abstract* desk
@@ -136,8 +136,11 @@ call, after asking a plainer question: *which name is professional?*
   in the world says Room, and the engine underneath is literally `THREE.Scene`. Banning `scene`
   because it was overloaded was the wrong instinct: the professional fix is to give an
   overloaded word back exactly one meaning, not to retire it.
-- **Stage → Container.** Stage collided with the deploy tier and with *stage = phase*, and it
-  named what the node produces rather than what it is.
+- **Stage → Container → Kiosk.** Stage collided with the deploy tier and with *stage = phase*.
+  Container lasted a few hours: Geo landed upstream as "the plain container" mid-pass, which
+  would have put two entries in the palette answering to one word. Checked before settling it —
+  `universe.space` appears exactly once in all saved work, in a project called `nodetypetest`,
+  so the cost of getting this wrong was two strings and the cost of asking was more.
 
 The lesson worth keeping: **a name that reads well in your own copy is not the same as a name
 your field already uses.** Check both before settling one.
