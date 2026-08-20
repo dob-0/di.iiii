@@ -1246,7 +1246,15 @@ export const NODE_TYPES = {
             { id: 'loop',     type: 'boolean', label: 'Loop',     default: true      },
             { id: 'autoplay', type: 'boolean', label: 'Autoplay', default: true      },
         ],
-        outputs: [],
+        outputs: [
+            // The playing sound as numbers (0..1), published silently by the
+            // editor's SoundAnalysisFeed — the scene's Sound object owns
+            // being HEARD. Analysis follows the editor's own playback.
+            { id: 'volume', type: 'number', label: 'Volume' },
+            { id: 'low',    type: 'number', label: 'Low'    },
+            { id: 'mid',    type: 'number', label: 'Mid'    },
+            { id: 'high',   type: 'number', label: 'High'   },
+        ],
         defaultValues: {},
         render: 'spatial-3d',
     },

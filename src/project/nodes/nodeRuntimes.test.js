@@ -221,3 +221,16 @@ describe('media.video frame', () => {
         expect(evaluateNodeOutput(video, 'frame', context)).toBe(null)
     })
 })
+
+describe('media.audio levels', () => {
+    it('reads the published levels, 0 where nothing analyses', () => {
+        const sound = node('s', 'media.audio')
+        const liveOutputs = new Map([['s:volume', 0.4], ['s:low', 0.8], ['s:mid', 0.2], ['s:high', 0.05]])
+        const fed = createNodeGraphContext({ nodes: [sound], edges: [] }, { liveOutputs })
+        expect(evaluateNodeOutput(sound, 'volume', fed)).toBe(0.4)
+        expect(evaluateNodeOutput(sound, 'low', fed)).toBe(0.8)
+        expect(evaluateNodeOutput(sound, 'high', fed)).toBe(0.05)
+        const silent = createNodeGraphContext({ nodes: [sound], edges: [] })
+        expect(evaluateNodeOutput(sound, 'mid', silent)).toBe(0)
+    })
+})

@@ -15,6 +15,7 @@ import ChatPanelWindow from './ChatPanelWindow.jsx'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import VideoFrameFeed from './VideoFrameFeed.jsx'
+import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
 import AgentRunPanel from './AgentRunPanel.jsx'
@@ -1113,6 +1114,12 @@ export default function RawEditor({
     const handleFrameOutputChange = useCallback((nodeId, texture) => {
         handleLiveOutputChange(nodeId, 'frame', texture)
     }, [handleLiveOutputChange])
+    const handleSoundOutputChange = useCallback((nodeId, levels) => {
+        handleLiveOutputChange(nodeId, 'volume', levels?.volume ?? null)
+        handleLiveOutputChange(nodeId, 'low', levels?.low ?? null)
+        handleLiveOutputChange(nodeId, 'mid', levels?.mid ?? null)
+        handleLiveOutputChange(nodeId, 'high', levels?.high ?? null)
+    }, [handleLiveOutputChange])
     const handleMicOutputChange = useCallback((nodeId, volume, frequency) => {
         handleLiveOutputChange(nodeId, 'volume', volume)
         handleLiveOutputChange(nodeId, 'frequency', frequency)
@@ -1993,6 +2000,16 @@ export default function RawEditor({
                         node={node}
                         asset={assetMap.get(node.values.src)}
                         onFrameChange={handleFrameOutputChange}
+                    />
+                ))}
+            {nodes
+                .filter((node) => node.typeId === 'media.audio' && node.values?.src && assetMap.has(node.values.src))
+                .map((node) => (
+                    <SoundAnalysisFeed
+                        key={node.id}
+                        node={node}
+                        asset={assetMap.get(node.values.src)}
+                        onLevelsChange={handleSoundOutputChange}
                     />
                 ))}
 
