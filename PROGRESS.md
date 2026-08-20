@@ -5,6 +5,61 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+# Light and Environment — the split (plan PR 2.4)
+
+## What was wrong
+
+world.light was two things wearing one name: per-scope ambient/directional
+settings AND a placeable lamp, deciding which by whether it had a parent —
+and BOTH at once inside a container. Unparented at root it drew nothing.
+
+## What changed
+
+- New `world.environment` "Environment" (TD Environment Light): the scene's
+  settings only — ambient wash + one sun (British labels: Ambient Colour,
+  Sun Colour/Intensity/Position). Hidden render, ●-scoped.
+- New `light.point` "Light": the lamp only — a real point light standing
+  wherever it is placed, ROOT INCLUDED (the disappearing act is over).
+- `world.light` goes paletteHidden with both behaviours untouched — every
+  existing document renders exactly as it did (fixture + screenshot proven);
+  its port labels go British on the way.
+- Read side: `resolveSceneLighting(document, graphContext, {scopeId})` in
+  viewportWorldState.js — active Environment wins, legacy light drives when
+  no Environment exists, null keeps callers' worldState fallbacks.
+- ACTIVE_MARKER_TYPE_IDS gains world.environment; all-nodes example places
+  Environment + a lamp and wires the breathing-intensity chain into
+  Environment; wiki + manual teach the split.
+
+## Verified
+
+By eye (screenshots read): a lamp at root washes a cube's face warm against
+a near-black Environment (theatre practical, three nodes); a legacy dual
+Light document renders pixel-identical to before. Unit: env beats legacy
+beats null; lamp renders at root; legacy unparented still draws nothing.
+Full suite 2486/2486, lint clean, build/anatomy/wiki/docs green.
+
+# The node table — every label settled (plan Phase 2.1 + 2.2)
+
+## What changed
+
+docs/ai/vocabulary.md gains the full 68-type census: two labels changed
+(Director (algovrithm) → Director; node.null Node → Null, TD's exact term),
+everything else confirmed with reasons (Sound kept over Audio deliberately;
+3D Desk survives per the 2026-08-19 note until the container pass), and a
+RESERVED table so the coming waves don't invent names: Environment + Light
+(the split), Compare/Gate/Switch, Lag, Noise, Array, and the streaming four.
+
+New guard src/nodeLabelVocabulary.test.js — the label half of the contract:
+no banned words, British spelling, no leading article, no parentheticals
+(one shell survivor allow-listed with its reason), two words max, and no two
+palette-offered types may share a label.
+
+## Verified
+
+Full suite 2480/2480, lint clean, build/anatomy/wiki/docs green. Naming was
+delegated by the owner ("just make all right naming you can creat
+vocubulaary"); decisions recorded with reasons in the table itself.
+
 # Monitor untagged; the palette leads with make (plan PRs 1.3 + 1.8)
 
 ## What changed
