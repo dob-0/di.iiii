@@ -2,8 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { buildManifest, renderManifestModule, EXTRA_PLACES } from './sync-node-anatomy.mjs'
-import { NODE_ANATOMY, DOORWAY_PLACE, SOURCE_FINGERPRINTS } from '../src/project/graph/nodeAnatomy.generated.js'
+import { EXTRA_PLACES, MEASURED_FILES } from './node-anatomy-lib.mjs'
+import { NODE_ANATOMY, DOORWAY_PLACE, SOURCE_FINGERPRINTS } from 'virtual:node-anatomy'
 import { NODE_TYPES, createNode } from '../src/project/nodeRegistry.js'
 import { isLiveFedOutput } from '../src/project/graph/nodeReading.js'
 import { fingerprintSource } from '../src/raw/utils/sourceFingerprint.js'
@@ -14,16 +14,20 @@ const slice = ({ file, fromLine, toLine }) => read(file).split('\n').slice(fromL
 
 const places = (entry) => [entry.computes, entry.draws, entry.panel].filter(Boolean)
 
-// These are SEMANTIC guards on the extractor, not just freshness. The
-// round-trip check alone would happily freeze a buggy extractor's wrong
-// output forever — each assertion below is one of the ways a slicer was
-// actually observed to lie during design, plus the coverage rule that stops
-// the sheet lying by omission when a 65th type lands.
+// These are SEMANTIC guards on the extractor. Freshness is no longer one of
+// them — the manifest is measured during the build that imports it here, so a
+// stale-copy assertion would be asserting against itself. What is left is the
+// part that always mattered: each assertion below is one of the ways a slicer
+// was actually observed to lie during design, plus the coverage rule that stops
+// the sheet lying by omission when a 65th type lands. A build-time extractor
+// with a bug is exactly as wrong as a committed one; only the rebases are gone.
 describe('the node anatomy manifest', () => {
-    it('is what the extractor produces from the sources on disk right now', async () => {
-        const expected = renderManifestModule(await buildManifest())
-        const actual = read('src/project/graph/nodeAnatomy.generated.js')
-        expect(actual).toBe(expected)
+    it('measures the files it claims to, and no others', () => {
+        const named = new Set([
+            ...Object.values(NODE_ANATOMY).flatMap((entry) => places(entry)).map((place) => place.file),
+            DOORWAY_PLACE.file
+        ])
+        for (const file of named) expect(MEASURED_FILES, file).toContain(file)
     })
 
     it('covers every registered node type, so a new type cannot be silently absent', () => {

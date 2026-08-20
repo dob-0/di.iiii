@@ -97,12 +97,6 @@ jobs:
       - name: Check wiki / user-facing docs
         run: npm run docs:wiki:check
 
-      # The node-anatomy manifest points the "what is it made of" sheet at real
-      # line ranges; an edit that moves them without a re-sync would have the
-      # sheet quoting the wrong lines. File-reads only — shallow-clone safe.
-      - name: Check node anatomy manifest
-        run: npm run check:node-anatomy
-
   # Behavioral browser checks (input-device contracts + responsive sweep) —
   # shared with the publish workflow, which gates deploys on the same suite.
   browser-checks:

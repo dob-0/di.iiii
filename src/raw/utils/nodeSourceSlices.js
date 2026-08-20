@@ -15,7 +15,7 @@
 // in a normal build they cannot differ (one commit, one artifact), but a
 // hot-patched deploy could desync them, and that one check turns the only
 // silent-lie path into a visible refusal.
-import { SOURCE_FINGERPRINTS } from '../../project/graph/nodeAnatomy.generated.js'
+import { SOURCE_FINGERPRINTS } from 'virtual:node-anatomy'
 import { fingerprintSource } from './sourceFingerprint.js'
 
 const SOURCES = {
