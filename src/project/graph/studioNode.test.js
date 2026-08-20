@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { STUDIO_INTERIOR, STUDIO_TYPE_ID, buildStudioInterior } from './studioNode.js'
-import { createEdge, createNode, getNodeType, listNodeTypes } from '../nodeRegistry.js'
+import { createEdge, createNode, getNodeType, listNodeTypes , isNodeTypeImplemented } from '../nodeRegistry.js'
 import { createNodeGraphContext, evaluateNodeOutput } from './nodeGraphRuntime.js'
 
 describe('studio container node', () => {
@@ -70,11 +70,20 @@ describe('studio container node', () => {
     // Every interior panel must have a real body in RawEditor's dispatch chain.
     // Unhandled panel-2d types fall through to a generic text box, which is how
     // the streaming preset's nodes ended up looking like working features.
-    it('contains only node types that exist and are palette-creatable', () => {
-        const offered = new Set(listNodeTypes({}).map((type) => type.id))
+    it('contains only node types that exist and are implemented', () => {
+        // includeUnimplemented admits paletteHidden types: view.library
+        // (Create) is retired from the node palette because its buttons make
+        // OBJECTS — but the Studio node is exactly the sanctioned home for
+        // objects, so its interior keeps a Create. The real trap this guards
+        // is UNIMPLEMENTED types falling through to a generic text box.
+        const implemented = new Set(
+            listNodeTypes({ includeUnimplemented: true })
+                .filter((type) => isNodeTypeImplemented(type.id))
+                .map((type) => type.id)
+        )
         for (const spec of STUDIO_INTERIOR) {
             expect(getNodeType(spec.typeId), `${spec.typeId} missing from registry`).toBeTruthy()
-            expect(offered.has(spec.typeId), `${spec.typeId} not palette-creatable`).toBe(true)
+            expect(implemented.has(spec.typeId), `${spec.typeId} not implemented`).toBe(true)
         }
     })
 

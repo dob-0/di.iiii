@@ -738,7 +738,11 @@ function SceneContent({
                 <meshBasicMaterial transparent opacity={0} />
             </mesh>
             <Suspense fallback={null}>
-                {(document.entities || []).map((entity) => (
+                {/* Objects (document.entities) are ROOT-scope citizens: they
+                    have no parent concept, so they stand in the top room and
+                    only there. They used to render unscoped — every object
+                    haunted every interior at every depth. */}
+                {(scopeId ? [] : (document.entities || [])).map((entity) => (
                     <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
                         <EntityVisual
                             entity={entity}
