@@ -326,3 +326,102 @@ describe('the numbers wave (TD audit)', () => {
         expect(evalPort(doc(1), 'e', 'bounce')).toBeCloseTo(1, 6)
     })
 })
+
+describe('the state wave (TD audit) — frameMemory operators', () => {
+    const evalWithMemory = (nodes, edges, targetId, portId, { now = 0, memory }) => {
+        const target = nodes.find((n) => n.id === targetId)
+        return evaluateNodeOutput(target, portId, createNodeGraphContext({ nodes, edges }, { now, frameMemory: memory }))
+    }
+
+    it('Counter counts rising edges only — a held button is ONE event', () => {
+        const memory = createFrameMemory()
+        const trigger = node('b', 'value.boolean', { value: false })
+        const counter = node('c', 'signal.counter')
+        const nodes = [trigger, counter]
+        const edges = [edge('b', 'out', 'c', 'count')]
+        const at = (v) => { trigger.values = { value: v }; return evalWithMemory(nodes, edges, 'c', 'out', { memory }) }
+        expect(at(false)).toBe(0)
+        expect(at(true)).toBe(1)
+        expect(at(true)).toBe(1)
+        expect(at(false)).toBe(1)
+        expect(at(true)).toBe(2)
+    })
+
+    it('Hold passes through until sampled, then freezes', () => {
+        const memory = createFrameMemory()
+        const value = node('v', 'value.number', { value: 10 })
+        const gate = node('g', 'value.boolean', { value: false })
+        const hold = node('h', 'signal.hold')
+        const nodes = [value, gate, hold]
+        const edges = [edge('v', 'out', 'h', 'value'), edge('g', 'out', 'h', 'sample')]
+        const at = (v, s) => { value.values = { value: v }; gate.values = { value: s }; return evalWithMemory(nodes, edges, 'h', 'out', { memory }) }
+        expect(at(10, false)).toBe(10)
+        expect(at(20, true)).toBe(20)
+        expect(at(99, false)).toBe(20)
+    })
+
+    it('Timer restarts on the edge and serves Elapsed/Progress/Done from the clock', () => {
+        const memory = createFrameMemory()
+        const start = node('s', 'value.boolean', { value: false })
+        const timer = node('t', 'signal.timer', { length: 2 })
+        const nodes = [start, timer]
+        const edges = [edge('s', 'out', 't', 'start')]
+        const at = (v, now, port) => { start.values = { value: v }; return evalWithMemory(nodes, edges, 't', port, { now, memory }) }
+        expect(at(false, 0, 'elapsed')).toBe(0)
+        expect(at(true, 1000, 'elapsed')).toBe(0)
+        expect(at(true, 2000, 'elapsed')).toBe(1)
+        expect(at(true, 2000, 'progress')).toBe(0.5)
+        expect(at(true, 3000, 'done')).toBe(true)
+    })
+
+    it('Trigger runs one attack-hold-release envelope per firing', () => {
+        const memory = createFrameMemory()
+        const fire = node('f', 'value.boolean', { value: false })
+        const trig = node('t', 'signal.trigger', { attack: 1, hold: 1, release: 2 })
+        const nodes = [fire, trig]
+        const edges = [edge('f', 'out', 't', 'fire')]
+        const at = (v, now) => { fire.values = { value: v }; return evalWithMemory(nodes, edges, 't', 'out', { now, memory }) }
+        expect(at(false, 0)).toBe(0)
+        at(true, 1000)
+        expect(at(true, 1500)).toBeCloseTo(0.5, 10)
+        expect(at(true, 2500)).toBe(1)
+        expect(at(true, 4000)).toBeCloseTo(0.5, 10)
+        expect(at(true, 9000)).toBe(0)
+    })
+
+    it('Speed integrates rate over real dt and Reset empties the travel', () => {
+        const memory = createFrameMemory()
+        const rate = node('r', 'value.number', { value: 2 })
+        const speed = node('s', 'signal.speed')
+        const nodes = [rate, speed]
+        const edges = [edge('r', 'out', 's', 'rate')]
+        const at = (now) => evalWithMemory(nodes, edges, 's', 'out', { now, memory })
+        expect(at(0)).toBe(0)
+        expect(at(1000)).toBe(2)
+        expect(at(1500)).toBe(3)
+        expect(at(1500)).toBe(3)
+    })
+
+    it('Toggle flips per edge; Delay answers the past', () => {
+        const memory = createFrameMemory()
+        const flip = node('f', 'value.boolean', { value: false })
+        const toggle = node('t', 'logic.toggle')
+        const tn = [flip, toggle]
+        const te = [edge('f', 'out', 't', 'flip')]
+        const flipAt = (v) => { flip.values = { value: v }; return evalWithMemory(tn, te, 't', 'out', { memory }) }
+        expect(flipAt(true)).toBe(true)
+        expect(flipAt(false)).toBe(true)
+        expect(flipAt(true)).toBe(false)
+
+        const memory2 = createFrameMemory()
+        const src = node('v', 'value.number', { value: 1 })
+        const delay = node('d', 'signal.delay', { delay: 1 })
+        const dn = [src, delay]
+        const de = [edge('v', 'out', 'd', 'value')]
+        const delayAt = (v, now) => { src.values = { value: v }; return evalWithMemory(dn, de, 'd', 'out', { now, memory: memory2 }) }
+        expect(delayAt(1, 0)).toBe(1)
+        expect(delayAt(50, 500)).toBe(1)
+        expect(delayAt(99, 1200)).toBe(1)
+        expect(delayAt(99, 1600)).toBe(50)
+    })
+})

@@ -160,6 +160,13 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('abs', 'math.abs', { label: 'Absolute', col: 1, row: 16 })
     add('round', 'math.round', { label: 'Round', col: 1, row: 17 })
     add('ease', 'signal.ease', { label: 'Ease', col: 1, row: 18 })
+    add('counter', 'signal.counter', { label: 'Counter', col: 0, row: 11 })
+    add('hold', 'signal.hold', { label: 'Hold', col: 0, row: 12 })
+    add('delay', 'signal.delay', { label: 'Delay', col: 0, row: 13 })
+    add('timer', 'signal.timer', { label: 'Timer', col: 0, row: 14 })
+    add('trigger', 'signal.trigger', { label: 'Trigger', col: 0, row: 15 })
+    add('speed', 'signal.speed', { label: 'Speed', col: 0, row: 16 })
+    add('toggle', 'logic.toggle', { label: 'Toggle', col: 0, row: 17 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
@@ -344,6 +351,17 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('lfo', 'saw', 'abs', 'in'),
         wire('lfo', 'square', 'round', 'in'),
         wire('divide', 'out', 'ease', 'in'),
+
+        // The state wave, driven by the verdicts already in the graph: the
+        // comparator's crossings count, sample, time, fire, spin and latch.
+        wire('compare', 'greater', 'counter', 'count'),
+        wire('sin', 'out', 'hold', 'value'),
+        wire('compare', 'greater', 'hold', 'sample'),
+        wire('sin', 'out', 'delay', 'value'),
+        wire('compare', 'greater', 'timer', 'start'),
+        wire('compare', 'greater', 'trigger', 'fire'),
+        wire('numB', 'out', 'speed', 'rate'),
+        wire('compare', 'less', 'toggle', 'flip'),
 
         // Array repeats the cube's own geometry value — the proving fixture
         // for its pass-through out (bare, an Array carries nothing).

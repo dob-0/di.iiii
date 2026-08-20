@@ -993,6 +993,106 @@ export const NODE_ANATOMY = {
         panel: null,
         alsoNeeds: null
     },
+    'signal.counter': {
+        computes: {
+            file: 'src/project/nodes/signal.counter/runtime.js',
+            fromLine: 1,
+            toLine: 15,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'signal.hold': {
+        computes: {
+            file: 'src/project/nodes/signal.hold/runtime.js',
+            fromLine: 1,
+            toLine: 14,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'signal.delay': {
+        computes: {
+            file: 'src/project/nodes/signal.delay/runtime.js',
+            fromLine: 1,
+            toLine: 23,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'signal.timer': {
+        computes: {
+            file: 'src/project/nodes/signal.timer/runtime.js',
+            fromLine: 1,
+            toLine: 20,
+            answers: [
+                'done',
+                'elapsed',
+                'progress'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'signal.trigger': {
+        computes: {
+            file: 'src/project/nodes/signal.trigger/runtime.js',
+            fromLine: 1,
+            toLine: 23,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'signal.speed': {
+        computes: {
+            file: 'src/project/nodes/signal.speed/runtime.js',
+            fromLine: 1,
+            toLine: 21,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'logic.toggle': {
+        computes: {
+            file: 'src/project/nodes/logic.toggle/runtime.js',
+            fromLine: 1,
+            toLine: 13,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
     'world.light': {
         computes: null,
         draws: {
@@ -1089,6 +1189,7 @@ export const SOURCE_FINGERPRINTS = {
     'src/project/nodes/logic.compare/runtime.js': 'ad9e4fb8',
     'src/project/nodes/logic.gate/runtime.js': 'edb3f61d',
     'src/project/nodes/logic.switch/runtime.js': 'fe692f18',
+    'src/project/nodes/logic.toggle/runtime.js': '5e086c00',
     'src/project/nodes/math.abs/runtime.js': '46582854',
     'src/project/nodes/math.add/runtime.js': '79ca6473',
     'src/project/nodes/math.clamp/runtime.js': '6aebc54e',
@@ -1104,9 +1205,15 @@ export const SOURCE_FINGERPRINTS = {
     'src/project/nodes/math.subtract/runtime.js': '67159775',
     'src/project/nodes/media.audio/runtime.js': '99d3c007',
     'src/project/nodes/media.video/runtime.js': 'c059ce96',
+    'src/project/nodes/signal.counter/runtime.js': 'ee5fcbeb',
+    'src/project/nodes/signal.delay/runtime.js': 'e0bb3572',
     'src/project/nodes/signal.ease/runtime.js': '61885fe0',
+    'src/project/nodes/signal.hold/runtime.js': '9f78c9e7',
     'src/project/nodes/signal.lag/runtime.js': '8a4020f7',
     'src/project/nodes/signal.lfo/runtime.js': '5c61bd2f',
+    'src/project/nodes/signal.speed/runtime.js': 'aa2ac4a7',
+    'src/project/nodes/signal.timer/runtime.js': '06a6ed46',
+    'src/project/nodes/signal.trigger/runtime.js': '9d2aaffc',
     'src/project/nodes/time/runtime.js': 'ea616ea0',
     'src/project/nodes/value.noise/runtime.js': '194f9400',
     'src/project/nodes/view.timeline/runtime.js': '453edf40'
