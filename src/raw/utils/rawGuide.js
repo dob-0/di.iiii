@@ -50,6 +50,7 @@ export const GUIDE_SECTIONS = [
             ['Add', 'Double-click or double-tap the canvas'],
             ['Search', 'Cmd/Ctrl+K, or just type /'],
             ['Delete', 'Select, then Delete or Backspace'],
+            ['Rename', 'Select, then click its name in the inspector'],
             ['Duplicate', 'Cmd/Ctrl+D'],
             ['Undo · Redo', 'Cmd/Ctrl+Z · Cmd/Ctrl+Y'],
             ['Close', 'Esc closes help']

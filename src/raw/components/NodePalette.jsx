@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import { listNodeTypes, NODE_FAMILIES, FAMILY_BY_TYPE } from '../../project/nodeRegistry.js'
 
 const PALETTE_WIDTH = 280
@@ -60,6 +60,8 @@ export default function NodePalette({
     const [activeIndex, setActiveIndex] = useState(0)
     const inputRef = useRef(null)
     const listRef = useRef(null)
+    const paletteRef = useRef(null)
+    const [measuredShift, setMeasuredShift] = useState(0)
 
     const scrollActiveIntoView = useCallback((index) => {
         if (!listRef.current) return
@@ -142,6 +144,19 @@ export default function NodePalette({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [query])
 
+    // getPalettePosition assumes the box is PALETTE_MAX_HEIGHT tall, but the
+    // real box is the list PLUS the input row — ~50px taller — so a summon in
+    // the bottom band ran past the viewport with no scroll cue (audit 08-21,
+    // desk-19). Measure the box that actually rendered and lift it back in.
+    // Above the early return: hooks must run on every render.
+    useLayoutEffect(() => {
+        if (!open || !placement || !paletteRef.current) return
+        const height = paletteRef.current.offsetHeight
+        const desiredTop = getPalettePosition(placement.clientX || 0, placement.clientY || 0).y
+        const fitTop = Math.max(16, Math.min(desiredTop, window.innerHeight - 16 - height))
+        setMeasuredShift(desiredTop - fitTop)
+    }, [open, query, placement])
+
     if (!open || !placement) return null
 
     const pos = getPalettePosition(placement.clientX || 0, placement.clientY || 0)
@@ -210,7 +225,8 @@ export default function NodePalette({
                 role="dialog"
                 aria-modal="true"
                 aria-label="Create a node, or summon a panel"
-                style={{ left: pos.x, top: pos.y }}
+                ref={paletteRef}
+                style={{ left: pos.x, top: pos.y - measuredShift }}
             >
                 <div className="raw-node-palette-input-row">
                     <input

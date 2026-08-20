@@ -158,6 +158,14 @@ export default function RawGraphSurface({
     emptyHint = 'Cursor is material. Double-click to place nodes.',
     onExplainScope = null,
     onSelectNode,
+    // A plain tap/click on empty canvas clears the selection — the phone has
+    // no Escape key, and the inspector sheet otherwise has no way to close
+    // (audit 08-21). Optional: Studio wraps this read-only and passes none.
+    onClearSelection = null,
+    // Bumped by the editor after it inserts a whole graph at once (the
+    // all-nodes example): the single-fit-per-scope guard is right for editing,
+    // wrong for an insertion that lands mostly off-screen.
+    fitSignal = null,
     onEnterNode,
     // Optional, like every other handler here: Studio wraps this read-only and
     // passes none, so no menu is offered there at all.
@@ -485,6 +493,20 @@ export default function RawGraphSurface({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [insetKey])
 
+    // An editor-side insertion of a whole graph (the all-nodes example)
+    // lands mostly off-screen if the view stays where it was — the ONE case
+    // where re-fitting under the user is the kindness, not the yank: they
+    // asked for a graph they have not seen yet.
+    const lastFitSignalRef = useRef(fitSignal)
+    useEffect(() => {
+        if (fitSignal === null || fitSignal === lastFitSignalRef.current) return
+        lastFitSignalRef.current = fitSignal
+        fitGraph({ force: true })
+        hasFitRef.current = scopeKey
+        lastFitInsetsRef.current = insetKey
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fitSignal])
+
     // The fit notice is transient — it reports on one fit, not a state.
     useEffect(() => {
         if (!fitNotice) return undefined
@@ -803,6 +825,24 @@ export default function RawGraphSurface({
         panStartRef.current = { x: event.clientX, y: event.clientY, panX: vp.panX, panY: vp.panY }
         setIsPanning(true)
         setIsPanMoving(false)
+        // A press on the background that never travels is a tap, and a tap on
+        // the background means "nothing selected" — the one deselect a phone
+        // can reach (Escape needs a keyboard; audit 08-21). Registered HERE,
+        // synchronously: a quick tap's pointerup beats the React effect that
+        // attaches the pan listeners, so the pan path cannot see it.
+        const downX = event.clientX
+        const downY = event.clientY
+        const onceUp = (upEvent) => {
+            window.removeEventListener('pointerup', onceUp)
+            window.removeEventListener('pointercancel', cancelTap)
+            if (Math.hypot(upEvent.clientX - downX, upEvent.clientY - downY) < 8) onClearSelection?.()
+        }
+        const cancelTap = () => {
+            window.removeEventListener('pointerup', onceUp)
+            window.removeEventListener('pointercancel', cancelTap)
+        }
+        window.addEventListener('pointerup', onceUp)
+        window.addEventListener('pointercancel', cancelTap)
     }
     
     useEffect(() => {
@@ -834,6 +874,40 @@ export default function RawGraphSurface({
                 toNodeId: target.toNodeId,
                 toPort: target.toPort
             })
+            // The drop may have LANDED somewhere other than where it was
+            // aimed: the nearest port under the finger can be incompatible,
+            // and the snap quietly walks to the nearest compatible one (a
+            // wire aimed at Size landed on Roughness in the 08-21 audit,
+            // without a word). The wire is still made — often it is what was
+            // wanted — but the redirect is said out loud.
+            const point = clientPointToGraphPoint(event.clientX, event.clientY)
+            const radius = (PORT_DROP_RADIUS_PX * (touch ? 2 : 1)) / viewportRef.current.zoom
+            let aimed = null
+            let aimedDistance = radius
+            for (const node of nodes) {
+                if (node.id === wire.fromNodeId) continue
+                for (const port of getNodeInputs(node, portScopeNodes)) {
+                    const center = inputPortCenter(node, port.id, portScopeNodes)
+                    const distance = Math.hypot(center.x - point.x, center.y - point.y)
+                    if (distance > aimedDistance) continue
+                    aimedDistance = distance
+                    aimed = { node, port }
+                }
+            }
+            if (aimed && (aimed.node.id !== target.toNodeId || aimed.port.id !== target.toPort)
+                && !arePortsCompatible(wire.fromPortType, aimed.port.type)) {
+                const landedNode = nodeById.get(target.toNodeId)
+                const landedPort = landedNode
+                    ? getNodeInputs(landedNode, portScopeNodes).find((p) => p.id === target.toPort)
+                    : null
+                setWireNotice({
+                    x: event.clientX,
+                    y: event.clientY,
+                    text: `${aimed.port.label} can’t take ${getPortType(wire.fromPortType).label} — wired to ${landedPort?.label || target.toPort} instead`
+                })
+                clearTimeout(wireNoticeTimer.current)
+                wireNoticeTimer.current = setTimeout(() => setWireNotice(null), 3200)
+            }
         }
         const cancel = () => {
             pendingWireRef.current = null
@@ -871,10 +945,25 @@ export default function RawGraphSurface({
             const node = nodeById.get(draggingNodeId)
             if (!node) return
             const point = clientPointToGraphPoint(event.clientX, event.clientY)
-            pendingPos = {
-                nextX: point.x - dragOffsetRef.current.x,
-                nextY: point.y - dragOffsetRef.current.y
+            let nextX = point.x - dragOffsetRef.current.x
+            let nextY = point.y - dragOffsetRef.current.y
+            // Same law as placement: the card and the door hanging off its
+            // left edge stay reachable. A card dragged past the edge used to
+            // leave the canvas entirely, door and all, with no way back
+            // (audit 08-21: card at x:-108, door fully off-screen).
+            const rect = containerRef.current?.getBoundingClientRect?.()
+            if (rect?.width && rect?.height) {
+                const halfCard = CARD_WIDTH / 2
+                const topLeft = clientPointToGraphPoint(rect.left + GRAPH_FIT_PADDING_PX, rect.top + GRAPH_FIT_PADDING_PX)
+                const bottomRight = clientPointToGraphPoint(rect.right - GRAPH_FIT_PADDING_PX, rect.bottom - GRAPH_FIT_PADDING_PX)
+                const minX = topLeft.x + halfCard + (DOOR_WIDTH_PX / viewportRef.current.zoom)
+                const maxX = bottomRight.x - halfCard
+                const minY = topLeft.y + HEADER_HEIGHT
+                const maxY = bottomRight.y - HEADER_HEIGHT
+                if (maxX > minX) nextX = clamp(nextX, minX, maxX)
+                if (maxY > minY) nextY = clamp(nextY, minY, maxY)
             }
+            pendingPos = { nextX, nextY }
             if (rafId === null) rafId = requestAnimationFrame(flush)
         }
         const up = () => {
@@ -897,6 +986,7 @@ export default function RawGraphSurface({
             setIsPanMoving(true)
             const dx = event.clientX - panStartRef.current.x
             const dy = event.clientY - panStartRef.current.y
+            panStartRef.current.moved = Math.max(panStartRef.current.moved || 0, Math.hypot(dx, dy))
             const nx = panStartRef.current.panX + dx
             const ny = panStartRef.current.panY + dy
             viewportRef.current.panX = nx
@@ -975,6 +1065,26 @@ export default function RawGraphSurface({
             const maxY = bottomRight.y - HEADER_HEIGHT
             if (maxX > minX) clamped.x = clamp(graphPoint.x, minX, maxX)
             if (maxY > minY) clamped.y = clamp(graphPoint.y, minY, maxY)
+            // On a phone the usable band is narrower than a card, so every
+            // placement clamps to nearly the same point and new cards land ON
+            // TOP of the last one (3 of 3 on the 08-21 audit). Placement is a
+            // suggestion, occupancy is a fact: walk down (then wrap right)
+            // until the spot is not already the centre of someone's card.
+            const occupied = (x, y) => nodes.some((other) =>
+                Math.abs((other.graphX ?? 0) - x) < CARD_WIDTH * 0.6
+                && Math.abs((other.graphY ?? 0) - y) < HEADER_HEIGHT + PORT_ROW_HEIGHT * 2)
+            let guard = 0
+            while (occupied(clamped.x, clamped.y) && guard < 24) {
+                guard += 1
+                const stepped = clamped.y + HEADER_HEIGHT + PORT_ROW_HEIGHT * 3
+                if (maxY > minY && stepped > maxY) {
+                    clamped.y = minY
+                    const shifted = clamped.x + CARD_WIDTH * 0.6
+                    clamped.x = (maxX > minX && shifted > maxX) ? minX : shifted
+                } else {
+                    clamped.y = stepped
+                }
+            }
         }
         onDoubleClick({ clientX: event.clientX, clientY: event.clientY, graphX: clamped.x, graphY: clamped.y })
     }
