@@ -110,6 +110,9 @@ export const FAMILY_BY_TYPE = {
     'math.sin': 'numbers',
     'math.mix': 'numbers',
     'math.clamp': 'numbers',
+    'logic.compare': 'numbers',
+    'logic.gate': 'numbers',
+    'logic.switch': 'numbers',
     // the scene — light, sky, grid, scenes, desks, containers
     'world.light': 'room',
     'world.environment': 'room',
@@ -1614,6 +1617,65 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The logic trio (show operators, 2026-08-20). Wire-first where TD uses a
+    // menu: Compare answers with three boolean outputs instead of an operation
+    // dropdown — you wire the question you mean.
+    'logic.compare': {
+        id: 'logic.compare',
+        label: 'Compare',
+        category: 'logic',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'a', type: 'number', label: 'A', default: 0 },
+            { id: 'b', type: 'number', label: 'B', default: 0 },
+        ],
+        outputs: [
+            { id: 'less',    type: 'boolean', label: 'Less'    },
+            { id: 'equal',   type: 'boolean', label: 'Equal'   },
+            { id: 'greater', type: 'boolean', label: 'Greater' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'logic.gate': {
+        id: 'logic.gate',
+        label: 'Gate',
+        category: 'logic',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            // No default on value: a Gate passes through what arrives, and a
+            // bare Gate honestly carries nothing (PASS_THROUGH_PORTS).
+            { id: 'value', type: 'any',     label: 'Value'                 },
+            { id: 'open',  type: 'boolean', label: 'Open',   default: true },
+        ],
+        outputs: [
+            { id: 'out', type: 'any', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'logic.switch': {
+        id: 'logic.switch',
+        label: 'Switch',
+        category: 'logic',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'a',    type: 'any',     label: 'A',    default: 0     },
+            { id: 'b',    type: 'any',     label: 'B',    default: 0     },
+            { id: 'pick', type: 'boolean', label: 'Pick', default: false },
+        ],
+        outputs: [
+            { id: 'out', type: 'any', label: 'Result' },
         ],
         defaultValues: {},
         render: 'hidden',
