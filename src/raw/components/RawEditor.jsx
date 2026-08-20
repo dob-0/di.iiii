@@ -1667,7 +1667,7 @@ export default function RawEditor({
     const paletteCommands = [
         {
             id: 'chrome',
-            label: zen ? 'Show the chrome' : 'Hide the chrome',
+            label: zen ? 'Show the toolbar' : 'Hide the toolbar',
             hint: zen ? 'topbar, controls' : 'zen — surface and nodes only',
             run: () => setZenPreference(!zen)
         },
@@ -1675,7 +1675,7 @@ export default function RawEditor({
         // backdrop retired (the desk is clear, always) this is the zen
         // route in; the audit called its absence critical back when the
         // backdrop still papered over it.
-        { id: 'room', label: 'Room', hint: 'the 3D view, fullscreen', run: () => setIsWorldFullscreen(true) },
+        { id: 'room', label: 'Full screen', hint: 'the 3D view, fullscreen', run: () => setIsWorldFullscreen(true) },
         { id: 'help', label: 'Help', hint: 'what the keys do', run: () => setHelpOpen(true) },
         { id: 'chat', label: 'Chat', hint: 'talk to whoever is here', run: () => setChatOpen(true) },
         { id: 'outliner', label: 'Outliner', hint: 'every node in this scope', run: () => setOutlinerOpen(true) },
@@ -1780,7 +1780,7 @@ export default function RawEditor({
                                     // most needed to see what they were building.
                                     onClick={() => setIsWorldFullscreen((current) => !current)}
                                 >
-                                    {isWorldFullscreen ? '← Graph' : 'Room'}
+                                    {isWorldFullscreen ? '← Graph' : 'Scene'}
                                 </button>
                             </div>
                         </div>

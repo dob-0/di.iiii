@@ -814,7 +814,7 @@ describe('the way into what a node is made of', () => {
         // pass, and a test that pins somebody else's string goes red on their
         // rename while saying nothing about the thing it is guarding.
         expect(buttons).toHaveLength(2)
-        expect(buttons[0].textContent).toBe("Show me what it's made of")
+        expect(buttons[0].textContent).toBe("What it's made of")
         fireEvent.click(buttons[1])
         expect(onMakeScene).toHaveBeenCalledTimes(1)
         expect(onExplainScope).not.toHaveBeenCalled()

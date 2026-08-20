@@ -403,14 +403,17 @@ describe('RawEditor clear desk — no backdrop, ever', () => {
         expect(container.querySelector('.raw-surface-shell.is-world-overlay')).toBeNull()
     })
 
-    // With the wallpaper gone, the palette is the zen route into the room.
-    it('the palette offers Room, and running it opens the fullscreen room', () => {
+    // With the wallpaper gone, the palette is the zen route into the scene.
+    // The command is "Full screen", NOT "Scene": the palette also lists the
+    // node type Scene (universe.world), and two entries answering to one word
+    // meant typing it ran the command instead of placing the node.
+    it('the palette offers Full screen, and running it opens the fullscreen scene', () => {
         window.localStorage.setItem(ROOM_STORAGE_KEY, makeWorkspaceDoc([
             { id: 'c-1', typeId: 'geom.cube', label: 'Cube', values: {} }
         ]))
         render(<RawEditor localStorageKey={ROOM_STORAGE_KEY} canvasMode />)
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
-        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Room' } })
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Full screen' } })
         fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
         expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
     })
@@ -1028,10 +1031,10 @@ describe('RawEditor — the room behind the graph', () => {
     // Fullscreen used to cancel on every scope step, so the render and the
     // graph could never be part of one journey. Now a door swaps which room
     // fills the screen — the TouchDesigner go-inside/come-out feel.
-    it('keeps the fullscreen room across scope navigation', () => {
+    it('keeps the fullscreen scene across scope navigation', () => {
         window.localStorage.setItem(ANATOMY_STORAGE_KEY, makeDoorwayDoc())
         render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
-        fireEvent.click(screen.getByRole('button', { name: 'Room' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Scene' }))
         expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
         fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
         expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
