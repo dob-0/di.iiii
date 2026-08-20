@@ -40,8 +40,14 @@ import { computeOutput as signalTrigger } from './signal.trigger/runtime.js'
 import { computeOutput as viewButton } from './view.button/runtime.js'
 import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
 import { computeOutput as valueNoise } from './value.noise/runtime.js'
+import { computeOutput as valueRandom } from './value.random/runtime.js'
+import { computeOutput as vectorAim } from './vector.aim/runtime.js'
 import { computeOutput as vectorCombine } from './vector.combine/runtime.js'
+import { computeOutput as vectorCross } from './vector.cross/runtime.js'
+import { computeOutput as vectorDirection } from './vector.direction/runtime.js'
 import { computeOutput as vectorDistance } from './vector.distance/runtime.js'
+import { computeOutput as vectorDot } from './vector.dot/runtime.js'
+import { computeOutput as vectorRotation } from './vector.rotation/runtime.js'
 import { computeOutput as vectorSplit } from './vector.split/runtime.js'
 
 // Colocated node runtimes — the lookup-first side of the registry plan.
@@ -92,8 +98,14 @@ export const NODE_RUNTIMES = new Map([
     ['signal.timer', signalTimer],
     ['signal.trigger', signalTrigger],
     ['value.noise', valueNoise],
+    ['value.random', valueRandom],
+    ['vector.aim', vectorAim],
     ['vector.combine', vectorCombine],
+    ['vector.cross', vectorCross],
+    ['vector.direction', vectorDirection],
     ['vector.distance', vectorDistance],
+    ['vector.dot', vectorDot],
+    ['vector.rotation', vectorRotation],
     ['vector.split', vectorSplit],
     ['view.button', viewButton],
     ['view.timeline', viewTimeline],

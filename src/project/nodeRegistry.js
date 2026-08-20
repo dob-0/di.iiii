@@ -141,6 +141,12 @@ export const FAMILY_BY_TYPE = {
     'colour.split': 'numbers',
     'colour.combine': 'numbers',
     'vector.distance': 'numbers',
+    'vector.dot': 'numbers',
+    'vector.cross': 'numbers',
+    'vector.direction': 'numbers',
+    'vector.rotation': 'numbers',
+    'vector.aim': 'numbers',
+    'value.random': 'numbers',
     'colour.ramp': 'numbers',
     // the scene — light, sky, grid, scenes, desks, containers
     'world.light': 'room',
@@ -1792,6 +1798,25 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    'value.random': {
+        id: 'value.random',
+        label: 'Random',
+        category: 'value',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['random', 'chance', 'draw', 'pick', 'variant', 'scatter'],
+        inputs: [
+            { id: 'least',    type: 'number', label: 'Least',    default: 0 },
+            { id: 'greatest', type: 'number', label: 'Greatest', default: 1 },
+            { id: 'variant',  type: 'number', label: 'Variant',  default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     'geom.array': {
         id: 'geom.array',
         label: 'Array',
@@ -2182,6 +2207,97 @@ export const NODE_TYPES = {
         outputs: [
             { id: 'distance', type: 'number', label: 'Distance' },
             { id: 'length',   type: 'number', label: 'Length'   },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.dot': {
+        id: 'vector.dot',
+        label: 'Dot',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['dot', 'product', 'facing', 'angle', 'alignment', 'agree', 'towards'],
+        inputs: [
+            { id: 'a', type: 'vec3', label: 'A', default: [0, 0, 0] },
+            { id: 'b', type: 'vec3', label: 'B', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'dot',   type: 'number', label: 'Dot'   },
+            { id: 'angle', type: 'number', label: 'Angle' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.cross': {
+        id: 'vector.cross',
+        label: 'Cross',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['cross', 'product', 'perpendicular', 'normal', 'sideways'],
+        inputs: [
+            { id: 'a', type: 'vec3', label: 'A', default: [0, 0, 0] },
+            { id: 'b', type: 'vec3', label: 'B', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.direction': {
+        id: 'vector.direction',
+        label: 'Direction',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['direction', 'normalise', 'normalize', 'unit', 'heading', 'way'],
+        inputs: [
+            { id: 'vector', type: 'vec3', label: 'Vector', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.rotation': {
+        id: 'vector.rotation',
+        label: 'Rotation',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['rotation', 'rotate', 'spin', 'orbit', 'axis', 'turn', 'revolve'],
+        inputs: [
+            { id: 'vector', type: 'vec3',   label: 'Vector', default: [0, 0, 0] },
+            { id: 'axis',   type: 'vec3',   label: 'Axis',   default: [0, 1, 0] },
+            { id: 'angle',  type: 'number', label: 'Angle',  default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.aim': {
+        id: 'vector.aim',
+        label: 'Aim',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['aim', 'face', 'look', 'lookat', 'towards', 'point at', 'orient'],
+        inputs: [
+            { id: 'from', type: 'vec3', label: 'From', default: [0, 0, 0] },
+            { id: 'to',   type: 'vec3', label: 'To',   default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Rotation' },
         ],
         defaultValues: {},
         render: 'hidden',
