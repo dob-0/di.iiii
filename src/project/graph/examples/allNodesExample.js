@@ -165,18 +165,20 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
 
     // --- column 4: universe containers and panels ------------------------------
     add('world', 'universe.world', { label: 'Scene', col: 4, row: 0 })
-    add('space', 'universe.space', { label: 'Stage', col: 4, row: 1 })
-    add('desk', 'universe.desk.3d', { label: '3D Desk', col: 4, row: 2 })
+    add('space', 'universe.space', { label: 'Kiosk', col: 4, row: 1 })
+    // universe.desk.3d retired from the palette with the container story —
+    // Geo is THE place that renders its children; the example shows what the
+    // palette offers.
 
-    // The doorways. They sit INSIDE the 3D Desk, which is what makes them mean
-    // anything: each one puts a socket on that desk's outer face, so a wire can
+    // The doorways. They sit INSIDE the Geo, which is what makes them mean
+    // anything: each one puts a socket on that geo's outer face, so a wire can
     // reach through the wall. Deliberately UNWIRED here — this file's port tests
     // call getNodeInputs/getNodeOutputs with no node list, which is the correct
     // behaviour for every existing caller, so a promoted socket does not exist
     // from their point of view and an edge into one would look like a wire to
-    // nowhere. The desk is the portrait; the wiring is the wiki's job.
-    add('doorIn', 'port.in', { label: 'In · a way through the wall', col: 3, row: 6, insideKey: 'desk', values: { label: 'Tint', portType: 'color' } })
-    add('doorOut', 'port.out', { label: 'Out · a way back through', col: 3, row: 7, insideKey: 'desk', values: { label: 'Size', portType: 'vec3' } })
+    // nowhere. The geo is the portrait; the wiring is the wiki's job.
+    add('doorIn', 'port.in', { label: 'In · a way through the wall', col: 3, row: 6, insideKey: 'geo', values: { label: 'Tint', portType: 'color' } })
+    add('doorOut', 'port.out', { label: 'Out · a way back through', col: 3, row: 7, insideKey: 'geo', values: { label: 'Size', portType: 'vec3' } })
 
     // The Geo: the plain place. It gets a resident — the example's job is
     // showing what a thing IS, and an empty geo is a footprint tile, which is

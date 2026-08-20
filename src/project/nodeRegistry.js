@@ -847,11 +847,17 @@ export const NODE_TYPES = {
         render: 'panel-2d',
     },
 
+    // RETIRED FROM THE PALETTE (2026-08-20, the container story): its role —
+    // "a place in the scene that renders its children" — is exactly what Geo
+    // is, and two containers with one job was the zoo the owner called a
+    // mess. Existing desks keep working: the shell body still draws, children
+    // still render inside, doors still work. It is simply never offered again.
     'universe.desk.3d': {
         id: 'universe.desk.3d',
         label: '3D Desk',
         category: 'universe',
         runtime: 'any',
+        paletteHidden: true,
         singleton: false,
         inputs: [
             { id: 'position',    type: 'vec3',   label: 'Position', default: [0, 0, 0]  },
@@ -1892,6 +1898,13 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
 // any node hold any other, and that is deliberate (product decision
 // 2026-07-19) — but an intention: these are the ones whose whole point is
 // having an inside.
+// THE INTERIOR-RENDERING RULE, in one place (the code lives in RawViewport's
+// childMap): Geo and 3D Desk DRAW their children in the room — a place shows
+// what stands in it. Scene (universe.world) and Constructor SUPPRESS them —
+// a Scene is its own stage seen through its window, and a Constructor's
+// inside is a workshop whose only public face is what reaches its doors.
+// Kiosk, Studio and the code containers never stand in the room at all
+// (render 'hidden'), so the rule does not touch them.
 export const CONTAINER_TYPE_IDS = new Set([
     'universe.world',
     'universe.space',
