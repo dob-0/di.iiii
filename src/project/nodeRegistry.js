@@ -92,6 +92,8 @@ export const FAMILY_BY_TYPE = {
     'geom.cone': 'make',
     'geom.torus': 'make',
     'geom.transform': 'make',
+    'view.button': 'bring-in',
+    'device.keyboard': 'bring-in',
     'geom.constructor': 'make',
     'view.text': 'make',
     // Create sits with the things it makes, not with the panels it looks like.
@@ -2300,6 +2302,48 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'out', type: 'geometry', label: 'Out' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The operator's hands (TD audit, 2026-08-20): the desk's Go button and
+    // a chosen key — the two ways a human fires a cue without leaving the
+    // canvas.
+    'view.button': {
+        id: 'view.button',
+        label: 'Button',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['button', 'go', 'press', 'fire', 'cue', 'bang', 'push'],
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Go' },
+        ],
+        outputs: [
+            { id: 'presses', type: 'number',  label: 'Presses' },
+            { id: 'pressed', type: 'boolean', label: 'Pressed' },
+        ],
+        defaultValues: {
+            presses: 0,
+        },
+        defaultFrame: { width: 220, height: 160 },
+        render: 'panel-2d',
+    },
+
+    'device.keyboard': {
+        id: 'device.keyboard',
+        label: 'Keyboard',
+        category: 'device',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['keyboard', 'key', 'spacebar', 'shortcut', 'press', 'go'],
+        inputs: [
+            { id: 'key', type: 'string', label: 'Key', default: 'Space' },
+        ],
+        outputs: [
+            { id: 'pressed', type: 'boolean', label: 'Pressed' },
+            { id: 'count',   type: 'number',  label: 'Count'   },
         ],
         defaultValues: {},
         render: 'hidden',

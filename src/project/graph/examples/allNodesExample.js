@@ -181,6 +181,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('cone', 'geom.cone', { label: 'Cone', col: 3, row: 10, values: { position: [4, 0.75, -2] } })
     add('torus', 'geom.torus', { label: 'Torus', col: 3, row: 11, values: { position: [5.5, 0.5, -2] } })
     add('transform', 'geom.transform', { label: 'Transform', col: 3, row: 12 })
+    add('go', 'view.button', { label: 'Go', col: 4, row: 0 })
+    add('keys', 'device.keyboard', { label: 'Keyboard', col: 4, row: 1 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
@@ -392,6 +394,11 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // for its pass-through out (bare, an Array carries nothing).
         wire('cube', 'geometry', 'array', 'geometry'),
         wire('torus', 'geometry', 'transform', 'geometry'),
+
+        // The operator's hands fire the state wave: Go presses count, the
+        // chosen key samples the sine.
+        wire('go', 'presses', 'counter', 'step'),
+        wire('keys', 'pressed', 'hold', 'sample'),
 
         // A wire OUT of a container — new on 2026-08-19, and the thing that
         // used to be impossible: every container declared zero outputs, so

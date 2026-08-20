@@ -512,3 +512,24 @@ describe('the geometry wave (TD audit)', () => {
         expect(evalPort({ nodes: [node('t', 'geom.transform')], edges: [] }, 't', 'out')).toBeUndefined()
     })
 })
+
+describe('the operator hands wave (TD audit)', () => {
+    it('Button: presses is the authored count, pressed is this window only', () => {
+        const button = node('go', 'view.button', { presses: 4 })
+        const held = createNodeGraphContext({ nodes: [button], edges: [] }, { liveOutputs: new Map([['go:pressed', true]]) })
+        expect(evaluateNodeOutput(button, 'presses', held)).toBe(4)
+        expect(evaluateNodeOutput(button, 'pressed', held)).toBe(true)
+        const idle = createNodeGraphContext({ nodes: [button], edges: [] })
+        expect(evaluateNodeOutput(button, 'pressed', idle)).toBe(false)
+    })
+
+    it('Keyboard reads the feed, quiet where no feed publishes', () => {
+        const keys = node('k', 'device.keyboard', { key: 'Space' })
+        const live = createNodeGraphContext({ nodes: [keys], edges: [] }, { liveOutputs: new Map([['k:pressed', true], ['k:count', 3]]) })
+        expect(evaluateNodeOutput(keys, 'pressed', live)).toBe(true)
+        expect(evaluateNodeOutput(keys, 'count', live)).toBe(3)
+        const out = createNodeGraphContext({ nodes: [keys], edges: [] })
+        expect(evaluateNodeOutput(keys, 'pressed', out)).toBe(false)
+        expect(evaluateNodeOutput(keys, 'count', out)).toBe(0)
+    })
+})

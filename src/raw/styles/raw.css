@@ -5097,6 +5097,42 @@
     touch-action: none !important;
 }
 
+/* The desk's Go button — one big pressable surface, thumb-sized on
+   anything, the press state visible from across a booth. */
+.raw-button-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.raw-button-panel-go {
+    flex: 1;
+    min-height: 64px;
+    border: 1px solid #2c6e4f;
+    border-radius: 6px;
+    background: #0d2018;
+    color: #7dffb8;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    touch-action: none;
+}
+
+.raw-button-panel-go:active {
+    background: #16563a;
+    color: #d2ffe8;
+}
+
+.raw-button-panel-count {
+    color: rgba(244, 247, 251, 0.55);
+    font-size: 11px;
+    text-align: center;
+}
+
 /* A wire that died on release says why, where it died. */
 .raw-wire-notice {
     position: fixed;
