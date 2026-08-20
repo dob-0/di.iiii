@@ -50,8 +50,12 @@ describe('NodePalette as the workspace summons', () => {
     })
 
     it('Enter runs the highlighted command', () => {
+        // Browsing now leads with nodes (first-contact fix), so the command
+        // is reached the way people actually reach it: by typing its name.
+        // Exact-label rank puts it first; Enter runs it.
         const run = vi.fn()
         open({ commands: [{ id: 'help', label: 'Help', hint: '', run }] })
+        fireEvent.change(screen.getByPlaceholderText(/type a node or panel name/i), { target: { value: 'Help' } })
         fireEvent.keyDown(screen.getByPlaceholderText(/type a node or panel name/i), { key: 'Enter' })
         expect(run).toHaveBeenCalled()
     })
