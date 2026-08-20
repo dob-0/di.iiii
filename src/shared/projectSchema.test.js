@@ -5,6 +5,9 @@ import {
     cloneValue,
     invertProjectOps,
     normalizeProjectDocument
+,
+    normalizeWorkspaceState,
+    defaultWorkspaceState
 } from './projectSchema.js'
 
 describe('projectSchema', () => {
@@ -459,6 +462,18 @@ describe('projectSchema', () => {
         expect(applyProjectOps(mutual, [
             { type: 'deleteNode', payload: { nodeId: 'cyc-a' } }
         ]).nodes).toHaveLength(0)
+    })
+})
+
+describe('the retired surface axis', () => {
+    it('normalizeWorkspaceState sheds activeSurface from old documents', () => {
+        const next = normalizeWorkspaceState({ activeSurface: 'world', selectedNodeId: 'n1' })
+        expect('activeSurface' in next).toBe(false)
+        expect(next.selectedNodeId).toBe('n1')
+    })
+
+    it('defaultWorkspaceState carries no activeSurface', () => {
+        expect('activeSurface' in defaultWorkspaceState).toBe(false)
     })
 })
 

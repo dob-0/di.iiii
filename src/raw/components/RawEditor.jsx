@@ -33,13 +33,11 @@ import { readNode } from '../../project/graph/nodeReading.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
-import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
+import { isNodeInScope, useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
 import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
-import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
-import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
@@ -155,7 +153,6 @@ export default function RawEditor({
     })
     const [paletteState, setPaletteState] = useState({
         open: false,
-        surface: 'world',
         placement: null
     })
     const [overflowOpen, setOverflowOpen] = useState(false)
@@ -220,9 +217,7 @@ export default function RawEditor({
     const unreadChatCount = chatOpen ? 0 : Math.max(0, presence.messages.length - readChatCount)
     const localSaveFailedRef = useRef(false)
     const topbarRef = useRef(null)
-    const workflowRef = useRef(null)
     const [workspaceTop, setWorkspaceTop] = useState(168)
-    const [workflowHeight, setWorkflowHeight] = useState(0)
     const [nodeScale, setNodeScale] = useState(() => {
         try {
             const saved = window.localStorage.getItem(NODE_SCALE_KEY)
@@ -274,8 +269,6 @@ export default function RawEditor({
             setPendingEnterNodeId(null)
         }
     }, [pendingEnterNodeId, authoredNodes, scopeGoToRoot])
-    const activeSurface = workspaceState.activeSurface || 'graph'
-    const workflow = getSurfaceWorkflow(activeSurface)
     // Panel windows are scoped exactly like graph cards. Before, this filtered
     // the whole document, so every universe.world node at any depth kept a live
     // <Canvas> mounted in every scope — see selectMountedPanelNodes.
@@ -292,16 +285,18 @@ export default function RawEditor({
         () => Math.max(6, ...visibleViewNodes.map((node) => node.values?.frame?.zIndex || 1)),
         [visibleViewNodes]
     )
-    const surfaceSelectedNode = useMemo(() => {
-        if (!selectedNode) return null
-        const selectedType = getNodeType(selectedNode.typeId)
-        return matchesNodeTypeSurface(selectedType, activeSurface) ? selectedNode : null
-    }, [activeSurface, selectedNode])
-    const surfaceSelectedEntity = activeSurface === 'world' ? selectedEntity : null
-    const surfaceNodes = useMemo(
-        () => authoredNodes.filter((node) => matchesNodeTypeSurface(getNodeType(node.typeId), activeSurface)),
-        [activeSurface, authoredNodes]
+    // Selection is visible only where it STANDS. The old filter was by node
+    // TYPE against a retired World/View/Graph axis — with activeSurface
+    // defaulting to 'world', selecting a panel node (Text, Image, Monitor)
+    // yielded no inspector and no Delete at all, and a node selected in one
+    // scope kept an armed Delete FAB after you walked somewhere it is not.
+    const scopedSelectedNode = useMemo(
+        () => (isNodeInScope(selectedNode, currentScopeId) ? selectedNode : null),
+        [selectedNode, currentScopeId]
     )
+    // Objects (document.entities) are root-scope citizens: the room draws them
+    // at root, so that is where they can be picked and deleted.
+    const scopedSelectedEntity = currentScopeId === null ? selectedEntity : null
     // Every node in the current scope gets a card, panel types included.
     //
     // Panel nodes used to be excluded here, which meant they had NO
@@ -339,8 +334,8 @@ export default function RawEditor({
         const cardIds = new Set(graphCardNodes.map((node) => node.id))
         return (document.edges || []).filter((edge) => cardIds.has(edge.fromNodeId) && cardIds.has(edge.toNodeId))
     }, [document.edges, graphCardNodes])
-    const surfaceNodeCount = authoredNodes.length
-    const hasAnyNodes = surfaceNodeCount > 0
+    const nodeCount = authoredNodes.length
+    const hasAnyNodes = nodeCount > 0
     const hasGraphNodes = hasAnyNodes
     // universe.world is not a singleton (product decision 2026-07-19) — a scope
     // can hold more than one. Hierarchy-as-connection (Kantan Mapper pattern):
@@ -482,28 +477,6 @@ export default function RawEditor({
         }
     }, [presence.users.length])
 
-    useLayoutEffect(() => {
-        const updateWorkflowHeight = () => {
-            const el = workflowRef.current
-            const nextHeight = el ? el.offsetTop + el.offsetHeight : workspaceTop
-            setWorkflowHeight(nextHeight)
-        }
-
-        updateWorkflowHeight()
-        window.addEventListener('resize', updateWorkflowHeight)
-
-        let resizeObserver = null
-        if (typeof ResizeObserver !== 'undefined' && workflowRef.current) {
-            resizeObserver = new ResizeObserver(updateWorkflowHeight)
-            resizeObserver.observe(workflowRef.current)
-        }
-
-        return () => {
-            window.removeEventListener('resize', updateWorkflowHeight)
-            resizeObserver?.disconnect?.()
-        }
-    }, [activeSurface, workflow.actionLabel, workflow.description, workflow.title, workspaceTop])
-
     const selectNode = (nodeId, patch = {}) => {
         dispatch({ type: 'select-entity', entityId: null })
         applyLocalOps({
@@ -536,13 +509,13 @@ export default function RawEditor({
         })
     }
 
-    const clearSelection = () => {
+    const clearSelection = useCallback(() => {
         dispatch({ type: 'select-entity', entityId: null })
         applyLocalOps({
             type: 'setWorkspaceState',
             payload: { patch: { selectedNodeId: null } }
         })
-    }
+    }, [applyLocalOps, dispatch])
 
     const handleEnterNode = useCallback((nodeId) => {
         const node = authoredNodes.find((n) => n.id === nodeId)
@@ -559,16 +532,22 @@ export default function RawEditor({
             return
         }
         if (node.typeId === 'universe.world') setIsWorldFullscreen(true)
+        // Selection dies at the door. It used to survive every scope walk,
+        // keeping a red Delete armed for a node no longer on screen — the
+        // scope clamp above hides it, and this stops the stale id from
+        // travelling in the shared workspace state at all.
+        if (workspaceState.selectedNodeId || selectedEntity) clearSelection()
         scopeEnterNode(nodeId)
-    }, [authoredNodes, scopeEnterNode, applyLocalOps])
+    }, [authoredNodes, scopeEnterNode, applyLocalOps, workspaceState.selectedNodeId, selectedEntity, clearSelection])
 
     const handleNavigateToScope = useCallback((targetIndex) => {
         // Fullscreen SURVIVES scope navigation now: walking through a door
         // swaps which room fills the screen, which is the TouchDesigner
         // go-inside/come-out feel. It used to cancel on every step — the
         // render and the graph could never both be part of one journey.
+        if (workspaceState.selectedNodeId || selectedEntity) clearSelection()
         scopeNavigateToScope(targetIndex)
-    }, [scopeNavigateToScope])
+    }, [scopeNavigateToScope, workspaceState.selectedNodeId, selectedEntity, clearSelection])
 
     // Browser/hardware BACK pops one scope level. This is the only exit on a
     // phone when a space hides the chrome (showChrome:false removes the back
@@ -598,22 +577,22 @@ export default function RawEditor({
     }, [navStack.length])
 
     const handleInspectorChange = (component, nextComponentValue) => {
-        if (surfaceSelectedNode) {
+        if (scopedSelectedNode) {
             applyLocalOps({
                 type: 'updateNode',
                 payload: {
-                    nodeId: surfaceSelectedNode.id,
+                    nodeId: scopedSelectedNode.id,
                     patch: { [component]: nextComponentValue }
                 }
             })
             return
         }
 
-        if (surfaceSelectedEntity) {
+        if (scopedSelectedEntity) {
             applyLocalOps({
                 type: 'updateComponent',
                 payload: {
-                    entityId: surfaceSelectedEntity.id,
+                    entityId: scopedSelectedEntity.id,
                     component,
                     patch: nextComponentValue
                 }
@@ -655,26 +634,26 @@ export default function RawEditor({
     }, [applyLocalOps, dispatch, state.document.entities])
 
     const handleDeleteSelected = useCallback(() => {
-        if (surfaceSelectedNode) {
+        if (scopedSelectedNode) {
             applyLocalOps([
                 {
                     type: 'deleteNode',
-                    payload: { nodeId: surfaceSelectedNode.id }
+                    payload: { nodeId: scopedSelectedNode.id }
                 },
                 {
                     type: 'setWorkspaceState',
                     payload: { patch: { selectedNodeId: null } }
                 }
-            ], { activityMessage: `Deleted ${surfaceSelectedNode.label}.`, activityLevel: 'warning' })
+            ], { activityMessage: `Deleted ${scopedSelectedNode.label}.`, activityLevel: 'warning' })
             return
         }
-        if (!surfaceSelectedEntity) return
+        if (!scopedSelectedEntity) return
         applyLocalOps({
             type: 'deleteEntity',
-            payload: { entityId: surfaceSelectedEntity.id }
-        }, { activityMessage: `Deleted ${surfaceSelectedEntity.name}.`, activityLevel: 'warning' })
+            payload: { entityId: scopedSelectedEntity.id }
+        }, { activityMessage: `Deleted ${scopedSelectedEntity.name}.`, activityLevel: 'warning' })
         dispatch({ type: 'select-entity', entityId: null })
-    }, [applyLocalOps, dispatch, surfaceSelectedEntity, surfaceSelectedNode])
+    }, [applyLocalOps, dispatch, scopedSelectedEntity, scopedSelectedNode])
 
     const handleResetLocalWorkspace = () => {
         if (!isLocalWorkspace) return
@@ -688,10 +667,10 @@ export default function RawEditor({
         })
     }
 
-    const inspectorSections = surfaceSelectedNode
-        ? deriveNodeInspectorSections(surfaceSelectedNode)
-        : (surfaceSelectedEntity
-            ? getInspectorSections(surfaceSelectedEntity)
+    const inspectorSections = scopedSelectedNode
+        ? deriveNodeInspectorSections(scopedSelectedNode)
+        : (scopedSelectedEntity
+            ? getInspectorSections(scopedSelectedEntity)
             : [
                 {
                     id: 'worldState',
@@ -704,11 +683,11 @@ export default function RawEditor({
                 }
             ])
 
-    const inspectorValues = surfaceSelectedNode
-        ? { values: { ...(surfaceSelectedNode.values || {}) } }
-        : (surfaceSelectedEntity ? surfaceSelectedEntity.components : { worldState: document.worldState })
-    const inspectorTitle = surfaceSelectedNode ? surfaceSelectedNode.label : (surfaceSelectedEntity ? surfaceSelectedEntity.name : 'World')
-    const inspectorSubtitle = surfaceSelectedNode ? surfaceSelectedNode.typeId : (surfaceSelectedEntity ? surfaceSelectedEntity.type : 'Scene defaults')
+    const inspectorValues = scopedSelectedNode
+        ? { values: { ...(scopedSelectedNode.values || {}) } }
+        : (scopedSelectedEntity ? scopedSelectedEntity.components : { worldState: document.worldState })
+    const inspectorTitle = scopedSelectedNode ? scopedSelectedNode.label : (scopedSelectedEntity ? scopedSelectedEntity.name : 'World')
+    const inspectorSubtitle = scopedSelectedNode ? scopedSelectedNode.typeId : (scopedSelectedEntity ? scopedSelectedEntity.type : 'Scene defaults')
 
     // Read the zen preference ONCE, and only after the document has loaded —
     // the default depends on whether this workspace already has work in it, and
@@ -736,7 +715,6 @@ export default function RawEditor({
             event.preventDefault()
             setPaletteState({
                 open: true,
-                surface: 'graph',
                 placement: {
                     clientX: Math.round(window.innerWidth / 2) - 140,
                     clientY: Math.round(window.innerHeight / 3)
@@ -747,10 +725,9 @@ export default function RawEditor({
         return () => window.removeEventListener('keydown', onKeyDown)
     }, [])
 
-    const openPalette = (surface, placement = null) => {
+    const openPalette = (placement = null) => {
         setPaletteState({
             open: true,
-            surface,
             placement
         })
     }
@@ -850,9 +827,7 @@ export default function RawEditor({
             parentId: currentScopeId
         })
         if (!nextNode) return
-        const nodeRender = getNodeType(definition.id)?.render || 'hidden'
         const workspacePatch = { selectedNodeId: nextNode.id }
-        if (nodeRender === 'hidden') workspacePatch.activeSurface = 'graph'
         // A container arrives with its contents. `studio` is one palette entry;
         // entering it has to reveal the subgraph it is made of, so the interior
         // is created in the SAME op batch — otherwise a single undo would leave
@@ -871,11 +846,11 @@ export default function RawEditor({
                 ? `Created ${definition.label} with ${interior.length} panels inside.`
                 : `Created ${definition.label}.`
         })
-        setPaletteState({ open: false, surface: paletteState.surface, placement: null })
+        setPaletteState({ open: false, placement: null })
     }
 
     const handleWorldSurfaceDoubleClick = (placement) => {
-        openPalette('world', placement)
+        openPalette(placement)
     }
 
     // --- Bringing a file in -------------------------------------------------
@@ -961,7 +936,7 @@ export default function RawEditor({
     // The inspector's "＋" on an asset port: same storage as a drop, but the
     // node already exists, so this only fills that port in.
     const handlePickAssetFile = useCallback(async (file, field) => {
-        if (!file || !surfaceSelectedNode) return
+        if (!file || !scopedSelectedNode) return
         setDropState({ over: false, busy: true, notice: '' })
         try {
             const asset = projectId
@@ -973,7 +948,7 @@ export default function RawEditor({
                 {
                     type: 'updateNode',
                     payload: {
-                        nodeId: surfaceSelectedNode.id,
+                        nodeId: scopedSelectedNode.id,
                         patch: { values: { [field?.path?.[0] || 'src']: asset.id } }
                     }
                 }
@@ -982,7 +957,7 @@ export default function RawEditor({
         } catch {
             setDropState({ over: false, busy: false, notice: `Could not bring in ${file.name}.` })
         }
-    }, [applyLocalOps, projectId, surfaceSelectedNode])
+    }, [applyLocalOps, projectId, scopedSelectedNode])
 
     const handleSurfaceDragEnter = (event) => {
         if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return
@@ -1035,7 +1010,7 @@ export default function RawEditor({
             ...exampleEdges.map((edge) => ({ type: 'createEdge', payload: { edge } })),
             {
                 type: 'setWorkspaceState',
-                payload: { patch: { activeSurface: 'graph', selectedNodeId: null } }
+                payload: { patch: { selectedNodeId: null } }
             }
         ], {
             activityMessage: `Created the all-nodes example (${exampleNodes.length} nodes, ${exampleEdges.length} edges).`
@@ -1059,7 +1034,7 @@ export default function RawEditor({
             ...sceneEdges.map((edge) => ({ type: 'createEdge', payload: { edge } })),
             {
                 type: 'setWorkspaceState',
-                payload: { patch: { activeSurface: 'graph', selectedNodeId: null } }
+                payload: { patch: { selectedNodeId: null } }
             }
         ], { activityMessage: 'Made a scene: a room, a light, a cube and a place for your own model.' })
     }
@@ -1185,7 +1160,6 @@ export default function RawEditor({
                 type: 'setWorkspaceState',
                 payload: {
                     patch: {
-                        activeSurface: 'graph',
                         selectedNodeId: compositorNode?.id || null
                     }
                 }
@@ -1204,7 +1178,7 @@ export default function RawEditor({
     // panel stayed pinned over the very node it was inspecting. CSS decides
     // where this sits; JS only supplies the measured offset.
     const hostInspector = (
-        <aside ref={scaffoldRef} className="raw-selection-scaffold" style={{ '--raw-scaffold-top': workflowHeight + 'px' }}>
+        <aside ref={scaffoldRef} className="raw-selection-scaffold" style={{ '--raw-scaffold-top': workspaceTop + 'px' }}>
             <PropertyInspector
                 title={inspectorTitle}
                 subtitle={inspectorSubtitle}
@@ -1404,8 +1378,8 @@ export default function RawEditor({
             return (
                 <WorldPanelWindow
                     document={document}
-                    selectedEntityId={surfaceSelectedEntity?.id || null}
-                    selectedNodeId={surfaceSelectedNode?.id || null}
+                    selectedEntityId={scopedSelectedEntity?.id || null}
+                    selectedNodeId={scopedSelectedNode?.id || null}
                     onSelectEntity={selectEntity}
                     onSelectNode={selectNode}
                     onClearSelection={clearSelection}
@@ -1527,7 +1501,7 @@ export default function RawEditor({
         if (node.typeId === 'view.outliner') {
             return (
                 <OutlinerPanelWindow
-                    nodes={surfaceNodes}
+                    nodes={authoredNodes}
                     selectedNodeId={workspaceState.selectedNodeId || null}
                     onSelectNode={(nodeId) => selectNode(nodeId)}
                 />
@@ -1568,7 +1542,7 @@ export default function RawEditor({
         return <TextPanelWindow node={node} values={resolvedValues} />
     }
 
-    const visibleSelection = Boolean(surfaceSelectedNode || surfaceSelectedEntity)
+    const visibleSelection = Boolean(scopedSelectedNode || scopedSelectedEntity)
 
     // How much of the canvas the selection panel is covering from the bottom,
     // so the graph can fit itself into the part you can actually see. Only
@@ -1598,11 +1572,13 @@ export default function RawEditor({
             observer?.disconnect()
             window.removeEventListener('resize', measure)
         }
-    }, [visibleSelection, activeSurface])
+    }, [visibleSelection])
 
 
+    // Keyboard delete for OBJECTS only — node deletion is RawGraphSurface's
+    // handler, which checks its own scope map; both firing would double-op.
     useEffect(() => {
-        if (!visibleSelection || activeSurface === 'graph') return undefined
+        if (!scopedSelectedEntity) return undefined
         const handler = (event) => {
             if (event.key !== 'Delete' && event.key !== 'Backspace') return
             const target = event.target
@@ -1613,7 +1589,7 @@ export default function RawEditor({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [activeSurface, handleDeleteSelected, visibleSelection])
+    }, [handleDeleteSelected, scopedSelectedEntity])
 
     useEffect(() => {
         const handler = (event) => {
@@ -1661,7 +1637,7 @@ export default function RawEditor({
     // sitting resident on the surface — and any panel node that is currently
     // hidden is listed generically, so a node type added later is summonable
     // without touching this list.
-    const hiddenPanelNodes = surfaceNodes.filter(
+    const hiddenPanelNodes = authoredNodes.filter(
         (node) => isPanelNode(node) && node.values?.frame?.visible === false
     )
     const paletteCommands = [
@@ -1788,15 +1764,15 @@ export default function RawEditor({
                             <button type="button" className="raw-topbar-help-action" onClick={() => setHelpOpen(true)}>
                                 Help
                             </button>
-                            {surfaceNodeCount > 0 && (
+                            {nodeCount > 0 && (
                                 <button
                                     type="button"
                                     className={`raw-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
                                     onClick={() => setOutlinerOpen((v) => !v)}
                                     title="Toggle outliner"
-                                    aria-label={`${surfaceNodeCount} nodes`}
+                                    aria-label={`${nodeCount} nodes`}
                                 >
-                                    {surfaceNodeCount} {surfaceNodeCount === 1 ? 'node' : 'nodes'}
+                                    {nodeCount} {nodeCount === 1 ? 'node' : 'nodes'}
                                 </button>
                             )}
                             {/* No Chat button alone in a local canvas: there
@@ -1917,7 +1893,7 @@ export default function RawEditor({
                     onDeleteEdge={handleDeleteEdge}
                     onDeleteNode={handleDeleteNode}
                     onMoveNode={handleMoveNode}
-                    onDoubleClick={(placement) => openPalette('graph', placement)}
+                    onDoubleClick={(placement) => openPalette(placement)}
                     isNodeActive={(node) =>
                         activeMarkerTypeIds.includes(node.typeId)
                         && getActiveNodeId(node.typeId, node.parentId || null) === node.id
@@ -2114,8 +2090,8 @@ export default function RawEditor({
                     <RawViewport
                         topInset={0}
                         document={document}
-                        selectedEntityId={surfaceSelectedEntity?.id || null}
-                        selectedNodeId={surfaceSelectedNode?.id || null}
+                        selectedEntityId={scopedSelectedEntity?.id || null}
+                        selectedNodeId={scopedSelectedNode?.id || null}
                         onSelectEntity={selectEntity}
                         onSelectNode={selectNode}
                         onClearSelection={clearSelection}
@@ -2146,7 +2122,6 @@ export default function RawEditor({
                 <DesktopWindow
                     windowState={outlinerFrame}
                     title="Outliner"
-                    kicker={activeSurface}
                     minTop={workspaceTop}
                     onFocus={() => setOutlinerFrame((f) => ({ ...f, zIndex: 20 }))}
                     onPatch={(patch) => setOutlinerFrame((f) => ({ ...f, ...patch }))}
@@ -2155,7 +2130,7 @@ export default function RawEditor({
                     onTogglePin={() => setOutlinerFrame((f) => ({ ...f, pinned: !f.pinned }))}
                 >
                     <OutlinerPanelWindow
-                        nodes={surfaceNodes}
+                        nodes={authoredNodes}
                         selectedNodeId={workspaceState.selectedNodeId || null}
                         onSelectNode={(nodeId) => selectNode(nodeId)}
                     />
@@ -2183,7 +2158,6 @@ export default function RawEditor({
                 <DesktopWindow
                     windowState={chatFrame}
                     title="Chat"
-                    kicker={activeSurface}
                     minTop={workspaceTop}
                     onFocus={() => setChatFrame((f) => ({ ...f, zIndex: 20 }))}
                     onPatch={(patch) => setChatFrame((f) => ({ ...f, ...patch }))}
@@ -2200,7 +2174,6 @@ export default function RawEditor({
 
             <RawHelpDialog
                 open={helpOpen}
-                surface={activeSurface}
                 onClose={() => setHelpOpen(false)}
             />
 
@@ -2208,9 +2181,8 @@ export default function RawEditor({
 
             <NodePalette
                 open={paletteState.open}
-                surface={paletteState.surface}
                 placement={paletteState.placement}
-                onClose={() => setPaletteState({ open: false, surface: 'world', placement: null })}
+                onClose={() => setPaletteState({ open: false, placement: null })}
                 onCreate={handlePaletteCreate}
                 commands={paletteCommands}
             />

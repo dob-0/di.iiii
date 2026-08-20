@@ -1,16 +1,21 @@
 const MANUAL_PATH = 'docs/raw/USER_MANUAL.md'
 
+// The in-product help's DATA. Deliberately one truthful section: the old
+// World/View/Graph trio taught a surface-switching product that was retired
+// in August; teaching it here armed the one dialog a confused visitor
+// actually opens. The full rewrite (scope walks, the Room, /out) lands with
+// the naming wave — until then, short and true beats long and wrong.
 export const GUIDE_AUDIENCES = [
     {
         id: 'visitor',
         label: 'For Visitors',
         glyph: '◧',
         title: 'Look first',
-        description: 'See scene and panels fast.',
-        tags: ['Public', 'View', 'World'],
+        description: 'Open a page and look around.',
+        tags: ['Look', 'Tap', 'Help'],
         steps: [
-            'Open public',
-            'Switch View / World',
+            'Open a public page',
+            'Drag to look around',
             'Tap Help'
         ],
         actionLabel: 'Open Public Space'
@@ -21,7 +26,7 @@ export const GUIDE_AUDIENCES = [
         glyph: '▣',
         title: 'Build small',
         description: 'Make one thing, then connect it.',
-        tags: ['Text', 'Cube', 'Graph'],
+        tags: ['Cube', 'Wire', 'Enter'],
         steps: [
             'Create project',
             'Add one visible node',
@@ -37,120 +42,35 @@ export const GUIDE_SECTIONS = [
         label: 'Start Here',
         icon: '◎',
         title: 'Start small',
-        description: 'Start empty. Double-click to create node 0.',
+        description: 'Double-click (or double-tap) the canvas and type what you want.',
         callouts: [
-            { icon: '◫', title: 'World', detail: 'Place scene nodes' },
-            { icon: '▤', title: 'View', detail: 'Make panels' },
-            { icon: '⋯', title: 'Graph', detail: 'Wire values' }
+            { icon: '◎', title: 'Make', detail: 'Double-click, type a name' },
+            { icon: '→', title: 'Wire', detail: 'Drag port to port' },
+            { icon: '›', title: 'Enter', detail: 'Step inside a card' }
         ],
         controls: [
-            ['Add', 'Double-click or top action'],
-            ['Select', 'Click node or panel'],
+            ['Add', 'Double-click or double-tap the canvas'],
+            ['Wire', 'Drag an output port to an input port'],
+            ['Enter', 'Press › on a card, or double-click it'],
+            ['Leave', 'Escape, or ‹ at the top'],
+            ['See the 3D view', 'Type Room in the palette'],
+            ['Delete', 'Select, then Delete or Backspace'],
             ['Close', 'Esc closes help']
         ],
         steps: [
-            'First page is empty.',
-            'Double-click to create node 0.',
-            'Then add nodes one by one.',
-            'Connect values when needed.'
+            'The canvas starts empty.',
+            'Double-click it and type — Cube is a good first word.',
+            'Wire values into things and watch them change.',
+            'Press › on a card to build inside it.'
         ],
         tips: [
-            'Best starters: Text, Image, Cube.',
-            'If nothing shows, check Graph.'
-        ]
-    },
-    {
-        id: 'world',
-        label: 'World',
-        icon: '◫',
-        title: 'Place scene nodes',
-        description: 'Objects, light, background.',
-        callouts: [
-            { icon: '◧', title: 'Orbit', detail: 'Drag scene' },
-            { icon: '◎', title: 'Add', detail: 'Double-click world' },
-            { icon: '▣', title: 'Tune', detail: 'Use inspector' }
-        ],
-        controls: [
-            ['Add node', 'Double-click world'],
-            ['Select', 'Click object'],
-            ['Move', 'Drag selected node'],
-            ['Delete', 'Delete or Backspace']
-        ],
-        steps: [
-            'Start with nothing.',
-            'Create node 0.',
-            'Add nodes one by one.',
-            'Use Graph when you need values.'
-        ],
-        tips: [
-            'World is the 3D scene.',
-            'Background, light, grid affect all.'
-        ]
-    },
-    {
-        id: 'view',
-        label: 'View',
-        icon: '▤',
-        title: 'Make panels',
-        description: 'Text, image, browser.',
-        callouts: [
-            { icon: '▤', title: 'Panel', detail: 'Add in View' },
-            { icon: '✎', title: 'Content', detail: 'Edit inspector' },
-            { icon: '⋯', title: 'Feed', detail: 'Use Graph values' }
-        ],
-        controls: [
-            ['Add panel', 'Double-click view'],
-            ['Select', 'Click window'],
-            ['Move', 'Drag window'],
-            ['Close', 'Window close button']
-        ],
-        steps: [
-            'Open View.',
-            'Add a panel.',
-            'Set content.',
-            'Use Graph to feed it.'
-        ],
-        tips: [
-            'Start with Text or Image.',
-            'If missing, check frame visibility.'
-        ]
-    },
-    {
-        id: 'graph',
-        label: 'Graph',
-        icon: '⋯',
-        title: 'Wire values',
-        description: 'Sources and math.',
-        callouts: [
-            { icon: '◌', title: 'Source', detail: 'Add value node' },
-            { icon: '→', title: 'Wire', detail: 'Drag port to port' },
-            { icon: '◎', title: 'Result', detail: 'Watch surfaces update' }
-        ],
-        controls: [
-            ['Add node', 'Double-click graph'],
-            ['Wire', 'Drag output to input'],
-            ['Select', 'Click card'],
-            ['Delete', 'Delete or Backspace']
-        ],
-        steps: [
-            'Open Graph.',
-            'Add Number, String, or Color.',
-            'Drag output to input.',
-            'Change value and watch update.'
-        ],
-        tips: [
-            'Some graph nodes are invisible by design.',
-            'If a wire fails, target may not support it yet.'
+            'Best starters: Cube, Geo, Text.',
+            'The 3D view is a window: open it from the palette, size it by its corner.'
         ]
     }
 ]
 
 export const getGuideSection = (sectionId = 'start') =>
     GUIDE_SECTIONS.find((section) => section.id === sectionId) || GUIDE_SECTIONS[0]
-
-export const getGuideSectionForSurface = (surface = 'graph') => {
-    if (surface === 'world' || surface === 'view' || surface === 'graph') return getGuideSection(surface)
-    return getGuideSection('start')
-}
 
 export const getGuideManualPath = () => MANUAL_PATH
