@@ -53,7 +53,7 @@ import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/serv
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { RAW_ANATOMY_Z, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
-import { isPaletteSummons, resolveZenPreference, writeZenPreference } from '../utils/zenMode.js'
+import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
     readLocalWorkspaceDocument,
@@ -105,15 +105,20 @@ const buildWindowStateFromNode = (node, index = 0, graphContext = null) => {
     // Cascade unpositioned windows by a STABLE per-node offset, not the list
     // index — index shifts when a sibling closes, which made every later
     // unpositioned window hop 32px.
+    // …and spread in TWO dimensions over 16 slots: the old 8-slot 32px
+    // staircase left concurrently-open windows ~90% overlapped whenever two
+    // ids hashed near each other (audit 08-21, desk-07: three windows, one
+    // pile). Still the stable per-node hash — never the list index.
     const cascadeSlot = hasSavedPos
         ? 0
-        : Array.from(String(node.id)).reduce((sum, ch) => sum + ch.charCodeAt(0), index) % 8
-    const cascadeOffset = hasSavedPos ? 0 : cascadeSlot * 32
+        : Array.from(String(node.id)).reduce((sum, ch) => sum + ch.charCodeAt(0), index) % 16
+    const cascadeX = hasSavedPos ? 0 : (cascadeSlot % 4) * 72
+    const cascadeY = hasSavedPos ? 0 : Math.floor(cascadeSlot / 4) * 56
     return {
         id: node.id,
         title: frame.title || evaluateNodeInput(node, 'title', graphContext) || node.label,
-        x: (frame.x ?? def.x) + cascadeOffset,
-        y: (frame.y ?? def.y) + cascadeOffset,
+        x: (frame.x ?? def.x) + cascadeX,
+        y: (frame.y ?? def.y) + cascadeY,
         width: frame.width || def.width,
         height: frame.height || def.height,
         zIndex: frame.zIndex || 6,
@@ -177,6 +182,9 @@ export default function RawEditor({
     const [chatFrame, setChatFrame] = useState({ x: 24, y: 432, width: 280, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [readChatCount, setReadChatCount] = useState(0)
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
+    // Bumped after inserting a whole graph at once — tells the surface this
+    // is the one moment a forced re-fit is a kindness, not a yank.
+    const [fitSignal, setFitSignal] = useState(0)
     // Declared here because hostInspector's JSX is built partway down the
     // component and needs it; the effect that measures it lives further down,
     // next to the selection state it depends on.
@@ -697,11 +705,32 @@ export default function RawEditor({
                 }
             ])
 
+    // Renaming exists only for nodes — entities and the world keep their
+    // own naming stories. Empty names are refused upstream in TitleField.
+    const handleRenameSelected = useCallback((label) => {
+        const nodeId = workspaceState.selectedNodeId
+        if (!nodeId) return
+        applyLocalOps({
+            type: 'updateNode',
+            payload: { nodeId, patch: { label } }
+        }, { activityMessage: `Renamed a node to “${label}”.` })
+    }, [applyLocalOps, workspaceState.selectedNodeId])
+
     const inspectorValues = scopedSelectedNode
         ? { values: { ...(scopedSelectedNode.values || {}) } }
         : (scopedSelectedEntity ? scopedSelectedEntity.components : { worldState: document.worldState })
     const inspectorTitle = scopedSelectedNode ? scopedSelectedNode.label : (scopedSelectedEntity ? scopedSelectedEntity.name : 'World')
     const inspectorSubtitle = scopedSelectedNode ? scopedSelectedNode.typeId : (scopedSelectedEntity ? scopedSelectedEntity.type : 'Scene defaults')
+
+    // Entering the fullscreen room with a node selected kept the inspector
+    // sheet over 38% of it — with an armed Delete floating over the stage
+    // (audit 08-21, phone-61). Fullscreen means the room, whole; a selection
+    // made INSIDE it (arranging) is untouched — this runs on entry only.
+    useEffect(() => {
+        if (!isWorldFullscreen) return
+        clearSelection()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isWorldFullscreen])
 
     // Read the zen preference ONCE, and only after the document has loaded —
     // the default depends on whether this workspace already has work in it, and
@@ -718,6 +747,17 @@ export default function RawEditor({
         setZen(next)
         writeZenPreference(zenWorkspaceKey, next)
     }, [zenWorkspaceKey])
+
+    // The canvas stopped being empty: if zen was only the derived
+    // empty-canvas default, lift it so the topbar — and its Scene button —
+    // exist the moment there is a scene to look at. An explicit zen choice
+    // is never touched (audit 08-21: entering the scene took a 4-step
+    // palette incantation because the chrome never came back).
+    const documentNodeCount = (document?.nodes || []).length
+    useEffect(() => {
+        if (!zenReadRef.current || documentNodeCount === 0) return
+        if (liftAutoZen(zenWorkspaceKey)) setZen(false)
+    }, [documentNodeCount, zenWorkspaceKey])
 
     // Cmd/Ctrl+K or a bare `/` opens the palette at the middle of the screen.
     // Touch already has this: double-tapping empty canvas opens the same
@@ -1029,6 +1069,10 @@ export default function RawEditor({
         ], {
             activityMessage: `Created the all-nodes example (${exampleNodes.length} nodes, ${exampleEdges.length} edges).`
         })
+        // 94 nodes had just landed mostly off-screen with the view unmoved —
+        // spaghetti in the visible corner and no sign of the rest (audit
+        // 08-21). The person asked to SEE every node; show them every node.
+        setFitSignal((token) => token + 1)
     }
 
     // A scene made the way a person makes one: a room, a light, a shape, a place
@@ -1063,6 +1107,7 @@ export default function RawEditor({
         <aside ref={scaffoldRef} className="raw-selection-scaffold" style={{ '--raw-scaffold-top': workspaceTop + 'px' }}>
             <PropertyInspector
                 title={inspectorTitle}
+                onRename={scopedSelectedNode ? handleRenameSelected : null}
                 subtitle={inspectorSubtitle}
                 sections={inspectorSections}
                 values={inspectorValues}
@@ -1452,6 +1497,7 @@ export default function RawEditor({
             return (
                 <PropertyInspector
                     title={inspectorTitle}
+                    onRename={scopedSelectedNode ? handleRenameSelected : null}
                     subtitle={inspectorSubtitle}
                     sections={inspectorSections}
                     values={inspectorValues}
@@ -1825,6 +1871,8 @@ export default function RawEditor({
                     // would simply never grow a socket, silently, with every
                     // unit test still passing.
                     portScopeNodes={authoredNodes}
+                    onClearSelection={clearSelection}
+                    fitSignal={fitSignal}
                     onPromotePort={handlePromotePort}
                     // Only at the ROOT of a truly blank desk. Inside a
                     // container the same button injected the whole six-node

@@ -1480,6 +1480,31 @@
     margin: 0;
 }
 
+/* Rename lives on the title itself: the button IS the title, visually —
+   no chrome until it is touched. */
+.raw-property-title-button {
+    all: unset;
+    cursor: text;
+    display: inline-block;
+    min-width: 40px;
+    border-bottom: 1px dashed transparent;
+}
+.raw-property-title-button:hover,
+.raw-property-title-button:focus-visible {
+    border-bottom-color: rgba(77, 249, 255, 0.55);
+}
+.raw-property-title-input {
+    font: inherit;
+    font-weight: 600;
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(77, 249, 255, 0.06);
+    color: inherit;
+    border: 1px solid rgba(77, 249, 255, 0.45);
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
 /* Says the family, in the family's colour — "the room", not UNIVERSE.WORLD.
    The cards started speaking plainly when families landed; the windows were
    the half left behind, still showing the code's internal type id. Lowercase,
@@ -2834,6 +2859,9 @@
 
 @media (hover: none) {
     .raw-graph-fit-notice { min-height: 44px; }
+    /* The palette is the way every node is made; its rows sat at 33px —
+       under the same 44px minimum this file enforces on doors and dots. */
+    .raw-node-palette-item { min-height: 44px; }
 }
 
 .raw-graph-port-label {
@@ -5039,7 +5067,28 @@
    graph (later positioned sibling), which is why cards went unreachable the
    moment it was on; mounting it as the shell's first child and refusing all
    events removes both failure modes at once. */
+/* The way OUT of the fullscreen room. This button had no base rule at all
+   and rendered as a 21px default-HTML button — invisible against the room on
+   a phone in zen, which made fullscreen a trap (audit 08-21). Same visual
+   family as the topbar-back / zoom controls. */
+.raw-room-exit {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 5;
+    min-height: 44px;
+    padding: 8px 18px;
+    background: rgba(10, 14, 18, 0.82);
+    color: rgba(77, 249, 255, 0.92);
+    border: 1px solid rgba(77, 249, 255, 0.45);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+}
 .raw-room-exit:hover { background: rgba(77, 249, 255, 0.14); }
+.raw-room-exit:focus-visible { outline: 2px solid rgba(77, 249, 255, 0.7); outline-offset: 2px; }
 
 /* The projector cable: /out is a room and nothing else. Fixed and black so a
    reload flashes dark, not white, on a projector; the viewport shell inside

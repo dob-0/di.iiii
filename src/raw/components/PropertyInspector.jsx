@@ -174,8 +174,53 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
     return <input type="text" value={value || ''} onChange={(event) => onChange(event.target.value)} />
 }
 
+// The rename verb. It did not exist anywhere in the UI (audit 08-21: the
+// schema patches `label`, but no surface ever offered it — a graph full of
+// nodes named Number had no way to tell them apart). The inspector title is
+// the one element every selected node already shows its name on, so the name
+// is edited exactly where it is read: click, type, Enter. Same edit-buffer
+// manners as NumberField — Escape abandons, blur commits.
+function TitleField({ title, onRename }) {
+    const [draft, setDraft] = useState(null)
+    if (!onRename) return <h4>{title}</h4>
+    if (draft === null) {
+        return (
+            <h4>
+                <button
+                    type="button"
+                    className="raw-property-title-button"
+                    title="Rename"
+                    onClick={() => setDraft(title || '')}
+                >
+                    {title}
+                </button>
+            </h4>
+        )
+    }
+    return (
+        <input
+            className="raw-property-title-input"
+            type="text"
+            value={draft}
+            ref={(element) => element?.focus()}
+            onFocus={(event) => event.target.select()}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={() => {
+                const next = draft.trim()
+                if (next && next !== title) onRename(next)
+                setDraft(null)
+            }}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur()
+                if (event.key === 'Escape') setDraft(null)
+            }}
+        />
+    )
+}
+
 export default function PropertyInspector({
     title,
+    onRename = null,
     subtitle = '',
     sections = [],
     assetOptions = [],
@@ -191,7 +236,7 @@ export default function PropertyInspector({
     return (
         <div className="raw-property-sheet">
             <header className="raw-property-sheet-header">
-                <h4>{title}</h4>
+                <TitleField title={title} onRename={onRename} />
                 {subtitle ? <p>{subtitle}</p> : null}
             </header>
             <div className="raw-property-sections-scroll">
