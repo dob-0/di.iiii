@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- The doors point where they say
+- One project, two editors — the door between them
 
 Full detail: `PROGRESS.md`.
 

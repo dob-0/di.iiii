@@ -27,6 +27,7 @@ export default function StudioControlCluster({
     onFullscreen,
     onHideUI,
     onBackToHub,
+    onOpenNodeEditor,
     xrState,
     syncState,
     presence,
@@ -130,6 +131,9 @@ export default function StudioControlCluster({
                                 <button className="scc-btn" onClick={onShowHelp} title="Keyboard shortcuts (Shift+?)">? Help</button>
                                 {!minimal && (
                                     <button className="scc-btn" onClick={onBackToHub} title="Back to hub">← Hub</button>
+                                )}
+                                {!minimal && onOpenNodeEditor && (
+                                    <button className="scc-btn" onClick={onOpenNodeEditor} title="Open this project in the node editor">⇄ Nodes</button>
                                 )}
                                 {!minimal && canViewLive && (
                                     <button className="scc-btn" onClick={onViewLive} title="Open the public space URL in a new tab">↗ View live</button>

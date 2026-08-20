@@ -536,6 +536,7 @@ export const WIKI_ARTICLES = [
             'The node editor is the other way to build: a canvas, nodes on it, and wires between them. Its core idea is free-form nesting — no node type is a singleton, and any node can be entered to author a graph inside it.',
             { list: [
                 'A space’s node projects are listed at /<space>/raw/projects (same sign-in rules as Studio). /<space>/raw opens the canvas itself — a scratch surface stored in your browser, not on the server; /open/raw is that canvas addressed to the communal open space.',
+                'One project, two editors: the ⋯ menu’s “Open in Studio” swaps the project you are in over to the Studio editor, and Studio’s toolbar “⇄ Nodes” button swaps it back. A project made here shows as “Nodes” in Studio’s project list.',
                 'Enter any node with its “Enter ›” button; the breadcrumb tracks your depth and Escape steps back out one level at a time.',
                 'Entering a Scene node opens its 3D viewport fullscreen; the ← Scene button in the toolbar drops back to the graph.',
                 'The palette groups its nodes into seven families by what you are doing — bring in, make, numbers, the scene, watch, send out, agents — each with its own colour, the same colour the node’s card wears on the canvas. Typing dissolves the groups into a flat search. It only lists node types that actually compute or render; a “shell” tag marks anything that places but carries nothing yet, and “local dev” marks nodes that only work against a local dev server.',
