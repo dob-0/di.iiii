@@ -79,18 +79,15 @@ function migrateLegacyRawStorage() {
 migrateLegacyRawStorage()
 const ROOT_WORLD_CARD_WIDTH = 160
 const ROOT_WORLD_CARD_HEIGHT = 120
-const WINDOW_DEFAULT_POSITIONS = {
+// Exported for the guard test: every key must name a REGISTERED type. The map
+// used to carry six phantoms (view.assets/activity/project, legacy-world.*)
+// naming Studio panels that were never made into node types.
+export const WINDOW_DEFAULT_POSITIONS = {
     'universe.world':  { x: 120,  y: 60, width: 680, height: 480 },
     'view.inspector':  { x: 24,   y: 56, width: 320, height: 480 },
     'agent':           { x: 96,   y: 140, width: 420, height: 480 },
-    'view.assets':     { x: 24,   y: 56, width: 280, height: 380 },
     'view.outliner':   { x: 24,   y: 56, width: 240, height: 360 },
     'view.library':    { x: 24,   y: 56, width: 260, height: 380 },
-    'view.activity':   { x: 24,   y: 56, width: 280, height: 300 },
-    'view.project':    { x: 24,   y: 56, width: 280, height: 320 },
-    'legacy-world.inspector': { x: 24,   y: 56, width: 320, height: 420 },
-    'legacy-world.assets':    { x: 360,  y: 56, width: 280, height: 360 },
-    'legacy-world.outliner':  { x: 660,  y: 56, width: 240, height: 360 },
 }
 
 const ACTIVE_MARKER_TYPE_IDS = ['world.light', 'world.background', 'world.grid', 'world.camera']
@@ -334,8 +331,10 @@ export default function RawEditor({
         const cardIds = new Set(graphCardNodes.map((node) => node.id))
         return (document.edges || []).filter((edge) => cardIds.has(edge.fromNodeId) && cardIds.has(edge.toNodeId))
     }, [document.edges, graphCardNodes])
-    const nodeCount = authoredNodes.length
-    const hasAnyNodes = nodeCount > 0
+    // The topbar counts THIS room; the empty-state logic asks about the whole
+    // document (a zen desk inside a full project is not "empty").
+    const nodeCount = graphCardNodes.length
+    const hasAnyNodes = authoredNodes.length > 0
     const hasGraphNodes = hasAnyNodes
     // universe.world is not a singleton (product decision 2026-07-19) — a scope
     // can hold more than one. Hierarchy-as-connection (Kantan Mapper pattern):
@@ -1039,138 +1038,6 @@ export default function RawEditor({
         ], { activityMessage: 'Made a scene: a room, a light, a cube and a place for your own model.' })
     }
 
-    const handleCreateStreamingPrototype = () => {
-        const startX = 80
-        const startY = workspaceTop + 72
-        const mkNode = ({ typeId, label, graphX, graphY, hostHint = '', values = {} }) => {
-            const seededValues = buildNodeValues(typeId, {
-                ...values,
-                ...(hostHint ? { hostHint } : {})
-            }, {
-                clientX: graphX + 180,
-                clientY: graphY + 48
-            })
-            return createNode(typeId, {
-                label,
-                graphX,
-                graphY,
-                values: seededValues
-            })
-        }
-
-        const instaNode = mkNode({
-            typeId: 'source.insta360',
-            label: 'Insta360 [mac]',
-            graphX: startX,
-            graphY: startY,
-            hostHint: 'mac'
-        })
-        const stereoNode = mkNode({
-            typeId: 'source.stereo',
-            label: 'Stereo Cam [linux]',
-            graphX: startX,
-            graphY: startY + 150,
-            hostHint: 'linux'
-        })
-        const micNode = mkNode({
-            typeId: 'source.mic',
-            label: 'Mic [mac]',
-            graphX: startX,
-            graphY: startY + 300,
-            hostHint: 'mac'
-        })
-        const ptzANode = mkNode({
-            typeId: 'device.ptz.osc',
-            label: 'PTZ A [windows]',
-            graphX: startX + 260,
-            graphY: startY,
-            hostHint: 'windows',
-            values: { oscAddress: '/ptz/a' }
-        })
-        const ptzBNode = mkNode({
-            typeId: 'device.ptz.osc',
-            label: 'PTZ B [windows]',
-            graphX: startX + 260,
-            graphY: startY + 150,
-            hostHint: 'windows',
-            values: { oscAddress: '/ptz/b' }
-        })
-        const controllerNode = mkNode({
-            typeId: 'stream.controller',
-            label: 'Controller [mobile]',
-            graphX: startX + 260,
-            graphY: startY + 300,
-            hostHint: 'mobile',
-            values: { title: 'Mobile Control Desk' }
-        })
-        const compositorNode = mkNode({
-            typeId: 'stream.compositor',
-            label: 'Compositor [linux]',
-            graphX: startX + 560,
-            graphY: startY + 120,
-            hostHint: 'linux'
-        })
-        const outputNode = mkNode({
-            typeId: 'stream.output',
-            label: 'Stream Output [windows]',
-            graphX: startX + 880,
-            graphY: startY + 80,
-            hostHint: 'windows',
-            values: { target: 'rtmp://localhost/live/main' }
-        })
-        const monitorNode = mkNode({
-            typeId: 'stream.monitor',
-            label: 'Program Monitor [mac]',
-            graphX: startX + 880,
-            graphY: startY + 240,
-            hostHint: 'mac',
-            values: { title: 'Program Monitor' }
-        })
-
-        const nodesToCreate = [
-            instaNode,
-            stereoNode,
-            micNode,
-            ptzANode,
-            ptzBNode,
-            controllerNode,
-            compositorNode,
-            outputNode,
-            monitorNode
-        ].filter(Boolean)
-
-        if (!nodesToCreate.length) return
-
-        const id = (node) => node?.id || ''
-        const edgesToCreate = [
-            createEdge(id(instaNode), 'frame', id(compositorNode), 'primary'),
-            createEdge(id(ptzANode), 'frame', id(compositorNode), 'altA'),
-            createEdge(id(ptzBNode), 'frame', id(compositorNode), 'altB'),
-            createEdge(id(stereoNode), 'depth', id(compositorNode), 'depth'),
-            createEdge(id(controllerNode), 'mix', id(compositorNode), 'mix'),
-            createEdge(id(compositorNode), 'program', id(outputNode), 'video'),
-            createEdge(id(micNode), 'frequency', id(outputNode), 'audio'),
-            createEdge(id(compositorNode), 'program', id(monitorNode), 'src')
-        ].filter((edge) => edge.fromNodeId && edge.toNodeId)
-
-        const ops = [
-            ...nodesToCreate.map((node) => ({ type: 'createNode', payload: { node } })),
-            ...edgesToCreate.map((edge) => ({ type: 'createEdge', payload: { edge } })),
-            {
-                type: 'setWorkspaceState',
-                payload: {
-                    patch: {
-                        selectedNodeId: compositorNode?.id || null
-                    }
-                }
-            }
-        ]
-
-        dispatch({ type: 'select-entity', entityId: null })
-        applyLocalOps(ops, {
-            activityMessage: 'Created streaming prototype graph (linux + mac + windows + mobile).'
-        })
-    }
 
     // The scaffold's offset is published as a custom property rather than an
     // inline `top`, because an inline declaration outranks every media query:
@@ -1396,7 +1263,12 @@ export default function RawEditor({
                     // the room it stands in. Showing node.id instead meant a
                     // cube placed beside the World was never drawn by it.
                     scopeId={currentScopeId}
-                    worldNode={node}
+                    // The scope's ●-resolved world, NOT this panel's own node:
+                    // sky/light fall back through worldNode, so two open Scene
+                    // windows in one room used to show two different skies.
+                    // A non-live window's own Sky field is inert until ● marks
+                    // it — that is what the ● toggle means now.
+                    worldNode={worldNode}
                     liveOutputs={liveOutputs}
                     isLive={(document.workspaceState?.liveWorldNodeIdByScope || {})[node.parentId || ''] === node.id}
                     onSetLive={() => markWorldLive(node)}
@@ -1600,6 +1472,15 @@ export default function RawEditor({
                 handleNavigateToScope(navStack.length - 2)
                 return
             }
+            // At the top of the stack there is no scope left to pop — Escape
+            // closes the fullscreen room instead of dying silently. Deeper
+            // down, fullscreen survives the walk by design (the go-inside/
+            // come-out journey), so scope-popping keeps priority.
+            if (event.key === 'Escape' && navStack.length === 1 && isWorldFullscreen) {
+                event.preventDefault()
+                setIsWorldFullscreen(false)
+                return
+            }
             if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
                 // Browsers bookmark on Ctrl+D; duplicating the selected node
                 // is what a person arranging a scene means by it here.
@@ -1623,7 +1504,7 @@ export default function RawEditor({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo])
+    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo, isWorldFullscreen])
 
     const handleMoveWorldNode = (nodeId, nextPosition) => {
         applyLocalOps({
@@ -1654,7 +1535,7 @@ export default function RawEditor({
         { id: 'room', label: 'Room', hint: 'the 3D view, fullscreen', run: () => setIsWorldFullscreen(true) },
         { id: 'help', label: 'Help', hint: 'what the keys do', run: () => setHelpOpen(true) },
         { id: 'chat', label: 'Chat', hint: 'talk to whoever is here', run: () => setChatOpen(true) },
-        { id: 'outliner', label: 'Outliner', hint: 'every node in this scope', run: () => setOutlinerOpen(true) },
+        { id: 'outliner', label: 'Outliner', hint: 'every node in the project', run: () => setOutlinerOpen(true) },
         ...hiddenPanelNodes.map((node) => ({
             id: `window:${node.id}`,
             label: node.values?.frame?.title || node.label || getNodeType(node.typeId)?.label || 'Panel',
@@ -1817,7 +1698,6 @@ export default function RawEditor({
                                         </div>
                                         <button type="button" onClick={() => { handleCreateSceneExample(); setOverflowOpen(false) }}>Make me a scene</button>
                                         <button type="button" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
-                                        <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Streaming Prototype</button>
                                         {isLocalWorkspace && (
                                             <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Reset Workspace</button>
                                         )}
