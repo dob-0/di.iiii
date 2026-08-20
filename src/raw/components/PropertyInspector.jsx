@@ -85,7 +85,7 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
         return (
             <input
                 type="number"
-                value={Number.isFinite(Number(value)) ? value : 0}
+                value={Number.isFinite(Number(value)) ? value : (Number.isFinite(Number(field.default)) ? field.default : 0)}
                 min={field.min}
                 max={field.max}
                 step={field.step ?? 0.1}
@@ -94,18 +94,28 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
         )
     }
     if (field.type === 'vec3') {
-        const arr = Array.isArray(value) ? value : [0, 0, 0]
+        // A node whose values never stored this field must show — and, on a
+        // single-axis edit, keep — the port's real default, not zeros. The
+        // zeros were live: editing one Scale axis on such a node committed
+        // [x, 0, 0] and flattened the thing to nothing ("i can't change
+        // size", 2026-08-20).
+        const fallback = Array.isArray(field.default) ? field.default : [0, 0, 0]
+        const arr = Array.isArray(value) ? value : fallback
         return (
             <div style={{ display: 'flex', gap: 4 }}>
                 {[0, 1, 2].map((axis) => (
                     <input
                         key={axis}
                         type="number"
-                        value={Number.isFinite(Number(arr[axis])) ? arr[axis] : 0}
+                        value={Number.isFinite(Number(arr[axis])) ? arr[axis] : (fallback[axis] ?? 0)}
                         step={field.step ?? 0.1}
                         style={{ width: '100%', minWidth: 0 }}
                         onChange={(event) => {
-                            const next = [arr[0] ?? 0, arr[1] ?? 0, arr[2] ?? 0]
+                            const next = [
+                                Number.isFinite(Number(arr[0])) ? arr[0] : (fallback[0] ?? 0),
+                                Number.isFinite(Number(arr[1])) ? arr[1] : (fallback[1] ?? 0),
+                                Number.isFinite(Number(arr[2])) ? arr[2] : (fallback[2] ?? 0)
+                            ]
                             next[axis] = Number(event.target.value)
                             onChange(next)
                         }}

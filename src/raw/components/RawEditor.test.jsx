@@ -380,50 +380,39 @@ describe('RawEditor live-world toggle', () => {
 // Product decision 2026-07-17: universe.space's showChrome value lets one
 // universe be a normal authoring space (full topbar) and another a
 // chromeless embed/kiosk view, without a global toggle.
-// Owner, 2026-08-20: "its clear till you add geo". A clear desk is flat paper
-// (the graph surface's own grid); the room backdrop mounts only when
-// something spatial stands at the current level. The mocked RawViewport
-// renders as data-testid="mock-viewport", so its presence IS the backdrop.
-describe('RawEditor room backdrop gating', () => {
+// Owner, 2026-08-20, final form: "i mean clear desk". The backdrop room is
+// retired — the desk is flat paper ALWAYS, whatever stands in the document.
+// The room is seen through the Scene window, the fullscreen Room (topbar and
+// palette), and /out — never as wallpaper behind the cards.
+describe('RawEditor clear desk — no backdrop, ever', () => {
     const ROOM_STORAGE_KEY = 'test-room-gating'
 
     afterEach(() => {
         window.localStorage.removeItem(ROOM_STORAGE_KEY)
     })
 
-    it('mounts no room on a clear desk', () => {
-        window.localStorage.setItem(ROOM_STORAGE_KEY, makeWorkspaceDoc([]))
+    it.each([
+        ['an empty desk', []],
+        ['a Geo at root', [{ id: 'geo-1', typeId: 'geom.geo', label: 'Geo', values: {} }]],
+        ['a cube at root', [{ id: 'c-1', typeId: 'geom.cube', label: 'Cube', values: {} }]],
+        ['a Scene card', [{ id: 'w-1', typeId: 'universe.world', label: 'Scene', values: {} }]]
+    ])('mounts no backdrop with %s', (_label, nodes) => {
+        window.localStorage.setItem(ROOM_STORAGE_KEY, makeWorkspaceDoc(nodes))
         const { container } = render(<RawEditor localStorageKey={ROOM_STORAGE_KEY} canvasMode />)
         expect(container.querySelector('.raw-world-overlay')).toBeNull()
         expect(container.querySelector('.raw-surface-shell.is-world-overlay')).toBeNull()
     })
 
-    it('mounts the room once a Geo stands at root', () => {
+    // With the wallpaper gone, the palette is the zen route into the room.
+    it('the palette offers Room, and running it opens the fullscreen room', () => {
         window.localStorage.setItem(ROOM_STORAGE_KEY, makeWorkspaceDoc([
-            { id: 'geo-1', typeId: 'geom.geo', label: 'Geo', values: {} }
+            { id: 'c-1', typeId: 'geom.cube', label: 'Cube', values: {} }
         ]))
-        const { container } = render(<RawEditor localStorageKey={ROOM_STORAGE_KEY} canvasMode />)
-        expect(container.querySelector('.raw-world-overlay')).toBeTruthy()
-        expect(container.querySelector('.raw-surface-shell.is-world-overlay')).toBeTruthy()
-    })
-
-    // The Scene's own floating window still shows its room (that viewport is
-    // mocked too), so the assertion targets the backdrop overlay, not the
-    // viewport mock.
-    it('a Scene card alone conjures no empty room behind the graph', () => {
-        window.localStorage.setItem(ROOM_STORAGE_KEY, makeWorkspaceDoc([
-            { id: 'w-1', typeId: 'universe.world', label: 'Scene', values: {} }
-        ]))
-        const { container } = render(<RawEditor localStorageKey={ROOM_STORAGE_KEY} canvasMode />)
-        expect(container.querySelector('.raw-world-overlay')).toBeNull()
-    })
-
-    it('an unparented Light alone conjures no room either', () => {
-        window.localStorage.setItem(ROOM_STORAGE_KEY, makeWorkspaceDoc([
-            { id: 'l-1', typeId: 'world.light', label: 'Light', values: {} }
-        ]))
-        const { container } = render(<RawEditor localStorageKey={ROOM_STORAGE_KEY} canvasMode />)
-        expect(container.querySelector('.raw-world-overlay')).toBeNull()
+        render(<RawEditor localStorageKey={ROOM_STORAGE_KEY} canvasMode />)
+        fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Room' } })
+        fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
+        expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
     })
 })
 
@@ -1018,12 +1007,10 @@ describe('RawEditor — the room behind the graph', () => {
         window.localStorage.removeItem(ANATOMY_STORAGE_KEY)
     })
 
-    // The audit's central finding was blind building: inside any non-World
-    // scope there was no 3D view, so the owner concluded nesting did not work.
-    // The backdrop answers that wherever something SPATIAL stands — and stays
-    // away where nothing does (owner, 2026-08-20: "its clear till you add
-    // geo"), so a desk of pure code is flat paper, not an empty stage.
-    it('renders the room wherever something stands in it — root and inside alike', () => {
+    // The desk is flat paper in every scope — spatial content included
+    // (owner, 2026-08-20: "i mean clear desk"). The room is a view you open,
+    // not wallpaper.
+    it('the desk stays flat in every scope, spatial content or not', () => {
         window.localStorage.setItem(ANATOMY_STORAGE_KEY, JSON.stringify({
             nodes: [
                 { id: 'geo', typeId: 'geom.geo', label: 'Geo', values: {} },
@@ -1032,14 +1019,6 @@ describe('RawEditor — the room behind the graph', () => {
             edges: [],
             workspaceState: {}
         }))
-        const { container } = render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
-        expect(container.querySelector('.raw-world-overlay')).toBeTruthy()
-        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
-        expect(container.querySelector('.raw-world-overlay')).toBeTruthy()
-    })
-
-    it('a desk of pure code is flat paper in every scope', () => {
-        window.localStorage.setItem(ANATOMY_STORAGE_KEY, makeDoorwayDoc())
         const { container } = render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
         expect(container.querySelector('.raw-world-overlay')).toBeNull()
         fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))

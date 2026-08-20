@@ -27,21 +27,20 @@ Creators should start with one visible result and one connection.
 
 ## The desk and the room
 
-The desk is one surface: a flat graph of cards on a grid. The room lives
-behind it — from the moment something stands in it. Place a **Geo** or a
-**Cube** and the current level's room appears behind your cards; a clear desk,
-or a desk of pure code (values, math, containers of code), stays flat paper.
+The desk is clear — always. Cards on flat paper, nothing behind them. The
+room is a view you open, three ways:
 
-- Scene nodes (Cube, Sphere, Plane, Geo, a Light inside a place) stand in the
-  room.
-- Panels (Text, Image, Browser, Timeline) open as floating windows over the
-  desk.
-- Value and math nodes drive both, through wires.
+- **The Scene window** — a room floating over the desk. Drag the corner glyph
+  (bottom-right) to make it any size.
+- **The Room button** (topbar), or type `Room` in the palette — the current
+  level's room, fullscreen. That is where clicking and dragging objects
+  lives. Every container has its own room, and walking through a door swaps
+  which room fills the screen.
+- **`/out`** — a whole display (see "Putting it on a projector").
 
-The **Room** button (or ⤢) takes the room fullscreen for arranging — that is
-where clicking and dragging objects lives. Every container has its own room,
-and walking through a door swaps which room fills the screen. The backdrop
-room behind the cards shows consequences; it takes no clicks of its own.
+Scene nodes (Cube, Sphere, Plane, Geo, a Light inside a place) stand in the
+room; panels open as floating windows; value and math nodes drive both,
+through wires.
 
 ## What is different in Raw (vs Beta)
 
