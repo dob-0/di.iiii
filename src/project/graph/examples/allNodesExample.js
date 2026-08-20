@@ -167,6 +167,12 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('trigger', 'signal.trigger', { label: 'Trigger', col: 0, row: 15 })
     add('speed', 'signal.speed', { label: 'Speed', col: 0, row: 16 })
     add('toggle', 'logic.toggle', { label: 'Toggle', col: 0, row: 17 })
+    add('vsplit', 'vector.split', { label: 'Split', col: 2, row: 10 })
+    add('vcombine', 'vector.combine', { label: 'Combine', col: 2, row: 11 })
+    add('channels', 'colour.split', { label: 'Channels', col: 2, row: 12 })
+    add('compose', 'colour.combine', { label: 'Compose', col: 2, row: 13 })
+    add('vdistance', 'vector.distance', { label: 'Distance', col: 2, row: 14 })
+    add('ramp', 'colour.ramp', { label: 'Ramp', col: 2, row: 15 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
@@ -362,6 +368,17 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('compare', 'greater', 'trigger', 'fire'),
         wire('numB', 'out', 'speed', 'rate'),
         wire('compare', 'less', 'toggle', 'flip'),
+
+        // The vector/colour wave: the first colour opened into channels, its
+        // hue recomposed, positions split and measured, the sawtooth riding
+        // a three-stop ramp.
+        wire('colorA', 'out', 'channels', 'colour'),
+        wire('channels', 'red', 'compose', 'red'),
+        wire('vsplit', 'x', 'vcombine', 'y'),
+        wire('vcombine', 'out', 'vdistance', 'a'),
+        wire('divide', 'out', 'ramp', 'position'),
+        wire('colorA', 'out', 'ramp', 'a'),
+        wire('colorB', 'out', 'ramp', 'c'),
 
         // Array repeats the cube's own geometry value — the proving fixture
         // for its pass-through out (bare, an Array carries nothing).
