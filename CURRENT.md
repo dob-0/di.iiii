@@ -13,7 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- What the owner hit
+- What was wrong
+- What was wrong
 
 Full detail: `PROGRESS.md`.
 
