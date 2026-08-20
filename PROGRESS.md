@@ -5,6 +5,51 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+# The container story (plan PR 2.5)
+
+## What changed
+
+- universe.desk.3d retires from the palette (paletteHidden): its role — a
+  place in the scene that renders its children — is exactly Geo's job, and
+  two containers with one job was the zoo. Existing desks keep working
+  (shell body, children, doors untouched).
+- The interior-rendering rule is written ONCE, at CONTAINER_TYPE_IDS: Geo
+  and 3D Desk draw their children; Scene and Constructor suppress; the
+  hidden containers never stand in the room. The anatomy sheet's container
+  sentence now derives to Scene · Kiosk · Geo · Studio · Constructor
+  automatically (PLACEABLE_CONTAINER_LABELS reads the palette).
+- All-nodes example: desk removed, doorways moved inside the Geo, the stale
+  'Stage' label corrected to Kiosk. Wiki states the one rule and the desk's
+  retirement.
+
+## Verified
+
+Full suite 2486/2486, lint clean, build/anatomy/wiki/docs green.
+
+# Help teaches the real product (plan PR 2.6)
+
+## What changed
+
+rawGuide.js becomes a four-section teach in the settled vocabulary: Start
+(double-click/tap, palette, families), Wires (port to port, compatibility
+lighting, maths on the way), Places (enter/leave, the trail, doorways,
+selection dies at the door), The scene (window / Full screen / /out,
+Environment vs Light, Camera ●, one sky). The dialog's tabs return
+automatically (they hide only below two sections).
+
+USER_MANUAL: the four July-30 fossils rewritten (visitor steps, the four
+first-exercises taught through the palette instead of retired surfaces),
+"The desk and the room" heading → "The canvas and the scene", the vs-Beta
+comparison frame dropped (its three living rules kept as "Three rules the
+node editor lives by").
+
+## Verified
+
+By eye (screenshots read): Help opens on Start with tabs Start · Wires ·
+Places · The scene; The scene tab teaches Window/Full screen//out with the
+Environment/Camera/one-sky steps; the dialog text screens clean of banned
+words. Full suite green, copyVocabulary 10/10, build/wiki/docs green.
+
 # Light and Environment — the split (plan PR 2.4)
 
 ## What was wrong
