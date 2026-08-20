@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- MIDI Out made real (Web MIDI send) — closing waves 6–8: Dot/Cross/Direction/Rotation/Aim/Random, Line/Circle, MIDI Out
+- The defect wave from the 08-21 deep audit — nine verified fixes plus the rename verb
 
 Full detail: `PROGRESS.md`.
 
