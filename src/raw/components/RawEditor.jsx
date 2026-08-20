@@ -11,6 +11,7 @@ import MonitorPanelWindow from './MonitorPanelWindow.jsx'
 import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
 import CreatePanelWindow from './CreatePanelWindow.jsx'
+import PublishPanelWindow from './PublishPanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
@@ -96,6 +97,7 @@ export const WINDOW_DEFAULT_POSITIONS = {
     'agent':           { x: 96,   y: 140, width: 420, height: 480 },
     'view.outliner':   { x: 24,   y: 56, width: 240, height: 360 },
     'view.library':    { x: 24,   y: 56, width: 260, height: 380 },
+    'view.publish':    { x: 24,   y: 56, width: 300, height: 430 },
 }
 
 const ACTIVE_MARKER_TYPE_IDS = ['world.light', 'world.environment', 'world.background', 'world.grid', 'world.camera']
@@ -642,6 +644,17 @@ export default function RawEditor({
     // version: the orbit controls live inside RawViewport's Canvas and are not
     // reachable from here. A ring around a target this component cannot read
     // would just be origin with extra steps.
+    // Publish state is two plain document ops, the same ones Studio's publish
+    // panel writes. Undoable like any other edit, and they sync through the
+    // ordinary op path, so a guest with a redeemed invite can make them.
+    const handlePresentationPatch = useCallback((patch) => {
+        applyLocalOps({ type: 'setPresentationState', payload: { patch } })
+    }, [applyLocalOps])
+
+    const handlePublishPatch = useCallback((patch) => {
+        applyLocalOps({ type: 'setPublishState', payload: { patch } })
+    }, [applyLocalOps])
+
     const handleCreateEntity = useCallback((type) => {
         const count = (state.document.entities || []).length
         const entity = createEntityOfType(type, {
@@ -1494,6 +1507,18 @@ export default function RawEditor({
         }
         if (node.typeId === 'view.library') {
             return <CreatePanelWindow onCreateEntity={handleCreateEntity} />
+        }
+        if (node.typeId === 'view.publish') {
+            return (
+                <PublishPanelWindow
+                    projectId={projectId}
+                    spaceId={resolvedSpaceId}
+                    presentationState={document.presentationState || {}}
+                    publishState={document.publishState || {}}
+                    onPresentationPatch={handlePresentationPatch}
+                    onPublishPatch={handlePublishPatch}
+                />
+            )
         }
         if (node.typeId === 'view.inspector') {
             return (

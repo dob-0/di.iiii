@@ -1971,6 +1971,121 @@
     line-height: 1;
 }
 
+/* view.publish — what a visitor to the public page gets. Same rules as the
+   Create panel: neutral at rest, cyan only for the chosen state, 44px floor on
+   anything a finger lands on, radius 0. */
+.raw-publish-section + .raw-publish-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.raw-publish-heading {
+    font-family: var(--di-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    margin: 0 0 8px;
+}
+
+.raw-publish-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.raw-publish-choice {
+    flex: 1 1 auto;
+    min-height: 44px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.raw-publish-choice:hover,
+.raw-publish-choice:focus-visible {
+    background: rgba(77, 249, 255, 0.08);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-publish-choice.is-on {
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+    background: rgba(77, 249, 255, 0.12);
+}
+
+.raw-publish-hint {
+    margin: 8px 0 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--di-text-muted);
+}
+
+.raw-publish-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.raw-publish-toggle input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--di-cyan);
+    cursor: pointer;
+}
+
+.raw-publish-url {
+    margin: 0 0 8px;
+    font-family: var(--di-mono);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.82);
+    word-break: break-all;
+}
+
+.raw-publish-copy {
+    min-height: 44px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.raw-publish-copy:hover,
+.raw-publish-copy:focus-visible {
+    background: rgba(77, 249, 255, 0.08);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-publish-status {
+    margin: 12px 0 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--di-text-muted);
+}
+
+.raw-publish-status.is-warn {
+    color: #ffb86c;
+}
+
 .raw-text-panel {
     display: flex;
     align-items: flex-start;

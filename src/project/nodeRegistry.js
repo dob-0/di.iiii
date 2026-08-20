@@ -173,6 +173,9 @@ export const FAMILY_BY_TYPE = {
     'view.director': 'watch',
     'stream.monitor': 'watch',
     // send out — leave the browser: MIDI/OSC out, streams, recordings
+    // Publish sits with the things that leave the browser: what this panel
+    // changes is what a stranger receives, not what the graph makes.
+    'view.publish': 'send-out',
     'device.midi.out': 'send-out',
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
@@ -1460,6 +1463,29 @@ export const NODE_TYPES = {
         paletteHidden: true,
         inputs: [
             { id: 'title', type: 'string', label: 'Title', default: 'Create' },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    // What a visitor to the public page gets. Everything the panel changes is
+    // a document op (presentationState / publishState), so it works for any
+    // session that can edit this project — a workshop participant holding a
+    // redeemed invite included. The space-level switches (make public, set
+    // live project) are owner-or-admin and 403 for exactly that person, so
+    // the panel reports the space as a sentence rather than offering buttons
+    // that always fail. No output port: nothing in the graph consumes publish
+    // state, and a port with no consumer draws, persists and carries nothing.
+    'view.publish': {
+        id: 'view.publish',
+        label: 'Public page',
+        category: 'view',
+        keywords: ['publish', 'public', 'share', 'live', 'visitor', 'audience', 'link', 'page'],
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Public page' },
         ],
         outputs: [],
         defaultValues: {},
