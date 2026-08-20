@@ -133,6 +133,26 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-21'
     },
     {
+        id: 'public-page-node',
+        category: 'Editing',
+        title: 'The Public page window',
+        summary: 'Set what a visitor to your published page gets — from inside the node editor, without owning the space.',
+        body: [
+            'Every project has a public face: the page a stranger sees when they open its address. The Public page window is where you decide what that face is, and it sits in the node editor with everything else rather than in a separate settings screen.',
+            { list: [
+                'What a visitor gets — the 3D room they can walk in, or the code view your project builds.',
+                'Headset entry — whether the page offers AR, VR, or neither.',
+                'Camera and microphone — off by default. Turning it on stops the page being sandboxed from the site, so only do it for a page that genuinely needs a live camera.',
+                'The address — the link itself, with a copy button.'
+            ] },
+            'All four are settings on the project, so anyone who can edit the project can change them — including a collaborator who joined by invite. They save as you click, like every other edit, and undo works on them.',
+            'What the window does not offer is the space-level half: making the space public, or choosing which project the space shows at its short address. Those belong to whoever owns the space. Rather than show you buttons that would refuse, the window tells you in a sentence where the space currently stands — live, showing a different project, or private — so you know whether anyone can actually reach what you just set.',
+            'The window is a node like any other: it can be closed, minimized, moved, and it lives in the project it belongs to.'
+        ],
+        tags: ['publish', 'public', 'share', 'link', 'visitor', 'raw', 'node', 'entry view', 'xr'],
+        updated: '2026-08-21'
+    },
+    {
         id: 'free-spaces',
         category: 'Spaces & access',
         title: '3 free spaces per account',
