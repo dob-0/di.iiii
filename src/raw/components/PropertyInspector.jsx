@@ -1,5 +1,40 @@
+import { useState } from 'react'
 import { cloneValue } from '../../shared/projectSchema.js'
 import { detectAssetMediaKind } from '../../utils/mediaAssetTypes.js'
+
+// A controlled number input with an EDIT BUFFER. Bare live-commit inputs
+// corrupted mid-edit values on the phone (2026-08-20 audit): Number('') is 0,
+// so clearing a field to retype committed 0 under your thumbs. While focused
+// the field shows what you typed; only valid parses commit; blur snaps back
+// to the canonical value; focus selects everything (a fresh number replaces,
+// not appends) and Enter closes the keyboard.
+function NumberField({ value, fallback = 0, min, max, step, onCommit }) {
+    const [draft, setDraft] = useState(null)
+    const canonical = Number.isFinite(Number(value)) ? value : fallback
+    return (
+        <input
+            type="number"
+            value={draft !== null ? draft : canonical}
+            min={min}
+            max={max}
+            step={step}
+            style={{ width: '100%', minWidth: 0 }}
+            onFocus={(event) => {
+                setDraft(String(canonical))
+                event.target.select()
+            }}
+            onChange={(event) => {
+                setDraft(event.target.value)
+                const next = Number(event.target.value)
+                if (event.target.value !== '' && Number.isFinite(next)) onCommit(next)
+            }}
+            onBlur={() => setDraft(null)}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur()
+            }}
+        />
+    )
+}
 
 const setNestedValue = (value, path, nextValue) => {
     const draft = cloneValue(value)
@@ -33,7 +68,9 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
         return <textarea value={value || ''} onChange={(event) => onChange(event.target.value)} rows={4} />
     }
     if (field.type === 'color') {
-        return <input type="color" value={value || '#ffffff'} onChange={(event) => onChange(event.target.value)} />
+        // The port's real default, not white: an unset Colour on a blue cube
+        // showed a white swatch while the cube stood there blue (S24 audit).
+        return <input type="color" value={value || field.default || '#ffffff'} onChange={(event) => onChange(event.target.value)} />
     }
     if (field.type === 'checkbox') {
         return <input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} />
@@ -83,13 +120,13 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
     }
     if (field.type === 'number') {
         return (
-            <input
-                type="number"
-                value={Number.isFinite(Number(value)) ? value : (Number.isFinite(Number(field.default)) ? field.default : 0)}
+            <NumberField
+                value={value}
+                fallback={Number.isFinite(Number(field.default)) ? field.default : 0}
                 min={field.min}
                 max={field.max}
                 step={field.step ?? 0.1}
-                onChange={(event) => onChange(Number(event.target.value))}
+                onCommit={onChange}
             />
         )
     }
@@ -104,19 +141,18 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
         return (
             <div style={{ display: 'flex', gap: 4 }}>
                 {[0, 1, 2].map((axis) => (
-                    <input
+                    <NumberField
                         key={axis}
-                        type="number"
                         value={Number.isFinite(Number(arr[axis])) ? arr[axis] : (fallback[axis] ?? 0)}
+                        fallback={fallback[axis] ?? 0}
                         step={field.step ?? 0.1}
-                        style={{ width: '100%', minWidth: 0 }}
-                        onChange={(event) => {
+                        onCommit={(committed) => {
                             const next = [
                                 Number.isFinite(Number(arr[0])) ? arr[0] : (fallback[0] ?? 0),
                                 Number.isFinite(Number(arr[1])) ? arr[1] : (fallback[1] ?? 0),
                                 Number.isFinite(Number(arr[2])) ? arr[2] : (fallback[2] ?? 0)
                             ]
-                            next[axis] = Number(event.target.value)
+                            next[axis] = committed
                             onChange(next)
                         }}
                     />

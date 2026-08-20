@@ -973,7 +973,7 @@ export const DOORWAY_PLACE = {
 export const SOURCE_FINGERPRINTS = {
     'src/project/graph/nodeGraphRuntime.js': '6db6899e',
     'src/raw/components/RawViewport.jsx': '79724ac5',
-    'src/raw/components/RawEditor.jsx': '3213bfc3',
+    'src/raw/components/RawEditor.jsx': '6a798bb6',
     'src/project/nodes/geom.array/runtime.js': '6958f9d9',
     'src/project/nodes/logic.compare/runtime.js': 'ad9e4fb8',
     'src/project/nodes/logic.gate/runtime.js': 'edb3f61d',

@@ -212,6 +212,10 @@
     gap: 2px;
     max-height: 280px;
     overflow-y: auto;
+    /* The graph surface behind the palette claims touch-action: none; the
+       list is its own scroller, so it must SAY pan-y or a fingertip can't
+       scroll the results while the phone keyboard is up (S24 audit). */
+    touch-action: pan-y;
 }
 
 /* The rows are flex children of the list, so their default `min-width: auto`
@@ -3913,15 +3917,16 @@
         padding-bottom: env(safe-area-inset-bottom);
     }
 
-    /* The Delete FAB lives in the bottom-right corner, which the sheet now
-       occupies — and the sheet is only ever up when something is selected,
-       i.e. exactly when Delete is the button you want. Move it above the
-       sheet's reach. Pinch still zooms the canvas that stays visible, so the
-       zoom controls being covered while a node is selected is survivable;
-       losing Delete is not. */
+    /* The Delete FAB rides just ABOVE the docked sheet (the editor publishes
+       the sheet's measured height as --raw-sheet-inset). It used to move to
+       the top-right instead — where Android notification banners drop over
+       it and steal the tap, which read as a dead Delete button on the real
+       S24 (2026-08-20). Bottom-right above the sheet is thumb-reachable and
+       banner-safe, and the sheet is only ever up when something is selected
+       — exactly when Delete is the button you want. */
     .raw-delete-fab {
-        top: calc(58px + env(safe-area-inset-top));
-        bottom: auto;
+        top: auto;
+        bottom: calc(var(--raw-sheet-inset, 0px) + 12px);
         right: calc(12px + env(safe-area-inset-right));
     }
 }
