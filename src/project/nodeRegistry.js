@@ -949,6 +949,13 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'color',    type: 'color',  label: 'Colour',    default: '#5fa8ff'  },
             { id: 'size',     type: 'vec3',   label: 'Size',     default: [1, 1, 1]  },
+            // Appearance (2026-08-20, material pass 1). Defaults mirror a bare
+            // meshStandardMaterial, so documents that predate these ports
+            // render pixel-identical.
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
         ],
@@ -973,6 +980,13 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'color',    type: 'color',  label: 'Colour',    default: '#5fa8ff'   },
             { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5         },
+            // Appearance (2026-08-20, material pass 1). Defaults mirror a bare
+            // meshStandardMaterial, so documents that predate these ports
+            // render pixel-identical.
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
         ],
@@ -999,6 +1013,13 @@ export const NODE_TYPES = {
             // textureUrl because a MediaStream-backed texture isn't a loadable
             // URL, and 'texture'/'string' ports aren't wire-compatible.
             { id: 'texture',    type: 'texture', label: 'Texture'                         },
+            // Appearance (2026-08-20, material pass 1). Defaults mirror a bare
+            // meshStandardMaterial, so documents that predate these ports
+            // render pixel-identical.
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
             { id: 'position',   type: 'vec3',    label: 'Position',    default: [0, 0, 0] },
             { id: 'rotation',   type: 'vec3',    label: 'Rotation',    default: [0, 0, 0] },
         ],
