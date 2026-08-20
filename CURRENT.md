@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- test:raw, and what the gate's minutes are actually spent on
+- What this branch does
 
 Full detail: `PROGRESS.md`.
 
