@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
+import { NODE_RUNTIMES } from './nodes/index.js'
 import { resolve } from 'node:path'
 import { cwd } from 'node:process'
 import { describe, expect, it } from 'vitest'
@@ -121,7 +122,12 @@ describe('NODE_TYPES', () => {
         const runtimePath = ['project/graph/nodeGraphRuntime.js', 'src/project/graph/nodeGraphRuntime.js']
             .map((p) => resolve(cwd(), p)).find(existsSync)
         const runtimeSource = readFileSync(runtimePath, 'utf8')
-        const evaluatedTypeIds = [...runtimeSource.matchAll(/case '([^']+)':/g)].map((m) => m[1])
+        // Evaluated types live in TWO homes since the colocation seed: the
+        // legacy switch (scanned from source) and the NODE_RUNTIMES map.
+        const evaluatedTypeIds = [
+            ...[...runtimeSource.matchAll(/case '([^']+)':/g)].map((m) => m[1]),
+            ...NODE_RUNTIMES.keys()
+        ]
         expect(evaluatedTypeIds).toContain('time')
         for (const typeId of evaluatedTypeIds) {
             if (!NODE_TYPES[typeId]) continue

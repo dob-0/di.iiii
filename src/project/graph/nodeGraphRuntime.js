@@ -173,7 +173,6 @@ export const evaluateNodeOutput = (node, portId, context, stack = new Set()) => 
     return result
 }
 
-const TAU = Math.PI * 2
 
 const computeNodeOutput = (node, portId, context, nextStack) => {
     // A socket a doorway made, read from OUTSIDE the container. Checked before
@@ -190,29 +189,12 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
             input: (id) => evaluateNodeInput(node, id, context, nextStack),
             asNumber,
             asVec3,
+            mix: mixValues,
             context
         })
     }
 
     switch (node.typeId) {
-        case 'time': {
-            // Declared four outputs and evaluated none — it fell through to
-            // `default` and returned undefined, so the clock never ticked and
-            // every math node downstream of it was dead too.
-            const seconds = asNumber(context?.now, 0) / 1000
-            if (portId === 'elapsed') return seconds
-            // bpm drives the musical outputs; 0 or negative would run the phase
-            // backwards or freeze it, so clamp to something that still advances.
-            const bpm = Math.max(1, asNumber(evaluateNodeInput(node, 'bpm', context, nextStack), 120))
-            const beats = seconds * (bpm / 60)
-            if (portId === 'sin') return Math.sin(beats * TAU)
-            if (portId === 'cos') return Math.cos(beats * TAU)
-            // 'beat' is a signal: a monotonically rising count, so consumers
-            // detect a new beat by the value changing rather than by sampling a
-            // pulse they could miss between frames.
-            if (portId === 'beat') return Math.floor(beats)
-            break
-        }
         case 'value.number':
         case 'value.color':
         case 'value.vec3':
@@ -344,66 +326,6 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
             if (portId === 'status') return context?.liveOutputs?.get(`${node.id}:status`) ?? 'idle'
             if (portId === 'running') return context?.liveOutputs?.get(`${node.id}:running`) ?? false
             if (portId === 'result') return context?.liveOutputs?.get(`${node.id}:result`) ?? ''
-            break
-        case 'math.add':
-            if (portId === 'out') {
-                return asNumber(evaluateNodeInput(node, 'a', context, nextStack))
-                    + asNumber(evaluateNodeInput(node, 'b', context, nextStack))
-            }
-            break
-        case 'math.subtract':
-            if (portId === 'out') {
-                return asNumber(evaluateNodeInput(node, 'a', context, nextStack))
-                    - asNumber(evaluateNodeInput(node, 'b', context, nextStack))
-            }
-            break
-        case 'math.multiply':
-            if (portId === 'out') {
-                return asNumber(evaluateNodeInput(node, 'a', context, nextStack))
-                    * asNumber(evaluateNodeInput(node, 'b', context, nextStack), 1)
-            }
-            break
-        case 'math.divide':
-            if (portId === 'out') {
-                const numerator = asNumber(evaluateNodeInput(node, 'a', context, nextStack))
-                const denominator = asNumber(evaluateNodeInput(node, 'b', context, nextStack), 1)
-                return denominator === 0 ? 0 : numerator / denominator
-            }
-            break
-        case 'math.mod':
-            if (portId === 'out') {
-                const value = asNumber(evaluateNodeInput(node, 'a', context, nextStack))
-                const divisor = asNumber(evaluateNodeInput(node, 'b', context, nextStack), 1)
-                return divisor === 0 ? 0 : value % divisor
-            }
-            break
-        case 'math.pow':
-            if (portId === 'out') {
-                return Math.pow(
-                    asNumber(evaluateNodeInput(node, 'a', context, nextStack)),
-                    asNumber(evaluateNodeInput(node, 'b', context, nextStack), 1)
-                )
-            }
-            break
-        case 'math.sin':
-            if (portId === 'out') return Math.sin(asNumber(evaluateNodeInput(node, 'in', context, nextStack)))
-            break
-        case 'math.mix':
-            if (portId === 'out') {
-                return mixValues(
-                    evaluateNodeInput(node, 'a', context, nextStack),
-                    evaluateNodeInput(node, 'b', context, nextStack),
-                    asNumber(evaluateNodeInput(node, 't', context, nextStack), 0.5)
-                )
-            }
-            break
-        case 'math.clamp':
-            if (portId === 'out') {
-                const value = asNumber(evaluateNodeInput(node, 'in', context, nextStack))
-                const min = asNumber(evaluateNodeInput(node, 'min', context, nextStack))
-                const max = asNumber(evaluateNodeInput(node, 'max', context, nextStack), 1)
-                return Math.min(max, Math.max(min, value))
-            }
             break
         // --- doorways --------------------------------------------------------
         // An `In` door inside container C hands out whatever is wired to C's
