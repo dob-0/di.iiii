@@ -206,7 +206,7 @@ describe('PreferencesPage', () => {
         const snapshotSection = screen.getByText('Project Snapshot').closest('section')
         expect(snapshotSection).toBeTruthy()
         expect(within(snapshotSection).getByText('/main/studio')).toBeInTheDocument()
-        expect(within(snapshotSection).getByText('/main/raw')).toBeInTheDocument()
+        expect(within(snapshotSection).getByText('/main/raw/projects')).toBeInTheDocument()
 
         // Inspect section (topology + objects + session merged, 2026-08-08) —
         // clicking a node in the architecture map updates the inline Node

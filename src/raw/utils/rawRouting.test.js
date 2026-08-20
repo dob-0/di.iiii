@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
     DEFAULT_RAW_SPACE_ID,
-    RAW_PAGE_HUB,
+    RAW_PAGE_CANVAS,
     RAW_PAGE_PROJECT,
     RAW_PAGE_OUT,
     RAW_PAGE_PROJECTS,
-    buildRawHubPath,
+    buildRawCanvasPath,
     buildRawOutPath,
     buildRawProjectPath,
     buildRawProjectsPath,
@@ -14,8 +14,8 @@ import {
 
 describe('rawRouting', () => {
     it('builds compatibility and space-scoped seed paths', () => {
-        expect(buildRawHubPath()).toBe('/raw')
-        expect(buildRawHubPath('main')).toBe('/main/raw')
+        expect(buildRawCanvasPath()).toBe('/raw')
+        expect(buildRawCanvasPath('main')).toBe('/main/raw')
         expect(buildRawProjectPath('demo-project')).toBe('/raw/projects/demo-project')
         expect(buildRawProjectPath('demo-project', 'gallery')).toBe('/gallery/raw/projects/demo-project')
         expect(buildRawProjectsPath()).toBe('/raw/projects')
@@ -26,7 +26,7 @@ describe('rawRouting', () => {
         expect(getRawLocationState({ pathname: '/raw', search: '' })).toEqual({
             isRaw: true,
             isLegacyPath: false,
-            page: RAW_PAGE_HUB,
+            page: RAW_PAGE_CANVAS,
             projectId: null,
             spaceId: DEFAULT_RAW_SPACE_ID,
             isDefaultSpace: true
@@ -55,7 +55,7 @@ describe('rawRouting', () => {
         expect(getRawLocationState({ pathname: '/gallery/raw', search: '' })).toEqual({
             isRaw: true,
             isLegacyPath: false,
-            page: RAW_PAGE_HUB,
+            page: RAW_PAGE_CANVAS,
             projectId: null,
             spaceId: 'gallery'
         })
@@ -85,7 +85,7 @@ describe('legacy /seed paths', () => {
         expect(getRawLocationState({ pathname: '/seed' })).toEqual({
             isRaw: true,
             isLegacyPath: true,
-            page: RAW_PAGE_HUB,
+            page: RAW_PAGE_CANVAS,
             projectId: null,
             spaceId: 'main',
             isDefaultSpace: true
@@ -96,7 +96,7 @@ describe('legacy /seed paths', () => {
         expect(getRawLocationState({ pathname: '/gallery/seed' })).toEqual({
             isRaw: true,
             isLegacyPath: true,
-            page: RAW_PAGE_HUB,
+            page: RAW_PAGE_CANVAS,
             projectId: null,
             spaceId: 'gallery'
         })

@@ -122,6 +122,21 @@ describe('StudioHub', () => {
         })
     })
 
+    // The doors audit (2026-08-21): this button promised "The node editor" and
+    // landed on /{space}/raw — the localStorage scratch canvas — instead of the
+    // space's node project list one segment deeper. The label is a list promise.
+    it('sends Nodes to the node project list, not the local canvas', async () => {
+        const navigate = vi.fn()
+        setAppNavigate(navigate)
+        listProjects.mockResolvedValue([])
+
+        render(<StudioHub spaceId="gallery" />)
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Nodes' }))
+        expect(navigate).toHaveBeenCalledWith('/gallery/raw/projects', { replace: false })
+        setAppNavigate(null)
+    })
+
     describe('code spaces', () => {
         // algovrithm's scene is a React route, not a project document, so the
         // server correctly reports zero projects for it. Without the registry

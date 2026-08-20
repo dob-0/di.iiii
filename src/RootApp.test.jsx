@@ -167,7 +167,7 @@ describe('RootApp /out chrome', () => {
     it('keeps the account chip on the ordinary editor route', async () => {
         window.history.pushState({}, '', '/gallery/raw')
         render(<RootApp />)
-        expect(await screen.findByText('raw-app:hub')).toBeInTheDocument()
+        expect(await screen.findByText('raw-app:canvas')).toBeInTheDocument()
         expect(screen.getByText('mock-account-chip')).toBeInTheDocument()
     })
 })

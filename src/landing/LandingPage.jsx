@@ -4,7 +4,7 @@ import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
-import { buildRawHubPath } from '../raw/utils/rawRouting.js'
+import { buildRawCanvasPath } from '../raw/utils/rawRouting.js'
 import { ALGO_VRITHM_LABEL, ALGO_VRITHM_PATH, ALGO_VRITHM_SPACE_ID } from '../algoVrithm/algoVrithmRouting.js'
 import { buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
 
@@ -23,7 +23,7 @@ const GridFloorBackground = lazy(() => import('../components/GridFloorBackground
 // sandbox — so a guest session has no write scope there and AuthGate sends it
 // to the read-only viewer instead of the editor it clicked for. Every session,
 // guest included, already has implicit access to 'open'.
-const RAW_LANE_HREF = buildRawHubPath('open')
+const RAW_LANE_HREF = buildRawCanvasPath('open')
 // "Open Studio" goes to the spaces hub (`/studio`) for everyone. Two earlier
 // passes landed one level too deep: `/open/studio?browse=1` is StudioHub, which
 // despite the name is a *single space's project list* — the open space's — so
