@@ -336,9 +336,12 @@ describe('unimplemented node types', () => {
 
     it('still offers everything that actually works', () => {
         const offered = listNodeTypes().map((type) => type.id)
+        // world.light left this list with the Light split: it still WORKS
+        // (old documents keep both its behaviours) but is paletteHidden —
+        // the palette offers Environment and Light (light.point) instead.
         for (const id of [
-            'value.number', 'math.add', 'geom.cube', 'world.light',
-            'universe.world', 'view.image', 'view.browser', 'time',
+            'value.number', 'math.add', 'geom.cube', 'light.point',
+            'world.environment', 'universe.world', 'view.image', 'view.browser', 'time',
             'source.webcam', 'source.mic', 'agent.keeper', 'device.midi.in'
         ]) {
             expect(offered).toContain(id)
