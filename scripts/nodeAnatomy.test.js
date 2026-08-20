@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { EXTRA_PLACES, MEASURED_FILES } from './node-anatomy-lib.mjs'
+import { EXTRA_PLACES, isMeasuredFile } from './node-anatomy-lib.mjs'
 import { NODE_ANATOMY, DOORWAY_PLACE, SOURCE_FINGERPRINTS } from 'virtual:node-anatomy'
 import { NODE_TYPES, createNode } from '../src/project/nodeRegistry.js'
 import { isLiveFedOutput } from '../src/project/graph/nodeReading.js'
@@ -22,12 +22,16 @@ const places = (entry) => [entry.computes, entry.draws, entry.panel].filter(Bool
 // the sheet lying by omission when a 65th type lands. A build-time extractor
 // with a bug is exactly as wrong as a committed one; only the rebases are gone.
 describe('the node anatomy manifest', () => {
-    it('measures the files it claims to, and no others', () => {
+    // Every place the sheet points at is a file the dev server also re-measures
+    // on change. These drifted apart once already: colocated runtimes arrived as
+    // a manifest source without arriving as a watched one, so an edit to one
+    // left a running editor quoting the previous revision's lines.
+    it('points only at files a change to which re-measures the manifest', () => {
         const named = new Set([
             ...Object.values(NODE_ANATOMY).flatMap((entry) => places(entry)).map((place) => place.file),
             DOORWAY_PLACE.file
         ])
-        for (const file of named) expect(MEASURED_FILES, file).toContain(file)
+        for (const file of named) expect(isMeasuredFile(file), file).toBe(true)
     })
 
     it('covers every registered node type, so a new type cannot be silently absent', () => {

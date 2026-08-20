@@ -170,12 +170,28 @@ export function extractDoorwaySpan(source, fnName) {
     return { fromLine: body[0].loc.start.line, toLine: body[switchIndex - 1].loc.end.line }
 }
 
-// The three measured files, by the repo-relative names the manifest carries.
-// The dev server watches exactly these to know when to re-measure.
+// The three hand-named files the manifest measures by parsing a function out of
+// them. Colocated runtimes are the fourth source and are DISCOVERED, not named —
+// see NODES_DIR below.
 export const RUNTIME_FILE = 'src/project/graph/nodeGraphRuntime.js'
 export const VIEWPORT_FILE = 'src/raw/components/RawViewport.jsx'
 export const EDITOR_FILE = 'src/raw/components/RawEditor.jsx'
 export const MEASURED_FILES = [RUNTIME_FILE, VIEWPORT_FILE, EDITOR_FILE]
+
+// One directory per type, whole file is that type's compute code.
+export const NODES_DIR = 'src/project/nodes'
+const COLOCATED_RE = /(^|\/)src\/project\/nodes\/[^/]+\/runtime\.js$/
+
+/**
+ * Does a change to this file change the manifest? The dev server asks per
+ * change event, rather than holding a list built at startup, because a type
+ * migrating out of the switch ADDS a colocated runtime — a list would be blind
+ * to exactly the file that just appeared.
+ */
+export const isMeasuredFile = (filePath) => {
+    const normalized = filePath.split('\\').join('/')
+    return MEASURED_FILES.some((file) => normalized.endsWith(file)) || COLOCATED_RE.test(normalized)
+}
 
 // The one hand-kept entry. `time` is the single type whose reality includes a
 // file no extractor can find: without useGraphClock's scan the context's clock
@@ -219,14 +235,34 @@ export async function buildManifest() {
     extractSwitchCases(viewportSource, 'renderNodeBody').forEach(place('draws', VIEWPORT_FILE))
     extractIfChain(editorSource, 'renderViewNodeContent').forEach(place('panel', EDITOR_FILE))
 
+    const fingerprints = {
+        [RUNTIME_FILE]: fingerprintSource(runtimeSource),
+        [VIEWPORT_FILE]: fingerprintSource(viewportSource),
+        [EDITOR_FILE]: fingerprintSource(editorSource)
+    }
+
+    // Colocated runtimes — the lookup-first side of the dispatcher. Whole file,
+    // one type, fingerprinted like the trio so an edit invalidates the manifest
+    // the same way. Placed AFTER the switch pass on purpose: a type that has
+    // migrated out still has a stale case standing in nodeGraphRuntime.js
+    // during the move, and the colocated module is the one that runs.
+    const nodesDir = path.join(ROOT, NODES_DIR)
+    if (fs.existsSync(nodesDir)) {
+        for (const entry of fs.readdirSync(nodesDir, { withFileTypes: true })) {
+            if (!entry.isDirectory()) continue
+            const typeId = entry.name
+            const file = `${NODES_DIR}/${typeId}/runtime.js`
+            if (!fs.existsSync(path.join(ROOT, file)) || !anatomy[typeId]) continue
+            const moduleSource = read(file)
+            anatomy[typeId].computes = { file, ...extractModuleAnswers(moduleSource), sharedWith: [] }
+            fingerprints[file] = fingerprintSource(moduleSource)
+        }
+    }
+
     return {
         anatomy,
         doorway: { file: RUNTIME_FILE, ...extractDoorwaySpan(runtimeSource, 'computeNodeOutput') },
-        fingerprints: {
-            [RUNTIME_FILE]: fingerprintSource(runtimeSource),
-            [VIEWPORT_FILE]: fingerprintSource(viewportSource),
-            [EDITOR_FILE]: fingerprintSource(editorSource)
-        }
+        fingerprints
     }
 }
 

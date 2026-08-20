@@ -22,9 +22,17 @@
   quotes `nodeGraphRuntime.js` 203–221, the real `geom.cube` case. Re-checked after the
   rebase, which also proved the point — the branch conflicted within the hour, on
   exactly the file it deletes, because two Raw PRs regenerated it.
-- **Land this promptly.** It conflicts with every wave that regenerates the file it
-  deletes — twice in one afternoon (#207/#208, then #213/#214). The resolution is always
-  the same single act, `git rm` the generated file. Worth knowing while it waits: GitHub
+- Carried across from #215, which landed real work into the file this branch deletes:
+  colocated runtimes (`src/project/nodes/<typeId>/runtime.js`) are a manifest source, so
+  `buildManifest` discovers and fingerprints them alongside the trio. The watch list
+  became a predicate (`isMeasuredFile`) rather than a list — migrating a type out of the
+  switch CREATES its runtime file, and a list built at server startup is blind to exactly
+  the file that just appeared, so the dev server now re-measures on `add` too. Seen:
+  inside Video, the sheet quotes `runtime.js` 1–8, the whole colocated module.
+- **Land this promptly.** It conflicts with every wave that touches what it deletes —
+  three times in one afternoon (#207/#208, #213/#214, then #215). The first two were the
+  generated file and resolved with one `git rm`; the third was a real change to carry.
+  Worth knowing while it waits: GitHub
   queues no `pull_request` CI run while a PR is conflicting, so a stale branch here reads
   as "no checks yet" rather than as a conflict, and polling for CI never resolves.
 - Still open in this lane: the `test:raw` script and widening the `authoringOnly`

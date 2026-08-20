@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MEASURED_FILES } from './scripts/node-anatomy-lib.mjs'
+import { isMeasuredFile } from './scripts/node-anatomy-lib.mjs'
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const XR_EMULATE_STUB = path.resolve(ROOT_DIR, 'src/xr/emulateStub.js')
@@ -92,8 +92,6 @@ const emitInstallScriptsPlugin = () => ({
 const nodeAnatomyPlugin = () => {
     const VIRTUAL_ID = 'virtual:node-anatomy'
     const RESOLVED_ID = `\0${VIRTUAL_ID}`
-    const measured = MEASURED_FILES.map((file) => path.resolve(ROOT_DIR, file))
-
     return {
         name: 'node-anatomy-manifest',
         resolveId(id) {
@@ -111,11 +109,16 @@ const nodeAnatomyPlugin = () => {
             // Without this a running dev server keeps serving the line numbers
             // it measured at startup — the same silent staleness the CI check
             // existed to catch, just shorter-lived.
-            server.watcher.on('change', (file) => {
-                if (!measured.includes(path.resolve(file))) return
+            // 'add' as well as 'change': migrating a type out of the switch
+            // CREATES its colocated runtime, and that is the edit most worth
+            // seeing without a restart.
+            const reMeasure = (file) => {
+                if (!isMeasuredFile(file)) return
                 const module = server.moduleGraph.getModuleById(RESOLVED_ID)
                 if (module) server.moduleGraph.invalidateModule(module)
-            })
+            }
+            server.watcher.on('change', reMeasure)
+            server.watcher.on('add', reMeasure)
         }
     }
 }
