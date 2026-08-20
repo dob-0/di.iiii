@@ -274,7 +274,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         onKeyDown={(e) => e.key === 'Enter' && !isBusy && handleCreate()}
                     />
                     <button type="button" className="raw-hub-create-btn" onClick={handleCreate} disabled={isBusy}>
-                        new
+                        new project
                     </button>
                     <label className="raw-hub-import-btn">
                         <input type="file" accept=".zip,.json,application/zip,application/json" onChange={handleImport} />

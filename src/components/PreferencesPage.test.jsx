@@ -203,7 +203,7 @@ describe('PreferencesPage', () => {
         expect(await screen.findByText('cpanel-20260415-150000')).toBeInTheDocument()
         expect(screen.getByText('abcdef1234567890')).toBeInTheDocument()
 
-        const snapshotSection = screen.getByText('Project Snapshot').closest('section')
+        const snapshotSection = screen.getByText('Session Snapshot').closest('section')
         expect(snapshotSection).toBeTruthy()
         expect(within(snapshotSection).getByText('/main/studio')).toBeInTheDocument()
         expect(within(snapshotSection).getByText('/main/raw')).toBeInTheDocument()

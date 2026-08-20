@@ -467,7 +467,7 @@ export default function SpaceHub() {
                                         onClick={() => setCreatingTitle('')}
                                         disabled={isBusy}
                                     >
-                                        + Create
+                                        + New space
                                         {Number.isFinite(spaceLimit) && (
                                             <span className="ssh-quota"> · {ownedSpaceCount}/{spaceLimit}</span>
                                         )}
