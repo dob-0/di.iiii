@@ -51,7 +51,11 @@ export const buildNodeValues = (definitionId, params, place, { workspaceTop = 0,
     const render = type?.render || 'hidden'
     const values = { ...(params || {}) }
     if (render === 'spatial-3d') {
-        const liftY = definitionId === 'geom.cube' ? 0.5 : 1.2
+        // A Geo is a PLACE: it stands on the floor and its children carry
+        // their own lifts. Lifting it 1.2 like a primitive left every geo's
+        // contents floating at eye height — two geos read as one broken pair
+        // of hovering clones (measured, 2026-08-20).
+        const liftY = definitionId === 'geom.geo' ? 0 : definitionId === 'geom.cube' ? 0.5 : 1.2
         if (place?.point) {
             // Placed by pointing INTO the room: put it where they pointed.
             values.position = [

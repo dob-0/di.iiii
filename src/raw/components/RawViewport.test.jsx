@@ -425,6 +425,54 @@ describe('RawViewport', () => {
     })
 })
 
+describe('separating geos', () => {
+    // "now the same cubes in the 2 geos.. i want to seperate geos" (owner,
+    // 2026-08-20): with two geos each holding a cube, the room showed two
+    // identical hovering cubes, clicking one selected the CUBE, and the Geo —
+    // the thing that can actually be moved apart — was unreachable.
+    const geo = { id: 'geo-1', typeId: 'geom.geo', parentId: null, label: 'Geo', values: { position: [1, 0, 2] } }
+    const cube = { id: 'cube-geo', typeId: 'geom.cube', parentId: 'geo-1', label: 'Cube', values: { size: [1, 1, 1], position: [0, 0.5, 0] } }
+
+    it('clicking inside a Geo selects the GEO — the thing this room can move', () => {
+        const onSelectNode = vi.fn()
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, entities: [], edges: [], nodes: [geo, cube] }}
+                scopeId={null}
+                onSelectNode={onSelectNode}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        const geoGroup = [...container.querySelectorAll('group')]
+            .find((g) => g.getAttribute('position') === '1,0,2')
+        expect(geoGroup, 'the geo group is on screen').toBeTruthy()
+        const childGroup = geoGroup.querySelector('group')
+        expect(childGroup, 'the cube stands inside it').toBeTruthy()
+        // The child carries no click of its own, so the click bubbles to the
+        // scope-level node. Selecting the cube is what ENTERING the geo is for.
+        fireEvent.click(childGroup)
+        expect(onSelectNode).toHaveBeenCalledWith('geo-1')
+        expect(onSelectNode).not.toHaveBeenCalledWith('cube-geo')
+    })
+
+    it('inside the geo scope, the cube is scope-level and selectable again', () => {
+        const onSelectNode = vi.fn()
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, entities: [], edges: [], nodes: [geo, cube] }}
+                scopeId={'geo-1'}
+                onSelectNode={onSelectNode}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        const cubeGroup = [...container.querySelectorAll('group')]
+            .find((g) => g.getAttribute('position') === '0,0.5,0')
+        expect(cubeGroup, 'the cube is scope-level here').toBeTruthy()
+        fireEvent.click(cubeGroup)
+        expect(onSelectNode).toHaveBeenCalledWith('cube-geo')
+    })
+})
+
 describe('the Constructor', () => {
     // A full snowman document, built the way a person builds one: two spheres
     // and a merge standing INSIDE the constructor, wired to an Out door.

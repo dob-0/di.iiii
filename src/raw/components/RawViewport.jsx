@@ -426,10 +426,17 @@ function NodeVisual({
             rotation={asVec3(values.rotation, [0, 0, 0])}
             scale={nodeScaleFactor}
             onPointerDown={onPointerDown}
-            onClick={(event) => {
+            // The room selects what stands in THIS room. A nested node gets no
+            // click of its own (onSelect null) so the click bubbles to the
+            // scope-level node — clicking a cube inside a Geo picks up the GEO,
+            // the thing this room can actually move. Enter the Geo and the cube
+            // is scope-level there, selectable again. While the child also
+            // self-selected, the pill said "Cube", the inspector edited the
+            // cube, and the Geo was unreachable from the room entirely.
+            onClick={onSelect ? (event) => {
                 event.stopPropagation()
-                onSelect?.(node.id)
-            }}
+                onSelect(node.id)
+            } : undefined}
         >
             {body}
             {children.map((child) => (
@@ -437,7 +444,7 @@ function NodeVisual({
                     <NodeVisual
                         node={child}
                         selected={child.id === selectedNodeId}
-                        onSelect={onSelectNode}
+                        onSelect={null}
                         onSelectNode={onSelectNode}
                         selectedNodeId={selectedNodeId}
                         assetMap={assetMap}
@@ -677,12 +684,17 @@ function SceneContent({
                         if (Math.abs(denom) > 1e-6) {
                             const t = (nx * (held[0] - origin.x) + nz * (held[2] - origin.z)) / denom
                             if (t > 0) {
-                                dragNodeYRef.current = Math.max(0, origin.y + direction.y * t)
+                                dragNodeYRef.current = Math.max(0, Math.min(40, origin.y + direction.y * t))
                                 dragPendingRef.current = [held[0], dragNodeYRef.current, held[2]]
                             }
                         }
                     } else {
-                        dragPendingRef.current = [point[0] + offX, dragNodeYRef.current, point[2] + offZ]
+                        // Near the drag plane's horizon the depth axis explodes
+                        // (measured: an 80px downward move threw a geo from z=0
+                        // to z=13.8 — off past the camera). The room is the
+                        // grid; nothing dragged by hand should leave it.
+                        const clampXZ = (value) => Math.max(-40, Math.min(40, value))
+                        dragPendingRef.current = [clampXZ(point[0] + offX), dragNodeYRef.current, clampXZ(point[2] + offZ)]
                     }
                     if (dragRafRef.current === null) {
                         dragRafRef.current = requestAnimationFrame(() => {
