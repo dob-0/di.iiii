@@ -166,7 +166,6 @@ const defaultPublishState = {
 }
 
 const defaultWorkspaceState = {
-  activeSurface: 'world',
   selectedNodeId: null,
   // Which universe.world node is the "live"/output one for a given scope — a flat
   // map keyed by scopeId (root scope key is '') so it works uniformly without a
@@ -674,17 +673,20 @@ const normalizeTemplate = (template = {}) => {
 
 const normalizeWorkspaceState = (workspace = {}) => {
   const source = workspace && typeof workspace === 'object' ? workspace : {}
-  const activeSurface = ensureString(source.activeSurface, defaultWorkspaceState.activeSurface)
   const liveMap = source.liveWorldNodeIdByScope
   const activeMap = source.activeNodeIdByTypeScope
-  return {
+  const next = {
     ...cloneValue(defaultWorkspaceState),
     ...cloneValue(source),
-    activeSurface: ['world', 'view', 'graph'].includes(activeSurface) ? activeSurface : defaultWorkspaceState.activeSurface,
     selectedNodeId: ensureString(source.selectedNodeId, '') || null,
     liveWorldNodeIdByScope: (liveMap && typeof liveMap === 'object' && !Array.isArray(liveMap)) ? cloneValue(liveMap) : {},
     activeNodeIdByTypeScope: (activeMap && typeof activeMap === 'object' && !Array.isArray(activeMap)) ? cloneValue(activeMap) : {}
   }
+  // The World/View/Graph surface axis is retired (2026-08-20). Old documents
+  // still carry the key; shedding it here means it disappears on next save
+  // instead of riding along forever. Mirrors src/shared/projectSchema.js.
+  delete next.activeSurface
+  return next
 }
 
 const normalizeNodesList = (list = []) => {
