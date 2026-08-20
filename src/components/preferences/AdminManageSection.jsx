@@ -455,7 +455,7 @@ function SpaceDetail({
                 subtitle={`Space · ${space.id}`}
                 actions={
                     <div className="preferences-module-actions">
-                        <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildStudioHubPath(space.id))}>Open hub</button>
+                        <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildStudioHubPath(space.id))}>Projects</button>
                         <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildAppSpacePath(space.id))}>View live</button>
                         <button type="button" className="preferences-inline-action warning" onClick={onDelete}>Delete</button>
                     </div>

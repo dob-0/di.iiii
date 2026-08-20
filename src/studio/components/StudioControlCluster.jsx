@@ -130,7 +130,7 @@ export default function StudioControlCluster({
                                 <button className="scc-btn" onClick={onHideUI} title="Hide UI (H)">Hide UI</button>
                                 <button className="scc-btn" onClick={onShowHelp} title="Keyboard shortcuts (Shift+?)">? Help</button>
                                 {!minimal && (
-                                    <button className="scc-btn" onClick={onBackToHub} title="Back to hub">← Hub</button>
+                                    <button className="scc-btn" onClick={onBackToHub} title="Back to projects">← Projects</button>
                                 )}
                                 {!minimal && onOpenNodeEditor && (
                                     <button className="scc-btn" onClick={onOpenNodeEditor} title="Open this project in the node editor">⇄ Nodes</button>

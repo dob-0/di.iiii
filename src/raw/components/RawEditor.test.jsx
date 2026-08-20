@@ -325,6 +325,7 @@ describe('RawEditor delete/reset confirmations', () => {
         const { unmount } = render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
         fireEvent.click(screen.getByText('⋯'))
         expect(screen.queryByText('Open in Studio')).toBeNull()
+        expect(screen.queryByText('Copy projector link')).toBeNull()
         unmount()
 
         // An empty project defaults to zen (no topbar); the door lives in the
@@ -333,6 +334,7 @@ describe('RawEditor delete/reset confirmations', () => {
         render(<RawEditor projectId="p1" spaceId="gallery" />)
         fireEvent.click(screen.getByText('⋯'))
         expect(screen.getByText('Open in Studio')).toBeInTheDocument()
+        expect(screen.getByText('Copy projector link')).toBeInTheDocument()
     })
 
     it('clears the canvas via the overflow menu once the user confirms', () => {

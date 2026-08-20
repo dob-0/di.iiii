@@ -50,7 +50,7 @@ import { buildWikiPath } from '../../utils/spaceRouting.js'
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
-import { buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
+import { buildRawOutPath, buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
@@ -1805,6 +1805,26 @@ export default function RawEditor({
                                                 }}
                                             >
                                                 Open in Studio
+                                            </button>
+                                        )}
+                                        {/* The projector cable had zero inbound
+                                            links — /out was reachable only by
+                                            typing the address (doors audit). */}
+                                        {!isLocalWorkspace && projectId && (
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    setOverflowOpen(false)
+                                                    const url = `${window.location.origin}${buildRawOutPath(projectId, resolvedSpaceId)}`
+                                                    try {
+                                                        if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(url)
+                                                        else if (typeof window.prompt === 'function') window.prompt('Copy projector link', url)
+                                                    } catch {
+                                                        if (typeof window.prompt === 'function') window.prompt('Copy projector link', url)
+                                                    }
+                                                }}
+                                            >
+                                                Copy projector link
                                             </button>
                                         )}
                                         {/* The platform exits — the canvas was a
