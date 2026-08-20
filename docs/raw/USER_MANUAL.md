@@ -135,6 +135,12 @@ place it, and from outside the Geo carries them all as one thing you can move,
 lift and duplicate. Empty, it shows a faint floor tile so a place never reads
 as void. When in doubt, build in a Geo.
 
+A Geo stands **on the floor**, and in the room a click picks up **the Geo as a
+whole** — click anything standing in it and the pill says Geo; drag to move
+the place with everything on it, or set its Position in the inspector to part
+two geos exactly. To handle one thing INSIDE — the cube, not its place —
+enter the Geo: in there, the click picks the cube.
+
 The Geo also **gives out what it collects**: its Geometry socket carries
 everything standing in it as one shape. Wire two Geos through a **Merge** into
 a Constructor's door and the Constructor wears both scenes as one object; a

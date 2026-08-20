@@ -263,7 +263,7 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
                 if (!children.length) return undefined
                 return {
                     kind: 'group',
-                    position: asVec3(evaluateNodeInput(node, 'position', context, nextStack), [0, 1.2, 0]),
+                    position: asVec3(evaluateNodeInput(node, 'position', context, nextStack), [0, 0, 0]),
                     rotation: asVec3(evaluateNodeInput(node, 'rotation', context, nextStack), [0, 0, 0]),
                     scale: asVec3(evaluateNodeInput(node, 'scale', context, nextStack), [1, 1, 1]),
                     children

@@ -845,7 +845,7 @@ export const DOORWAY_PLACE = {
 }
 
 export const SOURCE_FINGERPRINTS = {
-    'src/project/graph/nodeGraphRuntime.js': '2d05a0d4',
-    'src/raw/components/RawViewport.jsx': '7fd6332d',
+    'src/project/graph/nodeGraphRuntime.js': '12270da9',
+    'src/raw/components/RawViewport.jsx': 'e919f2b9',
     'src/raw/components/RawEditor.jsx': '9951d36a'
 }
