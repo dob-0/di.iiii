@@ -253,7 +253,16 @@ export const logoutApiSession = async () => apiFetch('/api/auth/session', {
 
 export const getApiAuthProviders = async () => apiFetch('/api/auth/providers')
 
-export const getOAuthUrl = (provider) => `${apiBaseUrl}/api/auth/${provider}`
+// Carries where the person is standing (path + query, so an ?invite= token
+// survives the round-trip) — the OAuth callback returns them there instead
+// of dropping every sign-in on the landing page.
+export const getOAuthUrl = (provider) => {
+    const returnTo = typeof window !== 'undefined'
+        ? `${window.location.pathname}${window.location.search}`
+        : ''
+    const suffix = returnTo && returnTo !== '/' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''
+    return `${apiBaseUrl}/api/auth/${provider}${suffix}`
+}
 
 export const getAiConnectionStatus = async (provider) =>
     apiFetch(`/api/integrations/ai/status?provider=${encodeURIComponent(provider)}`)
