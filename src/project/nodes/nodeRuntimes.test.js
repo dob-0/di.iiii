@@ -480,3 +480,35 @@ describe('the vector/colour wave (TD audit)', () => {
         expect(evalPort(doc(0.25), 'r', 'out')).toBe('#404040')
     })
 })
+
+describe('the geometry wave (TD audit)', () => {
+    it('the three new primitives speak their shape as a value, wires included', () => {
+        const doc = {
+            nodes: [node('c', 'value.color', { value: '#00ff00' }), node('cyl', 'geom.cylinder', { radius: 0.3, height: 2 })],
+            edges: [edge('c', 'out', 'cyl', 'color')]
+        }
+        const out = evalPort(doc, 'cyl', 'geometry')
+        expect(out.kind).toBe('cylinder')
+        expect(out.radius).toBe(0.3)
+        expect(out.height).toBe(2)
+        expect(out.color).toBe('#00ff00')
+
+        expect(evalPort({ nodes: [node('k', 'geom.cone')], edges: [] }, 'k', 'geometry').kind).toBe('cone')
+        const torus = evalPort({ nodes: [node('t', 'geom.torus', { tube: 0.25 })], edges: [] }, 't', 'geometry')
+        expect(torus.kind).toBe('torus')
+        expect(torus.tube).toBe(0.25)
+    })
+
+    it('Transform re-frames what arrives and is honestly dead bare', () => {
+        const doc = {
+            nodes: [node('c', 'geom.cube'), node('t', 'geom.transform', { position: [0, 2, 0], scale: [2, 2, 2] })],
+            edges: [edge('c', 'geometry', 't', 'geometry')]
+        }
+        const out = evalPort(doc, 't', 'out')
+        expect(out.kind).toBe('group')
+        expect(out.position).toEqual([0, 2, 0])
+        expect(out.scale).toEqual([2, 2, 2])
+        expect(out.children[0].kind).toBe('box')
+        expect(evalPort({ nodes: [node('t', 'geom.transform')], edges: [] }, 't', 'out')).toBeUndefined()
+    })
+})

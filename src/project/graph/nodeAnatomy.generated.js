@@ -366,8 +366,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 412,
-            toLine: 430,
+            fromLine: 477,
+            toLine: 495,
             sharedWith: []
         },
         panel: null,
@@ -398,8 +398,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 225,
-            toLine: 233,
+            fromLine: 259,
+            toLine: 267,
             sharedWith: []
         },
         panel: null,
@@ -417,8 +417,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 234,
-            toLine: 242,
+            fromLine: 268,
+            toLine: 276,
             sharedWith: []
         },
         panel: null,
@@ -436,8 +436,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 243,
-            toLine: 281,
+            fromLine: 308,
+            toLine: 346,
             sharedWith: []
         },
         panel: null,
@@ -469,8 +469,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 310,
-            toLine: 336,
+            fromLine: 375,
+            toLine: 401,
             sharedWith: []
         },
         panel: null,
@@ -480,8 +480,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 289,
-            toLine: 309,
+            fromLine: 354,
+            toLine: 374,
             sharedWith: []
         },
         panel: null,
@@ -511,8 +511,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 182,
-            toLine: 196,
+            fromLine: 216,
+            toLine: 230,
             sharedWith: []
         },
         panel: null,
@@ -530,8 +530,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 197,
-            toLine: 209,
+            fromLine: 231,
+            toLine: 243,
             sharedWith: []
         },
         panel: null,
@@ -547,8 +547,8 @@ export const NODE_ANATOMY = {
         },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 210,
-            toLine: 224,
+            fromLine: 244,
+            toLine: 258,
             sharedWith: []
         },
         panel: null,
@@ -1185,12 +1185,83 @@ export const NODE_ANATOMY = {
         panel: null,
         alsoNeeds: null
     },
+    'geom.cylinder': {
+        computes: {
+            file: 'src/project/nodes/geom.cylinder/runtime.js',
+            fromLine: 1,
+            toLine: 13,
+            answers: [
+                'geometry'
+            ],
+            sharedWith: []
+        },
+        draws: {
+            file: 'src/raw/components/RawViewport.jsx',
+            fromLine: 277,
+            toLine: 287,
+            sharedWith: []
+        },
+        panel: null,
+        alsoNeeds: null
+    },
+    'geom.cone': {
+        computes: {
+            file: 'src/project/nodes/geom.cone/runtime.js',
+            fromLine: 1,
+            toLine: 11,
+            answers: [
+                'geometry'
+            ],
+            sharedWith: []
+        },
+        draws: {
+            file: 'src/raw/components/RawViewport.jsx',
+            fromLine: 288,
+            toLine: 297,
+            sharedWith: []
+        },
+        panel: null,
+        alsoNeeds: null
+    },
+    'geom.torus': {
+        computes: {
+            file: 'src/project/nodes/geom.torus/runtime.js',
+            fromLine: 1,
+            toLine: 11,
+            answers: [
+                'geometry'
+            ],
+            sharedWith: []
+        },
+        draws: {
+            file: 'src/raw/components/RawViewport.jsx',
+            fromLine: 298,
+            toLine: 307,
+            sharedWith: []
+        },
+        panel: null,
+        alsoNeeds: null
+    },
+    'geom.transform': {
+        computes: {
+            file: 'src/project/nodes/geom.transform/runtime.js',
+            fromLine: 1,
+            toLine: 17,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
     'world.light': {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 337,
-            toLine: 361,
+            fromLine: 402,
+            toLine: 426,
             sharedWith: []
         },
         panel: null,
@@ -1206,8 +1277,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 362,
-            toLine: 383,
+            fromLine: 427,
+            toLine: 448,
             sharedWith: []
         },
         panel: null,
@@ -1217,8 +1288,8 @@ export const NODE_ANATOMY = {
         computes: null,
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
-            fromLine: 384,
-            toLine: 411,
+            fromLine: 449,
+            toLine: 476,
             sharedWith: []
         },
         panel: null,
@@ -1274,12 +1345,16 @@ export const DOORWAY_PLACE = {
 
 export const SOURCE_FINGERPRINTS = {
     'src/project/graph/nodeGraphRuntime.js': 'c82b732c',
-    'src/raw/components/RawViewport.jsx': '79724ac5',
+    'src/raw/components/RawViewport.jsx': 'b8baaa9f',
     'src/raw/components/RawEditor.jsx': '6a798bb6',
     'src/project/nodes/colour.combine/runtime.js': '00c5d4a9',
     'src/project/nodes/colour.ramp/runtime.js': '51df0efb',
     'src/project/nodes/colour.split/runtime.js': '9a7986de',
     'src/project/nodes/geom.array/runtime.js': '6958f9d9',
+    'src/project/nodes/geom.cone/runtime.js': 'adeb9d1d',
+    'src/project/nodes/geom.cylinder/runtime.js': '18febfaf',
+    'src/project/nodes/geom.torus/runtime.js': '65565c3f',
+    'src/project/nodes/geom.transform/runtime.js': 'dba67e6a',
     'src/project/nodes/logic.combine/runtime.js': 'd61431d7',
     'src/project/nodes/logic.compare/runtime.js': 'ad9e4fb8',
     'src/project/nodes/logic.gate/runtime.js': 'edb3f61d',

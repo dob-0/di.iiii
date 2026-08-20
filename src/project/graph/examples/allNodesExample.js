@@ -65,6 +65,10 @@ export const PASS_THROUGH_PORTS = [
         why: 'repeats what arrives; with nothing wired it carries nothing — an empty array is not an invisible shape'
     },
     {
+        port: 'geom.transform.out',
+        why: 're-frames what arrives; with nothing wired it carries nothing — an empty transform is not a shape'
+    },
+    {
         port: 'logic.gate.out',
         why: 'passes through what arrives while open; bare or closed it carries nothing — a closed gate is an unplugged wire, not a zero'
     }
@@ -173,6 +177,10 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('compose', 'colour.combine', { label: 'Compose', col: 2, row: 13 })
     add('vdistance', 'vector.distance', { label: 'Distance', col: 2, row: 14 })
     add('ramp', 'colour.ramp', { label: 'Ramp', col: 2, row: 15 })
+    add('cylinder', 'geom.cylinder', { label: 'Cylinder', col: 3, row: 9, values: { position: [2.5, 0.75, -2] } })
+    add('cone', 'geom.cone', { label: 'Cone', col: 3, row: 10, values: { position: [4, 0.75, -2] } })
+    add('torus', 'geom.torus', { label: 'Torus', col: 3, row: 11, values: { position: [5.5, 0.5, -2] } })
+    add('transform', 'geom.transform', { label: 'Transform', col: 3, row: 12 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
@@ -383,6 +391,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // Array repeats the cube's own geometry value — the proving fixture
         // for its pass-through out (bare, an Array carries nothing).
         wire('cube', 'geometry', 'array', 'geometry'),
+        wire('torus', 'geometry', 'transform', 'geometry'),
 
         // A wire OUT of a container — new on 2026-08-19, and the thing that
         // used to be impossible: every container declared zero outputs, so

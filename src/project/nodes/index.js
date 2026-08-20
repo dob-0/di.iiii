@@ -2,6 +2,10 @@ import { computeOutput as colourCombine } from './colour.combine/runtime.js'
 import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
 import { computeOutput as geomArray } from './geom.array/runtime.js'
+import { computeOutput as geomCone } from './geom.cone/runtime.js'
+import { computeOutput as geomCylinder } from './geom.cylinder/runtime.js'
+import { computeOutput as geomTorus } from './geom.torus/runtime.js'
+import { computeOutput as geomTransform } from './geom.transform/runtime.js'
 import { computeOutput as mathAdd } from './math.add/runtime.js'
 import { computeOutput as mathClamp } from './math.clamp/runtime.js'
 import { computeOutput as mathExtremes } from './math.extremes/runtime.js'
@@ -50,6 +54,10 @@ export const NODE_RUNTIMES = new Map([
     ['colour.ramp', colourRamp],
     ['colour.split', colourSplit],
     ['geom.array', geomArray],
+    ['geom.cone', geomCone],
+    ['geom.cylinder', geomCylinder],
+    ['geom.torus', geomTorus],
+    ['geom.transform', geomTransform],
     ['math.add', mathAdd],
     ['math.clamp', mathClamp],
     ['math.extremes', mathExtremes],
