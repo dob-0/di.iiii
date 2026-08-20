@@ -133,7 +133,7 @@ describe('StudioHub', () => {
         render(<StudioHub spaceId="gallery" />)
 
         fireEvent.click(await screen.findByRole('button', { name: 'Nodes' }))
-        expect(navigate).toHaveBeenCalledWith('/gallery/raw/projects')
+        expect(navigate).toHaveBeenCalledWith('/gallery/raw/projects', { replace: false })
         setAppNavigate(null)
     })
 
