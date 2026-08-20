@@ -883,6 +883,116 @@ export const NODE_ANATOMY = {
         panel: null,
         alsoNeeds: null
     },
+    'math.range': {
+        computes: {
+            file: 'src/project/nodes/math.range/runtime.js',
+            fromLine: 1,
+            toLine: 14,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'signal.lfo': {
+        computes: {
+            file: 'src/project/nodes/signal.lfo/runtime.js',
+            fromLine: 1,
+            toLine: 14,
+            answers: [
+                'sine',
+                'square',
+                'triangle',
+                'saw'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'logic.combine': {
+        computes: {
+            file: 'src/project/nodes/logic.combine/runtime.js',
+            fromLine: 1,
+            toLine: 11,
+            answers: [
+                'both',
+                'either',
+                'one',
+                'neither'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'math.extremes': {
+        computes: {
+            file: 'src/project/nodes/math.extremes/runtime.js',
+            fromLine: 1,
+            toLine: 7,
+            answers: [
+                'least',
+                'greatest'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'math.abs': {
+        computes: {
+            file: 'src/project/nodes/math.abs/runtime.js',
+            fromLine: 1,
+            toLine: 3,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'math.round': {
+        computes: {
+            file: 'src/project/nodes/math.round/runtime.js',
+            fromLine: 1,
+            toLine: 7,
+            answers: [
+                'round',
+                'floor',
+                'ceiling'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'signal.ease': {
+        computes: {
+            file: 'src/project/nodes/signal.ease/runtime.js',
+            fromLine: 1,
+            toLine: 17,
+            answers: [
+                'smooth',
+                'easeIn',
+                'easeOut',
+                'bounce'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
     'world.light': {
         computes: null,
         draws: {
@@ -975,21 +1085,28 @@ export const SOURCE_FINGERPRINTS = {
     'src/raw/components/RawViewport.jsx': '79724ac5',
     'src/raw/components/RawEditor.jsx': '6a798bb6',
     'src/project/nodes/geom.array/runtime.js': '6958f9d9',
+    'src/project/nodes/logic.combine/runtime.js': 'd61431d7',
     'src/project/nodes/logic.compare/runtime.js': 'ad9e4fb8',
     'src/project/nodes/logic.gate/runtime.js': 'edb3f61d',
     'src/project/nodes/logic.switch/runtime.js': 'fe692f18',
+    'src/project/nodes/math.abs/runtime.js': '46582854',
     'src/project/nodes/math.add/runtime.js': '79ca6473',
     'src/project/nodes/math.clamp/runtime.js': '6aebc54e',
     'src/project/nodes/math.divide/runtime.js': 'f659a1c5',
+    'src/project/nodes/math.extremes/runtime.js': 'e5dce542',
     'src/project/nodes/math.mix/runtime.js': 'c56798c1',
     'src/project/nodes/math.mod/runtime.js': '70967e14',
     'src/project/nodes/math.multiply/runtime.js': '0324038f',
     'src/project/nodes/math.pow/runtime.js': 'dea9fc7e',
+    'src/project/nodes/math.range/runtime.js': '9df58a2e',
+    'src/project/nodes/math.round/runtime.js': '2d6755fe',
     'src/project/nodes/math.sin/runtime.js': 'e84eae70',
     'src/project/nodes/math.subtract/runtime.js': '67159775',
     'src/project/nodes/media.audio/runtime.js': '99d3c007',
     'src/project/nodes/media.video/runtime.js': 'c059ce96',
+    'src/project/nodes/signal.ease/runtime.js': '61885fe0',
     'src/project/nodes/signal.lag/runtime.js': '8a4020f7',
+    'src/project/nodes/signal.lfo/runtime.js': '5c61bd2f',
     'src/project/nodes/time/runtime.js': 'ea616ea0',
     'src/project/nodes/value.noise/runtime.js': '194f9400',
     'src/project/nodes/view.timeline/runtime.js': '453edf40'
