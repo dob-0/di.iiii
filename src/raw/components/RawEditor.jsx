@@ -44,6 +44,7 @@ import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/n
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
 import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
+import { buildStudioProjectPath } from '../../studio/utils/studioRouting.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
@@ -1791,6 +1792,20 @@ export default function RawEditor({
                                 {overflowOpen && (
                                     <div className="raw-topbar-overflow-menu">
                                         <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
+                                        {/* One project, two editors — this is the
+                                            way across. The local canvas has no
+                                            Studio twin, so no link there. */}
+                                        {!isLocalWorkspace && projectId && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setOverflowOpen(false)
+                                                    navigateToRawPath(buildStudioProjectPath(projectId, resolvedSpaceId))
+                                                }}
+                                            >
+                                                Open in Studio
+                                            </button>
+                                        )}
                                         {/* Configuration, not work — the ⋯ is
                                             where the audit sent it. */}
                                         <div className="raw-topbar-scale-control">

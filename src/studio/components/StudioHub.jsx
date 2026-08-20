@@ -33,6 +33,7 @@ const formatRelativeDate = (iso) => {
 const formatSource = (source = '') => {
     switch (source) {
         case 'studio-v3': return 'Studio'
+        case 'raw-v2': return 'Nodes'
         case 'legacy-import-studio': return 'Imported'
         case 'beta-v2': return 'Legacy'
         case 'legacy-import': return 'Legacy'
