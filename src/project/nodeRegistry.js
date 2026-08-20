@@ -48,12 +48,16 @@ export const getCategoryColor = (categoryId) =>
 // both directions. Categories stay untouched underneath: search, surface
 // filters and old documents keep working.
 
+// Declaration order IS the palette's browse order. It leads with what a
+// builder reaches for by the minute (make, numbers, the scene) and demotes
+// session-setup hardware (bring in) — the audit's first-contact test opened
+// the palette to Chat/Outliner/Webcam/MIDI with no scene atom in sight.
 export const NODE_FAMILIES = [
-    { id: 'bring-in', label: 'bring in', color: '#5fa8ff' },
     { id: 'make',     label: 'make',     color: '#8be9fd' },
     { id: 'numbers',  label: 'numbers',  color: '#f1fa8c' },
     { id: 'room',     label: 'the scene', color: '#bd93f9' },
     { id: 'watch',    label: 'watch',    color: '#ff79c6' },
+    { id: 'bring-in', label: 'bring in', color: '#5fa8ff' },
     { id: 'send-out', label: 'send out', color: '#ffb86c' },
     { id: 'agents',   label: 'agents',   color: '#a8ff9e' },
 ]
@@ -667,7 +671,6 @@ export const NODE_TYPES = {
         label: 'Monitor',
         category: 'stream',
         runtime: 'any',
-        authoringOnly: true,
         singleton: false,
         // TouchDesigner's viewer, as a window: wire any texture into Source
         // and watch it live while you keep wiring. Implemented 2026-08-20 —

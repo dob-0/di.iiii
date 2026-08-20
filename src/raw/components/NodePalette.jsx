@@ -110,7 +110,16 @@ export default function NodePalette({
         if (label.startsWith(q)) return 1
         return 2
     }
-    const entries = [...commandEntries, ...groupedNodeEntries]
+    // Browsing (no query) leads with NODES — the first thing a first-timer
+    // sees is Cube/Sphere/Geo, not Chat and hardware (the audit's
+    // first-contact finding). One exception is PINNED first regardless: the
+    // toolbar-recovery command ('chrome') is the only way back when the
+    // toolbar is hidden, and a lifeline must not sit below a scroll of
+    // nodes. Other commands follow the families; typing restores the
+    // exact/prefix ranking above for everything.
+    const pinnedCommands = commandEntries.filter((entry) => entry.id === 'chrome')
+    const restCommands = commandEntries.filter((entry) => entry.id !== 'chrome')
+    const entries = (q ? [...commandEntries, ...groupedNodeEntries] : [...pinnedCommands, ...groupedNodeEntries, ...restCommands])
         .map((entry, index) => ({ entry, index }))
         .sort((a, b) => rank(a.entry) - rank(b.entry) || a.index - b.index)
         .map(({ entry }) => entry)
