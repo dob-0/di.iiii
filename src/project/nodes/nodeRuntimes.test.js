@@ -4,7 +4,7 @@ import { cwd } from 'node:process'
 import { describe, expect, it } from 'vitest'
 import { NODE_RUNTIMES } from './index.js'
 import { createEdge, createNode, getNodeType, isNodeTypeImplemented } from '../nodeRegistry.js'
-import { createNodeGraphContext, evaluateNodeOutput } from '../graph/nodeGraphRuntime.js'
+import { createFrameMemory, createNodeGraphContext, evaluateNodeOutput } from '../graph/nodeGraphRuntime.js'
 
 // Vitest roots at src/ but node resolves from the repo — try both, the same
 // dance nodeRegistry.test.js does for its own source scan.
@@ -115,5 +115,58 @@ describe('logic.switch', () => {
     it('bare, it speaks its A default', () => {
         const doc = { nodes: [node('s', 'logic.switch')], edges: [] }
         expect(evalPort(doc, 's', 'out')).toBe(0)
+    })
+})
+
+describe('signal.lag', () => {
+    it('answers the target directly when no memory is injected', () => {
+        const doc = {
+            nodes: [node('v', 'value.number', { value: 10 }), node('l', 'signal.lag')],
+            edges: [edge('v', 'out', 'l', 'value')]
+        }
+        // (wired into the declared input id, not the label)
+        doc.edges = [edge('v', 'out', 'l', 'in')]
+        expect(evalPort(doc, 'l', 'out')).toBe(10)
+    })
+
+    it('glides toward a changed target, frame-rate independent through real dt', () => {
+        const memory = createFrameMemory()
+        const lag = node('l', 'signal.lag', { in: 10, lag: 0.5 })
+        const docNodes = { nodes: [lag], edges: [] }
+        const at = (now) => evaluateNodeOutput(lag, 'out', createNodeGraphContext(docNodes, { now, frameMemory: memory }))
+        expect(at(0)).toBe(10)
+        lag.values = { ...lag.values, in: 0 }
+        // one whole second at lag 0.5 closes 1 - e^-2 of the distance
+        expect(at(1000)).toBeCloseTo(10 * Math.exp(-2), 6)
+        // and it keeps converging, never overshoots
+        const later = at(2000)
+        expect(later).toBeLessThan(10 * Math.exp(-2))
+        expect(later).toBeGreaterThan(0)
+    })
+})
+
+describe('value.noise', () => {
+    const noiseDoc = (values = {}) => ({ nodes: [node('n', 'value.noise', values)], edges: [] })
+    const sample = (doc, now) => {
+        const target = doc.nodes[0]
+        return evaluateNodeOutput(target, 'out', createNodeGraphContext(doc, { now }))
+    }
+
+    it('is deterministic in (now, variant) — every window sees the same wander', () => {
+        const doc = noiseDoc()
+        expect(sample(doc, 12345)).toBe(sample(noiseDoc(), 12345))
+        expect(sample(doc, 12345)).not.toBe(sample(noiseDoc({ variant: 7 }), 12345))
+    })
+
+    it('stays inside -1..1 and moves smoothly frame to frame', () => {
+        const doc = noiseDoc({ speed: 2 })
+        let prev = sample(doc, 0)
+        for (let ms = 16; ms < 2000; ms += 16) {
+            const value = sample(doc, ms)
+            expect(value).toBeGreaterThanOrEqual(-1)
+            expect(value).toBeLessThanOrEqual(1)
+            expect(Math.abs(value - prev)).toBeLessThan(0.25)
+            prev = value
+        }
     })
 })

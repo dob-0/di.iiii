@@ -160,7 +160,7 @@ Changed by this table:
 
 Confirmed as they stand (the census found no better professional word):
 - **make**: Cube · Sphere · Plane · Merge · Constructor · Text · Browser · Image · Create *(paletteHidden in the node editor — objects belong to Studio)*
-- **numbers**: Number · Colour · Vector · Boolean · String · Time · Add · Subtract · Multiply · Divide · Modulo · Power · Sin · Mix · Clamp · Compare · Gate · Switch *(the logic trio, shipped 2026-08-20 — Compare is wire-first: three boolean outputs, no operation menu)*
+- **numbers**: Number · Colour · Vector · Boolean · String · Time · Add · Subtract · Multiply · Divide · Modulo · Power · Sin · Mix · Clamp · Compare · Gate · Switch *(the logic trio, shipped 2026-08-20 — Compare is wire-first: three boolean outputs, no operation menu)* · Lag · Noise *(shipped 2026-08-20; Noise's variation input is Variant — "seed" is banned copy)*
 - **the scene**: Scene · Kiosk · Geo · Constructor's siblings 3D Desk / 2D Desk *(deliberate survivors — see the 2026-08-19 note; 3D Desk retires from the palette with the container pass)* · Light *(splits into Light + Environment in the Light pass — reserved below)* · Camera · Background · Grid · In · Out · Studio · Node 0 / Activate Node / Universe Link *(shells, hidden)*
 - **watch**: Monitor · Inspector · Outliner · Timeline · Director
 - **bring in**: Model · Video · Sound *(kept over "Audio": a Sound is a thing standing in the scene, matching Blender's Speaker idea; "audio" is reserved for the analysis outputs coming with the show operators)* · Webcam · Microphone · MIDI In · the capture shells (AR Camera, Insta360 Camera, Stereo Camera, RealSense D405, OSC In, PTZ Camera)
@@ -172,8 +172,6 @@ Reserved names — settle NOW so the build waves don't invent their own:
 | --- | --- | --- |
 | `world.environment` (Light split) | **Environment** | TD Environment Light; the scene's ambient/directional settings |
 | `light.point` (Light split) | **Light** | the lamp you place; the legacy dual-identity `world.light` goes paletteHidden with a non-colliding label decided in that pass |
-| `signal.lag` | **Lag** | TD Lag CHOP |
-| `value.noise` | **Noise** | TD Noise CHOP (its variation input is "Variant" — `seed` is banned copy) |
 | `geom.array` | **Array** | the standard modifier name |
 | streaming four, when built | **Composite · Switch (texture) · Output · Record** | TD TOP names; if number-Switch and texture-Switch would meet in one palette, the texture one ships as **Composite**'s sibling and the collision is resolved in that PR, not silently |
 

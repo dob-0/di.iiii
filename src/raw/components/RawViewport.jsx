@@ -11,7 +11,7 @@ import EntityContent from '../../project/viewport/EntityContent.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
 import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
-import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { createFrameMemory, createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
 import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
 import { createTapTracker } from '../utils/useDoubleTap.js'
@@ -521,9 +521,13 @@ function SceneContent({
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
     const clockNow = useDocumentClock(document)
+    // Between-pass node state (a Lag's last answer) — this window's own,
+    // never React state, dropped whole when the document changes.
+    const [frameMemory] = useState(() => createFrameMemory())
+    useEffect(() => { frameMemory.clear() }, [frameMemory, document.projectMeta?.id])
     const graphContext = useMemo(
-        () => createNodeGraphContext(document, { now: clockNow, liveOutputs }),
-        [document, clockNow, liveOutputs]
+        () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
+        [document, clockNow, liveOutputs, frameMemory]
     )
     // scopeId undefined = unscoped, matches the old document-wide behavior; a real
     // scope (including root, `null`) only renders/uses siblings of that scope — see

@@ -148,6 +148,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('compare', 'logic.compare', { label: 'Compare', col: 1, row: 9 })
     add('gate', 'logic.gate', { label: 'Gate', col: 1, row: 10 })
     add('switch', 'logic.switch', { label: 'Switch', col: 1, row: 11 })
+    add('lag', 'signal.lag', { label: 'Lag', col: 1, row: 12 })
+    add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
 
     // --- column 2: scene settings ---------------------------------------------
     // world.light is the RETIRED dual-identity node (paletteHidden; the
@@ -314,6 +316,10 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('colorA', 'out', 'switch', 'a'),
         wire('colorB', 'out', 'switch', 'b'),
         wire('compare', 'less', 'switch', 'pick'),
+
+        // Lag smooths the raw sine — the glide every window computes its own
+        // way (frameMemory is per-window), converging on the same target.
+        wire('sin', 'out', 'lag', 'in'),
 
         // A wire OUT of a container — new on 2026-08-19, and the thing that
         // used to be impossible: every container declared zero outputs, so

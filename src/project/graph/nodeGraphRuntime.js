@@ -87,7 +87,13 @@ const buildEdgesByTarget = (edges) => {
 // a captured MediaStream's THREE.VideoTexture, say — keyed by `${nodeId}:${portId}`.
 // Same idea as `now` for the clock: injected per-pass by whichever renderer
 // owns the live resource, read generically by computeNodeOutput/evaluateNodeInput.
-export const createNodeGraphContext = (document = {}, { now = 0, liveOutputs = null } = {}) => {
+// frameMemory carries values a node remembers BETWEEN passes (a Lag's last
+// answer and when it gave it) — per WINDOW, never React state, cleared when
+// the document changes. null is fine: memory-less evaluation (tests, one-off
+// reads) makes remembering nodes answer as if every frame were their first.
+export const createFrameMemory = () => new Map()
+
+export const createNodeGraphContext = (document = {}, { now = 0, liveOutputs = null, frameMemory = null } = {}) => {
     const edges = document.edges || []
     const nodes = document.nodes || []
     // Every `Out` door, by the container it makes a hole in. Built once per pass
@@ -106,7 +112,8 @@ export const createNodeGraphContext = (document = {}, { now = 0, liveOutputs = n
         doorwayOutByParent,
         outputCache: new Map(),
         now: Number.isFinite(now) ? now : 0,
-        liveOutputs
+        liveOutputs,
+        frameMemory
     }
 }
 
