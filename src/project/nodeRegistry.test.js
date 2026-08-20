@@ -20,6 +20,15 @@ import {
     CONTAINER_TYPE_IDS,
 } from './nodeRegistry.js'
 
+describe('paletteHidden', () => {
+    it('view.library (Create) is implemented but not offered — its buttons make objects, not nodes', () => {
+        const offered = listNodeTypes().map((type) => type.id)
+        expect(offered).not.toContain('view.library')
+        const everything = listNodeTypes({ includeUnimplemented: true }).map((type) => type.id)
+        expect(everything).toContain('view.library')
+    })
+})
+
 describe('PORT_TYPES', () => {
     it('defines core port types with label and color', () => {
         for (const key of ['number', 'vec3', 'color', 'boolean', 'string', 'geometry', 'texture', 'signal', 'any']) {
@@ -217,9 +226,11 @@ describe('createEdge', () => {
 describe('listNodeTypes', () => {
     it('returns every implemented type when no filter given', () => {
         // Not every declared type: unimplemented ones are withheld from the
-        // palette so the editor stops offering nodes that do nothing.
+        // palette so the editor stops offering nodes that do nothing, and
+        // paletteHidden ones are implemented but deliberately not offered.
+        const paletteHidden = Object.values(NODE_TYPES).filter((t) => t.paletteHidden && !UNIMPLEMENTED_NODE_TYPES.has(t.id)).length
         const all = listNodeTypes()
-        expect(all.length).toBe(Object.keys(NODE_TYPES).length - UNIMPLEMENTED_NODE_TYPES.size)
+        expect(all.length).toBe(Object.keys(NODE_TYPES).length - UNIMPLEMENTED_NODE_TYPES.size - paletteHidden)
     })
 
     it('filters by category', () => {

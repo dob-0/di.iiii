@@ -425,6 +425,37 @@ describe('RawViewport', () => {
     })
 })
 
+describe('objects stand at root only', () => {
+    // document.entities used to render UNSCOPED — every object haunted every
+    // interior at every depth (audit, 2026-08-20). Objects have no parent
+    // concept; the top room is where they stand.
+    const boxEntity = { id: 'e1', type: 'box', name: 'Box', components: { transform: { position: [0, 0.5, 0] } } }
+
+    it('renders objects in the root room', () => {
+        boxObjectSpy.mockClear()
+        render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [], edges: [], entities: [boxEntity] }}
+                scopeId={null}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        expect(boxObjectSpy).toHaveBeenCalled()
+    })
+
+    it('renders NO objects inside a scope', () => {
+        boxObjectSpy.mockClear()
+        render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [{ id: 'geo', typeId: 'geom.geo', parentId: null, label: 'Geo', values: {} }], edges: [], entities: [boxEntity] }}
+                scopeId={'geo'}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        expect(boxObjectSpy).not.toHaveBeenCalled()
+    })
+})
+
 describe('separating geos', () => {
     // "now the same cubes in the 2 geos.. i want to seperate geos" (owner,
     // 2026-08-20): with two geos each holding a cube, the room showed two

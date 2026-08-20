@@ -464,6 +464,21 @@ describe('RawEditor clear desk — no backdrop, ever', () => {
     })
 })
 
+describe('RawEditor Create window back-compat (plan PR 1.7)', () => {
+    const KEY = 'test-create-backcompat'
+    afterEach(() => { window.localStorage.removeItem(KEY) })
+
+    it('an existing view.library node still renders its window — retired from the palette, not from documents', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [{ id: 'lib', typeId: 'view.library', label: 'Create', values: { frame: { visible: true, x: 40, y: 90, width: 260, height: 380 } } }],
+            edges: [],
+            workspaceState: {}
+        }))
+        render(<RawEditor localStorageKey={KEY} />)
+        expect(screen.getByText('Create')).toBeTruthy()
+    })
+})
+
 // "Make me a scene" is an offer for a truly blank desk, not a trapdoor: a
 // stray double-click inside a fresh Geo used to inject the whole six-node
 // demo INTO the container the person was filling (seen live 2026-08-20).

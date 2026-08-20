@@ -1350,6 +1350,12 @@ export const NODE_TYPES = {
         keywords: ['create', 'add', 'library', 'shape', 'primitive', 'light', 'cube', 'box'],
         runtime: 'any',
         singleton: false,
+        // Implemented, but not OFFERED in the node editor: every button in
+        // this window creates an OBJECT (document.entities) — a thing with no
+        // card, no ports, no outliner row, which the node vocabulary cannot
+        // describe. Objects belong to Studio; existing documents with a
+        // Create window still render it (the window branch stays).
+        paletteHidden: true,
         inputs: [
             { id: 'title', type: 'string', label: 'Title', default: 'Create' },
         ],
@@ -1876,6 +1882,9 @@ export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any', i
     const q = String(query || '').trim().toLowerCase()
     return Object.values(NODE_TYPES).filter(type => {
         if (!includeUnimplemented && !isNodeTypeImplemented(type.id)) return false
+        // paletteHidden = implemented but not offered here (a different class
+        // from the shells: the code works, the palette just does not sell it).
+        if (!includeUnimplemented && type.paletteHidden) return false
         if (category !== 'all' && type.category !== category) return false
         if (runtime !== 'any' && type.runtime !== 'any' && type.runtime !== runtime) return false
         if (!q) return true
