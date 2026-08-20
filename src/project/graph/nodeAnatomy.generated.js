@@ -139,8 +139,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1325,
-            toLine: 1327,
+            fromLine: 1326,
+            toLine: 1328,
             sharedWith: []
         },
         alsoNeeds: null
@@ -159,8 +159,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1328,
-            toLine: 1330,
+            fromLine: 1329,
+            toLine: 1331,
             sharedWith: []
         },
         alsoNeeds: null
@@ -181,8 +181,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1352,
-            toLine: 1354,
+            fromLine: 1353,
+            toLine: 1355,
             sharedWith: []
         },
         alsoNeeds: null
@@ -202,8 +202,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1355,
-            toLine: 1364,
+            fromLine: 1356,
+            toLine: 1365,
             sharedWith: []
         },
         alsoNeeds: null
@@ -261,8 +261,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1331,
-            toLine: 1351,
+            fromLine: 1332,
+            toLine: 1352,
             sharedWith: []
         },
         alsoNeeds: null
@@ -302,8 +302,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1322,
-            toLine: 1324,
+            fromLine: 1323,
+            toLine: 1325,
             sharedWith: []
         },
         alsoNeeds: null
@@ -334,8 +334,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1274,
-            toLine: 1315,
+            fromLine: 1275,
+            toLine: 1316,
             sharedWith: []
         },
         alsoNeeds: null
@@ -519,7 +519,15 @@ export const NODE_ANATOMY = {
         alsoNeeds: null
     },
     'media.video': {
-        computes: null,
+        computes: {
+            file: 'src/project/nodes/media.video/runtime.js',
+            fromLine: 1,
+            toLine: 8,
+            answers: [
+                'frame'
+            ],
+            sharedWith: []
+        },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
             fromLine: 196,
@@ -551,8 +559,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1316,
-            toLine: 1318,
+            fromLine: 1317,
+            toLine: 1319,
             sharedWith: []
         },
         alsoNeeds: null
@@ -562,8 +570,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1384,
-            toLine: 1386,
+            fromLine: 1385,
+            toLine: 1387,
             sharedWith: []
         },
         alsoNeeds: null
@@ -573,8 +581,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1387,
-            toLine: 1398,
+            fromLine: 1388,
+            toLine: 1399,
             sharedWith: []
         },
         alsoNeeds: null
@@ -584,8 +592,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1319,
-            toLine: 1321,
+            fromLine: 1320,
+            toLine: 1322,
             sharedWith: []
         },
         alsoNeeds: null
@@ -595,8 +603,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1403,
-            toLine: 1411,
+            fromLine: 1404,
+            toLine: 1412,
             sharedWith: []
         },
         alsoNeeds: null
@@ -606,8 +614,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1412,
-            toLine: 1414,
+            fromLine: 1413,
+            toLine: 1415,
             sharedWith: []
         },
         alsoNeeds: null
@@ -617,8 +625,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1415,
-            toLine: 1428,
+            fromLine: 1416,
+            toLine: 1429,
             sharedWith: []
         },
         alsoNeeds: null
@@ -628,8 +636,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1429,
-            toLine: 1439,
+            fromLine: 1430,
+            toLine: 1440,
             sharedWith: []
         },
         alsoNeeds: null
@@ -775,37 +783,87 @@ export const NODE_ANATOMY = {
         alsoNeeds: null
     },
     'logic.compare': {
-        computes: null,
+        computes: {
+            file: 'src/project/nodes/logic.compare/runtime.js',
+            fromLine: 1,
+            toLine: 13,
+            answers: [
+                'less',
+                'equal',
+                'greater'
+            ],
+            sharedWith: []
+        },
         draws: null,
         panel: null,
         alsoNeeds: null
     },
     'logic.gate': {
-        computes: null,
+        computes: {
+            file: 'src/project/nodes/logic.gate/runtime.js',
+            fromLine: 1,
+            toLine: 8,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
         draws: null,
         panel: null,
         alsoNeeds: null
     },
     'logic.switch': {
-        computes: null,
+        computes: {
+            file: 'src/project/nodes/logic.switch/runtime.js',
+            fromLine: 1,
+            toLine: 7,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
         draws: null,
         panel: null,
         alsoNeeds: null
     },
     'signal.lag': {
-        computes: null,
+        computes: {
+            file: 'src/project/nodes/signal.lag/runtime.js',
+            fromLine: 1,
+            toLine: 23,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
         draws: null,
         panel: null,
         alsoNeeds: null
     },
     'value.noise': {
-        computes: null,
+        computes: {
+            file: 'src/project/nodes/value.noise/runtime.js',
+            fromLine: 1,
+            toLine: 20,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
         draws: null,
         panel: null,
         alsoNeeds: null
     },
     'geom.array': {
-        computes: null,
+        computes: {
+            file: 'src/project/nodes/geom.array/runtime.js',
+            fromLine: 1,
+            toLine: 24,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
         draws: null,
         panel: null,
         alsoNeeds: null
@@ -875,8 +933,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1365,
-            toLine: 1383,
+            fromLine: 1366,
+            toLine: 1384,
             sharedWith: []
         },
         alsoNeeds: null
@@ -900,5 +958,12 @@ export const DOORWAY_PLACE = {
 export const SOURCE_FINGERPRINTS = {
     'src/project/graph/nodeGraphRuntime.js': '6db6899e',
     'src/raw/components/RawViewport.jsx': '2c8fe092',
-    'src/raw/components/RawEditor.jsx': '4c0d666c'
+    'src/raw/components/RawEditor.jsx': 'be79f812',
+    'src/project/nodes/geom.array/runtime.js': '6958f9d9',
+    'src/project/nodes/logic.compare/runtime.js': 'ad9e4fb8',
+    'src/project/nodes/logic.gate/runtime.js': 'edb3f61d',
+    'src/project/nodes/logic.switch/runtime.js': 'fe692f18',
+    'src/project/nodes/media.video/runtime.js': 'c059ce96',
+    'src/project/nodes/signal.lag/runtime.js': '8a4020f7',
+    'src/project/nodes/value.noise/runtime.js': '194f9400'
 }

@@ -7,7 +7,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { extractDoorwaySpan, extractIfChain, extractSwitchCases } from './node-anatomy-lib.mjs'
+import { extractDoorwaySpan, extractIfChain, extractModuleAnswers, extractSwitchCases } from './node-anatomy-lib.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT_PATH = path.join(ROOT, 'src/project/graph/nodeAnatomy.generated.js')
@@ -59,14 +59,31 @@ export async function buildManifest() {
     extractSwitchCases(viewportSource, 'renderNodeBody').forEach(place('draws', VIEWPORT_FILE))
     extractIfChain(editorSource, 'renderViewNodeContent').forEach(place('panel', EDITOR_FILE))
 
+    // Colocated runtimes (src/project/nodes/<typeId>/runtime.js) — the
+    // lookup-first side of the dispatcher. Whole file, one type, fingerprinted
+    // like the measured trio so an edit invalidates the manifest the same way.
+    const fingerprints = {
+        [RUNTIME_FILE]: fingerprintSource(runtimeSource),
+        [VIEWPORT_FILE]: fingerprintSource(viewportSource),
+        [EDITOR_FILE]: fingerprintSource(editorSource)
+    }
+    const nodesDir = path.join(ROOT, 'src/project/nodes')
+    if (fs.existsSync(nodesDir)) {
+        for (const entry of fs.readdirSync(nodesDir, { withFileTypes: true })) {
+            if (!entry.isDirectory()) continue
+            const typeId = entry.name
+            const file = `src/project/nodes/${typeId}/runtime.js`
+            if (!fs.existsSync(path.join(ROOT, file)) || !anatomy[typeId]) continue
+            const moduleSource = read(file)
+            anatomy[typeId].computes = { file, ...extractModuleAnswers(moduleSource), sharedWith: [] }
+            fingerprints[file] = fingerprintSource(moduleSource)
+        }
+    }
+
     return {
         anatomy,
         doorway: { file: RUNTIME_FILE, ...extractDoorwaySpan(runtimeSource, 'computeNodeOutput') },
-        fingerprints: {
-            [RUNTIME_FILE]: fingerprintSource(runtimeSource),
-            [VIEWPORT_FILE]: fingerprintSource(viewportSource),
-            [EDITOR_FILE]: fingerprintSource(editorSource)
-        }
+        fingerprints
     }
 }
 

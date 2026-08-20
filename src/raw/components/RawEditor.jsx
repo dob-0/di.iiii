@@ -14,6 +14,7 @@ import CreatePanelWindow from './CreatePanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
+import VideoFrameFeed from './VideoFrameFeed.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
 import AgentRunPanel from './AgentRunPanel.jsx'
@@ -1980,6 +1981,20 @@ export default function RawEditor({
                     )}
                 </div>
             )}
+
+            {/* One invisible feed per playing Video node, so a Frame wire
+                carries the picture even while the room isn't on screen —
+                see VideoFrameFeed for why this lives here. */}
+            {nodes
+                .filter((node) => node.typeId === 'media.video' && node.values?.src && assetMap.has(node.values.src))
+                .map((node) => (
+                    <VideoFrameFeed
+                        key={node.id}
+                        node={node}
+                        asset={assetMap.get(node.values.src)}
+                        onFrameChange={handleFrameOutputChange}
+                    />
+                ))}
 
             {/* Fullscreen room — takes over the full viewport. Any scope,
                 not only Worlds: the room you are standing in IS the thing

@@ -104,6 +104,21 @@ export function extractSwitchCases(source, fnName) {
 }
 
 /**
+ * A COLOCATED runtime module — the whole file is one type's compute code
+ * (src/project/nodes/<typeId>/runtime.js, the lookup-first side of the
+ * dispatcher). The slice is the entire module; answers come from the same
+ * portId-comparison walk the switch cases use.
+ */
+export function extractModuleAnswers(source) {
+    const ast = parse(source)
+    return {
+        fromLine: 1,
+        toLine: source.replace(/\n$/, '').split('\n').length,
+        answers: answersIn([ast])
+    }
+}
+
+/**
  * The `if (node.typeId === '…')` chain inside fnName — the fourth place code
  * lives, and the one a switch-shaped extractor reports as "no code" for every
  * type in it.

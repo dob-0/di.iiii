@@ -1221,7 +1221,12 @@ export const NODE_TYPES = {
             { id: 'volume',   type: 'number',  label: 'Volume',   default: 1, min: 0, max: 1, step: 0.05 },
             { id: 'loop',     type: 'boolean', label: 'Loop',     default: true      },
         ],
-        outputs: [],
+        outputs: [
+            // The playing picture as a wire value (the webcam idiom): live in
+            // the window that renders the video, so a Monitor can watch it
+            // and a material can wear it.
+            { id: 'frame', type: 'texture', label: 'Frame' },
+        ],
         defaultValues: {},
         render: 'spatial-3d',
     },

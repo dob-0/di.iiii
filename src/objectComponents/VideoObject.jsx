@@ -84,7 +84,7 @@ const releaseVideo = (entry) => {
     entry.subscribers.clear()
 }
 
-function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = true } = {}) {
+export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = true } = {}) {
     const [state, setState] = useState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE })
 
     useEffect(() => {

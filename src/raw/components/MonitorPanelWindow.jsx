@@ -18,7 +18,7 @@ export default function MonitorPanelWindow({ node, values = null }) {
 
     return (
         <div className="raw-monitor-panel is-empty">
-            <p>Nothing wired in. Wire a texture into Source — a Webcam&rsquo;s Frame, for now.</p>
+            <p>Nothing wired in. Wire a texture into Source — a Webcam&rsquo;s or a Video&rsquo;s Frame.</p>
         </div>
     )
 }
