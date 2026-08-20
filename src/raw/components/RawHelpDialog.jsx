@@ -56,7 +56,7 @@ export default function RawHelpDialog({
                 aria-label="Close help"
                 onClick={onClose}
             />
-            <section className="raw-help-dialog" role="dialog" aria-modal="true" aria-label="Raw help">
+            <section className="raw-help-dialog" role="dialog" aria-modal="true" aria-label="Help">
                 <header className="raw-help-header">
                     <div className="raw-help-header-mark" aria-hidden="true">
                         <span>{activeSection.icon}</span>

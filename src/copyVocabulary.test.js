@@ -119,7 +119,6 @@ const COPY_FILES = [
     'src/raw/director/DispersionPanel.jsx',
     'src/raw/utils/dropAsset.js',
     'src/raw/utils/rawGuide.js',
-    'src/raw/utils/surfaceWorkflow.js',
     'src/studio/components/SpaceHub.jsx',
     'src/studio/components/StudioCodeSpaceDirector.jsx',
     'src/studio/components/StudioControlCluster.jsx',

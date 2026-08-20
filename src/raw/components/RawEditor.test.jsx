@@ -481,13 +481,13 @@ describe('RawEditor chrome sweep (plan PR 1.6)', () => {
         viewportMountProps.length = 0
     })
 
-    it('Escape at the top of the stack exits the fullscreen room', () => {
+    it('Escape at the top of the stack exits the fullscreen scene', () => {
         window.localStorage.setItem(KEY, makeWorkspaceDoc([
             { id: 'c-1', typeId: 'geom.cube', label: 'Cube', values: {} }
         ]))
         render(<RawEditor localStorageKey={KEY} canvasMode />)
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
-        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Room' } })
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Full screen' } })
         fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
         expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
         fireEvent.keyDown(window, { key: 'Escape' })
