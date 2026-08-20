@@ -130,6 +130,12 @@ export const FAMILY_BY_TYPE = {
     'signal.trigger': 'numbers',
     'signal.speed': 'numbers',
     'logic.toggle': 'numbers',
+    'vector.split': 'numbers',
+    'vector.combine': 'numbers',
+    'colour.split': 'numbers',
+    'colour.combine': 'numbers',
+    'vector.distance': 'numbers',
+    'colour.ramp': 'numbers',
     // the scene — light, sky, grid, scenes, desks, containers
     'world.light': 'room',
     'world.environment': 'room',
@@ -2070,6 +2076,126 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'out', type: 'boolean', label: 'On' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The vector/colour wave (TD audit, 2026-08-20). Pure taps and joins for
+    // the two compound wire types — both alphabets, wire the reading you mean.
+    'vector.split': {
+        id: 'vector.split',
+        label: 'Split',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['split', 'xyz', 'axis', 'component', 'unpack', 'vector'],
+        inputs: [
+            { id: 'vector', type: 'vec3', label: 'Vector', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'x', type: 'number', label: 'X' },
+            { id: 'y', type: 'number', label: 'Y' },
+            { id: 'z', type: 'number', label: 'Z' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.combine': {
+        id: 'vector.combine',
+        label: 'Combine',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['combine', 'xyz', 'pack', 'build', 'vector', 'compose'],
+        inputs: [
+            { id: 'x', type: 'number', label: 'X', default: 0 },
+            { id: 'y', type: 'number', label: 'Y', default: 0 },
+            { id: 'z', type: 'number', label: 'Z', default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Vector' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'colour.split': {
+        id: 'colour.split',
+        label: 'Channels',
+        category: 'colour',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['channels', 'rgb', 'hsl', 'hue', 'saturation', 'lightness', 'red', 'green', 'blue', 'split'],
+        inputs: [
+            { id: 'colour', type: 'color', label: 'Colour', default: '#5fa8ff' },
+        ],
+        outputs: [
+            { id: 'red',        type: 'number', label: 'Red'        },
+            { id: 'green',      type: 'number', label: 'Green'      },
+            { id: 'blue',       type: 'number', label: 'Blue'       },
+            { id: 'hue',        type: 'number', label: 'Hue'        },
+            { id: 'saturation', type: 'number', label: 'Saturation' },
+            { id: 'lightness',  type: 'number', label: 'Lightness'  },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'colour.combine': {
+        id: 'colour.combine',
+        label: 'Compose',
+        category: 'colour',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['compose', 'rgb', 'build', 'colour', 'combine', 'mix'],
+        inputs: [
+            { id: 'red',   type: 'number', label: 'Red',   default: 0 },
+            { id: 'green', type: 'number', label: 'Green', default: 0 },
+            { id: 'blue',  type: 'number', label: 'Blue',  default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'color', label: 'Colour' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.distance': {
+        id: 'vector.distance',
+        label: 'Distance',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['distance', 'length', 'proximity', 'near', 'far', 'apart', 'magnitude'],
+        inputs: [
+            { id: 'a', type: 'vec3', label: 'A', default: [0, 0, 0] },
+            { id: 'b', type: 'vec3', label: 'B', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'distance', type: 'number', label: 'Distance' },
+            { id: 'length',   type: 'number', label: 'Length'   },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'colour.ramp': {
+        id: 'colour.ramp',
+        label: 'Ramp',
+        category: 'colour',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['ramp', 'gradient', 'palette', 'lookup', 'journey', 'blend', 'stops'],
+        inputs: [
+            { id: 'position', type: 'number', label: 'Position', default: 0         },
+            { id: 'a',        type: 'color',  label: 'A',        default: '#000000' },
+            { id: 'b',        type: 'color',  label: 'B',        default: '#5fa8ff' },
+            { id: 'c',        type: 'color',  label: 'C',        default: '#ffffff' },
+        ],
+        outputs: [
+            { id: 'out', type: 'color', label: 'Colour' },
         ],
         defaultValues: {},
         render: 'hidden',

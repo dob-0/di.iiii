@@ -425,3 +425,58 @@ describe('the state wave (TD audit) — frameMemory operators', () => {
         expect(delayAt(99, 1600)).toBe(50)
     })
 })
+
+describe('the vector/colour wave (TD audit)', () => {
+    it('Split and Combine are inverses; Distance answers both questions', () => {
+        const doc = {
+            nodes: [node('v', 'value.vec3', { value: [3, 4, 0] }), node('s', 'vector.split')],
+            edges: [edge('v', 'out', 's', 'vector')]
+        }
+        expect(evalPort(doc, 's', 'x')).toBe(3)
+        expect(evalPort(doc, 's', 'y')).toBe(4)
+        expect(evalPort(doc, 's', 'z')).toBe(0)
+
+        const build = {
+            nodes: [node('a', 'value.number', { value: 1 }), node('c', 'vector.combine')],
+            edges: [edge('a', 'out', 'c', 'y')]
+        }
+        expect(evalPort(build, 'c', 'out')).toEqual([0, 1, 0])
+
+        const dist = {
+            nodes: [node('p', 'value.vec3', { value: [3, 4, 0] }), node('d', 'vector.distance')],
+            edges: [edge('p', 'out', 'd', 'a')]
+        }
+        expect(evalPort(dist, 'd', 'length')).toBe(5)
+        expect(evalPort(dist, 'd', 'distance')).toBe(5)
+    })
+
+    it('Channels reads both alphabets; Compose writes hex back', () => {
+        const doc = {
+            nodes: [node('c', 'value.color', { value: '#ff0000' }), node('s', 'colour.split')],
+            edges: [edge('c', 'out', 's', 'colour')]
+        }
+        expect(evalPort(doc, 's', 'red')).toBe(1)
+        expect(evalPort(doc, 's', 'green')).toBe(0)
+        expect(evalPort(doc, 's', 'hue')).toBe(0)
+        expect(evalPort(doc, 's', 'saturation')).toBe(1)
+        expect(evalPort(doc, 's', 'lightness')).toBe(0.5)
+
+        const build = {
+            nodes: [node('r', 'value.number', { value: 1 }), node('k', 'colour.combine')],
+            edges: [edge('r', 'out', 'k', 'red')]
+        }
+        expect(evalPort(build, 'k', 'out')).toBe('#ff0000')
+    })
+
+    it('Ramp journeys A through B to C and clamps the position', () => {
+        const doc = (pos) => ({
+            nodes: [node('p', 'value.number', { value: pos }), node('r', 'colour.ramp', { a: '#000000', b: '#808080', c: '#ffffff' })],
+            edges: [edge('p', 'out', 'r', 'position')]
+        })
+        expect(evalPort(doc(0), 'r', 'out')).toBe('#000000')
+        expect(evalPort(doc(0.5), 'r', 'out')).toBe('#808080')
+        expect(evalPort(doc(1), 'r', 'out')).toBe('#ffffff')
+        expect(evalPort(doc(9), 'r', 'out')).toBe('#ffffff')
+        expect(evalPort(doc(0.25), 'r', 'out')).toBe('#404040')
+    })
+})

@@ -1093,6 +1093,98 @@ export const NODE_ANATOMY = {
         panel: null,
         alsoNeeds: null
     },
+    'vector.split': {
+        computes: {
+            file: 'src/project/nodes/vector.split/runtime.js',
+            fromLine: 1,
+            toLine: 9,
+            answers: [
+                'x',
+                'y',
+                'z'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'vector.combine': {
+        computes: {
+            file: 'src/project/nodes/vector.combine/runtime.js',
+            fromLine: 1,
+            toLine: 5,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'colour.split': {
+        computes: {
+            file: 'src/project/nodes/colour.split/runtime.js',
+            fromLine: 1,
+            toLine: 15,
+            answers: [
+                'red',
+                'green',
+                'blue',
+                'hue',
+                'saturation',
+                'lightness'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'colour.combine': {
+        computes: {
+            file: 'src/project/nodes/colour.combine/runtime.js',
+            fromLine: 1,
+            toLine: 7,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'vector.distance': {
+        computes: {
+            file: 'src/project/nodes/vector.distance/runtime.js',
+            fromLine: 1,
+            toLine: 9,
+            answers: [
+                'length',
+                'distance'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
+    'colour.ramp': {
+        computes: {
+            file: 'src/project/nodes/colour.ramp/runtime.js',
+            fromLine: 1,
+            toLine: 12,
+            answers: [
+                'out'
+            ],
+            sharedWith: []
+        },
+        draws: null,
+        panel: null,
+        alsoNeeds: null
+    },
     'world.light': {
         computes: null,
         draws: {
@@ -1184,6 +1276,9 @@ export const SOURCE_FINGERPRINTS = {
     'src/project/graph/nodeGraphRuntime.js': 'c82b732c',
     'src/raw/components/RawViewport.jsx': '79724ac5',
     'src/raw/components/RawEditor.jsx': '6a798bb6',
+    'src/project/nodes/colour.combine/runtime.js': '00c5d4a9',
+    'src/project/nodes/colour.ramp/runtime.js': '51df0efb',
+    'src/project/nodes/colour.split/runtime.js': '9a7986de',
     'src/project/nodes/geom.array/runtime.js': '6958f9d9',
     'src/project/nodes/logic.combine/runtime.js': 'd61431d7',
     'src/project/nodes/logic.compare/runtime.js': 'ad9e4fb8',
@@ -1216,5 +1311,8 @@ export const SOURCE_FINGERPRINTS = {
     'src/project/nodes/signal.trigger/runtime.js': '9d2aaffc',
     'src/project/nodes/time/runtime.js': 'ea616ea0',
     'src/project/nodes/value.noise/runtime.js': '194f9400',
+    'src/project/nodes/vector.combine/runtime.js': '37bdb57d',
+    'src/project/nodes/vector.distance/runtime.js': 'a55b2ab4',
+    'src/project/nodes/vector.split/runtime.js': '9bab9ec9',
     'src/project/nodes/view.timeline/runtime.js': '453edf40'
 }

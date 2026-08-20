@@ -36,7 +36,7 @@ describe('NodePalette family grouping', () => {
         const numbers = [...container.querySelectorAll('.raw-node-palette-group')]
             .find((el) => el.firstChild.textContent === 'numbers')
         // value.* (5) + time + 9 maths + the logic trio + Lag/Noise + the TD-audit numbers wave
-        expect(numbers.querySelector('.raw-node-palette-group-count').textContent).toBe('34')
+        expect(numbers.querySelector('.raw-node-palette-group-count').textContent).toBe('40')
     })
 
     it('any typed character dissolves the grouping into the flat list', () => {

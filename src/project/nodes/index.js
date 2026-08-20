@@ -1,3 +1,6 @@
+import { computeOutput as colourCombine } from './colour.combine/runtime.js'
+import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
+import { computeOutput as colourSplit } from './colour.split/runtime.js'
 import { computeOutput as geomArray } from './geom.array/runtime.js'
 import { computeOutput as mathAdd } from './math.add/runtime.js'
 import { computeOutput as mathClamp } from './math.clamp/runtime.js'
@@ -31,6 +34,9 @@ import { computeOutput as signalTimer } from './signal.timer/runtime.js'
 import { computeOutput as signalTrigger } from './signal.trigger/runtime.js'
 import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
 import { computeOutput as valueNoise } from './value.noise/runtime.js'
+import { computeOutput as vectorCombine } from './vector.combine/runtime.js'
+import { computeOutput as vectorDistance } from './vector.distance/runtime.js'
+import { computeOutput as vectorSplit } from './vector.split/runtime.js'
 
 // Colocated node runtimes — the lookup-first side of the registry plan.
 // nodeGraphRuntime consults this map BEFORE its type switch; a type lives in
@@ -40,6 +46,9 @@ import { computeOutput as valueNoise } from './value.noise/runtime.js'
 // { input, asNumber, context }) — and import nothing from the graph runtime,
 // which keeps the dependency one-way.
 export const NODE_RUNTIMES = new Map([
+    ['colour.combine', colourCombine],
+    ['colour.ramp', colourRamp],
+    ['colour.split', colourSplit],
     ['geom.array', geomArray],
     ['math.add', mathAdd],
     ['math.clamp', mathClamp],
@@ -72,5 +81,8 @@ export const NODE_RUNTIMES = new Map([
     ['signal.timer', signalTimer],
     ['signal.trigger', signalTrigger],
     ['value.noise', valueNoise],
+    ['vector.combine', vectorCombine],
+    ['vector.distance', vectorDistance],
+    ['vector.split', vectorSplit],
     ['view.timeline', viewTimeline],
 ])
