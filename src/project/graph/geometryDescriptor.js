@@ -41,6 +41,35 @@ export function countGeometryPieces(descriptor, depth = 0) {
 }
 
 /**
+ * The same walk the renderer draws, as a PURE prune: returns a descriptor
+ * tree already inside the caps (leaves counted across the whole tree, depth
+ * counted down the branches), so the renderer needs no budget of its own.
+ *
+ * This exists because the renderer used to carry one shared mutable countdown
+ * through recursion — safe only while R3F v8 keeps StrictMode out of the
+ * Canvas; a double-invoked render would have silently halved the cap. A prune
+ * is idempotent: run it twice, get the same tree.
+ */
+export function pruneGeometryDescriptor(descriptor, { maxPieces = MAX_GEOMETRY_PIECES, maxDepth = MAX_GEOMETRY_DEPTH } = {}) {
+    const budget = { left: maxPieces }
+    const walk = (value, depth) => {
+        if (!isGeometryDescriptor(value) || depth >= maxDepth || budget.left <= 0) return null
+        if (value.kind !== 'group') {
+            budget.left -= 1
+            return value
+        }
+        const children = []
+        for (const child of value.children) {
+            const kept = walk(child, depth + 1)
+            if (kept) children.push(kept)
+            if (budget.left <= 0) break
+        }
+        return { ...value, children }
+    }
+    return walk(descriptor, 0)
+}
+
+/**
  * Merge any number of descriptors into one. Empty and invalid entries drop
  * out; nothing left means undefined — a Merge with nothing wired in carries
  * nothing, and "nothing" must stay distinguishable from "an empty group".

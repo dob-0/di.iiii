@@ -13,7 +13,8 @@ import { getNodeType } from '../../project/nodeRegistry.js'
 import { getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
-import { MAX_GEOMETRY_DEPTH, MAX_GEOMETRY_PIECES, isGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
+import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
+import { createTapTracker } from '../utils/useDoubleTap.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
@@ -105,49 +106,45 @@ function PlaneWithTexture({ w, h, textureUrl }) {
 // versions (BoxObject, SphereObject), so a cube worn by a Constructor and a
 // cube standing beside it are pixel-identical by construction.
 //
-// `budget` is one shared countdown across the whole walk (an object so the
-// count survives recursion), because MAX_GEOMETRY_PIECES caps the DESCRIPTOR,
-// not each branch — see geometryDescriptor.js for why the caps exist at all.
-//
-// Mutating it during render is safe TODAY only because this renders inside
-// R3F v8's own reconciler root, which hardcodes strictness off — StrictMode
-// does not cross that boundary, so nothing double-invokes this body. R3F v9
-// inherits StrictMode into the Canvas; on that upgrade this must move to a
-// plain recursive walk with a local counter or the cap silently halves in dev.
-function GeometryPieces({ descriptor, depth = 0, budget = null }) {
-    const spent = budget || { left: MAX_GEOMETRY_PIECES }
-    if (!isGeometryDescriptor(descriptor) || depth >= MAX_GEOMETRY_DEPTH || spent.left <= 0) return null
-    if (descriptor.kind === 'group') {
+// The caps live in pruneGeometryDescriptor — a pure pass that hands this
+// component a tree already inside MAX_GEOMETRY_PIECES/DEPTH. The render walk
+// itself holds no budget: the old shared mutable countdown was safe only
+// while R3F v8 kept StrictMode out of the Canvas, and a double-invoked render
+// would have silently halved the cap on the v9 upgrade.
+function GeometryPieces({ descriptor, pruned = false }) {
+    const shaped = pruned ? descriptor : pruneGeometryDescriptor(descriptor)
+    if (!shaped) return null
+    if (shaped.kind === 'group') {
         return (
             <group
-                position={asVec3(descriptor.position, [0, 0, 0])}
-                rotation={asVec3(descriptor.rotation, [0, 0, 0])}
-                scale={asPositiveVec3(descriptor.scale, [1, 1, 1], 0.001, 20)}
+                position={asVec3(shaped.position, [0, 0, 0])}
+                rotation={asVec3(shaped.rotation, [0, 0, 0])}
+                scale={asPositiveVec3(shaped.scale, [1, 1, 1], 0.001, 20)}
             >
-                {descriptor.children.map((child, index) => (
-                    <GeometryPieces key={index} descriptor={child} depth={depth + 1} budget={spent} />
+                {shaped.children.map((child, index) => (
+                    <GeometryPieces key={index} descriptor={child} pruned />
                 ))}
             </group>
         )
     }
-    spent.left -= 1
+    const descriptorLeaf = shaped
     const place = {
-        position: asVec3(descriptor.position, [0, 0, 0]),
-        rotation: asVec3(descriptor.rotation, [0, 0, 0])
+        position: asVec3(descriptorLeaf.position, [0, 0, 0]),
+        rotation: asVec3(descriptorLeaf.rotation, [0, 0, 0])
     }
-    switch (descriptor.kind) {
+    switch (descriptorLeaf.kind) {
         case 'box':
             return (
                 <group {...place}>
-                    <BoxObject color={asColor(descriptor.color, '#5fa8ff')} boxSize={asPositiveVec3(descriptor.size, [1, 1, 1])} />
+                    <BoxObject color={asColor(descriptorLeaf.color, '#5fa8ff')} boxSize={asPositiveVec3(descriptorLeaf.size, [1, 1, 1])} />
                 </group>
             )
         case 'sphere':
             return (
                 <group {...place}>
                     <SphereObject
-                        color={asColor(descriptor.color, '#5fa8ff')}
-                        sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.radius, 0.5))))}
+                        color={asColor(descriptorLeaf.color, '#5fa8ff')}
+                        sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5))))}
                     />
                 </group>
             )
@@ -155,10 +152,10 @@ function GeometryPieces({ descriptor, depth = 0, budget = null }) {
             return (
                 <mesh {...place}>
                     <planeGeometry args={[
-                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.width, 2)))),
-                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.height, 2))))
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.width, 2)))),
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.height, 2))))
                     ]} />
-                    <meshStandardMaterial color={asColor(descriptor.color, '#ffffff')} side={2} />
+                    <meshStandardMaterial color={asColor(descriptorLeaf.color, '#ffffff')} side={2} />
                 </mesh>
             )
         default:
@@ -611,6 +608,12 @@ function SceneContent({
     // animation frame is a real, safe win with no change in drag feel.
     const dragRafRef = useRef(null)
     const dragPendingRef = useRef(null)
+    // Touch double-tap on the floor = place here, same as double-click. The
+    // browser cannot be trusted to synthesize dblclick from touch (dead on
+    // the 08-20 real-phone test); the tracker also guards Chromium's double
+    // fire. R3F pointer events carry pointerType/clientX/clientY and the
+    // floor raycast point, which is all the tracker and the palette need.
+    const roomTap = useMemo(() => createTapTracker(), [])
     useEffect(() => () => {
         if (dragRafRef.current !== null) cancelAnimationFrame(dragRafRef.current)
     }, [])
@@ -648,11 +651,15 @@ function SceneContent({
                 onDoubleClick={interactive ? (event) => {
                     event.stopPropagation()
                     if (draggingNodeId) return
+                    if (roomTap.justFired()) return
                     onWorldDoubleClick?.({
                         point: event.point?.toArray?.() || [0, 0, 0],
                         clientX: event.nativeEvent?.clientX || 0,
                         clientY: event.nativeEvent?.clientY || 0
                     })
+                } : undefined}
+                onPointerDown={interactive ? (event) => {
+                    roomTap.down(event)
                 } : undefined}
                 onPointerMove={interactive ? (event) => {
                     if (!draggingNodeId) return
@@ -708,6 +715,14 @@ function SceneContent({
                     }
                 } : undefined}
                 onPointerUp={interactive ? (event) => {
+                    if (roomTap.up(event) && !draggingNodeId) {
+                        onWorldDoubleClick?.({
+                            point: event.point?.toArray?.() || [0, 0, 0],
+                            clientX: event.nativeEvent?.clientX ?? 0,
+                            clientY: event.nativeEvent?.clientY ?? 0
+                        })
+                        return
+                    }
                     if (!draggingNodeId) return
                     event.stopPropagation()
                     if (dragRafRef.current !== null) {
