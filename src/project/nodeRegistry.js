@@ -123,6 +123,13 @@ export const FAMILY_BY_TYPE = {
     'math.abs': 'numbers',
     'math.round': 'numbers',
     'signal.ease': 'numbers',
+    'signal.counter': 'numbers',
+    'signal.hold': 'numbers',
+    'signal.delay': 'numbers',
+    'signal.timer': 'numbers',
+    'signal.trigger': 'numbers',
+    'signal.speed': 'numbers',
+    'logic.toggle': 'numbers',
     // the scene — light, sky, grid, scenes, desks, containers
     'world.light': 'room',
     'world.environment': 'room',
@@ -1929,6 +1936,140 @@ export const NODE_TYPES = {
             { id: 'easeIn',  type: 'number', label: 'Ease In'  },
             { id: 'easeOut', type: 'number', label: 'Ease Out' },
             { id: 'bounce',  type: 'number', label: 'Bounce'   },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The state wave (TD audit, 2026-08-20). Every one remembers through
+    // context.frameMemory — per window, never React state — and reacts to
+    // RISING EDGES, so a held button is one event, not sixty a second.
+    'signal.counter': {
+        id: 'signal.counter',
+        label: 'Counter',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['count', 'counter', 'increment', 'cue', 'index', 'step', 'tally'],
+        inputs: [
+            { id: 'count', type: 'boolean', label: 'Count', default: false },
+            { id: 'reset', type: 'boolean', label: 'Reset', default: false },
+            { id: 'step',  type: 'number',  label: 'Step',  default: 1     },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Total' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.hold': {
+        id: 'signal.hold',
+        label: 'Hold',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['hold', 'sample', 'freeze', 'latch', 'capture', 'snapshot'],
+        inputs: [
+            { id: 'value',  type: 'number',  label: 'Value',  default: 0     },
+            { id: 'sample', type: 'boolean', label: 'Sample', default: false },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Held' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.delay': {
+        id: 'signal.delay',
+        label: 'Delay',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['delay', 'echo', 'lateness', 'shift', 'time', 'offset'],
+        inputs: [
+            { id: 'value', type: 'number', label: 'Value',     default: 0   },
+            { id: 'delay', type: 'number', label: 'Delay (s)', default: 0.5 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Later' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.timer': {
+        id: 'signal.timer',
+        label: 'Timer',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['timer', 'stopwatch', 'countdown', 'cue', 'duration', 'progress'],
+        inputs: [
+            { id: 'start',  type: 'boolean', label: 'Start',      default: false },
+            { id: 'length', type: 'number',  label: 'Length (s)', default: 5     },
+        ],
+        outputs: [
+            { id: 'elapsed',  type: 'number',  label: 'Elapsed (s)' },
+            { id: 'progress', type: 'number',  label: 'Progress'    },
+            { id: 'done',     type: 'boolean', label: 'Done'        },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.trigger': {
+        id: 'signal.trigger',
+        label: 'Trigger',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['trigger', 'envelope', 'pulse', 'attack', 'release', 'fire', 'bang', 'hit'],
+        inputs: [
+            { id: 'fire',    type: 'boolean', label: 'Fire',        default: false },
+            { id: 'attack',  type: 'number',  label: 'Attack (s)',  default: 0.1   },
+            { id: 'hold',    type: 'number',  label: 'Hold (s)',    default: 0.2   },
+            { id: 'release', type: 'number',  label: 'Release (s)', default: 0.5   },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Envelope' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.speed': {
+        id: 'signal.speed',
+        label: 'Speed',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['speed', 'accumulate', 'integrate', 'travel', 'spin', 'drive'],
+        inputs: [
+            { id: 'rate',  type: 'number',  label: 'Rate',  default: 0     },
+            { id: 'reset', type: 'boolean', label: 'Reset', default: false },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Travel' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'logic.toggle': {
+        id: 'logic.toggle',
+        label: 'Toggle',
+        category: 'logic',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['toggle', 'latch', 'flip', 'switch', 'on', 'off', 'state'],
+        inputs: [
+            { id: 'flip',  type: 'boolean', label: 'Flip',  default: false },
+            { id: 'reset', type: 'boolean', label: 'Reset', default: false },
+        ],
+        outputs: [
+            { id: 'out', type: 'boolean', label: 'On' },
         ],
         defaultValues: {},
         render: 'hidden',

@@ -17,11 +17,18 @@ import { computeOutput as logicCompare } from './logic.compare/runtime.js'
 import { computeOutput as mathAbs } from './math.abs/runtime.js'
 import { computeOutput as logicGate } from './logic.gate/runtime.js'
 import { computeOutput as logicSwitch } from './logic.switch/runtime.js'
+import { computeOutput as logicToggle } from './logic.toggle/runtime.js'
 import { computeOutput as mediaAudioLevels } from './media.audio/runtime.js'
 import { computeOutput as mediaVideoFrame } from './media.video/runtime.js'
+import { computeOutput as signalCounter } from './signal.counter/runtime.js'
+import { computeOutput as signalDelay } from './signal.delay/runtime.js'
 import { computeOutput as signalEase } from './signal.ease/runtime.js'
+import { computeOutput as signalHold } from './signal.hold/runtime.js'
 import { computeOutput as signalLag } from './signal.lag/runtime.js'
 import { computeOutput as signalLfo } from './signal.lfo/runtime.js'
+import { computeOutput as signalSpeed } from './signal.speed/runtime.js'
+import { computeOutput as signalTimer } from './signal.timer/runtime.js'
+import { computeOutput as signalTrigger } from './signal.trigger/runtime.js'
 import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
 import { computeOutput as valueNoise } from './value.noise/runtime.js'
 
@@ -52,11 +59,18 @@ export const NODE_RUNTIMES = new Map([
     ['math.abs', mathAbs],
     ['logic.gate', logicGate],
     ['logic.switch', logicSwitch],
+    ['logic.toggle', logicToggle],
     ['media.audio', mediaAudioLevels],
     ['media.video', mediaVideoFrame],
+    ['signal.counter', signalCounter],
+    ['signal.delay', signalDelay],
     ['signal.ease', signalEase],
+    ['signal.hold', signalHold],
     ['signal.lag', signalLag],
     ['signal.lfo', signalLfo],
+    ['signal.speed', signalSpeed],
+    ['signal.timer', signalTimer],
+    ['signal.trigger', signalTrigger],
     ['value.noise', valueNoise],
     ['view.timeline', viewTimeline],
 ])
