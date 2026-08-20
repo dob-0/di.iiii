@@ -481,7 +481,11 @@ function SceneContent({
     scopeId,
     worldNode,
     liveOutputs = null,
-    showSelectionPills = true
+    showSelectionPills = true,
+    // false = a pure LOOK: no picking, no dragging, no double-click placing.
+    // The /out projector view passes false — "handlers simply not passed" was
+    // not enough, because OrbitControls mounts its own DOM listeners.
+    interactive = true
 }) {
     // Keyed on assets + project id so the map only rebuilds when assets change,
     // not on every document identity change from a sync tick.
@@ -632,12 +636,12 @@ function SceneContent({
             <mesh
                 rotation={[-Math.PI / 2, 0, 0]}
                 position={[0, 0, 0]}
-                onClick={(event) => {
+                onClick={interactive ? (event) => {
                     if (draggingNodeId) return
                     if ((event.delta ?? 0) > 4) return
                     onClearSelection?.()
-                }}
-                onDoubleClick={(event) => {
+                } : undefined}
+                onDoubleClick={interactive ? (event) => {
                     event.stopPropagation()
                     if (draggingNodeId) return
                     onWorldDoubleClick?.({
@@ -645,8 +649,8 @@ function SceneContent({
                         clientX: event.nativeEvent?.clientX || 0,
                         clientY: event.nativeEvent?.clientY || 0
                     })
-                }}
-                onPointerMove={(event) => {
+                } : undefined}
+                onPointerMove={interactive ? (event) => {
                     if (!draggingNodeId) return
                     event.stopPropagation()
                     // Same plane the grab measured on — the object's height —
@@ -698,8 +702,8 @@ function SceneContent({
                             if (dragPendingRef.current) onMoveNode?.(draggingNodeId, dragPendingRef.current)
                         })
                     }
-                }}
-                onPointerUp={(event) => {
+                } : undefined}
+                onPointerUp={interactive ? (event) => {
                     if (!draggingNodeId) return
                     event.stopPropagation()
                     if (dragRafRef.current !== null) {
@@ -709,7 +713,7 @@ function SceneContent({
                     }
                     dragPendingRef.current = null
                     setDraggingNodeId(null)
-                }}
+                } : undefined}
             >
                 <planeGeometry args={[400, 400]} />
                 <meshBasicMaterial transparent opacity={0} />
@@ -741,7 +745,7 @@ function SceneContent({
                             nodeScale={nodeScale}
                             assetMap={assetMap}
                             showSelectionPills={showSelectionPills}
-                            onPointerDown={(event) => {
+                            onPointerDown={interactive ? (event) => {
                                 if (event.button !== 0) return
                                 event.stopPropagation()
                                 const position = node.values?.position || [0, 0, 0]
@@ -770,7 +774,7 @@ function SceneContent({
                                 }
                                 setDraggingNodeId(node.id)
                                 onSelectNode?.(node.id)
-                            }}
+                            } : undefined}
                         />
                     </SceneEntityErrorBoundary>
                 ))}
@@ -801,7 +805,8 @@ export default function RawViewport({
     // name pill duplicated it in the room's sky, detached from its object
     // (the "GEO" chip the audit photographed). Fullscreen keeps pills — the
     // cards are gone there.
-    showSelectionPills = true
+    showSelectionPills = true,
+    interactive = true
 }) {
     const viewportRef = useRef(null)
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
@@ -900,17 +905,18 @@ export default function RawViewport({
                     near: 0.1,
                     far: 200
                 }}
-                onPointerMissed={() => {
+                onPointerMissed={interactive ? () => {
                     // A node selection lives in the shared workspace state, so
                     // clearing it costs an op — only pay that when a node is
                     // actually selected; otherwise keep the cheap local clear.
                     if (selectedNodeId && onClearSelection) onClearSelection()
                     else onSelectEntity?.(null)
-                }}
+                } : undefined}
             >
-                {!hasAuthoredCamera && <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />}
+                {interactive && !hasAuthoredCamera && <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />}
                 <SceneContent
                     showSelectionPills={showSelectionPills}
+                    interactive={interactive}
                     document={document}
                     selectedEntityId={selectedEntityId}
                     selectedNodeId={selectedNodeId}

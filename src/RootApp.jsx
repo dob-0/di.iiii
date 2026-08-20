@@ -7,6 +7,7 @@ import {
     buildRawProjectsPath,
     getRawLocationState,
     isRawLocation,
+    RAW_PAGE_OUT,
     RAW_PAGE_PROJECT,
     RAW_PAGE_PROJECTS
 } from './raw/utils/rawRouting.js'
@@ -188,7 +189,14 @@ function AppRouter() {
 
     if (isRawLocation(rawState)) {
         const renderRaw = (spaceId) => (
-            <ProtectedSurface requiredSpaceId={spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
+            // /out is the projector image: the auth gate stays (a stranger
+            // still meets the gate, not content), but the floating account
+            // chip must not hang over the show.
+            <ProtectedSurface
+                requiredSpaceId={spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={rawState.page !== RAW_PAGE_OUT}
+            >
                 <Suspense
                     fallback={
                         <RouteSurfaceFallback

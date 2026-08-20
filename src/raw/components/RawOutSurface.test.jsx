@@ -35,6 +35,9 @@ describe('RawOutSurface', () => {
         expect(props.onMoveNode).toBeUndefined()
         expect(props.onWorldDoubleClick).toBeUndefined()
         expect(props.showEmptyHint).toBe(false)
+        // Handlers-not-passed is not enough: OrbitControls mounts its own DOM
+        // listeners, so the surface must explicitly refuse interaction.
+        expect(props.interactive).toBe(false)
         expect(screen.getByText('1 nodes')).toBeInTheDocument()
     })
 
