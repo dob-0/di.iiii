@@ -39,6 +39,8 @@ import { computeOutput as signalTimer } from './signal.timer/runtime.js'
 import { computeOutput as signalTrigger } from './signal.trigger/runtime.js'
 import { computeOutput as viewButton } from './view.button/runtime.js'
 import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
+import { computeOutput as geomCircle } from './geom.circle/runtime.js'
+import { computeOutput as geomLine } from './geom.line/runtime.js'
 import { computeOutput as valueNoise } from './value.noise/runtime.js'
 import { computeOutput as valueRandom } from './value.random/runtime.js'
 import { computeOutput as vectorAim } from './vector.aim/runtime.js'
@@ -97,6 +99,8 @@ export const NODE_RUNTIMES = new Map([
     ['signal.speed', signalSpeed],
     ['signal.timer', signalTimer],
     ['signal.trigger', signalTrigger],
+    ['geom.circle', geomCircle],
+    ['geom.line', geomLine],
     ['value.noise', valueNoise],
     ['value.random', valueRandom],
     ['vector.aim', vectorAim],

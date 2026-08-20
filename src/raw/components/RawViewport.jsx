@@ -115,6 +115,36 @@ function PlaneWithTexture({ w, h, textureUrl }) {
 // itself holds no budget: the old shared mutable countdown was safe only
 // while R3F v8 kept StrictMode out of the Canvas, and a double-invoked render
 // would have silently halved the cap on the v9 upgrade.
+// A stroke between two points, drawn as a thin cylinder so it has real
+// thickness (GPU line width is unreliable across platforms). The cylinder's
+// axis is +Y; two nested groups steer it: yaw about Y, then tilt about X —
+// spherical angles of the direction, no quaternion needed.
+function LineStroke({ from, to, thickness, color, opacity, emissive }) {
+    const a = asVec3(from, [0, 0, 0])
+    const b = asVec3(to, [0, 1.5, 0])
+    const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
+    const length = Math.hypot(d[0], d[1], d[2])
+    if (length < 0.0001) return null
+    const yaw = Math.atan2(d[0], d[2])
+    const tilt = Math.acos(Math.min(1, Math.max(-1, d[1] / length)))
+    const radius = Math.min(10, Math.max(0.0005, Math.abs(asFiniteNumber(thickness, 0.02)) / 2))
+    const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]
+    return (
+        <group position={mid} rotation={[0, yaw, 0]}>
+            <group rotation={[tilt, 0, 0]}>
+                <mesh>
+                    <cylinderGeometry args={[radius, radius, length, 12]} />
+                    <PrimitiveMaterial
+                        color={asColor(color, '#5fa8ff')}
+                        opacity={asFiniteNumber(opacity, 1)}
+                        emissive={emissive}
+                    />
+                </mesh>
+            </group>
+        </group>
+    )
+}
+
 function GeometryPieces({ descriptor, pruned = false }) {
     const shaped = pruned ? descriptor : pruneGeometryDescriptor(descriptor)
     if (!shaped) return null
@@ -192,6 +222,24 @@ function GeometryPieces({ descriptor, pruned = false }) {
                         torusTube={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.tube, 0.18))))}
                     />
                 </group>
+            )
+        case 'line':
+            return (
+                <LineStroke
+                    from={descriptorLeaf.from}
+                    to={descriptorLeaf.to}
+                    thickness={descriptorLeaf.thickness}
+                    color={descriptorLeaf.color}
+                />
+            )
+        case 'circle':
+            return (
+                <mesh {...place}>
+                    <circleGeometry args={[
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5)))), 48
+                    ]} />
+                    <meshStandardMaterial color={asColor(descriptorLeaf.color, '#5fa8ff')} side={2} />
+                </mesh>
             )
         default:
             return null
@@ -304,6 +352,33 @@ export function renderNodeBody(node, values, assetMap = null) {
                     opacity={asFiniteNumber(values.opacity, 1)}
                     material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
                 />
+            )
+        case 'geom.line':
+            return (
+                <LineStroke
+                    from={values.from}
+                    to={values.to}
+                    thickness={values.thickness}
+                    color={values.color}
+                    opacity={values.opacity}
+                    emissive={values.emissive}
+                />
+            )
+        case 'geom.circle':
+            return (
+                <mesh>
+                    <circleGeometry args={[
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.5)))), 48
+                    ]} />
+                    <PrimitiveMaterial
+                        color={asColor(values.color, '#5fa8ff')}
+                        opacity={asFiniteNumber(values.opacity, 1)}
+                        roughness={asFiniteNumber(values.roughness, 1)}
+                        metalness={asFiniteNumber(values.metalness, 0)}
+                        emissive={values.emissive}
+                        side={2}
+                    />
+                </mesh>
             )
         case 'geom.plane': {
             const w = Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.width, 1))))

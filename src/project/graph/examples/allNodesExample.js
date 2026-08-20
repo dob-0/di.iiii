@@ -187,6 +187,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('cone', 'geom.cone', { label: 'Cone', col: 3, row: 10, values: { position: [4, 0.75, -2] } })
     add('torus', 'geom.torus', { label: 'Torus', col: 3, row: 11, values: { position: [5.5, 0.5, -2] } })
     add('transform', 'geom.transform', { label: 'Transform', col: 3, row: 12 })
+    add('lineStroke', 'geom.line', { label: 'Line', col: 3, row: 13, values: { from: [-4, 0, -2], to: [-4, 1.5, -2] } })
+    add('circle', 'geom.circle', { label: 'Circle', col: 3, row: 14, values: { position: [-5.5, 0.5, -2] } })
     add('go', 'view.button', { label: 'Go', col: 4, row: 0 })
     add('keys', 'device.keyboard', { label: 'Keyboard', col: 4, row: 1 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
@@ -409,6 +411,12 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('vec', 'out', 'aim', 'to'),
         wire('numA', 'out', 'random', 'variant'),
         wire('numB', 'out', 'random', 'greatest'),
+
+        // Line and Circle: the authored vector pulls the stroke's far end,
+        // and both wear colours already on the desk.
+        wire('vec', 'out', 'lineStroke', 'to'),
+        wire('colorA', 'out', 'lineStroke', 'color'),
+        wire('colorB', 'out', 'circle', 'color'),
 
         // Array repeats the cube's own geometry value — the proving fixture
         // for its pass-through out (bare, an Array carries nothing).

@@ -647,3 +647,44 @@ describe('the second vector wave (TD audit)', () => {
         }
     })
 })
+
+describe('the line and circle wave (TD audit)', () => {
+    const vec = (id, value) => node(id, 'value.vec3', { value })
+
+    it('Line answers a stroke descriptor with wired endpoints', () => {
+        const doc = {
+            nodes: [vec('t', [2, 3, 4]), node('l', 'geom.line', { from: [1, 0, 0], thickness: 0.1 })],
+            edges: [edge('t', 'out', 'l', 'to')]
+        }
+        const out = evalPort(doc, 'l', 'geometry')
+        expect(out.kind).toBe('line')
+        expect(out.from).toEqual([1, 0, 0])
+        expect(out.to).toEqual([2, 3, 4])
+        expect(out.thickness).toBe(0.1)
+    })
+
+    it('Circle answers a disc descriptor the pruner accepts', async () => {
+        const { isGeometryDescriptor } = await import('../graph/geometryDescriptor.js')
+        const doc = {
+            nodes: [node('c', 'geom.circle', { radius: 2, color: '#ff5555' })],
+            edges: []
+        }
+        const out = evalPort(doc, 'c', 'geometry')
+        expect(out.kind).toBe('circle')
+        expect(out.radius).toBe(2)
+        expect(out.color).toBe('#ff5555')
+        expect(isGeometryDescriptor(out)).toBe(true)
+    })
+
+    it('a Line descriptor survives the pruner inside an Array', async () => {
+        const { isGeometryDescriptor } = await import('../graph/geometryDescriptor.js')
+        const doc = {
+            nodes: [node('l', 'geom.line'), node('arr', 'geom.array', { count: 3, offset: [1, 0, 0] })],
+            edges: [edge('l', 'geometry', 'arr', 'geometry')]
+        }
+        const out = evalPort(doc, 'arr', 'out')
+        expect(isGeometryDescriptor(out)).toBe(true)
+        expect(out.children).toHaveLength(3)
+        expect(out.children[0].children[0].kind).toBe('line')
+    })
+})

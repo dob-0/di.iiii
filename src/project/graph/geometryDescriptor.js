@@ -10,7 +10,7 @@
 //
 // This is the `geometry` port type — declared in PORT_TYPES since the
 // beginning and carried by nothing until now — finally carrying something.
-export const GEOMETRY_KINDS = new Set(['box', 'sphere', 'plane', 'cylinder', 'cone', 'torus', 'group'])
+export const GEOMETRY_KINDS = new Set(['box', 'sphere', 'plane', 'cylinder', 'cone', 'torus', 'line', 'circle', 'group'])
 
 // A graph is allowed to describe something absurd — two constructors merged
 // into each other through enough Merge nodes make a tree, and trees grow. The
