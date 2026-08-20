@@ -1,6 +1,10 @@
 import { createBasePathHelpers, joinPath } from '../../project/routing/laneBasePath.js'
 
-export const RAW_PAGE_HUB = 'hub'
+// /{space}/raw renders the local canvas (per-browser storage), NOT the space's
+// project list — that is RAW_PAGE_PROJECTS one segment deeper. The old name,
+// RAW_PAGE_HUB, taught every caller the opposite and three product surfaces
+// linked "the hub" to a scratchpad before the 2026-08-21 doors audit caught it.
+export const RAW_PAGE_CANVAS = 'canvas'
 export const RAW_PAGE_PROJECT = 'project'
 export const RAW_PAGE_PROJECTS = 'projects'
 // The projector cable: /out renders just-the-room of a project (or of the
@@ -16,7 +20,9 @@ export const DEFAULT_RAW_SPACE_ID = 'main'
 
 const { getBasePrefix, stripBasePath } = createBasePathHelpers(import.meta.env.BASE_URL || '/')
 
-export const buildRawHubPath = (spaceId = null) => {
+// Addresses the local canvas, not a project list — use buildRawProjectsPath
+// for any link whose label promises the space's projects.
+export const buildRawCanvasPath = (spaceId = null) => {
     const prefix = getBasePrefix()
     if (!spaceId) {
         return joinPath(prefix, RAW_RESERVED_SEGMENT)
@@ -127,7 +133,7 @@ export const getRawLocationState = (
         return {
             isRaw: true,
             isLegacyPath,
-            page: RAW_PAGE_HUB,
+            page: RAW_PAGE_CANVAS,
             projectId: null,
             spaceId: segments[0]
         }
@@ -182,7 +188,7 @@ export const getRawLocationState = (
     return {
         isRaw: true,
         isLegacyPath,
-        page: RAW_PAGE_HUB,
+        page: RAW_PAGE_CANVAS,
         projectId: null,
         spaceId: defaultSpaceId,
         isDefaultSpace: true

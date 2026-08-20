@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { usePreferencesData } from '../hooks/usePreferencesData.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import { hasServerApi } from '../services/apiClient.js'
-import { buildStudioHubPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
+import { buildStudioSpacesPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import {
     ArchitectureCanvas,
     ArchitectureLegend,
@@ -138,13 +138,13 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                     <ModuleSection title="Admin console" subtitle="Admins only">
                         <div className="preferences-empty">
                             This page is for platform admins. Your spaces — create, rename,
-                            publish, GitHub sync — live in the Studio hub.
+                            publish, GitHub sync — live on the Spaces page.
                         </div>
                         <div className="preferences-command-grid">
                             <button
                                 type="button"
                                 className="toggle-button"
-                                onClick={() => navigateToStudioPath(buildStudioHubPath())}
+                                onClick={() => navigateToStudioPath(buildStudioSpacesPath())}
                             >
                                 Go to my spaces
                             </button>

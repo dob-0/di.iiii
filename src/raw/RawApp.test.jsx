@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import RawApp from './RawApp.jsx'
-import { RAW_PAGE_HUB, RAW_PAGE_OUT, RAW_PAGE_PROJECT, RAW_PAGE_PROJECTS } from './utils/rawRouting.js'
+import { RAW_PAGE_CANVAS, RAW_PAGE_OUT, RAW_PAGE_PROJECT, RAW_PAGE_PROJECTS } from './utils/rawRouting.js'
 
 vi.mock('./components/RawHub.jsx', () => ({
     default: function MockRawHub({ spaceId }) {
@@ -29,7 +29,7 @@ vi.mock('./BlankNodeWorkspaceApp.jsx', () => ({
 
 describe('RawApp', () => {
     it('opens the blank node workspace on the seed hub route', () => {
-        render(<RawApp initialRoute={{ page: RAW_PAGE_HUB, spaceId: 'main' }} />)
+        render(<RawApp initialRoute={{ page: RAW_PAGE_CANVAS, spaceId: 'main' }} />)
 
         expect(screen.getByText('blank:main')).toBeInTheDocument()
     })

@@ -1707,7 +1707,7 @@ export default function RawEditor({
                             <button type="button" className="raw-topbar-back" onClick={() => {
                                 navigateToRawPath(buildRawProjectsPath(resolvedSpaceId))
                             }}>
-                                ← {isLocalWorkspace ? 'Projects' : 'Hub'}
+                                ← Projects
                             </button>
                             <span className="raw-topbar-name" title={workspaceTitle}>{workspaceTitle}</span>
                         </div>

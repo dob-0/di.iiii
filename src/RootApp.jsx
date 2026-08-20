@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom'
 import { setAppNavigate } from './utils/appNavigate.js'
 import {
-    buildRawHubPath,
+    buildRawCanvasPath,
     buildRawProjectPath,
     buildRawProjectsPath,
     getRawLocationState,
@@ -158,7 +158,7 @@ function AppRouter() {
             ? buildRawProjectPath(rawState.projectId, rawState.spaceId)
             : rawState.page === RAW_PAGE_PROJECTS
                 ? buildRawProjectsPath(rawState.spaceId)
-                : buildRawHubPath(rawState.spaceId)
+                : buildRawCanvasPath(rawState.spaceId)
         rrNavigate(target, { replace: true })
     }, [legacyRawPath, rawState.page, rawState.projectId, rawState.spaceId, rrNavigate])
     if (legacyRawPath) {
