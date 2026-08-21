@@ -13,7 +13,11 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Links say where they go, and copy what they mean
+- Doors audit wave A shipped (#231–#235, staging-verified as guest, desktop+phone):
+  links land where their label says, Studio ⇄ Nodes doors, OAuth returns you to the
+  page you started from, the canvas got its exits, share links copy the public URL,
+  labels unified (View live / Projects — "Hub" is gone). Staging only, prod waits.
+- Parallel strand: home rule + research mirrors in-repo; the space stops being a query parameter; toolbar-overlap check asserts again; create-button naming.
 
 Full detail: `PROGRESS.md`.
 
@@ -24,23 +28,18 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
+- **Doors waves B–E parked on three owner decisions** — where "Step inside" lands · what publishing a graph means · §6 + the prod moment. Ledger: memory
+  `project_dii_doors_audit_2026_08_21`; wave-A deferrals: embed-link copy, bare phone-canvas exit.
 - Raw-as-default landing promotion still open — owner's call, MANIFESTO §6 gates it.
-- **Staging Google OAuth secret parked by the user** — rotation script staged, see memory
-  `reference-leaked-secrets`. Prod spaces all owned; mesh gate ARMED both tiers.
+- Staging Google OAuth secret parked by the user — memory `reference-leaked-secrets`; prod spaces all owned, mesh gate ARMED both tiers.
 - Per-space byte QUOTA still unset — needs an owner policy number (ENOSPC floor shipped).
 - Deps parked: eslint-10 #148, router-7 #150, checkout-7 #143 (its windows install-test fails).
-- `open` card = upload the honest teal frame — pending staging API token then prod
-  approval. Director page still unseen.
-- **br_id_ge rite fixes unverified by a human** — Act III backdrop + Act V idle-motion CSS shipped live and the page loads clean, but the acts are camera-gesture-gated so no automated check can see them render.
-- **Prod room append path unproven** — record is empty by design (no backfill); the first real spoken line on di-studio.xyz/br_id_ge/field is both the proof and the room's first memory.
-- **Tunnel telegram first-binding untested by any human** — needs a telegram account with NO prior @diiii111bot chat.
-- **`httpContracts.test.js` is flaky and is 30–51s of the ~97s suite** — 429/Retry-After
-  red-then-green on identical runs. Re-run before believing a red; serverXR's, and the next
-  velocity item. `npm run test:raw` (~21s) is the Raw loop, never the gate.
-- **A green PR goes BEHIND — not CONFLICTING — the moment dev lands**; `gh` calls both "not
-  mergeable". Two agents in flight need a window: memory `feedback-coordinate-with-peer-agents`.
-- Trees unmerged/dirty (`npm run state`) and **`stash@{0}` = the parallel audit session's
-  CURRENT.md pre-write**, partly stale — both owner's call, don't clear blind.
+- `open` card teal-frame upload pending staging API token, then prod approval; director page unseen.
+- br_id_ge needs a human: rite Act III/V visuals (camera-gesture-gated), the prod room's
+  first spoken line, tunnel first-binding (telegram account with no prior bot chat).
+- `httpContracts.test.js` flaky (30–51s of the ~97s suite) — rerun before believing a red; `npm run test:raw` (~21s) is the Raw loop, never the gate.
+- Green PRs go BEHIND, not CONFLICTING, when dev lands — `gh` calls both "not mergeable"; landing windows: memory `feedback-coordinate-with-peer-agents`.
+- Dirty/unmerged trees + `stash@{0}` (a parallel session's CURRENT.md pre-write) — owner's call, don't clear blind.
 
 ## Deploy & validation — [docs/ai/known-fixes.md](docs/ai/known-fixes.md), check before any bug hunt
 
