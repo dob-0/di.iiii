@@ -38,6 +38,6 @@ describe('PreferencesPage non-admin gate', () => {
         render(<PreferencesPage />)
 
         fireEvent.click(screen.getByRole('button', { name: 'Go to my spaces' }))
-        expect(navigateToStudioPath).toHaveBeenCalledWith('/studio')
+        expect(navigateToStudioPath).toHaveBeenCalledWith('/spaces')
     })
 })

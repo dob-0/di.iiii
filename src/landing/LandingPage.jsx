@@ -6,7 +6,7 @@ import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildRawCanvasPath } from '../raw/utils/rawRouting.js'
 import { ALGO_VRITHM_LABEL, ALGO_VRITHM_PATH, ALGO_VRITHM_SPACE_ID } from '../algoVrithm/algoVrithmRouting.js'
-import { buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
+import { buildSpacesPath } from '../studio/utils/studioRouting.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
 // LiveProjectScene into the landing chunk for every visitor — including phones,
@@ -148,7 +148,7 @@ export default function LandingPage() {
     // which also meant these static hrefs pointed at the guest destination
     // during the tick before getApiSession resolved — click fast enough as a
     // signed-in owner and you got sent somewhere else entirely.
-    const studioHref = buildStudioSpacesPath()
+    const studioHref = buildSpacesPath()
     const [entered, setEntered] = useState(false)
     // Walk/fly and the calm orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to
