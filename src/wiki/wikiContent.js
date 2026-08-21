@@ -58,8 +58,10 @@ export const WIKI_ARTICLES = [
             'A project is one thing you make inside a space. A space can hold many projects, and one of them can be marked as the space’s published (live) project.',
             'The address of a project always begins with its space. The editor addresses put the tool first for historical reasons, which is why the shortcut below exists — it is the one that reads the way the product is actually arranged:',
             { list: [
-                '/<space>/studio — the space’s projects, in Studio',
-                '/<space>/raw/projects — the same projects, in the node editor',
+                '/<space>/projects — the space’s projects. This is the one to use: the list belongs to the space, not to whichever tool you are holding.',
+                '/spaces — all of your spaces',
+                '/<space>/studio — the same list, in Studio’s older address',
+                '/<space>/raw/projects — the same projects, in the node editor’s older address',
                 '/<space>/studio/projects/<id> — the editor for one project',
                 '/<space>/<project>/studio — the same project, open for editing. Add /raw instead for the node editor. This works on any project link: take the address you are looking at and add the word. It is a shortcut, not a second address — the bar heals to the editor’s own link once it opens.',
                 '/<space> — the public viewer for a space’s published project',

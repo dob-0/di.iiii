@@ -15,7 +15,7 @@ import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
 import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildAppSpacePath, buildPublicProjectPath } from '../../utils/spaceRouting.js'
-import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
@@ -1111,7 +1111,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onImportProjectFile={handleImportProjectFile}
             onEnterXr={xr.handleEnterXrSession}
             onExitXr={xr.handleExitXrSession}
-            onBackToHub={() => navigateToStudioPath(buildStudioHubPath(resolvedSpaceId))}
+            onBackToHub={() => navigateToStudioPath(buildSpaceProjectsPath(resolvedSpaceId))}
             onOpenNodeEditor={() => navigateToStudioPath(buildRawProjectPath(projectId, resolvedSpaceId))}
             onCameraViewChange={handleCameraViewChange}
             onTransformCommit={handleTransformCommit}

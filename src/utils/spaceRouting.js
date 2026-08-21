@@ -20,7 +20,13 @@ export const RESERVED_APP_SEGMENTS = [
     'raw',
     'seed',
     'open_jam',
-    'studio'
+    'studio',
+    // The layered addresses (studioRouting.js): /spaces and /{space}/projects.
+    // Reserved here so a project slug can never shadow the space's own project
+    // list. Checked against production and staging before reserving — no space
+    // and no project answered to either word on any tier.
+    'spaces',
+    'projects'
 ]
 
 const getAppBasePrefix = () => (APP_BASE_PATH === '/' ? '' : APP_BASE_PATH)

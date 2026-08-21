@@ -40,6 +40,7 @@ This is the shipped, working reality of the repo today.
 - `serverXR` is authoritative for spaces, projects, assets, ops, SSE, presence, and edit enforcement.
 - public routes use `/<space>` for the live published view, with `/<space>/studio`, `/<space>/raw`, and `/admin?space=<space>` for editing and ops
 - any project link opens for editing by appending the tool: `/<space>/<project>/studio`, or `/<space>/<project>/raw`. A shortcut, not a second address — it redirects to the editor's canonical path, so nothing new has to be kept alive forever
+- the lists live at the level they list: `/spaces` for your spaces, `/<space>/projects` for a space's projects. The tool-named forms (`/<space>/studio`, `/<space>/raw/projects`) are the older addresses for the same screens and keep working
 - persistence is still single-host filesystem storage
 - writes are protected by session/token-based auth, not a full multi-user identity and audit model yet
 

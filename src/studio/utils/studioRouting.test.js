@@ -8,6 +8,8 @@ import {
     buildStudioHubPath,
     buildStudioSpacesPath,
     buildStudioProjectPath,
+    buildSpaceProjectsPath,
+    buildSpacesPath,
     getStudioLocationState
 } from './studioRouting.js'
 
@@ -108,5 +110,48 @@ describe('studioRouting', () => {
     it('builds the director path it parses', () => {
         expect(getStudioLocationState(new URL(`https://example.com${buildStudioDirectorPath('algovrithm')}`)).page)
             .toBe(STUDIO_PAGE_DIRECTOR)
+    })
+
+    // The layered addresses. A space's projects belong to the space, not to whichever
+    // tool you are holding — "back to projects" used to land on /{space}/raw/projects.
+
+    it('builds the layered addresses', () => {
+        expect(buildSpaceProjectsPath('wcc')).toBe('/wcc/projects')
+        expect(buildSpacesPath()).toBe('/spaces')
+    })
+
+    it('parses /{space}/projects as that space\'s project list', () => {
+        expect(getStudioLocationState(new URL('https://example.com/wcc/projects'))).toEqual({
+            isStudio: true,
+            page: STUDIO_PAGE_HUB,
+            projectId: null,
+            spaceId: 'wcc'
+        })
+    })
+
+    it('parses /spaces as the spaces list', () => {
+        expect(getStudioLocationState(new URL('https://example.com/spaces'))).toEqual({
+            isStudio: true,
+            page: STUDIO_PAGE_SPACES,
+            projectId: null,
+            spaceId: null
+        })
+    })
+
+    it('round-trips both layered builders through the parser', () => {
+        expect(getStudioLocationState(new URL(`https://example.com${buildSpaceProjectsPath('br_id_ge')}`)).spaceId).toBe('br_id_ge')
+        expect(getStudioLocationState(new URL(`https://example.com${buildSpacesPath()}`)).page).toBe(STUDIO_PAGE_SPACES)
+    })
+
+    it('leaves every tool-named address working — nothing published can rot', () => {
+        expect(getStudioLocationState(new URL('https://example.com/wcc/studio')).page).toBe(STUDIO_PAGE_HUB)
+        expect(getStudioLocationState(new URL('https://example.com/studio')).page).toBe(STUDIO_PAGE_SPACES)
+        expect(getStudioLocationState(new URL('https://example.com/wcc/studio/projects/abc')).projectId).toBe('abc')
+    })
+
+    it('does not mistake a deeper path for the projects list', () => {
+        // /{space}/projects/{something} is NOT the list; only the bare two-segment
+        // form is, so a future addressing model can still use the deeper path.
+        expect(getStudioLocationState(new URL('https://example.com/wcc/projects/extra')).isStudio).toBe(false)
     })
 })

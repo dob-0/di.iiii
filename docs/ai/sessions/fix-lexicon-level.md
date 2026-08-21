@@ -133,6 +133,42 @@ the check should probably do the same.
 - Raw still shows no space in its chrome (Studio does: `Atlas · estate map`). Left alone for
   the same 390px crowding reason; the space is in the URL and the back button's tooltip.
 
+## 2026-08-21 — the lists move to the level they list
+
+The owner's original complaint was an ADDRESS: *"in raw when you click back to projects it
+open .../open/raw/projects"*. The doors audit on `dev` relabelled that button `← Projects` but
+left it navigating to `buildRawProjectsPath` — so the URL was unchanged and the complaint
+stood. An alias that redirects would not have fixed it either: you would still end up looking
+at a tool-nested address.
+
+So these are **canonical**, not aliases. They stay in the bar.
+
+    /spaces              all of your spaces
+    /{space}/projects    that space's projects
+
+Both `← Projects` controls now go to `/{space}/projects`. Every older shape —
+`/{space}/studio`, `/{space}/raw/projects`, `/studio`, `/{space}/studio/projects/{id}` —
+keeps working, and is covered by a test that says so.
+
+**Safe because it was checked, not assumed.** `spaces` and `projects` were reserved in
+`RESERVED_APP_SEGMENTS`, `RESERVED_SPACE_SLUGS` and `PROJECT_RESERVED_SLUGS` — after querying
+production and staging and finding **no space and no project answering to either word on
+either tier** (12 prod spaces, 11 staging). Reserving was free that day and gets more
+expensive every day it waits.
+
+Only the bare two-segment form is the list: `/{space}/projects/extra` deliberately does NOT
+match, so a future addressing model can still use the deeper path.
+
+**Verified in a browser** against both local and production data: `/spaces` renders the
+spaces list and stays; `/wcc/projects` and `/wcc/studio` land on the *same* auth gate at
+their own addresses, so the new one is gated identically rather than routing around it;
+`/open/raw/projects` still works. `/open/projects` does hop into the project — but so does
+`/open/studio`: that is StudioHub's existing open-the-only-project behaviour, not a new one,
+and `open` has exactly one project.
+
+**This does not settle §7.1.** Nothing here touches the editor addresses, which still read
+`/{space}/{tool}/projects/{id}`. Flipping those is the part still waiting on a signature.
+
 **Not done here:**
 
 - `scripts/works-boundary.mjs` — the one place the repo states `project ⊇ space`, the exact
