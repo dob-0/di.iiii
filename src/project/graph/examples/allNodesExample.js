@@ -262,6 +262,13 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: '/wiki' } })
     add('image', 'view.image', { label: 'Image panel', col: 4, row: 5 })
     add('publish', 'view.publish', { label: 'Public page panel', col: 4, row: 6, values: { title: 'The example project' } })
+    add('list', 'view.list', { label: 'List panel', col: 4, row: 7, values: {
+        groups: ['Core', 'Would be good'],
+        items: [
+            { id: 'ex-1', text: 'Six laptops', group: 'Core', order: 0 },
+            { id: 'ex-2', text: 'A second projector', group: 'Would be good', order: 1 }
+        ]
+    } })
 
     // --- column 5: the editor's own chrome, as nodes ---------------------------
     // `studio` is a container: on the canvas it is a card you enter, and its

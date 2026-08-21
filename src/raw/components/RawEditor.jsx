@@ -6,6 +6,7 @@ import RawViewport from './RawViewport.jsx'
 import RawGraphSurface from './RawGraphSurface.jsx'
 import NodePalette from './NodePalette.jsx'
 import TextPanelWindow from './TextPanelWindow.jsx'
+import ListPanelWindow from './ListPanelWindow.jsx'
 import ImagePanelWindow from './ImagePanelWindow.jsx'
 import MonitorPanelWindow from './MonitorPanelWindow.jsx'
 import WorldPanelWindow from './WorldPanelWindow.jsx'
@@ -98,6 +99,7 @@ export const WINDOW_DEFAULT_POSITIONS = {
     'view.outliner':   { x: 24,   y: 56, width: 240, height: 360 },
     'view.library':    { x: 24,   y: 56, width: 260, height: 380 },
     'view.publish':    { x: 24,   y: 56, width: 300, height: 430 },
+    'view.list':       { x: 24,   y: 56, width: 660, height: 560 },
 }
 
 const ACTIVE_MARKER_TYPE_IDS = ['world.light', 'world.environment', 'world.background', 'world.grid', 'world.camera']
@@ -1550,6 +1552,18 @@ export default function RawEditor({
         // how the streaming preset's stream.monitor/stream.controller ended up
         // looking like working features. Anything added above this line must be
         // real; anything below it is a text box wearing another name.
+        if (node.typeId === 'view.list') {
+            return (
+                <ListPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onChange={(patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId: node.id, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
         if (node.typeId === 'view.text') {
             // A note is written where it is read. The wire check keeps the box
             // read-only when an edge feeds `content` — see TextPanelWindow.

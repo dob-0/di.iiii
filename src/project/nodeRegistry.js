@@ -98,6 +98,7 @@ export const FAMILY_BY_TYPE = {
     'device.keyboard': 'bring-in',
     'geom.constructor': 'make',
     'view.text': 'make',
+    'view.list': 'make',
     // Create sits with the things it makes, not with the panels it looks like.
     'view.library': 'make',
     'view.image': 'make',
@@ -1399,6 +1400,29 @@ export const NODE_TYPES = {
             playStartClockMs: 0,
         },
         defaultFrame: { width: 900, height: 260 },
+        render: 'panel-2d',
+    },
+
+    'view.list': {
+        id: 'view.list',
+        label: 'List',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        // No ports. A list is read by people, and the dead-port rule says a
+        // socket nothing consumes should not exist — see view.timeline, which
+        // only grew outputs once the transport actually read them.
+        inputs: [],
+        outputs: [],
+        // `groups` are plain strings and the rows carry their group by name,
+        // so the headings are editable without a migration. The defaults are
+        // deliberately generic: the grouping is the thinking, and fixing the
+        // vocabulary here would make the node good for one list only.
+        defaultValues: {
+            groups: ['To do'],
+            items: [],
+        },
+        defaultFrame: { width: 660, height: 560 },
         render: 'panel-2d',
     },
 

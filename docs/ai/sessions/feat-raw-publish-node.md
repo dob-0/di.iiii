@@ -45,3 +45,41 @@ Not done here, and not this branch's business: the guest session cookie is stamp
 (7 days) never reaches the browser and every returning guest is a new subject; and the
 upload limiter is keyed by IP, so a venue behind one NAT is a single 60-per-10-min
 bucket. Both verified against staging, both fixable in a line, both filed.
+
+## 2026-08-21 — a list you can actually maintain
+
+`view.list`. A list with headings, where a person adds, edits, deletes,
+reorders and moves a row from one heading to another — all of it document ops,
+so undo works and a collaborator sees it.
+
+It exists because the thing it replaced was a Text window holding a list as
+prose. That reads fine and cannot be maintained: moving one line from "core" to
+"would be good" means retyping two paragraphs and hoping you did not lose a
+line. The camp's gear list went through four rewrites in one session and every
+one of them was me editing a build script, because there was no surface on
+which the person who owns the list could change it.
+
+Decisions worth keeping:
+
+- **Groups are plain strings on the node, not a fixed set.** The grouping IS
+  the thinking — gear wants core/would-be-good, a shot list wants shot/cut, a
+  packing list wants bag/van. Fixing the vocabulary would make the node good
+  for exactly one list.
+- **Rows carry their group by name**, so renaming a heading has to carry its
+  rows along or the group silently empties. Guarded.
+- **Deleting a heading never deletes work** — its rows move to the first
+  remaining group. Guarded.
+- **Up/down reorder within the group, not within the flat array.** Swapping in
+  the flat array moves a row past a neighbour from another group, so on screen
+  nothing happens — the render is grouped, not flat. Guarded, because this is
+  the one that looks like it works.
+- No ports, per the dead-port rule: a list is read by people. `view.timeline`
+  only grew outputs once the transport actually read them.
+
+Nine guards in `ListPanelWindow.test.jsx`, and the four gestures were driven
+through a real browser against a real server, each one read back out of the
+saved document rather than trusted from the DOM.
+
+Also: `view.list` added to the all-nodes example in the same change — the
+palette-coverage test is the one that caught `view.publish` missing, and it
+only catches it if you run the whole suite.

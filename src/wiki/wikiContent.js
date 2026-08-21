@@ -167,6 +167,27 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-21'
     },
     {
+        id: 'list-window',
+        category: 'Editing',
+        title: 'The List window',
+        summary: 'A list you actually maintain — add, edit, delete, reorder, and move a line from one group to another.',
+        body: [
+            'A List window holds a list with headings: what a project needs, what it would be nice to have, what is already done. It is the alternative to keeping a list as written text, where moving one line from one heading to another means retyping two paragraphs and hoping nothing was lost on the way.',
+            { list: [
+                'Type in a line to change it.',
+                'The arrows move a line up or down inside its own heading.',
+                'The dropdown beside a line moves it to a different heading.',
+                '× removes a line.',
+                '+ Add puts a new line under the heading you pressed it on.'
+            ] },
+            'The headings are yours. Type in one to rename it — every line under it comes along, so nothing is stranded. “+ Add a group” makes another. Removing a heading never removes work: its lines move to the first heading rather than disappearing with it.',
+            'Everything saves as you go, undo works on all of it, and anyone who can edit the project can maintain the list — including a collaborator who arrived by invite. If two of you have it open you will see each other working.',
+            'The window is a node like any other: close it, minimize it to a bar, move it, or open it from its graph card.'
+        ],
+        tags: ['list', 'checklist', 'window', 'node', 'raw', 'editing', 'groups', 'todo'],
+        updated: '2026-08-21'
+    },
+    {
         id: 'free-spaces',
         category: 'Spaces & access',
         title: '3 free spaces per account',

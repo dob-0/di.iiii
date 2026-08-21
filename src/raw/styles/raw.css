@@ -5384,3 +5384,150 @@
         inset: -14px;
     }
 }
+
+/* view.list — a list somebody maintains. Rows are controls, not prose, so
+   every target clears the 44px floor the touch audit set: on a phone these
+   are thumbs, and a 24px × next to a 24px ↑ is a coin toss. */
+.raw-list-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.raw-list-group-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(244, 247, 251, 0.14);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+}
+
+.raw-list-group-name {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(244, 247, 251, 0.72);
+}
+
+.raw-list-count {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-list-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.raw-list-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+}
+
+.raw-list-text {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 0;
+    background: rgba(244, 247, 251, 0.04);
+    font: inherit;
+    font-size: 16px;
+    color: #f4f7fb;
+}
+
+.raw-list-text:focus-visible {
+    outline: none;
+    border-color: rgba(110, 231, 249, 0.85);
+}
+
+.raw-list-row-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+}
+
+.raw-list-btn {
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(244, 247, 251, 0.16);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.78);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.raw-list-btn:hover:not(:disabled) { background: rgba(244, 247, 251, 0.08) }
+.raw-list-btn:disabled { opacity: 0.3; cursor: default }
+.raw-list-btn.is-danger:hover { border-color: #ff8a7a; color: #ff8a7a }
+
+.raw-list-move {
+    height: 44px;
+    max-width: 118px;
+    padding: 0 8px;
+    border: 1px solid rgba(244, 247, 251, 0.16);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.78);
+    font: inherit;
+    font-size: 13px;
+}
+
+.raw-list-move option { background: #0d1219; color: #f4f7fb }
+
+.raw-list-add {
+    align-self: flex-start;
+    margin-top: 8px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px dashed rgba(244, 247, 251, 0.24);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.62);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Removing a heading is rarer and more consequential than removing a row, so
+   it must not compete with the row controls for the eye. It keeps the full
+   44px hit area — it just stops wearing a box until you reach for it. */
+.raw-list-group-head .raw-list-btn {
+    border-color: transparent;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-list-group-head .raw-list-btn:hover {
+    border-color: #ff8a7a;
+    color: #ff8a7a;
+}
+
+.raw-list-add:hover { border-style: solid; color: #f4f7fb }
+.raw-list-add.is-group { border-color: rgba(110, 231, 249, 0.4); color: rgba(110, 231, 249, 0.9) }
+
+/* The controls stack under the text on a phone rather than squeezing a
+   44px row into 90px of leftover width. */
+@media (max-width: 520px) {
+    .raw-list-row { align-items: stretch; flex-wrap: wrap }
+    .raw-list-text { flex-basis: 100% }
+    .raw-list-move { flex: 1; max-width: none }
+}
