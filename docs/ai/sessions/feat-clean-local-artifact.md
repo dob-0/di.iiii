@@ -295,3 +295,47 @@ linked"), and code projects are still hard to manage — no UI creates one,
 `mode:'code'` and `entryView:'code'` are set in two different panels, and a
 code project is indistinguishable from a 3D one in every list because the list
 API carries no presentation mode.
+
+## 2026-08-21 (last) — what the audit found, and what is still open
+
+The gate the owner set on this branch was "check before any public". The audit
+that answers it produced findings that belong here because they are di.iiii's,
+not the estate's:
+
+- **A public space publishes every project inside it.** `wcc` holds 11, ten of
+  them named after people, all with `shareEnabled: false`, all readable with no
+  account, no cookie and no invite. Every one was scanned for contact-data
+  shapes and none carries any — so this is a design fact to know before making
+  a space public, not a live leak. Private spaces correctly 401 on prod and do
+  not appear in the anonymous listing.
+- **The owner cannot open his own spaces on prod.** `canAccessSpace`
+  (`serverXR/src/authAccess.js`) never reads `role` — only `isUnrestricted` or
+  an explicit `spaces` scope grants anything, so `role: admin` grants nothing.
+  library, funding, atlas and decisions are unreachable to the person who owns
+  them. Two invites that would fix it expire **2026-08-26**.
+- **prod's `di-library` promises 51 PDFs and serves zero.** The nightly backup
+  manifest has reported it since 2026-08-20; nobody reads that file.
+  `project.checkAssets` in the SDK is the move that catches this class, and it
+  says so in words rather than a count.
+
+**Why nothing is in sync, plainly:** there is no sync. Nothing in the estate is
+`di link`-ed; every space was hand-pushed by one of three different scripts. 7
+of 13 differ, in no single direction. `lastTouchedAt` is not an ahead/behind
+signal — a read touches it — which is why `sdk/compare.js` decides ahead-ness by
+`sceneVersion` and puts a differing front door first. `main` names two different
+spaces on the two tiers.
+
+**Undone and named:** per-space sync status on the local home (`di link` has no
+UI, so the only honest status today is "not linked"); the code/Studio/Raw
+connection (no UI creates a code project; `mode:'code'` and `entryView:'code'`
+live in two different panels and forgetting the second publishes an empty 3D
+scene; the project list API carries no presentation mode, so a code project
+cannot be told from a 3D one in any list; `codeFiles` accepts svg/json/md but
+the bundler inlines only `.css` and `.js`, so the rest is stored and unreachable
+at render). Also still owed from earlier on this branch: `v0.4.0` is bumped in
+`package.json` but untagged, so `curl … /get | sh` serves the fat v0.3.1.
+
+**One for whoever lands next:** `CURRENT.md` on `dev` is 53 lines against its own
+enforced limit of 50, so `npm run docs:ai:check` is currently red on `dev`. It
+was written by `npm run land` folding four notes at once. A feature branch cannot
+fix it — trimming it trips the "differs from origin/dev" rule instead.
