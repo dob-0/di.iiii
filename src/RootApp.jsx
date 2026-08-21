@@ -15,6 +15,7 @@ import ModeMark from './components/ModeMark.jsx'
 import LaneDefaultSpace from './components/LaneDefaultSpace.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
+import useLocalInstall from './hooks/useLocalInstall.js'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
 import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
@@ -24,6 +25,10 @@ import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
+// What `di up` opens on your own machine: your spaces, not a tour of a hosted
+// product you have already installed. Lazy so a hosted visitor never downloads
+// MUI to render a page that will not use it.
+const LocalHome = lazy(() => import('./landing/LocalHome.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 // Its own chunk, and deliberately not part of the experience's: the landing
 // page draws on a 2D canvas and must never pull three.js for a visitor who has
@@ -122,6 +127,9 @@ function AppRouter() {
         return () => setAppNavigate(null)
     }, [rrNavigate])
     const location = useLocation()
+    // Unconditional, at the top: the answer decides what "/" renders, and a
+    // hook behind an if is not a hook.
+    const localInstall = useLocalInstall()
     const rawState = getRawLocationState(location)
     const studioState = getStudioLocationState(location)
     const appState = getAppLocationState(location)
@@ -219,6 +227,21 @@ function AppRouter() {
         && appState.page !== APP_PAGE_TERMS
 
     if (isRootLanding) {
+        // ?tour=1 keeps the landing reachable on a local install — the tour is
+        // moved, not deleted, and the local home links to it by name.
+        const wantsTour = new URLSearchParams(location.search).get('tour') === '1'
+        if (localInstall.isLocal && !wantsTour) {
+            return (
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <LocalHome />
+                </Suspense>
+            )
+        }
+        // Held only while an already-local-looking address waits for the
+        // server's word — a hosted visitor is never here.
+        if (!localInstall.resolved) {
+            return <RouteSurfaceFallback label="Loading" detail="" />
+        }
         return (
             <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
                 <LandingPage />

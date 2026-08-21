@@ -16,6 +16,7 @@
  */
 
 import { DiError } from './http.js'
+import { hash } from './hash.js'
 import { PRIVATE, PUBLIC, READ } from './reach.js'
 
 const asSpace = (r) => r.body?.space || r.body
@@ -107,6 +108,83 @@ export const MOVES = {
             expiresAt: i.expiresAt || null,
             expired: Boolean(i.expiresAt && i.expiresAt < Date.now())
         }))
+    },
+
+    'space.fingerprint': {
+        reach: READ,
+        summary: 'everything about a space that has to match for two copies to be the same one',
+        input: { space: 'string' },
+        // Deliberately NOT lastTouchedAt. That field is bumped by anything that
+        // brushes a space — three prod spaces carry one identical batch
+        // timestamp while staging holds forty-six more scene edits — so read
+        // by the clock, prod looked newer everywhere and was not. sceneVersion
+        // counts edits; the document hashes decide the rest.
+        run: async (ctx, { space }) => {
+            const meta = await MOVES['space.get'].run(ctx, { space })
+            if (!meta) return null
+            const projects = await MOVES['project.list'].run(ctx, { space })
+            const shapes = []
+            for (const p of projects) {
+                const doc = await MOVES['project.read'].run(ctx, { project: p.id }).catch(() => null)
+                shapes.push({
+                    id: p.id,
+                    // The bytes a visitor would actually get, whichever way the
+                    // project stores them.
+                    body: hash(doc?.presentationState?.codeFiles ?? doc?.presentationState?.codeHtml ?? doc?.presentationState ?? null),
+                    assets: (doc?.assets || []).map((a) => a.id).sort(),
+                    shared: Boolean(doc?.publishState?.shareEnabled)
+                })
+            }
+            return {
+                id: meta.id,
+                isPublic: Boolean(meta.isPublic),
+                permanent: Boolean(meta.permanent),
+                publishedProjectId: meta.publishedProjectId || null,
+                sceneVersion: meta.sceneVersion ?? null,
+                projects: shapes.sort((a, b) => a.id.localeCompare(b.id))
+            }
+        }
+    },
+
+    'project.checkAssets': {
+        reach: READ,
+        summary: 'does this server actually have every file the project promises?',
+        input: { project: 'string' },
+        // The failure that looks most like success. A document can list 51 PDFs
+        // and the server can hold none of them: the page renders perfectly and
+        // every link is dead. Comparing two documents will never find it —
+        // both sides name the same ids — so the files have to be asked for.
+        //
+        // This is not hypothetical. prod's di-library promises 51 and serves 0.
+        run: async (ctx, { project }) => {
+            const doc = await MOVES['project.read'].run(ctx, { project })
+            const assets = doc?.assets || []
+            const missing = []
+            for (const asset of assets) {
+                if (!asset?.url) { missing.push({ id: asset?.id || '?', name: asset?.name || '?', reason: 'no url in the document' }); continue }
+                let status = 0
+                try {
+                    const probe = await ctx.http.call('HEAD', new URL(asset.url, ctx.site).toString(), { raw: true, allowPending: true })
+                    status = probe.status
+                } catch { status = 0 }
+                if (status !== 200) missing.push({ id: asset.id, name: asset.name, status })
+            }
+            return {
+                project,
+                promised: assets.length,
+                present: assets.length - missing.length,
+                missing,
+                // Said as a sentence because this is the line that has to reach
+                // a person, not a field they have to interpret.
+                verdict: !assets.length
+                    ? 'the document names no files'
+                    : missing.length === assets.length
+                        ? `THIS SERVER HAS NONE OF THEM — all ${assets.length} files the page links to are missing here`
+                        : missing.length
+                            ? `${missing.length} of ${assets.length} files are missing on this server`
+                            : `all ${assets.length} files are here`
+            }
+        }
     },
 
     /* ─────────────────────── writing, no new audience ─────────────────────── */

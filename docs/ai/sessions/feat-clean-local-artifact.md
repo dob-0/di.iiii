@@ -248,3 +248,50 @@ writeHtml verified byte for byte → front door → invite → delete), and then
 **out of the packed 3.1 MB artifact**, where `di mcp` resolves `sdk/` beside
 `cli/` and answers — because a command that only works in a checkout works for
 whoever wrote it and nobody else.
+
+## 2026-08-21 (later still) — `di up` opens your work, not a tour of it
+
+`di up` opened `/`, and `/` was the landing page: a tour of a hosted product,
+shown to somebody who had just finished installing it, with their own spaces
+two clicks away behind "Already have spaces?". The first question on a local
+install is not "what is di.iiii" — it is "what have I got, and where do I go".
+
+- `src/landing/LocalHome.jsx` — one bar (version, *on this machine*, the
+  address, the space count, and doors) above the existing **SpaceHub**. Not a
+  new hub: SpaceHub already answers the question and the repo's rule is that a
+  surface consolidating existing ones looks indistinguishable from them, so
+  nothing was restyled and no second header was invented.
+- **The tour is moved, not deleted:** `/?tour=1` still renders the landing, and
+  the bar links to it by name.
+- **No lane is declared primary.** Studio and Raw are both doors on the same
+  bar, deliberately: MANIFESTO non-negotiable 6 forbids forcing that choice on
+  a landing before the Studio-into-Raw unification lands. Flagged for the owner
+  rather than decided here.
+- `useLocalInstall` answers from the **hostname first**, so a hosted visitor
+  never waits on `/api/config` to be shown the landing — holding the public
+  site behind a request that only matters locally would be paying for the local
+  case on every page load everywhere. Only an already-loopback address waits
+  for the server's word.
+- A local install with auth switched **on** is someone serving other people
+  from their own machine; they get the ordinary front door, because their
+  visitors are not them. Guarded both ways.
+- `StudioThemeProvider` extracted from `StudioApp`, because LocalHome mounts
+  SpaceHub outside StudioApp and a second copy of the palette would drift —
+  the first sign being one surface a slightly different blue from the other.
+
+`RootApp.test.jsx` had **no test that rendered `/` at all**, so the most
+important URL in the app was about to be re-routed untested. Four now cover it
+(local, `?tour=1`, hosted, local-with-auth), and the first was watched to fail
+before it was trusted.
+
+Seen: the new client served in front of the REAL install's API, so the page was
+looked at with the actual five spaces in it — atlas, funding, library, main,
+open, each with its published project and its public/private state — and the
+tour confirmed still reachable. No console errors.
+
+**What this does not yet do**, from the same conversation: no per-space sync
+status (nothing is `di link`-ed anywhere, so the honest answer today is "not
+linked"), and code projects are still hard to manage — no UI creates one,
+`mode:'code'` and `entryView:'code'` are set in two different panels, and a
+code project is indistinguishable from a 3D one in every list because the list
+API carries no presentation mode.

@@ -18,10 +18,14 @@ vi.mock('./hooks/useAuthSession.js', () => ({
 const mockSpacePublicOverrides = {}
 const mockVanityResolutions = {}
 
+// What the server says about itself. ModeMark asks on every surface, and it
+// decides what "/" renders, so tests set it per case.
+const mockServerConfig = vi.hoisted(() => ({ value: { local: true } }))
+
 vi.mock('./services/serverSpaces.js', () => ({
     supportsServerSpaces: true,
-    // ModeMark asks which di.iiii this is on every surface.
-    getServerConfig: () => Promise.resolve({ local: true }),
+    getServerConfig: () => Promise.resolve(mockServerConfig.value),
+    listServerSpaces: () => Promise.resolve([]),
     getServerSpace: (spaceId) => Promise.resolve({
         id: spaceId,
         isPublic: spaceId === 'pub' || Boolean(mockSpacePublicOverrides[spaceId])
@@ -81,6 +85,58 @@ vi.mock('./algoVrithm/landing/AlgoVrithmLanding.jsx', () => ({
         return <div>algovrithm-landing</div>
     }
 }))
+
+vi.mock('./landing/LandingPage.jsx', () => ({
+    default: function MockLandingPage() {
+        return <div>landing-page</div>
+    }
+}))
+
+vi.mock('./landing/LocalHome.jsx', () => ({
+    default: function MockLocalHome() {
+        return <div>local-home</div>
+    }
+}))
+
+// `di up` used to open a tour of a hosted product, to somebody who had just
+// finished installing it, with their own spaces two clicks away.
+describe('what "/" opens', () => {
+    afterEach(() => {
+        window.history.pushState({}, '', '/')
+        mockServerConfig.value = { local: true }
+    })
+
+    it('opens your spaces on a local install, not the landing page', async () => {
+        window.history.pushState({}, '', '/')
+        render(<RootApp />)
+        expect(await screen.findByText('local-home')).toBeInTheDocument()
+        expect(screen.queryByText('landing-page')).toBeNull()
+    })
+
+    // Moved, not deleted.
+    it('still shows the tour at /?tour=1', async () => {
+        window.history.pushState({}, '', '/?tour=1')
+        render(<RootApp />)
+        expect(await screen.findByText('landing-page')).toBeInTheDocument()
+    })
+
+    it('shows the landing page on a hosted server', async () => {
+        mockServerConfig.value = { local: false }
+        window.history.pushState({}, '', '/')
+        render(<RootApp />)
+        expect(await screen.findByText('landing-page')).toBeInTheDocument()
+        expect(screen.queryByText('local-home')).toBeNull()
+    })
+
+    // Someone serving other people from their own machine has turned auth ON.
+    // They get the ordinary front door, because their visitors are not them.
+    it('shows the landing page on a local install that requires auth', async () => {
+        mockServerConfig.value = { local: true, requireAuth: true }
+        window.history.pushState({}, '', '/')
+        render(<RootApp />)
+        expect(await screen.findByText('landing-page')).toBeInTheDocument()
+    })
+})
 
 describe('RootApp', () => {
     afterEach(() => {
