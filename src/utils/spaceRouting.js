@@ -84,12 +84,15 @@ export const isProjectToolSegment = (value = '') =>
 export const buildProjectToolPath = (spaceSlugOrId, projectSlugOrId, toolSegment) =>
     `${buildVanityProjectPath(spaceSlugOrId, projectSlugOrId)}/${toolSegment}`
 
+// Emits /{space}/admin. The old /admin?space={id} still PARSES — every link
+// already in the wild keeps working — but nothing mints it any more: a space is
+// the level that owns the thing being administered, so it belongs in the path,
+// not in a parameter you could delete and still have a valid address.
 export const buildPreferencesPath = (spaceId) => {
     const prefix = getAppBasePrefix()
     const basePath = `${prefix}/${APP_PAGE_PREFERENCES_ROUTE}`.replace(/\/{2,}/g, '/')
     if (!spaceId) return basePath
-    const params = new URLSearchParams({ space: spaceId })
-    return `${basePath}?${params.toString()}`
+    return `${prefix}/${spaceId}/${APP_PAGE_PREFERENCES_ROUTE}`.replace(/\/{2,}/g, '/')
 }
 
 export const isReservedAppSegment = (value = '') => RESERVED_APP_SEGMENTS.includes((value || '').trim().toLowerCase())
@@ -144,6 +147,16 @@ export const getAppLocationState = (locationLike = null) => {
         }
         if (segment) {
             const segments = relative.split('/')
+            // A space's ops, with the space in the PATH. /admin?space=x kept the space
+            // as a query parameter — the one level that owns everything else, demoted
+            // to something you could drop and still have a valid URL. The old form
+            // keeps parsing above, so no existing link rots.
+            if (segments.length === 2 && isPreferencesPageSegment(segments[1])) {
+                return {
+                    page: APP_PAGE_PREFERENCES,
+                    spaceId: segment
+                }
+            }
             if (segments[1] === 'p' && segments[2]) {
                 // The doorway works on the /p/ form too, so "append the tool" is true
                 // of EVERY project link and not only the pretty one. Here the id is
