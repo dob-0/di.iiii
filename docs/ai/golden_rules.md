@@ -879,3 +879,36 @@ This does **not** fully solve node-to-node label collision (two labels can still
 **How:** This is unenforced — a person (or a stale temp path) is the only thing that notices when it's skipped, the same shape as the verification rule in "A rule no build can see is a convention, not a protocol" above. Treat it with the same discipline: image-by-path references are perishable evidence, not durable input. Read first, investigate second. If a path is already gone when you get to it, say so plainly and ask for a resend rather than guessing at what it showed.
 
 **Files:** none — process discipline, not code.
+
+---
+
+### Work has one home, and it is in a repo — the home rule
+
+**Rule:** Every durable work product lands inside the ecosystem, in the same
+effort that produced it: research → `docs/research/<yyyy-mm-dd>-<topic>.md`
+(update the existing file on a topic — never re-buy it); durable agent rules →
+this file; product truth → the wiki; running state → session notes folded by
+`npm run land`. External surfaces (a claude.ai artifact, a status page) are
+MIRRORS only: the in-repo file is the source of truth and records the mirror's
+URL. A session may run local servers for its own verification, but they die
+with the session and are never handed to a person as a deliverable — if
+someone must see it live, it goes to staging or into the product itself.
+Anything meant to outlive the session that listens on a port is an infra fact
+and gets recorded in di-atlas before it starts.
+
+**Why:** On 2026-08-21 a ten-agent UX audit (~1M tokens) delivered its ledger
+into a session-scratchpad directory, its plan onto claude.ai, and its live
+status onto an ad-hoc `localhost:8377` server — three homes, none of them
+di.iiii, all gone or unreachable the moment the session ends. The owner's
+words: "we burn credits work but info is not have the right path to
+ecosystem." Credits buy information; information that does not land in the
+repo has to be bought again. The same failure shape as the pre-2026-08-06
+CURRENT.md races: work happening, nothing durable owning the result.
+
+**How:** Largely process discipline, backed by two structural pieces:
+`docs/research/` exists with a README stating the ledger convention, and
+`docs/ai/RESEARCH_METHOD.md` names it as the required destination (rule 4).
+When reviewing a PR that contains research or a decision, ask where its file
+is; when a session offers a URL, ask whether the ecosystem owns it.
+
+**Files:** `docs/research/README.md, docs/ai/RESEARCH_METHOD.md`

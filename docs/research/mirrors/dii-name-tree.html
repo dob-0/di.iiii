@@ -1,0 +1,780 @@
+<!-- Mirror of https://claude.ai/code/artifact/0b79d34e-0366-45a5-bc3c-bd1fc270120e — fetched 2026-08-21. Per the home rule (docs/ai/golden_rules.md) this in-repo file is the source of truth; the claude.ai page is the mirror. -->
+
+<title>The di.iiii Name Tree</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+    --ink: #14171a;
+    --ink-soft: #4a5560;
+    --ink-faint: #7b8794;
+    --ground: #f4f6f7;
+    --panel: #ffffff;
+    --panel-2: #eef2f3;
+    --rule: #cdd6da;
+    --rule-soft: #e5eaec;
+    --accent: #0a7f8c;
+    --accent-soft: #e0f2f4;
+    --ok: #2f6d3f;
+    --ok-soft: #e6f1e8;
+    --warn: #a8541f;
+    --warn-soft: #fbeee3;
+    --dead: #9a3b38;
+    --dead-soft: #f8e8e7;
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --ink: #e8edf0;
+        --ink-soft: #a3b0ba;
+        --ink-faint: #6f7d88;
+        --ground: #0b0e10;
+        --panel: #13171a;
+        --panel-2: #191f23;
+        --rule: #2a3238;
+        --rule-soft: #1e2529;
+        --accent: #4fd6e4;
+        --accent-soft: #102a2e;
+        --ok: #8fd6a0;
+        --ok-soft: #16241a;
+        --warn: #e0a06a;
+        --warn-soft: #2a2018;
+        --dead: #e88a86;
+        --dead-soft: #2c1a19;
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"] {
+    --ink: #e8edf0;
+    --ink-soft: #a3b0ba;
+    --ink-faint: #6f7d88;
+    --ground: #0b0e10;
+    --panel: #13171a;
+    --panel-2: #191f23;
+    --rule: #2a3238;
+    --rule-soft: #1e2529;
+    --accent: #4fd6e4;
+    --accent-soft: #102a2e;
+    --ok: #8fd6a0;
+    --ok-soft: #16241a;
+    --warn: #e0a06a;
+    --warn-soft: #2a2018;
+    --dead: #e88a86;
+    --dead-soft: #2c1a19;
+    color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    padding: 0 1rem 5rem;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 58rem; margin: 0 auto; }
+
+header {
+    padding: 3rem 0 1.5rem;
+}
+.eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 0.8rem;
+}
+h1 {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: clamp(1.75rem, 5vw, 2.4rem);
+    letter-spacing: -0.02em;
+    margin: 0 0 0.7rem;
+    line-height: 1.1;
+    text-wrap: balance;
+}
+.sub { color: var(--ink-soft); margin: 0; max-width: 40em; }
+
+/* ---------- controls ---------- */
+.controls {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--ground);
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+.tabs { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.tab {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    padding: 0.45rem 0.8rem;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    background: var(--panel);
+    color: var(--ink-soft);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.spacer { flex: 1 1 2rem; }
+.toggle {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    padding: 0.4rem 0.75rem;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: var(--panel);
+    color: var(--ink-soft);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    cursor: pointer;
+}
+.toggle[aria-pressed="true"] { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- legend ---------- */
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.1rem;
+    margin: 1.2rem 0 1.6rem;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+}
+.legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
+
+.dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex: none;
+    background: var(--ink-faint);
+}
+[data-v="ok"] > .row > .dot, .dot.ok { background: var(--ok); }
+[data-v="warn"] > .row > .dot, .dot.warn { background: var(--warn); }
+[data-v="dead"] > .row > .dot, .dot.dead { background: var(--dead); }
+[data-v="fixed"] > .row > .dot, .dot.fixed { background: var(--accent); }
+
+/* ---------- panes ---------- */
+.pane { display: none; }
+.pane.is-on { display: block; }
+.pane > h2 {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+    margin: 0 0 0.4rem;
+}
+.pane > .lede { color: var(--ink-soft); margin: 0 0 1.6rem; max-width: 44em; }
+
+/* ---------- tree ---------- */
+.tree ul { list-style: none; margin: 0; padding: 0 0 0 1.1rem; position: relative; }
+.tree > ul { padding-left: 0; }
+.tree ul ul::before {
+    content: '';
+    position: absolute;
+    left: 0.15rem;
+    top: -0.35rem;
+    bottom: 1.55rem;
+    border-left: 1px solid var(--rule);
+}
+.tree li { position: relative; padding-left: 0.95rem; }
+.tree > ul > li { padding-left: 0; }
+.tree ul ul > li::before {
+    content: '';
+    position: absolute;
+    left: -0.95rem;
+    top: 1.55rem;
+    width: 1.05rem;
+    border-top: 1px solid var(--rule);
+}
+
+.row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.6rem;
+    padding: 0.55rem 0.7rem;
+    margin: 0.25rem 0;
+    background: var(--panel);
+    border: 1px solid var(--rule-soft);
+    border-left: 3px solid var(--rule);
+    border-radius: 3px;
+    cursor: pointer;
+    min-height: 44px;
+    text-align: left;
+    width: 100%;
+    font: inherit;
+    color: inherit;
+}
+[data-v="ok"] > .row { border-left-color: var(--ok); }
+[data-v="warn"] > .row { border-left-color: var(--warn); }
+[data-v="dead"] > .row { border-left-color: var(--dead); }
+[data-v="fixed"] > .row { border-left-color: var(--accent); }
+.row:hover { background: var(--panel-2); }
+.row .dot { align-self: center; }
+.key {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
+}
+.gloss { color: var(--ink-soft); font-size: 0.9rem; }
+.alias {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--warn);
+    background: var(--warn-soft);
+    padding: 0.1rem 0.45rem;
+    border-radius: 2px;
+    margin-left: auto;
+    white-space: nowrap;
+}
+[data-v="ok"] .alias { color: var(--ok); background: var(--ok-soft); }
+[data-v="dead"] .alias { color: var(--dead); background: var(--dead-soft); }
+[data-v="fixed"] .alias { color: var(--accent); background: var(--accent-soft); }
+
+.note {
+    display: none;
+    margin: 0 0 0.5rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--panel-2);
+    border-left: 3px solid var(--rule);
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+}
+.note.is-open { display: block; }
+.note p { margin: 0 0 0.5rem; }
+.note p:last-child { margin-bottom: 0; }
+.note .src {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    color: var(--ink-faint);
+    display: block;
+    margin-top: 0.4rem;
+    overflow-wrap: anywhere;
+}
+.note strong { color: var(--ink); }
+.verdict-line { color: var(--accent); font-weight: 500; }
+
+/* problems filter */
+.tree.filtered [data-v="ok"] > .row,
+.tree.filtered [data-v="fixed"] > .row { opacity: 0.32; }
+.tree.filtered [data-v="ok"] > .row:hover { opacity: 1; }
+
+code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--rule-soft);
+    padding: 0.08em 0.32em;
+    border-radius: 2px;
+    overflow-wrap: anywhere;
+}
+
+/* On a phone the alias chip cannot stay on one unbreakable line — the deepest
+   rows are already indented five levels and the longest chips ("labelled
+   'World', shown as 'Scene'") push the whole page sideways. Let them wrap and
+   sit under the gloss instead of being pinned right. */
+@media (max-width: 46rem) {
+    .alias { white-space: normal; margin-left: 0; }
+    .tree ul { padding-left: 0.75rem; }
+    .tree li { padding-left: 0.7rem; }
+    .tree ul ul > li::before { left: -0.7rem; width: 0.8rem; }
+    .controls { position: static; }
+    .spacer { display: none; }
+}
+
+/* ---------- word map ---------- */
+.words { display: grid; gap: 0.9rem; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }
+.word {
+    background: var(--panel);
+    border: 1px solid var(--rule-soft);
+    border-top: 3px solid var(--warn);
+    border-radius: 3px;
+    padding: 0.9rem 1rem 1rem;
+}
+.word.is-ok { border-top-color: var(--ok); }
+.word.is-dead { border-top-color: var(--dead); }
+.word h3 {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    margin: 0 0 0.15rem;
+    font-weight: 600;
+}
+.word .count {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 0.7rem;
+    font-variant-numeric: tabular-nums;
+}
+.word ol { margin: 0 0 0.8rem; padding-left: 1.2rem; font-size: 0.86rem; color: var(--ink-soft); }
+.word ol li { margin-bottom: 0.28rem; }
+.word ol li.cut { text-decoration: line-through; text-decoration-color: var(--dead); color: var(--ink-faint); }
+.word .keep {
+    font-size: 0.85rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--rule-soft);
+}
+.word .keep b { color: var(--accent); font-weight: 600; }
+
+footer {
+    margin-top: 3.5rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+<header>
+    <p class="eyebrow">di.iiii · naming map · 19 Aug 2026</p>
+    <h1>The di.iiii Name Tree</h1>
+    <p class="sub">Three maps of the same product. What the things <em>are</em>, what a visitor <em>walks through</em>, and which words are doing more than one job. Tap any row to open it.</p>
+</header>
+
+<div class="word" style="border-top-color: var(--accent); margin-bottom: 1.5rem;">
+    <h3 style="font-family: var(--sans); font-size: 1rem;">Fixed on 19 August</h3>
+    <span class="count">350 user-visible strings · 84 files · 2,314 tests green</span>
+    <p style="font-size: 0.9rem; color: var(--ink-soft); margin: 0 0 0.7rem">
+        The dictionary is now a contract in the repo (<code>docs/ai/vocabulary.md</code>) and an
+        executable test (<code>src/copyVocabulary.test.js</code>) that fails the build if a banned
+        word reaches a sentence. <b>Six of eight surfaces went from carrying banned words to clean</b>,
+        measured in a real browser rather than in source.
+    </p>
+    <p class="keep" style="margin:0">Cyan rows below are the ones that changed. Amber and red are what is still open — all of them
+        architecture, not wording.</p>
+</div>
+
+<div class="controls" role="tablist" aria-label="Views">
+    <div class="tabs">
+        <button class="tab" role="tab" aria-selected="true" data-pane="things">▣ the things</button>
+        <button class="tab" role="tab" aria-selected="false" data-pane="routes">→ the routes</button>
+        <button class="tab" role="tab" aria-selected="false" data-pane="words">✳ the words</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="toggle" id="filter" aria-pressed="false">◍ problems only</button>
+</div>
+
+<div class="legend">
+    <span><i class="dot ok"></i> one name, one meaning</span>
+    <span><i class="dot warn"></i> confused — more than one name or meaning</span>
+    <span><i class="dot dead"></i> dead or fossil — should not exist</span>
+    <span><i class="dot fixed"></i> fixed 19 Aug</span>
+</div>
+
+<!-- ============ PANE 1 : THINGS ============ -->
+<section class="pane is-on" id="pane-things">
+    <h2>Map 1 — what actually contains what</h2>
+    <p class="lede">Read straight off the database and the document schema. This is the real shape of the product; every naming problem below is a place where the word stopped matching this tree.</p>
+
+    <div class="tree" id="tree-things">
+    <ul>
+        <li data-v="ok">
+            <button class="row"><i class="dot"></i><span class="key">di.iiii</span><span class="gloss">the platform</span><span class="alias">di-studio.xyz</span></button>
+            <div class="note">
+                <p>The product's own name is the one word with no ambiguity anywhere. It is also the only name a first-time visitor is definitely given — the page <code>&lt;title&gt;</code> says <em>di.iiii — browser-native XR authoring</em> and nothing else.</p>
+                <span class="src">src/index.html:10</span>
+            </div>
+            <ul>
+                <li data-v="ok">
+                    <button class="row"><i class="dot"></i><span class="key">space</span><span class="gloss">a place that is yours — address, guest list, contents</span><span class="alias">keep</span></button>
+                    <div class="note">
+                        <p>A row in <code>spaces</code>. It owns everything below it: delete a space and its projects go with it (<code>ON DELETE CASCADE</code>, enforced — <code>foreign_keys = ON</code>).</p>
+                        <p class="verdict-line">Verdict: the word is right. It is the <em>six other jobs</em> hung on it that need to move.</p>
+                        <p><strong>19 Aug:</strong> four of the six moved — "linked space" and "code space" are gone from copy, the node is renamed, and the local-only record is no longer called a space to a reader. The 3D-scene sense survives because it is real in the schema (below).</p>
+                        <span class="src">serverXR/src/db.js:6 · db.js:30 · db.js:323</span>
+                    </div>
+                    <ul>
+                        <li data-v="dead">
+                            <button class="row"><i class="dot"></i><span class="key">scene.json</span><span class="gloss">a 3D scene owned by the space itself, with no project</span><span class="alias">the V1 fossil</span></button>
+                            <div class="note">
+                                <p>This is the single deepest cause of confusion in the product. A space can hold a scene <strong>directly</strong> — its own object list, its own op log, its own version counter — completely bypassing projects.</p>
+                                <p>It is why "space" can mean both <em>a place</em> and <em>a 3D world</em>, and why <code>/{space}</code> renders one of three unrelated things depending on <code>if</code>-order.</p>
+                                <p class="verdict-line">Verdict: retire it. No amount of rewording fixes a word whose second meaning is real in the schema.</p>
+                                <span class="src">spaceStore.js:99 <code>scene.json</code> · db.js:13 <code>scene_version</code> · src/shared/sceneSchema.js — a whole second schema with its own <code>objects[]</code> and <code>applySceneOps</code></span>
+                            </div>
+                        </li>
+                        <li data-v="ok">
+                            <button class="row"><i class="dot"></i><span class="key">assets · invites · sync keys · github link · ops</span><span class="gloss">everything else a space owns</span><span class="alias">fine</span></button>
+                            <div class="note">
+                                <p>All five cascade from the space and none of them have a naming problem. <code>space_links</code> holds at most one GitHub binding per space — its primary key <em>is</em> <code>space_id</code>.</p>
+                                <span class="src">db.js:21, :65, :78, :91, :161</span>
+                            </div>
+                        </li>
+                        <li data-v="warn">
+                            <button class="row"><i class="dot"></i><span class="key">published_project_id</span><span class="gloss">which one project the public sees at /{space}</span><span class="alias">no FK</span></button>
+                            <div class="note">
+                                <p>The one pointer that goes back <em>down</em> the tree, and the only relation in the schema with no foreign key behind it — a plain <code>TEXT</code> column. A dangling pointer is structurally possible.</p>
+                                <span class="src">db.js:12</span>
+                            </div>
+                        </li>
+                        <li data-v="fixed">
+                            <button class="row"><i class="dot"></i><span class="key">project</span><span class="gloss">one thing you make inside a space</span><span class="alias">one word now</span></button>
+                            <div class="note">
+                                <p>Hard-owned by exactly one space, but with a <strong>globally unique id</strong> — which is why every read of an existing project is flat (<code>/api/projects/:id</code>) while creating one is space-scoped (<code>/api/spaces/:id/projects</code>).</p>
+                                <p>The word is sound. Its four synonyms are not: the wiki's own definition teaches three of them in one sentence — <em>"A project is a single scene/document inside a space."</em></p>
+                                <p class="verdict-line">Verdict: keep <strong>project</strong>, delete <em>scene</em>, <em>document</em>, <em>page</em> and <em>workspace</em> as names for it.</p>
+                                <p><strong>19 Aug:</strong> done. The four synonyms are out of the wiki, and the landing page introduces the word at step 02 — so the "Projects" heading after sign-in is no longer the first time anyone reads it.</p>
+                                <span class="src">db.js:28 · projectRoutes.js:47, :93 · wikiContent.js:25</span>
+                            </div>
+                            <ul>
+                                <li data-v="ok">
+                                    <button class="row"><i class="dot"></i><span class="key">the row</span><span class="gloss">title, slug, source, version counter</span><span class="alias">metadata</span></button>
+                                    <div class="note">
+                                        <p>Slugs are unique <em>per space</em> for projects, but <em>globally</em> for spaces. Both a slug and an id address the same project, giving two permanent URL shapes.</p>
+                                        <span class="src">db.js:347–348</span>
+                                    </div>
+                                </li>
+                                <li data-v="warn">
+                                    <button class="row"><i class="dot"></i><span class="key">document.json</span><span class="gloss">everything the project actually contains</span><span class="alias">"document" also means a published page</span></button>
+                                    <div class="note">
+                                        <p>The API response says the split out loud: <code>{ document, version, project }</code> — <em>project</em> is the row, <em>document</em> is the file. A project is the pair.</p>
+                                        <p>But the wiki also uses "documents" to mean chrome-free published pages, 400 lines away from where it uses it to mean this.</p>
+                                        <span class="src">projectRoutes.js:184 · wikiContent.js:156</span>
+                                    </div>
+                                    <ul>
+                                        <li data-v="fixed">
+                                            <button class="row"><i class="dot"></i><span class="key">entities[]</span><span class="gloss">the things standing in the 3D room</span><span class="alias">now: object</span></button>
+                                            <div class="note">
+                                                <p>Three words for one thing, split by which screen you are on: the landing says <em>objects</em>, the Inspector says <em>entity</em>, the feature list says <em>"every object is a typed node"</em>.</p>
+                                                <p>These nest — <code>parentId</code>, a real parent→children map, drag-to-reparent, cascading delete. Entities are a tree in their own right.</p>
+                                                <p class="verdict-line">Verdict: <strong>object</strong> for people, everywhere.</p>
+                                                <p><strong>19 Aug:</strong> done — including Studio's History panel, which was still writing "Create entity" into every undo step, and the Inspector's every-selection sentence.</p>
+                                                <span class="src">projectSchema.js:369 · StudioInspector.jsx:426 · LandingPage.jsx:54, :111</span>
+                                            </div>
+                                        </li>
+                                        <li data-v="warn">
+                                            <button class="row"><i class="dot"></i><span class="key">nodes[] + edges[]</span><span class="gloss">the cards on the canvas and the wires between them</span><span class="alias">a second, parallel tree</span></button>
+                                            <div class="note">
+                                                <p><strong>The product has two content models in one file and they never reference each other.</strong> <code>entity.parentId</code> only ever points at an entity; <code>node.parentId</code> only ever points at a node. They render side by side and are otherwise strangers.</p>
+                                                <p>This is the repo's own hardest open question — the URL spec's §7 calls it "the load-bearing unknown" and recommends addressing entities, not nodes.</p>
+                                                <span class="src">projectSchema.js:622, :660 · SPEC_url_architecture_and_tree_addressing.md §7.1</span>
+                                            </div>
+                                            <ul>
+                                                <li data-v="fixed">
+                                                    <button class="row"><i class="dot"></i><span class="key">studio</span><span class="gloss">a container node you can step inside</span><span class="alias">a room, ratified</span></button>
+                                                    <div class="note">
+                                                        <p>Type id <code>'studio'</code>, label <em>Studio</em>, filed under the node family <em>"the room"</em>. It is a room you enter — and it is named identically to the editor lane and to the route that lists your spaces.</p>
+                                                        <p class="verdict-line">Verdict: this is the meaning worth keeping.</p>
+                                                        <p><strong>19 Aug:</strong> settled, and not by taste — MANIFESTO §6 already states that "Studio's own role is being drawn into Raw's node model as a container node". Ratified beats the unsigned URL spec that wanted Studio to name the whole platform. The two buttons on RawHub that both said "studio" now say what they each do.</p>
+                                                        <span class="src">src/project/graph/studioNode.js:44 · nodeRegistry.js:1199, :111</span>
+                                                    </div>
+                                                    <ul>
+                                                        <li data-v="fixed">
+                                                            <button class="row"><i class="dot"></i><span class="key">universe.world</span><span class="gloss">the 3D room</span><span class="alias">now labelled "Room"</span></button>
+                                                            <div class="note">
+                                                                <p>The node type is called World, the palette shows <em>World</em>, and the Studio interior relabels the very same node <em>Scene</em>. Two names, one node, one screen apart.</p>
+                                                                <span class="src">nodeRegistry.js:729 · studioNode.js:49</span>
+                                                            </div>
+                                                        </li>
+                                                        <li data-v="ok"><button class="row"><i class="dot"></i><span class="key">view.outliner</span><span class="gloss">Outliner</span><span class="alias">clear</span></button><div class="note"><p>Panel node. Name matches what it does.</p><span class="src">nodeRegistry.js:1107</span></div></li>
+                                                        <li data-v="ok"><button class="row"><i class="dot"></i><span class="key">view.inspector</span><span class="gloss">Inspector</span><span class="alias">clear</span></button><div class="note"><p>Panel node. But the landing page tells a stranger the Inspector is "on the right" in Studio, where the copy actually sends them to the Scene window.</p><span class="src">nodeRegistry.js:1142 · LandingPage.jsx:55</span></div></li>
+                                                        <li data-v="fixed">
+                                                            <button class="row"><i class="dot"></i><span class="key">view.library</span><span class="gloss">where you make things</span><span class="alias">Create, and the landing says so</span></button>
+                                                            <div class="note">
+                                                                <p>Shipped yesterday as the fourth Studio panel. The type id kept the old word; the label is <em>Create</em>. Meanwhile the landing page still instructs: <em>"Use the Library panel to add 3D shapes"</em>.</p>
+                                                                <p class="verdict-line">Verdict: the label is right, the landing instruction is simply wrong and should be fixed.</p>
+                                                                <span class="src">nodeRegistry.js:1127 · studioNode.js:52 · LandingPage.jsx:54</span>
+                                                            </div>
+                                                        </li>
+                                                    </ul>
+                                                </li>
+                                                <li data-v="fixed">
+                                                    <button class="row"><i class="dot"></i><span class="key">universe.space</span><span class="gloss">a container you enter that hides the toolbar inside it</span><span class="alias">now labelled "Stage"</span></button>
+                                                    <div class="note">
+                                                        <p>The id says <em>space</em>, the label says <em>Universe</em>, and it is neither a space nor a universe — it is a chrome-scoping container. A visitor meets the word <em>Universe</em> in the palette with no explanation anywhere in the product.</p>
+                                                        <p class="verdict-line">Verdict: rename the label to what it does.</p>
+                                                        <p><strong>19 Aug:</strong> it is <strong>Stage</strong> — a place where the work shows and the machinery does not, which is exactly what hiding the toolbar inside a container achieves. Its input "Show Chrome" now reads "Show the toolbar".</p>
+                                                        <span class="src">nodeRegistry.js:752</span>
+                                                    </div>
+                                                </li>
+                                                <li data-v="fixed">
+                                                    <button class="row"><i class="dot"></i><span class="key">universe.desk.2d / .3d</span><span class="gloss">node types literally named "2D Desk" / "3D Desk"</span><span class="alias">metaphor dropped, labels kept</span></button>
+                                                    <div class="note">
+                                                        <p>"The desk is already set" is your newest metaphor for the whole surface — used six times, never defined. Two node types are also called Desk. A reader who learns the metaphor then meets a node called <em>3D Desk</em> that is unrelated to it.</p>
+                                                        <p class="verdict-line">Verdict: pick one. Either drop <em>desk</em> from copy, or rename these nodes.</p>
+                                                        <span class="src">nodeRegistry.js:779, :805 · LandingPage.jsx:579 · wikiContent.js:690</span>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li data-v="ok"><button class="row"><i class="dot"></i><span class="key">worldState · windowLayout · publishState · assets[]</span><span class="gloss">the project's settings</span><span class="alias">internal</span></button><div class="note"><p>Fine as identifiers — except <code>worldState</code>, which leaks verbatim into a wiki summary a visitor reads.</p><span class="src">projectSchema.js:193 · wikiContent.js:255</span></div></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+    </ul>
+    </div>
+</section>
+
+<!-- ============ PANE 2 : ROUTES ============ -->
+<section class="pane" id="pane-routes">
+    <h2>Map 2 — what a visitor walks through</h2>
+    <p class="lede">There is no route table in the codebase. Every URL is matched by hand-written string splitting, and <strong>the order of the <code>if</code>-statements is the specification</strong>. This map is that order.</p>
+
+    <div class="tree" id="tree-routes">
+    <ul>
+        <li data-v="ok">
+            <button class="row"><i class="dot"></i><span class="key">/</span><span class="gloss">the landing page — one door since yesterday</span><span class="alias">good</span></button>
+            <div class="note">
+                <p>The hero is now a single button, <em>Step inside</em>, going to <code>/open/raw</code>. It does not say where it goes — deliberately, because the lane name is vocabulary a visitor does not have.</p>
+                <p class="verdict-line">Verdict: the button is right. The footer underneath it still lists <em>Raw</em> and <em>Studio</em> as two peer links, which undoes it.</p>
+                <span class="src">LandingPage.jsx:294, :605, :606</span>
+            </div>
+            <ul>
+                <li data-v="warn">
+                    <button class="row"><i class="dot"></i><span class="key">/{space}</span><span class="gloss">the space in public</span><span class="alias">three unrelated pages at one URL</span></button>
+                    <div class="note">
+                        <p>Renders whichever of three things wins the <code>if</code>-chain: the published project's document, or the V1 legacy editor over the space's own <code>scene.json</code>, or hardcoded React for <code>wcc</code>/<code>algovrithm</code>.</p>
+                        <p>The repo's own surface map lists two of those as <em>different surfaces at the identical route</em>.</p>
+                        <span class="src">SpaceSurfaceApp.jsx:115–133 · RootApp.jsx:250–265 · PROJECT_SURFACES.md</span>
+                    </div>
+                    <ul>
+                        <li data-v="ok"><button class="row"><i class="dot"></i><span class="key">/{space}/p/{id}</span><span class="gloss">permanent project link — never redirects</span><span class="alias">the stable one</span></button><div class="note"><p>The guaranteed-forever shape. Every raw-id link surface uses it.</p><span class="src">spaceRouting.js:45</span></div></li>
+                        <li data-v="warn"><button class="row"><i class="dot"></i><span class="key">/{space}/{slug}</span><span class="gloss">the pretty project link</span><span class="alias">the wiki calls this slot "page"</span></button><div class="note"><p>Resolved server-side. The router calls this segment <code>projectSlugSegment</code>; the wiki documents the same slot as <code>/&lt;space&gt;/&lt;page&gt;</code>; the sync engine calls it a page too.</p><span class="src">spaceRouting.js:54, :137 · wikiContent.js:163 · scripts/space-sync.mjs:19</span></div></li>
+                        <li data-v="warn">
+                            <button class="row"><i class="dot"></i><span class="key">/{space}/studio</span><span class="gloss">the project hub</span><span class="alias">route says studio, page says "Projects"</span></button>
+                            <div class="note">
+                                <p>Heading is <code>&lt;h1&gt;Projects&lt;/h1&gt;</code>. This is where a person first meets the word "project" — a word the landing page never once shows them.</p>
+                                <span class="src">StudioHub.jsx:208</span>
+                            </div>
+                            <ul>
+                                <li data-v="ok"><button class="row"><i class="dot"></i><span class="key">/studio/projects/{id}</span><span class="gloss">the editor itself</span><span class="alias">clear</span></button><div class="note"><p>The space segment may be omitted; the project's own metadata then decides which space it belongs to.</p><span class="src">studioRouting.js:108–120</span></div></li>
+                                <li data-v="warn"><button class="row"><i class="dot"></i><span class="key">/{space}/studio/director</span><span class="gloss">the code-space director view</span><span class="alias">"director" undefined anywhere</span></button><div class="note"><p>A whole surface named with a word that appears in no user-facing copy, no wiki article, and no landing text.</p><span class="src">studioRouting.js:45</span></div></li>
+                            </ul>
+                        </li>
+                        <li data-v="fixed">
+                            <button class="row"><i class="dot"></i><span class="key">/{space}/raw</span><span class="gloss">the canvas — the actual front door</span><span class="alias">URL kept, word retired</span></button>
+                            <div class="note">
+                                <p>I loaded this on staging as a plain visitor. <strong>The word "Raw" appears nowhere on the page.</strong> What you read is <em>World</em>, <em>welcome</em>, <em>Enter Studio</em>.</p>
+                                <p class="verdict-line">Verdict: keep the URL forever. Stop printing the word.</p>
+                                <p><strong>19 Aug:</strong> done. The footer link, the Studio button, the hub heading and the "raw project" strings are gone. The URL is untouched, and so is <code>/seed</code>.</p>
+                                <span class="src">rawRouting.js:15 · verified on staging.di-studio.xyz</span>
+                            </div>
+                            <ul>
+                                <li data-v="warn"><button class="row"><i class="dot"></i><span class="key">/{space}/raw/projects</span><span class="gloss">the Raw hub</span><span class="alias">the constant for the OTHER url is called HUB</span></button><div class="note"><p>Bare <code>/{space}/raw</code> renders <code>BlankNodeWorkspaceApp</code>, not the hub — even though its route constant is named <code>RAW_PAGE_HUB</code>. The hub only exists one level deeper.</p><p>And on that hub page, a button reading <code>open studio</code> creates a Studio <strong>node</strong>, while a button reading <code>studio</code> navigates to the Studio <strong>lane</strong>. Same page.</p><span class="src">RawApp.jsx:14–18 · RawHub.jsx:261, :312</span></div></li>
+                                <li data-v="dead"><button class="row"><i class="dot"></i><span class="key">/{space}/seed</span><span class="gloss">legacy alias, silently rewritten to /raw</span><span class="alias">a third name for one lane</span></button><div class="note"><p>Keep the redirect forever, but the word should not appear anywhere a person can read it.</p><span class="src">rawRouting.js:10 · RootApp.jsx:153</span></div></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li data-v="warn">
+                    <button class="row"><i class="dot"></i><span class="key">/studio</span><span class="gloss">your list of spaces</span><span class="alias">nav calls it "Spaces"</span></button>
+                    <div class="note">
+                        <p>The clearest single mismatch in the product: the route is <code>/studio</code>, the page heading is <code>&lt;h1&gt;Spaces&lt;/h1&gt;</code>, and the nav link pointing at it is labelled <em>Spaces</em>. Three names, one destination — and none of them is the one in the address bar.</p>
+                        <p class="verdict-line">Verdict: <code>/studio</code> → <code>/spaces</code>. But settle the Studio question first (see below).</p>
+                        <span class="src">SpaceHub.jsx:453 · LandingPage.jsx:249</span>
+                    </div>
+                </li>
+                <li data-v="dead"><button class="row"><i class="dot"></i><span class="key">/admin?space={id}</span><span class="gloss">space settings</span><span class="alias">a query param for what is elsewhere a path</span></button><div class="note"><p>"A creator surface scoped to a space" is a path for the editor and a query string for admin. The reserved-word list that protects these also permanently denies users two <em>typos</em>: <code>prefrenaces</code> and <code>preferances</code>.</p><span class="src">spaceRouting.js:5–10, :59</span></div></li>
+                <li data-v="dead"><button class="row"><i class="dot"></i><span class="key">/open_jam</span><span class="gloss">alias for space "open", project "open-jam"</span><span class="alias">a creator surface at a public root</span></button><div class="note"><p>Resolves with no redirect. It is on printed flyers and QR codes, so it can never be deleted — but it is the one URL where a top-level segment is neither a space nor a platform page.</p><span class="src">studioRouting.js:24–26, :72</span></div></li>
+                <li data-v="dead"><button class="row"><i class="dot"></i><span class="key">/wcc · /wcc/scene · /algovrithm</span><span class="gloss">hardcoded spaces, claimed before the generic mechanism</span><span class="alias">order-dependent</span></button><div class="note"><p>These work because their <code>if</code> comes first. Nothing but a comment records that.</p><span class="src">RootApp.jsx:250–265</span></div></li>
+                <li data-v="ok"><button class="row"><i class="dot"></i><span class="key">/wiki · /privacy · /terms</span><span class="gloss">platform pages</span><span class="alias">fine</span></button><div class="note"><p>Each occupies a top-level segment no space can ever be named. The draft URL spec would move them under a single reserved token <code>/-/</code> so that reserved lists shrink instead of growing.</p><span class="src">spaceRouting.js:11–24</span></div></li>
+            </ul>
+        </li>
+    </ul>
+    </div>
+</section>
+
+<!-- ============ PANE 3 : WORDS ============ -->
+<section class="pane" id="pane-words">
+    <h2>Map 3 — which word is doing how many jobs</h2>
+    <p class="lede">The same audit from the other end. Each card is one word, every job it currently does, and the one job I would leave it. Struck-through lines are the meanings to move elsewhere.</p>
+
+    <div class="words">
+
+        <div class="word">
+            <h3>space</h3>
+            <span class="count">211 in wiki · 72 in UI · 5,607 in source</span>
+            <ol>
+                <li>a tenant — address, guest list, assets</li>
+                <li class="cut">a 3D scene of its own</li>
+                <li class="cut">a node type (<code>universe.space</code>)</li>
+                <li class="cut">a browser-local record</li>
+                <li class="cut">a GitHub-synced site ("linked space")</li>
+                <li class="cut">a React route ("code space")</li>
+            </ol>
+            <p class="keep"><b>Keep:</b> a place that is yours. <b>Done 19 Aug</b> — except the 3D-scene sense, which is real in the schema until the V1 fossil retires.</p>
+        </div>
+
+        <div class="word">
+            <h3>project</h3>
+            <span class="count">57 in wiki · 43 in UI · 0 on the landing page</span>
+            <ol>
+                <li>project</li>
+                <li class="cut">scene</li>
+                <li class="cut">document</li>
+                <li class="cut">page</li>
+                <li class="cut">workspace</li>
+            </ol>
+            <p class="keep"><b>Keep:</b> project. <b>Done 19 Aug</b> — synonyms removed, and the landing page now says the word.</p>
+        </div>
+
+        <div class="word">
+            <h3>Studio</h3>
+            <span class="count">52 in wiki · 29 in UI</span>
+            <ol>
+                <li>a room you walk into</li>
+                <li class="cut">a lane / a codebase</li>
+                <li class="cut">the route that lists your spaces</li>
+                <li class="cut">the company</li>
+            </ol>
+            <p class="keep"><b>Keep:</b> the room. <b>Settled 19 Aug</b> by MANIFESTO §6, which already ratified Studio becoming a container node.</p>
+        </div>
+
+        <div class="word is-dead">
+            <h3>Raw</h3>
+            <span class="count">18 in wiki · 40 in UI · 0 on its own page</span>
+            <ol>
+                <li class="cut">the node-first editor</li>
+                <li class="cut">an adjective for a kind of project</li>
+                <li>ordinary English: unparsed, unformatted</li>
+            </ol>
+            <p class="keep"><b>Keep:</b> nothing user-facing. <b>Done 19 Aug</b> — the URL stays, the word is gone from every surface.</p>
+        </div>
+
+        <div class="word">
+            <h3>workspace</h3>
+            <span class="count">only 27 uses — the cheapest fix here</span>
+            <ol>
+                <li class="cut">= a space</li>
+                <li>the canvas you have open</li>
+                <li class="cut">Studio's panel arrangement</li>
+                <li class="cut">the Studio route</li>
+            </ol>
+            <p class="keep"><b>Keep:</b> the canvas. <b>Done 19 Aug</b> — the line now reads "a canvas, not a file", and the sentence calling a space a workspace is gone.</p>
+        </div>
+
+        <div class="word">
+            <h3>world</h3>
+            <span class="count">17 in wiki · 10 in UI</span>
+            <ol>
+                <li>the World node</li>
+                <li class="cut">a Studio panel</li>
+                <li class="cut">a space</li>
+                <li class="cut">your finished artwork</li>
+                <li class="cut">planet Earth ("across the world")</li>
+                <li class="cut">a coordinate frame</li>
+            </ol>
+            <p class="keep"><b>Keep:</b> <b>Room</b> takes the job. <b>Done 19 Aug</b> — the node, Studio's panel and the copy all say Room now.</p>
+        </div>
+
+        <div class="word">
+            <h3>entity / object / node</h3>
+            <span class="count">entity 9 · node 67</span>
+            <ol>
+                <li>object — a thing in the room</li>
+                <li>node — a card on the canvas</li>
+                <li class="cut">entity — the same thing as object</li>
+            </ol>
+            <p class="keep"><b>Keep:</b> both object and node. <b>Done 19 Aug</b> — <em>entity</em> is gone from every string a person can read.</p>
+        </div>
+
+        <div class="word is-dead">
+            <h3>beta · lane · surface · V1 · seed</h3>
+            <span class="count">names for editor generations</span>
+            <ol>
+                <li class="cut">beta — lane deleted 2026-08-06</li>
+                <li class="cut">lane — used in the article that retires it</li>
+                <li class="cut">surface · V1 · seed</li>
+            </ol>
+            <p class="keep"><b>Keep:</b> none of them. <b>Done 19 Aug</b> — the dead <code>/&lt;space&gt;/beta</code> routes are out of both READMEs.</p>
+        </div>
+
+        <div class="word">
+            <h3>desk</h3>
+            <span class="count">6 uses — one of them in the primary CTA</span>
+            <ol>
+                <li>the whole working surface (metaphor)</li>
+                <li class="cut">two node types named 2D/3D Desk</li>
+            </ol>
+            <p class="keep"><b>Keep:</b> the node labels, not the metaphor. <b>Done 19 Aug</b> — the four undefined "desk" sentences are gone; "3D Desk" stays, because as one concrete object in a room it is no longer ambiguous.</p>
+        </div>
+
+        <div class="word is-ok">
+            <h3>room</h3>
+            <span class="count">19 in wiki · the node family label</span>
+            <ol>
+                <li>the 3D place you are inside</li>
+                <li class="cut">"make room" — delete a space to free a slot</li>
+            </ol>
+            <p class="keep"><b>Keep:</b> this one is working. Give it the whole job that "world" is currently splitting with it.</p>
+        </div>
+
+    </div>
+
+    <div class="word" style="margin-top:1.5rem; border-top-color: var(--accent);">
+        <h3>The one question that is yours, not mine</h3>
+        <span class="count">blocks rows 10–11 of the change list</span>
+        <p style="font-size:0.9rem; color:var(--ink-soft); margin:0 0 0.7rem">Everything above assumes <strong>Studio is a room</strong>. But an unsigned spec in the repo proposes splitting the product across two hosts and names the creator host <code>studio.di-studio.xyz</code> — which makes Studio the name of the entire authoring side of the platform.</p>
+        <p class="keep" style="margin:0"><b>These cannot both be true.</b> Answer it before any copy work, because it decides which word moves.<span class="note" style="display:block; background:none; border:none; padding:0.4rem 0 0"><span class="src">docs/architecture/SPEC_url_architecture_and_tree_addressing.md §2.1 — status: DRAFT, unsigned</span></span></p>
+    </div>
+</section>
+
+<footer>
+    <p>Read from <code>serverXR/src/db.js</code>, <code>src/shared/projectSchema.js</code>, the three routing modules, <code>src/project/nodeRegistry.js</code>, <code>src/wiki/wikiContent.js</code>, the landing page and the three hubs. Visitor-facing words were read off a real browser on staging, not inferred from source. Nothing in the repo has been changed.</p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'))
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            tabs.forEach(function (t) {
+                var on = t === tab
+                t.setAttribute('aria-selected', on ? 'true' : 'false')
+                document.getElementById('pane-' + t.dataset.pane).classList.toggle('is-on', on)
+            })
+        })
+    })
+
+    // A row opens its own note. Children stay visible — the tree is the point,
+    // the detail is the option.
+    document.querySelectorAll('.row').forEach(function (row) {
+        row.addEventListener('click', function () {
+            var note = row.parentElement.querySelector(':scope > .note')
+            if (note) note.classList.toggle('is-open')
+        })
+    })
+
+    var filter = document.getElementById('filter')
+    filter.addEventListener('click', function () {
+        var on = filter.getAttribute('aria-pressed') !== 'true'
+        filter.setAttribute('aria-pressed', on ? 'true' : 'false')
+        document.querySelectorAll('.tree').forEach(function (t) { t.classList.toggle('filtered', on) })
+    })
+})()
+</script>
+
