@@ -26,6 +26,6 @@ describe('SpacePreviewRow', () => {
         expect(onOpenRoute).toHaveBeenCalledWith('/alpha/raw/projects')
 
         fireEvent.click(screen.getByRole('button', { name: 'Admin' }))
-        expect(onOpenRoute).toHaveBeenCalledWith('/admin?space=alpha')
+        expect(onOpenRoute).toHaveBeenCalledWith('/alpha/admin')
     })
 })

@@ -11,9 +11,33 @@ import {
 } from './spaceRouting.js'
 
 describe('spaceRouting', () => {
-    it('builds the admin route as the canonical control room path', () => {
+    it('builds the admin route with the space in the PATH, not a query parameter', () => {
         expect(buildPreferencesPath()).toBe('/admin')
-        expect(buildPreferencesPath('main')).toBe('/admin?space=main')
+        // Was '/admin?space=main'. A space is the level that owns the thing being
+        // administered, so it belongs in the path — not in a parameter you could
+        // delete and still be left with a valid address.
+        expect(buildPreferencesPath('main')).toBe('/main/admin')
+    })
+
+    it('parses /{space}/admin, and every alias of it', () => {
+        expect(getAppLocationState(new URL('https://example.com/wcc/admin'))).toEqual({
+            page: APP_PAGE_PREFERENCES,
+            spaceId: 'wcc'
+        })
+        expect(getAppLocationState(new URL('https://example.com/wcc/preferences')).spaceId).toBe('wcc')
+    })
+
+    it('still parses the old /admin?space= form — links already in the wild must not rot', () => {
+        expect(getAppLocationState(new URL('https://example.com/admin?space=main'))).toEqual({
+            page: APP_PAGE_PREFERENCES,
+            spaceId: 'main'
+        })
+    })
+
+    it('does not read a deeper path as the admin page', () => {
+        // Only the bare two-segment form. /{space}/admin/anything stays free.
+        expect(getAppLocationState(new URL('https://example.com/wcc/admin/extra')).page)
+            .not.toBe(APP_PAGE_PREFERENCES)
     })
 
     it('treats both /admin and /preferences as the admin page', () => {
