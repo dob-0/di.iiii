@@ -625,6 +625,15 @@ export default function StudioShell({
                 </>
             )}
 
+            {/* The only sync indicator lives in the control cluster, which is gated
+                !isMobile — so on a phone an expired session was completely silent while
+                the editor kept taking edits that a reload would drop. Rendered even when
+                the UI is hidden: losing work is not chrome. */}
+            {syncState?.pendingSyncError && (
+                <div className="studio-sync-alert" role="alert">
+                    {syncState.pendingSyncError}
+                </div>
+            )}
             {!uiHidden && isMobile && (
                 <>
                     <div className="smb-topbar">
