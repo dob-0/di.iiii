@@ -75,15 +75,22 @@ outcomes reaching only a collapsed activity log, and touch targets across Studio
 - Two invite tokens were printed into a session log (`library`, `funding`) and are live for
   7 days — reusable keys, not single-use. Revoke them.
 
-### The protocol has a deadlock, and it is currently firing
+### The protocol has a deadlock — it fired, and it cost four deploys
 
 `check-agent-docs.mjs` enforces two rules that can contradict: **CURRENT.md must be ≤50
 lines**, and **CURRENT.md must not differ from `origin/dev`** on any branch. When dev's own
-copy goes over budget, no branch can trim it without tripping the second rule — the fix has
-to be committed on `dev` directly.
+copy goes over budget, no branch can trim it — the trim itself trips the second rule. The
+fix has to be a commit on `dev`.
 
-That is live right now: dev's CURRENT.md went 53 lines at `fe2d4fc4` (land) and 59 at
-`7e535e37` (a hand-written recap). `docs:ai:check` therefore fails on dev, on every open PR,
-and in the staging deploy — PR #240's `build-and-test` is red for that line alone, with
-nothing of its own failing. Trim the "Open" section on `dev` and everything goes green
-together.
+It fired on 2026-08-21. Every dev deploy from the `fix/lexicon-level` merge onward failed
+the docs gate: first on `docs/ai/sessions/` not being empty, then — once `land` ran and
+cleared that — on CURRENT.md at 53 lines, then 59 after a hand-written recap. Four
+consecutive staging deploys failed, and every open PR went red on that one line; PR #240's
+`build-and-test` failed on it alone with nothing of its own broken.
+
+Demonstrated rather than assumed: a 50-line trim placed in the tree cleared the budget error
+and left exactly one complaint — that it was not on dev.
+
+A parallel session trimmed it to 49 lines on `dev` and the gate went green. Worth keeping:
+**the file that every agent is told to update is the one file a branch may not touch**, so
+when it overflows, the whole repo stops shipping until someone commits on dev.
