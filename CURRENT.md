@@ -13,7 +13,10 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Links say where they go, and copy what they mean
+- The home rule — work lands in the ecosystem, and the audit ledger moves in
+- the space stops being a query parameter
+- the two layer gaps the doors audit left
+- name what each create button makes, and stop two strings saying "project" about things that aren't
 
 Full detail: `PROGRESS.md`.
 
