@@ -13,10 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- The home rule — work lands in the ecosystem, and the audit ledger moves in
-- the space stops being a query parameter
-- the two layer gaps the doors audit left
-- name what each create button makes, and stop two strings saying "project" about things that aren't
+- Doors audit wave A shipped (#231–#235, staging-verified as guest, desktop+phone):
+  links land where their label says, Studio ⇄ Nodes doors, OAuth returns you to the
+  page you started from, the canvas got its exits, share links copy the public URL,
+  labels unified (View live / Projects — "Hub" is gone). Staging only, prod waits.
+- Parallel strand: home rule + research mirrors in-repo; the space stops being a
+  query parameter; toolbar-overlap check asserts again; create-button naming.
 
 Full detail: `PROGRESS.md`.
 
@@ -27,6 +29,10 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
+- **Doors waves B–E parked on three owner decisions** — where "Step inside" lands ·
+  what publishing a graph means · §6 amendment + the prod moment. Ledger: memory
+  `project_dii_doors_audit_2026_08_21`. Deferred from wave A: embed-link copy
+  affordance; bare PHONE canvas still has no visible exit.
 - Raw-as-default landing promotion still open — owner's call, MANIFESTO §6 gates it.
 - **Staging Google OAuth secret parked by the user** — rotation script staged, see memory
   `reference-leaked-secrets`. Prod spaces all owned; mesh gate ARMED both tiers.
