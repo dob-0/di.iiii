@@ -5,6 +5,265 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## Links say where they go, and copy what they mean
+
+Doors audit wave A, fifth slice.
+
+- Studio's "Copy share link" for a non-live project copies the PUBLIC viewer
+  address (/{space}/p/{id}) instead of the auth-gated editor URL a recipient
+  could never open. Same isPublic gate as the live link.
+- "Copy projector link" in the node editor's ⋯ menu — /out had zero inbound
+  links and was reachable only by typing the address. Server projects only;
+  a local canvas /out would show the visitor's own browser storage, not
+  the author's work. The Help sheet's Output row now points at the menu.
+- One label per destination (the audit counted six labels for /{space} and
+  seven for /{space}/studio): opening the public space view says "View live"
+  (StudioHub, admin space rows); opening a space's project list says
+  "Projects" (Studio toolbar "← Projects", admin rows — "Hub" is gone from
+  labels; it was never in the vocabulary).
+
+## The canvas gets its doors
+
+Doors audit wave A, fourth slice. /open/raw — the landing's one front door —
+was a sealed room: no nav, no way back to the landing, no path to Spaces or
+the Wiki.
+
+- The zen wordmark (bottom centre) is now the way home: a link to /, wearing
+  the same ambient clothes (same resting colour, quiet hover, focus ring).
+  This deliberately reverses the recorded "non-interactive by design" note —
+  the sealed-room P0 outweighed it, and a wordmark that links home adds no
+  furniture.
+- The ⋯ menu gains Spaces and Wiki under the existing Home entry.
+- Known gap, left honest: on a phone the wordmark is display:none (it sat on
+  the cards) and zen hides the toolbar — a bare phone canvas still has only
+  the sign-in chip until the toolbar is summoned. Wants its own touch-first
+  pass, not a squeeze into this one.
+- Wiki: the zen article says the wordmark is the way home.
+
+Verified by LOOKING at the preview build (1280×800): resting first-visit
+unchanged, menu entries native, ← Projects label live.
+
+## Sign-in returns you to where you stood
+
+Doors audit wave A, third slice. Every OAuth sign-in dumped the person on the
+landing page — destination lost, ?invite= token lost with it.
+
+- getOAuthUrl (the one builder every sign-in button uses) sends
+  returnTo=path+query; the start routes seal it into the signed anti-CSRF
+  state; the callback redirects there with the ?auth=ok marker appended.
+- sanitizeReturnTo admits only same-site paths (no absolute URLs, no
+  //host, no backslashes, 600-char cap) — the callback cannot become an
+  open redirect. Off-site values sign as if absent.
+- AuthReturnNotice already mounts at RootApp level and preserves foreign
+  params while stripping auth/kept, so the toast and an ?invite= token
+  both work on any return path.
+- Wiki: joining-a-space says sign-in brings you back, invite intact.
+
+## One project, two editors — the door between them
+
+Wave A, second slice of the 2026-08-21 doors audit. A project has always been
+editable in both editors, with no way across and no marker saying which one
+made it — opened in the wrong editor it renders a silent blank.
+
+- Studio's toolbar gains "⇄ Nodes" (Display section, next to ← Hub): opens the
+  same project in the node editor.
+- The node editor's ⋯ menu gains "Open in Studio" for server projects; the
+  local canvas has no Studio twin, so no entry there (guarded).
+- Studio's project list stops disguising node projects as "Project" —
+  `raw-v2` now shows as "Nodes".
+- Wiki (node-editor article) documents the door.
+
+## The doors point where they say
+
+Wave A of the 2026-08-21 doors audit (links/naming/hierarchy, artifact in the
+owner's gallery). Pure link fixes — no design decisions taken, no routes changed.
+
+- `buildRawHubPath` → `buildRawCanvasPath`, `RAW_PAGE_HUB` → `RAW_PAGE_CANVAS`:
+  the name now says the route renders the per-browser canvas, not a hub.
+- Studio's "Nodes" button and admin's "Nodes"/"Node Editor Path" now open
+  `/{space}/raw/projects` — the list their labels promise.
+- `/admin`'s non-admin "Go to my spaces" goes to `/studio` (was `/main/studio`
+  behind a second auth wall); gate copy says "the Spaces page", not "the hub".
+- Raw's back button says "← Projects" in both mounts (was "Hub" in one).
+- Wiki: the false claim that "Step inside" lands in the Open Space's shared
+  build is rewritten to the truth (browser-local canvas); the node-editor
+  article now names `/…/raw/projects` vs `/…/raw` correctly.
+
+Known-fixes rows + regression guards added for both broken doors.
+
+## The defect wave from the 08-21 deep audit — nine verified fixes plus the rename verb
+
+Source: a ten-agent audit (six tool-research scouts, four UI walkers at phone
+and desktop size) whose ledger lives outside the repo; every finding below was
+re-verified live before and after the fix.
+
+- Placement anti-stack: double-tap placement on a phone clamped every card
+  into a ~108px band, stacking new cards on the last one. The clamp stays;
+  an occupied spot now walks down (then wraps) until free.
+- Node drags clamp like placement — a card could carry its door fully
+  off-screen with no way back.
+- Tap on empty canvas clears the selection — the phone's only deselect
+  (registered synchronously at pointerdown; a quick tap's pointerup beats
+  the React effect that attaches the pan listeners).
+- Entering the fullscreen room clears the selection: the inspector sheet
+  covered 38% of "fullscreen" with an armed Delete floating over the stage.
+- .raw-room-exit had NO base style — a 21px default-HTML button as the only
+  way out. Styled like its topbar siblings, 44px.
+- The all-nodes example now force-fits after insert (new fitSignal prop on
+  RawGraphSurface) — 93 of 93 cards in view where before most sat off-screen.
+- The palette measures its real box and lifts itself back inside the
+  viewport (the JS assumed the list's 280px; the input row made it ~336px).
+- Palette rows get the 44px touch minimum the rest of the file enforces.
+- A redirected wire drop says so: "Size can't take Number — wired to
+  Roughness instead" — the snap-to-nearest-compatible stays, the silence goes.
+- RENAME exists: the inspector title is click-to-edit (the schema always
+  supported label patches; no surface offered the verb). Help's controls
+  list teaches it.
+- Zen: a DERIVED empty-canvas default is stored as 'auto-on' and lifts
+  itself when the first node lands — the topbar (and its Scene button)
+  appear the moment there is a scene to look at. An explicit zen choice is
+  never touched. zenMode tests updated to the revised contract.
+- Auto-opened windows spread over a 16-slot 2D cascade instead of the 8-slot
+  32px staircase that piled three windows into one stack.
+
+## Also in this branch
+
+docs/ai/RESEARCH_METHOD.md — the standing credit-managed research method
+(questions first, cheap schema'd scouts, synthesis in the main session,
+ledger files, spend stated). The sessions README now warns that land quotes
+the note's first heading into CURRENT.md.
+
+## What this branch does
+
+Wakes device.midi.out — the first dormant send-out node made real. A
+MidiOutFeed (the KeyboardFeed shape: invisible, one per node, editor-level)
+sends over Web MIDI: Trigger truthy holds a note (rising edge strikes at
+Note/Velocity, falling releases the note actually struck), a truthy-but-
+changed trigger re-strikes (the rising-count idiom), and a changed Value
+leaves as CC. useMidiOutput joins useMidiInput in midiCapture.js — same
+status vocabulary, same hotplug behaviour, same navigator-boundary fake in
+tests. Status is a real output read from the live side channel.
+
+## Where things stand
+
+Registry entry un-shelled (runtime 'web', channel input added, hostHint
+default dropped), removed from UNIMPLEMENTED_NODE_TYPES, guard test now
+holds device.osc.out as the canonical shell. Wired in the all-nodes
+example; wiki article beside MIDI In's; behaviour-tested at the fake
+navigator boundary including the stuck-key release on unmount.
+
+## Decisions worth keeping
+
+- Sends to EVERY connected output; a device picker can come later — a
+  venue with exactly one synth cable is the common case.
+- Note release names the note that was STRUCK, not the current Note input —
+  anything else leaves stuck keys when Note moves while held.
+- No hardware in CI or on this machine: verified at the API boundary plus
+  a browser pass showing honest status text. The first real cable test is
+  the owner's — the node says plainly what it is doing either way.
+
+## 2026-08-21 — test:raw, and what the gate's minutes are actually spent on
+
+- `npm run test:raw` — the fast loop for Raw work. 1080 tests, 108 files, ~25s against
+  ~97s for the full run. Scope is Raw, the node graph, Studio's graph surfaces and the
+  node-vocabulary guards: `src/project` and `src/studio` are in because a node change
+  reaches them, and leaving them out would have made the subset feel fast by not looking.
+- **It guards its own scope.** `src/raw/rawTestScope.test.js` reads the filters out of
+  package.json rather than restating them, walks every test under `src/`, and goes red
+  naming the file if one imports from `src/raw` or `src/project` while sitting outside
+  what `test:raw` collects. A subset that silently stops covering something is worse than
+  no subset — it reads as "the Raw tests passed" while the failing file was never
+  collected. Watched red with a probe test, then watched green again with it removed.
+- One deliberate exclusion, stated in the open and asserted rather than assumed:
+  `AdminManageSection.test.jsx` imports `project/services/projectsApi.js`, the REST
+  client, not the graph. The test also fails if an excluded file stops existing.
+- **This does NOT shorten the PR gate, and it was never going to.** Measured: the full
+  suite is ~97s wall, and `serverXR/src/httpContracts.test.js` alone is 30–51s of it —
+  a third to a half, in one file. Slicing Raw out of CI would trade real coverage for
+  seconds that are not where the time is. test:raw is a local loop; CI keeps the full run.
+- **Found while measuring: `httpContracts.test.js` is flaky on dev.** "throttles repeated
+  sync status requests with 429 + Retry-After" — same file, same command, one run red and
+  the next fully green, duration swinging 30→42→51s. It is load-sensitive, not
+  order-dependent (an early read that it failed 3/3 in isolation was an artifact of `-t`
+  skipping the other 53 tests and their setup — discarded). Not touched here: it is a
+  serverXR concern and wants its own fix, but a gate with a coin-flip in it is the next
+  real velocity problem, ahead of any further slicing.
+- Still open in the workshop map's lane 2: widening the `authoringOnly` staleness guard,
+  which remains blind to viewport/window-only implementations.
+
+## What this branch does
+
+Line and Circle — the last two pure-geometry singles from the
+TouchDesigner-audit remainder. Line is a stroke between two wirable
+endpoints, drawn as a thin cylinder (GPU line width is unreliable across
+platforms), steered by two nested groups — yaw about Y, tilt about X —
+no quaternion, no new three import. Circle is a flat disc facing +Z,
+Plane's round sibling, with the standard material inputs.
+
+## Where things stand
+
+Both are colocated runtimes answering Geometry descriptors, so Array can
+build a fence out of Lines and Transform can carry a Circle. GEOMETRY_KINDS
+gains 'line' and 'circle'; GeometryPieces renders both as leaves;
+renderNodeBody renders both standing. Wired into the all-nodes example,
+behaviour-tested including a Line-through-Array pruner pass.
+
+## Decisions worth keeping
+
+- Line has NO position/rotation inputs — the endpoints ARE the placement.
+- Circle stands vertical by default like Plane; rotate it to lay a mark on
+  the floor. Consistency beat the theatrical default on purpose.
+
+## What this branch does
+
+Six more pure operators from the TouchDesigner-audit remainder — the second
+vector wave. Dot (agreement + angle in degrees), Cross (perpendicular),
+Direction (normalise, zero stays zero), Rotation (Rodrigues spin around an
+axis, degrees), Aim (the euler that makes a shape's +Z face a target —
+dependency-free, proven against three's lookAt in the tests), and Random
+(one fixed draw per Variant, the still counterpart to Noise).
+
+## Where things stand
+
+All six are colocated runtimes under `src/project/nodes/<typeId>/runtime.js`,
+registered in NODE_RUNTIMES and the registry (numbers family), wired into the
+all-nodes example, and covered by behaviour tests including an exact
+three-comparison for Aim. No clock involvement — all six are pure.
+
+## Decisions worth keeping
+
+- Angles a person types are degrees (Rotation's Angle input, Dot's Angle
+  output). Rotations a wire carries are radians, because they plug straight
+  into three (Aim's output). The wiki row says which is which.
+- "Face" means the flat +Z side, the way a monitor faces you.
+- Matrix and Curve from the audit were NOT built — without a real mesh lane
+  they would be shells; they move to the mesh-workshop project.
+
+# The operator's hands (TD audit, wave 5 of 5)
+
+## What changed
+
+- **Button** — the desk's Go: a window with one big pressable surface.
+  Presses is the authored count, written through an op so every window and
+  a Counter downstream agree how many times the show was told to go;
+  Pressed is this window's live finger through the side channel.
+- **Keyboard** — a chosen key (default Space) read by an invisible
+  editor-level KeyboardFeed: repeat events don't recount (a held key is
+  one event, the Counter convention), and keys typed into fields are
+  ignored — the spacebar that fires the show must not fire while naming a
+  node. Window-local by nature; /out has no fingers.
+
+Both wired into the example: Go's presses drive the Counter's step, the
+chosen key samples the sine through Hold.
+
+## Verified
+
+Runtime reads (authored count vs live hold, feed-quiet defaults), the
+feed's repeat/field/case rules, the window's press-and-hold contract and
+its disabled-without-a-writer state — all unit-proven. Full suite
+2553/2553 (one known local-dev-server fetch flake, clean on rerun); lint
+at baseline; build/wiki/docs green.
+
 ## 2026-08-20 — the anatomy manifest is measured, not committed
 
 - `nodeAnatomy.generated.js` is gone. It was keyed by line number, so it changed

@@ -88,7 +88,7 @@ export const WIKI_ARTICLES = [
         title: 'The Open Space, your sandbox & guest mode',
         summary: 'Everyone shares one communal Open Space, and every visitor — guest or account — gets exactly one private sandbox.',
         body: [
-            'The landing page’s “Step inside” button drops you straight into the Open Space’s shared build — no account, no space picker, one click to 3D.',
+            'The landing page’s “Step inside” button opens a blank canvas — no account, no space picker, one click to building. What you make there stays in your browser; the shared Open Space itself lives at /open.',
             'There are three kinds of places, and everyone gets the first two without an account:',
             { list: [
                 'The Open Space — one shared space where every visitor can build, together, live. It is always there and survives cleanup; an admin can restore it from a daily snapshot if it gets trashed.',
@@ -106,7 +106,7 @@ export const WIKI_ARTICLES = [
             'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page. Where no Main space is set at all, the landing offers “Look around” instead — a decorative walkable preview of its own hero, not a real space.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr'],
-        updated: '2026-08-19'
+        updated: '2026-08-21'
     },
     {
         id: 'joining-a-space',
@@ -117,7 +117,7 @@ export const WIKI_ARTICLES = [
             'Someone sent you a link to a space. You do not need to install anything, clone anything, or open a terminal: a browser is the entire toolchain. (The repo has a developer setup guide as well — that is a different door, for people who want to run the platform itself, and you can ignore it.)',
             { list: [
                 '1 — Open the link. It carries the invite; the space opens as soon as access is granted.',
-                '2 — Sign in with GitHub or Google when asked. You can accept an invite as a guest, but a guest session lives in one browser and lasts about a week — the same week its sandbox survives idleness; signing in makes the access permanent and carries any work you already did onto your account.',
+                '2 — Sign in with GitHub or Google when asked. Sign-in brings you back to the page you started from, invite link intact. You can accept an invite as a guest, but a guest session lives in one browser and lasts about a week — the same week its sandbox survives idleness; signing in makes the access permanent and carries any work you already did onto your account.',
                 '3 — You land in the space. /<space>/studio is its project hub: every project in the space, plus ＋ New to start one.',
                 '4 — Open a project and build. There is no Save button — every change is written as you make it, and anyone else in the same project sees it live.',
                 '5 — Stuck? The ? button in the Studio (or Shift+?) opens the illustrated guides and the full shortcut list.'
@@ -128,7 +128,7 @@ export const WIKI_ARTICLES = [
             'If the link says it is invalid or has expired, it is not you — invites last 7 days. Ask for a fresh one.'
         ],
         tags: ['invite', 'collaboration', 'onboarding', 'getting started', 'no install', 'editor', 'access'],
-        updated: '2026-08-10'
+        updated: '2026-08-21'
     },
     {
         id: 'free-spaces',
@@ -537,7 +537,8 @@ export const WIKI_ARTICLES = [
         body: [
             'The node editor is the other way to build: a canvas, nodes on it, and wires between them. Its core idea is free-form nesting — no node type is a singleton, and any node can be entered to author a graph inside it.',
             { list: [
-                'Reached from a space at /<space>/raw (same sign-in rules as Studio); /open/raw opens it on the communal open space.',
+                'A space’s node projects are listed at /<space>/raw/projects (same sign-in rules as Studio). /<space>/raw opens the canvas itself — a scratch surface stored in your browser, not on the server; /open/raw is that canvas addressed to the communal open space.',
+                'One project, two editors: the ⋯ menu’s “Open in Studio” swaps the project you are in over to the Studio editor, and Studio’s toolbar “⇄ Nodes” button swaps it back. A project made here shows as “Nodes” in Studio’s project list.',
                 'Enter any node with its “Enter ›” button; the breadcrumb tracks your depth and Escape steps back out one level at a time.',
                 'Entering a Scene node opens its 3D viewport fullscreen; the ← Scene button in the toolbar drops back to the graph.',
                 'The palette groups its nodes into seven families by what you are doing — bring in, make, numbers, the scene, watch, send out, agents — each with its own colour, the same colour the node’s card wears on the canvas. Typing dissolves the groups into a flat search. It only lists node types that actually compute or render; a “shell” tag marks anything that places but carries nothing yet, and “local dev” marks nodes that only work against a local dev server.',
@@ -565,7 +566,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started', 'anatomy', 'made-of'],
-        updated: '2026-08-19'
+        updated: '2026-08-21'
     },
     {
         id: 'studio-node',
@@ -771,6 +772,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-08'
     },
     {
+        id: 'midi-out-node',
+        category: 'Editing',
+        title: 'MIDI Out: the graph plays your gear',
+        summary: 'Wire numbers out to a synth, a sampler, or a lighting desk that speaks MIDI.',
+        body: [
+            'Add a MIDI Out node from the palette. It asks the browser for MIDI access and sends to every connected device; its Status port says what it is doing, so a Text panel wired to Status is an honest meter.',
+            'Notes: while Trigger is on, the note is held. The moment Trigger rises the node strikes Note at Velocity; the moment it falls it releases exactly the note it struck, even if Note has moved since. A Button, a Compare, a Toggle — anything true-or-false — makes a good Trigger.',
+            'A Trigger that stays on but keeps changing — MIDI In\'s rising count, a Counter — re-strikes on every change. That is the same idiom the rest of the desk uses: something happened because the number changed.',
+            'Knobs: whenever Value changes it leaves as a control change on the CC number. Wire an Oscillator through Range into Value and a filter sweeps itself. Nothing is sent while Value merely stays what it was.',
+            'Channel picks the MIDI channel (1-16). This needs Chrome or Edge; Safari and Firefox have no Web MIDI and Status says so instead of sitting blank. Devices plugged in later appear without a reload.'
+        ],
+        tags: ['raw', 'nodes', 'midi', 'device', 'synth', 'lighting', 'performance'],
+        updated: '2026-08-21'
+    },
+    {
         id: 'raw-zen-workspace',
         category: 'Editing',
         title: 'A canvas with nothing on it',
@@ -781,10 +797,12 @@ export const WIKI_ARTICLES = [
             'Everything is one gesture away. Press ⌘K (Ctrl+K) or just / — on a touch screen, double-tap the empty canvas. The same panel opens either way: type what you want and press Enter.',
             'That panel creates nodes and summons everything else from the same list. "Help", "Chat", "Outliner", any window you closed, and "Show the toolbar" to bring it back. Summoning rows sit at the top, so with the toolbar hidden they are never more than a keystroke away.',
             'Zoom still works as it always did: the wheel on a computer, and on a phone the zoom buttons stay in the corner — faded until you reach for them, because on a touch screen they are the only way to zoom.',
-            'Each canvas remembers its own choice, on this device. A canvas you already arranged keeps its toolbar; only new ones start bare. Turning the toolbar on or off on one canvas never changes another, and never changes what anyone else sees.'
+            'The bare start lasts exactly as long as the canvas is bare: the moment your first node lands, the toolbar appears on its own — the Scene button and the node count belong on screen once there is a scene to look at. A toolbar you explicitly turned off stays off; only the automatic bare start lifts itself.',
+            'Each canvas remembers its own choice, on this device. A canvas you already arranged keeps its toolbar; only new ones start bare. Turning the toolbar on or off on one canvas never changes another, and never changes what anyone else sees.',
+            'The faint di.iiii wordmark at the bottom is the way home — it links to the landing page. With the toolbar up, the ⋯ menu also offers Spaces and the Wiki, so the canvas is never a room without doors.'
         ],
         tags: ['raw', 'canvas', 'workspace', 'zen', 'minimal', 'palette', 'shortcuts', 'ui', 'starter'],
-        updated: '2026-08-19'
+        updated: '2026-08-21'
     },
     {
         id: 'reading-the-workspace',

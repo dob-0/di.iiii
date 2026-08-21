@@ -57,6 +57,7 @@
         "preview": "vite preview",
         "lint": "eslint src serverXR scripts shared vite.config.js eslint.config.js",
         "test": "vitest run",
+        "test:raw": "vitest run raw/ project/ studio/ nodeLabelVocabulary copyVocabulary ../scripts/nodeAnatomy.test.js",
         "di": "node scripts/di/cli.mjs",
         "di:pack": "node scripts/pack-runtime.mjs",
         "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js serverXR/src/bundleContracts.test.js serverXR/src/installBundleContracts.test.js serverXR/src/fallbackContracts.test.js serverXR/src/spaHostingContracts.test.js serverXR/src/syncContracts.test.js",

@@ -91,7 +91,11 @@ export const FAMILY_BY_TYPE = {
     'geom.cylinder': 'make',
     'geom.cone': 'make',
     'geom.torus': 'make',
+    'geom.line': 'make',
+    'geom.circle': 'make',
     'geom.transform': 'make',
+    'view.button': 'bring-in',
+    'device.keyboard': 'bring-in',
     'geom.constructor': 'make',
     'view.text': 'make',
     // Create sits with the things it makes, not with the panels it looks like.
@@ -139,6 +143,12 @@ export const FAMILY_BY_TYPE = {
     'colour.split': 'numbers',
     'colour.combine': 'numbers',
     'vector.distance': 'numbers',
+    'vector.dot': 'numbers',
+    'vector.cross': 'numbers',
+    'vector.direction': 'numbers',
+    'vector.rotation': 'numbers',
+    'vector.aim': 'numbers',
+    'value.random': 'numbers',
     'colour.ramp': 'numbers',
     // the scene — light, sky, grid, scenes, desks, containers
     'world.light': 'room',
@@ -577,21 +587,23 @@ export const NODE_TYPES = {
         id: 'device.midi.out',
         label: 'MIDI Out',
         category: 'device',
-        runtime: 'local',
-        authoringOnly: true,
+        runtime: 'web',
         singleton: false,
+        keywords: ['midi', 'out', 'send', 'note', 'cc', 'controller', 'synth', 'lighting'],
         inputs: [
             { id: 'note',     type: 'number', label: 'Note',     default: 60 },
             { id: 'velocity', type: 'number', label: 'Velocity', default: 100 },
             { id: 'cc',       type: 'number', label: 'CC',       default: 1 },
             { id: 'value',    type: 'number', label: 'Value',    default: 0 },
-            { id: 'trigger',  type: 'signal', label: 'Trigger' },
+            // `any`, not `signal`: a Button, a Compare, a Toggle are exactly
+            // what should hold a note — and MIDI In's rising count re-strikes.
+            { id: 'trigger',  type: 'any',    label: 'Trigger' },
+            { id: 'channel',  type: 'number', label: 'Channel',  default: 1 },
         ],
         outputs: [
             { id: 'status', type: 'string', label: 'Status' },
         ],
         defaultValues: {
-            hostHint: 'windows',
             channel: 1,
         },
         render: 'hidden',
@@ -1790,6 +1802,25 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    'value.random': {
+        id: 'value.random',
+        label: 'Random',
+        category: 'value',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['random', 'chance', 'draw', 'pick', 'variant', 'scatter'],
+        inputs: [
+            { id: 'least',    type: 'number', label: 'Least',    default: 0 },
+            { id: 'greatest', type: 'number', label: 'Greatest', default: 1 },
+            { id: 'variant',  type: 'number', label: 'Variant',  default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     'geom.array': {
         id: 'geom.array',
         label: 'Array',
@@ -2185,6 +2216,97 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    'vector.dot': {
+        id: 'vector.dot',
+        label: 'Dot',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['dot', 'product', 'facing', 'angle', 'alignment', 'agree', 'towards'],
+        inputs: [
+            { id: 'a', type: 'vec3', label: 'A', default: [0, 0, 0] },
+            { id: 'b', type: 'vec3', label: 'B', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'dot',   type: 'number', label: 'Dot'   },
+            { id: 'angle', type: 'number', label: 'Angle' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.cross': {
+        id: 'vector.cross',
+        label: 'Cross',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['cross', 'product', 'perpendicular', 'normal', 'sideways'],
+        inputs: [
+            { id: 'a', type: 'vec3', label: 'A', default: [0, 0, 0] },
+            { id: 'b', type: 'vec3', label: 'B', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.direction': {
+        id: 'vector.direction',
+        label: 'Direction',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['direction', 'normalise', 'normalize', 'unit', 'heading', 'way'],
+        inputs: [
+            { id: 'vector', type: 'vec3', label: 'Vector', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.rotation': {
+        id: 'vector.rotation',
+        label: 'Rotation',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['rotation', 'rotate', 'spin', 'orbit', 'axis', 'turn', 'revolve'],
+        inputs: [
+            { id: 'vector', type: 'vec3',   label: 'Vector', default: [0, 0, 0] },
+            { id: 'axis',   type: 'vec3',   label: 'Axis',   default: [0, 1, 0] },
+            { id: 'angle',  type: 'number', label: 'Angle',  default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.aim': {
+        id: 'vector.aim',
+        label: 'Aim',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['aim', 'face', 'look', 'lookat', 'towards', 'point at', 'orient'],
+        inputs: [
+            { id: 'from', type: 'vec3', label: 'From', default: [0, 0, 0] },
+            { id: 'to',   type: 'vec3', label: 'To',   default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Rotation' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     'colour.ramp': {
         id: 'colour.ramp',
         label: 'Ramp',
@@ -2283,6 +2405,52 @@ export const NODE_TYPES = {
         render: 'spatial-3d',
     },
 
+    'geom.line': {
+        id: 'geom.line',
+        label: 'Line',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['line', 'stroke', 'segment', 'edge', 'beam', 'ray', 'between'],
+        inputs: [
+            { id: 'from',      type: 'vec3',   label: 'From',      default: [0, 0, 0] },
+            { id: 'to',        type: 'vec3',   label: 'To',        default: [0, 1.5, 0] },
+            { id: 'thickness', type: 'number', label: 'Thickness', default: 0.02 },
+            { id: 'color',     type: 'color',  label: 'Colour',    default: '#5fa8ff' },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1 },
+        ],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'geom.circle': {
+        id: 'geom.circle',
+        label: 'Circle',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['circle', 'disc', 'round', 'ring', 'mark', 'spot'],
+        inputs: [
+            { id: 'color',     type: 'color',  label: 'Colour',    default: '#5fa8ff' },
+            { id: 'radius',    type: 'number', label: 'Radius',    default: 0.5 },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1 },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0 },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1 },
+            { id: 'position',  type: 'vec3',   label: 'Position',  default: [0, 0.5, 0] },
+            { id: 'rotation',  type: 'vec3',   label: 'Rotation',  default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
     'geom.transform': {
         id: 'geom.transform',
         label: 'Transform',
@@ -2300,6 +2468,48 @@ export const NODE_TYPES = {
         ],
         outputs: [
             { id: 'out', type: 'geometry', label: 'Out' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The operator's hands (TD audit, 2026-08-20): the desk's Go button and
+    // a chosen key — the two ways a human fires a cue without leaving the
+    // canvas.
+    'view.button': {
+        id: 'view.button',
+        label: 'Button',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['button', 'go', 'press', 'fire', 'cue', 'bang', 'push'],
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Go' },
+        ],
+        outputs: [
+            { id: 'presses', type: 'number',  label: 'Presses' },
+            { id: 'pressed', type: 'boolean', label: 'Pressed' },
+        ],
+        defaultValues: {
+            presses: 0,
+        },
+        defaultFrame: { width: 220, height: 160 },
+        render: 'panel-2d',
+    },
+
+    'device.keyboard': {
+        id: 'device.keyboard',
+        label: 'Keyboard',
+        category: 'device',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['keyboard', 'key', 'spacebar', 'shortcut', 'press', 'go'],
+        inputs: [
+            { id: 'key', type: 'string', label: 'Key', default: 'Space' },
+        ],
+        outputs: [
+            { id: 'pressed', type: 'boolean', label: 'Pressed' },
+            { id: 'count',   type: 'number',  label: 'Count'   },
         ],
         defaultValues: {},
         render: 'hidden',
@@ -2559,13 +2769,12 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'source.insta360',
     'source.stereo',
     'source.realsense.d405',
-    // devices — no OSC client (UDP, needs the local bridge), and MIDI Out has
-    // no sender yet. device.midi.in came off this list on 2026-08-08: Web MIDI
-    // is real in the page, so that one is implemented.
+    // devices — no OSC client (UDP, needs the local bridge).
+    // device.midi.in came off this list on 2026-08-08, device.midi.out on
+    // 2026-08-21: Web MIDI is real in the page in BOTH directions now.
     'device.ptz.osc',
     'device.osc.in',
     'device.osc.out',
-    'device.midi.out',
     // streaming — no compositor, no transport
     'stream.compositor',
     'stream.switcher',

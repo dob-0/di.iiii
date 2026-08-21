@@ -206,7 +206,7 @@ describe('PreferencesPage', () => {
         const snapshotSection = screen.getByText('Session Snapshot').closest('section')
         expect(snapshotSection).toBeTruthy()
         expect(within(snapshotSection).getByText('/main/studio')).toBeInTheDocument()
-        expect(within(snapshotSection).getByText('/main/raw')).toBeInTheDocument()
+        expect(within(snapshotSection).getByText('/main/raw/projects')).toBeInTheDocument()
 
         // Inspect section (topology + objects + session merged, 2026-08-08) —
         // clicking a node in the architecture map updates the inline Node
@@ -238,8 +238,8 @@ describe('PreferencesPage', () => {
         expect(spacesHeading).toBeTruthy()
         const spacesSection = spacesHeading.closest('section')
         expect(spacesSection).toBeTruthy()
-        expect(within(spacesSection).getByRole('button', { name: 'Public' })).toBeInTheDocument()
-        expect(within(spacesSection).getByRole('button', { name: 'Studio' })).toBeInTheDocument()
+        expect(within(spacesSection).getByRole('button', { name: 'View live' })).toBeInTheDocument()
+        expect(within(spacesSection).getByRole('button', { name: 'Projects' })).toBeInTheDocument()
         expect(within(spacesSection).getByRole('button', { name: 'Nodes' })).toBeInTheDocument()
         expect(within(spacesSection).getByRole('button', { name: 'Admin' })).toBeInTheDocument()
     })

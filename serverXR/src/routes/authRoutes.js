@@ -3,7 +3,7 @@ const passport = require('passport')
 const { Strategy: GitHubStrategy } = require('passport-github2')
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20')
 const { upsertUser } = require('../userStore')
-const { signLoginState, verifyLoginState } = require('../loginState')
+const { signLoginState, verifyLoginState, readLoginState, sanitizeReturnTo } = require('../loginState')
 const logger = require('../logger')
 
 // Derive a stable fallback secret from OAuth client secrets when no
@@ -128,7 +128,13 @@ const registerAuthRoutes = (router, {
     // ?auth=ok lets the client confirm the sign-in (AuthReturnNotice) —
     // OAuth used to return with no marker at all, so success was silent.
     // &kept=1 tells the toast the guest's sandbox came along.
-    res.redirect(`${frontendUrl || '/'}?auth=ok${kept ? '&kept=1' : ''}`)
+    // The signed state carries the path the person signed in FROM (r):
+    // without it every sign-in dumped them on the landing page, and an
+    // ?invite= token riding the original URL was lost with it.
+    const returnTo = sanitizeReturnTo(readLoginState(stateSecret, req.query.state)?.r)
+    const destination = returnTo ? `${frontendUrl || ''}${returnTo}` : (frontendUrl || '/')
+    const separator = destination.includes('?') ? '&' : '?'
+    res.redirect(`${destination}${separator}auth=ok${kept ? '&kept=1' : ''}`)
   }
 
   if (oauth.github.enabled) {
@@ -139,7 +145,7 @@ const registerAuthRoutes = (router, {
       // (the exact bug this replaced: every login shared one state token, so it worked
       // only within STATE_TTL_MS of server start and failed for everyone after that).
       (req, res, next) =>
-        passport.authenticate('github', { scope: ['user:email'], session: false, state: signLoginState(stateSecret) })(req, res, next)
+        passport.authenticate('github', { scope: ['user:email'], session: false, state: signLoginState(stateSecret, { returnTo: req.query.returnTo }) })(req, res, next)
     )
     router.get('/api/auth/github/callback',
       requireValidLoginState,
@@ -151,7 +157,7 @@ const registerAuthRoutes = (router, {
   if (oauth.google.enabled) {
     router.get('/api/auth/google',
       (req, res, next) =>
-        passport.authenticate('google', { scope: ['profile', 'email'], session: false, state: signLoginState(stateSecret) })(req, res, next)
+        passport.authenticate('google', { scope: ['profile', 'email'], session: false, state: signLoginState(stateSecret, { returnTo: req.query.returnTo }) })(req, res, next)
     )
     router.get('/api/auth/google/callback',
       requireValidLoginState,

@@ -16,6 +16,9 @@ import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import VideoFrameFeed from './VideoFrameFeed.jsx'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
+import KeyboardFeed from './KeyboardFeed.jsx'
+import MidiOutFeed from './MidiOutFeed.jsx'
+import ButtonPanelWindow from './ButtonPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
 import AgentRunPanel from './AgentRunPanel.jsx'
@@ -41,17 +44,18 @@ import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/n
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
 import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
+import { buildStudioProjectPath, buildStudioSpacesPath } from '../../studio/utils/studioRouting.js'
+import { buildWikiPath } from '../../utils/spaceRouting.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
-import { buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
-import { buildStudioProjectPath, navigateToStudioPath } from '../../studio/utils/studioRouting.js'
+import { buildRawOutPath, buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { RAW_ANATOMY_Z, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
-import { isPaletteSummons, resolveZenPreference, writeZenPreference } from '../utils/zenMode.js'
+import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
     readLocalWorkspaceDocument,
@@ -103,15 +107,20 @@ const buildWindowStateFromNode = (node, index = 0, graphContext = null) => {
     // Cascade unpositioned windows by a STABLE per-node offset, not the list
     // index — index shifts when a sibling closes, which made every later
     // unpositioned window hop 32px.
+    // …and spread in TWO dimensions over 16 slots: the old 8-slot 32px
+    // staircase left concurrently-open windows ~90% overlapped whenever two
+    // ids hashed near each other (audit 08-21, desk-07: three windows, one
+    // pile). Still the stable per-node hash — never the list index.
     const cascadeSlot = hasSavedPos
         ? 0
-        : Array.from(String(node.id)).reduce((sum, ch) => sum + ch.charCodeAt(0), index) % 8
-    const cascadeOffset = hasSavedPos ? 0 : cascadeSlot * 32
+        : Array.from(String(node.id)).reduce((sum, ch) => sum + ch.charCodeAt(0), index) % 16
+    const cascadeX = hasSavedPos ? 0 : (cascadeSlot % 4) * 72
+    const cascadeY = hasSavedPos ? 0 : Math.floor(cascadeSlot / 4) * 56
     return {
         id: node.id,
         title: frame.title || evaluateNodeInput(node, 'title', graphContext) || node.label,
-        x: (frame.x ?? def.x) + cascadeOffset,
-        y: (frame.y ?? def.y) + cascadeOffset,
+        x: (frame.x ?? def.x) + cascadeX,
+        y: (frame.y ?? def.y) + cascadeY,
         width: frame.width || def.width,
         height: frame.height || def.height,
         zIndex: frame.zIndex || 6,
@@ -175,6 +184,9 @@ export default function RawEditor({
     const [chatFrame, setChatFrame] = useState({ x: 24, y: 432, width: 280, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [readChatCount, setReadChatCount] = useState(0)
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
+    // Bumped after inserting a whole graph at once — tells the surface this
+    // is the one moment a forced re-fit is a kindness, not a yank.
+    const [fitSignal, setFitSignal] = useState(0)
     // Declared here because hostInspector's JSX is built partway down the
     // component and needs it; the effect that measures it lives further down,
     // next to the selection state it depends on.
@@ -695,11 +707,32 @@ export default function RawEditor({
                 }
             ])
 
+    // Renaming exists only for nodes — entities and the world keep their
+    // own naming stories. Empty names are refused upstream in TitleField.
+    const handleRenameSelected = useCallback((label) => {
+        const nodeId = workspaceState.selectedNodeId
+        if (!nodeId) return
+        applyLocalOps({
+            type: 'updateNode',
+            payload: { nodeId, patch: { label } }
+        }, { activityMessage: `Renamed a node to “${label}”.` })
+    }, [applyLocalOps, workspaceState.selectedNodeId])
+
     const inspectorValues = scopedSelectedNode
         ? { values: { ...(scopedSelectedNode.values || {}) } }
         : (scopedSelectedEntity ? scopedSelectedEntity.components : { worldState: document.worldState })
     const inspectorTitle = scopedSelectedNode ? scopedSelectedNode.label : (scopedSelectedEntity ? scopedSelectedEntity.name : 'World')
     const inspectorSubtitle = scopedSelectedNode ? scopedSelectedNode.typeId : (scopedSelectedEntity ? scopedSelectedEntity.type : 'Scene defaults')
+
+    // Entering the fullscreen room with a node selected kept the inspector
+    // sheet over 38% of it — with an armed Delete floating over the stage
+    // (audit 08-21, phone-61). Fullscreen means the room, whole; a selection
+    // made INSIDE it (arranging) is untouched — this runs on entry only.
+    useEffect(() => {
+        if (!isWorldFullscreen) return
+        clearSelection()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isWorldFullscreen])
 
     // Read the zen preference ONCE, and only after the document has loaded —
     // the default depends on whether this workspace already has work in it, and
@@ -716,6 +749,17 @@ export default function RawEditor({
         setZen(next)
         writeZenPreference(zenWorkspaceKey, next)
     }, [zenWorkspaceKey])
+
+    // The canvas stopped being empty: if zen was only the derived
+    // empty-canvas default, lift it so the topbar — and its Scene button —
+    // exist the moment there is a scene to look at. An explicit zen choice
+    // is never touched (audit 08-21: entering the scene took a 4-step
+    // palette incantation because the chrome never came back).
+    const documentNodeCount = (document?.nodes || []).length
+    useEffect(() => {
+        if (!zenReadRef.current || documentNodeCount === 0) return
+        if (liftAutoZen(zenWorkspaceKey)) setZen(false)
+    }, [documentNodeCount, zenWorkspaceKey])
 
     // Cmd/Ctrl+K or a bare `/` opens the palette at the middle of the screen.
     // Touch already has this: double-tapping empty canvas opens the same
@@ -1027,6 +1071,10 @@ export default function RawEditor({
         ], {
             activityMessage: `Created the all-nodes example (${exampleNodes.length} nodes, ${exampleEdges.length} edges).`
         })
+        // 94 nodes had just landed mostly off-screen with the view unmoved —
+        // spaghetti in the visible corner and no sign of the rest (audit
+        // 08-21). The person asked to SEE every node; show them every node.
+        setFitSignal((token) => token + 1)
     }
 
     // A scene made the way a person makes one: a room, a light, a shape, a place
@@ -1061,6 +1109,7 @@ export default function RawEditor({
         <aside ref={scaffoldRef} className="raw-selection-scaffold" style={{ '--raw-scaffold-top': workspaceTop + 'px' }}>
             <PropertyInspector
                 title={inspectorTitle}
+                onRename={scopedSelectedNode ? handleRenameSelected : null}
                 subtitle={inspectorSubtitle}
                 sections={inspectorSections}
                 values={inspectorValues}
@@ -1114,6 +1163,13 @@ export default function RawEditor({
     // 2026-08-08).
     const handleFrameOutputChange = useCallback((nodeId, texture) => {
         handleLiveOutputChange(nodeId, 'frame', texture)
+    }, [handleLiveOutputChange])
+    const handleKeyState = useCallback((nodeId, pressed, count) => {
+        handleLiveOutputChange(nodeId, 'pressed', pressed)
+        handleLiveOutputChange(nodeId, 'count', count)
+    }, [handleLiveOutputChange])
+    const handleMidiOutStatus = useCallback((nodeId, status) => {
+        handleLiveOutputChange(nodeId, 'status', status)
     }, [handleLiveOutputChange])
     const handleSoundOutputChange = useCallback((nodeId, levels) => {
         handleLiveOutputChange(nodeId, 'volume', levels?.volume ?? null)
@@ -1393,6 +1449,19 @@ export default function RawEditor({
         if (node.typeId === 'view.director') {
             return <DirectorPanelWindow node={node} />
         }
+        if (node.typeId === 'view.button') {
+            return (
+                <ButtonPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onHeld={(nodeId, held) => handleLiveOutputChange(nodeId, 'pressed', held)}
+                    onPress={(nodeId) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, presses: (Number(node.values?.presses) || 0) + 1 } } }
+                    })}
+                />
+            )
+        }
         if (node.typeId === 'view.timeline') {
             return (
                 <TimelinePanelWindow
@@ -1430,6 +1499,7 @@ export default function RawEditor({
             return (
                 <PropertyInspector
                     title={inspectorTitle}
+                    onRename={scopedSelectedNode ? handleRenameSelected : null}
                     subtitle={inspectorSubtitle}
                     sections={inspectorSections}
                     values={inspectorValues}
@@ -1636,30 +1706,12 @@ export default function RawEditor({
                 {chromeVisible && (
                     <>
                         <div className="raw-topbar-left">
-                            {/* One label for one destination. This button always goes to the
-                                space's list of projects; calling it "Hub" on some workspaces
-                                and "Projects" on others made one screen answer to two names. */}
                             <button type="button" className="raw-topbar-back" onClick={() => {
                                 navigateToRawPath(buildRawProjectsPath(resolvedSpaceId))
-                            }} title="Back to this space's projects">
+                            }}>
                                 ← Projects
                             </button>
-                            {/* Name first, then the other tool: "← Projects · Scene · Studio"
-                                reads as "you are in Scene, open it in Studio". With the button
-                                before the name, "Studio Scene" reads as one phrase. */}
                             <span className="raw-topbar-name" title={workspaceTitle}>{workspaceTitle}</span>
-                            {/* The other way of opening the SAME project. Hidden on the local
-                                canvas, which has no project to open anywhere else. */}
-                            {!isLocalWorkspace && projectId && (
-                                <button
-                                    type="button"
-                                    className="raw-topbar-back"
-                                    title="Open this project in Studio"
-                                    onClick={() => navigateToStudioPath(buildStudioProjectPath(projectId, resolvedSpaceId))}
-                                >
-                                    Studio →
-                                </button>
-                            )}
                         </div>
                         <div className="raw-topbar-center">
                             {navStack.length > 1 ? (
@@ -1741,6 +1793,44 @@ export default function RawEditor({
                                 {overflowOpen && (
                                     <div className="raw-topbar-overflow-menu">
                                         <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
+                                        {/* One project, two editors — this is the
+                                            way across. The local canvas has no
+                                            Studio twin, so no link there. */}
+                                        {!isLocalWorkspace && projectId && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setOverflowOpen(false)
+                                                    navigateToRawPath(buildStudioProjectPath(projectId, resolvedSpaceId))
+                                                }}
+                                            >
+                                                Open in Studio
+                                            </button>
+                                        )}
+                                        {/* The projector cable had zero inbound
+                                            links — /out was reachable only by
+                                            typing the address (doors audit). */}
+                                        {!isLocalWorkspace && projectId && (
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    setOverflowOpen(false)
+                                                    const url = `${window.location.origin}${buildRawOutPath(projectId, resolvedSpaceId)}`
+                                                    try {
+                                                        if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(url)
+                                                        else if (typeof window.prompt === 'function') window.prompt('Copy projector link', url)
+                                                    } catch {
+                                                        if (typeof window.prompt === 'function') window.prompt('Copy projector link', url)
+                                                    }
+                                                }}
+                                            >
+                                                Copy projector link
+                                            </button>
+                                        )}
+                                        {/* The platform exits — the canvas was a
+                                            sealed room before the doors audit. */}
+                                        <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildStudioSpacesPath()) }}>Spaces</button>
+                                        <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildWikiPath()) }}>Wiki</button>
                                         {/* Configuration, not work — the ⋯ is
                                             where the audit sent it. */}
                                         <div className="raw-topbar-scale-control">
@@ -1821,6 +1911,8 @@ export default function RawEditor({
                     // would simply never grow a socket, silently, with every
                     // unit test still passing.
                     portScopeNodes={authoredNodes}
+                    onClearSelection={clearSelection}
+                    fitSignal={fitSignal}
                     onPromotePort={handlePromotePort}
                     // Only at the ROOT of a truly blank desk. Inside a
                     // container the same button injected the whole six-node
@@ -1852,9 +1944,17 @@ export default function RawEditor({
                     activeMarkerTypeIds={activeMarkerTypeIds}
                 />
                 {/* Zen's three residents are surface, nodes, wordmark — this is
-                    the wordmark. Ambient, non-interactive, kept when chrome is
-                    summoned too. */}
-                <div className="raw-surface-wordmark" aria-hidden="true">di<span>.</span>iiii</div>
+                    the wordmark. Ambient, kept when the toolbar is summoned too.
+                    It became the way home in the 2026-08-21 doors audit: the
+                    canvas was a sealed room (no nav, no path back to the
+                    platform), and a wordmark that links home is the one exit
+                    that adds no furniture. Same resting look, quiet hover. */}
+                <a
+                    className="raw-surface-wordmark"
+                    href="/"
+                    aria-label="di.iiii — home"
+                    onClick={(e) => { e.preventDefault(); navigateToRawPath('/') }}
+                >di<span>.</span>iiii</a>
                 {dropState.over && (
                     <div className="raw-drop-veil" aria-hidden="true">
                         <span>drop to bring it in</span>
@@ -2042,6 +2142,21 @@ export default function RawEditor({
                         node={node}
                         asset={assetMap.get(node.values.src)}
                         onLevelsChange={handleSoundOutputChange}
+                    />
+                ))}
+            {nodes
+                .filter((node) => node.typeId === 'device.keyboard')
+                .map((node) => (
+                    <KeyboardFeed key={node.id} node={node} onKeyState={handleKeyState} />
+                ))}
+            {nodes
+                .filter((node) => node.typeId === 'device.midi.out')
+                .map((node) => (
+                    <MidiOutFeed
+                        key={node.id}
+                        node={node}
+                        inputs={evaluateNodeInputs(node, graphContext)}
+                        onStatus={handleMidiOutStatus}
                     />
                 ))}
 

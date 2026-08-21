@@ -41,7 +41,7 @@ describe('minimal jam mode', () => {
                 expect(screen.getByRole('button', { name: label })).toBeTruthy()
             }
             expect(screen.getByText('Arrange')).toBeTruthy()
-            expect(screen.getByTitle("Back to this space's projects")).toBeTruthy()
+            expect(screen.getByTitle('Back to projects')).toBeTruthy()
         })
 
         it('jam minimal: only the Create window, no Arrange, no Hub — but Navigate/Edit stay', () => {
@@ -58,7 +58,7 @@ describe('minimal jam mode', () => {
                 expect(screen.queryByRole('button', { name: gone })).toBeNull()
             }
             expect(screen.queryByText('Arrange')).toBeNull()
-            expect(screen.queryByTitle("Back to this space's projects")).toBeNull()
+            expect(screen.queryByTitle('Back to projects')).toBeNull()
             expect(screen.getByRole('button', { name: 'Navigate' })).toBeTruthy()
             expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy()
         })

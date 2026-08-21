@@ -138,15 +138,12 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                     <ModuleSection title="Admin console" subtitle="Admins only">
                         <div className="preferences-empty">
                             This page is for platform admins. Your spaces — create, rename,
-                            publish, GitHub sync — live in the Studio hub.
+                            publish, GitHub sync — live on the Spaces page.
                         </div>
                         <div className="preferences-command-grid">
                             <button
                                 type="button"
                                 className="toggle-button"
-                                // buildStudioHubPath() with no space falls back to
-                                // DEFAULT_STUDIO_SPACE_ID, so "my spaces" was landing on ONE
-                                // space's project list. The spaces list has its own builder.
                                 onClick={() => navigateToStudioPath(buildStudioSpacesPath())}
                             >
                                 Go to my spaces

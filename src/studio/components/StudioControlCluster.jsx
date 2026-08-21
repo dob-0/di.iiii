@@ -27,8 +27,7 @@ export default function StudioControlCluster({
     onFullscreen,
     onHideUI,
     onBackToHub,
-    // Same project, other tool. Absent on surfaces with no project to open.
-    onOpenInNodeEditor,
+    onOpenNodeEditor,
     xrState,
     syncState,
     presence,
@@ -130,17 +129,11 @@ export default function StudioControlCluster({
                                 <button className="scc-btn" onClick={onFullscreen} title="Toggle fullscreen">⛶ Fullscreen</button>
                                 <button className="scc-btn" onClick={onHideUI} title="Hide UI (H)">Hide UI</button>
                                 <button className="scc-btn" onClick={onShowHelp} title="Keyboard shortcuts (Shift+?)">? Help</button>
-                                {/* "Projects", not "Hub": this goes to the space's list of
-                                    projects, and Hub is in no dictionary row — the same
-                                    screen was answering to three different names. */}
                                 {!minimal && (
-                                    <button className="scc-btn" onClick={onBackToHub} title="Back to this space's projects">← Projects</button>
+                                    <button className="scc-btn" onClick={onBackToHub} title="Back to projects">← Projects</button>
                                 )}
-                                {/* The other way of opening the SAME project. Without this the
-                                    only route between the two building tools is up to a list
-                                    and back down, through a blank canvas on the way. */}
-                                {!minimal && onOpenInNodeEditor && (
-                                    <button className="scc-btn" onClick={onOpenInNodeEditor} title="Open this project in the node editor">Node editor</button>
+                                {!minimal && onOpenNodeEditor && (
+                                    <button className="scc-btn" onClick={onOpenNodeEditor} title="Open this project in the node editor">⇄ Nodes</button>
                                 )}
                                 {!minimal && canViewLive && (
                                     <button className="scc-btn" onClick={onViewLive} title="Open the public space URL in a new tab">↗ View live</button>

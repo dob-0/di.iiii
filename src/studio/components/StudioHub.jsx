@@ -33,6 +33,7 @@ const formatRelativeDate = (iso) => {
 const formatSource = (source = '') => {
     switch (source) {
         case 'studio-v3': return 'Studio'
+        case 'raw-v2': return 'Nodes'
         case 'legacy-import-studio': return 'Imported'
         case 'beta-v2': return 'Legacy'
         case 'legacy-import': return 'Legacy'
@@ -273,7 +274,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         </>
                     )}
                     <span className="sh-sep">·</span>
-                    <button className="sh-link" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>Live</button>
+                    <button className="sh-link" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>View live</button>
                     {archivedProjects.length > 0 && (
                         <>
                             <span className="sh-sep">·</span>

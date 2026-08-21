@@ -512,3 +512,190 @@ describe('the geometry wave (TD audit)', () => {
         expect(evalPort({ nodes: [node('t', 'geom.transform')], edges: [] }, 't', 'out')).toBeUndefined()
     })
 })
+
+describe('the operator hands wave (TD audit)', () => {
+    it('Button: presses is the authored count, pressed is this window only', () => {
+        const button = node('go', 'view.button', { presses: 4 })
+        const held = createNodeGraphContext({ nodes: [button], edges: [] }, { liveOutputs: new Map([['go:pressed', true]]) })
+        expect(evaluateNodeOutput(button, 'presses', held)).toBe(4)
+        expect(evaluateNodeOutput(button, 'pressed', held)).toBe(true)
+        const idle = createNodeGraphContext({ nodes: [button], edges: [] })
+        expect(evaluateNodeOutput(button, 'pressed', idle)).toBe(false)
+    })
+
+    it('Keyboard reads the feed, quiet where no feed publishes', () => {
+        const keys = node('k', 'device.keyboard', { key: 'Space' })
+        const live = createNodeGraphContext({ nodes: [keys], edges: [] }, { liveOutputs: new Map([['k:pressed', true], ['k:count', 3]]) })
+        expect(evaluateNodeOutput(keys, 'pressed', live)).toBe(true)
+        expect(evaluateNodeOutput(keys, 'count', live)).toBe(3)
+        const out = createNodeGraphContext({ nodes: [keys], edges: [] })
+        expect(evaluateNodeOutput(keys, 'pressed', out)).toBe(false)
+        expect(evaluateNodeOutput(keys, 'count', out)).toBe(0)
+    })
+})
+
+describe('the second vector wave (TD audit)', () => {
+    const vec = (id, value) => node(id, 'value.vec3', { value })
+    const num = (id, value) => node(id, 'value.number', { value })
+
+    it('Dot answers agreement and the angle in degrees', () => {
+        const doc = {
+            nodes: [vec('a', [1, 0, 0]), vec('b', [0, 1, 0]), node('d', 'vector.dot')],
+            edges: [edge('a', 'out', 'd', 'a'), edge('b', 'out', 'd', 'b')]
+        }
+        expect(evalPort(doc, 'd', 'dot')).toBe(0)
+        expect(evalPort(doc, 'd', 'angle')).toBeCloseTo(90)
+    })
+
+    it('Dot with a zero-length side answers angle 0, not NaN', () => {
+        const doc = {
+            nodes: [vec('a', [0, 0, 0]), vec('b', [0, 1, 0]), node('d', 'vector.dot')],
+            edges: [edge('a', 'out', 'd', 'a'), edge('b', 'out', 'd', 'b')]
+        }
+        expect(evalPort(doc, 'd', 'angle')).toBe(0)
+    })
+
+    it('Cross of the first two axes is the third', () => {
+        const doc = {
+            nodes: [vec('a', [1, 0, 0]), vec('b', [0, 1, 0]), node('c', 'vector.cross')],
+            edges: [edge('a', 'out', 'c', 'a'), edge('b', 'out', 'c', 'b')]
+        }
+        expect(evalPort(doc, 'c', 'out')).toEqual([0, 0, 1])
+    })
+
+    it('Direction shrinks any vector to length 1 and leaves zero alone', () => {
+        const doc = {
+            nodes: [vec('v', [3, 0, 4]), node('d', 'vector.direction')],
+            edges: [edge('v', 'out', 'd', 'vector')]
+        }
+        expect(evalPort(doc, 'd', 'out')).toEqual([0.6, 0, 0.8])
+        const zero = {
+            nodes: [vec('v', [0, 0, 0]), node('d', 'vector.direction')],
+            edges: [edge('v', 'out', 'd', 'vector')]
+        }
+        expect(evalPort(zero, 'd', 'out')).toEqual([0, 0, 0])
+    })
+
+    it('Rotation spins a quarter turn around the default axis, in degrees', () => {
+        const doc = {
+            nodes: [vec('v', [1, 0, 0]), num('a', 90), node('r', 'vector.rotation')],
+            edges: [edge('v', 'out', 'r', 'vector'), edge('a', 'out', 'r', 'angle')]
+        }
+        const out = evalPort(doc, 'r', 'out')
+        expect(out[0]).toBeCloseTo(0)
+        expect(out[1]).toBeCloseTo(0)
+        expect(out[2]).toBeCloseTo(-1)
+    })
+
+    it('Rotation with a zero axis passes the vector through untouched', () => {
+        const doc = {
+            nodes: [vec('v', [1, 2, 3]), vec('ax', [0, 0, 0]), num('a', 45), node('r', 'vector.rotation')],
+            edges: [edge('v', 'out', 'r', 'vector'), edge('ax', 'out', 'r', 'axis'), edge('a', 'out', 'r', 'angle')]
+        }
+        expect(evalPort(doc, 'r', 'out')).toEqual([1, 2, 3])
+    })
+
+    it('Aim matches three\'s lookAt euler exactly — the wire IS a rotation', async () => {
+        const THREE = await import('three')
+        const o = new THREE.Object3D()
+        const cases = [
+            [[0, 0, 0], [0, 0, 5]],
+            [[0, 0, 0], [5, 0, 0]],
+            [[0, 0, 0], [0, 5, 0]],
+            [[0, 0, 0], [0, -5, 0]],
+            [[1, 2, 3], [4, 0, -2]],
+            [[0, 0, 0], [3, 4, 5]],
+            [[-2, 1, 7], [3, -4, -1]],
+        ]
+        for (const [from, to] of cases) {
+            const doc = {
+                nodes: [vec('f', from), vec('t', to), node('aim', 'vector.aim')],
+                edges: [edge('f', 'out', 'aim', 'from'), edge('t', 'out', 'aim', 'to')]
+            }
+            const out = evalPort(doc, 'aim', 'out')
+            o.position.set(...from)
+            o.rotation.set(0, 0, 0)
+            o.lookAt(new THREE.Vector3(...to))
+            expect(out[0], `x for ${JSON.stringify([from, to])}`).toBeCloseTo(o.rotation.x, 3)
+            expect(out[1], `y for ${JSON.stringify([from, to])}`).toBeCloseTo(o.rotation.y, 3)
+            expect(out[2], `z for ${JSON.stringify([from, to])}`).toBeCloseTo(o.rotation.z, 3)
+        }
+    })
+
+    it('Aim standing on its target answers no rotation at all', () => {
+        const doc = {
+            nodes: [vec('f', [1, 1, 1]), vec('t', [1, 1, 1]), node('aim', 'vector.aim')],
+            edges: [edge('f', 'out', 'aim', 'from'), edge('t', 'out', 'aim', 'to')]
+        }
+        expect(evalPort(doc, 'aim', 'out')).toEqual([0, 0, 0])
+    })
+
+    it('Random is fixed per variant, different across variants, inside the span', () => {
+        const draw = (variant) => {
+            const doc = {
+                nodes: [num('v', variant), num('hi', 10), node('r', 'value.random')],
+                edges: [edge('v', 'out', 'r', 'variant'), edge('hi', 'out', 'r', 'greatest')]
+            }
+            return evalPort(doc, 'r', 'out')
+        }
+        expect(draw(3)).toBe(draw(3))
+        expect(draw(3)).not.toBe(draw(4))
+        for (const variant of [0, 1, 2, 3, 4]) {
+            const value = draw(variant)
+            expect(value).toBeGreaterThanOrEqual(0)
+            expect(value).toBeLessThanOrEqual(10)
+        }
+    })
+})
+
+describe('the line and circle wave (TD audit)', () => {
+    const vec = (id, value) => node(id, 'value.vec3', { value })
+
+    it('Line answers a stroke descriptor with wired endpoints', () => {
+        const doc = {
+            nodes: [vec('t', [2, 3, 4]), node('l', 'geom.line', { from: [1, 0, 0], thickness: 0.1 })],
+            edges: [edge('t', 'out', 'l', 'to')]
+        }
+        const out = evalPort(doc, 'l', 'geometry')
+        expect(out.kind).toBe('line')
+        expect(out.from).toEqual([1, 0, 0])
+        expect(out.to).toEqual([2, 3, 4])
+        expect(out.thickness).toBe(0.1)
+    })
+
+    it('Circle answers a disc descriptor the pruner accepts', async () => {
+        const { isGeometryDescriptor } = await import('../graph/geometryDescriptor.js')
+        const doc = {
+            nodes: [node('c', 'geom.circle', { radius: 2, color: '#ff5555' })],
+            edges: []
+        }
+        const out = evalPort(doc, 'c', 'geometry')
+        expect(out.kind).toBe('circle')
+        expect(out.radius).toBe(2)
+        expect(out.color).toBe('#ff5555')
+        expect(isGeometryDescriptor(out)).toBe(true)
+    })
+
+    it('a Line descriptor survives the pruner inside an Array', async () => {
+        const { isGeometryDescriptor } = await import('../graph/geometryDescriptor.js')
+        const doc = {
+            nodes: [node('l', 'geom.line'), node('arr', 'geom.array', { count: 3, offset: [1, 0, 0] })],
+            edges: [edge('l', 'geometry', 'arr', 'geometry')]
+        }
+        const out = evalPort(doc, 'arr', 'out')
+        expect(isGeometryDescriptor(out)).toBe(true)
+        expect(out.children).toHaveLength(3)
+        expect(out.children[0].children[0].kind).toBe('line')
+    })
+})
+
+describe('device.midi.out status', () => {
+    it('reads the feed report from the live side channel, empty when unmounted', () => {
+        const doc = { nodes: [node('mo', 'device.midi.out')], edges: [] }
+        expect(evalPort(doc, 'mo', 'status')).toBe('')
+        const target = doc.nodes[0]
+        const live = new Map([['mo:status', 'Sending to 2 devices']])
+        const context = createNodeGraphContext(doc, { liveOutputs: live })
+        expect(evaluateNodeOutput(target, 'status', context)).toBe('Sending to 2 devices')
+    })
+})

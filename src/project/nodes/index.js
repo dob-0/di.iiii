@@ -1,6 +1,8 @@
 import { computeOutput as colourCombine } from './colour.combine/runtime.js'
 import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
+import { computeOutput as deviceKeyboard } from './device.keyboard/runtime.js'
+import { computeOutput as deviceMidiOut } from './device.midi.out/runtime.js'
 import { computeOutput as geomArray } from './geom.array/runtime.js'
 import { computeOutput as geomCone } from './geom.cone/runtime.js'
 import { computeOutput as geomCylinder } from './geom.cylinder/runtime.js'
@@ -36,10 +38,19 @@ import { computeOutput as signalLfo } from './signal.lfo/runtime.js'
 import { computeOutput as signalSpeed } from './signal.speed/runtime.js'
 import { computeOutput as signalTimer } from './signal.timer/runtime.js'
 import { computeOutput as signalTrigger } from './signal.trigger/runtime.js'
+import { computeOutput as viewButton } from './view.button/runtime.js'
 import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
+import { computeOutput as geomCircle } from './geom.circle/runtime.js'
+import { computeOutput as geomLine } from './geom.line/runtime.js'
 import { computeOutput as valueNoise } from './value.noise/runtime.js'
+import { computeOutput as valueRandom } from './value.random/runtime.js'
+import { computeOutput as vectorAim } from './vector.aim/runtime.js'
 import { computeOutput as vectorCombine } from './vector.combine/runtime.js'
+import { computeOutput as vectorCross } from './vector.cross/runtime.js'
+import { computeOutput as vectorDirection } from './vector.direction/runtime.js'
 import { computeOutput as vectorDistance } from './vector.distance/runtime.js'
+import { computeOutput as vectorDot } from './vector.dot/runtime.js'
+import { computeOutput as vectorRotation } from './vector.rotation/runtime.js'
 import { computeOutput as vectorSplit } from './vector.split/runtime.js'
 
 // Colocated node runtimes — the lookup-first side of the registry plan.
@@ -53,6 +64,8 @@ export const NODE_RUNTIMES = new Map([
     ['colour.combine', colourCombine],
     ['colour.ramp', colourRamp],
     ['colour.split', colourSplit],
+    ['device.keyboard', deviceKeyboard],
+    ['device.midi.out', deviceMidiOut],
     ['geom.array', geomArray],
     ['geom.cone', geomCone],
     ['geom.cylinder', geomCylinder],
@@ -88,9 +101,18 @@ export const NODE_RUNTIMES = new Map([
     ['signal.speed', signalSpeed],
     ['signal.timer', signalTimer],
     ['signal.trigger', signalTrigger],
+    ['geom.circle', geomCircle],
+    ['geom.line', geomLine],
     ['value.noise', valueNoise],
+    ['value.random', valueRandom],
+    ['vector.aim', vectorAim],
     ['vector.combine', vectorCombine],
+    ['vector.cross', vectorCross],
+    ['vector.direction', vectorDirection],
     ['vector.distance', vectorDistance],
+    ['vector.dot', vectorDot],
+    ['vector.rotation', vectorRotation],
     ['vector.split', vectorSplit],
+    ['view.button', viewButton],
     ['view.timeline', viewTimeline],
 ])

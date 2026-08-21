@@ -68,6 +68,15 @@ npm run test
 ```
 Never claim a task is done without these passing. The baseline is always "0 lint errors, current `npm run test` count all green" — run it fresh rather than trusting a number written here; a pinned count (this doc has done it before — "219 tests," and separately "221"/"16" in the 2026-07-07 audit) always goes stale within a few sessions. If either degrades, fix it before stopping.
 
+**While iterating on Raw, `npm run test:raw` is the fast loop** — Raw, the node
+graph, Studio's graph surfaces and the node vocabulary guards, roughly a quarter
+of the wall-clock of the full run. It is a SUBSET and never the thing you finish
+on: run `npm run test` before calling anything done. Its scope is guarded by
+`src/raw/rawTestScope.test.js`, which goes red naming the file if a test that
+reaches into `src/raw` or `src/project` lands outside what `test:raw` collects —
+so the subset cannot quietly stop covering something. Add a test there, not a
+filter you remember to update.
+
 ### Coding is not done — test as a human would, in a real browser
 
 **Rule:** Writing the code and passing lint/build/unit tests is not "done." Before reporting a UI/data-flow fix complete, drive it in an actual browser the way a human user would (click the real button, wait for the real network round-trip, look at the real screenshot) and confirm the thing the user asked for actually happened on screen.

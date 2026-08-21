@@ -29,6 +29,11 @@ export const readZenPreference = (workspaceKey, { nodeCount = 0, defaultZen, sto
     }
     if (stored === 'on') return true
     if (stored === 'off') return false
+    // A DERIVED default, not a choice: zen switched itself on because the
+    // canvas was empty at the time. The premise is re-checked on every read —
+    // the moment the canvas has work in it, the chrome belongs back. Only an
+    // explicit toggle writes the unconditional 'on'.
+    if (stored === 'auto-on') return nodeCount === 0
     // A caller that seeded the workspace itself may override the default: the
     // starter constellation is not "an arrangement somebody already built", so
     // a seeded first visit still opens bare. A stored choice always wins.
@@ -36,10 +41,10 @@ export const readZenPreference = (workspaceKey, { nodeCount = 0, defaultZen, sto
     return defaultZenFor({ nodeCount })
 }
 
-export const writeZenPreference = (workspaceKey, zen, { storage } = {}) => {
+export const writeZenPreference = (workspaceKey, zen, { storage, derived = false } = {}) => {
     const store = storage ?? (typeof window !== 'undefined' ? window.localStorage : null)
     try {
-        store?.setItem(storageKey(workspaceKey), zen ? 'on' : 'off')
+        store?.setItem(storageKey(workspaceKey), zen ? (derived ? 'auto-on' : 'on') : 'off')
     } catch {
         // A workspace that cannot remember the choice must still honour it for
         // this session, so a failed write is not an error worth surfacing.
@@ -53,9 +58,42 @@ export const writeZenPreference = (workspaceKey, zen, { storage } = {}) => {
  * as the workspace has a node in it — a setting that changes itself.
  */
 export const resolveZenPreference = (workspaceKey, { nodeCount = 0, defaultZen, storage } = {}) => {
+    const store = storage ?? (typeof window !== 'undefined' ? window.localStorage : null)
+    let stored = null
+    try {
+        stored = store?.getItem(storageKey(workspaceKey)) ?? null
+    } catch {
+        stored = null
+    }
     const resolved = readZenPreference(workspaceKey, { nodeCount, defaultZen, storage })
-    writeZenPreference(workspaceKey, resolved, { storage })
+    // An explicit choice stays exactly as written. A derived zen-on is
+    // remembered as 'auto-on' — stable across reloads of an empty canvas,
+    // but honest that nobody chose it, so the first node can lift it (the
+    // 08-21 audit's trap: the Scene button stayed invisible all session
+    // because the derived default had been stored as if it were a choice).
+    if (stored !== 'on' && stored !== 'off') {
+        writeZenPreference(workspaceKey, resolved, { storage, derived: resolved === true })
+    }
     return resolved
+}
+
+/**
+ * The canvas just stopped being empty. If zen is only on because of the
+ * derived empty-canvas default (stored 'auto-on'), lift it: write 'off' and
+ * answer true so the caller re-shows the chrome. An explicit 'on' is a
+ * person's choice and is never touched.
+ */
+export const liftAutoZen = (workspaceKey, { storage } = {}) => {
+    const store = storage ?? (typeof window !== 'undefined' ? window.localStorage : null)
+    let stored = null
+    try {
+        stored = store?.getItem(storageKey(workspaceKey)) ?? null
+    } catch {
+        stored = null
+    }
+    if (stored !== 'auto-on') return false
+    writeZenPreference(workspaceKey, false, { storage })
+    return true
 }
 
 /**

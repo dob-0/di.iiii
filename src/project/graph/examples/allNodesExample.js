@@ -177,10 +177,21 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('compose', 'colour.combine', { label: 'Compose', col: 2, row: 13 })
     add('vdistance', 'vector.distance', { label: 'Distance', col: 2, row: 14 })
     add('ramp', 'colour.ramp', { label: 'Ramp', col: 2, row: 15 })
+    add('dot', 'vector.dot', { label: 'Dot', col: 2, row: 16 })
+    add('crossN', 'vector.cross', { label: 'Cross', col: 2, row: 17 })
+    add('direction', 'vector.direction', { label: 'Direction', col: 2, row: 18 })
+    add('vrotation', 'vector.rotation', { label: 'Rotation', col: 2, row: 19 })
+    add('aim', 'vector.aim', { label: 'Aim', col: 2, row: 20 })
+    add('random', 'value.random', { label: 'Random', col: 2, row: 21 })
     add('cylinder', 'geom.cylinder', { label: 'Cylinder', col: 3, row: 9, values: { position: [2.5, 0.75, -2] } })
     add('cone', 'geom.cone', { label: 'Cone', col: 3, row: 10, values: { position: [4, 0.75, -2] } })
     add('torus', 'geom.torus', { label: 'Torus', col: 3, row: 11, values: { position: [5.5, 0.5, -2] } })
     add('transform', 'geom.transform', { label: 'Transform', col: 3, row: 12 })
+    add('lineStroke', 'geom.line', { label: 'Line', col: 3, row: 13, values: { from: [-4, 0, -2], to: [-4, 1.5, -2] } })
+    add('circle', 'geom.circle', { label: 'Circle', col: 3, row: 14, values: { position: [-5.5, 0.5, -2] } })
+    add('go', 'view.button', { label: 'Go', col: 4, row: 0 })
+    add('keys', 'device.keyboard', { label: 'Keyboard', col: 4, row: 1 })
+    add('midiOut', 'device.midi.out', { label: 'MIDI Out', col: 4, row: 2 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
@@ -388,10 +399,42 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('colorA', 'out', 'ramp', 'a'),
         wire('colorB', 'out', 'ramp', 'c'),
 
+        // The second vector wave: the same authored vector measured against
+        // the recombined one, pointed, spun by the sine, and aimed at — with
+        // one fixed random draw between the two numbers already on the desk.
+        wire('vec', 'out', 'dot', 'a'),
+        wire('vcombine', 'out', 'dot', 'b'),
+        wire('vec', 'out', 'crossN', 'a'),
+        wire('vcombine', 'out', 'crossN', 'b'),
+        wire('vec', 'out', 'direction', 'vector'),
+        wire('vec', 'out', 'vrotation', 'vector'),
+        wire('sin', 'out', 'vrotation', 'angle'),
+        wire('vec', 'out', 'aim', 'to'),
+        wire('numA', 'out', 'random', 'variant'),
+        wire('numB', 'out', 'random', 'greatest'),
+
+        // Line and Circle: the authored vector pulls the stroke's far end,
+        // and both wear colours already on the desk.
+        wire('vec', 'out', 'lineStroke', 'to'),
+        wire('colorA', 'out', 'lineStroke', 'color'),
+        wire('colorB', 'out', 'circle', 'color'),
+
         // Array repeats the cube's own geometry value — the proving fixture
         // for its pass-through out (bare, an Array carries nothing).
         wire('cube', 'geometry', 'array', 'geometry'),
         wire('torus', 'geometry', 'transform', 'geometry'),
+
+        // The operator's hands fire the state wave: Go presses count, the
+        // chosen key samples the sine.
+        wire('go', 'presses', 'counter', 'step'),
+        wire('keys', 'pressed', 'hold', 'sample'),
+
+        // The desk's hand on a cable: the comparator's verdict holds the
+        // note; the sine rides out as CC. The wiring shows the lanes without
+        // pretending hardware is attached.
+        wire('compare', 'greater', 'midiOut', 'trigger'),
+        wire('numB', 'out', 'midiOut', 'note'),
+        wire('sin', 'out', 'midiOut', 'value'),
 
         // A wire OUT of a container — new on 2026-08-19, and the thing that
         // used to be impossible: every container declared zero outputs, so

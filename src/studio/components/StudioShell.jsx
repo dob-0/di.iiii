@@ -141,7 +141,7 @@ export default function StudioShell({
     onEnterXr,
     onExitXr,
     onBackToHub,
-    onOpenInNodeEditor,
+    onOpenNodeEditor,
     onCameraViewChange,
     onTransformCommit,
     onToggleSelectEntity,
@@ -606,7 +606,7 @@ export default function StudioShell({
                         onFullscreen={handleFullscreen}
                         onHideUI={() => setUiHidden(true)}
                         onBackToHub={onBackToHub}
-                        onOpenInNodeEditor={onOpenInNodeEditor}
+                        onOpenNodeEditor={onOpenNodeEditor}
                         xrState={xrState}
                         syncState={syncState}
                         presence={presence}
