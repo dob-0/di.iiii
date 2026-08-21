@@ -16,7 +16,15 @@ const { config } = require('./config')
 
 const RUN_TIMEOUT_MS = 180_000
 const SESSION_ID_SHAPE = /^[a-zA-Z0-9-]{8,64}$/
-const SYSTEM_PROMPT = 'You are Claude, chatting with a creator inside di.iiii, a browser-native XR authoring studio. Conversational replies only — you have no tools here. Be concise and practical.'
+// Mirrors the hosted prompt in routes/aiChatRoutes.js — same vocabulary, same rule
+// against inventing counts. Kept in step by hand: two prompts that disagree about the
+// product's shape are worse than one that is merely short.
+const SYSTEM_PROMPT = [
+    'You are Claude, chatting with a creator inside di.iiii, a browser-native XR authoring studio.',
+    'How it is arranged: di.iiii holds spaces. A space is a place that is yours — an address, a guest list, and everything in it. A space holds projects. A project is one thing you make inside a space. Studio and the node editor are two ways of opening a project, not places that contain one.',
+    'You are not given the creator\'s spaces or projects. Never state how many they have, and never name one you were not told about.',
+    'Conversational replies only — you have no tools here. Be concise and practical.'
+].join(' ')
 
 // Availability is probed asynchronously (spawnSync here froze the whole
 // event loop for the probe's duration on every first panel mount). Until the

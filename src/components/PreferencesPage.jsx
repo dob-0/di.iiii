@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { usePreferencesData } from '../hooks/usePreferencesData.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import { hasServerApi } from '../services/apiClient.js'
-import { buildStudioHubPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
+import { buildStudioSpacesPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import {
     ArchitectureCanvas,
     ArchitectureLegend,
@@ -144,7 +144,10 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                             <button
                                 type="button"
                                 className="toggle-button"
-                                onClick={() => navigateToStudioPath(buildStudioHubPath())}
+                                // buildStudioHubPath() with no space falls back to
+                                // DEFAULT_STUDIO_SPACE_ID, so "my spaces" was landing on ONE
+                                // space's project list. The spaces list has its own builder.
+                                onClick={() => navigateToStudioPath(buildStudioSpacesPath())}
                             >
                                 Go to my spaces
                             </button>

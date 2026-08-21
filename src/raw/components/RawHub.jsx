@@ -309,7 +309,9 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                 <SpaceSyncPanel spaceId={spaceId} />
 
                 <footer className="raw-hub-footer">
-                    <button type="button" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>studio projects</button>
+                    {/* It goes to Studio, so it says Studio. "studio projects" named two
+                        levels at once and matched no dictionary row. */}
+                    <button type="button" title="Open this space in Studio" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>studio</button>
                     <button type="button" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>public</button>
                     {role === 'admin' && (
                         <button type="button" onClick={() => appNavigate(buildPreferencesPath(spaceId))}>admin</button>

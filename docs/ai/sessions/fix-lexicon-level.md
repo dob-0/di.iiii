@@ -78,6 +78,61 @@ for wcc" — not the viewer. The doorway respects the permission model rather th
 it. Full suite: 269 client files pass, +10 new tests, failure set identical to baseline (12
 serverXR files that cannot import `express` in this worktree).
 
+## 2026-08-21 — the layering, Tier 1: one name per level, and a way across
+
+Owner: *"still some thing wrong with namings so we need to do right layering, by example in
+raw when you click back to projects it open .../open/raw/projects"*. He is right, and the
+fault is deeper than that URL. Measured on staging, one space with one project, three entry
+points behaving three ways: `/open/studio` redirects INTO the project; `/open/raw` opens a
+blank canvas that is not that project; `/open/raw/projects` shows onboarding. And the same
+space's projects have two addresses, each nested under a tool.
+
+**The model** (from the audit, and it is just the dictionary made spatial): di.iiii holds
+spaces; a space holds projects; a **tool is a way of opening a project, never a container**.
+
+Shipped — Tier 1 only: copy, navigation targets and prompts. **No new routes.**
+
+- **A way across.** Studio's cluster gains "Node editor", Raw's topbar gains "Studio →",
+  both on the same project. Before this the only path between the two building tools was up
+  to a list and back down, via a blank canvas. This is what the owner meant by *"raw and
+  studio is for building so we can add layer layer"*.
+- **One name per level.** `← Hub` → `← Projects` in Studio; Raw's back stops flipping between
+  `Projects` and `Hub` for one destination; RawHub's `studio projects` → `studio`.
+- **Two silent mis-targets fixed**: Studio's "Nodes" went to a blank canvas, not the node
+  editor's projects; "Go to my spaces" went to one space's project list, not the spaces list.
+- **The chat stops inventing counts.** Nothing injects the caller's spaces or projects, so
+  every "you have N spaces and M projects" was fabricated. Both prompts now carry the
+  hierarchy and an explicit rule against answering from nothing.
+- Ops copy: the prod delete prompt says "N spaces — and the N projects inside them" (they go
+  because their space goes); `project-pull` says objects, not the banned "entities".
+
+**Tier 2 was dropped, not deferred by taste.** The audit proposed `/{space}/projects` and
+`/spaces` as redirect aliases. Neither word is reserved — `PROJECT_RESERVED_SLUGS` is
+{studio, beta, raw, seed, p} and `RESERVED_SPACE_SLUGS` has no `spaces` — so those aliases
+would shadow a project legitimately named "projects" or a space named "spaces". Reserving
+them now is itself a breaking change. It needs a decision, not a patch.
+
+**Tier 3 (flipping the canonical to `/{space}/{project}/{tool}`) stays blocked** on §7.1 of
+`SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04.
+
+**Verified by looking**, not by passing: Raw's topbar at 1440 and 390 reads
+`← Projects · Open Jam · Studio →` with zero slot overlap at all five checked widths.
+
+Worth knowing: **`npm run check:toolbar-overlap` passes vacuously.** Raw defaults to zen, so
+the bar is empty and the script reported "0 children checked" — a green run asserting
+nothing. I measured with the zen preference forced off (`dii.raw.zen.<project>` = `off`), and
+the check should probably do the same.
+
+**Two honest gaps in this pass:**
+- The cross-tool control is **desktop-only in Studio**. Studio's phone chrome is a separate
+  topbar (`smb-topbar`) with room for three controls; adding a fourth would crowd a working
+  surface at 390. Raw's works on both.
+- Studio's cluster now shows `Projects` twice — a window toggle in WINDOWS, my `← Projects`
+  in DISPLAY. Distinguishable by the arrow and the section headings, and still better than
+  `← Hub`, which named nothing. Not clean.
+- Raw still shows no space in its chrome (Studio does: `Atlas · estate map`). Left alone for
+  the same 390px crowding reason; the space is in the URL and the back button's tooltip.
+
 **Not done here:**
 
 - `scripts/works-boundary.mjs` — the one place the repo states `project ⊇ space`, the exact

@@ -46,6 +46,7 @@ const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
 import { buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
+import { buildStudioProjectPath, navigateToStudioPath } from '../../studio/utils/studioRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
@@ -1635,12 +1636,30 @@ export default function RawEditor({
                 {chromeVisible && (
                     <>
                         <div className="raw-topbar-left">
+                            {/* One label for one destination. This button always goes to the
+                                space's list of projects; calling it "Hub" on some workspaces
+                                and "Projects" on others made one screen answer to two names. */}
                             <button type="button" className="raw-topbar-back" onClick={() => {
                                 navigateToRawPath(buildRawProjectsPath(resolvedSpaceId))
-                            }}>
-                                ← {isLocalWorkspace ? 'Projects' : 'Hub'}
+                            }} title="Back to this space's projects">
+                                ← Projects
                             </button>
+                            {/* Name first, then the other tool: "← Projects · Scene · Studio"
+                                reads as "you are in Scene, open it in Studio". With the button
+                                before the name, "Studio Scene" reads as one phrase. */}
                             <span className="raw-topbar-name" title={workspaceTitle}>{workspaceTitle}</span>
+                            {/* The other way of opening the SAME project. Hidden on the local
+                                canvas, which has no project to open anywhere else. */}
+                            {!isLocalWorkspace && projectId && (
+                                <button
+                                    type="button"
+                                    className="raw-topbar-back"
+                                    title="Open this project in Studio"
+                                    onClick={() => navigateToStudioPath(buildStudioProjectPath(projectId, resolvedSpaceId))}
+                                >
+                                    Studio →
+                                </button>
+                            )}
                         </div>
                         <div className="raw-topbar-center">
                             {navStack.length > 1 ? (

@@ -16,6 +16,7 @@ import useSpaceAssets from '../../hooks/useSpaceAssets.js'
 import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildRawProjectPath, navigateToRawPath } from '../../raw/utils/rawRouting.js'
 import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
@@ -1108,6 +1109,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onEnterXr={xr.handleEnterXrSession}
             onExitXr={xr.handleExitXrSession}
             onBackToHub={() => navigateToStudioPath(buildStudioHubPath(resolvedSpaceId))}
+            // Straight to the node editor's own canonical path for THIS project. The
+            // typed doorway (/{space}/{project}/raw) heals to the same address; a button
+            // has the ids already, so it skips the redirect rather than flashing through it.
+            onOpenInNodeEditor={projectId ? () => navigateToRawPath(buildRawProjectPath(projectId, resolvedSpaceId)) : undefined}
             onCameraViewChange={handleCameraViewChange}
             onTransformCommit={handleTransformCommit}
             transformOp={transformOp}
