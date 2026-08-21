@@ -1,0 +1,1248 @@
+<!-- Mirror of https://claude.ai/code/artifact/4dff6d17-10d5-4dbe-b190-21b449aa0e34 — fetched 2026-08-21. Per the home rule (docs/ai/golden_rules.md) this in-repo file is the source of truth; the claude.ai page is the mirror. -->
+
+<title>Raw as a full workspace — deep audit</title>
+
+<style>
+  :root {
+    --ground:      #F4F7F7;
+    --surface:     #FFFFFF;
+    --surface-2:   #EBF0F0;
+    --hairline:    #CFDBDB;
+    --hairline-2:  #B4C6C6;
+    --ink:         #101819;
+    --ink-2:       #3C4C4E;
+    --ink-3:       #6C8082;
+    --accent:      #0E8C86;
+    --accent-soft: #DBF0EE;
+    --present:     #2E8B57;
+    --stub:        #9A7B10;
+    --absent:      #B03A73;
+    --code-bg:     #EDF2F2;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #07090A;
+      --surface:     #0D1214;
+      --surface-2:   #131A1C;
+      --hairline:    #1F2C2E;
+      --hairline-2:  #2E4144;
+      --ink:         #E4EDED;
+      --ink-2:       #AFC1C2;
+      --ink-3:       #74898B;
+      --accent:      #4FD6CB;
+      --accent-soft: #10302F;
+      --present:     #58C98A;
+      --stub:        #D6B93F;
+      --absent:      #E56BA9;
+      --code-bg:     #101718;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #07090A;
+    --surface:     #0D1214;
+    --surface-2:   #131A1C;
+    --hairline:    #1F2C2E;
+    --hairline-2:  #2E4144;
+    --ink:         #E4EDED;
+    --ink-2:       #AFC1C2;
+    --ink-3:       #74898B;
+    --accent:      #4FD6CB;
+    --accent-soft: #10302F;
+    --present:     #58C98A;
+    --stub:        #D6B93F;
+    --absent:      #E56BA9;
+    --code-bg:     #101718;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    font-size: 17px;
+    line-height: 1.62;
+    margin: 0;
+    padding: 0 20px 140px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 78ch; margin: 0 auto; }
+  .prose { max-width: 66ch; }
+
+  .mono {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code",
+                 "Roboto Mono", Menlo, Consolas, monospace;
+  }
+
+  code, kbd, pre {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code",
+                 "Roboto Mono", Menlo, Consolas, monospace;
+    font-size: 0.855em;
+  }
+
+  code {
+    background: var(--code-bg);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    padding: 0.06em 0.32em;
+    color: var(--ink);
+    word-break: break-word;
+  }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* ---------- masthead ---------- */
+
+  header.top {
+    border-bottom: 1px solid var(--hairline-2);
+    padding: 76px 0 34px;
+    margin-bottom: 52px;
+  }
+
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", Menlo, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 22px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+  }
+
+  h1 {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", Menlo, monospace;
+    font-size: clamp(30px, 5.2vw, 46px);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+    margin: 0 0 20px;
+  }
+
+  .standfirst {
+    font-size: 20px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    max-width: 60ch;
+    margin: 0;
+  }
+
+  /* ---------- headings ---------- */
+
+  h2 {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", Menlo, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 76px 0 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  h2 + .section-title {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", Menlo, monospace;
+    font-size: clamp(21px, 3.2vw, 27px);
+    font-weight: 500;
+    letter-spacing: -0.018em;
+    line-height: 1.24;
+    text-wrap: balance;
+    margin: 20px 0 22px;
+  }
+
+  h3 {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", Menlo, monospace;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 44px 0 12px;
+    text-wrap: balance;
+  }
+
+  h4 {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", Menlo, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 30px 0 10px;
+  }
+
+  p { margin: 0 0 17px; max-width: 66ch; }
+  ul, ol { max-width: 64ch; padding-left: 1.25em; margin: 0 0 18px; }
+  li { margin-bottom: 8px; }
+  li::marker { color: var(--ink-3); }
+
+  strong { font-weight: 700; color: var(--ink); }
+
+  /* ---------- node card: the recurring structural device ---------- */
+
+  .node {
+    border: 1px solid var(--hairline-2);
+    background: var(--surface);
+    margin: 26px 0;
+    display: flow-root;
+  }
+
+  .node > .bar {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--surface-2);
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", Menlo, monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.01em;
+  }
+
+  .node > .bar .name { font-weight: 600; color: var(--ink); }
+  .node > .bar .tag {
+    margin-left: auto;
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 1px;
+    flex: none;
+    align-self: center;
+    display: inline-block;
+  }
+  .dot.present { background: var(--present); }
+  .dot.stub    { background: var(--stub); }
+  .dot.absent  { background: var(--absent); }
+
+  .node > .body { padding: 16px 16px 4px; }
+  .node > .body > :last-child { margin-bottom: 12px; }
+
+  /* ---------- legend ---------- */
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", Menlo, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 12px 0;
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    margin: 0 0 34px;
+  }
+  .legend span { display: flex; align-items: center; gap: 7px; }
+
+  /* ---------- tables ---------- */
+
+  .scroll { overflow-x: auto; margin: 24px 0 30px; border: 1px solid var(--hairline); }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 540px;
+    font-size: 14.5px;
+    line-height: 1.45;
+    background: var(--surface);
+  }
+
+  th, td {
+    text-align: left;
+    padding: 9px 13px;
+    border-bottom: 1px solid var(--hairline);
+    vertical-align: top;
+  }
+
+  th {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", Menlo, monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  td.mono, th.mono { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace; font-size: 13px; }
+
+  .state {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .state.present { color: var(--present); }
+  .state.stub    { color: var(--stub); }
+  .state.absent  { color: var(--absent); }
+
+  /* ---------- pull quote ---------- */
+
+  blockquote {
+    margin: 26px 0;
+    padding: 2px 0 2px 20px;
+    border-left: 2px solid var(--accent);
+    color: var(--ink-2);
+    font-size: 17px;
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+  blockquote cite {
+    display: block;
+    margin-top: 9px;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    font-style: normal;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+  }
+
+  /* ---------- callout ---------- */
+
+  .callout {
+    border: 1px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 18px 20px 4px;
+    margin: 30px 0;
+  }
+  .callout h4 { margin-top: 0; color: var(--accent); }
+  .callout > :last-child { margin-bottom: 16px; }
+
+  /* ---------- ordered plan ---------- */
+
+  ol.plan { list-style: none; padding: 0; margin: 28px 0; max-width: none; counter-reset: step; }
+  ol.plan > li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 3.1rem 1fr;
+    gap: 0 16px;
+    padding: 20px 0;
+    border-top: 1px solid var(--hairline);
+    margin: 0;
+  }
+  ol.plan > li:last-child { border-bottom: 1px solid var(--hairline); }
+  ol.plan > li::before {
+    content: counter(step);
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--accent);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  ol.plan h3 { margin: 0 0 8px; font-size: 16px; }
+  ol.plan p, ol.plan ul { margin-bottom: 10px; }
+  ol.plan > li > div > :last-child { margin-bottom: 0; }
+
+  /* ---------- diagram ---------- */
+
+  figure { margin: 34px 0; }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--ink-3);
+    margin-top: 12px;
+    max-width: 62ch;
+  }
+
+  /* ---------- footnote block ---------- */
+
+  .meta {
+    margin-top: 80px;
+    padding-top: 26px;
+    border-top: 1px solid var(--hairline-2);
+    font-size: 14.5px;
+    color: var(--ink-2);
+  }
+  .meta h4 { margin-top: 24px; }
+  .meta p, .meta ul { max-width: 68ch; }
+
+  @media (max-width: 620px) {
+    body { font-size: 16px; padding: 0 16px 100px; }
+    header.top { padding-top: 48px; }
+    ol.plan > li { grid-template-columns: 2.2rem 1fr; gap: 0 12px; }
+    ol.plan > li::before { font-size: 19px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">
+    <span>di.iiii / src/raw</span>
+    <span>Audit · 2026-08-10</span>
+    <span>dev @ origin, main checkout 15 behind</span>
+  </p>
+  <h1>Raw is a description, not a runtime</h1>
+  <p class="standfirst">
+    The pieces of a combined multimedia workspace — code authoring, page publishing,
+    asset storage, sandboxed execution, deferred jobs — are all already built in di.iiii.
+    None of them are reachable from a node. And the thing that would make them reachable,
+    an evaluator that actually runs, was never built.
+  </p>
+</header>
+
+<p class="prose">
+  What follows is a code-level audit of the Raw lane and its surroundings, plus a survey of
+  how eleven shipped node-based environments solve the same problem. Every claim about
+  di.iiii carries a file and line. Every claim about the field carries a source. The
+  recommendation at the end is one path, ordered, with an explicit list of what not to build.
+</p>
+
+<div class="legend">
+  <span><i class="dot present"></i> Built and working</span>
+  <span><i class="dot stub"></i> Declared but inert</span>
+  <span><i class="dot absent"></i> Does not exist</span>
+</div>
+
+<!-- ============================================================ -->
+
+<h2>Part one</h2>
+<p class="section-title">The workspace already exists. It is just not in the graph.</p>
+
+<p>
+  The complaint was that there is no easy way to manage code and pages in Raw. That is true,
+  and the reason is more interesting than "it wasn't built yet." Almost all of it
+  <em>was</em> built — in Studio, in serverXR, and in the publish path.
+</p>
+
+<div class="node">
+  <div class="bar"><i class="dot present"></i><span class="name">presentationState.codeFiles[]</span><span class="tag">Studio only</span></div>
+  <div class="body">
+    <p>
+      A real multi-file HTML/CSS/JS editor: file tabs, add/rename/delete with automatic
+      <code>href</code>/<code>src</code> rewriting, zip and folder import, zip export,
+      starter templates, asset-URL insertion at the cursor.
+      <code>StudioShellPanels.jsx:1212–1470</code>. The editing surface itself is a plain
+      MUI textarea — no highlighting, no diagnostics.
+    </p>
+    <p>
+      <code>grep codeFiles src/raw</code> returns <strong>zero hits</strong>. No node type
+      reads it; Raw imports nothing from <code>codeFilesBundle.js</code>.
+    </p>
+  </div>
+</div>
+
+<div class="node">
+  <div class="bar"><i class="dot present"></i><span class="name">Sandboxed page execution</span><span class="tag">publish path</span></div>
+  <div class="body">
+    <p>
+      Published pages run user HTML/JS in a <code>srcdoc</code> iframe with
+      <code>allow-scripts allow-forms …</code> and — deliberately — <em>without</em>
+      <code>allow-same-origin</code> unless the owner opts into <code>deviceAccess</code>.
+      <code>PublicProjectViewer.jsx:36, 239, 252</code>. A live document read over SSE, not
+      a static export.
+    </p>
+    <p>
+      The security primitive for running untrusted code in a page is therefore already in the
+      product, already reviewed, already shipping to every visitor of every published space.
+    </p>
+  </div>
+</div>
+
+<div class="node">
+  <div class="bar"><i class="dot present"></i><span class="name">git push → live page</span><span class="tag">serverXR</span></div>
+  <div class="body">
+    <p>
+      <code>POST /api/github/webhook</code> (<code>serverXR/src/index.js:1197</code>),
+      HMAC-verified, mounted pre-auth-gate. On push it pulls the repo with an installation
+      token, reads a <code>di-space.json</code> manifest, uploads referenced binaries,
+      rewrites their URLs, and <code>PUT</code>s the result as the space's
+      <code>codeFiles</code>, then points <code>publishedProjectId</code> at it.
+    </p>
+  </div>
+</div>
+
+<div class="node">
+  <div class="bar"><i class="dot present"></i><span class="name">Deferred, approved, re-authorized actions</span><span class="tag">serverXR</span></div>
+  <div class="body">
+    <p>
+      The approval gate is a working durable-action system: <code>gateOrApply</code> writes a
+      <code>pending_actions</code> row and returns 202; nothing runs until a signed decision
+      arrives from di-bo over <code>POST /api/approvals/decision</code>. Authorization is
+      <strong>re-derived at execution time</strong>, never restored from a snapshot
+      (<code>approvalGate.js:20-23</code>); <code>intent_hash</code> binds the decision to
+      exact arguments; it fails closed on TTL.
+    </p>
+    <p>
+      That is most of what a "work automation" node would need on the server side, and it
+      already exists. What it does not have is a user-registrable executor — the six kinds
+      are fixed (<code>approvalGate.js:245-257</code>).
+    </p>
+  </div>
+</div>
+
+<div class="callout">
+  <h4>The single most actionable line in the whole audit</h4>
+  <p>
+    <code>setPresentationState</code>, <code>setPublishState</code>, <code>upsertAsset</code>,
+    <code>deleteAsset</code> and <code>setProjectMeta</code> are all <strong>real ops with
+    real inverses</strong> in <code>src/shared/projectSchema.js:905-948</code>. Undo works.
+    Sync works. Collaboration works.
+  </p>
+  <p>
+    <strong>No Raw component emits any of them.</strong> The gap between "Raw cannot manage
+    pages" and "Raw can manage pages" is UI, not architecture.
+  </p>
+</div>
+
+<h3>What Raw can and cannot do today</h3>
+
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>Capability</th><th>Studio</th><th>/admin</th><th>Raw</th><th>Evidence</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Create / import / delete a project</td><td>yes</td><td>yes</td><td><span class="state present"><i class="dot present"></i>yes</span></td><td class="mono">RawHub.jsx:59,79,110</td></tr>
+    <tr><td>Space ↔ live sync (pull / push)</td><td>no</td><td>no</td><td><span class="state present"><i class="dot present"></i>only Raw</span></td><td class="mono">RawHub.jsx:251</td></tr>
+    <tr><td>Reference an existing asset from a node</td><td>yes</td><td>—</td><td><span class="state present"><i class="dot present"></i>read-only picker</span></td><td class="mono">PropertyInspector.jsx:42</td></tr>
+    <tr><td>Publish / unpublish a project</td><td>yes</td><td>yes</td><td><span class="state absent"><i class="dot absent"></i>no</span></td><td class="mono">StudioEditor.jsx:893</td></tr>
+    <tr><td>Edit page content (<code>codeFiles</code>)</td><td>yes</td><td>no</td><td><span class="state absent"><i class="dot absent"></i>no</span></td><td class="mono">grep → 0 hits</td></tr>
+    <tr><td>Upload / browse / delete an asset</td><td>yes</td><td>partly</td><td><span class="state absent"><i class="dot absent"></i>no</span></td><td class="mono">RawHub.jsx:87</td></tr>
+    <tr><td>Rename a project, copy a share link</td><td>yes</td><td>yes</td><td><span class="state absent"><i class="dot absent"></i>no</span></td><td class="mono">SpaceHub.jsx:418</td></tr>
+    <tr><td>Create a space, invite, GitHub link</td><td>yes</td><td>yes</td><td><span class="state absent"><i class="dot absent"></i>no</span></td><td class="mono">SpaceHub.jsx:238,299,344</td></tr>
+    <tr><td>Run code written in a node</td><td>—</td><td>—</td><td><span class="state absent"><i class="dot absent"></i>no</span></td><td class="mono">nodeInspectorSections.js:28</td></tr>
+    <tr><td>Persist the default Raw surface</td><td>—</td><td>—</td><td><span class="state absent"><i class="dot absent"></i>localStorage only</span></td><td class="mono">RawEditor.jsx:371</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Two structural bugs sharpen the complaint. <strong><code>/&lt;space&gt;/raw</code> does not
+  render the hub</strong> — it renders the blank localStorage scratch pad; the project browser
+  is one segment deeper at <code>/&lt;space&gt;/raw/projects</code>
+  (<code>RawApp.jsx:9-18</code>). And the landing page's "Raw v.0" link points at
+  <code>/open/raw</code> (<code>LandingPage.jsx:26</code>), so anyone who follows it lands in
+  an unsynced scratch pad rather than their work. Separately, there is
+  <strong>no <code>page</code> entity anywhere</strong>: a page is a project whose
+  <code>presentationState.mode === 'code'</code>. Across the whole live corpus that is
+  <strong>13 code-mode projects against 100 scene-mode</strong>, and the large ones — the rite
+  at 101 KB, the field at 37 KB — are single hand-written <code>index.html</code> files pushed
+  in from external repos.
+</p>
+
+<!-- ============================================================ -->
+
+<h2>Part two</h2>
+<p class="section-title">Three absences, and only one of them is on the critical path.</p>
+
+<h3>There is an evaluator, but no scheduler</h3>
+
+<p>
+  <code>nodeGraphRuntime.js</code> is a pull-based, memoised-per-pass recursive evaluator with
+  one <code>switch (node.typeId)</code> carrying twenty cases. Nothing pushes. There is no
+  frame loop — except a conditional <code>requestAnimationFrame</code> that exists only to
+  advance a clock value, and only if a <code>time</code> node happens to exist anywhere in the
+  document (<code>useGraphClock.js:3</code>). <strong>Evaluation is triggered by React
+  re-render.</strong>
+</p>
+
+<figure>
+<svg viewBox="0 0 720 268" role="img" aria-labelledby="diagtitle diagdesc">
+  <title id="diagtitle">The current evaluation path in Raw</title>
+  <desc id="diagdesc">A webcam node's texture reaches a plane only while the webcam's panel window is mounted; going fullscreen unmounts it and the texture disappears.</desc>
+  <defs>
+    <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+    <marker id="arwbad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--absent)"/>
+    </marker>
+  </defs>
+
+  <g fill="none" stroke="var(--hairline-2)" stroke-width="1">
+    <rect x="8"   y="30"  width="150" height="46"/>
+    <rect x="200" y="30"  width="150" height="46"/>
+    <rect x="392" y="30"  width="150" height="46"/>
+    <rect x="200" y="132" width="150" height="46"/>
+    <rect x="392" y="132" width="150" height="46"/>
+    <rect x="584" y="132" width="128" height="46"/>
+  </g>
+
+  <g class="mono" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="var(--ink)">
+    <text x="20"  y="50">panel mounts</text>
+    <text x="20"  y="65" fill="var(--ink-3)">selectMountedPanelNodes</text>
+    <text x="212" y="50">getUserMedia</text>
+    <text x="212" y="65" fill="var(--ink-3)">VideoTexture created</text>
+    <text x="404" y="50">liveOutputs.set</text>
+    <text x="404" y="65" fill="var(--ink-3)">"id:frame" → texture</text>
+
+    <text x="212" y="152">React re-render</text>
+    <text x="212" y="167" fill="var(--ink-3)">new Map identity</text>
+    <text x="404" y="152">graphContext</text>
+    <text x="404" y="167" fill="var(--ink-3)">cache thrown away</text>
+    <text x="596" y="152">plane material</text>
+    <text x="596" y="167" fill="var(--ink-3)">map = texture</text>
+  </g>
+
+  <g stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#arw)" color="var(--accent)">
+    <path d="M158,53 L196,53"/>
+    <path d="M350,53 L388,53"/>
+    <path d="M467,76 L467,96 L275,96 L275,128"/>
+    <path d="M350,155 L388,155"/>
+    <path d="M542,155 L580,155"/>
+  </g>
+
+  <g stroke="var(--absent)" stroke-width="1.2" stroke-dasharray="4 3" fill="none" marker-end="url(#arwbad)" color="var(--absent)">
+    <path d="M83,76 L83,222 L640,222 L640,182"/>
+  </g>
+  <text x="96" y="238" class="mono" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="var(--absent)">
+    fullscreen world → selectMountedPanelNodes returns [] → panel unmounts → texture deleted → plane goes blank
+  </text>
+</svg>
+<figcaption>
+  Evaluation is coupled to UI mounting. The webcam node is torn down at exactly the moment you
+  go fullscreen to look at the plane it feeds (<code>windowLayout.js:36</code>). A hidden node
+  produces nothing; there is no headless execution of any node anywhere.
+</figcaption>
+</figure>
+
+<p>Everything else in this section follows from that one fact.</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Property</th><th>State</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td>Type checking on connections</td><td><span class="state stub"><i class="dot stub"></i>UI only</span></td><td><code>createEdge</code> never looks at ports; the schema layer never imports the registry. A <code>texture</code> can be wired into a <code>boolean</code> and it persists.</td></tr>
+    <tr><td>Two edges into one input</td><td><span class="state stub"><i class="dot stub"></i>first wins, silently</span></td><td><code>buildEdgesByTarget</code> keeps the first in array order. No fan-in, no merge, no signal that the second wire is dead.</td></tr>
+    <tr><td><code>signal</code> port type</td><td><span class="state stub"><i class="dot stub"></i>14 ports, 0 producers</span></td><td><code>time.beat</code> and <code>midi.trigger</code> are faked as rising numbers so consumers can diff them across frames.</td></tr>
+    <tr><td><code>geometry</code> port type</td><td><span class="state stub"><i class="dot stub"></i>0 users</span></td><td>Declared in <code>PORT_TYPES</code>, used by nothing. The <code>geom.*</code> outputs were deleted.</td></tr>
+    <tr><td>Per-node state across frames</td><td><span class="state absent"><i class="dot absent"></i>none</span></td><td>Evaluation is pure and the cache is destroyed every pass. The only durable state is <code>node.values</code>, and writing it costs an op-log entry and an undo step.</td></tr>
+    <tr><td>Scope as an evaluation boundary</td><td><span class="state absent"><i class="dot absent"></i>display filter only</span></td><td>The context is built from the whole unscoped document. A cross-scope edge evaluates fine — it just cannot be drawn.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>A node type cannot define its own behaviour</h3>
+
+<p>
+  A registry entry is pure data. There is no <code>evaluate</code>, <code>compute</code>,
+  <code>update</code>, or <code>component</code> field anywhere. All behaviour is hardcoded by
+  <code>typeId</code> in consumer modules: <strong>49 branch sites across 8 files</strong>,
+  plus type-id-keyed tables (one of which, <code>WINDOW_DEFAULT_POSITIONS</code>, names six
+  node types that do not exist).
+</p>
+
+<p>
+  Adding one working node type touches up to five files. Stopping after the registry entry
+  fails <em>silently</em>: <code>computeNodeOutput</code> falls through to
+  <code>return node.values[portId]</code>, and an unhandled panel type renders as a generic
+  text panel.
+</p>
+
+<h4>Three declared-but-unwired attempts at user-defined nodes</h4>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Mechanism</th><th>Intended as</th><th>Actual state</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">templates[]</td><td>saved node presets</td><td><span class="state stub"><i class="dot stub"></i>Declared at <code>projectSchema.js:198</code>, normalized at <code>:735</code>. Zero writers, zero readers. A persisted empty array.</span></td></tr>
+    <tr><td class="mono">node.null</td><td>"how you write new node types without leaving the graph"</td><td><span class="state stub"><i class="dot stub"></i>Delivers dynamic ports and nesting. Gated off the palette, no port-editing UI, no runtime case — every user-defined output returns <code>undefined</code>.</span></td></tr>
+    <tr><td class="mono">values.__code</td><td>a code body on every node</td><td><span class="state stub"><i class="dot stub"></i>A <code>&lt;textarea rows={4}&gt;</code> with <code>font-family: inherit</code>. The source comment says it: <em>"nothing reads or executes values.__code anywhere; it's storage and display only."</em></span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Opening the Code panel on a cube shows an <strong>empty box</strong>, not a serialization of
+  the cube. There is no serializer and no parser. And subgraphs have <strong>no port
+  promotion</strong> — <code>studio</code> exposes only <code>title</code> — so an interior
+  value can never surface on the parent card. A subgraph is a folder with a face, not an
+  abstraction. The codebase already names this as the open question, at
+  <code>studioNode.js:28-35</code>.
+</p>
+
+<div class="callout">
+  <h4>The one fact that makes all of this cheap</h4>
+  <p>
+    The schema layer never imports the registry. <code>typeId</code> is a free string and
+    <code>values</code> is unvalidated, so <strong>adding a node type costs zero
+    migration</strong>. Old documents are untouched; unknown types persist silently. Whatever
+    is built here does not need a schema version bump.
+  </p>
+  <p>
+    The reverse is the hazard: renaming a port silently orphans every stored edge and every
+    <code>values</code> key, and nothing detects it.
+  </p>
+</div>
+
+<h3>What is missing as a primitive, not as polish</h3>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Primitive</th><th>State</th><th>Nearest thing that exists</th></tr></thead>
+  <tbody>
+    <tr><td>Branching, comparison, gates</td><td><span class="state absent"><i class="dot absent"></i>absent</span></td><td><code>math.mix</code> lerps; it does not select. <code>value.boolean</code> can only be stored.</td></tr>
+    <tr><td>Iteration</td><td><span class="state absent"><i class="dot absent"></i>absent</span></td><td>Cycles are actively defeated rather than used as feedback.</td></tr>
+    <tr><td>State / memory / accumulate</td><td><span class="state absent"><i class="dot absent"></i>absent</span></td><td>No delay, sample-and-hold, counter or integrator.</td></tr>
+    <tr><td>Arrays and collections</td><td><span class="state absent"><i class="dot absent"></i>absent</span></td><td><code>vec3</code> is fixed-arity. <code>any</code> can carry a <code>Uint8Array</code> that nothing consumes.</td></tr>
+    <tr><td>String and data manipulation</td><td><span class="state absent"><i class="dot absent"></i>absent</span></td><td>No concat, format, split, parse, JSON, or number→string.</td></tr>
+    <tr><td>Generic HTTP / fetch</td><td><span class="state stub"><i class="dot stub"></i>hardcoded into two types</span></td><td><code>agent.keeper</code> POSTs to a user-typed URL. No request node.</td></tr>
+    <tr><td>Timers, triggers, events</td><td><span class="state stub"><i class="dot stub"></i>a clock, as a number</span></td><td><code>time</code> gives elapsed/sin/cos/beat. No delay, interval, one-shot or on-change.</td></tr>
+    <tr><td>Expressions on a field</td><td><span class="state stub"><i class="dot stub"></i>shipped, in the dead lane</span></td><td><code>sin(time)</code> literally works — allowlisted charset, 17 identifiers, per-frame. On three legacy transform vectors only. Zero occurrences of "expression" in <code>projectSchema.js</code>.</td></tr>
+    <tr><td>Shaders / materials</td><td><span class="state absent"><i class="dot absent"></i>absent</span></td><td>No material node category at all. Geometry nodes take a colour and nothing else.</td></tr>
+    <tr><td>Video, audio DSP, particles, physics</td><td><span class="state absent"><i class="dot absent"></i>absent</span></td><td>One <code>AudioContext</code> in the lane, producing a single RMS number.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Of the 56 registered types: <strong>15 compute</strong> (constants, nine maths ops, a clock),
+  <strong>~12 render</strong>, <strong>4 carry live I/O</strong>, <strong>4 are containers or
+  editor chrome</strong>, and <strong>19 are named stubs</strong> withheld from the palette.
+  Nine more are palette-creatable and non-functional at port level — <code>view.timeline</code>
+  has its ports deliberately stripped, <code>view.director</code> has none at all, and the
+  <code>studio</code> entry's own comment explains that it declares no outputs
+  <em>because</em> the evaluator would return <code>undefined</code> for them.
+</p>
+
+<!-- ============================================================ -->
+
+<h2>Part three</h2>
+<p class="section-title">What eleven shipped environments agree on.</p>
+
+<p>
+  TouchDesigner, Max/MSP, Pure Data, Unreal Blueprints, Notch, Resolume Wire + ISF, Isadora,
+  Vizzie, cables.gl, vvvv gamma and Nodes.io. Different decades, different industries, no
+  shared lineage. They converge on four things.
+</p>
+
+<h3>Code declares its own ports</h3>
+
+<p>
+  Every system that successfully put text code inside a node graph derives the node's interface
+  <em>from the source text</em>, rather than making the author declare it twice.
+</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>System</th><th>Declaration site</th><th>Form</th></tr></thead>
+  <tbody>
+    <tr><td>ISF (Resolume Wire, VDMX, 12 hosts)</td><td>JSON in the first comment of the <code>.fs</code></td><td class="mono">"INPUTS":[{"NAME":"tint","TYPE":"color"}]</td></tr>
+    <tr><td>Isadora GLSL actor</td><td>annotation above each uniform</td><td class="mono">// ISADORA_FLOAT_PARAM(amount, amt, 0, 1, .5, "…")</td></tr>
+    <tr><td>Notch custom shader</td><td>HLSL annotation block + semantics</td><td class="mono">float X &lt; string propertyName = "…"; &gt;</td></tr>
+    <tr><td>Max <code>gen~</code> / RNBO</td><td>identifiers in the code body</td><td class="mono">in1, out1 · @param, @state</td></tr>
+    <tr><td>Max <code>expr</code>, Pd <code>expr</code></td><td>sigils in the expression</td><td class="mono">$f1 $i2 $s3 · $v1 $x1[-1]</td></tr>
+    <tr><td>cables.gl CustomShader</td><td>uniform declarations in the GLSL</td><td class="mono">uniform sampler2D tex; → an input port appears</td></tr>
+    <tr><td>pd-lua</td><td>a table in the node's own Lua</td><td class="mono">self.inlets = {SIGNAL, SIGNAL, DATA}</td></tr>
+    <tr><td>Unreal</td><td>annotation on the C++ declaration</td><td class="mono">UFUNCTION(BlueprintCallable, meta=(…))</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Two refinements are worth taking whole. Isadora gives each parameter a <strong>stable
+  1–4 character id distinct from its display name</strong>, so renaming a parameter does not
+  break saved patches — the thing Max's XML shader binding lacks. And ISF separates
+  <code>LABEL</code> from <code>NAME</code> so the identifier stays a legal one, and carries an
+  <code>IDENTITY</code> key: the value at which the parameter is a no-op, which lets a host
+  bypass the node entirely.
+</p>
+
+<blockquote>
+  <p>Editing ISF loses parameters.</p>
+  <cite>Open complaint on the Resolume Wire forum. Editing a code node's source changes its declared interface, and the graph loses already-wired connections and values.</cite>
+</blockquote>
+
+<p>
+  That is the failure to design against before building the feature: match by name, preserve
+  connections and values across recompile, mark removed inputs as orphaned rather than dropping
+  wires silently, surface added inputs. cables.gl solves the same problem by rebuilding every
+  instance and re-linking by port name, logging
+  <code>could not set port X, probably renamed port ?</code> when a name moved.
+</p>
+
+<h3>The node is an interface; graph and code are both implementations</h3>
+
+<p>
+  MaterialX — the industry standard, and the cleanest resolution of "is code a node or a node's
+  body" anywhere in the survey — splits a node into three layers. A <code>nodedef</code> is the
+  declared interface: typed inputs with defaults, typed outputs, and it is
+  <strong>versioned</strong>. A <code>nodegraph</code> is a subgraph acting as <em>an</em>
+  implementation of that nodedef. An <code>implementation</code> is source code for a particular
+  target — OSL, GLSL, MDL.
+</p>
+
+<p>
+  One node type, N implementations, one of which may be a subgraph and others of which are text
+  per backend. That collapses port promotion and the code node into a single mechanism rather
+  than two features that have to agree with each other.
+</p>
+
+<div class="callout">
+  <h4>Shaders are not a system to build here — they are a view onto an IR already in the stack</h4>
+  <p>
+    three.js materials <strong>already are a node graph</strong>. TSL is its text form; it
+    compiles to both GLSL and WGSL through <code>NodeBuilder</code>, the standard node materials
+    are built on it, and it interoperates with MaterialX. The three.js wiki says so directly:
+    <em>"modern 3D authoring software uses Shader-Graph based material composition."</em>
+  </p>
+  <p>
+    So the missing material node category is not a new subsystem. It is a surface over an
+    existing node IR, and it comes with the WebGL/WebGPU split already solved.
+  </p>
+</div>
+
+<h3>Two kinds of subgraph, not one</h3>
+
+<p>
+  Unreal ships both, and the difference is load-bearing. A <strong>Function</strong> is a real
+  call with a declared signature, overridable, single exec exit. A <strong>Macro</strong> is
+  copy-pasted into the caller at compile time, and can therefore have
+  <strong>multiple execution outputs</strong> and contain <strong>latent (suspending)
+  nodes</strong>. <code>ForEachLoop</code>, <code>DoOnce</code>, <code>Gate</code> and
+  <code>FlipFlop</code> are all macros for exactly that reason.
+</p>
+
+<p>
+  If the only subgraph abstraction is "a function", a user can never author a loop-with-body
+  node. Resolume Wire is the live proof of the alternative: it has hundreds of node types and
+  <strong>no subpatches at all</strong> — and consequently a minimap, a node search, an
+  auto-layout, a comment-as-frame convention, an unused-node cleaner and a marketplace, every
+  one of them compensation for the missing feature.
+</p>
+
+<h3>Ports carry two orthogonal properties, not one</h3>
+
+<p>
+  Isadora encodes both in geometry: <strong>shape</strong> is scaling state (circle / square /
+  triangle), <strong>fill</strong> is type mutability (solid / hollow). Resolume Wire encodes a
+  different pair: <strong>colour</strong> is the data type, <strong>shape</strong> is the update
+  discipline — circle for <em>signal</em> (frame rate), rectangle for <em>event</em> (discrete,
+  several per frame), diamond for <em>attribute</em> (compile-time only; changing it recompiles
+  the patch).
+</p>
+
+<p>
+  Wire's three flow types map onto di.iiii almost exactly: the render tick, user and network
+  events, and scene-build constants. With one warning attached. Attribute-flow parameters were
+  un-automatable for six years — Wire 7.27.1, July 2026, is the release that finally notes
+  <em>"they cause the whole patch to recompile. We have made this a lot more efficient, so now
+  this limitation is no longer there."</em> <strong>Make recompile cheap on day one or ship the
+  same hole.</strong>
+</p>
+
+<h3>The CPU/GPU boundary must be visible in the graph</h3>
+
+<p>
+  Vizzie 2 made its modules accept both CPU matrices and GPU textures transparently. The result,
+  from Cycling '74's own forum: users reported bad performance, and the cause was that
+  <strong>one upstream node they could not see</strong> was emitting matrices, so an entire
+  GPU-capable chain silently ran on the CPU. The only escapes offered were pinning the old
+  module version or embedding it in the parent patch.
+</p>
+
+<p>
+  Isadora made the opposite call — Video CPU and Video GPU are two <em>types</em>, and you
+  convert a chain actor by actor. Tedious and honest. Jitter's rule, stated by Cycling '74:
+  <em>"once your data is on the GPU it should stay there."</em> Sending a texture straight to a
+  preview window silently triggers a readback.
+</p>
+
+<!-- ============================================================ -->
+
+<h2>Part four</h2>
+<p class="section-title">The sandbox question is settled, and it was measured here.</p>
+
+<p>
+  Running user-authored code at frame rate in a browser tab was the open feasibility question.
+  It is answered. The numbers below were benchmarked on this machine against
+  <code>quickjs-emscripten@0.32.0</code>, not quoted from documentation — no published
+  benchmark of this library's call throughput exists.
+</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Measurement</th><th class="num">Value</th><th>Consequence</th></tr></thead>
+  <tbody>
+    <tr><td>Bundle, <code>release-sync</code>, brotli</td><td class="num">194 KB</td><td>MIT. 491 KB raw.</td></tr>
+    <tr><td>WASM module init, cold</td><td class="num">16.3 ms</td><td>One-time, at load.</td></tr>
+    <tr><td>New isolated context in that module</td><td class="num">0.48 ms</td><td>Per-node isolation is cheap. Per-node <em>modules</em> are not.</td></tr>
+    <tr><td>Memory per additional context</td><td class="num">33 KB</td><td>86 KB base. 100 contexts → 3.25 MB.</td></tr>
+    <tr><td>Call, primitive args</td><td class="num">2.3 µs</td><td>~600× a native JS call.</td></tr>
+    <tr><td><strong>200 precompiled expressions / frame</strong></td><td class="num">0.47 ms</td><td><strong>2.8% of a 16.7 ms frame.</strong></td></tr>
+    <tr><td>Same 200, re-parsed each frame</td><td class="num">2.93 ms</td><td>17.6% of the frame, before anything draws.</td></tr>
+    <tr><td>3-key object round-trip</td><td class="num">15 µs</td><td rowspan="2">The membrane is the cost, not the engine. Pass objects and the frame blows at ~80 evaluations.</td></tr>
+    <tr><td>100-key object round-trip</td><td class="num">201 µs</td></tr>
+    <tr><td>Cost of installing an interrupt handler</td><td class="num">~1%</td><td>And it works: <code>/(a+)+b/</code> against a 40-char string aborted at 301 ms on a 300 ms deadline.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  That last row is the one that decides the architecture. <strong>SES and iframes cannot
+  interrupt.</strong> One <code>while(true)</code> in a hardened-JavaScript compartment freezes
+  the page permanently; a catastrophic regex does the same. QuickJS stops both, and returns a
+  clean JS error rather than a crash — as do its memory and stack limits.
+</p>
+
+<p>
+  Figma is the precedent and the reason to trust the shape. They shipped a Realms-based plugin
+  sandbox, had escapes privately disclosed, and replaced the whole thing with QuickJS-in-WASM
+  <strong>in nine days</strong>. Their stated reason is structural rather than defensive:
+  because a sandbox value is an opaque pointer into linear memory,
+  <em>"it's not possible to confuse objects from outside with objects from inside because the
+  object representations are too different."</em> The bug class is not patched, it is
+  unrepresentable. Their bridge is a membrane of roughly 500 lines, and plugin code never holds
+  a direct reference to a Figma object.
+</p>
+
+<div class="callout">
+  <h4>The hazard nobody documents</h4>
+  <p>
+    A single leaked handle aborts the entire WASM module — <code>Assertion failed:
+    list_empty(&amp;rt-&gt;gc_obj_list)</code> — taking every co-hosted context with it. In a
+    page running twenty code nodes in one module, one leak kills all twenty. The agent hit this
+    twice by accident inside a 200-line benchmark. Disposal discipline has to be written into
+    the API, not into reviewers' heads.
+  </p>
+</div>
+
+<p>
+  The strongest counter-evidence is Val Town, who evaluated exactly this and rejected it:
+  <em>"we'd be miles away from NPM or Node compatibility."</em> That objection does not apply
+  here. di.iiii's node API is small and its own. QuickJS loses when users expect npm; it wins
+  when the surface is a curated set of ports.
+</p>
+
+<!-- ============================================================ -->
+
+<h2>Part five</h2>
+<p class="section-title">Four expensive lessons, paid for by other people.</p>
+
+<h3>Do not build a bespoke code editor</h3>
+
+<p>
+  Darklang's entire premise was a structured editor with no parser — <em>"to never ever have a
+  syntax error again"</em> — with git and grep named explicitly as the disease. The retrospective,
+  in their own words: the editor was <strong>~50% of the codebase</strong>, 200 ReScript files
+  and 50k lines, in a language that could never be ported to Darklang itself. Users rated it
+  <em>"somewhere between 'Ok I guess' and 'probably the worst part of Darklang'."</em>
+</p>
+
+<blockquote>
+  <p>
+    By removing the editor, and the backward-compatibility requirements, we've unlocked
+    incredible progress… Overall, we accomplished more in February and March than in the past
+    two years combined.
+  </p>
+  <cite>Paul Biggar, Darklang blog, March 2023. They deleted the whole thing and replaced it with tree-sitter, an LSP and a VS Code extension.</cite>
+</blockquote>
+
+<p>
+  di.iiii has <strong>zero editor libraries installed</strong> — no CodeMirror, Monaco, Ace,
+  Prism or Shiki. That is currently an absence; it should become a decision.
+</p>
+
+<p>
+  Monaco is disqualified, and not on size. Its own FAQ, still the live text on
+  <code>main</code>: <em>"Is the editor supported in mobile browsers or mobile web app
+  frameworks? <strong>No.</strong>"</em> The request has been open <strong>ten years</strong>
+  with 211 reactions; the keyboard does not open on Android and there are no touch selection
+  handles. Size is the second reason — a realistic JS/TS Monaco is 1117 KB gzip plus a 92 KB
+  editor worker plus a 1512 KB TypeScript worker, and thirty instances cost 23 MB of heap.
+</p>
+
+<p>
+  <strong>Three tiers, not one editor</strong>, all figures measured here:
+</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Tier</th><th>When</th><th>What</th><th class="num">gzip</th></tr></thead>
+  <tbody>
+    <tr><td>Read-only body</td><td>the default state of most nodes on screen</td><td>Prism, or Shiki with explicit <code>createHighlighterCore</code> imports</td><td class="num">5 / 71 KB</td></tr>
+    <tr><td>Expression field</td><td>one line, <code>sin(t*0.001)</code></td><td>a real <code>&lt;textarea&gt;</code> with a highlighted <code>&lt;pre&gt;</code> beneath — nothing between the finger and the OS</td><td class="num">8 KB</td></tr>
+    <tr><td>Full editor</td><td>the one node the user has opened</td><td>CodeMirror 6, hand-picked, no workers</td><td class="num">134 KB</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Thirty CM6 instances is 103 ms and 4 MB — survivable but unnecessary. Promote on focus,
+  demote on blur. Two rules follow from the measurements: use <code>transform: scale()</code>
+  and <strong>never CSS <code>zoom</code></strong> (there is an open CM6 bug filed on exactly
+  that, by someone building a pinch-zoomable mobile code editor), and set editor CSS to
+  <strong>≥16px</strong> or iOS auto-zooms on focus and fights the canvas camera.
+</p>
+
+<p>
+  The caveat that matters: those numbers come from Chromium touch <em>emulation</em>, which
+  cannot reproduce iOS selection handles, the magnifier, or Gboard composition. CM6 has an open
+  iOS bug where <code>drawSelection()</code> renders the native handles invisible. Which makes
+  the plan file's open question #4 — <em>"Does this workspace need to work on a phone?"</em> —
+  the thing that decides the tier, not an aside.
+</p>
+
+<h3>Do not plan on compiling the graph to code</h3>
+
+<p>
+  Epic built Blueprint Nativization, shipped it across five engine versions, and deleted it:
+  <em>"Blueprint Nativization will not exist in UE5."</em> What replaced it is nothing
+  automatic — a C++ base class with a Blueprint subclass, and a Header View that emits
+  <strong>declarations only</strong>, as a scaffold for hand-porting. Enso, whose whole premise
+  is bidirectional graph↔code, had to constrain the language to make it work.
+</p>
+
+<h3>Cache pure evaluation, per tick</h3>
+
+<p>
+  Unreal's pure nodes are pull-evaluated and <strong>not memoised</strong>, so they run once per
+  consuming connection. Documented real cases: a pure array getter feeding a six-element loop
+  runs 13 times; a filter inside nested loops runs <strong>35,301 times</strong> to produce ten
+  print statements. There is a correctness dimension too — a pure random node hands a
+  <em>different value</em> to each consumer of the same wire.
+</p>
+
+<p>
+  Raw already memoises per pass, which is right. The thing to preserve when a real scheduler
+  lands is that a volatile node (time, random) is a <em>declared</em> opt-out, not an accident.
+</p>
+
+<h3>A node graph has to be the natural notation for its domain</h3>
+
+<p>
+  Godot removed VisualScript in 4.0, and published the number: <strong>0.5% of the user base
+  used it as their main language</strong>, from a poll of over 5,000. Their two stated reasons
+  are worth reading against Raw. Users who tried it found the text language approachable enough
+  that they preferred it. And <em>"engines like Unreal, Game Maker or Construct offer high level
+  game features packaged together with the visual scripting solution"</em> — Godot's
+  general-purpose node set gave visual scripting nothing to be <em>good at</em>.
+</p>
+
+<p>
+  The part they kept is the part that matters here: <em>"Visual shaders are working well and
+  appreciated by many users, so they're not going anywhere."</em> Domain-specific node graphs
+  win; general-purpose ones lose to text. Raw's defence is that its domain — a space, a scene, a
+  page, an audience's device, a live input — is genuinely one a graph is the right notation for.
+  The failure mode is drifting into a graphical rendering of an imperative program.
+</p>
+
+<h3>Store the graph as diffable text</h3>
+
+<p>
+  This is the one place di.iiii is already ahead of every system surveyed, and it is worth
+  knowing why. Max's <code>.maxpat</code> is JSON that reorders on save; the two community diff
+  tools both concede that merging is impossible and one is described by its author as
+  <em>"ridiculously brute force."</em> Pure Data references connections by creation index, so
+  git can textually merge two patches into a file whose wires now point at the wrong objects — a
+  silently, semantically wrong merge. Isadora has <strong>no text representation at
+  all</strong>. Unreal's <code>.uasset</code> is binary and the sanctioned workflow is exclusive
+  file locking.
+</p>
+
+<p>
+  di.iiii has UUID node identity, edges by UUID, an append-only op-log with inverses, and
+  real-time multiplayer. That is the structural advantage, and it is already built.
+</p>
+
+<!-- ============================================================ -->
+
+<h2>Part six</h2>
+<p class="section-title">One path, in order. The order is the recommendation.</p>
+
+<p>
+  The plan file already in the repo, <code>docs/architecture/RAW_WORKSPACE.md</code>, calls step
+  5.1 <em>"the keystone"</em> and says <em>"do this first or every later node invents its own
+  convention."</em> It was not built, and two nodes — the keeper and MIDI in — were built on the
+  ad-hoc <code>liveOutputs</code> Map anyway. That debt compounds with every node added.
+</p>
+
+<ol class="plan">
+  <li>
+    <div>
+      <h3>Build the port contract and a real clock</h3>
+      <p>
+        Nothing else is worth starting first. A provider registration with per-port status
+        (<code>idle | starting | live | denied | unavailable | error</code>), a scheduler that is
+        not React's render, per-node state that survives a frame, and a declared volatility flag
+        so caching stays correct.
+      </p>
+      <p>
+        Take Wire's three flow types while defining it — signal, event, attribute — and make
+        recompile cheap immediately. Take Isadora's two-axis port geometry so the CPU/GPU and
+        live/static distinctions are visible rather than discovered at 6 fps.
+      </p>
+    </div>
+  </li>
+
+  <li>
+    <div>
+      <h3>One <code>code</code> node, whose ports come from its source</h3>
+      <p>
+        Not a text box on every node — <code>values.__code</code> is that idea and it has been
+        inert since it shipped. One node type, body in QuickJS, ports parsed out of a declaration
+        header with a <strong>stable short id separate from the display name</strong>.
+      </p>
+      <p>
+        Bind the source at an <em>attribute</em>-flow port so editing it is structural, not
+        per-frame. Precompile once, call many. Keep the port payloads primitive. Write the
+        reconciliation — match by id, preserve wires and values, orphan removed inputs visibly —
+        <strong>before</strong> the feature, not after the first complaint.
+      </p>
+    </div>
+  </li>
+
+  <li>
+    <div>
+      <h3>Port promotion, so a subgraph becomes a node</h3>
+      <p>
+        Every prior-art system makes the author declare which interior ports surface on the
+        container. Notch's version is the one to copy: exposing a property
+        <strong>hides all the others</strong>, so the abstraction is enforced rather than offered.
+      </p>
+      <p>
+        Ship both kinds — a callable one with a signature, and an inlined one that can have
+        multiple exits and contain suspending nodes. Then <code>templates[]</code> finally has a
+        consumer and <code>node.null</code> finally has a purpose.
+      </p>
+    </div>
+  </li>
+
+  <li>
+    <div>
+      <h3>Let Raw emit the ops it already has</h3>
+      <p>
+        <code>setPresentationState</code>, <code>setPublishState</code>,
+        <code>upsertAsset</code>. This is the "manage code and pages" complaint, and it is the
+        cheapest item on the list — the ops, their inverses, the sync and the undo all exist.
+      </p>
+      <p>
+        Fix <code>/&lt;space&gt;/raw</code> pointing at the scratch pad in the same change; it is
+        a one-line routing bug that sends every new visitor to the wrong place.
+      </p>
+    </div>
+  </li>
+
+  <li>
+    <div>
+      <h3>Automation is the same graph on a different clock</h3>
+      <p>
+        The webhook receiver, the signed-decision channel, the deferred-action store with
+        execution-time re-authorization — all shipped. What is missing is a registrable executor
+        and a trigger node.
+      </p>
+      <p>
+        The open question the plan file already recorded stays open and must be answered first:
+        <em>"whose credentials, and what the agent is allowed to touch."</em> The
+        <code>feat/raw-admin</code> rule is the right shape for it —
+        <strong>no admin node declares an input port, ever</strong>, because an admin surface
+        reachable from graph evaluation is a delete wired to a signal.
+      </p>
+      <p>
+        For the execution side, measured: <code>node:vm</code>'s <code>timeout</code> only covers
+        <em>synchronous</em> execution. Five lines with a 200 ms timeout returned in 1 ms with no
+        error, kept a microtask chain running on the host event loop, and OOM-killed the whole
+        process 75 seconds later. <strong><code>isolated-vm</code> stopped the identical case at
+        601 ms</strong> — separate heap, separate microtask queue — at ~1 MB and ~1 ms per
+        sandbox, 2–5 µs warm, with prebuilt binaries so no compiler is needed on the VPS. The
+        alternative with a boundary you can explain to an auditor is a
+        <code>deno run --deny-all</code> subprocess per job at <strong>4 ms</strong>, taking CPU
+        and memory limits from systemd. And <strong>vm2 is not an option</strong>: revived in
+        October 2025, 31 advisories in 2026, five of them CVSS 10.0, including a bypass of a 2023
+        patch.
+      </p>
+    </div>
+  </li>
+</ol>
+
+<h3>What not to build</h3>
+
+<ul>
+  <li><strong>A bespoke code editor.</strong> CodeMirror 6. Darklang's 50% is the price of the alternative.</li>
+  <li><strong>Graph → source transpilation.</strong> Epic shipped it for five versions and deleted it.</li>
+  <li><strong>A projectional or structured editor.</strong> Same source, same verdict.</li>
+  <li><strong>NDI, OSC, or arbitrary local processes in a tab.</strong> The plan file is right: this is the sandbox, not a gap. The gated <code>stream.*</code> and <code>device.osc.*</code> nodes are telling the truth.</li>
+  <li><strong>A timeline editor, a DAW, a video mixer, projection mapping.</strong> Already refused in the plan; cutlab exists and is destined to live inside di.iiii. Compose, don't absorb.</li>
+  <li><strong>A second parallel styling system.</strong> Admin and management surfaces reuse <code>preferences-*</code>.</li>
+  <li><strong>A shader system from scratch.</strong> TSL already is one, in the stack, targeting both WebGL and WebGPU.</li>
+  <li><strong>A node-graph library dependency, without reading its licence file.</strong> Rete's nesting plugin, <code>rete-scopes-plugin</code>, is <strong>CC-BY-NC-SA — non-commercial</strong>; the living, most-exercised litegraph now lives inside a GPL-3.0 frontend. Baklava is the only MIT option carrying typed sockets, registered type conversions and real subgraphs — and Raw's own graph already works, so this is a question about the evaluator, not the canvas.</li>
+</ul>
+
+<!-- ============================================================ -->
+
+<div class="meta">
+  <h4>What was actually looked at</h4>
+  <p>
+    Signed into prod and opened <code>/raw</code> seeded with the all-nodes example, at 1440×900:
+    40 nodes on screen, the <code>⋯</code> menu offering exactly <em>Home / All Nodes Example /
+    Streaming Prototype / Reset Workspace</em>, and no code affordance anywhere in the DOM.
+    Double-clicking a node enters it (breadcrumb <code>◈ › Multiply</code>) onto an empty
+    interior. Roughly 20k lines read across <code>src/raw</code>, <code>src/project/graph</code>,
+    <code>src/shared</code>, <code>src/studio</code> and <code>serverXR/src</code>.
+  </p>
+
+  <h4>Gaps in this audit — stated rather than papered over</h4>
+  <ul>
+    <li>
+      <strong>Raw has not been seen on a phone this session</strong>, and the command palette
+      would not open under headless automation, so its contents are unverified. The plan file's
+      open question #4 — <em>"Does this workspace need to work on a phone?"</em> — is still open.
+    </li>
+    <li>
+      <strong>Three automation platforms were briefed and never read:</strong> n8n, Node-RED and
+      Windmill. Windmill is the closest shipped thing to "code and low-code in one workspace"
+      and should be read before step 5 is designed. ComfyUI <em>was</em> covered — its lazy
+      inputs and its node-expansion mechanism, where a node returns a subgraph to run in its
+      place with per-node cache granularity, are the two ideas worth stealing from that corner.
+    </li>
+    <li>
+      Blender's section was built from its C++ headers rather than its manual, because
+      <code>docs.blender.org</code> and <code>devtalk.blender.org</code> both refuse automated
+      requests. Better for design questions, but it means <strong>no user-complaint colour on
+      the field system</strong> — and fields are the part users reportedly struggle with.
+    </li>
+    <li>
+      Epic's own wording on why Blueprint nativization was removed could not be retrieved — their
+      docs render client-side. The removal is certain; the stated reasons are not sourced here.
+    </li>
+    <li>
+      Figma has published nothing naming their engine since 2019; current QuickJS use is
+      inferred from third-party reports and the absence of any announcement.
+    </li>
+  </ul>
+
+  <h4>In-flight work this must not collide with</h4>
+  <p>
+    PR #121 (the plan, keeper, MIDI in, zen) and PR #100 (timeline core) are
+    <strong>merged</strong>, not open — the memory index saying otherwise is stale. Two PRs are
+    genuinely open: #99 and #119. <strong>#99 is 157 commits behind dev with 11 conflicts and
+    its substance already landed by another route</strong> — but its unreviewed WIP commit
+    contains <code>work.status</code> and <code>work.agent</code> node types plus
+    <code>agentRunRoutes.js</code> and <code>workStatusRoutes.js</code>, which is a prototype of
+    step 5 and should be read before that step, not merged. <code>feat/raw-admin</code> is one
+    clean commit with no PR yet.
+  </p>
+</div>
+
+</div>
+

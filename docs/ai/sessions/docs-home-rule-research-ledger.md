@@ -14,3 +14,14 @@ right path to ecosystem… make rules to not mess."
 - The 08-21 audit's full findings ledger moved in as
   docs/research/2026-08-21-raw-ux-audit.md (plan mirror URL + spend
   recorded); the ad-hoc verification servers were killed this session.
+
+## The mirrors came home
+
+Owner: "take all needed artifacts from claude in the di.iiii… and ran the
+local that i can see." docs/research/mirrors/ now holds full-fidelity copies
+of every platform-connected claude.ai artifact (ten pages: both Raw audits,
+the workshop map, the UX plan, lexicon, name tree, growth plan, the 08-05
+full audit, promotion/licensing, The Same Rectangle) plus an index.html —
+view with `python3 -m http.server` in that directory. "What Is Actual" was
+deliberately not mirrored: it is the estate-wide audit and belongs with
+di-atlas. The claude.ai pages remain as mirrors; these files are the truth.
