@@ -62,3 +62,28 @@ rename created. Those two now select by link name.
 imports failing silently (`StudioEditor.jsx` try/finally with no catch), publish and share
 outcomes reaching only a collapsed activity log, and touch targets across Studio below the
 44px floor Raw's own CSS enforces. Full ranked list in the session artifact.
+
+### Carry into CURRENT.md's "Open" at land time
+
+`land` writes only the "Last session" list, so these need a human hand on `dev`:
+
+- **25 confirmed UX defects unfixed** — asset imports fail silently, publish and share
+  outcomes reach only a collapsed activity log, Studio touch targets under the 44px floor
+  Raw's own CSS enforces. Ranked list above.
+- **`algovrithm`'s space-card preview 404s on prod** — data, not code; repair written, the
+  production write is blocked by the local permission classifier.
+- Two invite tokens were printed into a session log (`library`, `funding`) and are live for
+  7 days — reusable keys, not single-use. Revoke them.
+
+### The protocol has a deadlock, and it is currently firing
+
+`check-agent-docs.mjs` enforces two rules that can contradict: **CURRENT.md must be ≤50
+lines**, and **CURRENT.md must not differ from `origin/dev`** on any branch. When dev's own
+copy goes over budget, no branch can trim it without tripping the second rule — the fix has
+to be committed on `dev` directly.
+
+That is live right now: dev's CURRENT.md went 53 lines at `fe2d4fc4` (land) and 59 at
+`7e535e37` (a hand-written recap). `docs:ai:check` therefore fails on dev, on every open PR,
+and in the staging deploy — PR #240's `build-and-test` is red for that line alone, with
+nothing of its own failing. Trim the "Open" section on `dev` and everything goes green
+together.
