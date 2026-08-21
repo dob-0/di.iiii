@@ -272,6 +272,24 @@ describe('the wiki says only the words the contract sanctions', () => {
         }
         expect(offences, report(offences)).toEqual([])
     })
+
+    // `page` cannot join BANNED: it is a sanctioned word (a published web page)
+    // and a live identifier (window.diiPageQuery), so a bare text scan would be
+    // all noise. The one place it is always wrong is a URL template — the slot
+    // after the space id holds a PROJECT's slug, and writing it `<page>` teaches
+    // the reader the slot is named page. The wiki shipped exactly that, three
+    // sentences after the article that rules it out.
+    it('never names the project slot in a URL "page"', () => {
+        const SLOT = /[/](<|\{|:)space(>|\})?[/](<|\{|:)page\b/i
+        const offences = []
+        for (const { where, value } of wikiStrings) {
+            if (SLOT.test(value)) offences.push(`src/wiki/wikiContent.js  ${where}\n    in: ${value.slice(0, 140)}`)
+        }
+        expect(
+            offences,
+            `The slot after a space id holds a project's slug — write it <slug>, not <page>:\n${offences.join('\n')}`,
+        ).toEqual([])
+    })
 })
 
 // --- the product's own strings ----------------------------------------------

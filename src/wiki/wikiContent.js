@@ -56,16 +56,20 @@ export const WIKI_ARTICLES = [
         body: [
             'A space is a place that is yours: an address, a guest list, and everything in it — projects, uploaded files, collaborators, and the rules about who gets in.',
             'A project is one thing you make inside a space. A space can hold many projects, and one of them can be marked as the space’s published (live) project.',
-            'URLs mirror this structure:',
+            'The address of a project always begins with its space. The editor addresses put the tool first for historical reasons, which is why the shortcut below exists — it is the one that reads the way the product is actually arranged:',
             { list: [
-                '/<space>/studio — the project hub for a space',
+                '/<space>/projects — the space’s projects. This is the one to use: the list belongs to the space, not to whichever tool you are holding.',
+                '/spaces — all of your spaces',
+                '/<space>/studio — the same list, in Studio’s older address',
+                '/<space>/raw/projects — the same projects, in the node editor’s older address',
                 '/<space>/studio/projects/<id> — the editor for one project',
+                '/<space>/<project>/studio — the same project, open for editing. Add /raw instead for the node editor. This works on any project link: take the address you are looking at and add the word. It is a shortcut, not a second address — the bar heals to the editor’s own link once it opens.',
                 '/<space> — the public viewer for a space’s published project',
                 '/<space>/p/<id> — the public viewer for any single project (on a public space, no login needed — share a draft or a second project without moving the published pointer)'
             ] }
         ],
         tags: ['spaces', 'projects', 'basics'],
-        updated: '2026-08-19'
+        updated: '2026-08-21'
     },
     {
         id: 'spaces-map-view',
@@ -193,7 +197,7 @@ export const WIKI_ARTICLES = [
             'Spaces and individual projects can each get a clean public link (a slug) that’s independent of their internal id — e.g. /wcc/artistplace instead of a longer id-based path. Set it from Ops Graph → Manage (“Edit public link” next to Rename); old id-based links keep working forever, they’re never replaced.',
             'Published code pages can use the visitor’s camera, microphone and motion sensors — but only if the project opts in by setting deviceAccess: true in its presentation state (repo-synced pages set it in their di-space manifest). Opted-in pages run without the usual origin isolation, so reserve it for pages you author yourself; everything else stays fully sandboxed. The visitor still gets the normal browser permission prompt either way.',
             'Opting into deviceAccess also gives the page real, persistent localStorage and sessionStorage — what it saves survives reloads and is shared with the space’s other opted-in pages on the same device, which is how one page can leave something for a sibling to find. Fully sandboxed pages keep an in-memory stand-in instead: calls succeed, but nothing outlives the visit.',
-            'Published code pages can read the URL’s query string — /<space>/<page>?just=bkyi — through window.diiPageQuery (already parsed for you as window.diiPageParams). A published page is rendered inside a frame with no URL of its own, so location.search there is always empty; read new URLSearchParams(window.diiPageQuery || location.search) and the same code keeps working when you open the file locally. This is what lets one published page hand over to another with state — “open the field, on the core I just made”.',
+            'Published code pages can read the URL’s query string — /<space>/<slug>?just=bkyi — through window.diiPageQuery (already parsed for you as window.diiPageParams). A published page is rendered inside a frame with no URL of its own, so location.search there is always empty; read new URLSearchParams(window.diiPageQuery || location.search) and the same code keeps working when you open the file locally. This is what lets one published page hand over to another with state — “open the field, on the core I just made”.',
             'Add ?embed=1 to any published link and the viewer becomes glass: no dark shell of its own, no “Made with di.iiii” badge, no Walk/Fly button, no loading screen. Use it when the page is a window inside another page rather than somewhere you send people — put it in an iframe and whatever your host page draws shows through behind it. Your page keeps its own background, so make that transparent too if you want the host to show through.'
         ],
         tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access', 'query', 'url parameters', 'embed', 'iframe', 'transparent', 'storage', 'localstorage'],

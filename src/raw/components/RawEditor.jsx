@@ -44,13 +44,13 @@ import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/n
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
 import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
-import { buildStudioProjectPath, buildStudioSpacesPath } from '../../studio/utils/studioRouting.js'
+import { buildSpaceProjectsPath, buildStudioProjectPath, buildStudioSpacesPath } from '../../studio/utils/studioRouting.js'
 import { buildWikiPath } from '../../utils/spaceRouting.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
-import { buildRawOutPath, buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
+import { buildRawOutPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
@@ -1707,7 +1707,7 @@ export default function RawEditor({
                     <>
                         <div className="raw-topbar-left">
                             <button type="button" className="raw-topbar-back" onClick={() => {
-                                navigateToRawPath(buildRawProjectsPath(resolvedSpaceId))
+                                navigateToRawPath(buildSpaceProjectsPath(resolvedSpaceId))
                             }}>
                                 ← Projects
                             </button>

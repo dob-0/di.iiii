@@ -578,7 +578,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                 <InfoPair label="Release Generated" value={releaseGeneratedAt} mono />
                             </ModuleSection>
 
-                            <ModuleSection title="Project Snapshot" subtitle={sync?.spaceId || 'main'}>
+                            <ModuleSection title="Session Snapshot" subtitle={sync?.spaceId || 'main'}>
                                 <InfoPair label="Public Path" value={currentSpaceRoutes.publicPath} mono />
                                 <InfoPair label="Studio Path" value={currentSpaceRoutes.studioPath} mono />
                                 <InfoPair label="Node Editor Path" value={currentSpaceRoutes.rawPath} mono />

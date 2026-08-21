@@ -75,7 +75,10 @@ if (apply && targetsProduction) {
   const { createInterface } = await import('node:readline/promises');
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const answer = await rl.question(
-    `\n  !! You are about to DELETE ${spaceCount} space(s) and ${projectCount} project(s) on PRODUCTION (${tgt.base}).\n` +
+    // "and the N projects inside them", not "and N projects": the projects are not a
+    // second pile being deleted alongside, they go BECAUSE their space goes. On a
+    // confirmation prompt for a destructive act that difference is worth the words.
+    `\n  !! You are about to DELETE ${spaceCount} space(s) — and the ${projectCount} project(s) inside them — on PRODUCTION (${tgt.base}).\n` +
     `  Type "delete on prod" to continue: `
   );
   rl.close();

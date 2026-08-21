@@ -17,6 +17,19 @@ export const STUDIO_PAGE_DIRECTOR = 'director'
 export const STUDIO_RESERVED_SEGMENT = 'studio'
 export const DEFAULT_STUDIO_SPACE_ID = 'main'
 
+// The layered addresses, added 2026-08-21.
+//
+// A space's projects belong to the SPACE, not to whichever tool you happen to be
+// holding — and the list of your spaces belongs to the root. Filing either under a
+// tool's name is what made "back to projects" land on /{space}/raw/projects, a
+// space's own list wearing the node editor's address.
+//
+// These are CANONICAL, not aliases: they stay in the bar rather than healing to the
+// tool-named form, because the address is the part that was wrong. Every existing
+// shape — /{space}/studio, /{space}/raw/projects, /studio — keeps working forever.
+export const SPACES_SEGMENT = 'spaces'
+export const PROJECTS_SEGMENT = 'projects'
+
 // Friendly short entry for the communal jam. `/open_jam` is a QR-/flyer-sized
 // alias for the full `/open/studio/projects/open-jam` path; it resolves to the
 // same editor state without a redirect, so the short URL stays in the bar.
@@ -31,6 +44,18 @@ export const buildStudioSpacesPath = () => {
     const prefix = getBasePrefix()
     return joinPath(prefix, STUDIO_RESERVED_SEGMENT)
 }
+
+// The address of a space's projects. Prefer this over buildStudioHubPath for any
+// control whose label says "Projects" — it names the level it goes to.
+export const buildSpaceProjectsPath = (spaceId) => {
+    const prefix = getBasePrefix()
+    if (!spaceId) return joinPath(prefix, SPACES_SEGMENT)
+    return joinPath(prefix, spaceId, PROJECTS_SEGMENT)
+}
+
+// The address of your spaces. buildStudioSpacesPath ('/studio') stays as the
+// legacy form and keeps working.
+export const buildSpacesPath = () => joinPath(getBasePrefix(), SPACES_SEGMENT)
 
 export const buildStudioHubPath = (spaceId = null) => {
     const prefix = getBasePrefix()
@@ -76,6 +101,19 @@ export const getStudioLocationState = (
             projectId: OPEN_JAM_PROJECT_ID,
             spaceId: OPEN_JAM_SPACE_ID
         }
+    }
+
+    // The layered addresses, checked before the tool-named ones so they are never
+    // mistaken for a space called "spaces" or a project called "projects". Both
+    // words are reserved (RESERVED_APP_SEGMENTS here, RESERVED_SPACE_SLUGS and
+    // PROJECT_RESERVED_SLUGS on the server), and neither was in use on any tier
+    // when they were reserved — checked against production and staging first.
+    if (segments[0] === SPACES_SEGMENT && segments.length === 1) {
+        return { isStudio: true, page: STUDIO_PAGE_SPACES, projectId: null, spaceId: null }
+    }
+
+    if (segments[0] && segments[1] === PROJECTS_SEGMENT && segments.length === 2) {
+        return { isStudio: true, page: STUDIO_PAGE_HUB, projectId: null, spaceId: segments[0] }
     }
 
     if (segments[0] !== STUDIO_RESERVED_SEGMENT) {

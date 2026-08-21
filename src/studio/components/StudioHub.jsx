@@ -218,7 +218,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                 Nodes
                             </button>
                             <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
-                                + New
+                                + New project
                             </button>
                         </div>
                     ) : (

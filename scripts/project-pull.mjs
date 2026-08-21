@@ -185,7 +185,7 @@ const main = async () => {
     const entityCount = Array.isArray(document.entities) ? document.entities.length : 0
 
     console.log(`  "${title}"`)
-    console.log(`  space: ${spaceId} · ${entityCount} entities · ${assetList.length} assets`)
+    console.log(`  space: ${spaceId} · ${entityCount} objects · ${assetList.length} assets`)
 
     if (dryRun) {
         console.log('dry-run: skipping write')
@@ -226,7 +226,7 @@ const main = async () => {
     }
 
     // 4. Load the document.
-    console.log(`Writing document (${entityCount} entities)`)
+    console.log(`Writing document (${entityCount} objects)`)
     await apiFetch(`${toBase}/api/projects/${projectId}/document`, {
         method: 'PUT',
         headers: buildHeaders(),

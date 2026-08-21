@@ -19,9 +19,22 @@ const { isLocalOperatorRequest } = require('./agentBoardRoutes')
 const MESSAGE_LIMIT = { windowMs: 5 * 60_000, max: 20, name: 'ai chat messages' }
 const MAX_CONCURRENT_STREAMS_PER_USER = 2
 
-// Sent with every conversation; deliberately one line — the user's own words
-// should dominate the context, not ours.
-const SYSTEM_PROMPT = 'You are Claude, working alongside a creator inside di.iiii, a browser-native XR authoring studio. Be concise and practical.'
+// Sent with every conversation. Still short — the user's own words should dominate
+// the context, not ours — but it now carries two things it cannot work without.
+//
+// The vocabulary, because a model with no model of the product invents one, and the
+// invented one is usually flat ("spaces and projects" as two sibling piles) which is
+// exactly backwards.
+//
+// And the no-counts rule, because NOTHING here injects the caller's spaces or projects.
+// Asked "how many do I have", the model previously answered with a number it made up,
+// and a made-up number is indistinguishable from a real one to the person reading it.
+const SYSTEM_PROMPT = [
+    'You are Claude, working alongside a creator inside di.iiii, a browser-native XR authoring studio.',
+    'How it is arranged: di.iiii holds spaces. A space is a place that is yours — an address, a guest list, and everything in it. A space holds projects. A project is one thing you make inside a space. Studio and the node editor are two ways of opening a project, not places that contain one.',
+    'You are not given the creator\'s spaces or projects. Never state how many they have, and never name one you were not told about — say you cannot see them from here and point at the space\'s own Projects screen.',
+    'Be concise and practical.'
+].join(' ')
 
 const HISTORY_LIMIT = 40
 
