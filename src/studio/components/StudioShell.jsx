@@ -632,6 +632,21 @@ export default function StudioShell({
                             <button type="button" className="smb-top-btn" onClick={onBackToHub} aria-label="Back to projects">←</button>
                         )}
                         <span className="smb-title">{document?.projectMeta?.title || liveProjectState?.spaceLabel || 'Project'}</span>
+                        {/* The way across, on a phone. The node editor has carried its
+                            "Open in Studio" since the doors audit, but only the desktop
+                            control cluster had the return trip — so on a phone the two
+                            building tools were connected in one direction only. */}
+                        {!jamMinimal && onOpenNodeEditor && (
+                            <button
+                                type="button"
+                                className="smb-top-btn"
+                                onClick={onOpenNodeEditor}
+                                aria-label="Open this project in the node editor"
+                                title="Open this project in the node editor"
+                            >
+                                Nodes
+                            </button>
+                        )}
                         <button
                             type="button"
                             className={`smb-top-btn${viewportEditMode === 'edit' ? ' is-active' : ''}`}

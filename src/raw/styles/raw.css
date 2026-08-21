@@ -3834,7 +3834,15 @@
         grid-template-columns: 1fr;
     }
 
+    /* Keep the SPACE below 1200px, drop the project title. The bar used to hide
+       both, so on every phone and most laptops nothing on screen said which space
+       you were editing in — recoverable only from the URL. A space id is short
+       enough to afford; a project title is not. */
     .raw-topbar-name {
+        max-width: 88px;
+    }
+
+    .raw-topbar-name-project {
         display: none;
     }
 }

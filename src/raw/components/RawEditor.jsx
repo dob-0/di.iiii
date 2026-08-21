@@ -1711,7 +1711,28 @@ export default function RawEditor({
                             }}>
                                 ← Projects
                             </button>
-                            <span className="raw-topbar-name" title={workspaceTitle}>{workspaceTitle}</span>
+                            {/* Name the space, not just the project. Studio's cluster has
+                                always shown "space · project"; Raw showed the project
+                                alone, so nothing on screen told you which space you were
+                                editing in. Folded into the existing element rather than
+                                adding chrome — the id is what the URL says, so it is the
+                                recognisable form. */}
+                            <span
+                                className="raw-topbar-name"
+                                title={isLocalWorkspace ? workspaceTitle : `${resolvedSpaceId} · ${workspaceTitle}`}
+                            >
+                                {isLocalWorkspace ? workspaceTitle : (
+                                    <>
+                                        <span className="raw-topbar-name-space">{resolvedSpaceId}</span>
+                                        {/* Its own element so the narrow rule can drop the
+                                            title and keep the space: a space id is short
+                                            ("wcc"), a project title is not, and which space
+                                            you are in is the fact you cannot otherwise
+                                            recover from this bar. */}
+                                        <span className="raw-topbar-name-project">{` · ${workspaceTitle}`}</span>
+                                    </>
+                                )}
+                            </span>
                         </div>
                         <div className="raw-topbar-center">
                             {navStack.length > 1 ? (
