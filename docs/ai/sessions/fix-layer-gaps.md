@@ -32,6 +32,19 @@ zen preference forced off (`dii.raw.zen.<projectId>` = `off`), because the repo'
 `check:toolbar-overlap` measures an empty bar and passes vacuously otherwise — see the
 note on the previous branch.
 
+**And the check itself is repaired.** `scripts/check-toolbar-overlap.mjs` reported
+*"0 children checked … PASS"* on a real topbar change — green while asserting nothing, on
+a check `src/raw/AGENTS.md` REQUIRES for every topbar change. Three fixes:
+
+- an init script clears `dii.raw.zen.*` before the app boots, so the bar has content;
+- zero-width boxes no longer count as "children checked", because a `display:none` slot
+  cannot overlap anything and counting it hides an empty bar behind a real number;
+- **it now FAILS when nothing was measured at any width**, naming the route and selector.
+
+Confirmed both ways: 3 children on `/open/raw` where it used to find 0, and a hard exit 1
+with a bogus selector. It is not wired into any CI workflow — only an npm script — so this
+cannot turn a pipeline red; it only stops misleading whoever runs it.
+
 **Still not done, and not for lack of trying:** the editor addresses still read
 `/{space}/{tool}/projects/{id}` — tool above project. That is §7.1 of
 `SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04. And
