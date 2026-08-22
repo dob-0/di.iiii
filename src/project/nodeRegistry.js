@@ -191,6 +191,28 @@ export const FAMILY_BY_TYPE = {
     'work.status': 'agents',
 }
 
+// What a card says about itself when it has no ports to draw.
+//
+// A card's body is nothing but port rows, so the dead-port rule has a side
+// effect nobody designed: a node that correctly declares no ports gets a card
+// that is visibly empty, and a list holding 23 rows looks identical to one
+// holding none. This is the one line such a card can afford — the body is
+// `max(inputs, outputs, 1)` rows tall, and that height is the geometry the
+// wires are drawn from, so it must not grow.
+//
+// Returns null for types with nothing worth saying, which is most of them.
+export const getNodeCardSummary = (node) => {
+    if (!node) return null
+    if (node.typeId === 'view.list') {
+        const items = Array.isArray(node.values?.items) ? node.values.items : []
+        const rows = items.filter((it) => String(it?.text || '').trim()).length
+        const groups = Array.isArray(node.values?.groups) ? node.values.groups.length : 0
+        if (!rows) return 'empty'
+        return `${rows} row${rows === 1 ? '' : 's'} · ${groups} group${groups === 1 ? '' : 's'}`
+    }
+    return null
+}
+
 export const getNodeFamily = (typeId) => {
     const familyId = FAMILY_BY_TYPE[typeId]
     return NODE_FAMILIES.find((f) => f.id === familyId) || null

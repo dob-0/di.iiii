@@ -5531,3 +5531,20 @@
     .raw-list-text { flex-basis: 100% }
     .raw-list-move { flex: 1; max-width: none }
 }
+
+/* The one line a portless card can afford. Clipped rather than wrapped: the
+   body is a single 22px row and its height is the geometry the wires are
+   drawn from, so this must never push it taller. */
+.raw-graph-node-summary {
+    position: absolute;
+    inset: 0 10px auto 10px;
+    top: 4px;
+    font-size: 11px;
+    line-height: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(244, 247, 251, 0.5);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
