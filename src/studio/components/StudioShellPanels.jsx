@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { forwardRef, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import JSZip from 'jszip'
 
 // Asset URLs come in two shapes: space assets already include the /serverXR mount,
@@ -1209,6 +1209,81 @@ export function ActivityPanel({ activity = [] }) {
     )
 }
 
+// The code buffer is local while you type: a whole-page file re-issues a document
+// op per keystroke otherwise, and an autosizing field re-measures the entire file
+// on every one. The box scrolls itself instead of growing; edits land on idle, on
+// blur, and on unmount (switching files or closing the window keeps them).
+const CodeEditorArea = forwardRef(function CodeEditorArea({ value, onCommit }, ref) {
+    const [draft, setDraft] = useState(value)
+    const committedRef = useRef(value)
+    const pendingRef = useRef(null)
+    const timerRef = useRef(null)
+    const commitRef = useRef(onCommit)
+    useEffect(() => { commitRef.current = onCommit })
+
+    // adopt changes that came from anywhere but this box (asset insert, undo, sync)
+    useEffect(() => {
+        if (value === committedRef.current) return
+        committedRef.current = value
+        pendingRef.current = null
+        setDraft(value)
+    }, [value])
+
+    const flush = () => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current)
+            timerRef.current = null
+        }
+        const next = pendingRef.current
+        pendingRef.current = null
+        if (next === null || next === committedRef.current) return
+        committedRef.current = next
+        commitRef.current?.(next)
+    }
+
+    useEffect(() => flush, [])
+
+    const handleChange = (event) => {
+        const next = event.target.value
+        setDraft(next)
+        pendingRef.current = next
+        if (timerRef.current) clearTimeout(timerRef.current)
+        timerRef.current = setTimeout(flush, 400)
+    }
+
+    return (
+        <Box
+            component="textarea"
+            ref={ref}
+            value={draft}
+            onChange={handleChange}
+            onBlur={flush}
+            spellCheck={false}
+            sx={{
+                flex: 1,
+                width: '100%',
+                minHeight: 220,
+                resize: 'vertical',
+                boxSizing: 'border-box',
+                p: 1,
+                fontFamily: 'monospace',
+                fontSize: '0.76rem',
+                lineHeight: 1.5,
+                color: 'text.primary',
+                bgcolor: 'background.paper',
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 1,
+                outline: 'none',
+                whiteSpace: 'pre-wrap',
+                overflowWrap: 'anywhere',
+                overflow: 'auto',
+                '&:focus': { borderColor: 'primary.main' }
+            }}
+        />
+    )
+})
+
 export function FilesPanel({
     presentationState,
     onPresentationPatch,
@@ -1227,11 +1302,18 @@ export function FilesPanel({
     const [embedOpen, setEmbedOpen] = useState(false)
     const [urlDraft, setUrlDraft] = useState(presentationState?.codeUrl || '')
 
-    const files = presentationState?.codeFiles || []
-    const hasLegacyHtml = Boolean(presentationState?.codeHtml && files.length === 0)
+    const storedFiles = presentationState?.codeFiles || []
+    // Projects authored before the file list kept their whole page in `codeHtml`.
+    // The viewport still renders it, so showing "no code files" here left the author
+    // looking at a page they could not open. Surface it as index.html; the first
+    // write moves it into codeFiles for good.
+    const legacyHtml = storedFiles.length === 0 ? (presentationState?.codeHtml || '') : ''
+    const files = legacyHtml ? [{ name: 'index.html', content: legacyHtml }] : storedFiles
     const activeFile = files.find((f) => f.name === activeFileName) || files[0] || null
 
-    const setFiles = (nextFiles) => onPresentationPatch({ codeFiles: nextFiles })
+    const setFiles = (nextFiles) => onPresentationPatch(
+        legacyHtml ? { codeFiles: nextFiles, codeHtml: '' } : { codeFiles: nextFiles }
+    )
 
     const applyTemplate = (template) => {
         setFiles([{ name: 'index.html', content: template.html }])
@@ -1358,7 +1440,8 @@ export function FilesPanel({
         if (activeFile && input && typeof input.selectionStart === 'number') {
             const start = input.selectionStart
             const end = input.selectionEnd ?? start
-            const content = activeFile.content || ''
+            // read the textarea, not the document — the last keystrokes may not be committed yet
+            const content = input.value ?? activeFile.content ?? ''
             updateActiveContent(content.slice(0, start) + url + content.slice(end))
             requestAnimationFrame(() => {
                 input.focus()
@@ -1438,11 +1521,6 @@ export function FilesPanel({
                 </Box>
             ) : (
                 <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-                    {hasLegacyHtml && (
-                        <Button size="small" variant="outlined" fullWidth sx={{ mb: 1 }}
-                            onClick={() => { onPresentationPatch({ codeFiles: [{ name: 'index.html', content: presentationState.codeHtml }], codeHtml: '' }); setActiveFileName('index.html') }}
-                        >Convert legacy HTML → index.html</Button>
-                    )}
                     <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
                         No code files yet — start from a template, or read <a href="/wiki#studio-content-model" target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>how content flows →</a>
                     </Typography>
@@ -1466,16 +1544,12 @@ export function FilesPanel({
 
             {/* ── code editor ── */}
             {activeFile && (
-                <Box sx={{ px: 1, pt: 1, flex: 1 }}>
-                    <TextField
+                <Box sx={{ px: 1, pt: 1, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                    <CodeEditorArea
                         key={activeFile.name}
-                        multiline fullWidth
-                        minRows={14}
+                        ref={editorInputRef}
                         value={activeFile.content}
-                        onChange={(e) => updateActiveContent(e.target.value)}
-                        inputRef={editorInputRef}
-                        inputProps={{ style: { fontFamily: 'monospace', fontSize: '0.76rem', lineHeight: 1.5 } }}
-                        sx={{ '& .MuiInputBase-root': { p: 1 } }}
+                        onCommit={updateActiveContent}
                     />
                     {renameValue !== null && (
                         <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
