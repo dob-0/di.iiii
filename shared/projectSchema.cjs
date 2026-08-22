@@ -109,6 +109,10 @@ const defaultWorldState = {
   fogColor: null,
   fogNear: 8,
   fogFar: 50,
+  // null = unconfined (legacy: the walker is only clamped to the entity AABB
+  // plus a 22m margin). An array of {minX,maxX,minZ,maxZ} rectangles declares
+  // the walkable floor plan, and the walker cannot leave their union.
+  walkableAreas: null,
   gridVisible: true,
   gridSize: 24,
   gridCellSize: 0.75,
@@ -460,6 +464,25 @@ const normalizeEntity = (entity = {}) => {
   }
 }
 
+// A walkable region list is either absent (null -- unconfined, the legacy
+// behaviour every existing space relies on) or a list of well-formed rectangles.
+// A malformed or empty list normalizes back to null rather than to "nowhere is
+// walkable", so bad data can never trap a visitor where they cannot move.
+const normalizeWalkableAreas = (areas) => {
+  if (!Array.isArray(areas)) return null
+  const rects = []
+  for (const area of areas) {
+    if (!area || typeof area !== 'object') continue
+    const minX = Math.min(ensureNumber(area.minX, 0), ensureNumber(area.maxX, 0))
+    const maxX = Math.max(ensureNumber(area.minX, 0), ensureNumber(area.maxX, 0))
+    const minZ = Math.min(ensureNumber(area.minZ, 0), ensureNumber(area.maxZ, 0))
+    const maxZ = Math.max(ensureNumber(area.minZ, 0), ensureNumber(area.maxZ, 0))
+    if (maxX - minX < 0.01 || maxZ - minZ < 0.01) continue
+    rects.push({ minX, maxX, minZ, maxZ })
+  }
+  return rects.length ? rects : null
+}
+
 const normalizeWorldState = (world = {}) => {
   const source = world && typeof world === 'object' ? world : {}
   return {
@@ -475,6 +498,7 @@ const normalizeWorldState = (world = {}) => {
       pitch: ensureNumber(source.spawn.pitch, 0),
       altY: ensureNumber(source.spawn.altY, 1.6)
     } : null,
+    walkableAreas: normalizeWalkableAreas(source.walkableAreas),
     fogEnabled: ensureBoolean(source.fogEnabled, defaultWorldState.fogEnabled),
     fogColor: source.fogColor ? ensureString(source.fogColor, defaultWorldState.backgroundColor) : null,
     fogNear: Math.max(0, ensureNumber(source.fogNear, defaultWorldState.fogNear)),

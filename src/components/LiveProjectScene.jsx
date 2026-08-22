@@ -9,6 +9,7 @@ import { useXrAr } from '../hooks/useXrAr.js'
 import MadeWithBadge from './MadeWithBadge.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
+import { confineToAreas } from './walkableAreas.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
     buildProjectEventsUrl,
@@ -387,7 +388,7 @@ function AmbientField({ center }) {
 
 // Free-roam walk: WASD + arrows move/turn; desktop uses pointer lock for look;
 // mobile uses touch outside the joystick zone for look.
-function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
+function Walker({ playerRef, onNearestZone, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
@@ -761,8 +762,14 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             const rightZ = Math.sin(player.yaw) * strafeSpeedRef.current
             const nextX = player.x + (forwardX + rightX) * delta
             const nextZ = player.z + (forwardZ + rightZ) * delta
-            player.x = THREE.MathUtils.clamp(nextX, bounds.minX, bounds.maxX)
-            player.z = THREE.MathUtils.clamp(nextZ, bounds.minZ, bounds.maxZ)
+            const moved = confineToAreas(
+                walkableAreas,
+                player.x, player.z,
+                THREE.MathUtils.clamp(nextX, bounds.minX, bounds.maxX),
+                THREE.MathUtils.clamp(nextZ, bounds.minZ, bounds.maxZ)
+            )
+            player.x = moved.x
+            player.z = moved.z
             bobPhaseRef.current += delta * Math.hypot(speedRef.current, strafeSpeedRef.current) * (fly ? 0 : 1.8)
         }
         // Scroll dolly steps along the horizontal facing direction, like
@@ -770,8 +777,14 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         if (wheelDollyRef.current !== 0) {
             const dolly = wheelDollyRef.current
             wheelDollyRef.current = 0
-            player.x = THREE.MathUtils.clamp(player.x + Math.sin(player.yaw) * dolly, bounds.minX, bounds.maxX)
-            player.z = THREE.MathUtils.clamp(player.z + Math.cos(player.yaw) * dolly, bounds.minZ, bounds.maxZ)
+            const dollied = confineToAreas(
+                walkableAreas,
+                player.x, player.z,
+                THREE.MathUtils.clamp(player.x + Math.sin(player.yaw) * dolly, bounds.minX, bounds.maxX),
+                THREE.MathUtils.clamp(player.z + Math.cos(player.yaw) * dolly, bounds.minZ, bounds.maxZ)
+            )
+            player.x = dollied.x
+            player.z = dollied.z
         }
         if (fly && vert !== 0) {
             player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, -2, 60)
@@ -1459,6 +1472,7 @@ export default function LiveProjectScene({
                         onNearestZone={setNearestLabel}
                         entities={entities}
                         bounds={bounds}
+                        walkableAreas={worldState.walkableAreas}
                         joystickRef={joystickRef}
                         joyVisRef={joyVisRef}
                         joyThumbRef={joyThumbRef}
