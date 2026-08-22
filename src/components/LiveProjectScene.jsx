@@ -1402,6 +1402,13 @@ export default function LiveProjectScene({
     const ambient = worldState.ambientLight || { color: '#ffffff', intensity: 0.85 }
     const directional = worldState.directionalLight || { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] }
     const backgroundColor = worldState.backgroundColor || '#0a1118'
+    // Fog was hardcoded to (backgroundColor, 8, 50). On a white void that is an
+    // invisible fog, so the corridor simply ended. Authorable now; the defaults
+    // below are the old constants, so every existing space renders unchanged.
+    const fogEnabled = worldState.fogEnabled !== false
+    const fogColor = worldState.fogColor || backgroundColor
+    const fogNear = Number.isFinite(worldState.fogNear) ? worldState.fogNear : 8
+    const fogFar = Number.isFinite(worldState.fogFar) ? worldState.fogFar : 50
     // Zone tint sources for atmosphere blend: each portal's position + authored colour.
     const atmosphereZones = useMemo(() => entities
         .filter((e) => e.type === 'portal')
@@ -1423,7 +1430,7 @@ export default function LiveProjectScene({
             >
                 <XR store={xr.xrStore}>
                 <color attach="background" args={[backgroundColor]} />
-                <fog attach="fog" args={[backgroundColor, 8, 50]} />
+                {fogEnabled ? <fog attach="fog" args={[fogColor, fogNear, fogFar]} /> : null}
                 {interactive && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
                     <AtmosphereBlender zones={atmosphereZones} playerRef={playerRef} baseBg={backgroundColor} />
                 ) : null}
