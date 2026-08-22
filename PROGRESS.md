@@ -5,6 +5,154 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-22 — Emily's algovrithm branch, landed without its typography half
+
+Emily pushed one commit to `emilyanikoghosyan/di.iiii feat/algovrithm-space` on
+2026-08-20, on a base three weeks behind dev. It carried three unrelated strands;
+this branch is two of them, rebased onto dev, with the third left where it was.
+
+- **Kept — algovrithm audio.** `audioWake.js` keeps the AudioContext running as a
+  repeatable question (gesture, tab visibility, XR sessionstart/sessionend, and the
+  context's own `statechange`), instead of the one-shot gesture unlock that left the
+  piece silent for good when a headset switched audio device mid-entry. The reel pool
+  now applies the unlock state to a pool built after the gesture, so the
+  idle-callback warm-up can no longer land on the wrong side of the first tap.
+- **Kept — the reel globe's "holes".** Black patches in the headset were never
+  geometry: they were video decoders that could not be allocated, failing silently at
+  a pool of 31. Two ceilings now, chosen by `navigator.xr.isSessionSupported`.
+  Left at nine on the merge and marked OPEN in the file — nine was measured against
+  full-resolution sources, and dev has since compressed the reels to 360x640, so the
+  headset ceiling is very likely raisable once someone measures it on the device.
+- **Kept — viewport.** `ringTour` and `textReveal` as pure helpers with tests; the
+  typewriter reveal on text objects, which needed a real defect fixed first (text was
+  the only type whose `appearance.opacity` did nothing, so timelines animating opacity
+  silently no-op'd); positional video sound, opt-in per video; a parented entity no
+  longer gets the legacy idle bob/spin, which is what pulled the 360 Cinema's cabinets
+  away from their video planes in the walk viewer but never in the editor.
+- **Dropped — the typography strand.** Self-hosted Montserrat, `muiTheme.js`, the
+  `--di-sans` pass across landing, studio, inspector, panels, wiki and wcc, and the
+  wiki's `platform-typeface` article are NOT here. They stay on Emily's fork for a
+  decision of their own. `@fontsource/arimo` is kept, because portal labels use it.
+
+Re-homed during the rebase, since dev had moved underneath all of it:
+- `playTimelines` and the `?xrdebug=1` panel now live in `PublicProjectSceneSurface`,
+  which dev extracted out of `PublicProjectViewer` after Emily's base.
+- Spatial video sound became a child component (`SpatialVideoSound`) rather than an
+  effect in `VideoObject`: dev's shared video cache means `VideoObject` is rendered
+  by plain react-dom tests that never open a Canvas, and `useThree` throws there.
+  Mounting it only when a video asks for spatial sound keeps those tests honest.
+- `LABEL_FONTS.default` is dev's vendored troika face, not "no font prop" — the
+  latter sends troika to a CDN at render time and paints nothing offline.
+
+Verified here: full suite 300 files / 2662 tests green, lint 0 errors, build clean,
+`docs:wiki:check`, `check:three-vendor`, `check:fallback-patterns`, `test:schema-sync`
+all pass. Looked at, at DPR 2: `/algovrithm` front door and the piece running through
+its sequences (no console errors), and `/wcc/scene` side by side against dev — same
+picture. `check:input` fails identically on plain dev in this environment, so it is
+not this branch.
+
+Not done: nothing on this branch is verified in an actual headset, which is where
+every audio fix in it was aimed.
+
+## 2026-08-22 — and then brought up to date instead of merged as found
+
+A second pass, on the owner's word: her fixes are right, but several were
+written against a codebase that has since answered part of the same question.
+Merging them as found would have shipped stale assumptions with a green suite.
+
+- **The headset ceiling stopped being a number.** `HEADSET_MAX_PLAYERS = 9` is
+  gone. In its place: `HEADSET_PIXEL_BUDGET` (nine 1080x1920 frames — the load
+  the pool was known to run at) divided by what one frame actually costs, probed
+  from a single reel's metadata by `probeReelPixels()` before the pool is built.
+  At the folder's current 360x640 that clears all 31 clips, so a headset gets the
+  whole folder — the thing her own comment said the compression was supposed to
+  buy, which dev had already done on 2026-08-08 and nobody had gone back for.
+  Re-encode the reels heavier and it tightens again on its own. A probe that
+  cannot answer falls back to nine.
+- **And the ceiling stopped being load-bearing.** A budget is still a prediction
+  about hardware this repo cannot test every variant of, so the failure it
+  predicts is now caught rather than assumed away: `hasPicture`/`displayTextures`
+  hand the globe its textures with any player that never produced a frame
+  replaced by a live one, dealt round-robin so substitutes spread across the
+  folder. Guessing too high now costs a repeat — which is what a feed looks like
+  — instead of a hole in the shell.
+- **That repair was wrong on its first draft, and the browser said so.** Polling
+  `readyState` reported three of thirty-one dead mid-beat on a desktop where
+  every clip was decoding: each player seeks to a random point in its own
+  timeline, and readyState drops for the length of a seek while the texture keeps
+  showing its last frame. It latches on the first frame ever decoded instead —
+  the one thing a refused decoder never does. Pinned as a test.
+- **audioWake moved to `src/utils/`.** It answers "is this context still
+  running", which is not algovrithm's question: any surface that puts a sound in
+  a room meets the same headset audio-device switch. `positionalVideoSound` now
+  registers through it instead of its own one-shot gesture listener — that
+  listener was the exact bug audioWake exists to kill, two files apart in the
+  same commit.
+- **A spatial video takes its own element.** dev's video cache shares one
+  element per (source, muted, volume, loop), and a media element can be routed
+  into Web Audio only once — so two spatial videos on one clip would have left
+  the second with flat sound in the wrong place. `exclusive` opts a caller out of
+  sharing; muted videos and every existing space are untouched.
+
+Seen, in a real browser at DPR 2: the globe beat with all 31 players decoding
+and `window.__diiReelPool` / `__diiReelHealth` reporting 0 dead; then eleven of
+them marked frameless by hand and the same shell coming back full of repeated
+clips with no black cells in it.
+
+Still not seen in a headset — which is where the ceiling this pass raised is
+actually decided. `__diiReelHealth` is there to be read on the device.
+
+## 2026-08-22 — the front door, the copy, and a page you could see but not open
+
+Three commits straight onto `dev` (`ea2dd731`, `af8a3b0e`, `466f2b17`), each one
+looked at in a browser before it was called done.
+
+- **A legacy `codeHtml` page opens in the Code window again.** `funding-board`
+  keeps 299,595 characters in `presentationState.codeHtml`, from before the file
+  list existed. The viewport rendered it, so the owner could *see* the page while
+  the Code window said "No code files yet" and offered a manual convert button —
+  visible and unopenable at the same time. The file list now falls back to
+  `codeHtml` as `index.html` and the first write migrates it (render-identical: a
+  lone index.html bundles to itself). The editor had to become usable first: a
+  whole-page file re-issued a document op per keystroke and the autosizing field
+  re-measured the whole file each time, growing to the page's height instead of
+  scrolling. Now a bounded scrolling box with a local buffer that commits on idle,
+  on blur and on unmount — **4ms per keystroke** on the 299KB page.
+
+- **"Step inside" opens the visitor's own space.** It pointed at `/open/raw`, the
+  browser-local canvas; `4b897db8` gave that canvas an exit the same day, but a
+  first visitor still has to know to use it. The door now lands where Projects and
+  **Nodes** already sit side by side with View live — so the Studio↔node-editor
+  connection is made by the door choosing the room that holds both, with no bridge
+  to build. This is doors-audit owner decision 1, and the positioning doc's item 4.
+  Mechanics: the four doors keep `href="/spaces"` as a real destination (no-JS,
+  middle-click, crawlers) and upgrade on click; `getApiSession()` runs on the
+  CLICK, never on a page view, because asking for a session mints one.
+
+- **The copy says what di.iiii is.** Hero, eyebrow, tab title and both share cards
+  now carry the 2026-08-21 position (*the visit is the product; the editor is
+  backstage*). Two sentences were false and are gone: "Nothing is empty when you
+  arrive: a live 3D room…" (untrue since the starter seed was deleted) and "Sign
+  in only to edit" (untrue the moment the door hands out an editable sandbox).
+  "Immersive" is on the refusal list and left with them.
+
+Measured, so nobody re-derives it:
+- The landing's decorative hero already calls `/api/auth/session` on every desktop
+  view (`LiveProjectScene.jsx:1389 → ensureGuestSession`), so "nothing is minted on
+  a passive visit" was already half-false. It mints a session but **no space row** —
+  the sandbox row appears only when someone actually opens it.
+- The landing is not slow any more: hero visible **1.6s on prod**, 0.9s on dev. The
+  10.2s figure in the positioning doc is stale.
+
+Paid for twice, worth writing down:
+- An uncommitted edit in this shared checkout can be **silently wiped** by another
+  session's checkout — `wikiContent.js` was back at HEAD an hour after being edited,
+  no stash, no diff, while five sibling files survived. Grep for your own edit
+  before reporting it done.
+- `npm run test` does not run the docs gate. This push failed CI on a session note
+  left by another branch — run `node scripts/check-agent-docs.mjs` AFTER rebasing,
+  not before.
+
 ## 2026-08-22 — a graph publishes as the room it makes
 
 The owner's call on "what publishing a graph means": build the real thing.

@@ -11,14 +11,10 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session — 2026-08-22/23 (two parallel sessions)
+## Last session
 
-- the dev box now says when it is behind — code, deps, data and identity are four clocks
-- Raw's exit opened: canvas saves to a space, `/out` is public, a graph publishes as its room
-- `/raw/projects` + `/studio/projects` un-broken; a phone canvas has a way home again; MANIFESTO §6 amended to record decisions already taken — worth the owner's review
-- the landing's one door now opens the visitor's OWN space (Projects + Nodes + View live), never the browser-local canvas; the session is fetched on click, never on a passive view
-- landing copy rewritten on the 2026-08-21 position; two false sentences gone ("Nothing is empty when you arrive", "Sign in only to edit")
-- legacy `codeHtml` projects open in the Code window again as `index.html`; the editor scrolls and commits on idle — 4ms/keystroke on the 299KB funding board
+- Emily's algovrithm branch, landed without its typography half
+- the front door, the copy, and a page you could see but not open
 
 Full detail: `PROGRESS.md`.
 
