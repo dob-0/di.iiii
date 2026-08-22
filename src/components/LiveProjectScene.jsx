@@ -36,6 +36,7 @@ import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject, { portalHref } from '../project/viewport/PortalObject.jsx'
 import WorldEnvironment from '../project/viewport/WorldEnvironment.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
+import { resolveProximity, applyProximity } from '../project/viewport/entityProximity.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../project/viewport/timelinePlayback.js'
 import { ringTourYaw } from '../project/viewport/ringTour.js'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
@@ -310,12 +311,17 @@ function AnimatedEntity({ entity, assetMap, childMap = null }) {
     }, [entity.id])
 
     const anim = useMemo(() => resolveAnimation(entity), [entity])
+    const prox = useMemo(() => resolveProximity(entity), [entity])
+    const proxPoint = useRef(new THREE.Vector3())
     const timeline = entity.components?.timeline
     const timelineActive = hasTimelineTracks(timeline)
 
     useFrame((state) => {
         const group = groupRef.current
         if (!group) return
+        // Dimming is independent of the pose, so it runs before the early
+        // return the timeline branch takes.
+        if (prox) applyProximity(group, prox, state.camera.position, proxPoint.current)
         if (timelineActive) {
             // Authored keyframes replace idle motion — no seed, playback is deterministic.
             const pose = sampleTimeline(timeline, state.clock.getElapsedTime())

@@ -574,6 +574,19 @@ const normalizeEntity = (entity = {}) => {
       amplitude: ensureNumber(sourceComponents.animation.amplitude, 1)
     }
   }
+  // Comes up as a visitor approaches: a light's intensity, and an emissive or
+  // translucent surface standing in for one, scale with how close they are.
+  // Absent means "always on", so nothing authored before this is touched.
+  if (sourceComponents.proximity) {
+    const radius = ensureNumber(sourceComponents.proximity.radius, 4)
+    const falloff = ensureNumber(sourceComponents.proximity.falloff, 2)
+    const min = ensureNumber(sourceComponents.proximity.min, 0)
+    nextComponents.proximity = {
+      radius: Math.max(0.1, radius),
+      falloff: Math.max(0.05, falloff),
+      min: Math.min(1, Math.max(0, min))
+    }
+  }
   if (sourceComponents.timeline) {
     const timeline = normalizeTimeline(sourceComponents.timeline)
     if (timeline) nextComponents.timeline = timeline
