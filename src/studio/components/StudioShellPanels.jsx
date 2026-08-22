@@ -53,7 +53,7 @@ import useAuthSession from '../../hooks/useAuthSession.js'
 import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
 import { listCommonsAssets } from '../../services/serverSpaces.js'
 import { formatAssetSize } from '../utils/assetOptimization.js'
-import { ASSET_FORMAT_HINT, canPlaceInScene } from '../utils/assetFormats.js'
+import { ASSET_ACCEPT, ASSET_FORMAT_HINT, canPlaceInScene } from '../utils/assetFormats.js'
 import { LIGHTS, PRIMITIVES } from '../../project/entityPalette.js'
 
 const formatTimestamp = (value) => {
@@ -408,7 +408,7 @@ export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateF
             <div className="scc-section">
                 <label className="scc-btn spa-btn-wide" style={{ cursor: 'pointer' }}>
                     ↑ Import files
-                    <input type="file" multiple onChange={onAssetFilesSelected} style={{ display: 'none' }} />
+                    <input type="file" multiple accept={ASSET_ACCEPT} onChange={onAssetFilesSelected} style={{ display: 'none' }} />
                 </label>
                 <p className="sfp-empty" title={ASSET_FORMAT_HINT}>{ASSET_FORMAT_HINT}</p>
             </div>

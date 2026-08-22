@@ -6,7 +6,19 @@ import sharp from 'sharp'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-const { scrubImageMetadata } = require('./assetScrub.js')
+const { scrubImageBuffer, scrubImageMetadata } = require('./assetScrub.js')
+
+// A real iPhone photo is an ISO-BMFF container branded `heic` whose payload is
+// HEVC — a codec the prebuilt libvips cannot decode, so sharp never sees pixels
+// and only the container is recognizable. That is exactly what these bytes are:
+// enough header to be identified as a still image, nothing decodable inside.
+const heicHeader = (brand = 'heic') => Buffer.concat([
+  Buffer.from([0, 0, 0, 24]),
+  Buffer.from(`ftyp${brand}`, 'latin1'),
+  Buffer.from([0, 0, 0, 0]),
+  Buffer.from('mif1heic', 'latin1'),
+  Buffer.from('hevc-payload-we-cannot-decode', 'latin1')
+])
 
 const tmpRoot = path.join(os.tmpdir(), 'assetScrub-test')
 
@@ -107,8 +119,97 @@ describe('scrubImageMetadata', () => {
     const result = await scrubImageMetadata(file)
     expect(result.scrubbed).toBe(false)
     expect(result.reason).toBe('undecodable')
+    expect(result.safeToStore).toBe(true)
 
     expect((await fsp.readFile(file)).equals(bytes)).toBe(true)
+  })
+
+  // libvips reports the *container*, so an .avif upload arrives as format
+  // 'heif' — it never matched the 'avif' entry in SCRUBBABLE_FORMATS and was
+  // stored with its EXIF intact until 'heif' was added.
+  it('removes EXIF (incl. GPS) from an AVIF, which reports as format "heif"', async () => {
+    const file = await tmpFile('gps.avif')
+    await sharp({
+      create: { width: 40, height: 60, channels: 3, background: { r: 1, g: 2, b: 3 } }
+    }).withMetadata({ exif: EXIF_GPS }).avif({ quality: 40 }).toFile(file)
+
+    const before = await sharp(file).metadata()
+    expect(before.format).toBe('heif')
+    expect(before.exif).toBeTruthy()
+
+    const result = await scrubImageMetadata(file)
+    expect(result).toMatchObject({ scrubbed: true, format: 'heif', safeToStore: true })
+
+    const after = await sharp(file).metadata()
+    expect(after.exif).toBeUndefined()
+    expect(after.width).toBe(40)
+  })
+
+  // THE invariant. An image whose metadata we could not strip must never be
+  // handed back as storable — a public asset URL serving an unscrubbed phone
+  // photo publishes the photographer's GPS position.
+  it('refuses to green-light a HEIC it cannot decode, instead of passing it through', async () => {
+    const file = await tmpFile('iphone.heic')
+    await fsp.writeFile(file, heicHeader())
+
+    const result = await scrubImageMetadata(file)
+    expect(result.scrubbed).toBe(false)
+    expect(result.safeToStore).toBe(false)
+  })
+
+  it('refuses a JPEG whose pixels will not decode — a broken photo still carries EXIF', async () => {
+    const file = await tmpFile('truncated.jpg')
+    const good = await tmpFile('source-for-truncation.jpg')
+    await makeJpegWithExif(good)
+    const bytes = await fsp.readFile(good)
+    await fsp.writeFile(file, bytes.subarray(0, Math.floor(bytes.length / 2)))
+
+    const result = await scrubImageMetadata(file)
+    expect(result.scrubbed).toBe(false)
+    expect(result.safeToStore).toBe(false)
+  })
+
+  it('still lets video through — an .mp4 shares the ftyp header but is not a still image', async () => {
+    const file = await tmpFile('clip.mp4')
+    const bytes = Buffer.concat([
+      Buffer.from([0, 0, 0, 24]),
+      Buffer.from('ftypisom', 'latin1'),
+      Buffer.from([0, 0, 2, 0]),
+      Buffer.from('isomiso2avc1mp41moov', 'latin1')
+    ])
+    await fsp.writeFile(file, bytes)
+
+    const result = await scrubImageMetadata(file)
+    expect(result.safeToStore).toBe(true)
+    expect((await fsp.readFile(file)).equals(bytes)).toBe(true)
+  })
+})
+
+// The Drive imports write downloaded bytes straight to the asset store, on the
+// same public URLs as an upload, so they answer to the same invariant.
+describe('scrubImageBuffer', () => {
+  it('strips EXIF from imported image bytes', async () => {
+    const file = await tmpFile('imported.jpg')
+    await makeJpegWithExif(file)
+    const original = await fsp.readFile(file)
+
+    const result = await scrubImageBuffer(original)
+    expect(result).toMatchObject({ scrubbed: true, format: 'jpeg', safeToStore: true })
+    expect(result.buffer.equals(original)).toBe(false)
+    expect((await sharp(result.buffer).metadata()).exif).toBeUndefined()
+  })
+
+  it('refuses an imported HEIC it cannot scrub', async () => {
+    const result = await scrubImageBuffer(heicHeader())
+    expect(result.scrubbed).toBe(false)
+    expect(result.safeToStore).toBe(false)
+  })
+
+  it('passes non-image bytes through untouched', async () => {
+    const bytes = Buffer.from('PK zip-ish bytes that are not an image')
+    const result = await scrubImageBuffer(bytes)
+    expect(result.safeToStore).toBe(true)
+    expect(result.buffer.equals(bytes)).toBe(true)
   })
 
   it('never throws on a corrupt upload — a scrub failure must not fail the upload', async () => {

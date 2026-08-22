@@ -424,24 +424,34 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         if (!files.length) return
         try {
             for (const file of files) {
-                if (isPdfAsset(file)) {
-                    await importPdfAsImagePages(file)
-                    continue
+                // One rejected file must not swallow the rest of the selection,
+                // and it must say why — the server refuses images whose EXIF it
+                // cannot strip (HEIC), and silence there looks like a dead button.
+                try {
+                    if (isPdfAsset(file)) {
+                        await importPdfAsImagePages(file)
+                        continue
+                    }
+                    const uploadFile = await requestAssetUploadFile(file)
+                    if (!uploadFile) continue
+                    const asset = await uploadProjectAsset(projectId, uploadFile)
+                    const wasOptimized = uploadFile !== file
+                    const activityMessage = wasOptimized
+                        ? `Optimized ${file.name} from ${formatAssetSize(file.size)} to ${formatAssetSize(uploadFile.size)} and imported it.`
+                        : `Imported ${file.name}.`
+                    applyLocalOps({
+                        type: 'upsertAsset',
+                        payload: { asset }
+                    }, { activityMessage })
+                    if (isSupportAssetFile(file)) continue
+                    const entityAsset = wasOptimized ? { ...asset, name: file.name } : asset
+                    handleCreateEntity(detectEntityTypeFromFile(file), entityAsset, position)
+                } catch (error) {
+                    applyLocalOps([], {
+                        activityMessage: `Could not import ${file.name || 'file'}: ${error.message}`,
+                        activityLevel: 'error'
+                    })
                 }
-                const uploadFile = await requestAssetUploadFile(file)
-                if (!uploadFile) continue
-                const asset = await uploadProjectAsset(projectId, uploadFile)
-                const wasOptimized = uploadFile !== file
-                const activityMessage = wasOptimized
-                    ? `Optimized ${file.name} from ${formatAssetSize(file.size)} to ${formatAssetSize(uploadFile.size)} and imported it.`
-                    : `Imported ${file.name}.`
-                applyLocalOps({
-                    type: 'upsertAsset',
-                    payload: { asset }
-                }, { activityMessage })
-                if (isSupportAssetFile(file)) continue
-                const entityAsset = wasOptimized ? { ...asset, name: file.name } : asset
-                handleCreateEntity(detectEntityTypeFromFile(file), entityAsset, position)
             }
         } finally {
             refreshSpaceAssets()
