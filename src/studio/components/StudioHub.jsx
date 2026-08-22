@@ -16,7 +16,7 @@ import {
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
-import { buildStudioProjectPath, buildStudioSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildStudioProjectPath, buildSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import '../styles/studio-hub.css'
 
@@ -242,7 +242,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
                 {/* Secondary actions */}
                 <div className="sh-secondary-row">
-                    <button className="sh-link" onClick={() => appNavigate(buildStudioSpacesPath())}>← Spaces</button>
+                    <button className="sh-link" onClick={() => appNavigate(buildSpacesPath())}>← Spaces</button>
                     <span className="sh-sep">·</span>
                     <label className={`sh-link${isBusy ? ' sh-link-disabled' : ''}`}>
                         Import

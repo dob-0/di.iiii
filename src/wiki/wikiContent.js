@@ -543,12 +543,14 @@ export const WIKI_ARTICLES = [
                 'Images (JPEG, PNG, WebP, TIFF, AVIF, GIF) are re-encoded on upload and stored without EXIF, IPTC or XMP metadata.',
                 'Rotation is preserved: the orientation is applied to the pixels before the tag is discarded, so portrait photos stay upright.',
                 'SVG files are left untouched — re-encoding would turn a vector into a bitmap.',
+                'An image whose metadata cannot be removed is refused, not saved — you get an error asking for a JPEG or PNG instead. iPhone HEIC photos are the usual case: set Camera → Formats → Most Compatible on the phone, and the photos arrive as JPEG.',
+                'Photos imported from Google Drive go through the same scrub, and are refused on the same terms.',
                 'Video, audio, 3D models and archives are stored as uploaded; their metadata is not stripped.',
                 'This applies to new uploads. Images uploaded before this change keep the metadata they arrived with.'
             ] }
         ],
-        tags: ['assets', 'uploads', 'privacy', 'exif', 'photos'],
-        updated: '2026-07-29'
+        tags: ['assets', 'uploads', 'privacy', 'exif', 'photos', 'heic'],
+        updated: '2026-08-22'
     },
     {
         id: 'open-call-applications',

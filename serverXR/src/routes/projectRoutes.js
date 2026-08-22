@@ -2,7 +2,7 @@ const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
-const { scrubImageMetadata } = require('../assetScrub')
+const { UNSCRUBBABLE_IMAGE_ERROR, scrubImageMetadata } = require('../assetScrub')
 const { getSpaceBlobPaths, storeBlobFromFile } = require('../blobStore')
 const { createKeyedLock } = require('../asyncLock')
 const { applyAssetSafetyHeaders } = require('../spaceStore')
@@ -408,6 +408,13 @@ function registerProjectRoutes(router, {
       // Strip EXIF/GPS before anything hashes the file — the id must address
       // the bytes we actually store and serve.
       const scrub = await scrubImageMetadata(req.file.path)
+      // An image we could not scrub must not be stored — the whole point of
+      // the scrubber is that nothing reaches a public URL still carrying the
+      // photographer's GPS position. Refusing loudly beats storing quietly.
+      if (!scrub.safeToStore) {
+        await fsp.rm(req.file.path, { force: true }).catch(() => {})
+        return res.status(415).json({ error: UNSCRUBBABLE_IMAGE_ERROR, format: scrub.format || null })
+      }
       // multer's recorded size is stale once scrubbing rewrites the file, and
       // the upload is moved into the blob store below — stat it while it's here
       const scrubbedSize = await fsp.stat(req.file.path).then((s) => s.size).catch(() => req.file.size)

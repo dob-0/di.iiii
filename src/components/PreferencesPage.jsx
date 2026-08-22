@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { usePreferencesData } from '../hooks/usePreferencesData.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import { hasServerApi } from '../services/apiClient.js'
-import { buildStudioSpacesPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
+import { buildSpacesPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import {
     ArchitectureCanvas,
     ArchitectureLegend,
@@ -144,7 +144,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                             <button
                                 type="button"
                                 className="toggle-button"
-                                onClick={() => navigateToStudioPath(buildStudioSpacesPath())}
+                                onClick={() => navigateToStudioPath(buildSpacesPath())}
                             >
                                 Go to my spaces
                             </button>
