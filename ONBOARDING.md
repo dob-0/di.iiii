@@ -84,12 +84,26 @@ cp serverXR/.env.example serverXR/.env
 #   mac/linux: touch serverXR/.env.local
 ```
 
-In `serverXR/.env`, for easy local use set:
+In `serverXR/.env`, for local use set:
 
 ```
-REQUIRE_AUTH=false
+REQUIRE_AUTH=true
 CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
+
+`REQUIRE_AUTH=true` is the honest setting, and it is what the boxes doing real
+work run. With it **off**, every scope check is skipped and every space is
+visible to everyone — so the surface you are looking at is not the one a visitor
+gets, and a whole class of bug (a space that is private, an invite that grants
+nothing, a share link that signs the recipient out) cannot be reproduced or even
+seen. Turn it off only when you are deliberately testing something else, and
+remember the box is then lying to you about access.
+
+Leave `CORS_ORIGINS` alone if you are unsure: the placeholder from
+`.env.example` (`https://your-domain.com`) rejects `localhost:5173`, and
+`npm run dev` only survives it because the dev stack overrides the value for the
+server it starts. Running `npm run dev:server` on its own with the placeholder
+in place gives you a server the client cannot talk to.
 
 ## 6. Run it
 
@@ -100,17 +114,38 @@ npm run dev
 This starts **serverXR** (`http://localhost:4000`) and the **Vite client**
 (`http://localhost:5173`) together. Useful routes:
 
+- `http://localhost:5173/spaces` — your spaces
 - `http://localhost:5173/main` — public view
 - `http://localhost:5173/main/studio` — main editor
-- `http://localhost:5173/main/beta` — experimental node editor
-- `http://localhost:5173/admin?space=main` — ops
+- `http://localhost:5173/main/raw/projects` — the node editor (Raw; `beta` was
+  deleted in Aug 2026 and its route is gone)
+- `http://localhost:5173/admin` — ops
 - `http://localhost:4000/serverXR/api/health` — server health check
 
+**A fresh database has two spaces in it — `main` and `open` — and nothing else.**
+Every space you have seen on the live site is missing until you bring it down:
+
+```bash
+npm run local:mirror:check   # read-only: what the live tiers have that you don't
+npm run local:mirror         # create them and pull their projects
+```
+
+Nothing does this for you, and nothing used to say it was needed — a missing
+space looks exactly like a space that was never made. `npm run dev` now names
+them at startup. The whole picture, and the three other things that go stale
+independently, is in [docs/ai/local-workflow.md](docs/ai/local-workflow.md).
+
 > **Already have a copy running?** If ports 4000/5173 are taken (e.g. a second
-> clone), run this one on other ports:
+> clone), move the server with
 > `VITE_API_BASE_URL=http://localhost:4001/serverXR npm run dev`
-> (serverXR → 4001, Vite auto-picks 5174). On PowerShell:
+> (serverXR → 4001). On PowerShell:
 > `$env:VITE_API_BASE_URL='http://localhost:4001/serverXR'; npm run dev`
+>
+> The **client does not move with it**: Vite runs with `strictPort` on purpose,
+> so it fails to start rather than quietly picking 5174 — a second client on a
+> guessed port is how you end up reading a page served by the other clone. Free
+> 5173, or start the client yourself on a port you chose:
+> `npx vite --port 5176 --strictPort`.
 
 ## 7. Daily workflow
 
