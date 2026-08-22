@@ -2,7 +2,7 @@ const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
-const { scrubImageMetadata } = require('../assetScrub')
+const { UNSCRUBBABLE_IMAGE_ERROR, scrubImageBuffer, scrubImageMetadata } = require('../assetScrub')
 const defaultGoogleDrive = require('../googleDrive')
 const { getOwnSandboxSpaceId, isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
@@ -864,6 +864,13 @@ function registerSpaceRoutes(router, {
       // Strip EXIF/GPS before anything hashes the file — the id must address
       // the bytes we actually store and serve.
       const scrub = await scrubImageMetadata(req.file.path)
+      // An image we could not scrub must not be stored — the whole point of
+      // the scrubber is that nothing reaches a public URL still carrying the
+      // photographer's GPS position. Refusing loudly beats storing quietly.
+      if (!scrub.safeToStore) {
+        await fsp.rm(req.file.path, { force: true }).catch(() => {})
+        return res.status(415).json({ error: UNSCRUBBABLE_IMAGE_ERROR, format: scrub.format || null })
+      }
       let assetId = ''
       // A scrubbed file no longer hashes to the id the client computed from the
       // original, so its requested id is moot — the content address is
@@ -985,15 +992,20 @@ function registerSpaceRoutes(router, {
           if (!isAllowedUpload({ mimetype: file.mimeType, originalname: file.name })) {
             throw new Error('Unsupported asset type.')
           }
-          const assetId = crypto.createHash('sha256').update(file.buffer).digest('hex')
+          // Imported bytes reach the same public URLs as an upload, so they get
+          // the same EXIF scrub — and the same refusal if it cannot be done.
+          const scrub = await scrubImageBuffer(file.buffer)
+          if (!scrub.safeToStore) throw new Error(UNSCRUBBABLE_IMAGE_ERROR)
+          const bytes = scrub.buffer
+          const assetId = crypto.createHash('sha256').update(bytes).digest('hex')
           const finalPath = path.join(assetsDir, assetId)
           const metaPath = path.join(assetsDir, `${assetId}.json`)
-          await fsp.writeFile(finalPath, file.buffer)
+          await fsp.writeFile(finalPath, bytes)
           const meta = {
             id: assetId,
             name: file.name || assetId,
             mimeType: file.mimeType || 'application/octet-stream',
-            size: file.buffer.length,
+            size: bytes.length,
             createdAt: Date.now(),
             source: 'google-drive'
           }
@@ -1054,13 +1066,16 @@ function registerSpaceRoutes(router, {
           if (!isAllowedUpload({ mimetype: file.mimeType, originalname: file.name })) {
             throw new Error('Unsupported asset type.')
           }
-          const assetId = crypto.createHash('sha256').update(file.buffer).digest('hex')
-          await fsp.writeFile(path.join(assetsDir, assetId), file.buffer)
+          const scrub = await scrubImageBuffer(file.buffer)
+          if (!scrub.safeToStore) throw new Error(UNSCRUBBABLE_IMAGE_ERROR)
+          const bytes = scrub.buffer
+          const assetId = crypto.createHash('sha256').update(bytes).digest('hex')
+          await fsp.writeFile(path.join(assetsDir, assetId), bytes)
           const meta = {
             id: assetId,
             name: file.name || assetId,
             mimeType: file.mimeType || 'application/octet-stream',
-            size: file.buffer.length,
+            size: bytes.length,
             createdAt: Date.now(),
             source: 'google-drive'
           }
