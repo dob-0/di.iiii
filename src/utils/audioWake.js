@@ -1,6 +1,7 @@
 // Keeping the sound ON, which is a different problem from turning it on.
 //
-// armAudioUnlock() in reelPlayers.js answers "has there been a gesture yet?".
+// A gesture unlock -- armAudioUnlock() in algoVrithm/reelPlayers.js, the wait
+// inside utils/videoPlayback.js -- answers "has there been a gesture yet?".
 // That is a ONE-SHOT question: it fires once, hands the waiters their callback,
 // removes its listeners and is done for the life of the page. Correct for what
 // it is for — autoplay permission is granted once and never revoked.
@@ -30,6 +31,11 @@
 // whole piece going quiet at once — score and reels together, because both
 // listeners share ONE context (three's AudioContext.getContext() is a module
 // singleton), which is what tells you it is the context and not the wiring.
+//
+// It lives under utils/ rather than in the piece it was written for because the
+// question is not algovrithm's: any surface that puts a sound in a room —
+// spatial video in a published space, an audio object, the piece — is a headset
+// audio-device switch away from the same silence.
 //
 // ---- THE SHAPE OF THE FIX --------------------------------------------------
 //
@@ -93,8 +99,8 @@ export const keepAudioAwake = (context) => {
     contexts.add(context)
     armWakeListeners()
 
-    if (!context.__algoVrithmWakeWatched && typeof context.addEventListener === 'function') {
-        context.__algoVrithmWakeWatched = true
+    if (!context.__diiAudioWakeWatched && typeof context.addEventListener === 'function') {
+        context.__diiAudioWakeWatched = true
         // Only a real transition fires this, so a resume() the browser refuses
         // cannot spin: the state never changed, so there is nothing to report.
         context.addEventListener('statechange', () => {

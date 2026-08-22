@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { keepAudioAwake } from './audioWake.js'
 
 // Spatial sound for a video plane: the clip's own audio track is routed through
 // a Web Audio panner positioned at the video in the scene, so it gets louder as
@@ -30,14 +31,16 @@ export const getOrCreateAudioListener = (camera) => {
 // A browser starts its AudioContext suspended and only lets a gesture resume it.
 // Video already waits for user activation before unmuting (see
 // utils/videoPlayback.js); this is the same wait for the Web Audio side.
-export const resumeContextOnGesture = (listener) => {
-    const context = listener?.context
-    if (!context || context.state !== 'suspended') return () => {}
-    const resume = () => { context.resume?.().catch(() => {}) }
-    const events = ['pointerdown', 'keydown', 'touchstart']
-    events.forEach((name) => window.addEventListener(name, resume, { once: true, passive: true }))
-    return () => events.forEach((name) => window.removeEventListener(name, resume))
-}
+//
+// It is `keepAudioAwake` rather than a one-shot gesture listener of its own,
+// and that difference is a bug this codebase has already paid for once. A
+// context can be suspended long AFTER the gesture that first resumed it — a
+// standalone headset switches audio device as an immersive session starts, and
+// tab backgrounding and headset sleep do the same — and a listener registered
+// `once` is long gone by then. algovrithm went silent that way for a whole
+// session with no way back (see utils/audioWake.js); a video plane in a
+// published space is the same context on the same devices.
+export const keepListenerAwake = (listener) => keepAudioAwake(listener?.context)
 
 /**
  * Route `video`'s audio through a PositionalAudio parented to `target`.

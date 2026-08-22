@@ -7,7 +7,7 @@ import { attachVideoPlaybackRetry, attachVideoSound, configureVideoElement } fro
 import {
     attachPositionalVideoSound,
     getOrCreateAudioListener,
-    resumeContextOnGesture
+    keepListenerAwake
 } from '../utils/positionalVideoSound.js'
 
 const DEFAULT_SIZE = [1, 1]
@@ -32,10 +32,19 @@ const sizeFromVideo = (video) => {
 // genuinely identical requests collapse.
 const videoCache = new Map()
 
-const cacheKey = (src, muted, volume, loop) => `${src}|${muted ? 1 : 0}|${volume}|${loop === false ? 0 : 1}`
+// `exclusive` opts one caller OUT of the sharing above, by carrying a token
+// nothing else can produce. Spatial sound needs it: a media element can be
+// routed into Web Audio only ONCE, so two objects that collapsed onto one
+// element would leave the second with no panner — audible, but flat and in the
+// wrong place, which is worse than the cost of its own decoder.
+const cacheKey = (src, muted, volume, loop, exclusive) =>
+    `${src}|${muted ? 1 : 0}|${volume}|${loop === false ? 0 : 1}|${exclusive || 'shared'}`
 
-const acquireVideo = (src, { muted, volume, loop }) => {
-    const key = cacheKey(src, muted, volume, loop)
+let exclusiveSeq = 0
+export const nextExclusiveToken = () => `exclusive-${exclusiveSeq += 1}`
+
+const acquireVideo = (src, { muted, volume, loop, exclusive }) => {
+    const key = cacheKey(src, muted, volume, loop, exclusive)
     const existing = videoCache.get(key)
     if (existing) {
         existing.refs += 1
@@ -90,8 +99,11 @@ const releaseVideo = (entry) => {
     entry.subscribers.clear()
 }
 
-export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = true } = {}) {
+export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = true, exclusive = false } = {}) {
     const [state, setState] = useState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE, video: null })
+    // Stable for the life of this hook, so an exclusive caller keeps its own
+    // element across re-renders instead of churning a decoder on every one.
+    const [instanceToken] = useState(nextExclusiveToken)
 
     useEffect(() => {
         const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
@@ -100,7 +112,9 @@ export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loo
             return undefined
         }
 
-        const entry = acquireVideo(resolvedSrc, { muted, volume, loop })
+        const entry = acquireVideo(resolvedSrc, {
+            muted, volume, loop, exclusive: exclusive ? instanceToken : null
+        })
         const sync = () => setState({
             texture: entry.ready ? entry.texture : null,
             playbackBlocked: entry.blocked,
@@ -116,7 +130,7 @@ export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loo
             entry.subscribers.delete(sync)
             releaseVideo(entry)
         }
-    }, [sourceUrl, muted, volume, loop])
+    }, [sourceUrl, muted, volume, loop, exclusive, instanceToken])
 
     return state
 }
@@ -129,10 +143,10 @@ export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loo
 // react-dom tests that never open one. Mounted only when a video actually asks
 // for spatial sound, so those tests never reach the hook.
 //
-// The element is shared per (source, muted, volume, loop) by the cache above,
-// and a media element can be routed into Web Audio only ONCE — so when two
-// spatial objects genuinely collapse onto one element, the second gets null
-// back and keeps the flat path rather than both going silent.
+// The element is its own (the cache's `exclusive` path), because routing into
+// Web Audio is once-per-element. attachPositionalVideoSound still refuses
+// gracefully if something ever hands it an element that is already routed: flat
+// audio in the wrong place beats no audio at all.
 function SpatialVideoSound({ targetRef, video, volume, distance, maxDistance }) {
     const { camera } = useThree()
 
@@ -141,7 +155,7 @@ function SpatialVideoSound({ targetRef, video, volume, distance, maxDistance }) 
         if (!target || !video) return undefined
 
         const listener = getOrCreateAudioListener(camera)
-        const stopWaiting = resumeContextOnGesture(listener)
+        const stopWaiting = keepListenerAwake(listener)
         const detach = attachPositionalVideoSound(target, video, listener, {
             volume,
             refDistance: distance,
@@ -164,7 +178,12 @@ export default function VideoObject({
     const isVideoType = !assetRef?.mimeType || assetRef.mimeType.startsWith('video/')
     const rawSource = (isVideoType ? assetUrl : null) || data || null
     const sourceUrl = typeof rawSource === 'string' ? rawSource.trim() : null
-    const { texture, playbackBlocked, size, video } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
+    // A video asking for spatial sound takes its own element (see cacheKey).
+    const wantsSpatial = spatial && muted === false
+    const { texture, playbackBlocked, size, video } = useVideoTextureSource(
+        sourceUrl,
+        { muted, volume, loop, exclusive: wantsSpatial }
+    )
     const meshRef = useRef(null)
 
     if (!texture) {
@@ -185,7 +204,7 @@ export default function VideoObject({
                     <span className="link-label">🔗</span>
                 </Html>
             )}
-            {spatial && muted === false && video ? (
+            {wantsSpatial && video ? (
                 <SpatialVideoSound
                     targetRef={meshRef}
                     video={video}

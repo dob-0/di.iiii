@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { smoothstep } from '../ritualClock.js'
@@ -9,7 +9,9 @@ import {
     playReels,
     advanceReels,
     armAudioUnlock,
-    reelAudioSource
+    reelAudioSource,
+    displayTextures,
+    healthSignature
 } from '../reelPlayers.js'
 
 // Sequence — the reel globe.
@@ -632,6 +634,8 @@ export default function ReelGlobe({ progress }) {
     // shader is nine lines and does nothing else.
     const materials = useMemo(() => pool.map((player, index) => new THREE.ShaderMaterial({
         uniforms: {
+            // Replaced from `textures` on the first frame; the pool's own are
+            // the right starting value for a globe whose players are all alive.
             uCurrent: { value: player.texture },
             uNext: { value: pool[(index + 1) % pool.length].texture },
             uSwipe: { value: 0 },
@@ -727,6 +731,46 @@ export default function ReelGlobe({ progress }) {
         const random = createRandom(MIX_SEED + 1)
         return pool.map(() => random())
     }, [pool])
+
+    // WHICH PLAYERS ACTUALLY HAVE A PICTURE.
+    //
+    // A decoder the device refused never produces a frame and its texture stays
+    // black, which on the shell reads as a hole rather than as a limit (see the
+    // note in reelPlayers.js). So the frame loop below draws from this array
+    // instead of straight from the pool: it is the pool's own textures, with any
+    // dead player standing in a live one.
+    //
+    // Polled rather than event-driven on purpose. `loadeddata` fires for the
+    // players that DO come up; the ones that fail emit nothing at all, so there
+    // is no event to hang this on — their silence is the whole symptom. Two
+    // seconds is far below the beat's own length and the work is a readyState
+    // compare per player.
+    const [health, setHealth] = useState(() => healthSignature(pool))
+    useEffect(() => {
+        const check = () => setHealth((current) => {
+            const next = healthSignature(pool)
+            return next === current ? current : next
+        })
+        check()
+        const timer = window.setInterval(check, 2000)
+        return () => window.clearInterval(timer)
+    }, [pool])
+
+    const textures = useMemo(() => {
+        const resolved = displayTextures(pool)
+        if (import.meta.env?.DEV && typeof window !== 'undefined') {
+            // Sound is invisible and so is this: nothing on screen says a cell
+            // is showing a substitute. Same DEV-only hook idea as
+            // window.__diiSpatialSounds.
+            window.__diiReelHealth = {
+                players: pool.length,
+                dead: health.split('').filter((flag) => flag === '0').length
+            }
+        }
+        return resolved
+        // `health` is the dependency that matters -- it changes exactly when a
+        // player's state does, which is when the substitution has to be redone.
+    }, [pool, health])
 
     // Free the GPU-side buffers when the sequence is finally torn down. The
     // player pool deliberately outlives this component; its geometries and
@@ -839,8 +883,8 @@ export default function ReelGlobe({ progress }) {
             const slotStep = Math.floor(position)
             const slotPhase = position - slotStep
 
-            uniforms.uCurrent.value = pool[(index + slotStep) % pool.length].texture
-            uniforms.uNext.value = pool[(index + slotStep + 1) % pool.length].texture
+            uniforms.uCurrent.value = textures[(index + slotStep) % textures.length]
+            uniforms.uNext.value = textures[(index + slotStep + 1) % textures.length]
             uniforms.uSwipe.value = chaos > 0
                 ? (slotPhase <= holdFraction ? 0 : smoothstep(holdFraction, 1, slotPhase))
                 : swipe

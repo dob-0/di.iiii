@@ -46,3 +46,51 @@ not this branch.
 
 Not done: nothing on this branch is verified in an actual headset, which is where
 every audio fix in it was aimed.
+
+## 2026-08-22 — and then brought up to date instead of merged as found
+
+A second pass, on the owner's word: her fixes are right, but several were
+written against a codebase that has since answered part of the same question.
+Merging them as found would have shipped stale assumptions with a green suite.
+
+- **The headset ceiling stopped being a number.** `HEADSET_MAX_PLAYERS = 9` is
+  gone. In its place: `HEADSET_PIXEL_BUDGET` (nine 1080x1920 frames — the load
+  the pool was known to run at) divided by what one frame actually costs, probed
+  from a single reel's metadata by `probeReelPixels()` before the pool is built.
+  At the folder's current 360x640 that clears all 31 clips, so a headset gets the
+  whole folder — the thing her own comment said the compression was supposed to
+  buy, which dev had already done on 2026-08-08 and nobody had gone back for.
+  Re-encode the reels heavier and it tightens again on its own. A probe that
+  cannot answer falls back to nine.
+- **And the ceiling stopped being load-bearing.** A budget is still a prediction
+  about hardware this repo cannot test every variant of, so the failure it
+  predicts is now caught rather than assumed away: `hasPicture`/`displayTextures`
+  hand the globe its textures with any player that never produced a frame
+  replaced by a live one, dealt round-robin so substitutes spread across the
+  folder. Guessing too high now costs a repeat — which is what a feed looks like
+  — instead of a hole in the shell.
+- **That repair was wrong on its first draft, and the browser said so.** Polling
+  `readyState` reported three of thirty-one dead mid-beat on a desktop where
+  every clip was decoding: each player seeks to a random point in its own
+  timeline, and readyState drops for the length of a seek while the texture keeps
+  showing its last frame. It latches on the first frame ever decoded instead —
+  the one thing a refused decoder never does. Pinned as a test.
+- **audioWake moved to `src/utils/`.** It answers "is this context still
+  running", which is not algovrithm's question: any surface that puts a sound in
+  a room meets the same headset audio-device switch. `positionalVideoSound` now
+  registers through it instead of its own one-shot gesture listener — that
+  listener was the exact bug audioWake exists to kill, two files apart in the
+  same commit.
+- **A spatial video takes its own element.** dev's video cache shares one
+  element per (source, muted, volume, loop), and a media element can be routed
+  into Web Audio only once — so two spatial videos on one clip would have left
+  the second with flat sound in the wrong place. `exclusive` opts a caller out of
+  sharing; muted videos and every existing space are untouched.
+
+Seen, in a real browser at DPR 2: the globe beat with all 31 players decoding
+and `window.__diiReelPool` / `__diiReelHealth` reporting 0 dead; then eleven of
+them marked frameless by hand and the same shell coming back full of repeated
+clips with no black cells in it.
+
+Still not seen in a headset — which is where the ceiling this pass raised is
+actually decided. `__diiReelHealth` is there to be read on the device.
