@@ -43,4 +43,15 @@ describe('editor viewport ↔ public viewer renderer parity', () => {
             expect(missing, `${component} keys missing from LiveProjectScene`).toEqual([])
         }
     })
+
+    // The same drift, one level up: worldState.gridVisible is authored in the
+    // Studio and was honoured by StudioViewport only, so walk mode drew the
+    // reference grid straight through the floor of any space that has a real
+    // one (found building the WCC corridor). Whole-file source here, because
+    // the grid is rendered below the AnimatedEntity split used above.
+    it('the public viewer honours worldState.gridVisible like the editor does', () => {
+        const fullLiveSrc = read('../../components/LiveProjectScene.jsx')
+        expect(fullLiveSrc, 'LiveProjectScene still renders <Grid> unconditionally')
+            .toMatch(/gridVisible !== false[\s\S]{0,200}<Grid/)
+    })
 })
