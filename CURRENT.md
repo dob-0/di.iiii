@@ -13,7 +13,10 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a graph publishes as the room it makes
+- the dev box now says when it is behind — code, deps, data and identity are four clocks
+- Raw's exit opened: canvas saves to a space, `/out` is public, a graph publishes as its room
+- `/raw/projects` + `/studio/projects` un-broken; a phone canvas has a way home again
+- MANIFESTO §6 amended to record decisions already taken — worth the owner's review
 
 Full detail: `PROGRESS.md`.
 
@@ -24,9 +27,9 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
-- **Doors waves B–E parked on three owner decisions** — where "Step inside" lands · what publishing a graph means · §6 + the prod moment. Ledger: memory
-  `project_dii_doors_audit_2026_08_21`; wave-A deferrals: embed-link copy, bare phone-canvas exit.
-- Raw-as-default landing promotion still open — owner's call, MANIFESTO §6 gates it.
+- **PROD IS BEHIND** — waves A + everything of 2026-08-22 sit on staging only; prod still serves the retired three-door landing. Owner promotes after checking staging.
+- Doors waves B–E: publishing-a-graph and §6 are now DECIDED and shipped; what remains is where "Step inside" ultimately lands, plus embed-link copy. Ledger: memory `project_dii_doors_audit_2026_08_22`.
+- Walk / Fly cannot render a node graph, so it is hidden on a node room — the honest remaining gap.
 - Staging Google OAuth secret parked by the user — memory `reference-leaked-secrets`; prod spaces all owned, mesh gate ARMED both tiers.
 - Per-space byte QUOTA still unset — needs an owner policy number (ENOSPC floor shipped).
 - Deps parked: eslint-10 #148, router-7 #150, checkout-7 #143 (its windows install-test fails).
