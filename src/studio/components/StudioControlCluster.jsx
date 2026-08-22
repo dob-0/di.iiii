@@ -70,7 +70,11 @@ export default function StudioControlCluster({
                     {syncState && (
                         <span
                             className={`scc-sync-dot scc-sync-dot--${syncState.pendingSyncError ? 'error' : (syncState.sceneStreamState || 'idle')}`}
-                            title={syncState.pendingSyncError ? `Sync failed, retrying — ${syncState.pendingSyncError}` : syncState.sceneStreamState}
+                            // "retrying" was a lie on the path that matters most: a 401
+                            // clearTimeout()s the retry and breaks, so nothing is retrying
+                            // and the queued edits sit in memory until a reload drops them.
+                            // The message the sync layer already wrote says what to do.
+                            title={syncState.pendingSyncError || syncState.sceneStreamState}
                         />
                     )}
                     <button className="scc-collapse-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand' : 'Collapse'}>

@@ -46,10 +46,10 @@ describe('LandingPage CTA routing', () => {
         // top. The label promises the hub; deliver the hub.
         Object.assign(sessionState, { authenticated: false, type: null })
         render(<LandingPage />)
-        const studioLinks = internalLinksTo('studio')
-        expect(studioLinks.length).toBeGreaterThan(0)
-        for (const link of studioLinks) {
-            expect(link.getAttribute('href')).toBe('/studio')
+        const spacesLinks = screen.getAllByRole('link', { name: /Open Studio/ })
+        expect(spacesLinks.length).toBeGreaterThan(0)
+        for (const link of spacesLinks) {
+            expect(link.getAttribute('href')).toBe('/spaces')
         }
     })
 
@@ -64,8 +64,8 @@ describe('LandingPage CTA routing', () => {
         ]) {
             Object.assign(sessionState, session)
             const { unmount } = render(<LandingPage />)
-            for (const link of internalLinksTo('studio')) {
-                expect(link.getAttribute('href')).toBe('/studio')
+            for (const link of screen.getAllByRole('link', { name: /Open Studio/ })) {
+                expect(link.getAttribute('href')).toBe('/spaces')
             }
             unmount()
         }
@@ -107,7 +107,7 @@ describe('LandingPage one door', () => {
         expect(screen.queryByRole('button', { name: 'Look around' })).not.toBeInTheDocument()
         const returnPath = screen.getAllByRole('link', { name: /Open Studio/ })
         expect(returnPath.length).toBeGreaterThan(0)
-        for (const link of returnPath) expect(link.getAttribute('href')).toBe('/studio')
+        for (const link of returnPath) expect(link.getAttribute('href')).toBe('/spaces')
     })
 
     it('keeps the walkable void reachable where there is no main space', async () => {

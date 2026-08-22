@@ -19,11 +19,12 @@ bounded, useful, and never repeated. It is how the 2026-08-21 UX audit ran.
    (mechanic / finding / gesture-cost), never prose. Schemas force ranking
    and concreteness, and they make results mergeable without a re-read.
 
-4. **Every result lands in a file, dated, with sources.** Research that
-   lives only in a conversation is spent twice. Results go to
-   `docs/research/<topic>.md` (or the scratchpad ledger during a run) so the
-   NEXT session updates instead of re-researching. An update names what
-   changed since the stamp — it never starts over.
+4. **Every result lands in `docs/research/`, dated, with sources — in the
+   same PR as the work.** Research that lives only in a conversation, a
+   scratchpad, or an external page is spent twice (the home rule,
+   golden_rules.md). The scratchpad may hold raw intermediates DURING a run;
+   the distilled result is not delivered until the repo owns it. An update
+   names what changed since the stamp — it never starts over.
 
 5. **State the spend.** Before a fleet launches: how many agents, which
    model, what cap. After: what it actually cost. The owner decides scale

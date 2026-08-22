@@ -978,6 +978,31 @@
     display: none;
 }
 
+/* Above the topbar's own z-index and outside the zen gate: this is the one message
+   in the lane whose absence costs work rather than convenience. Full width so it
+   cannot be mistaken for a chip, and it stays until the sync layer clears it. */
+.raw-sync-alert {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1600;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1b1005;
+    background: #f0b429;
+    text-align: center;
+}
+
+/* Both are fixed at top:0, so without this the alert sits ON the toolbar and
+   takes away "← Projects" at the exact moment someone needs to leave and sign
+   back in. Adjacent-sibling, because the alert renders immediately before the
+   header — no JS, and it cannot get out of step with the condition. */
+.raw-sync-alert + .raw-topbar {
+    top: 40px;
+}
+
 .raw-topbar {
     position: fixed;
     top: 0;

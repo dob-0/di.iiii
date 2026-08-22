@@ -5,6 +5,405 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-21 — the sweep, and the one defect that destroys work
+
+Owner asked whether the routes were fixed and the interface checked. The honest answer was
+no: recent work verified only what it touched. So: a browser sweep of every anonymous route
+plus a five-lens code audit.
+
+**The browser sweep** — 27 routes × desktop and phone, against production data. 40 of 54
+renders clean. Of the 14 flagged, 8 were correct behaviour (403 on `/admin` for a stranger,
+404 from `/api/resolve` on a name that does not exist), 2 were false positives (deliberate
+ellipsis truncation with a title tooltip), and 4 were one real defect: **`algovrithm`'s
+space-card preview points at an asset that 404s on production.** The space holds exactly one
+asset, `algovrithm-preview.webp`, and staging's preview points at that same id — so the
+pointer simply went stale. The repair is written
+(`$CLAUDE_JOB_DIR/tmp/fixpreview.mjs`) but the production write is blocked by the local
+permission classifier; it is a handover.
+
+**The code audit** returned 27 confirmed defects. Fixed here, the worst of them:
+
+### Silent sync death — the only one on the list that loses work
+
+`useProjectDocumentSync` handles a 401 by keeping the queued edits, dispatching
+`pendingSyncError` / `authExpired`, and **halting retries** (`clearTimeout`, `break`). The
+state was correct. Nothing rendered it:
+
+- `src/raw/` had **zero** references to either field — the node editor was silent on every
+  device;
+- Studio's only indicator was a 10px dot inside the control cluster, gated `!isMobile`, so
+  a phone showed nothing at all;
+- and that dot's tooltip read *"Sync failed, retrying — …"* on the exact path where retry is
+  halted. The one existing signal said the opposite of the truth.
+
+So an expired session kept accepting edits into a queue in memory and a reload dropped them,
+with no warning anywhere. Now both lanes render the message the sync layer already wrote,
+outside the zen and `uiHidden` gates — losing an hour of work is not furniture.
+
+**Verified with a real 401**, not a mocked state: intercepted the document/ops writes,
+placed a node, watched the banner appear reading *"Session expired — sign in again to keep
+syncing."* Studio's copy was proven by forcing the condition and screenshotting at 1280 and
+390, because a headless click could not drive an edit through Studio's viewport — that half
+is render-verified, not 401-verified, and it is the same four lines as Raw's.
+
+**A bug I introduced and caught:** both the alert and the toolbars are `position: fixed;
+top: 0`, so the banner covered the toolbar — taking away "← Projects" exactly when someone
+needs to leave and sign in again. Fixed with an adjacent-sibling offset. That exposed a
+second one: `workspaceTop` is measured from the toolbar's rect via a `ResizeObserver`, which
+never fires when the bar MOVES rather than resizes, so the scope pill landed on the toolbar.
+The effect now re-measures on `pendingSyncError`. Both confirmed by looking.
+
+### /spaces had no inbound links
+
+My own loose end from the previous branch: `/spaces` shipped as a canonical address and
+`buildSpacesPath` had zero callers — every "Spaces" control still minted the legacy
+`/studio`. All five now point at it (`LandingPage`, `StudioHub`, `StudioCodeSpaceDirector`,
+`RawEditor`'s ⋯ menu, the admin gate).
+
+Four tests pinned `/studio`; their names state the intent ("sends 'Go to my spaces' to the
+Spaces page"), which `/spaces` satisfies. One needed more than a string swap: the helper
+matched hrefs by substring, and `/wiki#free-spaces` contains "spaces" — a false match my
+rename created. Those two now select by link name.
+
+**Not fixed, from the same audit** — 25 further confirmed defects, the heaviest being asset
+imports failing silently (`StudioEditor.jsx` try/finally with no catch), publish and share
+outcomes reaching only a collapsed activity log, and touch targets across Studio below the
+44px floor Raw's own CSS enforces. Full ranked list in the session artifact.
+
+### Carry into CURRENT.md's "Open" at land time
+
+`land` writes only the "Last session" list, so these need a human hand on `dev`:
+
+- **25 confirmed UX defects unfixed** — asset imports fail silently, publish and share
+  outcomes reach only a collapsed activity log, Studio touch targets under the 44px floor
+  Raw's own CSS enforces. Ranked list above.
+- **`algovrithm`'s space-card preview 404s on prod** — data, not code; repair written, the
+  production write is blocked by the local permission classifier.
+- Two invite tokens were printed into a session log (`library`, `funding`) and are live for
+  7 days — reusable keys, not single-use. Revoke them.
+
+### The protocol has a deadlock — it fired, and it cost four deploys
+
+`check-agent-docs.mjs` enforces two rules that can contradict: **CURRENT.md must be ≤50
+lines**, and **CURRENT.md must not differ from `origin/dev`** on any branch. When dev's own
+copy goes over budget, no branch can trim it — the trim itself trips the second rule. The
+fix has to be a commit on `dev`.
+
+It fired on 2026-08-21. Every dev deploy from the `fix/lexicon-level` merge onward failed
+the docs gate: first on `docs/ai/sessions/` not being empty, then — once `land` ran and
+cleared that — on CURRENT.md at 53 lines, then 59 after a hand-written recap. Four
+consecutive staging deploys failed, and every open PR went red on that one line; PR #240's
+`build-and-test` failed on it alone with nothing of its own broken.
+
+Demonstrated rather than assumed: a 50-line trim placed in the tree cleared the budget error
+and left exactly one complaint — that it was not on dev.
+
+A parallel session trimmed it to 49 lines on `dev` and the gate went green. Worth keeping:
+**the file that every agent is told to update is the one file a branch may not touch**, so
+when it overflows, the whole repo stops shipping until someone commits on dev.
+
+## The home rule — work lands in the ecosystem, and the audit ledger moves in
+
+The owner, after watching the UX audit deliver onto a scratchpad, an ad-hoc
+local port, and claude.ai: "we burn credits work but info is not have the
+right path to ecosystem… make rules to not mess."
+
+- golden_rules.md gains "the home rule": durable work product lands in-repo
+  in the same effort that made it; external pages are mirrors of an in-repo
+  source; session servers die with the session and are never a deliverable;
+  long-lived listeners are di-atlas facts before they start.
+- docs/research/ exists — the paid-knowledge ledger, one dated file per
+  topic, updated never re-bought. README states the convention;
+  RESEARCH_METHOD.md rule 4 now points at it as the required destination.
+- The 08-21 audit's full findings ledger moved in as
+  docs/research/2026-08-21-raw-ux-audit.md (plan mirror URL + spend
+  recorded); the ad-hoc verification servers were killed this session.
+
+## The mirrors came home
+
+Owner: "take all needed artifacts from claude in the di.iiii… and ran the
+local that i can see." docs/research/mirrors/ now holds full-fidelity copies
+of every platform-connected claude.ai artifact (ten pages: both Raw audits,
+the workshop map, the UX plan, lexicon, name tree, growth plan, the 08-05
+full audit, promotion/licensing, The Same Rectangle) plus an index.html —
+view with `python3 -m http.server` in that directory. "What Is Actual" was
+deliberately not mirrored: it is the estate-wide audit and belongs with
+di-atlas. The claude.ai pages remain as mirrors; these files are the truth.
+
+## 2026-08-21 — the space stops being a query parameter
+
+The last layer gap reachable without a signature. `/admin?space=wcc` put the one level that
+**owns** everything being administered into a parameter you could delete and still be left
+with a valid address. Now:
+
+    /{space}/admin          the space's ops        NEW, canonical
+    /{space}/preferences    same, via the alias    NEW
+    /admin?space={id}       still parses           unchanged, forever
+    /admin                  no space               unchanged
+
+`buildPreferencesPath(spaceId)` emits the new shape, so all four of its callers moved
+together; the old form is still read by the parser, so nothing already in the wild rots.
+
+**Checked before claiming the word,** the same way as `spaces` and `projects`: no space and
+no project on production or staging answers to `admin`, `preferences`, or either of the two
+historical misspellings the aliases carry. `admin` was already reserved as a SPACE slug but
+**not** as a project slug — so a project could have taken it and shadowed the console. Added
+to `PROJECT_RESERVED_SLUGS` alongside `preferences`.
+
+Only the bare two-segment form is the console: `/{space}/admin/extra` deliberately does not
+match, leaving the deeper path free.
+
+**Verified in a browser, all five cases:** `/atlas/admin` and `/atlas/preferences` render
+the console and stay at their own address with the space chip reading `atlas`;
+`/admin?space=atlas` still works; `/admin` still defaults; `/atlas/admin/extra` is not the
+console.
+
+Three tests pinned the old URL and were updated — they asserted the shape, not the
+behaviour, so this is a deliberate change of contract rather than a regression. Suite back
+to baseline: 2428 passing, the 12 serverXR files that cannot import `express` here.
+
+**Still open after this:** the editor addresses, `/{space}/{tool}/projects/{id}`. That is
+§7.1 of `SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04, and it
+is the last inversion left.
+
+## 2026-08-21 — the two layer gaps the doors audit left
+
+Owner: *"we just need to fix layer gaps"*. Checked `dev` first this time, which retired
+one of the three candidates before any code was written — `/{space}/raw` being called a
+"hub" while rendering a blank canvas is **already fixed** on dev (`RAW_PAGE_CANVAS`,
+`buildRawCanvasPath`, with a comment saying the old name "taught every caller the
+opposite"). Two gaps were real.
+
+**The way between the tools ran in one direction on a phone.** The node editor has
+carried "Open in Studio" in its ⋯ menu since the doors audit, but Studio's return trip
+lived only in the desktop floating cluster — so on a phone you could go node editor →
+Studio and not back. Studio's mobile topbar gains **Nodes**, using the `onOpenNodeEditor`
+prop dev already threaded through the shell. Verified by tapping it: `/atlas/studio/
+projects/estate-map` → `/atlas/raw/projects/estate-map`, same project, other tool. The
+bar reads `← · estate map · Nodes · Edit` at 390 with no overflow.
+
+**Raw's chrome never named the space.** Studio's cluster header has always shown
+`space · project`; Raw showed the project alone — and `@media (max-width: 1200px)` hid
+even that, so on every phone AND most laptops nothing on screen said which space you were
+editing in. It was recoverable only from the URL.
+
+Now `open · Open Jam` above 1200px, and **`open` alone below it** — the title drops, the
+space survives. A space id is short enough to afford at 390; a project title is not. Done
+by folding into the existing `.raw-topbar-name` element rather than adding chrome, with
+the project half in its own span so the narrow rule can drop exactly that.
+
+Measured: `1440 "open · Open Jam" 106px · 1199 "open" 32px · 900 "open" · 390 "open"`.
+
+**Toolbar overlap** re-checked at 1440 / 1201 / 1199 / 900 / 700 / 390 — 3 slots, zero
+overlap at every width, including both sides of the breakpoint I introduced. Run with the
+zen preference forced off (`dii.raw.zen.<projectId>` = `off`), because the repo's own
+`check:toolbar-overlap` measures an empty bar and passes vacuously otherwise — see the
+note on the previous branch.
+
+**And the check itself is repaired.** `scripts/check-toolbar-overlap.mjs` reported
+*"0 children checked … PASS"* on a real topbar change — green while asserting nothing, on
+a check `src/raw/AGENTS.md` REQUIRES for every topbar change. Three fixes:
+
+- an init script clears `dii.raw.zen.*` before the app boots, so the bar has content;
+- zero-width boxes no longer count as "children checked", because a `display:none` slot
+  cannot overlap anything and counting it hides an empty bar behind a real number;
+- **it now FAILS when nothing was measured at any width**, naming the route and selector.
+
+Confirmed both ways: 3 children on `/open/raw` where it used to find 0, and a hard exit 1
+with a bogus selector. It is not wired into any CI workflow — only an npm script — so this
+cannot turn a pipeline red; it only stops misleading whoever runs it.
+
+**Still not done, and not for lack of trying:** the editor addresses still read
+`/{space}/{tool}/projects/{id}` — tool above project. That is §7.1 of
+`SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04. And
+`/admin?space=` still demotes the space to a query parameter; `/{space}/admin` is free
+(`admin` is already reserved on both axes) but it is another canonical address and did
+not belong in a gap-closing pass.
+
+## 2026-08-20 — name what each create button makes, and stop two strings saying "project" about things that aren't
+
+Fallout from a lexicon audit of the space/project pair. The audit's own recommendation was
+**keep `project`** — every candidate replacement is already spent inside the product, and
+`piece`, the strongest one, is live one level UP (`StudioCodeSpaceDirector.jsx:74` ships
+"Open the piece" and it navigates to a *space* root, 26 lines from ":48 This space keeps its
+work as projects"). So nothing here renames anything. These are the corrections that are
+true under the current dictionary.
+
+- **Three create buttons now name what they make.** `+ Create` (made a space) and `+ New`
+  (made a project) sat one route apart, both unqualified; the node editor's hub said `new`.
+  Now `+ New space`, `+ New project`, and `new project` — lowercase in the node editor
+  because its neighbour is `import` and its register is its own. Looked at in a browser at
+  1280 and 390: nothing clips, no row overflows, the widest row still fits a phone.
+- **`/<space>/<page>` → `/<space>/<slug>`** in the wiki's published-page article. It was a
+  live violation of the rule three sentences earlier, teaching the reader that the slot
+  after a space id is *named* page when it holds a project's slug.
+- **"Project Snapshot" → "Session Snapshot"** in preferences. It is subtitled with a space
+  id and renders space routes, scene version, socket, scene stream, collaborators and save
+  state — not one project fact. Deliberately NOT "Space Snapshot": over half of what it
+  shows is session, not space.
+- **Guard added** for the one that can silently come back: `copyVocabulary.test.js` now
+  fails on any wiki string writing the slot after a space id as `<page>`/`{page}`/`:page`.
+  Narrow on purpose — `page` cannot join `BANNED`, because it is both sanctioned prose (a
+  published web page) and a live identifier (`window.diiPageQuery`). Confirmed by putting
+  the exact defect back and watching it fail, then restoring.
+
+Two rows added to `docs/ai/known-fixes.md`.
+
+## 2026-08-21 — the last two create buttons, on the owner's call to fix all of them
+
+- **`AdminManageSection.jsx`: "Add project" → "Create project".** NOT the audit's suggested
+  "+ New project": that console uses bare verbs throughout — Create space, Save, Cancel,
+  Rename, Search — and no `+` anywhere, so a plus would have broken its register. "Create
+  project" now matches its own "Create space" in the New Space form. Seen on screen.
+- **`StudioProjectsPanel.jsx`: `＋ New project` → `+ New project`.** The fullwidth `＋` was
+  the only one in the whole studio tree; every sibling create button uses ASCII. **Not seen
+  on screen** — that panel does not surface from any route reachable with the local dev
+  data, and I would not write test projects into another session's dev database to force
+  it. The same string renders correctly in `StudioHub`, which was verified, so the glyph
+  itself is proven; its placement in that panel is not.
+
+## 2026-08-21 — the tool doorway: append a word to a project link and it opens there
+
+The owner's shape, in his words: *"it great when you can go in studio with just easy add
+where you go and it run"*. And, on raw: *"raw and studio is for building so we can add layer
+layer"* — so the project is the address and the tool is a view of it.
+
+    /wcc/mery-petrosyan          the project, published        (already worked)
+    /wcc/mery-petrosyan/studio   the same project, in Studio    NEW
+    /wcc/mery-petrosyan/raw      the same project, node editor  NEW
+    /wcc/p/<id>/studio           the same, on the permanent form  NEW
+
+**A doorway, not an address.** The slug resolves, then the router `replace:`s the bar with
+the lane's existing canonical path. No new permanent URL is minted, so nothing new has to be
+supported forever — and it does not prejudge §7.1 of the URL spec, unsigned since 08-04,
+which stages an addressing model where this level stops existing.
+
+**It fixed a real silent fall-through.** `getAppLocationState` classified the two-segment
+shape and never read `segments[2]`, so `/wcc/x/studio` AND `/wcc/x/banana` both rendered the
+published project at HTTP 200 with the wrong URL in the bar. Measured on prod by rendering,
+because the SPA answers 200 for every path.
+
+Two things added beyond the plan the design agents produced, both from their own adversarial
+pass: **`?query` and `#hash` are carried across** (every other heal in `RootApp` drops them,
+which silently eats `?embed=1`), and **the `/p/` form gets the doorway too**, or "append the
+tool" would have been true of the pretty link and quietly false of the permanent one — the
+form published links actually use.
+
+Three parts of that plan were deliberately **dropped**: a robots.txt change (it would have
+de-indexed URLs the sitemap advertises — the pass's only blocker), an og:image rewrite, and a
+server-side reserved-word guard on project creation that would have turned imports and backup
+restores into hard 400s.
+
+Verified in a browser against production data: all eight cases land correctly, and
+`/wcc/mery-petrosyan/studio` reaches the editor's **auth gate** — "Sign in to open the editor
+for wcc" — not the viewer. The doorway respects the permission model rather than routing past
+it. Full suite: 269 client files pass, +10 new tests, failure set identical to baseline (12
+serverXR files that cannot import `express` in this worktree).
+
+## 2026-08-21 — the layering, Tier 1: one name per level, and a way across
+
+Owner: *"still some thing wrong with namings so we need to do right layering, by example in
+raw when you click back to projects it open .../open/raw/projects"*. He is right, and the
+fault is deeper than that URL. Measured on staging, one space with one project, three entry
+points behaving three ways: `/open/studio` redirects INTO the project; `/open/raw` opens a
+blank canvas that is not that project; `/open/raw/projects` shows onboarding. And the same
+space's projects have two addresses, each nested under a tool.
+
+**The model** (from the audit, and it is just the dictionary made spatial): di.iiii holds
+spaces; a space holds projects; a **tool is a way of opening a project, never a container**.
+
+Shipped — Tier 1 only: copy, navigation targets and prompts. **No new routes.**
+
+- **A way across.** Studio's cluster gains "Node editor", Raw's topbar gains "Studio →",
+  both on the same project. Before this the only path between the two building tools was up
+  to a list and back down, via a blank canvas. This is what the owner meant by *"raw and
+  studio is for building so we can add layer layer"*.
+- **One name per level.** `← Hub` → `← Projects` in Studio; Raw's back stops flipping between
+  `Projects` and `Hub` for one destination; RawHub's `studio projects` → `studio`.
+- **Two silent mis-targets fixed**: Studio's "Nodes" went to a blank canvas, not the node
+  editor's projects; "Go to my spaces" went to one space's project list, not the spaces list.
+- **The chat stops inventing counts.** Nothing injects the caller's spaces or projects, so
+  every "you have N spaces and M projects" was fabricated. Both prompts now carry the
+  hierarchy and an explicit rule against answering from nothing.
+- Ops copy: the prod delete prompt says "N spaces — and the N projects inside them" (they go
+  because their space goes); `project-pull` says objects, not the banned "entities".
+
+**Tier 2 was dropped, not deferred by taste.** The audit proposed `/{space}/projects` and
+`/spaces` as redirect aliases. Neither word is reserved — `PROJECT_RESERVED_SLUGS` is
+{studio, beta, raw, seed, p} and `RESERVED_SPACE_SLUGS` has no `spaces` — so those aliases
+would shadow a project legitimately named "projects" or a space named "spaces". Reserving
+them now is itself a breaking change. It needs a decision, not a patch.
+
+**Tier 3 (flipping the canonical to `/{space}/{project}/{tool}`) stays blocked** on §7.1 of
+`SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04.
+
+**Verified by looking**, not by passing: Raw's topbar at 1440 and 390 reads
+`← Projects · Open Jam · Studio →` with zero slot overlap at all five checked widths.
+
+Worth knowing: **`npm run check:toolbar-overlap` passes vacuously.** Raw defaults to zen, so
+the bar is empty and the script reported "0 children checked" — a green run asserting
+nothing. I measured with the zen preference forced off (`dii.raw.zen.<project>` = `off`), and
+the check should probably do the same.
+
+**Two honest gaps in this pass:**
+- The cross-tool control is **desktop-only in Studio**. Studio's phone chrome is a separate
+  topbar (`smb-topbar`) with room for three controls; adding a fourth would crowd a working
+  surface at 390. Raw's works on both.
+- Studio's cluster now shows `Projects` twice — a window toggle in WINDOWS, my `← Projects`
+  in DISPLAY. Distinguishable by the arrow and the section headings, and still better than
+  `← Hub`, which named nothing. Not clean.
+- Raw still shows no space in its chrome (Studio does: `Atlas · estate map`). Left alone for
+  the same 390px crowding reason; the space is in the URL and the back button's tooltip.
+
+## 2026-08-21 — the lists move to the level they list
+
+The owner's original complaint was an ADDRESS: *"in raw when you click back to projects it
+open .../open/raw/projects"*. The doors audit on `dev` relabelled that button `← Projects` but
+left it navigating to `buildRawProjectsPath` — so the URL was unchanged and the complaint
+stood. An alias that redirects would not have fixed it either: you would still end up looking
+at a tool-nested address.
+
+So these are **canonical**, not aliases. They stay in the bar.
+
+    /spaces              all of your spaces
+    /{space}/projects    that space's projects
+
+Both `← Projects` controls now go to `/{space}/projects`. Every older shape —
+`/{space}/studio`, `/{space}/raw/projects`, `/studio`, `/{space}/studio/projects/{id}` —
+keeps working, and is covered by a test that says so.
+
+**Safe because it was checked, not assumed.** `spaces` and `projects` were reserved in
+`RESERVED_APP_SEGMENTS`, `RESERVED_SPACE_SLUGS` and `PROJECT_RESERVED_SLUGS` — after querying
+production and staging and finding **no space and no project answering to either word on
+either tier** (12 prod spaces, 11 staging). Reserving was free that day and gets more
+expensive every day it waits.
+
+Only the bare two-segment form is the list: `/{space}/projects/extra` deliberately does NOT
+match, so a future addressing model can still use the deeper path.
+
+**Verified in a browser** against both local and production data: `/spaces` renders the
+spaces list and stays; `/wcc/projects` and `/wcc/studio` land on the *same* auth gate at
+their own addresses, so the new one is gated identically rather than routing around it;
+`/open/raw/projects` still works. `/open/projects` does hop into the project — but so does
+`/open/studio`: that is StudioHub's existing open-the-only-project behaviour, not a new one,
+and `open` has exactly one project.
+
+**This does not settle §7.1.** Nothing here touches the editor addresses, which still read
+`/{space}/{tool}/projects/{id}`. Flipping those is the part still waiting on a signature.
+
+**Not done here:**
+
+- `scripts/works-boundary.mjs` — the one place the repo states `project ⊇ space`, the exact
+  inverse of the dictionary — is **not on `dev`**. It lives only on
+  `feat/clean-local-artifact`, which is checked out in another worktree, so the fix went to
+  its own branch `fix/works-boundary-wording` rather than into someone else's in-flight work.
+- The audit's larger finding is untouched and is the real one: production runs **12 spaces,
+  26 projects, median 1, mode 1 — 8 of 12 spaces hold exactly one project**, and `wcc`, the
+  one genuine multi, already fakes nesting with 10 portal entities inside its `main`
+  project. The level is the defect, not the noun. Anything structural waits on §7.1 of
+  `SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04, which stages an
+  end state where this level stops existing.
+
 ## Links say where they go, and copy what they mean
 
 Doors audit wave A, fifth slice.

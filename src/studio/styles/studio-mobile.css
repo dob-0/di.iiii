@@ -2,6 +2,31 @@
    top context bar, a five-window bottom nav, and one panel at a time as a
    bottom sheet. Same di.i vocabulary as the desktop shell. */
 
+/* Not mobile-only, despite living here: the desktop's only sync indicator is a
+   hover tooltip on a 10px dot, and on a phone there was nothing at all. An
+   expired session halts retries while the editor keeps taking edits that a
+   reload drops — the one message in Studio whose absence costs work. Rendered
+   outside the uiHidden gate for the same reason. */
+.studio-sync-alert {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2600;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1b1005;
+    background: #f0b429;
+    text-align: center;
+}
+
+/* Same reason as Raw's: the phone's context bar is fixed at the top, so the
+   alert would cover the ← and the project name. */
+.studio-sync-alert + .smb-topbar {
+    top: 40px;
+}
+
 .smb-topbar {
     position: fixed;
     top: 0;

@@ -46,7 +46,7 @@ import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/n
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
 import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
-import { buildSpaceProjectsPath, buildStudioProjectPath, buildStudioSpacesPath } from '../../studio/utils/studioRouting.js'
+import { buildSpaceProjectsPath, buildStudioProjectPath, buildSpacesPath } from '../../studio/utils/studioRouting.js'
 import { buildWikiPath } from '../../utils/spaceRouting.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
@@ -494,7 +494,10 @@ export default function RawEditor({
             window.removeEventListener('resize', updateWorkspaceTop)
             resizeObserver?.disconnect?.()
         }
-    }, [presence.users.length])
+        // pendingSyncError, because the sync alert pushes the topbar down 40px and a
+        // ResizeObserver never fires for that: the bar MOVES, it does not resize. Without
+        // this the workspace keeps the old inset and the scope pill lands on the toolbar.
+    }, [presence.users.length, state.pendingSyncError])
 
     const selectNode = (nodeId, patch = {}) => {
         dispatch({ type: 'select-entity', entityId: null })
@@ -1759,6 +1762,17 @@ export default function RawEditor({
 
     return (
         <main className="raw-editor-shell">
+            {/* An expired session stops the sync layer retrying (useProjectDocumentSync's
+                401 branch clearTimeout()s and breaks) while the editor keeps accepting
+                edits. They sit in a queue in memory and a reload drops them. Nothing in
+                this lane rendered that state, on any device — so the work vanished with
+                no warning at all. Deliberately OUTSIDE the chromeVisible gate: zen hides
+                the toolbar, and losing an hour of work is not furniture. */}
+            {state.pendingSyncError && (
+                <div className="raw-sync-alert" role="alert">
+                    {state.pendingSyncError}
+                </div>
+            )}
             <header className={`raw-topbar${chromeVisible ? ' is-seeded' : ''}`} ref={topbarRef}>
                 {chromeVisible && (
                     <>
@@ -1907,7 +1921,7 @@ export default function RawEditor({
                                         )}
                                         {/* The platform exits — the canvas was a
                                             sealed room before the doors audit. */}
-                                        <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildStudioSpacesPath()) }}>Spaces</button>
+                                        <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildSpacesPath()) }}>Spaces</button>
                                         <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildWikiPath()) }}>Wiki</button>
                                         {/* Configuration, not work — the ⋯ is
                                             where the audit sent it. */}
