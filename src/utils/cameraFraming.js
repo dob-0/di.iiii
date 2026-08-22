@@ -2,7 +2,49 @@ import * as THREE from 'three'
 
 const MIN_RADIUS = 0.75
 const DEFAULT_PADDING = 1.35
+const DEFAULT_FOV = 50
+const MIN_HALF_FOV = 0.01
 const DEFAULT_FALLBACK_DIRECTION = new THREE.Vector3(0.8, 0.45, 1)
+
+const getSafeAspect = (aspect) => {
+    const numericAspect = Number(aspect)
+    return Number.isFinite(numericAspect) && numericAspect > 0 ? numericAspect : 1
+}
+
+// A perspective camera only fits a sphere on BOTH axes if it fits the narrower
+// one. On a landscape viewport that is the vertical fov; on a portrait phone
+// (390x844 -> aspect ~0.46) the horizontal fov is roughly half as wide, so
+// fitting to vertical alone crops the sides of the work. Every framing path
+// must go through this, or the two copies drift apart again — which is exactly
+// how published pages ended up cropping on phones.
+export const getLimitingHalfFov = (fov = DEFAULT_FOV, aspect = 1) => {
+    const numericFov = Number.isFinite(Number(fov)) ? Number(fov) : DEFAULT_FOV
+    const verticalHalfFov = Math.max(MIN_HALF_FOV, THREE.MathUtils.degToRad(numericFov / 2))
+    const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * getSafeAspect(aspect))
+    return Math.max(MIN_HALF_FOV, Math.min(verticalHalfFov, horizontalHalfFov))
+}
+
+export const computeFitDistance = (radius, { fov = DEFAULT_FOV, aspect = 1 } = {}) =>
+    radius / Math.sin(getLimitingHalfFov(fov, aspect))
+
+// How much further back a viewport of this shape has to sit, relative to the
+// vertical-only fit, to show the same sphere. 1 for anything square or wider,
+// ~2 for a portrait phone.
+export const getAspectFitScale = (fov = DEFAULT_FOV, aspect = 1) =>
+    Math.sin(getLimitingHalfFov(fov, 1)) / Math.sin(getLimitingHalfFov(fov, aspect))
+
+// Best available guess at the aspect of the surface a scene is about to be
+// drawn into, for callers computing a camera before any canvas exists. Chrome
+// above the canvas only makes the real canvas shorter (a WIDER aspect), so
+// erring on the window's aspect errs toward framing slightly wider — never
+// toward cropping.
+export const getViewportAspect = (fallback = 1) => {
+    if (typeof window === 'undefined') return fallback
+    const width = Number(window.innerWidth)
+    const height = Number(window.innerHeight)
+    if (!(width > 0) || !(height > 0)) return fallback
+    return width / height
+}
 
 const getSafeRadius = (radius, minRadius = MIN_RADIUS) => {
     const numericRadius = Number(radius)
@@ -64,10 +106,13 @@ export const getPointsBoundingSphere = (points = [], options = {}) => {
 
 // Same framing math as frameSphereInControls but for callers with no live
 // CameraControls instance yet (e.g. computing an initial camera before mount).
+// Pass `aspect` (width / height of the surface it will be drawn into) or the
+// shot is fitted to the vertical fov only and crops on a portrait phone.
 export const computeFramingCamera = (sphere, options = {}) => {
     if (!sphere) return null
 
-    const fov = Number.isFinite(options.fov) ? options.fov : 50
+    const fov = Number.isFinite(options.fov) ? options.fov : DEFAULT_FOV
+    const aspect = getSafeAspect(options.aspect)
     const padding = Number.isFinite(options.padding) ? options.padding : DEFAULT_PADDING
     const target = sphere.center.clone()
     const radius = getSafeRadius(sphere.radius, options.minRadius) * padding
@@ -75,11 +120,15 @@ export const computeFramingCamera = (sphere, options = {}) => {
         ? new THREE.Vector3(...options.direction).normalize()
         : getFallbackDirection()
 
-    const verticalHalfFov = THREE.MathUtils.degToRad(fov / 2)
-    const fitDistance = radius / Math.sin(Math.max(0.01, verticalHalfFov))
-    const distance = Number.isFinite(options.maxDistance)
-        ? Math.min(fitDistance, options.maxDistance)
-        : fitDistance
+    const fitDistance = computeFitDistance(radius, { fov, aspect })
+    // `maxDistance` caps how much of a sprawling scene the entry shot swallows,
+    // not a raw metric distance — so it has to carry the same aspect correction
+    // the fit just got. Left unscaled it clamps a portrait phone straight back
+    // to the vertical-only distance and silently re-crops the work.
+    const maxDistance = Number.isFinite(options.maxDistance)
+        ? options.maxDistance * getAspectFitScale(fov, aspect)
+        : null
+    const distance = maxDistance === null ? fitDistance : Math.min(fitDistance, maxDistance)
     const position = target.clone().add(direction.multiplyScalar(distance))
 
     return {
@@ -101,10 +150,10 @@ export const frameSphereInControls = (controls, sphere, options = {}) => {
     controls.target.copy(target)
 
     if (camera.isPerspectiveCamera) {
-        const verticalHalfFov = THREE.MathUtils.degToRad((camera.fov || 50) / 2)
-        const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * (camera.aspect || 1))
-        const limitingHalfFov = Math.max(0.01, Math.min(verticalHalfFov, horizontalHalfFov))
-        const distance = radius / Math.sin(limitingHalfFov)
+        const distance = computeFitDistance(radius, {
+            fov: camera.fov || DEFAULT_FOV,
+            aspect: camera.aspect
+        })
 
         camera.position.copy(target).add(direction.multiplyScalar(distance))
         camera.near = Math.max(0.05, distance / 100)
