@@ -37,7 +37,7 @@ graduating piecemeal.
 
 ## Do Not Assume
 
-- do not treat `Raw` as the main shipped product lane — Studio still is (see `MANIFESTO.md`'s non-negotiable #6: the long-term direction is unifying Studio into Raw's node model, not a landing-page primacy switch ahead of that landing)
+- do not treat `Raw` as the main shipped product lane — Studio still is (see `MANIFESTO.md`'s non-negotiable #6). The landing now opens on the node canvas, amended into §6 on 2026-08-22 — that is a front door, not a promotion: production work, bug fixes and default UX still belong to Studio, and experimental Raw behavior must not become Studio's default
 - do not fork shared project logic into Raw unless the behavior is intentionally experimental
 - do not move canonical schema changes into Raw-only state or utilities
 - do not re-add a singleton/scope-restriction mechanism to any node type without checking with the user first (product decision 2026-07-19, see `docs/architecture/RECURSIVE_NODE_CORE.md`)

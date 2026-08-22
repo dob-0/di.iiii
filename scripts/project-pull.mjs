@@ -18,6 +18,10 @@
  *   --to      <url>   Local server API base (default: $LOCAL_API_URL or http://localhost:4000/serverXR)
  *   --token   <token> Bearer token for the live server (default: $LIVE_API_TOKEN).
  *                     Public projects need none.
+ *   --to-token <token> Bearer token for the LOCAL server (default: $API_TOKEN,
+ *                     read from serverXR/.env.local). Required whenever the
+ *                     local server runs with REQUIRE_AUTH=true — without it
+ *                     every write below returns 401.
  *   --publish         Point the target space's publishedProjectId at this project
  *                     (what makes the landing background and space viewer render it)
  *   --no-assets       Skip asset binaries — document only
@@ -43,6 +47,7 @@ const parseArgs = (argv) => {
         from: null,
         to: null,
         token: null,
+        toToken: null,
         publish: false,
         assets: true,
         force: false,
@@ -58,6 +63,7 @@ const parseArgs = (argv) => {
         if (arg === '--from') { args.from = argv[++i]; continue }
         if (arg === '--to') { args.to = argv[++i]; continue }
         if (arg === '--token') { args.token = argv[++i]; continue }
+        if (arg === '--to-token') { args.toToken = argv[++i]; continue }
         if (arg === '--publish') { args.publish = true; continue }
         if (arg === '--no-assets') { args.assets = false; continue }
         if (arg === '--force') { args.force = true; continue }
@@ -77,7 +83,10 @@ const loadEnvFile = async (filePath) => {
             if (idx === -1) continue
             const key = trimmed.slice(0, idx).trim()
             const value = trimmed.slice(idx + 1).trim().replace(/^['"]|['"]$/g, '')
-            if (key) env[key] = value
+            // An empty assignment is a placeholder, not a value: the root .env
+            // holds `LIVE_API_TOKEN=` with nothing after it and is merged last,
+            // which would blank the real token from serverXR/.env.local.
+            if (key && value) env[key] = value
         }
         return env
     } catch {
@@ -143,7 +152,11 @@ const apiFetchOptional = async (url, options = {}) => {
 }
 
 const main = async () => {
+    // serverXR/.env.local is where the local server's own API_TOKEN lives; the
+    // root files carry the live-tier settings only.
     const localEnv = {
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env'))),
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env'))),
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env.local'))),
     }
@@ -152,7 +165,7 @@ const main = async () => {
     const args = parseArgs(process.argv.slice(2))
 
     if (!args.projectId) {
-        console.error('Usage: node scripts/project-pull.mjs <projectId> [--space <id>] [--from <url>] [--to <url>] [--token <token>] [--publish] [--no-assets] [--force] [--dry-run]')
+        console.error('Usage: node scripts/project-pull.mjs <projectId> [--space <id>] [--from <url>] [--to <url>] [--token <token>] [--to-token <token>] [--publish] [--no-assets] [--force] [--dry-run]')
         process.exitCode = 1
         return
     }
@@ -160,7 +173,10 @@ const main = async () => {
     const fromBase = (args.from || getEnv('LIVE_API_URL') || DEFAULT_LIVE_URL).replace(/\/+$/, '')
     const toBase = (args.to || getEnv('LOCAL_API_URL') || DEFAULT_LOCAL_URL).replace(/\/+$/, '')
     const token = args.token || getEnv('LIVE_API_TOKEN') || ''
+    const localToken = args.toToken || getEnv('API_TOKEN') || ''
     const { projectId, dryRun, force, publish } = args
+    const localHeaders = () => buildHeaders(localToken)
+    const localAuth = () => (localToken ? { Authorization: `Bearer ${localToken}` } : {})
 
     console.log(`[project-pull] ${projectId}`)
     console.log(`  from: ${fromBase}`)
@@ -195,12 +211,15 @@ const main = async () => {
     // 2. The space has to exist locally before a project can live in it. A
     //    fresh clone bootstraps only "open" and "main", so anything else
     //    (wcc, beyond-form, …) has to be created here first.
-    const localSpace = await apiFetchOptional(`${toBase}/api/spaces/${spaceId}`)
+    // Authenticated even though it only reads: a private space answers an
+    // anonymous GET with 401, not 404, so without a token this cannot tell
+    // "not here yet" from "here but not yours" and dies on the difference.
+    const localSpace = await apiFetchOptional(`${toBase}/api/spaces/${spaceId}`, { headers: localHeaders() })
     if (!localSpace) {
         console.log(`\nSpace "${spaceId}" not present locally — creating it`)
         await apiFetch(`${toBase}/api/spaces`, {
             method: 'POST',
-            headers: buildHeaders(),
+            headers: localHeaders(),
             body: JSON.stringify({ slug: spaceId, label: spaceId, permanent: true }),
         })
         console.log(`  created`)
@@ -213,7 +232,7 @@ const main = async () => {
     try {
         await apiFetch(`${toBase}/api/spaces/${spaceId}/projects`, {
             method: 'POST',
-            headers: buildHeaders(),
+            headers: localHeaders(),
             body: JSON.stringify({ slug: projectId, title }),
         })
         console.log('  created')
@@ -229,7 +248,7 @@ const main = async () => {
     console.log(`Writing document (${entityCount} objects)`)
     await apiFetch(`${toBase}/api/projects/${projectId}/document`, {
         method: 'PUT',
-        headers: buildHeaders(),
+        headers: localHeaders(),
         body: JSON.stringify(document),
     })
     console.log('  ok')
@@ -247,7 +266,10 @@ const main = async () => {
             if (!assetId) continue
             const label = `[${index + 1}/${assetList.length}] ${asset.name || assetId}`
             try {
-                const existing = await apiFetchOptional(`${toBase}/api/projects/${projectId}/assets/${assetId}/meta`)
+                const existing = await apiFetchOptional(
+                    `${toBase}/api/projects/${projectId}/assets/${assetId}/meta`,
+                    { headers: localAuth() }
+                )
                 if (existing) {
                     skipped++
                     continue
@@ -274,7 +296,7 @@ const main = async () => {
                 }), asset.name || assetId)
                 const upload = await fetchWithRetry(
                     `${toBase}/api/projects/${projectId}/assets`,
-                    { method: 'POST', body: form },
+                    { method: 'POST', body: form, headers: localAuth() },
                     TRANSFER_TIMEOUT_MS,
                     label
                 )
@@ -303,7 +325,7 @@ const main = async () => {
         console.log(`\nPublishing "${projectId}" as space "${spaceId}"'s scene`)
         await apiFetch(`${toBase}/api/spaces/${spaceId}`, {
             method: 'PATCH',
-            headers: buildHeaders(),
+            headers: localHeaders(),
             body: JSON.stringify({ publishedProjectId: projectId }),
         })
         console.log('  ok')

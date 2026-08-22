@@ -4659,12 +4659,6 @@
    bottom-centre keeps it clear of the zoom cluster (left), the account
    button and delete FAB (right). Since the 2026-08-21 doors audit it is
    the way home — a link wearing the same ambient clothes. */
-/* Ambient, and only where there is room to be ambient: on a phone it sat on
-   top of the cards (measured in the audit). */
-@media (max-width: 640px) {
-    .raw-surface-wordmark { display: none; }
-}
-
 .raw-surface-wordmark {
     position: fixed;
     bottom: 18px;
@@ -4693,6 +4687,38 @@
 .raw-surface-wordmark span {
     color: var(--di-cyan);
     opacity: 0.75;
+}
+
+/* Phone. At the bottom centre it sat on top of the cards (measured in the
+   2026-08-21 audit), and it was hidden outright for that — which left a phone
+   canvas under zen with NO way out at all, because zen hides the topbar and
+   this is the only other door. So it moves rather than disappears: the top-left
+   corner is empty on a phone (measured at 390×844), it is where a way home is
+   looked for, and it is clear of the zoom cluster bottom-left and the account
+   button bottom-right.
+
+   This block must stay AFTER the base rule above — it overrides `bottom`,
+   `left` and `transform`, and at equal specificity the later rule is the one
+   that wins. Placed before it, the phone kept the desktop position and grew to
+   full height from having both `top` and `bottom` set. */
+@media (max-width: 640px) {
+    .raw-surface-wordmark {
+        bottom: auto;
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        left: calc(env(safe-area-inset-left, 0px) + 14px);
+        transform: none;
+        font-size: 14px;
+        /* It can still pass over a card up here, so it carries just enough
+           ground to stay readable when it does — and a real finger's worth of
+           target, which the bare text (29px tall) was not. */
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 6px;
+        background: rgba(10, 14, 22, 0.62);
+        color: rgba(255, 255, 255, 0.44);
+    }
 }
 
 /* Dropping a file in. The veil is the only thing that tells someone mid-drag

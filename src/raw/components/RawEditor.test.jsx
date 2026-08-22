@@ -777,6 +777,17 @@ describe('RawEditor topbar empty-state hint', () => {
         expect(screen.queryByText(/Double-click/)).toBeNull()
     })
 
+    it('says the empty local canvas is a local canvas, on the canvas itself', () => {
+        // The only other place that says so is the topbar title, and an empty
+        // workspace opens in zen, which hides the topbar. So at the moment a
+        // first-time visitor arrives from "Step inside", nothing on screen told
+        // them a browser-only scratch surface apart from a space that keeps
+        // their work — and the landing sends everyone here.
+        mockPointer(false)
+        render(<RawEditor localStorageKey={HINT_STORAGE_KEY} />)
+        expect(screen.getByText(/nothing here is saved to a space yet/i)).toBeTruthy()
+    })
+
     it('renders no topbar hint pill once any node exists — only the mocked canvas hint area remains', () => {
         mockPointer(false)
         window.localStorage.setItem(HINT_STORAGE_KEY, makeWorkspaceDoc([makeNodeZero()]))

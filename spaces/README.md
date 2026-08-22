@@ -50,6 +50,23 @@ Tokens come from the tier's declared `tokenEnv` — `PROD_API_TOKEN`,
 `serverXR/.env.local`. The `local` tier is `governed: false`: shown in the
 table, never enforced, because the dev box holds 70 projects nobody declared.
 
+That last sentence has a cost worth naming: **the local tier goes stale in
+silence.** The audit prints `—` for a space the dev box has never heard of and
+still exits 0, and an audit only covers the spaces someone wrote a declaration
+for — the private ones (`library`, `atlas`, `decisions`) are declared nowhere.
+The command that fixes it walks production's own space list instead:
+
+```bash
+npm run local:mirror:check   # read-only: what prod has that this box doesn't
+npm run local:mirror         # create the missing spaces and pull their projects
+```
+
+It mirrors `label`, `isPublic`, `openInscriptions` and `allowEdits`, and
+deliberately **not** `kind` or `permanent` — a local install builds `open` as
+`kind: global` while production reports `normal`, and copying that across would
+demote the local open space. Ownership and roles it never touches, for the
+reason given below.
+
 ## Ownership is not declared here
 
 A space's owner is deliberately **not** a declared field. Handing someone a

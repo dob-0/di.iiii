@@ -391,4 +391,45 @@ describe('PublicProjectViewer', () => {
         const badge = screen.getByRole('link', { name: /build your own space/i })
         expect(badge).toHaveAttribute('href', '/')
     })
+
+    // A project made in the node lane publishes here as an EMPTY ROOM: this
+    // viewer renders `entities`, and no node-to-entity compile exists in the
+    // product. An empty grid reads as "the artist made nothing", which is the
+    // opposite of true — so say what it is and point at the surface that does
+    // render the graph.
+    describe('a project whose work is a node graph', () => {
+        const graphOnly = {
+            version: 1,
+            document: {
+                projectMeta: { id: 'live-project', title: 'Live Project' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                nodes: [{ id: 'n1', typeId: 'geom.cube' }],
+                entities: []
+            }
+        }
+
+        it('says so, and links to the live view of the graph', async () => {
+            getProjectDocumentMock.mockResolvedValue(graphOnly)
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="dilijan" projectId="live-project" spaceLabel="Dilijan" />)
+
+            expect(await screen.findByText(/This project is a node graph/)).toBeInTheDocument()
+            expect(screen.getByRole('link', { name: /Open the live view/i }))
+                .toHaveAttribute('href', '/dilijan/raw/projects/live-project/out')
+        })
+
+        it('stays quiet when the room actually has something in it', async () => {
+            getProjectDocumentMock.mockResolvedValue({
+                ...graphOnly,
+                document: { ...graphOnly.document, entities: [{ id: 'e1' }] }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="dilijan" projectId="live-project" spaceLabel="Dilijan" />)
+
+            expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+            expect(screen.queryByText(/This project is a node graph/)).toBeNull()
+        })
+    })
 })

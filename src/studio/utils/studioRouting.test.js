@@ -4,6 +4,7 @@ import {
     STUDIO_PAGE_HUB,
     STUDIO_PAGE_PROJECT,
     STUDIO_PAGE_DIRECTOR,
+    DEFAULT_STUDIO_SPACE_ID,
     buildStudioDirectorPath,
     buildStudioHubPath,
     buildStudioSpacesPath,
@@ -141,6 +142,26 @@ describe('studioRouting', () => {
     it('round-trips both layered builders through the parser', () => {
         expect(getStudioLocationState(new URL(`https://example.com${buildSpaceProjectsPath('br_id_ge')}`)).spaceId).toBe('br_id_ge')
         expect(getStudioLocationState(new URL(`https://example.com${buildSpacesPath()}`)).page).toBe(STUDIO_PAGE_SPACES)
+    })
+
+    it('does not claim a lane name as a space', () => {
+        // `/raw/projects` used to parse as the hub of a space called "raw" —
+        // a space that can never exist, because the word is reserved. Both this
+        // and `/studio/projects` rendered "Nothing lives at raw", and both are
+        // documented addresses in the wiki. Studio's parser runs before Raw's,
+        // so leaving `raw` alone here is what lets the Raw lane answer for it.
+        expect(getStudioLocationState(new URL('https://example.com/raw/projects')).isStudio).toBe(false)
+        expect(getStudioLocationState(new URL('https://example.com/beta/projects')).isStudio).toBe(false)
+        expect(getStudioLocationState(new URL('https://example.com/wiki/projects')).isStudio).toBe(false)
+    })
+
+    it('parses /studio/projects as the default space\'s project list', () => {
+        expect(getStudioLocationState(new URL('https://example.com/studio/projects'))).toEqual({
+            isStudio: true,
+            page: STUDIO_PAGE_HUB,
+            projectId: null,
+            spaceId: DEFAULT_STUDIO_SPACE_ID
+        })
     })
 
     it('leaves every tool-named address working — nothing published can rot', () => {

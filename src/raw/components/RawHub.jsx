@@ -27,7 +27,17 @@ import SpaceSyncPanel from '../../components/SpaceSyncPanel.jsx'
 // single per-space project that hosts the Studio container node. Not
 // "studio" itself — that slug is blocked because it would collide with the
 // existing /{space}/studio route.
+// `projects.id` is a GLOBAL primary key and ids derive from slugs, so a fixed
+// slug here meant exactly one space in the whole install could hold a Studio
+// node: the second space to try it got a 409 "Project already exists" and the
+// button died. Scoping the slug by space is the smallest fix that does not
+// touch the id model.
+//
+// The bare legacy id is still accepted when it appears in THIS space's list —
+// it can only be there if it belongs here — so the one space that already has
+// one keeps it, and nothing needs migrating.
 const STUDIO_PROJECT_ID = 'studio-node'
+const studioProjectSlugFor = (spaceId) => `${STUDIO_PROJECT_ID}-${spaceId}`
 
 export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const { role } = useAuthSession()
@@ -161,12 +171,13 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         setIsBusy(true)
         setStatus('Opening Studio...')
         try {
-            let project = projects.find((existing) => existing.id === STUDIO_PROJECT_ID)
+            const scopedId = studioProjectSlugFor(spaceId)
+            let project = projects.find((existing) => existing.id === scopedId || existing.id === STUDIO_PROJECT_ID)
             let studioNodeId = null
             if (!project) {
                 const response = await createProject(spaceId, {
                     title: 'Studio',
-                    slug: STUDIO_PROJECT_ID,
+                    slug: scopedId,
                     source: 'raw-v2'
                 })
                 project = response.project
