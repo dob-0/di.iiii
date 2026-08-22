@@ -90,7 +90,7 @@ export const WIKI_ARTICLES = [
         title: 'The Open Space, your sandbox & guest mode',
         summary: 'Everyone shares one communal Open Space, and every visitor — guest or account — gets exactly one private sandbox.',
         body: [
-            'The landing page’s “Step inside” button opens a blank canvas — no account, no space picker, one click to building. What you make there stays in your browser; the shared Open Space itself lives at /open.',
+            'The landing page’s “Step inside” button opens your own private sandbox — no account, no space picker, one click to building. What you make there is kept in the space, where Studio and Nodes sit side by side and “View live” hands out the address. The shared Open Space itself lives at /open.',
             'There are three kinds of places, and everyone gets the first two without an account:',
             { list: [
                 'The Open Space — one shared space where every visitor can build, together, live. It is always there and survives cleanup; an admin can restore it from a daily snapshot if it gets trashed.',

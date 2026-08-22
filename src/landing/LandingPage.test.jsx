@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../components/GridFloorBackground.jsx', () => ({ default: () => <div data-testid="mock-grid-bg" /> }))
@@ -7,6 +7,11 @@ vi.mock('../services/serverSpaces.js', () => ({ getServerConfig: () => Promise.r
 
 const sessionState = { authenticated: false, type: null }
 vi.mock('../hooks/useAuthSession.js', () => ({ default: () => ({ ...sessionState }) }))
+
+// The door resolves the visitor's own space on CLICK — mocked so this file can
+// assert the page never asks for a session on a passive view.
+const getApiSession = vi.hoisted(() => vi.fn(() => Promise.resolve({ sandboxSpaceId: 'sandbox-guestabc', type: 'guest' })))
+vi.mock('../services/apiClient.js', () => ({ getApiSession }))
 
 window.matchMedia = window.matchMedia || (() => ({
     matches: false,
@@ -29,15 +34,14 @@ const internalLinksTo = (fragment) => screen.getAllByRole('link').filter((link) 
 })
 
 describe('LandingPage CTA routing', () => {
-    it('points every Raw link at the open sandbox space, not the bare /raw route', () => {
-        // Bare lane routes default to the restricted 'main' space, where a guest
-        // has no write scope and gets bounced to the read-only viewer.
+    it('sends no door at the browser-local node canvas', () => {
+        // The canvas at /{space}/raw lives in the browser's own storage: it
+        // cannot save into a space and cannot publish, so nothing made there
+        // survives or can be handed to anyone. The front page must not open
+        // onto it. (Bare /raw is worse still — it defaults to the restricted
+        // 'main' space, where a guest is bounced to the read-only viewer.)
         render(<LandingPage />)
-        const rawLinks = internalLinksTo('raw')
-        expect(rawLinks.length).toBeGreaterThan(0)
-        for (const link of rawLinks) {
-            expect(link.getAttribute('href')).toBe('/open/raw')
-        }
+        expect(internalLinksTo('/raw')).toHaveLength(0)
     })
 
     it('points every Studio link at the spaces hub, not one space\'s project list', () => {
@@ -71,17 +75,24 @@ describe('LandingPage CTA routing', () => {
         }
     })
 
-    it('points "Step inside" at Raw, the promoted default surface, not the bare /raw route', () => {
-        // Raw replaced Studio as the primary door (2026-08-06 lane promotion).
-        // Still asserts the space-scoped form, not bare /raw — same guest-scope
-        // trap this test originally guarded against for Studio.
+    it('opens the visitor own space on click, and asks for nothing on a passive view', () => {
+        // GET /api/auth/session mints a guest session for whoever asks, so the
+        // page must not ask on a page view — only when someone chooses to
+        // enter. The href stays a real destination for no-JS, middle-click and
+        // crawlers; the click upgrades it to the visitor's own space.
+        getApiSession.mockClear()
         Object.assign(sessionState, { authenticated: true, type: 'user' })
         render(<LandingPage />)
+        expect(getApiSession).not.toHaveBeenCalled()
+
         const doors = screen.getAllByRole('link', { name: 'Step inside' })
         expect(doors.length).toBeGreaterThan(0)
         for (const link of doors) {
-            expect(link.getAttribute('href')).toBe('/open/raw')
+            expect(link.getAttribute('href')).toBe('/spaces')
         }
+
+        fireEvent.click(doors[0], { button: 0 })
+        expect(getApiSession).toHaveBeenCalledTimes(1)
     })
 })
 
@@ -133,7 +144,7 @@ describe('LandingPage local-install copy', () => {
 
         expect(await screen.findByText(/everything here is yours to edit/)).toBeInTheDocument()
         expect(screen.getByText('Your machine, your spaces')).toBeInTheDocument()
-        expect(screen.queryByText(/Sign in only to edit/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Sign in to keep it/)).not.toBeInTheDocument()
         expect(screen.queryByText('3 free spaces')).not.toBeInTheDocument()
     })
 
@@ -141,7 +152,7 @@ describe('LandingPage local-install copy', () => {
         serverConfigState.current = { local: false, requireAuth: true }
         render(<LandingPage />)
 
-        expect(await screen.findByText(/Sign in only to edit/)).toBeInTheDocument()
+        expect(await screen.findByText(/Sign in to keep it/)).toBeInTheDocument()
         expect(screen.getByText('3 free spaces')).toBeInTheDocument()
         expect(screen.queryByText('Your machine, your spaces')).not.toBeInTheDocument()
     })
@@ -150,7 +161,7 @@ describe('LandingPage local-install copy', () => {
         serverConfigState.current = { local: true, requireAuth: true }
         render(<LandingPage />)
 
-        expect(await screen.findByText(/Sign in only to edit/)).toBeInTheDocument()
+        expect(await screen.findByText(/Sign in to keep it/)).toBeInTheDocument()
         expect(screen.queryByText('Your machine, your spaces')).not.toBeInTheDocument()
     })
 })
