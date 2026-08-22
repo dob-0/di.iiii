@@ -5,6 +5,177 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-21 — the Public page as a node, and two windows that were lying about themselves
+
+Built for a children's workshop in Dilijan, where the whole week's work is authored in
+Raw and taken home as a published link. Three things were in the way.
+
+- **`view.publish` — the public page as a panel node.** Entry view, headset default,
+  camera/mic opt-in, and the address with a copy button. Deliberately not Studio's
+  `PublishPanel` imported across the lane boundary: that one is MUI and Raw loads
+  neither MUI's styles nor the control cluster's, so it would render as a column of
+  unstyled text — the same ruling `CreatePanelWindow` already made. Everything on it is
+  a document op, so a guest holding a redeemed invite can use it. The two space-level
+  switches (make public, set live project) are owner-or-admin and would 403 for exactly
+  that person, so they are not rendered as buttons that always fail; the space's state
+  is reported as a sentence instead. `shareEnabled` is absent on purpose — grep it,
+  nothing on the published page reads it.
+
+- **A Text window could not be written in.** `TextPanelWindow` rendered a `<p>`. A desk
+  seeded with "Our room is about ______" was an instruction nobody could obey, and the
+  only way to change a note was the inspector or a one-line port field on a card that
+  may be off-screen or past the LOD threshold. It is a textarea now, writing through
+  `updateNode` — per keystroke, which is what the surrounding code already does and what
+  the sync throttle and the history's same-field coalescing are built for. When an edge
+  feeds `content` the box stays read-only and says who is holding the pen: the wire wins
+  on every evaluation, so an editable box there would swallow the typing.
+
+- **A minimized window was placed by the panel it would open to.** `clampWindowFrame`
+  reserved the stored full height for a collapsed bar, so a bar authored near the bottom
+  was yanked up onto whatever sat above it. Measured on a 1440x810 desk: three bars
+  authored at y=640 landed at 392, 248 and 94, stacked on the row of cards and on each
+  other.
+
+  **The part worth remembering:** the first fix was in `clampWindowFrame`, with a unit
+  test over `clampWindowFrame`, and it passed while every window on screen stayed
+  exactly as wrong as before. `DesktopWindow` rebuilds the frame it clamps from
+  x/y/width/height alone, so the `minimized` the clamp reads never arrived — the guard
+  sat one layer above the break. The real fix carries `minimized` in the window's draft;
+  the guard now renders a `DesktopWindow` and reads where it actually lands (64 before,
+  580 after, in jsdom's 1024x768). A test of the helper is not a test of the surface.
+
+Also: `docs/ai/known-fixes.md` rows for both window defects, and wiki entries for the
+Public page window and for writing on a Text window.
+
+Not done here, and not this branch's business: the guest session cookie is stamped with
+`config.authSession.ttlMs` (12h) regardless of the caller's ttl, so `GUEST_SESSION_TTL_MS`
+(7 days) never reaches the browser and every returning guest is a new subject; and the
+upload limiter is keyed by IP, so a venue behind one NAT is a single 60-per-10-min
+bucket. Both verified against staging, both fixable in a line, both filed.
+
+## 2026-08-21 — a list you can actually maintain
+
+`view.list`. A list with headings, where a person adds, edits, deletes,
+reorders and moves a row from one heading to another — all of it document ops,
+so undo works and a collaborator sees it.
+
+It exists because the thing it replaced was a Text window holding a list as
+prose. That reads fine and cannot be maintained: moving one line from "core" to
+"would be good" means retyping two paragraphs and hoping you did not lose a
+line. The camp's gear list went through four rewrites in one session and every
+one of them was me editing a build script, because there was no surface on
+which the person who owns the list could change it.
+
+Decisions worth keeping:
+
+- **Groups are plain strings on the node, not a fixed set.** The grouping IS
+  the thinking — gear wants core/would-be-good, a shot list wants shot/cut, a
+  packing list wants bag/van. Fixing the vocabulary would make the node good
+  for exactly one list.
+- **Rows carry their group by name**, so renaming a heading has to carry its
+  rows along or the group silently empties. Guarded.
+- **Deleting a heading never deletes work** — its rows move to the first
+  remaining group. Guarded.
+- **Up/down reorder within the group, not within the flat array.** Swapping in
+  the flat array moves a row past a neighbour from another group, so on screen
+  nothing happens — the render is grouped, not flat. Guarded, because this is
+  the one that looks like it works.
+- No ports, per the dead-port rule: a list is read by people. `view.timeline`
+  only grew outputs once the transport actually read them.
+
+Nine guards in `ListPanelWindow.test.jsx`, and the four gestures were driven
+through a real browser against a real server, each one read back out of the
+saved document rather than trusted from the DOM.
+
+Also: `view.list` added to the all-nodes example in the same change — the
+palette-coverage test is the one that caught `view.publish` missing, and it
+only catches it if you run the whole suite.
+
+## 2026-08-22 — an image whose EXIF could not be stripped is never stored
+
+- `SCRUBBABLE_FORMATS` had no `heif`, so an iPhone HEIC passed the mime filter, failed the
+  scrubber with `unsupported-format`, and was stored byte-for-byte with its GPS
+  coordinates, device serial and capture time — on URLs served to anyone who has them.
+  `unsupported-format` read as benign and was in fact the leak.
+- **AVIF was leaking the same way and nobody knew.** sharp reports an AVIF's format as
+  `heif`, so the `avif` entry in the set was dead code and every AVIF upload kept its EXIF.
+- **The two Google Drive import loops never called the scrubber at all**, writing whatever
+  Drive handed them straight to the same public asset URLs. Plain JPEGs with GPS included.
+- The invariant is now the other way round: anything that cannot be scrubbed is refused
+  with a 415 and its temp file deleted, rather than stored verbatim. What counts as an
+  image is decided by magic-byte sniffing — ISO-BMFF still-image ftyp brands included,
+  video brands deliberately excluded — not by the mime type the client claims.
+- Studio's asset input had no `accept` at all, so iOS never transcoded on pick; it now
+  matches Raw's. A rejected import lands in the activity feed with the server's reason
+  instead of being a dead button.
+- The new guard was watched failing against the unfixed code: the HEIC was stored, 200
+  where 415 was expected.
+
+**Still undone, and it needs a phone.** This machine's libvips has the HEIF container but
+no HEVC decoder, and there is no `.heic` file on it, so the rejection path is proven with a
+genuine HEIC container header whose payload will not decode — the same state a real photo
+reaches here, but an inference rather than a photograph. Put one real iPhone photo through
+the upload button before relying on this.
+
+## 2026-08-22 — a guest cookie lasts the week it claims, and uploads are counted per person
+
+- The auth cookie always stamped `config.authSession.ttlMs` (12h) no matter what ttl the
+  session was actually minted with, while guest sessions are minted for
+  `GUEST_SESSION_TTL_MS`. The signed payload claimed a week, the browser dropped the
+  cookie overnight, and every returning guest came back as a new subject — new sandbox,
+  and any space grant redeemed from an invite gone with it. `setAuthSessionCookie` now
+  takes the ttl, and the two guest-minting call sites pass the one they used. All six
+  minting sites were audited; account and OAuth sessions keep their 12h, which is what
+  their payload claims.
+- The guest week is absolute from issuance, not rolling — the session re-sync never fires
+  for a guest, so the cookie is never refreshed. Fine for a six-day workshop; a longer one
+  would need the guest to re-enter.
+- `uploadLimiter` used the default address key, so 60 uploads per 10 minutes was the budget
+  for an entire NAT — a room full of people on one venue wifi shared one bucket and the
+  first few uploaders spent everyone's. It now keys on the session subject, falling back to
+  the address for callers with no subject. With `REQUIRE_AUTH` off every caller shares the
+  `auth-disabled` sentinel, so that type falls back too rather than putting a whole server
+  in one bucket. `createRateLimiter` gained a `scope` string so the 429 stops blaming
+  "this address" for a per-session count.
+- Both guards were watched failing against the unfixed code before being accepted.
+
+Still undone, found while here and deliberately out of scope: **no client code handles a
+429 anywhere**. `apiClient.js` never reads `Retry-After`, Studio's `importAssetFiles` has
+no catch so a throttled import dies silently mid-batch, and `useAssetPipeline.js` tells the
+user to check their connection when the connection is fine.
+
+## 2026-08-22 — published pages stop cropping on a portrait phone
+
+- `computeFramingCamera` fitted the entry camera to the **vertical** fov only and never
+  read the aspect, while `frameSphereInControls` — 25 lines below it in the same file —
+  already did it correctly. Two copies of one calculation that had drifted; that drift
+  is the actual defect, not the missing line. Both now go through one shared
+  `getLimitingHalfFov` / `computeFitDistance` helper so they cannot separate again.
+- The trap that makes a naive fix invisible: `PublicProjectSceneSurface` passes
+  `AUTO_FRAME_MAX_DISTANCE = 25` as `maxDistance` and it is clamped with `Math.min`, so
+  on any scene wider than about 4 units the corrected larger distance is yanked straight
+  back down. The clamp is now scaled by `getAspectFitScale(fov, aspect)` — it caps how
+  much of a sprawl the shot swallows, not a raw metric distance. The factor is exactly 1
+  for any aspect >= 1, so landscape/desktop framing is unchanged.
+- Guard: `src/utils/cameraFraming.test.js`. Portrait must be >1.9x landscape for the same
+  sphere **and** the clamped case must stay >1.9x. Both clamp tests were watched go red
+  with the scaling removed, then green with it back.
+- Looked at it, did not just test it: headless Chromium at 390x844, deviceScaleFactor 3,
+  on a real published scene page served from this worktree. Before, the entry shot sat at
+  half the needed distance — the grey plane bled off three edges, the title was jammed
+  under the Walk/Fly button, the aircraft model was out of frame entirely. After, the same
+  scene from ~2x back: aircraft, box and plane all inside the frame with margin. Landscape
+  before/after at 1440x900 are identical, as intended.
+- Two things found in the same area and deliberately NOT changed:
+  - The auto-frame bounding sphere is still built from entity **positions only**, ignoring
+    size/scale, so a large object near the edge can still overflow. A correct fix needs real
+    geometry bounds, which do not exist before mount; the cheap proxy (expand by scale) would
+    let one big ground plane or skybox blow the sphere up and push every scene far away. Left
+    open on purpose rather than shipped blind three days before a camp.
+  - `entryView: 'fixed-camera'` removing Walk/Fly is deliberate, not a bug — recorded in
+    `known-fixes.md` ("fixed-camera/code presentation modes are a deliberate per-project
+    choice and stay untouched").
+
 ## 2026-08-21 — the sweep, and the one defect that destroys work
 
 Owner asked whether the routes were fixed and the interface checked. The honest answer was
