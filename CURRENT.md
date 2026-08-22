@@ -13,10 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the Public page as a node, and two windows that were lying about themselves
-- an image whose EXIF could not be stripped is never stored
-- a guest cookie lasts the week it claims, and uploads are counted per person
-- published pages stop cropping on a portrait phone
+- the dev box says when it is behind, and Raw's work can leave the building
 
 Full detail: `PROGRESS.md`.
 
