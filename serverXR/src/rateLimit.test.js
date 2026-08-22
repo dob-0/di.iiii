@@ -43,6 +43,32 @@ describe('createRateLimiter', () => {
         expect(res.statusCode).toBe(429)
     })
 
+    // A venue is one address and many people. Any limiter that must survive a
+    // classroom or a gallery keys on the person, not the wire they share — and
+    // then it has to say so in the 429, or a throttled visitor reads that their
+    // whole building is at fault.
+    it('counts by whatever keyFn returns, and names that scope in the 429', () => {
+        const limiter = createRateLimiter({
+            windowMs: 60_000,
+            max: 1,
+            name: 'uploads',
+            keyFn: (req) => req.subject,
+            scope: 'from this session'
+        })
+        const next = vi.fn()
+        const sharedAddress = { headers: { 'x-forwarded-for': '203.0.113.7, 10.0.0.1' } }
+
+        limiter(makeReq({ ...sharedAddress, subject: 'guest:a' }), makeRes(), next)
+        limiter(makeReq({ ...sharedAddress, subject: 'guest:b' }), makeRes(), next)
+        expect(next).toHaveBeenCalledTimes(2)
+
+        const blocked = makeRes()
+        limiter(makeReq({ ...sharedAddress, subject: 'guest:a' }), blocked, next)
+        expect(next).toHaveBeenCalledTimes(2)
+        expect(blocked.statusCode).toBe(429)
+        expect(blocked.body.error).toContain('Too many uploads from this session')
+    })
+
     it('resets the bucket after the window elapses', () => {
         vi.useFakeTimers()
         try {

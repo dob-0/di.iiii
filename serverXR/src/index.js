@@ -69,7 +69,7 @@ const githubApp = require('./githubApp')
 const spaceSyncPlan = require('./spaceSyncPlan')
 const spaceLinkStore = require('./spaceLinkStore')
 const { httpRequest } = require('./httpClient')
-const { createRateLimiter } = require('./rateLimit')
+const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
@@ -540,12 +540,20 @@ const getPublicAuthState = (req) => {
   return getAuthState(req)
 }
 
-const setAuthSessionCookie = (res, value) => {
+// The cookie's Max-Age must be the SAME ttl the session payload was minted
+// with. It used to always stamp config.authSession.ttlMs (12h) while guest
+// sessions were minted for GUEST_SESSION_TTL_MS (7 days) — so the browser
+// dropped the cookie overnight and every returning guest came back as a
+// brand-new subject: new sandbox, and any space grant redeemed from an
+// invite gone with it. Callers minting anything other than an account
+// session MUST pass the ttl they used; the default only covers the
+// account/OAuth sessions that genuinely claim config.authSession.ttlMs.
+const setAuthSessionCookie = (res, value, ttlMs = config.authSession.ttlMs) => {
   res.setHeader('Set-Cookie', serializeAuthSessionCookie(value, {
     name: config.authSession.cookieName,
     path: config.authSession.cookiePath,
     secure: config.authSession.cookieSecure,
-    ttlMs: config.authSession.ttlMs
+    ttlMs
   }))
 }
 
@@ -734,7 +742,7 @@ const issueGuestSession = async (res) => {
       spaces
     }
   })
-  setAuthSessionCookie(res, result.value)
+  setAuthSessionCookie(res, result.value, GUEST_SESSION_TTL_MS)
   return { guestId, expiresAt: result.expiresAt, spaces }
 }
 
@@ -747,7 +755,29 @@ const authAttemptLimiter = createRateLimiter({ windowMs: 60_000, max: 10, name: 
 const syncKeyMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'sync-key mints' })
 const inviteMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite mints' })
 const inviteRedeemLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite redeems' })
-const uploadLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'uploads' })
+// Uploads are keyed per PERSON, not per address. A venue — a classroom, a
+// gallery, a day camp — is a dozen people behind one NAT, so an address key
+// gave the whole room a single 60-per-10-minutes budget and the first few
+// uploaders spent everyone's. Every browser caller has a subject by the time
+// this runs (the authState middleware issues/reads the session cookie before
+// any route), guests included; the address key stays as the fallback for
+// callers with no subject at all, so an anonymous flood is still bounded.
+// With REQUIRE_AUTH off, getPublicAuthState hands EVERY caller the same
+// 'auth-disabled' sentinel subject — keying on that would put a whole server
+// in one bucket, strictly worse than the address. Type 'disabled' is not a
+// person, so it falls back with the anonymous callers.
+const uploadKey = (req) => {
+  const state = req.authState
+  const subject = state && state.type !== 'disabled' ? state.subject : null
+  return subject ? `subject:${subject}` : `addr:${clientKey(req)}`
+}
+const uploadLimiter = createRateLimiter({
+  windowMs: 10 * 60_000,
+  max: 60,
+  name: 'uploads',
+  keyFn: uploadKey,
+  scope: 'from this session'
+})
 // pull/push do real disk I/O plus an outbound HTTP call to the configured
 // live server, with no limiter previously — same class of gap the upload
 // route already had one for (audit finding #9).
@@ -1687,7 +1717,10 @@ router.post('/api/invites/redeem', inviteRedeemLimiter, async (req, res, next) =
           isUnrestricted: false
         }
       })
-      setAuthSessionCookie(res, session.value)
+      // Minted with GUEST_SESSION_TTL_MS above — the cookie has to say the
+      // same, or the grant this invite just handed out expires with the
+      // cookie long before the payload it is written into does.
+      setAuthSessionCookie(res, session.value, GUEST_SESSION_TTL_MS)
     }
     markInviteUsed(resolved.inviteId)
     res.json({ ok: true, granted: true, space: spacePublic })
