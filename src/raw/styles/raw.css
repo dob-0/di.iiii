@@ -5599,3 +5599,18 @@
     font-variant-numeric: tabular-nums;
     pointer-events: none;
 }
+
+/* The Raw topbar overflowed a 390px phone BEFORE the room count was added:
+   measured at 433px of content in a 390px bar, which pushed the ⋯ button clean
+   off the right edge — and ⋯ is the only route on a phone to "Save to <space>",
+   Spaces, Wiki and Home. A canvas you cannot save from is a canvas that loses
+   your work, and nothing failed: check:toolbar-overlap tests sibling overlap,
+   not scrollWidth, so a row that simply ends past the edge passes.
+   Both words drop, never the controls: the arrow still navigates (aria-label
+   carries "Back to projects"), the number still toggles the outliner and still
+   announces "N nodes". Buys 83px, which the row spends on staying whole. */
+@media (max-width: 640px) {
+    .raw-topbar-word {
+        display: none;
+    }
+}

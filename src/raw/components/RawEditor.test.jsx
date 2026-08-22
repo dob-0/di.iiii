@@ -1300,3 +1300,43 @@ describe('RawEditor show clock stamp', () => {
         expect(stampCalls()).toEqual([])
     })
 })
+
+// Audit 2026-08-23, walking the product as a stranger: place a Cube and no cube
+// appears. The desk is deliberately clear, so what you made is standing in a
+// room behind the topbar's "Scene" button — and that button read the same
+// whether the room was empty or held your whole scene. The count is the cheapest
+// honest signal that something happened somewhere, without putting the room back
+// as wallpaper (owner, 2026-08-20: "i mean clear desk").
+describe('RawEditor — the Scene button counts what stands in the room', () => {
+    const ROOM_KEY = 'dii.raw.room-count-test'
+    const makeCube = (id) => ({ id, typeId: 'geom.cube', label: 'Cube', values: {} })
+
+    afterEach(() => {
+        window.localStorage.removeItem(ROOM_KEY)
+    })
+
+    const sceneButton = () => screen.getByRole('button', { name: /^(Scene|Scene · \d+)$/ })
+
+    it('says plain "Scene" while nothing spatial stands in the room', () => {
+        window.localStorage.setItem(ROOM_KEY, makeWorkspaceDoc([makeNodeZero()]))
+        render(<RawEditor localStorageKey={ROOM_KEY} />)
+        expect(sceneButton().textContent).toBe('Scene')
+    })
+
+    it('counts the spatial nodes standing in the room', () => {
+        window.localStorage.setItem(ROOM_KEY, makeWorkspaceDoc([makeCube('c1'), makeCube('c2'), makeNodeZero()]))
+        render(<RawEditor localStorageKey={ROOM_KEY} />)
+        expect(sceneButton().textContent).toBe('Scene · 2')
+    })
+
+    it('says how many in the title, singular and plural', () => {
+        window.localStorage.setItem(ROOM_KEY, makeWorkspaceDoc([makeCube('c1')]))
+        const { unmount } = render(<RawEditor localStorageKey={ROOM_KEY} />)
+        expect(sceneButton().getAttribute('title')).toMatch(/1 thing standing in it/)
+        unmount()
+
+        window.localStorage.setItem(ROOM_KEY, makeWorkspaceDoc([makeCube('c1'), makeCube('c2')]))
+        render(<RawEditor localStorageKey={ROOM_KEY} />)
+        expect(sceneButton().getAttribute('title')).toMatch(/2 things standing in it/)
+    })
+})
