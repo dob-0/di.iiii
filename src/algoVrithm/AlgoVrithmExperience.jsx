@@ -16,7 +16,7 @@ import TransformGizmo, { GIZMO_MODES, gizmoModesFor } from '../raw/director/Tran
 import SpatialScore from './SpatialScore.jsx'
 import { isDirectorEnabled } from '../raw/director/directorFlag.js'
 import { ALGOVRITHM_PIECE } from '../raw/director/pieces.js'
-import { reelPlayers } from './reelPlayers.js'
+import { reelPlayers, DESKTOP_MAX_PLAYERS, headsetCeiling, probeReelPixels } from './reelPlayers.js'
 import { XR_AR_ONLY, xrAvailability } from './xrAvailability.js'
 import { describeEyeHeight } from './xrStandpoint.js'
 import { totalDurationSec } from './editList.js'
@@ -491,14 +491,50 @@ function AlgoVrithmStage({
     //
     // requestIdleCallback is not in Safari, so the timeout is the real path on
     // an iPhone rather than a fallback nobody takes.
+    //
+    // The pool's SIZE is decided here too, and only here — see the decode
+    // budget in reelPlayers.js. A standalone headset cannot allocate an
+    // unlimited number of video decoders, and the way it fails is silent: the
+    // elements never produce a frame, so those cells draw black and the globe
+    // looks like it has holes in it. `immersive-vr` support is the honest test
+    // for "this is a headset" — the Quest browser runs on the device and
+    // reports true, a desktop with no headset attached reports false and keeps
+    // the whole folder.
+    //
+    // A headset's ceiling is then arithmetic rather than a constant: one reel's
+    // metadata says what a frame costs, and the budget says how many of those
+    // fit. At the folder's current 360x640 that comes out above the folder's own
+    // size, so a headset gets every clip; re-encode the reels heavier and it
+    // tightens on its own, with nothing here to remember to change.
+    //
+    // Asked here rather than read from the component's XR hook because that is
+    // declared further down; this is self-contained and resolves in
+    // milliseconds, well inside the idle deferral below.
     useEffect(() => {
-        const warm = () => { reelPlayers() }
+        let cancelled = false
+        const warm = async () => {
+            let ceiling = DESKTOP_MAX_PLAYERS
+            try {
+                const isHeadset = await navigator.xr?.isSessionSupported?.('immersive-vr')
+                if (isHeadset) ceiling = headsetCeiling(await probeReelPixels())
+            } catch {
+                // A check that throws is not a headset answer — keep the desktop
+                // ceiling rather than quietly degrading everyone's globe.
+            }
+            if (!cancelled) reelPlayers(ceiling)
+        }
         if (typeof window.requestIdleCallback === 'function') {
             const handle = window.requestIdleCallback(warm, { timeout: 2500 })
-            return () => window.cancelIdleCallback?.(handle)
+            return () => {
+                cancelled = true
+                window.cancelIdleCallback?.(handle)
+            }
         }
         const handle = window.setTimeout(warm, 1200)
-        return () => window.clearTimeout(handle)
+        return () => {
+            cancelled = true
+            window.clearTimeout(handle)
+        }
     }, [])
 
     // The live edit list. Starts as the committed one and is only ever changed

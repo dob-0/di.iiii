@@ -36,6 +36,7 @@ import PortalObject from '../project/viewport/PortalObject.jsx'
 import WorldEnvironment from '../project/viewport/WorldEnvironment.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../project/viewport/timelinePlayback.js'
+import { ringTourYaw } from '../project/viewport/ringTour.js'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
 import {
     WALK_MAX_SPEED, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
@@ -173,6 +174,9 @@ function EntityVisual({ entity, assetMap }) {
                 muted={media.muted !== false}
                 volume={media.volume}
                 loop={media.loop !== false}
+                spatial={media.spatial === true}
+                distance={media.distance}
+                maxDistance={media.maxDistance}
             />
         )
     case 'model':
@@ -814,6 +818,40 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         }
     })
 
+    return null
+}
+
+// Guided turn around a ring of objects: `worldState.ringTour` holds the visitor
+// on one stop long enough to watch it, eases round to the next, and repeats --
+// so a piece arranged in a circle shows itself to someone who touches nothing.
+//
+// It drives `playerRef.yaw`, which is the ONE control that reaches both
+// surfaces: the desktop Walker builds its lookAt from it, and XrLocomotion
+// writes it onto the XROrigin's rotation. A headset's own head tracking is
+// added on top and is never overridden -- rotating the origin is the only turn
+// available in XR, and it turns the room around a still body, so keep `turn`
+// slow and `dwell` long. The visitor always wins: the first yaw change we did
+// not make ourselves (mouse-look, thumbstick turn) hands the view over for good.
+const TOUR_YAW_EPSILON = 0.01
+function RingTour({ playerRef, config }) {
+    const startedAt = useRef(null)
+    const surrendered = useRef(false)
+    const lastApplied = useRef(null)
+
+    useFrame((state) => {
+        const player = playerRef.current
+        if (!player || surrendered.current) return
+        if (lastApplied.current !== null && Math.abs(player.yaw - lastApplied.current) > TOUR_YAW_EPSILON) {
+            surrendered.current = true
+            return
+        }
+        const now = state.clock.getElapsedTime()
+        if (startedAt.current === null) startedAt.current = now
+        const yaw = ringTourYaw(now - startedAt.current, config)
+        if (yaw === null) return
+        player.yaw = yaw
+        lastApplied.current = yaw
+    })
     return null
 }
 
@@ -1465,6 +1503,9 @@ export default function LiveProjectScene({
                     <IdleOrbit center={center} />
                 )}
                 {interactive && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
+                {interactive && worldState.ringTour?.enabled ? (
+                    <RingTour playerRef={playerRef} config={worldState.ringTour} />
+                ) : null}
                 </XR>
             </Canvas>
 

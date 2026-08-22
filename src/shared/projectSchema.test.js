@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
     PROJECT_DOCUMENT_VERSION,
     applyProjectOps,
+    buildCreationComponentsForType,
+    buildDefaultComponentsForType,
     cloneValue,
     invertProjectOps,
     normalizeProjectDocument
@@ -44,8 +46,12 @@ describe('projectSchema', () => {
         })
 
         expect(document.entities[0].type).toBe('portal')
+        // Label styling defaults must reproduce the pre-existing look exactly —
+        // white type on a plate, renderer's own font — so portals authored
+        // before those fields existed render identically.
         expect(document.entities[0].components.reference).toEqual({
-            spaceId: 'wcc', projectId: 'arthur', mode: 'embed', label: 'Arthur'
+            spaceId: 'wcc', projectId: 'arthur', mode: 'embed', label: 'Arthur',
+            labelColor: '#ffffff', labelPlate: true, labelFont: 'default'
         })
         // unknown mode falls back to 'portal'
         expect(document.entities[1].components.reference.mode).toBe('portal')
@@ -630,6 +636,39 @@ describe('invertProjectOps', () => {
         expect(invertProjectOps(base, [{ type: 'deleteEntity', payload: { entityId: 'ghost' } }])).toEqual([])
         expect(invertProjectOps(base, [{ type: 'setWorldState', payload: { patch: {} } }])).toEqual([])
         expect(invertProjectOps(base, [{ type: 'createEntity', payload: { entity: { type: 'box' } } }])).toEqual([])
+    })
+
+    // Creation defaults and normalization fallbacks come from two different
+    // builders on purpose. If they are ever merged, every video in every space
+    // ever saved starts playing sound the next time its document is loaded.
+    describe('creation defaults vs normalization fallbacks', () => {
+        it('gives a newly added video spatial sound, unmuted', () => {
+            const created = buildCreationComponentsForType('video')
+            expect(created.media.spatial).toBe(true)
+            expect(created.media.muted).toBe(false)
+        })
+
+        it('leaves an existing video silent when its document predates the fields', () => {
+            // Exactly what a document saved before spatial sound existed looks
+            // like: a media object with no spatial/muted keys at all.
+            const document = normalizeProjectDocument({
+                entities: [{ id: 'old', type: 'video', components: { media: { assetId: 'a' } } }]
+            })
+            expect(document.entities[0].components.media.spatial).toBe(false)
+            expect(document.entities[0].components.media.muted).toBe(true)
+        })
+
+        it('keeps the normalization fallback silent, whatever creation does', () => {
+            const fallback = buildDefaultComponentsForType('video')
+            expect(fallback.media.spatial).toBe(false)
+            expect(fallback.media.muted).toBe(true)
+        })
+
+        it('changes nothing for non-video types', () => {
+            for (const type of ['box', 'image', 'audio', 'model', 'text']) {
+                expect(buildCreationComponentsForType(type)).toEqual(buildDefaultComponentsForType(type))
+            }
+        })
     })
 })
 
