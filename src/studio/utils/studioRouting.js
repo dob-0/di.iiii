@@ -1,4 +1,5 @@
 import { createBasePathHelpers, joinPath } from '../../project/routing/laneBasePath.js'
+import { RESERVED_APP_SEGMENTS } from '../../utils/spaceRouting.js'
 
 export const STUDIO_PAGE_SPACES = 'spaces'
 export const STUDIO_PAGE_HUB = 'hub'
@@ -112,8 +113,25 @@ export const getStudioLocationState = (
         return { isStudio: true, page: STUDIO_PAGE_SPACES, projectId: null, spaceId: null }
     }
 
-    if (segments[0] && segments[1] === PROJECTS_SEGMENT && segments.length === 2) {
+    // …and the first segment has to be a space, not a tool. Without this guard
+    // `/raw/projects` parses as the hub of a space called "raw" — a space that
+    // can never exist, because the word is reserved — so the lane's own
+    // space-less form ("/raw/projects means the default space") was unreachable
+    // and both it and `/studio/projects` rendered "Nothing lives at raw". Both
+    // are documented addresses in the wiki.
+    if (
+        segments[0]
+        && !RESERVED_APP_SEGMENTS.includes(segments[0])
+        && segments[1] === PROJECTS_SEGMENT
+        && segments.length === 2
+    ) {
         return { isStudio: true, page: STUDIO_PAGE_HUB, projectId: null, spaceId: segments[0] }
+    }
+
+    // `/studio/projects` is Studio's own space-less form: the default space's
+    // project list, the sibling of `/raw/projects`.
+    if (segments[0] === STUDIO_RESERVED_SEGMENT && segments[1] === PROJECTS_SEGMENT && segments.length === 2) {
+        return { isStudio: true, page: STUDIO_PAGE_HUB, projectId: null, spaceId: DEFAULT_STUDIO_SPACE_ID }
     }
 
     if (segments[0] !== STUDIO_RESERVED_SEGMENT) {
