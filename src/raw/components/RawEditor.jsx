@@ -53,6 +53,7 @@ const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
 import { buildRawOutPath, buildRawProjectPath, navigateToRawPath } from '../utils/rawRouting.js'
+import { describeRootEmptyCanvas } from '../utils/emptyCanvasHint.js'
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
@@ -871,10 +872,12 @@ export default function RawEditor({
         // which hides the topbar — so at the exact moment a first-time visitor
         // arrives from "Step inside", nothing on screen distinguishes a
         // browser-only scratch surface from a space that will keep their work.
-        if (!currentScopeId && isLocalWorkspace) {
-            return `A canvas in this browser — nothing here is saved to a space yet. ${pointerVerb} to place your first node.`
+        // Crossing from Studio's ⇄ Nodes landed on exactly this screen, which is
+        // what made the two editors look unconnected: the door worked, the room
+        // it opened onto looked blank.
+        if (!currentScopeId) {
+            return describeRootEmptyCanvas({ isLocalWorkspace, entityCount: entities.length, pointerVerb })
         }
-        if (!currentScopeId) return `${pointerVerb} to place your first node.`
         const label = scopeNode?.label || 'this node'
         // The old sentence for a code-made node — "there is nothing inside it
         // to see" — taught the owner's exact wrong belief: children placed
@@ -889,7 +892,7 @@ export default function RawEditor({
                 : `Inside ${label} — code, no room of its own.`
         }
         return `Inside ${label}. ${pointerVerb} to place the first node in it.`
-    }, [currentScopeId, isLocalWorkspace, pointerVerb, scopeNode])
+    }, [currentScopeId, entities.length, isLocalWorkspace, pointerVerb, scopeNode])
 
     // …and the sentence above is only the first half of the answer. It says
     // THAT a Cube has no inside; the sheet says what it has instead. Opening
@@ -2080,7 +2083,16 @@ export default function RawEditor({
                     // live 2026-08-20: a stray double-click inside a fresh
                     // Geo buried it under a demo room). The ⋯ menu still
                     // offers the demo deliberately, anywhere.
-                    onMakeScene={currentScopeId === null && nodes.length === 0 ? handleCreateSceneExample : null}
+                    // …and never when the room already holds objects: the demo
+                    // injects six nodes, and offering that as the primary action
+                    // on somebody's Studio project invites them to bury it.
+                    onMakeScene={currentScopeId === null && nodes.length === 0 && entities.length === 0 ? handleCreateSceneExample : null}
+                    // The way to the work that IS here. Without it the crossing
+                    // from Studio ends on a blank grid whose only offer is to
+                    // start over.
+                    onOpenRoom={currentScopeId === null && nodes.length === 0 && entities.length > 0
+                        ? () => setIsWorldFullscreen(true)
+                        : null}
                     // Only inside a CODE-made node: there the empty canvas IS
                     // the question. A container's reading stays one tap away on
                     // the marker's ? — two resident buttons for one answer was

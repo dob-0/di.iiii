@@ -174,6 +174,7 @@ export default function RawGraphSurface({
     // Builds a worked example on a blank canvas. Optional: Studio wraps this
     // read-only and offers nothing.
     onMakeScene = null,
+    onOpenRoom = null,
     onCreateEdge,
     onDeleteEdge,
     onDeleteNode,
@@ -1192,6 +1193,9 @@ export default function RawGraphSurface({
                             component read-only and passes no handlers. */}
                         {onExplainScope ? (
                             <button type="button" onClick={onExplainScope}>What it&apos;s made of</button>
+                        ) : null}
+                        {onOpenRoom ? (
+                            <button type="button" onClick={onOpenRoom}>See the room</button>
                         ) : null}
                         {onMakeScene ? (
                             <button type="button" onClick={onMakeScene}>Build an example</button>
