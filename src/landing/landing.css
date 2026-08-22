@@ -951,7 +951,11 @@ body.is-landing .account-btn-wrapper {
 
 .lp-enter-note {
     font-size: 0.7rem !important;
-    color: rgba(255, 255, 255, 0.2) !important;
+    /* Was 0.2 — 1.66:1, and it carries a real link (thedi.studio). A whisper is
+       a legitimate choice for a credit line; an unreadable link is not, and no
+       alpha below ~0.46 clears the floor. It stays quieter than body copy by
+       size, caps and letter-spacing rather than by being invisible. */
+    color: var(--di-text-muted) !important;
     letter-spacing: 0.14em !important;
     text-transform: uppercase !important;
     font-family: var(--di-mono) !important;
