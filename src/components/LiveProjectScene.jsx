@@ -1606,8 +1606,14 @@ export default function LiveProjectScene({
     // Authored fog opens the walk-mode horizon for vast scenes; the far plane
     // tracks it so the opened distance is actually rendered. Defaults preserve
     // the close-world look every existing space was composed for.
+    //
+    // Colour and the off switch matter on light grounds: fog was locked to the
+    // background, which is an invisible fog on a white void — the room just
+    // ended at fogFar instead of receding.
     const fogNear = worldState.fog?.near ?? 8
     const fogFar = worldState.fog?.far ?? 50
+    const fogEnabled = worldState.fog?.enabled !== false
+    const fogColor = worldState.fog?.color || backgroundColor
     const cameraFar = Math.min(600, Math.max(200, fogFar * 1.15))
     // Zone tint sources for atmosphere blend: each portal's position + authored colour.
     const atmosphereZones = useMemo(() => entities
@@ -1630,7 +1636,7 @@ export default function LiveProjectScene({
             >
                 <XR store={xr.xrStore}>
                 <color attach="background" args={[backgroundColor]} />
-                <fog attach="fog" args={[backgroundColor, fogNear, fogFar]} />
+                {fogEnabled ? <fog attach="fog" args={[fogColor, fogNear, fogFar]} /> : null}
                 {interactive && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
                     <AtmosphereBlender zones={atmosphereZones} playerRef={playerRef} baseBg={backgroundColor} />
                 ) : null}

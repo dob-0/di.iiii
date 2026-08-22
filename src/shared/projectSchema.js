@@ -640,12 +640,17 @@ const normalizeWorldState = (world = {}) => {
             altY: ensureNumber(source.spawn.altY, 1.6)
         } : null,
         // Walk-mode atmosphere: null keeps the built-in close fog (8..50m); an
-        // authored {near, far} opens the distance for VAST scenes — the walker's
+        // authored object opens the distance for VAST scenes — the walker's
         // camera far plane follows it (LiveProjectScene), so a 150m composition
-        // is invisible without this and fully present with it.
+        // is invisible without this and fully present with it — and can recolour
+        // or switch the fog off. Colour matters because fog was previously locked
+        // to the background, which is an invisible fog on a light ground: a white
+        // room simply ended at 50m.
         fog: source.fog && typeof source.fog === 'object' ? {
             near: Math.max(0, ensureNumber(source.fog.near, 8)),
-            far: Math.max(1, ensureNumber(source.fog.far, 50))
+            far: Math.max(1, ensureNumber(source.fog.far, 50)),
+            color: source.fog.color ? ensureString(source.fog.color, defaultWorldState.backgroundColor) : null,
+            enabled: ensureBoolean(source.fog.enabled, true)
         } : null,
         gridVisible: ensureBoolean(source.gridVisible, defaultWorldState.gridVisible),
         gridSize: Math.max(1, ensureNumber(source.gridSize, defaultWorldState.gridSize)),
