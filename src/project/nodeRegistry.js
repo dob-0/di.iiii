@@ -98,6 +98,7 @@ export const FAMILY_BY_TYPE = {
     'device.keyboard': 'bring-in',
     'geom.constructor': 'make',
     'view.text': 'make',
+    'view.list': 'make',
     // Create sits with the things it makes, not with the panels it looks like.
     'view.library': 'make',
     'view.image': 'make',
@@ -173,6 +174,9 @@ export const FAMILY_BY_TYPE = {
     'view.director': 'watch',
     'stream.monitor': 'watch',
     // send out — leave the browser: MIDI/OSC out, streams, recordings
+    // Publish sits with the things that leave the browser: what this panel
+    // changes is what a stranger receives, not what the graph makes.
+    'view.publish': 'send-out',
     'device.midi.out': 'send-out',
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
@@ -185,6 +189,28 @@ export const FAMILY_BY_TYPE = {
     'agent.keeper': 'agents',
     'work.agent': 'agents',
     'work.status': 'agents',
+}
+
+// What a card says about itself when it has no ports to draw.
+//
+// A card's body is nothing but port rows, so the dead-port rule has a side
+// effect nobody designed: a node that correctly declares no ports gets a card
+// that is visibly empty, and a list holding 23 rows looks identical to one
+// holding none. This is the one line such a card can afford — the body is
+// `max(inputs, outputs, 1)` rows tall, and that height is the geometry the
+// wires are drawn from, so it must not grow.
+//
+// Returns null for types with nothing worth saying, which is most of them.
+export const getNodeCardSummary = (node) => {
+    if (!node) return null
+    if (node.typeId === 'view.list') {
+        const items = Array.isArray(node.values?.items) ? node.values.items : []
+        const rows = items.filter((it) => String(it?.text || '').trim()).length
+        const groups = Array.isArray(node.values?.groups) ? node.values.groups.length : 0
+        if (!rows) return 'empty'
+        return `${rows} row${rows === 1 ? '' : 's'} · ${groups} group${groups === 1 ? '' : 's'}`
+    }
+    return null
 }
 
 export const getNodeFamily = (typeId) => {
@@ -1399,6 +1425,29 @@ export const NODE_TYPES = {
         render: 'panel-2d',
     },
 
+    'view.list': {
+        id: 'view.list',
+        label: 'List',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        // No ports. A list is read by people, and the dead-port rule says a
+        // socket nothing consumes should not exist — see view.timeline, which
+        // only grew outputs once the transport actually read them.
+        inputs: [],
+        outputs: [],
+        // `groups` are plain strings and the rows carry their group by name,
+        // so the headings are editable without a migration. The defaults are
+        // deliberately generic: the grouping is the thinking, and fixing the
+        // vocabulary here would make the node good for one list only.
+        defaultValues: {
+            groups: ['To do'],
+            items: [],
+        },
+        defaultFrame: { width: 660, height: 560 },
+        render: 'panel-2d',
+    },
+
     'view.image': {
         id: 'view.image',
         label: 'Image',
@@ -1460,6 +1509,29 @@ export const NODE_TYPES = {
         paletteHidden: true,
         inputs: [
             { id: 'title', type: 'string', label: 'Title', default: 'Create' },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    // What a visitor to the public page gets. Everything the panel changes is
+    // a document op (presentationState / publishState), so it works for any
+    // session that can edit this project — a workshop participant holding a
+    // redeemed invite included. The space-level switches (make public, set
+    // live project) are owner-or-admin and 403 for exactly that person, so
+    // the panel reports the space as a sentence rather than offering buttons
+    // that always fail. No output port: nothing in the graph consumes publish
+    // state, and a port with no consumer draws, persists and carries nothing.
+    'view.publish': {
+        id: 'view.publish',
+        label: 'Public page',
+        category: 'view',
+        keywords: ['publish', 'public', 'share', 'live', 'visitor', 'audience', 'link', 'page'],
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Public page' },
         ],
         outputs: [],
         defaultValues: {},

@@ -1996,6 +1996,121 @@
     line-height: 1;
 }
 
+/* view.publish — what a visitor to the public page gets. Same rules as the
+   Create panel: neutral at rest, cyan only for the chosen state, 44px floor on
+   anything a finger lands on, radius 0. */
+.raw-publish-section + .raw-publish-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.raw-publish-heading {
+    font-family: var(--di-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    margin: 0 0 8px;
+}
+
+.raw-publish-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.raw-publish-choice {
+    flex: 1 1 auto;
+    min-height: 44px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.raw-publish-choice:hover,
+.raw-publish-choice:focus-visible {
+    background: rgba(77, 249, 255, 0.08);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-publish-choice.is-on {
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+    background: rgba(77, 249, 255, 0.12);
+}
+
+.raw-publish-hint {
+    margin: 8px 0 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--di-text-muted);
+}
+
+.raw-publish-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.raw-publish-toggle input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--di-cyan);
+    cursor: pointer;
+}
+
+.raw-publish-url {
+    margin: 0 0 8px;
+    font-family: var(--di-mono);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.82);
+    word-break: break-all;
+}
+
+.raw-publish-copy {
+    min-height: 44px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.raw-publish-copy:hover,
+.raw-publish-copy:focus-visible {
+    background: rgba(77, 249, 255, 0.08);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-publish-status {
+    margin: 12px 0 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--di-text-muted);
+}
+
+.raw-publish-status.is-warn {
+    color: #ffb86c;
+}
+
 .raw-text-panel {
     display: flex;
     align-items: flex-start;
@@ -2011,11 +2126,50 @@
     max-width: 100%;
 }
 
+/* The editable Text panel. `align-items: flex-start` on the parent would
+   shrink-wrap the box to its content, so the writing area is stretched back
+   to the window: a note is written by clicking anywhere in it, not by
+   hunting the last line of text. */
+.raw-text-panel-input {
+    align-self: stretch;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    resize: none;
+    font: inherit;
+    font-size: 20px;
+    line-height: 1.5;
+    color: #f4f7fb;
+    overflow-wrap: anywhere;
+}
+
+.raw-text-panel-input::placeholder {
+    color: rgba(244, 247, 251, 0.35);
+}
+
+.raw-text-panel-input:focus-visible {
+    outline: 1px solid rgba(110, 231, 249, 0.85);
+    outline-offset: 4px;
+}
+
+.raw-text-panel-driven {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: rgba(244, 247, 251, 0.55);
+}
+
 /* 20px is a presentation size on a desk; on a 390px phone it turns three
    sentences into a scrolling column, which is how the starter desk's last
    line — the one naming the way into Studio — ended up below the fold. */
 @media (max-width: 640px) {
-    .raw-text-panel-content {
+    .raw-text-panel-content,
+    .raw-text-panel-input {
         font-size: 17px;
         line-height: 1.45;
     }
@@ -5254,4 +5408,168 @@
         position: absolute;
         inset: -14px;
     }
+}
+
+/* view.list — a list somebody maintains. Rows are controls, not prose, so
+   every target clears the 44px floor the touch audit set: on a phone these
+   are thumbs, and a 24px × next to a 24px ↑ is a coin toss. */
+.raw-list-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.raw-list-group-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(244, 247, 251, 0.14);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+}
+
+.raw-list-group-name {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(244, 247, 251, 0.72);
+}
+
+.raw-list-count {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-list-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.raw-list-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+}
+
+.raw-list-text {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 0;
+    background: rgba(244, 247, 251, 0.04);
+    font: inherit;
+    font-size: 16px;
+    color: #f4f7fb;
+}
+
+.raw-list-text:focus-visible {
+    outline: none;
+    border-color: rgba(110, 231, 249, 0.85);
+}
+
+.raw-list-row-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+}
+
+.raw-list-btn {
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(244, 247, 251, 0.16);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.78);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.raw-list-btn:hover:not(:disabled) { background: rgba(244, 247, 251, 0.08) }
+.raw-list-btn:disabled { opacity: 0.3; cursor: default }
+.raw-list-btn.is-danger:hover { border-color: #ff8a7a; color: #ff8a7a }
+
+.raw-list-move {
+    height: 44px;
+    max-width: 118px;
+    padding: 0 8px;
+    border: 1px solid rgba(244, 247, 251, 0.16);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.78);
+    font: inherit;
+    font-size: 13px;
+}
+
+.raw-list-move option { background: #0d1219; color: #f4f7fb }
+
+.raw-list-add {
+    align-self: flex-start;
+    margin-top: 8px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px dashed rgba(244, 247, 251, 0.24);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.62);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Removing a heading is rarer and more consequential than removing a row, so
+   it must not compete with the row controls for the eye. It keeps the full
+   44px hit area — it just stops wearing a box until you reach for it. */
+.raw-list-group-head .raw-list-btn {
+    border-color: transparent;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-list-group-head .raw-list-btn:hover {
+    border-color: #ff8a7a;
+    color: #ff8a7a;
+}
+
+.raw-list-add:hover { border-style: solid; color: #f4f7fb }
+.raw-list-add.is-group { border-color: rgba(110, 231, 249, 0.4); color: rgba(110, 231, 249, 0.9) }
+
+/* The controls stack under the text on a phone rather than squeezing a
+   44px row into 90px of leftover width. */
+@media (max-width: 520px) {
+    .raw-list-row { align-items: stretch; flex-wrap: wrap }
+    .raw-list-text { flex-basis: 100% }
+    .raw-list-move { flex: 1; max-width: none }
+}
+
+/* The one line a portless card can afford. Clipped rather than wrapped: the
+   body is a single 22px row and its height is the geometry the wires are
+   drawn from, so this must never push it taller. */
+.raw-graph-node-summary {
+    position: absolute;
+    inset: 0 10px auto 10px;
+    top: 4px;
+    font-size: 11px;
+    line-height: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(244, 247, 251, 0.5);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
 }

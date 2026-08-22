@@ -133,6 +133,61 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-21'
     },
     {
+        id: 'public-page-node',
+        category: 'Editing',
+        title: 'The Public page window',
+        summary: 'Set what a visitor to your published page gets — from inside the node editor, without owning the space.',
+        body: [
+            'Every project has a public face: the page a stranger sees when they open its address. The Public page window is where you decide what that face is, and it sits in the node editor with everything else rather than in a separate settings screen.',
+            { list: [
+                'What a visitor gets — the 3D room they can walk in, or the code view your project builds.',
+                'Headset entry — whether the page offers AR, VR, or neither.',
+                'Camera and microphone — off by default. Turning it on stops the page being sandboxed from the site, so only do it for a page that genuinely needs a live camera.',
+                'The address — the link itself, with a copy button.'
+            ] },
+            'All four are settings on the project, so anyone who can edit the project can change them — including a collaborator who joined by invite. They save as you click, like every other edit, and undo works on them.',
+            'What the window does not offer is the space-level half: making the space public, or choosing which project the space shows at its short address. Those belong to whoever owns the space. Rather than show you buttons that would refuse, the window tells you in a sentence where the space currently stands — live, showing a different project, or private — so you know whether anyone can actually reach what you just set.',
+            'The window is a node like any other: it can be closed, minimized, moved, and it lives in the project it belongs to.'
+        ],
+        tags: ['publish', 'public', 'share', 'link', 'visitor', 'raw', 'node', 'entry view', 'xr'],
+        updated: '2026-08-21'
+    },
+    {
+        id: 'text-window',
+        category: 'Editing',
+        title: 'Writing on a Text window',
+        summary: 'A Text window is a note you can type straight into — unless something is wired to it.',
+        body: [
+            'A Text window holds writing: a title for a desk, instructions for whoever opens the project next, a list you are still working out. Click into it and type. What you write saves as you go, the same way every other edit does, and undo works on it.',
+            'Anyone who can edit the project can write in one, including a collaborator who arrived by invite. If two of you are in the project at once you will see each other\'s changes.',
+            'One case is different. A Text window\'s content can be fed by another node — wired in, like a colour is wired into a scene. When it is, the window shows the text but will not let you type, and says so: the value belongs to the node upstream, and anything typed here would be replaced the moment that node changed. Unplug the wire and the window becomes writable again.',
+            'The window is a node like any other: close it, minimize it to a bar, move it, or open it up from the graph card that carries the same name.'
+        ],
+        tags: ['text', 'note', 'writing', 'window', 'node', 'raw', 'board', 'editing'],
+        updated: '2026-08-21'
+    },
+    {
+        id: 'list-window',
+        category: 'Editing',
+        title: 'The List window',
+        summary: 'A list you actually maintain — add, edit, delete, reorder, and move a line from one group to another.',
+        body: [
+            'A List window holds a list with headings: what a project needs, what it would be nice to have, what is already done. It is the alternative to keeping a list as written text, where moving one line from one heading to another means retyping two paragraphs and hoping nothing was lost on the way.',
+            { list: [
+                'Type in a line to change it.',
+                'The arrows move a line up or down inside its own heading.',
+                'The dropdown beside a line moves it to a different heading.',
+                '× removes a line.',
+                '+ Add puts a new line under the heading you pressed it on.'
+            ] },
+            'The headings are yours. Type in one to rename it — every line under it comes along, so nothing is stranded. “+ Add a group” makes another. Removing a heading never removes work: its lines move to the first heading rather than disappearing with it.',
+            'Everything saves as you go, undo works on all of it, and anyone who can edit the project can maintain the list — including a collaborator who arrived by invite. If two of you have it open you will see each other working.',
+            'The window is a node like any other: close it, minimize it to a bar, move it, or open it from its graph card.'
+        ],
+        tags: ['list', 'checklist', 'window', 'node', 'raw', 'editing', 'groups', 'todo'],
+        updated: '2026-08-21'
+    },
+    {
         id: 'free-spaces',
         category: 'Spaces & access',
         title: '3 free spaces per account',

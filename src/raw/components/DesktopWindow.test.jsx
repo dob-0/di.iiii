@@ -5,6 +5,35 @@ import DesktopWindow from './DesktopWindow.jsx'
 const windowState = { x: 10, y: 10, width: 300, height: 200, zIndex: 1, minimized: false, pinned: false }
 
 describe('DesktopWindow', () => {
+    // Regression, and a lesson about where a guard has to sit: clampWindowFrame
+    // already placed a minimized window by its bar, and a unit test over that
+    // function passed — while every window on screen was still misplaced,
+    // because DesktopWindow rebuilt the frame from x/y/width/height alone and
+    // the `minimized` the clamp reads never arrived. Measured before the fix:
+    // a collapsed bar authored at y=640 with a stored height of 600 rendered
+    // at y≈94 on a 1440x810 desk, on top of the window above it.
+    it('places a minimized window by its bar, not by the panel it would open to', () => {
+        const collapsed = { x: 656, y: 640, width: 520, height: 600, zIndex: 9, minimized: true, pinned: false }
+        const { container } = render(
+            <DesktopWindow windowState={collapsed} title="Gear">content</DesktopWindow>
+        )
+        // jsdom is 1024x768. The bottom reserve puts the floor for a 56px bar
+        // at 580 and for the 600px panel at 36 — the gap between those two
+        // numbers IS the bug, and it is what this asserts.
+        const top = Number.parseFloat(container.querySelector('.raw-window').style.transform.split(',')[1])
+        expect(top).toBe(580)
+    })
+
+    it('still pulls an OPEN window back inside the viewport', () => {
+        const open = { x: 656, y: 640, width: 520, height: 600, zIndex: 9, minimized: false, pinned: false }
+        const { container } = render(
+            <DesktopWindow windowState={open} title="Gear">content</DesktopWindow>
+        )
+        const transform = container.querySelector('.raw-window').style.transform
+        const top = Number.parseFloat(transform.split(',')[1])
+        expect(top).toBeLessThan(640)
+    })
+
     // Regression: the pointermove/pointerup-attaching effect used to depend on
     // a mutable ref (interactionRef) instead of the `dragMode` state, so it
     // never re-ran when a drag started — pointer listeners were never

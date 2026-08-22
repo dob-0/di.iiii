@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import {
     arePortsCompatible,
+    getNodeCardSummary,
     getNodeFamily,
     getNodeInputs,
     getNodeOutputs,
@@ -1394,6 +1395,13 @@ export default function RawGraphSurface({
                                     part of the geometry the wires are drawn from. Only its
                                     contents change. See graphGeometry.test.js. */}
                                 <div style={{ position: 'relative', height: h - HEADER_HEIGHT }}>
+                                    {/* A card whose type declares no ports has a body of
+                                        pure empty box — see getNodeCardSummary. One line, and
+                                        only where there is genuinely nothing else to draw, so
+                                        it can never collide with a port row. */}
+                                    {showPorts && !inputs.length && !outputs.length && getNodeCardSummary(node) ? (
+                                        <span className="raw-graph-node-summary">{getNodeCardSummary(node)}</span>
+                                    ) : null}
                                     {tier === 'header' ? (
                                         // Too small for ports, but the wires still land here,
                                         // so mark where. Ticks sit at the exact port centres.

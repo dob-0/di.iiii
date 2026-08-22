@@ -13,6 +13,11 @@ export const DEFAULT_RAW_WORKSPACE_TOP = 64
 // a node happens to be selected — the alternative is a window that jumps
 // size the moment a selection (and therefore the delete FAB) changes.
 export const RAW_WINDOW_BOTTOM_RESERVE = 120
+// What a minimized window actually occupies: its header, and nothing else
+// (DesktopWindow renders `height: auto` and drops the body and the resizer).
+// The placement maths below has to use THIS, not the stored height — see the
+// comment on maxY.
+export const RAW_WINDOW_MINIMIZED_HEIGHT = 56
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 const hasFiniteValue = (value) => Number.isFinite(Number(value))
@@ -74,10 +79,20 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
             ? viewportWidth - width - viewportPadding
             : Math.max(minLeft, viewportWidth - width - viewportPadding))
         : (allowOverflowLeft ? nextX : Math.max(minLeft, nextX))
+    // A minimized window is a title bar, but the clamp used to place it by its
+    // STORED height — so a collapsed bar authored near the bottom got yanked
+    // upward by however tall it would be if opened, landing on top of whatever
+    // was there. Measured: a bar at y=640 with height 430 jumped to y=248 at
+    // 1440x810, straight onto the card row. Place it by what it actually
+    // occupies; `height` is still returned untouched so expanding restores the
+    // authored size.
+    const placedHeight = frame.minimized === true
+        ? Math.min(height, RAW_WINDOW_MINIMIZED_HEIGHT)
+        : height
     const maxY = viewportHeight
         ? (allowOverflowTop
-            ? viewportHeight - height - bottomEdgePadding
-            : Math.max(minTop, viewportHeight - height - bottomEdgePadding))
+            ? viewportHeight - placedHeight - bottomEdgePadding
+            : Math.max(minTop, viewportHeight - placedHeight - bottomEdgePadding))
         : (allowOverflowTop ? nextY : Math.max(minTop, nextY))
 
     // Overflow is allowed, but never total: some of the header must stay
