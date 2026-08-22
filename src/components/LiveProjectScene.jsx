@@ -1670,7 +1670,15 @@ export default function LiveProjectScene({
                         intensity={worldState.environmentIntensity}
                     />
                 )}
-                <Grid args={[80, 80]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={40} infiniteGrid />
+                {/* worldState.gridVisible is authored in the Studio and was honoured
+                    by StudioViewport only -- walk mode drew the grid unconditionally,
+                    so a space with a real floor (the WCC corridor) got a grid printed
+                    through it. Defaults to visible, so spaces that never set the flag
+                    look exactly as they did. Hidden in AR for the same reason the
+                    studio hides it: the floor there is the room you are standing in. */}
+                {worldState.gridVisible !== false && !isArActive && (
+                    <Grid args={[80, 80]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={40} infiniteGrid />
+                )}
                 <AmbientField center={center} />
                 {showEntities && rootEntities.map((entity) => (
                     <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
