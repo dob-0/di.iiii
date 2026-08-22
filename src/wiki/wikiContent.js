@@ -141,6 +141,7 @@ export const WIKI_ARTICLES = [
             'Every project has a public face: the page a stranger sees when they open its address. The Public page window is where you decide what that face is, and it sits in the node editor with everything else rather than in a separate settings screen.',
             { list: [
                 'What a visitor gets — the 3D room they can walk in, or the code view your project builds.',
+                'What is IN that room — everything the project holds. Nodes you placed and objects you made both stand in it, exactly as they do in the node editor\u2019s own viewport. A project built entirely out of nodes publishes as the room those nodes make; it is no longer an empty page.',
                 'Headset entry — whether the page offers AR, VR, or neither.',
                 'Camera and microphone — off by default. Turning it on stops the page being sandboxed from the site, so only do it for a page that genuinely needs a live camera.',
                 'The address — the link itself, with a copy button.'
@@ -150,7 +151,7 @@ export const WIKI_ARTICLES = [
             'The window is a node like any other: it can be closed, minimized, moved, and it lives in the project it belongs to.'
         ],
         tags: ['publish', 'public', 'share', 'link', 'visitor', 'raw', 'node', 'entry view', 'xr'],
-        updated: '2026-08-21'
+        updated: '2026-08-22'
     },
     {
         id: 'text-window',

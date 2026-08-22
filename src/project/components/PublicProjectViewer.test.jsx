@@ -43,6 +43,17 @@ vi.mock('../../hooks/useXrAr.js', () => ({
     })
 }))
 
+vi.mock('../../raw/PublicGraphSurface.jsx', () => ({
+    default: function MockPublicGraphSurface({ interactive }) {
+        return (
+            <div>
+                <div>viewer-graph</div>
+                <div>graph-interactive:{String(Boolean(interactive))}</div>
+            </div>
+        )
+    }
+}))
+
 vi.mock('../../studio/components/StudioViewport.jsx', () => ({
     default: function MockStudioViewport({ document, enableNavigation, showChrome, lowPower }) {
         return (
@@ -392,13 +403,12 @@ describe('PublicProjectViewer', () => {
         expect(badge).toHaveAttribute('href', '/')
     })
 
-    // A project made in the node lane publishes here as an EMPTY ROOM: this
-    // viewer renders `entities`, and no node-to-entity compile exists in the
-    // product. An empty grid reads as "the artist made nothing", which is the
-    // opposite of true — so say what it is and point at the surface that does
-    // render the graph.
+    // A project made in the node lane used to publish here as an EMPTY ROOM:
+    // this viewer rendered `entities` only. It now renders the graph too — the
+    // node editor's own viewport shows spatial nodes AND root-scope entities in
+    // one room, and the published page had simply never been pointed at it.
     describe('a project whose work is a node graph', () => {
-        const graphOnly = {
+        const graphDocument = {
             version: 1,
             document: {
                 projectMeta: { id: 'live-project', title: 'Live Project' },
@@ -408,28 +418,42 @@ describe('PublicProjectViewer', () => {
             }
         }
 
-        it('says so, and links to the live view of the graph', async () => {
-            getProjectDocumentMock.mockResolvedValue(graphOnly)
+        it('renders the graph instead of an empty entity room', async () => {
+            getProjectDocumentMock.mockResolvedValue(graphDocument)
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
 
             render(<PublicProjectViewer spaceId="dilijan" projectId="live-project" spaceLabel="Dilijan" />)
 
-            expect(await screen.findByText(/This project is a node graph/)).toBeInTheDocument()
-            expect(screen.getByRole('link', { name: /Open the live view/i }))
-                .toHaveAttribute('href', '/dilijan/raw/projects/live-project/out')
+            expect(await screen.findByText('viewer-graph')).toBeInTheDocument()
+            expect(screen.queryByText(/^viewer-scene:/)).toBeNull()
+            // A visitor may look around; an author's affordances stay behind.
+            expect(screen.getByText('graph-interactive:true')).toBeInTheDocument()
         })
 
-        it('stays quiet when the room actually has something in it', async () => {
-            getProjectDocumentMock.mockResolvedValue({
-                ...graphOnly,
-                document: { ...graphOnly.document, entities: [{ id: 'e1' }] }
-            })
+        it('does not offer Walk / Fly, which would render the room without its work', async () => {
+            // Walk mode enters LiveProjectScene, which reads `entities`. On a
+            // node-built room it would show an empty version of what the
+            // visitor is already looking at, and they would read that as the
+            // room rather than as the mode.
+            getProjectDocumentMock.mockResolvedValue(graphDocument)
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
 
             render(<PublicProjectViewer spaceId="dilijan" projectId="live-project" spaceLabel="Dilijan" />)
 
+            expect(await screen.findByText('viewer-graph')).toBeInTheDocument()
+            expect(screen.queryByRole('button', { name: /Walk \/ Fly/i })).toBeNull()
+        })
+
+        it('leaves an entities-only project on the entity renderer', async () => {
+            // The overwhelming majority of published pages. Nothing about them
+            // may change.
+            getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
             expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
-            expect(screen.queryByText(/This project is a node graph/)).toBeNull()
+            expect(screen.queryByText('viewer-graph')).toBeNull()
         })
     })
 })
