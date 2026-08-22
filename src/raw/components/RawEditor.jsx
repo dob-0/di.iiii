@@ -52,8 +52,8 @@ import { buildWikiPath } from '../../utils/spaceRouting.js'
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
-import { buildRawOutPath, navigateToRawPath } from '../utils/rawRouting.js'
-import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
+import { buildRawOutPath, buildRawProjectPath, navigateToRawPath } from '../utils/rawRouting.js'
+import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { RAW_ANATOMY_Z, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
@@ -709,6 +709,52 @@ export default function RawEditor({
         })
     }
 
+    // The bridge out of the local canvas.
+    //
+    // The landing's only call to action sends every first-time visitor to
+    // `/{space}/raw` — a canvas kept in this one browser. Until now nothing
+    // made there could become a project: no second device, no collaborator, no
+    // public link, and a cleared browser took it. The canvas was a dead end by
+    // construction, and it was the front door.
+    //
+    // Deliberately a copy, not a move: the local canvas is left exactly as it
+    // was. Someone who saves and then wants the scratch surface back still has
+    // it, and a failed save cannot cost them the work — the one thing this
+    // must never do.
+    const [isSavingToSpace, setIsSavingToSpace] = useState(false)
+    const handleSaveCanvasToSpace = useCallback(async () => {
+        if (!isLocalWorkspace || isSavingToSpace) return
+        const title = (window.prompt('Name this project', 'Canvas') || '').trim()
+        if (!title) return
+        setIsSavingToSpace(true)
+        dispatch({ type: 'append-activity', level: 'info', message: `Saving “${title}” to ${resolvedSpaceId}…` })
+        try {
+            const response = await createProject(resolvedSpaceId, { title, slug: title, source: 'raw-v2' })
+            const newId = response.project.id
+            await updateProjectDocument(newId, {
+                ...document,
+                projectMeta: {
+                    ...(document.projectMeta || {}),
+                    id: newId,
+                    spaceId: resolvedSpaceId,
+                    title,
+                    source: 'raw-v2'
+                }
+            })
+            navigateToRawPath(buildRawProjectPath(newId, resolvedSpaceId))
+        } catch (error) {
+            // Stay on the canvas with the work intact and say why. A failure
+            // here is usually scope — a guest can write to the open space and
+            // its own sandbox, and nowhere else.
+            dispatch({
+                type: 'append-activity',
+                level: 'error',
+                message: error?.message || `Could not save to ${resolvedSpaceId}. Your canvas is untouched.`
+            })
+            setIsSavingToSpace(false)
+        }
+    }, [dispatch, document, isLocalWorkspace, isSavingToSpace, resolvedSpaceId])
+
     const inspectorSections = scopedSelectedNode
         ? deriveNodeInspectorSections(scopedSelectedNode)
         : (scopedSelectedEntity
@@ -819,6 +865,15 @@ export default function RawEditor({
     )
 
     const scopeEmptyHint = useMemo(() => {
+        // At the root of an empty LOCAL canvas, say which canvas this is before
+        // saying what to do in it. The only other place that says so is the
+        // topbar title ('Local canvas'), and an empty workspace opens in zen,
+        // which hides the topbar — so at the exact moment a first-time visitor
+        // arrives from "Step inside", nothing on screen distinguishes a
+        // browser-only scratch surface from a space that will keep their work.
+        if (!currentScopeId && isLocalWorkspace) {
+            return `A canvas in this browser — nothing here is saved to a space yet. ${pointerVerb} to place your first node.`
+        }
         if (!currentScopeId) return `${pointerVerb} to place your first node.`
         const label = scopeNode?.label || 'this node'
         // The old sentence for a code-made node — "there is nothing inside it
@@ -834,7 +889,7 @@ export default function RawEditor({
                 : `Inside ${label} — code, no room of its own.`
         }
         return `Inside ${label}. ${pointerVerb} to place the first node in it.`
-    }, [currentScopeId, pointerVerb, scopeNode])
+    }, [currentScopeId, isLocalWorkspace, pointerVerb, scopeNode])
 
     // …and the sentence above is only the first half of the answer. It says
     // THAT a Cube has no inside; the sheet says what it has instead. Opening
@@ -1917,6 +1972,19 @@ export default function RawEditor({
                                                 }}
                                             >
                                                 Copy projector link
+                                            </button>
+                                        )}
+                                        {/* The way out of a browser-only canvas
+                                            and into a real project. First,
+                                            because it is the only thing here
+                                            that changes what the work IS. */}
+                                        {isLocalWorkspace && (
+                                            <button
+                                                type="button"
+                                                disabled={isSavingToSpace}
+                                                onClick={() => { setOverflowOpen(false); handleSaveCanvasToSpace() }}
+                                            >
+                                                {isSavingToSpace ? 'Saving…' : `Save to ${resolvedSpaceId}`}
                                             </button>
                                         )}
                                         {/* The platform exits — the canvas was a

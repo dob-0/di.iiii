@@ -47,6 +47,50 @@ function ProtectedSurface({ children, requiredSpaceId = null, showAccountButton 
     )
 }
 
+// The Raw lane's surfaces. Everything here is an authoring tool and stays
+// behind the gate — except the projector image of a project in a PUBLIC space.
+//
+// `/…/raw/projects/{id}/out` is the one Raw address meant for an audience: a
+// read-only render of the room, no chrome, following every edit live. Gated, it
+// handed a show machine — or anyone the "Copy projector link" control gave it
+// to — a sign-in card instead of the work. The space viewer next door has had
+// exactly this bypass all along; the Raw branch simply never got it.
+//
+// Two limits, both deliberate. The space's own canvas (`/{space}/raw/out`, no
+// project) is never public: it renders the VIEWER's localStorage, so to a
+// stranger it is their own empty canvas, and nothing is gained by opening it.
+// And a private space stays private — this reads the same `isPublic` flag the
+// rest of the product does, so "public" keeps meaning one thing.
+function RawSurfaceRoute({ rawState, spaceId }) {
+    const canBePublic = rawState.page === RAW_PAGE_OUT && Boolean(rawState.projectId)
+    const { isPublic, loading } = useSpacePublicFlag(canBePublic ? spaceId : null)
+
+    const surface = (
+        <Suspense fallback={<RouteSurfaceFallback label="Loading the node editor" detail="" />}>
+            <RawApp initialRoute={{ ...rawState, spaceId }} />
+        </Suspense>
+    )
+
+    if (canBePublic && loading) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+
+    if (canBePublic && isPublic) {
+        return surface
+    }
+
+    return (
+        <ProtectedSurface
+            requiredSpaceId={spaceId}
+            outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+            // The floating account chip must not hang over the show.
+            showAccountButton={rawState.page !== RAW_PAGE_OUT}
+        >
+            {surface}
+        </ProtectedSurface>
+    )
+}
+
 function SpaceSurfaceRoute({ appState }) {
     const canBePublic = appState.page !== APP_PAGE_PREFERENCES
     const { isPublic, loading } = useSpacePublicFlag(canBePublic ? appState.spaceId : null)
@@ -254,27 +298,7 @@ function AppRouter() {
     }
 
     if (isRawLocation(rawState)) {
-        const renderRaw = (spaceId) => (
-            // /out is the projector image: the auth gate stays (a stranger
-            // still meets the gate, not content), but the floating account
-            // chip must not hang over the show.
-            <ProtectedSurface
-                requiredSpaceId={spaceId}
-                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
-                showAccountButton={rawState.page !== RAW_PAGE_OUT}
-            >
-                <Suspense
-                    fallback={
-                        <RouteSurfaceFallback
-                            label="Loading the node editor"
-                            detail=""
-                        />
-                    }
-                >
-                    <RawApp initialRoute={{ ...rawState, spaceId }} />
-                </Suspense>
-            </ProtectedSurface>
-        )
+        const renderRaw = (spaceId) => <RawSurfaceRoute rawState={rawState} spaceId={spaceId} />
         return rawState.isDefaultSpace
             ? <LaneDefaultSpace state={rawState}>{renderRaw}</LaneDefaultSpace>
             : renderRaw(rawState.spaceId)
