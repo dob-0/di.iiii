@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the dev box says when it is behind, and Raw's work can leave the building
+- a graph publishes as the room it makes
 
 Full detail: `PROGRESS.md`.
 
