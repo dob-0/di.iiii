@@ -13,11 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Doors audit wave A shipped (#231–#235, staging-verified as guest, desktop+phone):
-  links land where their label says, Studio ⇄ Nodes doors, OAuth returns you to the
-  page you started from, the canvas got its exits, share links copy the public URL,
-  labels unified (View live / Projects — "Hub" is gone). Staging only, prod waits.
-- Parallel strand: home rule + research mirrors in-repo; the space stops being a query parameter; toolbar-overlap check asserts again; create-button naming.
+- the sweep, and the one defect that destroys work
 
 Full detail: `PROGRESS.md`.
 
