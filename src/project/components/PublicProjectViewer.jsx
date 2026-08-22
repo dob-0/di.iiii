@@ -18,7 +18,6 @@ import {
 } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
-import { buildRawOutPath } from '../../raw/utils/rawRouting.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -168,12 +167,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const presentationState = document?.presentationState || {}
     const entryView = viewMode || presentationState.entryView || 'scene'
     const showCodeView = entryView === 'code'
-    // Work made in the node lane with nothing in the entity lane. This viewer
-    // renders entities only, so such a project publishes as an empty room —
-    // see the notice below.
-    const graphOnly = entryView === 'scene'
-        && (document?.nodes?.length || 0) > 0
-        && (document?.entities?.length || 0) === 0
+    // Work in the node lane. The renderer that can show it is not the one walk
+    // mode uses — see the Walk / Fly control below.
+    const hasGraph = (document?.nodes?.length || 0) > 0
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
     // the shell's query belongs to the page it is showing — a published page
@@ -317,40 +313,13 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </Suspense>
             ) : null}
 
-            {/* A project whose work is a node graph publishes as an EMPTY ROOM
-                here: this viewer renders `entities` and there is no
-                node-to-entity compile anywhere in the product. Until that
-                exists, the honest thing is to stop pretending the room is the
-                work and point at the surface that does render the graph — the
-                projector view, which is public for a public space. Silence was
-                the worst option: an empty grid reads as "the artist made
-                nothing", which is the opposite of true. */}
-            {state.status === 'ready' && graphOnly && !isPreview && !isEmbed ? (
-                <div
-                    style={{
-                        position: 'absolute',
-                        left: '50%',
-                        bottom: '5rem',
-                        transform: 'translateX(-50%)',
-                        zIndex: 20,
-                        ...overlayCardStyle,
-                        textAlign: 'center'
-                    }}
-                >
-                    <strong style={{ display: 'block', marginBottom: '0.35rem' }}>This project is a node graph.</strong>
-                    <span style={{ display: 'block', marginBottom: '0.8rem', opacity: 0.78, fontSize: '0.92rem' }}>
-                        The room is empty because a graph is not made of objects. Open it as its makers see it.
-                    </span>
-                    <a
-                        href={buildRawOutPath(projectId, resolvedRouteSpaceId)}
-                        style={{ ...overlayButtonStyle, display: 'inline-block', textDecoration: 'none' }}
-                    >
-                        Open the live view
-                    </a>
-                </div>
-            ) : null}
-
-            {state.status === 'ready' && entryView === 'scene' && navMode === 'orbit' && !isPreview && !isEmbed ? (
+            {/* Walk mode enters LiveProjectScene, which renders `entities` and
+                not `nodes`. Offering it on a room built out of nodes would walk
+                the visitor into a version of it with the work missing — worse
+                than not offering it, because they would read the emptiness as
+                the room rather than as the mode. Hidden until walk mode can
+                render a graph. */}
+            {state.status === 'ready' && entryView === 'scene' && navMode === 'orbit' && !hasGraph && !isPreview && !isEmbed ? (
                 <button
                     type="button"
                     style={{ ...overlayButtonStyle, position: 'absolute', top: '1rem', right: '1rem', zIndex: 20 }}

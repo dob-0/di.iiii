@@ -13,6 +13,18 @@ import lazyWithReload from '../../utils/lazyWithReload.js'
 // publicViewerCodeModeGraph.test.js.
 const LiveProjectScene = lazyWithReload(() => import('../../components/LiveProjectScene.jsx'), 'live-project-scene')
 const StudioViewport = lazyWithReload(() => import('../../studio/components/StudioViewport.jsx'), 'studio-viewport')
+// Work made in the node lane. Until now the published page rendered
+// `entities` and nothing else, so a project authored as a graph published as
+// an EMPTY ROOM — an empty grid that reads as "the maker made nothing", which
+// is the opposite of true.
+//
+// This is not a compiler and does not need to be: `RawViewport` already
+// renders a scope's spatial nodes AND the root-scope entities in one room —
+// it is what the node editor's own viewport shows, and what /out has been
+// handing projectors all along. The published page had simply never been
+// pointed at it. Lazily loaded like its two siblings so the code-mode path
+// stays clear of it (see publicViewerCodeModeGraph.test.js).
+const PublicGraphSurface = lazyWithReload(() => import('../../raw/PublicGraphSurface.jsx'), 'public-graph-surface')
 
 // A scene's saved camera can go stale (e.g. left pointed off into empty
 // space mid-edit) — that's invisible to editors, who interactively orbit
@@ -108,6 +120,11 @@ export default function PublicProjectSceneSurface({
     const wantsVr = xrDefaultMode === 'vr'
     const xrEntrySupported = wantsVr ? xr.supportedXrModes.vr : xr.supportedXrModes.ar
 
+    // A document carries both lanes (`nodes` and `entities`) and either may be
+    // empty. Whichever renderer we pick has to be the one that can show
+    // everything this document holds — and only RawViewport shows both.
+    const hasGraph = (document.nodes || []).length > 0
+
     return (
         <>
             {navMode === 'walk' ? (
@@ -118,6 +135,11 @@ export default function PublicProjectSceneSurface({
                     title={title}
                     onExit={() => onNavModeChange('orbit')}
                     exitLabel="← View mode"
+                />
+            ) : hasGraph ? (
+                <PublicGraphSurface
+                    document={document}
+                    interactive={entryView !== 'fixed-camera' && !isPreview}
                 />
             ) : (
                 <StudioViewport
