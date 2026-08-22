@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import useXrAr from '../../hooks/useXrAr.js'
-import { computeFramingCamera, getPointsBoundingSphere } from '../../utils/cameraFraming.js'
+import { computeFramingCamera, getPointsBoundingSphere, getViewportAspect } from '../../utils/cameraFraming.js'
 import { overlayButtonStyle } from './publicViewerStyles.js'
 import lazyWithReload from '../../utils/lazyWithReload.js'
 
@@ -24,9 +24,12 @@ const StudioViewport = lazyWithReload(() => import('../../studio/components/Stud
 // spread edge-to-edge shrinks individual content to unreadable specks. Start
 // at a normal walk-around distance instead and let free navigation (already
 // enabled outside fixed-camera mode) cover the rest.
+// This number is authored for a landscape viewport; computeFramingCamera
+// scales it by the same aspect correction it applies to the fit itself, so a
+// portrait phone is not clamped back into a crop.
 const AUTO_FRAME_MAX_DISTANCE = 25
 
-const computeAutoFrameCamera = (document) => {
+const computeAutoFrameCamera = (document, aspect) => {
     const points = (document.entities || [])
         .map((entity) => entity?.components?.transform?.position)
         .filter(Boolean)
@@ -34,11 +37,15 @@ const computeAutoFrameCamera = (document) => {
     if (!sphere) return null
     return computeFramingCamera(sphere, {
         fov: document.worldState?.savedView?.fov,
+        aspect,
         maxDistance: AUTO_FRAME_MAX_DISTANCE
     })
 }
 
-export const resolveViewerCamera = (document) => {
+// `aspect` defaults to the live viewport: a published page is opened at
+// whatever shape the visitor's device is, and a parent's phone in portrait is
+// the narrow case the auto-frame has to survive.
+export const resolveViewerCamera = (document, aspect = getViewportAspect()) => {
     const entryView = document.presentationState?.entryView || 'scene'
     const fixedCamera = document.presentationState?.fixedCamera
     if (entryView === 'fixed-camera' && fixedCamera?.locked) {
@@ -47,7 +54,7 @@ export const resolveViewerCamera = (document) => {
     if (entryView === 'fixed-camera') {
         return fixedCamera || document.worldState?.savedView || null
     }
-    return computeAutoFrameCamera(document) || document.worldState?.savedView || null
+    return computeAutoFrameCamera(document, aspect) || document.worldState?.savedView || null
 }
 
 export default function PublicProjectSceneSurface({
