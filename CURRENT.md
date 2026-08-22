@@ -11,12 +11,14 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session
+## Last session — 2026-08-22/23 (two parallel sessions)
 
 - the dev box now says when it is behind — code, deps, data and identity are four clocks
 - Raw's exit opened: canvas saves to a space, `/out` is public, a graph publishes as its room
-- `/raw/projects` + `/studio/projects` un-broken; a phone canvas has a way home again
-- MANIFESTO §6 amended to record decisions already taken — worth the owner's review
+- `/raw/projects` + `/studio/projects` un-broken; a phone canvas has a way home again; MANIFESTO §6 amended to record decisions already taken — worth the owner's review
+- the landing's one door now opens the visitor's OWN space (Projects + Nodes + View live), never the browser-local canvas; the session is fetched on click, never on a passive view
+- landing copy rewritten on the 2026-08-21 position; two false sentences gone ("Nothing is empty when you arrive", "Sign in only to edit")
+- legacy `codeHtml` projects open in the Code window again as `index.html`; the editor scrolls and commits on idle — 4ms/keystroke on the 299KB funding board
 
 Full detail: `PROGRESS.md`.
 
@@ -27,18 +29,18 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
-- **PROD IS BEHIND** — waves A + everything of 2026-08-22 sit on staging only; prod still serves the retired three-door landing. Owner promotes after checking staging.
-- Doors waves B–E: publishing-a-graph and §6 are now DECIDED and shipped; what remains is where "Step inside" ultimately lands, plus embed-link copy. Ledger: memory `project_dii_doors_audit_2026_08_22`.
-- Walk / Fly cannot render a node graph, so it is hidden on a node room — the honest remaining gap.
+- **PROD IS BEHIND** — everything of 2026-08-22/23 sits on staging only; prod still serves the retired three-door landing. Owner promotes after checking staging.
+- Doors waves B–E: publishing-a-graph, §6 and where "Step inside" lands are all DECIDED and shipped; what remains is embed-link copy. Ledger: memory `project_dii_doors_audit_2026_08_22`.
+- Walk / Fly cannot render a node graph, so it is hidden on a node room — the honest gap.
+- `stash@{0}` (a sibling session's CURRENT.md pre-write) is still parked — owner's call, don't clear blind.
+- **Sharing the bare domain previews as an Express error page** — `/og/*splat` never matches an empty splat; the fallback card already exists (`ogRoutes.js:108-119`). Smallest fix on the list, worst symptom.
 - Staging Google OAuth secret parked by the user — memory `reference-leaked-secrets`; prod spaces all owned, mesh gate ARMED both tiers.
 - Per-space byte QUOTA still unset — needs an owner policy number (ENOSPC floor shipped).
 - Deps parked: eslint-10 #148, router-7 #150, checkout-7 #143 (its windows install-test fails).
 - `open` card teal-frame upload pending staging API token, then prod approval; director page unseen.
 - br_id_ge needs a human: rite Act III/V visuals (camera-gesture-gated), the prod room's
   first spoken line, tunnel first-binding (telegram account with no prior bot chat).
-- `httpContracts.test.js` flaky (30–51s of the ~97s suite) — rerun before believing a red; `npm run test:raw` (~21s) is the Raw loop, never the gate.
-- Green PRs go BEHIND, not CONFLICTING, when dev lands — `gh` calls both "not mergeable"; landing windows: memory `feedback-coordinate-with-peer-agents`.
-- Dirty/unmerged trees + `stash@{0}` (a parallel session's CURRENT.md pre-write) — owner's call, don't clear blind.
+- `httpContracts.test.js` flaky (30–51s of the ~97s suite) — rerun before believing a red; `npm run test:raw` (~21s) is the node loop, never the gate. Green PRs go BEHIND, not CONFLICTING, when dev lands (`gh` calls both "not mergeable") — landing windows: memory `feedback-coordinate-with-peer-agents`.
 
 ## Deploy & validation — [docs/ai/known-fixes.md](docs/ai/known-fixes.md), check before any bug hunt
 
