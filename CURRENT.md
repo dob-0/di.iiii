@@ -13,10 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- `platform` stopped standing in for the name — ~25 sentences (wiki, Terms, admin, landing) now say di.iiii; the word is NOT banned and no test guards it, the rule is a person rule in `docs/ai/vocabulary.md`.
-- The landing answered "What is di.iiii?" with the editor ("a collaborative 3D spatial editor… a shared whiteboard"); it now answers with what the code does. README's H2 followed.
-- Live labels corrected **on staging only**: space `main` `di.ii`→Works (project `di.i: open_space`→Everything made here), `platform-recordar`→RecordAR, `wcc`→WCC Exhibition. Ids and slugs untouched, all ten public URLs still 200.
-- New golden rule after the owner flagged the risk: **a shared link is a promise** — labels are free, `id`/`slug`/`publishedProjectId` are not. The last two `desk` metaphors also went (canvas); `3D Desk` and *lighting desk* stay.
+- the jam stops being a stripped editor and becomes a place you stand in
+- the jam was on no backup path; snapshots now carry project documents
 
 Full detail: `PROGRESS.md`.
 
