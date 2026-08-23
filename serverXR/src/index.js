@@ -189,6 +189,7 @@ const {
   readOpsHistory,
   readOpsHistorySince,
   removeAssetThumbnails,
+  restoreSpaceProjectDocuments,
   saveSpaceMeta,
   serveAsset,
   snapshotSpaceScene,
@@ -1527,6 +1528,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   applySceneOps,
   blankScene: BLANK_SCENE,
   broadcastLiveEvent,
+  broadcastProjectLiveEvent,
   buildMeta,
   collectSceneAssetRefs,
   config,
@@ -1567,6 +1569,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   readOpsHistory,
   readOpsHistorySince,
   removeAssetThumbnails,
+  restoreSpaceProjectDocuments,
   saveSpaceMeta,
   serveAsset,
   setUserSpaces,
@@ -1992,8 +1995,9 @@ initStorage()
     setInterval(() => {
       pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
     }, 1000 * 60 * 30)
-    // Daily scene snapshot of the open space — vandalism insurance (admin
-    // restores via POST /api/spaces/:id/restore-snapshot).
+    // Daily snapshot of the open space — its scene and its project documents,
+    // which is where the jam's contributions actually live. Vandalism
+    // insurance (admin restores via POST /api/spaces/:id/restore-snapshot).
     snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
     setInterval(() => {
       snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))

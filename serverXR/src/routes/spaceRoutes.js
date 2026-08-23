@@ -18,6 +18,7 @@ function registerSpaceRoutes(router, {
   applySceneOps,
   blankScene,
   broadcastLiveEvent,
+  broadcastProjectLiveEvent = null,
   buildMeta,
   collectSceneAssetRefs = null,
   config = {},
@@ -59,6 +60,7 @@ function registerSpaceRoutes(router, {
   readOpsHistory,
   readOpsHistorySince,
   removeAssetThumbnails,
+  restoreSpaceProjectDocuments = null,
   saveSpaceMeta,
   serveAsset,
   spacesDir,
@@ -828,8 +830,10 @@ function registerSpaceRoutes(router, {
   })
 
   // Vandalism insurance for the open space (works for any snapshotted space):
-  // put the latest scene snapshot back. Owner-or-admin; the open space has no
-  // owner, so there it is effectively admin-only.
+  // put the latest snapshot back — the scene AND the project documents it
+  // carries, since the Open Jam's contributions live in a project document.
+  // Owner-or-admin; the open space has no owner, so there it is effectively
+  // admin-only.
   router.post('/api/spaces/:spaceId/restore-snapshot', requireSpaceOwnerOrAdminWrite, async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -844,8 +848,21 @@ function registerSpaceRoutes(router, {
       // Deliberately unconditional: restoring a snapshot IS the act of
       // discarding what is there now. It reports the deltas so an accidental
       // restore is visible rather than silent.
-      const result = await replaceSceneAndBroadcast(spaceId, snapshot.scene)
-      res.json({ ok: true, restoredFrom: snapshot.takenAt, ...result })
+      const result = snapshot.scene ? await replaceSceneAndBroadcast(spaceId, snapshot.scene) : {}
+      // The other half of the room. Each restored document is announced to
+      // its own project channel the same way PUT .../document announces a
+      // full replace, so an editor holding the wiped copy resyncs live.
+      let projects = []
+      if (snapshot.projects?.length && typeof restoreSpaceProjectDocuments === 'function') {
+        const restored = await restoreSpaceProjectDocuments(spaceId, snapshot.projects, { maxOpHistory, maxOpAgeMs })
+        for (const entry of restored) {
+          if (typeof broadcastProjectLiveEvent === 'function') {
+            await broadcastProjectLiveEvent(entry.projectId, 'project-op', { version: entry.version, ops: entry.ops })
+          }
+        }
+        projects = restored.map(entry => ({ id: entry.projectId, version: entry.version }))
+      }
+      res.json({ ok: true, restoredFrom: snapshot.takenAt, projects, ...result })
     } catch (error) {
       next(error)
     }

@@ -8,6 +8,16 @@ const { getDb } = require('./db')
 const commonsStore = require('./commonsStore')
 const logger = require('./logger')
 const { isValidAssetId } = require('./assetHash')
+const {
+  appendProjectOps,
+  ensureProject,
+  getProjectPaths,
+  listProjectsInSpace,
+  loadProjectMeta,
+  normalizeProjectId,
+  upsertProjectMeta,
+  writeProjectDocument
+} = require('./projectStore')
 
 const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
 
@@ -347,7 +357,9 @@ function createSpaceStore({
   // Archive + revive: long-idle account sandboxes fold down to a scene
   // snapshot instead of occupying a space row forever — ensureOwnSandbox
   // restores the snapshot when the owner comes back. Sandboxes holding Studio
-  // projects are left alone (snapshots only capture the scene).
+  // projects are still left alone: a snapshot does now carry their documents,
+  // but folding somebody's real work down to a backup is a bigger call than a
+  // TTL sweep gets to make on its own.
   const archiveIdleAccountSandboxes = async () => {
     if (!accountSandboxTtlMs) return []
     const rows = s().selectIdleAccountSandbox.all(Date.now() - accountSandboxTtlMs)
@@ -361,20 +373,55 @@ function createSpaceStore({
     return archived
   }
 
-  // Scene-level snapshots — vandalism insurance for the communal open space.
-  // Assets stay in the space's own store, so a restore only puts the scene
-  // JSON back; the files live outside spacesDir so they never look like spaces.
+  // Snapshots — vandalism insurance for the communal open space. A snapshot
+  // holds the scene AND every project document in the space: what people make
+  // in the Open Jam (photos, text, placed objects) lives in a PROJECT
+  // document, not in scene.json, so a scene-only snapshot restored an empty
+  // room. Any guest holds editor on the open space, which is exactly why one
+  // accidental mass-delete has to be recoverable.
+  //
+  // Assets stay OUT on purpose: they are content-addressed files in the
+  // space's own store, and copying them into every snapshot would multiply
+  // the heaviest bytes on disk by `keep`. Restored JSON still names the same
+  // asset ids, and those files were never the thing a vandal could rewrite.
+  //
+  // Growth: a scene snapshot is a few KB, a project document runs to ~30 KB,
+  // and a space can hold several — so a five-project space costs ~150 KB per
+  // snapshot and roughly 1 MB across the default keep=7 rotation. Per space
+  // (only the open space is snapshotted daily), not per visitor.
+  //
+  // The files live outside spacesDir so they never look like spaces.
   const snapshotsDir = path.resolve(spacesDir, '..', 'snapshots')
+
+  // v2 snapshot files are an envelope: { snapshotVersion, takenAt, scene,
+  // projects: [{ id, meta, document }] }. Everything written before this is a
+  // bare scene object — readLatestSpaceSnapshot still reads those (v1).
+  const SNAPSHOT_VERSION = 2
+
+  // Read the documents RAW, never through readProjectDocument: that one
+  // normalizes and writes the normalized form back, and a backup path must
+  // not write to the thing it is backing up.
+  const readSpaceProjectDocuments = async (spaceId) => {
+    const entries = []
+    for (const meta of await listProjectsInSpace(spacesDir, spaceId)) {
+      const { documentPath } = getProjectPaths(spacesDir, spaceId, meta.id)
+      const document = await readJson(documentPath, null)
+      if (!document) continue
+      entries.push({ id: meta.id, meta, document })
+    }
+    return entries
+  }
 
   const snapshotSpaceScene = async (spaceId, { keep = 7 } = {}) => {
     const { scenePath } = getSpacePaths(spaceId)
     const scene = await readJson(scenePath, null)
-    if (!scene) return null
+    const projects = await readSpaceProjectDocuments(spaceId)
+    if (!scene && !projects.length) return null
     const dir = path.join(snapshotsDir, spaceId)
     await ensureDir(dir)
     const stamp = new Date().toISOString().replace(/[:.]/g, '-')
     const file = path.join(dir, `${stamp}.json`)
-    await writeJson(file, scene)
+    await writeJson(file, { snapshotVersion: SNAPSHOT_VERSION, takenAt: stamp, scene, projects })
     const entries = (await fsp.readdir(dir)).filter(name => name.endsWith('.json')).sort()
     const excess = entries.slice(0, Math.max(0, entries.length - keep))
     await Promise.all(excess.map(name => fsp.rm(path.join(dir, name), { force: true })))
@@ -391,8 +438,50 @@ function createSpaceStore({
     }
     const latest = entries[entries.length - 1]
     if (!latest) return null
-    const scene = await readJson(path.join(dir, latest), null)
-    return scene ? { scene, takenAt: latest.replace(/\.json$/, '') } : null
+    const payload = await readJson(path.join(dir, latest), null)
+    if (!payload) return null
+    const takenAt = latest.replace(/\.json$/, '')
+    // A v1 file IS the scene; it never carried projects.
+    if (payload.snapshotVersion !== SNAPSHOT_VERSION) return { scene: payload, projects: [], takenAt }
+    const projects = Array.isArray(payload.projects) ? payload.projects : []
+    if (!payload.scene && !projects.length) return null
+    return { scene: payload.scene || null, projects, takenAt }
+  }
+
+  // The restore half, symmetric with replaceSceneAndBroadcast and shaped like
+  // PUT /api/projects/:id/document: the document goes back to disk, a
+  // `replaceDocument` reset op is appended, and documentVersion is bumped so a
+  // client that is still holding the wiped copy resyncs instead of believing
+  // it is current. Returns what the caller needs to broadcast — the SSE emit
+  // belongs to the route (spaceRoutes' restore-snapshot), not to the store.
+  const restoreSpaceProjectDocuments = async (spaceId, projects = [], { maxOpHistory = 500, maxOpAgeMs = 0 } = {}) => {
+    const restored = []
+    for (const entry of (Array.isArray(projects) ? projects : [])) {
+      const projectId = normalizeProjectId(entry?.id || entry?.meta?.id || '')
+      const document = entry?.document
+      if (!projectId || !document || typeof document !== 'object') continue
+      const meta = entry.meta || {}
+      await ensureProject(spacesDir, spaceId, projectId, {
+        slug: meta.slug ?? null,
+        title: meta.title,
+        source: meta.source
+      })
+      const current = await loadProjectMeta(spacesDir, spaceId, projectId)
+      const version = (Number(current?.documentVersion) || 0) + 1
+      await writeProjectDocument(spacesDir, spaceId, projectId, document)
+      const resetOp = {
+        opId: crypto.randomUUID?.() || `project-op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        clientId: 'server',
+        type: 'replaceDocument',
+        payload: { document },
+        version,
+        timestamp: Date.now()
+      }
+      await appendProjectOps(spacesDir, spaceId, projectId, [resetOp], maxOpHistory, maxOpAgeMs)
+      await upsertProjectMeta(spacesDir, spaceId, projectId, { documentVersion: version })
+      restored.push({ projectId, version, ops: [resetOp] })
+    }
+    return restored
   }
 
   const readOpsHistory = async (spaceId) =>
@@ -574,7 +663,9 @@ function createSpaceStore({
     readLatestSpaceSnapshot,
     readOpsHistory,
     readOpsHistorySince,
+    readSpaceProjectDocuments,
     removeAssetThumbnails,
+    restoreSpaceProjectDocuments,
     snapshotSpaceScene,
     saveSpaceMeta,
     serveAsset,
