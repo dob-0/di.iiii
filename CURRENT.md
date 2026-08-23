@@ -13,8 +13,10 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Emily's algovrithm branch, landed without its typography half
-- the front door, the copy, and a page you could see but not open
+- the badge that advertised the work by covering it
+- the dark theme's secondary text was below the readability floor, and nothing could have told us
+- "where did my cube go", and the phone topbar that had already lost its ⋯
+- the crossing from Studio to Nodes landed on a screen that said the work was gone
 
 Full detail: `PROGRESS.md`.
 

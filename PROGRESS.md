@@ -5,6 +5,130 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-23 — the badge that advertised the work by covering it
+
+- Audit item #3. On Beyond Form the "Made with di.iiii — build yours" badge landed squarely on
+  the exhibition's own "ԱՇԽԱՏԱՆՔՆԵՐ / WORKS" nav — and because the badge difference-blends, the
+  two texts inverted through each other into mush. Neither could be read.
+- **Not a placement mistake.** The badge is platform chrome pinned to a fixed corner of a page
+  the platform did not author, and the published page is a sandboxed frame the parent cannot
+  read (`iframe.contentDocument` is null — checked). There is no way to detect what is under
+  the badge and dodge it. Any fixed corner eventually lands on somebody's content.
+- So it stops being big enough to cause one: the ◈ mark alone at rest, the whole sentence on
+  hover or keyboard focus. 221px → 44px, and the 44 is mostly transparent padding so the tap
+  target still clears the minimum. The link, the tooltip and the accessible name are unchanged.
+- Expanded, it drops `mix-blend-mode` and brings its own dark ground. Difference-blending is
+  right for a 14px mark that has to survive an unknown background and wrong the moment a
+  sentence unfolds across someone's text — the first version of this fix expanded into exactly
+  the same mush it was meant to end.
+- **Owner's decision**, taken with the cost stated: on touch there is no hover, so mobile
+  visitors see only the mark. That is reach given up on purpose.
+
+### Worth knowing
+
+- `box-sizing: border-box` is load-bearing here. Without it `min-width: 44px` sits outside the
+  12px padding and the mark claims **68px** of an exhibition's corner instead of the 44 it asked
+  for — measured, not reasoned.
+- The `chrome` variant (inside the live-scene header, where the platform owns the row) is
+  deliberately untouched. Only `--floating` is a guest on somebody else's page.
+
+## 2026-08-23 — the dark theme's secondary text was below the readability floor, and nothing could have told us
+
+- Came out of a walkthrough audit of the product as a stranger: the landing page's own
+  explanation of what di.iiii is was hard to read on a phone. Measured rather than argued —
+  `rgba(255,255,255,0.4)` on black is **3.66:1**, under the 4.5:1 WCAG AA floor for body text.
+- **61 failing text nodes** across `/` (54) and `/spaces` (6), plus one hardcoded outlier. All
+  but one came from a single token, `--di-text-muted`, so the fix is one line: `0.4` → `0.5`
+  (5.28:1). It still reads as muted next to `--di-text`; nothing about the design changes.
+- The outlier was `.lp-enter-note` at `rgba(255,255,255,0.2)` — **1.66:1, wrapped around a real
+  link**. No alpha below ~0.46 clears the floor, so a credit line that stays readable has to be
+  quiet by size, caps and letter-spacing rather than by being invisible.
+- Guard reads the stylesheets and computes WCAG luminance itself (`src/styles/contrast.test.js`):
+  one test on the token, one sweeping `landing.css` for any faint hardcoded white. Both watched
+  failing against the old values before being restored — the second one is what found the
+  outlier the token change alone left behind.
+- Verified by eye at 1440×900 and on iPhone 13, before vs after, on a clean worktree served
+  beside staging.
+
+### Worth knowing
+
+- This class of defect is invisible to every gate the repo has — lint, tests, build and the
+  docs check all pass on unreadable text, and it looks intentional on screen. The guard above is
+  the first thing in the repo that reads a colour and judges it.
+
+## 2026-08-23 — "where did my cube go", and the phone topbar that had already lost its ⋯
+
+- From the walkthrough audit: place a Cube in the node editor and no cube appears. It was the
+  widest gap in the whole product between what a first-timer expects and what is on screen.
+- **Working as designed — and the design was mute.** The desk is deliberately clear (owner,
+  2026-08-20: "i mean clear desk"), so what you place stands in a room reached through the
+  topbar's Scene button. That button said the same single word whether the room was empty or
+  held your whole scene, so placing the first object changed nothing in the chrome.
+- Fixed inside the ruling, not around it: **`Scene · 3`** counts what stands in the room at the
+  current scope — spatial nodes in scope plus root-scope entities, the same rule the viewport
+  draws by. Plain `Scene` when empty. No wallpaper; that was tried and rejected twice in August.
+- **Then the phone said no**, and it turned out to be saying no already. Measuring at 390px:
+  the bar carried **433px of content**, so the ⋯ button was off the right edge — on `dev`,
+  before any of this. ⋯ is the only route on a phone to "Save to <space>", Spaces, Wiki and
+  Home, so a phone canvas had no way to save the work on it. My longer label pushed the node
+  count off too, which is how I found it.
+- Both words now drop at ≤640px — "Projects" beside the arrow, "nodes" beside the count — never
+  the controls. 83px bought; measured **390/390 with nothing off-screen**, and the ⋯ visible on
+  a phone for the first time.
+
+### The gate that should have caught it
+
+`check:toolbar-overlap` is REQUIRED by `src/raw/AGENTS.md` for every topbar change, and it
+tests whether siblings *intersect* — never whether the container overflows. Every child was
+overlap-free while the last one sat past the edge, so it passed the whole time. It now measures
+`scrollWidth` vs `clientWidth` as well, and was watched failing against `dev` (426/390).
+
+### Worth carrying
+
+- A checker's blind spot is not visible from its output. This one printed "0 overlaps" in a
+  reassuring green while the thing it guards was broken — the same shape as the empty-bar bug
+  its own header comment already records. Second time for this script.
+
+## 2026-08-23 — the crossing from Studio to Nodes landed on a screen that said the work was gone
+
+- Owner's report: "landing page still the same and actually nothing is wired — Studio and Raw
+  is connected?" Two separate things, and only one of them was a bug.
+- **Not a bug:** the landing. The one-door landing shipped 2026-08-21 and is on dev and
+  staging; production still serves the retired three-door version because nothing has been
+  promoted. The owner's own dev server was also 31 commits behind `origin/dev` with a peer
+  agent's uncommitted `LandingPage.jsx` rewrite in the tree, so it showed a third variant that
+  exists nowhere else. Verified from a clean worktree on a second port rather than pulling
+  under the peer.
+- **Not a bug either:** Studio→Raw exists. `⇄ Nodes` sits in the control cluster's Display
+  section (`StudioControlCluster.jsx`), with a mobile twin in the phone topbar, and it
+  navigates to the right project.
+- **The bug:** what it arrived at. A project authored in Studio holds entities and no nodes,
+  so Raw's graph is genuinely empty — and the empty-graph sentence, "Double-click to place
+  your first node", is written for a project with nothing in it. Crossing over therefore read
+  as "the other editor threw my work away", when `RawViewport` had been rendering those same
+  entities at root scope the whole time.
+- Fixed by saying the true thing and offering the way to it: "Built in Studio — N objects in
+  the room, no nodes yet", plus a `See the room` button that opens the scene fullscreen.
+  `Build an example` is now suppressed whenever entities exist — it injects six nodes, and
+  offering that as the primary action on somebody's project invites them to bury it.
+- The sentence became a pure helper (`src/raw/utils/emptyCanvasHint.js`) because a server
+  project's document arrives through sync, which every test in `RawEditor.test.jsx` mocks —
+  in place it was unreachable from a test.
+- Verified by looking, on the local build: Studio `mini` → `⇄ Nodes` → the new sentence →
+  `See the room` → the project's video object standing on its floor, with `‹ graph` back.
+  Desktop 1440×900 and iPhone 13 (button 129×44, no horizontal scroll).
+
+### Still open, deliberately
+
+- **Jam mode hides every lane door.** In a jam project `minimal` suppresses `← Projects`,
+  `⇄ Nodes` and `↗ View live` alike. `/open/studio` redirects to `open-jam`, so the first
+  Studio a visitor sees is the one variant with no way anywhere. Left alone: whether a jam
+  kiosk should offer the crossing is the owner's call, not a defect to patch quietly.
+- **Both doors are buried.** Studio's `⇄ Nodes` lives under "Display", next to Fullscreen and
+  Hide UI; Raw's "Open in Studio" lives in the ⋯ overflow. Switching editors is not a display
+  setting. Moving them is a UI decision, not a fix.
+- **Production is still behind everything** — this, and the 2026-08-21 doors-audit wave.
+
 ## 2026-08-22 — Emily's algovrithm branch, landed without its typography half
 
 Emily pushed one commit to `emilyanikoghosyan/di.iiii feat/algovrithm-space` on
