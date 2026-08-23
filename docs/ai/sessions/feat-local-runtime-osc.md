@@ -77,3 +77,40 @@ a screenshot, not inferred from a green run.
 socket pushing into the graph, which is a different problem from sending and
 should not ride along on this. `device.ptz.osc`, the `stream.*` family and the
 RealSense/stereo sources remain unimplemented.
+
+## 2026-08-23 (later) — two worktrees had files deleted out from under them
+
+A sweep for work that existed only on this machine turned into a repair job.
+The di.iiii half of it, recorded here because the next person to open these
+trees deserves to know what happened in them:
+
+- **`~/di.iiii-dijetnode`** (`feat/raw-dijet-source`) showed 119 changed files.
+  It was 113 DELETIONS — the whole of `serverXR/src`, 0 files on disk where a
+  healthy tree has 93 — plus 14 inserted lines, every one of them a reversion
+  to a pre-2026-08-08 file. Committing it would have deleted the backend and
+  un-done `028430cf`/`7cdde5fc`, the blob-GC fix written after that bug nearly
+  deleted four irreplaceable br_id_ge stills. The mtimes name it as an
+  interrupted bulk copy at **2026-08-18 00:52**, mangling `scripts/` in a
+  contiguous alphabetical run and stopping dead partway.
+- **`~/di.iiii-rawadmin`** (`feat/raw-admin`) showed 36 changed files, all
+  deletions: `src/raw/utils/` and `.claude/agents/` emptied wholesale, dated
+  **2026-08-10** — a separate incident, not the same night.
+
+Both branches matched their pushed remotes exactly, so nothing was authored and
+nothing was lost. `git restore .` in each; both now report 0 changes and match
+their commits file for file (110/110 in dijetnode's `serverXR/src`, all seven
+Dijet panels intact). **Neither was committed** — the instruction was to commit
+and push everything, and doing that literally would have destroyed working code.
+
+Also pushed in the same sweep, for anyone looking for them: 14 di.iiii branches
+that had never reached the remote (20 distinct commits, oldest from June) plus
+the `pre-rebase-backup-20260805` tag. `git log --branches --not --remotes` is
+now empty in this repo. One commit had a same-titled but different-patch twin
+upstream and went to `rescue/gc-markup-refs-local` rather than being forced over
+anything.
+
+**A correction worth keeping:** pushing a task branch here does NOT open a PR.
+`auto-pr.yml` carries `if: github.repository != 'dob-0/di.iiii'` — it is
+fork-side only, and origin in this checkout IS the upstream. Task-branch pushes
+are pure backup; treating them as outward-facing was wrong and cost a day of
+branches sitting unpushed on one disk.
