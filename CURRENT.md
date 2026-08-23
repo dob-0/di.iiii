@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the one link most likely to be shared had no preview card
+- the one card with nothing in it was the room the product points at
 
 Full detail: `PROGRESS.md`.
 
