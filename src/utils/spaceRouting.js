@@ -11,11 +11,16 @@ export const APP_PAGE_PREFERENCES_ALIASES = [
 export const APP_PAGE_WIKI = 'wiki'
 export const APP_PAGE_PRIVACY = 'privacy'
 export const APP_PAGE_TERMS = 'terms'
+// A standalone poster page (src/garage/), not a space: it has no project
+// document, no auth and nothing in the DB to look up, so it routes like
+// /privacy rather than like /wcc.
+export const APP_PAGE_GARAGE = 'garage'
 export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
     APP_PAGE_WIKI,
     APP_PAGE_PRIVACY,
     APP_PAGE_TERMS,
+    APP_PAGE_GARAGE,
     'beta',
     'raw',
     'seed',
@@ -100,6 +105,7 @@ export const isPreferencesPageSegment = (value = '') => APP_PAGE_PREFERENCES_ALI
 export const isWikiPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_WIKI
 export const isPrivacyPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_PRIVACY
 export const isTermsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TERMS
+export const isGaragePageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_GARAGE
 
 export const buildWikiPath = () => {
     const prefix = getAppBasePrefix()
@@ -142,6 +148,12 @@ export const getAppLocationState = (locationLike = null) => {
         if (isTermsPageSegment(segment)) {
             return {
                 page: APP_PAGE_TERMS,
+                spaceId: null
+            }
+        }
+        if (isGaragePageSegment(segment)) {
+            return {
+                page: APP_PAGE_GARAGE,
                 spaceId: null
             }
         }

@@ -19,7 +19,7 @@ import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
 import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { ALGO_VRITHM_SPACE_ID, isAlgoVrithmSegment } from './algoVrithm/algoVrithmRouting.js'
-import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_GARAGE, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
@@ -33,6 +33,9 @@ const AlgoVrithmLanding = lazy(() => import('./algoVrithm/landing/AlgoVrithmLand
 const WikiPage = lazy(() => import('./wiki/WikiPage.jsx'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'))
 const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
+// Its own chunk. The page itself is DOM and SVG; three.js arrives only for the
+// headline, one level further down (src/garage/GarageSale.jsx).
+const GarageSale = lazy(() => import('./garage/GarageSale.jsx'))
 // AuthGate pulls in MUI + AccountButton -- lazy so public routes (landing,
 // wiki, any public space) that never render a gate don't pay for MUI in
 // their eager bundle (2026-07-17 perf audit).
@@ -326,6 +329,14 @@ function AppRouter() {
         return (
             <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
                 <TermsPage />
+            </Suspense>
+        )
+    }
+
+    if (appState.page === APP_PAGE_GARAGE) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <GarageSale />
             </Suspense>
         )
     }

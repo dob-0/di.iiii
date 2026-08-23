@@ -832,6 +832,26 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'garage-sale',
+        category: 'Spaces & access',
+        title: '/garage — a poster page, not a space',
+        summary: 'A moving sale published as a flat page at /garage: hand-lettered in code, its items in one editable file, and claimed by message rather than checkout.',
+        body: [
+            '/garage is a personal moving sale — two people selling what will not travel with them. It is worth reading as an example of the smallest thing this repo can host: a page with no project document, no scene and no editor behind it, added as a folder and a route.',
+            'It is deliberately NOT a space. A space route asks the server whether the space is public, and a page that fails that check sends a visitor to a sign-in screen — which is the wrong answer for a stranger following a link to a coat. So it routes the way /privacy and /terms do: an APP_PAGE_* constant in utils/spaceRouting.js, no auth, no lookup, nothing in the database to get wrong.',
+            'The lettering is a stroke font rather than a typeface. Every glyph in src/garage/markerFont.js is a set of polylines through a 1.0 em box, and two renderers read the same data: flat SVG polylines for headings and prices, and swept three.js tubes for the headline. A marker letter is a stroke, so drawing the centre line and giving it thickness looks handwritten, where an extruded typeface looks like a logo animation. The wobble is seeded from the string itself, so a word is wrong the same way on every render — jitter re-rolled per frame reads as a broken shader, not as a hand.',
+            { list: [
+                'Everything a non-developer edits is in src/garage/content.js — the items and their prices, categories, status (available / on hold / gone), the two sellers, the palette, and the one contact the claim button uses. Nothing in that file is JSX.',
+                'Photos live in public/garage/<item-slug>/ and are listed per item; an item with no photos draws a placeholder frame instead of a broken image.',
+                'There is no checkout. The claim button opens WhatsApp — or email, when there is no number — with the item and price already written into the message, because the money and the handover happen in person.',
+                'three.js loads only for the headline, one lazy boundary below the page itself, so a visitor scrolling a grid of coats on a phone does not pay for a renderer before the grid paints. The fallback while it arrives is the same lettering drawn flat, so the title never blinks out.'
+            ] },
+            'One trap it hit, worth knowing before adding any other document-style page here: styles/base.css pins html, body and #root to position: fixed; height: 100%, because the app is an editor that owns the viewport. A page written with min-height: 100vh therefore renders perfectly and cannot be scrolled, and no test catches it. Such a page has to be its own scroll container — height: 100%; overflow-y: auto — the way pages/legal.css and the landing page already are.'
+        ],
+        tags: ['garage', 'page', 'routing', 'svg', 'three.js', 'lettering', 'public'],
+        updated: '2026-08-23'
+    },
+    {
         id: 'di-cli-local',
         category: 'Getting started',
         title: 'Run di.iiii on your own machine',

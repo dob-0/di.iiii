@@ -912,3 +912,26 @@ When reviewing a PR that contains research or a decision, ask where its file
 is; when a session offers a URL, ask whether the ecosystem owns it.
 
 **Files:** `docs/research/README.md, docs/ai/RESEARCH_METHOD.md`
+
+### A document page in this app must be its own scroll container
+
+**Rule:** Any page that is a document rather than a viewport — legal text, a
+wiki article, a poster page — sets `height: 100%; overflow-y: auto` on its own
+root. Never `min-height: 100vh`.
+
+**Why:** `src/styles/base.css` pins `html, body, #root` to `position: fixed;
+height: 100%`, because the app is an editor that owns the viewport and must not
+scroll behind its panels. A page written the ordinary way therefore lays out
+correctly, paints correctly, screenshots correctly at viewport height — and
+silently cannot be scrolled. Nothing fails: no console error, no failing test,
+and `fullPage` screenshots come back the height of the viewport, which looks
+like a short page rather than a broken one. `/garage` shipped this bug and it
+was caught only by scrolling the real page in a browser.
+
+**How:** Copy the shape `src/pages/legal.css` already uses. Two follow-ons: a
+`position: sticky` bar inside that container needs the container to carry **no
+top padding**, or content scrolls past visibly in the strip above it; and a
+modal that locks scrolling must toggle the class on the page root, since
+`body { overflow: hidden }` locks an element that was never scrolling.
+
+**Files:** `src/styles/base.css, src/pages/legal.css, src/garage/garage.css`
