@@ -1,0 +1,363 @@
+/* The jam surface.
+ *
+ * Two rules govern everything here.
+ *
+ * 1. The overlay must not eat the walker's touches. The first-person walker
+ *    listens for touchstart/touchmove on the WebGL canvas itself — left half
+ *    moves, right half looks — so any element stacked over the canvas with
+ *    pointer-events:auto swallows movement for its own footprint and the
+ *    events never reach the canvas at all. So: the root layer is
+ *    pointer-events:none, and only real hit targets turn it back on.
+ * 2. Everything a thumb has to reach lives in the bottom band, above the home
+ *    indicator. A phone held one-handed at an event has one thumb and no
+ *    second hand to spare.
+ */
+
+.jam-surface {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: #05070a;
+}
+
+.jam-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    pointer-events: none;
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: #f2f5f8;
+}
+
+.jam-overlay button,
+.jam-overlay a,
+.jam-overlay input,
+.jam-overlay textarea,
+.jam-overlay label.jam-file {
+    pointer-events: auto;
+    touch-action: manipulation;
+}
+
+/* --- the top line ------------------------------------------------------- */
+
+.jam-topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: calc(env(safe-area-inset-top, 0px) + 0.7rem) 0.9rem 0.7rem;
+    background: linear-gradient(to bottom, rgba(5, 7, 10, 0.72), rgba(5, 7, 10, 0));
+}
+
+.jam-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.jam-count-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.18);
+}
+
+.jam-count-dot.is-alone {
+    background: #94a3b8;
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.16);
+}
+
+.jam-exit {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(242, 245, 248, 0.72);
+    text-decoration: none;
+    padding: 0.45rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgba(242, 245, 248, 0.18);
+    background: rgba(5, 7, 10, 0.5);
+    white-space: nowrap;
+}
+
+/* --- the one persistent control ----------------------------------------- */
+
+.jam-add-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1.1rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.jam-add {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    border: 1px solid rgba(242, 245, 248, 0.28);
+    background: rgba(12, 16, 22, 0.86);
+    color: #f2f5f8;
+    font-size: 2rem;
+    line-height: 1;
+    font-weight: 300;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+}
+
+.jam-add:active {
+    transform: scale(0.94);
+}
+
+.jam-mine-chip {
+    border: 1px solid rgba(242, 245, 248, 0.16);
+    background: rgba(5, 7, 10, 0.55);
+    color: rgba(242, 245, 248, 0.78);
+    border-radius: 999px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* --- the sheet ---------------------------------------------------------- */
+
+.jam-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: auto;
+    background: rgba(10, 13, 18, 0.96);
+    border-top: 1px solid rgba(242, 245, 248, 0.12);
+    border-radius: 1.1rem 1.1rem 0 0;
+    padding: 0.9rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.55);
+    max-height: 72dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.jam-sheet-grip {
+    width: 2.4rem;
+    height: 0.25rem;
+    border-radius: 999px;
+    background: rgba(242, 245, 248, 0.24);
+    margin: 0 auto 0.85rem;
+}
+
+.jam-sheet-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.jam-sheet-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.jam-sheet-close {
+    background: none;
+    border: none;
+    color: rgba(242, 245, 248, 0.6);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.3rem 0.4rem;
+    cursor: pointer;
+}
+
+.jam-shapes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+}
+
+.jam-shape,
+.jam-file {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 4.6rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(242, 245, 248, 0.14);
+    background: rgba(242, 245, 248, 0.05);
+    color: #f2f5f8;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.jam-shape:active,
+.jam-file:active {
+    background: rgba(242, 245, 248, 0.12);
+}
+
+.jam-shape-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.jam-file input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* --- editing your own object ------------------------------------------- */
+
+.jam-field {
+    margin-bottom: 0.85rem;
+}
+
+.jam-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(242, 245, 248, 0.5);
+    margin-bottom: 0.4rem;
+}
+
+.jam-input {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 0.7rem;
+    border: 1px solid rgba(242, 245, 248, 0.16);
+    background: rgba(242, 245, 248, 0.05);
+    color: #f2f5f8;
+    padding: 0.7rem 0.75rem;
+    font: inherit;
+    font-size: 1rem;
+    resize: vertical;
+}
+
+.jam-colours {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.jam-colour {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.jam-colour.is-on {
+    border-color: #f2f5f8;
+}
+
+.jam-row {
+    display: flex;
+    gap: 0.6rem;
+}
+
+.jam-btn {
+    flex: 1;
+    min-height: 3rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(242, 245, 248, 0.16);
+    background: rgba(242, 245, 248, 0.05);
+    color: #f2f5f8;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.jam-btn:active {
+    background: rgba(242, 245, 248, 0.12);
+}
+
+.jam-btn.is-danger {
+    border-color: rgba(248, 113, 113, 0.4);
+    color: #fca5a5;
+}
+
+.jam-mine-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.jam-mine-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 3rem;
+    padding: 0 0.85rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(242, 245, 248, 0.14);
+    background: rgba(242, 245, 248, 0.05);
+    color: #f2f5f8;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.jam-mine-swatch {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    flex: none;
+    border: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+.jam-note {
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: rgba(242, 245, 248, 0.55);
+    margin: 0.2rem 0 0;
+}
+
+.jam-status {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: calc(env(safe-area-inset-top, 0px) + 3.2rem);
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(5, 7, 10, 0.78);
+    border: 1px solid rgba(242, 245, 248, 0.16);
+    font-size: 0.76rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* A tablet or a laptop gets the same surface, just not stretched edge to
+   edge — the sheet becomes a card and the controls stay near the thumb line
+   of a held device rather than sprawling. */
+@media (min-width: 640px) {
+    .jam-sheet {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: min(30rem, calc(100% - 2rem));
+        bottom: 1rem;
+        border-radius: 1.1rem;
+        border: 1px solid rgba(242, 245, 248, 0.12);
+    }
+}
