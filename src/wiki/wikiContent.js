@@ -659,6 +659,7 @@ export const WIKI_ARTICLES = [
                 'A space’s node projects are listed at /<space>/raw/projects (same sign-in rules as Studio). /<space>/raw opens the canvas itself — a scratch surface stored in your browser, not on the server; /open/raw is that canvas addressed to the communal open space.',
                 'A canvas can become a real project: the ⋯ menu’s “Save to <space>” copies what is on it into the space you are in, names it, and opens it as a project — from then on it syncs, opens on another device, and can be shared. The canvas itself is left as it was, so the scratch surface stays yours.',
                 'One project, two editors: the ⋯ menu’s “Open in Studio” swaps the project you are in over to the Studio editor, and Studio’s toolbar “⇄ Nodes” button swaps it back. A project made here shows as “Nodes” in Studio’s project list.',
+                'Crossing from Studio into the node editor shows an empty graph, and that is the truth: a project built in Studio has objects, not nodes. The canvas says so — “Built in Studio — N objects in the room, no nodes yet” — and its “See the room” button opens the 3D view where those objects are standing. Adding a node there adds it to that same room; nothing you built in Studio is lost or hidden by crossing over.',
                 'Enter any node with its “Enter ›” button; the breadcrumb tracks your depth and Escape steps back out one level at a time.',
                 'Entering a Scene node opens its 3D viewport fullscreen; the ← Scene button in the toolbar drops back to the graph.',
                 'The palette groups its nodes into seven families by what you are doing — bring in, make, numbers, the scene, watch, send out, agents — each with its own colour, the same colour the node’s card wears on the canvas. Typing dissolves the groups into a flat search. It only lists node types that actually compute or render; a “shell” tag marks anything that places but carries nothing yet, and “local dev” marks nodes that only work against a local dev server.',
@@ -685,8 +686,8 @@ export const WIKI_ARTICLES = [
                 'A Director node (view.director) is a timeline editor for code-authored pieces, moved out of algovrithm into the node editor on 2026-08-05 and generalised the same day — it takes the piece as input rather than being welded to one, so a future piece is a registration rather than a fork. For algovrithm it can retime and reorder its beats, edit each scene’s colour, fog and lights, and drop assets onto the timeline — the same panel the Director page inside Studio opens embedded in the piece, so this is a second way to reach it, not the only one. “Save to source” writes src/algoVrithm/sequences/index.js in place with its comments intact from either one.'
             ] }
         ],
-        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started', 'anatomy', 'made-of'],
-        updated: '2026-08-21'
+        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started', 'anatomy', 'made-of', 'crossing'],
+        updated: '2026-08-23'
     },
     {
         id: 'studio-node',
