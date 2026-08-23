@@ -551,9 +551,13 @@ export const NODE_TYPES = {
         id: 'device.osc.out',
         label: 'OSC Out',
         category: 'device',
+        // 'local' is load-bearing now: OSC is UDP and a page cannot open a UDP
+        // socket, so this node reaches the wire only through a di.iiii running
+        // on the same machine. On a hosted tab it says so on the card rather
+        // than sending nothing in silence.
         runtime: 'local',
-        authoringOnly: true,
         singleton: false,
+        keywords: ['osc', 'udp', 'lighting', 'laser', 'projector', 'resolume', 'touchdesigner', 'qlab', 'show', 'dmx', 'control'],
         inputs: [
             { id: 'address', type: 'string', label: 'Address', default: '/control' },
             { id: 'value',   type: 'any',    label: 'Value'                        },
@@ -566,10 +570,15 @@ export const NODE_TYPES = {
             hostHint: 'windows',
             targetHost: '127.0.0.1',
             targetPort: 9000,
+            // Continuous control is most of what OSC carries and JS cannot tell
+            // 1.0 from 1, so the default is float; 'int' is here for the desks
+            // that want a channel or an index. See serverXR/src/osc.js.
+            numberAs: 'float',
         },
         configInputs: [
             { id: 'targetHost', type: 'string', label: 'Target Host' },
             { id: 'targetPort', type: 'number', label: 'Target Port' },
+            { id: 'numberAs',   type: 'string', label: 'Numbers as (float/int)' },
         ],
         render: 'hidden',
     },
@@ -2841,12 +2850,14 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'source.insta360',
     'source.stereo',
     'source.realsense.d405',
-    // devices — no OSC client (UDP, needs the local bridge).
-    // device.midi.in came off this list on 2026-08-08, device.midi.out on
-    // 2026-08-21: Web MIDI is real in the page in BOTH directions now.
+    // devices. device.midi.in came off this list on 2026-08-08, device.midi.out
+    // on 2026-08-21 (Web MIDI is real in the page in both directions), and
+    // device.osc.out on 2026-08-23 — the local runtime exists now, so the page
+    // composes the message and a di.iiii on the same machine sends the packet
+    // (serverXR/src/osc.js + routes/oscRoutes.js). OSC IN still needs a
+    // listening socket and a way to push into the graph, which is not this.
     'device.ptz.osc',
     'device.osc.in',
-    'device.osc.out',
     // streaming — no compositor, no transport
     'stream.compositor',
     'stream.switcher',

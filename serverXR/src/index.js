@@ -44,6 +44,7 @@ const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerOgRoutes } = require('./routes/ogRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerWorkStatusRoutes } = require('./routes/workStatusRoutes')
+const { registerOscRoutes } = require('./routes/oscRoutes')
 const { registerAgentRunRoutes } = require('./routes/agentRunRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerAiConnectionRoutes } = require('./routes/aiConnectionRoutes')
@@ -1486,6 +1487,7 @@ registerStatusRoutes(router, {
 })
 
 registerWorkStatusRoutes(router, {})
+registerOscRoutes(router)
 registerAgentRunRoutes(router, {})
 
 registerIntegrationRoutes(router)

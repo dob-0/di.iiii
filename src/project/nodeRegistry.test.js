@@ -333,9 +333,12 @@ describe('unimplemented node types', () => {
     it('withholds types with nothing behind them from the palette', () => {
         const offered = listNodeTypes().map((type) => type.id)
         // device.midi.in left this list on 2026-08-08 — Web MIDI is real in the
-        // page, so it is implemented. Same for device.midi.out since 2026-08-21.
-        // device.osc.out stands in their place: no UDP without the bridge.
-        for (const id of ['source.ar', 'device.osc.out', 'stream.compositor', 'universe.link']) {
+        // page, so it is implemented. Same for device.midi.out since 2026-08-21,
+        // and device.osc.out on 2026-08-23 once the local runtime could put a
+        // UDP packet on the wire. device.osc.IN stands in their place: hearing
+        // OSC needs a listening socket pushing into the graph, which is not the
+        // same problem as sending.
+        for (const id of ['source.ar', 'device.osc.in', 'stream.compositor', 'universe.link']) {
             expect(offered).not.toContain(id)
         }
     })

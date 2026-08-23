@@ -3,6 +3,7 @@ import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
 import { computeOutput as deviceKeyboard } from './device.keyboard/runtime.js'
 import { computeOutput as deviceMidiOut } from './device.midi.out/runtime.js'
+import { computeOutput as deviceOscOut } from './device.osc.out/runtime.js'
 import { computeOutput as geomArray } from './geom.array/runtime.js'
 import { computeOutput as geomCone } from './geom.cone/runtime.js'
 import { computeOutput as geomCylinder } from './geom.cylinder/runtime.js'
@@ -66,6 +67,7 @@ export const NODE_RUNTIMES = new Map([
     ['colour.split', colourSplit],
     ['device.keyboard', deviceKeyboard],
     ['device.midi.out', deviceMidiOut],
+    ['device.osc.out', deviceOscOut],
     ['geom.array', geomArray],
     ['geom.cone', geomCone],
     ['geom.cylinder', geomCylinder],
