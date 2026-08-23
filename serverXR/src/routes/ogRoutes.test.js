@@ -83,6 +83,27 @@ describe('the og route, through the real mount', () => {
     expect(r.status).toBe(200)
     expect(r.body).toContain('/brand/og-image.png')
   })
+
+  // The bare domain — the single most-shared link there is. `*splat` requires at
+  // least one segment, so `/og` and `/og/` fell past the router entirely and a
+  // crawler got nginx's 403 page instead of a card. The "no handle" fallback was
+  // already written; it was unreachable. Watched failing at 404 before the fix.
+  it('gives the platform card for the bare domain, both spellings', async () => {
+    for (const path of ['/serverXR/og/', '/serverXR/og']) {
+      const r = await hit(path)
+      expect(r.status, `${path} must answer`).toBe(200)
+      expect(r.body).toContain('/brand/og-image.png')
+      expect(r.body).toContain('<meta property="og:title" content="di.iiii')
+    }
+  })
+
+  // ...and it must send the crawler to the front door, not back to the path
+  // that just missed, which is a loop.
+  it('points the bare-domain card at the origin, not at /og', async () => {
+    const r = await hit('/serverXR/og/')
+    expect(r.body).toContain('rel="canonical" href="https://di-studio.xyz"')
+    expect(r.body).not.toContain('href="https://di-studio.xyz/og')
+  })
 })
 
 // ── the public origin ─────────────────────────────────────────────────────
