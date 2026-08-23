@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act, cleanup, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, act, cleanup, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TextPanelWindow from './TextPanelWindow.jsx'
 
@@ -234,8 +234,11 @@ describe('RawEditor canvas mode', () => {
 
 // Product decision 2026-07-17: Node 0 is an ordinary node — deleting it (via
 // either the Delete FAB or the graph canvas's own delete path) behaves exactly
-// like deleting any other node, no special confirmation. Only Clear the canvas
-// (a document-wide wipe) still confirms.
+// like deleting any other node. Since the delete guard (a shared space is
+// five people who can take each other's work with one keystroke) every delete
+// asks first; the decision that survives is that Node 0 gets the SAME question
+// as any other node, never an extra one of its own. window.confirm stays
+// banned everywhere: a native dialog blocks the event loop.
 describe('RawEditor delete/reset confirmations', () => {
     const GUARD_STORAGE_KEY = 'test-node0-delete-guard'
 
@@ -255,13 +258,15 @@ describe('RawEditor delete/reset confirmations', () => {
         )
     }
 
-    it('deletes Node 0 via the Delete FAB with no confirmation, same as any other node', () => {
+    it('deletes Node 0 via the Delete FAB through the same confirm as any other node', () => {
         seedSelectedNodeZero()
         const confirmSpy = vi.spyOn(window, 'confirm')
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
 
         fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+        expect(mockApplyLocalOps).not.toHaveBeenCalled()
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }))
 
         expect(confirmSpy).not.toHaveBeenCalled()
         const deletedNode0 = mockApplyLocalOps.mock.calls
@@ -271,7 +276,10 @@ describe('RawEditor delete/reset confirmations', () => {
         expect(deletedNode0).toBe(true)
     })
 
-    it('deletes Node 0 via the graph canvas\'s own delete path with no confirmation', () => {
+    // The graph surface is mocked here, so this covers RawEditor's half only:
+    // it must not add a confirm of its own on top of the surface's (the real
+    // one lives in RawGraphSurface and is tested there).
+    it('deletes Node 0 via the graph canvas\'s own delete path with no second confirm', () => {
         seedSelectedNodeZero()
         const confirmSpy = vi.spyOn(window, 'confirm')
         mockApplyLocalOps.mockClear()
@@ -348,7 +356,7 @@ describe('RawEditor delete/reset confirmations', () => {
         expect(screen.queryByText('Node 0')).toBeNull()
     })
 
-    it('never asks for confirmation when deleting a normal (non-root) node', () => {
+    it('asks the same once for a normal (non-root) node — no extra question for Node 0', () => {
         window.localStorage.setItem(
             GUARD_STORAGE_KEY,
             JSON.stringify({
@@ -362,6 +370,8 @@ describe('RawEditor delete/reset confirmations', () => {
         render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
 
         fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+        expect(screen.getByRole('dialog')).toHaveTextContent('Delete “Test Cube”?')
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }))
 
         expect(confirmSpy).not.toHaveBeenCalled()
         const deletedCube = mockApplyLocalOps.mock.calls

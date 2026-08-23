@@ -34,6 +34,8 @@ import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSy
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
+import { currentAuthor } from '../../project/authorship.js'
+import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { readNode } from '../../project/graph/nodeReading.js'
@@ -229,6 +231,7 @@ export default function RawEditor({
         anonymousLabel: 'Guest',
         userIdPrefix: 'raw-user'
     })
+    const { requestDelete, deleteConfirm } = useDeleteConfirm()
     useEffect(() => {
         if (chatOpen) setReadChatCount(presence.messages.length)
     }, [chatOpen, presence.messages.length])
@@ -676,6 +679,7 @@ export default function RawEditor({
     const handleCreateEntity = useCallback((type) => {
         const count = (state.document.entities || []).length
         const entity = createEntityOfType(type, {
+            createdBy: currentAuthor(displayName),
             components: {
                 transform: { position: [((count % 4) - 1.5) * 1.4, 0, Math.floor(count / 4) * -1.8] }
             }
@@ -688,27 +692,38 @@ export default function RawEditor({
         dispatch({ type: 'select-entity', entityId: entity.id })
     }, [applyLocalOps, dispatch, state.document.entities])
 
+    // Nothing is applied until the confirm comes back: a delete is the one
+    // edit the person who loses the work cannot undo, because undo history is
+    // per-client.
     const handleDeleteSelected = useCallback(() => {
         if (scopedSelectedNode) {
-            applyLocalOps([
-                {
-                    type: 'deleteNode',
-                    payload: { nodeId: scopedSelectedNode.id }
-                },
-                {
-                    type: 'setWorkspaceState',
-                    payload: { patch: { selectedNodeId: null } }
-                }
-            ], { activityMessage: `Deleted ${scopedSelectedNode.label}.`, activityLevel: 'warning' })
+            requestDelete(
+                { id: scopedSelectedNode.id, name: scopedSelectedNode.label, author: scopedSelectedNode.createdBy },
+                () => applyLocalOps([
+                    {
+                        type: 'deleteNode',
+                        payload: { nodeId: scopedSelectedNode.id }
+                    },
+                    {
+                        type: 'setWorkspaceState',
+                        payload: { patch: { selectedNodeId: null } }
+                    }
+                ], { activityMessage: `Deleted ${scopedSelectedNode.label}.`, activityLevel: 'warning' })
+            )
             return
         }
         if (!scopedSelectedEntity) return
-        applyLocalOps({
-            type: 'deleteEntity',
-            payload: { entityId: scopedSelectedEntity.id }
-        }, { activityMessage: `Deleted ${scopedSelectedEntity.name}.`, activityLevel: 'warning' })
-        dispatch({ type: 'select-entity', entityId: null })
-    }, [applyLocalOps, dispatch, scopedSelectedEntity, scopedSelectedNode])
+        requestDelete(
+            { id: scopedSelectedEntity.id, name: scopedSelectedEntity.name, author: scopedSelectedEntity.createdBy },
+            () => {
+                applyLocalOps({
+                    type: 'deleteEntity',
+                    payload: { entityId: scopedSelectedEntity.id }
+                }, { activityMessage: `Deleted ${scopedSelectedEntity.name}.`, activityLevel: 'warning' })
+                dispatch({ type: 'select-entity', entityId: null })
+            }
+        )
+    }, [applyLocalOps, dispatch, requestDelete, scopedSelectedEntity, scopedSelectedNode])
 
     const handleResetLocalWorkspace = () => {
         if (!isLocalWorkspace) return
@@ -968,7 +983,8 @@ export default function RawEditor({
             values,
             graphX: cardX,
             graphY: cardY,
-            parentId: currentScopeId
+            parentId: currentScopeId,
+            createdBy: currentAuthor(displayName)
         })
         if (!nextNode) return
         const workspacePatch = { selectedNodeId: nextNode.id }
@@ -1041,7 +1057,8 @@ export default function RawEditor({
                     // Fan them out so a multi-file drop doesn't stack cards.
                     graphX: (place.graphX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2) + (index * 32),
                     graphY: Math.max(20, (place.graphY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2) + (index * 32)),
-                    parentId: targetScopeId
+                    parentId: targetScopeId,
+                    createdBy: currentAuthor(displayName)
                 })
                 if (!node) throw new Error(`unknown node type ${typeId}`)
                 ops.push({ type: 'upsertAsset', payload: { asset } })
@@ -1311,7 +1328,8 @@ export default function RawEditor({
             },
             graphX: (node.graphX ?? 0) + (dir === 'out' ? 260 : -260),
             graphY: node.graphY ?? 0,
-            parentId: currentScopeId
+            parentId: currentScopeId,
+            createdBy: currentAuthor(displayName)
         })
         if (!door) return
         const edge = dir === 'out'
@@ -1366,7 +1384,10 @@ export default function RawEditor({
             parentId: source.parentId || null,
             graphX: (source.graphX || 0) + 48,
             graphY: (source.graphY || 0) + 48,
-            values
+            values,
+            // The copy belongs to whoever made it, not to the original's
+            // author — see cloneSubtree in Studio's clipboard.
+            createdBy: currentAuthor(displayName)
         })
         if (!copy) return
         applyLocalOps(
@@ -2467,6 +2488,8 @@ export default function RawEditor({
                 onCreate={handlePaletteCreate}
                 commands={paletteCommands}
             />
+
+            {deleteConfirm}
 
         </main>
     )

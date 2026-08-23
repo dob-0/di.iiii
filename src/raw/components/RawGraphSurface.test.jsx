@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 // The floor the auto-fit will not go below; the door must survive it.
 const FIT_MIN_USEFUL_ZOOM_FOR_TEST = 0.34
@@ -615,10 +615,12 @@ describe('RawGraphSurface', () => {
         fireEvent.keyDown(window, { key: 'Delete' })
 
         expect(onDeleteNode).not.toHaveBeenCalled()
+        // Out of scope means out of scope: not even the question is asked.
+        expect(screen.queryByRole('dialog')).toBeNull()
     })
 
-    it('still deletes a selected node that IS on this surface', () => {
-        const node = makeNode('geom.cube', { id: 'cube-1' })
+    it('still deletes a selected node that IS on this surface, once confirmed', () => {
+        const node = makeNode('geom.cube', { id: 'cube-1', label: 'My Cube' })
         const onDeleteNode = vi.fn()
 
         render(
@@ -631,8 +633,59 @@ describe('RawGraphSurface', () => {
         )
 
         fireEvent.keyDown(window, { key: 'Backspace' })
+        const dialog = screen.getByRole('dialog')
+        expect(dialog).toHaveTextContent('Delete “My Cube”?')
+        expect(onDeleteNode).not.toHaveBeenCalled()
+
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }))
 
         expect(onDeleteNode).toHaveBeenCalledWith('cube-1')
+    })
+
+    // The INPUT/TEXTAREA/contentEditable guard: a node label ends in a
+    // backspace like any other typing, and that must not take the node.
+    it('Backspace while typing in a field neither deletes nor asks', () => {
+        const node = makeNode('geom.cube', { id: 'cube-1', label: 'My Cube' })
+        const onDeleteNode = vi.fn()
+
+        render(
+            <>
+                <input aria-label="a name field" />
+                <RawGraphSurface
+                    nodes={[node]}
+                    edges={[]}
+                    selectedNodeId={'cube-1'}
+                    onDeleteNode={onDeleteNode}
+                />
+            </>
+        )
+
+        const field = screen.getByLabelText('a name field')
+        fireEvent.keyDown(field, { key: 'Backspace' })
+        fireEvent.keyDown(field, { key: 'Delete' })
+
+        expect(screen.queryByRole('dialog')).toBeNull()
+        expect(onDeleteNode).not.toHaveBeenCalled()
+    })
+
+    it('cancelling the confirm leaves the node alone', () => {
+        const node = makeNode('geom.cube', { id: 'cube-1', label: 'My Cube' })
+        const onDeleteNode = vi.fn()
+
+        render(
+            <RawGraphSurface
+                nodes={[node]}
+                edges={[]}
+                selectedNodeId={'cube-1'}
+                onDeleteNode={onDeleteNode}
+            />
+        )
+
+        fireEvent.keyDown(window, { key: 'Backspace' })
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }))
+
+        expect(onDeleteNode).not.toHaveBeenCalled()
+        expect(screen.queryByRole('dialog')).toBeNull()
     })
 
     // A card that holds something is a place you can go; one that does not is

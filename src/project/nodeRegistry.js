@@ -2808,6 +2808,9 @@ export const createNode = (typeId, options = {}) => {
         graphY:    options.graphY    ?? 0,
         runtimeId: options.runtimeId || null,
         parentId:  options.parentId  || null,
+        // Same contract as createEntityOfType's: handed in by the caller so
+        // this stays pure, and absent means unowned.
+        createdBy: options.createdBy || null,
     }
 }
 

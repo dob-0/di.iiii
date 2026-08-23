@@ -471,6 +471,66 @@ describe('projectSchema', () => {
     })
 })
 
+// The author stamp only exists if the normalizer names it. Both normalizers
+// return a literal object, so an unlisted field is dropped on every op apply
+// and every document load — the op-log would hold an author the rebuilt
+// document does not have, and the delete guard would read every object in the
+// space as unowned.
+describe('the author stamp survives normalization', () => {
+    it('keeps createdBy on an entity, through creation and through an op apply', () => {
+        const createdBy = { subject: 'guest:ani', label: 'Ani' }
+        const document = normalizeProjectDocument({
+            entities: [{ id: 'e1', type: 'box', name: 'Tower', createdBy }]
+        })
+        expect(document.entities[0].createdBy).toEqual(createdBy)
+
+        const applied = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createEntity', payload: { entity: { id: 'e2', type: 'box', createdBy } } }
+        ])
+        expect(applied.entities[0].createdBy).toEqual(createdBy)
+    })
+
+    it('keeps createdBy on a node', () => {
+        const createdBy = { subject: 'guest:ani', label: 'Ani' }
+        const document = normalizeProjectDocument({
+            nodes: [{ id: 'n1', typeId: 'geom.cube', label: 'Cube', values: {}, createdBy }]
+        })
+        expect(document.nodes[0].createdBy).toEqual(createdBy)
+    })
+
+    // Editing somebody's object is not taking it over.
+    it('an updateEntity op does not erase who made it', () => {
+        const createdBy = { subject: 'guest:ani', label: 'Ani' }
+        const start = normalizeProjectDocument({
+            entities: [{ id: 'e1', type: 'box', name: 'Tower', createdBy }]
+        })
+        const after = applyProjectOps(start, [
+            { type: 'updateEntity', payload: { entityId: 'e1', patch: { name: 'Renamed' } } }
+        ])
+        expect(after.entities[0].name).toBe('Renamed')
+        expect(after.entities[0].createdBy).toEqual(createdBy)
+    })
+
+    // Everything made before the stamp existed. Unowned, not yours.
+    it('normalizes a legacy entity and any half-formed author to null', () => {
+        const document = normalizeProjectDocument({
+            entities: [
+                { id: 'old', type: 'box' },
+                { id: 'junk', type: 'box', createdBy: 'guest:ani' },
+                { id: 'nameless', type: 'box', createdBy: { label: 'Ani' } }
+            ]
+        })
+        for (const entity of document.entities) expect(entity.createdBy).toBeNull()
+    })
+
+    it('drops a label that is not a string rather than carrying it', () => {
+        const document = normalizeProjectDocument({
+            entities: [{ id: 'e1', type: 'box', createdBy: { subject: 'guest:ani', label: { evil: true } } }]
+        })
+        expect(document.entities[0].createdBy).toEqual({ subject: 'guest:ani', label: '' })
+    })
+})
+
 describe('the retired surface axis', () => {
     it('normalizeWorkspaceState sheds activeSurface from old documents', () => {
         const next = normalizeWorkspaceState({ activeSurface: 'world', selectedNodeId: 'n1' })

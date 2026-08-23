@@ -172,6 +172,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-22'
     },
     {
+        id: 'deleting-someones-work',
+        category: 'Editing',
+        title: 'Delete asks first',
+        summary: 'Delete and Backspace now ask before they take anything, and say when the thing was made by somebody else.',
+        body: [
+            'Pressing Delete or Backspace no longer removes the selected object straight away. A small panel appears naming what is about to go — the object\u2019s name, or how many there are — with Cancel and Delete. Enter deletes, Escape cancels, clicking outside cancels, and cancelling leaves everything exactly as it was.',
+            'If what you selected was made by somebody else, the panel says so and names them. It is a warning, not a lock: you can still delete it. The reason for the warning is that undo is yours alone — it reverts only your own last change — so the person whose work you delete has nothing to undo. On a space several people share, that is the one edit that cannot be taken back from the other side.',
+            'Anything made before this existed has no maker recorded, so it is nobody\u2019s in particular and the panel simply asks the plain question.',
+            'This applies everywhere the keyboard can delete: Studio\u2019s viewport, the node editor\u2019s canvas for both nodes and objects, and the Delete button on a phone. The buttons are full-size touch targets, and on a phone the panel sits at the bottom of the screen where your thumb already is.'
+        ],
+        tags: ['delete', 'backspace', 'undo', 'collaboration', 'shared space', 'safety', 'editing'],
+        updated: '2026-08-24'
+    },
+    {
         id: 'text-window',
         category: 'Editing',
         title: 'Writing on a Text window',

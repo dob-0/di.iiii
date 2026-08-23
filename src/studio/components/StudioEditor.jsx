@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMediaQuery, useTheme } from '@mui/material'
 import { Vector3 } from 'three'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
+import { currentAuthor } from '../../project/authorship.js'
+import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
@@ -120,6 +122,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         anonymousLabel: 'Guest',
         userIdPrefix: 'studio-user'
     })
+    const { requestDelete, deleteConfirm } = useDeleteConfirm()
     const document = state.document
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
@@ -278,6 +281,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const handleCreateEntity = (type, asset = null, position = null) => {
         const entity = createEntityOfType(type, {
             name: asset?.name ? asset.name.replace(/\.[^.]+$/, '') : undefined,
+            createdBy: currentAuthor(displayName),
             components: {
                 transform: {
                     position: position || getViewPlacement(controlsRef, entities.length)
@@ -470,16 +474,24 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const handleDeleteSelected = () => {
         const targets = selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : [])
         if (!targets.length) return
-        applyLocalOps(
-            targets.map((entity) => ({ type: 'deleteEntity', payload: { entityId: entity.id } })),
-            {
-                activityMessage: targets.length === 1
-                    ? `Deleted ${targets[0].name}.`
-                    : `Deleted ${targets.length} objects.`,
-                activityLevel: 'warning'
+        // Nothing is applied until the confirm comes back: a delete is the one
+        // edit the person who loses the work cannot undo, because undo history
+        // is per-client.
+        requestDelete(
+            targets.map((entity) => ({ id: entity.id, name: entity.name, author: entity.createdBy })),
+            () => {
+                applyLocalOps(
+                    targets.map((entity) => ({ type: 'deleteEntity', payload: { entityId: entity.id } })),
+                    {
+                        activityMessage: targets.length === 1
+                            ? `Deleted ${targets[0].name}.`
+                            : `Deleted ${targets.length} objects.`,
+                        activityLevel: 'warning'
+                    }
+                )
+                dispatch({ type: 'select-entity', entityId: null })
             }
         )
-        dispatch({ type: 'select-entity', entityId: null })
     }
 
     // Build a new entity from any source (selected entity or clipboard), offset
@@ -487,7 +499,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const handleDuplicateSelected = () => {
         const targets = topLevelTargets(entities, selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : []))
         if (!targets.length) return
-        const cloneGroups = targets.map((target) => cloneSubtree(collectSubtree(entities, target.id)))
+        const cloneGroups = targets.map((target) => cloneSubtree(collectSubtree(entities, target.id), currentAuthor(displayName)))
         const clones = cloneGroups.flat()
         applyLocalOps(
             clones.map((entity) => ({ type: 'createEntity', payload: { entity } })),
@@ -511,7 +523,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const handlePasteClipboard = () => {
         const source = clipboardRef.current
         if (!source?.subtrees?.length) return
-        const cloneGroups = source.subtrees.map((subtree) => cloneSubtree(subtree))
+        const cloneGroups = source.subtrees.map((subtree) => cloneSubtree(subtree, currentAuthor(displayName)))
         const clones = cloneGroups.flat()
         applyLocalOps(
             clones.map((entity) => ({ type: 'createEntity', payload: { entity } })),
@@ -568,6 +580,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         const centroid = getSelectionCentroid(targets)
         const group = createEntityOfType('group', {
             name: 'Group',
+            createdBy: currentAuthor(displayName),
             components: { transform: { position: centroid, rotation: [0, 0, 0], scale: [1, 1, 1] } }
         })
         const ops = [{ type: 'createEntity', payload: { entity: group } }]
@@ -1149,6 +1162,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 onUploadOriginal={() => finishAssetOptimizationPrompt(assetOptimizationPrompt?.file || null)}
                 onCancel={() => finishAssetOptimizationPrompt(null)}
             />
+            {deleteConfirm}
         </>
     )
 }

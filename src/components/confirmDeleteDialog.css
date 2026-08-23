@@ -1,0 +1,118 @@
+.confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    /* Above every surface that can hold a selection: the quick-insert overlay
+       sits at 3001, the help dialogs at 1550 and 9999. */
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.62);
+}
+
+.confirm-scrim {
+    position: absolute;
+    inset: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    cursor: default;
+}
+
+.confirm-dialog {
+    position: relative;
+    width: min(420px, calc(100vw - 48px));
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 22px;
+    background: var(--di-surface, #0a0a0a);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    color: var(--di-text, #fff);
+    font-family: var(--di-mono, monospace);
+}
+
+.confirm-dialog.is-someone-elses {
+    border-color: var(--di-warning, #ffb347);
+}
+
+.confirm-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+.confirm-names,
+.confirm-body,
+.confirm-warning {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.confirm-names,
+.confirm-body {
+    color: var(--di-text-muted, rgba(255, 255, 255, 0.5));
+}
+
+.confirm-warning {
+    color: var(--di-warning, #ffb347);
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.confirm-action {
+    /* 44px is the one-finger floor this project holds every control to. */
+    min-height: 44px;
+    min-width: 96px;
+    padding: 10px 18px;
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    border-radius: 0;
+    background: var(--di-surface, #0a0a0a);
+    color: var(--di-text, #fff);
+    font: inherit;
+    cursor: pointer;
+}
+
+.confirm-action:hover {
+    border-color: var(--di-cyan, #4df9ff);
+    background: var(--di-cyan-dim, rgba(77, 249, 255, 0.1));
+}
+
+.confirm-action.is-danger {
+    border-color: var(--di-danger, #f25f5c);
+    color: var(--di-danger, #f25f5c);
+}
+
+.confirm-action.is-danger:hover {
+    background: rgba(242, 95, 92, 0.12);
+}
+
+.confirm-action:focus-visible {
+    outline: 1px solid var(--di-cyan, #4df9ff);
+    outline-offset: 2px;
+}
+
+/* On a phone the dialog drops to the bottom edge so both buttons land in
+   thumb reach rather than mid-screen. */
+@media (max-width: 600px) {
+    .confirm-backdrop {
+        align-items: end;
+        padding: 16px;
+    }
+
+    .confirm-dialog {
+        width: 100%;
+    }
+
+    .confirm-action {
+        flex: 1;
+    }
+}

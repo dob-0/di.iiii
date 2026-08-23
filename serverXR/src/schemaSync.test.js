@@ -109,6 +109,25 @@ describe('normalizeProjectDocument', () => {
     })
     expect(doc.nodes.length).toBe(0)
   })
+
+  // The mirror has to carry the author stamp too. If only the ESM side knows
+  // the field, the server rebuilds every document without it and the delete
+  // guard sees a space full of unowned objects.
+  it('keeps createdBy on entities and nodes, and nulls a half-formed one', () => {
+    const createdBy = { subject: 'guest:ani', label: 'Ani' }
+    const doc = normalizeProjectDocument({
+      entities: [
+        { id: 'e1', type: 'box', createdBy },
+        { id: 'e2', type: 'box' },
+        { id: 'e3', type: 'box', createdBy: { label: 'Ani' } }
+      ],
+      nodes: [{ id: 'n1', typeId: 'geom.cube', label: 'Cube', values: {}, createdBy }]
+    })
+    expect(doc.entities[0].createdBy).toEqual(createdBy)
+    expect(doc.entities[1].createdBy).toBeNull()
+    expect(doc.entities[2].createdBy).toBeNull()
+    expect(doc.nodes[0].createdBy).toEqual(createdBy)
+  })
 })
 
 // --- applyProjectOps ---
