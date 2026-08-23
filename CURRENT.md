@@ -13,7 +13,10 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the one card with nothing in it was the room the product points at
+- `platform` stopped standing in for the name — ~25 sentences (wiki, Terms, admin, landing) now say di.iiii; the word is NOT banned and no test guards it, the rule is a person rule in `docs/ai/vocabulary.md`.
+- The landing answered "What is di.iiii?" with the editor ("a collaborative 3D spatial editor… a shared whiteboard"); it now answers with what the code does. README's H2 followed.
+- Live labels corrected **on staging only**: space `main` `di.ii`→Works (project `di.i: open_space`→Everything made here), `platform-recordar`→RecordAR, `wcc`→WCC Exhibition. Ids and slugs untouched, all ten public URLs still 200.
+- New golden rule after the owner flagged the risk: **a shared link is a promise** — labels are free, `id`/`slug`/`publishedProjectId` are not. The last two `desk` metaphors also went (canvas); `3D Desk` and *lighting desk* stay.
 
 Full detail: `PROGRESS.md`.
 
@@ -24,11 +27,13 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
-- **PROD IS BEHIND** — everything of 2026-08-22/23 sits on staging only; prod still serves the retired three-door landing. Owner promotes after checking staging.
+- **PROD IS BEHIND** — everything of 2026-08-22/23 sits on staging only; prod still serves the retired three-door landing, and still previews the bare domain as an Express error page (fixed on staging). Owner promotes after checking staging.
 - Doors waves B–E: publishing-a-graph, §6 and where "Step inside" lands are all DECIDED and shipped; what remains is embed-link copy. Ledger: memory `project_dii_doors_audit_2026_08_22`.
 - Walk / Fly cannot render a node graph, so it is hidden on a node room — the honest gap.
 - `stash@{0}` (a sibling session's CURRENT.md pre-write) is still parked — owner's call, don't clear blind.
-- **Sharing the bare domain previews as an Express error page** — `/og/*splat` never matches an empty splat; the fallback card already exists (`ogRoutes.js:108-119`). Smallest fix on the list, worst symptom.
+- **Live DB renames owed on PROD** — the four above are staging-only. The sandbox writes to `dii-staging-server-1` and refuses `dii-server-1`: needs `"Bash(ssh dii-vps:*)"` in settings, or four renames from the owner's Spaces page.
+- **`azd` is unidentified and public on prod** — label and only project both `azd`. If it is scratch the fix is `isPublic:false`, not a rename. Owner's call.
+- **`/wcc` publishes `alla-virabyan`** — the WCC link opens one artist, not the exhibition front. A publishing setting, not a name.
 - Staging Google OAuth secret parked by the user — memory `reference-leaked-secrets`; prod spaces all owned, mesh gate ARMED both tiers.
 - Per-space byte QUOTA still unset — needs an owner policy number (ENOSPC floor shipped).
 - Deps parked: eslint-10 #148, router-7 #150, checkout-7 #143 (its windows install-test fails).
