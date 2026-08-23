@@ -28,7 +28,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **scene** | The 3D place you can be inside. |
 | **page** | A published web page (HTML/CSS/JS), never a project. |
 | **Studio** | The one you walk into for the four editing panels. A node, not a lane. |
-| **di.iiii** | The platform. The whole thing. |
+| **di.iiii** | The whole thing. Spaces live in it. |
 
 Two words that are already right and must not drift: **port** (where a wire attaches to a node)
 and **wire** (what runs between two ports). They are the node model's own vocabulary, they are
@@ -54,6 +54,22 @@ used consistently, and every node tool a visitor might arrive from uses one or t
 
 `raw` in its ordinary English sense (*unparsed, unformatted*) is fine in code, but never in a
 user-visible string where it can be mistaken for the lane — rewrite those.
+
+## `platform` — true, but a third-person word
+
+di.iiii **is** a platform, and the word is correct wherever someone is placing it in a
+category: the README, a deck, a grant form, an agent-readable `type` field, a section
+eyebrow that labels what the section is about. Nothing bans it and no test guards it.
+
+What it must not do is stand in for the name inside di.iiii's own sentences. "A platform
+admin", "as the platform grows", "released back to the platform", "the platform's loading
+screen" — in every one of those the true subject is **di.iiii**, and the name is shorter,
+clearer and unambiguous. A product does not refer to itself by its category; that is what
+outsiders do. Swept 2026-08-23: ~25 sentences, zero left.
+
+Where a category genuinely has to appear in a sentence rather than a label, the verb is
+cleaner than the noun — **di.iiii hosts 3D spaces on the web** — and Terms and Privacy may
+use *the Service*, which is the legal convention.
 
 ## Node labels settled 2026-08-19
 
@@ -113,7 +129,7 @@ These are architecture, not wording, and each needs its own decision:
 
 **The creator host must not be named `studio.`** The URL spec (DRAFT, unsigned) proposes
 `studio.di-studio.xyz` for the authoring host. That would make Studio the name of the entire
-authoring side of the platform — which is the exact one-word-two-sizes disease this file exists
+authoring side of di.iiii — which is the exact one-word-two-sizes disease this file exists
 to cure, and a hostname in every creator's URL bar teaches it harder than any copy can undo.
 
 The ratified direction is the opposite: MANIFESTO §6 states that "Studio's own role is being

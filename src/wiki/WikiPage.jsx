@@ -90,7 +90,7 @@ export default function WikiPage() {
                 <p className="wiki-eyebrow">Help &amp; Wiki</p>
                 <h1 className="wiki-title">How di.iiii works</h1>
                 <p className="wiki-lede">
-                    Guides for spaces, access, editing, and the API. Kept up to date as the platform grows.
+                    Guides for spaces, access, editing, and the API. Kept up to date as di.iiii grows.
                 </p>
                 <input
                     type="search"

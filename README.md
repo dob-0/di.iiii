@@ -1,8 +1,8 @@
 <img src="public/brand/wordmark-on-black.png" alt="di.iiii" width="360">
 
-## Web XR Authoring Platform
+## di.iiii hosts 3D spaces on the web
 
-`di.iiii` is a browser-native platform for building and publishing spatial XR experiences — 3D scenes, node-driven behaviors, and AR/VR spaces — without leaving the web. The editor runs in the browser; the backend owns persistence, auth, and publish state; spaces are the public unit. No native installs, no engine lock-in, creator-owned data.
+You sign in, get an address, build a scene in the browser, mark one project live, and hand out the link — it opens on a phone, a laptop or a headset with nothing to install, and exports as a file when it ends. The editor runs in the browser; the backend owns persistence, auth, and publish state; spaces are the public unit. No native installs, no engine lock-in, creator-owned data.
 
 
 ## Start Here
@@ -158,8 +158,8 @@ Useful local routes:
 
 There are two doors, and most people only need the first:
 
-- **Collaborating on a space** — you were invited to build, not to run the platform. Nothing to install: [di-studio.xyz/wiki#joining-a-space](https://di-studio.xyz/wiki#joining-a-space) is the whole path, from the invite link to your first saved edit.
-- **Working on the code** — clone, run, and change the platform itself. Start with [ONBOARDING.md](ONBOARDING.md): prerequisites, fork + clone, local env setup, `npm run dev`, and setting up Claude Code with the project's checked-in AI workflow (don't start a fresh one — see ONBOARDING §8).
+- **Collaborating on a space** — you were invited to build, not to run di.iiii. Nothing to install: [di-studio.xyz/wiki#joining-a-space](https://di-studio.xyz/wiki#joining-a-space) is the whole path, from the invite link to your first saved edit.
+- **Working on the code** — clone, run, and change di.iiii itself. Start with [ONBOARDING.md](ONBOARDING.md): prerequisites, fork + clone, local env setup, `npm run dev`, and setting up Claude Code with the project's checked-in AI workflow (don't start a fresh one — see ONBOARDING §8).
 
 The code path is fork-based:
 

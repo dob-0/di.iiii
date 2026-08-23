@@ -33,7 +33,7 @@ export const WIKI_ARTICLES = [
                 'scene — the 3D place you can be inside.',
                 'page — a published web page (HTML/CSS/JS). Never a project.',
                 'Studio — the one you walk into for the editing panels. It is also a node, so you can place one on a canvas.',
-                'di.iiii — the platform. The whole thing.'
+                'di.iiii — the whole thing. Spaces live in it.'
             ] },
             'And five that carry their own meaning, each with an article of its own:',
             { list: [
@@ -52,7 +52,7 @@ export const WIKI_ARTICLES = [
         id: 'spaces-and-projects',
         category: 'Getting started',
         title: 'Spaces & projects',
-        summary: 'How the platform is organized: a space is a place that is yours, and a project is one thing you make inside it.',
+        summary: 'How di.iiii is organized: a space is a place that is yours, and a project is one thing you make inside it.',
         body: [
             'A space is a place that is yours: an address, a guest list, and everything in it — projects, uploaded files, collaborators, and the rules about who gets in.',
             'A project is one thing you make inside a space. A space can hold many projects, and one of them can be marked as the space’s published (live) project.',
@@ -116,7 +116,7 @@ export const WIKI_ARTICLES = [
         title: 'Invited to collaborate? Start here',
         summary: 'The whole path from an invite link to your first saved edit — in a browser tab, with nothing to install.',
         body: [
-            'Someone sent you a link to a space. You do not need to install anything, clone anything, or open a terminal: a browser is the entire toolchain. (The repo has a developer setup guide as well — that is a different door, for people who want to run the platform itself, and you can ignore it.)',
+            'Someone sent you a link to a space. You do not need to install anything, clone anything, or open a terminal: a browser is the entire toolchain. (The repo has a developer setup guide as well — that is a different door, for people who want to run di.iiii itself, and you can ignore it.)',
             { list: [
                 '1 — Open the link. It carries the invite; the space opens as soon as access is granted.',
                 '2 — Sign in with GitHub or Google when asked. Sign-in brings you back to the page you started from, invite link intact. You can accept an invite as a guest, but a guest session lives in one browser and lasts about a week — the same week its sandbox survives idleness; signing in makes the access permanent and carries any work you already did onto your account.',
@@ -125,7 +125,7 @@ export const WIKI_ARTICLES = [
                 '5 — Stuck? The ? button in the Studio (or Shift+?) opens the illustrated guides and the full shortcut list.'
             ] },
             'What an invite gives you is access to that one space, as an editor. You can open and edit its projects, create new ones, upload files, and use every tool in the Studio.',
-            'What it does not give you is the space itself. Publishing (setting which project is live), renaming, changing the public link, making the space public or private, minting further invites, and deleting are the owner’s — see "Who owns a space". If you need one of those, ask whoever invited you; if the space has no owner at all, a platform admin has to assign one first.',
+            'What it does not give you is the space itself. Publishing (setting which project is live), renaming, changing the public link, making the space public or private, minting further invites, and deleting are the owner’s — see "Who owns a space". If you need one of those, ask whoever invited you; if the space has no owner at all, a di.iiii admin has to assign one first.',
             'Your own work is separate from all of this and always there: every visitor gets a private sandbox, and a signed-in account can create its own spaces. Being a collaborator in someone else’s space does not spend any of that.',
             'If the link says it is invalid or has expired, it is not you — invites last 7 days. Ask for a fresh one.'
         ],
@@ -281,8 +281,8 @@ export const WIKI_ARTICLES = [
         summary: 'Every space should have an owner — they manage it without needing an admin. Admins can assign or release ownership at any time.',
         body: [
             'The owner of a space is whoever created it. Ownership is what makes a space self-service: the owner publishes, mints invites, renames, changes the public link, and can delete it — none of which needs an admin.',
-            'A space can also have no owner. That happens when it was provisioned over the API rather than created in the browser — every space linked to a GitHub repo starts this way. Such a space works normally, but every management action in it falls to a platform admin, which quietly makes one person the bottleneck.',
-            'Admins assign the owner in Ops Graph → Manage → pick the space → Owner & access. The panel names the current owner, or says plainly that there is none. "Make owner" hands the space over and grants that account access in the same move; clicking it again on the current owner releases the space back to the platform.',
+            'A space can also have no owner. That happens when it was provisioned over the API rather than created in the browser — every space linked to a GitHub repo starts this way. Such a space works normally, but every management action in it falls to a di.iiii admin, which quietly makes one person the bottleneck.',
+            'Admins assign the owner in Ops Graph → Manage → pick the space → Owner & access. The panel names the current owner, or says plainly that there is none. "Make owner" hands the space over and grants that account access in the same move; clicking it again on the current owner releases the space back to di.iiii.',
             'Only admins can change ownership — an owner cannot give their own space away. Granting access is a separate, smaller thing: it lets someone into the space without making them its owner (that is also what an invite link does).'
         ],
         tags: ['owner', 'ownership', 'access', 'admin', 'handover', 'collaboration', 'spaces'],
@@ -390,7 +390,7 @@ export const WIKI_ARTICLES = [
             { list: [
                 'labelColor — the type colour. Defaults to white.',
                 'labelPlate — the dark plate behind the type. Set it off to let the name sit directly on the scene. The type outline goes with it, since an outline only exists to separate the letters from a plate.',
-                'labelFont — “default” (the platform’s own vendored face, the same one every 3D label uses) or “helvetica”. Helvetica here is Arimo, which is metrically identical to Helvetica and Arial and openly licensed, so it can ship with the platform. Real Helvetica and Arial cannot: they are proprietary, and 3D labels cannot reach the fonts installed on a visitor’s machine the way a web page can.'
+                'labelFont — “default” (di.iiii’s own vendored face, the same one every 3D label uses) or “helvetica”. Helvetica here is Arimo, which is metrically identical to Helvetica and Arial and openly licensed, so it can ship with di.iiii. Real Helvetica and Arial cannot: they are proprietary, and 3D labels cannot reach the fonts installed on a visitor’s machine the way a web page can.'
             ] },
             'Fonts are chosen by name from a fixed list rather than by URL on purpose — the renderer will fetch whatever address it is handed, and a project document should not be able to point it at an arbitrary site.',
             'Left alone, every one of these keeps the original look, so existing portals are unaffected.'
@@ -424,7 +424,7 @@ export const WIKI_ARTICLES = [
         title: 'Ops Graph — the admin console',
         summary: 'Ops Graph, at /admin, is admins-only; your own spaces are managed from /studio.',
         body: [
-            'Ops Graph is the platform console. It lives at /admin and is visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
+            'Ops Graph is di.iiii’s console. It lives at /admin and is visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
             'Admins manage everything from Ops Graph → Manage: a directory tree of spaces, each expanding to its projects. The console keeps three admin sections (Manage, Open Call, Agents) and four diagnostics sections (Overview, Inspect, System, Estate); the header shows counts for the work at hand instead of 3D telemetry while you administer.',
             { list: [
                 'Create / rename / delete spaces and projects inline.',
@@ -439,7 +439,7 @@ export const WIKI_ARTICLES = [
     {
         id: 'admin-estate',
         category: 'Spaces & access',
-        title: 'Estate — the machines behind the platform',
+        title: 'Estate — the machines behind di.iiii',
         summary: 'A read-only map of every machine, address and store the studio runs, shown inside Ops Graph.',
         body: [
             'Ops Graph → Estate renders the studio\u2019s infrastructure map: the tailnet topology, every machine and what it is for, what runs where, the public names, and the totals \u2014 threads, memory, storage, GPUs, backups.',
@@ -517,7 +517,7 @@ export const WIKI_ARTICLES = [
         title: 'License & openness',
         summary: 'di.iiii is open source under AGPL-3.0 — read it, run it, self-host it; your content stays yours.',
         body: [
-            'The di.iiii platform code is licensed under the GNU AGPL-3.0 (see the LICENSE file in the repository). Anyone may read, use, modify, and self-host it; anyone who hosts a modified copy must publish their changes under the same license — the commons can grow but not be enclosed.',
+            'di.iiii’s code is licensed under the GNU AGPL-3.0 (see the LICENSE file in the repository). Anyone may read, use, modify, and self-host it; anyone who hosts a modified copy must publish their changes under the same license — the commons can grow but not be enclosed.',
             'Content is separate from code: spaces and projects you create belong to you, and published spaces stay free to visit — no login is ever needed to view a public space.',
             'Self-hosting is a supported path (npm run selfhost, docs/deploy/SELF_HOST.md), and space bundles are exportable, so your work is never locked to this host.'
         ],
@@ -528,9 +528,9 @@ export const WIKI_ARTICLES = [
         id: 'privacy-and-terms',
         category: 'Spaces & access',
         title: 'Privacy & terms',
-        summary: 'What the platform stores about you and under which terms — plainly, at /privacy and /terms.',
+        summary: 'What di.iiii stores about you and under which terms — plainly, at /privacy and /terms.',
         body: [
-            'Two pages disclose how the platform treats you: /privacy describes exactly what is collected (the session cookie, OAuth profile fields, uploads, retention) and what is deliberately not (no third-party analytics, no stored IP addresses, no tracking that links visits together) — including the parts that are not built yet, named as gaps rather than hidden.',
+            'Two pages disclose how di.iiii treats you: /privacy describes exactly what is collected (the session cookie, OAuth profile fields, uploads, retention) and what is deliberately not (no third-party analytics, no stored IP addresses, no tracking that links visits together) — including the parts that are not built yet, named as gaps rather than hidden.',
             '/terms covers the AGPL-3.0 license, the 3-free-spaces limit, and the append-only nature of anonymous inscriptions.',
             'Visits are counted anonymously first-party: one event per page load with path, time, and referring site — no cookie, no IP, nothing identifying.',
             'For anything the pages do not answer, or to request account or data removal by hand: info@thedi.studio.'

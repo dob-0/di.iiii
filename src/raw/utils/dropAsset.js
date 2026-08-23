@@ -1,7 +1,7 @@
 import { detectAssetMediaKind } from '../../utils/mediaAssetTypes.js'
 
 // Which node a dropped file becomes. Keyed by the same media kinds the rest
-// of the platform already detects, so a file behaves identically whether it
+// of di.iiii already detects, so a file behaves identically whether it
 // arrives through Studio's importer or onto Raw's canvas.
 export const NODE_TYPE_BY_ASSET_KIND = {
     model: 'geom.model',

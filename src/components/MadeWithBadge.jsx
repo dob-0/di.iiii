@@ -1,6 +1,6 @@
 import './madeWithBadge.css'
 
-// The public viewer and exhibitions are the platform's widest audience and
+// The public viewer and exhibitions are di.iiii's widest audience and
 // previously offered no path from watching into making. One quiet affordance,
 // shared by every public surface. variant: 'chrome' flows inside the
 // live-scene header; 'floating' pins itself to the bottom-left corner.
