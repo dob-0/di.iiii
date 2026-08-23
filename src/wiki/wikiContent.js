@@ -159,7 +159,7 @@ export const WIKI_ARTICLES = [
         title: 'Writing on a Text window',
         summary: 'A Text window is a note you can type straight into — unless something is wired to it.',
         body: [
-            'A Text window holds writing: a title for a desk, instructions for whoever opens the project next, a list you are still working out. Click into it and type. What you write saves as you go, the same way every other edit does, and undo works on it.',
+            'A Text window holds writing: a title for a canvas, instructions for whoever opens the project next, a list you are still working out. Click into it and type. What you write saves as you go, the same way every other edit does, and undo works on it.',
             'Anyone who can edit the project can write in one, including a collaborator who arrived by invite. If two of you are in the project at once you will see each other\'s changes.',
             'One case is different. A Text window\'s content can be fed by another node — wired in, like a colour is wired into a scene. When it is, the window shows the text but will not let you type, and says so: the value belongs to the node upstream, and anything typed here would be replaced the moment that node changed. Unplug the wire and the window becomes writable again.',
             'The window is a node like any other: close it, minimize it to a bar, move it, or open it up from the graph card that carries the same name.'
@@ -901,7 +901,7 @@ export const WIKI_ARTICLES = [
         body: [
             'Add a MIDI Out node from the palette. It asks the browser for MIDI access and sends to every connected device; its Status port says what it is doing, so a Text panel wired to Status is an honest meter.',
             'Notes: while Trigger is on, the note is held. The moment Trigger rises the node strikes Note at Velocity; the moment it falls it releases exactly the note it struck, even if Note has moved since. A Button, a Compare, a Toggle — anything true-or-false — makes a good Trigger.',
-            'A Trigger that stays on but keeps changing — MIDI In\'s rising count, a Counter — re-strikes on every change. That is the same idiom the rest of the desk uses: something happened because the number changed.',
+            'A Trigger that stays on but keeps changing — MIDI In\'s rising count, a Counter — re-strikes on every change. That is the same idiom the rest of the canvas uses: something happened because the number changed.',
             'Knobs: whenever Value changes it leaves as a control change on the CC number. Wire an Oscillator through Range into Value and a filter sweeps itself. Nothing is sent while Value merely stays what it was.',
             'Channel picks the MIDI channel (1-16). This needs Chrome or Edge; Safari and Firefox have no Web MIDI and Status says so instead of sitting blank. Devices plugged in later appear without a reload.'
         ],
