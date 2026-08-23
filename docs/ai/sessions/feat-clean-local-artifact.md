@@ -339,3 +339,39 @@ at render). Also still owed from earlier on this branch: `v0.4.0` is bumped in
 enforced limit of 50, so `npm run docs:ai:check` is currently red on `dev`. It
 was written by `npm run land` folding four notes at once. A feature branch cannot
 fix it — trimming it trips the "differs from origin/dev" rule instead.
+
+## 2026-08-21 (push sweep) — three branches on this machine and nowhere else
+
+A sweep of every repo on the desktop for committed-but-unpushed work. Four
+repos went out (`di-bo` 20 commits, `br_id_ge-ops`, `di-jet`, `br_id_ge`, plus
+`di-atlas`'s public/private and sync maps) — none of them di.iiii's, so the
+detail lives with them. What belongs here is the di.iiii half:
+
+**Three task branches hold work that exists only on this desktop**, none of it
+in `origin/dev`, none of it ever pushed:
+
+- `fix/og-empty-splat` (`~/di.iiii-ogfix`) — 2 commits: the front door's link
+  preview was a 404, and "Room" outlived its retirement. Committed today, tree
+  clean. Note that `dev` has since landed its own front-door/copy work and an
+  `og-image` re-render from a different branch, so this one may now overlap or
+  conflict — check before pushing rather than assuming it still applies.
+- `night/dijet-verify` (`~/di.iiii/.claude/worktrees/night-dijet`) — 5 commits
+  from 08-19: a read-only di.jet source node, driving/lighting/speaking to it
+  from a graph, its wiki entry, a lint fix.
+- `fix/keeper-openai-endpoint` (`~/di.iiii-raw-ws`) — 3 commits from 08-11: the
+  live-port contract with a reason per port, and the keeper reporting a working
+  llama.cpp server as broken.
+
+Not pushed here, deliberately: a task-branch push opens a PR into
+`dob-0/di.iiii` `dev` via `auto-pr.yml`, which is a shared-repo action on work
+this session did not write and has not verified. Left for the owner.
+
+Also uncommitted and therefore unreachable by any push, recorded so it is not
+lost: `~/di.iiii-dijetnode` (119 files), `feat/raw-admin` (36),
+`di-spaces` (15), `beyond_form` (8).
+
+**`CURRENT.md` note for the next session:** `dev` moved twice during this one,
+and this branch's copy had to be reverted to `origin/dev` both times. It was
+briefly 53 lines against its own 50-line limit — that is fixed on `dev` now
+(46 lines, `docs:ai:check` green). A feature branch cannot fix that class of
+breakage; only `dev` can.
