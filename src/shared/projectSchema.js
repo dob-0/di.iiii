@@ -417,6 +417,21 @@ const normalizeTimeline = (source) => {
     return { duration, loop: ensureBoolean(source.loop, true), tracks }
 }
 
+// Who made this. `subject` is the session identity ('github:99', 'guest:abc')
+// and is the only half worth comparing — `label` is a display name a person
+// can change. Everything made before this field existed normalizes to null,
+// and null means UNOWNED: never read it as yours, never as someone else's.
+// It has to live in the normalizer or it does not exist: both normalizers
+// return a literal, so an unlisted field is silently dropped on every op
+// apply and every document load, leaving the op-log holding a value the
+// rebuilt document does not have.
+export const normalizeAuthor = (author) => {
+    if (!author || typeof author !== 'object') return null
+    const subject = ensureString(author.subject, '')
+    if (!subject) return null
+    return { subject, label: ensureString(author.label, '') }
+}
+
 export const normalizeEntity = (entity = {}) => {
     const rawType = ensureString(entity.type, 'box')
     const type = ENTITY_TYPE_SET.has(rawType) ? rawType : 'box'
@@ -523,6 +538,7 @@ export const normalizeEntity = (entity = {}) => {
         type,
         name: ensureString(entity.name, `${type[0].toUpperCase()}${type.slice(1)} Entity`),
         parentId: ensureString(entity.parentId, '') || null,
+        createdBy: normalizeAuthor(entity.createdBy),
         components: nextComponents
     }
 }
@@ -728,7 +744,8 @@ export const normalizeProjectNode = (node = {}) => {
         graphY,
         runtimeId: source.runtimeId ?? null,
         assetRef,
-        parentId: ensureString(source.parentId, '') || null
+        parentId: ensureString(source.parentId, '') || null,
+        createdBy: normalizeAuthor(source.createdBy)
     }
 }
 

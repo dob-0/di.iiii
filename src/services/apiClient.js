@@ -229,9 +229,20 @@ export async function apiFetch(path, {
 let lastSessionWasLocal = false
 export const isLocalInstallSession = () => lastSessionWasLocal
 
+// Same reason as the flag above, for who you are: an entity is stamped with
+// its author inside a pure creation funnel that cannot call a React hook, and
+// nothing else on the client keeps the resolved subject. Null until the
+// session has answered once — null reads as unowned, never as "yours".
+let lastSessionIdentity = null
+export const getSessionIdentity = () => lastSessionIdentity
+
 export const getApiSession = async (opts = {}) => {
     const data = await apiFetch('/api/auth/session', opts)
     lastSessionWasLocal = Boolean(data?.local)
+    const subject = typeof data?.subject === 'string' ? data.subject : ''
+    lastSessionIdentity = subject
+        ? { subject, label: typeof data?.label === 'string' ? data.label : '' }
+        : null
     return data
 }
 

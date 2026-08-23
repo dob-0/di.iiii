@@ -88,6 +88,7 @@ export function useAppEditorInteractionState({
         toggleAdminMode,
         selectionGroups,
         persistSelectionGroups,
+        selectedObjectId,
         selectedObjectIds,
         applySelection,
         expandIdsWithGroups,

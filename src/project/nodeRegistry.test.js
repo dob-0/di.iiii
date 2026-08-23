@@ -192,6 +192,14 @@ describe('createNode', () => {
         expect(node.graphY).toBe(200)
     })
 
+    // Same contract as createEntityOfType's stamp: handed in so this stays
+    // pure, and absent means unowned rather than yours.
+    it('stamps the author the caller hands it, and leaves it unowned otherwise', () => {
+        expect(createNode('geom.cube', { createdBy: { subject: 'guest:ani', label: 'Ani' } }).createdBy)
+            .toEqual({ subject: 'guest:ani', label: 'Ani' })
+        expect(createNode('geom.cube').createdBy).toBeNull()
+    })
+
     it('returns null for unknown typeId', () => {
         expect(createNode('does.not.exist')).toBeNull()
     })

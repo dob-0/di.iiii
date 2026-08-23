@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import {
     arePortsCompatible,
@@ -189,6 +190,7 @@ export default function RawGraphSurface({
     onSetActive = () => {},
     activeMarkerTypeIds = []
 }) {
+    const { requestDelete, deleteConfirm } = useDeleteConfirm()
     const containerRef = useRef(null)
     const [pendingWire, setPendingWire] = useState(null)
     const [draggingNodeId, setDraggingNodeId] = useState(null)
@@ -645,11 +647,15 @@ export default function RawGraphSurface({
             // — cascading over its whole subtree and dumping you back to the
             // parent with everything gone.
             if (!nodeById.has(selectedNodeId)) return
-            onDeleteNode(selectedNodeId)
+            const node = nodeById.get(selectedNodeId)
+            requestDelete(
+                { id: selectedNodeId, name: node?.label, author: node?.createdBy },
+                () => onDeleteNode(selectedNodeId)
+            )
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [selectedNodeId, onDeleteNode, nodeById])
+    }, [selectedNodeId, onDeleteNode, nodeById, requestDelete])
 
     // The output port nearest a screen point, within the grab radius. Distance
     // is in SCREEN pixels so the tolerance is a fingertip at every zoom.
@@ -1513,6 +1519,7 @@ export default function RawGraphSurface({
                         </button>
                     </div>
                 ) : null}
+            {deleteConfirm}
         </div>
     )
 }

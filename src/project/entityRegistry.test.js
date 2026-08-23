@@ -33,4 +33,17 @@ describe('createEntityOfType', () => {
         expect(entity.id).toBeTruthy()
         expect(entity.components.transform.position).toEqual([0, 0, 0])
     })
+
+    // The author stamp. It is handed in, never looked up: this funnel stays a
+    // pure function, so the clipboard and these tests can call it with no
+    // session anywhere in reach.
+    it('stamps the author the caller hands it', () => {
+        const entity = createEntityOfType('box', { createdBy: { subject: 'guest:ani', label: 'Ani' } })
+        expect(entity.createdBy).toEqual({ subject: 'guest:ani', label: 'Ani' })
+    })
+
+    it('leaves an entity unowned when the caller has no author to give', () => {
+        expect(createEntityOfType('box').createdBy).toBeNull()
+        expect(createEntityOfType('box', { createdBy: { label: 'Ani' } }).createdBy).toBeNull()
+    })
 })

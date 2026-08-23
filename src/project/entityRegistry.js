@@ -406,6 +406,12 @@ export const createEntityOfType = (type = 'box', overrides = {}) => {
         type,
         name: overrides.name || definition.label,
         parentId: overrides.parentId || null,
+        // Handed in, never looked up: this is the one funnel every "add an
+        // entity" path goes through, and it stays pure so the tests and the
+        // clipboard can call it with no session in reach. A caller with no
+        // author leaves the entity unowned, which is what everything made
+        // before the stamp existed already is.
+        createdBy: overrides.createdBy || null,
         components: {
             // Creation defaults, NOT normalization fallbacks — see
             // buildCreationComponentsForType. A clone or paste passes the

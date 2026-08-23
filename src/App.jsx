@@ -23,7 +23,8 @@ function AppInner() {
         refs,
         isPreferencesPage,
         navigateToEditor,
-        editorLayoutProps
+        editorLayoutProps,
+        deleteConfirm
     } = useAppState()
 
     return (
@@ -40,6 +41,7 @@ function AppInner() {
                                             onNavigateToEditor={navigateToEditor}
                                             editorLayoutProps={editorLayoutProps}
                                         />
+                                        {deleteConfirm}
                                     </RefsContext.Provider>
                                 </ActionsContext.Provider>
                             </SpacesContext.Provider>
