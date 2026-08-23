@@ -369,7 +369,7 @@ export default function LandingPage() {
             {/* ── WHAT IS DI.I ─────────────────────────────────── */}
             <Box className="lp-section" component="section" id="what">
                 <Box className="lp-section-inner">
-                    <Typography className="lp-section-eyebrow">The platform</Typography>
+                    <Typography className="lp-section-eyebrow">The short answer</Typography>
                     <Typography className="lp-section-title" component="h2">What is di.iiii?</Typography>
                     <Typography className="lp-section-body">
                         di.iiii is where you make a 3D space and hand out its address.
@@ -544,7 +544,7 @@ export default function LandingPage() {
                             <Box className="lp-code-block">
                                 {[
                                     ['name', 'di.iiii'],
-                                    ['type', 'WebXR platform for public 3D spaces'],
+                                    ['type', 'public 3D spaces on the open web'],
                                     ['version', '0.2.0'],
                                     ['backend', 'serverXR (Node.js)'],
                                     ['storage', 'SQLite + disk assets'],

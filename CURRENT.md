@@ -13,8 +13,9 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the jam stops being a stripped editor and becomes a place you stand in
-- the jam was on no backup path; snapshots now carry project documents
+- camp SETTLED on staging (owner, 08-24): prod is not part of it. Invites re-minted — the old six died Aug 27, mid-camp — and the camp is ONE shared room.
+- the camp desks are mobile-first now: on a phone every window clamps to x=12 w=366, so Board and Scene both landed at y=64 and Scene was unreachable. One open Board + four bars, patched as DATA (frames only, gear rows untouched).
+- the lexicon sweep missed the landing itself ("The platform" above "What is di.iiii?") and the OG fallback still shipped pre-sweep copy — both fixed; a pasted link and the page now agree.
 
 Full detail: `PROGRESS.md`.
 
@@ -29,9 +30,8 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 - Doors audit: only embed-link copy is left; the rest is decided and shipped. Ledger: memory `project_dii_doors_audit_2026_08_22`.
 - Walk / Fly cannot render a node graph, so it is hidden on a node room — the honest gap. `stash@{0}` (a sibling's CURRENT.md pre-write) is still parked; don't clear it blind.
 - **Live DB renames owed on PROD** — the four above are staging-only. The sandbox writes to `dii-staging-server-1` and refuses `dii-server-1`: needs `"Bash(ssh dii-vps:*)"` in settings, or four renames from the owner's Spaces page.
-- **`azd` is unidentified and public on prod** — label and only project both `azd`. If it is scratch the fix is `isPublic:false`, not a rename. Owner's call.
-- **`/wcc` publishes `alla-virabyan`** — the WCC link opens one artist, not the exhibition front. A publishing setting, not a name.
-- **Open Jam — two PRs open, neither landed:** #256 snapshots project documents (jam contributions were on NO backup path; merge before any clean-up), #257 the walk-in surface at `/open_jam/scene`. `/open_jam` still opens the editor — repointing the in-circulation QR is the owner's call. Clean-up is prepared but NOT applied: `~/di-backups/open-jam/` holds both tiers, triage sheets and `jam-clean.mjs` (keep every upload, bin what the unsuited UI added, staging 47→20); the `PUT` was refused by the permission classifier.
+- `/wcc` was a FALSE ALARM (checked on prod 2026-08-24): the front page renders correctly and `/wcc/main` is the walkable gallery — the project id `alla-virabyan` is just a naming leftover and must not be renamed. Real: `/wcc/main` needs >60s to settle.
+- **Open Jam — #256 and #257 landed, on dev and on staging.** `/open_jam` still opens the editor — repointing the in-circulation QR is the owner's call. Clean-up is prepared but NOT applied: `~/di-backups/open-jam/` holds both tiers, triage sheets and `jam-clean.mjs` (keep every upload, bin what the unsuited UI added, staging 47→20); the `PUT` was refused by the permission classifier.
 - **No repo can own `open-jam`** — boot-ensured (`serverXR/src/index.js:623`) and `space-sync.mjs:441` writes only `mode: 'code'`, so a sync replaces 4983 versions of communal work with a static page. Owner picks: a door page at `/open/jam`, or a new space `jam` the repo masters.
 - Staging Google OAuth secret parked by the user — memory `reference-leaked-secrets`; prod spaces all owned, mesh gate ARMED both tiers.
 - Per-space byte QUOTA still unset — needs an owner policy number (ENOSPC floor shipped).
