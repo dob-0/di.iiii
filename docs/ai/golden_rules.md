@@ -645,6 +645,17 @@ Do **not** implement a capability inside a bespoke per-space renderer/component.
 
 **Checklist for a new capability:** schema field (both files) → renders in `LiveProjectScene` → inspector/World-panel control → `test:schema-sync` + `lint` + `build` green → it now works in every space.
 
+**The trap inside step 1, paid for on 2026-08-24:** `normalizeEntity` and
+`normalizeProjectNode` **return a fixed object literal**. They do not spread the input.
+So a new field added anywhere else — at a creation funnel, in a type, on a call site —
+is silently deleted on every op apply and every document load, and nothing errors: the
+op-log carries a value the rebuilt document does not have, which reads as "it saved and
+then forgot". `test:schema-sync` does **not** catch this; it compares the two mirrors
+with each other, and a field missing from both is consistent. Add the field to the
+normalizer in both mirrors, and add a case asserting it *survives a normalize round-trip*
+— not merely that the mirrors agree. Check `updateEntity` too: a field that must outlive
+an edit has to be preserved there, or editing someone's object quietly rewrites it.
+
 **Files:** `src/shared/projectSchema.js`, `shared/projectSchema.cjs`, `src/components/LiveProjectScene.jsx`, `src/project/entityRegistry.js`, `src/studio/components/StudioShellPanels.jsx`
 
 ---
