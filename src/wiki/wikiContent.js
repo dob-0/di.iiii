@@ -386,10 +386,12 @@ export const WIKI_ARTICLES = [
                 'The tour turns the visitor and never moves them, so it works the same on a laptop and in a headset. It surrenders permanently the moment the visitor turns the view themselves — an automatic turn that fights the mouse or the thumbstick is worse than none.'
             ] },
             'A caution for headsets: in VR the tour rotates the world around a body that is sitting still, which is the classic recipe for motion sickness — the visitor sees movement they do not feel. Keep turn slow and dwell long, and test on one person before an audience. If comfort matters more than a fixed running order, leave ringTour off and let the visitor turn their own head.',
-            'Idle motion is separate and older: an object with no authored animation and no timeline gets a gentle drift in the live view (models float and turn, flat media sways) so imported legacy scenes keep the look they had. Objects that were placed deliberately should say animation.mode: static, and anything parented to a group is left alone automatically — otherwise the parts of one object drift away from each other.'
+            'Idle motion is separate and older: an object with no authored animation and no timeline gets a gentle drift in the live view (models float and turn, flat media sways) so imported legacy scenes keep the look they had. Objects that were placed deliberately should say animation.mode: static, and anything parented to a group is left alone automatically — otherwise the parts of one object drift away from each other.',
+            'Whether the button is there at all: a published page offers Walk / Fly whenever the room holds objects for it to show — and it does not matter whether the project also has a graph, so a project built in both editors is walkable on the strength of its objects. A project made of nodes and nothing else still has no button, because walk/fly renders objects and would drop the visitor into an empty version of the room they are already looking at. Give that project one real object and the door opens — and VR and AR open with it, since a headset session is entered from inside walk/fly.',
+            'A composed opening shot does not close that door either: a project whose entry view is Fixed camera opens on the shot you framed and still offers Walk / Fly, because the shot is where the visit starts rather than a promise the visitor may never move. Only a Code entry view has no button, and it has no room to give one to.'
         ],
         tags: ['scene', 'room', 'spawn', 'vr', 'exhibition', 'tour', 'walk', 'animation'],
-        updated: '2026-08-19'
+        updated: '2026-08-24'
     },
     {
         id: 'spatial-video-sound',
