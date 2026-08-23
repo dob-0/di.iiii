@@ -50,7 +50,25 @@ const BANNED = [
     // identifier written into a string cannot trip this.
     { word: 'Raw', pattern: /\bRaw\b/, use: 'the node editor, or nothing at all' },
     // The retired product name. `di.iiii` is not a hit — the lookahead stops it.
-    { word: 'di.i', pattern: /\bdi\.i(?!i)/, use: 'di.iiii' }
+    { word: 'di.i', pattern: /\bdi\.i(?!i)/, use: 'di.iiii' },
+    // Capital R only, for the same reason as Raw. "place it in your own room"
+    // is ordinary English about the room a visitor is standing in, and it is
+    // correct AR copy. `Room` as the name of a thing INSIDE di.iiii is the
+    // retired one: the palette has no Room, it has a Scene (asserted below).
+    //
+    // Room was retired on 2026-08-19 and this rule was missing from the guard
+    // until 2026-08-21, so seven live strings kept saying it for two days —
+    // including Studio's empty state, which told people to "add a Room", naming
+    // a card the palette does not contain. That one dead-ends someone mid-task
+    // rather than merely reading oddly, which is the difference between drift
+    // and a bug.
+    //
+    // Known hole, stated so nobody reads this rule as exhaustive: a LOWERCASE
+    // "rooms" meaning places in di.iiii slips through, and the landing page
+    // carried one ("Build rooms, place objects") until it was fixed alongside
+    // this. The hole is deliberate — the alternative flags "in your own room",
+    // which is right. Read new copy for the sense; the guard catches the noun.
+    { word: 'Room', pattern: /\bRooms?\b/, use: 'Scene (the 3D place) · space (the place that is yours)' }
 ]
 
 // Copy-carrying files, read as text. Everything a visitor, a guest or an owner

@@ -373,7 +373,7 @@ export default function LandingPage() {
                     <Typography className="lp-section-title" component="h2">What is di.iiii?</Typography>
                     <Typography className="lp-section-body">
                         di.iiii is where you make a 3D space and hand out its address.
-                        Build rooms, place objects, set up lighting and cameras,
+                        Build scenes, place objects, set up lighting and cameras,
                         and invite others into the same space in real time — then publish,
                         and anyone opens it in a browser or a headset with nothing to install.
                     </Typography>

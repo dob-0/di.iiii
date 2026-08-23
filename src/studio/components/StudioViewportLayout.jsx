@@ -136,7 +136,7 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h', 'graph')} title="Split with a nodes view (dev preview)">N</button>
                 )}
                 {isGraphViewEnabled() && (
-                    <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h', 'world')} title="Split with the live Room's 3D view (dev preview)">W</button>
+                    <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h', 'world')} title="Split with the live Scene's 3D view (dev preview)">W</button>
                 )}
                 {!isRoot && (
                     <button className="svl-ctrl-btn svl-ctrl-btn--close" onClick={() => onClose(node.id)} title="Close pane">×</button>

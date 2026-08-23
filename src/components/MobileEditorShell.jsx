@@ -18,8 +18,8 @@ const DEFAULT_SHEET_STATE = {
 
 const EMPTY_STATES = {
     scene: {
-        title: 'Room tools are empty',
-        description: 'Room controls will appear here when they are available.'
+        title: 'Scene tools are empty',
+        description: 'Scene controls will appear here when they are available.'
     },
     files: {
         title: 'No file tools yet',
