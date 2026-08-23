@@ -102,13 +102,31 @@ export const WIKI_ARTICLES = [
             'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.',
             'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google) — everything comes with you: your whole sandbox, its projects and its files, moves onto your account automatically — or Export the project as a file you can import into any space later. The sign-in confirmation says when your sandbox came along. Existing account work is never overwritten by a later guest session.',
             'For a live jam — an event, a workshop, a projected wall — share the short link di-studio.xyz/open_jam (or turn it into a QR code). It opens the shared Open Jam directly, and a one-line welcome shows first-timers how to add their visual. Anyone who scans can drop in an image, video or 3D model on the spot, no account needed.',
-            'The Open Jam opens in a simple mode: one Create window with file upload and a few basic shapes — the full editor’s other windows and import options stay out of the way. Tapping an object opens a small Edit window (change your text, pick a colour, or remove it). Anyone who wants the complete toolset can press “⚒ All tools” in the control cluster (and “◱ Simple” switches back); the choice is remembered on that device.',
+            'There are two ways in, and they are the same jam. di-studio.xyz/open_jam/scene puts you inside the scene — you stand in it, walk around, and add things where you are looking; it is the one to put on a flyer or a QR code for a phone. See "Standing in the jam" for what it does.',
+            'The Open Jam opens in a simple mode: one Create window with file upload and a few basic shapes — the full editor’s other windows and import options stay out of the way. Tapping an object opens a small Edit window (change your text, pick a colour, or remove it). Anyone who wants the complete toolset can press “⚒ All tools” in the toolbar (and “◱ Simple” switches back); the choice is remembered on that device.',
             'For admins: Ops Graph → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
             'The landing page has one door. It used to offer three side by side — “Step inside”, “Open Studio” and “Enter Space” — which asked a first-time visitor to choose between them before they knew what any of them were. Studio is not a rival to the door now: step inside, and Studio is there to walk into. The quiet “Already have spaces? Open Studio →” line under the button is the return path for people who already have work of their own.',
             'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page. Where no Main space is set at all, the landing offers “Look around” instead — a decorative walkable preview of its own hero, not a real space.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr'],
-        updated: '2026-08-21'
+        updated: '2026-08-23'
+    },
+    {
+        id: 'jam-surface',
+        category: 'Spaces & access',
+        title: 'Standing in the jam',
+        summary: 'Scan the code and you are inside the scene: walk around, add something where you are looking, and see everyone else who is there.',
+        body: [
+            'di-studio.xyz/open_jam/scene opens the shared Open Jam as a place you are in, rather than as an editor with most of it switched off. You arrive standing at eye height. Drag a thumb across the right of the screen to look around, and the left to walk.',
+            'One large ＋ sits at the bottom, in reach of a thumb. Tap it and a sheet comes up with five shapes — box, sphere, cone, torus, text — and a photo from your camera or your camera roll. Nothing else: at an event the whole point is that somebody who has never seen di.iiii can put something in before the moment passes.',
+            'What you add lands on the ground about two metres in front of you, where you are looking. That is the real difference from the editor. Everyone who opens the editor starts from the same saved view, so everyone drops their work into the same handful of spots; here, twenty people standing in twenty places make twenty places.',
+            'While something is yours, the sheet lets you change it: retype the words if it is text, pick a different colour, push it further away or pull it nearer, or remove it. A chip above the ＋ counts what you added so you can find it again. That list lives on your own device and is a convenience, not a lock — the Open Jam is shared, and anyone in it can still change anything in it, exactly as before.',
+            'A line at the top says how many people are here, and each of them stands in the scene as a soft marker on the floor with their name above it, turned whichever way they are facing. Until now everybody in the jam was invisible to everybody else on a phone, because the old marker followed a mouse and a phone has none.',
+            '“Full editor →” at the top right opens the same jam in Studio with every tool in it. A phone had no way through to that at all before: the switch lived in a toolbar that only appears on a wide screen.',
+            'The editor is unchanged and still lives at di-studio.xyz/open_jam. The two are the same jam — whatever is made in one shows up in the other, live — so a laptop can be doing the careful work while the phones in the space keep adding.'
+        ],
+        tags: ['jam', 'open space', 'qr', 'event', 'walk', 'phone', 'presence', 'scene', 'mobile'],
+        updated: '2026-08-23'
     },
     {
         id: 'joining-a-space',
@@ -159,7 +177,7 @@ export const WIKI_ARTICLES = [
         title: 'Writing on a Text window',
         summary: 'A Text window is a note you can type straight into — unless something is wired to it.',
         body: [
-            'A Text window holds writing: a title for a desk, instructions for whoever opens the project next, a list you are still working out. Click into it and type. What you write saves as you go, the same way every other edit does, and undo works on it.',
+            'A Text window holds writing: a title for a canvas, instructions for whoever opens the project next, a list you are still working out. Click into it and type. What you write saves as you go, the same way every other edit does, and undo works on it.',
             'Anyone who can edit the project can write in one, including a collaborator who arrived by invite. If two of you are in the project at once you will see each other\'s changes.',
             'One case is different. A Text window\'s content can be fed by another node — wired in, like a colour is wired into a scene. When it is, the window shows the text but will not let you type, and says so: the value belongs to the node upstream, and anything typed here would be replaced the moment that node changed. Unplug the wire and the window becomes writable again.',
             'The window is a node like any other: close it, minimize it to a bar, move it, or open it up from the graph card that carries the same name.'
@@ -901,7 +919,7 @@ export const WIKI_ARTICLES = [
         body: [
             'Add a MIDI Out node from the palette. It asks the browser for MIDI access and sends to every connected device; its Status port says what it is doing, so a Text panel wired to Status is an honest meter.',
             'Notes: while Trigger is on, the note is held. The moment Trigger rises the node strikes Note at Velocity; the moment it falls it releases exactly the note it struck, even if Note has moved since. A Button, a Compare, a Toggle — anything true-or-false — makes a good Trigger.',
-            'A Trigger that stays on but keeps changing — MIDI In\'s rising count, a Counter — re-strikes on every change. That is the same idiom the rest of the desk uses: something happened because the number changed.',
+            'A Trigger that stays on but keeps changing — MIDI In\'s rising count, a Counter — re-strikes on every change. That is the same idiom the rest of the canvas uses: something happened because the number changed.',
             'Knobs: whenever Value changes it leaves as a control change on the CC number. Wire an Oscillator through Range into Value and a filter sweeps itself. Nothing is sent while Value merely stays what it was.',
             'Channel picks the MIDI channel (1-16). This needs Chrome or Edge; Safari and Firefox have no Web MIDI and Status says so instead of sitting blank. Devices plugged in later appear without a reload.'
         ],

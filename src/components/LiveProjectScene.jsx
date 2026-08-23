@@ -44,6 +44,7 @@ import {
     WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
     BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
 } from './walkModeConfig.js'
+import { isTypingTarget } from './walkKeyboard.js'
 import './liveProjectScene.css'
 
 const PARTICLE_COUNT = 900
@@ -416,6 +417,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         const keys = keysRef.current
         const moveKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'q', 'e', 'c']
         const onKeyDown = (e) => {
+            if (isTypingTarget(e.target)) return
             const key = e.key.toLowerCase()
             if (!moveKeys.includes(key)) return
             if (key === ' ') e.preventDefault()
@@ -1295,9 +1297,36 @@ export default function LiveProjectScene({
     showEntities = true,
     onExit = null,
     exitLabel = '← Exit',
-    title = ''
+    title = '',
+    // --- Four optional seams, added for the jam surface (JamSurface.jsx).
+    // Every one of them defaults to exactly what this component did before,
+    // so nothing that already renders a walk-mode scene changes behaviour.
+    //
+    // `document`: a caller that already holds the live project document hands
+    // it over instead of making this component fetch a second copy and open a
+    // second SSE stream for the same project. A surface that both WRITES and
+    // walks (the jam) necessarily already has a sync of its own.
+    document: providedDocument = null,
+    // `walkerRef`: publishes the walker's pose object so a caller can read
+    // where the visitor is standing and what they are looking at. The SAME
+    // object, never a copy — see the Object.assign note in the spawn effect
+    // below, and livePlayerRef.test.js, which guards that identity.
+    walkerRef = null,
+    // `showModeControls`: the Fly toggle and the Enter VR/AR buttons. They are
+    // functional controls, not branding, which is why they survive
+    // showChrome={false} — but a surface whose whole design is one thumb-sized
+    // control needs to be able to say "not here". Movement (the joystick) is
+    // never hidden by this: it is the only way a phone can move at all.
+    showModeControls = true,
+    // `sceneExtras`: three.js children rendered inside this component's Canvas,
+    // after the project's own objects. The jam draws a marker where each other
+    // person is standing, and a marker in the scene has to be IN the scene.
+    sceneExtras = null
 }) {
-    const { doc, loadError, retryDocument } = useLiveProjectDocument(projectId)
+    const fetched = useLiveProjectDocument(providedDocument ? null : projectId)
+    const doc = providedDocument || fetched.doc
+    const loadError = providedDocument ? false : fetched.loadError
+    const retryDocument = fetched.retryDocument
     const xr = useXrAr()
     const [nearestLabel, setNearestLabel] = useState(null)
     const [isLocked, setIsLocked] = useState(false)
@@ -1332,6 +1361,18 @@ export default function LiveProjectScene({
     // The ref (not the object) — worldState.spawn replaces playerRef.current.
     if (import.meta.env.DEV && typeof window !== 'undefined') window.__diiWalkerRef = playerRef
 
+    // Hand the caller the pose object itself, not a snapshot of it. A surface
+    // that places something "where I am looking" has to read the pose at the
+    // moment of the tap, and the pose is mutated in place every frame — so a
+    // copy would be stale by the time it was read, and a per-frame callback
+    // would cost a React render 60 times a second to answer a question nobody
+    // is asking until a button is pressed.
+    useEffect(() => {
+        if (!walkerRef) return undefined
+        walkerRef.current = playerRef.current
+        return () => { walkerRef.current = null }
+    }, [walkerRef])
+
     // Data-driven arrival: a project can author worldState.spawn to place/aim the
     // visitor on entry (otherwise the default above). Applied once per project load.
     const spawnAppliedRef = useRef(null)
@@ -1362,11 +1403,14 @@ export default function LiveProjectScene({
     }, [xr.domOverlayRoot])
 
     useEffect(() => {
-        if (!interactive) return undefined
-        const onKey = (e) => { if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f) }
+        if (!interactive || !showModeControls) return undefined
+        const onKey = (e) => {
+            if (isTypingTarget(e.target)) return
+            if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f)
+        }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [interactive])
+    }, [interactive, showModeControls])
 
     const entities = useMemo(() => doc?.entities || [], [doc?.entities])
     // Legacy-imported projects store assets with an empty `url` field (the
@@ -1484,6 +1528,7 @@ export default function LiveProjectScene({
                     </SceneEntityErrorBoundary>
                 ))}
                 {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
+                {sceneExtras}
                 {interactive ? (
                     <Walker
                         playerRef={playerRef}
@@ -1522,10 +1567,10 @@ export default function LiveProjectScene({
                         {interactive && isMobile && (
                             <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
                         )}
-                        {interactive && isMobile && flyMode && (
+                        {interactive && isMobile && flyMode && showModeControls && (
                             <VerticalTouchControls vertTouchRef={vertTouchRef} />
                         )}
-                        {interactive && (
+                        {interactive && showModeControls && (
                             <button
                                 type="button"
                                 className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
@@ -1568,7 +1613,7 @@ export default function LiveProjectScene({
                 on `interactive` -- a purely decorative background (e.g.
                 Studio Hub's) has no Walker/locomotion wired up to make a
                 session usable. */}
-            {interactive && (xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
+            {interactive && showModeControls && (xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
                 <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, zIndex: 11 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
                         {xr.supportedXrModes.vr && (

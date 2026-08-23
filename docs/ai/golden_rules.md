@@ -208,6 +208,44 @@ Guessing wrong on a destructive or architectural decision costs more than a one-
 ### Never commit .env files or secrets
 `.env`, credentials, API tokens, and session secrets are never committed. If a task requires adding a new secret, add the key to `.env.example` with a placeholder value only.
 
+### A shared link is a promise — never change what a public address resolves to
+
+**Rule:** On any live tier, treat every public address as permanent and already
+handed out. **Free to change:** a space's `label`, a project's `title` — they are
+what a name *reads* as. **Never change without the owner asking for that specific
+link to move:** a space `id`, a space `slug`, a project `id` or `slug`, and
+`publishedProjectId` — they are what a link *resolves* to. Renaming is a display
+change; re-addressing is a broken link in someone else's message, bookmark, QR code
+or printed wall text, and you cannot un-send those.
+
+**Why:** 2026-08-23, correcting retired names in the DB — `main` was labelled
+`di.ii`, `platform-recordar` was its own id, a project was titled
+`di.i: open_space`. The owner's reaction was not about the names: *"we used the
+links and shared… spaces main links are shared with people so they can lose the
+access."* The addresses of the flagship spaces are out in the world. The renames
+were safe — only `label`/`title` were sent, every slug stayed `null`, all ten public
+URLs still returned 200 — but that was true by construction, not by luck, and the
+same PATCH endpoint accepts `slug` and `publishedProjectId` in the same body. One
+extra field would have silently moved a link that people already hold.
+
+**How:** Before any write to a live tier, ask *"does an address depend on this
+field?"*
+1. Send only the fields you mean. `PATCH /api/spaces/:id {label}` — never spread a
+   whole record back, which re-sends `slug` and `publishedProjectId` along with it.
+2. Prove it afterwards, on the live tier, before saying it is done: re-fetch and
+   confirm `slug` and `publishedProjectId` are unchanged, then `curl -o /dev/null -w
+   "%{http_code}"` every public URL — spaces, and `/{space}/p/{project}` deep links.
+   A 200 on each is the evidence; the intent is not.
+3. Staging first, always. The rehearsal tier is where a mistake costs nothing,
+   because nobody has shared its links.
+4. If a public address genuinely must move, that is an owner decision with a
+   redirect plan, never a side effect of a naming pass.
+
+**Files:** `serverXR/src/routes/spaceRoutes.js` (the PATCH route: `slug` only moves
+when `slug !== undefined` — keep it that way), `serverXR/src/routes/projectRoutes.js`,
+`docs/architecture/SPEC_space_urls_and_portability.md`, `docs/ai/vocabulary.md`
+(the same scope rule: the contract governs sentences, never identifiers).
+
 ### Never discard another agent's uncommitted changes
 If `git status` shows unstaged edits you didn't make, assume another agent is mid-task in the same working tree. `git stash push -- <file>` to set them aside if you need a clean tree for an unrelated operation (e.g. a branch merge), then `git stash pop` immediately after to restore them exactly as found. Never `git checkout --` or discard them. See [parallel-agents.md](parallel-agents.md) for the full multi-agent setup (prefer `git worktree` over sharing one tree).
 
