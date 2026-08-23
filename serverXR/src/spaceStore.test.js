@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 const require = createRequire(import.meta.url)
 const { createSpaceStore } = require('./spaceStore.js')
 const { initDb, closeDb, getDb } = require('./db.js')
+const projectStore = require('./projectStore.js')
 
 let store
 let tmpDir
@@ -181,5 +182,108 @@ describe('spaceStore readOpsHistorySince', () => {
         await store.writeOpsHistory('gamma-b', [{ opId: 'b1', version: 1, type: 'noop', payload: {} }])
         expect((await store.readOpsHistorySince('gamma-a', 0)).map((op) => op.opId)).toEqual(['a1'])
         expect((await store.readOpsHistorySince('gamma-b', 0)).map((op) => op.opId)).toEqual(['b1'])
+    })
+})
+
+// The Open Jam holds every contribution people made at an event inside a
+// PROJECT document, not in scene.json. Snapshots used to write the scene
+// alone, so a wiped or vandalised jam could not be restored — and any guest
+// holds editor on the open space. These are the regression guards for that.
+describe('spaceStore snapshots carry project documents', () => {
+    // Own spacesDir under tmpDir so the snapshots (a sibling of spacesDir)
+    // land inside the per-test temp tree and get cleaned up with it.
+    let jamStore
+    let spacesRoot
+    let snapshotsRoot
+
+    beforeEach(() => {
+        spacesRoot = path.join(tmpDir, 'spaces')
+        snapshotsRoot = path.join(tmpDir, 'snapshots')
+        fs.mkdirSync(spacesRoot, { recursive: true })
+        jamStore = createSpaceStore({ spacesDir: spacesRoot, blankScene: { objects: [] } })
+    })
+
+    const jamDocument = (entityIds = []) => ({
+        version: 1,
+        projectMeta: { id: 'open-jam', spaceId: 'open-space', title: 'Open Jam', source: 'studio-v3' },
+        entities: entityIds.map((id) => ({ id, type: 'box', name: id })),
+        nodes: [],
+        edges: [],
+        assets: []
+    })
+
+    const seedJam = async (entityIds) => {
+        await jamStore.upsertSpaceMeta('open-space', { label: 'Open Space', permanent: true, sceneVersion: 1 })
+        await jamStore.ensureSpaceScene('open-space')
+        fs.writeFileSync(path.join(spacesRoot, 'open-space', 'scene.json'), JSON.stringify({ objects: [{ id: 'floor' }] }))
+        await projectStore.ensureProject(spacesRoot, 'open-space', 'open-jam', { title: 'Open Jam', source: 'studio-v3' })
+        await projectStore.writeProjectDocument(spacesRoot, 'open-space', 'open-jam', jamDocument(entityIds))
+    }
+
+    const jamEntityIds = async () =>
+        (await projectStore.readProjectDocument(spacesRoot, 'open-space', 'open-jam')).entities.map((e) => e.id)
+
+    it('snapshots the jam document alongside the scene and restores it after a wipe', async () => {
+        await seedJam(['contribution-a', 'contribution-b'])
+
+        expect(await jamStore.snapshotSpaceScene('open-space')).toBeTruthy()
+
+        // The vandalism: an editor (any guest is one here) empties the jam.
+        await projectStore.writeProjectDocument(spacesRoot, 'open-space', 'open-jam', jamDocument([]))
+        expect(await jamEntityIds()).toEqual([])
+
+        const snapshot = await jamStore.readLatestSpaceSnapshot('open-space')
+        expect(snapshot.scene.objects[0].id).toBe('floor')
+        expect(snapshot.projects).toHaveLength(1)
+        expect(snapshot.projects[0].id).toBe('open-jam')
+        expect(snapshot.projects[0].document.entities.map((e) => e.id))
+            .toEqual(['contribution-a', 'contribution-b'])
+
+        const restored = await jamStore.restoreSpaceProjectDocuments('open-space', snapshot.projects)
+
+        expect(restored.map((entry) => entry.projectId)).toEqual(['open-jam'])
+        expect(await jamEntityIds()).toEqual(['contribution-a', 'contribution-b'])
+        // A client still holding the wiped copy has to be told: the version
+        // moves and a replaceDocument reset op lands in the project's history.
+        const meta = await projectStore.loadProjectMeta(spacesRoot, 'open-space', 'open-jam')
+        expect(meta.documentVersion).toBe(restored[0].version)
+        expect(restored[0].version).toBeGreaterThan(0)
+        const ops = await projectStore.readProjectOps(spacesRoot, 'open-space', 'open-jam')
+        expect(ops.at(-1)).toMatchObject({ type: 'replaceDocument', version: restored[0].version })
+    })
+
+    it('recreates a project the vandal deleted outright', async () => {
+        await seedJam(['contribution-a'])
+        await jamStore.snapshotSpaceScene('open-space')
+        const snapshot = await jamStore.readLatestSpaceSnapshot('open-space')
+
+        await projectStore.deleteProject(spacesRoot, 'open-space', 'open-jam')
+        expect(await projectStore.loadProjectMeta(spacesRoot, 'open-space', 'open-jam')).toBeNull()
+
+        await jamStore.restoreSpaceProjectDocuments('open-space', snapshot.projects)
+
+        expect((await projectStore.loadProjectMeta(spacesRoot, 'open-space', 'open-jam')).title).toBe('Open Jam')
+        expect(await jamEntityIds()).toEqual(['contribution-a'])
+    })
+
+    it('keeps the existing rotation: one file per snapshot, oldest dropped', async () => {
+        await seedJam(['contribution-a'])
+        const dir = path.join(snapshotsRoot, 'open-space')
+        for (let i = 0; i < 3; i += 1) {
+            await jamStore.snapshotSpaceScene('open-space', { keep: 2 })
+            await new Promise((r) => setTimeout(r, 2))
+        }
+        expect(fs.readdirSync(dir).filter((name) => name.endsWith('.json'))).toHaveLength(2)
+    })
+
+    it('still reads a pre-envelope snapshot file as a scene-only snapshot', async () => {
+        await jamStore.upsertSpaceMeta('legacy-space', {})
+        const dir = path.join(snapshotsRoot, 'legacy-space')
+        fs.mkdirSync(dir, { recursive: true })
+        fs.writeFileSync(path.join(dir, '2026-01-01T00-00-00-000Z.json'), JSON.stringify({ objects: [{ id: 'old' }] }))
+
+        const snapshot = await jamStore.readLatestSpaceSnapshot('legacy-space')
+        expect(snapshot.scene.objects[0].id).toBe('old')
+        expect(snapshot.projects).toEqual([])
     })
 })

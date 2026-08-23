@@ -217,7 +217,7 @@ function registerSyncRoutes(router, {
         // arrived in this scene and will not resolve here either.
         missingOnLive: remote.missingAssetIds,
         // snapshotSpaceScene returns the file it wrote, or null for a space
-        // that had no scene yet.
+        // with nothing to snapshot yet (no scene and no project documents).
         snapshot,
       })
     } catch (error) {
