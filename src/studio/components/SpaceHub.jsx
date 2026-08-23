@@ -587,7 +587,17 @@ export default function SpaceHub() {
                                                 loading="lazy"
                                             />
                                         </div>
-                                    ) : space.isPublic && space.publishedProjectId ? (
+                                    ) : space.isPublic ? (
+                                        // isPublic alone, NOT isPublic && publishedProjectId.
+                                        // SpaceCardPreview embeds the SPACE's own live route
+                                        // (`buildAppSpacePath(spaceId)?preview=1`) — it never
+                                        // needed a published project, and the extra condition
+                                        // blanked exactly one card: the Open Space, which is the
+                                        // first card a visitor sees and the room the whole
+                                        // product points at. It has no published project because
+                                        // it is the communal scene itself, and /open renders it
+                                        // fine. Every other public space happened to have one,
+                                        // so the gate looked correct for two years of cards.
                                         <SpaceCardPreview spaceId={space.id} label={space.label || space.id} />
                                     ) : null}
                                     <p className="ssh-space-label">{space.label || space.id}</p>

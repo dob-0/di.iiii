@@ -143,7 +143,7 @@ describe('SpaceHub', () => {
         expect(draftsCard.querySelector('.ssh-live-link')).toBeNull()
     })
 
-    it('embeds a non-interactive live preview only on public spaces with a linked project', async () => {
+    it('embeds a non-interactive live preview on every public space, linked project or not', async () => {
         // preview iframes mount when the card becomes visible
         vi.stubGlobal('IntersectionObserver', class {
             constructor(callback) { this.callback = callback }
@@ -178,9 +178,17 @@ describe('SpaceHub', () => {
             expect(previewFrame.style.height).toBe('576px')
             expect(previewFrame.style.transform).toMatch(/^scale\(/)
 
-            // not public → no preview; public without a linked project → no preview
+            // A public space with NO linked project still previews. The gate used to
+            // be `isPublic && publishedProjectId`, which blanked exactly one card:
+            // the Open Space — the first card a visitor sees and the room the whole
+            // product points at. It has no published project because it IS the
+            // communal scene, and /open renders it fine. The preview embeds the
+            // SPACE route, so a project was never needed.
+            await waitFor(() => expect(frameIn('bare')).not.toBeNull())
+            expect(frameIn('bare').getAttribute('src')).toBe('/bare?preview=1')
+
+            // private → still no preview, which is the condition that matters
             expect(screen.getByText('drafts').closest('.ssh-space-card').querySelector('.ssh-card-preview')).toBeNull()
-            expect(screen.getByText('bare').closest('.ssh-space-card').querySelector('.ssh-card-preview')).toBeNull()
         } finally {
             vi.unstubAllGlobals()
         }
