@@ -447,12 +447,68 @@ describe('PublicProjectViewer', () => {
             expect(screen.getByText('graph-interactive:true')).toBeInTheDocument()
         })
 
+        // DO NOT relax this into "a graph may be walked". Walk mode enters
+        // LiveProjectScene, which reads `entities` and nothing else. With a
+        // graph and no entity beside it there is literally nothing for it to
+        // put in front of the visitor, so the button would swap the work they
+        // are looking at for an empty room they would read as the room rather
+        // than as the mode. It stays hidden until walk mode can render a graph;
+        // the mixed case below is offered because its entities are real, not
+        // because the graph became walkable.
         it('does not offer Walk / Fly, which would render the room without its work', async () => {
-            // Walk mode enters LiveProjectScene, which reads `entities`. On a
-            // node-built room it would show an empty version of what the
-            // visitor is already looking at, and they would read that as the
-            // room rather than as the mode.
             getProjectDocumentMock.mockResolvedValue(graphDocument)
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="dilijan" projectId="live-project" spaceLabel="Dilijan" />)
+
+            // the visitor IS looking at work — that is what makes the swap a loss
+            expect(await screen.findByText('viewer-graph')).toBeInTheDocument()
+            expect(graphDocument.document.entities).toHaveLength(0)
+            expect(screen.queryByRole('button', { name: /Walk \/ Fly/i })).toBeNull()
+        })
+
+        // The owner's settled model: ONE document carries both lanes. Wires,
+        // scene and light live in the node editor; anything that must survive
+        // for a visitor is made as an entity. Such a room used to be refused
+        // walk mode purely because a graph sat beside it — which also meant no
+        // headset entry at all, since Enter VR / Enter AR live inside
+        // LiveProjectScene and walk mode is the only way in.
+        it('offers Walk / Fly on a mixed room, where the entities are real', async () => {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'live-project', title: 'Live Project' },
+                    presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                    nodes: [{ id: 'n1', typeId: 'geom.cube' }],
+                    entities: [{ id: 'e1', type: 'box', components: { transform: { position: [0, 0, 0] } } }]
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="dilijan" projectId="live-project" spaceLabel="Dilijan" />)
+
+            // orbit still shows the renderer that can hold both lanes
+            expect(await screen.findByText('viewer-graph')).toBeInTheDocument()
+            const walkButton = await screen.findByRole('button', { name: 'Walk / Fly' })
+
+            // and it really reaches LiveProjectScene — the only door to XR
+            fireEvent.click(walkButton)
+            expect(await screen.findByRole('button', { name: '← View mode' })).toBeInTheDocument()
+        })
+
+        // Hidden entities are dropped with their whole subtree by
+        // LiveProjectScene, so a graph room whose only entities are hidden is
+        // the empty-room case wearing an entity array.
+        it('does not count hidden entities as something to walk into', async () => {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'live-project', title: 'Live Project' },
+                    presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                    nodes: [{ id: 'n1', typeId: 'geom.cube' }],
+                    entities: [{ id: 'e1', type: 'box', components: { runtime: { visible: false } } }]
+                }
+            })
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
 
             render(<PublicProjectViewer spaceId="dilijan" projectId="live-project" spaceLabel="Dilijan" />)
@@ -471,6 +527,61 @@ describe('PublicProjectViewer', () => {
 
             expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
             expect(screen.queryByText('viewer-graph')).toBeNull()
+        })
+    })
+
+    // A composed opening shot and a room the visitor may walk are two unrelated
+    // things, but the gate used to require entryView === 'scene', so choosing
+    // 'fixed-camera' silently cost the room its Walk / Fly button — and with it
+    // headset entry, which is only reachable through walk mode.
+    describe('which entry views open onto a room', () => {
+        const roomEntities = [{ id: 'e1', type: 'box', components: { transform: { position: [0, 0, 0] } } }]
+
+        it('offers Walk / Fly on a fixed-camera room — the shot is where the visit starts, not a cage', async () => {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'live-project', title: 'Live Project' },
+                    presentationState: {
+                        mode: 'scene',
+                        entryView: 'fixed-camera',
+                        codeHtml: '',
+                        fixedCamera: { locked: true, position: [0, 2, 6], target: [0, 1, 0] }
+                    },
+                    entities: roomEntities
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+            expect(await screen.findByText('viewer-scene:fixed-camera')).toBeInTheDocument()
+            // the authored shot still holds the orbit view still
+            expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:false chrome:true low:false')
+
+            const walkButton = await screen.findByRole('button', { name: 'Walk / Fly' })
+            fireEvent.click(walkButton)
+            expect(await screen.findByRole('button', { name: '← View mode' })).toBeInTheDocument()
+        })
+
+        it('offers nothing to walk into on a code page, which has no room at all', async () => {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'code-only', title: 'Code Only' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>page</main>' },
+                    entities: roomEntities
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { container } = render(<PublicProjectViewer spaceId="main" projectId="code-only" spaceLabel="Main Space" />)
+
+            await waitFor(() => {
+                expect(container.querySelector('iframe')).not.toBeNull()
+            })
+            // entities present and walkable — the entry view is the whole reason
+            expect(screen.queryByRole('button', { name: /Walk \/ Fly/i })).toBeNull()
         })
     })
 })
