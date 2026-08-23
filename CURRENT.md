@@ -13,10 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the badge that advertised the work by covering it
-- the dark theme's secondary text was below the readability floor, and nothing could have told us
-- "where did my cube go", and the phone topbar that had already lost its ⋯
-- the crossing from Studio to Nodes landed on a screen that said the work was gone
+- the one link most likely to be shared had no preview card
 
 Full detail: `PROGRESS.md`.
 
