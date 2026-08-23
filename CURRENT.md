@@ -13,9 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- camp SETTLED on staging (owner, 08-24): prod is not part of it. Invites re-minted — the old six died Aug 27, mid-camp — and the camp is ONE shared room.
-- the camp desks are mobile-first now: on a phone every window clamps to x=12 w=366, so Board and Scene both landed at y=64 and Scene was unreachable. One open Board + four bars, patched as DATA (frames only, gear rows untouched).
-- the lexicon sweep missed the landing itself ("The platform" above "What is di.iiii?") and the OG fallback still shipped pre-sweep copy — both fixed; a pasted link and the page now agree.
+- deleting asks first, and says whose work it is
 
 Full detail: `PROGRESS.md`.
 
