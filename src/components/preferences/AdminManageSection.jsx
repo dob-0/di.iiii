@@ -546,7 +546,7 @@ function SpaceDetail({
             <ModuleSection title="Owner &amp; access" subtitle="Who holds this space, and who can reach it">
                 {/* A space with no owner still works, but every owner-gated
                     action in it (publish, invite, rename, delete) can only be
-                    done by a platform admin. Spaces provisioned over the API —
+                    done by a di.iiii admin. Spaces provisioned over the API —
                     every repo-synced one — arrive here. */}
                 <InfoPair
                     label="Owner"
@@ -574,7 +574,7 @@ function SpaceDetail({
                                             className={`toggle-button ${owns ? 'active success-button' : ''}`}
                                             onClick={() => onPatch({ ownerUserId: owns ? null : u.id })}
                                             title={owns
-                                                ? 'Release this space back to the platform (admins keep full control)'
+                                                ? 'Release this space back to di.iiii (admins keep full control)'
                                                 : 'Hand this space over — they get owner rights and access in one move'}
                                         >
                                             {owns ? 'Owner ✓' : 'Make owner'}

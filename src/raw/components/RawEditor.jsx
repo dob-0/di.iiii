@@ -1990,7 +1990,7 @@ export default function RawEditor({
                                                 {isSavingToSpace ? 'Saving…' : `Save to ${resolvedSpaceId}`}
                                             </button>
                                         )}
-                                        {/* The platform exits — the canvas was a
+                                        {/* The exits back to di.iiii — the canvas was a
                                             sealed room before the doors audit. */}
                                         <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildSpacesPath()) }}>Spaces</button>
                                         <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildWikiPath()) }}>Wiki</button>
@@ -2118,8 +2118,8 @@ export default function RawEditor({
                 {/* Zen's three residents are surface, nodes, wordmark — this is
                     the wordmark. Ambient, kept when the toolbar is summoned too.
                     It became the way home in the 2026-08-21 doors audit: the
-                    canvas was a sealed room (no nav, no path back to the
-                    platform), and a wordmark that links home is the one exit
+                    canvas was a sealed room (no nav, no path back to
+                    di.iiii), and a wordmark that links home is the one exit
                     that adds no furniture. Same resting look, quiet hover. */}
                 <a
                     className="raw-surface-wordmark"

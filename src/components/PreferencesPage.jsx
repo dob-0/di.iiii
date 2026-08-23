@@ -137,7 +137,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                 <div className="preferences-gate">
                     <ModuleSection title="Admin console" subtitle="Admins only">
                         <div className="preferences-empty">
-                            This page is for platform admins. Your spaces — create, rename,
+                            This page is for di.iiii admins. Your spaces — create, rename,
                             publish, GitHub sync — live on the Spaces page.
                         </div>
                         <div className="preferences-command-grid">

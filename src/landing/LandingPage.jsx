@@ -158,9 +158,9 @@ export default function LandingPage() {
     // the orbit view once you'd moved was a full Exit + Enter Space round
     // trip. This lets you flip between them without leaving "entered" at all.
     const [viewMode, setViewMode] = useState(false)
-    // The platform's "Main" space (set from /admin, or inline in Studio Hub's
+    // di.iiii's "Main" space (set from /admin, or inline in Studio Hub's
     // per-space "Main" badge) is the same space that already represents the
-    // platform elsewhere — reuse it here instead of a second, parallel
+    // di.iiii elsewhere — reuse it here instead of a second, parallel
     // landing-only setting. When set, "Enter Space" opens that real,
     // populated space instead of the decorative walkable void this page's
     // own background renders.
@@ -372,10 +372,10 @@ export default function LandingPage() {
                     <Typography className="lp-section-eyebrow">The platform</Typography>
                     <Typography className="lp-section-title" component="h2">What is di.iiii?</Typography>
                     <Typography className="lp-section-body">
-                        di.iiii is a collaborative 3D spatial editor that runs entirely in your web browser.
-                        Think of it as a shared whiteboard — but in three dimensions.
+                        di.iiii is where you make a 3D space and hand out its address.
                         Build rooms, place objects, set up lighting and cameras,
-                        and invite others to join the same space in real time.
+                        and invite others into the same space in real time — then publish,
+                        and anyone opens it in a browser or a headset with nothing to install.
                     </Typography>
 
                     <Box className="lp-three-cols">
@@ -502,7 +502,7 @@ export default function LandingPage() {
                     <Typography className="lp-section-title" component="h2">Learn how it works</Typography>
                     <Typography className="lp-section-body">
                         New here? The Wiki explains spaces, guest &amp; sandbox modes, free accounts,
-                        publishing, and the API — and it’s kept up to date as the platform grows.
+                        publishing, and the API — and it’s kept up to date as di.iiii grows.
                     </Typography>
 
                     <Box className="lp-feature-grid">
@@ -540,11 +540,11 @@ export default function LandingPage() {
 
                     <Box className="lp-ai-cols">
                         <Box className="lp-ai-block">
-                            <Typography className="lp-ai-block-title">Platform identity</Typography>
+                            <Typography className="lp-ai-block-title">Identity</Typography>
                             <Box className="lp-code-block">
                                 {[
                                     ['name', 'di.iiii'],
-                                    ['type', '3D spatial editor / WebXR platform'],
+                                    ['type', 'WebXR platform for public 3D spaces'],
                                     ['version', '0.2.0'],
                                     ['backend', 'serverXR (Node.js)'],
                                     ['storage', 'SQLite + disk assets'],

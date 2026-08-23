@@ -27,7 +27,7 @@ import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 // chunk (~1.6MB raw, measured against first paint on /br_id_ge).
 const PublicProjectSceneSurface = lazyWithReload(() => import('./PublicProjectSceneSurface.jsx'), 'public-scene-surface')
 
-// The platform's one loading screen — black, one spinner, no drawn words
+// di.iiii's one loading screen — black, one spinner, no drawn words
 // (LoadingScreen.jsx). The published face used to show its own lit text pill
 // here, the last per-surface loading look left.
 const loadingOverlay = <LoadingScreen label="Loading live experience" />

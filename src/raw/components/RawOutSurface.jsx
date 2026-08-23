@@ -44,7 +44,7 @@ export default function RawOutSurface({ projectId = null, localStorageKey = '', 
 
     // A show output must survive unattended: ask the screen to stay awake,
     // and re-ask whenever the tab becomes visible again (the lock is released
-    // by the platform on every hide). Denial is fine — kiosk setups disable
+    // by di.iiii on every hide). Denial is fine — kiosk setups disable
     // sleep at the OS level anyway.
     useEffect(() => {
         if (typeof navigator === 'undefined' || !navigator.wakeLock?.request) return undefined

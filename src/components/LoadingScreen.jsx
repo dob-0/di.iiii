@@ -1,6 +1,6 @@
 import './loadingScreen.css'
 
-// The platform's single loading screen. Black, one spinner, no drawn words.
+// di.iiii's single loading screen. Black, one spinner, no drawn words.
 //
 // One component rather than one per surface. Before this there were five
 // different looks for "wait a moment" — a blue-lit card on routes, a bare MUI
