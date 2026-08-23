@@ -361,3 +361,12 @@
         border: 1px solid rgba(242, 245, 248, 0.12);
     }
 }
+
+/* The account button is fixed to the bottom-right of every surface, so on the
+   jam it lands on the add sheet's "photo" tile and takes the tap. Measured on
+   an iPhone 13: 346,548–376,578 against the tile's 261,551–374,626. The jam has
+   its own way in and out (the "Full editor →" link), so it does not need a
+   second one floating over the scene. Same move the landing and the wiki make. */
+body.is-jam .account-btn-wrapper {
+    display: none !important;
+}

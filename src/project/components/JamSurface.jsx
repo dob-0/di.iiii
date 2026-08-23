@@ -235,6 +235,18 @@ export default function JamSurface({ projectId, spaceId }) {
         [standingVisitors]
     )
 
+    // The platform's floating account button is fixed to the bottom-right of
+    // every surface. Measured on an iPhone 13: it lands at 346,548–376,578,
+    // INSIDE the sheet's "photo" tile (261,551–374,626) and above it in z — so
+    // the one contribution that matters at an event, a picture from your own
+    // camera, has a sign-in button parked on its corner. The landing and the
+    // wiki already take themselves out of its way the same way; a full-bleed
+    // surface with its own thumb-reachable controls is the same case.
+    useEffect(() => {
+        document.body.classList.add('is-jam')
+        return () => document.body.classList.remove('is-jam')
+    }, [])
+
     return (
         <main className="jam-surface" data-space-id={spaceId || ''}>
             <LiveProjectScene

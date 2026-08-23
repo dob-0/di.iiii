@@ -224,4 +224,18 @@ describe('changing an object', () => {
         expect(screen.queryByRole('button', { name: /of yours/ })).not.toBeInTheDocument()
         expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument()
     })
+
+    // Measured on an iPhone 13 against the running surface: the platform's fixed
+    // account button lands at 346,548-376,578, INSIDE the add sheet's "photo"
+    // tile at 261,551-374,626 and above it in z. The one contribution that
+    // matters at an event — a picture from your own camera — had a sign-in
+    // button parked on its corner. The landing and the wiki already step out of
+    // its way with a body class; the jam is the same case.
+    it('takes the floating account button out of the sheet\u2019s way', () => {
+        expect(document.body.classList.contains('is-jam')).toBe(false)
+        const view = mount()
+        expect(document.body.classList.contains('is-jam')).toBe(true)
+        view.unmount()
+        expect(document.body.classList.contains('is-jam')).toBe(false)
+    })
 })
