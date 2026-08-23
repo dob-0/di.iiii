@@ -355,6 +355,18 @@ export default function RawEditor({
     // The topbar counts THIS room; the empty-state logic asks about the whole
     // document (a zen desk inside a full project is not "empty").
     const nodeCount = graphCardNodes.length
+    // "Where did my cube go?" The desk is deliberately clear (owner, 2026-08-20:
+    // "i mean clear desk"), so a spatial node you just placed is standing in a
+    // room you are not looking at — and the button to that room said the same
+    // word whether it held nothing or held your whole scene. Counting what
+    // stands there makes placing the first thing visibly change something
+    // besides the card, without putting the room back as wallpaper.
+    // Entities are root-scope citizens, same rule the viewport draws by.
+    const roomCount = useMemo(() => {
+        const standing = authoredNodes.filter((node) => (node.parentId || null) === (currentScopeId || null)
+            && getNodeType(node.typeId)?.render === 'spatial-3d').length
+        return standing + (currentScopeId ? 0 : entities.length)
+    }, [authoredNodes, currentScopeId, entities.length])
     const hasAnyNodes = authoredNodes.length > 0
     const hasGraphNodes = hasAnyNodes
     // universe.world is not a singleton (product decision 2026-07-19) — a scope
@@ -1835,10 +1847,10 @@ export default function RawEditor({
                 {chromeVisible && (
                     <>
                         <div className="raw-topbar-left">
-                            <button type="button" className="raw-topbar-back" onClick={() => {
+                            <button type="button" className="raw-topbar-back" aria-label="Back to projects" onClick={() => {
                                 navigateToRawPath(buildSpaceProjectsPath(resolvedSpaceId))
                             }}>
-                                ← Projects
+                                ←<span className="raw-topbar-word"> Projects</span>
                             </button>
                             {/* Name the space, not just the project. Studio's cluster has
                                 always shown "space · project"; Raw showed the project
@@ -1900,8 +1912,15 @@ export default function RawEditor({
                                     // nothing, silently, exactly where a person
                                     // most needed to see what they were building.
                                     onClick={() => setIsWorldFullscreen((current) => !current)}
+                                    title={isWorldFullscreen
+                                        ? 'Back to the graph'
+                                        : roomCount > 0
+                                            ? `Open the room — ${roomCount} thing${roomCount === 1 ? '' : 's'} standing in it`
+                                            : 'Open the room — nothing standing in it yet'}
                                 >
-                                    {isWorldFullscreen ? '← Graph' : 'Scene'}
+                                    {isWorldFullscreen
+                                        ? '← Graph'
+                                        : roomCount > 0 ? `Scene · ${roomCount}` : 'Scene'}
                                 </button>
                             </div>
                         </div>
@@ -1917,7 +1936,7 @@ export default function RawEditor({
                                     title="Toggle outliner"
                                     aria-label={`${nodeCount} nodes`}
                                 >
-                                    {nodeCount} {nodeCount === 1 ? 'node' : 'nodes'}
+                                    {nodeCount}<span className="raw-topbar-word"> {nodeCount === 1 ? 'node' : 'nodes'}</span>
                                 </button>
                             )}
                             {/* No Chat button alone in a local canvas: there

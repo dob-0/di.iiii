@@ -26,6 +26,7 @@ const arg = (name, fallback = null) => {
 const BASE = arg('base', 'http://localhost:5173')
 const ROUTE = arg('route', '/open/raw')
 const CHILD_SELECTOR = arg('children', '.raw-topbar-left,.raw-topbar-center,.raw-topbar-right')
+const CONTAINER = arg('container', '.raw-topbar')
 const WIDTHS = arg('widths', '1440,900,889,700,390').split(',').map(Number)
 
 const intersects = (a, b) => a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom
@@ -81,7 +82,20 @@ async function main() {
         }
       }
     }
-    console.log(`${w}px: ${rects.length} children checked, ${failures.length} overlaps so far`)
+    // Overlap is not the only way a toolbar breaks. Measured 2026-08-23: at
+    // 390px the Raw topbar held 433px of content, so the row simply ENDED past
+    // the right edge and took the ⋯ button with it — the only route on a phone
+    // to "Save to <space>", Spaces, Wiki and Home. Every child was overlap-free
+    // the whole time, so this script passed while a canvas on a phone had no
+    // way to save the work on it.
+    const overflow = await page.$eval(CONTAINER, (el) => ({
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth
+    })).catch(() => null)
+    if (overflow && overflow.scrollWidth > overflow.clientWidth) {
+      failures.push(`width ${w}px: ${CONTAINER} overflows — ${overflow.scrollWidth}px of content in ${overflow.clientWidth}px, so whatever sits last is off-screen`)
+    }
+    console.log(`${w}px: ${rects.length} children checked, ${overflow ? `${overflow.scrollWidth}/${overflow.clientWidth}px` : 'container not found'}, ${failures.length} problems so far`)
   }
 
   await browser.close()
