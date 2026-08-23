@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- deleting asks first, and says whose work it is
+- a room with a graph beside it can be walked into again, and worn
 
 Full detail: `PROGRESS.md`.
 
