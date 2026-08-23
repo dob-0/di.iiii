@@ -18,10 +18,14 @@ import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
 import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
+import { getJamLocationState, isJamLocation } from './project/routing/jamRouting.js'
 import { ALGO_VRITHM_SPACE_ID, isAlgoVrithmSegment } from './algoVrithm/algoVrithmRouting.js'
 import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
+// The jam as a place you stand in. Its own chunk: it reaches three.js through
+// the walker, and no other route should pay for that.
+const JamSurface = lazy(() => import('./project/components/JamSurface.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 const WccExperience = lazy(() => import('./wcc/WccExperience.jsx'))
@@ -255,6 +259,7 @@ function AppRouter() {
     const location = useLocation()
     const rawState = getRawLocationState(location)
     const studioState = getStudioLocationState(location)
+    const jamState = getJamLocationState(location)
     const appState = getAppLocationState(location)
 
     // The Raw lane was called Seed until 2026-07-30. Old /seed links still
@@ -273,6 +278,24 @@ function AppRouter() {
     }, [legacyRawPath, rawState.page, rawState.projectId, rawState.spaceId, rrNavigate])
     if (legacyRawPath) {
         return <RouteSurfaceFallback label="Loading the node editor" detail="" />
+    }
+
+    // `/open_jam/scene` — the jam as a place you stand in, beside the editor at
+    // `/open_jam` rather than instead of it. Dispatched first because it is the
+    // most specific address in this function: one exact two-segment path, and
+    // nothing else can match it.
+    //
+    // Behind the same gate as the editor next door, with the same required
+    // space, so the guest session an event visitor arrives on is created and
+    // scoped exactly as it always was — a jam has no new access story.
+    if (isJamLocation(jamState)) {
+        return (
+            <ProtectedSurface requiredSpaceId={jamState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
+                <Suspense fallback={<RouteSurfaceFallback label="Loading the jam" detail="" />}>
+                    <JamSurface projectId={jamState.projectId} spaceId={jamState.spaceId} />
+                </Suspense>
+            </ProtectedSurface>
+        )
     }
 
     if (isStudioLocation(studioState)) {
