@@ -20,6 +20,7 @@ import VideoFrameFeed from './VideoFrameFeed.jsx'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
 import MidiOutFeed from './MidiOutFeed.jsx'
+import OscOutFeed from './OscOutFeed.jsx'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
@@ -1259,6 +1260,9 @@ export default function RawEditor({
     const handleMidiOutStatus = useCallback((nodeId, status) => {
         handleLiveOutputChange(nodeId, 'status', status)
     }, [handleLiveOutputChange])
+    const handleOscOutStatus = useCallback((nodeId, status) => {
+        handleLiveOutputChange(nodeId, 'status', status)
+    }, [handleLiveOutputChange])
     const handleSoundOutputChange = useCallback((nodeId, levels) => {
         handleLiveOutputChange(nodeId, 'volume', levels?.volume ?? null)
         handleLiveOutputChange(nodeId, 'low', levels?.low ?? null)
@@ -2348,6 +2352,16 @@ export default function RawEditor({
                         node={node}
                         inputs={evaluateNodeInputs(node, graphContext)}
                         onStatus={handleMidiOutStatus}
+                    />
+                ))}
+            {nodes
+                .filter((node) => node.typeId === 'device.osc.out')
+                .map((node) => (
+                    <OscOutFeed
+                        key={node.id}
+                        node={node}
+                        inputs={evaluateNodeInputs(node, graphContext)}
+                        onStatus={handleOscOutStatus}
                     />
                 ))}
 

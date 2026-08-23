@@ -909,6 +909,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-21'
     },
     {
+        id: 'osc-out-node',
+        category: 'Editing',
+        title: 'OSC Out: the graph speaks to the room',
+        summary: 'Send OSC to a lighting desk, a laser, Resolume, TouchDesigner or QLab — from a di.iiii running on your own machine.',
+        body: [
+            'OSC is how most stage equipment listens: lighting desks, media servers, lasers, Resolume, TouchDesigner, QLab, robots. Add an OSC Out node, set Target Host and Target Port to whatever is listening, and wire a number into Value.',
+            'This node only works on a di.iiii running on the same machine as you \u2014 the one you start with `di up`. OSC travels over UDP and a web page is not allowed to open a UDP socket, in any browser, ever. On di-studio.xyz the node says \u201cNeeds a di.iiii running on this machine\u201d rather than pretending to send.',
+            'Whenever Value changes, a message goes out to Address. Nothing is sent while Value merely stays what it was, which is what keeps a fader at 60 frames a second from becoming a flood. Trigger fires the current value on its rising edge, and re-fires whenever a held Trigger changes \u2014 the same idiom as the rest of the desk.',
+            'Numbers go out as floats, because that is what faders, intensities and positions are. If your desk wants a whole number \u2014 a channel, an index, a cue number \u2014 set Numbers as to `int`. A fractional value stays a float even then: di.iiii will not round your number behind your back.',
+            'Status says where it is going once it is live, and names the reason when it is not. By default only a browser on the same machine may send; to drive lights from a tablet on the same network, start di.iiii with DI_ALLOW_LAN_DEVICES=1, which is off by default because an open send-anywhere port is worth choosing on purpose.'
+        ],
+        tags: ['raw', 'nodes', 'osc', 'device', 'lighting', 'laser', 'projection', 'performance', 'local', 'udp', 'resolume', 'touchdesigner', 'qlab'],
+        updated: '2026-08-23'
+    },
+    {
         id: 'raw-zen-workspace',
         category: 'Editing',
         title: 'A canvas with nothing on it',
