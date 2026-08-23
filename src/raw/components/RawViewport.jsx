@@ -1106,7 +1106,7 @@ export default function RawViewport({
             style={{ top: `${topInset}px` }}
             role="button"
             tabIndex={0}
-            aria-label="Room — double-click to place a node"
+            aria-label="Scene — double-click to place a node"
             onPointerMove={handlePointerMove}
             onPointerLeave={onCursorLeave}
             onDoubleClick={handleViewportDoubleClick}
@@ -1119,7 +1119,7 @@ export default function RawViewport({
                         <div className="raw-viewport-empty-crosshair" />
                     </div>
                     <div className="raw-viewport-empty-panel">
-                        <span className="raw-window-kicker">Room</span>
+                        <span className="raw-window-kicker">Scene</span>
                         <strong>Cursor is material.</strong>
                         <p>Double-click anywhere to place a node, or use the button below.</p>
                         <button type="button" onClick={openWorldCreateAtCenter}>

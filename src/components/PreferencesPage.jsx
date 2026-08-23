@@ -532,7 +532,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                 </div>
                             </ModuleSection>
 
-                            <ModuleSection title="Room Config" subtitle="Live room values">
+                            <ModuleSection title="Scene Config" subtitle="Live scene values">
                                 <InfoPair label="Background" value={sceneSettings?.backgroundColor || 'n/a'} mono />
                                 <InfoPair label="Grid Size" value={String(sceneSettings?.gridSize ?? 'n/a')} />
                                 <InfoPair label="Ambient Light" value={ambientLightSummary} mono />

@@ -27,7 +27,7 @@ export default function StudioWorldSurface({ document }) {
     if (!worldNode) {
         return (
             <div className="ssws-root ssws-empty">
-                <p>No Room is live yet — open the node editor, add a Room, and click its ● to make it live.</p>
+                <p>No Scene is live yet — open the node editor, add a Scene, and click its ● to make it live.</p>
             </div>
         )
     }
