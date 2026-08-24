@@ -11,11 +11,9 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session (2026-08-24, camp morning)
+## Last session
 
-- `/dilijan` hub redesigned to the elite pass: door nameplates reveal on APPROACH/hover (#262) — entry is clean geometry+colour, no label wall; rings got fake-bloom glow + membrane tap target; walking through a door ARRIVES WALKING (#263); gate glow is the gate's colour, not alarm-red (#264); wiki follows (#265).
-- Room data v3: arc of equal plinths, colour floor paths, questions ON the screen, portrait-composed navigable fixed camera; five rooms' floors extended under the walk-arrival point; return doors moved OFF the walk-in axis (bounce-back trap).
-- Whole journey re-verified on deployed staging as a phone guest: entry→drag→tap→walk-through→arrive walking→tap return→home. Scripts: `~/Documents/hosq-camp/room/`.
+- (no session notes were staged for this landing)
 
 Full detail: `PROGRESS.md`.
 
