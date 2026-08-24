@@ -223,6 +223,57 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     <p className="raw-hub-tagline">space · {spaceId}</p>
                 </header>
 
+
+                <div className="raw-hub-create-row">
+                    <input
+                        ref={titleInputRef}
+                        className="raw-hub-title-input"
+                        value={title}
+                        onChange={(event) => setTitle(event.target.value)}
+                        placeholder="project title"
+                        onKeyDown={(e) => e.key === 'Enter' && !isBusy && handleCreate()}
+                    />
+                    <button type="button" className="raw-hub-create-btn" onClick={handleCreate} disabled={isBusy}>
+                        new project
+                    </button>
+                    <label className="raw-hub-import-btn">
+                        <input type="file" accept=".zip,.json,application/zip,application/json" onChange={handleImport} />
+                        import
+                    </label>
+                </div>
+
+                <div className="raw-hub-projects">
+                    {projects.length ? (
+                        <ul className="raw-project-list">
+                            {projects.map((project) => (
+                                <li key={project.id}>
+                                    <button type="button" onClick={() => openProject(project.id)}>
+                                        <strong>{project.title}</strong>
+                                        <span>{project.id}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="danger"
+                                        onClick={() => handleDeleteProject(project)}
+                                    >
+                                        ×
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="raw-hub-empty">{status}</p>
+                    )}
+                </div>
+
+                {/* The GUIDE comes after the list, not before it.
+                    This address means "this space's node projects", and it used to
+                    open on a full page of onboarding with the list pushed below the
+                    fold — so the Studio hub's "Nodes" button, which is how a person
+                    who already has projects gets here, answered a request for a list
+                    with a lesson. Below the list it costs a returning person nothing,
+                    and a newcomer still meets it first, because their list is empty
+                    and takes almost no room. */}
                 <section className="raw-hub-onboarding" aria-label="Getting started">
                     <div className="raw-hub-onboarding-copy">
                         <span className="raw-window-kicker">First Landing</span>
@@ -274,48 +325,6 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         </section>
                     </div>
                 </section>
-
-                <div className="raw-hub-create-row">
-                    <input
-                        ref={titleInputRef}
-                        className="raw-hub-title-input"
-                        value={title}
-                        onChange={(event) => setTitle(event.target.value)}
-                        placeholder="project title"
-                        onKeyDown={(e) => e.key === 'Enter' && !isBusy && handleCreate()}
-                    />
-                    <button type="button" className="raw-hub-create-btn" onClick={handleCreate} disabled={isBusy}>
-                        new project
-                    </button>
-                    <label className="raw-hub-import-btn">
-                        <input type="file" accept=".zip,.json,application/zip,application/json" onChange={handleImport} />
-                        import
-                    </label>
-                </div>
-
-                <div className="raw-hub-projects">
-                    {projects.length ? (
-                        <ul className="raw-project-list">
-                            {projects.map((project) => (
-                                <li key={project.id}>
-                                    <button type="button" onClick={() => openProject(project.id)}>
-                                        <strong>{project.title}</strong>
-                                        <span>{project.id}</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="danger"
-                                        onClick={() => handleDeleteProject(project)}
-                                    >
-                                        ×
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="raw-hub-empty">{status}</p>
-                    )}
-                </div>
 
                 <SpaceSyncPanel spaceId={spaceId} />
 

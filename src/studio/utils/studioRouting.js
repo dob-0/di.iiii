@@ -31,6 +31,19 @@ export const DEFAULT_STUDIO_SPACE_ID = 'main'
 export const SPACES_SEGMENT = 'spaces'
 export const PROJECTS_SEGMENT = 'projects'
 
+// An address ENDING in `projects` means "show me the list", and that has to be
+// distinguishable from `/{space}/studio`, which is a DOOR — the open space
+// forwards it straight into the shared jam so "step inside" lands in 3D
+// (StudioHub). Both used to parse to the identical hub state, so the door
+// swallowed the list: `/open/projects`, the canonical tool-free address whose
+// whole purpose is the list, opened the jam document instead, and the only way
+// to the list was a `?browse=1` nobody knows about. The door was written before
+// these addresses existed and followed them in by accident.
+//
+// So: the door is `/{space}` and the bare `/{space}/studio`. Anything that says
+// `projects` lists projects.
+export const WANTS_PROJECT_LIST = 'wantsProjectList'
+
 // Friendly short entry for the communal jam. `/open_jam` is a QR-/flyer-sized
 // alias for the full `/open/studio/projects/open-jam` path; it resolves to the
 // same editor state without a redirect, so the short URL stays in the bar.
@@ -125,13 +138,13 @@ export const getStudioLocationState = (
         && segments[1] === PROJECTS_SEGMENT
         && segments.length === 2
     ) {
-        return { isStudio: true, page: STUDIO_PAGE_HUB, projectId: null, spaceId: segments[0] }
+        return { isStudio: true, page: STUDIO_PAGE_HUB, projectId: null, spaceId: segments[0], wantsProjectList: true }
     }
 
     // `/studio/projects` is Studio's own space-less form: the default space's
     // project list, the sibling of `/raw/projects`.
     if (segments[0] === STUDIO_RESERVED_SEGMENT && segments[1] === PROJECTS_SEGMENT && segments.length === 2) {
-        return { isStudio: true, page: STUDIO_PAGE_HUB, projectId: null, spaceId: DEFAULT_STUDIO_SPACE_ID }
+        return { isStudio: true, page: STUDIO_PAGE_HUB, projectId: null, spaceId: DEFAULT_STUDIO_SPACE_ID, wantsProjectList: true }
     }
 
     if (segments[0] !== STUDIO_RESERVED_SEGMENT) {
@@ -139,12 +152,24 @@ export const getStudioLocationState = (
             return { isStudio: false, page: null, projectId: null, spaceId: null }
         }
 
-        if (segments[2] === 'projects' && segments[3]) {
+        if (segments[2] === PROJECTS_SEGMENT && segments[3]) {
             return {
                 isStudio: true,
                 page: STUDIO_PAGE_PROJECT,
                 projectId: segments[3],
                 spaceId: segments[0]
+            }
+        }
+
+        // `/{space}/studio/projects` with nothing after it is the list, the same
+        // as `/{space}/projects`. Only the bare `/{space}/studio` is the door.
+        if (segments[2] === PROJECTS_SEGMENT) {
+            return {
+                isStudio: true,
+                page: STUDIO_PAGE_HUB,
+                projectId: null,
+                spaceId: segments[0],
+                wantsProjectList: true
             }
         }
 
@@ -182,6 +207,13 @@ export const getStudioLocationState = (
             isStudio: true,
             page: STUDIO_PAGE_SPACES,
             projectId: null,
+            // Two addresses, one page: `/studio` and `/spaces` render the same
+            // spaces grid, and nothing in the product emits `/studio` any more
+            // (every caller already builds `/spaces`). It stays working forever —
+            // it is bookmarked and typed — but the bar heals to the canonical
+            // one, the same treatment the tool doorways get, so the duplicate
+            // stops travelling.
+            legacySpacesAddress: true,
             spaceId: null
         }
     }

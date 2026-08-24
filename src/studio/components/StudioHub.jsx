@@ -43,7 +43,7 @@ const formatSource = (source = '') => {
 
 const isArchivedTitle = (title = '') => title.trimStart().startsWith('[archived]')
 
-export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
+export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, showProjectList = false }) {
     const { role, openSpaceId } = useAuthSession()
     const [projects, setProjects] = useState([])
     const [status, setStatus] = useState('loading...')
@@ -92,10 +92,16 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     // re-forwarded: visitors could never get back to where they came from.
     useEffect(() => {
         if (!openSpaceId || spaceId !== openSpaceId) return
+        // `/open/projects` and `/open/studio/projects` ASKED for the list. The
+        // door belongs to `/open` and the bare `/open/studio`; it used to fire
+        // for every address that reached this component, so the one address
+        // whose entire purpose is the list opened the jam document instead and
+        // `?browse=1` was the only way out — a query nobody knows to type.
+        if (showProjectList) return
         if (new URLSearchParams(window.location.search).has('browse')) return
         const jam = projects.find(p => p.id === 'open-jam') || projects[0]
         if (jam) navigateToStudioPath(buildStudioProjectPath(jam.id, spaceId), { replace: true })
-    }, [projects, spaceId, openSpaceId])
+    }, [projects, spaceId, openSpaceId, showProjectList])
 
     const openProject = (projectId) =>
         navigateToStudioPath(buildStudioProjectPath(projectId, spaceId))

@@ -68,13 +68,15 @@ export default function StudioApp({ initialRoute }) {
             return <StudioCodeSpaceDirector spaceId={route.spaceId} />
         }
         if (route.page === STUDIO_PAGE_HUB) {
-            return <StudioHub spaceId={route.spaceId} />
+            // An address that says `projects` gets the list, never the open
+            // space's door-forward into the shared jam. See studioRouting.js.
+            return <StudioHub spaceId={route.spaceId} showProjectList={Boolean(route.wantsProjectList)} />
         }
         if (route.page === STUDIO_PAGE_SPACES) {
-            return <SpaceHub />
+            return <SpaceHub healToCanonical={Boolean(route.legacySpacesAddress)} />
         }
         return <StudioHub spaceId={DEFAULT_STUDIO_SPACE_ID} />
-    }, [route.page, route.projectId, route.spaceId])
+    }, [route.page, route.projectId, route.spaceId, route.wantsProjectList, route.legacySpacesAddress])
 
     return (
         <ThemeProvider theme={studioTheme}>

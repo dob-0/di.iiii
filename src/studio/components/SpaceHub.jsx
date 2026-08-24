@@ -16,7 +16,7 @@ import {
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
 import SpaceConstellation from './SpaceConstellation.jsx'
-import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildSpacesPath, buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
@@ -142,8 +142,17 @@ function SpaceCardPreview({ spaceId, label }) {
     )
 }
 
-export default function SpaceHub() {
+export default function SpaceHub({ healToCanonical = false }) {
     const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit, spaces: sessionScopes, openSpaceId, sandboxSpaceId } = useAuthSession()
+    // `/studio` renders this same grid. Nothing emits that address any more, but
+    // it is bookmarked and typed, so it keeps working and the bar heals to the
+    // canonical `/spaces` — replace(), so Back leaves the duplicate behind
+    // rather than bouncing through it.
+    useEffect(() => {
+        if (!healToCanonical) return
+        navigateToStudioPath(buildSpacesPath(), { replace: true })
+    }, [healToCanonical])
+
     const [spaces, setSpaces] = useState([])
     const [sandboxSummary, setSandboxSummary] = useState(null)
     const [isPurging, setIsPurging] = useState(false)

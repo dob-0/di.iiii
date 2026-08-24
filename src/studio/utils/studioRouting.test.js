@@ -24,12 +24,20 @@ describe('studioRouting', () => {
     })
 
     it('parses /studio as the spaces index and space-scoped project routes', () => {
+        // `legacySpacesAddress` is what heals the bar to `/spaces`. `/studio`
+        // keeps working forever — it is bookmarked and typed — it just stops
+        // being a second address that travels.
         expect(getStudioLocationState(new URL('https://example.com/studio'))).toEqual({
             isStudio: true,
             page: STUDIO_PAGE_SPACES,
             projectId: null,
+            legacySpacesAddress: true,
             spaceId: null
         })
+
+        // …and the canonical one is NOT marked, or it would heal to itself.
+        expect(getStudioLocationState(new URL('https://example.com/spaces')).legacySpacesAddress)
+            .toBeUndefined()
 
         expect(getStudioLocationState(new URL('https://example.com/studio/projects/demo-project'))).toEqual({
             isStudio: true,
@@ -126,8 +134,21 @@ describe('studioRouting', () => {
             isStudio: true,
             page: STUDIO_PAGE_HUB,
             projectId: null,
-            spaceId: 'wcc'
+            spaceId: 'wcc',
+            wantsProjectList: true
         })
+    })
+
+    it('does NOT mark the bare /{space}/studio as a list — that one is the door', () => {
+        expect(getStudioLocationState(new URL('https://example.com/open/studio')).wantsProjectList)
+            .toBeUndefined()
+    })
+
+    it('parses /{space}/studio/projects as the list too', () => {
+        const state = getStudioLocationState(new URL('https://example.com/open/studio/projects'))
+        expect(state.page).toBe(STUDIO_PAGE_HUB)
+        expect(state.spaceId).toBe('open')
+        expect(state.wantsProjectList).toBe(true)
     })
 
     it('parses /spaces as the spaces list', () => {
@@ -160,7 +181,8 @@ describe('studioRouting', () => {
             isStudio: true,
             page: STUDIO_PAGE_HUB,
             projectId: null,
-            spaceId: DEFAULT_STUDIO_SPACE_ID
+            spaceId: DEFAULT_STUDIO_SPACE_ID,
+            wantsProjectList: true
         })
     })
 

@@ -154,3 +154,58 @@ thumb controls, no horizontal overflow, `check:toolbar-overlap` green at
   end and it is the obvious next piece.
 - Not deployed. `dev` deploys to staging and staging is the Dilijan camp's
   production this week — the merge is the owner's call.
+
+## 2026-08-24 (third) — the paths, measured and three of them fixed
+
+Owner: *"there are all path right it feels messy fix that all"*.
+
+**Measured before touching anything.** Route census in a real browser
+(`scratchpad/route-census.mjs`) over ~40 addresses, recording where the bar ends
+up and what actually renders — status codes prove nothing here, the SPA answers
+200 to everything and several routes rewrite the bar after they resolve. The map
+is in `/home/dob/.claude/jobs/*/tmp/route-census.json`.
+
+**Fixed, each verified live, with every in-circulation address re-checked after.**
+
+1. **`/open/projects` opened the shared jam instead of listing projects.** The
+   open space forwards into the jam — "a door, not a lobby" — and that forward
+   was written for the bare `/{space}/studio`. When `/{space}/projects` was added
+   as the canonical tool-free list address (2026-08-21) it parsed to the
+   IDENTICAL hub state, so the door swallowed the one address whose whole purpose
+   is the list. `?browse=1` was the only way out. The parse now marks an address
+   ending in `projects` with `wantsProjectList` and the hub skips the forward for
+   it. The door keeps `/{space}` and the bare `/{space}/studio`. **This is the
+   space the landing sends every first-time visitor to.**
+2. **`/{space}/raw/projects` buried its list under a page of onboarding.** That
+   is where the Studio hub's "Nodes" button goes, so the people most likely to
+   arrive are the ones who already have projects. List first, guide after; a
+   newcomer still meets the guide because an empty list takes no room.
+3. **`/studio` and `/spaces` were two addresses for one page.** Nothing in the
+   product emits `/studio` any more — every caller already builds `/spaces` — so
+   it now heals the bar with replace(). It keeps working; it stops travelling.
+
+**Verified unchanged after all three:** `/open/studio`, `/open_jam` and
+`/open/studio/projects/open-jam` all still reach the jam; every published page
+(`/{space}/p/{id}` and the vanity `/{space}/{id}`), both tool doorways, `/out`,
+`/wcc`, `/wcc/scene`, `/wiki`, `/admin`, `/wcc/projects`, `/main/projects`.
+
+**What the census found that is NOT mine to fix — two decisions.**
+
+- **One space, two project lists.** `/{space}/projects` and
+  `/{space}/raw/projects` show the SAME projects; they differ only in which
+  editor a click opens. Under the arrangements model that split has no reason to
+  exist any more, but merging them means deciding what a click opens, and that
+  is a product call.
+- **`/{space}/projects/{id}` does not open a project.** The canonical shape stops
+  at the list; a project's editor address is still tool-first
+  (`/{space}/raw/projects/{id}`), which contradicts both the 08-21 "projects
+  belong to the space" pass and the arrangements model. I checked whether the
+  lane could be read from data instead of guessed — `projects.source` is a
+  display label only ("Studio"/"Nodes"/"Imported"), so it cannot. Needs a
+  decision, not a fix.
+
+**Left alone deliberately.** A mistyped project id renders the space rather than
+a not-found — documented in `RootApp.jsx` as intended ("/somespace/randomtext
+never breaks"). It is arguably wrong for public links, where a visitor with a
+slightly-wrong URL sees a room and assumes it is the work. That is a decision
+too, and reversing it changes behaviour for every mistyped link in circulation.

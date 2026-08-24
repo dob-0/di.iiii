@@ -55,6 +55,41 @@ describe('RawHub', () => {
         expect(screen.getByRole('button', { name: 'Start Creating' })).toBeTruthy()
     })
 
+    // This address means "this space's node projects". It used to open on a full
+    // page of onboarding with the list below the fold, so the Studio hub's
+    // "Nodes" button — how a person who already HAS projects arrives — answered a
+    // request for a list with a lesson.
+    it('puts the project list above the getting-started guide', async () => {
+        listProjects.mockResolvedValue([
+            { id: 'alla-virabyan', title: 'Alla Virabyan' },
+            { id: 'main', title: 'Main' }
+        ])
+
+        const { container } = render(<RawHub spaceId="wcc" />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Alla Virabyan')).toBeTruthy()
+        })
+
+        const list = container.querySelector('.raw-project-list')
+        const guide = container.querySelector('.raw-hub-onboarding')
+        expect(list).toBeTruthy()
+        expect(guide).toBeTruthy()
+        // DOCUMENT_POSITION_FOLLOWING: the guide comes after the list.
+        expect(list.compareDocumentPosition(guide) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+
+    // ...and a newcomer still meets the guide, because an empty list takes no room.
+    it('still shows the guide when the space has no node projects yet', async () => {
+        listProjects.mockResolvedValue([])
+
+        render(<RawHub spaceId="gallery" />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Choose a path.')).toBeTruthy()
+        })
+    })
+
     // `projects.id` is a GLOBAL primary key and ids come from slugs, so a fixed
     // 'studio-node' slug meant exactly one space in the install could ever hold
     // a Studio node — every space after the first got a 409 and the button died
