@@ -11,9 +11,12 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session
+## Last session (2026-08-24, the night before camp)
 
-- a portal opens by walking into it, not only by clicking it
+- Camp is READY on staging: invites re-minted to Aug 31 (old ones died mid-camp), one shared room, A5 QR card printed + chain-verified, desks mobile-first, delete guard live (#258).
+- `/dilijan` became a walkable hub: five colour-named portal doors → `room-1..5`, each with a door back; walking into a ring travels (#261), doors also unlock on graph rooms (#259) and portals finally honour projectId (#260).
+- The lexicon sweep's three misses (landing eyebrow, identity line, OG fallback) fixed and verified — prod promotion unblocked, waits on the owner's look.
+- Room build scripts + human-journey test harness live in `~/Documents/hosq-camp/room/`; craft research (post kills WebXR, ACES vs colour wayfinding, Tol palette) in auto-memory `reference_dii_room_craft`.
 
 Full detail: `PROGRESS.md`.
 
@@ -26,9 +29,9 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 - **PROD IS BEHIND** — everything of 2026-08-22/23 sits on staging only; prod still serves the retired three-door landing, and still previews the bare domain as an Express error page (fixed on staging). Owner promotes after checking staging. The three copy misses that would have baked pre-sweep positioning into every link preview are FIXED and verified live 08-24.
 - Doors audit: only embed-link copy is left; the rest is decided and shipped. Ledger: memory `project_dii_doors_audit_2026_08_21` (also still open there: the bare PHONE canvas has no visible exit).
-- Walk / Fly cannot render a node graph, so it is hidden on a node room — the honest gap. (`stash@{0}` was checked and DROPPED 2026-08-24 — every fact in it was already recorded elsewhere.)
+- Viewer seams from the hub build: arrival after a portal jump is view mode, not walk (remount resets navMode); the entry auto-frame direction is hardcoded (0.8,0.45,1) so portrait entries sit tilted+small — `entryView:'fixed-camera'` fixes framing but LOCKS the mouse (that was the owner's "can't move camera" bug, reverted); graph-only rooms still hide Walk/Fly by design.
 - **Live DB renames owed on PROD** — the four above are staging-only. The sandbox writes to `dii-staging-server-1` and refuses `dii-server-1`: needs `"Bash(ssh dii-vps:*)"` in settings, or four renames from the owner's Spaces page.
-- `/wcc` was a FALSE ALARM (checked on prod 2026-08-24): the front page renders correctly and `/wcc/main` is the walkable gallery — the project id `alla-virabyan` is just a naming leftover and must not be renamed. Real: `/wcc/main` needs >60s to settle.
+- `/wcc` false alarm closed; real leftover: `/wcc/main` needs >60s to settle. Camp decisions owed: kids name their own doors (labels only, first name/pseudonym — never full names on the public URL); consent for the public URL is hosq's call.
 - **Open Jam — #256 and #257 landed, on dev and on staging.** `/open_jam` still opens the editor — repointing the in-circulation QR is the owner's call. Clean-up is prepared but NOT applied: `~/di-backups/open-jam/` holds both tiers, triage sheets and `jam-clean.mjs` (keep every upload, bin what the unsuited UI added, staging 47→20); the `PUT` was refused by the permission classifier.
 - **No repo can own `open-jam`** — boot-ensured (`serverXR/src/index.js:623`) and `space-sync.mjs:441` writes only `mode: 'code'`, so a sync replaces 4983 versions of communal work with a static page. Owner picks: a door page at `/open/jam`, or a new space `jam` the repo masters.
 - Staging Google OAuth secret parked by the user — memory `reference-leaked-secrets`; prod spaces all owned, mesh gate ARMED both tiers.
