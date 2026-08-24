@@ -16,6 +16,7 @@ const {
     readJson,
     readProjectDocument,
     readProjectIndex,
+    countProjectsBySpace,
     readProjectOps,
     writeJson
 } = require('./projectStore.js')
@@ -60,6 +61,25 @@ describe('projectStore', () => {
 
         await deleteProject(spacesDir, 'main', 'alpha-project')
         expect(await readProjectIndex(spacesDir)).toEqual({})
+    })
+
+    // The space list had no way to say what a space HOLDS — a card named the
+    // space's published project or nothing at all, so the Open Space (no
+    // published project, because it is the communal room itself) rendered blank
+    // with the shared jam invisible inside it.
+    it('countProjectsBySpace counts each space in one query', async () => {
+        const spacesDir = await createSpacesDir()
+
+        expect(await countProjectsBySpace()).toEqual({})
+
+        await ensureProject(spacesDir, 'main', 'alpha-project', { title: 'Alpha' })
+        await ensureProject(spacesDir, 'open', 'open-jam', { title: 'Open Jam' })
+        await ensureProject(spacesDir, 'open', 'scratch', { title: 'Scratch' })
+
+        expect(await countProjectsBySpace()).toEqual({ main: 1, open: 2 })
+
+        await deleteProject(spacesDir, 'open', 'scratch')
+        expect(await countProjectsBySpace()).toEqual({ main: 1, open: 1 })
     })
 
     it('findProjectById returns null for unknown projects', async () => {

@@ -97,6 +97,7 @@ const s = () => {
     selectBySpaceAll: db.prepare('SELECT * FROM projects WHERE space_id = ? ORDER BY updated_at DESC'),
     selectBySlug:     db.prepare('SELECT * FROM projects WHERE space_id = ? AND slug = ?'),
     selectAllIndex:   db.prepare('SELECT id, space_id FROM projects'),
+    countBySpace:     db.prepare('SELECT space_id, COUNT(*) AS n FROM projects GROUP BY space_id'),
     insert:           db.prepare('INSERT INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
     upsert:           db.prepare('INSERT OR REPLACE INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
     update:           db.prepare('UPDATE projects SET slug=?, title=?, document_version=?, source=?, updated_at=?, last_touched_at=? WHERE id=?'),
@@ -116,6 +117,20 @@ const s = () => {
 // kept: projectStore.test.js exercises the projectId→spaceId map contract
 const readProjectIndex = async (spacesDir) =>
   Object.fromEntries(s().selectAllIndex.all().map(r => [r.id, r.space_id]))
+
+// How many projects each space holds, in ONE grouped query.
+//
+// The space list had no way to say what a space contains: a card named its
+// PUBLISHED project or nothing at all, so the Open Space — which has no
+// published project because it is the communal room itself — rendered as a
+// blank card, with the 26 projects inside it (the shared jam among them)
+// invisible from the one page that is supposed to show you your spaces.
+//
+// Counted here rather than in the client so the grid costs no extra requests:
+// the alternative was one listProjects per space on every load of the page,
+// pulling whole project lists to learn their length.
+const countProjectsBySpace = async () =>
+  Object.fromEntries(s().countBySpace.all().map((r) => [r.space_id, r.n]))
 
 const loadProjectMeta = async (spacesDir, spaceId, projectId) =>
   rowToMeta(s().selectBySpace.get(projectId, spaceId))
@@ -320,6 +335,7 @@ module.exports = {
   isReservedProjectSlug,
   isValidAssetId,
   listProjectsInSpace,
+  countProjectsBySpace,
   loadProjectMeta,
   normalizeProjectId,
   normalizeProjectSlug,

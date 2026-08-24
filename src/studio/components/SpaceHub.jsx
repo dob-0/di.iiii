@@ -613,6 +613,23 @@ export default function SpaceHub({ healToCanonical = false }) {
                                     {linkedTitle && (
                                         <p className="ssh-space-project">Project: {linkedTitle}</p>
                                     )}
+                                    {/* What the space HOLDS. A card could only ever name the
+                                        space's PUBLISHED project, so a space without one read
+                                        as empty — the Open Space most of all, which has no
+                                        published project because it IS the communal room, while
+                                        holding the shared jam and everything else made in it.
+                                        You could not see that from the one page whose job is to
+                                        show you your spaces. Rendered whenever the server sent a
+                                        count, including zero: "no projects yet" is an answer,
+                                        and a blank card is not. */}
+                                    {Number.isFinite(space.projectCount) && (
+                                        <p className="ssh-space-count">
+                                            {space.projectCount === 0
+                                                ? 'No projects yet'
+                                                : `${space.projectCount} project${space.projectCount === 1 ? '' : 's'}`}
+                                            {space.projectCount > 0 && !space.publishedProjectId && ' · none published'}
+                                        </p>
+                                    )}
                                     {space.publishedProjectId && !space.isPublic && (
                                         <p className="ssh-space-warning">
                                             ⚠ Not public — visitors will see a login wall, not the project.

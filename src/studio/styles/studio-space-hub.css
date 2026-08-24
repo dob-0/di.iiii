@@ -516,6 +516,14 @@
     opacity: 0.7;
 }
 
+/* Quieter than the project line: the project a space publishes is the headline,
+   what it holds is the footnote that stops a card reading as empty. */
+.ssh-space-count {
+    margin: 2px 0 0;
+    font-size: 0.72rem;
+    color: var(--di-text-muted, rgba(255, 255, 255, 0.55));
+}
+
 .ssh-space-warning {
     margin-top: 4px;
     font-size: 0.75rem;
