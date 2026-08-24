@@ -56,6 +56,12 @@ export default function PrimitiveMaterial({ color, wireframe = false, opacity = 
             wireframe={wireframe}
             transparent={wireframe || opacity < 1}
             opacity={opacity}
+            // A mostly-see-through surface must not write depth: with the
+            // three.js default it hole-punches particles, grids and other
+            // translucents behind it, which reads as broken glass the moment
+            // two ghost boxes overlap. Solid-ish translucency (>=0.5) keeps
+            // depth so it still occludes what is genuinely behind it.
+            depthWrite={!(opacity < 0.5)}
             roughness={Number.isFinite(roughness) ? Math.min(1, Math.max(0, roughness)) : 1}
             metalness={Number.isFinite(metalness) ? Math.min(1, Math.max(0, metalness)) : 0}
             emissive={asColor(emissive, '#000000')}

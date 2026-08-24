@@ -1529,6 +1529,12 @@ export default function LiveProjectScene({
     const ambient = worldState.ambientLight || { color: '#ffffff', intensity: 0.85 }
     const directional = worldState.directionalLight || { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] }
     const backgroundColor = worldState.backgroundColor || '#0a1118'
+    // Authored fog opens the walk-mode horizon for vast scenes; the far plane
+    // tracks it so the opened distance is actually rendered. Defaults preserve
+    // the close-world look every existing space was composed for.
+    const fogNear = worldState.fog?.near ?? 8
+    const fogFar = worldState.fog?.far ?? 50
+    const cameraFar = Math.min(600, Math.max(200, fogFar * 1.15))
     // Zone tint sources for atmosphere blend: each portal's position + authored colour.
     const atmosphereZones = useMemo(() => entities
         .filter((e) => e.type === 'portal')
@@ -1542,7 +1548,7 @@ export default function LiveProjectScene({
             <Canvas
                 key={canvasKey}
                 className="live-scene-canvas"
-                camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: 200 }}
+                camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: cameraFar }}
                 dpr={[1, 1.8]}
                 gl={{ antialias: true }}
                 onCreated={({ gl }) => bindContextGuard(gl)}
@@ -1550,7 +1556,7 @@ export default function LiveProjectScene({
             >
                 <XR store={xr.xrStore}>
                 <color attach="background" args={[backgroundColor]} />
-                <fog attach="fog" args={[backgroundColor, 8, 50]} />
+                <fog attach="fog" args={[backgroundColor, fogNear, fogFar]} />
                 {interactive && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
                     <AtmosphereBlender zones={atmosphereZones} playerRef={playerRef} baseBg={backgroundColor} />
                 ) : null}
