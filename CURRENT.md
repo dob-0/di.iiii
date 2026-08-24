@@ -11,10 +11,9 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session (2026-08-24, camp day)
+## Last session
 
-- `/dilijan` REBUILT twice on owner references, final form "the grid hall with a night garden inside": luminous grid ceiling, grout walls, violet floor, doors as glowing rings in rock masses, glass dioramas, campfire/stream/mushroom kept indoors; dens are hue grid rooms with toys — ALL DATA (`~/Documents/hosq-camp/room/hall-grid.mjs` + `rooms-forest.mjs`), full chain re-verified on staging.
-- Platform same day: approach-revealed door names (#262, radius #267), arrive-walking (#263), gate glow in gate colour (#264), wiki (#265), mouse-look −35% (#266). Fixed-camera cages only when `locked:true`.
+- (no session notes were staged for this landing)
 
 Full detail: `PROGRESS.md`.
 
