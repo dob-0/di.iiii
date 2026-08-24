@@ -410,6 +410,16 @@ function AmbientField({ center }) {
 
 // Free-roam walk: WASD + arrows move/turn; desktop uses pointer lock for look;
 // mobile uses touch outside the joystick zone for look.
+// Where a walker stands when the space authored no arrival at all. Pure and
+// exported so the choice is testable without mounting a canvas.
+export const CENTROID_STANDBACK_MIN = 6
+export const CENTROID_STANDBACK_MAX = 14
+export const centroidSpawn = (center, bounds) => {
+    const depth = Math.max(0, (bounds?.maxZ ?? 0) - (bounds?.minZ ?? 0))
+    const back = Math.min(CENTROID_STANDBACK_MAX, Math.max(CENTROID_STANDBACK_MIN, depth * 0.22))
+    return { x: center?.x ?? 0, z: (center?.z ?? 0) + back, yaw: Math.PI, pitch: 0 }
+}
+
 function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
@@ -1512,6 +1522,26 @@ export default function LiveProjectScene({
         // literal would also drop altY.
         Object.assign(playerRef.current, { x: pos[0], z: pos[2] + 6, yaw: Math.PI, pitch: 0 })
     }, [gateEntity, interactive])
+
+    // Neither a gate nor an authored spawn: stand where the WORK is, not at the
+    // world origin. A space whose content happens to sit away from 0,0 dropped
+    // every walker into empty space -- the landing page's own "Look around"
+    // button walks the `main` space, whose 83 entities span x -6..57 / z
+    // -38..54 with a centroid at (20.6, 24.4), so the visitor arrived ~32m off
+    // in a corner and saw an empty blue grid. The idle orbit already frames the
+    // centroid, which is why the same scene looks full one click earlier.
+    // Stand back from it along +z so the content is ahead of you, not on top of
+    // you. Runs after the gate effect and does nothing when either authored
+    // form of arrival exists.
+    const centroidSpawnRef = useRef(null)
+    useEffect(() => {
+        if (!interactive || gateEntity || doc?.worldState?.spawn) return
+        if (!entities.length || centroidSpawnRef.current === projectId) return
+        centroidSpawnRef.current = projectId
+        // Mutate in place -- see the spawn effect above for why replacing the
+        // object silently kills mouse/touch-look.
+        Object.assign(playerRef.current, centroidSpawn(center, bounds))
+    }, [interactive, gateEntity, doc, projectId, entities.length, center, bounds])
 
     // Walking into a portal goes where clicking it goes: same portalHref, same
     // SPA navigation. Only the verb changes, and only in walk mode -- Walker is
