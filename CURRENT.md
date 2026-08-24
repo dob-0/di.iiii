@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session (2026-08-24, camp day)
 
-- `/dilijan` REBUILT as "the forest clearing at night" (owner: make it for kids): violet Chroma field, campfire + stumps, five gabled door-houses, per-hue dens with toys, glow canopy, secrets — ALL DATA (`~/Documents/hosq-camp/room/hall-forest.mjs` + `rooms-forest.mjs`), tap/walk-through/arrive-walking/tap-return chain-verified on staging.
+- `/dilijan` REBUILT twice on owner references, final form "the grid hall with a night garden inside": luminous grid ceiling, grout walls, violet floor, doors as glowing rings in rock masses, glass dioramas, campfire/stream/mushroom kept indoors; dens are hue grid rooms with toys — ALL DATA (`~/Documents/hosq-camp/room/hall-grid.mjs` + `rooms-forest.mjs`), full chain re-verified on staging.
 - Platform same day: approach-revealed door names (#262, radius #267), arrive-walking (#263), gate glow in gate colour (#264), wiki (#265), mouse-look −35% (#266). Fixed-camera cages only when `locked:true`.
 
 Full detail: `PROGRESS.md`.
