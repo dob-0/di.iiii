@@ -85,13 +85,26 @@ export const buildStudioHubPath = (spaceId = null) => {
 export const buildStudioDirectorPath = (spaceId) =>
     joinPath(getBasePrefix(), spaceId, STUDIO_RESERVED_SEGMENT, STUDIO_PAGE_DIRECTOR)
 
+// A project's address. Tool-free once the space is known — see the
+// `/{space}/projects/{id}` branch in the parser for why.
+//
+// Without a space there is nothing to put in front, so the space-less form keeps
+// its tool name. That branch also deliberately leaves `spaceId` null on parse so
+// StudioEditor falls back to the project's own `document.projectMeta.spaceId`
+// rather than being forced onto `main` — do not "tidy" it into `/projects/{id}`
+// without solving that first.
 export const buildStudioProjectPath = (projectId, spaceId = null) => {
     const prefix = getBasePrefix()
     if (!spaceId) {
-        return joinPath(prefix, STUDIO_RESERVED_SEGMENT, 'projects', projectId)
+        return joinPath(prefix, STUDIO_RESERVED_SEGMENT, PROJECTS_SEGMENT, projectId)
     }
-    return joinPath(prefix, spaceId, STUDIO_RESERVED_SEGMENT, 'projects', projectId)
+    return joinPath(prefix, spaceId, PROJECTS_SEGMENT, projectId)
 }
+
+// The tool-named form this replaced. Nothing emits it any more; it is kept so the
+// parser and the heal can both name it, and so a test can prove it still works.
+export const buildLegacyStudioProjectPath = (projectId, spaceId) =>
+    joinPath(getBasePrefix(), spaceId, STUDIO_RESERVED_SEGMENT, PROJECTS_SEGMENT, projectId)
 
 export const getStudioLocationState = (
     locationLike = null,
@@ -141,6 +154,31 @@ export const getStudioLocationState = (
         return { isStudio: true, page: STUDIO_PAGE_HUB, projectId: null, spaceId: segments[0], wantsProjectList: true }
     }
 
+    // `/{space}/projects/{id}` — THE address of a project.
+    //
+    // The list got its tool-free address in the 2026-08-21 pass and the item did
+    // not, so a project's own address stayed tool-first
+    // (`/{space}/studio/projects/{id}`) — you could not say where a project WAS
+    // without naming which editor you happened to be holding. That is the shape
+    // the arrangements work made obsolete: the tool is an arrangement now, and a
+    // project is a project.
+    //
+    // It opens Studio, per MANIFESTO §6 — Studio is the shipped lane and an
+    // experimental one must not become the default for a canonical address. The
+    // node editor keeps its own `/{space}/raw/projects/{id}`, which is correct
+    // rather than messy: a lane that is explicitly experimental owns a
+    // lane-named address. `/{space}/{project}/raw` still gets you there in one
+    // hop.
+    if (
+        segments[0]
+        && !RESERVED_APP_SEGMENTS.includes(segments[0])
+        && segments[1] === PROJECTS_SEGMENT
+        && segments[2]
+        && segments.length === 3
+    ) {
+        return { isStudio: true, page: STUDIO_PAGE_PROJECT, projectId: segments[2], spaceId: segments[0] }
+    }
+
     // `/studio/projects` is Studio's own space-less form: the default space's
     // project list, the sibling of `/raw/projects`.
     if (segments[0] === STUDIO_RESERVED_SEGMENT && segments[1] === PROJECTS_SEGMENT && segments.length === 2) {
@@ -152,9 +190,15 @@ export const getStudioLocationState = (
             return { isStudio: false, page: null, projectId: null, spaceId: null }
         }
 
+        // `/{space}/studio/projects/{id}` — the tool-named form. Nothing emits it
+        // any more; it stays parseable forever (bookmarks, pasted links, the
+        // wiki) and heals the bar to `/{space}/projects/{id}`. The `/open_jam`
+        // alias does NOT reach this branch — it resolves earlier and stays short
+        // in the bar on purpose.
         if (segments[2] === PROJECTS_SEGMENT && segments[3]) {
             return {
                 isStudio: true,
+                legacyProjectAddress: true,
                 page: STUDIO_PAGE_PROJECT,
                 projectId: segments[3],
                 spaceId: segments[0]

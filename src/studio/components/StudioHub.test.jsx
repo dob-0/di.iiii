@@ -125,15 +125,33 @@ describe('StudioHub', () => {
     // The doors audit (2026-08-21): this button promised "The node editor" and
     // landed on /{space}/raw — the localStorage scratch canvas — instead of the
     // space's node project list one segment deeper. The label is a list promise.
-    it('sends Nodes to the node project list, not the local canvas', async () => {
+    // It goes to the node editor's own workspace, never the browser-local canvas.
+    // The label says "Node editor" now: it used to say "Nodes" while a per-project
+    // "Nodes" action also exists on every row, and one word cannot name both a
+    // place and an action on a thing.
+    it('sends Node editor to the node workspace, not the local canvas', async () => {
         const navigate = vi.fn()
         setAppNavigate(navigate)
         listProjects.mockResolvedValue([])
 
         render(<StudioHub spaceId="gallery" />)
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Nodes' }))
+        fireEvent.click(await screen.findByRole('button', { name: 'Node editor' }))
         expect(navigate).toHaveBeenCalledWith('/gallery/raw/projects', { replace: false })
+        setAppNavigate(null)
+    })
+
+    // One space, one list. Reaching the other editor for a project used to mean
+    // going to a SECOND list of the very same projects.
+    it('opens a single project in the node editor from its own row', async () => {
+        const navigate = vi.fn()
+        setAppNavigate(navigate)
+        listProjects.mockResolvedValue([{ id: 'alla-virabyan', title: 'Alla Virabyan' }])
+
+        render(<StudioHub spaceId="wcc" />)
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Nodes' }))
+        expect(navigate).toHaveBeenCalledWith('/wcc/raw/projects/alla-virabyan', { replace: false })
         setAppNavigate(null)
     })
 

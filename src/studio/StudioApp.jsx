@@ -62,7 +62,15 @@ export default function StudioApp({ initialRoute }) {
 
     const content = useMemo(() => {
         if (route.page === STUDIO_PAGE_PROJECT && route.projectId) {
-            return <StudioEditor projectId={route.projectId} spaceId={route.spaceId} />
+            return (
+                <StudioEditor
+                    projectId={route.projectId}
+                    spaceId={route.spaceId}
+                    // `/{space}/studio/projects/{id}` heals to the tool-free
+                    // `/{space}/projects/{id}`. See studioRouting.js.
+                    healToCanonical={Boolean(route.legacyProjectAddress)}
+                />
+            )
         }
         if (route.page === STUDIO_PAGE_DIRECTOR) {
             return <StudioCodeSpaceDirector spaceId={route.spaceId} />
@@ -76,7 +84,7 @@ export default function StudioApp({ initialRoute }) {
             return <SpaceHub healToCanonical={Boolean(route.legacySpacesAddress)} />
         }
         return <StudioHub spaceId={DEFAULT_STUDIO_SPACE_ID} />
-    }, [route.page, route.projectId, route.spaceId, route.wantsProjectList, route.legacySpacesAddress])
+    }, [route.page, route.projectId, route.spaceId, route.wantsProjectList, route.legacySpacesAddress, route.legacyProjectAddress])
 
     return (
         <ThemeProvider theme={studioTheme}>

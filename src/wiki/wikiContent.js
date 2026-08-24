@@ -56,20 +56,20 @@ export const WIKI_ARTICLES = [
         body: [
             'A space is a place that is yours: an address, a guest list, and everything in it — projects, uploaded files, collaborators, and the rules about who gets in.',
             'A project is one thing you make inside a space. A space can hold many projects, and one of them can be marked as the space’s published (live) project.',
-            'The address of a project always begins with its space. The editor addresses put the tool first for historical reasons, which is why the shortcut below exists — it is the one that reads the way the product is actually arranged:',
+            'The address of a project always begins with its space, and it does not name a tool — a project is a project, and which editor you open it in is your choice, not part of where it lives:',
             { list: [
-                '/<space>/projects — the space’s projects. This is the one to use: the list belongs to the space, not to whichever tool you are holding.',
+                '/<space>/projects — the space’s projects',
+                '/<space>/projects/<id> — one project, open for editing',
                 '/spaces — all of your spaces',
-                '/<space>/studio — the same list, in Studio’s older address',
-                '/<space>/raw/projects — the same projects, in the node editor’s older address',
-                '/<space>/studio/projects/<id> — the editor for one project',
-                '/<space>/<project>/studio — the same project, open for editing. Add /raw instead for the node editor. This works on any project link: take the address you are looking at and add the word. It is a shortcut, not a second address — the bar heals to the editor’s own link once it opens.',
+                '/<space>/<project>/raw — the same project in the node editor. This works on any project link: take the address you are looking at and add the word. It is a shortcut, not a second address — the bar heals to the node editor’s own link once it opens, and /studio does the same in the other direction.',
+                '/<space>/raw/projects — the node editor’s own page for this space, where its canvas, import and sync live',
+                'Older addresses still work and always will — /<space>/studio for the list, /<space>/studio/projects/<id> for a project, /studio for your spaces. They open exactly what they always did; the bar just heals to the shorter address, so what you copy is the current one.',
                 '/<space> — the public viewer for a space’s published project',
                 '/<space>/p/<id> — the public viewer for any single project (on a public space, no login needed — share a draft or a second project without moving the published pointer)'
             ] }
         ],
         tags: ['spaces', 'projects', 'basics'],
-        updated: '2026-08-21'
+        updated: '2026-08-24'
     },
     {
         id: 'spaces-map-view',

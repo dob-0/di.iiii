@@ -47,7 +47,7 @@ describe('StudioProjectsPanel', () => {
         expect(await screen.findByText('live')).toBeInTheDocument()
 
         await userEvent.click(screen.getByRole('button', { name: /hosq one-pager/ }))
-        expect(navigateToStudioPath).toHaveBeenCalledWith('/br-id-ge/studio/projects/br-id-ge-hosq')
+        expect(navigateToStudioPath).toHaveBeenCalledWith('/br-id-ge/projects/br-id-ge-hosq')
 
         navigateToStudioPath.mockClear()
         await userEvent.click(current)
@@ -67,7 +67,7 @@ describe('StudioProjectsPanel', () => {
         await waitFor(() => {
             expect(createProject).toHaveBeenCalledWith('br-id-ge', { title: 'sketch', slug: 'sketch', source: 'studio-v3' })
         })
-        expect(navigateToStudioPath).toHaveBeenCalledWith('/br-id-ge/studio/projects/fresh')
+        expect(navigateToStudioPath).toHaveBeenCalledWith('/br-id-ge/projects/fresh')
     })
 
     it('renames a project in place', async () => {

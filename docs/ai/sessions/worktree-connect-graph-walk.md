@@ -209,3 +209,51 @@ a not-found — documented in `RootApp.jsx` as intended ("/somespace/randomtext
 never breaks"). It is arguably wrong for public links, where a visitor with a
 slightly-wrong URL sees a room and assumes it is the work. That is a decision
 too, and reversing it changes behaviour for every mistyped link in circulation.
+
+## 2026-08-24 (fourth) — a project has an address that does not name a tool
+
+Owner: *"go fix all"* — the two path decisions handed back after the census.
+
+Both were the same decision underneath: **what does "open this project" mean now
+that the tool is an arrangement?** MANIFESTO §6 settles it — Studio is the shipped
+lane, and an experimental one must not become the default for a canonical address.
+So: opening a project opens Studio, and the node editor is one hop away.
+
+**`/{space}/projects/{id}` is now THE address of a project.** The 08-21 pass gave
+the LIST a tool-free address and left the ITEM tool-first, so you could not say
+where a project was without naming which editor you happened to be holding. Its
+own test had even reserved the deeper path "so a future addressing model can still
+use it" — this is that model. `buildStudioProjectPath` emits it; the tool-named
+`/{space}/studio/projects/{id}` parses forever and heals the bar.
+
+`/open_jam` deliberately does NOT heal — it resolves earlier and stays short in the
+bar, which is the whole point of a QR alias.
+
+**One space, one list.** The Studio hub's "Nodes" button went to
+`/{space}/raw/projects` — a second index of the very same projects. The other
+editor is an action ON a project now: every row has its own "Nodes" button. The
+top-level button says "Node editor", because one word cannot name both a place and
+an action on a thing.
+
+**A bonus that fell out of it.** `/{space}/projects/nope-not-real` says "Project
+not found." The vanity form still falls through to the space silently — that is
+documented as deliberate and left alone — but the honest answer now exists at the
+address people will actually be given.
+
+**Verified live, twice, after the change:** the new canonical opens and stays;
+`/{space}/studio/projects/{id}` and `/{space}/{project}/studio` both heal to it;
+`/open_jam`, `/open/studio` and the full jam path all still reach the jam;
+`/{space}/raw/projects/{id}`, both published-page forms, `/spaces`, `/studio`,
+`/out`, `/wcc`, `/wcc/scene` unchanged.
+
+**Docs:** the wiki's address list now leads with the tool-free forms and says the
+old ones keep working; both architecture specs (`SPEC_space_urls_and_portability`,
+`SPEC_url_architecture_and_tree_addressing`) corrected — they still named the
+tool-first form as canonical.
+
+**Caught by a guard, worth remembering:** "workspace" is a banned word
+(`copyVocabulary.test.js` — say canvas, space, or layout). I wrote it twice.
+
+**Still open, deliberately.** A mistyped project on the VANITY form still renders
+the space rather than a not-found. Reversing that changes behaviour for every
+mistyped link in circulation and is the owner's call, not a tidy.

@@ -14,7 +14,8 @@ Backend/API (domain routing), Infrastructure (Caddy/DNS) all touch 3c.
 **Amendment, 2026-08-21 — the tool doorway.** Appending a tool word to any project link
 opens it there: `/<space>/<project>/studio`, or `/raw` for the node editor, and the same on
 the `/<space>/p/<id>` form. This is an **alias, not an address**: the slug resolves, then the
-router replaces the bar with the lane's existing canonical path (`/<space>/studio/projects/<id>`),
+router replaces the bar with the lane's canonical path (`/<space>/projects/<id>` for Studio
+since 2026-08-24, `/<space>/raw/projects/<id>` for the node editor),
 carrying `?query` and `#hash` across. No new permanent URL is minted, so nothing here has to
 outlive a future addressing model — which is also why it does not prejudge §7.1 of
 `SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04.
@@ -37,9 +38,11 @@ published project at 200 while the address bar said otherwise. See `docs/ai/know
   the guaranteed-stable fallback forever.
 - Admin UI (`AdminManageSection.jsx`): "Edit public link" action, independent of Rename.
 - `ProjectSwitcher.jsx`: one-click "Copy link" per project, using the slug when set.
-- Deliberately NOT touched: Studio's own internal editor URL
-  (`/{space}/studio/projects/{id}`) — that's an editing deep-link, not the public share
-  link this covers. WCC's hardcoded `/wcc` + `/wcc/scene` routes — untouched, still claimed
+- Deliberately NOT touched by THIS spec: Studio's own internal editor URL — that's an
+  editing deep-link, not the public share link this covers. (It did change later:
+  **2026-08-24** it became the tool-free `/{space}/projects/{id}`, completing the layered
+  addresses of 08-21, which had given the LIST a tool-free address and left the item
+  tool-first. `/{space}/studio/projects/{id}` parses forever and heals the bar.) WCC's hardcoded `/wcc` + `/wcc/scene` routes — untouched, still claimed
   first in `RootApp.jsx`'s dispatch order before the new generic mechanism is ever reached.
 
 > Prompted 2026-07-18 by a direct product ask: today's Studio project links are long and

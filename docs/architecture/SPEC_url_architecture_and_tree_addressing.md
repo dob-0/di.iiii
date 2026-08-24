@@ -37,7 +37,7 @@ Verified in `src/utils/spaceRouting.js` and `src/RootApp.jsx`:
 /{space}/{projectSlug}        public project (resolved via /api/resolve/...)
 /{space}/p/{projectId}        permanent id-based fallback
 /{space}/studio               editor hub
-/{space}/studio/projects/{id} editor deep link
+/{space}/projects/{id}          editor deep link (2026-08-24; /{space}/studio/projects/{id} heals to it)
 /studio                       spaces list
 /open_jam                     short alias -> the open-jam EDITOR
 /admin?space={space}          space admin, as a query param

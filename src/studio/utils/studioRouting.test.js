@@ -9,6 +9,7 @@ import {
     buildStudioHubPath,
     buildStudioSpacesPath,
     buildStudioProjectPath,
+    buildLegacyStudioProjectPath,
     buildSpaceProjectsPath,
     buildSpacesPath,
     getStudioLocationState
@@ -20,7 +21,9 @@ describe('studioRouting', () => {
         expect(buildStudioHubPath('main')).toBe('/main/studio')
         expect(buildStudioHubPath()).toBe('/main/studio')
         expect(buildStudioProjectPath('demo-project')).toBe('/studio/projects/demo-project')
-        expect(buildStudioProjectPath('demo-project', 'gallery')).toBe('/gallery/studio/projects/demo-project')
+        // Tool-free once the space is known — a project is a project, not a
+        // thing that lives inside whichever editor you happen to be holding.
+        expect(buildStudioProjectPath('demo-project', 'gallery')).toBe('/gallery/projects/demo-project')
     })
 
     it('parses /studio as the spaces index and space-scoped project routes', () => {
@@ -88,6 +91,7 @@ describe('studioRouting', () => {
 
         expect(getStudioLocationState(new URL('https://example.com/gallery/studio/projects/demo-project'))).toEqual({
             isStudio: true,
+            legacyProjectAddress: true,
             page: STUDIO_PAGE_PROJECT,
             projectId: 'demo-project',
             spaceId: 'gallery'
@@ -192,9 +196,38 @@ describe('studioRouting', () => {
         expect(getStudioLocationState(new URL('https://example.com/wcc/studio/projects/abc')).projectId).toBe('abc')
     })
 
-    it('does not mistake a deeper path for the projects list', () => {
-        // /{space}/projects/{something} is NOT the list; only the bare two-segment
-        // form is, so a future addressing model can still use the deeper path.
-        expect(getStudioLocationState(new URL('https://example.com/wcc/projects/extra')).isStudio).toBe(false)
+    // The deeper path was reserved by the 08-21 pass "so a future addressing
+    // model can still use it". This is that model.
+    it('parses /{space}/projects/{id} as the project itself', () => {
+        expect(getStudioLocationState(new URL('https://example.com/wcc/projects/alla-virabyan'))).toEqual({
+            isStudio: true,
+            page: STUDIO_PAGE_PROJECT,
+            projectId: 'alla-virabyan',
+            spaceId: 'wcc'
+        })
+    })
+
+    it('round-trips the project builder through the parser', () => {
+        const path = buildStudioProjectPath('demo-project', 'gallery')
+        const state = getStudioLocationState(new URL(`https://example.com${path}`))
+        expect(state.page).toBe(STUDIO_PAGE_PROJECT)
+        expect(state.projectId).toBe('demo-project')
+        expect(state.spaceId).toBe('gallery')
+        // …and it is NOT marked legacy, or it would heal to itself forever.
+        expect(state.legacyProjectAddress).toBeUndefined()
+    })
+
+    it('keeps the tool-named form working, and heals the bar off it', () => {
+        const legacy = buildLegacyStudioProjectPath('demo-project', 'gallery')
+        expect(legacy).toBe('/gallery/studio/projects/demo-project')
+        const state = getStudioLocationState(new URL(`https://example.com${legacy}`))
+        expect(state.page).toBe(STUDIO_PAGE_PROJECT)
+        expect(state.projectId).toBe('demo-project')
+        expect(state.spaceId).toBe('gallery')
+        expect(state.legacyProjectAddress).toBe(true)
+    })
+
+    it('still claims nothing below a project', () => {
+        expect(getStudioLocationState(new URL('https://example.com/wcc/projects/extra/deeper')).isStudio).toBe(false)
     })
 })

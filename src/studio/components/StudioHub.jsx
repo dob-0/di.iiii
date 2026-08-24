@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRouting.js'
-import { buildRawProjectsPath } from '../../raw/utils/rawRouting.js'
+import { buildRawProjectPath, buildRawProjectsPath } from '../../raw/utils/rawRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import GridFloorBackground from '../../components/GridFloorBackground.jsx'
 import useAuthSession from '../../hooks/useAuthSession.js'
@@ -218,10 +218,10 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, showProj
                         <div className="sh-top-actions">
                             <button
                                 className="sh-btn-outline"
-                                title="The node editor"
+                                title="The node editor's own page for this space"
                                 onClick={() => appNavigate(buildRawProjectsPath(spaceId))}
                             >
-                                Nodes
+                                Node editor
                             </button>
                             <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
                                 + New project
@@ -397,6 +397,17 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, showProj
                                     </div>
                                     {!isRenaming && (
                                         <>
+                                            {/* The node editor, for THIS project. Reaching it used
+                                                to mean going to a second list — the "Nodes" button
+                                                up top opens `/{space}/raw/projects`, which lists
+                                                the very same projects this row is in. One space,
+                                                one list; the other editor is an action on a
+                                                project, not a parallel index of them. */}
+                                            <button
+                                                className="sh-btn-rename"
+                                                onClick={e => { e.stopPropagation(); appNavigate(buildRawProjectPath(project.id, spaceId)) }}
+                                                title="Open this project in the node editor"
+                                            >Nodes</button>
                                             <button
                                                 className="sh-btn-rename"
                                                 onClick={e => startRename(project, e)}

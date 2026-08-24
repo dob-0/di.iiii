@@ -17,7 +17,7 @@ import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
 import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildAppSpacePath, buildPublicProjectPath } from '../../utils/spaceRouting.js'
-import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildSpaceProjectsPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
@@ -88,7 +88,16 @@ const readCurrentCameraSnapshot = (controlsRef, fallback) => {
     }
 }
 
-export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPACE_ID }) {
+export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPACE_ID, healToCanonical = false }) {
+    // `/{space}/studio/projects/{id}` still opens — bookmarks and pasted links
+    // must never rot — but the bar heals to the tool-free `/{space}/projects/{id}`
+    // so the tool-named form stops travelling. replace(), so Back leaves it
+    // behind rather than bouncing through it.
+    useEffect(() => {
+        if (!healToCanonical || !projectId || !spaceId) return
+        navigateToStudioPath(buildStudioProjectPath(projectId, spaceId), { replace: true })
+    }, [healToCanonical, projectId, spaceId])
+
     const [displayName, setDisplayName] = useState(() => {
         try {
             return window.localStorage.getItem(DISPLAY_NAME_KEY)
