@@ -344,19 +344,23 @@ function AnimatedEntity({ entity, assetMap, childMap = null }) {
 function GateGlow({ entity }) {
     const ringRef = useRef(null)
     const pos = entity.components?.transform?.position || [0, 0, 0]
+    // The gate's own authored colour, not alarm-red: in a room whose doors are
+    // colour-coded wayfinding, a hardcoded red pulse floating at head height
+    // read as an error marker sitting among the doors.
+    const color = entity.components?.appearance?.color || '#ffb27a'
 
     useFrame((state) => {
         const ring = ringRef.current
         if (!ring) return
         const t = state.clock.getElapsedTime()
-        const pulse = 0.55 + Math.sin(t * 1.4) * 0.2
+        const pulse = 0.35 + Math.sin(t * 1.4) * 0.15
         ring.material.opacity = pulse
     })
 
     return (
-        <mesh ref={ringRef} position={[pos[0], pos[1] + 1.2, pos[2]]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh ref={ringRef} position={[pos[0], pos[1] + 0.06, pos[2]]} rotation={[Math.PI / 2, 0, 0]}>
             <ringGeometry args={[1.3, 1.55, 48]} />
-            <meshBasicMaterial color={0xd90000} transparent opacity={0.6} toneMapped={false} side={THREE.DoubleSide} />
+            <meshBasicMaterial color={color} transparent opacity={0.4} toneMapped={false} side={THREE.DoubleSide} />
         </mesh>
     )
 }
