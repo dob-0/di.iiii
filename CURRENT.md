@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a portal could name a project and still not go there
+- a portal opens by walking into it, not only by clicking it
 
 Full detail: `PROGRESS.md`.
 
