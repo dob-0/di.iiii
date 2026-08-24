@@ -11,9 +11,11 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session
+## Last session (2026-08-24, camp morning)
 
-- (no session notes were staged for this landing)
+- `/dilijan` hub redesigned to the elite pass: door nameplates reveal on APPROACH/hover (#262) — entry is clean geometry+colour, no label wall; rings got fake-bloom glow + membrane tap target; walking through a door ARRIVES WALKING (#263); gate glow is the gate's colour, not alarm-red (#264); wiki follows (#265).
+- Room data v3: arc of equal plinths, colour floor paths, questions ON the screen, portrait-composed navigable fixed camera; five rooms' floors extended under the walk-arrival point; return doors moved OFF the walk-in axis (bounce-back trap).
+- Whole journey re-verified on deployed staging as a phone guest: entry→drag→tap→walk-through→arrive walking→tap return→home. Scripts: `~/Documents/hosq-camp/room/`.
 
 Full detail: `PROGRESS.md`.
 
@@ -26,7 +28,7 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 - **PROD IS BEHIND** — everything of 2026-08-22/23 sits on staging only; prod still serves the retired three-door landing, and still previews the bare domain as an Express error page (fixed on staging). Owner promotes after checking staging. The three copy misses that would have baked pre-sweep positioning into every link preview are FIXED and verified live 08-24.
 - Doors audit: only embed-link copy is left; the rest is decided and shipped. Ledger: memory `project_dii_doors_audit_2026_08_21` (also still open there: the bare PHONE canvas has no visible exit).
-- Viewer seams from the hub build: arrival after a portal jump is view mode, not walk (remount resets navMode); the entry auto-frame direction is hardcoded (0.8,0.45,1) so portrait entries sit tilted+small — `entryView:'fixed-camera'` fixes framing but LOCKS the mouse (that was the owner's "can't move camera" bug, reverted); graph-only rooms still hide Walk/Fly by design.
+- Viewer seams left: the entry auto-frame direction is still hardcoded (0.8,0.45,1) — portrait entries tilt unless a composed fixed camera is authored (fixed-camera is NAVIGABLE now unless `locked:true`, #262); graph-only rooms still hide Walk/Fly by design; 3D text at eye level unsolved.
 - **Live DB renames owed on PROD** — the four above are staging-only. The sandbox writes to `dii-staging-server-1` and refuses `dii-server-1`: needs `"Bash(ssh dii-vps:*)"` in settings, or four renames from the owner's Spaces page.
 - `/wcc` false alarm closed; real leftover: `/wcc/main` needs >60s to settle. Camp decisions owed: kids name their own doors (labels only, first name/pseudonym — never full names on the public URL); consent for the public URL is hosq's call.
 - **Open Jam — #256 and #257 landed, on dev and on staging.** `/open_jam` still opens the editor — repointing the in-circulation QR is the owner's call. Clean-up is prepared but NOT applied: `~/di-backups/open-jam/` holds both tiers, triage sheets and `jam-clean.mjs` (keep every upload, bin what the unsuited UI added, staging 47→20); the `PUT` was refused by the permission classifier.
