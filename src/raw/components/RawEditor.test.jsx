@@ -109,6 +109,41 @@ describe('RawEditor outliner toggle', () => {
         expect(screen.getByRole('button', { name: /2 nodes/i })).toBeTruthy()
     })
 
+    // A project can hold work in two lanes, and this button used to appear only
+    // for one of them. On `wcc/alla-virabyan` — twelve objects, no nodes — the
+    // one control that lists what is in the room was hidden BECAUSE the room was
+    // full of objects rather than nodes.
+    it('counts objects too, and appears for a project that has only objects', () => {
+        window.localStorage.setItem(
+            OUTLINER_STORAGE_KEY,
+            JSON.stringify({
+                nodes: [],
+                edges: [],
+                workspaceState: {},
+                entities: [
+                    { id: 'e1', type: 'box', name: 'Plinth', components: {} },
+                    { id: 'e2', type: 'model', name: 'Beads', components: {} }
+                ]
+            })
+        )
+        render(<RawEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
+        expect(screen.getByRole('button', { name: /2 objects/i })).toBeTruthy()
+    })
+
+    it('names both lanes when a project has each', () => {
+        window.localStorage.setItem(
+            OUTLINER_STORAGE_KEY,
+            JSON.stringify({
+                nodes: [makeNodeZero()],
+                edges: [],
+                workspaceState: {},
+                entities: [{ id: 'e1', type: 'box', name: 'Plinth', components: {} }]
+            })
+        )
+        render(<RawEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
+        expect(screen.getByRole('button', { name: /1 node, 1 object/i })).toBeTruthy()
+    })
+
     it('opens the outliner dialog when the node count button is clicked', () => {
         window.localStorage.setItem(
             OUTLINER_STORAGE_KEY,
@@ -581,7 +616,7 @@ describe('RawEditor chrome sweep (plan PR 1.6)', () => {
             workspaceState: {}
         }))
         render(<RawEditor localStorageKey={KEY} />)
-        expect(screen.getByRole('button', { name: '1 nodes' })).toBeTruthy()
+        expect(screen.getByRole('button', { name: '1 node' })).toBeTruthy()
     })
 })
 
@@ -595,11 +630,11 @@ describe('RawEditor hardware Back (mobile finding #3)', () => {
             edges: [], workspaceState: {}
         }))
         render(<RawEditor localStorageKey={KEY} />)
-        expect(screen.getByRole('button', { name: '1 nodes' })).toBeTruthy()
+        expect(screen.getByRole('button', { name: '1 node' })).toBeTruthy()
         act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
         // the node count survives — the old guard navigated to index -1 and
         // rendered "place your first node" over an intact document
-        expect(screen.getByRole('button', { name: '1 nodes' })).toBeTruthy()
+        expect(screen.getByRole('button', { name: '1 node' })).toBeTruthy()
         expect(screen.queryByText(/place your first node/i)).toBeNull()
     })
 

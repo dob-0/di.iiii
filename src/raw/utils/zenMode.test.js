@@ -12,42 +12,42 @@ const fakeStorage = (initial = {}) => {
 
 describe('defaultZenFor', () => {
     it('is on for an empty workspace', () => {
-        expect(defaultZenFor({ nodeCount: 0 })).toBe(true)
+        expect(defaultZenFor({ workCount: 0 })).toBe(true)
     })
 
     it('is OFF for a workspace that already has work in it', () => {
         // Turning the chrome off under an arrangement somebody already built is
         // not a default — it is a change to their workspace.
-        expect(defaultZenFor({ nodeCount: 1 })).toBe(false)
-        expect(defaultZenFor({ nodeCount: 12 })).toBe(false)
+        expect(defaultZenFor({ workCount: 1 })).toBe(false)
+        expect(defaultZenFor({ workCount: 12 })).toBe(false)
     })
 })
 
 describe('readZenPreference', () => {
     it('honours a stored choice over the default, in both directions', () => {
-        const withWork = { nodeCount: 9 }
+        const withWork = { workCount: 9 }
         expect(readZenPreference('w1', { ...withWork, storage: fakeStorage({ 'dii.raw.zen.w1': 'on' }) })).toBe(true)
-        expect(readZenPreference('w1', { nodeCount: 0, storage: fakeStorage({ 'dii.raw.zen.w1': 'off' }) })).toBe(false)
+        expect(readZenPreference('w1', { workCount: 0, storage: fakeStorage({ 'dii.raw.zen.w1': 'off' }) })).toBe(false)
     })
 
     it('keeps workspaces separate', () => {
         const storage = fakeStorage({ 'dii.raw.zen.a': 'on', 'dii.raw.zen.b': 'off' })
-        expect(readZenPreference('a', { nodeCount: 5, storage })).toBe(true)
-        expect(readZenPreference('b', { nodeCount: 0, storage })).toBe(false)
+        expect(readZenPreference('a', { workCount: 5, storage })).toBe(true)
+        expect(readZenPreference('b', { workCount: 0, storage })).toBe(false)
     })
 
     it('falls back to the default when storage throws, rather than blowing up', () => {
         // Private-mode browsers throw on access instead of returning null.
         const hostile = { getItem: () => { throw new Error('denied') } }
-        expect(readZenPreference('w', { nodeCount: 0, storage: hostile })).toBe(true)
-        expect(readZenPreference('w', { nodeCount: 3, storage: hostile })).toBe(false)
+        expect(readZenPreference('w', { workCount: 0, storage: hostile })).toBe(true)
+        expect(readZenPreference('w', { workCount: 3, storage: hostile })).toBe(false)
     })
 
     it('lets a seeding caller override the default, but never a stored choice', () => {
         // A seeded starter workspace has nodes it did not earn — still zen.
-        expect(readZenPreference('w', { nodeCount: 5, defaultZen: true, storage: fakeStorage() })).toBe(true)
+        expect(readZenPreference('w', { workCount: 5, defaultZen: true, storage: fakeStorage() })).toBe(true)
         expect(readZenPreference('w', {
-            nodeCount: 5,
+            workCount: 5,
             defaultZen: true,
             storage: fakeStorage({ 'dii.raw.zen.w': 'off' })
         })).toBe(false)
@@ -77,22 +77,22 @@ describe('resolveZenPreference', () => {
         // old contract stored it as a choice, and the Scene button stayed
         // invisible for the whole session after the first node arrived.
         const storage = fakeStorage()
-        expect(resolveZenPreference('w', { nodeCount: 0, storage })).toBe(true)
+        expect(resolveZenPreference('w', { workCount: 0, storage })).toBe(true)
         expect(storage._map.get('dii.raw.zen.w')).toBe('auto-on')
-        expect(resolveZenPreference('w', { nodeCount: 0, storage })).toBe(true)
+        expect(resolveZenPreference('w', { workCount: 0, storage })).toBe(true)
         // Same workspace, now with work in it — the premise died, zen lifts.
-        expect(resolveZenPreference('w', { nodeCount: 7, storage })).toBe(false)
+        expect(resolveZenPreference('w', { workCount: 7, storage })).toBe(false)
     })
 
     it('leaves a workspace that already had work with its chrome, and remembers that too', () => {
         const storage = fakeStorage()
-        expect(resolveZenPreference('w2', { nodeCount: 4, storage })).toBe(false)
+        expect(resolveZenPreference('w2', { workCount: 4, storage })).toBe(false)
         expect(storage._map.get('dii.raw.zen.w2')).toBe('off')
     })
 
     it('never overrides an explicit choice', () => {
         const storage = fakeStorage({ 'dii.raw.zen.w3': 'on' })
-        expect(resolveZenPreference('w3', { nodeCount: 20, storage })).toBe(true)
+        expect(resolveZenPreference('w3', { workCount: 20, storage })).toBe(true)
     })
 })
 
@@ -135,14 +135,14 @@ describe('isPaletteSummons', () => {
 describe('auto zen — a derived default is not a choice', () => {
     it('resolve stores the empty-canvas default as auto-on, not on', () => {
         const storage = fakeStorage()
-        expect(resolveZenPreference('w9', { nodeCount: 0, storage })).toBe(true)
+        expect(resolveZenPreference('w9', { workCount: 0, storage })).toBe(true)
         expect(storage._map.get('dii.raw.zen.w9')).toBe('auto-on')
     })
 
     it('auto-on lifts itself the moment the canvas has work in it', () => {
         const storage = fakeStorage({ 'dii.raw.zen.w9': 'auto-on' })
-        expect(readZenPreference('w9', { nodeCount: 0, storage })).toBe(true)
-        expect(readZenPreference('w9', { nodeCount: 3, storage })).toBe(false)
+        expect(readZenPreference('w9', { workCount: 0, storage })).toBe(true)
+        expect(readZenPreference('w9', { workCount: 3, storage })).toBe(false)
     })
 
     it('liftAutoZen lifts only the derived default, never a chosen zen', () => {
@@ -160,12 +160,12 @@ describe('auto zen — a derived default is not a choice', () => {
         const storage = fakeStorage()
         writeZenPreference('w9', true, { storage })
         expect(storage._map.get('dii.raw.zen.w9')).toBe('on')
-        expect(readZenPreference('w9', { nodeCount: 12, storage })).toBe(true)
+        expect(readZenPreference('w9', { workCount: 12, storage })).toBe(true)
     })
 
     it('a stored explicit choice is never rewritten by resolve', () => {
         const storage = fakeStorage({ 'dii.raw.zen.w9': 'on' })
-        expect(resolveZenPreference('w9', { nodeCount: 12, storage })).toBe(true)
+        expect(resolveZenPreference('w9', { workCount: 12, storage })).toBe(true)
         expect(storage._map.get('dii.raw.zen.w9')).toBe('on')
     })
 })

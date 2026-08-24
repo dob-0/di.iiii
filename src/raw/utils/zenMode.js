@@ -15,10 +15,16 @@ const storageKey = (workspaceKey) => `${KEY_PREFIX}${workspaceKey || 'default'}`
  * Zen is the default for a NEW workspace and never for one that already has
  * work in it — turning the chrome off under an arrangement somebody already
  * built is not a default, it is a change to their workspace.
+ *
+ * `workCount` is WORK, both lanes. It was `nodeCount`, and the name was doing
+ * real damage: a project holding twelve objects and no nodes counted as zero,
+ * so it opened chromeless — no toolbar, no outliner button, no way to reach the
+ * one control that would have listed the work. The rule was always about
+ * whether the workspace has anything in it; only the parameter disagreed.
  */
-export const defaultZenFor = ({ nodeCount = 0 } = {}) => nodeCount === 0
+export const defaultZenFor = ({ workCount = 0 } = {}) => workCount === 0
 
-export const readZenPreference = (workspaceKey, { nodeCount = 0, defaultZen, storage } = {}) => {
+export const readZenPreference = (workspaceKey, { workCount = 0, defaultZen, storage } = {}) => {
     const store = storage ?? (typeof window !== 'undefined' ? window.localStorage : null)
     let stored = null
     try {
@@ -33,12 +39,12 @@ export const readZenPreference = (workspaceKey, { nodeCount = 0, defaultZen, sto
     // canvas was empty at the time. The premise is re-checked on every read —
     // the moment the canvas has work in it, the chrome belongs back. Only an
     // explicit toggle writes the unconditional 'on'.
-    if (stored === 'auto-on') return nodeCount === 0
+    if (stored === 'auto-on') return workCount === 0
     // A caller that seeded the workspace itself may override the default: the
     // starter constellation is not "an arrangement somebody already built", so
     // a seeded first visit still opens bare. A stored choice always wins.
     if (typeof defaultZen === 'boolean') return defaultZen
-    return defaultZenFor({ nodeCount })
+    return defaultZenFor({ workCount })
 }
 
 export const writeZenPreference = (workspaceKey, zen, { storage, derived = false } = {}) => {
@@ -57,7 +63,7 @@ export const writeZenPreference = (workspaceKey, zen, { storage, derived = false
  * an empty workspace opens zen and then the chrome reappears by itself as soon
  * as the workspace has a node in it — a setting that changes itself.
  */
-export const resolveZenPreference = (workspaceKey, { nodeCount = 0, defaultZen, storage } = {}) => {
+export const resolveZenPreference = (workspaceKey, { workCount = 0, defaultZen, storage } = {}) => {
     const store = storage ?? (typeof window !== 'undefined' ? window.localStorage : null)
     let stored = null
     try {
@@ -65,7 +71,7 @@ export const resolveZenPreference = (workspaceKey, { nodeCount = 0, defaultZen, 
     } catch {
         stored = null
     }
-    const resolved = readZenPreference(workspaceKey, { nodeCount, defaultZen, storage })
+    const resolved = readZenPreference(workspaceKey, { workCount, defaultZen, storage })
     // An explicit choice stays exactly as written. A derived zen-on is
     // remembered as 'auto-on' — stable across reloads of an empty canvas,
     // but honest that nobody chose it, so the first node can lift it (the

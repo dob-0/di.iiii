@@ -20,9 +20,33 @@ vi.mock('../../project/nodeRegistry.js', () => ({
 const makeNode = (id, typeId, label = '') => ({ id, typeId, label })
 
 describe('OutlinerPanelWindow', () => {
-    it('renders an empty state when there are no nodes', () => {
+    // The old copy said "No nodes here yet", and that sentence WAS the bug this
+    // panel had: it is what a room holding twelve objects was told about itself.
+    // The emptiness it reports is the room's, not one lane's.
+    it('renders an empty state when the room is empty', () => {
         render(<OutlinerPanelWindow nodes={[]} selectedNodeId={null} onSelectNode={vi.fn()} />)
-        expect(screen.getByText(/no nodes/i)).toBeTruthy()
+        expect(screen.getByText(/nothing in this room/i)).toBeTruthy()
+    })
+
+    it('lists objects beside nodes, and selecting one selects the object', () => {
+        const onSelectEntity = vi.fn()
+        const items = [
+            { kind: 'node', id: 'n1', node: { id: 'n1', typeId: 'geom.cube', label: 'Corner block' } },
+            { kind: 'object', id: 'e1', label: 'Plinth', typeLabel: 'box', color: '#c8a2ff' }
+        ]
+        render(
+            <OutlinerPanelWindow
+                items={items}
+                selectedNodeId={null}
+                onSelectNode={vi.fn()}
+                selectedEntityId={null}
+                onSelectEntity={onSelectEntity}
+            />
+        )
+        expect(screen.getByText('Plinth')).toBeTruthy()
+        expect(screen.getByText('Corner block')).toBeTruthy()
+        screen.getByText('Plinth').closest('button').click()
+        expect(onSelectEntity).toHaveBeenCalledWith('e1')
     })
 
     it('lists nodes with their type label and node label', () => {

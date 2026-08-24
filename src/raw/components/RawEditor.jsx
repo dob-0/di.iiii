@@ -41,6 +41,8 @@ import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSe
 import { readNode } from '../../project/graph/nodeReading.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
+import { METHODS, detectMethod, planMethod } from '../utils/workspaceMethods.js'
+import { buildObjectCards, buildScopeItems } from '../utils/objectCards.js'
 import { hasClockNode } from '../../project/graph/useGraphClock.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
 import { isNodeInScope, useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
@@ -259,7 +261,11 @@ export default function RawEditor({
     const document = state.document
     const isLocalWorkspace = !projectId
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
-    const entities = document.entities || []
+    // Memoized like `nodes` below it, and for a reason that only appeared once
+    // objects became citizens of the canvas and the outliner: a fresh `[]` every
+    // render made both of those lists rebuild on every render, and rebuilding
+    // the object cards means re-laying-out the whole lane for nothing.
+    const entities = useMemo(() => document.entities || [], [document.entities])
     const nodes = useMemo(() => document.nodes || [], [document.nodes])
     const workspaceState = document.workspaceState || {}
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
@@ -349,6 +355,20 @@ export default function RawEditor({
         () => nodes.filter((node) => (node.parentId || null) === currentScopeId),
         [nodes, currentScopeId]
     )
+    // The other lane, on the same canvas. Root scope only — objects have no
+    // parent concept, so they stand in the top room and nowhere else, the same
+    // rule the viewport draws by. See objectCards.js for why the layout is
+    // derived rather than written into the document.
+    const objectCards = useMemo(
+        () => (currentScopeId ? [] : buildObjectCards(entities, { nodes: graphCardNodes })),
+        [currentScopeId, entities, graphCardNodes]
+    )
+    // One list for the outliner, both lanes. An outliner that could only see
+    // nodes said "no nodes here yet" to a room holding twelve objects.
+    const outlinerItems = useMemo(
+        () => buildScopeItems({ nodes: authoredNodes, entities, scopeId: currentScopeId }),
+        [authoredNodes, entities, currentScopeId]
+    )
     // Edges are scoped along with nodes — an edge whose endpoints aren't both
     // in the current scope's card set has no business rendering here.
     const graphCardEdges = useMemo(() => {
@@ -358,6 +378,9 @@ export default function RawEditor({
     // The topbar counts THIS room; the empty-state logic asks about the whole
     // document (a zen desk inside a full project is not "empty").
     const nodeCount = graphCardNodes.length
+    // Objects are root-scope citizens, the same rule the room and the canvas
+    // draw by — so they are counted where they stand and nowhere else.
+    const objectCount = currentScopeId ? 0 : entities.length
     // "Where did my cube go?" The desk is deliberately clear (owner, 2026-08-20:
     // "i mean clear desk"), so a spatial node you just placed is standing in a
     // room you are not looking at — and the button to that room said the same
@@ -833,7 +856,10 @@ export default function RawEditor({
         if (zenReadRef.current || !document) return
         zenReadRef.current = true
         setZen(resolveZenPreference(zenWorkspaceKey, {
-            nodeCount: (document.nodes || []).length
+            // BOTH lanes. Counting nodes alone opened every object-built project
+            // chromeless, because a room holding twelve objects counted as zero
+            // work — so the project with the most in it got the least interface.
+            workCount: (document.nodes || []).length + (document.entities || []).length
         }))
     }, [document, zenWorkspaceKey])
 
@@ -1595,9 +1621,11 @@ export default function RawEditor({
         if (node.typeId === 'view.outliner') {
             return (
                 <OutlinerPanelWindow
-                    nodes={authoredNodes}
+                    items={outlinerItems}
                     selectedNodeId={workspaceState.selectedNodeId || null}
                     onSelectNode={(nodeId) => selectNode(nodeId)}
+                    selectedEntityId={state.selectedEntityId || null}
+                    onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}
                 />
             )
         }
@@ -1786,7 +1814,43 @@ export default function RawEditor({
     const hiddenPanelNodes = authoredNodes.filter(
         (node) => isPanelNode(node) && node.values?.frame?.visible === false
     )
+    // The arrangement you are in, read off the windows rather than stored — so
+    // it cannot claim a method you have since moved past. See workspaceMethods.js.
+    const activeMethod = detectMethod(authoredNodes, currentScopeId)
+    const [methodNotice, setMethodNotice] = useState(null)
+    // Applying one is ordinary ops on the open document: it lands live, syncs to
+    // whoever else is here, and undoes in a single step. Nothing is deleted, so
+    // flipping between arrangements all afternoon costs nothing.
+    const applyMethod = useCallback((method) => {
+        const { ops, missing } = planMethod(method, {
+            nodes: authoredNodes,
+            scopeId: currentScopeId,
+            viewport: {
+                width: typeof window === 'undefined' ? 1280 : window.innerWidth,
+                height: typeof window === 'undefined' ? 800 : window.innerHeight
+            },
+            workspaceTop
+        })
+        // A method that wanted the room and could not make one used to just show
+        // you less than you asked for, silently — which on an object-built
+        // project is every time, because those have no Scene node and their room
+        // is implicit. Saying so, with the one action that gets you there, is the
+        // difference between a missing feature and a broken one.
+        setMethodNotice(missing.includes('universe.world') ? method.id : null)
+        if (!ops.length) return
+        applyLocalOps(ops, { activityMessage: `${method.label} arrangement.` })
+    }, [applyLocalOps, authoredNodes, currentScopeId, workspaceTop])
+
     const paletteCommands = [
+        // First in the list, because changing how you are working is the thing
+        // this palette is now most often opened to do — and because a person who
+        // has never seen a method needs to meet one without hunting.
+        ...METHODS.map((method) => ({
+            id: `method:${method.id}`,
+            label: method.id === activeMethod ? `${method.label} — you are here` : method.label,
+            hint: method.hint,
+            run: () => applyMethod(method)
+        })),
         {
             id: 'chrome',
             label: zen ? 'Show the toolbar' : 'Hide the toolbar',
@@ -1949,15 +2013,48 @@ export default function RawEditor({
                             <button type="button" className="raw-topbar-help-action" onClick={() => setHelpOpen(true)}>
                                 Help
                             </button>
-                            {nodeCount > 0 && (
+                            {/* Counts BOTH lanes, and appears for either. It used
+                                to be `nodeCount > 0`, so a project holding twelve
+                                objects and no nodes had no outliner button at all
+                                — the one control that would have listed the work
+                                was hidden precisely because the work was not
+                                nodes. The word span is what the narrow layout
+                                drops, so a phone reads "3 · 12" and never a bare
+                                number wearing the wrong noun. */}
+                            {(nodeCount > 0 || objectCount > 0) && (
                                 <button
                                     type="button"
                                     className={`raw-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
                                     onClick={() => setOutlinerOpen((v) => !v)}
                                     title="Toggle outliner"
-                                    aria-label={`${nodeCount} nodes`}
+                                    aria-label={[
+                                        nodeCount > 0 ? `${nodeCount} ${nodeCount === 1 ? 'node' : 'nodes'}` : '',
+                                        objectCount > 0 ? `${objectCount} ${objectCount === 1 ? 'object' : 'objects'}` : ''
+                                    ].filter(Boolean).join(', ')}
                                 >
-                                    {nodeCount}<span className="raw-topbar-word"> {nodeCount === 1 ? 'node' : 'nodes'}</span>
+                                    {/* Two numbers and a separator did not fit:
+                                        measured at 393px of content in a 390px
+                                        bar, and the row was already at 433px
+                                        before the room count existed (see the
+                                        media query in raw.css). So the phone
+                                        gets ONE number — how many things this
+                                        button will list — and the breakdown
+                                        lives in the aria-label, which is where a
+                                        person who needs it can still get it.
+                                        Robust to digit count in a way that
+                                        trimming padding would not have been. */}
+                                    <span className="raw-topbar-count-full">
+                                        {nodeCount > 0 && (
+                                            <>{nodeCount}<span className="raw-topbar-word"> {nodeCount === 1 ? 'node' : 'nodes'}</span></>
+                                        )}
+                                        {nodeCount > 0 && objectCount > 0 ? <span aria-hidden="true"> · </span> : null}
+                                        {objectCount > 0 && (
+                                            <>{objectCount}<span className="raw-topbar-word"> {objectCount === 1 ? 'object' : 'objects'}</span></>
+                                        )}
+                                    </span>
+                                    <span className="raw-topbar-count-compact" aria-hidden="true">
+                                        {nodeCount + objectCount}
+                                    </span>
                                 </button>
                             )}
                             {/* No Chat button alone in a local canvas: there
@@ -2107,6 +2204,13 @@ export default function RawEditor({
                     bottomInset={graphBottomInset}
                     contentInsets={graphContentInsets}
                     nodes={graphCardNodes}
+                    // The room's objects, on the same canvas. Selecting one
+                    // reaches the SAME selection Studio's outliner and the room
+                    // itself use, so the inspector that opens already knows how
+                    // to edit it — nothing new had to be taught anything.
+                    objectCards={objectCards}
+                    selectedObjectId={state.selectedEntityId || null}
+                    onSelectObject={(entityId) => dispatch({ type: 'select-entity', entityId })}
                     childCounts={childCounts}
                     // EVERY node, not graphCardNodes. A container's doorways
                     // live INSIDE it — a different scope from its own card — so
@@ -2155,6 +2259,21 @@ export default function RawEditor({
                     onSetActive={(node) => setActiveNodeId(node.typeId, node.parentId || null, node.id)}
                     activeMarkerTypeIds={activeMarkerTypeIds}
                 />
+                {/* An arrangement asked for the room and this project has no
+                    Scene node to hang one on — true of every object-built
+                    project, whose room is implicit. Rather than quietly showing
+                    one window fewer than was asked for, say it, and offer the
+                    door. Dismisses itself the moment it is used or the
+                    arrangement changes. */}
+                {methodNotice && objectCount > 0 ? (
+                    <button
+                        type="button"
+                        className="raw-graph-fit-notice raw-method-notice"
+                        onClick={() => { setMethodNotice(null); setIsWorldFullscreen(true) }}
+                    >
+                        no Scene here — see the room full screen
+                    </button>
+                ) : null}
                 {/* Zen's three residents are surface, nodes, wordmark — this is
                     the wordmark. Ambient, kept when the toolbar is summoned too.
                     It became the way home in the 2026-08-21 doors audit: the
@@ -2432,9 +2551,11 @@ export default function RawEditor({
                     onTogglePin={() => setOutlinerFrame((f) => ({ ...f, pinned: !f.pinned }))}
                 >
                     <OutlinerPanelWindow
-                        nodes={authoredNodes}
+                        items={outlinerItems}
                         selectedNodeId={workspaceState.selectedNodeId || null}
                         onSelectNode={(nodeId) => selectNode(nodeId)}
+                        selectedEntityId={state.selectedEntityId || null}
+                        onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}
                     />
                 </DesktopWindow>
             )}

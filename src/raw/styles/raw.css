@@ -3031,6 +3031,24 @@
     cursor: pointer;
 }
 
+/* The method notice sits BELOW the fit notice rather than replacing it: both
+   can be true at once (a big graph that also has no Scene), and a notice that
+   silently displaced another is how one of them stops being read. */
+.raw-method-notice {
+    top: 52px;
+}
+
+/* On a phone a method stacks its layers from the top, so a notice sitting at
+   52px lands UNDER the first title bar and is read as a torn edge rather than a
+   sentence (seen at 390x844). Down here it has the band above the zoom cluster
+   to itself. */
+@media (max-width: 640px) {
+    .raw-method-notice {
+        top: auto;
+        bottom: 76px;
+    }
+}
+
 .raw-graph-fit-notice:hover,
 .raw-graph-fit-notice:focus-visible {
     color: var(--di-cyan);
@@ -5600,6 +5618,10 @@
     pointer-events: none;
 }
 
+.raw-topbar-count-compact {
+    display: none;
+}
+
 /* The Raw topbar overflowed a 390px phone BEFORE the room count was added:
    measured at 433px of content in a 390px bar, which pushed the ⋯ button clean
    off the right edge — and ⋯ is the only route on a phone to "Save to <space>",
@@ -5612,5 +5634,19 @@
 @media (max-width: 640px) {
     .raw-topbar-word {
         display: none;
+    }
+
+    /* One number, not two. With both lanes counted, "3 · 12" plus its separator
+       measured 393px of content in a 390px bar — the row overflows and whatever
+       sits last goes off the right edge, which on this bar is the ⋯ button and
+       therefore the only route to Save, Spaces, Wiki and Home. The compact form
+       shows how many things the outliner will list; the aria-label still
+       announces "N nodes, N objects". */
+    .raw-topbar-count-full {
+        display: none;
+    }
+
+    .raw-topbar-count-compact {
+        display: inline;
     }
 }

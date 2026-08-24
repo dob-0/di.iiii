@@ -146,6 +146,23 @@ export default function RawGraphSurface({
     initialZoom = null,
     nodes = [],
     edges = [],
+    // OBJECTS ON THE CANVAS. A project can hold work in two lanes, and until
+    // now this surface drew one of them — so a room with twelve objects in it
+    // opened here as an empty canvas, and the canvas was lying about the
+    // project. Seen on `wcc/alla-virabyan`: 12 objects, three cards, all three
+    // of them windows.
+    //
+    // They arrive as their OWN pass rather than mixed into `nodes`, for two
+    // reasons. An object genuinely is not a node — it has no ports, no wires
+    // and no inside — so giving it a node's body would be a drawing that
+    // promises connections it cannot make. And node rendering is load-bearing
+    // for Studio, which wraps this component read-only; an additive pass
+    // cannot change what it already draws.
+    //
+    // Optional and defaulted throughout: every existing caller passes none.
+    objectCards = [],
+    selectedObjectId = null,
+    onSelectObject = null,
     // How many nodes each node contains, by node id. Optional and defaulted:
     // Studio wraps this component read-only and passes nothing, and must keep
     // rendering exactly as before.
@@ -220,6 +237,14 @@ export default function RawGraphSurface({
     // pinch sits on a threshold.
     const [tier, setTier] = useState(() => lodTierForZoom(initialZoom ?? 1))
     useEffect(() => { setTier((previous) => lodTierForZoom(zoom, previous)) }, [zoom])
+
+    // Everything the view has to hold, both lanes. Only the FIT and the
+    // is-this-canvas-empty question use it — drawing, wires and ports stay on
+    // `nodes` alone, because only nodes have any of those.
+    const cardsInView = useMemo(
+        () => (objectCards.length ? [...nodes, ...objectCards] : nodes),
+        [nodes, objectCards]
+    )
 
     const nodeById = useMemo(() => {
         const map = new Map()
@@ -388,8 +413,8 @@ export default function RawGraphSurface({
      * `force` runs the true overview anyway, at whatever zoom that takes.
      */
     const fitGraph = ({ force = false } = {}) => {
-        if (!nodes.length) return
-        const all = boundsOf(nodes)
+        if (!cardsInView.length) return
+        const all = boundsOf(cardsInView)
         const overviewZoom = zoomToFitBounds(all, { maxZoom: 1 })
         if (overviewZoom === null) return
 
@@ -437,7 +462,7 @@ export default function RawGraphSurface({
                 return x + w > 0 && x < box.width && y + h > 0 && y < box.height - Math.max(0, bottomInset)
             }).length
             : 0
-        setFitNotice({ shown, total: nodes.length })
+        setFitNotice({ shown, total: cardsInView.length })
     }
 
     // Zoom to the selected node. Unlike fit-all this is ALLOWED to magnify —
@@ -463,11 +488,11 @@ export default function RawGraphSurface({
     // The key must be the SCOPE, nothing else — a node count or first-node id
     // in here made every create/delete miss the guard and re-fit, which is
     // exactly the yank the comment above forbids.
-    const scopeKey = nodes.length ? `scope:${nodes[0]?.parentId || 'root'}` : ''
+    const scopeKey = cardsInView.length ? `scope:${nodes[0]?.parentId || 'root'}` : ''
     const insetKey = `${contentInsets?.left || 0}:${contentInsets?.right || 0}:${contentInsets?.top || 0}:${contentInsets?.bottom || 0}`
     useEffect(() => {
         if (initialZoom !== null) return
-        if (hasFitRef.current === scopeKey || !containerRef.current || nodes.length === 0) return
+        if (hasFitRef.current === scopeKey || !containerRef.current || cardsInView.length === 0) return
         if (!visibleBox()) return
         fitGraph()
         hasFitRef.current = scopeKey
@@ -1184,7 +1209,7 @@ export default function RawGraphSurface({
                     showing {fitNotice.shown} of {fitNotice.total} — ⤢ fit all
                 </button>
             ) : null}
-            {nodes.length === 0 ? (
+            {cardsInView.length === 0 ? (
                 // A blank workspace opens in ZEN, where there is NO topbar — so
                 // the ⋯ menu, and everything in it, does not exist for the
                 // person most likely to need it. The one offer that matters has
@@ -1489,6 +1514,50 @@ export default function RawGraphSurface({
                             </div>
                         )
                     })}
+                    {/* The objects. Same stage, so they pan and zoom with
+                        everything else and read as being in the same place —
+                        which is the whole point, they ARE in the same project.
+                        Deliberately a plainer card than a node's: no port rows,
+                        no doorway, no wire grab. A card that looked wirable and
+                        was not would be a worse lie than the empty canvas this
+                        replaces. */}
+                    {objectCards.map((card) => (
+                        <div
+                            key={card.id}
+                            className={`raw-graph-node-card raw-graph-object-card${card.id === selectedObjectId ? ' is-selected' : ''}`}
+                            style={{
+                                position: 'absolute',
+                                left: card.graphX,
+                                top: card.graphY,
+                                width: CARD_WIDTH,
+                                height: cardHeight(card, null),
+                                cursor: onSelectObject ? 'pointer' : 'default',
+                                ...(card.familyColor ? { '--card-family': card.familyColor } : {})
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => onSelectObject?.(card.entityId)}
+                            onKeyDown={(event) => {
+                                if (event.key !== 'Enter' && event.key !== ' ') return
+                                event.preventDefault()
+                                onSelectObject?.(card.entityId)
+                            }}
+                            title={`${card.label} — an object in the room`}
+                        >
+                            {/* The node card's own classes, so an object reads
+                                as living on this canvas rather than pasted onto
+                                it. What tells them apart is the hue and the
+                                absence of ports — not a second visual language. */}
+                            <header className="raw-graph-node-header">
+                                <span className="raw-graph-node-icon" />
+                                <span className="raw-graph-node-label">{card.label}</span>
+                                <span className="raw-graph-node-category" style={{ color: card.familyColor }}>object</span>
+                            </header>
+                            <div style={{ position: 'relative', height: cardHeight(card, null) - HEADER_HEIGHT }}>
+                                <span className="raw-graph-node-summary">{card.typeLabel}</span>
+                            </div>
+                        </div>
+                    ))}
                 </div>
                 {/* Outside .raw-graph-stage on purpose: the stage carries the
                     pan/zoom transform, and position:fixed inside a transformed

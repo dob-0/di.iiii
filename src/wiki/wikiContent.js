@@ -686,14 +686,15 @@ export const WIKI_ARTICLES = [
         id: 'raw-lane',
         category: 'Editing',
         title: 'The node editor: free-form nesting',
-        summary: 'di.iiii’s node editor lives at /<space>/raw. Any node can hold a graph of its own, and entering a Scene opens it fullscreen.',
+        summary: 'di.iiii’s node editor lives at /<space>/raw. It shows a project whole — nodes and objects both — and the palette’s arrangements lay the windows out for whatever you are doing.',
         body: [
             'The node editor is the other way to build: a canvas, nodes on it, and wires between them. Its core idea is free-form nesting — no node type is a singleton, and any node can be entered to author a graph inside it.',
             { list: [
                 'A space’s node projects are listed at /<space>/raw/projects (same sign-in rules as Studio). /<space>/raw opens the canvas itself — a scratch surface stored in your browser, not on the server; /open/raw is that canvas addressed to the communal open space.',
                 'A canvas can become a real project: the ⋯ menu’s “Save to <space>” copies what is on it into the space you are in, names it, and opens it as a project — from then on it syncs, opens on another device, and can be shared. The canvas itself is left as it was, so the scratch surface stays yours.',
                 'One project, two editors: the ⋯ menu’s “Open in Studio” swaps the project you are in over to the Studio editor, and Studio’s toolbar “⇄ Nodes” button swaps it back. A project made here shows as “Nodes” in Studio’s project list.',
-                'Crossing from Studio into the node editor shows an empty graph, and that is the truth: a project built in Studio has objects, not nodes. The canvas says so — “Built in Studio — N objects in the room, no nodes yet” — and its “See the room” button opens the 3D view where those objects are standing. Adding a node there adds it to that same room; nothing you built in Studio is lost or hidden by crossing over.',
+                'Crossing from Studio into the node editor shows you the same project, not half of it. Objects made in Studio get their own cards on the canvas — plainer than a node’s, in their own colour, with no ports, because an object has nothing to wire — and clicking one selects it, so the Inspector opens on the thing you clicked. They are listed in the Outliner beside the nodes, and the toolbar counts both (“3 nodes · 12 objects”; a phone shows the total). It used to show an empty graph and say so, which was true about nodes and quite wrong about the project. Adding a node adds it to that same room; nothing you built in Studio is lost or hidden by crossing over.',
+                'Arrangements, not tools. The palette leads with four ways of working — Arrange, Wire, Publish, Clear — and picking one lays the windows out for that job on the spot: Arrange gives you the Outliner, Create, the room and the Inspector; Wire clears the way for the canvas; Publish puts the room beside the public-page panel. They swap live, on the project you are already in, with no reload and no other editor to open, and the palette marks the one you are in. Nothing is ever thrown away — an arrangement puts the windows you are not using out of the way, keeping their size, place and contents, so moving between them all afternoon costs nothing and undo takes you back in one step. Move a window yourself and you are simply no longer in an arrangement, which is the honest answer. On a phone the same layers arrive as title bars with one of them open, because four windows side by side is not a thing a phone can hold. An arrangement will not invent a Scene for you — a room is something you meant — so on a project that has none it says so and offers the full-screen room instead.',
                 'Enter any node with its “Enter ›” button; the breadcrumb tracks your depth and Escape steps back out one level at a time.',
                 'Entering a Scene node opens its 3D viewport fullscreen; the ← Scene button in the toolbar drops back to the graph.',
                 'The canvas stays clear on purpose — what you place stands in the room, not behind the cards. So the toolbar’s Scene button counts it: “Scene · 3” means three things are standing in the room at the level you are on, and it changes the moment you place the first one. Plain “Scene” means the room is still empty. On a phone the toolbar drops the words and keeps the controls — the arrow, the count, the ⋯ menu.',
@@ -722,7 +723,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started', 'anatomy', 'made-of', 'crossing'],
-        updated: '2026-08-23'
+        updated: '2026-08-24'
     },
     {
         id: 'studio-node',
