@@ -11,12 +11,9 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session (2026-08-24, camp day — the /dilijan design marathon)
+## Last session
 
-- `/dilijan` REBUILT as "The Islands Between Two Skies", then **rebuilt again after a human walk-test** found the root cause of a day of ugliness: **every primitive is BASE-anchored and cylinder/cone are 1.5 units tall**, so the island was a 2.1m drum with its surface at y=1.4 and the 1.6m-eye walker was crawling on it. Current space: `~/Documents/hosq-camp/room/islands-v9.mjs` + `dens-v9.mjs` (real-metre helpers — use them).
-- Also found by testing as a human: the **gate entity overrides `worldState.spawn`** (spawn = gate.z+6); a **portal ring is hard-rotated FLAT** and at scale 0.85 is untappable (0/25 sweep hits) — stand it upright from the entity (`rotation:[-1.5708,yaw,0]`) at scale 1.7; a portal within 2.2m of a spawn **bounces arrivals straight back**. All in `docs`/memory `reference_dii_room_craft`.
-- Verified end-to-end on staging, phone-sized, zero console errors: tap a door / tap home / walk a door (4.9s) arriving in WALK mode / walk home.
-- Platform today: #262-#268 (approach-revealed door names, arrive-walking, gate glow, wiki, mouse-look −35%, reveal radius, `worldState.fog` + translucency depthWrite).
+- 1. The hairline-grid slab (public, on prod)
 
 Full detail: `PROGRESS.md`.
 
