@@ -8,7 +8,7 @@
     padding: 0 24px 64px;
     background: var(--di-black);
     color: var(--di-text);
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
     overflow-x: hidden;
     overflow-y: auto;
     scroll-behavior: smooth;
