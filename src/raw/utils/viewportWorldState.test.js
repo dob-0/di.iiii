@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createEdge, createNode } from '../../project/nodeRegistry.js'
 import { createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
-import { getRawWorldBackgroundColor, pickActiveTypeNode, resolveSceneLighting, resolveScopeWorldNode } from './viewportWorldState.js'
+import { getRawWorldBackgroundColor, graphAuthorsLighting, pickActiveTypeNode, resolveSceneLighting, resolveScopeWorldNode } from './viewportWorldState.js'
 
 describe('resolveScopeWorldNode', () => {
     const nodes = [
@@ -191,5 +191,55 @@ describe('resolveSceneLighting — the Light split, read side', () => {
 
     it('with neither, null — callers keep their own fallbacks', () => {
         expect(resolveSceneLighting({ nodes: [], workspaceState: {} }, null, { scopeId: null })).toBeNull()
+    })
+})
+
+// Both of these exist for one caller: a renderer composing the node lane's
+// world over a host that already has one of its own. The host has to be able to
+// tell "the author chose this" from "nobody chose", and it has to be able to
+// ask without a running graph context.
+describe('composing the node world over a host that has its own', () => {
+    describe('graphAuthorsLighting', () => {
+        it('is true for an Environment', () => {
+            const doc = { nodes: [{ id: 'e', typeId: 'world.environment', parentId: null, values: {} }], workspaceState: {} }
+            expect(graphAuthorsLighting(doc, { scopeId: null })).toBe(true)
+        })
+
+        it('is true for the retired dual Light, so old documents still suppress the host', () => {
+            const doc = { nodes: [{ id: 'l', typeId: 'world.light', parentId: null, values: {} }], workspaceState: {} }
+            expect(graphAuthorsLighting(doc, { scopeId: null })).toBe(true)
+        })
+
+        it('is false with no lighting node — the host keeps its own, unchanged', () => {
+            const doc = { nodes: [{ id: 'c', typeId: 'geom.cube', parentId: null, values: {} }], workspaceState: {} }
+            expect(graphAuthorsLighting(doc, { scopeId: null })).toBe(false)
+        })
+
+        it('is false when the lighting node belongs to another scope', () => {
+            const doc = { nodes: [{ id: 'e', typeId: 'world.environment', parentId: 'somewhere-else', values: {} }], workspaceState: {} }
+            expect(graphAuthorsLighting(doc, { scopeId: null })).toBe(false)
+        })
+
+        it('needs no graph context — it is a presence question, not a value one', () => {
+            const doc = { nodes: [{ id: 'e', typeId: 'world.environment', parentId: null, values: {} }], workspaceState: {} }
+            expect(() => graphAuthorsLighting(doc)).not.toThrow()
+        })
+    })
+
+    describe('getRawWorldBackgroundColor with an explicit fallback', () => {
+        it('answers null when the node lane authored no sky, instead of the document default', () => {
+            const doc = { nodes: [], workspaceState: {}, worldState: { backgroundColor: '#123456' } }
+            expect(getRawWorldBackgroundColor(doc, null, { scopeId: null, worldNode: null })).toBe('#123456')
+            expect(getRawWorldBackgroundColor(doc, null, { scopeId: null, worldNode: null, fallback: null })).toBeNull()
+        })
+
+        it('still answers the authored colour when there is one', () => {
+            const doc = {
+                nodes: [{ id: 'bg', typeId: 'world.background', parentId: null, values: { color: '#abcdef' } }],
+                workspaceState: {},
+                worldState: { backgroundColor: '#123456' }
+            }
+            expect(getRawWorldBackgroundColor(doc, null, { scopeId: null, fallback: null })).toBe('#abcdef')
+        })
     })
 })

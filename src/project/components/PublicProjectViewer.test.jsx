@@ -447,24 +447,31 @@ describe('PublicProjectViewer', () => {
             expect(screen.getByText('graph-interactive:true')).toBeInTheDocument()
         })
 
-        // DO NOT relax this into "a graph may be walked". Walk mode enters
-        // LiveProjectScene, which reads `entities` and nothing else. With a
-        // graph and no entity beside it there is literally nothing for it to
-        // put in front of the visitor, so the button would swap the work they
-        // are looking at for an empty room they would read as the room rather
-        // than as the mode. It stays hidden until walk mode can render a graph;
-        // the mixed case below is offered because its entities are real, not
-        // because the graph became walkable.
-        it('does not offer Walk / Fly, which would render the room without its work', async () => {
+        // This used to assert the opposite, and the reason it did is the whole
+        // point of the change that inverted it: walk mode read `entities` and
+        // nothing else, so offering the button on a node room would have swapped
+        // the work the visitor was looking at for an empty room they would read
+        // as the room rather than as the mode. Refusing was the only way to keep
+        // "walk must never show LESS than orbit shows" — at the price of the
+        // headset door, since Enter VR / Enter AR live inside LiveProjectScene
+        // and walk mode is the only way in.
+        // LiveProjectScene now mounts GraphSceneBodies, so the invariant is kept
+        // by rendering instead of by refusing. What must NOT be relaxed is the
+        // invariant: if walk mode ever stops drawing node bodies, this button has
+        // to go back to hidden rather than open onto an empty room.
+        it('offers Walk / Fly on a room whose only work is a node graph', async () => {
             getProjectDocumentMock.mockResolvedValue(graphDocument)
             listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
 
             render(<PublicProjectViewer spaceId="dilijan" projectId="live-project" spaceLabel="Dilijan" />)
 
-            // the visitor IS looking at work — that is what makes the swap a loss
             expect(await screen.findByText('viewer-graph')).toBeInTheDocument()
             expect(graphDocument.document.entities).toHaveLength(0)
-            expect(screen.queryByRole('button', { name: /Walk \/ Fly/i })).toBeNull()
+            const walkButton = await screen.findByRole('button', { name: 'Walk / Fly' })
+
+            // and it really reaches LiveProjectScene — the only door to XR
+            fireEvent.click(walkButton)
+            expect(await screen.findByRole('button', { name: '← View mode' })).toBeInTheDocument()
         })
 
         // The owner's settled model: ONE document carries both lanes. Wires,
@@ -497,9 +504,12 @@ describe('PublicProjectViewer', () => {
         })
 
         // Hidden entities are dropped with their whole subtree by
-        // LiveProjectScene, so a graph room whose only entities are hidden is
-        // the empty-room case wearing an entity array.
-        it('does not count hidden entities as something to walk into', async () => {
+        // LiveProjectScene. That used to make this the empty-room case wearing
+        // an entity array, and the button was hidden for it. The node bodies are
+        // what the visitor is here for and walk mode draws them now, so a hidden
+        // entity is simply a hidden entity: it neither earns nor forfeits the
+        // door.
+        it('offers Walk / Fly even when every entity beside the graph is hidden', async () => {
             getProjectDocumentMock.mockResolvedValue({
                 version: 1,
                 document: {
@@ -514,7 +524,7 @@ describe('PublicProjectViewer', () => {
             render(<PublicProjectViewer spaceId="dilijan" projectId="live-project" spaceLabel="Dilijan" />)
 
             expect(await screen.findByText('viewer-graph')).toBeInTheDocument()
-            expect(screen.queryByRole('button', { name: /Walk \/ Fly/i })).toBeNull()
+            expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
         })
 
         it('leaves an entities-only project on the entity renderer', async () => {

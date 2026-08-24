@@ -167,15 +167,6 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const presentationState = document?.presentationState || {}
     const entryView = viewMode || presentationState.entryView || 'scene'
     const showCodeView = entryView === 'code'
-    // Work in the node lane. The renderer that can show it is not the one walk
-    // mode uses — see the Walk / Fly control below.
-    const hasGraph = (document?.nodes?.length || 0) > 0
-    // What walk mode would actually have to show. `entities` is always an array
-    // after normalization, so presence proves nothing — length does. Explicitly
-    // hidden entities are dropped with their whole subtree by LiveProjectScene,
-    // so a room whose entities are all hidden is empty in there.
-    const hasWalkableEntities = (document?.entities || [])
-        .some((entity) => entity?.components?.runtime?.visible !== false)
     // The two entry views that open onto a room. 'fixed-camera' only replaces
     // the auto-framed opening shot with the author's composed one — the room
     // behind it is the same room, so it is walkable. 'code' is the one entry
@@ -325,23 +316,21 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </Suspense>
             ) : null}
 
-            {/* Walk mode enters LiveProjectScene, which renders `entities` and
-                not `nodes`. Offering it on a room built out of nodes ALONE
-                would walk the visitor into a version of it with the work
-                missing — worse than not offering it, because they would read
-                the emptiness as the room rather than as the mode.
-                A graph on its own is no longer the test, because one document
-                carries both lanes: wires, scene and light live in the node
-                editor, and anything that must survive for a visitor is made as
-                an entity. Such a room has a real entity body to walk into, and
-                refusing it there also refused headset entry — Enter VR / Enter
-                AR live inside LiveProjectScene, reachable only through walk.
-                So: hidden only when the graph is all there is.
-                It was also refused to every 'fixed-camera' room, which made an
-                author choose between a composed opening shot and a room anyone
-                could walk — two unrelated things. An authored camera is how the
-                visit STARTS, not a promise they may never move. */}
-            {state.status === 'ready' && isSpatialEntry && navMode === 'orbit' && (!hasGraph || hasWalkableEntities) && !isPreview && !isEmbed ? (
+            {/* The invariant this gate exists to protect is "walk must never
+                show LESS than orbit already shows". It used to be enforced by
+                refusing: walk mode rendered `entities` and not `nodes`, so a
+                room built out of nodes would have walked the visitor into a
+                version of itself with the work missing — and because Enter VR /
+                Enter AR live inside LiveProjectScene, reachable only through
+                walk, that refusal cost those rooms headset entry outright.
+                It is now enforced by RENDERING: LiveProjectScene mounts
+                GraphSceneBodies, the same node bodies the orbit view draws, so
+                there is no longer a kind of room that walk cannot show. The
+                condition it required is gone with the reason for it.
+                'fixed-camera' still qualifies and 'code' still does not — an
+                authored camera is how the visit STARTS, not a promise the
+                visitor may never move; a code page has no room at all. */}
+            {state.status === 'ready' && isSpatialEntry && navMode === 'orbit' && !isPreview && !isEmbed ? (
                 <button
                     type="button"
                     style={{ ...overlayButtonStyle, position: 'absolute', top: '1rem', right: '1rem', zIndex: 20 }}

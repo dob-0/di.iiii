@@ -12,33 +12,12 @@ import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
 import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
-import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
-import { getNodeType } from '../../project/nodeRegistry.js'
-import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
-import { createFrameMemory, createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
-import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
 import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
 import { createTapTracker } from '../utils/useDoubleTap.js'
-import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
+import { isSpatialNode, pickAuthoredCameraNode, useGraphSceneModel } from './useGraphSceneModel.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
-
-const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
-
-// The authored eye is EXPLICIT-ONLY: unlike Light/Background/Grid (additive,
-// safe to default to first-created), an active camera hijacks the view — so
-// placing a Camera must never steal the shot. Seen 2026-08-20: the palette
-// drops spatial nodes at the click point, and the first-created fallback cut
-// the room to an accidental floor-level close-up the moment the card landed.
-// Only the ● toggle makes a camera the eye.
-const pickAuthoredCameraNode = (nodes, scopeId, activeMap) => {
-    const markedId = (activeMap || {})[`world.camera::${scopeId || ''}`]
-    if (!markedId) return null
-    return (nodes || []).find((node) =>
-        node.id === markedId && node.typeId === 'world.camera' && (node.parentId || null) === (scopeId || null)
-    ) || null
-}
 
 // A mesh that is drawn but never picked.
 const NO_RAYCAST = () => null
@@ -244,19 +223,6 @@ function GeometryPieces({ descriptor, pruned = false }) {
         default:
             return null
     }
-}
-
-// evaluateNodeInputs plus the one value no input carries: what a Constructor
-// is wearing, read off its own Out doors. Computed HERE, where the whole
-// document and the running context both exist, because renderNodeBody gets
-// only (node, values, assetMap) and threading a context through every call
-// site for one type's sake would put the plumbing in eleven files.
-const resolveSpatialValues = (node, graphContext, allNodes) => {
-    const values = evaluateNodeInputs(node, graphContext)
-    if (node.typeId === 'geom.constructor') {
-        values.wornGeometry = wearConstructorGeometry(node, allNodes, graphContext)
-    }
-    return values
 }
 
 export function renderNodeBody(node, values, assetMap = null) {
@@ -581,7 +547,7 @@ export function renderNodeBody(node, values, assetMap = null) {
 // nodeScale is the workspace's own zoom and belongs to the whole scene, not to
 // each object: applied per level it would compound with depth, so it is folded
 // in at the roots only and passed down as 1.
-function NodeVisual({
+export function NodeVisual({
     node,
     selected,
     onSelect,
@@ -684,89 +650,32 @@ function SceneContent({
     // not enough, because OrbitControls mounts its own DOM listeners.
     interactive = true
 }) {
-    // Keyed on assets + project id so the map only rebuilds when assets change,
-    // not on every document identity change from a sync tick.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
-    // Rebuilt every frame while a Time node exists — the per-pass outputCache
-    // must not survive a tick or the clock would freeze at its first sample.
-    const clockNow = useDocumentClock(document)
-    // Between-pass node state (a Lag's last answer) — this window's own,
-    // never React state, dropped whole when the document changes.
-    const [frameMemory] = useState(() => createFrameMemory())
-    useEffect(() => { frameMemory.clear() }, [frameMemory, document.projectMeta?.id])
-    const graphContext = useMemo(
-        () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
-        [document, clockNow, liveOutputs, frameMemory]
-    )
     // scopeId undefined = unscoped, matches the old document-wide behavior; a real
     // scope (including root, `null`) only renders/uses siblings of that scope — see
     // the identical comment in viewportWorldState.js.
     //
-    // With one carve-out either way: a constructor's parts are its DEFINITION,
-    // not standing objects, and the unscoped mode admitted every spatial node
-    // flat — so a legacy caller drew the snowman AND its loose spheres side by
-    // side, the exact double the childMap rule below exists to prevent.
-    const constructorIds = useMemo(
-        () => new Set((document.nodes || []).filter((node) => node.typeId === 'geom.constructor').map((node) => node.id)),
-        [document.nodes]
-    )
-    const inScope = (node) => (
-        scopeId === undefined
-            ? !constructorIds.has(node.parentId || null)
-            : (node.parentId || null) === scopeId
-    )
-    const renderableNodes = useMemo(
-        () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)),
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [document.nodes, scopeId]
-    )
-    // Everything standing inside a container, keyed by the container it stands
-    // in. Descent stops at a nested universe.world: a World is its own stage,
-    // and seeing through one into another would be a different feature.
-    //
-    // Values are resolved for the WHOLE subtree here, not only the top row —
-    // NodeVisual reads node.values directly, so a nested node whose position is
-    // wired to a Time node would otherwise freeze the moment it went inside
-    // something. That would be the "can't connect" complaint, newly caused by
-    // the fix for the other one.
-    const childMap = useMemo(() => {
-        const spatial = (document.nodes || []).filter(isSpatialNode)
-        const byParent = new Map()
-        for (const node of spatial) {
-            const parentId = node.parentId || null
-            if (!parentId) continue
-            if (!byParent.has(parentId)) byParent.set(parentId, [])
-            byParent.get(parentId).push({ ...node, values: resolveSpatialValues(node, graphContext, document.nodes) })
-        }
-        for (const [parentId, kids] of byParent) {
-            const parent = spatial.find((node) => node.id === parentId)
-            // A World is its own stage. A Constructor's inside is a WORKSHOP:
-            // the parts standing in it are its definition, and only what
-            // reaches a door is its result — drawing both would show a snowman
-            // AND its three loose spheres. Same split TouchDesigner draws
-            // between a COMP's network and its output.
-            if (parent?.typeId === 'universe.world' || parent?.typeId === 'geom.constructor') byParent.set(parentId, [])
-            else byParent.set(parentId, kids)
-        }
-        return byParent
-    }, [document.nodes, graphContext])
-    const resolvedLight = useMemo(
-        () => resolveSceneLighting(document, graphContext, { scopeId }),
-        [document, graphContext, scopeId]
-    )
-    // The authored eye: the scope's active Camera node drives the view every
-    // frame (position, Look At, FOV — all wireable, so a Time→Sin dolly works
-    // with no further machinery). The active camera's own body is filtered out
-    // below: the room is seen THROUGH it, and a housing centred on the near
-    // plane would only shed clipped fragments.
-    const authoredCameraNode = useMemo(
-        () => pickAuthoredCameraNode(document.nodes, scopeId, document.workspaceState?.activeNodeIdByTypeScope),
-        [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
-    )
+    // Every line of this used to sit inline here. It moved to a hook the day
+    // walk mode learned to render nodes, so that the room a visitor looks at
+    // and the room they step into are evaluated by the same arithmetic rather
+    // than by two components that agree only by hand.
+    const {
+        assetMap,
+        renderableNodes,
+        childMap,
+        resolvedLight,
+        resolvedGrid,
+        // The authored eye: the scope's active Camera node drives the view every
+        // frame (position, Look At, FOV — all wireable, so a Time→Sin dolly works
+        // with no further machinery). The active camera's own body is filtered out
+        // below: the room is seen THROUGH it, and a housing centred on the near
+        // plane would only shed clipped fragments.
+        authoredCameraNode,
+        backgroundColor,
+        resolveValues
+    } = useGraphSceneModel(document, { scopeId, worldNode, liveOutputs })
     useFrame(({ camera }) => {
         if (!authoredCameraNode) return
-        const values = resolveSpatialValues(authoredCameraNode, graphContext, document.nodes)
+        const values = resolveValues(authoredCameraNode)
         const pos = asVec3(values.position, [0, 2.4, 6.5])
         const look = asVec3(values.lookAt, [0, 0.75, 0])
         const fov = asFiniteNumber(values.fov, 50)
@@ -777,11 +686,6 @@ function SceneContent({
         }
         camera.lookAt(look[0], look[1], look[2])
     })
-    const gridNode = useMemo(
-        () => pickActiveTypeNode(document.nodes, 'world.grid', { scopeId, activeMap: document.workspaceState?.activeNodeIdByTypeScope }),
-        [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
-    )
-    const resolvedGrid = gridNode ? evaluateNodeInputs(gridNode, graphContext) : null
     const [draggingNodeId, setDraggingNodeId] = useState(null)
     // Orbit yields while a node is being dragged: the controls listen on the
     // DOM canvas, which R3F stopPropagation never reaches, so without this
@@ -898,7 +802,7 @@ function SceneContent({
 
     return (
         <>
-            <color attach="background" args={[getRawWorldBackgroundColor(document, graphContext, { scopeId, worldNode })]} />
+            <color attach="background" args={[backgroundColor]} />
             <ambientLight
                 color={resolvedLight?.ambientColor ?? document.worldState?.ambientLight?.color ?? '#ffffff'}
                 intensity={resolvedLight?.ambientIntensity ?? document.worldState?.ambientLight?.intensity ?? 0.8}
@@ -967,7 +871,7 @@ function SceneContent({
                 {renderableNodes.filter((node) => node.id !== authoredCameraNode?.id).map((node) => (
                     <SceneEntityErrorBoundary key={node.id} resetKey={node.id}>
                         <NodeVisual
-                            node={{ ...node, values: resolveSpatialValues(node, graphContext, document.nodes) }}
+                            node={{ ...node, values: resolveValues(node) }}
                             selected={node.id === selectedNodeId}
                             onSelect={onSelectNode}
                             onSelectNode={onSelectNode}

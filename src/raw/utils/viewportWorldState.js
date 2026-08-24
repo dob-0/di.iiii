@@ -69,13 +69,38 @@ export function resolveSceneLighting(document, graphContext = null, { scopeId } 
     return node ? evaluateNodeInputs(node, graphContext) : null
 }
 
+// Does the node lane light this scope at all? A presence question, so it needs
+// no running context and can be asked by a renderer that is only deciding
+// whether to get out of the way.
+//
+// It exists because lights ADD. A host that draws its own ambient + sun and
+// then mounts the node lane's on top does not show the author's lighting, it
+// shows the sum — measured as a visibly brighter room in walk mode than the
+// same document showed in orbit, which is the one thing walk mode must not do.
+// Background needs no equivalent: `<color attach="background">` is last-writer-
+// wins, and the node lane mounts after the host.
+export function graphAuthorsLighting(document, { scopeId } = {}) {
+    const activeMap = document?.workspaceState?.activeNodeIdByTypeScope
+    return Boolean(
+        pickActiveTypeNode(document?.nodes, 'world.environment', { scopeId, activeMap })
+        || pickActiveTypeNode(document?.nodes, 'world.light', { scopeId, activeMap })
+    )
+}
+
 // scopeId undefined = unscoped (old behavior, matches any world.background node
 // anywhere). scopeId null or a real id = only match a world.background node that's
 // a sibling of the given scope (parentId === scopeId) — root scope is `null`, not
 // "unset", so this is intentionally distinct from omitting the option entirely.
 // worldNode's own values.bgColor is the fallback once a world.background sibling
 // isn't found — makes the World node's own field load-bearing instead of inert.
-export function getRawWorldBackgroundColor(document, graphContext = null, { scopeId, worldNode } = {}) {
+//
+// `fallback` is what to answer when the node lane says nothing at all. It
+// defaults to the document's Studio-side colour, which is what every viewport
+// caller wants. Pass `null` to ask the narrower question — "did the NODES
+// author a sky?" — which is what a renderer needs when it is composing the
+// node lane's world over a host that already has one of its own: the node lane
+// must win where it speaks and stay out of the way where it does not.
+export function getRawWorldBackgroundColor(document, graphContext = null, { scopeId, worldNode, fallback } = {}) {
     const backgroundNode = pickActiveTypeNode(document?.nodes, 'world.background', {
         scopeId,
         activeMap: document?.workspaceState?.activeNodeIdByTypeScope
@@ -85,5 +110,6 @@ export function getRawWorldBackgroundColor(document, graphContext = null, { scop
     if (typeof nodeColor === 'string' && nodeColor.trim()) return nodeColor
     const worldColor = worldNode ? evaluateNodeInput(worldNode, 'bgColor', graphContext) : null
     if (typeof worldColor === 'string' && worldColor.trim()) return worldColor
+    if (fallback !== undefined) return fallback
     return document?.worldState?.backgroundColor || '#0a0e16'
 }

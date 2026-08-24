@@ -45,6 +45,13 @@ import {
     BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
+// The node lane's bodies, rendered in this Canvas. Imported here rather than
+// passed in as `sceneExtras` because walk mode owns the document — a caller
+// handing over its own copy would be a second one, free to go stale against
+// the live stream this component already keeps open.
+import GraphSceneBodies from '../raw/components/GraphSceneBodies.jsx'
+import { isSpatialNode } from '../raw/components/useGraphSceneModel.js'
+import { graphAuthorsLighting } from '../raw/utils/viewportWorldState.js'
 import './liveProjectScene.css'
 
 const PARTICLE_COUNT = 900
@@ -1432,26 +1439,48 @@ export default function LiveProjectScene({
         return map
     }, [entities])
     const rootEntities = useMemo(() => entities.filter((e) => !e.parentId), [entities])
+    // Work made in the node lane. Root-scope only, matching what
+    // GraphSceneBodies draws below: a node inside a container is placed
+    // relative to that container, so its own `position` is not a room
+    // coordinate and must not be measured as one.
+    const spatialNodes = useMemo(
+        () => (doc?.nodes || []).filter((node) => isSpatialNode(node) && !node.parentId),
+        [doc?.nodes]
+    )
+    // Every position the room occupies, whichever lane made it. The walker's
+    // reach and the idle orbit are both computed from this: measuring only
+    // entities would fence a visitor into a 20m box in the middle of a node
+    // room and leave the work standing outside the fence — visible, and
+    // unreachable, which is its own kind of not-connected.
+    const roomPoints = useMemo(() => {
+        const points = []
+        for (const entity of entities) {
+            const pos = entity.components?.transform?.position
+            if (Array.isArray(pos)) points.push(pos)
+        }
+        for (const node of spatialNodes) {
+            const pos = node.values?.position
+            if (Array.isArray(pos)) points.push(pos)
+        }
+        return points
+    }, [entities, spatialNodes])
 
     const center = useMemo(() => {
-        if (!entities.length) return new THREE.Vector3(0, 0, 0)
-        const sum = entities.reduce((acc, e) => {
-            const pos = e.components?.transform?.position || [0, 0, 0]
+        if (!roomPoints.length) return new THREE.Vector3(0, 0, 0)
+        const sum = roomPoints.reduce((acc, pos) => {
             acc.x += pos[0]
             acc.z += pos[2]
             return acc
         }, { x: 0, z: 0 })
-        return new THREE.Vector3(sum.x / entities.length, 0, sum.z / entities.length)
-    }, [entities])
+        return new THREE.Vector3(sum.x / roomPoints.length, 0, sum.z / roomPoints.length)
+    }, [roomPoints])
 
     const bounds = useMemo(() => {
-        if (!entities.length) {
+        if (!roomPoints.length) {
             return { minX: -BOUNDS_MIN_HALF, maxX: BOUNDS_MIN_HALF, minZ: -BOUNDS_MIN_HALF, maxZ: BOUNDS_MIN_HALF }
         }
         let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity
-        for (const entity of entities) {
-            const pos = entity.components?.transform?.position
-            if (!Array.isArray(pos)) continue
+        for (const pos of roomPoints) {
             minX = Math.min(minX, pos[0])
             maxX = Math.max(maxX, pos[0])
             minZ = Math.min(minZ, pos[2])
@@ -1465,7 +1494,7 @@ export default function LiveProjectScene({
             minZ: Math.min(minZ - BOUNDS_MARGIN, cz - BOUNDS_MIN_HALF),
             maxZ: Math.max(maxZ + BOUNDS_MARGIN, cz + BOUNDS_MIN_HALF)
         }
-    }, [entities])
+    }, [roomPoints])
 
     // Start a little south of the entrance gate (if any), facing into the space.
     useEffect(() => {
@@ -1484,6 +1513,12 @@ export default function LiveProjectScene({
     const ambient = worldState.ambientLight || { color: '#ffffff', intensity: 0.85 }
     const directional = worldState.directionalLight || { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] }
     const backgroundColor = worldState.backgroundColor || '#0a1118'
+    // When the node lane lights this room, these stand down — lights ADD, and
+    // keeping both showed the sum rather than the author's choice: the same
+    // cube came out visibly brighter here than it was in the orbit view a
+    // click earlier. Seen, not reasoned about. A room with no lighting node
+    // keeps this pair exactly as before.
+    const graphLights = useMemo(() => showEntities && graphAuthorsLighting(doc, { scopeId: null }), [doc, showEntities])
     // Zone tint sources for atmosphere blend: each portal's position + authored colour.
     const atmosphereZones = useMemo(() => entities
         .filter((e) => e.type === 'portal')
@@ -1512,8 +1547,12 @@ export default function LiveProjectScene({
                 {worldState.hubDecor && atmosphereZones.length > 0 ? (
                     <HubDecor zones={atmosphereZones} />
                 ) : null}
-                <ambientLight color={ambient.color} intensity={ambient.intensity} />
-                <directionalLight color={directional.color} intensity={directional.intensity} position={directional.position} />
+                {!graphLights ? (
+                    <>
+                        <ambientLight color={ambient.color} intensity={ambient.intensity} />
+                        <directionalLight color={directional.color} intensity={directional.intensity} position={directional.position} />
+                    </>
+                ) : null}
                 {worldState.environmentAssetId && (
                     <WorldEnvironment
                         environmentAsset={assetMap.get(worldState.environmentAssetId) || null}
@@ -1528,6 +1567,19 @@ export default function LiveProjectScene({
                     </SceneEntityErrorBoundary>
                 ))}
                 {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
+                {/* The node lane's half of the room. Before this, walk mode
+                    rendered `entities` and nothing else, so a project made of
+                    nodes was a room you could look at from orbit and never
+                    step into — and because Enter VR/AR live in here, it had no
+                    headset door either. The bodies are the editor's own
+                    NodeVisual, evaluated by the editor's own hook, so what a
+                    visitor walks through is what the author was looking at.
+                    Gated on `showEntities` with the entities themselves: that
+                    flag reads "the room's contents", not "one lane's contents"
+                    — StudioHub passes it false for a bare decorative grid
+                    behind its own UI, and drawing a node room into that would
+                    put a stranger's furniture behind the hub. */}
+                {showEntities && spatialNodes.length > 0 ? <GraphSceneBodies document={doc} /> : null}
                 {sceneExtras}
                 {interactive ? (
                     <Walker

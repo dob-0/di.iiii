@@ -64,3 +64,44 @@ describe('the seams the jam surface uses stay optional', () => {
         expect(guarded.length).toBeGreaterThanOrEqual(2)
     })
 })
+
+// The invariant PublicProjectViewer's Walk / Fly gate now leans on. It used to
+// protect "walk must never show LESS than orbit shows" by refusing the button
+// to a node room; it protects it by RENDERING one instead. If the render goes
+// away and the gate does not, every graph room gets a door onto an empty
+// version of itself — and no test in the viewer would notice, because the
+// viewer mocks this component out.
+describe('walk mode renders the node lane too', () => {
+    it('mounts the node bodies inside its own Canvas', () => {
+        expect(SOURCE).toMatch(/import GraphSceneBodies from '\.\.\/raw\/components\/GraphSceneBodies\.jsx'/)
+        expect(SOURCE).toMatch(/<GraphSceneBodies document=\{doc\} \/>/)
+    })
+
+    it('draws them from its OWN document, not a copy handed in', () => {
+        // `sceneExtras` was the tempting seam and it is the wrong one here: the
+        // caller's copy is free to go stale against the live stream this
+        // component keeps open, and a visitor would be walking last minute's
+        // room.
+        const line = SOURCE.split('\n').find((entry) => entry.includes('<GraphSceneBodies'))
+        expect(line).toBeTruthy()
+        expect(line).toMatch(/document=\{doc\}/)
+    })
+
+    it('lets a decorative backdrop stay empty', () => {
+        // StudioHub renders this behind its own UI with showEntities={false}
+        // and means "no contents", not "no entities" — a node room drawn there
+        // would put a stranger's furniture behind the hub.
+        const line = SOURCE.split('\n').find((entry) => entry.includes('<GraphSceneBodies'))
+        expect(line).toMatch(/showEntities &&/)
+    })
+
+    it('measures the walker’s reach on both lanes', () => {
+        // Bounds from entities alone would fence a visitor into a 20m box in
+        // the middle of a node room, with the work standing outside the fence:
+        // visible, unreachable, and its own kind of not-connected.
+        expect(SOURCE).toMatch(/const roomPoints = useMemo/)
+        expect(SOURCE).toMatch(/for \(const node of spatialNodes\)/)
+        const boundsBlock = SOURCE.slice(SOURCE.indexOf('const bounds = useMemo'))
+        expect(boundsBlock.slice(0, 900)).toMatch(/roomPoints/)
+    })
+})
