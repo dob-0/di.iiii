@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createEdge, createNode } from '../nodeRegistry.js'
+import { createEdge, createNode, getNodeInputs, getNodeOutputs, getNodeType } from '../nodeRegistry.js'
 import {
     createNodeGraphContext,
     evaluateNodeInput,
@@ -161,6 +161,34 @@ describe('nodeGraphRuntime', () => {
         expect(evaluateNodeOutput(multiply, 'out', context)).toBe(42)
     })
 
+    it('a value.boolean returns exactly what it stores', () => {
+        // The only member of the computed core that had zero coverage —
+        // it shares the value.* switch case, but sharing is what a regression
+        // quietly breaks.
+        const flag = createNode('value.boolean', { id: 'flag', values: { value: true } })
+        const context = createNodeGraphContext({ nodes: [flag], edges: [] })
+        expect(evaluateNodeOutput(flag, 'out', context)).toBe(true)
+        flag.values.value = false
+        const context2 = createNodeGraphContext({ nodes: [flag], edges: [] })
+        expect(evaluateNodeOutput(flag, 'out', context2)).toBe(false)
+    })
+
+    it('mixes two hex colors per RGB channel instead of hard-switching at t=0.5', () => {
+        const a = createNode('value.color', { id: 'ca', values: { value: '#000000' } })
+        const b = createNode('value.color', { id: 'cb', values: { value: '#ff0080' } })
+        const t = createNode('value.number', { id: 'ct', values: { value: 0.5 } })
+        const mix = createNode('math.mix', { id: 'mix-color' })
+        const context = createNodeGraphContext({
+            nodes: [a, b, t, mix],
+            edges: [
+                createEdge('ca', 'out', 'mix-color', 'a'),
+                createEdge('cb', 'out', 'mix-color', 'b'),
+                createEdge('ct', 'out', 'mix-color', 't')
+            ]
+        })
+        expect(evaluateNodeOutput(mix, 'out', context)).toBe('#800040')
+    })
+
     it('mixes numbers and vec3s by t, and clamps a value into range', () => {
         const a = createNode('value.number', { id: 'a', values: { value: 0 } })
         const b = createNode('value.number', { id: 'b', values: { value: 10 } })
@@ -308,5 +336,264 @@ describe('time node', () => {
         const edge = { fromNodeId: 't', fromPort: 'elapsed', toNodeId: 'a', toPort: 'a' }
         const ctx = createNodeGraphContext({ nodes: [time, add], edges: [edge] }, { now: 3000 })
         expect(evaluateNodeOutput(add, 'out', ctx)).toBe(13)
+    })
+})
+
+// Every container declared ZERO outputs before this, so nearestOutputPort had
+// an empty list to iterate and a press-and-pull on a World card silently
+// DRAGGED THE CARD. That is "can't connect" at the data layer, not a UX bug.
+describe('container outputs', () => {
+    const CONTAINERS = [
+        ['universe.world', ['title', 'bgColor']],
+        ['universe.desk.3d', ['position', 'rotation', 'scale']],
+        ['studio', ['title']]
+    ]
+
+    // The load-bearing one. A test that only asks "did something come out"
+    // passes against computeNodeOutput's fallthrough, which returns the node's
+    // own stored value and silently ignores every wire into the matching input —
+    // a port that draws, persists, survives a reload and lies.
+    it.each(CONTAINERS)('%s carries a WIRED value out, not the stored one', (typeId, ports) => {
+        for (const portId of ports) {
+            const type = getNodeType(typeId)
+            const portType = type.outputs.find((port) => port.id === portId).type
+            const [sourceType, wired, stored] = portType === 'vec3'
+                ? ['value.vec3', [7, 8, 9], [1, 1, 1]]
+                : portType === 'color'
+                    ? ['value.color', '#abcdef', '#000000']
+                    : ['value.string', 'wired through', 'stored locally']
+            const source = createNode(sourceType, { id: 'src', values: { value: wired } })
+            const container = createNode(typeId, { id: 'box', values: { [portId]: stored } })
+            const ctx = createNodeGraphContext({
+                nodes: [source, container],
+                edges: [createEdge('src', 'out', 'box', portId)]
+            })
+            expect(evaluateNodeOutput(container, portId, ctx), `${typeId}.${portId}`).toEqual(wired)
+        }
+    })
+
+    it.each(CONTAINERS)('%s declares no output the runtime cannot compute', (typeId) => {
+        const container = createNode(typeId, { id: 'box' })
+        const ctx = createNodeGraphContext({ nodes: [container], edges: [] })
+        const outputs = getNodeType(typeId).outputs
+        expect(outputs.length).toBeGreaterThan(0)
+        for (const port of outputs) {
+            expect(
+                evaluateNodeOutput(container, port.id, ctx),
+                `${typeId}.${port.id} draws a wire and carries nothing`
+            ).not.toBeUndefined()
+        }
+    })
+
+    // A CONTAINER OUTPUTS ITS OWN SETTINGS, NEVER ITS CONTENTS. Assuming wires
+    // pass through a container is the most common container mistake in every
+    // node tool surveyed, so nothing about a child may leak across the boundary.
+    it('leaks nothing about what is inside it', () => {
+        const container = createNode('universe.desk.3d', { id: 'box', values: { position: [1, 2, 3] } })
+        const child = createNode('geom.cube', { id: 'kid', parentId: 'box', values: { color: '#ff0000' } })
+        const ctx = createNodeGraphContext({ nodes: [container, child], edges: [] })
+        for (const port of getNodeType('universe.desk.3d').outputs) {
+            expect(evaluateNodeOutput(container, port.id, ctx)).not.toBe('#ff0000')
+        }
+        // …and the container has no port that could name a child at all.
+        const ids = getNodeType('universe.desk.3d').outputs.map((port) => port.id)
+        expect(ids).not.toContain('children')
+        expect(ids).not.toContain('contents')
+    })
+
+    // universe.space keeps zero outputs deliberately: showChrome has no input
+    // anywhere it could drive to a visible result, so a port would be the exact
+    // dead wire this whole rule exists to prevent.
+    it('gives universe.space no outputs, on purpose', () => {
+        expect(getNodeType('universe.space').outputs).toEqual([])
+    })
+
+    // arePortsCompatible has always allowed color -> vec3 and the input dot
+    // lights up compatible, but asVec3 returned the fallback for a non-array, so
+    // the wire drew and quietly produced [0,0,0]. Nothing reached it until a
+    // container gained a colour OUTPUT.
+    it('turns a wired colour into a real vector instead of silently zeroing it', () => {
+        const sky = createNode('value.color', { id: 'sky', values: { value: '#ff8000' } })
+        const desk = createNode('universe.desk.3d', { id: 'desk' })
+        const ctx = createNodeGraphContext({
+            nodes: [sky, desk],
+            edges: [createEdge('sky', 'out', 'desk', 'position')]
+        })
+        const position = evaluateNodeOutput(desk, 'position', ctx)
+        expect(position[0]).toBeCloseTo(1, 2)
+        expect(position[1]).toBeCloseTo(128 / 255, 2)
+        expect(position[2]).toBeCloseTo(0, 5)
+    })
+})
+
+// DOORWAYS — the answer to "I want to build a world but can't connect anything
+// to it". Put an In or an Out node inside a container and a socket appears on
+// that container's outer face.
+//
+// The load-bearing property, and the reason this design is safe: NO EDGE EVER
+// CROSSES A SCOPE BOUNDARY. The outside wire joins two siblings in the parent
+// scope; the inside wire joins two siblings within the container. RawEditor's
+// both-endpoints-in-scope filter stays exactly as written and the runtime needs
+// no notion of scope at all.
+describe('doorways', () => {
+    // outside ──▶ [ desk : socket(door) ]
+    //                        └─▶ In door ──▶ cube.color   (all inside)
+    const buildInwards = ({ wireOutside = true, fallback = null } = {}) => {
+        const source = createNode('value.color', { id: 'src', values: { value: '#ff0000' } })
+        const desk = createNode('universe.desk.3d', { id: 'desk' })
+        const door = createNode('port.in', {
+            id: 'door', parentId: 'desk', values: { label: 'Tint', portType: 'color', fallback }
+        })
+        const cube = createNode('geom.cube', { id: 'cube', parentId: 'desk', values: { color: '#000000' } })
+        const edges = [createEdge('door', 'value', 'cube', 'color')]
+        // The socket's id IS the door node's id — that is what makes renaming
+        // safe and what stops two clients colliding on a name.
+        if (wireOutside) edges.push(createEdge('src', 'out', 'desk', 'door'))
+        return { nodes: [source, desk, door, cube], edges, cube, desk, door }
+    }
+
+    it('carries a value from outside a container to a node inside it', () => {
+        const { nodes, edges, cube } = buildInwards()
+        const ctx = createNodeGraphContext({ nodes, edges })
+        expect(evaluateNodeInput(cube, 'color', ctx)).toBe('#ff0000')
+    })
+
+    it('makes the container grow a socket named by the door', () => {
+        const { nodes, desk } = buildInwards()
+        const ports = getNodeInputs(desk, nodes)
+        const socket = ports.find((port) => port.id === 'door')
+        expect(socket, 'the desk grew no socket for the door inside it').toBeTruthy()
+        expect(socket.label).toBe('Tint')
+        expect(socket.type).toBe('color')
+        // …and the declared ports are still all there, in front of it.
+        expect(ports.slice(0, 5).map((port) => port.id))
+            .toEqual(['position', 'rotation', 'scale', 'gridVisible', 'bgColor'])
+    })
+
+    // An unwired door that returned undefined would let the consumer quietly use
+    // its own local value, which looks EXACTLY like a door that works.
+    it('falls back to the door\'s own value when the socket is unwired', () => {
+        const { nodes, edges, cube } = buildInwards({ wireOutside: false, fallback: '#00ff00' })
+        const ctx = createNodeGraphContext({ nodes, edges })
+        expect(evaluateNodeInput(cube, 'color', ctx)).toBe('#00ff00')
+    })
+
+    // [ desk : socket(door) ] ──▶ outside
+    //     cube.bounds ──▶ Out door        (inside)
+    it('carries a value from inside a container out to a node beside it', () => {
+        const desk = createNode('universe.desk.3d', { id: 'desk' })
+        const cube = createNode('geom.cube', { id: 'cube', parentId: 'desk', values: { size: [3, 4, 5] } })
+        const door = createNode('port.out', {
+            id: 'door', parentId: 'desk', values: { label: 'Cube size', portType: 'vec3' }
+        })
+        const outside = createNode('geom.sphere', { id: 'ball' })
+        const nodes = [desk, cube, door, outside]
+        const edges = [
+            createEdge('cube', 'bounds', 'door', 'value'),
+            createEdge('desk', 'door', 'ball', 'color')
+        ]
+        const ctx = createNodeGraphContext({ nodes, edges })
+        expect(evaluateNodeOutput(desk, 'door', ctx)).toEqual([3, 4, 5])
+        expect(getNodeOutputs(desk, nodes).map((port) => port.id))
+            .toEqual(['position', 'rotation', 'scale', 'door'])
+    })
+
+    it('never asks an edge to cross a scope boundary', () => {
+        const { nodes, edges } = buildInwards()
+        const byId = new Map(nodes.map((node) => [node.id, node]))
+        for (const edge of edges) {
+            const from = byId.get(edge.fromNodeId)
+            const to = byId.get(edge.toNodeId)
+            expect(
+                from.parentId || null,
+                `${edge.fromNodeId} -> ${edge.toNodeId} crosses a scope`
+            ).toBe(to.parentId || null)
+        }
+    })
+
+    // Identity is the node id, so the label is free to change.
+    it('keeps a wire attached when the door is renamed', () => {
+        const { nodes, edges, cube, door } = buildInwards()
+        door.values.label = 'Something else entirely'
+        const ctx = createNodeGraphContext({ nodes, edges })
+        expect(evaluateNodeInput(cube, 'color', ctx)).toBe('#ff0000')
+    })
+
+    it('gives a door with no container its fallback rather than undefined', () => {
+        const door = createNode('port.in', { id: 'lonely', values: { fallback: 'nothing upstream' } })
+        const ctx = createNodeGraphContext({ nodes: [door], edges: [] })
+        expect(evaluateNodeOutput(door, 'value', ctx)).toBe('nothing upstream')
+    })
+
+    // Called without the node list — every existing call site — a container must
+    // return exactly what it always did, by reference.
+    it('changes nothing for callers that pass no node list', () => {
+        const desk = createNode('universe.desk.3d', { id: 'desk' })
+        expect(getNodeInputs(desk)).toBe(getNodeType('universe.desk.3d').inputs)
+        expect(getNodeOutputs(desk)).toBe(getNodeType('universe.desk.3d').outputs)
+    })
+
+    // Every node in production today is a node.null, and its dynamic ports
+    // return before the promotion merge. Stated out loud rather than discovered.
+    it('does not give node.null doors — a known limit, not an accident', () => {
+        const nullNode = createNode('node.null', { id: 'n', values: { portDefs: [] } })
+        const door = createNode('port.in', { id: 'd', parentId: 'n' })
+        expect(getNodeInputs(nullNode, [nullNode, door])).toEqual([])
+    })
+})
+
+// The Geo gives out what it collects (owner, 2026-08-20: "i can't add
+// multigeos and connect… create geometry inside geometry"). Containment is
+// the wire: what stands in the Geo is its Geometry.
+describe('geom.geo geometry output', () => {
+    it('an empty Geo carries nothing — an empty place is not an invisible shape', () => {
+        const geo = createNode('geom.geo', { id: 'geo-1' })
+        const ctx = createNodeGraphContext({ nodes: [geo], edges: [] })
+        expect(evaluateNodeOutput(geo, 'geometry', ctx)).toBeUndefined()
+    })
+
+    it('collects its standing children as one group, in its own transform', () => {
+        const geo = createNode('geom.geo', { id: 'geo-1', values: { position: [2, 0, 0] } })
+        const cube = createNode('geom.cube', { id: 'cube-1' })
+        cube.parentId = geo.id
+        const light = createNode('world.light', { id: 'light-1' })
+        light.parentId = geo.id
+        const ctx = createNodeGraphContext({ nodes: [geo, cube, light], edges: [] })
+        const out = evaluateNodeOutput(geo, 'geometry', ctx)
+        expect(out.kind).toBe('group')
+        expect(out.position).toEqual([2, 0, 0])
+        // The Light stands there but is not a shape — skipped, not an error.
+        expect(out.children).toHaveLength(1)
+        expect(out.children[0].kind).toBe('box')
+    })
+
+    it('a Geo inside a Geo answers recursively — geometry inside geometry', () => {
+        const outer = createNode('geom.geo', { id: 'outer' })
+        const inner = createNode('geom.geo', { id: 'inner', values: { position: [0, 0, -1] } })
+        inner.parentId = outer.id
+        const sphere = createNode('geom.sphere', { id: 'sphere-1' })
+        sphere.parentId = inner.id
+        const ctx = createNodeGraphContext({ nodes: [outer, inner, sphere], edges: [] })
+        const out = evaluateNodeOutput(outer, 'geometry', ctx)
+        expect(out.kind).toBe('group')
+        expect(out.children).toHaveLength(1)
+        expect(out.children[0].kind).toBe('group')
+        expect(out.children[0].children[0].kind).toBe('sphere')
+    })
+
+    it('feeds a Merge like any primitive does — geos connect', () => {
+        const geo = createNode('geom.geo', { id: 'geo-1' })
+        const cube = createNode('geom.cube', { id: 'cube-1' })
+        cube.parentId = geo.id
+        const loose = createNode('geom.sphere', { id: 'loose-1' })
+        const merge = createNode('shape.merge', { id: 'merge-1' })
+        const edges = [
+            createEdge(geo.id, 'geometry', merge.id, 'a'),
+            createEdge(loose.id, 'geometry', merge.id, 'b')
+        ]
+        const ctx = createNodeGraphContext({ nodes: [geo, cube, loose, merge], edges })
+        const out = evaluateNodeOutput(merge, 'out', ctx)
+        expect(out.kind).toBe('group')
+        expect(out.children).toHaveLength(2)
     })
 })

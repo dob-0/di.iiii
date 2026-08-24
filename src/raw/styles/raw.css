@@ -168,12 +168,16 @@
     z-index: 1800;
 }
 
+/* Furniture, like the windows: the palette is summoned, used and dismissed —
+   it is never the work. Its family accent bars on the rows carry the colour
+   here, so its frame does not need to. */
 .raw-node-palette {
     position: fixed;
     width: 280px;
     border-radius: 0;
-    background: #0a0a0a;
-    border: 1px solid var(--di-cyan-border);
+    background: #101418;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9);
 
     overflow: hidden;
     z-index: 1801;
@@ -208,6 +212,10 @@
     gap: 2px;
     max-height: 280px;
     overflow-y: auto;
+    /* The graph surface behind the palette claims touch-action: none; the
+       list is its own scroller, so it must SAY pan-y or a fingertip can't
+       scroll the results while the phone keyboard is up (S24 audit). */
+    touch-action: pan-y;
 }
 
 /* The rows are flex children of the list, so their default `min-width: auto`
@@ -297,6 +305,43 @@
     font-size: 12px;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     letter-spacing: 0.08em;
+}
+
+/* Family headers exist only in browse mode (empty query) — sticky so the
+   family you are scrolling through stays named. Any typed character removes
+   them entirely. */
+.raw-node-palette-group {
+    position: sticky;
+    top: -6px; /* cancels the list's own padding so the header pins flush */
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px 5px;
+    background: #0a0a0a;
+    color: rgba(210, 245, 255, 0.55);
+    font-size: 10px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.15em;
+    text-transform: lowercase;
+    border-left: 2px solid var(--family-color, transparent);
+}
+
+.raw-node-palette-group-count {
+    color: rgba(244, 247, 251, 0.28);
+    letter-spacing: 0;
+}
+
+/* The same color the family header carries, on every row — one vocabulary
+   between palette and canvas. */
+.raw-node-palette-item {
+    border-left: 2px solid var(--family-color, transparent);
+}
+
+/* A shell places and holds its ports but computes nothing yet — it must not
+   look as alive as a node that does. */
+.raw-node-palette-item.is-shell {
+    opacity: 0.55;
 }
 
 
@@ -710,13 +755,6 @@
     margin: 0;
 }
 
-.raw-card {
-    background: var(--di-card);
-    border: 1px solid var(--di-cyan-border);
-    border-radius: 0;
-    box-shadow: none;
-}
-
 .raw-chip,
 .raw-status-pill,
 .raw-user-pill,
@@ -765,10 +803,6 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
-}
-
-.raw-card {
-    padding: 24px;
 }
 
 .raw-inline-list,
@@ -875,7 +909,6 @@
 .raw-topbar-actions button,
 .raw-hub-actions button,
 .raw-primitive-row button,
-.raw-window-actions button,
 .raw-assets-list button {
     -webkit-appearance: none;
     appearance: none;
@@ -893,11 +926,46 @@
 .raw-topbar-actions button:hover,
 .raw-hub-actions button:hover,
 .raw-primitive-row button:hover,
-.raw-window-actions button:hover,
 .raw-assets-list button:hover {
     border-color: var(--di-cyan);
     background: var(--di-cyan-dim);
     color: var(--di-cyan);
+}
+
+/* Window controls are NOT in the bordered-button family above, and that was
+   most of why a window read as a card containing four smaller cards: every
+   button repeated the frame's own edge. They are the window's furniture —
+   quiet until touched. They also declared no font, so they rendered in the
+   browser's default Arial while every other word in the lane is Inter, and
+   sat at 37px against the 44px floor the rest of the lane keeps. */
+.raw-window-actions button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.42);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 10px;
+    cursor: pointer;
+    transition: color 0.1s, background 0.1s;
+}
+
+.raw-window-actions button:hover,
+.raw-window-actions button:focus-visible {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Close is the one that cannot be undone; it should not look like Pin. */
+.raw-window-actions button:last-child:hover,
+.raw-window-actions button:last-child:focus-visible {
+    color: var(--di-danger);
+    background: rgba(242, 95, 92, 0.12);
 }
 
 .raw-topbar-actions button.is-active {
@@ -908,6 +976,31 @@
 
 .raw-file-button input {
     display: none;
+}
+
+/* Above the topbar's own z-index and outside the zen gate: this is the one message
+   in the lane whose absence costs work rather than convenience. Full width so it
+   cannot be mistaken for a chip, and it stays until the sync layer clears it. */
+.raw-sync-alert {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1600;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1b1005;
+    background: #f0b429;
+    text-align: center;
+}
+
+/* Both are fixed at top:0, so without this the alert sits ON the toolbar and
+   takes away "← Projects" at the exact moment someone needs to leave and sign
+   back in. Adjacent-sibling, because the alert renders immediately before the
+   header — no JS, and it cannot get out of step with the condition. */
+.raw-sync-alert + .raw-topbar {
+    top: 40px;
 }
 
 .raw-topbar {
@@ -932,7 +1025,8 @@
 .raw-topbar.is-seeded {
     height: 48px;
     padding: 0 16px;
-    border-bottom: 1px solid var(--di-cyan-border);
+    /* Furniture (see the window rule). */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     pointer-events: auto;
     overflow: visible;
     animation: rawTopbarReveal 0.35s ease both;
@@ -1183,7 +1277,8 @@
     appearance: none;
     border: none;
     border-radius: 0;
-    background: rgba(63, 105, 246, 0.12);
+    /* Was a blue-violet nobody else in the lane uses — a hue with no job. */
+    background: rgba(255, 255, 255, 0.06);
     color: #f4f7fb;
     padding: 4px 8px;
     font-size: 11px;
@@ -1332,16 +1427,32 @@
     color: #ffb0aa;
 }
 
+/* ONE JOB PER COLOUR (2026-08-18). A window and a graph card used to be the
+   same rectangle — the same cyan hairline, the same square corner, the same
+   near-black fill, neither casting a shadow — so nothing in the picture said
+   which one lay on the canvas and which floated above it. The fix is not a
+   nicer frame, it is giving each colour a single job:
+     neutral   — furniture (this window, the palette, the topbar, the HUD)
+     family    — what a node IS (its card's edge and icon; the stripe below)
+     cyan      — interaction only (selected, hover, focus)
+     port hue  — data type (wires, unchanged)
+   A shadow cannot carry depth here: black on black is invisible (measured).
+   Depth comes from the lifted fill plus the one-pixel top highlight.
+   `--window-accent` is set per window by DesktopWindow from its node's family,
+   so a window and its card are visibly the same node. Windows with no node
+   behind them (Outliner, Chat) fall back to the neutral edge, which is honest:
+   they are tools, not nodes. */
 .raw-window {
     position: fixed;
     top: 0;
     left: 0;
     display: flex;
     flex-direction: column;
-    background: #0a0a0a;
-    border: 1px solid var(--di-cyan-border);
+    background: #101418;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-top: 2px solid var(--window-accent, rgba(255, 255, 255, 0.14));
     border-radius: 0;
-
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 60px rgba(0, 0, 0, 0.9);
     overflow: hidden;
 }
 
@@ -1352,28 +1463,83 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
-    padding: 14px 16px;
+    padding: 8px 10px 8px 13px;
     cursor: grab;
-    border-bottom: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.025);
     touch-action: none;
     -webkit-user-select: none;
     user-select: none;
 }
 
-.raw-window-header h3,
-.raw-property-sheet-header h4,
-.raw-card h2 {
+/* Both classes have been on the markup since windows existed and neither had
+   a single rule, so a pinned window looked exactly like an unpinned one and a
+   minimized one kept a divider under a body that was no longer there. */
+.raw-window.is-pinned .raw-window-header::after {
+    content: 'pinned';
+    font-family: var(--di-mono);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    color: rgba(255, 255, 255, 0.3);
+    order: 3;
+    flex: 0 0 auto;
+}
+
+.raw-window.is-minimized .raw-window-header {
+    border-bottom-color: transparent;
+}
+
+/* The window title used to be nothing but this zero margin, which left its
+   size and weight to the browser's built-in h3 — 18.72px, louder than any
+   authored label in the lane and the reason a window shouted while its card
+   whispered at 12px. */
+.raw-window-header h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.25;
+}
+
+.raw-property-sheet-header h4 {
     margin: 0;
 }
 
+/* Rename lives on the title itself: the button IS the title, visually —
+   no chrome until it is touched. */
+.raw-property-title-button {
+    all: unset;
+    cursor: text;
+    display: inline-block;
+    min-width: 40px;
+    border-bottom: 1px dashed transparent;
+}
+.raw-property-title-button:hover,
+.raw-property-title-button:focus-visible {
+    border-bottom-color: rgba(77, 249, 255, 0.55);
+}
+.raw-property-title-input {
+    font: inherit;
+    font-weight: 600;
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(77, 249, 255, 0.06);
+    color: inherit;
+    border: 1px solid rgba(77, 249, 255, 0.45);
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+/* Says the family, in the family's colour — "the room", not UNIVERSE.WORLD.
+   The cards started speaking plainly when families landed; the windows were
+   the half left behind, still showing the code's internal type id. Lowercase,
+   because that is how the palette and the cards write these words. */
 .raw-window-kicker {
     display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(244, 247, 251, 0.42);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--window-accent, rgba(244, 247, 251, 0.42));
+    font-family: var(--di-mono);
 }
 
 .raw-window-actions {
@@ -1392,16 +1558,30 @@
 
 .raw-window-resizer {
     position: absolute;
-    right: 8px;
-    bottom: 8px;
-    width: 16px;
-    height: 16px;
+    right: 2px;
+    bottom: 2px;
+    width: 22px;
+    height: 22px;
     cursor: nwse-resize;
     border-radius: 0;
-    background: rgba(77, 249, 255, 0.04);
+    /* Two visible corner strokes: the handle existed for weeks as a 16px
+       4%-alpha square nobody could find, wedged against the window's own
+       corner buttons over a pointer-hungry canvas ("i can't change size",
+       2026-08-20). An affordance that cannot be seen is not an affordance. */
+    background:
+        linear-gradient(135deg,
+            transparent 52%, rgba(77, 249, 255, 0.45) 52%, rgba(77, 249, 255, 0.45) 60%,
+            transparent 60%, transparent 70%,
+            rgba(77, 249, 255, 0.45) 70%, rgba(77, 249, 255, 0.45) 78%, transparent 78%);
+    opacity: 0.75;
+    /* Above every panel's own corner chrome — the handle owns this corner. */
+    z-index: 12;
     touch-action: none;
     -webkit-user-select: none;
-    user-select: none;
+}
+
+.raw-window-resizer:hover {
+    opacity: 1;
 }
 
 /* ── World panel window ── */
@@ -1416,18 +1596,24 @@
 .raw-world-panel-actions {
     position: absolute;
     bottom: 10px;
-    right: 10px;
+    /* Clear of the window's resize corner: at right:10 the ⤢/● cluster sat
+       exactly ON the resize handle and swallowed its pointer — the literal
+       "i can't change size" of the room window (2026-08-20). */
+    right: 34px;
     display: flex;
     gap: 6px;
     z-index: 10;
 }
 
+/* Controls sitting ON the live 3D content: furniture at rest (see the window
+   rule), cyan only under the pointer. Three permanently-cyan buttons over a
+   scene pull the eye away from the scene. */
 .raw-world-panel-btn {
     -webkit-appearance: none;
     appearance: none;
-    border: 1px solid var(--di-cyan-border);
-    background: rgba(10, 10, 10, 0.72);
-    color: var(--di-cyan);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(10, 12, 14, 0.72);
+    color: rgba(255, 255, 255, 0.62);
     width: 28px;
     height: 28px;
     cursor: pointer;
@@ -1440,8 +1626,11 @@
     transition: background 0.1s;
 }
 
-.raw-world-panel-btn:hover {
+.raw-world-panel-btn:hover,
+.raw-world-panel-btn:focus-visible {
     background: var(--di-cyan-dim);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
 }
 
 .raw-world-panel-btn.is-live {
@@ -1458,31 +1647,6 @@
     z-index: 1200;
 }
 
-/* ── World overlay mode (3D behind graph) ── */
-
-.raw-world-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-}
-
-.raw-world-overlay > * {
-    pointer-events: auto;
-}
-
-.raw-surface-shell.is-world-overlay {
-    background: transparent;
-    pointer-events: none;
-}
-
-.raw-surface-shell.is-world-overlay > * {
-    pointer-events: auto;
-}
-
-.raw-surface-shell.is-world-overlay .raw-graph-surface {
-    background: transparent;
-}
 
 .raw-viewport-shell,
 .raw-cursor-layer {
@@ -1779,6 +1943,174 @@
     padding: 16px;
 }
 
+/* view.library — Studio's Create window as a panel node. */
+.raw-create-section + .raw-create-section {
+    margin-top: 18px;
+}
+
+.raw-create-label {
+    font-family: var(--di-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    margin-bottom: 8px;
+}
+
+.raw-create-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+    gap: 6px;
+}
+
+.raw-create-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    /* 44px is the one-finger floor this project holds every control to; a
+       shape grid is exactly where a phone visitor taps first. */
+    min-height: 56px;
+    padding: 8px 4px;
+    background: transparent;
+    /* Neutral at rest, cyan under the pointer — the same rule the windows, the
+       zoom cluster and the viewport buttons follow. Fifteen permanently-cyan
+       boxes would out-shout the scene they are for putting things into. */
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 11px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.raw-create-btn:hover,
+.raw-create-btn:focus-visible {
+    background: rgba(77, 249, 255, 0.08);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-create-icon {
+    font-size: 17px;
+    line-height: 1;
+}
+
+/* view.publish — what a visitor to the public page gets. Same rules as the
+   Create panel: neutral at rest, cyan only for the chosen state, 44px floor on
+   anything a finger lands on, radius 0. */
+.raw-publish-section + .raw-publish-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.raw-publish-heading {
+    font-family: var(--di-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    margin: 0 0 8px;
+}
+
+.raw-publish-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.raw-publish-choice {
+    flex: 1 1 auto;
+    min-height: 44px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.raw-publish-choice:hover,
+.raw-publish-choice:focus-visible {
+    background: rgba(77, 249, 255, 0.08);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-publish-choice.is-on {
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+    background: rgba(77, 249, 255, 0.12);
+}
+
+.raw-publish-hint {
+    margin: 8px 0 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--di-text-muted);
+}
+
+.raw-publish-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.raw-publish-toggle input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--di-cyan);
+    cursor: pointer;
+}
+
+.raw-publish-url {
+    margin: 0 0 8px;
+    font-family: var(--di-mono);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.82);
+    word-break: break-all;
+}
+
+.raw-publish-copy {
+    min-height: 44px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.raw-publish-copy:hover,
+.raw-publish-copy:focus-visible {
+    background: rgba(77, 249, 255, 0.08);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-publish-status {
+    margin: 12px 0 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--di-text-muted);
+}
+
+.raw-publish-status.is-warn {
+    color: #ffb86c;
+}
+
 .raw-text-panel {
     display: flex;
     align-items: flex-start;
@@ -1792,6 +2124,55 @@
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     max-width: 100%;
+}
+
+/* The editable Text panel. `align-items: flex-start` on the parent would
+   shrink-wrap the box to its content, so the writing area is stretched back
+   to the window: a note is written by clicking anywhere in it, not by
+   hunting the last line of text. */
+.raw-text-panel-input {
+    align-self: stretch;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    resize: none;
+    font: inherit;
+    font-size: 20px;
+    line-height: 1.5;
+    color: #f4f7fb;
+    overflow-wrap: anywhere;
+}
+
+.raw-text-panel-input::placeholder {
+    color: rgba(244, 247, 251, 0.35);
+}
+
+.raw-text-panel-input:focus-visible {
+    outline: 1px solid rgba(110, 231, 249, 0.85);
+    outline-offset: 4px;
+}
+
+.raw-text-panel-driven {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: rgba(244, 247, 251, 0.55);
+}
+
+/* 20px is a presentation size on a desk; on a 390px phone it turns three
+   sentences into a scrolling column, which is how the starter desk's last
+   line — the one naming the way into Studio — ended up below the fold. */
+@media (max-width: 640px) {
+    .raw-text-panel-content,
+    .raw-text-panel-input {
+        font-size: 17px;
+        line-height: 1.45;
+    }
 }
 
 .raw-chat-panel {
@@ -1921,6 +2302,49 @@
     border-radius: 0;
     background: #0a0a0a;
     color: rgba(244, 247, 251, 0.48);
+}
+
+/* The blank canvas is where a beginner lands, and it opens in zen — no topbar,
+   no menu, nothing to press. So the one offer that matters lives here — in the
+   LOWER band, because the hint says "double-click", the centre is where people
+   double-click, and the audit watched a double-click land on the button and
+   inject a demo scene into somebody's node. */
+.raw-empty-state {
+    position: absolute;
+    top: auto;
+    bottom: 14%;
+    left: 50%;
+    transform: translate(-50%, 0);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.raw-empty-state p {
+    margin: 0;
+    font-size: 13px;
+}
+
+.raw-empty-state button {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 44px;
+    padding: 0 20px;
+    border: 1px solid rgba(77, 249, 255, 0.5);
+    border-radius: 999px;
+    background: rgba(77, 249, 255, 0.12);
+    color: var(--di-cyan);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-empty-state button:hover {
+    background: rgba(77, 249, 255, 0.26);
 }
 
 .raw-overlay-message {
@@ -2078,9 +2502,12 @@
 .raw-topbar-help-action {
     -webkit-appearance: none;
     appearance: none;
-    border: 1px solid rgba(77, 249, 255, 0.3);
-    background: rgba(77, 249, 255, 0.08);
-    color: #f4f7fb;
+    /* Furniture at rest, cyan only under the pointer (see the window rule):
+       a topbar button that is permanently accent-coloured competes with the
+       selected node for the eye and wins, which is exactly backwards. */
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.72);
     padding: 10px 14px;
     font-size: 12px;
     cursor: pointer;
@@ -2243,17 +2670,26 @@
     align-items: center;
     gap: 8px;
     padding: 6px 8px;
-    border: 1px solid var(--di-cyan-border);
-    background: rgba(6, 10, 18, 0.92);
+    /* Furniture (see the window rule): the zoom cluster is a tool for looking
+       at the work, not part of it. */
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(16, 20, 24, 0.94);
 }
 
 .raw-graph-zoom-controls button {
     min-width: 44px;
     height: 44px;
-    border: 1px solid var(--di-cyan-border);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     background: var(--di-black);
-    color: var(--di-text);
+    color: rgba(255, 255, 255, 0.62);
     cursor: pointer;
+    transition: border-color 0.1s, color 0.1s;
+}
+
+.raw-graph-zoom-controls button:hover,
+.raw-graph-zoom-controls button:focus-visible {
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
 }
 
 .raw-graph-zoom-value {
@@ -2271,9 +2707,16 @@
     padding: 0 32px 32px;
 }
 
+/* The card's edge is its FAMILY, not the lane's accent. `--card-family` is set
+   per card by RawGraphSurface; the plain cyan declaration above it is the
+   fallback for engines without color-mix() and for a node whose type has no
+   family yet. Before this, every card in every family wore the same cyan edge
+   and the family was a 10px word on the right — unreadable at arm's length,
+   invisible at half zoom, and identical to the chrome around it. */
 .raw-graph-node-card {
     background: var(--di-black);
     border: 1px solid var(--di-cyan-border);
+    border-color: color-mix(in srgb, var(--card-family, #4df9ff) 46%, transparent);
     border-radius: 0;
     color: var(--di-text);
     cursor: pointer;
@@ -2298,11 +2741,13 @@
     box-shadow: 0 0 0 1px var(--di-cyan), 0 0 18px rgba(77, 249, 255, 0.15);
 }
 
-/* di.i hollow-square icon — the brand node motif */
+/* di.i hollow-square icon — the brand node motif, now in the node's own family
+   colour so the swatch says what the card is. Cyan remains the fallback for a
+   type with no family. */
 .raw-graph-node-icon {
     width: 14px;
     height: 14px;
-    border: 3px solid var(--di-cyan);
+    border: 3px solid var(--card-family, var(--di-cyan));
     background: transparent;
     flex-shrink: 0;
 }
@@ -2363,41 +2808,98 @@
     font-family: 'JetBrains Mono', monospace;
 }
 
-.raw-graph-node-enter-hint {
+/* THE DOOR — the way into a container.
+   It hangs off the card's LEFT edge and is counter-scaled by the surface's zoom,
+   so it is the same size on screen whatever the graph is doing. It used to live
+   in the card header inside the graph's own transform: at the zoom the auto-fit
+   lands an oversized graph on, that measured 7x7 SCREEN PIXELS — in the DOM,
+   invisible in the browser, and passing a DOM-presence test the whole time.
+   Left rather than right because nearestOutputPort's grab radius is 28 screen
+   pixels and covers the card's right-hand end when zoomed out, so a door there
+   fights with starting a wire. */
+.raw-graph-node-door-anchor {
+    position: absolute;
+    right: 100%;
+    top: 22px;
+    width: 0;
+    height: 0;
+    transform-origin: 100% 50%;
+    pointer-events: none;
+}
+
+.raw-graph-node-door {
     -webkit-appearance: none;
     appearance: none;
-    border: none;
-    background: transparent;
-    padding: 0 4px;
-    margin: -8px -4px -8px 0;
-    font-size: 13px;
+    position: absolute;
+    right: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 22px;
+    padding: 3px 5px;
+    border: 1px solid rgba(244, 247, 251, 0.28);
+    border-radius: 6px;
+    background: rgba(10, 14, 22, 0.92);
+    /* Was rgba(244,247,251,0.2) on --di-black — about 1.6:1, under the 3:1
+       floor for a non-text control. */
+    color: rgba(244, 247, 251, 0.62);
     font-family: inherit;
-    color: rgba(244, 247, 251, 0.2);
-    flex-shrink: 0;
+    font-size: 12px;
     line-height: 1;
+    white-space: nowrap;
     cursor: pointer;
     touch-action: manipulation;
-    transition: color 0.15s;
+    pointer-events: auto;
+    transition: color 0.15s, border-color 0.15s;
 }
 
-.raw-graph-node-card:hover .raw-graph-node-enter-hint,
-.raw-graph-node-card.is-selected .raw-graph-node-enter-hint,
-.raw-graph-node-enter-hint:focus-visible {
-    color: rgba(77, 249, 255, 0.7);
+.raw-graph-node-card:hover .raw-graph-node-door,
+.raw-graph-node-card.is-selected .raw-graph-node-door,
+.raw-graph-node-door:focus-visible {
+    color: rgba(77, 249, 255, 0.95);
+    border-color: rgba(77, 249, 255, 0.5);
 }
 
-/* Coarse pointers get no hover, so the chevron was invisible and entering a
-   node had no affordance at all — fatal for container nodes, whose entire
-   purpose is being entered. Show it always, and give it a real tap target. */
+/* A card that actually holds something says so, and says how much. Every card
+   used to wear the same mark whether or not there was anything behind it, so
+   the mark carried no information at all. Never a GATE on the door: the same
+   control reopens a closed panel window, and an un-enterable empty container is
+   a box that can never be filled. */
+.raw-graph-node-door.has-contents {
+    color: var(--card-family, rgba(77, 249, 255, 0.95));
+    border-color: var(--card-family, rgba(77, 249, 255, 0.55));
+}
+
+.raw-graph-node-child-count {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* The 44px finger target, extended LEFT ONLY into the column gutter — a
+   symmetric halo would cover the card's own drag area at low zoom. Gated above
+   DOOR_HALO_MIN_ZOOM in the component, because below that it would reach into
+   the previous column's output ports. */
+.raw-graph-node-door.has-halo::after {
+    content: "";
+    position: absolute;
+    inset: -11px 0 -11px -22px;
+}
+
+/* Coarse pointers get no hover, and this is the ONLY way into a container on a
+   phone — double-click is not a gesture a finger has. So the plate itself is a
+   full 44px target rather than relying on the halo, which is gated by zoom.
+   Because the anchor is counter-scaled by the surface's zoom, 44 here is 44
+   SCREEN pixels at every zoom, not 44 graph units that shrink with the view. */
 @media (hover: none) {
-    .raw-graph-node-enter-hint {
-        color: rgba(77, 249, 255, 0.7);
-        min-width: 32px;
-        min-height: 32px;
-        margin: -10px -8px -10px 0;
-        display: inline-flex;
-        align-items: center;
+    .raw-graph-node-door {
+        min-height: 44px;
+        min-width: 44px;
         justify-content: center;
+        color: rgba(77, 249, 255, 0.9);
+        border-color: rgba(77, 249, 255, 0.45);
     }
 }
 
@@ -2447,6 +2949,18 @@
 
 .raw-graph-port-dot--out { cursor: crosshair; }
 .raw-graph-port-dot--in  { cursor: pointer; }
+
+/* Live feedback while a wire is being dragged: an input that can take it
+   glows, one that cannot goes quiet. Before this, an incompatible drop was
+   pure silence. */
+.raw-graph-port-dot--in.is-compatible {
+    box-shadow: 0 0 0 3px rgba(77, 249, 255, 0.35);
+    transform: scale(1.3);
+}
+
+.raw-graph-port-dot--in.is-incompatible {
+    opacity: 0.18;
+}
 
 /* touch-action is NOT inherited — it applies to whichever element the touch
    hit-tests to. `.raw-graph-surface` sets `none`, but a finger landing on a
@@ -2524,6 +3038,9 @@
 
 @media (hover: none) {
     .raw-graph-fit-notice { min-height: 44px; }
+    /* The palette is the way every node is made; its rows sat at 33px —
+       under the same 44px minimum this file enforces on doors and dots. */
+    .raw-node-palette-item { min-height: 44px; }
 }
 
 .raw-graph-port-label {
@@ -3496,7 +4013,15 @@
         grid-template-columns: 1fr;
     }
 
+    /* Keep the SPACE below 1200px, drop the project title. The bar used to hide
+       both, so on every phone and most laptops nothing on screen said which space
+       you were editing in — recoverable only from the URL. A space id is short
+       enough to afford; a project title is not. */
     .raw-topbar-name {
+        max-width: 88px;
+    }
+
+    .raw-topbar-name-project {
         display: none;
     }
 }
@@ -3607,15 +4132,16 @@
         padding-bottom: env(safe-area-inset-bottom);
     }
 
-    /* The Delete FAB lives in the bottom-right corner, which the sheet now
-       occupies — and the sheet is only ever up when something is selected,
-       i.e. exactly when Delete is the button you want. Move it above the
-       sheet's reach. Pinch still zooms the canvas that stays visible, so the
-       zoom controls being covered while a node is selected is survivable;
-       losing Delete is not. */
+    /* The Delete FAB rides just ABOVE the docked sheet (the editor publishes
+       the sheet's measured height as --raw-sheet-inset). It used to move to
+       the top-right instead — where Android notification banners drop over
+       it and steal the tap, which read as a dead Delete button on the real
+       S24 (2026-08-20). Bottom-right above the sheet is thumb-reachable and
+       banner-safe, and the sheet is only ever up when something is selected
+       — exactly when Delete is the button you want. */
     .raw-delete-fab {
-        top: calc(58px + env(safe-area-inset-top));
-        bottom: auto;
+        top: auto;
+        bottom: calc(var(--raw-sheet-inset, 0px) + 12px);
         right: calc(12px + env(safe-area-inset-right));
     }
 }
@@ -3850,6 +4376,7 @@
     line-height: 1.4;
     white-space: pre-wrap;
     word-break: break-word;
+}
 
 /* --- Timeline panel (view.timeline) --- */
 
@@ -3876,6 +4403,21 @@
 .raw-timeline-title {
     font-weight: 600;
     letter-spacing: 0.04em;
+}
+
+.raw-timeline-transport {
+    background: none;
+    border: 1px solid #2c3a4d;
+    border-radius: 4px;
+    color: #4f9eff;
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1;
+    padding: 4px 8px;
+}
+
+.raw-timeline-transport:hover {
+    border-color: #4f9eff;
 }
 
 .raw-timeline-readout {
@@ -4110,4 +4652,965 @@
     border-top: none;
     backdrop-filter: none;
     background: transparent;
+}
+
+/* Zen's third resident — the wordmark, ambient on the workspace surface.
+   Fixed so it neither pans with the graph nor collides with the windows;
+   bottom-centre keeps it clear of the zoom cluster (left), the account
+   button and delete FAB (right). Since the 2026-08-21 doors audit it is
+   the way home — a link wearing the same ambient clothes. */
+.raw-surface-wordmark {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: -0.02em;
+    color: rgba(255, 255, 255, 0.28);
+    user-select: none;
+    z-index: 1200;
+    text-decoration: none;
+}
+
+.raw-surface-wordmark:hover {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.raw-surface-wordmark:focus-visible {
+    outline: 1px solid var(--di-cyan);
+    outline-offset: 4px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.raw-surface-wordmark span {
+    color: var(--di-cyan);
+    opacity: 0.75;
+}
+
+/* Phone. At the bottom centre it sat on top of the cards (measured in the
+   2026-08-21 audit), and it was hidden outright for that — which left a phone
+   canvas under zen with NO way out at all, because zen hides the topbar and
+   this is the only other door. So it moves rather than disappears: the top-left
+   corner is empty on a phone (measured at 390×844), it is where a way home is
+   looked for, and it is clear of the zoom cluster bottom-left and the account
+   button bottom-right.
+
+   This block must stay AFTER the base rule above — it overrides `bottom`,
+   `left` and `transform`, and at equal specificity the later rule is the one
+   that wins. Placed before it, the phone kept the desktop position and grew to
+   full height from having both `top` and `bottom` set. */
+@media (max-width: 640px) {
+    .raw-surface-wordmark {
+        bottom: auto;
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        left: calc(env(safe-area-inset-left, 0px) + 14px);
+        transform: none;
+        font-size: 14px;
+        /* It can still pass over a card up here, so it carries just enough
+           ground to stay readable when it does — and a real finger's worth of
+           target, which the bare text (29px tall) was not. */
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 6px;
+        background: rgba(10, 14, 22, 0.62);
+        color: rgba(255, 255, 255, 0.44);
+    }
+}
+
+/* Dropping a file in. The veil is the only thing that tells someone mid-drag
+   that this surface will take what they are carrying — without it a drop that
+   works and a drop that does nothing look identical until they let go. */
+.raw-drop-veil {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 14, 22, 0.55);
+    border: 2px dashed var(--di-cyan);
+    pointer-events: none;
+    z-index: 1250;
+}
+
+.raw-drop-veil span {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: #ffffff;
+    background: rgba(10, 14, 22, 0.85);
+    border: 1px solid var(--di-cyan);
+    border-radius: 999px;
+    padding: 10px 18px;
+}
+
+.raw-drop-notice {
+    position: fixed;
+    left: 50%;
+    bottom: 52px;
+    transform: translateX(-50%);
+    max-width: min(520px, calc(100vw - 32px));
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.92);
+    background: rgba(10, 14, 22, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    padding: 10px 16px;
+    pointer-events: none;
+    z-index: 1260;
+}
+
+.raw-drop-notice.is-warning {
+    border-color: var(--di-amber, #ffb86c);
+}
+
+/* You are inside something. Never hidden — not by zen, not by fullscreen.
+   Every corner is already taken, and each one was checked by measuring, not by
+   eye: .raw-topbar is 49px tall and full-width (so top:12px sat INSIDE it
+   whenever chrome was on), .raw-graph-fit-notice is top:12px/left:50%, the zoom
+   cluster is bottom-left and .raw-delete-fab bottom-right. What is free is the
+   top-left BELOW the topbar — the component supplies the offset, since the
+   topbar's height is 0 in zen and ~49px with chrome. */
+.raw-scope-marker {
+    position: fixed;
+    left: 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: min(420px, calc(100vw - 24px));
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.78);
+    background: rgba(10, 14, 22, 0.92);
+    border: 1px solid rgba(77, 249, 255, 0.35);
+    border-radius: 999px;
+    padding: 2px 4px 2px 2px;
+    z-index: 1400;
+    pointer-events: auto;
+}
+
+.raw-scope-marker-label {
+    padding: 0 8px 0 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.raw-scope-marker-label strong {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.raw-scope-marker-out,
+.raw-scope-marker-root {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* A finger's target, because leaving is the one thing a lost person needs
+       and there is no keyboard on a phone. */
+    /* 44, not 34: raw.css's own floor for the controls in this lane, and this
+       is the one control a lost person needs on a phone. */
+    min-width: 44px;
+    min-height: 44px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(77, 249, 255, 0.14);
+    color: var(--di-cyan);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-scope-marker-out:hover,
+.raw-scope-marker-root:hover {
+    background: rgba(77, 249, 255, 0.28);
+}
+
+.raw-inspector-asset-field {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    min-width: 0;
+}
+
+.raw-inspector-asset-field select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* 44px so it is a real one-finger target on a phone, where this button is the
+   ONLY way in — there is no dragging a file onto a touch screen. */
+.raw-inspector-asset-add {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+    color: var(--di-cyan);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.raw-inspector-asset-add:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.raw-inspector-asset-add input[type="file"] {
+    display: none;
+}
+
+.raw-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* The port menu. A sibling of .raw-graph-stage, so it does not inherit the
+   pan/zoom transform. z-index deliberately under 1300: .raw-topbar owns that
+   band, and a menu that covers the topbar is worse than one that is covered. */
+.raw-graph-port-menu {
+    position: fixed;
+    z-index: 1250;
+    min-width: 208px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background: rgba(10, 14, 22, 0.97);
+    border: 1px solid rgba(77, 249, 255, 0.35);
+    border-radius: 10px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.raw-graph-port-menu-title {
+    margin: 0;
+    padding: 4px 10px 6px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.raw-graph-port-menu button {
+    -webkit-appearance: none;
+    appearance: none;
+    /* A finger's target: this menu is opened by a long press, which is a touch
+       gesture before it is anything else. */
+    min-height: 44px;
+    padding: 0 12px;
+    text-align: left;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.92);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-graph-port-menu button:hover,
+.raw-graph-port-menu button:focus-visible {
+    background: rgba(77, 249, 255, 0.16);
+    color: var(--di-cyan);
+}
+
+/* The socket a promote just made is one scope up and off screen. Bottom-centre,
+   clear of the zoom cluster (bottom-left), the delete FAB (bottom-right) and
+   the scope marker (top-left, below the topbar). */
+.raw-promoted-notice {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1350;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: min(520px, calc(100vw - 32px));
+    padding: 4px 4px 4px 14px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(10, 14, 22, 0.95);
+    border: 1px solid rgba(77, 249, 255, 0.4);
+    border-radius: 999px;
+}
+
+.raw-promoted-notice strong {
+    color: var(--di-cyan);
+    font-weight: 600;
+}
+
+.raw-promoted-notice button {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(77, 249, 255, 0.16);
+    color: var(--di-cyan);
+    font-family: inherit;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-promoted-notice button:hover {
+    background: rgba(77, 249, 255, 0.3);
+}
+
+.raw-promoted-notice-close {
+    font-size: 17px;
+    padding: 0 !important;
+    background: transparent !important;
+    color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* WHAT A NODE IS MADE OF — the anatomy sheet.
+   Lives inside a DesktopWindow, so the furniture (square corners, #101418
+   fill, neutral edge, the 2px family stripe) is inherited and this only owns
+   the reading. Cyan stays on interaction: the one button here is the only
+   thing that gets it, and only on hover or focus. */
+.raw-anatomy {
+    /* The window body is `overflow: hidden` so its children can scroll; four
+       sections of prose is the first thing in this lane that reliably needs to.
+       It is a window, NOT a child of .raw-graph-stage — the graph surface sets
+       touch-action: none on every descendant and calls preventDefault on wheel,
+       so a scroll region rendered there is dead to both a finger and a wheel. */
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 20px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(244, 247, 251, 0.72);
+}
+
+.raw-anatomy-banner {
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    border-left: 2px solid var(--di-warning);
+    background: rgba(255, 179, 71, 0.08);
+    color: rgba(255, 213, 153, 0.92);
+}
+
+.raw-anatomy-lede {
+    margin: 0 0 16px;
+    color: rgba(244, 247, 251, 0.86);
+}
+
+.raw-anatomy-lede strong { color: var(--di-text); }
+
+.raw-anatomy-slot {
+    padding: 14px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.raw-anatomy-slot h4 {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 8px;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(244, 247, 251, 0.5);
+}
+
+/* The badge carries the ANSWER, not decoration — "a door", "its own window",
+   "nothing". It is the one word a person can scan four of and learn the shape
+   of a node from, so it gets the node's own family hue rather than a neutral. */
+.raw-anatomy-badge {
+    flex: 0 0 auto;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: none;
+    color: var(--window-accent, rgba(244, 247, 251, 0.6));
+}
+
+.raw-anatomy-slot h5 {
+    margin: 12px 0 6px;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(244, 247, 251, 0.34);
+}
+
+.raw-anatomy-slot p { margin: 0; }
+
+.raw-anatomy-ports {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.raw-anatomy-port {
+    padding: 7px 0 8px 10px;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.raw-anatomy-port + .raw-anatomy-port { margin-top: 2px; }
+
+.raw-anatomy-port-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.raw-anatomy-port-head strong {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--di-text);
+}
+
+.raw-anatomy-port-head em {
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 10px;
+    font-style: normal;
+    letter-spacing: 0.06em;
+    color: rgba(244, 247, 251, 0.36);
+}
+
+.raw-anatomy-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 12px;
+    color: var(--di-text);
+    /* A vector or a long string must not push the window wider than the screen;
+       it wraps, because a horizontal scrollbar on a value is worse than a
+       second line. */
+    overflow-wrap: anywhere;
+}
+
+/* An empty port is a fact, not a missing one. It is dimmed and italic so a
+   glance down the column separates "nothing" from a value that reads as a
+   word — and it is never blank, which would read as a rendering failure. */
+.raw-anatomy-value.is-empty {
+    font-style: italic;
+    color: rgba(244, 247, 251, 0.38);
+}
+
+.raw-anatomy-swatch {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.raw-anatomy-origin,
+.raw-anatomy-door {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.46);
+}
+
+.raw-anatomy-door { color: rgba(244, 247, 251, 0.38); }
+
+.raw-anatomy-goto {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-left: 6px;
+    padding: 0 8px;
+    border: 0;
+    background: none;
+    color: rgba(244, 247, 251, 0.6);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-anatomy-goto:hover,
+.raw-anatomy-goto:focus-visible { color: var(--di-cyan); }
+
+.raw-anatomy-none,
+.raw-anatomy-foot {
+    margin: 0;
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-anatomy-foot { margin-top: 10px; }
+
+.raw-anatomy-close {
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+/* Two buttons where there was one. Stacked rather than side by side: at the
+   empty state's centred position a row of two pills is wider than a 320px
+   phone, and the offer that answers the question the person is standing in
+   front of goes first. */
+.raw-empty-state-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+@media (max-width: 640px) {
+    .raw-anatomy { padding: 12px 12px 18px; }
+    /* The window is the full width of the phone here, so the value column has
+       nowhere to overflow to; the port block loses its indent to buy the text
+       back the ten pixels. */
+    .raw-anatomy-port { padding-left: 8px; }
+}
+
+/* "what is it made of", on the scope marker. Text rather than a glyph: ‹ and ◈
+   are directions, and this is a question — there is no symbol for it that a
+   first-time visitor reads correctly. 44px because it sits in the marker, which
+   is the one strip a lost person on a phone reaches for. */
+.raw-scope-marker-what {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(77, 249, 255, 0.1);
+    color: var(--di-cyan);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-scope-marker-what:hover,
+.raw-scope-marker-what:focus-visible { background: rgba(77, 249, 255, 0.26); }
+
+/* The empty state had no max-width and had never carried more than one short
+   sentence; the "made of code" line ran the full 1440px of the canvas as a
+   single stretched row. Capped at a readable measure, and the cap belongs to
+   the block rather than to the paragraph so the two buttons centre under it. */
+.raw-empty-state { max-width: min(520px, calc(100vw - 48px)); }
+.raw-empty-state p { line-height: 1.55; }
+
+/* Where the code lives, and — behind one press — the lines themselves. */
+.raw-anatomy-place { margin-top: 8px; }
+
+.raw-anatomy-loc {
+    display: inline-block;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.5);
+}
+
+.raw-anatomy-disclosure {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-left: 4px;
+    padding: 0 10px;
+    border: 0;
+    background: none;
+    color: rgba(244, 247, 251, 0.6);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-anatomy-disclosure:hover,
+.raw-anatomy-disclosure:focus-visible { color: var(--di-cyan); }
+
+.raw-anatomy-code-note {
+    margin: 4px 0 0;
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-anatomy-code-note.is-refusal { color: var(--di-warning); }
+
+.raw-anatomy-code {
+    margin: 6px 0 0;
+    padding: 10px 12px;
+    background: #0a0a0a;
+    border-left: 2px solid rgba(255, 255, 255, 0.14);
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 11px;
+    line-height: 1.5;
+    color: rgba(244, 247, 251, 0.78);
+    /* Sideways inside its own box, never wrapped: wrapped code lies about
+       where its lines end, and the window body must not scroll horizontally. */
+    overflow-x: auto;
+    white-space: pre;
+}
+
+/* The permanent backdrop: the current scope's room, drawn behind the graph.
+   Non-interactive on purpose (for now): the graph owns every pointer, and the
+   room is consequences, not controls — arranging happens in fullscreen. The
+   old opt-in overlay let its canvas take pointer events and painted OVER the
+   graph (later positioned sibling), which is why cards went unreachable the
+   moment it was on; mounting it as the shell's first child and refusing all
+   events removes both failure modes at once. */
+/* The way OUT of the fullscreen room. This button had no base rule at all
+   and rendered as a 21px default-HTML button — invisible against the room on
+   a phone in zen, which made fullscreen a trap (audit 08-21). Same visual
+   family as the topbar-back / zoom controls. */
+.raw-room-exit {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 5;
+    min-height: 44px;
+    padding: 8px 18px;
+    background: rgba(10, 14, 18, 0.82);
+    color: rgba(77, 249, 255, 0.92);
+    border: 1px solid rgba(77, 249, 255, 0.45);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+}
+.raw-room-exit:hover { background: rgba(77, 249, 255, 0.14); }
+.raw-room-exit:focus-visible { outline: 2px solid rgba(77, 249, 255, 0.7); outline-offset: 2px; }
+
+/* The projector cable: /out is a room and nothing else. Fixed and black so a
+   reload flashes dark, not white, on a projector; the viewport shell inside
+   paints its own room. */
+.raw-out-surface {
+    position: fixed;
+    inset: 0;
+    background: #05070c;
+}
+
+.raw-out-message {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 14px;
+}
+
+/* The Monitor: a window that watches a texture wire. The canvas letterboxes
+   inside whatever frame the window is dragged to. */
+.raw-monitor-panel {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: #05070c;
+}
+
+.raw-monitor-panel canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.raw-monitor-panel.is-empty p {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 13px;
+    padding: 0 18px;
+    text-align: center;
+}
+
+/* The view owns its gestures. R3F writes an inline touch-action: auto on
+   the canvas element itself (measured on the S24, 2026-08-20 — a class
+   rule loses to it, hence !important), while its wrapper div carries an
+   inline none. Effective touch-action is the intersection down the
+   ancestor chain, so browser pan/zoom is already blocked; this rule makes
+   the shell and the canvas SAY so too, as defence in depth against R3F
+   changing its inline styles. The drag itself was revived by riding the
+   grabbed object's own pointer capture, not by CSS. */
+.raw-viewport-shell {
+    touch-action: none;
+}
+
+.raw-viewport-shell canvas {
+    touch-action: none !important;
+}
+
+/* The desk's Go button — one big pressable surface, thumb-sized on
+   anything, the press state visible from across a booth. */
+.raw-button-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.raw-button-panel-go {
+    flex: 1;
+    min-height: 64px;
+    border: 1px solid #2c6e4f;
+    border-radius: 6px;
+    background: #0d2018;
+    color: #7dffb8;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    touch-action: none;
+}
+
+.raw-button-panel-go:active {
+    background: #16563a;
+    color: #d2ffe8;
+}
+
+.raw-button-panel-count {
+    color: rgba(244, 247, 251, 0.55);
+    font-size: 11px;
+    text-align: center;
+}
+
+/* A wire that died on release says why, where it died. */
+.raw-wire-notice {
+    position: fixed;
+    transform: translate(-50%, -130%);
+    background: rgba(10, 14, 22, 0.95);
+    border: 1px solid rgba(255, 107, 122, 0.55);
+    color: #ffb3bc;
+    font-family: var(--raw-mono, ui-monospace, monospace);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 3px;
+    pointer-events: none;
+    z-index: 60;
+    max-width: 260px;
+}
+
+/* A fingertip is not a cursor: on coarse pointers every port dot carries an
+   invisible touch halo (~44px total target, Android's minimum), without
+   changing what the eye sees. */
+@media (pointer: coarse) {
+    .raw-graph-port-dot {
+        position: relative;
+    }
+    .raw-graph-port-dot::after {
+        content: '';
+        position: absolute;
+        inset: -14px;
+    }
+}
+
+/* view.list — a list somebody maintains. Rows are controls, not prose, so
+   every target clears the 44px floor the touch audit set: on a phone these
+   are thumbs, and a 24px × next to a 24px ↑ is a coin toss. */
+.raw-list-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.raw-list-group-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(244, 247, 251, 0.14);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+}
+
+.raw-list-group-name {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(244, 247, 251, 0.72);
+}
+
+.raw-list-count {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-list-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.raw-list-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+}
+
+.raw-list-text {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 0;
+    background: rgba(244, 247, 251, 0.04);
+    font: inherit;
+    font-size: 16px;
+    color: #f4f7fb;
+}
+
+.raw-list-text:focus-visible {
+    outline: none;
+    border-color: rgba(110, 231, 249, 0.85);
+}
+
+.raw-list-row-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+}
+
+.raw-list-btn {
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(244, 247, 251, 0.16);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.78);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.raw-list-btn:hover:not(:disabled) { background: rgba(244, 247, 251, 0.08) }
+.raw-list-btn:disabled { opacity: 0.3; cursor: default }
+.raw-list-btn.is-danger:hover { border-color: #ff8a7a; color: #ff8a7a }
+
+.raw-list-move {
+    height: 44px;
+    max-width: 118px;
+    padding: 0 8px;
+    border: 1px solid rgba(244, 247, 251, 0.16);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.78);
+    font: inherit;
+    font-size: 13px;
+}
+
+.raw-list-move option { background: #0d1219; color: #f4f7fb }
+
+.raw-list-add {
+    align-self: flex-start;
+    margin-top: 8px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px dashed rgba(244, 247, 251, 0.24);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.62);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Removing a heading is rarer and more consequential than removing a row, so
+   it must not compete with the row controls for the eye. It keeps the full
+   44px hit area — it just stops wearing a box until you reach for it. */
+.raw-list-group-head .raw-list-btn {
+    border-color: transparent;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-list-group-head .raw-list-btn:hover {
+    border-color: #ff8a7a;
+    color: #ff8a7a;
+}
+
+.raw-list-add:hover { border-style: solid; color: #f4f7fb }
+.raw-list-add.is-group { border-color: rgba(110, 231, 249, 0.4); color: rgba(110, 231, 249, 0.9) }
+
+/* The controls stack under the text on a phone rather than squeezing a
+   44px row into 90px of leftover width. */
+@media (max-width: 520px) {
+    .raw-list-row { align-items: stretch; flex-wrap: wrap }
+    .raw-list-text { flex-basis: 100% }
+    .raw-list-move { flex: 1; max-width: none }
+}
+
+/* The one line a portless card can afford. Clipped rather than wrapped: the
+   body is a single 22px row and its height is the geometry the wires are
+   drawn from, so this must never push it taller. */
+.raw-graph-node-summary {
+    position: absolute;
+    inset: 0 10px auto 10px;
+    top: 4px;
+    font-size: 11px;
+    line-height: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(244, 247, 251, 0.5);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+
+/* The Raw topbar overflowed a 390px phone BEFORE the room count was added:
+   measured at 433px of content in a 390px bar, which pushed the ⋯ button clean
+   off the right edge — and ⋯ is the only route on a phone to "Save to <space>",
+   Spaces, Wiki and Home. A canvas you cannot save from is a canvas that loses
+   your work, and nothing failed: check:toolbar-overlap tests sibling overlap,
+   not scrollWidth, so a row that simply ends past the edge passes.
+   Both words drop, never the controls: the arrow still navigates (aria-label
+   carries "Back to projects"), the number still toggles the outliner and still
+   announces "N nodes". Buys 83px, which the row spends on staying whole. */
+@media (max-width: 640px) {
+    .raw-topbar-word {
+        display: none;
+    }
 }

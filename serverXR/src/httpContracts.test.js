@@ -937,6 +937,150 @@ describe('server write contracts', () => {
         expect(sharedState.spaces[1]).toMatch(/^sandbox-/)
     })
 
+    // The cookie the browser keeps and the expiry the signed payload claims are
+    // two different numbers, and they used to disagree: setAuthSessionCookie
+    // always stamped the 12h account ttl while guest sessions were minted for
+    // GUEST_SESSION_TTL_MS (a week). The browser dropped the cookie overnight,
+    // so every returning guest was a brand-new subject — new sandbox, and any
+    // space an invite had granted them gone with it. A six-day workshop lost a
+    // room of people's work every night. Both numbers, both directions.
+    it('stamps every session cookie with the ttl its own payload claims', async () => {
+        const guestTtlMs = 7 * 24 * 60 * 60 * 1000
+        const accountTtlMs = 12 * 60 * 60 * 1000
+        const editorToken = 'cookie-ttl-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                GUEST_SPACES: '',
+                SANDBOX_TTL_MS: String(guestTtlMs),
+                AUTH_SESSION_TTL_MS: String(accountTtlMs),
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'ttl-space'
+            }
+        })
+
+        const maxAgeOf = (response) => {
+            const header = response.headers.get('set-cookie') || ''
+            const match = /max-age=(\d+)/i.exec(header)
+            expect(match, `no Max-Age in Set-Cookie: ${header}`).toBeTruthy()
+            return Number(match[1])
+        }
+        // Max-Age is what the browser obeys; expiresAt is what the payload
+        // promises. Anything more than a minute apart is the bug.
+        const expectAgreement = (maxAgeSeconds, expiresAt) => {
+            expect(Number.isFinite(Number(expiresAt))).toBe(true)
+            const payloadSeconds = Math.round((Number(expiresAt) - Date.now()) / 1000)
+            expect(Math.abs(payloadSeconds - maxAgeSeconds)).toBeLessThan(60)
+        }
+
+        // A guest: cookie must last the guest ttl (the week its sandbox lives),
+        // not the 12h account ttl.
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestState = await guest.json()
+        expect(guestState.type).toBe('guest')
+        const guestMaxAge = maxAgeOf(guest)
+        expect(guestMaxAge).toBe(guestTtlMs / 1000)
+        expectAgreement(guestMaxAge, guestState.expiresAt)
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+
+        // An account: still its own shorter ttl — the fix must not hand a 12h
+        // payload a week-long cookie in the other direction.
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        expect(login.status).toBe(200)
+        const loginState = await login.json()
+        const accountMaxAge = maxAgeOf(login)
+        expect(accountMaxAge).toBe(accountTtlMs / 1000)
+        expectAgreement(accountMaxAge, loginState.expiresAt)
+        const ownerCookie = (login.headers.get('set-cookie') || '').split(';')[0]
+
+        // Redeeming an invite re-mints the guest session with the granted space
+        // in scope — also on the guest ttl, so the grant does not quietly
+        // expire with the cookie hours after it was handed out.
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+            body: JSON.stringify({ label: 'TTL Space', slug: 'ttl-space' })
+        })
+        expect(created.status).toBe(201)
+        const minted = await fetch(`${server.baseUrl}/api/spaces/ttl-space/invites`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+            body: JSON.stringify({ label: 'camp' })
+        })
+        expect(minted.status).toBe(201)
+        const { token: inviteToken } = await minted.json()
+
+        const redeemed = await fetch(`${server.baseUrl}/api/invites/redeem`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({ token: inviteToken })
+        })
+        expect(redeemed.status).toBe(200)
+        await expect(redeemed.json()).resolves.toMatchObject({ granted: true })
+        expect(maxAgeOf(redeemed)).toBe(guestTtlMs / 1000)
+
+        // And the re-minted cookie really is the week-long one the guest keeps.
+        const grantedCookie = (redeemed.headers.get('set-cookie') || '').split(';')[0]
+        const back = await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: grantedCookie } })
+        const backState = await back.json()
+        expect(backState.subject).toBe(guestState.subject)
+        expect(backState.spaces).toContain('ttl-space')
+    })
+
+    // A venue is one public address and many people. Keying the upload throttle
+    // on the address gave a whole room a single 60-per-10-minutes budget, so the
+    // first few uploaders spent everyone's and the rest got 429 on the day the
+    // class collects photos. Budgets belong to people.
+    it('gives two people behind one address independent upload budgets', async () => {
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                GUEST_SPACES: ''
+            }
+        })
+
+        // One venue wifi: the same forwarded client IP for both visitors.
+        const venue = { 'X-Forwarded-For': '203.0.113.7, 10.0.0.1' }
+
+        const newGuest = async () => {
+            const response = await fetch(`${server.baseUrl}/api/auth/session`, { headers: venue })
+            const state = await response.json()
+            expect(state.type).toBe('guest')
+            return {
+                cookie: (response.headers.get('set-cookie') || '').split(';')[0],
+                sandbox: state.sandboxSpaceId
+            }
+        }
+
+        const first = await newGuest()
+        const second = await newGuest()
+        expect(first.sandbox).not.toBe(second.sandbox)
+
+        // The limiter runs before the upload route validates anything, so an
+        // empty POST still spends budget — which is exactly what is being
+        // counted here. Only the 429 matters, not the rejection status.
+        const upload = (guest) => fetch(`${server.baseUrl}/api/spaces/${guest.sandbox}/assets`, {
+            method: 'POST',
+            headers: { ...venue, Cookie: guest.cookie }
+        })
+
+        // Spend the full window as the first person: 60 through, the 61st out.
+        const statuses = []
+        for (let i = 0; i < 61; i++) statuses.push((await upload(first)).status)
+        expect(statuses.slice(0, 60).every((status) => status !== 429)).toBe(true)
+        expect(statuses[60]).toBe(429)
+
+        // Same wifi, different person — untouched.
+        const neighbour = await upload(second)
+        expect(neighbour.status).not.toBe(429)
+    })
+
     it('accounts reach their own persistent sandbox without cookie scope, and admins can purge stale guest sandboxes', async () => {
         const editorToken = 'sandbox-editor-token'
         const server = await startServer({

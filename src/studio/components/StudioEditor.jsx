@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMediaQuery, useTheme } from '@mui/material'
 import { Vector3 } from 'three'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
+import { currentAuthor } from '../../project/authorship.js'
+import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
@@ -14,8 +16,9 @@ import { defaultWorldState, normalizeProjectDocument } from '../../shared/projec
 import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
 import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
-import { buildAppSpacePath } from '../../utils/spaceRouting.js'
-import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildAppSpacePath, buildPublicProjectPath } from '../../utils/spaceRouting.js'
+import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
@@ -116,9 +119,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         userIdStorageKey: 'dii.studio.userId',
         legacyDisplayNameStorageKeys: ['dii.beta.displayName'],
         legacyUserIdStorageKeys: ['dii.beta.userId'],
-        anonymousLabel: 'Studio',
+        anonymousLabel: 'Guest',
         userIdPrefix: 'studio-user'
     })
+    const { requestDelete, deleteConfirm } = useDeleteConfirm()
     const document = state.document
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
@@ -277,6 +281,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const handleCreateEntity = (type, asset = null, position = null) => {
         const entity = createEntityOfType(type, {
             name: asset?.name ? asset.name.replace(/\.[^.]+$/, '') : undefined,
+            createdBy: currentAuthor(displayName),
             components: {
                 transform: {
                     position: position || getViewPlacement(controlsRef, entities.length)
@@ -294,7 +299,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         applyLocalOps({
             type: 'createEntity',
             payload: { entity }
-        }, { activityMessage: `Created ${entity.type} entity.` })
+        }, { activityMessage: `Created ${entity.type} object.` })
         dispatch({ type: 'select-entity', entityId: entity.id })
     }
 
@@ -352,7 +357,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             ? 'It will be removed from this project and from the space files.'
             : item.inSpace ? 'It will be removed from the space files.' : 'It will be removed from this project.'
         const usedNote = item.usedByCount
-            ? ` ${item.usedByCount} entit${item.usedByCount === 1 ? 'y uses' : 'ies use'} it in this scene and will lose their file.`
+            ? ` ${item.usedByCount} object${item.usedByCount === 1 ? ' uses' : 's use'} it here and will lose their file.`
             : ''
         if (!window.confirm(`Delete "${item.name || item.id}"? ${scopeNote}${usedNote}`)) return
         try {
@@ -423,24 +428,34 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         if (!files.length) return
         try {
             for (const file of files) {
-                if (isPdfAsset(file)) {
-                    await importPdfAsImagePages(file)
-                    continue
+                // One rejected file must not swallow the rest of the selection,
+                // and it must say why — the server refuses images whose EXIF it
+                // cannot strip (HEIC), and silence there looks like a dead button.
+                try {
+                    if (isPdfAsset(file)) {
+                        await importPdfAsImagePages(file)
+                        continue
+                    }
+                    const uploadFile = await requestAssetUploadFile(file)
+                    if (!uploadFile) continue
+                    const asset = await uploadProjectAsset(projectId, uploadFile)
+                    const wasOptimized = uploadFile !== file
+                    const activityMessage = wasOptimized
+                        ? `Optimized ${file.name} from ${formatAssetSize(file.size)} to ${formatAssetSize(uploadFile.size)} and imported it.`
+                        : `Imported ${file.name}.`
+                    applyLocalOps({
+                        type: 'upsertAsset',
+                        payload: { asset }
+                    }, { activityMessage })
+                    if (isSupportAssetFile(file)) continue
+                    const entityAsset = wasOptimized ? { ...asset, name: file.name } : asset
+                    handleCreateEntity(detectEntityTypeFromFile(file), entityAsset, position)
+                } catch (error) {
+                    applyLocalOps([], {
+                        activityMessage: `Could not import ${file.name || 'file'}: ${error.message}`,
+                        activityLevel: 'error'
+                    })
                 }
-                const uploadFile = await requestAssetUploadFile(file)
-                if (!uploadFile) continue
-                const asset = await uploadProjectAsset(projectId, uploadFile)
-                const wasOptimized = uploadFile !== file
-                const activityMessage = wasOptimized
-                    ? `Optimized ${file.name} from ${formatAssetSize(file.size)} to ${formatAssetSize(uploadFile.size)} and imported it.`
-                    : `Imported ${file.name}.`
-                applyLocalOps({
-                    type: 'upsertAsset',
-                    payload: { asset }
-                }, { activityMessage })
-                if (isSupportAssetFile(file)) continue
-                const entityAsset = wasOptimized ? { ...asset, name: file.name } : asset
-                handleCreateEntity(detectEntityTypeFromFile(file), entityAsset, position)
             }
         } finally {
             refreshSpaceAssets()
@@ -459,16 +474,24 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const handleDeleteSelected = () => {
         const targets = selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : [])
         if (!targets.length) return
-        applyLocalOps(
-            targets.map((entity) => ({ type: 'deleteEntity', payload: { entityId: entity.id } })),
-            {
-                activityMessage: targets.length === 1
-                    ? `Deleted ${targets[0].name}.`
-                    : `Deleted ${targets.length} entities.`,
-                activityLevel: 'warning'
+        // Nothing is applied until the confirm comes back: a delete is the one
+        // edit the person who loses the work cannot undo, because undo history
+        // is per-client.
+        requestDelete(
+            targets.map((entity) => ({ id: entity.id, name: entity.name, author: entity.createdBy })),
+            () => {
+                applyLocalOps(
+                    targets.map((entity) => ({ type: 'deleteEntity', payload: { entityId: entity.id } })),
+                    {
+                        activityMessage: targets.length === 1
+                            ? `Deleted ${targets[0].name}.`
+                            : `Deleted ${targets.length} objects.`,
+                        activityLevel: 'warning'
+                    }
+                )
+                dispatch({ type: 'select-entity', entityId: null })
             }
         )
-        dispatch({ type: 'select-entity', entityId: null })
     }
 
     // Build a new entity from any source (selected entity or clipboard), offset
@@ -476,14 +499,14 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const handleDuplicateSelected = () => {
         const targets = topLevelTargets(entities, selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : []))
         if (!targets.length) return
-        const cloneGroups = targets.map((target) => cloneSubtree(collectSubtree(entities, target.id)))
+        const cloneGroups = targets.map((target) => cloneSubtree(collectSubtree(entities, target.id), currentAuthor(displayName)))
         const clones = cloneGroups.flat()
         applyLocalOps(
             clones.map((entity) => ({ type: 'createEntity', payload: { entity } })),
             {
                 activityMessage: targets.length === 1
                     ? `Duplicated ${targets[0].name}.`
-                    : `Duplicated ${targets.length} entities.`
+                    : `Duplicated ${targets.length} objects.`
             }
         )
         dispatch({ type: 'select-entities', entityIds: cloneGroups.map((group) => group[0].id) })
@@ -500,14 +523,14 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const handlePasteClipboard = () => {
         const source = clipboardRef.current
         if (!source?.subtrees?.length) return
-        const cloneGroups = source.subtrees.map((subtree) => cloneSubtree(subtree))
+        const cloneGroups = source.subtrees.map((subtree) => cloneSubtree(subtree, currentAuthor(displayName)))
         const clones = cloneGroups.flat()
         applyLocalOps(
             clones.map((entity) => ({ type: 'createEntity', payload: { entity } })),
             {
                 activityMessage: cloneGroups.length === 1
                     ? `Pasted ${source.subtrees[0][0].name}.`
-                    : `Pasted ${cloneGroups.length} entities.`
+                    : `Pasted ${cloneGroups.length} objects.`
             }
         )
         dispatch({ type: 'select-entities', entityIds: cloneGroups.map((group) => group[0].id) })
@@ -557,6 +580,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         const centroid = getSelectionCentroid(targets)
         const group = createEntityOfType('group', {
             name: 'Group',
+            createdBy: currentAuthor(displayName),
             components: { transform: { position: centroid, rotation: [0, 0, 0], scale: [1, 1, 1] } }
         })
         const ops = [{ type: 'createEntity', payload: { entity: group } }]
@@ -578,7 +602,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 }
             })
         }
-        applyLocalOps(ops, { activityMessage: `Grouped ${targets.length} entities.` })
+        applyLocalOps(ops, { activityMessage: `Grouped ${targets.length} objects.` })
         dispatch({ type: 'select-entity', entityId: group.id })
     }
 
@@ -862,9 +886,12 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
 
     const handleCopyShareLink = async () => {
         const isLiveProject = spaceMeta?.publishedProjectId === projectId
+        // Share means the VIEWER address. The non-live branch used to copy the
+        // editor URL — the recipient hit a sign-in wall (doors audit 2026-08-21).
+        // /p/ is gated only by the space's isPublic, same as the live link.
         const sharePath = isLiveProject
             ? buildAppSpacePath(resolvedSpaceId)
-            : buildStudioProjectPath(projectId, resolvedSpaceId)
+            : buildPublicProjectPath(resolvedSpaceId, projectId)
         const url = `${window.location.origin}${sharePath}`
         try {
             if (navigator.clipboard?.writeText) {
@@ -1026,7 +1053,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         : [
             {
                 id: 'worldState',
-                label: 'World',
+                label: 'Scene',
                 fields: [
                     { label: 'Background', component: 'worldState', path: ['backgroundColor'], type: 'color' },
                     { label: 'Grid Visible', component: 'worldState', path: ['gridVisible'], type: 'checkbox' },
@@ -1107,7 +1134,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onImportProjectFile={handleImportProjectFile}
             onEnterXr={xr.handleEnterXrSession}
             onExitXr={xr.handleExitXrSession}
-            onBackToHub={() => navigateToStudioPath(buildStudioHubPath(resolvedSpaceId))}
+            onBackToHub={() => navigateToStudioPath(buildSpaceProjectsPath(resolvedSpaceId))}
+            onOpenNodeEditor={() => navigateToStudioPath(buildRawProjectPath(projectId, resolvedSpaceId))}
             onCameraViewChange={handleCameraViewChange}
             onTransformCommit={handleTransformCommit}
             transformOp={transformOp}
@@ -1134,6 +1162,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 onUploadOriginal={() => finishAssetOptimizationPrompt(assetOptimizationPrompt?.file || null)}
                 onCancel={() => finishAssetOptimizationPrompt(null)}
             />
+            {deleteConfirm}
         </>
     )
 }

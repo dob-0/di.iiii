@@ -40,7 +40,7 @@ export default function TermsPage() {
                 <section className="legal-section">
                     <h2>the code is open</h2>
                     <p>
-                        The di.iiii platform code is licensed under the GNU AGPL-3.0. Anyone may
+                        di.iiii’s code is licensed under the GNU AGPL-3.0. Anyone may
                         read, use, modify, and self-host it; anyone who hosts a modified copy must
                         publish their changes under the same license — the commons can grow but not
                         be enclosed.

@@ -32,10 +32,11 @@ import ModelObject from '../objectComponents/ModelObject.jsx'
 import AudioObject from '../objectComponents/AudioObject.jsx'
 import Text2DObject from '../objectComponents/Text2DObject.jsx'
 import Text3DObject from '../objectComponents/Text3DObject.jsx'
-import PortalObject from '../project/viewport/PortalObject.jsx'
+import PortalObject, { portalHref } from '../project/viewport/PortalObject.jsx'
 import WorldEnvironment from '../project/viewport/WorldEnvironment.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../project/viewport/timelinePlayback.js'
+import { ringTourYaw } from '../project/viewport/ringTour.js'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
 import {
     WALK_MAX_SPEED, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
@@ -43,6 +44,10 @@ import {
     WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
     BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
 } from './walkModeConfig.js'
+import { isTypingTarget } from './walkKeyboard.js'
+import { createPortalWalkThrough } from './portalWalkThrough.js'
+import { appNavigate } from '../utils/appNavigate.js'
+import { markArriveWalking } from './arriveWalking.js'
 import './liveProjectScene.css'
 
 const PARTICLE_COUNT = 900
@@ -173,6 +178,9 @@ function EntityVisual({ entity, assetMap }) {
                 muted={media.muted !== false}
                 volume={media.volume}
                 loop={media.loop !== false}
+                spatial={media.spatial === true}
+                distance={media.distance}
+                maxDistance={media.maxDistance}
             />
         )
     case 'model':
@@ -336,19 +344,34 @@ function AnimatedEntity({ entity, assetMap, childMap = null }) {
 function GateGlow({ entity }) {
     const ringRef = useRef(null)
     const pos = entity.components?.transform?.position || [0, 0, 0]
+    // The gate's own authored colour, not alarm-red: in a room whose doors are
+    // colour-coded wayfinding, a hardcoded red pulse floating at head height
+    // read as an error marker sitting among the doors.
+    const color = entity.components?.appearance?.color || '#ffb27a'
 
     useFrame((state) => {
         const ring = ringRef.current
         if (!ring) return
         const t = state.clock.getElapsedTime()
-        const pulse = 0.55 + Math.sin(t * 1.4) * 0.2
+        const pulse = 0.35 + Math.sin(t * 1.4) * 0.15
         ring.material.opacity = pulse
     })
 
+    // depthWrite off + polygon offset: a flat ring 6cm over the floor z-fights
+    // into broken dashes at the grazing angles walk mode lives at.
     return (
-        <mesh ref={ringRef} position={[pos[0], pos[1] + 1.2, pos[2]]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh ref={ringRef} position={[pos[0], pos[1] + 0.1, pos[2]]} rotation={[Math.PI / 2, 0, 0]}>
             <ringGeometry args={[1.3, 1.55, 48]} />
-            <meshBasicMaterial color={0xd90000} transparent opacity={0.6} toneMapped={false} side={THREE.DoubleSide} />
+            <meshBasicMaterial
+                color={color}
+                transparent
+                opacity={0.4}
+                toneMapped={false}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+                polygonOffset
+                polygonOffsetFactor={-2}
+            />
         </mesh>
     )
 }
@@ -387,7 +410,7 @@ function AmbientField({ center }) {
 
 // Free-roam walk: WASD + arrows move/turn; desktop uses pointer lock for look;
 // mobile uses touch outside the joystick zone for look.
-function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
+function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
@@ -405,13 +428,19 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
     const joyBaseRef = useRef({ x: 0, y: 0 })
     const onLockChangeRef = useRef(onLockChange)
     onLockChangeRef.current = onLockChange
+    const onPortalReachedRef = useRef(onPortalReached)
+    onPortalReachedRef.current = onPortalReached
     const flyRef = useRef(flyMode)
     flyRef.current = flyMode
+    // One latch for the lifetime of the walker, not one per frame — see
+    // portalWalkThrough.js for what it remembers and why.
+    const [portalWalk] = useState(createPortalWalkThrough)
 
     useEffect(() => {
         const keys = keysRef.current
         const moveKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'q', 'e', 'c']
         const onKeyDown = (e) => {
+            if (isTypingTarget(e.target)) return
             const key = e.key.toLowerCase()
             if (!moveKeys.includes(key)) return
             if (key === ' ') e.preventDefault()
@@ -706,10 +735,20 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
     }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef, isArActive, arTouchElRef])
 
     useFrame((_, delta) => {
+        const player = playerRef.current
+
+        // Above the isPresenting return deliberately: this reads the pose and
+        // never writes it, and XrLocomotion keeps playerRef in sync for the
+        // whole session -- so a headset visitor walks through a ring the same
+        // way, which is the only way they can, having no cursor to click it with.
+        if (onPortalReachedRef.current) {
+            const reached = portalWalk.step(entities, player.x, player.z)
+            if (reached) onPortalReachedRef.current(reached)
+        }
+
         // XrLocomotion owns movement + camera during a session.
         if (isPresenting) return
         const keys = keysRef.current
-        const player = playerRef.current
         const joy = joystickRef?.current || { x: 0, y: 0 }
         const fly = flyRef.current
         if (player.pitch === undefined) player.pitch = 0
@@ -814,6 +853,40 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         }
     })
 
+    return null
+}
+
+// Guided turn around a ring of objects: `worldState.ringTour` holds the visitor
+// on one stop long enough to watch it, eases round to the next, and repeats --
+// so a piece arranged in a circle shows itself to someone who touches nothing.
+//
+// It drives `playerRef.yaw`, which is the ONE control that reaches both
+// surfaces: the desktop Walker builds its lookAt from it, and XrLocomotion
+// writes it onto the XROrigin's rotation. A headset's own head tracking is
+// added on top and is never overridden -- rotating the origin is the only turn
+// available in XR, and it turns the room around a still body, so keep `turn`
+// slow and `dwell` long. The visitor always wins: the first yaw change we did
+// not make ourselves (mouse-look, thumbstick turn) hands the view over for good.
+const TOUR_YAW_EPSILON = 0.01
+function RingTour({ playerRef, config }) {
+    const startedAt = useRef(null)
+    const surrendered = useRef(false)
+    const lastApplied = useRef(null)
+
+    useFrame((state) => {
+        const player = playerRef.current
+        if (!player || surrendered.current) return
+        if (lastApplied.current !== null && Math.abs(player.yaw - lastApplied.current) > TOUR_YAW_EPSILON) {
+            surrendered.current = true
+            return
+        }
+        const now = state.clock.getElapsedTime()
+        if (startedAt.current === null) startedAt.current = now
+        const yaw = ringTourYaw(now - startedAt.current, config)
+        if (yaw === null) return
+        player.yaw = yaw
+        lastApplied.current = yaw
+    })
     return null
 }
 
@@ -1257,9 +1330,36 @@ export default function LiveProjectScene({
     showEntities = true,
     onExit = null,
     exitLabel = '← Exit',
-    title = ''
+    title = '',
+    // --- Four optional seams, added for the jam surface (JamSurface.jsx).
+    // Every one of them defaults to exactly what this component did before,
+    // so nothing that already renders a walk-mode scene changes behaviour.
+    //
+    // `document`: a caller that already holds the live project document hands
+    // it over instead of making this component fetch a second copy and open a
+    // second SSE stream for the same project. A surface that both WRITES and
+    // walks (the jam) necessarily already has a sync of its own.
+    document: providedDocument = null,
+    // `walkerRef`: publishes the walker's pose object so a caller can read
+    // where the visitor is standing and what they are looking at. The SAME
+    // object, never a copy — see the Object.assign note in the spawn effect
+    // below, and livePlayerRef.test.js, which guards that identity.
+    walkerRef = null,
+    // `showModeControls`: the Fly toggle and the Enter VR/AR buttons. They are
+    // functional controls, not branding, which is why they survive
+    // showChrome={false} — but a surface whose whole design is one thumb-sized
+    // control needs to be able to say "not here". Movement (the joystick) is
+    // never hidden by this: it is the only way a phone can move at all.
+    showModeControls = true,
+    // `sceneExtras`: three.js children rendered inside this component's Canvas,
+    // after the project's own objects. The jam draws a marker where each other
+    // person is standing, and a marker in the scene has to be IN the scene.
+    sceneExtras = null
 }) {
-    const { doc, loadError, retryDocument } = useLiveProjectDocument(projectId)
+    const fetched = useLiveProjectDocument(providedDocument ? null : projectId)
+    const doc = providedDocument || fetched.doc
+    const loadError = providedDocument ? false : fetched.loadError
+    const retryDocument = fetched.retryDocument
     const xr = useXrAr()
     const [nearestLabel, setNearestLabel] = useState(null)
     const [isLocked, setIsLocked] = useState(false)
@@ -1294,6 +1394,18 @@ export default function LiveProjectScene({
     // The ref (not the object) — worldState.spawn replaces playerRef.current.
     if (import.meta.env.DEV && typeof window !== 'undefined') window.__diiWalkerRef = playerRef
 
+    // Hand the caller the pose object itself, not a snapshot of it. A surface
+    // that places something "where I am looking" has to read the pose at the
+    // moment of the tap, and the pose is mutated in place every frame — so a
+    // copy would be stale by the time it was read, and a per-frame callback
+    // would cost a React render 60 times a second to answer a question nobody
+    // is asking until a button is pressed.
+    useEffect(() => {
+        if (!walkerRef) return undefined
+        walkerRef.current = playerRef.current
+        return () => { walkerRef.current = null }
+    }, [walkerRef])
+
     // Data-driven arrival: a project can author worldState.spawn to place/aim the
     // visitor on entry (otherwise the default above). Applied once per project load.
     const spawnAppliedRef = useRef(null)
@@ -1324,11 +1436,14 @@ export default function LiveProjectScene({
     }, [xr.domOverlayRoot])
 
     useEffect(() => {
-        if (!interactive) return undefined
-        const onKey = (e) => { if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f) }
+        if (!interactive || !showModeControls) return undefined
+        const onKey = (e) => {
+            if (isTypingTarget(e.target)) return
+            if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f)
+        }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [interactive])
+    }, [interactive, showModeControls])
 
     const entities = useMemo(() => doc?.entities || [], [doc?.entities])
     // Legacy-imported projects store assets with an empty `url` field (the
@@ -1398,10 +1513,28 @@ export default function LiveProjectScene({
         Object.assign(playerRef.current, { x: pos[0], z: pos[2] + 6, yaw: Math.PI, pitch: 0 })
     }, [gateEntity, interactive])
 
+    // Walking into a portal goes where clicking it goes: same portalHref, same
+    // SPA navigation. Only the verb changes, and only in walk mode -- Walker is
+    // the one place this is wired, and Walker only exists when `interactive`.
+    const handlePortalReached = useCallback((entity) => {
+        const reference = entity?.components?.reference || {}
+        const href = portalHref(reference.spaceId, reference.projectId)
+        if (href) {
+            markArriveWalking()
+            appNavigate(href)
+        }
+    }, [])
+
     const worldState = doc?.worldState || {}
     const ambient = worldState.ambientLight || { color: '#ffffff', intensity: 0.85 }
     const directional = worldState.directionalLight || { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] }
     const backgroundColor = worldState.backgroundColor || '#0a1118'
+    // Authored fog opens the walk-mode horizon for vast scenes; the far plane
+    // tracks it so the opened distance is actually rendered. Defaults preserve
+    // the close-world look every existing space was composed for.
+    const fogNear = worldState.fog?.near ?? 8
+    const fogFar = worldState.fog?.far ?? 50
+    const cameraFar = Math.min(600, Math.max(200, fogFar * 1.15))
     // Zone tint sources for atmosphere blend: each portal's position + authored colour.
     const atmosphereZones = useMemo(() => entities
         .filter((e) => e.type === 'portal')
@@ -1415,7 +1548,7 @@ export default function LiveProjectScene({
             <Canvas
                 key={canvasKey}
                 className="live-scene-canvas"
-                camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: 200 }}
+                camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: cameraFar }}
                 dpr={[1, 1.8]}
                 gl={{ antialias: true }}
                 onCreated={({ gl }) => bindContextGuard(gl)}
@@ -1423,7 +1556,7 @@ export default function LiveProjectScene({
             >
                 <XR store={xr.xrStore}>
                 <color attach="background" args={[backgroundColor]} />
-                <fog attach="fog" args={[backgroundColor, 8, 50]} />
+                <fog attach="fog" args={[backgroundColor, fogNear, fogFar]} />
                 {interactive && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
                     <AtmosphereBlender zones={atmosphereZones} playerRef={playerRef} baseBg={backgroundColor} />
                 ) : null}
@@ -1446,10 +1579,12 @@ export default function LiveProjectScene({
                     </SceneEntityErrorBoundary>
                 ))}
                 {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
+                {sceneExtras}
                 {interactive ? (
                     <Walker
                         playerRef={playerRef}
                         onNearestZone={setNearestLabel}
+                        onPortalReached={handlePortalReached}
                         entities={entities}
                         bounds={bounds}
                         joystickRef={joystickRef}
@@ -1465,6 +1600,9 @@ export default function LiveProjectScene({
                     <IdleOrbit center={center} />
                 )}
                 {interactive && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
+                {interactive && worldState.ringTour?.enabled ? (
+                    <RingTour playerRef={playerRef} config={worldState.ringTour} />
+                ) : null}
                 </XR>
             </Canvas>
 
@@ -1481,10 +1619,10 @@ export default function LiveProjectScene({
                         {interactive && isMobile && (
                             <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
                         )}
-                        {interactive && isMobile && flyMode && (
+                        {interactive && isMobile && flyMode && showModeControls && (
                             <VerticalTouchControls vertTouchRef={vertTouchRef} />
                         )}
-                        {interactive && (
+                        {interactive && showModeControls && (
                             <button
                                 type="button"
                                 className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
@@ -1527,7 +1665,7 @@ export default function LiveProjectScene({
                 on `interactive` -- a purely decorative background (e.g.
                 Studio Hub's) has no Walker/locomotion wired up to make a
                 session usable. */}
-            {interactive && (xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
+            {interactive && showModeControls && (xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
                 <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, zIndex: 11 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
                         {xr.supportedXrModes.vr && (

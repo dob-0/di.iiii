@@ -66,13 +66,13 @@ describe('StructurePanel rename and runtime toggles', () => {
         const { onRenameEntity } = renderFull()
 
         fireEvent.doubleClick(screen.getByText('Visible'))
-        const input = screen.getByLabelText('Entity name')
+        const input = screen.getByLabelText('Object name')
         fireEvent.change(input, { target: { value: 'Hero Box' } })
         fireEvent.keyDown(input, { key: 'Enter' })
         expect(onRenameEntity).toHaveBeenCalledWith('visible', 'Hero Box')
 
         fireEvent.doubleClick(screen.getByText('Locked'))
-        const second = screen.getByLabelText('Entity name')
+        const second = screen.getByLabelText('Object name')
         fireEvent.change(second, { target: { value: 'Discarded' } })
         fireEvent.keyDown(second, { key: 'Escape' })
         expect(onRenameEntity).toHaveBeenCalledTimes(1)

@@ -47,7 +47,7 @@ const HINTS = {
     bloom: 'additive glow shells, not a post-process — also drives how hard the sphere lights the room',
     fluidScale: 'size of the pattern ON the sphere, independent of the sphere itself',
     haloTint: '0 = white halo and white room · 1 = the sphere’s own colour spilling everywhere',
-    strobe: 'a pulse running the colonnade one column at a time, partway through the scene'
+    strobe: 'a pulse running the colonnade one column at a time, partway through the piece'
 }
 
 export default function DispersionPanel() {

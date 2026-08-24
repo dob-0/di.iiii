@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { buildRawHubPath } from '../../raw/utils/rawRouting.js'
+import { buildRawProjectsPath } from '../../raw/utils/rawRouting.js'
 import { buildStudioHubPath } from '../../studio/utils/studioRouting.js'
 import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRouting.js'
 
@@ -259,7 +259,7 @@ export function OperatorLinkCard({ label, href }) {
 export const buildSpaceRouteBundle = (spaceId) => ({
     publicPath: buildAppSpacePath(spaceId),
     studioPath: buildStudioHubPath(spaceId),
-    rawPath: buildRawHubPath(spaceId),
+    rawPath: buildRawProjectsPath(spaceId),
     adminPath: buildPreferencesPath(spaceId)
 })
 
@@ -294,21 +294,21 @@ export function SpacePreviewRow({ space, isActive, onOpenRoute, onCopy }) {
                     className="preferences-inline-action"
                     onClick={() => onOpenRoute?.(routes?.publicPath)}
                 >
-                    Public
+                    View live
                 </button>
                 <button
                     type="button"
                     className="preferences-inline-action"
                     onClick={() => onOpenRoute?.(routes?.studioPath)}
                 >
-                    Studio
+                    Projects
                 </button>
                 <button
                     type="button"
                     className="preferences-inline-action"
                     onClick={() => onOpenRoute?.(routes?.rawPath)}
                 >
-                    Raw
+                    Nodes
                 </button>
                 <button
                     type="button"

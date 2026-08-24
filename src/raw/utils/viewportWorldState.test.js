@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createEdge, createNode } from '../../project/nodeRegistry.js'
 import { createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
-import { getRawWorldBackgroundColor, pickActiveTypeNode, resolveScopeWorldNode } from './viewportWorldState.js'
+import { getRawWorldBackgroundColor, pickActiveTypeNode, resolveSceneLighting, resolveScopeWorldNode } from './viewportWorldState.js'
 
 describe('resolveScopeWorldNode', () => {
     const nodes = [
@@ -27,8 +27,43 @@ describe('resolveScopeWorldNode', () => {
         expect(resolveScopeWorldNode(nodes, 'world-1', {}).id).toBe('world-1')
     })
 
-    it('returns null in a non-world scope with no world children', () => {
-        expect(resolveScopeWorldNode(nodes, 'root-child', {})).toBeNull()
+    // Changed deliberately 2026-08-19 (was: returns null here). A scope with
+    // no World of its own — standing inside a 3D Desk or a Studio — is still
+    // somewhere you look around from, and returning null gated the whole 3D
+    // surface off, so entering a desk blanked the stage. Now the nearest
+    // ancestor's World lights the room you are standing in.
+    it('falls back to the nearest ancestor world when the scope has none of its own', () => {
+        expect(resolveScopeWorldNode(nodes, 'root-child', {}).id).toBe('world-1')
+    })
+
+    it('still honours the live marker of the ancestor it fell back to', () => {
+        expect(resolveScopeWorldNode(nodes, 'root-child', { '': 'world-2' }).id).toBe('world-2')
+    })
+
+    it('prefers a world in the scope itself over an ancestor\'s', () => {
+        const nested = [
+            ...nodes,
+            { id: 'desk', typeId: 'universe.desk.3d', parentId: null, values: {} },
+            { id: 'desk-world', typeId: 'universe.world', parentId: 'desk', values: {} }
+        ]
+        expect(resolveScopeWorldNode(nested, 'desk', {}).id).toBe('desk-world')
+    })
+
+    it('returns null when no ancestor has a world at all', () => {
+        const worldless = [
+            { id: 'a', typeId: 'math.add', parentId: null, values: {} },
+            { id: 'b', typeId: 'math.add', parentId: 'a', values: {} }
+        ]
+        expect(resolveScopeWorldNode(worldless, 'b', {})).toBeNull()
+    })
+
+    // A damaged document must not hang the viewport.
+    it('survives a parentId cycle', () => {
+        const cyclic = [
+            { id: 'x', typeId: 'math.add', parentId: 'y', values: {} },
+            { id: 'y', typeId: 'math.add', parentId: 'x', values: {} }
+        ]
+        expect(resolveScopeWorldNode(cyclic, 'x', {})).toBeNull()
     })
 })
 
@@ -137,5 +172,24 @@ describe('getRawWorldBackgroundColor', () => {
             workspaceState: { activeNodeIdByTypeScope: { 'world.background::my-world': 'bg-marked' } }
         }
         expect(getRawWorldBackgroundColor(document, null, { scopeId: 'my-world' })).toBe('#222222')
+    })
+})
+
+describe('resolveSceneLighting — the Light split, read side', () => {
+    const env = { id: 'env', typeId: 'world.environment', parentId: null, values: { ambientIntensity: 0.3 } }
+    const legacy = { id: 'leg', typeId: 'world.light', parentId: null, values: { ambientIntensity: 0.9 } }
+
+    it('an Environment in scope wins', () => {
+        const doc = { nodes: [env, legacy], workspaceState: {} }
+        expect(resolveSceneLighting(doc, null, { scopeId: null }).ambientIntensity).toBe(0.3)
+    })
+
+    it('with no Environment, the retired dual Light still drives — old documents light as they did', () => {
+        const doc = { nodes: [legacy], workspaceState: {} }
+        expect(resolveSceneLighting(doc, null, { scopeId: null }).ambientIntensity).toBe(0.9)
+    })
+
+    it('with neither, null — callers keep their own fallbacks', () => {
+        expect(resolveSceneLighting({ nodes: [], workspaceState: {} }, null, { scopeId: null })).toBeNull()
     })
 })

@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { useNodeGraphScope } from './useNodeGraphScope.js'
+import { isNodeInScope, useNodeGraphScope } from './useNodeGraphScope.js'
 
 const ROOT_TYPE = 'universe.node0'
 
@@ -113,5 +113,25 @@ describe('useNodeGraphScope', () => {
         expect(result.current.navStack).toEqual([null])
         act(() => { result.current.enterNode('x') })
         expect(result.current.navStack).toEqual([null, 'x'])
+    })
+})
+
+describe('isNodeInScope — the one predicate selection visibility hangs off', () => {
+    it('a root node is in the root scope, spelled null or undefined', () => {
+        expect(isNodeInScope({ id: 'a' }, null)).toBe(true)
+        expect(isNodeInScope({ id: 'a' }, undefined)).toBe(true)
+        expect(isNodeInScope({ id: 'a', parentId: null }, null)).toBe(true)
+    })
+
+    it('a child is in its parent scope and nowhere else', () => {
+        const child = { id: 'c', parentId: 'geo' }
+        expect(isNodeInScope(child, 'geo')).toBe(true)
+        expect(isNodeInScope(child, null)).toBe(false)
+        expect(isNodeInScope(child, 'other')).toBe(false)
+    })
+
+    it('no node is in no scope', () => {
+        expect(isNodeInScope(null, null)).toBe(false)
+        expect(isNodeInScope(undefined, 'geo')).toBe(false)
     })
 })

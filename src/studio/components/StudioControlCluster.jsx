@@ -6,8 +6,8 @@ import { usePanelDrag } from '../../hooks/usePanelDrag.js'
 // hopping between and managing the space's projects without the hub detour.
 const PANEL_BUTTONS = [
     { key: 'create', label: 'Create' },
-    { key: 'scene', label: 'Scene' },
-    { key: 'world', label: 'World' },
+    { key: 'scene', label: 'Objects' },
+    { key: 'world', label: 'Scene' },
     { key: 'publish', label: 'Share' },
     { key: 'files', label: 'Code' },
     { key: 'projects', label: 'Projects' },
@@ -27,6 +27,7 @@ export default function StudioControlCluster({
     onFullscreen,
     onHideUI,
     onBackToHub,
+    onOpenNodeEditor,
     xrState,
     syncState,
     presence,
@@ -69,7 +70,11 @@ export default function StudioControlCluster({
                     {syncState && (
                         <span
                             className={`scc-sync-dot scc-sync-dot--${syncState.pendingSyncError ? 'error' : (syncState.sceneStreamState || 'idle')}`}
-                            title={syncState.pendingSyncError ? `Sync failed, retrying — ${syncState.pendingSyncError}` : syncState.sceneStreamState}
+                            // "retrying" was a lie on the path that matters most: a 401
+                            // clearTimeout()s the retry and breaks, so nothing is retrying
+                            // and the queued edits sit in memory until a reload drops them.
+                            // The message the sync layer already wrote says what to do.
+                            title={syncState.pendingSyncError || syncState.sceneStreamState}
                         />
                     )}
                     <button className="scc-collapse-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand' : 'Collapse'}>
@@ -80,7 +85,7 @@ export default function StudioControlCluster({
                 {!collapsed && (
                     <>
                         <div className="scc-section">
-                            <div className="scc-section-label">Scene</div>
+                            <div className="scc-section-label">Tools</div>
                             <div className="scc-buttons">
                                 <button
                                     className={`scc-btn ${editMode === 'navigate' ? 'active' : ''}`}
@@ -129,7 +134,10 @@ export default function StudioControlCluster({
                                 <button className="scc-btn" onClick={onHideUI} title="Hide UI (H)">Hide UI</button>
                                 <button className="scc-btn" onClick={onShowHelp} title="Keyboard shortcuts (Shift+?)">? Help</button>
                                 {!minimal && (
-                                    <button className="scc-btn" onClick={onBackToHub} title="Back to hub">← Hub</button>
+                                    <button className="scc-btn" onClick={onBackToHub} title="Back to projects">← Projects</button>
+                                )}
+                                {!minimal && onOpenNodeEditor && (
+                                    <button className="scc-btn" onClick={onOpenNodeEditor} title="Open this project in the node editor">⇄ Nodes</button>
                                 )}
                                 {!minimal && canViewLive && (
                                     <button className="scc-btn" onClick={onViewLive} title="Open the public space URL in a new tab">↗ View live</button>

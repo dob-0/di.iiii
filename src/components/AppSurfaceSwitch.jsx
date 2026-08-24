@@ -17,8 +17,8 @@ export default function AppSurfaceSwitch({
         <Suspense
             fallback={
                 <RouteSurfaceFallback
-                    label="Loading admin surface"
-                    detail="Preparing the operator dashboard..."
+                    label="Loading the admin console"
+                    detail=""
                 />
             }
         >

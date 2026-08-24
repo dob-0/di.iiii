@@ -22,7 +22,7 @@ describe('deriveNodeInspectorSections', () => {
     it('keeps regular node ports for standard node types', () => {
         const node = createNode('geom.cube')
         const sections = deriveNodeInspectorSections(node)
-        expect(sections[0].fields.map((field) => field.label)).toContain('Color')
+        expect(sections[0].fields.map((field) => field.label)).toContain('Colour')
         expect(sections[0].fields.map((field) => field.label)).not.toContain('Body')
     })
 
@@ -98,20 +98,65 @@ describe('deriveNodeInspectorSections', () => {
     // — and routes through the shared 'values' component so it reads/writes
     // the same node.values object the Ports/Node section uses, even though
     // its own section id ('code') differs for React-key/labeling purposes.
-    it('appends an inert Code section (values.__code) to every node type', () => {
-        for (const typeId of ['geom.cube', 'value.color', 'view.image', 'device.ptz.osc', 'node.null']) {
-            const node = createNode(typeId)
-            const sections = deriveNodeInspectorSections(node)
-            const codeSection = sections.find((section) => section.id === 'code')
-            expect(codeSection, `${typeId} should have a Code section`).toBeDefined()
-            expect(codeSection.component).toBe('values')
+    // The section used to ship on EVERY node — a dead textarea under every
+    // Cube, the UX audit's one systemic clutter generator. Now it appears
+    // exactly where it is true: a node.null (code is its identity), or any
+    // node actually carrying stored code. A fresh Cube shows nothing.
+    it('shows the Code section only where there is code', () => {
+        for (const typeId of ['geom.cube', 'value.color', 'view.image', 'device.ptz.osc']) {
+            const bare = createNode(typeId)
+            expect(
+                deriveNodeInspectorSections(bare).find((section) => section.id === 'code'),
+                `${typeId} fresh should carry no Code section`
+            ).toBeUndefined()
+            const carrying = createNode(typeId)
+            carrying.values = { ...carrying.values, __code: 'return 1' }
+            const codeSection = deriveNodeInspectorSections(carrying).find((section) => section.id === 'code')
+            expect(codeSection, `${typeId} with stored code should show it`).toBeDefined()
             expect(codeSection.fields).toEqual([
                 { label: 'Body', path: ['__code'], type: 'textarea', portType: 'string', component: 'values' }
             ])
         }
+        // node.null keeps it unconditionally — code is that type's identity.
+        const nullNode = createNode('node.null')
+        expect(deriveNodeInspectorSections(nullNode).find((section) => section.id === 'code')).toBeDefined()
     })
 
-    it('keeps the Code section\'s values.__code distinct from node.null\'s own values.body', () => {
+    // Without this the `src` port falls through to a plain text field and the
+    // only way to fill it is to type a sha256 by hand.
+    it.each([
+        ['geom.model', 'model'],
+        ['media.video', 'video'],
+        ['media.audio', 'audio']
+    ])('gives %s an asset picker filtered to %s files', (typeId, assetKind) => {
+        const sections = deriveNodeInspectorSections(createNode(typeId))
+        const src = sections.find((section) => section.id === 'values')
+            ?.fields.find((field) => field.path[0] === 'src')
+        expect(src).toBeDefined()
+        expect(src.type).toBe('asset')
+        expect(src.assetKind).toBe(assetKind)
+    })
+
+        // A doorway's port type decides what its socket on the container carries.
+    // Typed by hand, a typo produces a type nothing is compatible with and the
+    // only symptom is a wire that silently refuses to connect.
+    it.each(['port.in', 'port.out'])('%s picks its carried type from a list, not a text box', (typeId) => {
+        const fields = deriveNodeInspectorSections(createNode(typeId))
+            .find((section) => section.id === 'values')?.fields || []
+        const portType = fields.find((field) => field.path[0] === 'portType')
+        expect(portType).toBeDefined()
+        expect(portType.type).toBe('select')
+        expect(portType.options.map((option) => option.value)).toContain('color')
+        expect(portType.options.map((option) => option.value)).toContain('vec3')
+    })
+
+    it.each(['port.in', 'port.out'])('%s can be renamed without a wire noticing', (typeId) => {
+        const fields = deriveNodeInspectorSections(createNode(typeId))
+            .find((section) => section.id === 'values')?.fields || []
+        expect(fields.find((field) => field.path[0] === 'label')).toBeDefined()
+    })
+
+it('keeps the Code section\'s values.__code distinct from node.null\'s own values.body', () => {
         const node = createNode('node.null', { values: { body: 'the null node body', portDefs: [] } })
         const sections = deriveNodeInspectorSections(node)
         const bodySection = sections.find((section) => section.id === 'values')

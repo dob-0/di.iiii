@@ -47,6 +47,26 @@ describe('FilesPanel', () => {
         expect(patch.codeFiles[0].content).toContain('href="theme.css"')
     })
 
+    it('opens a legacy codeHtml page as index.html and migrates it on the first write', () => {
+        const onPresentationPatch = vi.fn()
+        render(
+            <FilesPanel
+                presentationState={{ mode: 'code', codeFiles: [], codeHtml: '<h1>legacy</h1>' }}
+                onPresentationPatch={onPresentationPatch}
+            />
+        )
+
+        expect(screen.getByRole('tab', { name: /index\.html/ })).toBeInTheDocument()
+        const editor = screen.getByDisplayValue('<h1>legacy</h1>')
+        fireEvent.change(editor, { target: { value: '<h1>edited</h1>' } })
+        fireEvent.blur(editor)
+
+        expect(onPresentationPatch).toHaveBeenCalledWith({
+            codeFiles: [{ name: 'index.html', content: '<h1>edited</h1>' }],
+            codeHtml: ''
+        })
+    })
+
     it('offers the code↔files URL bridge and the external embed controls', () => {
         const onPresentationPatch = vi.fn()
         render(

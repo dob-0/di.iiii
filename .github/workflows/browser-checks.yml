@@ -50,8 +50,29 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
+      # The install stalls forever some days (2026-08-20 alone it hung four
+      # runs past 12 minutes, each cancelled by hand — the known failure in
+      # reference_dii_ci_playwright_hang). The stall lives in the --with-deps
+      # apt phase, and the first bounded-retry attempt taught the second
+      # lesson: killing npx orphans the apt-get underneath it, which keeps
+      # holding /var/lib/dpkg/lock-frontend, so a naive retry dies instantly
+      # on the lock (run 32306276793). The retry must bury the orphan first.
+      # 300s per attempt — an honest cold install (apt deps + ~160MB browser
+      # download) can pass 150s (run 32305518130) but finishes well under
+      # five minutes; a true stall self-heals once or goes red in eleven.
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 11
+        run: |
+          timeout 300 npx playwright install --with-deps chromium || {
+            echo "attempt 1 did not finish in 300s -- clearing leftover apt and retrying"
+            sudo pkill -9 -f 'apt-get|dpkg' 2>/dev/null || true
+            for i in $(seq 1 30); do
+              sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || break
+              sleep 2
+            done
+            sudo dpkg --configure -a || true
+            timeout 300 npx playwright install --with-deps chromium
+          }
 
       - name: Start seeded server + frontend
         run: |

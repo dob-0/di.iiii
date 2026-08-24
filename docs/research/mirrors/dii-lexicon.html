@@ -1,0 +1,526 @@
+<!-- Mirror of https://claude.ai/code/artifact/66bf18ad-8fd3-4d0b-ad17-3770e0d04afd — fetched 2026-08-21. Per the home rule (docs/ai/golden_rules.md) this in-repo file is the source of truth; the claude.ai page is the mirror. -->
+<title>The di.iiii Lexicon</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+    --ink: #14171a;
+    --ink-soft: #4a5560;
+    --ink-faint: #7b8794;
+    --ground: #f4f6f7;
+    --panel: #ffffff;
+    --rule: #d9e0e4;
+    --rule-soft: #e8edef;
+    --accent: #0a7f8c;
+    --accent-soft: #e0f2f4;
+    --warn: #a8541f;
+    --warn-soft: #fbeee3;
+    --dead: #9a3b38;
+    --dead-soft: #f8e8e7;
+    --ok: #2f6d3f;
+    --ok-soft: #e6f1e8;
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+:root:not([data-theme="light"]) {
+    color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --ink: #e8edf0;
+        --ink-soft: #a3b0ba;
+        --ink-faint: #71808c;
+        --ground: #0c0f11;
+        --panel: #14181b;
+        --rule: #262d32;
+        --rule-soft: #1d2327;
+        --accent: #4fd6e4;
+        --accent-soft: #10292d;
+        --warn: #e0a06a;
+        --warn-soft: #2a2018;
+        --dead: #e88a86;
+        --dead-soft: #2c1a19;
+        --ok: #8fd6a0;
+        --ok-soft: #16241a;
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"] {
+    --ink: #e8edf0;
+    --ink-soft: #a3b0ba;
+    --ink-faint: #71808c;
+    --ground: #0c0f11;
+    --panel: #14181b;
+    --rule: #262d32;
+    --rule-soft: #1d2327;
+    --accent: #4fd6e4;
+    --accent-soft: #10292d;
+    --warn: #e0a06a;
+    --warn-soft: #2a2018;
+    --dead: #e88a86;
+    --dead-soft: #2c1a19;
+    --ok: #8fd6a0;
+    --ok-soft: #16241a;
+    color-scheme: dark;
+}
+
+body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0 1.25rem 6rem;
+    -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 50rem; margin: 0 auto; }
+a { color: var(--accent); }
+
+/* ---- masthead ---- */
+header.masthead {
+    padding: 4.5rem 0 2rem;
+    border-bottom: 3px double var(--rule);
+    margin-bottom: 2.5rem;
+}
+.eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 1rem;
+}
+h1 {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 1rem;
+    text-wrap: balance;
+}
+.standfirst {
+    font-size: 1.08rem;
+    color: var(--ink-soft);
+    max-width: 34em;
+    margin: 0;
+}
+.standfirst strong { color: var(--ink); font-weight: 600; }
+
+/* ---- verdict ---- */
+.verdict {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    padding: 1.5rem 1.6rem;
+    margin: 0 0 3rem;
+}
+.verdict h2 {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 0.75rem;
+    font-weight: 500;
+}
+.verdict p { margin: 0 0 0.9rem; }
+.verdict p:last-child { margin-bottom: 0; }
+
+/* ---- sections ---- */
+h2.section {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+    margin: 3.5rem 0 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--rule);
+}
+
+/* ---- dictionary entry ---- */
+.entry {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    margin: 0 0 1.5rem;
+}
+.entry-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6rem 0.9rem;
+    padding: 1.1rem 1.4rem;
+    border-bottom: 1px solid var(--rule-soft);
+}
+.headword {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 1.3rem;
+    letter-spacing: -0.01em;
+}
+.senses-count {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 2px;
+    background: var(--warn-soft);
+    color: var(--warn);
+    white-space: nowrap;
+}
+.senses-count.is-clean { background: var(--ok-soft); color: var(--ok); }
+.senses-count.is-dead { background: var(--dead-soft); color: var(--dead); }
+.usage {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+}
+.entry-body { padding: 1.2rem 1.4rem 1.4rem; }
+
+ol.senses { margin: 0; padding: 0 0 0 1.4rem; }
+ol.senses li { margin-bottom: 0.65rem; padding-left: 0.2rem; }
+ol.senses li::marker { font-family: var(--mono); color: var(--ink-faint); font-size: 0.85em; }
+ol.senses li.retire { color: var(--ink-faint); }
+ol.senses li.retire .gloss { text-decoration: line-through; text-decoration-color: var(--dead); }
+.gloss { font-weight: 500; }
+.cite {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    color: var(--ink-faint);
+    display: block;
+    margin-top: 0.15rem;
+}
+.cite q { color: var(--ink-soft); font-style: normal; }
+
+.ruling {
+    margin-top: 1.2rem;
+    padding: 0.9rem 1.1rem;
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+}
+.ruling .label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 0.3rem;
+}
+.ruling p { margin: 0; }
+.ruling p + p { margin-top: 0.6rem; }
+
+/* ---- collision callout ---- */
+.collision {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--warn);
+    padding: 1.1rem 1.3rem;
+    margin: 0 0 1rem;
+}
+.collision h3 {
+    font-size: 1rem;
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+}
+.collision p { margin: 0 0 0.5rem; }
+.collision p:last-child { margin-bottom: 0; }
+.collision.is-dead { border-left-color: var(--dead); }
+
+code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--rule-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 2px;
+    /* Long paths like docs/architecture/SPEC_url_… are single tokens and will
+       push the page sideways on a phone unless they are allowed to break. */
+    overflow-wrap: anywhere;
+}
+
+/* ---- action table ---- */
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule); background: var(--panel); }
+table { border-collapse: collapse; width: 100%; min-width: 34rem; }
+th, td { text-align: left; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; font-size: 0.92rem; }
+th {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+    background: var(--rule-soft);
+}
+tbody tr:last-child td { border-bottom: none; }
+td.cost { font-family: var(--mono); font-size: 0.78rem; white-space: nowrap; }
+.pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 2px;
+}
+.pill.copy { background: var(--ok-soft); color: var(--ok); }
+.pill.code { background: var(--warn-soft); color: var(--warn); }
+.pill.route { background: var(--dead-soft); color: var(--dead); }
+
+footer.foot {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+}
+footer.foot p { margin: 0 0 0.5rem; }
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+    <p class="eyebrow">di.iiii · vocabulary audit · 19 Aug 2026</p>
+    <h1>The di.iiii Lexicon</h1>
+    <p class="standfirst">Every word in the product is named after <strong>how it was built</strong>, not <strong>what it is to a person</strong>. That is the whole disease. Here is every word, every meaning it currently carries, and the one meaning I think it should keep.</p>
+</header>
+
+<div class="verdict">
+    <h2>The short version</h2>
+    <p><strong>“Studio” and “Raw” are not two places. They are two codebases.</strong> A visitor is being shown your repository structure as if it were a floor plan. Raw is already invisible on its own page — the word appears nowhere at <code>/open/raw</code>, only in the URL and the footer. Finish that: stop printing it.</p>
+    <p><strong>“Space” carries six meanings because it was the first noun</strong> and everything got hung on it — the tenant, the 3D scene, a node type, a browser-local record, a synced static site, and a React route. It cannot be fixed by renaming; it is fixed by moving four of those jobs onto words that already exist.</p>
+    <p><strong>Almost none of this is a code change.</strong> The identifiers can stay exactly as they are — <code>space</code> alone appears 5,607 times in source. What needs to change is the ~200 sentences a person actually reads.</p>
+</div>
+
+<h2 class="section">I · The dictionary</h2>
+
+<!-- SPACE -->
+<div class="entry">
+    <div class="entry-head">
+        <span class="headword">space</span>
+        <span class="senses-count">6 senses</span>
+        <span class="usage">211 in wiki · 72 in UI</span>
+    </div>
+    <div class="entry-body">
+        <ol class="senses">
+            <li><span class="gloss">A tenant: an address, a guest list, an asset store.</span>
+                <span class="cite">serverXR/src/db.js:6 — the <code>spaces</code> row: owner, access, invites, sync keys</span></li>
+            <li class="retire"><span class="gloss">A 3D scene in its own right.</span>
+                <span class="cite">db.js:13 <code>scene_version</code> + spaceStore.js:99 <code>scene.json</code> — a space owns a scene with no project involved. This is the V1 fossil.</span></li>
+            <li class="retire"><span class="gloss">A node type inside a document.</span>
+                <span class="cite">nodeRegistry.js:752 — id <code>universe.space</code>, label <q>Universe</q>. The id and the label are already different words for the same node.</span></li>
+            <li class="retire"><span class="gloss">A browser-local record with no server behind it.</span>
+                <span class="cite">src/storage/spaceStore.js:3 — and useSpacesController.js:179 says it out loud: <q>Created a local space instead.</q></span></li>
+            <li class="retire"><span class="gloss">A GitHub-synced static site (“linked space”).</span>
+                <span class="cite">scripts/space-sync.mjs:3 — used 4× in the wiki, never once defined for a reader</span></li>
+            <li class="retire"><span class="gloss">A React route (“code space”).</span>
+                <span class="cite">src/studio/utils/codeSpaces.js:11 — <q>Spaces whose scene is CODE rather than a project document</q>; badge <code>code space</code> at StudioHub.jsx:315</span></li>
+        </ol>
+        <div class="ruling">
+            <span class="label">Keep — but only sense 1</span>
+            <p><strong>A space is a place that is yours: it has an address, a guest list, and things inside it.</strong> That is a sentence a stranger understands, and it is exactly what the database says.</p>
+            <p>Senses 4–6 are not really meanings, they are <em>implementation notes leaking into copy</em>. “Linked space” and “code space” are things only you need to know; a visitor should just see a space. Sense 2 is the honest problem — the schema really does let a space hold a scene with no project — and that is a retirement job, not a wording job.</p>
+        </div>
+    </div>
+</div>
+
+<!-- PROJECT -->
+<div class="entry">
+    <div class="entry-head">
+        <span class="headword">project</span>
+        <span class="senses-count">5 names</span>
+        <span class="usage">57 in wiki · 43 in UI · <strong>0 on the landing page</strong></span>
+    </div>
+    <div class="entry-body">
+        <p style="margin-top:0">The opposite problem to <em>space</em>: one thing wearing five names.</p>
+        <ol class="senses">
+            <li><span class="gloss">project</span> <span class="cite">db.js:28 — the row. Hard-owned by one space: <code>space_id … ON DELETE CASCADE</code></span></li>
+            <li><span class="gloss">scene</span> <span class="cite">wikiContent.js:25 — <q>A project is a single scene/document inside a space.</q></span></li>
+            <li><span class="gloss">document</span> <span class="cite">same sentence. Also README.md:75 <q>the editable document inside a space</q></span></li>
+            <li><span class="gloss">page</span> <span class="cite">wikiContent.js:163 documents the URL as <code>/&lt;space&gt;/&lt;page&gt;</code> — the same slot the router calls <code>projectSlugSegment</code></span></li>
+            <li><span class="gloss">workspace</span> <span class="cite">SpacesPanel.jsx:110 — <code>&lt;option&gt;Studio workspace&lt;/option&gt;</code></span></li>
+        </ol>
+        <div class="ruling">
+            <span class="label">Keep “project”, kill the four synonyms</span>
+            <p>It is the word in the database, in the API, and in <code>/p/{id}</code>. Renaming it would be enormous and would buy nothing — but the <em>synonyms</em> are pure copy and cost nothing to remove.</p>
+            <p>The sharper problem: <strong>a visitor meets the word “Projects” as a page heading (StudioHub.jsx:208) having never once seen it on the landing page.</strong> The landing sells spaces and worlds; the hub then asks about projects. Introduce it, or accept that the first screen after sign-in speaks a word the front door never taught.</p>
+        </div>
+    </div>
+</div>
+
+<!-- STUDIO -->
+<div class="entry">
+    <div class="entry-head">
+        <span class="headword">Studio</span>
+        <span class="senses-count">4 senses</span>
+        <span class="usage">52 in wiki · 29 in UI</span>
+    </div>
+    <div class="entry-body">
+        <ol class="senses">
+            <li><span class="gloss">A room you can walk into — the four-panel editor.</span>
+                <span class="cite">Landing: <q>Studio is a room on the same desk.</q> · nodeRegistry.js:1199 <code>label: 'Studio'</code>, family <q>the room</q></span></li>
+            <li class="retire"><span class="gloss">A lane / a codebase.</span>
+                <span class="cite">LandingPage.jsx:123 — <q>Studio — main authoring editor</q></span></li>
+            <li class="retire"><span class="gloss">A route that shows your list of spaces.</span>
+                <span class="cite"><code>/studio</code> renders a page headed <q>Spaces</q> (SpaceHub.jsx:453), linked from a nav item labelled <q>Spaces</q> (LandingPage.jsx:249)</span></li>
+            <li class="retire"><span class="gloss">The company.</span>
+                <span class="cite">wikiContent.js:291 <q>every machine … the studio runs</q>; footer link <code>thedi.studio</code></span></li>
+        </ol>
+        <div class="ruling">
+            <span class="label">Keep sense 1 only — Studio is a room, not a lane</span>
+            <p>You have already written the good version yourself: <em>“Studio is a room on the same desk.”</em> Commit to it. Studio is the name of a place inside the workspace, the way “kitchen” is a room and not a brand.</p>
+            <p><strong>The worst single artefact in the product is on one page:</strong> <code>RawHub.jsx:261</code> has a button reading <code>open studio</code> that creates a Studio <em>node</em>, and <code>RawHub.jsx:312</code> has a button reading <code>studio</code> that navigates to the Studio <em>lane</em>. Same word, same screen, unrelated actions. (Verified in the running code.)</p>
+        </div>
+    </div>
+</div>
+
+<!-- RAW -->
+<div class="entry">
+    <div class="entry-head">
+        <span class="headword">Raw</span>
+        <span class="senses-count is-dead">retire the word</span>
+        <span class="usage">18 in wiki · 40 in UI</span>
+    </div>
+    <div class="entry-body">
+        <p style="margin-top:0">Raw is a name you gave a branch. It has never been explained to a visitor, and the landing page's own source comment admits it: <em>“the lane name is vocabulary a first visitor does not have yet”</em> (LandingPage.jsx:245).</p>
+        <ol class="senses">
+            <li class="retire"><span class="gloss">The node-first editor.</span>
+                <span class="cite">Footer link <code>Raw</code> · StudioHub.jsx:217 button <code>Raw</code> · RawHub.jsx:211 heading <code>di.iiii raw</code></span></li>
+            <li class="retire"><span class="gloss">An adjective for a kind of project.</span>
+                <span class="cite">RawHub.jsx:52 — <q>No raw projects in this space yet.</q> Implies “raw” is a project type, which it is not.</span></li>
+            <li><span class="gloss">Ordinary English: unparsed, unformatted.</span>
+                <span class="cite">PreferencesPage.jsx:596 <q>Storage &amp; Raw Snapshot</q> sits <strong>12 lines below</strong> <q>Raw Path</q> (:584) — one is English, one is the lane, nothing distinguishes them</span></li>
+        </ol>
+        <div class="ruling">
+            <span class="label">Stop printing it. Keep <code>/raw</code> in the URL forever.</span>
+            <p>You are three edits from this already being true. I checked <code>/open/raw</code> on staging as a plain visitor: <strong>the word “Raw” appears nowhere on the page.</strong> What you read is <em>World</em>, <em>welcome</em>, <em>Enter Studio</em>. It survives only in the footer link, the StudioHub button, and the RawHub heading.</p>
+            <p>The URL is a different matter — links exist in the wild, and <code>/seed</code> is already kept alive as a legacy alias (rawRouting.js:10). Routes are permanent; words are not.</p>
+        </div>
+    </div>
+</div>
+
+<!-- WORKSPACE -->
+<div class="entry">
+    <div class="entry-head">
+        <span class="headword">workspace</span>
+        <span class="senses-count">4 senses</span>
+        <span class="usage">only 27 uses — the cheapest fix here</span>
+    </div>
+    <div class="entry-body">
+        <ol class="senses">
+            <li class="retire"><span class="gloss">= a space.</span>
+                <span class="cite">wikiContent.js:24 — <q>A space is a self-contained workspace.</q></span></li>
+            <li><span class="gloss">The canvas you have open, with your things on it.</span>
+                <span class="cite">starterWorkspace.js:25 — <q>a workspace, not a file.</q> · wikiContent.js:689 <q>A new workspace has no toolbar</q></span></li>
+            <li class="retire"><span class="gloss">Studio's desktop panel arrangement.</span>
+                <span class="cite">wikiContent.js:225 — <q>The desktop floating-panel workspace is unchanged.</q></span></li>
+            <li class="retire"><span class="gloss">The Studio route.</span>
+                <span class="cite">SpacesPanel.jsx:110 — <code>Studio workspace</code></span></li>
+        </ol>
+        <div class="ruling">
+            <span class="label">Sense 2 wins — and sense 1 is the line to delete</span>
+            <p>The definition article and the newest article contradict each other head-on: one says a workspace is a <em>space</em>, the other says a workspace is <em>one canvas</em>. Four sentences fix this, and “a workspace, not a file” is the best line in the product — it is worth protecting.</p>
+        </div>
+    </div>
+</div>
+
+<!-- OBJECT -->
+<div class="entry">
+    <div class="entry-head">
+        <span class="headword">entity · object · node</span>
+        <span class="senses-count">3 words, 1 thing</span>
+        <span class="usage">entity: 9 · object: landing only · node: 67</span>
+    </div>
+    <div class="entry-body">
+        <ol class="senses">
+            <li><span class="gloss">object</span> <span class="cite">LandingPage.jsx:54 <q>Add objects</q> — the word a stranger is given first</span></li>
+            <li class="retire"><span class="gloss">entity</span> <span class="cite">StudioInspector.jsx:426 <q>Select an entity to edit it.</q> — engineering vocabulary in the highest-traffic sentence in the editor</span></li>
+            <li><span class="gloss">node</span> <span class="cite">The card on the canvas. Genuinely a different thing — but LandingPage.jsx:111 collapses them: <q>Every object is a typed node.</q></span></li>
+        </ol>
+        <div class="ruling">
+            <span class="label">object = a thing in the room · node = a card on the canvas</span>
+            <p>Two words, two honest referents. <strong>“Entity” should not survive anywhere a person can read it</strong> — it is the one word here that is pure ECS jargon, and it sits in the sentence the Inspector shows on every single selection.</p>
+        </div>
+    </div>
+</div>
+
+<!-- WORLD / ROOM -->
+<div class="entry">
+    <div class="entry-head">
+        <span class="headword">world · room · desk</span>
+        <span class="senses-count">9 senses between them</span>
+        <span class="usage">world: 17 · room: 19 · desk: 6</span>
+    </div>
+    <div class="entry-body">
+        <p style="margin-top:0"><strong>world</strong> currently means: a Studio panel · a node type · a space · your finished artwork · planet Earth (<q>together across the world</q>, LandingPage.jsx:385) · and a coordinate frame (<q>world position is kept</q>, wikiContent.js:212).</p>
+        <p><strong>desk</strong> is your newest metaphor — 6 uses, one of them in the primary CTA subtitle — and it collides with two node types actually named <code>2D Desk</code> and <code>3D Desk</code> (nodeRegistry.js:779, :805).</p>
+        <div class="ruling">
+            <span class="label">room = the 3D place you are inside. World = the node's name, nothing else.</span>
+            <p>“The room” is already the node family label you shipped yesterday, and “the room follows” is already in the starter text. It is doing well; let it take the whole job.</p>
+            <p>On <strong>desk</strong>: either commit or drop. A metaphor used six times, never defined, and colliding with a node label is currently costing more than it earns. My advice is drop it from copy and rename the node types if you want to keep the word for the surface.</p>
+        </div>
+    </div>
+</div>
+
+<h2 class="section">II · Words that are simply dead</h2>
+
+<div class="collision is-dead">
+    <h3>“Beta” is still a documented, published route</h3>
+    <p>The lane was deleted 2026-08-06. <code>public-README.md:36</code> still publishes <code>/&lt;space&gt;/beta</code> in a route table on the public repo's front page, and <code>README.md:60</code> still instructs: <em>“Use <code>/&lt;space&gt;/beta</code> for experimental or node-first work.”</em> Also <code>public-README.md:78, 85, 107</code> and <code>README.md:38, 41, 73</code>. <strong>Verified.</strong> Anyone arriving from GitHub is being sent to a route that no longer exists.</p>
+</div>
+
+<div class="collision is-dead">
+    <h3>“lane”, “surface”, “V1”, “seed”</h3>
+    <p>Internal words for editor generations. <code>lane</code> reaches the reader in the wiki (<q>asked a first-time visitor to choose a lane before they knew what a lane was</q> — the article explaining the fix uses the word it is retiring). <code>seed</code> is a live legacy URL alias. None of these should appear in anything a user reads; all are fine to keep in <code>docs/</code>.</p>
+</div>
+
+<div class="collision">
+    <h3>Two landing-page instructions point at panels that do not exist</h3>
+    <p>Step 02: <em>“Use the <strong>Library</strong> panel to add 3D shapes”</em> — the window is called <strong>Create</strong>. Step 03: <em>“Tweak with the <strong>Inspector</strong> on the right”</em> — Studio's own copy sends you to the <strong>Scene</strong> window. <code>LandingPage.jsx:54–55</code>. <strong>Verified.</strong> These are the four sentences that tell a stranger how to use the product.</p>
+</div>
+
+<div class="collision">
+    <h3>One console, two names</h3>
+    <p>The wiki calls it <q>Ops Graph → Manage</q> (wikiContent.js:437) and <q>/admin → Manage</q> (wikiContent.js:276) in the same article set.</p>
+</div>
+
+<h2 class="section">III · The one decision this forces</h2>
+
+<div class="verdict" style="border-left-color: var(--warn);">
+    <h2>Studio: a room, or the whole building?</h2>
+    <p>Everything above assumes <strong>Studio is a room</strong> — a place inside the workspace, next to Color and Cube in the palette. That matches what is already on screen and what you already wrote.</p>
+    <p>But there is an unsigned spec in the repo that assumes the opposite. <code>docs/architecture/SPEC_url_architecture_and_tree_addressing.md</code> proposes splitting the product across two hosts, and names the creator host <strong><code>studio.di-studio.xyz</code></strong> — which makes Studio the name of <em>the entire authoring side of the platform</em>. Sign that spec and “Studio the room” has to be renamed instead.</p>
+    <p>These two cannot both be true. It is the only naming question here that is genuinely yours and not mine — and it is worth answering before any of the copy work below, because it decides which word moves.</p>
+</div>
+
+<h2 class="section">IV · What I'd change, in order</h2>
+
+<div class="tablewrap">
+<table>
+<thead>
+<tr><th>#</th><th>Change</th><th>Why now</th><th class="cost">Cost</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Delete the dead <code>beta</code> routes from <code>README.md</code> and <code>public-README.md</code></td><td>Public repo instructs people to visit a route deleted in August</td><td class="cost"><span class="pill copy">copy</span></td></tr>
+<tr><td>2</td><td>Fix landing steps 02/03 — <em>Library</em> → <em>Create</em>, <em>Inspector</em> → <em>Scene</em></td><td>The how-to-use-it instructions name panels that aren't there</td><td class="cost"><span class="pill copy">copy</span></td></tr>
+<tr><td>3</td><td>Rewrite <code>wikiContent.js:24</code> so a space is a <em>place</em>, not a <em>workspace</em></td><td>Kills the head-on contradiction with the zen article</td><td class="cost"><span class="pill copy">copy</span></td></tr>
+<tr><td>4</td><td>Drop <em>Raw</em> from the footer, the StudioHub button, and the RawHub heading</td><td>Finishes the one-door work; the word is already absent from the page itself</td><td class="cost"><span class="pill copy">copy</span></td></tr>
+<tr><td>5</td><td>Rename RawHub's two <code>studio</code> buttons to say what they each do</td><td>Two identical labels, one screen, unrelated actions</td><td class="cost"><span class="pill copy">copy</span></td></tr>
+<tr><td>6</td><td><em>entity</em> → <em>object</em> in every user-visible string</td><td>9 occurrences; one is the Inspector's every-selection sentence</td><td class="cost"><span class="pill code">strings</span></td></tr>
+<tr><td>7</td><td>Collapse <em>scene</em> / <em>document</em> / <em>page</em> into <em>project</em> in the wiki</td><td>One thing, five names; the definition sentence teaches three at once</td><td class="cost"><span class="pill code">strings</span></td></tr>
+<tr><td>8</td><td>Introduce <em>project</em> on the landing page</td><td>First screen after sign-in says “Projects”; the front door never said it</td><td class="cost"><span class="pill code">strings</span></td></tr>
+<tr><td>9</td><td>Add a <strong>glossary</strong> article to the wiki — there isn't one</td><td>30 articles, no page that defines the vocabulary they all assume</td><td class="cost"><span class="pill code">new</span></td></tr>
+<tr><td>10</td><td>Decide the Studio question above; then <code>/studio</code> → <code>/spaces</code></td><td>The route is called studio and renders a page headed “Spaces”</td><td class="cost"><span class="pill route">route</span></td></tr>
+<tr><td>11</td><td>Retire the space-owned <code>scene.json</code> (V1 fossil)</td><td>The only reason “space” can still mean “a 3D scene”</td><td class="cost"><span class="pill route">schema</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<p style="margin-top:1.5rem"><strong>Rows 1–5 are an afternoon</strong> and remove every outright falsehood. Rows 6–9 are the actual vocabulary work. Rows 10–11 are architecture and should wait for the decision in section III.</p>
+
+<footer class="foot">
+    <p>Sources: <code>serverXR/src/db.js</code>, <code>src/utils/spaceRouting.js</code>, <code>src/raw/utils/rawRouting.js</code>, <code>src/studio/utils/studioRouting.js</code>, <code>src/shared/projectSchema.js</code>, <code>src/project/nodeRegistry.js</code>, <code>src/wiki/wikiContent.js</code>, <code>src/landing/LandingPage.jsx</code>, the three hubs, <code>README.md</code>, <code>public-README.md</code>.</p>
+    <p>Counts are from source; the claims marked <em>verified</em> were re-checked by hand, and the visitor-facing words were read off <code>staging.di-studio.xyz</code> in a real browser rather than inferred from code. Nothing in the repo has been changed.</p>
+</footer>
+
+</div>

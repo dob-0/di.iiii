@@ -467,7 +467,7 @@ export default function SpaceHub() {
                                         onClick={() => setCreatingTitle('')}
                                         disabled={isBusy}
                                     >
-                                        + Create
+                                        + New space
                                         {Number.isFinite(spaceLimit) && (
                                             <span className="ssh-quota"> · {ownedSpaceCount}/{spaceLimit}</span>
                                         )}
@@ -587,7 +587,17 @@ export default function SpaceHub() {
                                                 loading="lazy"
                                             />
                                         </div>
-                                    ) : space.isPublic && space.publishedProjectId ? (
+                                    ) : space.isPublic ? (
+                                        // isPublic alone, NOT isPublic && publishedProjectId.
+                                        // SpaceCardPreview embeds the SPACE's own live route
+                                        // (`buildAppSpacePath(spaceId)?preview=1`) — it never
+                                        // needed a published project, and the extra condition
+                                        // blanked exactly one card: the Open Space, which is the
+                                        // first card a visitor sees and the room the whole
+                                        // product points at. It has no published project because
+                                        // it is the communal scene itself, and /open renders it
+                                        // fine. Every other public space happened to have one,
+                                        // so the gate looked correct for two years of cards.
                                         <SpaceCardPreview spaceId={space.id} label={space.label || space.id} />
                                     ) : null}
                                     <p className="ssh-space-label">{space.label || space.id}</p>
@@ -712,10 +722,10 @@ export default function SpaceHub() {
 
                                     {isLinking && (
                                         <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                                            {linker.loading && <p className="ssh-linker-status">Loading projects...</p>}
+                                            {linker.loading && <p className="ssh-linker-status">Loading projects…</p>}
                                             {linker.error && <p className="ssh-linker-status ssh-linker-error">{linker.error}</p>}
                                             {!linker.loading && !linker.error && linker.projects.length === 0 && (
-                                                <p className="ssh-linker-status">No projects yet. Open this space in Studio to create one.</p>
+                                                <p className="ssh-linker-status">No projects yet — open this space to make one.</p>
                                             )}
                                             {!linker.loading && linker.projects.length > 0 && (
                                                 <div className="ssh-linker-list">

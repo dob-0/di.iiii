@@ -30,26 +30,100 @@ import { ASSET_LIBRARY } from './assetLibrary.js'
 // resource, reused by everything that needs it.
 
 // EVERY clip in the folder gets its own decoder, on direction: "use all reels in
-// folder". The pool is therefore as large as the library, capped only by the
-// ceiling below.
+// folder" — as far as the device allows.
 //
 // This is the expensive decision in the whole piece and it should be made
-// knowingly. Nine decoders was not a guess — it was chosen because these are
-// full-resolution phone captures and a browser decoding thirty-one of those at
-// once is doing thirty-one times the work. On a desktop with a discrete GPU that
-// is usually fine. On a standalone headset it is the thing most likely to drop
-// the frame rate, and dropped frames in a headset are nausea rather than an
-// aesthetic problem.
+// knowingly. A browser decoding thirty-one videos at once is doing thirty-one
+// times the work. On a desktop that is usually fine. On a standalone headset it
+// is the thing most likely to drop the frame rate, and dropped frames in a
+// headset are nausea rather than an aesthetic problem.
 //
-// So: MAX_PLAYERS is the knob. Lower it and the globe simply repeats clips more
-// often; nothing else in the piece changes. The other half of the answer is
-// DONE: the sources are 360x640 since 2026-08-08 (scripts/compress-reels.mjs
-// --replace), which took the pool from 25.9 to 7.1 megapixels per frame — keep
-// running that script over anything new dropped in the folder.
-const MAX_PLAYERS = 32
+// A decoder that cannot be allocated does not fail loudly: the element simply
+// never produces a frame, so its VideoTexture stays at its initial black and
+// every cell showing that clip is a black rectangle scattered over the shell.
+// Turning your head sweeps past patches of black and it reads as a hole in the
+// globe rather than as a decoding limit — which is why the pool has both a
+// ceiling below and a repair above.
+//
+// ---- THE CEILING IS DERIVED, NOT PICKED ------------------------------------
+//
+// It used to be one number for headsets (nine), chosen when these were
+// full-resolution phone captures. The sources are not that any more: since
+// 2026-08-08 they are transcoded to 360x640 (scripts/compress-reels.mjs
+// --replace — keep running it over anything new dropped in the folder), which
+// took the pool from 25.9 to 7.1 megapixels per frame. A hardcoded nine would
+// now be throwing away two thirds of the folder to pay for a cost that is no
+// longer there, and would go stale again the next time the source resolution
+// moves.
+//
+// So the headset ceiling is a DECODE BUDGET divided by what a frame actually
+// costs. The budget is the load that was known to work: nine full-resolution
+// (1080x1920) captures, which is what the pool ran at before the compression.
+// At 360x640 that arithmetic returns more than the folder holds, so a headset
+// gets every clip — which is the direction, finally affordable.
+//
+// A desktop keeps a flat cap: there is no budget question there, only the
+// folder's own size and a sane upper bound.
+export const DESKTOP_MAX_PLAYERS = 32
 
-export const playerCount = () => Math.min(
-    MAX_PLAYERS,
+// Nine 1080x1920 frames. Named as the measurement it is, not as a magic number.
+export const HEADSET_PIXEL_BUDGET = 9 * 1080 * 1920
+
+// What to use when the probe cannot answer (no metadata, a source that will not
+// load, a browser that refuses). The old fixed ceiling, kept as the floor: being
+// wrong here should cost repetition, never black.
+export const HEADSET_FALLBACK_PLAYERS = 9
+
+/**
+ * How many decoders this device should be asked for, given what one frame of
+ * the source actually costs.
+ *
+ * `pixelsPerFrame` comes from a real <video>'s metadata (see probeReelPixels),
+ * so re-encoding the folder changes this on its own with nothing to edit here.
+ */
+export const headsetCeiling = (pixelsPerFrame) => {
+    if (!Number.isFinite(pixelsPerFrame) || pixelsPerFrame <= 0) return HEADSET_FALLBACK_PLAYERS
+    const affordable = Math.floor(HEADSET_PIXEL_BUDGET / pixelsPerFrame)
+    return Math.max(1, Math.min(DESKTOP_MAX_PLAYERS, affordable))
+}
+
+/**
+ * Ask ONE reel how big it is, without decoding it.
+ *
+ * `preload='metadata'` is a few kilobytes of container header, and the element
+ * is thrown away immediately — it never becomes a decoder and never counts
+ * against the budget it is being used to compute. Resolves null if the source
+ * will not answer, and the caller falls back rather than guessing.
+ */
+export const probeReelPixels = (timeoutMs = 4000) => new Promise((resolve) => {
+    const asset = ASSET_LIBRARY.find((entry) => entry.kind === 'video')
+    if (!asset || typeof document === 'undefined') return resolve(null)
+
+    const probe = document.createElement('video')
+    let settled = false
+    const finish = (value) => {
+        if (settled) return
+        settled = true
+        window.clearTimeout(timer)
+        probe.removeAttribute('src')
+        probe.load?.()
+        resolve(value)
+    }
+    const timer = window.setTimeout(() => finish(null), timeoutMs)
+
+    probe.preload = 'metadata'
+    probe.muted = true
+    probe.playsInline = true
+    probe.addEventListener('loadedmetadata', () => {
+        const pixels = probe.videoWidth * probe.videoHeight
+        finish(pixels > 0 ? pixels : null)
+    }, { once: true })
+    probe.addEventListener('error', () => finish(null), { once: true })
+    probe.src = asset.src
+})
+
+export const playerCount = (maxPlayers = DESKTOP_MAX_PLAYERS) => Math.min(
+    maxPlayers,
     ASSET_LIBRARY.filter((asset) => asset.kind === 'video').length
 )
 
@@ -57,15 +131,16 @@ const PLAYER_SEED = 20260730
 
 let sharedPlayers = null
 
-const createPlayers = () => {
+const createPlayers = (maxPlayers) => {
     const videos = ASSET_LIBRARY.filter((asset) => asset.kind === 'video')
     if (videos.length === 0) return []
 
     const random = createRandom(PLAYER_SEED)
 
-    // Every clip, in library order. No stride and no selection any more — the
-    // pool IS the folder, so nothing has to be chosen and nothing is left out.
-    return Array.from({ length: playerCount() }, (_, index) => {
+    // Every clip, in library order, up to whatever this device can decode. No
+    // stride and no selection — under the desktop ceiling the pool IS the
+    // folder, so nothing has to be chosen and nothing is left out.
+    return Array.from({ length: playerCount(maxPlayers) }, (_, index) => {
         const asset = videos[index % videos.length]
 
         const video = document.createElement('video')
@@ -90,7 +165,11 @@ const createPlayers = () => {
         texture.magFilter = THREE.LinearFilter
         texture.generateMipmaps = false
 
-        const player = { asset, video, texture, aspect: 9 / 16 }
+        const player = { asset, video, texture, aspect: 9 / 16, everDecoded: false }
+
+        // First frame ever decoded — the only thing that separates a working
+        // player from one whose decoder the device refused. See hasPicture.
+        video.addEventListener('loadeddata', () => { player.everDecoded = true }, { once: true })
 
         video.addEventListener('loadedmetadata', () => {
             if (video.videoWidth > 0 && video.videoHeight > 0) {
@@ -108,11 +187,115 @@ const createPlayers = () => {
     })
 }
 
-/** The pool, built on first use and shared for the life of the page. */
-export const reelPlayers = () => {
-    if (!sharedPlayers) sharedPlayers = createPlayers()
+/**
+ * The pool, built on first use and shared for the life of the page.
+ *
+ * `maxPlayers` is honoured by the FIRST caller only, which is the warm-up in
+ * AlgoVrithmExperience — by the time the footage beat mounts and calls this
+ * with no argument, the pool exists and the ceiling has already been chosen.
+ * That ordering is the point: the device question is answered once, early,
+ * rather than being re-asked by whoever happens to be on screen.
+ */
+export const reelPlayers = (maxPlayers = DESKTOP_MAX_PLAYERS) => {
+    if (!sharedPlayers) {
+        sharedPlayers = createPlayers(maxPlayers)
+        // THE POOL CAN BE BUILT AFTER THE GESTURE THAT UNLOCKED AUDIO, and then
+        // nothing would ever unmute it. unlock() below unmutes the players that
+        // EXIST when it fires, and the warm-up is deliberately deferred to idle
+        // (up to 2.5s after mount — see AlgoVrithmExperience). A headset loses
+        // that race almost every time: the page finishes loading, the visitor
+        // taps Enter VR straight away, and that tap arrives while sharedPlayers
+        // is still undefined. The synth score is unaffected — it only needs the
+        // context resumed — so the symptom is a scored piece with silent reels,
+        // which is exactly what it looked like.
+        //
+        // Unmuting here is safe precisely because audioUnlocked means a real
+        // gesture has already happened, so autoplay-with-sound is permitted.
+        if (audioUnlocked) applyUnlockedAudio(sharedPlayers)
+        // The pool is invisible from outside: nothing on screen says how many
+        // decoders a device actually gave you, and the failure this file guards
+        // against is a silent one. Same DEV-only hook idea as
+        // window.__diiWalkerRef — and the seam the repair is exercised through
+        // in a real browser, by marking a player frameless and watching its
+        // cells fill with a live clip instead of black.
+        if (import.meta.env?.DEV && typeof window !== 'undefined') {
+            window.__diiReelPool = sharedPlayers
+        }
+    }
     return sharedPlayers
 }
+
+// ---- WHEN A DECODER DIES ANYWAY --------------------------------------------
+//
+// The ceiling above is a prediction, and a prediction about hardware nobody in
+// this repo can run every variant of. A device can still refuse a decoder: it
+// can be older than the budget assumes, it can already be decoding something
+// else, or the browser can simply have a lower simultaneous-stream limit than
+// the pixel arithmetic implies.
+//
+// What must not happen is the failure staying INVISIBLE. An element that never
+// produces a frame leaves its VideoTexture black, and black cells read as holes
+// torn in the globe. A repeat does not: repetition is what a feed looks like,
+// and the mix is built on it already.
+//
+// So the globe asks, while it is on screen, which players actually have a
+// frame, and shows a live one in place of each dead one. The cost of guessing
+// too high is therefore the same cost as setting the ceiling too low — the same
+// clip twice — instead of a hole.
+
+// "Has this player EVER produced a frame", which is not the same question as
+// "is it ready right now" — and the difference was measured rather than
+// reasoned about. Polling readyState alone reported three of thirty-one dead
+// mid-beat on a desktop that had every clip decoding fine: each player seeks to
+// a random point in its own timeline (see createPlayers), and readyState drops
+// back to HAVE_METADATA for the length of a seek. A VideoTexture keeps showing
+// its last decoded frame throughout, so those cells were never black — and
+// swapping them for a substitute would have introduced a flicker of the wrong
+// clip to fix a problem that did not exist.
+//
+// A decoder that was refused at allocation, by contrast, never reaches
+// HAVE_CURRENT_DATA even once. So the flag latches on first sight of a frame
+// and never clears.
+export const hasPicture = (player) => {
+    if (!player) return false
+    if (player.everDecoded) return true
+    const video = player.video
+    const live = Boolean(video)
+        && video.readyState >= 2
+        && video.videoWidth > 0
+        && video.videoHeight > 0
+    // Latch here as well as on the event: a player can reach its first frame
+    // before anything is listening, and the poll is what notices.
+    if (live) player.everDecoded = true
+    return live
+}
+
+/**
+ * One texture per player, with every dead player replaced by a live one.
+ *
+ * Live players are dealt round-robin so the substitutes are spread across the
+ * folder rather than every dead cell in the globe falling back to the same
+ * clip. Returns each player's own texture when they are all alive (the normal
+ * case, and no work downstream), and also when they are all dead — there is
+ * nothing better to show, and a pool that has not loaded YET must not be
+ * rewritten into a single frozen clip.
+ */
+export const displayTextures = (players = []) => {
+    const own = players.map((player) => player.texture)
+    const live = []
+    const dead = []
+    players.forEach((player, index) => {
+        (hasPicture(player) ? live : dead).push(index)
+    })
+    if (dead.length === 0 || live.length === 0) return own
+    dead.forEach((index, nth) => { own[index] = players[live[nth % live.length]].texture })
+    return own
+}
+
+/** A cheap value that changes only when the set of dead players changes. */
+export const healthSignature = (players = []) => players
+    .map((player) => (hasPicture(player) ? '1' : '0'))
+    .join('')
 
 // ---- SOUND -----------------------------------------------------------------
 //
@@ -140,16 +323,54 @@ let audioUnlocked = false
 let unlockArmed = false
 const unlockWaiters = new Set()
 
+/**
+ * Turn the sound on for a set of players. Called from the gesture handler for
+ * whatever exists then, and again from reelPlayers() for a pool built later.
+ *
+ * The re-play is guarded on `paused` on purpose: at unlock time NONE of these
+ * are playing, and calling play() on all of them would start thirty-one
+ * decoders twenty seconds before the beat that needs them — the exact budget
+ * this pool exists to protect. It only matters for a player already on screen
+ * when the gesture lands, where some mobile builds want the element poked
+ * before they will emit audio it started muted without.
+ */
+const applyUnlockedAudio = (players) => {
+    players?.forEach((player) => {
+        player.video.muted = false
+        player.video.defaultMuted = false
+        // play() returns undefined rather than a promise in some environments
+        // (jsdom among them), so the result is not assumed to be thenable.
+        if (!player.video.paused) player.video.play?.()?.catch?.(() => {})
+    })
+}
+
 const unlock = () => {
     if (audioUnlocked) return
     audioUnlocked = true
     // Unmuting is what actually turns the sound on. It has to happen INSIDE the
     // gesture handler — deferring it by even a task can lose the user-activation
     // window in some browsers.
-    sharedPlayers?.forEach((player) => { player.video.muted = false })
+    applyUnlockedAudio(sharedPlayers)
     unlockWaiters.forEach((waiter) => waiter())
     unlockWaiters.clear()
 }
+
+/**
+ * Unlock imperatively, for a gesture the window listeners cannot see.
+ *
+ * ENTERING AN IMMERSIVE SESSION IS A USER ACTIVATION, but it does not have to
+ * arrive as a DOM event on this window — a session can be started from an XR
+ * button in an overlay, resumed by the headset, or entered without the tap ever
+ * reaching `window`. The listeners in armAudioUnlock() would miss all of those
+ * and the piece would play silent inside the headset while being perfectly
+ * unlockable on the flat page, which is the hardest version of this bug to
+ * reproduce at a desk.
+ *
+ * So SpatialScore calls this on `sessionstart`. Idempotent — unlock() returns
+ * immediately once the page has been unlocked, so the ordinary gesture path and
+ * this one cannot double up.
+ */
+export const unlockAudio = () => { unlock() }
 
 /**
  * Arm the gesture unlock. Idempotent; safe to call from every sequence's mount.

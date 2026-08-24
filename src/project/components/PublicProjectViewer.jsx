@@ -18,6 +18,7 @@ import {
 } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
+import { consumeArriveWalking } from '../../components/arriveWalking.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -27,7 +28,7 @@ import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 // chunk (~1.6MB raw, measured against first paint on /br_id_ge).
 const PublicProjectSceneSurface = lazyWithReload(() => import('./PublicProjectSceneSurface.jsx'), 'public-scene-surface')
 
-// The platform's one loading screen — black, one spinner, no drawn words
+// di.iiii's one loading screen — black, one spinner, no drawn words
 // (LoadingScreen.jsx). The published face used to show its own lit text pill
 // here, the last per-surface loading look left.
 const loadingOverlay = <LoadingScreen label="Loading live experience" />
@@ -167,6 +168,24 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const presentationState = document?.presentationState || {}
     const entryView = viewMode || presentationState.entryView || 'scene'
     const showCodeView = entryView === 'code'
+    // Work in the node lane. The renderer that can show it is not the one walk
+    // mode uses — see the Walk / Fly control below.
+    const hasGraph = (document?.nodes?.length || 0) > 0
+    // What walk mode would actually have to show. `entities` is always an array
+    // after normalization, so presence proves nothing — length does. Explicitly
+    // hidden entities are dropped with their whole subtree by LiveProjectScene,
+    // so a room whose entities are all hidden is empty in there.
+    const hasWalkableEntities = (document?.entities || [])
+        .some((entity) => entity?.components?.runtime?.visible !== false)
+    // The two entry views that open onto a room. 'fixed-camera' only replaces
+    // the auto-framed opening shot with the author's composed one — the room
+    // behind it is the same room, so it is walkable. 'code' is the one entry
+    // view where a Walk / Fly button means nothing: there is no room, only a
+    // page in an iframe.
+    const isSpatialEntry = entryView === 'scene' || entryView === 'fixed-camera'
+    // The one gate walk mode has: shared by the Walk / Fly button and the
+    // arrive-walking effect below.
+    const walkGateOpen = isSpatialEntry && (!hasGraph || hasWalkableEntities) && !isPreview && !isEmbed
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
     // the shell's query belongs to the page it is showing — a published page
@@ -182,6 +201,20 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         setViewMode(null)
         setNavMode('orbit')
     }, [presentationState.entryView])
+
+    // A visitor who WALKED through a portal arrives walking — the flag is set
+    // by the walker's portal jump (see arriveWalking.js) and honoured only when
+    // this room passes the same gate the Walk / Fly button uses; consumed
+    // unconditionally so it can never leak into an unrelated navigation.
+    // Declared AFTER the entryView reset above on purpose: the reset fires on
+    // the same document-ready commit (entryView undefined → authored value),
+    // and effects run in declaration order — above it, the walk this sets was
+    // stomped straight back to orbit before it ever painted.
+    useEffect(() => {
+        if (state.status !== 'ready') return
+        if (consumeArriveWalking() && walkGateOpen) setNavMode('walk')
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state.status, projectId])
 
     useEffect(() => {
         if (!showCodeView) return undefined
@@ -310,7 +343,23 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </Suspense>
             ) : null}
 
-            {state.status === 'ready' && entryView === 'scene' && navMode === 'orbit' && !isPreview && !isEmbed ? (
+            {/* Walk mode enters LiveProjectScene, which renders `entities` and
+                not `nodes`. Offering it on a room built out of nodes ALONE
+                would walk the visitor into a version of it with the work
+                missing — worse than not offering it, because they would read
+                the emptiness as the room rather than as the mode.
+                A graph on its own is no longer the test, because one document
+                carries both lanes: wires, scene and light live in the node
+                editor, and anything that must survive for a visitor is made as
+                an entity. Such a room has a real entity body to walk into, and
+                refusing it there also refused headset entry — Enter VR / Enter
+                AR live inside LiveProjectScene, reachable only through walk.
+                So: hidden only when the graph is all there is.
+                It was also refused to every 'fixed-camera' room, which made an
+                author choose between a composed opening shot and a room anyone
+                could walk — two unrelated things. An authored camera is how the
+                visit STARTS, not a promise they may never move. */}
+            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
                 <button
                     type="button"
                     style={{ ...overlayButtonStyle, position: 'absolute', top: '1rem', right: '1rem', zIndex: 20 }}

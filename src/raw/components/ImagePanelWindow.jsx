@@ -1,13 +1,26 @@
+import LiveTextureView, { isLiveTexture } from './LiveTextureView.jsx'
+
 const getImageAssetFromNode = (node, assetMap = new Map()) => {
     const assetId = node?.values?.src || node?.assetRef || null
-    return assetId ? assetMap.get(assetId) || null : null
+    if (!assetId || typeof assetId !== 'string') return null
+    return assetMap.get(assetId) || null
 }
 
 export default function ImagePanelWindow({ node, values = null, assetMap }) {
     const sourceNode = values ? { ...node, values } : node
+    const wired = sourceNode?.values?.src
+    const alt = sourceNode.values?.title || node.label || 'Image'
+
+    if (isLiveTexture(wired)) {
+        return (
+            <div className="raw-image-panel">
+                <LiveTextureView texture={wired} label={alt} />
+            </div>
+        )
+    }
+
     const asset = getImageAssetFromNode(sourceNode, assetMap)
     const src = asset?.url || ''
-    const alt = asset?.name || sourceNode.values?.title || node.label || 'Image'
 
     if (!src) {
         return (
@@ -19,7 +32,7 @@ export default function ImagePanelWindow({ node, values = null, assetMap }) {
 
     return (
         <div className="raw-image-panel">
-            <img className="raw-image-panel-media" src={src} alt={alt} />
+            <img className="raw-image-panel-media" src={src} alt={asset?.name || alt} />
         </div>
     )
 }

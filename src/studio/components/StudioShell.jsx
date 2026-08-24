@@ -14,7 +14,7 @@ import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import { isJamProject, loadJamAllTools, saveJamAllTools } from '../utils/jamMode.js'
-import { JAM_PRIMITIVES } from '../utils/entityPalette.js'
+import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
 import {
     AssetsPanel,
     FilesPanel,
@@ -34,8 +34,8 @@ import {
 // The five Studio windows, as a phone bottom nav (order = frequency of use).
 const MOBILE_PANELS = [
     ['create', 'Create'],
-    ['scene', 'Scene'],
-    ['world', 'World'],
+    ['scene', 'Objects'],
+    ['world', 'Scene'],
     ['publish', 'Share'],
     ['files', 'Code']
 ]
@@ -141,6 +141,7 @@ export default function StudioShell({
     onEnterXr,
     onExitXr,
     onBackToHub,
+    onOpenNodeEditor,
     onCameraViewChange,
     onTransformCommit,
     onToggleSelectEntity,
@@ -493,7 +494,7 @@ export default function StudioShell({
                             />
                             {(selectedEntity || selectedEntityIds.length > 0) ? (
                                 <StudioInspector
-                                    title={selectedEntityIds.length > 1 ? `${selectedEntityIds.length} selected` : (selectedEntity ? selectedEntity.name : 'World')}
+                                    title={selectedEntityIds.length > 1 ? `${selectedEntityIds.length} selected` : (selectedEntity ? selectedEntity.name : 'Scene')}
                                     subtitle={selectedEntityIds.length > 1 ? `Primary: ${selectedEntity?.name || selectedEntityId}` : (selectedEntity ? selectedEntity.type : 'Project defaults')}
                                     sections={inspectorSections}
                                     values={inspectorValues}
@@ -503,7 +504,7 @@ export default function StudioShell({
                                     footer={inspectorFooter}
                                 />
                             ) : (
-                                <p className="sfp-empty">Select an entity above or in the viewport to edit it.</p>
+                                <p className="sfp-empty">Select an object above or in the viewport to edit it.</p>
                             )}
                             {selectedEntity && selectedEntityIds.length <= 1 && (
                                 <TimelinePanel
@@ -563,7 +564,7 @@ export default function StudioShell({
                         </StudioFloatingPanel>
                     )}
                     {!jamMinimal && isOpen('scene') && (
-                        <StudioFloatingPanel key={`scene-${layoutKey}`} title="Scene" onClose={() => toggle('scene')} initialWidth={300} {...panelChrome('scene')}>
+                        <StudioFloatingPanel key={`scene-${layoutKey}`} title="Objects" onClose={() => toggle('scene')} initialWidth={300} {...panelChrome('scene')}>
                             {panelBodies.scene}
                         </StudioFloatingPanel>
                     )}
@@ -578,7 +579,7 @@ export default function StudioShell({
                         </StudioFloatingPanel>
                     )}
                     {!jamMinimal && isOpen('world') && (
-                        <StudioFloatingPanel key={`world-${layoutKey}`} title="World" onClose={() => toggle('world')} initialWidth={280} {...panelChrome('world')}>
+                        <StudioFloatingPanel key={`world-${layoutKey}`} title="Scene" onClose={() => toggle('world')} initialWidth={280} {...panelChrome('world')}>
                             {panelBodies.world}
                         </StudioFloatingPanel>
                     )}
@@ -605,6 +606,7 @@ export default function StudioShell({
                         onFullscreen={handleFullscreen}
                         onHideUI={() => setUiHidden(true)}
                         onBackToHub={onBackToHub}
+                        onOpenNodeEditor={onOpenNodeEditor}
                         xrState={xrState}
                         syncState={syncState}
                         presence={presence}
@@ -623,6 +625,15 @@ export default function StudioShell({
                 </>
             )}
 
+            {/* The only sync indicator lives in the control cluster, which is gated
+                !isMobile — so on a phone an expired session was completely silent while
+                the editor kept taking edits that a reload would drop. Rendered even when
+                the UI is hidden: losing work is not chrome. */}
+            {syncState?.pendingSyncError && (
+                <div className="studio-sync-alert" role="alert">
+                    {syncState.pendingSyncError}
+                </div>
+            )}
             {!uiHidden && isMobile && (
                 <>
                     <div className="smb-topbar">
@@ -630,6 +641,21 @@ export default function StudioShell({
                             <button type="button" className="smb-top-btn" onClick={onBackToHub} aria-label="Back to projects">←</button>
                         )}
                         <span className="smb-title">{document?.projectMeta?.title || liveProjectState?.spaceLabel || 'Project'}</span>
+                        {/* The way across, on a phone. The node editor has carried its
+                            "Open in Studio" since the doors audit, but only the desktop
+                            control cluster had the return trip — so on a phone the two
+                            building tools were connected in one direction only. */}
+                        {!jamMinimal && onOpenNodeEditor && (
+                            <button
+                                type="button"
+                                className="smb-top-btn"
+                                onClick={onOpenNodeEditor}
+                                aria-label="Open this project in the node editor"
+                                title="Open this project in the node editor"
+                            >
+                                Nodes
+                            </button>
+                        )}
                         <button
                             type="button"
                             className={`smb-top-btn${viewportEditMode === 'edit' ? ' is-active' : ''}`}

@@ -31,12 +31,42 @@ export function resolveScopeWorldNode(nodes, scopeId, liveWorldNodeIdByScope) {
     const list = nodes || []
     const scopeNode = scopeId ? list.find((node) => node?.id === scopeId) : null
     if (scopeNode?.typeId === 'universe.world') return scopeNode
-    const candidates = list.filter((node) =>
-        node?.typeId === 'universe.world' && (node.parentId || null) === (scopeId || null)
-    )
-    if (!candidates.length) return null
-    const liveId = (liveWorldNodeIdByScope || {})[scopeId || '']
-    return candidates.find((node) => node.id === liveId) || candidates[0]
+
+    const pickAt = (id) => {
+        const candidates = list.filter((node) =>
+            node?.typeId === 'universe.world' && (node.parentId || null) === (id || null)
+        )
+        if (!candidates.length) return null
+        const liveId = (liveWorldNodeIdByScope || {})[id || '']
+        return candidates.find((node) => node.id === liveId) || candidates[0]
+    }
+
+    // Walk up to the nearest ancestor that has one. A scope with no World of
+    // its own — a 3D Desk, a Studio — is still somewhere you stand and look
+    // around; without this the 3D is gated off entirely and entering a desk
+    // blanks the stage. The guard bounds a parentId cycle in a damaged
+    // document rather than trusting the data.
+    const seen = new Set()
+    let cursor = scopeId || null
+    for (;;) {
+        const found = pickAt(cursor)
+        if (found) return found
+        if (!cursor || seen.has(cursor)) return null
+        seen.add(cursor)
+        cursor = list.find((node) => node?.id === cursor)?.parentId || null
+    }
+}
+
+// The scene's lighting, resolved through the split (2026-08-20): an active
+// `world.environment` in the scope wins; with none, the legacy `world.light`
+// (the retired dual-identity node) still drives — so every old document
+// lights exactly as it did. Returns resolved input values or null (callers
+// keep their worldState/hardcoded fallbacks).
+export function resolveSceneLighting(document, graphContext = null, { scopeId } = {}) {
+    const activeMap = document?.workspaceState?.activeNodeIdByTypeScope
+    const envNode = pickActiveTypeNode(document?.nodes, 'world.environment', { scopeId, activeMap })
+    const node = envNode || pickActiveTypeNode(document?.nodes, 'world.light', { scopeId, activeMap })
+    return node ? evaluateNodeInputs(node, graphContext) : null
 }
 
 // scopeId undefined = unscoped (old behavior, matches any world.background node

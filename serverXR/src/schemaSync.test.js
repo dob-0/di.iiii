@@ -109,6 +109,25 @@ describe('normalizeProjectDocument', () => {
     })
     expect(doc.nodes.length).toBe(0)
   })
+
+  // The mirror has to carry the author stamp too. If only the ESM side knows
+  // the field, the server rebuilds every document without it and the delete
+  // guard sees a space full of unowned objects.
+  it('keeps createdBy on entities and nodes, and nulls a half-formed one', () => {
+    const createdBy = { subject: 'guest:ani', label: 'Ani' }
+    const doc = normalizeProjectDocument({
+      entities: [
+        { id: 'e1', type: 'box', createdBy },
+        { id: 'e2', type: 'box' },
+        { id: 'e3', type: 'box', createdBy: { label: 'Ani' } }
+      ],
+      nodes: [{ id: 'n1', typeId: 'geom.cube', label: 'Cube', values: {}, createdBy }]
+    })
+    expect(doc.entities[0].createdBy).toEqual(createdBy)
+    expect(doc.entities[1].createdBy).toBeNull()
+    expect(doc.entities[2].createdBy).toBeNull()
+    expect(doc.nodes[0].createdBy).toEqual(createdBy)
+  })
 })
 
 // --- applyProjectOps ---
@@ -166,6 +185,73 @@ describe('applyProjectOps', () => {
     ])
     expect(afterDelete.nodes.find((n) => n.id === 'n1')).toBeUndefined()
     expect(afterDelete.edges.find((e) => e.id === 'edge1')).toBeUndefined()
+  })
+
+  // Deleting a DOORWAY leaves an edge whose endpoints both still exist: the
+  // wire names the CONTAINER and the socket id, not the door. createEdge
+  // validates endpoint nodes only and normalizeEdgesList drops edges by missing
+  // node id, never by missing port — so without the sweep this is a permanent
+  // orphan no reload or gesture can clear.
+  //
+  // This fixture exists because the parity check is fixture-driven: an edit to
+  // the ESM copy alone passes green until something exercises the path. If only
+  // the client had the sweep, the wire would vanish locally and be resurrected
+  // by the server's replay on the next sync.
+  it('deleting a doorway also removes the wire to the socket it made', () => {
+    const withDoor = applyProjectOps({}, [
+      { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', label: 'Desk', values: {} } } },
+      { type: 'createNode', payload: { node: { id: 'door', typeId: 'port.in', label: 'Tint', parentId: 'desk', values: {} } } },
+      { type: 'createNode', payload: { node: { id: 'src', typeId: 'value.color', label: 'Colour', values: {} } } },
+      // The wire lands on the DESK, at a port named by the door's id.
+      { type: 'createEdge', payload: { edge: { id: 'e1', fromNodeId: 'src', fromPort: 'out', toNodeId: 'desk', toPort: 'door' } } },
+    ])
+    expect(withDoor.edges.find((e) => e.id === 'e1')).toBeDefined()
+
+    const afterDelete = applyProjectOps(withDoor, [
+      { type: 'deleteNode', payload: { nodeId: 'door' } }
+    ])
+    expect(afterDelete.nodes.find((n) => n.id === 'door')).toBeUndefined()
+    // The desk and the source both survive, so the old edge sweep would keep it.
+    expect(afterDelete.nodes.find((n) => n.id === 'desk')).toBeDefined()
+    expect(afterDelete.nodes.find((n) => n.id === 'src')).toBeDefined()
+    expect(afterDelete.edges.find((e) => e.id === 'e1')).toBeUndefined()
+  })
+
+  // The atomic move. As four loose ops the reducer refuses the parentId and
+  // STILL applies the coordinates — and useProjectDocumentSync resubmits a
+  // 409'd batch verbatim, so a lost race leaves the node replanted at a
+  // coordinate meaningless in its scope with nothing said. Whole or nothing.
+  it('reparentNode moves a node atomically, or not at all', () => {
+    const base = applyProjectOps({}, [
+      { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', label: 'Desk', values: {} } } },
+      { type: 'createNode', payload: { node: { id: 'cube', typeId: 'geom.cube', label: 'Cube', graphX: 10, graphY: 20, values: {} } } },
+    ])
+
+    const moved = applyProjectOps(base, [
+      { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'desk', graphX: 60, graphY: 80 } }
+    ])
+    const cube = moved.nodes.find((n) => n.id === 'cube')
+    expect(cube.parentId).toBe('desk')
+    expect(cube.graphX).toBe(60)
+
+    // Destination missing: NOTHING applies, coordinates included.
+    const refused = applyProjectOps(base, [
+      { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'ghost', graphX: 999, graphY: 999 } }
+    ])
+    const untouched = refused.nodes.find((n) => n.id === 'cube')
+    expect(untouched.parentId).toBeFalsy()
+    expect(untouched.graphX).toBe(10)
+  })
+
+  it('reparentNode refuses to make a node its own ancestor', () => {
+    const nested = applyProjectOps({}, [
+      { type: 'createNode', payload: { node: { id: 'outer', typeId: 'universe.desk.3d', label: 'Outer', values: {} } } },
+      { type: 'createNode', payload: { node: { id: 'inner', typeId: 'universe.desk.3d', label: 'Inner', parentId: 'outer', values: {} } } },
+    ])
+    const after = applyProjectOps(nested, [
+      { type: 'reparentNode', payload: { nodeId: 'outer', parentId: 'inner' } }
+    ])
+    expect(after.nodes.find((n) => n.id === 'outer').parentId).toBeFalsy()
   })
 
   it('setWorldState patch merges correctly', () => {
@@ -266,6 +352,35 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'n1', typeId: 'some.type', values: { x: 2 } }
       ],
       edges: [{ id: 'edge1', fromNodeId: 'n1', fromPort: 'out', toNodeId: 'ghost', toPort: 'in' }]
+    },
+    // Portal label styling and text reveal: both were added to the ESM source
+    // and the mirror by hand, and neither was covered by any fixture, so the
+    // mirror could have drifted on them without a single test noticing.
+    {
+      entities: [
+        {
+          id: 'p1',
+          type: 'portal',
+          components: {
+            reference: {
+              spaceId: 'wcc', projectId: 'alla-virabyan', mode: 'embed', label: 'Alla Virabyan',
+              labelColor: '#000000', labelPlate: false, labelFont: 'helvetica'
+            }
+          }
+        },
+        // Defaults must survive: a portal authored before label styling existed.
+        { id: 'p2', type: 'portal', components: { reference: { spaceId: 's', projectId: 'p', mode: 'portal', label: 'Old' } } },
+        // An unknown font name must fall back rather than reach a strange URL.
+        { id: 'p3', type: 'portal', components: { reference: { spaceId: 's', projectId: 'p', label: 'X', labelFont: 'https://evil.example/f.woff' } } },
+        { id: 't1', type: 'text', components: { text: { value: 'a\nb', reveal: { mode: 'typewriter', speed: 999, delay: -5 } } } },
+        { id: 't2', type: 'text', components: { text: { value: 'plain' } } },
+        // Spatial video sound: a zero refDistance would make the panner divide
+        // by zero, and maxDistance below refDistance is incoherent.
+        { id: 'v1', type: 'video', components: { media: { assetId: 'a', spatial: true, distance: 0, maxDistance: 2 } } },
+        { id: 'v2', type: 'video', components: { media: { assetId: 'a' } } },
+        // An image's media object must NOT grow spatial fields.
+        { id: 'i1', type: 'image', components: { media: { assetId: 'a' } } }
+      ]
     }
   ]
 

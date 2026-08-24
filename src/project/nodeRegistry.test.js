@@ -1,19 +1,34 @@
 import { existsSync, readFileSync } from 'node:fs'
+import { NODE_RUNTIMES } from './nodes/index.js'
 import { resolve } from 'node:path'
 import { cwd } from 'node:process'
 import { describe, expect, it } from 'vitest'
 import {
     NODE_TYPES,
     PORT_TYPES,
+    NODE_FAMILIES,
+    FAMILY_BY_TYPE,
     createNode,
     createEdge,
     listNodeTypes,
     UNIMPLEMENTED_NODE_TYPES,
     arePortsCompatible,
+    getNodeFamily,
     getNodeType,
     getNodeInputs,
     getNodeOutputs,
+    isNodeMadeOfCode,
+    CONTAINER_TYPE_IDS,
 } from './nodeRegistry.js'
+
+describe('paletteHidden', () => {
+    it('view.library (Create) is implemented but not offered — its buttons make objects, not nodes', () => {
+        const offered = listNodeTypes().map((type) => type.id)
+        expect(offered).not.toContain('view.library')
+        const everything = listNodeTypes({ includeUnimplemented: true }).map((type) => type.id)
+        expect(everything).toContain('view.library')
+    })
+})
 
 describe('PORT_TYPES', () => {
     it('defines core port types with label and color', () => {
@@ -60,10 +75,27 @@ describe('NODE_TYPES', () => {
         expect(NODE_TYPES['view.image'].render).toBe('panel-2d')
     })
 
-    it('world and math nodes are hidden', () => {
-        expect(NODE_TYPES['world.light'].render).toBe('hidden')
+    it('world and math nodes are hidden — except Light and Camera, which stand somewhere', () => {
+        // world.light went spatial 2026-08-19 so a Light can be COLLECTED
+        // inside a container (a real point light with a marker); at root it
+        // still draws nothing and keeps its settings job. world.camera went in
+        // spatial 2026-08-20: the authored eye stands in the room, carried by
+        // containers like anything else.
+        expect(NODE_TYPES['world.light'].render).toBe('spatial-3d')
+        expect(NODE_TYPES['world.camera'].render).toBe('spatial-3d')
         expect(NODE_TYPES['world.background'].render).toBe('hidden')
         expect(NODE_TYPES['math.add'].render).toBe('hidden')
+    })
+
+    it('a fresh Camera is the room\'s own default view — authored without a jump', () => {
+        // These three defaults are byte-identical to RawViewport's built-in
+        // camera (position [0,2.4,6.5], target [0,0.75,0], fov 50). If either
+        // side drifts, placing a Camera would CUT to a different shot the
+        // moment it lands.
+        const inputs = Object.fromEntries(NODE_TYPES['world.camera'].inputs.map((i) => [i.id, i.default]))
+        expect(inputs.position).toEqual([0, 2.4, 6.5])
+        expect(inputs.lookAt).toEqual([0, 0.75, 0])
+        expect(inputs.fov).toBe(50)
     })
 
     // Product decision 2026-07-19: no node type is a singleton — every type,
@@ -90,7 +122,12 @@ describe('NODE_TYPES', () => {
         const runtimePath = ['project/graph/nodeGraphRuntime.js', 'src/project/graph/nodeGraphRuntime.js']
             .map((p) => resolve(cwd(), p)).find(existsSync)
         const runtimeSource = readFileSync(runtimePath, 'utf8')
-        const evaluatedTypeIds = [...runtimeSource.matchAll(/case '([^']+)':/g)].map((m) => m[1])
+        // Evaluated types live in TWO homes since the colocation seed: the
+        // legacy switch (scanned from source) and the NODE_RUNTIMES map.
+        const evaluatedTypeIds = [
+            ...[...runtimeSource.matchAll(/case '([^']+)':/g)].map((m) => m[1]),
+            ...NODE_RUNTIMES.keys()
+        ]
         expect(evaluatedTypeIds).toContain('time')
         for (const typeId of evaluatedTypeIds) {
             if (!NODE_TYPES[typeId]) continue
@@ -155,6 +192,14 @@ describe('createNode', () => {
         expect(node.graphY).toBe(200)
     })
 
+    // Same contract as createEntityOfType's stamp: handed in so this stays
+    // pure, and absent means unowned rather than yours.
+    it('stamps the author the caller hands it, and leaves it unowned otherwise', () => {
+        expect(createNode('geom.cube', { createdBy: { subject: 'guest:ani', label: 'Ani' } }).createdBy)
+            .toEqual({ subject: 'guest:ani', label: 'Ani' })
+        expect(createNode('geom.cube').createdBy).toBeNull()
+    })
+
     it('returns null for unknown typeId', () => {
         expect(createNode('does.not.exist')).toBeNull()
     })
@@ -195,9 +240,11 @@ describe('createEdge', () => {
 describe('listNodeTypes', () => {
     it('returns every implemented type when no filter given', () => {
         // Not every declared type: unimplemented ones are withheld from the
-        // palette so the editor stops offering nodes that do nothing.
+        // palette so the editor stops offering nodes that do nothing, and
+        // paletteHidden ones are implemented but deliberately not offered.
+        const paletteHidden = Object.values(NODE_TYPES).filter((t) => t.paletteHidden && !UNIMPLEMENTED_NODE_TYPES.has(t.id)).length
         const all = listNodeTypes()
-        expect(all.length).toBe(Object.keys(NODE_TYPES).length - UNIMPLEMENTED_NODE_TYPES.size)
+        expect(all.length).toBe(Object.keys(NODE_TYPES).length - UNIMPLEMENTED_NODE_TYPES.size - paletteHidden)
     })
 
     it('filters by category', () => {
@@ -294,18 +341,22 @@ describe('unimplemented node types', () => {
     it('withholds types with nothing behind them from the palette', () => {
         const offered = listNodeTypes().map((type) => type.id)
         // device.midi.in left this list on 2026-08-08 — Web MIDI is real in the
-        // page, so it is implemented. device.midi.out stands in its place: it
-        // has no sender yet.
-        for (const id of ['source.ar', 'device.midi.out', 'stream.compositor', 'universe.link']) {
+        // page, so it is implemented. Same for device.midi.out since 2026-08-21.
+        // device.osc.out stands in their place: no UDP without the bridge.
+        for (const id of ['source.ar', 'device.osc.out', 'stream.compositor', 'universe.link']) {
             expect(offered).not.toContain(id)
         }
     })
 
     it('still offers everything that actually works', () => {
         const offered = listNodeTypes().map((type) => type.id)
+        // world.light left this list with the Light split: it still WORKS
+        // (old documents keep both its behaviours) but is paletteHidden —
+        // the palette offers Environment and Light (light.point) instead.
         for (const id of [
-            'value.number', 'math.add', 'geom.cube', 'world.light',
-            'universe.world', 'view.image', 'view.browser', 'time',
+            'value.number', 'math.add', 'geom.cube', 'light.point',
+            'device.midi.out',
+            'world.environment', 'universe.world', 'view.image', 'view.browser', 'time',
             'source.webcam', 'source.mic', 'agent.keeper', 'device.midi.in'
         ]) {
             expect(offered).toContain(id)
@@ -331,3 +382,81 @@ describe('unimplemented node types', () => {
         }
     })
 })
+
+// The palette groups by family; a type missing from the map would silently
+// fall out of browse mode while staying searchable — invisible until someone
+// notices a node "disappeared". Both directions are enforced here.
+describe('node families', () => {
+    it('every node type belongs to exactly one declared family', () => {
+        const familyIds = new Set(NODE_FAMILIES.map((family) => family.id))
+        for (const typeId of Object.keys(NODE_TYPES)) {
+            const familyId = FAMILY_BY_TYPE[typeId]
+            expect(familyId, `${typeId} has no family`).toBeTruthy()
+            expect(familyIds.has(familyId), `${typeId} points at unknown family ${familyId}`).toBe(true)
+        }
+    })
+
+    it('the family map names only types that really exist', () => {
+        for (const typeId of Object.keys(FAMILY_BY_TYPE)) {
+            expect(getNodeType(typeId), `${typeId} is mapped to a family but is not a real type`).toBeTruthy()
+        }
+    })
+
+    // A real palette test on staging searched these nine words and every one
+    // returned "no match" — the node did not exist. Now it does, and the
+    // words a person actually types have to reach it.
+    it.each([
+        ['model', 'geom.model'], ['glb', 'geom.model'], ['gltf', 'geom.model'],
+        ['mesh', 'geom.model'], ['fbx', 'geom.model'], ['scan', 'geom.model'],
+        ['video', 'media.video'], ['mp4', 'media.video'], ['footage', 'media.video'],
+        ['sound', 'media.audio'], ['audio', 'media.audio'], ['music', 'media.audio']
+    ])('searching the palette for "%s" finds %s', (query, typeId) => {
+        expect(listNodeTypes({ query }).map((type) => type.id)).toContain(typeId)
+    })
+
+    it('"import" and "file" reach all three ways of bringing something in', () => {
+        for (const query of ['import', 'file']) {
+            const found = listNodeTypes({ query }).map((type) => type.id)
+            expect(found, query).toEqual(expect.arrayContaining(['geom.model', 'media.video', 'media.audio']))
+        }
+    })
+
+    it('resolves a family with label and color for any placeable type', () => {
+        for (const type of listNodeTypes()) {
+            const family = getNodeFamily(type.id)
+            expect(family?.label, `${type.id} resolves no family`).toBeTruthy()
+            expect(family?.color).toMatch(/^#[0-9a-f]{6}$/i)
+        }
+    })
+})
+
+// An empty canvas means two different things and used to show one screen for
+// both: an empty ROOM, or a thing that HAS no room. Going inside a Cube gave
+// the same blank grid as a fresh workspace, with nothing to say that a Cube is
+// a case in a JavaScript switch and has no insides to look at.
+describe('what a node is made of', () => {
+    it('calls a cube, a light and a number made of code', () => {
+        for (const typeId of ['geom.cube', 'geom.sphere', 'world.light', 'value.number', 'math.add', 'view.text']) {
+            expect(isNodeMadeOfCode(typeId), typeId).toBe(true)
+        }
+    })
+
+    it('does not say that of the things whose whole point is having an inside', () => {
+        for (const typeId of ['universe.world', 'universe.desk.3d', 'studio', 'universe.space']) {
+            expect(isNodeMadeOfCode(typeId), typeId).toBe(false)
+        }
+    })
+
+    it('says nothing about a type it has never heard of', () => {
+        expect(isNodeMadeOfCode('not.a.real.type')).toBe(false)
+        expect(isNodeMadeOfCode(undefined)).toBe(false)
+    })
+
+    // Derived, not listed, so it cannot rot as types are added.
+    it('covers every registered type one way or the other', () => {
+        for (const typeId of Object.keys(NODE_TYPES)) {
+            expect(isNodeMadeOfCode(typeId) || CONTAINER_TYPE_IDS.has(typeId), typeId).toBe(true)
+        }
+    })
+})
+

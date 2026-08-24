@@ -4,9 +4,9 @@ import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
-import { buildRawHubPath } from '../raw/utils/rawRouting.js'
+import { getApiSession } from '../services/apiClient.js'
 import { ALGO_VRITHM_LABEL, ALGO_VRITHM_PATH, ALGO_VRITHM_SPACE_ID } from '../algoVrithm/algoVrithmRouting.js'
-import { buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
+import { buildSpacesPath, buildStudioHubPath } from '../studio/utils/studioRouting.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
 // LiveProjectScene into the landing chunk for every visitor — including phones,
@@ -15,15 +15,18 @@ import { buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
 // after to confirm.
 const GridFloorBackground = lazy(() => import('../components/GridFloorBackground.jsx'))
 
-// The landing page promotes one experimental lane, and that is Raw (formerly
-// Seed). Beta has been retired.
+// The door used to be `buildRawCanvasPath('open')` — the node canvas that lives
+// in the browser's own storage. It cannot save into a space and cannot publish,
+// so the front page's one door opened onto the one surface where nothing a
+// visitor makes survives or can be handed to anyone. It now opens the visitor's
+// OWN space, where Studio and Nodes sit side by side and "View live" exists.
 //
-// Pointed at the communal 'open' space, not the bare '/raw' route: bare lane
-// routes default to the 'main' space — di.iiii's restricted flagship, not a
-// sandbox — so a guest session has no write scope there and AuthGate sends it
-// to the read-only viewer instead of the editor it clicked for. Every session,
-// guest included, already has implicit access to 'open'.
-const RAW_LANE_HREF = buildRawHubPath('open')
+// Progressive enhancement, on purpose: the href is a real destination for
+// no-JS, middle-click and crawlers, and the click upgrades it to the sandbox.
+// The session is fetched on the CLICK, never on page view — GET
+// /api/auth/session mints a guest session (and a sandbox space) for whoever
+// asks, and a passive visit must not do that.
+const DOOR_FALLBACK_MS = 1500
 // "Open Studio" goes to the spaces hub (`/studio`) for everyone. Two earlier
 // passes landed one level too deep: `/open/studio?browse=1` is StudioHub, which
 // despite the name is a *single space's project list* — the open space's — so
@@ -46,13 +49,13 @@ const FEATURED_SPACES = [
 // disk. Not a separate "mode": one boolean, and the two hosted sentences
 // below get local-truthful variants. Voice matches the wiki's local-install
 // article ("Run di.iiii on your own machine").
-const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Click "Open Studio" or go to any space URL. This is your machine — everything here is yours to edit, no account involved.' }
+const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Click "Step inside" or go to any space URL. This is your machine — everything here is yours to edit, no account involved.' }
 const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', desc: 'This di.iiii runs locally. Create as many spaces as you like — no sign-in, no quota, and your work stays in your own home folder.' }
 
 const STEPS = [
-    { n: '01', title: 'Open a space', body: 'Click "Step inside" or go to any space URL. No account required to view. Sign in only to edit.' },
-    { n: '02', title: 'Add objects', body: 'Use the Library panel to add 3D shapes, text, images, or 3D models. Drag to position them.' },
-    { n: '03', title: 'Customize your world', body: 'Change colors, lighting, camera angle, and background. Tweak with the Inspector on the right.' },
+    { n: '01', title: 'Open a space', body: 'Click "Step inside" — you get a space of your own, no account needed. Sign in to keep it and to make more.' },
+    { n: '02', title: 'Add objects', body: 'A space holds projects — open one, then use the Create window for 3D shapes, text, images, or 3D models. Drag to position them.' },
+    { n: '03', title: 'Set up the scene', body: 'The Scene window sets the sky, background and lighting. Select an object and edit it in the Objects window.' },
     { n: '04', title: 'Share or publish', body: 'Copy the space link to invite collaborators, or publish to make it live for the public.' }
 ]
 
@@ -66,7 +69,7 @@ const AUDIENCES = [
             </svg>
         ),
         label: 'Artists & Creators',
-        desc: 'Build visual worlds, 3D exhibitions, and immersive installations directly in the browser. No 3D software experience needed.'
+        desc: 'Build 3D exhibitions and installations a visitor opens from a link. No 3D software experience needed.'
     },
     {
         icon: (
@@ -108,11 +111,11 @@ const AUDIENCES = [
 ]
 
 const FEATURES = [
-    { icon: '◈', title: 'Node-based scene graph', desc: 'Every object is a typed node. Wire them, group them, script them.' },
+    { icon: '◈', title: 'Everything is a node', desc: 'Every object is a typed node. Wire them, group them, script them.' },
     { icon: '◉', title: 'Real-time collaboration', desc: 'See teammates\' cursors and changes live, in the same space.' },
     { icon: '⬡', title: 'WebXR ready', desc: 'Enter VR or AR from any supported browser — no app install.' },
     { icon: '◫', title: 'Asset pipeline', desc: 'Upload images, 3D models, audio. Optimized and served automatically.' },
-    { icon: '◳', title: 'Spaces system', desc: 'Multiple isolated workspaces. Share by link. Lock editing or leave open.' },
+    { icon: '◳', title: 'Spaces', desc: 'A space is a place that is yours — its own address, its own guest list, and the projects you make in it. Share by link. Lock editing or leave it open.' },
     { icon: '◐', title: 'Publish anywhere', desc: 'Each space has a public URL. Export JSON. Embed or link directly.' },
     { icon: '◍', title: 'Guest & sandbox modes', desc: 'Visitors explore without an account — a shared global space, or a private sandbox each.' },
     { icon: '✦', title: '3 free spaces', desc: 'Sign in and create up to three of your own spaces for free. Admins are unlimited.' }
@@ -120,12 +123,12 @@ const FEATURES = [
 
 const ROUTES = [
     { path: '/', label: 'Landing — this page' },
-    { path: '/studio', label: 'Studio — main authoring editor' },
+    { path: '/studio', label: 'Your spaces' },
     // Space-scoped, not the bare /raw this used to list. A bare lane route
     // defaults to the restricted 'main' space, where a guest session has no
     // write scope, so a visitor who clicked this from the route map landed on
     // "sign in to open the editor" instead of an editor.
-    { path: '/open/raw', label: 'Raw — experimental node-first editor' },
+    { path: '/open/raw', label: 'The node editor, on the open space' },
     { path: '/:spaceId', label: 'Public space viewer' },
     { path: '/serverXR/api/health', label: 'Backend health (JSON)' },
     { path: '/serverXR/api/auth/session', label: 'Auth session state (JSON)' },
@@ -148,16 +151,16 @@ export default function LandingPage() {
     // which also meant these static hrefs pointed at the guest destination
     // during the tick before getApiSession resolved — click fast enough as a
     // signed-in owner and you got sent somewhere else entirely.
-    const studioHref = buildStudioSpacesPath()
+    const studioHref = buildSpacesPath()
     const [entered, setEntered] = useState(false)
     // Walk/fly and the calm orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to
     // the orbit view once you'd moved was a full Exit + Enter Space round
     // trip. This lets you flip between them without leaving "entered" at all.
     const [viewMode, setViewMode] = useState(false)
-    // The platform's "Main" space (set from /admin, or inline in Studio Hub's
+    // di.iiii's "Main" space (set from /admin, or inline in Studio Hub's
     // per-space "Main" badge) is the same space that already represents the
-    // platform elsewhere — reuse it here instead of a second, parallel
+    // di.iiii elsewhere — reuse it here instead of a second, parallel
     // landing-only setting. When set, "Enter Space" opens that real,
     // populated space instead of the decorative walkable void this page's
     // own background renders.
@@ -193,6 +196,17 @@ export default function LandingPage() {
         }).catch(() => {})
         return () => { cancelled = true }
     }, [])
+
+    const openDoor = (event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
+        event.preventDefault()
+        const fallback = new Promise((resolve) => setTimeout(() => resolve(null), DOOR_FALLBACK_MS))
+        Promise.race([getApiSession().catch(() => null), fallback]).then((session) => {
+            window.location.href = session?.sandboxSpaceId
+                ? buildStudioHubPath(session.sandboxSpaceId)
+                : buildSpacesPath()
+        })
+    }
 
     const handleEnterSpace = () => {
         if (mainSpaceId) {
@@ -241,12 +255,16 @@ export default function LandingPage() {
             {!entered && (
                 <nav className="lp-nav">
                     <a href="/" className="lp-nav-logo">di<span className="lp-dot">.</span>iiii</a>
+                    {/* "Raw" and "Enter Raw" were the same URL twice, and the
+                        lane name is vocabulary a first visitor does not have
+                        yet. The nav now carries the same one door as the hero,
+                        plus the return path for people who already have work. */}
                     <div className="lp-nav-links">
-                        <a href={RAW_LANE_HREF} className="lp-nav-link">Raw</a>
+                        <a href={studioHref} className="lp-nav-link">Spaces</a>
                         <a href={buildWikiPath()} className="lp-nav-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
                     </div>
-                    <a href={RAW_LANE_HREF} className="lp-nav-cta">Enter Raw</a>
+                    <a href={studioHref} onClick={openDoor} className="lp-nav-cta">Step inside</a>
                 </nav>
             )}
 
@@ -262,29 +280,49 @@ export default function LandingPage() {
 
                 <Stack className={`lp-hero-inner${entered ? ' lp-hero-inner--hidden' : ''}`} alignItems="center" spacing={0}>
                     <Typography className="lp-eyebrow">
-                        Web XR &nbsp;·&nbsp; Node-based creation &nbsp;·&nbsp; Spatial
+                        Public spaces &nbsp;·&nbsp; on the open web
                     </Typography>
 
                     <Typography className="lp-wordmark" component="h1">
                         di<span className="lp-dot">.</span>iiii
                     </Typography>
 
+                    {/* The position, 2026-08-21: the visit is the product, the
+                        editor is backstage. The old line ("immersive 3D spatial
+                        experiences") sold the backstage, and "immersive" is on
+                        the refusal list. */}
                     <Typography className="lp-tagline">
-                        Build immersive 3D spatial experiences in your browser.<br />
-                        No download. No install. Just open and create.
+                        Make a space, hand out the address.<br />
+                        A link while it runs, a file when it ends.
                     </Typography>
 
+                    {/* One door. Three peer buttons asked a stranger to pick a
+                        lane before they knew what a lane was, and two of the
+                        three led somewhere worse than the first: "Open Studio"
+                        to a hub that wants an account, "Enter Space" to the
+                        restricted 'main' space, where a guest is bounced to the
+                        read-only viewer. Studio is now depth behind the one
+                        door (a room you enter once you are inside), not a rival
+                        to it. "Look around" is the decorative walkable void this
+                        page renders itself — it only exists where there is no
+                        real main space to enter, otherwise it is another door
+                        wearing a preview's clothes. */}
                     <Stack direction="row" spacing={2} sx={{ pt: 1, pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href={RAW_LANE_HREF}>
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={studioHref} onClick={openDoor}>
                             Step inside
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
-                            Open Studio
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
-                            Enter Space
-                        </Button>
+                        {!mainSpaceId && (
+                            <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
+                                Look around
+                            </Button>
+                        )}
                     </Stack>
+
+                    <Typography className="lp-cta-sub">
+                        no account, nothing to install — for you or for whoever opens your link.
+                        <br />
+                        <a href={studioHref}>Already have spaces? Open Studio →</a>
+                    </Typography>
 
                     <Stack direction="row" spacing={1.5} sx={{ pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                         {FEATURED_SPACES.map((space) => (
@@ -310,7 +348,7 @@ export default function LandingPage() {
                 {entered && (
                     <>
                         <button type="button" className="lp-enter-exit" onClick={() => { setEntered(false); setViewMode(false) }}>
-                            ← Exit space
+                            ← Back
                         </button>
                         <button type="button" className="lp-enter-exit lp-enter-viewtoggle" onClick={() => setViewMode((v) => !v)}>
                             {viewMode ? '→ Walk / fly' : '◐ View mode'}
@@ -331,13 +369,13 @@ export default function LandingPage() {
             {/* ── WHAT IS DI.I ─────────────────────────────────── */}
             <Box className="lp-section" component="section" id="what">
                 <Box className="lp-section-inner">
-                    <Typography className="lp-section-eyebrow">The platform</Typography>
+                    <Typography className="lp-section-eyebrow">The short answer</Typography>
                     <Typography className="lp-section-title" component="h2">What is di.iiii?</Typography>
                     <Typography className="lp-section-body">
-                        di.iiii is a collaborative 3D spatial editor that runs entirely in your web browser.
-                        Think of it as a shared whiteboard — but in three dimensions.
+                        di.iiii is where you make a 3D space and hand out its address.
                         Build scenes, place objects, set up lighting and cameras,
-                        and invite others to join the same space in real time.
+                        and invite others into the same space in real time — then publish,
+                        and anyone opens it in a browser or a headset with nothing to install.
                     </Typography>
 
                     <Box className="lp-three-cols">
@@ -372,7 +410,7 @@ export default function LandingPage() {
                                     </Box>
                                 ),
                                 title: 'Publish',
-                                body: 'Every space has a public URL. Share the link — visitors see your world in their browser or in VR/AR headsets.'
+                                body: 'Every space has a public URL. Share the link — visitors see your work in their browser or in a VR/AR headset.'
                             }
                         ].map((col) => (
                             <Box key={col.title} className="lp-col-card">
@@ -391,7 +429,7 @@ export default function LandingPage() {
                     <Typography className="lp-section-eyebrow">Getting started</Typography>
                     <Typography className="lp-section-title" component="h2">How to use di.iiii</Typography>
                     <Typography className="lp-section-body">
-                        You can be building your first 3D scene in under two minutes.
+                        You can be building your first 3D room in under two minutes.
                     </Typography>
 
                     <Box className="lp-steps">
@@ -409,7 +447,7 @@ export default function LandingPage() {
                     <Box className="lp-tip">
                         <Typography className="lp-tip-icon" component="span" aria-hidden="true">→</Typography>
                         <Typography className="lp-tip-text" component="span">
-                            Keyboard shortcuts: <kbd>H</kbd> toggles the UI, <kbd>F</kbd> frames the scene, <kbd>Ctrl/⌘</kbd>+<kbd>Z</kbd> undoes the last action.
+                            Keyboard shortcuts: <kbd>H</kbd> toggles the UI, <kbd>F</kbd> frames the selection, <kbd>Ctrl/⌘</kbd>+<kbd>Z</kbd> undoes the last action.
                         </Typography>
                     </Box>
                 </Box>
@@ -464,7 +502,7 @@ export default function LandingPage() {
                     <Typography className="lp-section-title" component="h2">Learn how it works</Typography>
                     <Typography className="lp-section-body">
                         New here? The Wiki explains spaces, guest &amp; sandbox modes, free accounts,
-                        publishing, and the API — and it’s kept up to date as the platform grows.
+                        publishing, and the API — and it’s kept up to date as di.iiii grows.
                     </Typography>
 
                     <Box className="lp-feature-grid">
@@ -502,11 +540,11 @@ export default function LandingPage() {
 
                     <Box className="lp-ai-cols">
                         <Box className="lp-ai-block">
-                            <Typography className="lp-ai-block-title">Platform identity</Typography>
+                            <Typography className="lp-ai-block-title">Identity</Typography>
                             <Box className="lp-code-block">
                                 {[
                                     ['name', 'di.iiii'],
-                                    ['type', '3D spatial editor / WebXR platform'],
+                                    ['type', 'public 3D spaces on the open web'],
                                     ['version', '0.2.0'],
                                     ['backend', 'serverXR (Node.js)'],
                                     ['storage', 'SQLite + disk assets'],
@@ -556,21 +594,18 @@ export default function LandingPage() {
                         Start building your space.
                     </Typography>
                     <Typography className="lp-enter-body">
-                        Step inside to build with everyone in the Open Space, or open Studio for the
-                        classic panel-based editor.
-                        Everything runs in your browser — no sign-up required to explore.
+                        A space of your own, empty and waiting. Build it in the browser, hand out the
+                        address while it runs, and take the whole thing away as one file when it ends.
+                        No account needed to start.
                     </Typography>
                     <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', justifyContent: 'center', mb: 2 }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href={RAW_LANE_HREF}>
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={studioHref} onClick={openDoor}>
                             Step inside
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
-                            Open Studio
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
-                            Enter Space
-                        </Button>
                     </Stack>
+                    <Typography className="lp-cta-sub" sx={{ mb: 3 }}>
+                        <a href={studioHref}>Already have spaces? Open Studio →</a>
+                    </Typography>
                     <Typography className="lp-enter-note">
                         Armenia &nbsp;·&nbsp; Web XR &nbsp;·&nbsp; <a href="https://thedi.studio" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>thedi.studio</a>
                     </Typography>
@@ -585,8 +620,12 @@ export default function LandingPage() {
                         when Privacy/Terms/Instagram joined; .lp-footer-inner
                         already wraps, this lets the links themselves follow */}
                     <nav className="lp-footer-nav" aria-label="Footer navigation" style={{ flexWrap: 'wrap' }}>
-                        <a href={RAW_LANE_HREF} className="lp-footer-link">Raw</a>
-                        <a href={studioHref} className="lp-footer-link">Studio</a>
+                        {/* One door here too. This row used to read "Raw · Studio"
+                            — two peer lanes, which is the choice the hero exists
+                            to spare a first visitor. The entrance is the entrance;
+                            "Spaces" is a destination like Wiki, matching the nav. */}
+                        <a href={studioHref} onClick={openDoor} className="lp-footer-link">Step inside</a>
+                        <a href={studioHref} className="lp-footer-link">Spaces</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
                         <a href="/privacy" className="lp-footer-link">Privacy</a>
                         <a href="/terms" className="lp-footer-link">Terms</a>

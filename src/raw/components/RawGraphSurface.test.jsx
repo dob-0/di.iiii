@@ -1,5 +1,7 @@
-import { fireEvent, render } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+// The floor the auto-fit will not go below; the door must survive it.
+const FIT_MIN_USEFUL_ZOOM_FOR_TEST = 0.34
 import RawGraphSurface from './RawGraphSurface.jsx'
 import { createNode } from '../../project/nodeRegistry.js'
 
@@ -49,7 +51,7 @@ describe('RawGraphSurface', () => {
         expect(cubeCard).toBeTruthy()
 
         const outputDot = colorCard.querySelector('span[title*="(color)"]')
-        const cubeColorDot = cubeCard.querySelector('span[title="Color (color)"]')
+        const cubeColorDot = cubeCard.querySelector('span[title="Colour (color)"]')
         expect(outputDot).toBeTruthy()
         expect(cubeColorDot).toBeTruthy()
 
@@ -162,6 +164,36 @@ describe('RawGraphSurface', () => {
         fireEvent.pointerUp(numberInputDot, clientForGraphPoint(container, port.x, port.y))
 
         expect(onCreateEdge).not.toHaveBeenCalled()
+        // …and the death is SPOKEN, not silent: the two failure modes
+        // (missed vs incompatible) were indistinguishable on touch.
+        expect(container.querySelector('.raw-wire-notice')?.textContent).toMatch(/can’t feed/)
+    })
+
+    it('reserves the lower band on a coarse pointer — new cards must not land under the incoming inspector', () => {
+        // 3/3 creations on the S24 audit landed occluded: the docked
+        // inspector mounts the moment the new card selects, over exactly
+        // where a thumb double-taps.
+        const originalMatchMedia = window.matchMedia
+        window.matchMedia = vi.fn(() => ({ matches: true, addListener: () => {}, removeListener: () => {} }))
+        const rect = { left: 0, top: 0, right: 800, bottom: 800, width: 800, height: 800 }
+        const spy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue(rect)
+        try {
+            const onDoubleClick = vi.fn()
+            const { container } = render(
+                <RawGraphSurface nodes={[]} edges={[]} onDoubleClick={onDoubleClick} />
+            )
+            const surface = container.querySelector('.raw-graph-surface')
+            fireEvent.doubleClick(surface, { clientX: 400, clientY: 780 })
+            expect(onDoubleClick).toHaveBeenCalled()
+            const { graphY } = onDoubleClick.mock.calls[0][0]
+            // 45% of the 800px canvas is reserved: the clamped graph point
+            // must sit above ~440 (rect bottom 800 - 360 reserved - padding
+            // - header), never at the raw 780 tap line.
+            expect(graphY).toBeLessThan(450)
+        } finally {
+            spy.mockRestore()
+            window.matchMedia = originalMatchMedia
+        }
     })
 
     it('renders visible wires for existing edges', () => {
@@ -285,21 +317,47 @@ describe('RawGraphSurface', () => {
         expect(onEnterNode).toHaveBeenCalledWith('cube-1')
     })
 
-    // At fit-zoom on a phone a whole card is a few pixels across, so a tap
-    // aimed at a port landed on the enter control and changed scope instead of
-    // starting a wire — you ended up inside an empty node.
-    it('hides the enter control when cards are too small to aim at', () => {
+    // This used to assert the opposite: the enter control was HIDDEN when
+    // zoomed out, because at fit-zoom a whole card is a few pixels across and a
+    // tap aimed at a port landed on the control and changed scope instead of
+    // starting a wire. That collision was real, but hiding the only way into a
+    // container at exactly the zoom the auto-fit lands on is the wrong cure —
+    // and the intermediate fix, rendering it anyway, made it 7x7 real pixels.
+    //
+    // The door now hangs off the card's LEFT edge, counter-scaled, so it is
+    // nowhere near nearestOutputPort's 28-SCREEN-pixel grab radius on the right.
+    // The collision is structural now, not a threshold, so this asserts the
+    // thing the threshold was protecting instead.
+    it('keeps the way in at the zoom the fit lands on, without eating a wire grab', () => {
         const node = makeNode('geom.cube', { id: 'cube-1' })
-        const { getByRole, queryByRole } = render(
-            <RawGraphSurface nodes={[node]} edges={[]} onEnterNode={vi.fn()} />
+        const onEnterNode = vi.fn()
+        const onCreateEdge = vi.fn()
+        const { queryByRole, container } = render(
+            <RawGraphSurface
+                nodes={[node]}
+                edges={[]}
+                onEnterNode={onEnterNode}
+                onCreateEdge={onCreateEdge}
+                // Pinned to the exact zoom the auto-fit refuses to go below,
+                // rather than counting zoom-out clicks — the fit's starting
+                // point depends on how many nodes there are, which made the
+                // old version of this test measure something else.
+                initialZoom={FIT_MIN_USEFUL_ZOOM_FOR_TEST}
+            />
         )
 
+        // Still there — this is the regression that shipped in the first pass.
         expect(queryByRole('button', { name: /^Enter / })).toBeTruthy()
-        // Six steps of 0.1 take 1.0 down to 0.4, below the 0.5 threshold.
-        for (let i = 0; i < 6; i += 1) {
-            fireEvent.click(getByRole('button', { name: 'Zoom out' }))
-        }
-        expect(queryByRole('button', { name: /^Enter / })).toBeNull()
+
+        // And it is nowhere near the output end of the card, which is what the
+        // old zoom threshold was really protecting: the anchor is positioned
+        // OUTSIDE the card's left edge (right: 100%), so nearestOutputPort's
+        // grab radius on the right cannot reach it at any zoom.
+        const anchor = container.querySelector('.raw-graph-node-door-anchor')
+        expect(anchor).toBeTruthy()
+        expect(anchor.parentElement.classList.contains('raw-graph-node-card')).toBe(true)
+        expect(onEnterNode).not.toHaveBeenCalled()
+        expect(onCreateEdge).not.toHaveBeenCalled()
     })
 
     it('does not start a node drag when the enter control is pressed', () => {
@@ -557,10 +615,12 @@ describe('RawGraphSurface', () => {
         fireEvent.keyDown(window, { key: 'Delete' })
 
         expect(onDeleteNode).not.toHaveBeenCalled()
+        // Out of scope means out of scope: not even the question is asked.
+        expect(screen.queryByRole('dialog')).toBeNull()
     })
 
-    it('still deletes a selected node that IS on this surface', () => {
-        const node = makeNode('geom.cube', { id: 'cube-1' })
+    it('still deletes a selected node that IS on this surface, once confirmed', () => {
+        const node = makeNode('geom.cube', { id: 'cube-1', label: 'My Cube' })
         const onDeleteNode = vi.fn()
 
         render(
@@ -573,7 +633,289 @@ describe('RawGraphSurface', () => {
         )
 
         fireEvent.keyDown(window, { key: 'Backspace' })
+        const dialog = screen.getByRole('dialog')
+        expect(dialog).toHaveTextContent('Delete “My Cube”?')
+        expect(onDeleteNode).not.toHaveBeenCalled()
+
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }))
 
         expect(onDeleteNode).toHaveBeenCalledWith('cube-1')
+    })
+
+    // The INPUT/TEXTAREA/contentEditable guard: a node label ends in a
+    // backspace like any other typing, and that must not take the node.
+    it('Backspace while typing in a field neither deletes nor asks', () => {
+        const node = makeNode('geom.cube', { id: 'cube-1', label: 'My Cube' })
+        const onDeleteNode = vi.fn()
+
+        render(
+            <>
+                <input aria-label="a name field" />
+                <RawGraphSurface
+                    nodes={[node]}
+                    edges={[]}
+                    selectedNodeId={'cube-1'}
+                    onDeleteNode={onDeleteNode}
+                />
+            </>
+        )
+
+        const field = screen.getByLabelText('a name field')
+        fireEvent.keyDown(field, { key: 'Backspace' })
+        fireEvent.keyDown(field, { key: 'Delete' })
+
+        expect(screen.queryByRole('dialog')).toBeNull()
+        expect(onDeleteNode).not.toHaveBeenCalled()
+    })
+
+    it('cancelling the confirm leaves the node alone', () => {
+        const node = makeNode('geom.cube', { id: 'cube-1', label: 'My Cube' })
+        const onDeleteNode = vi.fn()
+
+        render(
+            <RawGraphSurface
+                nodes={[node]}
+                edges={[]}
+                selectedNodeId={'cube-1'}
+                onDeleteNode={onDeleteNode}
+            />
+        )
+
+        fireEvent.keyDown(window, { key: 'Backspace' })
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }))
+
+        expect(onDeleteNode).not.toHaveBeenCalled()
+        expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    // A card that holds something is a place you can go; one that does not is
+    // not. Before this every card wore the same chevron, so the chevron said
+    // nothing — and it disappeared entirely below CARD_CONTROL_MIN_ZOOM, which
+    // is exactly where the auto-fit lands an oversized graph.
+    describe('containers are legible as containers', () => {
+        it('shows how many nodes a card holds', () => {
+            const { container } = render(
+                <RawGraphSurface
+                    nodes={[makeNode('studio', { id: 'studio-1' })]}
+                    edges={[]}
+                    onEnterNode={() => {}}
+                    childCounts={new Map([['studio-1', 4]])}
+                />
+            )
+            const badge = container.querySelector('.raw-graph-node-child-count')
+            expect(badge?.textContent).toBe('4')
+            expect(container.querySelector('.raw-graph-node-door.has-contents')).toBeTruthy()
+        })
+
+        it('marks nothing on a card that holds nothing', () => {
+            const { container } = render(
+                <RawGraphSurface
+                    nodes={[makeNode('geom.cube', { id: 'cube-1' })]}
+                    edges={[]}
+                    onEnterNode={() => {}}
+                />
+            )
+            expect(container.querySelector('.raw-graph-node-door')).toBeTruthy()
+            expect(container.querySelector('.raw-graph-node-child-count')).toBeNull()
+            expect(container.querySelector('.raw-graph-node-door.has-contents')).toBeNull()
+        })
+
+        // Studio wraps this component read-only: no childCounts, and no
+        // onEnterNode either — so it must get a card and no door at all,
+        // rather than a door that goes nowhere.
+        it('renders a card with no door when nothing can be entered', () => {
+            const { container } = render(
+                <RawGraphSurface nodes={[makeNode('studio', { id: 'studio-1' })]} edges={[]} />
+            )
+            expect(container.querySelector('.raw-graph-node-card')).toBeTruthy()
+            expect(container.querySelector('.raw-graph-node-door')).toBeNull()
+            expect(container.querySelector('.raw-graph-node-child-count')).toBeNull()
+        })
+
+        // The defect this whole rework exists for: in the card header the door
+        // rode the graph's transform and measured 7x7 REAL pixels at the zoom
+        // the fit lands on, while a DOM-presence test passed the entire time.
+        // The anchor is counter-scaled, so the door's own box stays constant.
+        it('counter-scales the door so it does not shrink with the graph', () => {
+            const { container } = render(
+                <RawGraphSurface
+                    nodes={[makeNode('studio', { id: 'studio-1' })]}
+                    edges={[]}
+                    onEnterNode={() => {}}
+                    initialZoom={0.34}
+                />
+            )
+            const anchor = container.querySelector('.raw-graph-node-door-anchor')
+            expect(anchor).toBeTruthy()
+            // 1 / 0.34 — the exact inverse of the surface's own scale.
+            const scale = Number(/scale\(([^)]+)\)/.exec(anchor.getAttribute('style'))?.[1])
+            expect(scale).toBeCloseTo(1 / 0.34, 4)
+        })
+
+        it('still offers the door at the zoom the fit actually lands on', () => {
+            const { container } = render(
+                <RawGraphSurface
+                    nodes={[makeNode('studio', { id: 'studio-1' })]}
+                    edges={[]}
+                    onEnterNode={() => {}}
+                    initialZoom={0.34}
+                />
+            )
+            expect(container.querySelector('.raw-graph-node-door')).toBeTruthy()
+        })
+    })
+})
+
+// Long-press or right-click a port dot and offer to put it on the container's
+// face. Honest about itself: a long press advertises to nobody, so this is a
+// shortcut for people who know it, not the way anyone discovers doorways.
+describe('exposing a port on the container', () => {
+    const openMenu = (container) => {
+        const dot = container.querySelector('.raw-graph-port-dot--out')
+        fireEvent.contextMenu(dot, { clientX: 100, clientY: 100 })
+        return container.querySelector('.raw-graph-port-menu')
+    }
+
+    it('offers nothing at all when the surface cannot promote', () => {
+        // Studio wraps this read-only and passes no handler.
+        const { container } = render(
+            <RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} />
+        )
+        expect(openMenu(container)).toBeNull()
+    })
+
+    it('hands back the port that was held', () => {
+        const onPromotePort = vi.fn()
+        const node = makeNode('value.color', { id: 'c' })
+        const { container } = render(
+            <RawGraphSurface nodes={[node]} edges={[]} onPromotePort={onPromotePort} />
+        )
+        expect(openMenu(container)).toBeTruthy()
+        fireEvent.click([...container.querySelectorAll('.raw-graph-port-menu button')]
+            .find((button) => /Expose/.test(button.textContent)))
+        expect(onPromotePort).toHaveBeenCalledWith(expect.objectContaining({
+            dir: 'out',
+            port: expect.objectContaining({ id: 'out' })
+        }))
+        expect(container.querySelector('.raw-graph-port-menu')).toBeNull()
+    })
+
+    // A press on an output dot arms a wire. If the menu leaves it armed, the
+    // next release anywhere on the canvas snaps it to a port within 36px and
+    // creates a plausible-looking edge nobody asked for.
+    it('disarms any half-started wire when the menu opens', () => {
+        const onCreateEdge = vi.fn()
+        const colour = makeNode('value.color', { id: 'c', graphX: 0 })
+        const cube = makeNode('geom.cube', { id: 'cube', graphX: 320 })
+        const { container } = render(
+            <RawGraphSurface
+                nodes={[colour, cube]}
+                edges={[]}
+                onCreateEdge={onCreateEdge}
+                onPromotePort={vi.fn()}
+            />
+        )
+        const dot = container.querySelector('.raw-graph-port-dot--out')
+        fireEvent.pointerDown(dot, { button: 0, clientX: 100, clientY: 100 })
+        fireEvent.contextMenu(dot, { clientX: 100, clientY: 100 })
+        // Release right on the cube's Color input — which WOULD have connected.
+        const port = inputPortGraphPoint(cube, 0)
+        fireEvent.pointerUp(window, clientForGraphPoint(container, port.x, port.y))
+        expect(onCreateEdge).not.toHaveBeenCalled()
+    })
+
+    it('closes on cancel without promoting anything', () => {
+        const onPromotePort = vi.fn()
+        const { container } = render(
+            <RawGraphSurface
+                nodes={[makeNode('value.color', { id: 'c' })]}
+                edges={[]}
+                onPromotePort={onPromotePort}
+            />
+        )
+        openMenu(container)
+        fireEvent.click([...container.querySelectorAll('.raw-graph-port-menu button')]
+            .find((button) => /Cancel/.test(button.textContent)))
+        expect(onPromotePort).not.toHaveBeenCalled()
+        expect(container.querySelector('.raw-graph-port-menu')).toBeNull()
+    })
+})
+
+// A blank workspace opens in ZEN — no topbar, so the ⋯ menu and everything in
+// it does not exist for the person most likely to need it. The one offer that
+// matters has to live on the canvas they are actually looking at.
+describe('the blank canvas', () => {
+    it('offers to build a scene when there is nothing at all', () => {
+        const onMakeScene = vi.fn()
+        const { getByRole } = render(
+            <RawGraphSurface nodes={[]} edges={[]} onMakeScene={onMakeScene} />
+        )
+        fireEvent.click(getByRole('button', { name: /Build an example/ }))
+        expect(onMakeScene).toHaveBeenCalledTimes(1)
+    })
+
+    it('offers nothing once there is something on the canvas', () => {
+        const { queryByRole } = render(
+            <RawGraphSurface
+                nodes={[makeNode('geom.cube', { id: 'c' })]}
+                edges={[]}
+                onMakeScene={vi.fn()}
+            />
+        )
+        expect(queryByRole('button', { name: /Build an example/ })).toBeNull()
+    })
+
+    // Studio wraps this read-only and passes no handler.
+    it('offers nothing when there is nothing to offer', () => {
+        const { queryByRole } = render(<RawGraphSurface nodes={[]} edges={[]} />)
+        expect(queryByRole('button', { name: /Build an example/ })).toBeNull()
+    })
+})
+
+
+describe('the way into what a node is made of', () => {
+    const emptyScope = (props = {}) => render(
+        <RawGraphSurface
+            nodes={[]}
+            edges={[]}
+            emptyHint="A cube is made of code, not of other nodes."
+            {...props}
+        />
+    )
+
+    it('offers the reading before the offer to build something', () => {
+        const onExplainScope = vi.fn()
+        const onMakeScene = vi.fn()
+        const { container } = emptyScope({ onExplainScope, onMakeScene })
+        const buttons = [...container.querySelectorAll('.raw-empty-state-actions button')]
+        // Order matters: standing inside a node with no inside, "what is this"
+        // is the question being asked; "build me something" answers a different
+        // one and belongs second.
+        //
+        // Asserted as position + this button's own words, NOT as the pair of
+        // labels: the second button's wording is owned by a parallel vocabulary
+        // pass, and a test that pins somebody else's string goes red on their
+        // rename while saying nothing about the thing it is guarding.
+        expect(buttons).toHaveLength(2)
+        expect(buttons[0].textContent).toBe("What it's made of")
+        fireEvent.click(buttons[1])
+        expect(onMakeScene).toHaveBeenCalledTimes(1)
+        expect(onExplainScope).not.toHaveBeenCalled()
+    })
+
+    // Studio wraps this component read-only and passes no handlers. A button
+    // that calls undefined is a button that throws in front of somebody.
+    it('offers nothing when no handler is given', () => {
+        const { container } = emptyScope()
+        expect(container.querySelectorAll('.raw-empty-state-actions button')).toHaveLength(0)
+        expect(container.querySelector('.raw-empty-state').textContent)
+            .toContain('made of code')
+    })
+
+    it('calls back when pressed', () => {
+        const onExplainScope = vi.fn()
+        const { container } = emptyScope({ onExplainScope })
+        fireEvent.click(container.querySelector('.raw-empty-state-actions button'))
+        expect(onExplainScope).toHaveBeenCalledTimes(1)
     })
 })

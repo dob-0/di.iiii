@@ -5,6 +5,12 @@ export default function DesktopWindow({
     windowState,
     title,
     kicker = '',
+    // The family colour of the node this window belongs to, if it belongs to
+    // one. Drives the stripe along the top edge and the kicker's colour, which
+    // is what makes a window and its graph card legible as ONE node rather
+    // than two identical rectangles. Windows that are tools rather than nodes
+    // (Outliner, Chat) pass nothing and keep the neutral furniture edge.
+    accent = null,
     children,
     onFocus,
     onPatch,
@@ -17,11 +23,18 @@ export default function DesktopWindow({
     allowOverflowTop = false,
     canvasZoom = 1
 }) {
+    // `minimized` rides along in the draft on purpose. The clamp places a
+    // collapsed window by its bar rather than by the panel it would open to,
+    // and it reads that from the frame it is handed — so a draft built from
+    // x/y/width/height alone silently told the clamp every window was open,
+    // and the fix in windowLayout.js could never fire from here. It is never
+    // written back: onPatch below sends the four geometry fields only.
     const [draft, setDraft] = useState(() => ({
         x: windowState.x,
         y: windowState.y,
         width: windowState.width,
-        height: windowState.height
+        height: windowState.height,
+        minimized: windowState.minimized === true
     }))
     const interactionRef = useRef(null)
     const [dragMode, setDragMode] = useState(null)
@@ -34,7 +47,8 @@ export default function DesktopWindow({
             x: windowState.x,
             y: windowState.y,
             width: windowState.width,
-            height: windowState.height
+            height: windowState.height,
+            minimized: windowState.minimized === true
         }, {
             minTop,
             allowOverflowLeft,
@@ -42,7 +56,7 @@ export default function DesktopWindow({
             viewportWidth: typeof window !== 'undefined' ? window.innerWidth : undefined,
             viewportHeight: typeof window !== 'undefined' ? window.innerHeight : undefined
         }))
-    }, [allowOverflowLeft, allowOverflowTop, minTop, windowState.height, windowState.width, windowState.x, windowState.y])
+    }, [allowOverflowLeft, allowOverflowTop, minTop, windowState.height, windowState.minimized, windowState.width, windowState.x, windowState.y])
 
     // Re-clamp when the viewport itself changes — rotation, window resize, the
     // virtual keyboard shrinking the layout viewport. Without this a window
@@ -168,7 +182,12 @@ export default function DesktopWindow({
                 width: draft.width,
                 height: windowState.minimized ? 'auto' : draft.height,
                 zIndex: windowState.zIndex,
-                cursor: sectionCursor
+                cursor: sectionCursor,
+                // A custom property, not a direct border/colour: raw.css owns
+                // the treatment (stripe width, fallback edge, kicker colour)
+                // and this only says which hue. Undefined leaves every
+                // fallback in the stylesheet intact.
+                ...(accent ? { '--window-accent': accent } : {})
             }}
         >
             <header
@@ -184,20 +203,42 @@ export default function DesktopWindow({
                     {onEnter && (
                         <button
                             type="button"
-                            title="Enter this node's scope to place children inside it"
+                            title="Go inside this node to put things in it"
                             onClick={(event) => { event.stopPropagation(); onEnter() }}
                         >
                             Enter ›
                         </button>
                     )}
-                    <button type="button" onClick={(event) => { event.stopPropagation(); onTogglePin?.() }}>
-                        {windowState.pinned ? 'Unpin' : 'Pin'}
+                    {/* Glyphs, not words. Four words per title bar — and a
+                        full extra 390px row per window on a phone — for three
+                        actions every windowing system on earth spells with
+                        symbols. Enter › above keeps its word: it is the one
+                        action a first-timer must find. Accessible names carry
+                        the words the glyphs dropped. */}
+                    <button
+                        type="button"
+                        className={windowState.pinned ? 'is-active' : ''}
+                        aria-label={windowState.pinned ? 'Unpin' : 'Pin'}
+                        title={windowState.pinned ? 'Unpin' : 'Pin'}
+                        onClick={(event) => { event.stopPropagation(); onTogglePin?.() }}
+                    >
+                        ⌖
                     </button>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); onToggleMinimize?.() }}>
-                        {windowState.minimized ? 'Expand' : 'Minimize'}
+                    <button
+                        type="button"
+                        aria-label={windowState.minimized ? 'Expand' : 'Minimize'}
+                        title={windowState.minimized ? 'Expand' : 'Minimize'}
+                        onClick={(event) => { event.stopPropagation(); onToggleMinimize?.() }}
+                    >
+                        {windowState.minimized ? '▣' : '–'}
                     </button>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); onClose?.() }}>
-                        Close
+                    <button
+                        type="button"
+                        aria-label="Close"
+                        title="Close"
+                        onClick={(event) => { event.stopPropagation(); onClose?.() }}
+                    >
+                        ×
                     </button>
                 </div>
             </header>

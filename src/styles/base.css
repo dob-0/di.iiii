@@ -26,7 +26,14 @@
     --di-black: #000;
     --di-surface: #0a0a0a;
     --di-text: #fff;
-    --di-text-muted: rgba(255, 255, 255, 0.4);
+    /* 0.4 measured 3.66:1 against the black ground — below the 4.5:1 floor for
+       body text, on 54 text nodes of the landing page alone and 6 more on
+       /spaces. Every one of them was secondary copy doing real explaining: what
+       di.iiii is, what a space holds, what the guest session gives you. 0.5
+       measures 5.28:1 and still reads as muted beside --di-text. Raise this
+       token, never a single call site: it is the one place the whole dark
+       theme's secondary text is set. */
+    --di-text-muted: rgba(255, 255, 255, 0.5);
     --di-mono: 'JetBrains Mono', 'Fira Code', monospace;
     --di-danger: #f25f5c;
     --di-success: #4df9c0;

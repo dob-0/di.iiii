@@ -110,6 +110,7 @@ export const defaultWorldState = {
     atmosphereBlend: false,
     hubDecor: false,
     spawn: null,
+    fog: null,
     gridVisible: true,
     gridSize: 24,
     gridCellSize: 0.75,
@@ -172,8 +173,15 @@ export const defaultPublishState = {
     lastExportAt: 0
 }
 
+export const defaultShowState = {
+    // Wall-clock ms stamped once, the first time a Time node exists in the
+    // document. Every window (editor, second tab, /out) derives the same
+    // elapsed value from it, so one show has ONE clock. 0 = not stamped yet;
+    // the clock falls back to each window's own monotonic time.
+    clockEpoch: 0
+}
+
 export const defaultWorkspaceState = {
-    activeSurface: 'world',
     selectedNodeId: null,
     // Which universe.world node is the "live"/output one for a given scope — a flat
     // map keyed by scopeId (root scope key is '') so it works uniformly without a
@@ -203,6 +211,7 @@ export const defaultProjectDocument = {
     xrState: defaultXrState,
     presentationState: defaultPresentationState,
     publishState: defaultPublishState,
+    showState: defaultShowState,
     windowLayout: defaultWindowLayout,
     assets: []
 }
@@ -242,7 +251,9 @@ export const buildDefaultComponentsForType = (type = 'box') => {
             base.media = { assetId: null, fit: 'contain', autoplay: false, loop: false, muted: true }
             break
         case 'video':
-            base.media = { assetId: null, fit: 'contain', autoplay: true, loop: true, muted: true, volume: 0.8 }
+            // spatial is off by default: routing a video's audio through a panner
+            // changes how an existing space sounds, so it is opted into per video.
+            base.media = { assetId: null, fit: 'contain', autoplay: true, loop: true, muted: true, volume: 0.8, spatial: false, distance: 6, maxDistance: 40 }
             break
         case 'audio':
             base.media = { assetId: null, autoplay: true, loop: true, muted: false, volume: 0.8, distance: 8 }
@@ -298,6 +309,26 @@ export const buildDefaultComponentsForType = (type = 'box') => {
     return base
 }
 
+/**
+ * What a NEWLY ADDED entity starts with — deliberately separate from
+ * buildDefaultComponentsForType, which is also the fallback normalizeEntity
+ * applies to every document ever saved.
+ *
+ * The two must not be merged. Turning a default on in the builder above would
+ * switch that behaviour on retroactively for every existing space the moment
+ * its document was next loaded; changing it here only affects things added from
+ * now on. Anything a creator would expect "in the box" belongs here.
+ */
+export const buildCreationComponentsForType = (type = 'box') => {
+    const base = buildDefaultComponentsForType(type)
+    if (type === 'video') {
+        // A video added to a space is expected to bring its sound with it,
+        // placed in the room rather than playing flat at a constant volume.
+        base.media = { ...base.media, spatial: true, muted: false }
+    }
+    return base
+}
+
 export const normalizeAsset = (asset = {}) => ({
     id: ensureString(asset.id, generateId('asset')),
     name: ensureString(asset.name, 'Untitled Asset'),
@@ -336,6 +367,27 @@ export const normalizeWindowLayout = (layout = {}) => {
     return { activeWindowId: windows[requestedActive] ? requestedActive : defaultWindowLayout.activeWindowId, windows }
 }
 
+// Portal label fonts are chosen by name from a fixed set, never by URL — the
+// renderer fetches whatever it is given and a document is untrusted input.
+const LABEL_FONT_NAMES = ['default', 'helvetica']
+
+const TEXT_REVEAL_MODES = ['none', 'typewriter']
+
+// A text entity's optional reveal. Absent (or 'none') means the text draws in
+// full immediately, which is what every text entity authored before this did.
+const normalizeTextReveal = (source) => {
+    const mode = TEXT_REVEAL_MODES.includes(source?.mode) ? source.mode : 'none'
+    if (mode === 'none') return { mode: 'none' }
+    return {
+        mode,
+        speed: Math.min(400, Math.max(1, ensureNumber(source.speed, 28))),
+        delay: Math.max(0, ensureNumber(source.delay, 0.4)),
+        lineDelay: Math.max(0, ensureNumber(source.lineDelay, 0.35)),
+        hold: Math.max(0, ensureNumber(source.hold, 3)),
+        loop: ensureBoolean(source.loop, false)
+    }
+}
+
 const TIMELINE_PROPERTIES = ['position', 'rotation', 'scale', 'opacity']
 const TIMELINE_EASINGS = ['linear', 'ease']
 
@@ -364,6 +416,21 @@ const normalizeTimeline = (source) => {
         tracks.push({ property, keys })
     })
     return { duration, loop: ensureBoolean(source.loop, true), tracks }
+}
+
+// Who made this. `subject` is the session identity ('github:99', 'guest:abc')
+// and is the only half worth comparing — `label` is a display name a person
+// can change. Everything made before this field existed normalizes to null,
+// and null means UNOWNED: never read it as yours, never as someone else's.
+// It has to live in the normalizer or it does not exist: both normalizers
+// return a literal, so an unlisted field is silently dropped on every op
+// apply and every document load, leaving the op-log holding a value the
+// rebuilt document does not have.
+export const normalizeAuthor = (author) => {
+    if (!author || typeof author !== 'object') return null
+    const subject = ensureString(author.subject, '')
+    if (!subject) return null
+    return { subject, label: ensureString(author.label, '') }
 }
 
 export const normalizeEntity = (entity = {}) => {
@@ -403,7 +470,8 @@ export const normalizeEntity = (entity = {}) => {
             ...nextComponents.text,
             value: typeof nextComponents.text.value === 'string' ? nextComponents.text.value : defaultComponents.text.value,
             variant: ensureString(nextComponents.text.variant, defaultComponents.text.variant || '2d'),
-            billboard: ensureBoolean(nextComponents.text.billboard, defaultComponents.text?.billboard ?? false)
+            billboard: ensureBoolean(nextComponents.text.billboard, defaultComponents.text?.billboard ?? false),
+            reveal: normalizeTextReveal(nextComponents.text.reveal)
         }
     }
     if (nextComponents.media) {
@@ -411,6 +479,16 @@ export const normalizeEntity = (entity = {}) => {
             ...defaultComponents.media,
             ...nextComponents.media,
             assetId: nextComponents.media.assetId || null
+        }
+        // Spatial-sound fields only exist where the defaults introduced them, so
+        // an image or model's media object is left exactly as it was.
+        if ('spatial' in (defaultComponents.media || {})) {
+            const media = nextComponents.media
+            media.spatial = ensureBoolean(media.spatial, defaultComponents.media.spatial ?? false)
+            // A zero or negative reference distance makes the panner divide by
+            // zero and the sound never attenuates.
+            media.distance = Math.max(0.1, ensureNumber(media.distance, defaultComponents.media.distance ?? 6))
+            media.maxDistance = Math.max(media.distance, ensureNumber(media.maxDistance, defaultComponents.media.maxDistance ?? 40))
         }
     }
     if (sourceComponents.link || defaultComponents.link) {
@@ -427,7 +505,13 @@ export const normalizeEntity = (entity = {}) => {
             spaceId: ensureString(refSource.spaceId, refDefault.spaceId || ''),
             projectId: ensureString(refSource.projectId, refDefault.projectId || ''),
             mode: ['embed', 'portal'].includes(refMode) ? refMode : 'portal',
-            label: ensureString(refSource.label, refDefault.label || '')
+            label: ensureString(refSource.label, refDefault.label || ''),
+            // Label styling. Defaults reproduce the original look exactly (white
+            // type on a dark plate, renderer's built-in font), so a portal
+            // authored before these existed is untouched.
+            labelColor: ensureString(refSource.labelColor, refDefault.labelColor || '#ffffff'),
+            labelPlate: ensureBoolean(refSource.labelPlate, refDefault.labelPlate ?? true),
+            labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default'
         }
     }
     if (sourceComponents.runtime || defaultComponents.runtime) {
@@ -455,6 +539,7 @@ export const normalizeEntity = (entity = {}) => {
         type,
         name: ensureString(entity.name, `${type[0].toUpperCase()}${type.slice(1)} Entity`),
         parentId: ensureString(entity.parentId, '') || null,
+        createdBy: normalizeAuthor(entity.createdBy),
         components: nextComponents
     }
 }
@@ -473,6 +558,14 @@ const normalizeWorldState = (world = {}) => {
             yaw: ensureNumber(source.spawn.yaw, 0),
             pitch: ensureNumber(source.spawn.pitch, 0),
             altY: ensureNumber(source.spawn.altY, 1.6)
+        } : null,
+        // Walk-mode atmosphere: null keeps the built-in close fog (8..50m); an
+        // authored {near, far} opens the distance for VAST scenes — the walker's
+        // camera far plane follows it (LiveProjectScene), so a 150m composition
+        // is invisible without this and fully present with it.
+        fog: source.fog && typeof source.fog === 'object' ? {
+            near: Math.max(0, ensureNumber(source.fog.near, 8)),
+            far: Math.max(1, ensureNumber(source.fog.far, 50))
         } : null,
         gridVisible: ensureBoolean(source.gridVisible, defaultWorldState.gridVisible),
         gridSize: Math.max(1, ensureNumber(source.gridSize, defaultWorldState.gridSize)),
@@ -591,6 +684,13 @@ export const normalizePublishState = (publish = {}) => {
     }
 }
 
+export const normalizeShowState = (show = {}) => {
+    const source = show && typeof show === 'object' ? show : {}
+    return {
+        clockEpoch: Math.max(0, ensureNumber(source.clockEpoch, defaultShowState.clockEpoch))
+    }
+}
+
 export const normalizeProjectMeta = (meta = {}) => {
     const source = meta && typeof meta === 'object' ? meta : {}
     const now = Date.now()
@@ -653,7 +753,8 @@ export const normalizeProjectNode = (node = {}) => {
         graphY,
         runtimeId: source.runtimeId ?? null,
         assetRef,
-        parentId: ensureString(source.parentId, '') || null
+        parentId: ensureString(source.parentId, '') || null,
+        createdBy: normalizeAuthor(source.createdBy)
     }
 }
 
@@ -685,17 +786,20 @@ const normalizeTemplate = (template = {}) => {
 
 export const normalizeWorkspaceState = (workspace = {}) => {
     const source = workspace && typeof workspace === 'object' ? workspace : {}
-    const activeSurface = ensureString(source.activeSurface, defaultWorkspaceState.activeSurface)
     const liveMap = source.liveWorldNodeIdByScope
     const activeMap = source.activeNodeIdByTypeScope
-    return {
+    const next = {
         ...cloneValue(defaultWorkspaceState),
         ...cloneValue(source),
-        activeSurface: ['world', 'view', 'graph'].includes(activeSurface) ? activeSurface : defaultWorkspaceState.activeSurface,
         selectedNodeId: ensureString(source.selectedNodeId, '') || null,
         liveWorldNodeIdByScope: (liveMap && typeof liveMap === 'object' && !Array.isArray(liveMap)) ? cloneValue(liveMap) : {},
         activeNodeIdByTypeScope: (activeMap && typeof activeMap === 'object' && !Array.isArray(activeMap)) ? cloneValue(activeMap) : {}
     }
+    // The World/View/Graph surface axis is retired (2026-08-20). Old documents
+    // still carry the key; shedding it here means it disappears on next save
+    // instead of riding along forever.
+    delete next.activeSurface
+    return next
 }
 
 const normalizeNodesList = (list = []) => {
@@ -743,6 +847,7 @@ export const normalizeProjectDocument = (document = {}) => {
         xrState: normalizeXrState(source.xrState),
         presentationState: normalizePresentationState(source.presentationState, worldState),
         publishState: normalizePublishState(source.publishState),
+        showState: normalizeShowState(source.showState),
         windowLayout: normalizeWindowLayout(source.windowLayout),
         assets: Array.isArray(source.assets) ? source.assets.map(normalizeAsset) : []
     }
@@ -841,6 +946,42 @@ export const applyProjectOps = (document, ops = []) => {
                 if (normalized) nodes.set(nodeId, normalized)
                 break
             }
+            case 'reparentNode': {
+                const nodeId = ensureString(payload.nodeId)
+                if (!nodeId || !nodes.has(nodeId)) break
+                const nextParentId = payload.parentId ? ensureString(payload.parentId) : null
+                // The destination must exist. A parentId naming nothing puts the
+                // node in no scope's child list, reachable from no Enter and
+                // visible on no canvas — silent loss, not an error.
+                if (nextParentId && !nodes.has(nextParentId)) break
+                // …and the node must not become its own ancestor. deleteNode's
+                // collect() guards against cycles it FINDS; this stops one being
+                // made. Without it the cycle is unreachable, undeletable and
+                // recurses on every traversal.
+                let cursor = nextParentId
+                let cycles = false
+                const seen = new Set()
+                while (cursor) {
+                    if (cursor === nodeId) { cycles = true; break }
+                    if (seen.has(cursor)) break
+                    seen.add(cursor)
+                    cursor = nodes.get(cursor)?.parentId || null
+                }
+                if (cycles) break
+                // ONE op, applied whole or not at all. As four loose ops the
+                // reducer would refuse the parentId while still applying the
+                // coordinates — and useProjectDocumentSync resubmits a 409'd
+                // batch verbatim, so a lost race left the node replanted at a
+                // coordinate meaningless in its scope, with nothing said.
+                const existing = nodes.get(nodeId)
+                nodes.set(nodeId, normalizeProjectNode({
+                    ...existing,
+                    parentId: nextParentId,
+                    ...(payload.graphX !== undefined ? { graphX: ensureNumber(payload.graphX, existing.graphX) } : {}),
+                    ...(payload.graphY !== undefined ? { graphY: ensureNumber(payload.graphY, existing.graphY) } : {})
+                }))
+                break
+            }
             case 'deleteNode': {
                 const nodeId = ensureString(payload.nodeId)
                 if (!nodeId) break
@@ -857,9 +998,30 @@ export const applyProjectOps = (document, ops = []) => {
                     }
                 }
                 collect(nodeId)
+                // A doorway node puts a socket on its CONTAINER's outer face,
+                // and the wire to that socket names the container, not the door
+                // — so deleting the door leaves an edge whose endpoints both
+                // still exist. Nothing else would ever remove it: createEdge
+                // validates endpoint nodes only, and normalizeEdgesList drops
+                // edges by missing node id, never by missing port. It would be a
+                // permanent orphan, parked at the corner of a card by
+                // inputPortCenter's idx<0 branch, that no reload or gesture
+                // could clear. Swept here, where the door's id is still known.
+                const deletedDoorwaySockets = new Set()
+                for (const id of toDelete) {
+                    const doomed = nodes.get(id)
+                    if (doomed && (doomed.typeId === 'port.in' || doomed.typeId === 'port.out') && doomed.parentId) {
+                        deletedDoorwaySockets.add(`${doomed.parentId}:${doomed.id}`)
+                    }
+                }
                 for (const id of toDelete) nodes.delete(id)
                 for (const [edgeId, edge] of edges) {
-                    if (toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId)) edges.delete(edgeId)
+                    if (toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId)) {
+                        edges.delete(edgeId)
+                    } else if (deletedDoorwaySockets.has(`${edge.toNodeId}:${edge.toPort}`)
+                        || deletedDoorwaySockets.has(`${edge.fromNodeId}:${edge.fromPort}`)) {
+                        edges.delete(edgeId)
+                    }
                 }
                 if (toDelete.has(nextDocument.workspaceState.selectedNodeId)) {
                     nextDocument.workspaceState = normalizeWorkspaceState({
@@ -911,6 +1073,10 @@ export const applyProjectOps = (document, ops = []) => {
             }
             case 'setPublishState': {
                 nextDocument.publishState = normalizePublishState(mergePatch(nextDocument.publishState, payload.patch || {}))
+                break
+            }
+            case 'setShowState': {
+                nextDocument.showState = normalizeShowState(mergePatch(nextDocument.showState, payload.patch || {}))
                 break
             }
             case 'setWindowState': {
@@ -1074,6 +1240,24 @@ const invertSingleOp = (document, op) => {
             if (!Object.keys(inversePatch).length) break
             return [{ type: 'updateNode', payload: { nodeId, patch: inversePatch } }]
         }
+        case 'reparentNode': {
+            const nodeId = ensureString(payload.nodeId)
+            const existing = nodeId ? nodes.get(nodeId) : null
+            if (!existing) break
+            // Puts the node back in the scope it came FROM, and back where it
+            // sat there. Without the coordinates the undo returns it to the
+            // right room at the drop point's coordinates, which mean nothing in
+            // that room.
+            return [{
+                type: 'reparentNode',
+                payload: {
+                    nodeId,
+                    parentId: existing.parentId || null,
+                    graphX: existing.graphX,
+                    graphY: existing.graphY
+                }
+            }]
+        }
         case 'deleteNode': {
             const nodeId = ensureString(payload.nodeId)
             if (!nodeId) break
@@ -1087,8 +1271,23 @@ const invertSingleOp = (document, op) => {
             }
             collect(nodeId)
             const restoredNodes = Array.from(toDelete).filter((id) => nodes.has(id)).map((id) => nodes.get(id))
+            // A doorway's exterior wire names the CONTAINER and the door's id,
+            // and the container is not in toDelete — so the delete sweep
+            // removes it while this filter alone would never restore it, and
+            // undo would silently drop a wire the user still had. Found by
+            // reading the inverse rather than by a failing test; guarded by one
+            // now.
+            const doorwaySockets = new Set(
+                Array.from(toDelete)
+                    .map((id) => nodes.get(id))
+                    .filter((node) => node && (node.typeId === 'port.in' || node.typeId === 'port.out') && node.parentId)
+                    .map((node) => `${node.parentId}:${node.id}`)
+            )
             const restoredEdges = Array.from(edges.values())
-                .filter((edge) => toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId))
+                .filter((edge) => toDelete.has(edge.fromNodeId)
+                    || toDelete.has(edge.toNodeId)
+                    || doorwaySockets.has(`${edge.toNodeId}:${edge.toPort}`)
+                    || doorwaySockets.has(`${edge.fromNodeId}:${edge.fromPort}`))
             if (!restoredNodes.length && !restoredEdges.length) break
             const inverse = [
                 ...restoredNodes.map((node) => ({ type: 'createNode', payload: { node: cloneValue(node) } })),
@@ -1122,6 +1321,7 @@ const invertSingleOp = (document, op) => {
         case 'setXrState': return patchInverse('setXrState', document.xrState)
         case 'setPresentationState': return patchInverse('setPresentationState', document.presentationState)
         case 'setPublishState': return patchInverse('setPublishState', document.publishState)
+        case 'setShowState': return patchInverse('setShowState', document.showState)
         case 'setWindowState': {
             const windowId = ensureString(payload.windowId)
             const windows = document.windowLayout?.windows || {}

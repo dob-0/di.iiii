@@ -4,6 +4,7 @@ import RawViewport, { renderNodeBody } from './RawViewport.jsx'
 
 vi.mock('@react-three/fiber', () => ({
     Canvas: ({ children }) => <div data-testid="mock-canvas">{children}</div>,
+    useFrame: () => {},
     useThree: () => ({
         camera: {
             position: { set: vi.fn() },
@@ -16,7 +17,7 @@ const gridSpy = vi.fn(() => null)
 vi.mock('@react-three/drei', () => ({
     Grid: (props) => gridSpy(props),
     Html: ({ children }) => <div>{children}</div>,
-    OrbitControls: () => null,
+    OrbitControls: () => <div data-testid="mock-orbit" />,
     // A live texture must render directly (PlaneWithTexture's useTexture is
     // for loadable URLs only) — if geom.plane ever falls through to this path
     // for a live-texture value, the test should fail loudly, not silently
@@ -207,6 +208,140 @@ describe('RawViewport', () => {
         expect(body.type).toBe('group')
     })
 
+    // A container carries what stands inside it. Before this, a node whose
+    // parentId was a 3D Desk was simply not rendered in the desk's own scope —
+    // the desk drew an empty shell and nothing ever moved with it.
+    describe('containment', () => {
+        const desk = { id: 'desk-1', typeId: 'universe.desk.3d', parentId: null, label: 'Desk', values: { position: [3, 0, 0], scale: [2, 2, 2] } }
+        const cubeInside = { id: 'cube-1', typeId: 'geom.cube', parentId: 'desk-1', label: 'Cube', values: { size: [1, 1, 1], position: [0, 0.5, 0] } }
+
+        it('renders a child inside its container, not as a sibling', () => {
+            boxObjectSpy.mockClear()
+            const { container } = render(
+                <RawViewport
+                    document={{ worldState: {}, entities: [], edges: [], nodes: [desk, cubeInside] }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            // The cube renders at all — it did not before.
+            expect(boxObjectSpy).toHaveBeenCalled()
+            // …and it renders BENEATH the desk's own group, so the desk's
+            // position/scale apply to it. A sibling would not be nested.
+            const deskGroup = [...container.querySelectorAll('group')]
+                .find((g) => g.getAttribute('position') === '3,0,0')
+            expect(deskGroup, 'the desk group is on screen').toBeTruthy()
+            expect(deskGroup.querySelector('group'), 'the cube is inside it').toBeTruthy()
+        })
+
+        it('does not render a child twice — once nested and once flat', () => {
+            boxObjectSpy.mockClear()
+            render(
+                <RawViewport
+                    document={{ worldState: {}, entities: [], edges: [], nodes: [desk, cubeInside] }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            expect(boxObjectSpy).toHaveBeenCalledTimes(1)
+        })
+
+        // The guard that matters most: NodeVisual reads node.values directly,
+        // so a nested node's wires have to be resolved before it is handed
+        // down, or going inside a container silently freezes the graph.
+        it('resolves a nested child\'s wired inputs, so going inside does not freeze it', () => {
+            sphereObjectSpy.mockClear()
+            render(
+                <RawViewport
+                    document={{
+                        worldState: {},
+                        entities: [],
+                        nodes: [
+                            desk,
+                            { id: 'color-1', typeId: 'value.color', parentId: null, label: 'Color', values: { value: '#ff8800' } },
+                            { id: 'sphere-1', typeId: 'geom.sphere', parentId: 'desk-1', label: 'Sphere', values: { radius: 0.5 } }
+                        ],
+                        edges: [{ id: 'e1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'sphere-1', toPort: 'color' }]
+                    }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            expect(sphereObjectSpy).toHaveBeenCalled()
+            expect(sphereObjectSpy.mock.calls[0][0].color).toBe('#ff8800')
+        })
+
+        // A World is its own stage. Seeing through one into another is a
+        // different feature and would change what every existing space shows.
+        it('does not see through a nested World into its contents', () => {
+            boxObjectSpy.mockClear()
+            render(
+                <RawViewport
+                    document={{
+                        worldState: {},
+                        entities: [],
+                        edges: [],
+                        nodes: [
+                            { id: 'world-1', typeId: 'universe.world', parentId: null, label: 'World', values: {} },
+                            { ...cubeInside, parentId: 'world-1' }
+                        ]
+                    }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            expect(boxObjectSpy).not.toHaveBeenCalled()
+        })
+    })
+
+    // The file-backed nodes resolve an assetId through the assetMap. Before
+    // this existed, renderNodeBody was never handed the map at all, so a node
+    // could not reach a file even in principle.
+    describe('file-backed nodes', () => {
+        const assetMap = new Map([
+            ['asset-model', { id: 'asset-model', name: 'scan.glb', mimeType: 'model/gltf-binary', url: '/api/a/scan.glb' }],
+            ['asset-video', { id: 'asset-video', name: 'clip.mp4', mimeType: 'video/mp4', url: '/api/a/clip.mp4' }],
+            ['asset-audio', { id: 'asset-audio', name: 'score.wav', mimeType: 'audio/wav', url: '/api/a/score.wav' }]
+        ])
+
+        it.each([
+            ['geom.model', 'asset-model'],
+            ['media.video', 'asset-video'],
+            ['media.audio', 'asset-audio']
+        ])('%s renders a body once its file is chosen', (typeId, assetId) => {
+            const body = renderNodeBody({ id: 'n', typeId }, { src: assetId }, assetMap)
+            expect(body).not.toBeNull()
+            expect(body.props.assetRef.id).toBe(assetId)
+        })
+
+        it('passes the resolved url through, so a server-stored asset loads', () => {
+            const body = renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'asset-model' }, assetMap)
+            expect(body.props.data).toBe('/api/a/scan.glb')
+            expect(body.props.modelFormat).toBe('gltf')
+        })
+
+        it('renders nothing — not an error — before a file is chosen', () => {
+            expect(renderNodeBody({ id: 'n', typeId: 'geom.model' }, {}, assetMap)).toBeNull()
+            expect(renderNodeBody({ id: 'n', typeId: 'media.video' }, { src: '' }, assetMap)).toBeNull()
+        })
+
+        // A local workspace stores bytes in IndexedDB, so its asset record has
+        // no url at all; ModelObject/useAssetUrl look the blob up by id. The
+        // node must still render, or dropping a file into a local workspace
+        // would look like nothing happened.
+        it('renders for a local asset that has no url', () => {
+            const localMap = new Map([['local-1', { id: 'local-1', name: 'scan.glb', mimeType: 'model/gltf-binary' }]])
+            const body = renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'local-1' }, localMap)
+            expect(body).not.toBeNull()
+            expect(body.props.data).toBeNull()
+        })
+
+        it('survives an assetId that points at nothing', () => {
+            expect(renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'gone' }, assetMap)).toBeNull()
+            expect(renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'gone' }, null)).toBeNull()
+        })
+    })
+
     it('without a scopeId, renders every spatial node document-wide (unscoped, matches old behavior)', () => {
         boxObjectSpy.mockClear()
         render(
@@ -287,5 +422,349 @@ describe('RawViewport', () => {
 
         const pills = [...container.querySelectorAll('.raw-selection-pill')].map((el) => el.textContent)
         expect(pills).toEqual(['Chosen'])
+    })
+})
+
+describe('the Light split', () => {
+    it('a Light (light.point) at ROOT is a real lamp — the disappearing act is over', () => {
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [{ id: 'l1', typeId: 'light.point', parentId: null, label: 'Light', values: { position: [1, 1.6, 0] } }], edges: [], entities: [] }}
+                scopeId={null}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        // the ambient+directional pair always exists; the lamp adds a third light
+        expect(container.querySelectorAll('pointlight').length).toBe(1)
+    })
+
+    it('the retired dual Light keeps BOTH old behaviours: unparented draws nothing', () => {
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [{ id: 'leg', typeId: 'world.light', parentId: null, label: 'Light', values: {} }], edges: [], entities: [] }}
+                scopeId={null}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        expect(container.querySelectorAll('pointlight').length).toBe(0)
+    })
+
+    it('an Environment drives the scene wash exactly as the legacy settings did', () => {
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [{ id: 'env', typeId: 'world.environment', parentId: null, label: 'Environment', values: { ambientIntensity: 0.33, directionalIntensity: 2.5 } }], edges: [], entities: [] }}
+                scopeId={null}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        const ambient = container.querySelector('ambientlight')
+        expect(ambient?.getAttribute('intensity')).toBe('0.33')
+        const directional = container.querySelector('directionallight')
+        expect(directional?.getAttribute('intensity')).toBe('2.5')
+    })
+})
+
+describe('objects stand at root only', () => {
+    // document.entities used to render UNSCOPED — every object haunted every
+    // interior at every depth (audit, 2026-08-20). Objects have no parent
+    // concept; the top room is where they stand.
+    const boxEntity = { id: 'e1', type: 'box', name: 'Box', components: { transform: { position: [0, 0.5, 0] } } }
+
+    it('renders objects in the root room', () => {
+        boxObjectSpy.mockClear()
+        render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [], edges: [], entities: [boxEntity] }}
+                scopeId={null}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        expect(boxObjectSpy).toHaveBeenCalled()
+    })
+
+    it('renders NO objects inside a scope', () => {
+        boxObjectSpy.mockClear()
+        render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [{ id: 'geo', typeId: 'geom.geo', parentId: null, label: 'Geo', values: {} }], edges: [], entities: [boxEntity] }}
+                scopeId={'geo'}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        expect(boxObjectSpy).not.toHaveBeenCalled()
+    })
+})
+
+describe('separating geos', () => {
+    // "now the same cubes in the 2 geos.. i want to seperate geos" (owner,
+    // 2026-08-20): with two geos each holding a cube, the room showed two
+    // identical hovering cubes, clicking one selected the CUBE, and the Geo —
+    // the thing that can actually be moved apart — was unreachable.
+    const geo = { id: 'geo-1', typeId: 'geom.geo', parentId: null, label: 'Geo', values: { position: [1, 0, 2] } }
+    const cube = { id: 'cube-geo', typeId: 'geom.cube', parentId: 'geo-1', label: 'Cube', values: { size: [1, 1, 1], position: [0, 0.5, 0] } }
+
+    it('clicking inside a Geo selects the GEO — the thing this room can move', () => {
+        const onSelectNode = vi.fn()
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, entities: [], edges: [], nodes: [geo, cube] }}
+                scopeId={null}
+                onSelectNode={onSelectNode}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        const geoGroup = [...container.querySelectorAll('group')]
+            .find((g) => g.getAttribute('position') === '1,0,2')
+        expect(geoGroup, 'the geo group is on screen').toBeTruthy()
+        const childGroup = geoGroup.querySelector('group')
+        expect(childGroup, 'the cube stands inside it').toBeTruthy()
+        // The child carries no click of its own, so the click bubbles to the
+        // scope-level node. Selecting the cube is what ENTERING the geo is for.
+        fireEvent.click(childGroup)
+        expect(onSelectNode).toHaveBeenCalledWith('geo-1')
+        expect(onSelectNode).not.toHaveBeenCalledWith('cube-geo')
+    })
+
+    it('inside the geo scope, the cube is scope-level and selectable again', () => {
+        const onSelectNode = vi.fn()
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, entities: [], edges: [], nodes: [geo, cube] }}
+                scopeId={'geo-1'}
+                onSelectNode={onSelectNode}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        const cubeGroup = [...container.querySelectorAll('group')]
+            .find((g) => g.getAttribute('position') === '0,0.5,0')
+        expect(cubeGroup, 'the cube is scope-level here').toBeTruthy()
+        fireEvent.click(cubeGroup)
+        expect(onSelectNode).toHaveBeenCalledWith('cube-geo')
+    })
+})
+
+describe('the Constructor', () => {
+    // A full snowman document, built the way a person builds one: two spheres
+    // and a merge standing INSIDE the constructor, wired to an Out door.
+    // Nothing here is mocked below the object components — the runtime
+    // resolves the descriptor through the real doorway mechanism.
+    const snowman = () => ({
+        worldState: {},
+        entities: [],
+        nodes: [
+            { id: 'ctor', typeId: 'geom.constructor', parentId: null, label: 'Snowman', values: { position: [2, 0, 0] } },
+            { id: 'head', typeId: 'geom.sphere', parentId: 'ctor', label: 'Head', values: { radius: 0.3, color: '#ffffff', position: [0, 1.2, 0] } },
+            { id: 'body', typeId: 'geom.sphere', parentId: 'ctor', label: 'Body', values: { radius: 0.5, color: '#eeeeff', position: [0, 0.5, 0] } },
+            { id: 'merge', typeId: 'shape.merge', parentId: 'ctor', label: 'Merge', values: {} },
+            { id: 'door', typeId: 'port.out', parentId: 'ctor', label: 'Out', values: { label: 'Shape' } }
+        ],
+        edges: [
+            { id: 'e1', fromNodeId: 'head', fromPort: 'geometry', toNodeId: 'merge', toPort: 'a' },
+            { id: 'e2', fromNodeId: 'body', fromPort: 'geometry', toNodeId: 'merge', toPort: 'b' },
+            { id: 'e3', fromNodeId: 'merge', fromPort: 'out', toNodeId: 'door', toPort: 'value' }
+        ]
+    })
+
+    it('wears what its doors carry — two spheres, through a Merge, end to end', () => {
+        sphereObjectSpy.mockClear()
+        render(<RawViewport document={snowman()} scopeId={null} onWorldDoubleClick={() => {}} />)
+        expect(sphereObjectSpy).toHaveBeenCalledTimes(2)
+        expect(sphereObjectSpy.mock.calls.map((call) => call[0].sphereRadius).sort()).toEqual([0.3, 0.5])
+    })
+
+    // The inside is a workshop, not a room: the parts must not ALSO stand as
+    // objects, or a person sees their snowman and its two loose spheres. The
+    // count-of-2 above is that guard — watched red with the childMap rule
+    // removed: four sphere renders, two worn and two standing.
+    //
+    // But standing INSIDE the constructor, the parts are exactly what you are
+    // there to arrange — the scoped room shows them as objects again.
+    it('shows the parts as objects when you stand inside it', () => {
+        sphereObjectSpy.mockClear()
+        render(<RawViewport document={snowman()} scopeId="ctor" onWorldDoubleClick={() => {}} />)
+        expect(sphereObjectSpy.mock.calls.length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('a wired colour reaches the worn shape live', () => {
+        sphereObjectSpy.mockClear()
+        const doc = snowman()
+        doc.nodes.push({ id: 'red', typeId: 'value.color', parentId: 'ctor', label: 'Red', values: { value: '#ff0000' } })
+        doc.edges.push({ id: 'e4', fromNodeId: 'red', fromPort: 'out', toNodeId: 'head', toPort: 'color' })
+        render(<RawViewport document={doc} scopeId={null} onWorldDoubleClick={() => {}} />)
+        const head = sphereObjectSpy.mock.calls.find((call) => call[0].sphereRadius === 0.3)
+        expect(head[0].color).toBe('#ff0000')
+    })
+
+    it('renders a placeholder frame when nothing reaches a door', () => {
+        sphereObjectSpy.mockClear()
+        const doc = snowman()
+        doc.edges = [] // parts exist, nothing wired
+        const { container } = render(<RawViewport document={doc} scopeId={null} onWorldDoubleClick={() => {}} />)
+        expect(sphereObjectSpy).not.toHaveBeenCalled()
+        // The wireframe placeholder in the geometry hue — "shape goes here".
+        const frames = [...container.querySelectorAll('meshbasicmaterial')]
+            .filter((el) => el.getAttribute('color') === '#bd93f9')
+        expect(frames.length).toBeGreaterThan(0)
+    })
+
+    it('renderNodeBody draws a bare constructor as the placeholder, without a document', () => {
+        const body = renderNodeBody({ id: 'c', typeId: 'geom.constructor' }, {})
+        expect(body).toBeTruthy()
+    })
+})
+
+describe('the Geo', () => {
+    // "It's a clear geo you can enter and in it collect what you need —
+    // object, light… and so on." The geo is a PLACE: visibly there when
+    // empty, everything spatial inside renders inside it, and a Light
+    // standing in it is a real light.
+    const geoDoc = (children = []) => ({
+        worldState: {},
+        entities: [],
+        edges: [],
+        nodes: [
+            { id: 'geo', typeId: 'geom.geo', parentId: null, label: 'Geo', values: { position: [1, 0, 0] } },
+            ...children
+        ]
+    })
+
+    it('marks its footprint even when empty — an empty place must not read as void', () => {
+        gridSpy.mockClear()
+        render(<RawViewport document={geoDoc()} scopeId={null} onWorldDoubleClick={() => {}} />)
+        expect(gridSpy).toHaveBeenCalled()
+    })
+
+    it('renders collected objects inside itself', () => {
+        boxObjectSpy.mockClear()
+        render(<RawViewport
+            document={geoDoc([{ id: 'c1', typeId: 'geom.cube', parentId: 'geo', label: 'Cube', values: {} }])}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        expect(boxObjectSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('a Light standing inside is a real point light; unparented it draws nothing', () => {
+        const { container } = render(<RawViewport
+            document={geoDoc([{ id: 'l1', typeId: 'world.light', parentId: 'geo', label: 'Light', values: { color: '#ff0000' } }])}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        const point = [...container.querySelectorAll('pointlight')]
+        expect(point.length).toBe(1)
+        expect(point[0].getAttribute('color')).toBe('#ff0000')
+
+        // …and at root, no body: every existing document keeps its look.
+        const { container: rootOnly } = render(<RawViewport
+            document={{ worldState: {}, entities: [], edges: [], nodes: [{ id: 'l2', typeId: 'world.light', parentId: null, label: 'Light', values: {} }] }}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        expect(rootOnly.querySelectorAll('pointlight').length).toBe(0)
+    })
+})
+
+describe('the Camera', () => {
+    const camDoc = (nodes, workspaceState = {}) => ({ worldState: {}, workspaceState, entities: [], edges: [], nodes })
+    const markActive = (id) => ({ activeNodeIdByTypeScope: { 'world.camera::': id } })
+
+    // Activation is EXPLICIT-ONLY: the palette drops nodes at the click point,
+    // so a first-created fallback would cut the room to an accidental
+    // floor-level close-up the moment the card landed (seen 2026-08-20).
+    it('placing a camera never steals the view — orbit stays until ● marks it', () => {
+        const { container } = render(<RawViewport
+            document={camDoc([{ id: 'cam', typeId: 'world.camera', parentId: null, label: 'Camera', values: {} }])}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        expect(container.querySelector('[data-testid="mock-orbit"]')).toBeTruthy()
+        // …and unmarked, it stands in the room as a housing marker.
+        expect(container.querySelectorAll('conegeometry').length).toBe(1)
+    })
+
+    it('the ● -marked camera owns the view: orbit unmounts and its body disappears', () => {
+        const { container } = render(<RawViewport
+            document={camDoc(
+                [{ id: 'cam', typeId: 'world.camera', parentId: null, label: 'Camera', values: {} }],
+                markActive('cam')
+            )}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        expect(container.querySelector('[data-testid="mock-orbit"]')).toBeNull()
+        expect(container.querySelectorAll('conegeometry').length).toBe(0)
+    })
+
+    // The /out projector view: "handlers not passed" was never enough,
+    // because OrbitControls mounts its own DOM listeners — the audience could
+    // orbit and zoom the "read-only" output (found 2026-08-20).
+    it('interactive={false} never mounts orbit, even with no authored camera', () => {
+        const { container } = render(<RawViewport
+            document={camDoc([{ id: 'c1', typeId: 'geom.cube', parentId: null, label: 'Cube', values: {} }])}
+            scopeId={null}
+            interactive={false}
+        />)
+        expect(container.querySelector('[data-testid="mock-orbit"]')).toBeNull()
+    })
+
+    it("a camera marked in another scope is not this room's eye", () => {
+        // cam stands INSIDE the geo and is marked active for the geo's scope —
+        // at root, orbit keeps the view and the housing renders inside the geo.
+        const { container } = render(<RawViewport
+            document={camDoc(
+                [
+                    { id: 'geo', typeId: 'geom.geo', parentId: null, label: 'Geo', values: {} },
+                    { id: 'cam', typeId: 'world.camera', parentId: 'geo', label: 'Camera', values: {} }
+                ],
+                { activeNodeIdByTypeScope: { 'world.camera::geo': 'cam' } }
+            )}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        expect(container.querySelector('[data-testid="mock-orbit"]')).toBeTruthy()
+        expect(container.querySelectorAll('conegeometry').length).toBe(1)
+    })
+})
+
+// In the backdrop the graph card IS the selection feedback — the floating
+// name pill duplicated it in the sky, detached from its object (the "GEO"
+// chip). Fullscreen keeps pills; the cards are gone there.
+describe('selection pills', () => {
+    const doc = { worldState: {}, entities: [], edges: [], nodes: [
+        { id: 'c1', typeId: 'geom.cube', parentId: null, label: 'A cube', values: {} }
+    ] }
+
+    it('renders a pill for the selected node by default (the fullscreen room)', () => {
+        const { container } = render(<RawViewport document={doc} scopeId={null} selectedNodeId="c1" onWorldDoubleClick={() => {}} />)
+        expect(container.querySelector('.raw-selection-pill')).toBeTruthy()
+    })
+
+    it('renders none when pills are off (the backdrop behind the cards)', () => {
+        const { container } = render(<RawViewport document={doc} scopeId={null} selectedNodeId="c1" showSelectionPills={false} onWorldDoubleClick={() => {}} />)
+        expect(container.querySelector('.raw-selection-pill')).toBeNull()
+    })
+})
+
+describe('material inputs reach the primitive bodies (material pass 1)', () => {
+    it('cube and sphere carry roughness/metalness/emission/opacity through', () => {
+        const cube = renderNodeBody(
+            { id: 'c1', typeId: 'geom.cube' },
+            { color: '#ff0000', roughness: 0.2, metalness: 1, emissive: '#220000', opacity: 0.5 }
+        )
+        expect(cube.props.opacity).toBe(0.5)
+        expect(cube.props.material).toEqual({ roughness: 0.2, metalness: 1, emissive: '#220000' })
+
+        const sphere = renderNodeBody(
+            { id: 's1', typeId: 'geom.sphere' },
+            { roughness: 0, metalness: 0.5, emissive: '#00ff00', opacity: 1 }
+        )
+        expect(sphere.props.material.metalness).toBe(0.5)
+        expect(sphere.props.material.emissive).toBe('#00ff00')
+    })
+
+    it('defaults mirror a bare material, so old documents render identically', () => {
+        const cube = renderNodeBody({ id: 'c1', typeId: 'geom.cube' }, {})
+        expect(cube.props.opacity).toBe(1)
+        expect(cube.props.material).toEqual({ roughness: 1, metalness: 0, emissive: undefined })
     })
 })

@@ -20,7 +20,13 @@ export const RESERVED_APP_SEGMENTS = [
     'raw',
     'seed',
     'open_jam',
-    'studio'
+    'studio',
+    // The layered addresses (studioRouting.js): /spaces and /{space}/projects.
+    // Reserved here so a project slug can never shadow the space's own project
+    // list. Checked against production and staging before reserving — no space
+    // and no project answered to either word on any tier.
+    'spaces',
+    'projects'
 ]
 
 const getAppBasePrefix = () => (APP_BASE_PATH === '/' ? '' : APP_BASE_PATH)
@@ -56,12 +62,37 @@ export const buildVanityProjectPath = (spaceSlugOrId, projectSlugOrId) => {
     return `${prefix}/${spaceSlugOrId}/${projectSlugOrId}`.replace(/\/{2,}/g, '/')
 }
 
+// The tool doorway: append one word to a project's link and it opens in that tool.
+//
+//   /wcc/alla-virabyan          the project, published
+//   /wcc/alla-virabyan/studio   the same project, open in Studio
+//   /wcc/alla-virabyan/raw      the same project, open in the node editor
+//
+// An ALIAS, never a canonical address. RootApp resolves the slug and then rewrites
+// the bar to the lane's own path, so no new permanent URL is minted and nothing new
+// has to be supported forever — the same contract the retired /seed segment gets.
+// The closed list of two is safe by construction: both words are already unusable as
+// a project slug (serverXR/src/projectStore.js PROJECT_RESERVED_SLUGS) and as a space
+// id (serverXR/src/spaceStore.js RESERVED_SPACE_SLUGS), so a doorway can never be
+// mistaken for content.
+export const TOOL_SEGMENT_STUDIO = 'studio'
+export const TOOL_SEGMENT_RAW = 'raw'
+export const PROJECT_TOOL_SEGMENTS = [TOOL_SEGMENT_STUDIO, TOOL_SEGMENT_RAW]
+export const isProjectToolSegment = (value = '') =>
+    PROJECT_TOOL_SEGMENTS.includes((value || '').trim().toLowerCase())
+
+export const buildProjectToolPath = (spaceSlugOrId, projectSlugOrId, toolSegment) =>
+    `${buildVanityProjectPath(spaceSlugOrId, projectSlugOrId)}/${toolSegment}`
+
+// Emits /{space}/admin. The old /admin?space={id} still PARSES — every link
+// already in the wild keeps working — but nothing mints it any more: a space is
+// the level that owns the thing being administered, so it belongs in the path,
+// not in a parameter you could delete and still have a valid address.
 export const buildPreferencesPath = (spaceId) => {
     const prefix = getAppBasePrefix()
     const basePath = `${prefix}/${APP_PAGE_PREFERENCES_ROUTE}`.replace(/\/{2,}/g, '/')
     if (!spaceId) return basePath
-    const params = new URLSearchParams({ space: spaceId })
-    return `${basePath}?${params.toString()}`
+    return `${prefix}/${spaceId}/${APP_PAGE_PREFERENCES_ROUTE}`.replace(/\/{2,}/g, '/')
 }
 
 export const isReservedAppSegment = (value = '') => RESERVED_APP_SEGMENTS.includes((value || '').trim().toLowerCase())
@@ -116,11 +147,28 @@ export const getAppLocationState = (locationLike = null) => {
         }
         if (segment) {
             const segments = relative.split('/')
+            // A space's ops, with the space in the PATH. /admin?space=x kept the space
+            // as a query parameter — the one level that owns everything else, demoted
+            // to something you could drop and still have a valid URL. The old form
+            // keeps parsing above, so no existing link rots.
+            if (segments.length === 2 && isPreferencesPageSegment(segments[1])) {
+                return {
+                    page: APP_PAGE_PREFERENCES,
+                    spaceId: segment
+                }
+            }
             if (segments[1] === 'p' && segments[2]) {
+                // The doorway works on the /p/ form too, so "append the tool" is true
+                // of EVERY project link and not only the pretty one. Here the id is
+                // already real, so no resolve step is needed.
+                const idTool = segments.length === 4 && isProjectToolSegment(segments[3])
+                    ? segments[3].trim().toLowerCase()
+                    : null
                 return {
                     page: APP_PAGE_EDITOR,
                     spaceId: segment,
-                    projectId: segments[2]
+                    projectId: segments[2],
+                    ...(idTool ? { toolSegment: idTool } : {})
                 }
             }
             // Bare two-segment shape (/{spaceSlugOrId}/{projectSlugOrId}) — this
@@ -135,10 +183,23 @@ export const getAppLocationState = (locationLike = null) => {
             // is a defense-in-depth guard so getAppLocationState is correct on
             // its own, not dependent on caller dispatch order.
             if (segments[1] && segments[1] !== 'p' && !isReservedAppSegment(segments[1])) {
+                // A tool word in the LAST position is a doorway; anything else after
+                // the project slug is a tail we do not recognise. Both were silently
+                // dropped before, so /wcc/x/studio and /wcc/x/banana rendered the
+                // published page and the URL bar lied about it.
+                const tail = segments.slice(2)
+                const toolSegment = tail.length === 1 && isProjectToolSegment(tail[0])
+                    ? tail[0].trim().toLowerCase()
+                    : null
                 return {
                     page: APP_PAGE_EDITOR,
                     spaceId: segment,
-                    projectSlugSegment: segments[1]
+                    projectSlugSegment: segments[1],
+                    // Spread conditionally: the two-segment return must stay
+                    // byte-identical, or a toEqual on the whole object fails for a
+                    // URL whose behaviour did not change.
+                    ...(toolSegment ? { toolSegment } : {}),
+                    ...(tail.length && !toolSegment ? { hasUnknownTail: true } : {})
                 }
             }
             return {

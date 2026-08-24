@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { listNodeTypes } from '../../project/nodeRegistry.js'
-import { filterNodeTypesForSurface } from '../../project/graph/nodeSurfaceFilters.js'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
+import { listNodeTypes, NODE_FAMILIES, FAMILY_BY_TYPE } from '../../project/nodeRegistry.js'
 
 const PALETTE_WIDTH = 280
 // Must match .raw-node-palette's max-height in raw.css — they disagreed by
@@ -14,7 +13,6 @@ const toDefinitionShim = (type) => {
     for (const port of type.inputs || []) {
         if (port.default !== undefined && defaults[port.id] === undefined) defaults[port.id] = port.default
     }
-    const surface = type.render === 'panel-2d' ? 'view' : 'world'
     const mode = type.render === 'spatial-3d'
         ? 'spatial'
         : type.render === 'panel-2d'
@@ -23,10 +21,10 @@ const toDefinitionShim = (type) => {
     return {
         id: type.id,
         label: type.label,
-        family: type.category,
-        surface,
+        family: FAMILY_BY_TYPE[type.id] || null,
         mode,
         authoringOnly: Boolean(type.authoringOnly),
+        devLocalOnly: Boolean(type.devLocalOnly),
         defaultParams: defaults
     }
 }
@@ -49,7 +47,6 @@ function getPalettePosition(clickX, clickY) {
 
 export default function NodePalette({
     open,
-    surface = 'world',
     placement = null,
     onClose,
     onCreate,
@@ -63,6 +60,8 @@ export default function NodePalette({
     const [activeIndex, setActiveIndex] = useState(0)
     const inputRef = useRef(null)
     const listRef = useRef(null)
+    const paletteRef = useRef(null)
+    const [measuredShift, setMeasuredShift] = useState(0)
 
     const scrollActiveIntoView = useCallback((index) => {
         if (!listRef.current) return
@@ -70,7 +69,7 @@ export default function NodePalette({
         item?.scrollIntoView({ block: 'nearest' })
     }, [])
 
-    const nodeEntries = filterNodeTypesForSurface(listNodeTypes({ query }), surface)
+    const nodeEntries = listNodeTypes({ query })
         .map(toDefinitionShim)
         .filter(Boolean)
         .map((definition) => ({ kind: 'node', id: definition.id, label: definition.label, hint: definition.id, definition }))
@@ -82,25 +81,88 @@ export default function NodePalette({
 
     // Commands first: with the chrome hidden they are the only way back to it,
     // so they must not be below a scroll of node types.
-    const entries = [...commandEntries, ...nodeEntries]
+    //
+    // With no query the node list is a browse, and 39 rows in registry
+    // declaration order is where "raw feels messy" lived — so browse mode
+    // groups by family, in the declared task order, with a sticky header per
+    // family. Any typed character dissolves the grouping into the flat ranked
+    // list: type-to-place stays exactly what it was.
+    const groupedNodeEntries = q
+        ? nodeEntries
+        : NODE_FAMILIES.flatMap((family) => {
+            const members = nodeEntries.filter((entry) => entry.definition.family === family.id)
+            if (!members.length) return []
+            return [
+                { kind: 'header', id: `family:${family.id}`, label: family.label, count: members.length, color: family.color },
+                ...members
+            ]
+        })
+    // EXACT MATCH FIRST, absolutely. Typing "Out" and pressing Enter used to
+    // open an Outliner panel: three command rows matched by substring and sat
+    // above the node actually named Out, so the documented door-building flow
+    // detonated on its own palette (watched happen in the UX audit). A row
+    // whose LABEL equals the query outranks every substring match, node or
+    // command; after that, label-prefix matches; the commands-first rule
+    // holds only WITHIN a rank, for its original reason (chrome hidden,
+    // commands must not sink below a scroll of nodes).
+    const rank = (entry) => {
+        if (!q) return 1
+        const label = (entry.label || '').toLowerCase()
+        if (label === q) return 0
+        if (label.startsWith(q)) return 1
+        return 2
+    }
+    // Browsing (no query) leads with NODES — the first thing a first-timer
+    // sees is Cube/Sphere/Geo, not Chat and hardware (the audit's
+    // first-contact finding). One exception is PINNED first regardless: the
+    // toolbar-recovery command ('chrome') is the only way back when the
+    // toolbar is hidden, and a lifeline must not sit below a scroll of
+    // nodes. Other commands follow the families; typing restores the
+    // exact/prefix ranking above for everything.
+    const pinnedCommands = commandEntries.filter((entry) => entry.id === 'chrome')
+    const restCommands = commandEntries.filter((entry) => entry.id !== 'chrome')
+    const entries = (q ? [...commandEntries, ...groupedNodeEntries] : [...pinnedCommands, ...groupedNodeEntries, ...restCommands])
+        .map((entry, index) => ({ entry, index }))
+        .sort((a, b) => rank(a.entry) - rank(b.entry) || a.index - b.index)
+        .map(({ entry }) => entry)
+
+    // Family headers are rows but not choices — the highlight and Enter must
+    // never land on one.
+    const isSelectable = (entry) => Boolean(entry) && entry.kind !== 'header'
+    const firstSelectableIndex = Math.max(0, entries.findIndex(isSelectable))
 
     useEffect(() => {
         if (!open) return
         setQuery('')
-        setActiveIndex(0)
+        setActiveIndex(firstSelectableIndex)
         requestAnimationFrame(() => inputRef.current?.focus())
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open])
 
     useEffect(() => {
-        setActiveIndex(0)
+        setActiveIndex(firstSelectableIndex)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [query])
+
+    // getPalettePosition assumes the box is PALETTE_MAX_HEIGHT tall, but the
+    // real box is the list PLUS the input row — ~50px taller — so a summon in
+    // the bottom band ran past the viewport with no scroll cue (audit 08-21,
+    // desk-19). Measure the box that actually rendered and lift it back in.
+    // Above the early return: hooks must run on every render.
+    useLayoutEffect(() => {
+        if (!open || !placement || !paletteRef.current) return
+        const height = paletteRef.current.offsetHeight
+        const desiredTop = getPalettePosition(placement.clientX || 0, placement.clientY || 0).y
+        const fitTop = Math.max(16, Math.min(desiredTop, window.innerHeight - 16 - height))
+        setMeasuredShift(desiredTop - fitTop)
+    }, [open, query, placement])
 
     if (!open || !placement) return null
 
     const pos = getPalettePosition(placement.clientX || 0, placement.clientY || 0)
 
     const handleConfirm = (entry) => {
-        if (!entry) return
+        if (!entry || entry.kind === 'header') return
         if (entry.kind === 'command') {
             // Closing first: a command that opens a panel would otherwise put it
             // behind the palette's own backdrop.
@@ -123,7 +185,10 @@ export default function NodePalette({
         if (event.key === 'ArrowDown') {
             event.preventDefault()
             setActiveIndex((i) => {
-                const next = Math.min(i + 1, entries.length - 1)
+                let next = i
+                for (let candidate = i + 1; candidate < entries.length; candidate += 1) {
+                    if (isSelectable(entries[candidate])) { next = candidate; break }
+                }
                 scrollActiveIntoView(next)
                 return next
             })
@@ -132,7 +197,10 @@ export default function NodePalette({
         if (event.key === 'ArrowUp') {
             event.preventDefault()
             setActiveIndex((i) => {
-                const next = Math.max(i - 1, 0)
+                let next = i
+                for (let candidate = i - 1; candidate >= 0; candidate -= 1) {
+                    if (isSelectable(entries[candidate])) { next = candidate; break }
+                }
                 scrollActiveIntoView(next)
                 return next
             })
@@ -157,7 +225,8 @@ export default function NodePalette({
                 role="dialog"
                 aria-modal="true"
                 aria-label="Create a node, or summon a panel"
-                style={{ left: pos.x, top: pos.y }}
+                ref={paletteRef}
+                style={{ left: pos.x, top: pos.y - measuredShift }}
             >
                 <div className="raw-node-palette-input-row">
                     <input
@@ -175,9 +244,16 @@ export default function NodePalette({
                     <ul ref={listRef} className="raw-node-palette-list">
                         {entries.map((entry, index) => (
                             <li key={`${entry.kind}:${entry.id}`}>
+                                {entry.kind === 'header' ? (
+                                    <div className="raw-node-palette-group" style={{ '--family-color': entry.color }}>
+                                        <span>{entry.label}</span>
+                                        <span className="raw-node-palette-group-count">{entry.count}</span>
+                                    </div>
+                                ) : (
                                 <button
                                     type="button"
-                                    className={`raw-node-palette-item${index === activeIndex ? ' is-active' : ''}`}
+                                    className={`raw-node-palette-item${index === activeIndex ? ' is-active' : ''}${entry.kind === 'node' && entry.definition.authoringOnly ? ' is-shell' : ''}`}
+                                    style={entry.kind === 'node' ? { '--family-color': NODE_FAMILIES.find((f) => f.id === entry.definition.family)?.color || 'transparent' } : undefined}
                                     onPointerEnter={(event) => {
                                         // Touch synthesises a pointerenter right
                                         // before the tap; moving the active row
@@ -207,11 +283,17 @@ export default function NodePalette({
                                         <span className="raw-node-palette-tag is-command">panel</span>
                                     )}
                                     {entry.kind === 'node' && entry.definition.authoringOnly && (
-                                        <span className="raw-node-palette-tag" title="Placeable and editable, but doesn't compute or render anything yet">
-                                            authoring only
+                                        <span className="raw-node-palette-tag" title="Holds its ports — computes nothing yet">
+                                            shell
+                                        </span>
+                                    )}
+                                    {entry.kind === 'node' && entry.definition.devLocalOnly && (
+                                        <span className="raw-node-palette-tag" title="Only works against a local dev server on this machine">
+                                            local dev
                                         </span>
                                     )}
                                 </button>
+                                )}
                             </li>
                         ))}
                     </ul>

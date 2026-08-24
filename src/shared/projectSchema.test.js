@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
     PROJECT_DOCUMENT_VERSION,
     applyProjectOps,
+    buildCreationComponentsForType,
+    buildDefaultComponentsForType,
     cloneValue,
     invertProjectOps,
     normalizeProjectDocument
+,
+    normalizeWorkspaceState,
+    defaultWorkspaceState
 } from './projectSchema.js'
 
 describe('projectSchema', () => {
@@ -41,8 +46,12 @@ describe('projectSchema', () => {
         })
 
         expect(document.entities[0].type).toBe('portal')
+        // Label styling defaults must reproduce the pre-existing look exactly —
+        // white type on a plate, renderer's own font — so portals authored
+        // before those fields existed render identically.
         expect(document.entities[0].components.reference).toEqual({
-            spaceId: 'wcc', projectId: 'arthur', mode: 'embed', label: 'Arthur'
+            spaceId: 'wcc', projectId: 'arthur', mode: 'embed', label: 'Arthur',
+            labelColor: '#ffffff', labelPlate: true, labelFont: 'default'
         })
         // unknown mode falls back to 'portal'
         expect(document.entities[1].components.reference.mode).toBe('portal')
@@ -242,6 +251,113 @@ describe('projectSchema', () => {
         expect(afterDeleteNode.edges).toHaveLength(0)
     })
 
+    // The one edge the ordinary cascade cannot catch: a doorway's wire names the
+    // CONTAINER and a port id, not the door, so both endpoint nodes survive the
+    // delete. createEdge validates endpoint nodes only and normalizeEdgesList
+    // drops edges by missing node id, never by missing port — so without the
+    // sweep this is a permanent orphan that no reload, normalisation or gesture
+    // can remove, parked at the corner of a card by inputPortCenter's idx<0
+    // branch. Mirrored in shared/projectSchema.cjs and covered there too: with
+    // the sweep on the client only, the wire vanishes locally and the server's
+    // replay resurrects it on the next sync.
+    it('sweeps the wire to a socket when the doorway that made it is deleted', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'door', typeId: 'port.in', parentId: 'desk', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'sky', typeId: 'value.color', values: { value: '#ff0000' } } } },
+            {
+                type: 'createEdge',
+                payload: { edge: { id: 'e1', fromNodeId: 'sky', fromPort: 'out', toNodeId: 'desk', toPort: 'door' } }
+            }
+        ])
+        expect(base.edges).toHaveLength(1)
+
+        const afterDelete = applyProjectOps(base, [
+            { type: 'deleteNode', payload: { nodeId: 'door' } }
+        ])
+        // Both endpoints of the wire are still here — which is exactly why the
+        // ordinary cascade would have kept it.
+        expect(afterDelete.nodes.map((node) => node.id).sort()).toEqual(['desk', 'sky'])
+        expect(afterDelete.edges).toHaveLength(0)
+    })
+
+    describe('reparentNode', () => {
+        const withDeskAndCube = () => applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'cube', typeId: 'geom.cube', graphX: 10, graphY: 20, values: {} } } }
+        ])
+
+        it('moves a node into a container, with its new coordinates', () => {
+            const moved = applyProjectOps(withDeskAndCube(), [
+                { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'desk', graphX: 60, graphY: 80 } }
+            ])
+            const cube = moved.nodes.find((node) => node.id === 'cube')
+            expect(cube.parentId).toBe('desk')
+            expect(cube.graphX).toBe(60)
+            expect(cube.graphY).toBe(80)
+        })
+
+        // The whole reason this is one op rather than four. As loose ops the
+        // reducer refuses the parentId and STILL applies the coordinates, and a
+        // 409'd batch is resubmitted verbatim — leaving the node replanted at a
+        // coordinate meaningless in its scope with nothing said.
+        it('applies nothing at all when the destination does not exist', () => {
+            const before = withDeskAndCube()
+            const after = applyProjectOps(before, [
+                { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'ghost', graphX: 999, graphY: 999 } }
+            ])
+            const cube = after.nodes.find((node) => node.id === 'cube')
+            expect(cube.parentId).toBeFalsy()
+            expect(cube.graphX).toBe(10)
+            expect(cube.graphY).toBe(20)
+        })
+
+        it('refuses to make a node its own ancestor', () => {
+            const nested = applyProjectOps(withDeskAndCube(), [
+                { type: 'createNode', payload: { node: { id: 'inner', typeId: 'universe.desk.3d', parentId: 'desk', values: {} } } }
+            ])
+            // desk -> inner -> desk would be unreachable, undeletable and would
+            // recurse on every traversal.
+            const after = applyProjectOps(nested, [
+                { type: 'reparentNode', payload: { nodeId: 'desk', parentId: 'inner' } }
+            ])
+            expect(after.nodes.find((node) => node.id === 'desk').parentId).toBeFalsy()
+        })
+
+        it('undoes back to the scope AND the position it came from', () => {
+            const before = withDeskAndCube()
+            const op = { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'desk', graphX: 60, graphY: 80 } }
+            const inverse = invertProjectOps(before, [op])
+            const after = applyProjectOps(applyProjectOps(before, [op]), inverse)
+            const cube = after.nodes.find((node) => node.id === 'cube')
+            expect(cube.parentId).toBeFalsy()
+            expect(cube.graphX).toBe(10)
+            expect(cube.graphY).toBe(20)
+        })
+    })
+
+    // Found by reading invertSingleOp, not by a failing test: a doorway's
+    // exterior wire names the CONTAINER and the door's id, and the container is
+    // not among the deleted nodes — so the delete sweep removed the wire while
+    // the inverse's filter would never have restored it, and one Ctrl+Z would
+    // silently drop a wire the user still had.
+    it('restores the wire to a doorway socket when the delete is undone', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'door', typeId: 'port.in', parentId: 'desk', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'sky', typeId: 'value.color', values: {} } } },
+            { type: 'createEdge', payload: { edge: { id: 'e1', fromNodeId: 'sky', fromPort: 'out', toNodeId: 'desk', toPort: 'door' } } }
+        ])
+        const op = { type: 'deleteNode', payload: { nodeId: 'door' } }
+        const inverse = invertProjectOps(base, [op])
+        const afterDelete = applyProjectOps(base, [op])
+        expect(afterDelete.edges).toHaveLength(0)
+
+        const restored = applyProjectOps(afterDelete, inverse)
+        expect(restored.nodes.find((node) => node.id === 'door')).toBeDefined()
+        expect(restored.edges.map((edge) => edge.id)).toEqual(['e1'])
+    })
+
     it('accepts unknown typeIds (matches the server, which never validates them)', () => {
         const base = normalizeProjectDocument({})
         // shared/projectSchema.cjs (the server's authoritative mirror) intentionally
@@ -352,6 +468,78 @@ describe('projectSchema', () => {
         expect(applyProjectOps(mutual, [
             { type: 'deleteNode', payload: { nodeId: 'cyc-a' } }
         ]).nodes).toHaveLength(0)
+    })
+})
+
+// The author stamp only exists if the normalizer names it. Both normalizers
+// return a literal object, so an unlisted field is dropped on every op apply
+// and every document load — the op-log would hold an author the rebuilt
+// document does not have, and the delete guard would read every object in the
+// space as unowned.
+describe('the author stamp survives normalization', () => {
+    it('keeps createdBy on an entity, through creation and through an op apply', () => {
+        const createdBy = { subject: 'guest:ani', label: 'Ani' }
+        const document = normalizeProjectDocument({
+            entities: [{ id: 'e1', type: 'box', name: 'Tower', createdBy }]
+        })
+        expect(document.entities[0].createdBy).toEqual(createdBy)
+
+        const applied = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createEntity', payload: { entity: { id: 'e2', type: 'box', createdBy } } }
+        ])
+        expect(applied.entities[0].createdBy).toEqual(createdBy)
+    })
+
+    it('keeps createdBy on a node', () => {
+        const createdBy = { subject: 'guest:ani', label: 'Ani' }
+        const document = normalizeProjectDocument({
+            nodes: [{ id: 'n1', typeId: 'geom.cube', label: 'Cube', values: {}, createdBy }]
+        })
+        expect(document.nodes[0].createdBy).toEqual(createdBy)
+    })
+
+    // Editing somebody's object is not taking it over.
+    it('an updateEntity op does not erase who made it', () => {
+        const createdBy = { subject: 'guest:ani', label: 'Ani' }
+        const start = normalizeProjectDocument({
+            entities: [{ id: 'e1', type: 'box', name: 'Tower', createdBy }]
+        })
+        const after = applyProjectOps(start, [
+            { type: 'updateEntity', payload: { entityId: 'e1', patch: { name: 'Renamed' } } }
+        ])
+        expect(after.entities[0].name).toBe('Renamed')
+        expect(after.entities[0].createdBy).toEqual(createdBy)
+    })
+
+    // Everything made before the stamp existed. Unowned, not yours.
+    it('normalizes a legacy entity and any half-formed author to null', () => {
+        const document = normalizeProjectDocument({
+            entities: [
+                { id: 'old', type: 'box' },
+                { id: 'junk', type: 'box', createdBy: 'guest:ani' },
+                { id: 'nameless', type: 'box', createdBy: { label: 'Ani' } }
+            ]
+        })
+        for (const entity of document.entities) expect(entity.createdBy).toBeNull()
+    })
+
+    it('drops a label that is not a string rather than carrying it', () => {
+        const document = normalizeProjectDocument({
+            entities: [{ id: 'e1', type: 'box', createdBy: { subject: 'guest:ani', label: { evil: true } } }]
+        })
+        expect(document.entities[0].createdBy).toEqual({ subject: 'guest:ani', label: '' })
+    })
+})
+
+describe('the retired surface axis', () => {
+    it('normalizeWorkspaceState sheds activeSurface from old documents', () => {
+        const next = normalizeWorkspaceState({ activeSurface: 'world', selectedNodeId: 'n1' })
+        expect('activeSurface' in next).toBe(false)
+        expect(next.selectedNodeId).toBe('n1')
+    })
+
+    it('defaultWorkspaceState carries no activeSurface', () => {
+        expect('activeSurface' in defaultWorkspaceState).toBe(false)
     })
 })
 
@@ -508,5 +696,60 @@ describe('invertProjectOps', () => {
         expect(invertProjectOps(base, [{ type: 'deleteEntity', payload: { entityId: 'ghost' } }])).toEqual([])
         expect(invertProjectOps(base, [{ type: 'setWorldState', payload: { patch: {} } }])).toEqual([])
         expect(invertProjectOps(base, [{ type: 'createEntity', payload: { entity: { type: 'box' } } }])).toEqual([])
+    })
+
+    // Creation defaults and normalization fallbacks come from two different
+    // builders on purpose. If they are ever merged, every video in every space
+    // ever saved starts playing sound the next time its document is loaded.
+    describe('creation defaults vs normalization fallbacks', () => {
+        it('gives a newly added video spatial sound, unmuted', () => {
+            const created = buildCreationComponentsForType('video')
+            expect(created.media.spatial).toBe(true)
+            expect(created.media.muted).toBe(false)
+        })
+
+        it('leaves an existing video silent when its document predates the fields', () => {
+            // Exactly what a document saved before spatial sound existed looks
+            // like: a media object with no spatial/muted keys at all.
+            const document = normalizeProjectDocument({
+                entities: [{ id: 'old', type: 'video', components: { media: { assetId: 'a' } } }]
+            })
+            expect(document.entities[0].components.media.spatial).toBe(false)
+            expect(document.entities[0].components.media.muted).toBe(true)
+        })
+
+        it('keeps the normalization fallback silent, whatever creation does', () => {
+            const fallback = buildDefaultComponentsForType('video')
+            expect(fallback.media.spatial).toBe(false)
+            expect(fallback.media.muted).toBe(true)
+        })
+
+        it('changes nothing for non-video types', () => {
+            for (const type of ['box', 'image', 'audio', 'model', 'text']) {
+                expect(buildCreationComponentsForType(type)).toEqual(buildDefaultComponentsForType(type))
+            }
+        })
+    })
+})
+
+describe('showState — the one show clock', () => {
+    it('normalizes junk to a clean, unstamped clock', () => {
+        expect(normalizeProjectDocument({}).showState).toEqual({ clockEpoch: 0 })
+        expect(normalizeProjectDocument({ showState: null }).showState).toEqual({ clockEpoch: 0 })
+        expect(normalizeProjectDocument({ showState: { clockEpoch: -5, junk: true } }).showState).toEqual({ clockEpoch: 0 })
+        expect(normalizeProjectDocument({ showState: { clockEpoch: 'soon' } }).showState).toEqual({ clockEpoch: 0 })
+    })
+
+    it('keeps a stamped epoch through normalize', () => {
+        expect(normalizeProjectDocument({ showState: { clockEpoch: 1755000000000 } }).showState.clockEpoch).toBe(1755000000000)
+    })
+
+    it('setShowState stamps the epoch and inverts back to unstamped', () => {
+        const base = normalizeProjectDocument({})
+        const op = { type: 'setShowState', payload: { patch: { clockEpoch: 1755000000000 } } }
+        const inverse = invertProjectOps(base, [op])
+        const stamped = applyProjectOps(base, [op])
+        expect(stamped.showState.clockEpoch).toBe(1755000000000)
+        expect(applyProjectOps(stamped, inverse).showState.clockEpoch).toBe(0)
     })
 })

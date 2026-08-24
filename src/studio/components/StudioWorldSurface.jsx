@@ -27,7 +27,7 @@ export default function StudioWorldSurface({ document }) {
     if (!worldNode) {
         return (
             <div className="ssws-root ssws-empty">
-                <p>No World is marked live yet — open Raw, create a World, and click its ● button to mark it live.</p>
+                <p>No Scene is live yet — open the node editor, add a Scene, and click its ● to make it live.</p>
             </div>
         )
     }
@@ -36,11 +36,15 @@ export default function StudioWorldSurface({ document }) {
         <div className="ssws-root">
             <RawViewport
                 document={document}
-                scopeId={worldNode.id}
+                // The room the live World stands in — the same room Raw's own
+                // World panel shows. Passing worldNode.id here would show the
+                // World's interior instead, so the identical document rendered
+                // as two different rooms depending on which lane opened it.
+                scopeId={worldNode.parentId || null}
                 worldNode={worldNode}
                 showEmptyHint={false}
             />
-            <div className="ssws-readonly-badge">Read-only · live world</div>
+            <div className="ssws-readonly-badge">Read-only · live room</div>
         </div>
     )
 }

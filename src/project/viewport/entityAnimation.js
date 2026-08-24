@@ -10,6 +10,12 @@ export function resolveAnimation(entity) {
     if (anim?.mode) {
         return { mode: anim.mode, speed: anim.speed ?? 1, amplitude: anim.amplitude ?? 1 }
     }
+    // A parented entity is PART of something, not an object standing in a room:
+    // the fallback is per-entity with its own phase seed, so letting it apply
+    // inside a group dismembers the group -- a TV's cabinet spinning one way
+    // while its picture rocks the other. Authored `animation.mode` still wins,
+    // so a child that is meant to move on its own can still say so.
+    if (entity?.parentId) return { mode: 'static', speed: 1, amplitude: 1 }
     const name = entity?.name || ''
     if (/ground|floor|gate|threshold|entrance/i.test(name)) return { mode: 'static', speed: 1, amplitude: 1 }
     if (/\bfly\b/i.test(name)) return { mode: 'orbit', speed: 1, amplitude: 1 }
