@@ -18,6 +18,7 @@ import {
 } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
+import { consumeArriveWalking } from '../../components/arriveWalking.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -182,6 +183,16 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // view where a Walk / Fly button means nothing: there is no room, only a
     // page in an iframe.
     const isSpatialEntry = entryView === 'scene' || entryView === 'fixed-camera'
+    // A visitor who WALKED through a portal arrives walking — the flag is set
+    // by the walker's portal jump (see arriveWalking.js) and honoured only when
+    // this room passes the same gate the Walk / Fly button uses; consumed
+    // unconditionally so it can never leak into an unrelated navigation.
+    const walkGateOpen = isSpatialEntry && (!hasGraph || hasWalkableEntities) && !isPreview && !isEmbed
+    useEffect(() => {
+        if (state.status !== 'ready') return
+        if (consumeArriveWalking() && walkGateOpen) setNavMode('walk')
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state.status, projectId])
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
     // the shell's query belongs to the page it is showing — a published page
@@ -341,7 +352,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 author choose between a composed opening shot and a room anyone
                 could walk — two unrelated things. An authored camera is how the
                 visit STARTS, not a promise they may never move. */}
-            {state.status === 'ready' && isSpatialEntry && navMode === 'orbit' && (!hasGraph || hasWalkableEntities) && !isPreview && !isEmbed ? (
+            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
                 <button
                     type="button"
                     style={{ ...overlayButtonStyle, position: 'absolute', top: '1rem', right: '1rem', zIndex: 20 }}

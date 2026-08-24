@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
+import * as THREE from 'three'
 import { Billboard, Text } from '@react-three/drei'
 import { TROIKA_FONT_URL } from './troikaFont.js'
 import arimoUrl from '@fontsource/arimo/files/arimo-latin-400-normal.woff'
@@ -145,8 +146,54 @@ export const portalHref = (spaceId, projectId) => {
     return project ? `/${space}/${project}` : `/${space}`
 }
 
-function PortalGateway({ spaceId, projectId, label, color = '#4df9ff' }) {
+// A door's name is the reward for approaching it, not a poster over the room:
+// five doors × a wide bilingual label each = a wall of overlapping plates from
+// the entry camera, which is exactly the screenshot that forced this. Colour
+// does the wayfinding at distance; the nameplate scales in on approach (walk),
+// on hover (orbit), and always in the editor, where the author needs to see
+// what points where.
+export const LABEL_REVEAL_NEAR = 4.5
+export const LABEL_REVEAL_FAR = 8
+export const labelRevealTarget = (distance, { hovered = false, inEditor = false } = {}) => {
+    if (hovered || inEditor) return 1
+    if (!Number.isFinite(distance)) return 0
+    const t = (LABEL_REVEAL_FAR - distance) / (LABEL_REVEAL_FAR - LABEL_REVEAL_NEAR)
+    return Math.min(1, Math.max(0, t))
+}
+
+// Fake bloom. Real bloom is an EffectComposer pass and EffectComposer renders
+// BLACK inside a WebXR session (pmndrs/xr#128, unfixed) — the headset path is
+// the one place a glowing door matters most, so the glow has to be geometry:
+// one additive radial-gradient sprite, tinted per portal.
+let glowTexture = null
+const getGlowTexture = () => {
+    if (glowTexture) return glowTexture
+    const size = 128
+    const canvas = window.document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+    g.addColorStop(0, 'rgba(255,255,255,0.9)')
+    g.addColorStop(0.3, 'rgba(255,255,255,0.32)')
+    g.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, size, size)
+    glowTexture = new THREE.CanvasTexture(canvas)
+    return glowTexture
+}
+
+const scratchWorldPos = new THREE.Vector3()
+
+function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate = true }) {
     const inEditor = typeof window !== 'undefined' && isStudioEditorPath(window.location.pathname)
+    const groupRef = useRef(null)
+    const labelRef = useRef(null)
+    const ringRef = useRef(null)
+    const ringMatRef = useRef(null)
+    const revealRef = useRef(inEditor ? 1 : 0)
+    const [hovered, setHovered] = useState(false)
     const enter = (event) => {
         event.stopPropagation()
         // appNavigate keeps this an SPA route change (back/forward stay sane);
@@ -159,19 +206,91 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff' }) {
         const href = portalHref(spaceId, projectId)
         if (href) appNavigate(href)
     }
+    const hoverOn = (event) => {
+        event.stopPropagation()
+        setHovered(true)
+        window.document.body.style.cursor = 'pointer'
+    }
+    const hoverOff = () => {
+        setHovered(false)
+        window.document.body.style.cursor = ''
+    }
+    useEffect(() => () => { if (hovered) window.document.body.style.cursor = '' }, [hovered])
+
+    useFrame((state, delta) => {
+        const group = groupRef.current
+        if (!group) return
+        group.getWorldPosition(scratchWorldPos)
+        const distance = state.camera.position.distanceTo(scratchWorldPos)
+        const target = labelRevealTarget(distance, { hovered, inEditor })
+        const next = THREE.MathUtils.damp(revealRef.current, target, 6, delta)
+        revealRef.current = next
+        if (labelRef.current) {
+            labelRef.current.visible = next > 0.02
+            labelRef.current.scale.setScalar(Math.max(next, 0.001))
+        }
+        if (ringMatRef.current) {
+            ringMatRef.current.emissiveIntensity = THREE.MathUtils.damp(
+                ringMatRef.current.emissiveIntensity, hovered ? 1.25 : 0.55, 8, delta)
+        }
+        if (ringRef.current) {
+            const s = THREE.MathUtils.damp(ringRef.current.scale.x, hovered ? 1.07 : 1, 8, delta)
+            ringRef.current.scale.setScalar(s)
+        }
+    })
+
     return (
-        <group>
-            <mesh rotation={[Math.PI / 2, 0, 0]} onClick={inEditor ? undefined : enter}>
+        <group ref={groupRef}>
+            <mesh
+                ref={ringRef}
+                rotation={[Math.PI / 2, 0, 0]}
+                onClick={inEditor ? undefined : enter}
+                onPointerOver={inEditor ? undefined : hoverOn}
+                onPointerOut={inEditor ? undefined : hoverOff}
+            >
                 <torusGeometry args={[1.1, 0.12, 16, 48]} />
-                <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.5} />
+                <meshStandardMaterial ref={ringMatRef} color={color} emissive={color} emissiveIntensity={0.55} />
             </mesh>
+            {/* The membrane doubles the tap target: the torus BAND was the only
+                clickable surface, ~40px on a phone — under the 44px touch
+                minimum, and tapping the hole a door visibly has did nothing. */}
+            <mesh
+                rotation={[-Math.PI / 2, 0, 0]}
+                onClick={inEditor ? undefined : enter}
+                onPointerOver={inEditor ? undefined : hoverOn}
+                onPointerOut={inEditor ? undefined : hoverOff}
+            >
+                <circleGeometry args={[1.02, 48]} />
+                <meshBasicMaterial
+                    color={color}
+                    transparent
+                    opacity={0.14}
+                    depthWrite={false}
+                    blending={THREE.AdditiveBlending}
+                    side={THREE.DoubleSide}
+                />
+            </mesh>
+            {getGlowTexture() ? (
+                <sprite scale={[3.4, 3.4, 1]}>
+                    <spriteMaterial
+                        map={getGlowTexture()}
+                        color={color}
+                        transparent
+                        opacity={0.3}
+                        depthWrite={false}
+                        blending={THREE.AdditiveBlending}
+                    />
+                </sprite>
+            ) : null}
             {label ? (
-                <Billboard position={[0, 1.9, 0]}>
-                    <LabelPlate text={label} fontSize={0.4} />
-                    <Text font={TROIKA_FONT_URL} fontSize={0.4} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.018} outlineColor="#04070c">
-                        {label}
-                    </Text>
-                </Billboard>
+                <group ref={labelRef} position={[0, 1.9, 0]} visible={inEditor}>
+                    <Billboard>
+                        {showPlate ? <LabelPlate text={label} fontSize={0.34} /> : null}
+                        <Text font={TROIKA_FONT_URL} fontSize={0.34} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.016} outlineColor="#04070c">
+                            {label}
+                        </Text>
+                    </Billboard>
+                </group>
             ) : null}
         </group>
     )
@@ -217,6 +336,7 @@ export default function PortalObject({ entity }) {
             projectId={reference.projectId}
             label={reference.label || reference.projectId || reference.spaceId || 'Portal'}
             color={entity.components?.appearance?.color}
+            showPlate={reference.labelPlate !== false}
         />
     )
 }
