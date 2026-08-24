@@ -11,9 +11,11 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session
+## Last session (2026-08-24, camp day — the /dilijan design marathon)
 
-- (no session notes were staged for this landing)
+- `/dilijan` final form "THE ISLANDS BETWEEN TWO SKIES" (owner: "too close, the box closes the space" → role-agent redesign, XR Creator plan + VPE limits): hearth island between two infinite luminous grids, five door islands 58m across walkable void, 88m mushroom mountain, glass toy-rooms at +28m on light tethers, walkable moon, 3 far secrets; dens = one island between two mono-hue skies. ALL DATA (`~/Documents/hosq-camp/room/islands.mjs` + `dens-islands.mjs`), full chain verified (tap/walk-through/arrive-walking/return).
+- Platform: #268 `worldState.fog {near,far}` (walk mode was BLIND past 50m; camera far follows) + translucent depthWrite fix. Earlier same day: #262-#267 (approach-revealed names, arrive-walking, gate glow, wiki, mouse-look −35%, reveal radius).
+- HARD-WON: a pointLight FLOODS walk mode ignoring distance/decay (green-light bisect proof) — vast scenes are styled with EMISSIVE surfaces, zero lights; `worldState.spawn` IS honoured (old "gate wins" note was wrong).
 
 Full detail: `PROGRESS.md`.
 
