@@ -152,8 +152,11 @@ export const portalHref = (spaceId, projectId) => {
 // does the wayfinding at distance; the nameplate scales in on approach (walk),
 // on hover (orbit), and always in the editor, where the author needs to see
 // what points where.
-export const LABEL_REVEAL_NEAR = 4.5
-export const LABEL_REVEAL_FAR = 8
+// FAR was 8 — but the hub's walk spawn stands 7.3-7.9m from its doors, so
+// every nameplate was faintly on at arrival and smudged the screen behind.
+// 6.5 keeps the spawn clean; the reveal begins one stride in.
+export const LABEL_REVEAL_NEAR = 4
+export const LABEL_REVEAL_FAR = 6.5
 export const labelRevealTarget = (distance, { hovered = false, inEditor = false } = {}) => {
     if (hovered || inEditor) return 1
     if (!Number.isFinite(distance)) return 0

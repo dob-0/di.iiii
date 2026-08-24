@@ -357,10 +357,21 @@ function GateGlow({ entity }) {
         ring.material.opacity = pulse
     })
 
+    // depthWrite off + polygon offset: a flat ring 6cm over the floor z-fights
+    // into broken dashes at the grazing angles walk mode lives at.
     return (
-        <mesh ref={ringRef} position={[pos[0], pos[1] + 0.06, pos[2]]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh ref={ringRef} position={[pos[0], pos[1] + 0.1, pos[2]]} rotation={[Math.PI / 2, 0, 0]}>
             <ringGeometry args={[1.3, 1.55, 48]} />
-            <meshBasicMaterial color={color} transparent opacity={0.4} toneMapped={false} side={THREE.DoubleSide} />
+            <meshBasicMaterial
+                color={color}
+                transparent
+                opacity={0.4}
+                toneMapped={false}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+                polygonOffset
+                polygonOffsetFactor={-2}
+            />
         </mesh>
     )
 }
