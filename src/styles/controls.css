@@ -90,7 +90,7 @@
     right: auto;
     padding: 6px 12px;
     min-width: 92px;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.04em;

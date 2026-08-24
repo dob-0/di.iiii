@@ -15,7 +15,7 @@
     border-radius: 8px;
     background: var(--ui-surface);
     cursor: pointer;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
     color: var(--ui-text-primary);
 }
 .media-variant-button.selected {
