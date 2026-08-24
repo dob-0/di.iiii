@@ -136,13 +136,28 @@ function LabelPlate({ text, fontSize, maxWidth }) {
 const STUDIO_PATH_SEGMENT_RE = /(?:^|\/)studio(?:\/|$)/
 export const isStudioEditorPath = (pathname = '') => STUDIO_PATH_SEGMENT_RE.test(pathname)
 
-function PortalGateway({ spaceId, label, color = '#4df9ff' }) {
+// Where a gateway portal lands. Pure and exported so the routing decision is
+// testable without mounting a canvas.
+export const portalHref = (spaceId, projectId) => {
+    const space = String(spaceId || '').trim()
+    if (!space) return null
+    const project = String(projectId || '').trim()
+    return project ? `/${space}/${project}` : `/${space}`
+}
+
+function PortalGateway({ spaceId, projectId, label, color = '#4df9ff' }) {
     const inEditor = typeof window !== 'undefined' && isStudioEditorPath(window.location.pathname)
     const enter = (event) => {
         event.stopPropagation()
         // appNavigate keeps this an SPA route change (back/forward stay sane);
         // window.location.assign here forced a full app reload per portal jump.
-        if (spaceId) appNavigate(`/${spaceId}`)
+        // The reference has always carried a projectId — the label even falls back
+        // to it — but the jump ignored it and landed on the space's published
+        // project instead. A hub whose doors all point at rooms INSIDE one space
+        // therefore went nowhere: every door re-opened the room you were standing
+        // in. Route to the project when one is named.
+        const href = portalHref(spaceId, projectId)
+        if (href) appNavigate(href)
     }
     return (
         <group>
@@ -199,6 +214,7 @@ export default function PortalObject({ entity }) {
     return (
         <PortalGateway
             spaceId={reference.spaceId}
+            projectId={reference.projectId}
             label={reference.label || reference.projectId || reference.spaceId || 'Portal'}
             color={entity.components?.appearance?.color}
         />
