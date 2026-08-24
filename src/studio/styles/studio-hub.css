@@ -150,15 +150,24 @@
 .sh-status-error { color: rgba(255, 109, 96, 0.75); }
 
 /* ─── PROJECT GRID ─────────────────────────────────────────── */
+/* Hairlines are drawn by the CARDS, not by a background showing through the
+   gaps. The gap trick (gap: 1px over a cyan background) draws the same grid
+   when the last row happens to be full -- and paints a solid cyan slab across
+   every empty cell when it is not, which is most of the time. Seen on
+   /dilijan/studio with 12 projects in a 5-wide grid: a bright teal block over
+   half the last row. Borders on the cards cannot expose anything, because
+   there is nothing behind them to expose. */
 .sh-projects-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1px;
-    background: var(--di-cyan-border);
-    border: 1px solid var(--di-cyan-border);
+    gap: 0;
+    border-top: 1px solid var(--di-cyan-border);
+    border-left: 1px solid var(--di-cyan-border);
 }
 
 .sh-project-card {
+    border-right: 1px solid var(--di-cyan-border);
+    border-bottom: 1px solid var(--di-cyan-border);
     background: var(--di-surface);
     padding: 20px;
     display: flex;

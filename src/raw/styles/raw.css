@@ -4650,6 +4650,7 @@
     flex: 1;
     min-height: 0;
     border-top: none;
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: transparent;
 }
