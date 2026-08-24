@@ -585,3 +585,30 @@ describe('PublicProjectViewer', () => {
         })
     })
 })
+
+describe('arrive walking', () => {
+    it('enters walk mode when the arrive-walking flag is set and the room is walkable', async () => {
+        window.sessionStorage.setItem('dii:arrive-walking', '1')
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'room-3', title: 'Room 3' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: [{
+                    id: 'e-floor',
+                    type: 'box',
+                    name: 'Floor',
+                    components: { transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] } }
+                }]
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="dilijan" projectId="room-3" spaceLabel="dilijan" />)
+
+        await waitFor(() => {
+            expect(screen.getByText('← View mode')).toBeInTheDocument()
+        })
+        expect(window.sessionStorage.getItem('dii:arrive-walking')).toBe(null)
+    })
+})

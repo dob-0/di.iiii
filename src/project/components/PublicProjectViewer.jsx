@@ -183,16 +183,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // view where a Walk / Fly button means nothing: there is no room, only a
     // page in an iframe.
     const isSpatialEntry = entryView === 'scene' || entryView === 'fixed-camera'
-    // A visitor who WALKED through a portal arrives walking — the flag is set
-    // by the walker's portal jump (see arriveWalking.js) and honoured only when
-    // this room passes the same gate the Walk / Fly button uses; consumed
-    // unconditionally so it can never leak into an unrelated navigation.
+    // The one gate walk mode has: shared by the Walk / Fly button and the
+    // arrive-walking effect below.
     const walkGateOpen = isSpatialEntry && (!hasGraph || hasWalkableEntities) && !isPreview && !isEmbed
-    useEffect(() => {
-        if (state.status !== 'ready') return
-        if (consumeArriveWalking() && walkGateOpen) setNavMode('walk')
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [state.status, projectId])
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
     // the shell's query belongs to the page it is showing — a published page
@@ -208,6 +201,20 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         setViewMode(null)
         setNavMode('orbit')
     }, [presentationState.entryView])
+
+    // A visitor who WALKED through a portal arrives walking — the flag is set
+    // by the walker's portal jump (see arriveWalking.js) and honoured only when
+    // this room passes the same gate the Walk / Fly button uses; consumed
+    // unconditionally so it can never leak into an unrelated navigation.
+    // Declared AFTER the entryView reset above on purpose: the reset fires on
+    // the same document-ready commit (entryView undefined → authored value),
+    // and effects run in declaration order — above it, the walk this sets was
+    // stomped straight back to orbit before it ever painted.
+    useEffect(() => {
+        if (state.status !== 'ready') return
+        if (consumeArriveWalking() && walkGateOpen) setNavMode('walk')
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state.status, projectId])
 
     useEffect(() => {
         if (!showCodeView) return undefined
