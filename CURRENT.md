@@ -11,12 +11,9 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session (2026-08-24, the night before camp)
+## Last session
 
-- Camp is READY on staging: invites re-minted to Aug 31 (old ones died mid-camp), one shared room, A5 QR card printed + chain-verified, desks mobile-first, delete guard live (#258).
-- `/dilijan` became a walkable hub: five colour-named portal doors → `room-1..5`, each with a door back; walking into a ring travels (#261), doors also unlock on graph rooms (#259) and portals finally honour projectId (#260).
-- The lexicon sweep's three misses (landing eyebrow, identity line, OG fallback) fixed and verified — prod promotion unblocked, waits on the owner's look.
-- Room build scripts + human-journey test harness live in `~/Documents/hosq-camp/room/`; craft research (post kills WebXR, ACES vs colour wayfinding, Tol palette) in auto-memory `reference_dii_room_craft`.
+- (no session notes were staged for this landing)
 
 Full detail: `PROGRESS.md`.
 
