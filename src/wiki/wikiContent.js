@@ -388,7 +388,7 @@ export const WIKI_ARTICLES = [
             'A caution for headsets: in VR the tour rotates the world around a body that is sitting still, which is the classic recipe for motion sickness — the visitor sees movement they do not feel. Keep turn slow and dwell long, and test on one person before an audience. If comfort matters more than a fixed running order, leave ringTour off and let the visitor turn their own head.',
             'Idle motion is separate and older: an object with no authored animation and no timeline gets a gentle drift in the live view (models float and turn, flat media sways) so imported legacy scenes keep the look they had. Objects that were placed deliberately should say animation.mode: static, and anything parented to a group is left alone automatically — otherwise the parts of one object drift away from each other.',
             'Whether the button is there at all: a published page offers Walk / Fly whenever the room holds objects for it to show — and it does not matter whether the project also has a graph, so a project built in both editors is walkable on the strength of its objects. A project made of nodes and nothing else still has no button, because walk/fly renders objects and would drop the visitor into an empty version of the room they are already looking at. Give that project one real object and the door opens — and VR and AR open with it, since a headset session is entered from inside walk/fly.',
-            'A composed opening shot does not close that door either: a project whose entry view is Fixed camera opens on the shot you framed and still offers Walk / Fly, because the shot is where the visit starts rather than a promise the visitor may never move. Only a Code entry view has no button, and it has no room to give one to.'
+            'A composed opening shot does not close that door either: a project whose entry view is Fixed camera opens on the shot you framed and still offers Walk / Fly, because the shot is where the visit starts rather than a promise the visitor may never move. The mouse and touch stay live on that shot too — the visitor can orbit away from your framing the moment they arrive. Only the camera\u2019s explicit “locked” switch freezes the shot into a still, and only a Code entry view has no button, since it has no room to give one to.'
         ],
         tags: ['scene', 'room', 'spawn', 'vr', 'exhibition', 'tour', 'walk', 'animation'],
         updated: '2026-08-24'
@@ -436,7 +436,7 @@ export const WIKI_ARTICLES = [
         id: 'walking-through-a-portal',
         category: 'Editing',
         title: 'Walking through a door',
-        summary: 'In walk mode a portal opens by walking into it, not only by clicking the ring.',
+        summary: 'In walk mode a portal opens by walking into it — and its name appears as you near it.',
         body: [
             'A portal in gateway mode draws a ring on the floor and leads somewhere else. Clicking that ring has always been the way through, and still is — from a desk, in view mode, a click is the quickest way in.',
             'In walk mode it was the wrong verb. The hands are on the movement keys or the joystick and the mouse is looking around, so entering a door meant stopping, aiming a cursor at a ring and clicking it. In a headset there is no cursor to aim at all. So walking into the ring now takes you through it, the way a door works.',
@@ -446,9 +446,11 @@ export const WIKI_ARTICLES = [
                 'It fires once per arrival. Standing in the ring does not repeat, and stepping half out and back in is still one arrival; the visitor has to leave the doorway properly before it is a doorway again.',
                 'A portal with no space named leads nowhere, exactly as its click does.',
                 'Embed portals — the kind that pull another project into this scene — are windows, not doors. Walking up to one does nothing, so an exhibition floor built out of them stays walkable.',
-                'A visitor who arrives standing on a portal does not get sent straight back out of it. Nothing travels until they have been seen clear of every ring in the room, so two rooms whose doors face each other cannot bounce someone between them.'
+                'A visitor who arrives standing on a portal does not get sent straight back out of it. Nothing travels until they have been seen clear of every ring in the room, so two rooms whose doors face each other cannot bounce someone between them.',
+                'Going through a door on foot keeps you on foot: the room on the other side opens already in walk mode, provided it is walkable at all. A click in view mode still arrives in view mode.'
             ] },
-            'Nothing changes in view mode, in an embedded page, or in a preview thumbnail: those have no walker, so there is nothing to walk into.'
+            'A door also announces itself on the way in. Its name floats hidden until the visitor is within a few strides, then scales up as they approach — so a hall of many doors reads as architecture and colour from the entrance, not as a wall of overlapping nameplates. In view mode, pointing at a ring shows its name the same way; in the editor every name stays visible, since the author needs to see what points where.',
+            'Nothing changes in an embedded page or in a preview thumbnail: those have no walker, so there is nothing to walk into.'
         ],
         tags: ['portal', 'walk', 'navigation', 'vr', 'exhibition', 'visiting'],
         updated: '2026-08-24'
