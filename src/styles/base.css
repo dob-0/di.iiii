@@ -35,6 +35,20 @@
        theme's secondary text is set. */
     --di-text-muted: rgba(255, 255, 255, 0.5);
     --di-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    /* The sans stack existed 24 times as a copy-pasted literal in two
+       incompatible spellings -- 'Inter','SF Pro Text',-apple-system,Blink…
+       (preferences/wiki/legal) and 'Inter','Segoe UI' (landing/raw) -- so a
+       typeface change meant 24 edits and the two families fell back
+       differently per OS. This is their union, in preference order. Inter is
+       self-hosted (see the @font-face above), so the fallbacks fire only when
+       it genuinely fails to load. */
+    --di-sans: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* Motion. 0.12s and 0.15s already cover most transitions in the codebase;
+       naming them is what makes a future prefers-reduced-motion sweep a
+       one-file change instead of a 174-site one. */
+    --di-motion-fast: 0.12s;
+    --di-motion-base: 0.15s;
     --di-danger: #f25f5c;
     --di-success: #4df9c0;
     --di-warning: #ffb347;
@@ -107,6 +121,13 @@ body,
     background: var(--di-black);
     cursor: default;
     color: var(--di-text);
+    /* The document had no base font-family, so the browser default (Times)
+       was the real inherited value on every page -- each surface only looked
+       right because its own root container set a font. Anything rendering
+       outside those containers silently fell back to serif. Nothing visible
+       does today (checked live on /, /wiki and /spaces), so this changes no
+       pixels; it stops the next stray element from arriving in Times. */
+    font-family: var(--di-sans);
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;

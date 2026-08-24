@@ -6,7 +6,7 @@
     overflow-y: auto;
     background: var(--di-black);
     color: var(--di-text);
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     scroll-behavior: smooth;
 }
 
