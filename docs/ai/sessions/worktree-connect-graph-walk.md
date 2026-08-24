@@ -257,3 +257,62 @@ tool-first form as canonical.
 **Still open, deliberately.** A mistyped project on the VANITY form still renders
 the space rather than a not-found. Reversing that changes behaviour for every
 mistyped link in circulation and is the owner's call, not a tidy.
+
+## 2026-08-24 (fifth) — a space card says what it holds, and what the estate weighs
+
+Owner: *"lets organaize and manage and optmize the all spaces, i can't see the
+open jam space"*, clarified to *"i mean in space list"*.
+
+**The symptom, and it was real.** The Open Space WAS in the list — as a label
+over an empty preview with nothing else on it. A card could only ever name a
+space's PUBLISHED project, and the Open Space has none: it IS the communal room
+rather than a room some project makes. So the page whose job is to show you your
+spaces said nothing about the 26 projects in it, the shared jam among them.
+Every other space happened to have a published project, which is why the gap read
+as correct behaviour.
+
+Fixed: every card says what the space holds — "26 projects · none published",
+"No projects yet". Counted server-side in ONE grouped query
+(`countProjectsBySpace`), not a `listProjects` per space from the client. The
+route dependency is optional, so a caller that does not pass it gets the old
+response shape exactly.
+
+**The inventory (LOCAL mirror, 2026-08-24 — staging/prod will differ).**
+Measured with `scratchpad/space-audit.mjs`; nothing was deleted.
+
+```
+SPACE               ON DISK   PROJ   MEDIA    machine-named
+wcc                 122.9MB    11    35.1MB
+platform-recordar    39.9MB     1    39.8MB
+open                 12.3MB    26    12.2MB   20
+azd                   3.0MB     1     2.9MB
+br-id-ge              1.5MB    74     0.5MB
+beyond-form           1.4MB     1
+library               0.5MB     1
+funding               0.3MB     1
+dilijan               0.1MB     7
+decisions             0.1MB     1
+atlas                 0.0MB     1
+main                  0.0MB     0     ← published project not present locally
+algovrithm            0.0MB     0     ← code space, expected
+                    ───────
+                    181.9MB    13 spaces · 125 projects
+```
+
+**Two things worth the owner's decision, neither of them mine to do.**
+
+1. **`open` is 20/26 machine-named projects** — `debug-chat-…`, `phase3-test-…`,
+   `td-check…`, `multiworld-…`, `final-verify-…`, `untitled-project`: agent test
+   debris, with the shared jam sitting among it. CURRENT.md already records that
+   a cleanup is PREPARED AND NOT APPLIED (`~/di-backups/open-jam/`, `jam-clean.mjs`,
+   staging 47→20) and that it is the owner's call. Listed, never deleted. The
+   full list is in the session log above and reproducible with the script.
+2. **`wcc` is 68% of the whole estate, and it is all MEDIA** — 87.8MB of
+   per-project assets plus 29.2MB of blobs; every `document.json` is 0.01–0.02MB,
+   so there is no op-log bloat to chase. `alla-virabyan` alone is 36.6MB. The
+   repo already knows the fix (`project_di_iiii_asset_pipeline` — gltfpack
+   settings measured at ~98% off), but recompressing a real exhibition's assets
+   and re-uploading them is a data operation on the owner's work.
+
+**Not measured here:** these are the LOCAL mirror's numbers. The same script run
+against staging/prod (or on the VPS) is what should decide anything.
