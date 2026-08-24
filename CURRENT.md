@@ -27,7 +27,7 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
-- **PROD IS BEHIND** — everything of 2026-08-22/23 sits on staging only; prod still serves the retired three-door landing, and still previews the bare domain as an Express error page (fixed on staging). Owner promotes after checking staging. The three copy misses that would have baked pre-sweep positioning into every link preview are FIXED and verified live 08-24.
+- **PROD IS CURRENT** — dev→main promoted 2026-08-25 (PR #269, 364 commits, all CI green; needed an admin merge because main requires a review the sole owner cannot self-give, plus the `production` environment approval). Verified live: di-studio.xyz serves the new front door ("Step inside"), the positioning eyebrow and the rebuilt wiki, zero console errors. **The Dilijan camp space stays on STAGING by decision — nothing about it moved.**
 - Doors audit: only embed-link copy is left; the rest is decided and shipped. Ledger: memory `project_dii_doors_audit_2026_08_21` (also still open there: the bare PHONE canvas has no visible exit).
 - Viewer seams left: the entry auto-frame direction is still hardcoded (0.8,0.45,1) — portrait entries tilt unless a composed fixed camera is authored (fixed-camera is NAVIGABLE now unless `locked:true`, #262); graph-only rooms still hide Walk/Fly by design; 3D text at eye level unsolved.
 - **Live DB renames owed on PROD** — the four above are staging-only. The sandbox writes to `dii-staging-server-1` and refuses `dii-server-1`: needs `"Bash(ssh dii-vps:*)"` in settings, or four renames from the owner's Spaces page.
