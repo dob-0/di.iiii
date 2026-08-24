@@ -105,7 +105,10 @@ describe('where walking through is wired', () => {
         // window.location.assign here forced a full app reload per jump; the
         // click path was moved off it deliberately and this must not drift back.
         expect(SCENE).toMatch(/const href = portalHref\(reference\.spaceId, reference\.projectId\)/)
-        expect(SCENE).toMatch(/if \(href\) appNavigate\(href\)/)
+        // ...and since the approach-reveal pass, arrival carries walk mode
+        // across the remount: the one-shot flag must be set BEFORE the route
+        // change, or the destination viewer mounts first and never sees it.
+        expect(SCENE).toMatch(/markArriveWalking\(\)\s*\n\s*appNavigate\(href\)/)
         expect(SCENE.slice(SCENE.indexOf('handlePortalReached'))).not.toMatch(/window\.location\.assign/)
     })
 

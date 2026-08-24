@@ -47,6 +47,7 @@ import {
 import { isTypingTarget } from './walkKeyboard.js'
 import { createPortalWalkThrough } from './portalWalkThrough.js'
 import { appNavigate } from '../utils/appNavigate.js'
+import { markArriveWalking } from './arriveWalking.js'
 import './liveProjectScene.css'
 
 const PARTICLE_COUNT = 900
@@ -1503,7 +1504,10 @@ export default function LiveProjectScene({
     const handlePortalReached = useCallback((entity) => {
         const reference = entity?.components?.reference || {}
         const href = portalHref(reference.spaceId, reference.projectId)
-        if (href) appNavigate(href)
+        if (href) {
+            markArriveWalking()
+            appNavigate(href)
+        }
     }, [])
 
     const worldState = doc?.worldState || {}

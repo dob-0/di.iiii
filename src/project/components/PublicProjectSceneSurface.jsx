@@ -58,6 +58,16 @@ const computeAutoFrameCamera = (document, aspect) => {
 // `aspect` defaults to the live viewport: a published page is opened at
 // whatever shape the visitor's device is, and a parent's phone in portrait is
 // the narrow case the auto-frame has to survive.
+// An authored camera is how the visit STARTS, not a promise the visitor may
+// never move. Only `locked: true` — the author's explicit choice of a composed
+// still — disables navigation; a plain 'fixed-camera' entry seeds the opening
+// shot and then hands the camera over. Before this, entryView alone froze the
+// mouse, which read as a broken page ("i can't move the camera") on every
+// composed-entry room.
+export const isCameraCaged = (entryView, fixedCamera) => (
+    entryView === 'fixed-camera' && fixedCamera?.locked === true
+)
+
 export const resolveViewerCamera = (document, aspect = getViewportAspect()) => {
     const entryView = document.presentationState?.entryView || 'scene'
     const fixedCamera = document.presentationState?.fixedCamera
@@ -93,6 +103,7 @@ export default function PublicProjectSceneSurface({
     })
     const previousEntryViewRef = useRef(document.presentationState?.entryView || 'scene')
     const controlsRef = useRef(null)
+    const caged = isCameraCaged(entryView, document.presentationState?.fixedCamera)
 
     useEffect(() => {
         const nextEntryView = document.presentationState?.entryView || 'scene'
@@ -102,7 +113,7 @@ export default function PublicProjectSceneSurface({
             if (
                 current
                 && previousEntryView === nextEntryView
-                && nextEntryView !== 'fixed-camera'
+                && !isCameraCaged(nextEntryView, document.presentationState?.fixedCamera)
                 && nextEntryView !== 'code'
             ) {
                 return current
@@ -143,7 +154,7 @@ export default function PublicProjectSceneSurface({
             ) : hasGraph ? (
                 <PublicGraphSurface
                     document={document}
-                    interactive={entryView !== 'fixed-camera' && !isPreview}
+                    interactive={!caged && !isPreview}
                 />
             ) : (
                 <StudioViewport
@@ -157,10 +168,10 @@ export default function PublicProjectSceneSurface({
                     controlsRef={controlsRef}
                     xrStore={xr.xrStore}
                     onCameraChange={(nextView) => {
-                        if (entryView === 'fixed-camera') return
+                        if (caged) return
                         setCameraView(nextView)
                     }}
-                    enableNavigation={entryView !== 'fixed-camera' && !isPreview}
+                    enableNavigation={!caged && !isPreview}
                     showChrome={!isPreview}
                     lowPower={isPreview}
                     // Authored keyframes used to play ONLY while the editor's
