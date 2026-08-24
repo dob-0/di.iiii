@@ -1,11 +1,4 @@
 .mobile-editor-shell {
-    --mobile-shell-card: rgba(11, 17, 27, 0.78);
-    --mobile-shell-card-strong: rgba(13, 20, 32, 0.94);
-    --mobile-shell-border: rgba(255,255,255,0.14);
-    --mobile-shell-border-strong: rgba(255,255,255,0.18);
-    --mobile-shell-accent: #4fd6ff;
-    --mobile-shell-accent-strong: #1dafff;
-    --mobile-shell-ink: #09131f;
     position: fixed;
     inset: 0;
     z-index: 110;
