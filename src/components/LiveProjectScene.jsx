@@ -32,7 +32,7 @@ import ModelObject from '../objectComponents/ModelObject.jsx'
 import AudioObject from '../objectComponents/AudioObject.jsx'
 import Text2DObject from '../objectComponents/Text2DObject.jsx'
 import Text3DObject from '../objectComponents/Text3DObject.jsx'
-import PortalObject from '../project/viewport/PortalObject.jsx'
+import PortalObject, { portalHref } from '../project/viewport/PortalObject.jsx'
 import WorldEnvironment from '../project/viewport/WorldEnvironment.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../project/viewport/timelinePlayback.js'
@@ -45,6 +45,8 @@ import {
     BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
+import { createPortalWalkThrough } from './portalWalkThrough.js'
+import { appNavigate } from '../utils/appNavigate.js'
 import './liveProjectScene.css'
 
 const PARTICLE_COUNT = 900
@@ -392,7 +394,7 @@ function AmbientField({ center }) {
 
 // Free-roam walk: WASD + arrows move/turn; desktop uses pointer lock for look;
 // mobile uses touch outside the joystick zone for look.
-function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
+function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
@@ -410,8 +412,13 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
     const joyBaseRef = useRef({ x: 0, y: 0 })
     const onLockChangeRef = useRef(onLockChange)
     onLockChangeRef.current = onLockChange
+    const onPortalReachedRef = useRef(onPortalReached)
+    onPortalReachedRef.current = onPortalReached
     const flyRef = useRef(flyMode)
     flyRef.current = flyMode
+    // One latch for the lifetime of the walker, not one per frame — see
+    // portalWalkThrough.js for what it remembers and why.
+    const [portalWalk] = useState(createPortalWalkThrough)
 
     useEffect(() => {
         const keys = keysRef.current
@@ -712,10 +719,20 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
     }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef, isArActive, arTouchElRef])
 
     useFrame((_, delta) => {
+        const player = playerRef.current
+
+        // Above the isPresenting return deliberately: this reads the pose and
+        // never writes it, and XrLocomotion keeps playerRef in sync for the
+        // whole session -- so a headset visitor walks through a ring the same
+        // way, which is the only way they can, having no cursor to click it with.
+        if (onPortalReachedRef.current) {
+            const reached = portalWalk.step(entities, player.x, player.z)
+            if (reached) onPortalReachedRef.current(reached)
+        }
+
         // XrLocomotion owns movement + camera during a session.
         if (isPresenting) return
         const keys = keysRef.current
-        const player = playerRef.current
         const joy = joystickRef?.current || { x: 0, y: 0 }
         const fly = flyRef.current
         if (player.pitch === undefined) player.pitch = 0
@@ -1480,6 +1497,15 @@ export default function LiveProjectScene({
         Object.assign(playerRef.current, { x: pos[0], z: pos[2] + 6, yaw: Math.PI, pitch: 0 })
     }, [gateEntity, interactive])
 
+    // Walking into a portal goes where clicking it goes: same portalHref, same
+    // SPA navigation. Only the verb changes, and only in walk mode -- Walker is
+    // the one place this is wired, and Walker only exists when `interactive`.
+    const handlePortalReached = useCallback((entity) => {
+        const reference = entity?.components?.reference || {}
+        const href = portalHref(reference.spaceId, reference.projectId)
+        if (href) appNavigate(href)
+    }, [])
+
     const worldState = doc?.worldState || {}
     const ambient = worldState.ambientLight || { color: '#ffffff', intensity: 0.85 }
     const directional = worldState.directionalLight || { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] }
@@ -1533,6 +1559,7 @@ export default function LiveProjectScene({
                     <Walker
                         playerRef={playerRef}
                         onNearestZone={setNearestLabel}
+                        onPortalReached={handlePortalReached}
                         entities={entities}
                         bounds={bounds}
                         joystickRef={joystickRef}

@@ -433,6 +433,27 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-07'
     },
     {
+        id: 'walking-through-a-portal',
+        category: 'Editing',
+        title: 'Walking through a door',
+        summary: 'In walk mode a portal opens by walking into it, not only by clicking the ring.',
+        body: [
+            'A portal in gateway mode draws a ring on the floor and leads somewhere else. Clicking that ring has always been the way through, and still is — from a desk, in view mode, a click is the quickest way in.',
+            'In walk mode it was the wrong verb. The hands are on the movement keys or the joystick and the mouse is looking around, so entering a door meant stopping, aiming a cursor at a ring and clicking it. In a headset there is no cursor to aim at all. So walking into the ring now takes you through it, the way a door works.',
+            'What that means for a space you are building:',
+            { list: [
+                'It fires when the visitor reaches the ring itself, not from across the room — about the width of the ring you can see. A portal scaled larger is a larger door and opens from proportionally further out.',
+                'It fires once per arrival. Standing in the ring does not repeat, and stepping half out and back in is still one arrival; the visitor has to leave the doorway properly before it is a doorway again.',
+                'A portal with no space named leads nowhere, exactly as its click does.',
+                'Embed portals — the kind that pull another project into this scene — are windows, not doors. Walking up to one does nothing, so an exhibition floor built out of them stays walkable.',
+                'A visitor who arrives standing on a portal does not get sent straight back out of it. Nothing travels until they have been seen clear of every ring in the room, so two rooms whose doors face each other cannot bounce someone between them.'
+            ] },
+            'Nothing changes in view mode, in an embedded page, or in a preview thumbnail: those have no walker, so there is nothing to walk into.'
+        ],
+        tags: ['portal', 'walk', 'navigation', 'vr', 'exhibition', 'visiting'],
+        updated: '2026-08-24'
+    },
+    {
         id: 'text-reveal',
         category: 'Editing',
         title: 'Text that types itself',
