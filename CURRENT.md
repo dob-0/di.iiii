@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- 1. The hairline-grid slab (public, on prod)
+- (no session notes were staged for this landing)
 
 Full detail: `PROGRESS.md`.
 

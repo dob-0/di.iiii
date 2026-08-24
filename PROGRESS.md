@@ -5,6 +5,49 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+# "Look around" walked you into an empty corner (2026-08-25)
+
+The landing page's second CTA drops the visitor into the `main` space in walk
+mode. It looked broken — an empty blue grid, one clipped plane at the edge,
+none of the gallery you were admiring one click earlier. Screenshot-confirmed
+on staging.
+
+Cause, measured against the live document: `main` has **no gate entity and no
+`worldState.spawn`**, so the walker started at the world origin. Its 83
+entities span x −6..57 / z −38..54 with a centroid at **(20.6, 24.4)** — the
+visitor arrived roughly 32m away in a corner. The idle orbit frames the
+centroid, which is exactly why the same scene looks full until you click.
+
+Fix: when a space authored neither form of arrival, stand at the content
+centroid, backed off along +z by 22% of the scene depth (clamped 6–14m) and
+facing into it. Authored gates and spawns are untouched and still win. Pure
+helper `centroidSpawn()` exported and unit-tested with the real `main`
+numbers.
+
+This is general: every space that never authored an arrival gets it.
+
+# /wcc previewed as the generic platform tile (2026-08-25)
+
+`ogRoutes.js` gives every space its own link card, and it works — a crawler
+fetching `/br_id_ge` gets a 984-byte card naming the space. A crawler fetching
+`/wcc` got the **3548-byte SPA, byte-identical to what a human gets**, and
+therefore the generic "di.iiii — public spaces on the open web" tile.
+
+Cause: the crawler branch lives inside `location /`, and `location ~ ^/wcc/?$`
+(added so the exhibition's own doorway loads the app rather than 403-ing on a
+directory) matches first. So the one space with a hand-made doorway was the
+one space whose link previewed as nothing — and it is the landing page's own
+second chip, i.e. one of the most-shared URLs on the site.
+
+Fix: repeat the crawler branch in the `/wcc` block, exactly as the security
+headers are already repeated there for the same inheritance reason. Config
+validated with `nginx -t` in a container.
+
+Follow-up worth doing (owner's data, not code): the `wcc` space record has no
+`ogTitle`/`ogDescription`, so its card will now read "wcc" rather than
+"WCC: Women Creating Change". Setting those two fields on the space finishes
+the job.
+
 # The design system was colour-only (2026-08-25)
 
 Auditing all surfaces as one suite turned up the reason type, spacing and
