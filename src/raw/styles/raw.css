@@ -2182,6 +2182,37 @@
     height: 100%;
 }
 
+.raw-chat-tabs {
+    display: flex;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--di-cyan-border);
+}
+
+.raw-chat-tab {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    /* 40px+ of height on a phone: this is the control that decides which room
+       you are talking into, and a mis-tap sends a private line to the wrong
+       four people. */
+    padding: 11px 8px;
+    font-family: var(--di-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.raw-chat-tab.is-active {
+    color: var(--di-cyan);
+    border-bottom-color: var(--di-cyan);
+}
+
 .raw-chat-messages {
     flex: 1;
     overflow-y: auto;
@@ -2205,8 +2236,31 @@
     font-family: var(--di-mono);
 }
 
+.raw-chat-message-author {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .raw-chat-message.is-self .raw-chat-message-author {
     color: var(--di-cyan);
+}
+
+/* Only ever rendered for an admin, in the space room. Deliberately quiet: it
+   is an adult's eraser, not a control the children are invited to press. */
+.raw-chat-message-remove {
+    background: transparent;
+    border: 0;
+    color: var(--di-text-muted);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 4px 8px;
+    margin: -4px 0;
+}
+
+.raw-chat-message-remove:hover {
+    color: #ff8080;
 }
 
 .raw-chat-message-text {
@@ -2229,6 +2283,13 @@
 
 .raw-chat-input {
     flex: 1;
+    /* A flex item will not shrink below its intrinsic width without this, and a
+       bare <input> is ~258px wide by default. In a 280px window at 390px that
+       pushed the whole row to 325px: Send sat outside the window, and the
+       horizontal scroll it created shifted the tabs and everybody's messages
+       off the left edge as soon as anyone touched the field. Measured on the
+       phone profile 2026-08-26 — it predates space chat. */
+    min-width: 0;
     background: transparent;
     border: 1px solid var(--di-cyan-border);
     outline: none;
