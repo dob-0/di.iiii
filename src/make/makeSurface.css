@@ -73,6 +73,15 @@ body.is-make .account-btn-wrapper {
     left: 0;
     right: 0;
     bottom: calc(var(--make-bar-h) + var(--make-safe));
+    /* A STACKING CONTEXT OF ITS OWN, and it is load-bearing. The selection chip
+       over an object is a drei <Html>, which puts `z-index: 16777271` inline on
+       its own wrapper — so with nothing to contain it, a chip reading
+       "ԳՆԴԱԿ · ball" printed itself on top of the open drawer, over the words a
+       thumb was reaching for. Isolating the room caps everything the renderer
+       mounts at this one layer, and the drawer, the scrim and the four words go
+       back to being above it. */
+    z-index: 1;
+    isolation: isolate;
 }
 
 /* --- words --------------------------------------------------------------
@@ -457,20 +466,19 @@ body.is-make .account-btn-wrapper {
  *
  * It scrolls sideways, and the sixth disc is deliberately left half-showing at
  * the right edge so that it says so without a word or an arrow. */
+/* All nine at once, in a grid that wraps — not a row that scrolls sideways.
+   The row fitted five on a 390px screen and left black, white, sand and grey
+   past the right edge, where a child has no reason to think anything is: a
+   surface whose whole argument is "few choices, all of them visible" cannot
+   put four of its nine choices where they cannot be seen. Three across,
+   three down — the same rhythm as the shapes drawer next to it. */
 .make-swatches {
-    display: flex;
-    gap: 12px;
-    margin: 0 -18px;
-    padding: 4px 18px 10px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    justify-items: center;
+    gap: 14px 12px;
+    padding: 4px 0 10px;
     transition: opacity 140ms ease;
-}
-
-.make-swatches::-webkit-scrollbar {
-    display: none;
 }
 
 .make-swatches.is-waiting {
@@ -489,7 +497,6 @@ body.is-make .account-btn-wrapper {
     border: 0;
     border-radius: 50%;
     background: transparent;
-    scroll-snap-align: center;
     cursor: pointer;
 }
 
