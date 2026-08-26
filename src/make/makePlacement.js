@@ -30,9 +30,37 @@ const PER_ARC = 4
 // fits the camera to, so the first thing a child makes is already in frame.
 const FIRST_RADIUS = 2.6
 const ARC_STEP = 1.25
-// Half the arc, in radians — about 65°, so the widest slot is still well inside
-// a portrait frame.
-const ARC_HALF = 1.14
+// Half the arc, in radians — about 46°. It was 65°, which put the fourth thing
+// a child made almost at right angles to the room: seen on a 390px screen, a
+// photo landed with a third of itself past the left edge, and the camera had to
+// stand a long way back to gather it in, shrinking everything else. A room is
+// wider than a phone; the arc should not make it wider still.
+const ARC_HALF = 0.8
+
+// PICTURES STAND UP.
+//
+// ImageObject draws its plane with `rotation-x={-Math.PI/2}` — flat on the
+// floor, always, on every surface in the platform. That is a sensible default
+// for a picture dropped into a jam and it is the wrong one here: seen on the
+// real thing, a child's photograph of Dilijan arrived as a RUG. The plane is
+// three metres tall whatever the photo, so it also has to be lifted half of
+// that or it is buried to the waist.
+//
+// Countered in the entity's own transform rather than in ImageObject, because
+// ImageObject is shared with Studio, with Raw, with the jam and with every
+// published page, and none of them asked for their pictures to stand up.
+//
+// The maths, since it is not obvious: three.js reads a transform's euler in
+// XYZ order, so `[π/2, 0, -bearing]` composes as Rx(π/2)·Rz(-bearing) and turns
+// the mesh's up-facing normal into a horizontal one pointing along the bearing
+// — which is where the camera is. A plain yaw on Y would have been swallowed:
+// applied before the X quarter-turn, it only spins a horizontal plane in place.
+const PICTURE_HEIGHT = 3
+const PICTURE_STANDS = new Set(['image', 'video'])
+
+export const makePlacementRotation = (type, { bearing = 0 } = {}) => (
+    PICTURE_STANDS.has(type) ? [Math.PI / 2, 0, -bearing] : [0, 0, 0]
+)
 
 export const makePlacementPosition = (type, index = 0, { bearing = 0, origin = [0, 0, 0] } = {}) => {
     const safeIndex = Math.max(0, Math.floor(index) || 0)
@@ -47,22 +75,9 @@ export const makePlacementPosition = (type, index = 0, { bearing = 0, origin = [
     // so it RESTS on the floor rather than being half-buried in it. Reused, not
     // restated: it is derived from the creation defaults in projectSchema.js and
     // has to move when those move.
-    return restOnGround(
-        [origin[0] + Math.sin(angle) * radius, 0, origin[2] + Math.cos(angle) * radius],
-        { standHeight: standHeightForType(type) }
-    )
-}
-
-// Which way "in front" is: the compass bearing from the middle of the room out
-// towards wherever the view is taken from. Without this the arc would assume
-// every project is looked at down the +Z axis, which is true of the camp
-// scaffold and is not a promise any document makes.
-export const bearingFromView = (savedView = null) => {
-    const eye = savedView?.position
-    const target = savedView?.target
-    if (!Array.isArray(eye) || !Array.isArray(target)) return 0
-    const dx = Number(eye[0]) - Number(target[0])
-    const dz = Number(eye[2]) - Number(target[2])
-    if (!Number.isFinite(dx) || !Number.isFinite(dz) || (dx === 0 && dz === 0)) return 0
-    return Math.atan2(dx, dz)
+    const ground = [origin[0] + Math.sin(angle) * radius, 0, origin[2] + Math.cos(angle) * radius]
+    // A standing picture's middle is half its own height up. standHeightForType
+    // has no answer for one, because on every other surface a picture lies flat.
+    if (PICTURE_STANDS.has(type)) return [ground[0], PICTURE_HEIGHT / 2, ground[2]]
+    return restOnGround(ground, { standHeight: standHeightForType(type) })
 }

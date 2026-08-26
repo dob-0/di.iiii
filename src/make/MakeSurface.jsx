@@ -5,11 +5,12 @@ import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.
 import { useProjectPresence } from '../project/hooks/useProjectPresence.js'
 import { createEntityOfType } from '../project/entityRegistry.js'
 import { currentAuthor } from '../project/authorship.js'
-import { uploadProjectAsset } from '../project/services/projectsApi.js'
+import { getProject, uploadProjectAsset } from '../project/services/projectsApi.js'
 import MakeNamePrompt from './MakeNamePrompt.jsx'
 import MakeSheet from './MakeSheet.jsx'
 import { GlyphAdd, GlyphColour, GlyphPhoto, GlyphTalk } from './MakeGlyphs.jsx'
-import { bearingFromView, makePlacementPosition } from './makePlacement.js'
+import { makePlacementPosition, makePlacementRotation } from './makePlacement.js'
+import { bearingFromView } from './makeFraming.js'
 import { DISPLAY_NAME_KEY, USER_ID_KEY, readDisplayName, writeDisplayName } from './makeIdentity.js'
 import { nameForShape, splitTitle, WORDS } from './makeVocabulary.js'
 // .raw-viewport-shell is `position: absolute; inset: 0` in this file and
@@ -164,15 +165,19 @@ export default function MakeSurface({ projectId, spaceId }) {
         try {
             const asset = await uploadProjectAsset(projectId, file)
             const entity = createEntityOfType('image', {
-                name: asset?.name ? asset.name.replace(/\.[^.]+$/, '') : undefined,
+                // Both languages, like every other name this surface writes —
+                // and not the filename, which is `IMG_0526` on every phone at
+                // the camp and is the one label a mentor reading the Raw
+                // outliner learns nothing from.
+                name: `${WORDS.photo.hy} · ${WORDS.photo.en}`,
                 createdBy: currentAuthor(displayName),
                 components: {
                     transform: {
                         position: makePlacementPosition('image', entities.length, placement),
-                        // A picture is a thing you look AT. Unrotated it faces
-                        // +Z, which on most rooms is edge-on to the camera and
-                        // reads as a photo that did not upload.
-                        rotation: [0, placement.bearing, 0]
+                        // A picture is a thing you look AT, and left to itself
+                        // it lies flat on the floor like a rug. See
+                        // makePlacement.js.
+                        rotation: makePlacementRotation('image', placement)
                     },
                     media: { assetId: asset.id, fit: 'contain', autoplay: false, loop: false, muted: true }
                 }
@@ -217,15 +222,34 @@ export default function MakeSurface({ projectId, spaceId }) {
     // projects are named for the children (`ՄԱՐԳԱՐԻՏԱ · Margarita`), while the
     // id is an address somebody typed into a phone once. A room that calls a
     // child TEAM 3 is a room that belongs to the camp rather than to them.
+    //
+    // From the project RECORD, not from `document.projectMeta.title`. Those two
+    // titles drift and the record is the one that is right: measured on the
+    // real camp data, renaming a project updates the row the project list reads
+    // and leaves the document's own copy — written once, when the scaffold was
+    // created — saying `Team 3` for ever. Every list in the platform shows the
+    // record. So does this.
+    const [recordTitle, setRecordTitle] = useState('')
+    useEffect(() => {
+        if (!projectId) return undefined
+        let alive = true
+        getProject(projectId)
+            .then((result) => { if (alive) setRecordTitle(result?.project?.title || '') })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [projectId])
+
     const roomName = useMemo(
-        () => splitTitle(projectDocument?.projectMeta?.title),
-        [projectDocument?.projectMeta?.title]
+        () => splitTitle(recordTitle || projectDocument?.projectMeta?.title),
+        [recordTitle, projectDocument?.projectMeta?.title]
     )
 
     return (
         <main className="make-surface" data-space-id={spaceId || ''}>
             <MakeRoom
                 projectDocument={projectDocument}
+                projectId={projectId}
+                roomTitle={roomName?.hy || ''}
                 selectedId={selectedId}
                 onSelectEntity={selectEntity}
                 onClearSelection={clearSelection}

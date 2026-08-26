@@ -41,16 +41,28 @@ const PORTRAIT_ASPECT = 1
 // produced. Tip the eye over and the room's DEPTH maps onto the screen's long
 // axis instead — the floor plan opens out and fills the height.
 //
-// 27° is as far as it goes. Past about 35° a child is looking at the tops of
-// their own objects and can no longer see the FRONT of the thing they just
-// coloured, and the horizon leaves the top of the frame, taking with it the
-// one cue that says you are standing somewhere rather than reading a map.
-const PORTRAIT_ELEVATION_DEG = 27
+// 30° is as far as it goes, and it is chosen against the lens: at a 60° field
+// the top of the frame then sits within a couple of degrees of the horizon, so
+// the sky is a band rather than a third of the picture and the ground carries
+// everything else. Past about 35° a child is looking at the tops of their own
+// objects and can no longer see the FRONT of the thing they just coloured, and
+// the horizon leaves the frame entirely, taking with it the one cue that says
+// you are standing somewhere rather than reading a map.
+//
+// What this angle cannot do is make a wide room fill a tall screen. A camp room
+// is about seven metres across and four deep; a portrait phone is 0.58 as wide
+// as it is tall. Fit that box and the width is what binds — the room spans the
+// full width and a bit over a third of the height, and no elevation, lens or
+// margin changes that ratio, only cropping does. So the rest of the height is
+// given to the ground and the horizon (MakeRoom's ambience) rather than to
+// black, and the arc a child's own objects land in was narrowed to stop the
+// room getting wider still (makePlacement.js).
+const PORTRAIT_ELEVATION_DEG = 30
 const LANDSCAPE_ELEVATION_DEG = 18
 
 // Air around the room. Small on purpose: the complaint this whole file answers
 // is that the room did not fill the screen.
-const MARGIN = 1.04
+const MARGIN = 1.0
 
 // Never nearer than this even for a single small object, and never further than
 // this for a room somebody scaled to the size of a town.
@@ -80,7 +92,14 @@ const HALF_EXTENTS = {
     cone: [0.55, 0.7, 0.55],
     cylinder: [0.45, 0.6, 0.45],
     torus: [0.68, 0.68, 0.18],
-    plane: [1, 1, 1]
+    plane: [1, 1, 1],
+    // ImageObject sizes its plane three metres tall and as wide as the photo's
+    // own aspect makes it, so a landscape phone photo is four metres across.
+    // Symmetric in x and z because the toybox stands its pictures up facing
+    // whichever way the camera is, and this file is asked for the box before
+    // anybody knows which way that is.
+    image: [2.1, 1.6, 2.1],
+    video: [2.1, 1.6, 2.1]
 }
 
 // Anything whose size this file has no table for — a model, a video, a node

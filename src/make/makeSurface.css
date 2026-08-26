@@ -125,6 +125,37 @@ body.is-make .account-btn-wrapper {
     border-top: 1px solid var(--make-line);
 }
 
+
+.make-key {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin: 0;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--make-ink);
+    font-family: inherit;
+    font-size: 30px; /* the glyph is sized in em */
+    cursor: pointer;
+    transition: background 140ms ease;
+}
+
+.make-key + .make-key {
+    box-shadow: inset 1px 0 0 var(--make-line);
+}
+
+.make-key:active {
+    background: rgba(38, 36, 31, 0.05);
+}
+
+.make-key.is-open {
+    background: rgba(38, 36, 31, 0.07);
+}
+
 /* The only filled block on the surface. A child looking for where to start
    finds exactly one thing that looks like a button. */
 .make-key--photo {
@@ -162,36 +193,6 @@ body.is-make .account-btn-wrapper {
 /* The hairline dividers belong to the row of three, not to the picture. */
 .make-key--photo + .make-key {
     box-shadow: none;
-}
-
-.make-key {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    margin: 0;
-    padding: 0 4px;
-    border: 0;
-    background: transparent;
-    color: var(--make-ink);
-    font-family: inherit;
-    font-size: 30px; /* the glyph is sized in em */
-    cursor: pointer;
-    transition: background 140ms ease;
-}
-
-.make-key + .make-key {
-    box-shadow: inset 1px 0 0 var(--make-line);
-}
-
-.make-key:active {
-    background: rgba(38, 36, 31, 0.05);
-}
-
-.make-key.is-open {
-    background: rgba(38, 36, 31, 0.07);
 }
 
 /* A quiet mark that this word has something to act on. Not a colour, not a
@@ -776,4 +777,68 @@ body.is-make .account-btn-wrapper {
         from { transform: translate(-50%, 18%); opacity: 0.4; }
         to { transform: translate(-50%, 0); opacity: 1; }
     }
+}
+
+/* --- a phone on its side -------------------------------------------------
+ * Children turn phones. In landscape the screen is 390 tall and the portrait
+ * bar — two rows, 170px — eats nearly half of it, which leaves a letterbox
+ * where the room should be. So the picture goes back on the same row as the
+ * other three words and keeps its weight by being wider and filled rather than
+ * by being taller. Everything else is unchanged.
+ *
+ * On height rather than on `orientation`, deliberately: a keyboard opening on a
+ * portrait phone leaves exactly the same amount of room, and it wants exactly
+ * the same answer. */
+@media (max-height: 520px) {
+    .make-surface {
+        --make-photo-h: 0px;
+        --make-bar-h: 74px;
+    }
+
+    .make-bar {
+        grid-template-columns: 1.5fr 1fr 1fr 1fr;
+        grid-template-rows: 1fr;
+    }
+
+    .make-key--photo {
+        grid-column: auto;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .make-key--photo .make-glyph {
+        margin: 0 auto;
+        font-size: 26px;
+    }
+
+    .make-key--photo .make-key-words {
+        text-align: center;
+    }
+
+    .make-key--photo .make-word-hy {
+        font-size: 12px;
+    }
+
+    .make-key--photo .make-word-en {
+        font-size: 9.5px;
+    }
+
+    .make-key--photo + .make-key {
+        box-shadow: inset 1px 0 0 var(--make-line);
+    }
+
+    .make-sheet {
+        max-height: 92vh;
+    }
+
+    .make-sheet--talk {
+        height: 92vh;
+    }
+
+    .make-room-name {
+        top: calc(10px + env(safe-area-inset-top, 0px));
+    }
+
+    .make-room-name-hy { font-size: 16px; }
+    .make-room-name-en { font-size: 10px; }
 }

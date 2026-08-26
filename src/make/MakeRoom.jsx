@@ -42,7 +42,58 @@ const boundsSignature = (bounds) => (
     [...bounds.min, ...bounds.max].map((n) => Math.round(n / REFIT_EPSILON)).join(',')
 )
 
-export default function MakeRoom({ projectDocument, selectedId, onSelectEntity, onClearSelection }) {
+// A ROOM MAY NOT CALL A CHILD BY THEIR ADDRESS.
+//
+// Every camp project arrives with a mentor's scaffold, and standing in the
+// middle of it is a text object reading `TEAM 3` — the project id, set in
+// letters a metre high, at the moment somebody made five rooms in a row before
+// there were five children to put in them. The projects have been named since:
+// `ԳՈՌ · Gor`. The label has not.
+//
+// So the label is drawn with the name the project actually has, in the copy
+// handed to the viewport and nowhere else. The rule is deliberately narrow — it
+// fires only on a text object that is repeating the ADDRESS, `team-3` written
+// out as `TEAM 3` — because a text object saying anything else is something
+// somebody meant, and this surface does not get to edit those.
+//
+// The document is untouched, so a mentor opening the same project in Raw still
+// sees the scaffold exactly as they left it, and can retype the label there
+// once and for good.
+const addressLabel = (projectId) => String(projectId || '').replace(/[-_]+/g, ' ').trim().toUpperCase()
+
+const withRoomName = (projectDocument, projectId, title) => {
+    const label = addressLabel(projectId)
+    const name = String(title || '').trim()
+    if (!label || !name || !projectDocument?.entities?.length) return projectDocument
+    let changed = false
+    const entities = projectDocument.entities.map((entity) => {
+        const value = entity?.components?.text?.value
+        if (typeof value !== 'string' || !value.toUpperCase().includes(label)) return entity
+        changed = true
+        return {
+            ...entity,
+            components: {
+                ...entity.components,
+                text: { ...entity.components.text, value: name }
+            }
+        }
+    })
+    return changed ? { ...projectDocument, entities } : projectDocument
+}
+
+export default function MakeRoom({
+    projectDocument: sourceDocument,
+    projectId,
+    roomTitle,
+    selectedId,
+    onSelectEntity,
+    onClearSelection
+}) {
+    const projectDocument = useMemo(
+        () => withRoomName(sourceDocument, projectId, roomTitle),
+        [sourceDocument, projectId, roomTitle]
+    )
+
     const shellRef = useRef(null)
     const [aspect, setAspect] = useState(() => (
         typeof window === 'undefined' ? 1 : window.innerWidth / Math.max(1, window.innerHeight)

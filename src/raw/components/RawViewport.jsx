@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows, Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
@@ -259,6 +259,44 @@ const resolveSpatialValues = (node, graphContext, allNodes) => {
     return values
 }
 
+// Whether the surface around this scene has painted its own world
+// (RawViewport's `ambience`, below). A context rather than one more argument
+// threaded through renderNodeBody — the note above resolveSpatialValues gives
+// the reason, and it holds for exactly one type here as it did for that one.
+const AmbienceContext = createContext(null)
+
+// A geo's footprint: the faint floor tile that makes an empty container read as
+// a PLACE rather than as void. Cyan on near-black, which is Raw's language and
+// is right on Raw's bench. A surface with an ambience of its own has already
+// said what its ground looks like, and a second, smaller, differently-coloured
+// grid inside it is the technical look leaking back in — so there, the geo is
+// its contents and nothing else.
+function GeoFootprint() {
+    const ambience = useContext(AmbienceContext)
+    if (ambience) return null
+    return (
+        <group>
+            {/* the pickable ground of the place — near-invisible but
+                clickable, so an empty geo can still be selected and
+                dragged in the room */}
+            <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[2, 2]} />
+                <meshBasicMaterial color="#4df9ff" transparent opacity={0.05} side={2} />
+            </mesh>
+            <Grid
+                args={[2, 2]}
+                position={[0, 0.02, 0]}
+                cellSize={0.25}
+                sectionSize={1}
+                cellColor="rgba(77,249,255,0.35)"
+                sectionColor="rgba(77,249,255,0.6)"
+                fadeDistance={14}
+                infiniteGrid={false}
+            />
+        </group>
+    )
+}
+
 export function renderNodeBody(node, values, assetMap = null) {
     switch (node.typeId) {
         case 'geom.model': {
@@ -453,27 +491,7 @@ export function renderNodeBody(node, values, assetMap = null) {
             // report of an empty container reading as void. Children render
             // through the childMap like any spatial parent's; this body adds
             // nothing else, which is the whole point of the type.
-            return (
-                <group>
-                    {/* the pickable ground of the place — near-invisible but
-                        clickable, so an empty geo can still be selected and
-                        dragged in the room */}
-                    <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                        <planeGeometry args={[2, 2]} />
-                        <meshBasicMaterial color="#4df9ff" transparent opacity={0.05} side={2} />
-                    </mesh>
-                    <Grid
-                        args={[2, 2]}
-                        position={[0, 0.02, 0]}
-                        cellSize={0.25}
-                        sectionSize={1}
-                        cellColor="rgba(77,249,255,0.35)"
-                        sectionColor="rgba(77,249,255,0.6)"
-                        fadeDistance={14}
-                        infiniteGrid={false}
-                    />
-                </group>
-            )
+            return <GeoFootprint />
         case 'world.light':
             // Standing INSIDE a container, a Light is a real point light plus
             // a small glowing marker — "collect what you need: object,
@@ -719,10 +737,16 @@ function SceneContent({
             ? !constructorIds.has(node.parentId || null)
             : (node.parentId || null) === scopeId
     )
+    // `ambience` also leaves the BENCH'S OWN RIG out of the picture. A
+    // `world.camera` node draws itself as a wireframe gizmo with a frustum fan,
+    // and a `world.light` as a marker; both are controls, and both were sitting
+    // in the middle of a child's room looking like something they had made by
+    // accident. Raw keeps them — that is where they are controls.
     const renderableNodes = useMemo(
-        () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)),
+        () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)
+            && !(ambience && String(node.typeId || '').startsWith('world.'))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [document.nodes, scopeId]
+        [document.nodes, scopeId, ambience]
     )
     // Everything standing inside a container, keyed by the container it stands
     // in. Descent stops at a nested universe.world: a World is its own stage,
@@ -900,7 +924,7 @@ function SceneContent({
 
 
     return (
-        <>
+        <AmbienceContext.Provider value={ambience}>
             <color attach="background" args={[ambience?.sky || getRawWorldBackgroundColor(document, graphContext, { scopeId, worldNode })]} />
             {ambience ? (
                 <>
@@ -1040,7 +1064,7 @@ function SceneContent({
                     </SceneEntityErrorBoundary>
                 ))}
             </Suspense>
-        </>
+        </AmbienceContext.Provider>
     )
 }
 
