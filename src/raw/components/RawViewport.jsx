@@ -1039,7 +1039,15 @@ export default function RawViewport({
     // (the "GEO" chip the audit photographed). Fullscreen keeps pills — the
     // cards are gone there.
     showSelectionPills = true,
-    interactive = true
+    interactive = true,
+    // The lens. 50° vertical is what every Raw surface has always used and what
+    // a wide screen wants — the default keeps every existing caller byte-
+    // identical. A full-bleed PORTRAIT surface needs a wider one: three.js
+    // derives the horizontal field from the aspect, so 50° across a 390×750
+    // canvas is 27° of room and everything else is off both edges. See
+    // src/make/makeFraming.js, which is where the number that gets passed in
+    // is worked out.
+    cameraFov = 50
 }) {
     const viewportRef = useRef(null)
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
@@ -1134,7 +1142,7 @@ export default function RawViewport({
                 onCreated={({ gl }) => bindContextGuard(gl)}
                 camera={{
                     position: camera.position || [0, 2.4, 6.5],
-                    fov: 50,
+                    fov: cameraFov,
                     near: 0.1,
                     far: 200
                 }}

@@ -19,6 +19,7 @@ import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
 import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { getJamLocationState, isJamLocation } from './project/routing/jamRouting.js'
+import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { ALGO_VRITHM_SPACE_ID, isAlgoVrithmSegment } from './algoVrithm/algoVrithmRouting.js'
 import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 
@@ -26,6 +27,9 @@ const RawApp = lazy(() => import('./raw/RawApp.jsx'))
 // The jam as a place you stand in. Its own chunk: it reaches three.js through
 // the walker, and no other route should pay for that.
 const JamSurface = lazy(() => import('./project/components/JamSurface.jsx'))
+// The toybox. Its own chunk for the same reason the jam has one: it reaches
+// three.js through RawViewport, and no other route should pay for that.
+const MakeSurface = lazy(() => import('./make/MakeSurface.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 const WccExperience = lazy(() => import('./wcc/WccExperience.jsx'))
@@ -260,6 +264,7 @@ function AppRouter() {
     const rawState = getRawLocationState(location)
     const studioState = getStudioLocationState(location)
     const jamState = getJamLocationState(location)
+    const makeState = getMakeLocationState(location)
     const appState = getAppLocationState(location)
 
     // The Raw lane was called Seed until 2026-07-30. Old /seed links still
@@ -293,6 +298,35 @@ function AppRouter() {
             <ProtectedSurface requiredSpaceId={jamState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
                 <Suspense fallback={<RouteSurfaceFallback label="Loading the jam" detail="" />}>
                     <JamSurface projectId={jamState.projectId} spaceId={jamState.spaceId} />
+                </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
+    // `/{space}/make/{projectId}` — the toybox (src/make/MakeSurface.jsx). Same
+    // project document and same op layer as Raw next door; a different lid.
+    //
+    // Dispatched here, beside the jam, because it is the same kind of address:
+    // one exact three-segment path with the lane word in the middle, nothing
+    // else can match it, and it must be claimed before the generic
+    // /{space}/{projectSlug} shape further down reads "make" as a project.
+    //
+    // Behind the same gate as Raw, with the same required space, because it
+    // edits the same document — a surface that writes must never be reachable
+    // on terms the surface it writes through would refuse. A guest holding a
+    // redeemed space invite carries `role: editor` scoped to that space and
+    // passes exactly as they do into Raw. No account chip: the whole design is
+    // four thumb-sized words and the platform's floating chip lands on the
+    // fourth one.
+    if (isMakeLocation(makeState)) {
+        return (
+            <ProtectedSurface
+                requiredSpaceId={makeState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={false}
+            >
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <MakeSurface projectId={makeState.projectId} spaceId={makeState.spaceId} />
                 </Suspense>
             </ProtectedSurface>
         )
