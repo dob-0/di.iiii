@@ -1,19 +1,46 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import RawViewport from '../raw/components/RawViewport.jsx'
-import { fovForAspect, frameForAspect } from './makeFraming.js'
+import { contentBounds, fitToContent, savedViewFromFit } from './makeFraming.js'
 
 // THE ROOM, FRAMED FOR THE SCREEN IT IS ON.
 //
 // RawViewport unchanged — the same renderer Raw uses, the same one the public
-// projector route uses, reading the same document. This wrapper does one job:
-// measure the space the canvas actually got and hand the viewport a lens and a
-// standing-back distance that suit it. See makeFraming.js for why.
+// projector route uses, reading the same document. This wrapper does three
+// things and none of them touch the project:
 //
-// The framed view is memoised on the SAVED view and the aspect, never on the
-// whole document, and that matters: `target` is read by OrbitControls on every
-// render, so a fresh array on every entity edit would yank the camera back to
-// centre each time a child added a shape. Here the array identity only changes
-// when the framing genuinely does.
+//   1. Measures the space the canvas actually got, and fits the camera to the
+//      box the room's contents occupy (makeFraming.js). Re-fits when the phone
+//      is turned and when a child adds something the current shot does not
+//      hold.
+//   2. Hands the viewport a calm ground and a soft horizon in place of Raw's
+//      black-and-white technical grid.
+//   3. Uncages the view, so the room can be turned.
+//
+// Everything above is done to a COPY of the document. The project keeps its own
+// saved view, its own background, its own grid and its own camera node, and a
+// mentor opening the same project in Raw sees exactly what they authored.
+
+// Warm, and deliberately close to the name prompt's paper rather than to Raw's
+// cyan-on-black. Two tones only: the ground a shade deeper than the sky, so the
+// horizon exists without a line being drawn anywhere.
+const MAKE_AMBIENCE = {
+    sky: '#EFE7DA',
+    ground: '#DED2BE',
+    fogNear: 10,
+    fogFar: 46,
+    shadowOpacity: 0.26,
+    shadowColor: '#5B5040'
+}
+
+// How much the content box has to move before the camera is allowed to follow.
+// Zero would re-fit on every sync tick — the document's identity changes
+// whenever anybody types anywhere — and a camera that drifts under a child's
+// thumb reads as the surface losing their place.
+const REFIT_EPSILON = 0.35
+
+const boundsSignature = (bounds) => (
+    [...bounds.min, ...bounds.max].map((n) => Math.round(n / REFIT_EPSILON)).join(',')
+)
 
 export default function MakeRoom({ projectDocument, selectedId, onSelectEntity, onClearSelection }) {
     const shellRef = useRef(null)
@@ -43,7 +70,37 @@ export default function MakeRoom({ projectDocument, selectedId, onSelectEntity, 
     }, [])
 
     const savedView = projectDocument?.worldState?.savedView || null
-    const framedView = useMemo(() => frameForAspect(savedView, aspect), [savedView, aspect])
+    const bounds = useMemo(() => contentBounds(projectDocument), [projectDocument])
+    const signature = `${boundsSignature(bounds)}|${aspect}`
+
+    const fit = useMemo(
+        () => fitToContent(projectDocument, aspect),
+        // Only when the framing genuinely changes. `projectDocument` is read
+        // inside, but its identity changes on every sync tick and re-fitting on
+        // those is the drift this guards against.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [signature]
+    )
+
+    // The view RawViewport reads when it creates the renderer. Frozen at the
+    // first fit: the Canvas reads its `camera` prop exactly once, and every
+    // later re-frame goes through `viewRequest` instead. Freezing it also keeps
+    // the array identities stable, which matters — OrbitControls re-applies its
+    // `target` prop whenever that array is new, and a target re-applied on
+    // every sync tick would yank the room back mid-drag.
+    const [mountView] = useState(() => savedViewFromFit(savedView, fit))
+
+    // `distance` and `elevation` travel with the request so a re-frame can be
+    // rebuilt around whichever way the child has already turned the room —
+    // RawViewport's applier reads the live bearing off the camera and keeps it.
+    const viewRequest = useMemo(() => ({
+        key: signature,
+        target: fit.target,
+        position: fit.position,
+        fov: fit.fov,
+        distance: fit.distance,
+        elevation: fit.elevation
+    }), [signature, fit])
 
     // UNCAGE THE VIEW — in the copy handed to the viewport, never in the project.
     //
@@ -75,8 +132,8 @@ export default function MakeRoom({ projectDocument, selectedId, onSelectEntity, 
     const framedDocument = useMemo(() => ({
         ...projectDocument,
         workspaceState: uncagedWorkspace,
-        worldState: { ...(projectDocument?.worldState || {}), savedView: framedView }
-    }), [projectDocument, uncagedWorkspace, framedView])
+        worldState: { ...(projectDocument?.worldState || {}), savedView: mountView }
+    }), [projectDocument, uncagedWorkspace, mountView])
 
     return (
         <div className="make-room" ref={shellRef}>
@@ -87,7 +144,9 @@ export default function MakeRoom({ projectDocument, selectedId, onSelectEntity, 
                 selectedNodeId={null}
                 onSelectEntity={onSelectEntity}
                 onClearSelection={onClearSelection}
-                cameraFov={fovForAspect(aspect)}
+                cameraFov={fit.fov}
+                ambience={MAKE_AMBIENCE}
+                viewRequest={viewRequest}
                 showEmptyHint={false}
                 showSelectionPills
                 interactive

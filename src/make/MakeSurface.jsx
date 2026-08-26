@@ -11,7 +11,7 @@ import MakeSheet from './MakeSheet.jsx'
 import { GlyphAdd, GlyphColour, GlyphPhoto, GlyphTalk } from './MakeGlyphs.jsx'
 import { bearingFromView, makePlacementPosition } from './makePlacement.js'
 import { DISPLAY_NAME_KEY, USER_ID_KEY, readDisplayName, writeDisplayName } from './makeIdentity.js'
-import { nameForShape, WORDS } from './makeVocabulary.js'
+import { nameForShape, splitTitle, WORDS } from './makeVocabulary.js'
 // .raw-viewport-shell is `position: absolute; inset: 0` in this file and
 // nothing at all without it — RawViewport mounted without raw.css collapses to
 // an intrinsic band across the top of the page with dead space beneath. Seen,
@@ -213,6 +213,15 @@ export default function MakeSurface({ projectId, spaceId }) {
     const selectedColour = selected?.components?.appearance?.color || null
     const isEmpty = entities.length === 0 && !state.loading
 
+    // Whose room this is. The project's own title and nothing else — the camp's
+    // projects are named for the children (`ՄԱՐԳԱՐԻՏԱ · Margarita`), while the
+    // id is an address somebody typed into a phone once. A room that calls a
+    // child TEAM 3 is a room that belongs to the camp rather than to them.
+    const roomName = useMemo(
+        () => splitTitle(projectDocument?.projectMeta?.title),
+        [projectDocument?.projectMeta?.title]
+    )
+
     return (
         <main className="make-surface" data-space-id={spaceId || ''}>
             <MakeRoom
@@ -222,6 +231,13 @@ export default function MakeSurface({ projectId, spaceId }) {
                 onClearSelection={clearSelection}
             />
 
+            {roomName && (
+                <p className="make-room-name">
+                    <span className="make-room-name-hy">{roomName.hy}</span>
+                    {roomName.en && <span className="make-room-name-en">{roomName.en}</span>}
+                </p>
+            )}
+
             {(status || state.loading) && (
                 <p className="make-status" role="status">
                     {status || WORDS.loading.hy}
@@ -230,13 +246,28 @@ export default function MakeSurface({ projectId, spaceId }) {
 
             {isEmpty && !sheet && (
                 <p className="make-empty">
-                    <span className="make-word-hy">{WORDS.add.hy}</span>
-                    <span className="make-word-en">start with a shape</span>
+                    <span className="make-word-hy">{WORDS.startHere.hy}</span>
+                    <span className="make-word-en">{WORDS.startHere.en}</span>
                     <span className="make-empty-arrow" aria-hidden="true">↓</span>
                 </p>
             )}
 
+            {/* THE PHOTO COMES FIRST.
+                In two full days of camp not one child has authored anything in
+                a browser, and the strand's raw material — photographs of
+                Dilijan — is already on their phones. So the picture is not the
+                third of four equal words: it is the whole width of the screen,
+                on its own row, in the only filled block on the surface, and it
+                opens the camera roll on one tap with nothing in between. The
+                shapes are the side dish. */}
             <nav className="make-bar" aria-label="make">
+                <button type="button" className="make-key make-key--photo" onClick={openPhotoPicker}>
+                    <GlyphPhoto />
+                    <span className="make-key-words">
+                        <span className="make-word-hy">{WORDS.photo.hy}</span>
+                        <span className="make-word-en">{WORDS.photo.en}</span>
+                    </span>
+                </button>
                 <button
                     type="button"
                     className={`make-key${sheet === 'add' ? ' is-open' : ''}`}
@@ -254,11 +285,6 @@ export default function MakeSurface({ projectId, spaceId }) {
                     <GlyphColour />
                     <span className="make-word-hy">{WORDS.colour.hy}</span>
                     <span className="make-word-en">{WORDS.colour.en}</span>
-                </button>
-                <button type="button" className="make-key" onClick={openPhotoPicker}>
-                    <GlyphPhoto />
-                    <span className="make-word-hy">{WORDS.photo.hy}</span>
-                    <span className="make-word-en">{WORDS.photo.en}</span>
                 </button>
                 <button
                     type="button"

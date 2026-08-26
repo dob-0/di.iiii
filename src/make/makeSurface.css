@@ -43,7 +43,9 @@ body.is-make .account-btn-wrapper {
     --make-ink-soft: #7C7568;
     --make-line: rgba(38, 36, 31, 0.10);
     --make-shadow: 0 -16px 44px rgba(38, 30, 18, 0.16);
-    --make-bar-h: 92px;
+    /* Two rows: the picture on its own, then the other three words. */
+    --make-photo-h: 78px;
+    --make-bar-h: 170px;
     --make-safe: env(safe-area-inset-bottom, 0px);
     --make-sans: 'Noto Sans Armenian', 'Inter', 'SF Pro Text', -apple-system,
         BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -103,9 +105,10 @@ body.is-make .account-btn-wrapper {
 }
 
 /* --- the four words -----------------------------------------------------
- * Four equal columns, edge to edge, no gaps and no icons floating in space.
- * The whole column is the target — 97 x 92 at 390px, which a thumb hits
- * without looking. */
+ * The picture on its own row, full width, filled — then three equal columns
+ * for the rest. Edge to edge, no gaps and no icons floating in space: the
+ * whole cell is the target, 130 x 92 at 390px for the three and 390 x 78 for
+ * the picture, all of which a thumb hits without looking. */
 
 .make-bar {
     position: absolute;
@@ -114,11 +117,51 @@ body.is-make .account-btn-wrapper {
     bottom: 0;
     z-index: 20;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: var(--make-photo-h) 1fr;
     height: calc(var(--make-bar-h) + var(--make-safe));
     padding-bottom: var(--make-safe);
     background: var(--make-paper);
     border-top: 1px solid var(--make-line);
+}
+
+/* The only filled block on the surface. A child looking for where to start
+   finds exactly one thing that looks like a button. */
+.make-key--photo {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    gap: 14px;
+    background: var(--make-ink);
+    color: var(--make-paper);
+}
+
+.make-key--photo:active {
+    background: #3B3830;
+}
+
+.make-key--photo .make-glyph {
+    margin: 0;
+    font-size: 34px;
+}
+
+.make-key--photo .make-key-words {
+    display: block;
+    text-align: left;
+}
+
+.make-key--photo .make-word-hy {
+    font-size: 17px;
+    letter-spacing: 0.02em;
+}
+
+.make-key--photo .make-word-en {
+    color: rgba(251, 248, 243, 0.62);
+    font-size: 11px;
+}
+
+/* The hairline dividers belong to the row of three, not to the picture. */
+.make-key--photo + .make-key {
+    box-shadow: none;
 }
 
 .make-key {
@@ -181,11 +224,48 @@ body.is-make .account-btn-wrapper {
     text-align: center;
 }
 
+/* --- whose room this is --------------------------------------------------
+ * The project's own title, at the top, quiet. It is the child's name, so it is
+ * set like a name and not like a header: no box, no rule, no chip — the room
+ * behind it is warm paper and the name simply sits on it. */
+
+.make-room-name {
+    position: absolute;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    left: 0;
+    right: 0;
+    z-index: 14;
+    margin: 0;
+    padding: 0 22px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.make-room-name-hy {
+    display: block;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+    color: var(--make-ink);
+}
+
+.make-room-name-en {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: lowercase;
+    line-height: 1.1;
+    color: var(--make-ink-soft);
+}
+
 /* --- what the room says -------------------------------------------------- */
 
 .make-status {
     position: absolute;
-    top: calc(14px + env(safe-area-inset-top, 0px));
+    top: calc(72px + env(safe-area-inset-top, 0px));
     left: 50%;
     z-index: 15;
     transform: translateX(-50%);

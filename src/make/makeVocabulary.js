@@ -22,6 +22,7 @@ export const WORDS = {
     nameSkip: say('հետո', 'later'),
     namePlaceholder: say('քո անունը', 'your name'),
     tapFirst: say('նախ դիպչիր մի բանի', 'tap something first'),
+    startHere: say('դիր քո նկարը սենյակում', 'put your photo in the room'),
     close: say('փակել', 'close'),
     sending: say('ուղարկվում է…', 'sending…'),
     photoFailed: say('չստացվեց։ փորձիր փոքրը', 'that would not send — try a smaller one'),
@@ -29,6 +30,25 @@ export const WORDS = {
     chatPlaceholder: say('գրիր մի բան', 'say something'),
     chatSend: say('ուղարկել', 'send'),
     chatEmpty: say('դեռ ոչ ոք ոչինչ չի ասել', 'nobody has said anything yet')
+}
+
+// WHOSE ROOM THIS IS.
+//
+// The camp's projects are titled with the child's own name — `ՄԱՐԳԱՐԻՏԱ ·
+// Margarita`, `ԺԱՆԱ · Zhana`. Same separator this file uses everywhere else, so
+// a title splits into the same two lines every other word on this surface has.
+// A title with no separator is shown whole on the Armenian line rather than
+// guessed at: a room belonging to somebody called `Team 3` should say `Team 3`
+// and let a mentor notice that it has not been named yet.
+//
+// Read from `document.projectMeta.title`, never derived from the project id —
+// `team-3` is an address, not a person.
+export const splitTitle = (title = '') => {
+    const text = String(title || '').trim()
+    if (!text) return null
+    const parts = text.split('·').map((part) => part.trim()).filter(Boolean)
+    if (parts.length >= 2) return { hy: parts[0], en: parts.slice(1).join(' · ') }
+    return { hy: text, en: '' }
 }
 
 // The five shapes, in the order a hand reaches for them. Types are the
