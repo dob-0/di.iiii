@@ -10,6 +10,7 @@ import MakeNamePrompt from './MakeNamePrompt.jsx'
 import MakeSheet from './MakeSheet.jsx'
 import { GlyphAdd, GlyphColour, GlyphPhoto, GlyphTalk } from './MakeGlyphs.jsx'
 import { makePlacementPosition, makePlacementRotation } from './makePlacement.js'
+import { preparePhoto } from './makePhoto.js'
 import { bearingFromView } from './makeFraming.js'
 import { DISPLAY_NAME_KEY, USER_ID_KEY, readDisplayName, writeDisplayName } from './makeIdentity.js'
 import { nameForShape, splitTitle, WORDS } from './makeVocabulary.js'
@@ -93,9 +94,11 @@ export default function MakeSurface({ projectId, spaceId }) {
     )
 
     // A line that says itself and goes away. No toast system on this surface.
-    const say = useCallback((word) => {
+    // Bad news stays up longer than good news — a child who missed the one
+    // moment the surface told them their photo did not go in has no way to ask.
+    const say = useCallback((word, holdMs = 2600) => {
         setStatus(word)
-        window.setTimeout(() => setStatus((current) => (current === word ? '' : current)), 2600)
+        window.setTimeout(() => setStatus((current) => (current === word ? '' : current)), holdMs)
     }, [])
 
     // The platform's floating account chip is fixed to the bottom-right of every
@@ -159,10 +162,14 @@ export default function MakeSurface({ projectId, spaceId }) {
     // both the camera and the roll, and half of what these children want in
     // their rooms was photographed before they sat down.
 
-    const addPhoto = useCallback(async (file) => {
-        if (!file || !projectId) return
+    const addPhoto = useCallback(async (chosen) => {
+        if (!chosen || !projectId) return
         setStatus(WORDS.sending.hy)
         try {
+            // Re-encoded in the browser first — see makePhoto.js. It is what
+            // makes an iPhone HEIC land at all, and it means a child's GPS
+            // coordinates never leave the phone.
+            const { file } = await preparePhoto(chosen)
             const asset = await uploadProjectAsset(projectId, file)
             const entity = createEntityOfType('image', {
                 // Both languages, like every other name this surface writes —
@@ -192,7 +199,7 @@ export default function MakeSurface({ projectId, spaceId }) {
             dispatch({ type: 'select-entity', entityId: entity.id })
             setStatus('')
         } catch {
-            say(WORDS.photoFailed.hy)
+            say(WORDS.photoFailed.hy, 6000)
         }
     }, [applyLocalOps, dispatch, displayName, entities.length, placement, projectId, say])
 

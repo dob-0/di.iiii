@@ -25,7 +25,7 @@ export const WORDS = {
     startHere: say('դիր քո նկարը սենյակում', 'put your photo in the room'),
     close: say('փակել', 'close'),
     sending: say('ուղարկվում է…', 'sending…'),
-    photoFailed: say('չստացվեց։ փորձիր փոքրը', 'that would not send — try a smaller one'),
+    photoFailed: say('այս նկարը չընդունվեց։ փորձիր ուրիշը', 'that photo would not go in — try another one'),
     loading: say('բացվում է…', 'opening…'),
     chatPlaceholder: say('գրիր մի բան', 'say something'),
     chatSend: say('ուղարկել', 'send'),
@@ -41,8 +41,10 @@ export const WORDS = {
 // guessed at: a room belonging to somebody called `Team 3` should say `Team 3`
 // and let a mentor notice that it has not been named yet.
 //
-// Read from `document.projectMeta.title`, never derived from the project id —
-// `team-3` is an address, not a person.
+// Read from the project RECORD's title, never derived from the project id —
+// `team-3` is an address, not a person — and never from the document's own
+// `projectMeta.title`, which is a copy written when the project was created and
+// still says `Team 3` on every camp project that has been renamed since.
 export const splitTitle = (title = '') => {
     const text = String(title || '').trim()
     if (!text) return null
