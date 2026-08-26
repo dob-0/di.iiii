@@ -230,12 +230,15 @@ export default function MakeSurface({ projectId, spaceId }) {
     // id is an address somebody typed into a phone once. A room that calls a
     // child TEAM 3 is a room that belongs to the camp rather than to them.
     //
-    // From the project RECORD, not from `document.projectMeta.title`. Those two
-    // titles drift and the record is the one that is right: measured on the
-    // real camp data, renaming a project updates the row the project list reads
-    // and leaves the document's own copy — written once, when the scaffold was
-    // created — saying `Team 3` for ever. Every list in the platform shows the
-    // record. So does this.
+    // The DOCUMENT's title is the one that is true, and it took a wrong turn to
+    // establish that. The project row and `document.projectMeta.title` can
+    // disagree, so the row looked like the safer read — until the row reverted
+    // to `Team 1` the moment a child added a shape. Every op batch ends with
+    // `upsertProjectMeta({ title: nextDocument.projectMeta.title })`
+    // (serverXR/src/routes/projectRoutes.js), so the row is a MIRROR of the
+    // document, refreshed on every edit, and the document is upstream of it.
+    // The row is still read, as the thing to show before the document has
+    // arrived — the first paint of a room should not be nameless.
     const [recordTitle, setRecordTitle] = useState('')
     useEffect(() => {
         if (!projectId) return undefined
@@ -247,7 +250,7 @@ export default function MakeSurface({ projectId, spaceId }) {
     }, [projectId])
 
     const roomName = useMemo(
-        () => splitTitle(recordTitle || projectDocument?.projectMeta?.title),
+        () => splitTitle(projectDocument?.projectMeta?.title || recordTitle),
         [recordTitle, projectDocument?.projectMeta?.title]
     )
 

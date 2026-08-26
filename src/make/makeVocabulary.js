@@ -41,10 +41,8 @@ export const WORDS = {
 // guessed at: a room belonging to somebody called `Team 3` should say `Team 3`
 // and let a mentor notice that it has not been named yet.
 //
-// Read from the project RECORD's title, never derived from the project id —
-// `team-3` is an address, not a person — and never from the document's own
-// `projectMeta.title`, which is a copy written when the project was created and
-// still says `Team 3` on every camp project that has been renamed since.
+// Read from the project's own title, never derived from the project id —
+// `team-3` is an address, not a person.
 export const splitTitle = (title = '') => {
     const text = String(title || '').trim()
     if (!text) return null

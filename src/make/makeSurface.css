@@ -745,9 +745,17 @@ body.is-make .account-btn-wrapper {
 .make-name-skip .make-word-hy { font-size: 13px; font-weight: 600; }
 
 /* A mentor's laptop lands here too. Nothing changes shape — the four words just
-   stop being the full width of a desk. */
-@media (min-width: 720px) {
-    .make-surface { --make-bar-h: 104px; }
+   stop being the full width of a desk.
+ *
+ * The height condition is not decoration. A phone held sideways is 844 x 390
+ * and matched `min-width: 720px` on its own, so a child who turned their phone
+ * got the laptop's floating 560px pill parked in the middle of a letterboxed
+ * room — seen, on a real 844 x 390 viewport. A desk is wide AND tall. */
+@media (min-width: 720px) and (min-height: 560px) {
+    .make-surface {
+        --make-photo-h: 68px;
+        --make-bar-h: 150px;
+    }
 
     .make-bar {
         left: 50%;
@@ -760,8 +768,15 @@ body.is-make .account-btn-wrapper {
         box-shadow: 0 10px 34px rgba(38, 30, 18, 0.14);
     }
 
-    .make-key:first-child { border-radius: 26px 0 0 26px; }
-    .make-key:last-child { border-radius: 0 26px 26px 0; }
+    /* The picture owns the whole top row of the pill; the other three sit
+       along the bottom of it. */
+    .make-key--photo { border-radius: 26px 26px 0 0; }
+    .make-key--photo + .make-key { border-radius: 0 0 0 26px; }
+    .make-key:last-child { border-radius: 0 0 26px 0; }
+
+    /* The room runs on behind the floating pill rather than stopping in a
+       band above it. */
+    .make-room { bottom: 0; }
 
     .make-surface .raw-viewport-shell { bottom: 0; }
 

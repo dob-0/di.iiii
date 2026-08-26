@@ -13,10 +13,10 @@
 // constant — a fixed ROOM_RADIUS of 3.4 metres, framed around the world origin,
 // for rooms whose contents are neither that wide nor centred there.
 //
-// So: fit the CONTENT. Measure the box the room's objects actually occupy,
-// aim at the middle of that box, and stand exactly far enough back that its
-// eight corners land inside the frustum. Every number below falls out of that
-// one idea; nothing is a magic distance any more.
+// So: fit the CONTENT. Aim at the middle of what is in the room, and stand
+// exactly far enough back that every object in it — measured one bounding
+// sphere at a time, not as one union box — lands inside the frustum. Every
+// number below falls out of that one idea; nothing is a magic distance.
 //
 // Pure, and takes an aspect number and a plain document rather than an element
 // or a renderer, so the framing can be checked without a canvas or a device.
@@ -49,14 +49,14 @@ const PORTRAIT_ASPECT = 1
 // the horizon leaves the frame entirely, taking with it the one cue that says
 // you are standing somewhere rather than reading a map.
 //
-// What this angle cannot do is make a wide room fill a tall screen. A camp room
-// is about seven metres across and four deep; a portrait phone is 0.58 as wide
-// as it is tall. Fit that box and the width is what binds — the room spans the
-// full width and a bit over a third of the height, and no elevation, lens or
-// margin changes that ratio, only cropping does. So the rest of the height is
-// given to the ground and the horizon (MakeRoom's ambience) rather than to
-// black, and the arc a child's own objects land in was narrowed to stop the
-// room getting wider still (makePlacement.js).
+// What no angle can do is make a wide room fill a tall screen. A camp room is
+// about six metres across and four deep; a portrait phone is 0.58 as wide as it
+// is tall. Fit that and the WIDTH is what binds — the room spans the full width
+// and rather less of the height, and no elevation, lens or margin changes that
+// ratio, only cropping does. So the height that is left over is given to the
+// room's own ground and horizon rather than to black (MakeRoom's ambience), and
+// the arc a child's objects land in was narrowed to stop the room getting wider
+// still (makePlacement.js).
 const PORTRAIT_ELEVATION_DEG = 30
 const LANDSCAPE_ELEVATION_DEG = 18
 
@@ -98,8 +98,8 @@ const HALF_EXTENTS = {
     // Symmetric in x and z because the toybox stands its pictures up facing
     // whichever way the camera is, and this file is asked for the box before
     // anybody knows which way that is.
-    image: [2.1, 1.6, 2.1],
-    video: [2.1, 1.6, 2.1]
+    image: [1.7, 1.55, 1.7],
+    video: [1.7, 1.55, 1.7]
 }
 
 // Anything whose size this file has no table for — a model, a video, a node
@@ -149,7 +149,38 @@ const halfExtentForNode = (node) => {
 }
 
 /**
+ * Everything standing in the room, as `{ position, radius }` — one bounding
+ * sphere each. The list the fit is actually computed from.
+ *
+ * Spheres rather than one union box, and the difference is visible rather than
+ * academic. Fitting the eight corners of a union box pairs the far-left X of
+ * one object with the near Z of another and asks the camera to hold a corner
+ * that nothing occupies. Measured on a real camp room with one photograph in
+ * it, that cost about a third of the picture: the objects filled 66% of the
+ * width when the arithmetic believed they filled 100%.
+ */
+export const placedItems = (projectDocument = null) => {
+    const items = []
+    const asSphere = (position, half) => ({
+        position,
+        radius: Math.hypot(half[0], half[1], half[2])
+    })
+    for (const entity of projectDocument?.entities || []) {
+        const position = asTriple(entity?.components?.transform?.position, [0, 0, 0])
+        items.push(asSphere(position, halfExtentForEntity(entity)))
+    }
+    for (const node of projectDocument?.nodes || []) {
+        if (!nodeIsInTheRoom(node)) continue
+        items.push(asSphere(asTriple(node.values.position), halfExtentForNode(node)))
+    }
+    return items
+}
+
+/**
  * The box everything in the room occupies: `{ min, max, center, isEmpty }`.
+ *
+ * Used for the AIM and for deciding when a re-fit is due. The distance comes
+ * from placedItems above.
  *
  * Never null — an empty project gets a small box around the origin, because
  * every caller here has to produce a camera either way and a null would only
@@ -158,26 +189,16 @@ const halfExtentForNode = (node) => {
 export const contentBounds = (projectDocument = null) => {
     const min = [Infinity, Infinity, Infinity]
     const max = [-Infinity, -Infinity, -Infinity]
-    let counted = 0
+    const items = placedItems(projectDocument)
 
-    const swallow = (position, half) => {
-        counted += 1
+    for (const item of items) {
         for (let axis = 0; axis < 3; axis += 1) {
-            min[axis] = Math.min(min[axis], position[axis] - half[axis])
-            max[axis] = Math.max(max[axis], position[axis] + half[axis])
+            min[axis] = Math.min(min[axis], item.position[axis] - item.radius)
+            max[axis] = Math.max(max[axis], item.position[axis] + item.radius)
         }
     }
 
-    for (const entity of projectDocument?.entities || []) {
-        const position = asTriple(entity?.components?.transform?.position, [0, 0, 0])
-        swallow(position, halfExtentForEntity(entity))
-    }
-    for (const node of projectDocument?.nodes || []) {
-        if (!nodeIsInTheRoom(node)) continue
-        swallow(asTriple(node.values.position), halfExtentForNode(node))
-    }
-
-    if (!counted) {
+    if (!items.length) {
         return {
             min: [-EMPTY_HALF_EXTENT, 0, -EMPTY_HALF_EXTENT],
             max: [EMPTY_HALF_EXTENT, EMPTY_HALF_EXTENT, EMPTY_HALF_EXTENT],
@@ -223,27 +244,33 @@ export const bearingFromView = (savedView = null) => {
 }
 
 /**
- * How far back to stand so every corner of `bounds` lands inside the frustum.
+ * How far back to stand so every object lands inside the frustum.
  *
- * Exact rather than approximate. For a corner at (x, y, z) in camera axes — x
- * across, y up, z along the line of sight, all measured from the middle of the
- * box — the perspective condition is |x| ≤ (d + z)·tan(h/2), which rearranges
- * to d ≥ |x|/tan(h/2) − z. The distance that satisfies all eight corners on
- * both axes is the largest of the sixteen answers. Half the reason this is
- * worth doing exactly: a room is not a sphere, and fitting its bounding sphere
- * instead — the obvious shortcut — stands a third too far back on every room
- * that is wider than it is deep, which is all of them.
+ * Exact, and per object. For a sphere of radius r whose middle sits at (x, y,
+ * z) in camera axes — x across, y up, z along the line of sight, all measured
+ * from the point the camera is aimed at — the condition that it clears the left
+ * and right planes of a frustum whose half-angle is θ is
+ *
+ *     d ≥ |x|/tanθ + r/sinθ − z
+ *
+ * and the same with the vertical half-angle for the top and bottom. The answer
+ * is the largest of those over every object on both axes. The `r/sinθ` term is
+ * the part a corner-of-a-box fit gets wrong: a frustum plane is slanted, so the
+ * room a sphere needs beside it is not its radius but its radius divided by the
+ * sine of the angle.
  */
-export const distanceForBounds = (bounds, aspect, bearing = 0, elevation = 0) => {
+export const distanceForItems = (items, target, aspect, bearing = 0, elevation = 0) => {
     const tanV = Math.tan((fovForAspect(aspect) / 2) * DEG)
     const safeAspect = Number(aspect) > 0 ? Number(aspect) : 1
     const tanH = tanV * safeAspect
+    // sinθ from tanθ, without an arctangent round trip.
+    const invSinH = Math.sqrt(1 + tanH * tanH) / tanH
+    const invSinV = Math.sqrt(1 + tanV * tanV) / tanV
 
     // The camera basis at this bearing and elevation. `eye` points from the
     // middle of the room towards the camera; forward is its opposite.
     const cosE = Math.cos(elevation)
-    const eye = [Math.sin(bearing) * cosE, Math.sin(elevation), Math.cos(bearing) * cosE]
-    const forward = [-eye[0], -eye[1], -eye[2]]
+    const forward = [-Math.sin(bearing) * cosE, -Math.sin(elevation), -Math.cos(bearing) * cosE]
     const right = [Math.cos(bearing), 0, -Math.sin(bearing)]
     const up = [
         right[1] * forward[2] - right[2] * forward[1],
@@ -251,18 +278,21 @@ export const distanceForBounds = (bounds, aspect, bearing = 0, elevation = 0) =>
         right[0] * forward[1] - right[1] * forward[0]
     ]
 
-    const { min, max, center } = bounds
     let distance = MIN_DISTANCE
-    for (let corner = 0; corner < 8; corner += 1) {
+    for (const item of items) {
         const point = [
-            (corner & 1 ? max[0] : min[0]) - center[0],
-            (corner & 2 ? max[1] : min[1]) - center[1],
-            (corner & 4 ? max[2] : min[2]) - center[2]
+            item.position[0] - target[0],
+            item.position[1] - target[1],
+            item.position[2] - target[2]
         ]
         const across = point[0] * right[0] + point[1] * right[1] + point[2] * right[2]
         const rise = point[0] * up[0] + point[1] * up[1] + point[2] * up[2]
         const depth = point[0] * forward[0] + point[1] * forward[1] + point[2] * forward[2]
-        distance = Math.max(distance, Math.abs(across) / tanH - depth, Math.abs(rise) / tanV - depth)
+        distance = Math.max(
+            distance,
+            Math.abs(across) / tanH + item.radius * invSinH - depth,
+            Math.abs(rise) / tanV + item.radius * invSinV - depth
+        )
     }
 
     return Math.min(MAX_DISTANCE, Math.max(MIN_DISTANCE, distance * MARGIN))
@@ -280,7 +310,13 @@ export const fitToContent = (projectDocument, aspect, bearing = null) => {
     const savedView = projectDocument?.worldState?.savedView || null
     const heading = Number.isFinite(bearing) ? bearing : bearingFromView(savedView)
     const elevation = elevationForAspect(aspect)
-    const distance = distanceForBounds(bounds, aspect, heading, elevation)
+    const distance = distanceForItems(
+        placedItems(projectDocument),
+        bounds.center,
+        aspect,
+        heading,
+        elevation
+    )
     const cosE = Math.cos(elevation)
     const target = bounds.center
     return {
