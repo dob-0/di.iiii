@@ -9,7 +9,7 @@ import { getProject, uploadProjectAsset } from '../project/services/projectsApi.
 import MakeNamePrompt from './MakeNamePrompt.jsx'
 import MakeSheet from './MakeSheet.jsx'
 import { GlyphAdd, GlyphColour, GlyphPhoto, GlyphTalk } from './MakeGlyphs.jsx'
-import { makePlacementPosition, makePlacementRotation } from './makePlacement.js'
+import { makePlacementPosition, makePlacementRotation, makePlacementScale } from './makePlacement.js'
 import { preparePhoto } from './makePhoto.js'
 import { bearingFromView } from './makeFraming.js'
 import { DISPLAY_NAME_KEY, USER_ID_KEY, readDisplayName, writeDisplayName } from './makeIdentity.js'
@@ -184,7 +184,8 @@ export default function MakeSurface({ projectId, spaceId }) {
                         // A picture is a thing you look AT, and left to itself
                         // it lies flat on the floor like a rug. See
                         // makePlacement.js.
-                        rotation: makePlacementRotation('image', placement)
+                        rotation: makePlacementRotation('image', placement),
+                        scale: makePlacementScale('image')
                     },
                     media: { assetId: asset.id, fit: 'contain', autoplay: false, loop: false, muted: true }
                 }

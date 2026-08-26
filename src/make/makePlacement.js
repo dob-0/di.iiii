@@ -55,11 +55,23 @@ const ARC_HALF = 0.8
 // the mesh's up-facing normal into a horizontal one pointing along the bearing
 // — which is where the camera is. A plain yaw on Y would have been swallowed:
 // applied before the X quarter-turn, it only spins a horizontal plane in place.
+// And a picture is drawn THREE METRES TALL whatever it is a picture of, which
+// beside a one-metre cube is a billboard, not a photograph somebody stood in
+// their room. Worse, on a portrait phone one of them alone pushes the camera
+// back far enough to shrink everything else: measured, a single photograph cost
+// about a third of the picture's width. At 0.6 it is 1.8m — a shade taller than
+// the child holding the phone, which is the size a thing you look at wants to
+// be.
 const PICTURE_HEIGHT = 3
+const PICTURE_SCALE = 0.6
 const PICTURE_STANDS = new Set(['image', 'video'])
 
 export const makePlacementRotation = (type, { bearing = 0 } = {}) => (
     PICTURE_STANDS.has(type) ? [Math.PI / 2, 0, -bearing] : [0, 0, 0]
+)
+
+export const makePlacementScale = (type) => (
+    PICTURE_STANDS.has(type) ? [PICTURE_SCALE, PICTURE_SCALE, PICTURE_SCALE] : [1, 1, 1]
 )
 
 export const makePlacementPosition = (type, index = 0, { bearing = 0, origin = [0, 0, 0] } = {}) => {
@@ -78,6 +90,6 @@ export const makePlacementPosition = (type, index = 0, { bearing = 0, origin = [
     const ground = [origin[0] + Math.sin(angle) * radius, 0, origin[2] + Math.cos(angle) * radius]
     // A standing picture's middle is half its own height up. standHeightForType
     // has no answer for one, because on every other surface a picture lies flat.
-    if (PICTURE_STANDS.has(type)) return [ground[0], PICTURE_HEIGHT / 2, ground[2]]
+    if (PICTURE_STANDS.has(type)) return [ground[0], (PICTURE_HEIGHT * PICTURE_SCALE) / 2, ground[2]]
     return restOnGround(ground, { standHeight: standHeightForType(type) })
 }
