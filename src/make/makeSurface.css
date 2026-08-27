@@ -537,6 +537,29 @@ body.is-make .account-btn-wrapper {
     padding: 0;
 }
 
+/* Raw's two room tabs, lit for paper. `--di-cyan` on a cream sheet is a bright
+   line for the active tab and a nearly invisible one for the inactive tab —
+   seen on staging: a child could not tell there was a second room to tap. Ink
+   for the one you are in, soft ink for the other, and both keep Raw's 40px+
+   target because a mis-tap here sends a private line to the wrong four people. */
+.make-chat .raw-chat-tabs {
+    border-bottom: 1px solid var(--make-line);
+}
+
+.make-chat .raw-chat-tab {
+    padding: 13px 8px;
+    font-family: var(--make-sans);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--make-ink-soft);
+}
+
+.make-chat .raw-chat-tab.is-active {
+    color: var(--make-ink);
+    border-bottom-color: var(--make-ink);
+}
+
 .make-chat .raw-chat-messages {
     padding: 4px 18px 12px;
     gap: 14px;
