@@ -597,6 +597,11 @@ body.is-make .account-btn-wrapper {
 }
 
 .make-chat .raw-chat-input {
+    /* raw.css gives this `flex: 1`, which keeps `min-width: auto` — and at the
+       16px font size below, the field's own min-content width is wider than a
+       390px phone leaves it, so it pushed the send button off the right edge
+       and the platform clipped its corner. Seen on staging, 2026-08-27. */
+    min-width: 0;
     padding: 13px 16px;
     border: 1px solid var(--make-line);
     border-radius: 22px;
