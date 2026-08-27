@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a making surface for a ten-year-old with a phone
+- chat that reaches the other rooms, not just this one
 
 Full detail: `PROGRESS.md`.
 
