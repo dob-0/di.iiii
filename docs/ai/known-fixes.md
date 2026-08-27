@@ -21,6 +21,35 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## A fit that centres the content leaves the dead space where it hurts
+
+`/<space>/make/<project>` fits the camera so nothing is cropped. On a portrait
+phone the WIDTH binds — measured on the camp's real rooms, 94% of the width and
+35% of the height, at every bearing from 0 to 180 and every elevation from 18 to
+42 degrees. That two-thirds is geometry, not a bug: a camp room is five metres
+across, four deep and two tall, and a phone is 0.58 as wide as it is tall.
+
+The bug was where the leftover went. A centred fit splits it evenly and the
+lower half is blank near-floor, lit flat, right where a thumb rests — which is
+what "the room looks empty" actually meant. Two fixes, and the second is worth
+more than the first:
+
+1. `makeFraming.js` seats the room on the LOWER part of the screen (`SEAT`) and
+   gives the rest to the sky, so the horizon comes into the picture. It pans the
+   eye rather than tilting it, so nothing that was in frame leaves it.
+   Guard: `src/make/makeFraming.test.js`, which measures every corner of every
+   object in normalised device coordinates and fails at `SEAT = 0`.
+2. The room's own ARRANGEMENT. The camp scaffold stood its pieces in a row
+   across the room, and a row across is the one shape a portrait phone cannot
+   hold. Re-seated as a room you look INTO — the picture at the back under the
+   child's name, one block in the middle, two in front — the same objects come
+   out two to three times bigger on the same screen. Data, not code: see
+   `LAYOUT` in the camp's `roomplan.mjs`.
+
+So: when a room reads as empty on a phone, check what shape its contents are in
+before touching the lens. No elevation, field of view or margin can make a row
+across fill a tall screen; rearranging it can.
+
 ## A bare `*` route stops serverXR booting, it does not fail a request
 
 serverXR is on Express 5, whose router uses path-to-regexp v8. That version

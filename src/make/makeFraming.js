@@ -334,6 +334,129 @@ export const distanceForItems = (items, target, aspect, bearing = 0, elevation =
     return Math.min(MAX_DISTANCE, Math.max(MIN_DISTANCE, distance * MARGIN))
 }
 
+// --- where the leftover goes ---------------------------------------------
+//
+// A camp room is about five metres across, four deep and two tall; a portrait
+// phone is 0.58 as wide as it is tall. Fit that room without cutting anything
+// and the WIDTH binds at about 94% while the height reaches 35%, and no lens,
+// elevation or margin changes that — measured on Gor's actual room, at every
+// bearing from 0 to 180 and at elevations from 18 to 42 degrees. The two-thirds
+// of the screen that is left over is not a bug to be solved. It is a choice
+// about WHERE it goes.
+//
+// Centring the content, which is what a plain fit does, splits it evenly: a
+// third of haze above and a third of blank near-floor below. The floor half is
+// the one that reads as an empty room, because it is the part with nothing in
+// it and no horizon in it either — flat ground, lit the same everywhere, right
+// where a thumb rests.
+//
+// So the frame stands the content on the lower part of the screen and gives the
+// rest to the sky. At this elevation and lens the top of the frame sits within
+// a couple of degrees of the horizon, so panning the eye up is what brings the
+// horizon down INTO the picture — the room stops being a floor and becomes a
+// place with a distance in it. A child sees their own objects near their own
+// thumb, and the room going away above them.
+//
+// Both numbers are fractions of the screen, not metres, because that is what
+// they are for: FOOT is the ground a child's nearest object stands on, HEAD is
+// the guarantee that panning never pushes the far edge of the room out of the
+// top of the frame.
+// How far below the middle of the screen the room sits, as a fraction of a
+// half-frame. 0.22 was chosen by looking at three: centred is the even split
+// this replaces, 0.5 stands the objects on the bottom edge with two-thirds of
+// haze above them, and this one puts the room where a photograph of a place
+// puts it — low, with the distance above it.
+const SEAT = 0.22
+// The ground a child's nearest object stands on, and the guarantee that the far
+// edge of the room never leaves the top of the frame. Both are floors under the
+// seat above, not targets: the seat asks, these two refuse.
+const FOOT = 0.06
+const HEAD = 0.04
+
+// Every corner of every object, in normalised device coordinates on the vertical
+// axis: -1 is the bottom of the frame, +1 the top. Exact rather than estimated
+// — a box's projected height depends on how far away each of its corners is,
+// and the near-bottom corner of the nearest object is precisely the one that
+// must not fall off the screen.
+const verticalSpan = (items, eye, basis, tanV) => {
+    let low = Infinity
+    let high = -Infinity
+    for (const item of items) {
+        for (const sx of [-1, 1]) {
+            for (const sy of [-1, 1]) {
+                for (const sz of [-1, 1]) {
+                    const point = [
+                        item.position[0] + sx * item.half[0] - eye[0],
+                        item.position[1] + sy * item.half[1] - eye[1],
+                        item.position[2] + sz * item.half[2] - eye[2]
+                    ]
+                    const depth = point[0] * basis.forward[0] + point[1] * basis.forward[1] + point[2] * basis.forward[2]
+                    if (depth <= 0.01) continue
+                    const y = (point[0] * basis.up[0] + point[1] * basis.up[1] + point[2] * basis.up[2]) / (depth * tanV)
+                    low = Math.min(low, y)
+                    high = Math.max(high, y)
+                }
+            }
+        }
+    }
+    return Number.isFinite(low) ? { low, high } : null
+}
+
+const cameraBasis = (bearing, elevation) => {
+    const cosE = Math.cos(elevation)
+    const forward = [-Math.sin(bearing) * cosE, -Math.sin(elevation), -Math.cos(bearing) * cosE]
+    const right = [Math.cos(bearing), 0, -Math.sin(bearing)]
+    return {
+        forward,
+        right,
+        up: [
+            right[1] * forward[2] - right[2] * forward[1],
+            right[2] * forward[0] - right[0] * forward[2],
+            right[0] * forward[1] - right[1] * forward[0]
+        ]
+    }
+}
+
+/**
+ * How far to slide the eye along its own up-axis so the room stands on the
+ * lower part of the screen. Panning, not tilting: the direction the eye looks
+ * does not change, so nothing that was inside the frame leaves it sideways, and
+ * the elevation the rest of this file reasons about stays exactly what it says.
+ *
+ * Solved and then checked, because the relation is only linear for a single
+ * depth: sliding by `d · tanV · Δ` moves a point at distance `d` by `Δ` of a
+ * half-frame, and the room has objects at several distances. So the first
+ * answer is taken at the middle of the room and then the true span is measured
+ * again and clamped, and the clamp is what guarantees the top of the room stays
+ * in shot rather than the arithmetic.
+ */
+export const liftForComposition = (items, target, position, bearing, elevation, aspect) => {
+    if (!items.length) return 0
+    const tanV = Math.tan((fovForAspect(aspect) / 2) * DEG)
+    const basis = cameraBasis(bearing, elevation)
+    const span = verticalSpan(items, position, basis, tanV)
+    if (!span) return 0
+
+    const middle = Math.hypot(target[0] - position[0], target[1] - position[1], target[2] - position[2])
+    const wanted = ((span.low + span.high) / 2) + SEAT
+    let lift = wanted * middle * tanV
+    if (lift <= 0) return 0
+
+    // Measured again from where the eye would actually be, and pulled back if
+    // the far edge of the room has been lifted past the top of the frame.
+    const lifted = [position[0] + basis.up[0] * lift, position[1] + basis.up[1] * lift, position[2] + basis.up[2] * lift]
+    const after = verticalSpan(items, lifted, basis, tanV)
+    if (after) {
+        if (after.low < -1 + FOOT) {
+            lift = Math.max(0, lift - ((-1 + FOOT) - after.low) * middle * tanV)
+        }
+        if (after.high > 1 - HEAD) {
+            lift = Math.max(0, lift - (after.high - (1 - HEAD)) * middle * tanV)
+        }
+    }
+    return lift
+}
+
 /**
  * The whole frame: `{ target, position, fov, bearing, distance, elevation }`.
  *
@@ -354,14 +477,21 @@ export const fitToContent = (projectDocument, aspect, bearing = null) => {
         elevation
     )
     const cosE = Math.cos(elevation)
-    const target = bounds.center
+    const items = placedItems(projectDocument)
+    const seat = bounds.center
+    const eye = [
+        seat[0] + Math.sin(heading) * cosE * distance,
+        seat[1] + Math.sin(elevation) * distance,
+        seat[2] + Math.cos(heading) * cosE * distance
+    ]
+    // Stand the room on the lower part of the screen and give the rest to the
+    // sky. Both the eye and what it looks at move together, so this is a pan.
+    const up = cameraBasis(heading, elevation).up
+    const lift = liftForComposition(items, seat, eye, heading, elevation, aspect)
+    const target = [seat[0] + up[0] * lift, seat[1] + up[1] * lift, seat[2] + up[2] * lift]
     return {
         target,
-        position: [
-            target[0] + Math.sin(heading) * cosE * distance,
-            target[1] + Math.sin(elevation) * distance,
-            target[2] + Math.cos(heading) * cosE * distance
-        ],
+        position: [eye[0] + up[0] * lift, eye[1] + up[1] * lift, eye[2] + up[2] * lift],
         fov: fovForAspect(aspect),
         bearing: heading,
         distance,
