@@ -1,0 +1,871 @@
+/* THE TOYBOX'S LID.
+ *
+ * Every rule here is namespaced `.make-*` or scoped under `.make-surface`, so
+ * bringing raw.css along for RawViewport (which needs it) restyles nothing and
+ * nothing here reaches back into Raw. The two exceptions are marked and both
+ * are `.make-surface .raw-…` — a light skin on Raw's own components, applied
+ * only inside this surface.
+ *
+ * The palette is warm and quiet on purpose. Raw is cyan on near-black, which
+ * is right for a bench in a dark studio and reads, on a phone in Dilijan in
+ * August, as a machine you are not allowed to touch. This is paper.
+ */
+
+/* Armenian. The subsetted Noto Sans Armenian files already in the repo for the
+ * WCC exhibition page — self-hosted, OFL, no request leaves the machine. Inter
+ * (the app's own sans) carries no Armenian at all, so without this every
+ * Armenian word on this surface falls back to whatever the phone happens to
+ * have, at whatever weight it happens to be. The unicode-range split means a
+ * latin word costs nothing extra: the Armenian file is only fetched by an
+ * Armenian character. */
+@font-face {
+    font-family: 'Noto Sans Armenian';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('../wcc/landing/fonts/noto-sans-armenian-armenian.woff2') format('woff2');
+    unicode-range: U+0308, U+0530-058F, U+2010, U+2024, U+25CC, U+FB13-FB17;
+}
+
+/* The platform's floating account chip is fixed to the bottom-right of every
+ * surface and lands on top of the fourth word. RootApp already refuses it; this
+ * is the belt. The jam has an identical rule in jamSurface.css, which is not
+ * imported here — importing 370 lines of another surface's stylesheet to reuse
+ * one declaration would cost more than it saves. */
+body.is-make .account-btn-wrapper {
+    display: none !important;
+}
+
+.make-surface {
+    --make-paper: #FBF8F3;
+    --make-card: #FFFFFF;
+    --make-ink: #26241F;
+    --make-ink-soft: #7C7568;
+    --make-line: rgba(38, 36, 31, 0.10);
+    --make-shadow: 0 -16px 44px rgba(38, 30, 18, 0.16);
+    /* Two rows: the picture on its own, then the other three words. */
+    --make-photo-h: 78px;
+    --make-bar-h: 170px;
+    --make-safe: env(safe-area-inset-bottom, 0px);
+    --make-sans: 'Noto Sans Armenian', 'Inter', 'SF Pro Text', -apple-system,
+        BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    font-family: var(--make-sans);
+    color: var(--make-ink);
+    background: var(--make-paper);
+    /* The room is the interface. Nothing on this surface may bounce, rubber-band
+       or select — a child's thumb is on a 3D canvas, not a document. */
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* The scene fills the screen and stops above the four words, so the room is
+   never behind the thing you press. The viewport measures THIS box to work out
+   what lens it needs (MakeRoom.jsx), so its height has to be the real one. */
+.make-room {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--make-bar-h) + var(--make-safe));
+    /* A STACKING CONTEXT OF ITS OWN, and it is load-bearing. The selection chip
+       over an object is a drei <Html>, which puts `z-index: 16777271` inline on
+       its own wrapper — so with nothing to contain it, a chip reading
+       "ԳՆԴԱԿ · ball" printed itself on top of the open drawer, over the words a
+       thumb was reaching for. Isolating the room caps everything the renderer
+       mounts at this one layer, and the drawer, the scrim and the four words go
+       back to being above it. */
+    z-index: 1;
+    isolation: isolate;
+}
+
+/* --- words --------------------------------------------------------------
+ * Armenian first, English under it, everywhere. Two spans, never one string:
+ * the two languages want different sizes and different weights, and a slash
+ * between them makes a label a child has to parse. */
+
+.make-word-hy {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.15;
+}
+
+.make-word-en {
+    display: block;
+    margin-top: 2px;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: lowercase;
+    color: var(--make-ink-soft);
+    line-height: 1.15;
+}
+
+.make-glyph {
+    display: block;
+    margin: 0 auto;
+}
+
+/* --- the four words -----------------------------------------------------
+ * The picture on its own row, full width, filled — then three equal columns
+ * for the rest. Edge to edge, no gaps and no icons floating in space: the
+ * whole cell is the target, 130 x 92 at 390px for the three and 390 x 78 for
+ * the picture, all of which a thumb hits without looking. */
+
+.make-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: var(--make-photo-h) 1fr;
+    height: calc(var(--make-bar-h) + var(--make-safe));
+    padding-bottom: var(--make-safe);
+    background: var(--make-paper);
+    border-top: 1px solid var(--make-line);
+}
+
+
+.make-key {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin: 0;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--make-ink);
+    font-family: inherit;
+    font-size: 30px; /* the glyph is sized in em */
+    cursor: pointer;
+    transition: background 140ms ease;
+}
+
+.make-key + .make-key {
+    box-shadow: inset 1px 0 0 var(--make-line);
+}
+
+.make-key:active {
+    background: rgba(38, 36, 31, 0.05);
+}
+
+.make-key.is-open {
+    background: rgba(38, 36, 31, 0.07);
+}
+
+/* The only filled block on the surface. A child looking for where to start
+   finds exactly one thing that looks like a button. */
+.make-key--photo {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    gap: 14px;
+    background: var(--make-ink);
+    color: var(--make-paper);
+}
+
+.make-key--photo:active {
+    background: #3B3830;
+}
+
+.make-key--photo .make-glyph {
+    margin: 0;
+    font-size: 34px;
+}
+
+.make-key--photo .make-key-words {
+    display: block;
+    text-align: left;
+}
+
+.make-key--photo .make-word-hy {
+    font-size: 17px;
+    letter-spacing: 0.02em;
+}
+
+.make-key--photo .make-word-en {
+    color: rgba(251, 248, 243, 0.62);
+    font-size: 11px;
+}
+
+/* The hairline dividers belong to the row of three, not to the picture. */
+.make-key--photo + .make-key {
+    box-shadow: none;
+}
+
+/* A quiet mark that this word has something to act on. Not a colour, not a
+   badge — a hairline under the word, the width of the word. */
+.make-key.has-target::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    width: 26px;
+    height: 2px;
+    transform: translateX(-50%);
+    background: var(--make-ink);
+    border-radius: 2px;
+}
+
+.make-unread {
+    position: absolute;
+    top: 14px;
+    left: calc(50% + 12px);
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 10px;
+    background: #EE8866;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 19px;
+    text-align: center;
+}
+
+/* --- whose room this is --------------------------------------------------
+ * The project's own title, at the top, quiet. It is the child's name, so it is
+ * set like a name and not like a header: no box, no rule, no chip — the room
+ * behind it is warm paper and the name simply sits on it. */
+
+.make-room-name {
+    position: absolute;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    left: 0;
+    right: 0;
+    z-index: 14;
+    margin: 0;
+    padding: 0 22px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.make-room-name-hy {
+    display: block;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+    color: var(--make-ink);
+}
+
+.make-room-name-en {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: lowercase;
+    line-height: 1.1;
+    color: var(--make-ink-soft);
+}
+
+/* --- what the room says -------------------------------------------------- */
+
+.make-status {
+    position: absolute;
+    top: calc(72px + env(safe-area-inset-top, 0px));
+    left: 50%;
+    z-index: 15;
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 9px 18px;
+    border-radius: 999px;
+    background: rgba(251, 248, 243, 0.94);
+    color: var(--make-ink);
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(38, 30, 18, 0.14);
+    pointer-events: none;
+}
+
+.make-empty {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--make-bar-h) + var(--make-safe) + 22px);
+    z-index: 15;
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 14px 22px 10px;
+    border-radius: 20px;
+    background: rgba(251, 248, 243, 0.92);
+    text-align: center;
+    box-shadow: 0 6px 24px rgba(38, 30, 18, 0.14);
+    pointer-events: none;
+}
+
+.make-empty .make-word-hy { font-size: 14px; }
+.make-empty .make-word-en { font-size: 11px; }
+
+.make-empty-arrow {
+    display: block;
+    margin-top: 4px;
+    font-size: 17px;
+    line-height: 1;
+    color: var(--make-ink-soft);
+}
+
+/* --- the drawer ---------------------------------------------------------- */
+
+.make-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 25;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: rgba(28, 24, 16, 0.28);
+    cursor: pointer;
+}
+
+.make-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    max-height: 78vh;
+    padding: 4px 18px calc(20px + var(--make-safe));
+    border-radius: 26px 26px 0 0;
+    background: var(--make-paper);
+    box-shadow: var(--make-shadow);
+    animation: make-rise 190ms cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+.make-sheet--talk {
+    height: 74vh;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+@keyframes make-rise {
+    from { transform: translateY(18%); opacity: 0.4; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .make-sheet { animation: none; }
+}
+
+.make-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 0 0 auto;
+    padding: 14px 0 12px;
+}
+
+.make-sheet--talk .make-sheet-head {
+    padding-left: 18px;
+    padding-right: 18px;
+}
+
+/* The grab handle, drawn on the header rather than added as an element. */
+.make-sheet-head::before {
+    content: '';
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    transform: translateX(-50%);
+    border-radius: 4px;
+    background: var(--make-line);
+}
+
+.make-sheet-title .make-word-hy { font-size: 15px; }
+.make-sheet-title .make-word-en { font-size: 10px; }
+
+.make-sheet-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 22px;
+    background: rgba(38, 36, 31, 0.06);
+    color: var(--make-ink);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* --- shapes -------------------------------------------------------------- */
+
+.make-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding-bottom: 4px;
+    overflow-y: auto;
+}
+
+.make-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 108px;
+    margin: 0;
+    padding: 14px 6px 12px;
+    border: 1px solid var(--make-line);
+    border-radius: 20px;
+    background: var(--make-card);
+    color: var(--make-ink);
+    font-family: inherit;
+    font-size: 40px; /* the glyph is sized in em */
+    cursor: pointer;
+    transition: transform 120ms ease, background 120ms ease;
+}
+
+.make-tile:active {
+    transform: scale(0.96);
+    background: #F4EFE6;
+}
+
+.make-tile .make-word-hy { font-size: 11.5px; }
+.make-tile .make-word-en { font-size: 9.5px; }
+
+/* --- colours ------------------------------------------------------------- */
+
+.make-hint {
+    margin: 0 0 10px;
+    padding: 10px 16px;
+    border-radius: 14px;
+    background: rgba(238, 136, 102, 0.13);
+    text-align: center;
+}
+
+.make-hint .make-word-hy { font-size: 13px; }
+.make-hint .make-word-en { font-size: 10px; }
+
+/* A ROW, not a grid — and the row is why this drawer is short.
+ *
+ * Nine swatches in a 3×3 grid made a drawer that covered the bottom half of the
+ * screen, which is exactly where the thing being coloured was standing: a child
+ * tapped green and watched a sheet of paper not change. One line of discs keeps
+ * the room in view while the colour lands on it. Seen, not reasoned — the grid
+ * version is screenshot 24 of the 2026-08-26 pass.
+ *
+ * It scrolls sideways, and the sixth disc is deliberately left half-showing at
+ * the right edge so that it says so without a word or an arrow. */
+/* All nine at once, in a grid that wraps — not a row that scrolls sideways.
+   The row fitted five on a 390px screen and left black, white, sand and grey
+   past the right edge, where a child has no reason to think anything is: a
+   surface whose whole argument is "few choices, all of them visible" cannot
+   put four of its nine choices where they cannot be seen. Three across,
+   three down — the same rhythm as the shapes drawer next to it. */
+.make-swatches {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    justify-items: center;
+    gap: 14px 12px;
+    padding: 4px 0 10px;
+    transition: opacity 140ms ease;
+}
+
+.make-swatches.is-waiting {
+    opacity: 0.38;
+}
+
+.make-swatch {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+}
+
+.make-swatch-disc {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--swatch);
+    /* Every hue in the row gets the same hairline, so white and sand are discs
+       on paper rather than holes in it. */
+    box-shadow: inset 0 0 0 1px rgba(38, 36, 31, 0.14);
+    transition: transform 120ms ease;
+}
+
+.make-swatch:active .make-swatch-disc {
+    transform: scale(0.92);
+}
+
+.make-swatch.is-on .make-swatch-disc {
+    box-shadow:
+        inset 0 0 0 1px rgba(38, 36, 31, 0.14),
+        0 0 0 3px var(--make-paper),
+        0 0 0 6px var(--make-ink);
+}
+
+/* --- talk ---------------------------------------------------------------
+ * Scoped skin on Raw's own ChatPanelWindow. The component is reused byte for
+ * byte — this only lights it, because raw.css dresses it for a black studio
+ * and this surface is paper. Nothing below can reach Raw: every selector is
+ * under `.make-chat`. */
+
+.make-chat {
+    flex: 1;
+    min-height: 0;
+}
+
+.make-chat .raw-window-stack {
+    padding: 0;
+}
+
+.make-chat .raw-chat-messages {
+    padding: 4px 18px 12px;
+    gap: 14px;
+}
+
+/* raw.css paints this one on a near-black card for a near-black studio; on
+   paper it read as a black brick across the middle of an empty conversation. */
+.make-chat .raw-empty-state {
+    margin: auto 0;
+    padding: 20px 0;
+    border: 0;
+    background: transparent;
+    color: var(--make-ink-soft);
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.make-chat .raw-chat-message-author {
+    font-family: var(--make-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--make-ink-soft);
+}
+
+.make-chat .raw-chat-message.is-self .raw-chat-message-author {
+    color: #2F8C74;
+}
+
+.make-chat .raw-chat-message-text {
+    align-self: flex-start;
+    max-width: 88%;
+    padding: 10px 14px;
+    border-radius: 16px 16px 16px 4px;
+    background: var(--make-card);
+    box-shadow: inset 0 0 0 1px var(--make-line);
+    color: var(--make-ink);
+    font-size: 15px;
+}
+
+.make-chat .raw-chat-message.is-self .raw-chat-message-text {
+    align-self: flex-end;
+    border-radius: 16px 16px 4px 16px;
+    background: #E4F3EE;
+    box-shadow: none;
+}
+
+.make-chat .raw-chat-message.is-self {
+    align-items: flex-end;
+}
+
+.make-chat .raw-chat-input-row {
+    gap: 10px;
+    padding: 12px 18px calc(4px + var(--make-safe));
+    border-top: 1px solid var(--make-line);
+}
+
+.make-chat .raw-chat-input {
+    /* raw.css gives this `flex: 1`, which keeps `min-width: auto` — and at the
+       16px font size below, the field's own min-content width is wider than a
+       390px phone leaves it, so it pushed the send button off the right edge
+       and the platform clipped its corner. Seen on staging, 2026-08-27. */
+    min-width: 0;
+    padding: 13px 16px;
+    border: 1px solid var(--make-line);
+    border-radius: 22px;
+    background: var(--make-card);
+    color: var(--make-ink);
+    /* 16px or iOS zooms the whole surface on focus and the room is gone. */
+    font-size: 16px;
+    font-family: var(--make-sans);
+}
+
+.make-chat .raw-chat-input::placeholder {
+    color: var(--make-ink-soft);
+}
+
+.make-chat .raw-chat-input-row button {
+    min-width: 76px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 22px;
+    background: var(--make-ink);
+    color: var(--make-paper);
+    font-family: var(--make-sans);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.make-chat .raw-chat-input-row button:disabled {
+    background: rgba(38, 36, 31, 0.16);
+    color: rgba(38, 36, 31, 0.4);
+}
+
+/* --- the name over the object -------------------------------------------
+ * Raw's selection pill, lit for paper. Same reasoning as the chat above:
+ * scoped, additive, and the only feedback a child has for "this one". */
+
+.make-surface .raw-selection-pill {
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--make-ink);
+    color: var(--make-paper);
+    font-family: var(--make-sans);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(38, 30, 18, 0.28);
+}
+
+/* --- the name ------------------------------------------------------------ */
+
+.make-file {
+    display: none;
+}
+
+.make-name {
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--make-paper);
+}
+
+.make-name-card {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    text-align: center;
+}
+
+.make-name-hy {
+    margin: 0;
+    font-size: 27px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+}
+
+.make-name-en {
+    margin: 8px 0 30px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--make-ink-soft);
+}
+
+.make-name-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 18px 20px;
+    border: 1px solid var(--make-line);
+    border-radius: 20px;
+    background: var(--make-card);
+    color: var(--make-ink);
+    /* 16px minimum, or iOS zooms on focus. */
+    font-size: 19px;
+    font-family: inherit;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+}
+
+.make-name-input:focus {
+    border-color: var(--make-ink);
+}
+
+.make-name-input::placeholder {
+    color: rgba(124, 117, 104, 0.55);
+    font-weight: 500;
+}
+
+.make-name-go {
+    width: 100%;
+    margin-top: 14px;
+    padding: 16px;
+    border: 0;
+    border-radius: 20px;
+    background: var(--make-ink);
+    color: var(--make-paper);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.make-name-go .make-word-hy { font-size: 14px; }
+.make-name-go .make-word-en { color: rgba(251, 248, 243, 0.6); }
+
+.make-name-go:disabled {
+    background: rgba(38, 36, 31, 0.12);
+    color: rgba(38, 36, 31, 0.42);
+}
+
+.make-name-go:disabled .make-word-en {
+    color: rgba(38, 36, 31, 0.34);
+}
+
+/* Skippable, and quietly so — a child on a borrowed phone who does not want to
+   type their name still gets into the room. */
+.make-name-skip {
+    width: 100%;
+    margin: 4px 0 0;
+    padding: 16px;
+    border: 0;
+    border-radius: 20px;
+    background: transparent;
+    color: var(--make-ink-soft);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.make-name-skip .make-word-hy { font-size: 13px; font-weight: 600; }
+
+/* A mentor's laptop lands here too. Nothing changes shape — the four words just
+   stop being the full width of a desk.
+ *
+ * The height condition is not decoration. A phone held sideways is 844 x 390
+ * and matched `min-width: 720px` on its own, so a child who turned their phone
+ * got the laptop's floating 560px pill parked in the middle of a letterboxed
+ * room — seen, on a real 844 x 390 viewport. A desk is wide AND tall. */
+@media (min-width: 720px) and (min-height: 560px) {
+    .make-surface {
+        --make-photo-h: 68px;
+        --make-bar-h: 150px;
+    }
+
+    .make-bar {
+        left: 50%;
+        right: auto;
+        bottom: 26px;
+        width: 560px;
+        transform: translateX(-50%);
+        border: 1px solid var(--make-line);
+        border-radius: 26px;
+        box-shadow: 0 10px 34px rgba(38, 30, 18, 0.14);
+    }
+
+    /* The picture owns the whole top row of the pill; the other three sit
+       along the bottom of it. */
+    .make-key--photo { border-radius: 26px 26px 0 0; }
+    .make-key--photo + .make-key { border-radius: 0 0 0 26px; }
+    .make-key:last-child { border-radius: 0 0 26px 0; }
+
+    /* The room runs on behind the floating pill rather than stopping in a
+       band above it. */
+    .make-room { bottom: 0; }
+
+    .make-surface .raw-viewport-shell { bottom: 0; }
+
+    .make-sheet {
+        left: 50%;
+        right: auto;
+        bottom: 0;
+        width: 560px;
+        transform: translateX(-50%);
+    }
+
+    @keyframes make-rise {
+        from { transform: translate(-50%, 18%); opacity: 0.4; }
+        to { transform: translate(-50%, 0); opacity: 1; }
+    }
+}
+
+/* --- a phone on its side -------------------------------------------------
+ * Children turn phones. In landscape the screen is 390 tall and the portrait
+ * bar — two rows, 170px — eats nearly half of it, which leaves a letterbox
+ * where the room should be. So the picture goes back on the same row as the
+ * other three words and keeps its weight by being wider and filled rather than
+ * by being taller. Everything else is unchanged.
+ *
+ * On height rather than on `orientation`, deliberately: a keyboard opening on a
+ * portrait phone leaves exactly the same amount of room, and it wants exactly
+ * the same answer. */
+@media (max-height: 520px) {
+    .make-surface {
+        --make-photo-h: 0px;
+        --make-bar-h: 74px;
+    }
+
+    .make-bar {
+        grid-template-columns: 1.5fr 1fr 1fr 1fr;
+        grid-template-rows: 1fr;
+    }
+
+    .make-key--photo {
+        grid-column: auto;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .make-key--photo .make-glyph {
+        margin: 0 auto;
+        font-size: 26px;
+    }
+
+    .make-key--photo .make-key-words {
+        text-align: center;
+    }
+
+    .make-key--photo .make-word-hy {
+        font-size: 12px;
+    }
+
+    .make-key--photo .make-word-en {
+        font-size: 9.5px;
+    }
+
+    .make-key--photo + .make-key {
+        box-shadow: inset 1px 0 0 var(--make-line);
+    }
+
+    .make-sheet {
+        max-height: 92vh;
+    }
+
+    .make-sheet--talk {
+        height: 92vh;
+    }
+
+    .make-room-name {
+        top: calc(10px + env(safe-area-inset-top, 0px));
+    }
+
+    .make-room-name-hy { font-size: 16px; }
+    .make-room-name-en { font-size: 10px; }
+}

@@ -6,9 +6,20 @@ import { useEffect, useRef, useState } from 'react'
 // is not replaced — a mentor dropping into one project still needs the channel
 // that only that project's occupants hear — it is one tap away instead of
 // being the only thing on offer.
+//
+// The three strings this panel says out loud are props with the exact defaults
+// it has always used, so every existing caller is byte-identical. They exist
+// because the toybox (src/make/) reuses this component whole and has to say
+// them in Armenian first — a bilingual surface with one English placeholder in
+// the middle of it is a surface that stopped being bilingual. They name the
+// PROJECT room; the space room says its own name, because "everyone in dilijan"
+// is not a string a caller can guess in advance.
 export default function ChatPanelWindow({
     messages = [],
     onSend,
+    placeholder = 'Message collaborators…',
+    sendLabel = 'Send',
+    emptyLabel = 'No messages yet.',
     // null (not []) means this surface has no space channel at all — a local
     // canvas, or a project opened outside a space. The tabs then disappear
     // rather than offering a room that cannot exist.
@@ -77,7 +88,7 @@ export default function ChatPanelWindow({
             <div className="raw-chat-messages" ref={listRef}>
                 {shown.length === 0 && (
                     <div className="raw-empty-state">
-                        {isSpace ? 'Nobody has said anything here yet.' : 'No messages yet.'}
+                        {isSpace ? 'Nobody has said anything here yet.' : emptyLabel}
                     </div>
                 )}
                 {shown.map((message) => (
@@ -106,10 +117,10 @@ export default function ChatPanelWindow({
                     className="raw-chat-input"
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
-                    placeholder={isSpace ? `Message everyone in ${spaceLabel}…` : 'Message collaborators…'}
+                    placeholder={isSpace ? `Message everyone in ${spaceLabel}…` : placeholder}
                     maxLength={500}
                 />
-                <button type="submit" disabled={!draft.trim()}>Send</button>
+                <button type="submit" disabled={!draft.trim()}>{sendLabel}</button>
             </form>
         </div>
     )

@@ -11,11 +11,9 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session (2026-08-25, prod promotion + the UI/UX suite audit)
+## Last session
 
-- **Prod promoted and verified live** (PR #269, 364 commits) — see the PROD line below.
-- Audited every surface as one suite (design-layer + a live first-visitor walk, both agent-run, all load-bearing claims re-verified by hand). Shipped four fixes: **#270** the cyan slab (`gap:1px` over a border-colour background paints a solid teal block in any partial last row — it was live on the marketing page's 8-in-3 feature grid) + 23 missing `-webkit-backdrop-filter` (iOS Safari rendered every frosted panel flat); **#271** `--di-sans`/motion tokens and 73 duplicated font literals folded in — the document had **no base font-family at all**, so its inherited default was Times; **#272** `/wcc` previewed as the generic platform tile because `location ~ ^/wcc/?$` matches before the crawler branch; **#273** walk mode stood you at the world origin when a space authored no arrival — the landing's "Look around" dropped you 32m from `main`'s content, now the centroid.
-- Audit findings NOT acted on (they restyle working surfaces — owner's call, per-surface): **nine cyans ship** (`#4fd6ff`/`rgba(79,214,255)` is the big one, ~40 declarations across studio+workspace), three different page grounds, `--workspace-*` is a second global token system contradicting 20 canonical values, 98 font sizes / 32 radii / 15 breakpoints, ~1,050 verified-dead CSS lines. Full detail in this session's PROGRESS entry.
+- a making surface for a ten-year-old with a phone
 
 Full detail: `PROGRESS.md`.
 
