@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function ChatPanelWindow({ messages, onSend }) {
+// The three strings this panel says out loud are props with the exact defaults
+// it has always used, so every existing caller is byte-identical. They exist
+// because the toybox (src/make/) reuses this component whole and has to say
+// them in Armenian first — a bilingual surface with one English placeholder in
+// the middle of it is a surface that stopped being bilingual.
+export default function ChatPanelWindow({
+    messages,
+    onSend,
+    placeholder = 'Message collaborators…',
+    sendLabel = 'Send',
+    emptyLabel = 'No messages yet.'
+}) {
     const [draft, setDraft] = useState('')
     const listRef = useRef(null)
 
@@ -24,7 +35,7 @@ export default function ChatPanelWindow({ messages, onSend }) {
         <div className="raw-window-stack raw-chat-panel">
             <div className="raw-chat-messages" ref={listRef}>
                 {messages.length === 0 && (
-                    <div className="raw-empty-state">No messages yet.</div>
+                    <div className="raw-empty-state">{emptyLabel}</div>
                 )}
                 {messages.map((message) => (
                     <div key={message.id} className={`raw-chat-message${message.self ? ' is-self' : ''}`}>
@@ -39,10 +50,10 @@ export default function ChatPanelWindow({ messages, onSend }) {
                     className="raw-chat-input"
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
-                    placeholder="Message collaborators…"
+                    placeholder={placeholder}
                     maxLength={500}
                 />
-                <button type="submit" disabled={!draft.trim()}>Send</button>
+                <button type="submit" disabled={!draft.trim()}>{sendLabel}</button>
             </form>
         </div>
     )
