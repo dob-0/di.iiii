@@ -151,6 +151,25 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-21'
     },
     {
+        id: 'chat-in-a-space',
+        category: 'Spaces & access',
+        title: 'Talking to the others in a space',
+        summary: 'Two chat rooms behind one Chat button: everyone in the space, or only the people in this project.',
+        body: [
+            'Chat opens on whichever room you were last reading. The tab named after the space reaches everyone in it, whatever project each of them has open — the room to use when you are working alone in your own project and want to say something to the others. The tab that says "This project" reaches only the people who have this project open, which is the older behaviour and is unchanged.',
+            'The badge on the Chat button counts both rooms together, so a message in the tab you are not looking at still gets your attention.',
+            { list: [
+                'The space room keeps its messages. Someone arriving an hour late, or reloading the page, reads what was said before they got there — the last 100 lines.',
+                'The project room does not keep anything. Close the tab and that conversation is gone, on purpose.',
+                'Both rooms are limited to 500 characters a message, and only people with access to the space can read or write either.'
+            ] },
+            'Your name in chat is the name this browser knows you by. Set it once and every message carries it; without one you appear as Guest-XXXX.',
+            'Moderation, plainly: a di.iiii admin — not a space owner, not an invited editor — can delete any message in the space room, and it disappears from everyone\'s screen at once, including the person who wrote it. Nobody can edit a message, nothing is filtered automatically, and the project room has no delete at all. If a space is being used by children, an adult with an admin account should be in it.'
+        ],
+        tags: ['chat', 'collaboration', 'space', 'project', 'presence', 'moderation', 'invite'],
+        updated: '2026-08-26'
+    },
+    {
         id: 'public-page-node',
         category: 'Editing',
         title: 'The Public page window',

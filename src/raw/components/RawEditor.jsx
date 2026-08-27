@@ -190,6 +190,7 @@ export default function RawEditor({
     const [chatOpen, setChatOpen] = useState(false)
     const [chatFrame, setChatFrame] = useState({ x: 24, y: 432, width: 280, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [readChatCount, setReadChatCount] = useState(0)
+    const [readSpaceChatCount, setReadSpaceChatCount] = useState(0)
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
     // Bumped after inserting a whole graph at once — tells the surface this
     // is the one moment a forced re-fit is a kindness, not a yank.
@@ -223,8 +224,12 @@ export default function RawEditor({
         opIdPrefix: 'raw-op'
     })
     const { applyLocalOps: _applyLocalOps } = projectSync
+    // Only a project that actually lives in a space has a space room. A local
+    // canvas has no server document and no neighbours, so it gets no tabs.
+    const chatSpaceId = projectId ? (spaceId || DEFAULT_PROJECT_SPACE_ID) : ''
     const presence = useProjectPresence({
         projectId,
+        spaceId: chatSpaceId,
         displayName,
         displayNameStorageKey: DISPLAY_NAME_KEY,
         userIdStorageKey: USER_ID_KEY,
@@ -232,10 +237,27 @@ export default function RawEditor({
         userIdPrefix: 'raw-user'
     })
     const { requestDelete, deleteConfirm } = useDeleteConfirm()
+    const spaceChatMessages = chatSpaceId ? (presence.spaceMessages || []) : null
+    // Space first: alone in your own project, the four people you mean are in
+    // the other projects.
+    const [chatChannel, setChatChannel] = useState(chatSpaceId ? 'space' : 'project')
+    const spaceChatCount = spaceChatMessages ? spaceChatMessages.length : 0
     useEffect(() => {
-        if (chatOpen) setReadChatCount(presence.messages.length)
-    }, [chatOpen, presence.messages.length])
-    const unreadChatCount = chatOpen ? 0 : Math.max(0, presence.messages.length - readChatCount)
+        if (chatOpen && chatChannel === 'project') setReadChatCount(presence.messages.length)
+    }, [chatOpen, chatChannel, presence.messages.length])
+    useEffect(() => {
+        if (chatOpen && chatChannel === 'space') setReadSpaceChatCount(spaceChatCount)
+    }, [chatOpen, chatChannel, spaceChatCount])
+    // One badge over both rooms — the question the number answers is "is anyone
+    // talking to me", and which of two tabs it landed in is the tab strip's job.
+    // The room you are looking at is read by definition; the other one is not,
+    // which is why the open panel can still carry a count.
+    const unreadChatCount = ((chatOpen && chatChannel === 'project')
+        ? 0
+        : Math.max(0, presence.messages.length - readChatCount))
+        + ((chatOpen && chatChannel === 'space')
+            ? 0
+            : Math.max(0, spaceChatCount - readSpaceChatCount))
     const localSaveFailedRef = useRef(false)
     const topbarRef = useRef(null)
     const [workspaceTop, setWorkspaceTop] = useState(168)
@@ -2470,6 +2492,13 @@ export default function RawEditor({
                     <ChatPanelWindow
                         messages={presence.messages}
                         onSend={presence.sendChatMessage}
+                        spaceMessages={spaceChatMessages}
+                        onSendSpace={presence.sendSpaceChatMessage}
+                        spaceLabel={chatSpaceId || 'Space'}
+                        canModerate={Boolean(presence.canModerateSpaceChat)}
+                        onRemoveSpaceMessage={presence.removeSpaceChatMessage}
+                        channel={chatChannel}
+                        onChannelChange={setChatChannel}
                     />
                 </DesktopWindow>
             )}

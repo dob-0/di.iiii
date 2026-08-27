@@ -52,6 +52,11 @@ const NO_LEGACY_KEYS = Object.freeze([])
 
 export function useProjectPresence({
     projectId,
+    // Opt-in, and only meaningful for a project that lives on a server. Pass it
+    // and this same socket also joins `space-<id>` and carries the space-wide
+    // chat — the one every project in the space shares. Left empty, nothing
+    // about this hook changes.
+    spaceId = '',
     displayName,
     displayNameStorageKey = DEFAULT_DISPLAY_NAME_STORAGE_KEY,
     userIdStorageKey = DEFAULT_USER_ID_STORAGE_KEY,
@@ -78,6 +83,8 @@ export function useProjectPresence({
     const [users, setUsers] = useState([])
     const [cursors, setCursors] = useState({})
     const [messages, setMessages] = useState([])
+    const [spaceMessages, setSpaceMessages] = useState([])
+    const [canModerateSpaceChat, setCanModerateSpaceChat] = useState(false)
 
     useEffect(() => {
         persistStoredValue(displayNameStorageKey, resolvedName)
@@ -86,6 +93,8 @@ export function useProjectPresence({
     useEffect(() => {
         if (!projectId) return undefined
         setMessages([])
+        setSpaceMessages([])
+        setCanModerateSpaceChat(false)
         const hasWindow = typeof window !== 'undefined'
         const { serverUrl, path, auth } = getSocketConfigForRuntime({
             configuredBase: import.meta.env.VITE_API_BASE_URL || '',
@@ -112,6 +121,16 @@ export function useProjectPresence({
                 userId: localUserId,
                 userName: resolvedName
             })
+            if (spaceId) {
+                // `chat: true` asks the server for the stored transcript; the
+                // scene-collaboration client joins the same room without it.
+                socket.emit('join-space', {
+                    spaceId,
+                    userId: localUserId,
+                    userName: resolvedName,
+                    chat: true
+                })
+            }
         })
 
         socket.on('disconnect', () => {
@@ -168,12 +187,41 @@ export function useProjectPresence({
             setMessages((current) => [...current, { ...payload, receivedAt: Date.now() }].slice(-MAX_CHAT_MESSAGES))
         })
 
+        // Replay on join — the whole reason space chat is stored. Replaces
+        // rather than merges: this IS the room's history, and a reconnect must
+        // not stack a second copy of every line onto the first.
+        socket.on('space-chat-history', (payload) => {
+            const incoming = Array.isArray(payload?.messages) ? payload.messages : []
+            const now = Date.now()
+            setSpaceMessages(incoming.map((message) => ({
+                ...message,
+                receivedAt: now,
+                self: message.userId === localUserId
+            })).slice(-MAX_CHAT_MESSAGES))
+            setCanModerateSpaceChat(Boolean(payload?.canModerate))
+        })
+
+        socket.on('space-chat-message', (payload) => {
+            setSpaceMessages((current) => {
+                // The sender already holds an optimistic copy under the same id
+                // (the client mints it, see sendSpaceChatMessage) — a replay or
+                // a self-echo must not double it.
+                if (payload?.id && current.some((message) => message.id === payload.id)) return current
+                return [...current, { ...payload, receivedAt: Date.now() }].slice(-MAX_CHAT_MESSAGES)
+            })
+        })
+
+        socket.on('space-chat-removed', (payload) => {
+            if (!payload?.id) return
+            setSpaceMessages((current) => current.filter((message) => message.id !== payload.id))
+        })
+
         socketRef.current = socket
         return () => {
             socketRef.current = null
             socket.disconnect()
         }
-    }, [localUserId, projectId, resolvedName])
+    }, [localUserId, projectId, resolvedName, spaceId])
 
     useEffect(() => {
         const intervalId = window.setInterval(() => {
@@ -254,6 +302,39 @@ export function useProjectPresence({
         }].slice(-MAX_CHAT_MESSAGES))
     }, [localUserId, projectId, resolvedName])
 
+    const sendSpaceChatMessage = useCallback((text) => {
+        const trimmed = String(text || '').trim()
+        if (!trimmed || !spaceId || !socketRef.current?.connected) return
+        // The id is minted here, not on the server, so the optimistic copy and
+        // the stored row are one message — an admin's removal then reaches the
+        // author's own screen too.
+        const id = generateId('space-chat')
+        socketRef.current.emit('space-chat-message', {
+            spaceId,
+            id,
+            userId: localUserId,
+            userName: resolvedName,
+            text: trimmed
+        })
+        setSpaceMessages((current) => [...current, {
+            id,
+            userId: localUserId,
+            userName: resolvedName,
+            text: trimmed,
+            timestamp: Date.now(),
+            receivedAt: Date.now(),
+            self: true
+        }].slice(-MAX_CHAT_MESSAGES))
+    }, [localUserId, resolvedName, spaceId])
+
+    const removeSpaceChatMessage = useCallback((id) => {
+        if (!id || !spaceId || !socketRef.current?.connected) return
+        // No optimistic removal: the server is the one that decides whether
+        // this session is allowed to erase somebody else's words, and the
+        // `space-chat-removed` broadcast comes back to us like everyone else.
+        socketRef.current.emit('space-chat-remove', { spaceId, id })
+    }, [spaceId])
+
     return {
         displayName: resolvedName,
         localUserId,
@@ -263,6 +344,10 @@ export function useProjectPresence({
         emitCursor,
         clearCursor,
         messages,
-        sendChatMessage
+        sendChatMessage,
+        spaceMessages,
+        sendSpaceChatMessage,
+        canModerateSpaceChat,
+        removeSpaceChatMessage
     }
 }

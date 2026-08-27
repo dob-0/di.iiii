@@ -29,7 +29,13 @@ export const WORDS = {
     loading: say('բացվում է…', 'opening…'),
     chatPlaceholder: say('գրիր մի բան', 'say something'),
     chatSend: say('ուղարկել', 'send'),
-    chatEmpty: say('դեռ ոչ ոք ոչինչ չի ասել', 'nobody has said anything yet')
+    chatEmpty: say('դեռ ոչ ոք ոչինչ չի ասել', 'nobody has said anything yet'),
+    // The two rooms a child can talk in. "Everyone" is not the space's id —
+    // a ten-year-old does not know they are standing in `dilijan`, they know
+    // the other four are somewhere and they want to reach them.
+    chatEveryone: say('ԲՈԼՈՐԸ', 'everyone'),
+    chatHere: say('ԱՅՍՏԵՂ', 'here'),
+    chatSpaceEmpty: say('դեռ ոչ ոք ոչինչ չի ասել', 'nobody has said anything yet')
 }
 
 // WHOSE ROOM THIS IS.

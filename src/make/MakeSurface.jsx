@@ -62,6 +62,10 @@ export default function MakeSurface({ projectId, spaceId }) {
     // a child's name appear on a Raw chat bubble without Raw changing at all.
     const presence = useProjectPresence({
         projectId,
+        // The space room. A child alone in their own room has nobody in the
+        // project channel — the four people they mean by "talk" are each in a
+        // room of their own, and this is the only channel that reaches them.
+        spaceId,
         displayName,
         displayNameStorageKey: DISPLAY_NAME_KEY,
         userIdStorageKey: USER_ID_KEY,
@@ -83,6 +87,7 @@ export default function MakeSurface({ projectId, spaceId }) {
     }), [projectDocument?.worldState?.savedView])
 
     const [sheet, setSheet] = useState(null)
+    const [readSpaceCount, setReadSpaceCount] = useState(0)
     const [status, setStatus] = useState('')
     const [readCount, setReadCount] = useState(0)
     const fileInputRef = useRef(null)
@@ -116,7 +121,17 @@ export default function MakeSurface({ projectId, spaceId }) {
     useEffect(() => {
         if (sheet === 'talk') setReadCount(presence.messages.length)
     }, [sheet, presence.messages.length])
-    const unread = sheet === 'talk' ? 0 : Math.max(0, presence.messages.length - readCount)
+    const spaceChatMessages = spaceId ? (presence.spaceMessages || []) : null
+    const [chatChannel, setChatChannel] = useState(spaceId ? 'space' : 'project')
+    useEffect(() => {
+        if (sheet === 'talk') setReadSpaceCount(spaceChatMessages?.length || 0)
+    }, [sheet, spaceChatMessages?.length])
+    // One badge over one word: a child has one ԽՈՍԵԼ button, not two rooms to
+    // keep separate counts of.
+    const unread = sheet === 'talk' ? 0 : (
+        Math.max(0, presence.messages.length - readCount)
+        + Math.max(0, (spaceChatMessages?.length || 0) - readSpaceCount)
+    )
 
     const handleName = useCallback((value) => {
         const name = writeDisplayName(value)
@@ -339,9 +354,13 @@ export default function MakeSurface({ projectId, spaceId }) {
                     hasSelection={Boolean(selected)}
                     selectedColour={selectedColour}
                     messages={presence.messages}
+                    spaceMessages={spaceChatMessages}
+                    chatChannel={chatChannel}
+                    onChatChannelChange={setChatChannel}
                     onAddShape={addShape}
                     onPickColour={pickColour}
                     onSendMessage={presence.sendChatMessage}
+                    onSendSpaceMessage={presence.sendSpaceChatMessage}
                     onClose={() => setSheet(null)}
                 />
             )}
