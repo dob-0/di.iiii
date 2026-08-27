@@ -132,7 +132,11 @@ const registerAuthRoutes = (router, {
     // without it every sign-in dumped them on the landing page, and an
     // ?invite= token riding the original URL was lost with it.
     const returnTo = sanitizeReturnTo(readLoginState(stateSecret, req.query.state)?.r)
-    const destination = returnTo ? `${frontendUrl || ''}${returnTo}` : (frontendUrl || '/')
+    // frontendUrl defaults to '/', and returnTo always starts with '/': joined
+    // raw that makes '//spaces', a protocol-relative URL the browser resolves
+    // as host `spaces` (DNS_PROBE_FINISHED_NXDOMAIN) instead of our own path.
+    const base = frontendUrl && frontendUrl !== '/' ? frontendUrl.replace(/\/+$/, '') : ''
+    const destination = returnTo ? `${base}${returnTo}` : (frontendUrl || '/')
     const separator = destination.includes('?') ? '&' : '?'
     res.redirect(`${destination}${separator}auth=ok${kept ? '&kept=1' : ''}`)
   }
