@@ -28,9 +28,15 @@ export default function MakeSheet({
     hasSelection,
     selectedColour,
     messages,
+    // null when this room is not inside a space — the two tabs then vanish and
+    // the drawer is the project room alone, which is what it was before.
+    spaceMessages = null,
+    chatChannel = 'space',
+    onChatChannelChange,
     onAddShape,
     onPickColour,
     onSendMessage,
+    onSendSpaceMessage,
     onClose
 }) {
     const panelRef = useRef(null)
@@ -128,6 +134,14 @@ export default function MakeSheet({
                             placeholder={`${WORDS.chatPlaceholder.hy} · ${WORDS.chatPlaceholder.en}`}
                             sendLabel={WORDS.chatSend.hy}
                             emptyLabel={`${WORDS.chatEmpty.hy} · ${WORDS.chatEmpty.en}`}
+                            spaceMessages={spaceMessages}
+                            onSendSpace={onSendSpaceMessage}
+                            spaceLabel={WORDS.chatEveryone.hy}
+                            projectLabel={WORDS.chatHere.hy}
+                            spacePlaceholder={`${WORDS.chatPlaceholder.hy} · ${WORDS.chatPlaceholder.en}`}
+                            spaceEmptyLabel={`${WORDS.chatSpaceEmpty.hy} · ${WORDS.chatSpaceEmpty.en}`}
+                            channel={chatChannel}
+                            onChannelChange={onChatChannelChange}
                         />
                     </div>
                 )}

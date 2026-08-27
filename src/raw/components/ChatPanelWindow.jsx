@@ -26,6 +26,13 @@ export default function ChatPanelWindow({
     spaceMessages = null,
     onSendSpace,
     spaceLabel = 'Space',
+    // The space room's own three strings, same reasoning as the project room's
+    // above: null keeps the wording Raw has always used, including the template
+    // that names the space in the placeholder. The toybox overrides all three
+    // because a child reads `ԲՈԼՈՐԸ`, not `dilijan`.
+    projectLabel = 'This project',
+    spacePlaceholder = null,
+    spaceEmptyLabel = 'Nobody has said anything here yet.',
     canModerate = false,
     onRemoveSpaceMessage,
     channel = 'project',
@@ -81,14 +88,14 @@ export default function ChatPanelWindow({
                         className={`raw-chat-tab${!isSpace ? ' is-active' : ''}`}
                         onClick={() => onChannelChange?.('project')}
                     >
-                        This project
+                        {projectLabel}
                     </button>
                 </div>
             )}
             <div className="raw-chat-messages" ref={listRef}>
                 {shown.length === 0 && (
                     <div className="raw-empty-state">
-                        {isSpace ? 'Nobody has said anything here yet.' : emptyLabel}
+                        {isSpace ? spaceEmptyLabel : emptyLabel}
                     </div>
                 )}
                 {shown.map((message) => (
@@ -117,7 +124,7 @@ export default function ChatPanelWindow({
                     className="raw-chat-input"
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
-                    placeholder={isSpace ? `Message everyone in ${spaceLabel}…` : placeholder}
+                    placeholder={isSpace ? (spacePlaceholder || `Message everyone in ${spaceLabel}…`) : placeholder}
                     maxLength={500}
                 />
                 <button type="submit" disabled={!draft.trim()}>{sendLabel}</button>
