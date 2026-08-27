@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- chat that reaches the other rooms, not just this one
+- the room stands on the lower part of the screen
 
 Full detail: `PROGRESS.md`.
 
