@@ -584,6 +584,71 @@ describe('PublicProjectViewer', () => {
             expect(screen.queryByRole('button', { name: /Walk \/ Fly/i })).toBeNull()
         })
     })
+    it('catches up from the version it just loaded, not from 0, when the stream is ready first', async () => {
+        // The ordering that caused the bug: SSE onReady fires while the
+        // snapshot GET is still in flight. versionRef is 0 until it resolves,
+        // and ?since=0 replays the whole retained log -- every replaceDocument
+        // op in it another full copy of the document (measured 2026-08-27 on
+        // staging: 3.97 MB of ops behind a 1.98 MB document, 67% discarded).
+        let resolveDocument
+        getProjectDocumentMock.mockReturnValue(new Promise((resolve) => {
+            resolveDocument = resolve
+        }))
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 7 })
+
+        render(<PublicProjectViewer spaceId="dilijan" projectId="the-yard" spaceLabel="dilijan" />)
+
+        await waitFor(() => {
+            expect(syncState.connectArgs?.onReady).toEqual(expect.any(Function))
+        })
+        // Stream ready while the snapshot is still pending: nothing may be
+        // asked for yet, because the version to ask from is not known yet.
+        let readyPromise
+        act(() => {
+            readyPromise = syncState.connectArgs.onReady()
+        })
+        expect(listProjectOpsMock).not.toHaveBeenCalled()
+
+        await act(async () => {
+            resolveDocument({
+                version: 7,
+                document: {
+                    projectMeta: { id: 'the-yard', title: 'The Yard' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>yard</main>' },
+                    entities: []
+                }
+            })
+            await readyPromise
+        })
+
+        expect(listProjectOpsMock).toHaveBeenCalledTimes(1)
+        expect(listProjectOpsMock).toHaveBeenCalledWith('the-yard', 7)
+    })
+
+    it('retries the snapshot instead of replaying the whole log when the document load failed', async () => {
+        getProjectDocumentMock.mockRejectedValue(new Error('offline'))
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 7 })
+
+        render(<PublicProjectViewer spaceId="dilijan" projectId="the-yard" spaceLabel="dilijan" />)
+
+        await waitFor(() => {
+            expect(syncState.connectArgs?.onReady).toEqual(expect.any(Function))
+        })
+        await waitFor(() => {
+            expect(getProjectDocumentMock.mock.calls.length).toBeGreaterThan(0)
+        })
+        const loadsBefore = getProjectDocumentMock.mock.calls.length
+
+        await act(async () => {
+            await syncState.connectArgs.onReady()
+        })
+
+        // No document to apply ops onto -- the log would be fetched and thrown
+        // away, which on the-yard is 3.97 MB.
+        expect(listProjectOpsMock).not.toHaveBeenCalled()
+        expect(getProjectDocumentMock.mock.calls.length).toBeGreaterThan(loadsBefore)
+    })
+
 })
 
 describe('arrive walking', () => {

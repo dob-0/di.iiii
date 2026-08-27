@@ -90,6 +90,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const syncServiceRef = useRef(createProjectSyncService())
     const versionRef = useRef(0)
     const documentRef = useRef(null)
+    // The in-flight snapshot load, so the SSE catch-up can wait for the version
+    // it is supposed to catch up FROM. See onReady below.
+    const documentLoadRef = useRef(null)
 
     useEffect(() => {
         documentRef.current = state.document
@@ -160,7 +163,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     }, [applyIncomingDocument, projectId])
 
     useEffect(() => {
-        void reloadDocument()
+        documentLoadRef.current = reloadDocument()
     }, [reloadDocument])
 
     const document = state.document
@@ -246,6 +249,27 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 // stream apply later ops over the gap, silently diverging the
                 // viewer until a full reload.
                 try {
+                    // Wait for the snapshot before asking what changed since
+                    // it. The stream is usually ready first, and versionRef is
+                    // still 0 until the document GET resolves -- so this asked
+                    // ?since=0, which is not a catch-up but a full replay of
+                    // the retained log. Every PUT /document appends a
+                    // replaceDocument op carrying a COMPLETE copy of the
+                    // document, so a page shipped itself once as the document
+                    // and again per retained op: measured 2026-08-27 on
+                    // staging, the-yard was 1.98 MB of document plus 3.97 MB
+                    // of ops, 67% of it discarded on arrival. The server
+                    // filters `version > since` and both endpoints advance the
+                    // same documentVersion counter, so the snapshot's own
+                    // version is exactly the right floor.
+                    await documentLoadRef.current
+                    // A failed snapshot leaves no document for ops to apply to
+                    // (applyIncomingOps no-ops without one); retry the snapshot
+                    // rather than pull the whole log to throw it away.
+                    if (!documentRef.current) {
+                        void reloadDocument()
+                        return
+                    }
                     const catchUp = await listProjectOps(projectId, versionRef.current)
                     applyIncomingOps(catchUp.ops || [], Number(catchUp.latestVersion))
                 } catch {
