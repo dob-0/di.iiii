@@ -129,6 +129,24 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-23'
     },
     {
+        id: 'projection-mapping',
+        category: 'Spaces & access',
+        title: 'Putting a space on a wall',
+        summary: 'Point a projector at a wall, drag each surface onto the shape it belongs to, and the work runs there — no separate mapping software.',
+        body: [
+            'di-studio.xyz/{space}/map/{project} opens a mapping. A mapping is a project whose contents are other projects: a list of surfaces, each one a four-cornered shape on the wall with something playing inside it.',
+            'A projector never sees a wall straight on, so a rectangle of picture lands on it as a slanted quadrilateral. That is what the corner handles are for. Pick a surface, drag its four corners onto the four corners of the thing you are projecting at — a sheet of paper, a panel, a doorway — and the picture is squeezed to fit it exactly. Arrow keys nudge by one projector pixel, hold shift for ten.',
+            'Before any of the work is ready, set a surface to a test pattern. A grid, rings, diagonal bars or corner brackets, in white on black, with the surface\'s name across the middle. You align in a dark room against a pattern, not against a finished piece: a picture gives your eye no edge to judge, and the name tells you which shape is whose.',
+            'Shapes are rarely rectangles. Press M for the mask and click round the outline you actually want — a cut corner, a triangle, a doorway — and everything outside it goes black. Drag a point to move it, alt-click to remove it.',
+            'A surface can show a project from this space, any web page by its address, a video, an image, or a flat colour. The address is the important one: work that was never a di.iiii project — a page somebody made somewhere else — still goes on the wall, live, next to work that was.',
+            'Each surface has its own opacity, brightness, contrast, saturation and hue, and a blend mode for where two of them overlap. Projected light is not paint: on coloured paper, some of the colour is simply absorbed, and these are how you claw back what the paper takes.',
+            '“Open output” opens a second window with nothing in it but the surfaces on black — no toolbar, no title, no cursor once it has been still. Drag that window onto the projector and put it full screen. Keep the first window on your laptop: the two stay in step, so you drag a corner while watching the wall.',
+            'One caution. A surface showing a project or a page is a whole page running, and over a plain http:// address a browser only allows a handful at once — past about four, the rest never load. On di-studio.xyz this does not apply. If you are running from a laptop and the bar warns you about it, use video or image surfaces for some of them.'
+        ],
+        tags: ['projection', 'mapping', 'projector', 'wall', 'exhibition', 'show', 'surface', 'corner pin', 'mask', 'output'],
+        updated: '2026-08-27'
+    },
+    {
         id: 'joining-a-space',
         category: 'Getting started',
         title: 'Invited to collaborate? Start here',

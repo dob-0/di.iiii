@@ -20,40 +20,15 @@ import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
+import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
 import '../styles/studio-space-hub.css'
 
 // Each preview iframe is a full app instance, so a burst of simultaneous
-// boots janks the hub on first paint. At most this many previews boot at
-// once; a slot frees when the iframe's document loads (or the card unmounts
-// or scrolls away before that).
-const PREVIEW_BOOT_SLOTS = 2
-const previewBootQueue = { active: 0, waiting: [] }
-
-function requestPreviewBoot(start) {
-    const entry = { start, granted: false, released: false }
-    const grantNext = () => {
-        while (previewBootQueue.active < PREVIEW_BOOT_SLOTS && previewBootQueue.waiting.length) {
-            const next = previewBootQueue.waiting.shift()
-            next.granted = true
-            previewBootQueue.active += 1
-            next.start()
-        }
-    }
-    entry.release = () => {
-        if (entry.released) return
-        entry.released = true
-        if (entry.granted) {
-            previewBootQueue.active -= 1
-        } else {
-            const index = previewBootQueue.waiting.indexOf(entry)
-            if (index !== -1) previewBootQueue.waiting.splice(index, 1)
-        }
-        grantNext()
-    }
-    previewBootQueue.waiting.push(entry)
-    grantNext()
-    return entry.release
-}
+// boots janks the hub on first paint. At most PREVIEW_BOOT_SLOTS boot at once;
+// a slot frees when the iframe's document loads (or the card unmounts or
+// scrolls away before that). The queue itself now lives in utils, shared with
+// the projection mapper, which hit the same wall harder — see that file.
+const requestPreviewBoot = createPreviewBootQueue()
 
 // Preview iframes lay out at this virtual desktop viewport and are scaled
 // down with a CSS transform to fit the card — an iframe laid out at the

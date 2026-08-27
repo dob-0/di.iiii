@@ -174,6 +174,33 @@ const defaultShowState = {
   clockEpoch: 0
 }
 
+const defaultMappingSurface = {
+  id: '',
+  name: '',
+  enabled: true,
+  // Corners in the OUTPUT frame's normalised space, clockwise from top-left.
+  // Normalised so a mapping aligned on a laptop still lands on the wall when
+  // the projector runs at a different resolution.
+  corners: [[0.1, 0.1], [0.5, 0.1], [0.5, 0.5], [0.1, 0.5]],
+  // Polygon mask in the surface's OWN normalised space. Empty = the whole
+  // rectangle.
+  mask: [],
+  source: { kind: 'test', ref: 'grid' },
+  resolution: [1280, 720],
+  opacity: 1,
+  brightness: 1,
+  contrast: 1,
+  saturation: 1,
+  hue: 0,
+  blend: 'normal'
+}
+
+const defaultMappingState = {
+  output: { width: 1920, height: 1080 },
+  background: '#000000',
+  surfaces: []
+}
+
 const defaultWorkspaceState = {
   selectedNodeId: null,
   // Which universe.world node is the "live"/output one for a given scope — a flat
@@ -201,6 +228,7 @@ const defaultProjectDocument = {
   presentationState: defaultPresentationState,
   publishState: defaultPublishState,
   showState: defaultShowState,
+  mappingState: defaultMappingState,
   windowLayout: defaultWindowLayout,
   assets: []
 }
@@ -679,6 +707,78 @@ const normalizeShowState = (show = {}) => {
   }
 }
 
+const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test']
+const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
+
+const normalizePoint = (point, fallback = [0, 0]) => {
+  if (!Array.isArray(point)) return [...fallback]
+  return [ensureNumber(point[0], fallback[0]), ensureNumber(point[1], fallback[1])]
+}
+
+const normalizeCorners = (corners) => {
+  const source = Array.isArray(corners) ? corners : []
+  return defaultMappingSurface.corners.map((fallback, index) => normalizePoint(source[index], fallback))
+}
+
+// A mask of one or two points is one being DRAWN — the operator has clicked
+// the first corners of a shape and not closed it yet — so the points are kept.
+// Nothing is clipped until there are three (maskToClipPath), which is what
+// "fewer than three cannot enclose anything" actually means.
+const normalizeMask = (mask) => {
+  if (!Array.isArray(mask)) return []
+  return mask.map((point) => normalizePoint(point))
+}
+
+const normalizeMappingSurface = (surface = {}) => {
+  const source = surface && typeof surface === 'object' ? surface : {}
+  const rawSource = source.source && typeof source.source === 'object' ? source.source : {}
+  const kind = ensureString(rawSource.kind, defaultMappingSurface.source.kind)
+  const blend = ensureString(source.blend, defaultMappingSurface.blend)
+  const resolution = Array.isArray(source.resolution) ? source.resolution : defaultMappingSurface.resolution
+  return {
+    id: ensureString(source.id, ''),
+    name: ensureString(source.name, ''),
+    enabled: ensureBoolean(source.enabled, defaultMappingSurface.enabled),
+    corners: normalizeCorners(source.corners),
+    mask: normalizeMask(source.mask),
+    source: {
+      kind: MAPPING_SOURCE_KINDS.includes(kind) ? kind : defaultMappingSurface.source.kind,
+      ref: ensureString(rawSource.ref, '')
+    },
+    resolution: [
+      Math.max(1, ensureNumber(resolution[0], defaultMappingSurface.resolution[0])),
+      Math.max(1, ensureNumber(resolution[1], defaultMappingSurface.resolution[1]))
+    ],
+    opacity: Math.min(1, Math.max(0, ensureNumber(source.opacity, defaultMappingSurface.opacity))),
+    brightness: Math.max(0, ensureNumber(source.brightness, defaultMappingSurface.brightness)),
+    contrast: Math.max(0, ensureNumber(source.contrast, defaultMappingSurface.contrast)),
+    saturation: Math.max(0, ensureNumber(source.saturation, defaultMappingSurface.saturation)),
+    hue: ensureNumber(source.hue, defaultMappingSurface.hue),
+    blend: MAPPING_BLEND_MODES.includes(blend) ? blend : defaultMappingSurface.blend
+  }
+}
+
+const normalizeMappingState = (mapping = {}) => {
+  const source = mapping && typeof mapping === 'object' ? mapping : {}
+  const output = source.output && typeof source.output === 'object' ? source.output : {}
+  const surfaces = Array.isArray(source.surfaces) ? source.surfaces : []
+  const seen = new Set()
+  return {
+    output: {
+      width: Math.max(1, ensureNumber(output.width, defaultMappingState.output.width)),
+      height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height))
+    },
+    background: ensureString(source.background, defaultMappingState.background),
+    surfaces: surfaces
+      .map(normalizeMappingSurface)
+      .filter((surface) => {
+        if (!surface.id || seen.has(surface.id)) return false
+        seen.add(surface.id)
+        return true
+      })
+  }
+}
+
 const normalizeProjectMeta = (meta = {}) => {
   const source = meta && typeof meta === 'object' ? meta : {}
   const now = Date.now()
@@ -836,6 +936,7 @@ const normalizeProjectDocument = (document = {}) => {
     presentationState: normalizePresentationState(source.presentationState, worldState),
     publishState: normalizePublishState(source.publishState),
     showState: normalizeShowState(source.showState),
+    mappingState: normalizeMappingState(source.mappingState),
     windowLayout: normalizeWindowLayout(source.windowLayout),
     assets: Array.isArray(source.assets) ? source.assets.map(normalizeAsset) : []
   }
@@ -1076,6 +1177,62 @@ const applyProjectOps = (document, ops = []) => {
       }
       case 'setShowState': {
         nextDocument.showState = normalizeShowState(mergePatch(nextDocument.showState, payload.patch || {}))
+        break
+      }
+      case 'setMappingState': {
+        const patch = payload.patch || {}
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          ...patch,
+          // A doc-level patch never rewrites the surfaces wholesale; that is
+          // what the surface ops are for.
+          surfaces: nextDocument.mappingState.surfaces
+        })
+        break
+      }
+      case 'createMappingSurface': {
+        const surface = normalizeMappingSurface(payload.surface || {})
+        if (!surface.id) break
+        if (nextDocument.mappingState.surfaces.some((existing) => existing.id === surface.id)) break
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          surfaces: [...nextDocument.mappingState.surfaces, surface]
+        })
+        break
+      }
+      case 'setMappingSurface': {
+        const surfaceId = ensureString(payload.surfaceId)
+        if (!surfaceId) break
+        const index = nextDocument.mappingState.surfaces.findIndex((surface) => surface.id === surfaceId)
+        if (index === -1) break
+        const surfaces = [...nextDocument.mappingState.surfaces]
+        surfaces[index] = normalizeMappingSurface({
+          ...mergePatch(surfaces[index], payload.patch || {}),
+          id: surfaceId
+        })
+        nextDocument.mappingState = normalizeMappingState({ ...nextDocument.mappingState, surfaces })
+        break
+      }
+      case 'reorderMappingSurfaces': {
+        const order = Array.isArray(payload.surfaceIds) ? payload.surfaceIds.map((id) => ensureString(id)) : []
+        if (!order.length) break
+        const byId = new Map(nextDocument.mappingState.surfaces.map((surface) => [surface.id, surface]))
+        const reordered = order.map((id) => byId.get(id)).filter(Boolean)
+        const named = new Set(reordered.map((surface) => surface.id))
+        const rest = nextDocument.mappingState.surfaces.filter((surface) => !named.has(surface.id))
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          surfaces: [...rest, ...reordered]
+        })
+        break
+      }
+      case 'deleteMappingSurface': {
+        const surfaceId = ensureString(payload.surfaceId)
+        if (!surfaceId) break
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          surfaces: nextDocument.mappingState.surfaces.filter((surface) => surface.id !== surfaceId)
+        })
         break
       }
       case 'setWindowState': {
@@ -1321,6 +1478,36 @@ const invertSingleOp = (document, op) => {
     case 'setPresentationState': return patchInverse('setPresentationState', document.presentationState)
     case 'setPublishState': return patchInverse('setPublishState', document.publishState)
     case 'setShowState': return patchInverse('setShowState', document.showState)
+    case 'setMappingState': return patchInverse('setMappingState', document.mappingState)
+    case 'reorderMappingSurfaces': {
+      const surfaces = document.mappingState?.surfaces || []
+      if (!Array.isArray(payload.surfaceIds) || !payload.surfaceIds.length || !surfaces.length) break
+      return [{ type: 'reorderMappingSurfaces', payload: { surfaceIds: surfaces.map((surface) => surface.id) } }]
+    }
+    case 'createMappingSurface': {
+      const surfaceId = ensureString(payload.surface?.id)
+      if (!surfaceId) break
+      const prev = (document.mappingState?.surfaces || []).find((surface) => surface.id === surfaceId)
+      if (prev) return []
+      return [{ type: 'deleteMappingSurface', payload: { surfaceId } }]
+    }
+    case 'setMappingSurface': {
+      const surfaceId = ensureString(payload.surfaceId)
+      const prev = (document.mappingState?.surfaces || []).find((surface) => surface.id === surfaceId)
+      if (!surfaceId || !prev || !hasPatchKeys(payload.patch)) break
+      return patchInverse('setMappingSurface', prev, { surfaceId })
+    }
+    case 'deleteMappingSurface': {
+      const surfaceId = ensureString(payload.surfaceId)
+      const surfaces = document.mappingState?.surfaces || []
+      const index = surfaces.findIndex((surface) => surface.id === surfaceId)
+      if (index === -1) break
+      const restore = [{ type: 'createMappingSurface', payload: { surface: cloneValue(surfaces[index]) } }]
+      if (index < surfaces.length - 1) {
+        restore.push({ type: 'reorderMappingSurfaces', payload: { surfaceIds: surfaces.map((surface) => surface.id) } })
+      }
+      return restore
+    }
     case 'setWindowState': {
       const windowId = ensureString(payload.windowId)
       const windows = document.windowLayout?.windows || {}
@@ -1385,6 +1572,8 @@ module.exports = {
   defaultXrState,
   defaultWindowLayout,
   defaultWorkspaceState,
+  defaultMappingState,
+  defaultMappingSurface,
   buildDefaultComponentsForType,
   buildCreationComponentsForType,
   cloneValue,
@@ -1400,6 +1589,8 @@ module.exports = {
   normalizeProjectNode,
   normalizeProjectEdge,
   normalizeProjectMeta,
+  normalizeMappingState,
+  normalizeMappingSurface,
   normalizeWindowLayout,
   normalizeWorkspaceState,
   applyProjectOps,
