@@ -115,7 +115,65 @@
     will-change: transform;
     overflow: hidden;
     background: #000;
+    /* Declared here at zero so a cue only has to change the DURATION. A
+       transition introduced for the first time in the same style change as the
+       value it should animate does not always run; one that already exists and
+       merely lengthens always does. */
+    transition: opacity 0s linear;
 }
+
+/* The wall, photographed, behind the surfaces on the desk. Never on the
+   output — it is a tracing aid, not part of the show. */
+.map-reference {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    pointer-events: none;
+    z-index: 1;
+}
+.map-stage-holder > .map-overlay { z-index: 2; }
+
+.map-guide {
+    stroke: var(--ui-warning);
+    stroke-width: 1;
+    stroke-dasharray: 6 4;
+    pointer-events: none;
+}
+
+.map-cue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.map-cue-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    background: var(--ui-surface-raised);
+    border: 1px solid transparent;
+}
+.map-cue-row.is-live { border-color: var(--ui-accent); background: var(--ui-surface-highlight); }
+.map-cue-key {
+    flex: 0 0 auto;
+    min-width: 16px;
+    text-align: center;
+    font-family: var(--di-mono);
+    font-size: 10px;
+    color: var(--ui-accent);
+}
+.map-cue-fire {
+    flex: 1 1 auto;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--ui-text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.map-cue-hold { flex: 0 0 auto; font-family: var(--di-mono); font-size: 10px; color: var(--ui-text-muted); }
+
+.map-section { border-top: 1px solid var(--ui-divider); margin-top: 8px; padding-top: 8px; }
+.map-row { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .map-stage-surface > * { display: block; width: 100%; height: 100%; border: 0; }
 .map-source-fill { width: 100%; height: 100%; }
@@ -246,4 +304,63 @@
     .map-panel { max-height: 30vh; }
     .map-panel-left { border-right: 0; border-bottom: 1px solid var(--ui-divider); }
     .map-panel-right { border-left: 0; border-top: 1px solid var(--ui-divider); }
+}
+
+/* The output's only chrome. Present when the pointer moves, gone when it
+   stops — the same rule the cursor follows, because anything permanently on
+   this page is permanently on the wall. */
+.map-output-controls {
+    position: fixed;
+    left: 12px;
+    bottom: 12px;
+    display: flex;
+    gap: 6px;
+    opacity: 1;
+    transition: opacity 0.25s ease;
+}
+.map-output.is-idle .map-output-controls { opacity: 0; pointer-events: none; }
+.map-output-controls button {
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text-primary);
+    font: inherit;
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+.map-output-controls button:hover { border-color: var(--ui-accent); color: var(--ui-accent); }
+
+/* Carrying a mapping between machines. Deliberately a text box and not a file
+   download: the machine that aligns a wall is often not the machine that made
+   the mapping, and text crosses a chat window, a notes app or a USB stick. */
+.map-transfer {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10;
+}
+.map-transfer-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: min(720px, 90vw);
+    max-height: 80vh;
+    padding: 12px;
+    background: var(--ui-surface);
+    border: 1px solid var(--ui-border);
+}
+.map-transfer-text {
+    flex: 1 1 auto;
+    min-height: 320px;
+    background: var(--di-black);
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text-primary);
+    font-family: var(--di-mono);
+    font-size: 11px;
+    line-height: 1.5;
+    padding: 8px;
+    resize: vertical;
 }

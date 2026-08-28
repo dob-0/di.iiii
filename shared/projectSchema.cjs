@@ -195,10 +195,35 @@ const defaultMappingSurface = {
   blend: 'normal'
 }
 
+const defaultMappingCue = {
+  id: '',
+  name: '',
+  key: '',
+  fade: 0.6,
+  hold: 0,
+  // Per-surface state keyed by surface id. GEOMETRY IS DELIBERATELY NOT IN A
+  // CUE: corners and masks are the wall, cues are the show.
+  surfaces: {}
+}
+
+const defaultMappingReference = {
+  url: '',
+  opacity: 0.5,
+  visible: false
+}
+
 const defaultMappingState = {
   output: { width: 1920, height: 1080 },
   background: '#000000',
-  surfaces: []
+  surfaces: [],
+  cues: [],
+  reference: defaultMappingReference,
+  grid: 0,
+  // Seconds a surface takes to reach a new opacity. 0 while somebody is
+  // editing; a cue writes its own fade here in the same op batch that changes
+  // the surfaces, and CSS transitions read the AFTER style, so the browser
+  // animates with the duration the cue just asked for.
+  fade: 0
 }
 
 const defaultWorkspaceState = {
@@ -707,7 +732,7 @@ const normalizeShowState = (show = {}) => {
   }
 }
 
-const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test']
+const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera']
 const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
 
 const normalizePoint = (point, fallback = [0, 0]) => {
@@ -758,11 +783,56 @@ const normalizeMappingSurface = (surface = {}) => {
   }
 }
 
+const normalizeCueSurface = (state = {}) => {
+  const source = state && typeof state === 'object' ? state : {}
+  const patch = {}
+  if (source.enabled !== undefined) patch.enabled = ensureBoolean(source.enabled, true)
+  if (source.opacity !== undefined) patch.opacity = Math.min(1, Math.max(0, ensureNumber(source.opacity, 1)))
+  if (source.source && typeof source.source === 'object') {
+    const kind = ensureString(source.source.kind, '')
+    if (MAPPING_SOURCE_KINDS.includes(kind)) {
+      patch.source = { kind, ref: ensureString(source.source.ref, '') }
+    }
+  }
+  return patch
+}
+
+const normalizeMappingCue = (cue = {}) => {
+  const source = cue && typeof cue === 'object' ? cue : {}
+  const rawSurfaces = source.surfaces && typeof source.surfaces === 'object' ? source.surfaces : {}
+  const surfaces = {}
+  Object.entries(rawSurfaces).forEach(([surfaceId, state]) => {
+    const id = ensureString(surfaceId)
+    if (!id) return
+    const patch = normalizeCueSurface(state)
+    if (Object.keys(patch).length) surfaces[id] = patch
+  })
+  const key = ensureString(source.key, '')
+  return {
+    id: ensureString(source.id, ''),
+    name: ensureString(source.name, ''),
+    key: /^[1-9]$/.test(key) ? key : '',
+    fade: Math.max(0, ensureNumber(source.fade, defaultMappingCue.fade)),
+    hold: Math.max(0, ensureNumber(source.hold, defaultMappingCue.hold)),
+    surfaces
+  }
+}
+
+const normalizeMappingReference = (reference = {}) => {
+  const source = reference && typeof reference === 'object' ? reference : {}
+  return {
+    url: ensureString(source.url, ''),
+    opacity: Math.min(1, Math.max(0, ensureNumber(source.opacity, defaultMappingReference.opacity))),
+    visible: ensureBoolean(source.visible, defaultMappingReference.visible)
+  }
+}
+
 const normalizeMappingState = (mapping = {}) => {
   const source = mapping && typeof mapping === 'object' ? mapping : {}
   const output = source.output && typeof source.output === 'object' ? source.output : {}
   const surfaces = Array.isArray(source.surfaces) ? source.surfaces : []
   const seen = new Set()
+  const seenCues = new Set()
   return {
     output: {
       width: Math.max(1, ensureNumber(output.width, defaultMappingState.output.width)),
@@ -775,7 +845,17 @@ const normalizeMappingState = (mapping = {}) => {
         if (!surface.id || seen.has(surface.id)) return false
         seen.add(surface.id)
         return true
-      })
+      }),
+    cues: (Array.isArray(source.cues) ? source.cues : [])
+      .map(normalizeMappingCue)
+      .filter((cue) => {
+        if (!cue.id || seenCues.has(cue.id)) return false
+        seenCues.add(cue.id)
+        return true
+      }),
+    reference: normalizeMappingReference(source.reference),
+    grid: Math.max(0, Math.min(200, Math.round(ensureNumber(source.grid, defaultMappingState.grid)))),
+    fade: Math.max(0, Math.min(30, ensureNumber(source.fade, defaultMappingState.fade)))
   }
 }
 
@@ -1184,9 +1264,10 @@ const applyProjectOps = (document, ops = []) => {
         nextDocument.mappingState = normalizeMappingState({
           ...nextDocument.mappingState,
           ...patch,
-          // A doc-level patch never rewrites the surfaces wholesale; that is
-          // what the surface ops are for.
-          surfaces: nextDocument.mappingState.surfaces
+          // A doc-level patch never rewrites the surfaces or the cues
+          // wholesale; that is what the surface and cue ops are for.
+          surfaces: nextDocument.mappingState.surfaces,
+          cues: nextDocument.mappingState.cues
         })
         break
       }
@@ -1226,12 +1307,70 @@ const applyProjectOps = (document, ops = []) => {
         })
         break
       }
+      case 'createMappingCue': {
+        const cue = normalizeMappingCue(payload.cue || {})
+        if (!cue.id) break
+        if (nextDocument.mappingState.cues.some((existing) => existing.id === cue.id)) break
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          cues: [...nextDocument.mappingState.cues, cue]
+        })
+        break
+      }
+      case 'setMappingCue': {
+        const cueId = ensureString(payload.cueId)
+        if (!cueId) break
+        const index = nextDocument.mappingState.cues.findIndex((cue) => cue.id === cueId)
+        if (index === -1) break
+        const patch = payload.patch || {}
+        const cues = [...nextDocument.mappingState.cues]
+        // `surfaces` REPLACES rather than merges — a removal would otherwise
+        // be silently impossible.
+        const merged = mergePatch(cues[index], { ...patch, surfaces: undefined })
+        delete merged.surfaces
+        cues[index] = normalizeMappingCue({
+          ...merged,
+          surfaces: patch.surfaces !== undefined ? patch.surfaces : cues[index].surfaces,
+          id: cueId
+        })
+        nextDocument.mappingState = normalizeMappingState({ ...nextDocument.mappingState, cues })
+        break
+      }
+      case 'deleteMappingCue': {
+        const cueId = ensureString(payload.cueId)
+        if (!cueId) break
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          cues: nextDocument.mappingState.cues.filter((cue) => cue.id !== cueId)
+        })
+        break
+      }
+      case 'reorderMappingCues': {
+        const order = Array.isArray(payload.cueIds) ? payload.cueIds.map((id) => ensureString(id)) : []
+        if (!order.length) break
+        const byId = new Map(nextDocument.mappingState.cues.map((cue) => [cue.id, cue]))
+        const reordered = order.map((id) => byId.get(id)).filter(Boolean)
+        const named = new Set(reordered.map((cue) => cue.id))
+        const rest = nextDocument.mappingState.cues.filter((cue) => !named.has(cue.id))
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          cues: [...reordered, ...rest]
+        })
+        break
+      }
       case 'deleteMappingSurface': {
         const surfaceId = ensureString(payload.surfaceId)
         if (!surfaceId) break
         nextDocument.mappingState = normalizeMappingState({
           ...nextDocument.mappingState,
-          surfaces: nextDocument.mappingState.surfaces.filter((surface) => surface.id !== surfaceId)
+          surfaces: nextDocument.mappingState.surfaces.filter((surface) => surface.id !== surfaceId),
+          // Every cue forgets it too.
+          cues: nextDocument.mappingState.cues.map((cue) => {
+            if (!cue.surfaces[surfaceId]) return cue
+            const surfaces = { ...cue.surfaces }
+            delete surfaces[surfaceId]
+            return { ...cue, surfaces }
+          })
         })
         break
       }
@@ -1491,6 +1630,40 @@ const invertSingleOp = (document, op) => {
       if (prev) return []
       return [{ type: 'deleteMappingSurface', payload: { surfaceId } }]
     }
+    case 'createMappingCue': {
+      const cueId = ensureString(payload.cue?.id)
+      if (!cueId) break
+      if ((document.mappingState?.cues || []).some((cue) => cue.id === cueId)) return []
+      return [{ type: 'deleteMappingCue', payload: { cueId } }]
+    }
+    case 'setMappingCue': {
+      const cueId = ensureString(payload.cueId)
+      const prev = (document.mappingState?.cues || []).find((cue) => cue.id === cueId)
+      if (!cueId || !prev || !hasPatchKeys(payload.patch)) break
+      const inverse = patchInverse('setMappingCue', prev, { cueId })
+      if (payload.patch.surfaces !== undefined) {
+        const entry = inverse[0] || { type: 'setMappingCue', payload: { cueId, patch: {} } }
+        entry.payload.patch = { ...entry.payload.patch, surfaces: cloneValue(prev.surfaces) }
+        return [entry]
+      }
+      return inverse
+    }
+    case 'deleteMappingCue': {
+      const cueId = ensureString(payload.cueId)
+      const cues = document.mappingState?.cues || []
+      const index = cues.findIndex((cue) => cue.id === cueId)
+      if (index === -1) break
+      const restore = [{ type: 'createMappingCue', payload: { cue: cloneValue(cues[index]) } }]
+      if (index < cues.length - 1) {
+        restore.push({ type: 'reorderMappingCues', payload: { cueIds: cues.map((cue) => cue.id) } })
+      }
+      return restore
+    }
+    case 'reorderMappingCues': {
+      const cues = document.mappingState?.cues || []
+      if (!Array.isArray(payload.cueIds) || !payload.cueIds.length || !cues.length) break
+      return [{ type: 'reorderMappingCues', payload: { cueIds: cues.map((cue) => cue.id) } }]
+    }
     case 'setMappingSurface': {
       const surfaceId = ensureString(payload.surfaceId)
       const prev = (document.mappingState?.surfaces || []).find((surface) => surface.id === surfaceId)
@@ -1574,6 +1747,8 @@ module.exports = {
   defaultWorkspaceState,
   defaultMappingState,
   defaultMappingSurface,
+  defaultMappingCue,
+  defaultMappingReference,
   buildDefaultComponentsForType,
   buildCreationComponentsForType,
   cloneValue,
@@ -1591,6 +1766,8 @@ module.exports = {
   normalizeProjectMeta,
   normalizeMappingState,
   normalizeMappingSurface,
+  normalizeMappingCue,
+  normalizeMappingReference,
   normalizeWindowLayout,
   normalizeWorkspaceState,
   applyProjectOps,

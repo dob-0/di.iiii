@@ -41,21 +41,87 @@ on a flat wall, a corner-pin is exactly enough.
 
 | file | what it is |
 |---|---|
-| `cornerPin.js` | the maths — homography solve, `matrix3d`, masks, filters |
+| `cornerPin.js` | the maths — homography solve, `matrix3d`, masks, filters, snapping |
 | `mapRouting.js` | the two addresses |
 | `MapStage.jsx` | every surface, pinned, at a given pixel size. **The desk and the output both render this** — there is no second path that could disagree about the geometry |
 | `MapSourceView.jsx` | what a surface shows |
 | `MapEditorOverlay.jsx` | corner and mask handles |
 | `MapSurface.jsx` | the desk |
-| `MapOutput.jsx` | the signal |
+| `MapInspector.jsx` | one surface's properties, and copying between surfaces |
+| `MapCueList.jsx` | named states of the show, and playback |
+| `MapOutput.jsx` | the signal, plus its own fullscreen and display picker |
 | `mapTestPattern.jsx` | alignment patterns |
 | `transportCeiling.js` | the HTTP/1.1 ceiling and its warning |
 | `useMapDocument.js` | the document, the op layer, and the BroadcastChannel courier |
 
 Schema lives in `src/shared/projectSchema.js` as `mappingState`, mirrored in
 `shared/projectSchema.cjs`. Ops: `setMappingState`, `createMappingSurface`,
-`setMappingSurface`, `reorderMappingSurfaces`, `deleteMappingSurface` — all with
-inverses, so undo restores a deleted surface to its place in the paint order.
+`setMappingSurface`, `reorderMappingSurfaces`, `deleteMappingSurface`,
+`createMappingCue`, `setMappingCue`, `reorderMappingCues`, `deleteMappingCue` —
+all with inverses, so undo restores a deleted surface or cue to its place in the
+order.
+
+## Cues
+
+A cue is a named state of the show that a number key fires: which surfaces are
+up, how bright, showing what. `Play` advances through them on each cue's hold
+time; a hold of zero means "wait for a person" and playback stops there, which
+is a stage manager's standby, not an error.
+
+**A cue holds no geometry, and the schema enforces it** — corners and masks are
+dropped from a cue's surface map on the way in. Corners and masks are the wall;
+cues are the show. A cue that could move an alignment would let one keystroke
+undo an afternoon spent on a ladder.
+
+Firing a cue is ONE op batch: the fade and every surface it touches land in the
+same document version, so the wall never shows a half-applied cue. The fade is a
+CSS transition on the surfaces themselves — the desk preview and the wall read
+the same number out of the same document, so one cue cannot fade at two speeds.
+`.map-stage-surface` declares `transition: opacity 0s` in CSS so a cue only has
+to change the DURATION; a transition introduced for the first time in the same
+style change as the value it should animate does not reliably run.
+
+Playback state is deliberately NOT in the document. Two windows watching one
+mapping must not each believe they are running the show.
+
+## Snapping
+
+Corner drags snap to a grid (off by default) and then to guides: every corner of
+every other surface, plus the frame's edges and centre. X and Y snap
+independently, because a corner often wants a neighbour's height without wanting
+its column, and the line it agreed with is drawn while dragging — a snap nobody
+can see is a snap nobody can trust. **Alt ignores both.** Every tool that snaps
+needs one key that doesn't, or the surface that genuinely sits a hair off its
+neighbour cannot be expressed at all.
+
+One modifier, one meaning: alt is "ignore snapping" everywhere, so removing a
+mask point is SHIFT-click. The two met once and reaching for an unsnapped mask
+point deleted it instead.
+
+## The wall photo
+
+A photograph of the wall can sit behind the surfaces on the desk, at an
+adjustable opacity, to trace paper edges over. It is never drawn on the output —
+it is a tracing aid, not part of the show.
+
+A file chosen from disk is held as a blob URL **in that browser only**: it means
+nothing to another machine, and a wall photo baked into the document as base64
+would follow every edit forever. `reference.url` in the document is for a photo
+that has a real address.
+
+Automatic shape detection from the photo is deliberately NOT here. A phone photo
+is taken from where a person stood, not from where the projector stands, so the
+quad it yields is the wrong quad — it would look like an alignment and be a lie.
+Trace over the photo, then correct against the projector.
+
+## Carrying a mapping between machines
+
+Export and Import move the whole `mappingState` as readable JSON, in a paste box
+rather than a file download: the machine that aligns a wall is often not the
+machine that made the mapping, and text crosses a chat window, a notes app or a
+USB stick alike. Import REPLACES — a merge would silently keep surfaces the
+person pasting has never seen — and applies as one op batch, so a half-applied
+import can never be what is on the wall when somebody walks in.
 
 ## Facts that were learned the hard way
 
@@ -98,16 +164,37 @@ every source is tinted toward the paper's own hue. Either make that the idea
 border. The per-surface brightness/contrast/saturation/hue controls exist to
 claw some of it back, not to fix it.
 
-**`serverXR` watches only `serverXR/src`.** Editing `shared/projectSchema.cjs`
-needs a server restart or the running process keeps the old normalizer — which
-looks exactly like the client silently refusing to save.
+**A generated id must go LAST when building a surface from another one.**
+`{ id, ...patch }` let Duplicate — which passes the whole surface it is copying,
+`id` included — keep the original id, so `createMappingSurface` saw an id that
+already existed and dropped the op. The button did nothing at all, silently, and
+only a count-before/count-after check found it.
+
+**An empty `ref` does not mean "unfinished".** For a camera it means "whichever
+camera this machine has". A `!ref` fallback that caught every kind quietly
+rendered a test pattern instead and made the whole camera branch unreachable.
+Only `url`, `video` and `image` are meaningless without an address.
+
+**`serverXR` used to watch only `serverXR/src`.** Editing `shared/projectSchema.cjs`
+then needed a manual restart, or the running process kept the old normalizer and
+silently dropped every field it had not heard of — which looks exactly like the
+client refusing to save, and cost an hour twice before the cause was found. Its
+dev script now watches `../shared` as well. If a field you just added comes back
+missing from a GET, check the server actually reloaded before suspecting
+anything else.
 
 ## Looking at it
 
 ```
 node scripts/look-map.mjs <out-dir> [base] [space] [project]
+node scripts/map-tools-check.mjs <out-dir> [base] [api] [space] [project]
 ```
 
-Shoots the desk and the output and reports what was drawn. It asserts nothing:
-a mapping is a visual thing, and the numbers are there so a black screenshot can
-be told apart from an empty mapping.
+`look-map` shoots the desk and the output and reports what was drawn. It asserts
+nothing: a mapping is a visual thing, and the numbers are there so a black
+screenshot can be told apart from an empty mapping.
+
+`map-tools-check` DRIVES the desk — fires cues by key, drags a corner into a
+neighbour to prove the snap, duplicates, pastes, masks, exports — and reads each
+result back from the server rather than from the page. Both bugs in the list
+above were found by it and by nothing else.

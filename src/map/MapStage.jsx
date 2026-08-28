@@ -52,6 +52,11 @@ export default function MapStage({
                             transform,
                             clipPath: maskToClipPath(surface.mask),
                             opacity: surface.opacity,
+                            // The fade lives on the mapping, not on a timer in
+                            // this component: the desk preview and the wall
+                            // read the same number out of the same document,
+                            // so one cue cannot fade at two speeds.
+                            transitionDuration: `${mapping?.fade || 0}s`,
                             filter: surfaceFilter(surface),
                             mixBlendMode: surface.blend === 'add' ? 'plus-lighter' : surface.blend
                         }}

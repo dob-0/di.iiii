@@ -9,6 +9,9 @@ import {
     maskToClipPath,
     quadSignedArea,
     solveHomography,
+    guideCandidates,
+    snapToGrid,
+    snapToGuides,
     solveLinearSystem,
     surfaceFilter
 } from './cornerPin.js'
@@ -127,5 +130,47 @@ describe('surfaceFilter', () => {
 
     it('chains only the controls that moved', () => {
         expect(surfaceFilter({ brightness: 0.8, hue: 30 })).toBe('brightness(0.8) hue-rotate(30deg)')
+    })
+})
+
+describe('snapping', () => {
+    it('leaves a point alone when there is no grid', () => {
+        expect(snapToGrid([0.333, 0.777], 0)).toEqual([0.333, 0.777])
+    })
+
+    it('rounds onto the grid', () => {
+        const [x, y] = snapToGrid([0.26, 0.74], 4)
+        expect(x).toBeCloseTo(0.25, 6)
+        expect(y).toBeCloseTo(0.75, 6)
+    })
+
+    it('snaps x and y independently, so a corner can take a height without a column', () => {
+        const result = snapToGuides([0.402, 0.9], [[0.4, 0.1]], 0.01)
+        expect(result.point[0]).toBeCloseTo(0.4, 6)
+        expect(result.point[1]).toBe(0.9)
+        expect(result.guideX).toBe(0.4)
+        expect(result.guideY).toBeNull()
+    })
+
+    it('does not reach past the tolerance', () => {
+        const result = snapToGuides([0.5, 0.5], [[0.4, 0.4]], 0.01)
+        expect(result.point).toEqual([0.5, 0.5])
+        expect(result.guideX).toBeNull()
+    })
+
+    it('takes the nearest candidate when several are in range', () => {
+        const result = snapToGuides([0.5, 0.5], [[0.49, 0], [0.505, 0]], 0.02)
+        expect(result.guideX).toBe(0.505)
+    })
+
+    it('offers the frame and every other surface, never the dragged one', () => {
+        const surfaces = [
+            { id: 'a', corners: [[0.1, 0.1], [0.2, 0.1], [0.2, 0.2], [0.1, 0.2]] },
+            { id: 'b', corners: [[0.7, 0.7], [0.8, 0.7], [0.8, 0.8], [0.7, 0.8]] }
+        ]
+        const points = guideCandidates(surfaces, 'a')
+        expect(points).toContainEqual([0.7, 0.7])
+        expect(points).not.toContainEqual([0.1, 0.1])
+        expect(points).toContainEqual([0.5, 0.5])
     })
 })

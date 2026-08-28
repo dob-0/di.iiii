@@ -150,3 +150,62 @@ export const applyHomography = (h, [x, y]) => {
 // because swapping the correspondences is the same work and cannot drift out
 // of step with solveHomography's own conventions.
 export const inverseHomography = (source, destination) => solveHomography(destination, source)
+
+// --- snapping -----------------------------------------------------------
+//
+// Five papers on one wall are rarely at five unrelated heights: they share
+// tops, they share edges, and by eye a corner is "almost" lined up with its
+// neighbour for hours. Snapping is what turns almost into exactly, and the
+// guide line is what tells you WHICH neighbour you just agreed with — a snap
+// that happens silently is indistinguishable from a hand that shook.
+
+// Round a normalised point onto a grid of `divisions` across the output frame.
+// 0 divisions means no grid, and the point is returned untouched.
+export const snapToGrid = ([x, y], divisions = 0) => {
+    if (!divisions || divisions < 1) return [x, y]
+    const step = 1 / divisions
+    return [Math.round(x / step) * step, Math.round(y / step) * step]
+}
+
+// Snap to the nearest candidate x and the nearest candidate y INDEPENDENTLY —
+// a corner often wants a neighbour's height without wanting its column.
+// Returns the point and which values it agreed with, so the caller can draw
+// them.
+export const snapToGuides = ([x, y], candidates = [], tolerance = 0) => {
+    if (!(tolerance > 0) || !candidates.length) return { point: [x, y], guideX: null, guideY: null }
+
+    let guideX = null
+    let guideY = null
+    let bestX = tolerance
+    let bestY = tolerance
+
+    candidates.forEach(([cx, cy]) => {
+        if (Number.isFinite(cx)) {
+            const distance = Math.abs(cx - x)
+            if (distance < bestX) { bestX = distance; guideX = cx }
+        }
+        if (Number.isFinite(cy)) {
+            const distance = Math.abs(cy - y)
+            if (distance < bestY) { bestY = distance; guideY = cy }
+        }
+    })
+
+    return {
+        point: [guideX === null ? x : guideX, guideY === null ? y : guideY],
+        guideX,
+        guideY
+    }
+}
+
+// Everything a dragged corner may want to agree with: every corner of every
+// OTHER surface, plus the frame's own edges and centre lines. The surface
+// being dragged is excluded — a corner snapping to its own neighbour corner
+// would collapse the quad it is part of.
+export const guideCandidates = (surfaces = [], exceptSurfaceId = null) => {
+    const points = [[0, 0], [0.5, 0.5], [1, 1]]
+    surfaces.forEach((surface) => {
+        if (!surface || surface.id === exceptSurfaceId) return
+        surface.corners.forEach((corner) => points.push(corner))
+    })
+    return points
+}

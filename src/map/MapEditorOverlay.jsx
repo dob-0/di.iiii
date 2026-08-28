@@ -1,5 +1,19 @@
-import { useCallback, useMemo, useRef } from 'react'
-import { applyHomography, cornersToPixels, inverseHomography, isDegenerateQuad } from './cornerPin.js'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import {
+    applyHomography,
+    cornersToPixels,
+    guideCandidates,
+    inverseHomography,
+    isDegenerateQuad,
+    snapToGrid,
+    snapToGuides
+} from './cornerPin.js'
+
+// Hold alt to place a corner exactly where the pointer is, ignoring both the
+// grid and every neighbour. Every tool that snaps needs one key that doesn't,
+// or the one surface that genuinely sits a hair off a neighbour cannot be
+// expressed at all.
+const snapOff = (event) => Boolean(event?.altKey)
 
 // Perpendicular distance from a point to a line SEGMENT (not the infinite
 // line): the projection is clamped to the segment, so a point beyond an edge's
@@ -15,6 +29,10 @@ export const distanceToSegment = ([px, py], [ax, ay], [bx, by]) => {
 
 const HANDLE_R = 9
 const MASK_R = 6
+// How near a corner has to come, in screen pixels, before it agrees with a
+// neighbour. Converted to normalised units against the stage, so the feel is
+// the same whether the preview is small or the output is 4K.
+const SNAP_PIXELS = 7
 const CORNER_LABELS = ['TL', 'TR', 'BR', 'BL']
 
 // The handles, drawn over the stage in the SAME pixel space the surfaces are
@@ -26,12 +44,18 @@ export default function MapEditorOverlay({
     height,
     selectedSurfaceId,
     maskMode = false,
+    grid = 0,
+    snap = true,
     onSelectSurface,
     onCornersChange,
     onMaskChange
 }) {
     const svgRef = useRef(null)
     const dragRef = useRef(null)
+    // Which lines the corner currently agrees with. Drawn while dragging and
+    // gone the moment the finger lifts: a snap nobody can see is a snap nobody
+    // can trust.
+    const [guides, setGuides] = useState({ x: null, y: null })
 
     const geometry = useMemo(() => (mapping?.surfaces || []).map((surface) => {
         const corners = cornersToPixels(surface.corners, width, height)
@@ -57,6 +81,7 @@ export default function MapEditorOverlay({
 
     const endDrag = useCallback((event) => {
         dragRef.current = null
+        setGuides({ x: null, y: null })
         try { event.currentTarget.releasePointerCapture(event.pointerId) } catch { /* already gone */ }
     }, [])
 
@@ -66,9 +91,18 @@ export default function MapEditorOverlay({
         const [x, y] = pointAt(event)
 
         if (drag.kind === 'corner') {
-            const corners = drag.corners.map((corner, index) => (
-                index === drag.index ? [x / width, y / height] : corner
-            ))
+            // Grid first, then guides: the grid is a coarse decision about
+            // where things may sit at all, and a neighbour's edge should be
+            // able to win over it.
+            let point = snapToGrid([x / width, y / height], snapOff(event) ? 0 : grid)
+            let agreed = { guideX: null, guideY: null }
+            if (snap && !snapOff(event)) {
+                const result = snapToGuides(point, drag.candidates, SNAP_PIXELS / width)
+                point = result.point
+                agreed = result
+            }
+            setGuides({ x: agreed.guideX, y: agreed.guideY })
+            const corners = drag.corners.map((corner, index) => (index === drag.index ? point : corner))
             onCornersChange?.(drag.surfaceId, corners)
             return
         }
@@ -84,17 +118,32 @@ export default function MapEditorOverlay({
             const local = applyHomography(drag.toLocal, [x, y])
             if (!local) return
             const [rw, rh] = drag.resolution
-            const mask = drag.mask.map((point, index) => (
-                index === drag.index ? [local[0] / rw, local[1] / rh] : point
-            ))
+            // A mask point snaps to the surface's OWN outline — its corners,
+            // its edges and its centre lines — which is what you want when
+            // cutting one corner off a rectangle and leaving the other three
+            // exactly where the paper is.
+            const raw = [local[0] / rw, local[1] / rh]
+            const point = snap && !snapOff(event)
+                ? snapToGuides(raw, [[0, 0], [0.5, 0.5], [1, 1]], SNAP_PIXELS / width).point
+                : raw
+            const mask = drag.mask.map((entry, index) => (index === drag.index ? point : entry))
             onMaskChange?.(drag.surfaceId, mask)
         }
-    }, [pointAt, width, height, onCornersChange, onMaskChange])
+    }, [pointAt, width, height, grid, snap, onCornersChange, onMaskChange])
 
     const startCornerDrag = (surface, index) => (event) => {
         event.stopPropagation()
         event.currentTarget.setPointerCapture(event.pointerId)
-        dragRef.current = { kind: 'corner', surfaceId: surface.id, index, corners: surface.corners }
+        dragRef.current = {
+            kind: 'corner',
+            surfaceId: surface.id,
+            index,
+            corners: surface.corners,
+            // Computed once per drag, not per frame: the candidate set cannot
+            // change mid-drag, and rebuilding it 60 times a second across
+            // every surface is work for nothing.
+            candidates: guideCandidates(mapping?.surfaces || [], surface.id)
+        }
         onSelectSurface?.(surface.id)
     }
 
@@ -107,10 +156,14 @@ export default function MapEditorOverlay({
 
     const startMaskDrag = (entry, index) => (event) => {
         event.stopPropagation()
-        // Alt-click removes a point. A mask needs three to enclose anything, so
-        // the third-from-last removal is refused rather than silently turning
-        // the mask off.
-        if (event.altKey) {
+        // SHIFT-click removes a point, not alt: alt is "ignore snapping"
+        // everywhere else in this overlay, and the two met here — reaching for
+        // an unsnapped mask point deleted it instead, and the unsnapped branch
+        // below could never run. One modifier, one meaning.
+        //
+        // A mask needs three points to enclose anything, so the third-from-last
+        // removal is refused rather than silently turning the mask off.
+        if (event.shiftKey) {
             if (entry.surface.mask.length <= 3) return
             onMaskChange?.(entry.surface.id, entry.surface.mask.filter((_, i) => i !== index))
             return
@@ -170,6 +223,12 @@ export default function MapEditorOverlay({
             onPointerUp={endDrag}
             onPointerCancel={endDrag}
         >
+            {guides.x !== null ? (
+                <line className="map-guide" x1={guides.x * width} y1={0} x2={guides.x * width} y2={height} />
+            ) : null}
+            {guides.y !== null ? (
+                <line className="map-guide" x1={0} y1={guides.y * height} x2={width} y2={guides.y * height} />
+            ) : null}
             {geometry.map((entry) => {
                 const { surface, corners, degenerate } = entry
                 const selected = surface.id === selectedSurfaceId

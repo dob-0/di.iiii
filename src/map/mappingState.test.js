@@ -124,3 +124,93 @@ describe('mapping ops', () => {
         expect(after.mappingState.surfaces[0].opacity).toBe(1)
     })
 })
+
+describe('cues', () => {
+    const withCue = (cue) => applyProjectOps(
+        withSurfaces(['a', 'b']),
+        [{ type: 'createMappingCue', payload: { cue: { id: 'c1', ...cue } } }]
+    )
+
+    it('keeps only keys 1-9', () => {
+        expect(withCue({ key: '3' }).mappingState.cues[0].key).toBe('3')
+        expect(withCue({ key: 'q' }).mappingState.cues[0].key).toBe('')
+        expect(withCue({ key: '0' }).mappingState.cues[0].key).toBe('')
+    })
+
+    it('drops a surface entry that says nothing', () => {
+        // An empty object reads like "this cue covers that surface" and would
+        // make a capture look complete when it is not.
+        const cue = withCue({ surfaces: { a: { enabled: false }, b: {} } }).mappingState.cues[0]
+        expect(Object.keys(cue.surfaces)).toEqual(['a'])
+    })
+
+    it('holds no geometry, however hard a caller tries', () => {
+        // The whole safety of a cue: firing one must never be able to move an
+        // alignment somebody spent an afternoon on.
+        const cue = withCue({ surfaces: { a: { enabled: true, corners: [[0, 0], [1, 0], [1, 1], [0, 1]], mask: [[0, 0]] } } })
+            .mappingState.cues[0]
+        expect(cue.surfaces.a).toEqual({ enabled: true })
+    })
+
+    it('replaces the surface map rather than merging it, so a surface can be dropped from a cue', () => {
+        const doc = withCue({ surfaces: { a: { enabled: true }, b: { enabled: true } } })
+        const after = applyProjectOps(doc, [{ type: 'setMappingCue', payload: { cueId: 'c1', patch: { surfaces: { a: { enabled: true } } } } }])
+        expect(Object.keys(after.mappingState.cues[0].surfaces)).toEqual(['a'])
+    })
+
+    it('undoes a surface-map replace back to what it held', () => {
+        const doc = withCue({ surfaces: { a: { enabled: true }, b: { enabled: true } } })
+        const ops = [{ type: 'setMappingCue', payload: { cueId: 'c1', patch: { surfaces: { a: { enabled: false } } } } }]
+        const restored = applyProjectOps(applyProjectOps(doc, ops), invertProjectOps(doc, ops))
+        expect(Object.keys(restored.mappingState.cues[0].surfaces).sort()).toEqual(['a', 'b'])
+    })
+
+    it('forgets a surface everywhere when it is deleted', () => {
+        const doc = withCue({ surfaces: { a: { enabled: true }, b: { enabled: true } } })
+        const after = applyProjectOps(doc, [{ type: 'deleteMappingSurface', payload: { surfaceId: 'b' } }])
+        expect(Object.keys(after.mappingState.cues[0].surfaces)).toEqual(['a'])
+    })
+
+    it('does not let an output patch clobber the cue list', () => {
+        const doc = withCue({ name: 'one' })
+        const after = applyProjectOps(doc, [{ type: 'setMappingState', payload: { patch: { fade: 2, cues: [] } } }])
+        expect(after.mappingState.cues).toHaveLength(1)
+        expect(after.mappingState.fade).toBe(2)
+    })
+
+    it('undoes a delete back into its place in the order', () => {
+        const base = applyProjectOps(withSurfaces(['a']), ['c1', 'c2', 'c3'].map((id) => ({
+            type: 'createMappingCue', payload: { cue: { id } }
+        })))
+        const ops = [{ type: 'deleteMappingCue', payload: { cueId: 'c2' } }]
+        const after = applyProjectOps(base, ops)
+        expect(after.mappingState.cues.map((cue) => cue.id)).toEqual(['c1', 'c3'])
+        const restored = applyProjectOps(after, invertProjectOps(base, ops))
+        expect(restored.mappingState.cues.map((cue) => cue.id)).toEqual(['c1', 'c2', 'c3'])
+    })
+})
+
+describe('the reference photo and the grid', () => {
+    it('clamps the grid to something a person could use', () => {
+        expect(normalizeMappingState({ grid: -4 }).grid).toBe(0)
+        expect(normalizeMappingState({ grid: 9999 }).grid).toBe(200)
+        expect(normalizeMappingState({ grid: 24.6 }).grid).toBe(25)
+    })
+
+    it('defaults the wall photo to hidden', () => {
+        expect(normalizeMappingState({}).reference).toEqual({ url: '', opacity: 0.5, visible: false })
+    })
+})
+
+describe('creating a surface from another one', () => {
+    it('never lets a copied id overwrite the new one', () => {
+        // Duplicate passes the whole surface it is copying, `id` included. If
+        // the caller's id wins, the op is a no-op against the existing surface
+        // and the button does nothing at all, silently.
+        const doc = withSurfaces(['a'])
+        const copied = { ...doc.mappingState.surfaces[0], name: 'a copy' }
+        const after = applyProjectOps(doc, [{ type: 'createMappingSurface', payload: { surface: { ...copied, id: 'b' } } }])
+        expect(after.mappingState.surfaces.map((surface) => surface.id)).toEqual(['a', 'b'])
+        expect(after.mappingState.surfaces[1].name).toBe('a copy')
+    })
+})

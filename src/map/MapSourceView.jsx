@@ -45,7 +45,16 @@ export default function MapSourceView({ surface, spaceId = '', live = true, labe
         return <div className="map-source-fill" style={{ background: ref || '#ffffff' }} />
     }
 
-    if (kind === 'test' || (!ref && kind !== 'project')) {
+    if (kind === 'camera') {
+        return <MapCameraSource deviceId={ref} label={label} width={width} height={height} />
+    }
+
+    // Only the kinds that are MEANINGLESS without a reference fall back to a
+    // test pattern. An earlier version tested `!ref` against everything, which
+    // quietly swallowed the ordinary camera surface — kind 'camera' with an
+    // empty ref IS the default camera, not an unfinished surface — and made
+    // that whole branch unreachable.
+    if (kind === 'test' || (!ref && ['url', 'video', 'image'].includes(kind))) {
         return <MapTestPattern pattern={kind === 'test' ? (ref || 'grid') : 'grid'} width={width} height={height} label={label} />
     }
 
@@ -95,6 +104,51 @@ export default function MapSourceView({ surface, spaceId = '', live = true, labe
     }
 
     return <MapSourcePlaceholder label={label} detail={kind} width={width} height={height} />
+}
+
+// A camera, on the wall. The room beside the work, or the work being made.
+//
+// The stream is opened by THIS component rather than shared, because a surface
+// can be switched off and on and must not leave a camera light burning; the
+// track is stopped on unmount. A refused or missing camera shows the reason on
+// the surface instead of going black, because a black rectangle on a wall is
+// indistinguishable from a mapping mistake.
+function MapCameraSource({ deviceId, label, width, height }) {
+    const videoRef = useRef(null)
+    const [problem, setProblem] = useState('')
+
+    useEffect(() => {
+        let stream = null
+        let cancelled = false
+        const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
+        if (!media?.getUserMedia) {
+            setProblem('no camera access in this browser')
+            return undefined
+        }
+        setProblem('')
+        media.getUserMedia({
+            video: deviceId ? { deviceId: { exact: deviceId } } : true,
+            audio: false
+        })
+            .then((result) => {
+                if (cancelled) {
+                    result.getTracks().forEach((track) => track.stop())
+                    return
+                }
+                stream = result
+                if (videoRef.current) videoRef.current.srcObject = result
+            })
+            .catch((error) => {
+                if (!cancelled) setProblem(error?.name === 'NotAllowedError' ? 'camera not permitted' : 'camera unavailable')
+            })
+        return () => {
+            cancelled = true
+            if (stream) stream.getTracks().forEach((track) => track.stop())
+        }
+    }, [deviceId])
+
+    if (problem) return <MapSourcePlaceholder label={label} detail={problem} width={width} height={height} />
+    return <video className="map-source-media" ref={videoRef} autoPlay muted playsInline />
 }
 
 // One page surface: waits for a boot slot, then mounts its iframe.
