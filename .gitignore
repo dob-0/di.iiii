@@ -49,6 +49,8 @@ serverXR/data/
 serverXR/uploads/
 serverXR/.env
 serverXR/.env.local
+# Local-only data roots for isolated worktrees (see serverXR/.env DATA_ROOT)
+serverXR/.data-*
 
 # verify-surfaces.mjs screenshots + report (local artefact)
 .verify-surfaces/

@@ -22,6 +22,7 @@ import useResolveSlugProject from './hooks/useResolveSlugProject.js'
 import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { getJamLocationState, isJamLocation } from './project/routing/jamRouting.js'
 import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
+import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
 import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
@@ -33,6 +34,8 @@ const JamSurface = lazy(() => import('./project/components/JamSurface.jsx'))
 // The toybox. Its own chunk for the same reason the jam has one: it reaches
 // three.js through RawViewport, and no other route should pay for that.
 const MakeSurface = lazy(() => import('./make/MakeSurface.jsx'))
+const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
+const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 // What `di up` opens on your own machine: your spaces, not a tour of a hosted
 // product you have already installed. Lazy so a hosted visitor never downloads
@@ -253,6 +256,7 @@ function AppRouter() {
     const studioState = getStudioLocationState(location)
     const jamState = getJamLocationState(location)
     const makeState = getMakeLocationState(location)
+    const mapState = getMapLocationState(location)
     const appState = getAppLocationState(location)
 
     // The Raw lane was called Seed until 2026-07-30. Old /seed links still
@@ -306,6 +310,35 @@ function AppRouter() {
     // passes exactly as they do into Raw. No account chip: the whole design is
     // four thumb-sized words and the platform's floating chip lands on the
     // fourth one.
+    // `/{space}/map/{projectId}` and `/{space}/map/{projectId}/out` — the
+    // projection mapper (src/map/). Dispatched here with the other lane words
+    // for the same reason Make is: the shape is exact, and the generic
+    // /{space}/{projectSlug} rule further down would otherwise read "map" as
+    // the name of a project.
+    //
+    // Behind the same gate as Raw and Make, because the desk writes to the
+    // project document through the same op layer. The OUTPUT is behind it too
+    // — it is the same document, and a signal that could be opened on terms
+    // the desk would refuse is a way to read a private space off a wall.
+    //
+    // No account chip on the output: it is a projector's picture, and a
+    // floating button would be projected onto the wall along with the work.
+    if (isMapLocation(mapState)) {
+        return (
+            <ProtectedSurface
+                requiredSpaceId={mapState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={!mapState.isOutput}
+            >
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    {mapState.isOutput
+                        ? <MapOutput projectId={mapState.projectId} spaceId={mapState.spaceId} />
+                        : <MapSurface projectId={mapState.projectId} spaceId={mapState.spaceId} />}
+                </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
     if (isMakeLocation(makeState)) {
         return (
             <ProtectedSurface
