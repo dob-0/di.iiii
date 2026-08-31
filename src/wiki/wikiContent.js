@@ -919,20 +919,33 @@ export const WIKI_ARTICLES = [
                 'Windows (PowerShell) — irm https://di-studio.xyz/get.ps1 | iex'
             ] },
             'Then type di up. It starts, opens in your browser, and you are in a Studio that looks exactly like the one online, with an empty Main Space waiting. di down stops it. di help lists the rest.',
+            'Your work is files. `di save my-show` writes one file — my-show.diiii — holding everything that space is made of: the scene, every edit ever made to it, the projects inside it, the images and models. Copy it to a stick, email it, keep it for ten years; `di open my-show.diiii` puts it back, on this machine or anyone else’s. It is the same idea as a Blender file, with one difference worth knowing: a space is live, so there is nothing to lose by forgetting to save — di.iiii is already keeping it. Saving is how you get a copy you can carry, not how the work survives.',
+            'You do not need the terminal for this. Every space on the Spaces page has a Save to file button, and Open a file sits next to + Create — the same file, either way. If a space of that name is already there, di.iiii asks what to call this one instead of refusing.',
+            'A file remembers which di.iiii wrote it. An older file opens normally. A file written by a NEWER di.iiii is refused, with the reason, rather than opened halfway — because a half-opened file does not look broken, it looks fine and is quietly wrong.',
+            'What arrives is di.iiii itself and nothing else — about a 3 MB download. The exhibitions and pieces that live on di-studio.xyz are not part of it: they are work made with di.iiii, not part of the tool, and carrying them would have made the download forty times larger for things you did not ask for. Your copy starts empty and fills with your own.',
             'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one. Nothing is sent anywhere: the one outbound request is a version check, at most once a day, which gives up after three seconds and never blocks anything — and the page loads no fonts or scripts from anywhere else, down to the 3D text labels, whose font ships with the install.',
+            'A local di.iiii wears a green border and a small LOCAL badge in the corner, with the address it is answering on. staging.di-studio.xyz wears an amber one. The live site wears nothing — so if there is no border, you are on di-studio.xyz and anyone can see what you do next. It is there because two di.iiii that look identical are two di.iiii you will eventually confuse.',
             'Your work lives in a folder called .di in your home directory, deliberately kept apart from the app itself — so updating, rolling back, or removing di.iiii cannot touch it. di uninstall says as much, and leaves your spaces where they are.',
             { list: [
+                'di new NAME — start a new space',
+                'di save SPACE — save one space as a single file you can carry anywhere',
+                'di open FILE — open a file someone saved, here',
+                'di spaces — what is in this di.iiii',
                 'di backup — writes your whole di.iiii to one file you can carry to another machine',
                 'di restore — reads one back in',
                 'di update — installs the newest version, and never touches your work; di update --rollback returns to the one before',
+                'di update --from FILE — updates from a file on this machine, for a venue with no network',
+                'di restore --snapshot — the copies di.iiii takes of your work by itself, before an update that changes how it is stored',
                 'di status — what is running, on which address, and how much space your work takes',
-                'di doctor — what this machine can and cannot do, and what to install if something is missing'
+                'di doctor — what this machine can and cannot do, and what to install if something is missing',
+                'di mcp — hands this di.iiii to Claude, or any other agent that speaks MCP'
             ] },
-            'It does not need admin rights, and it does not ask for a password. It runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away. Docker is there too, but only if you ask for it (di install --docker) — a container cannot reach things on your machine, so the parts of di.iiii that talk to your own tools (the agent board, a Claude installed on this computer) work in the ordinary mode and not in the container one.',
-            'Syncing a local space with di-studio.xyz is not here yet — for now, di backup and the space bundles on the Spaces page are how work moves between the two.'
+            'Before an update changes anything, the new version opens a COPY of your work and checks it can read it — if it cannot, the update stops and you are still on the version you were. And when an update changes how the work is stored, di.iiii keeps a copy of it first, so going back is always possible: di restore --snapshot lists them. Going back to a version too old to read your work is refused rather than done, because that would not fail, it would quietly misread it.',
+            'It does not need admin rights, and it does not ask for a password. It runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away. Docker is there too, but only if you ask for it (di install --docker) — a container cannot reach things on your machine, so the surfaces that talk to your own tools (the agent board, a Claude installed on this computer) work in the ordinary mode and not in the container one.',
+            'A local space can now be linked to one on di-studio.xyz: di link connects the two, and di sync compares them and moves work in whichever direction is safe — it refuses rather than guess when both sides have changed. di backup and the space bundles on the Spaces page are still there when you would rather carry a file.'
         ],
         tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup'],
-        updated: '2026-08-19'
+        updated: '2026-08-21'
     },
     {
         id: 'keeper-node',

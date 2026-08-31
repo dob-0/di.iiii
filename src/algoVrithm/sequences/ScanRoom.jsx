@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
-import { smoothstep } from '../ritualClock.js'
+import { smoothstep } from '../../timeline/clock.js'
 import scanUrl from '../assets/scan.glb?url'
 
 // Sequence — the scan, GLITCHING MESH VERSION (2026-07-31, her direction:

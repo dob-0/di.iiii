@@ -7,7 +7,7 @@ import {
     dispersionSource,
     resetDispersionControls,
     setDispersionControl
-} from '../../algoVrithm/dispersionControls.js'
+} from '../../timeline/dispersionControls.js'
 
 // The dispersion sphere's controls. Author-only, mounted alongside the director
 // panel and behind the same H toggle — it is authoring furniture, and an
@@ -88,11 +88,11 @@ export default function DispersionPanel() {
     }, [])
 
     return (
-        <section className={`algo-vrithm-dispersion${open ? '' : ' is-collapsed'}`}>
+        <section className={`di-dispersion${open ? '' : ' is-collapsed'}`}>
             <header>
                 <button
                     type="button"
-                    className="algo-vrithm-dispersion-collapse"
+                    className="di-dispersion-collapse"
                     aria-expanded={open}
                     aria-label={open ? 'Hide dispersion sphere controls' : 'Show dispersion sphere controls'}
                     onClick={() => setOpen((previous) => !previous)}
@@ -100,7 +100,7 @@ export default function DispersionPanel() {
                     {open ? '▾' : '▸'}
                 </button>
                 <span>dispersion sphere</span>
-                <span className="algo-vrithm-dispersion-actions">
+                <span className="di-dispersion-actions">
                     <button type="button" onClick={reset}>Reset</button>
                     <button type="button" onClick={copy}>
                         {copied ? 'Copied ✓' : 'Copy values'}
@@ -108,13 +108,13 @@ export default function DispersionPanel() {
                 </span>
             </header>
 
-            <div className="algo-vrithm-dispersion-grid">
+            <div className="di-dispersion-grid">
                 {DISPERSION_KEYS.map((key) => {
                     const range = DISPERSION_RANGES[key]
                     const isDefault = values[key] === DISPERSION_DEFAULTS[key]
                     return (
-                        <label key={key} className="algo-vrithm-dispersion-row">
-                            <span className="algo-vrithm-dispersion-name">
+                        <label key={key} className="di-dispersion-row">
+                            <span className="di-dispersion-name">
                                 {LABELS[key]}
                                 {/* Marks what has been moved off the committed
                                     value. Without it a panel full of sliders
@@ -132,7 +132,7 @@ export default function DispersionPanel() {
                             />
                             <output>{Number(values[key].toFixed(2))}</output>
                             {HINTS[key] && (
-                                <small className="algo-vrithm-dispersion-hint">
+                                <small className="di-dispersion-hint">
                                     {HINTS[key]}
                                 </small>
                             )}

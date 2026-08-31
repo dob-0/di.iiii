@@ -551,7 +551,13 @@ function registerProjectRoutes(router, {
       res.setHeader('Content-Type', meta?.mimeType || 'application/octet-stream')
       applyAssetSafetyHeaders(res, meta?.mimeType)
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-      res.sendFile(servePath)
+      // `root` + a name, never sendFile(absolutePath). `send` applies
+      // dotfiles: 'ignore' to EVERY segment of an absolute path, and the
+      // default install lives in ~/.di — so on any `di` install this 404'd
+      // every asset anyone uploaded, while the API and the app itself kept
+      // working, which reads as a routing bug and is not one. The same trap
+      // was fixed for index.html (index.js) and left here.
+      res.sendFile(path.basename(servePath), { root: path.dirname(servePath) })
     } catch (error) {
       if (error.code === 'ENOENT') {
         return res.status(404).json({ error: 'Asset not found.' })

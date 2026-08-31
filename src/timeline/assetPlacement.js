@@ -1,4 +1,4 @@
-import { STANDPOINT } from './stageView.js'
+import { STANDPOINT } from '../timeline/stageView.js'
 
 // Polar placement for asset clips — and the inverse, so drag handles can write
 // back into it.

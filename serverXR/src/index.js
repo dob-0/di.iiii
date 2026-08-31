@@ -397,6 +397,10 @@ app.use((req, res, next) => {
 const router = express.Router()
 router.use(express.static(PUBLIC_DIR))
 
+// `di up` sets DI_LOCAL=1. Read at request time rather than at boot so tests
+// can toggle it, which is why it is a function and not a constant.
+const isLocalInstall = () => process.env.DI_LOCAL === '1'
+
 const buildAuthState = ({
   authenticated = false,
   type = null,
@@ -756,6 +760,26 @@ const authAttemptLimiter = createRateLimiter({ windowMs: 60_000, max: 10, name: 
 const syncKeyMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'sync-key mints' })
 const inviteMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite mints' })
 const inviteRedeemLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite redeems' })
+// A separate multer from `upload`: the asset filter is an allow-list of media
+// types, and a space bundle is none of them. Its own filter (the two names a
+// bundle is ever written under) and its own destination, so a rejected upload
+// never lands anywhere the asset pipeline looks.
+const bundleUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+    filename: (req, file, cb) => cb(null, `${Date.now()}-bundle.diiii`)
+  }),
+  limits: { fileSize: config.maxUploadBytes },
+  fileFilter: (req, file, cb) => {
+    const name = String(file.originalname || '').toLowerCase()
+    if (name.endsWith('.diiii') || name.endsWith('.space-bundle.tar.gz') || name.endsWith('.tar.gz')) {
+      cb(null, true)
+      return
+    }
+    cb(new Error('Not a di.iiii file. Save one with `di save`, or from the Spaces page.'))
+  }
+})
+
 // Uploads are keyed per PERSON, not per address. A venue — a classroom, a
 // gallery, a day camp — is a dozen people behind one NAT, so an address key
 // gave the whole room a single 60-per-10-minutes budget and the first few
@@ -871,7 +895,7 @@ router.get('/api/auth/session', async (req, res, next) => {
       // is a `di up` install on the artist's own machine (the CLI runner sets
       // DI_LOCAL=1). The client uses it to stop speaking hosted-product copy
       // ("sign in to edit", space quotas) to someone who owns the whole disk.
-      local: process.env.DI_LOCAL === '1',
+      local: isLocalInstall(),
       authenticated: Boolean(state.authenticated),
       type: isGuest ? 'guest' : (state.type || null),
       role: state.role || null,
@@ -882,7 +906,14 @@ router.get('/api/auth/session', async (req, res, next) => {
       expiresAt: state.session?.expiresAt || null,
       openSpaceId: getCommunalSpaceId(),
       sandboxSpaceId,
-      spaceLimit,
+      // null, not 3, on a local install. The comment above promises this page
+      // stops speaking quotas to someone who owns the disk, and canCreateSpace
+      // already ignores the limit here (requireAuth is off) — but the number
+      // was still sent, and SpaceHub renders it: "+ Create · 0/3" on a machine
+      // with no quota at all. SpaceHub already guards on Number.isFinite, so
+      // null is the value that makes the counter disappear rather than a
+      // second branch in the client.
+      spaceLimit: isLocalInstall() ? null : spaceLimit,
       ownedSpaceCount,
       canCreateSpace
     })
@@ -1577,6 +1608,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   spaceExists,
   upsertSpaceMeta,
   upload,
+  bundleUpload,
   writeJson,
   approvalGate
 })

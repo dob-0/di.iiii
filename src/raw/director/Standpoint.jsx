@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { STANDPOINT } from '../../algoVrithm/stageView.js'
+import { STANDPOINT } from '../../timeline/stageView.js'
 
 // The standpoint marker — visible only from the outside view.
 //

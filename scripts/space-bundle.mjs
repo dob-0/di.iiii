@@ -39,6 +39,37 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 
 const BUNDLE_FORMAT = 'di.space-bundle'
 const BUNDLE_VERSION = 1
+
+// The document extension. A space bundle is to di.iiii what a .blend is to
+// Blender — one file holding everything the work is made of, portable to any
+// other install — and `my-show.space-bundle.tar.gz` did not read like a
+// document anyone owns. The old name is still accepted on import: files that
+// already exist keep opening, which is the entire point of a file format.
+// Import takes any path, so files already written as `.space-bundle.tar.gz`
+// keep opening with no special case — which is the entire point of a format.
+const BUNDLE_EXT = '.diiii'
+
+// What wrote this file. Recorded so that an install can tell an old file (open
+// it) from one written by a version newer than itself (refuse it BY NAME rather
+// than half-importing it and leaving someone to find out later). Same rule the
+// database uses — see SCHEMA_VERSION in serverXR/src/db.js.
+const writerStamp = () => {
+    let appVersion = null
+    let schemaVersion = null
+    try {
+        const release = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'release.json'), 'utf8'))
+        appVersion = release.version ?? null
+        schemaVersion = Number.isInteger(release.schemaVersion) ? release.schemaVersion : null
+    } catch { /* a dev checkout has no release.json */ }
+    if (schemaVersion === null) {
+        try {
+            const dbSource = fs.readFileSync(path.join(ROOT_DIR, 'serverXR', 'src', 'db.js'), 'utf8')
+            const match = /const SCHEMA_VERSION = (\d+)/.exec(dbSource)
+            if (match) schemaVersion = Number(match[1])
+        } catch { /* neither — recorded as unknown, which the reader handles */ }
+    }
+    return { appVersion, schemaVersion }
+}
 const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
 const STRIPPED_TABLES = ['space_sync_keys', 'space_links']
 
@@ -143,10 +174,16 @@ async function exportSpace(args) {
             await fsp.writeFile(path.join(staging, 'commons.json'), JSON.stringify(commons, null, 2))
         }
 
+        const stamp = writerStamp()
         const manifest = {
             format: BUNDLE_FORMAT,
             version: BUNDLE_VERSION,
             spaceId,
+            // Which di.iiii wrote this, and what shape its data was in. A file
+            // outlives the app that made it; without these an older install
+            // cannot tell "old file, open it" from "future file, refuse it".
+            writtenBy: stamp.appVersion,
+            schemaVersion: stamp.schemaVersion,
             exportedAt: new Date().toISOString(),
             counts: {
                 spaceOps: spaceOps.length,
@@ -157,7 +194,7 @@ async function exportSpace(args) {
         }
         await fsp.writeFile(path.join(staging, 'bundle.json'), JSON.stringify(manifest, null, 2))
 
-        const out = path.resolve(args.out || `${spaceId}.space-bundle.tar.gz`)
+        const out = path.resolve(args.out || `${spaceId}${BUNDLE_EXT}`)
         execFileSync('tar', ['-czf', out, '-C', staging, '.'])
         const size = (fs.statSync(out).size / 1024 / 1024).toFixed(2)
         log(`exported space "${spaceId}" → ${out} (${size} MB, ${projects.length} projects, ${spaceOps.length} space ops)`)
@@ -188,6 +225,15 @@ async function importSpace(args) {
         const manifest = await readJson(manifestPath)
         if (manifest.format !== BUNDLE_FORMAT) die(`unknown bundle format "${manifest.format}"`)
         if (manifest.version > BUNDLE_VERSION) die(`bundle version ${manifest.version} is newer than this tool (${BUNDLE_VERSION})`)
+        // A file from a newer di.iiii. Refused by name rather than imported
+        // partially: the rows would go in and mean something slightly different,
+        // which is the failure nobody sees until much later.
+        const mine = writerStamp().schemaVersion
+        if (Number.isInteger(manifest.schemaVersion) && Number.isInteger(mine) && manifest.schemaVersion > mine) {
+            die(`this file was written by a newer di.iiii${manifest.writtenBy ? ` (${manifest.writtenBy})` : ''}.\n`
+                + `  the file stores work in shape ${manifest.schemaVersion}; this di.iiii reads ${mine}\n`
+                + `  update first:  di update`)
+        }
 
         const sourceId = manifest.spaceId
         const targetId = args.as || sourceId

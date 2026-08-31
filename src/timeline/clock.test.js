@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { MAX_STEP_SEC, clipProgress, fadeEnvelope, sourceProgress, useRitualClock } from './ritualClock.js'
+import { MAX_STEP_SEC, clipProgress, fadeEnvelope, sourceProgress, useSceneClock } from './clock.js'
 
 // The clock deliberately does not tick itself — a window.requestAnimationFrame
 // loop in the hook froze the piece inside a headset, because R3F hands a
@@ -68,9 +68,9 @@ describe('sourceProgress', () => {
     })
 })
 
-describe('useRitualClock', () => {
+describe('useSceneClock', () => {
     it('exposes advance and does not move on its own', async () => {
-        const { result } = renderHook(() => useRitualClock({ durationSec: 10 }))
+        const { result } = renderHook(() => useSceneClock({ durationSec: 10 }))
 
         expect(typeof result.current.advance).toBe('function')
         expect(result.current.playheadSec).toBe(0)
@@ -82,7 +82,7 @@ describe('useRitualClock', () => {
     })
 
     it('autoplays from zero so the audience never has to start it', () => {
-        const { result } = renderHook(() => useRitualClock({ durationSec: 10 }))
+        const { result } = renderHook(() => useSceneClock({ durationSec: 10 }))
 
         expect(result.current.isPlaying).toBe(true)
         tick(result, 0.05, 10)
@@ -90,7 +90,7 @@ describe('useRitualClock', () => {
     })
 
     it('keeps a stable advance across renders so useFrame never resubscribes', () => {
-        const { result } = renderHook(() => useRitualClock({ durationSec: 10 }))
+        const { result } = renderHook(() => useSceneClock({ durationSec: 10 }))
         const first = result.current.advance
 
         tick(result, 0.5)
@@ -101,7 +101,7 @@ describe('useRitualClock', () => {
     describe('looping', () => {
         it('wraps past the end and carries the overshoot', () => {
             const { result } = renderHook(
-                () => useRitualClock({ durationSec: 1, loop: true })
+                () => useSceneClock({ durationSec: 1, loop: true })
             )
 
             tick(result, 0.09, 11) // 0.99
@@ -115,7 +115,7 @@ describe('useRitualClock', () => {
 
         it('keeps running for many passes', () => {
             const { result } = renderHook(
-                () => useRitualClock({ durationSec: 0.5, loop: true })
+                () => useSceneClock({ durationSec: 0.5, loop: true })
             )
 
             tick(result, 0.1, 60) // twelve times round
@@ -126,7 +126,7 @@ describe('useRitualClock', () => {
 
         it('holds on the final frame when loop is off', () => {
             const { result } = renderHook(
-                () => useRitualClock({ durationSec: 1, loop: false })
+                () => useSceneClock({ durationSec: 1, loop: false })
             )
 
             tick(result, 0.1, 30)
@@ -136,7 +136,7 @@ describe('useRitualClock', () => {
 
     describe('frame delta guards', () => {
         it('clamps a long stall instead of skipping the opening', () => {
-            const { result } = renderHook(() => useRitualClock({ durationSec: 10 }))
+            const { result } = renderHook(() => useSceneClock({ durationSec: 10 }))
 
             // A headset handover or a backgrounded tab. Advancing by the whole
             // gap would put the visitor past the opening the moment they get
@@ -146,7 +146,7 @@ describe('useRitualClock', () => {
         })
 
         it('ignores a negative or non-finite delta', () => {
-            const { result } = renderHook(() => useRitualClock({ durationSec: 10 }))
+            const { result } = renderHook(() => useSceneClock({ durationSec: 10 }))
 
             tick(result, 1)
             const before = result.current.playheadSec
@@ -160,7 +160,7 @@ describe('useRitualClock', () => {
 
         it('never yields NaN when the edit list has no duration', () => {
             const { result } = renderHook(
-                () => useRitualClock({ durationSec: 0, loop: true })
+                () => useSceneClock({ durationSec: 0, loop: true })
             )
 
             tick(result, 0.1, 5)
@@ -173,7 +173,7 @@ describe('useRitualClock', () => {
 
     describe('transport', () => {
         it('does not advance while paused', () => {
-            const { result } = renderHook(() => useRitualClock({ durationSec: 10 }))
+            const { result } = renderHook(() => useSceneClock({ durationSec: 10 }))
 
             tick(result, 0.05, 10)
             act(() => result.current.pause())
@@ -184,7 +184,7 @@ describe('useRitualClock', () => {
         })
 
         it('scales the step by the playback rate', () => {
-            const { result } = renderHook(() => useRitualClock({ durationSec: 10 }))
+            const { result } = renderHook(() => useSceneClock({ durationSec: 10 }))
 
             act(() => result.current.setRate(0.25))
             tick(result, 0.1)
@@ -193,7 +193,7 @@ describe('useRitualClock', () => {
         })
 
         it('seeking pauses, and resumes from where it was left', () => {
-            const { result } = renderHook(() => useRitualClock({ durationSec: 10 }))
+            const { result } = renderHook(() => useSceneClock({ durationSec: 10 }))
 
             act(() => result.current.seek(4))
             expect(result.current.isPlaying).toBe(false)
@@ -210,7 +210,7 @@ describe('useRitualClock', () => {
             // Entering VR flips this. Without the rewind, a visitor who spends
             // half a minute getting the headset on arrives mid-piece.
             const { result, rerender } = renderHook(
-                ({ restartKey }) => useRitualClock({ durationSec: 10, restartKey }),
+                ({ restartKey }) => useSceneClock({ durationSec: 10, restartKey }),
                 { initialProps: { restartKey: false } }
             )
 

@@ -2,19 +2,26 @@ import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../services/spaceSettings.js', () => ({
+vi.mock('../../services/spaceSettings.js', () => ({
     getSpaceSettings: vi.fn(),
     putSpaceSettings: vi.fn()
 }))
 
 import useSavedTiming, { TIMING_LOAD_TIMEOUT_MS } from './useSavedTiming.js'
-import { getSpaceSettings, putSpaceSettings } from '../services/spaceSettings.js'
-import { SEQUENCES } from './sequences/index.js'
+import { getSpaceSettings, putSpaceSettings } from '../../services/spaceSettings.js'
+// A stand-in baseline rather than a real piece's: the hook is the platform's
+// now, and a test that imports one artwork's sequences to exercise it is the
+// same coupling this move removed.
+const SEQUENCES = [
+    { id: 'one', title: 'One', startSec: 0, endSec: 8 },
+    { id: 'two', title: 'Two', startSec: 8, endSec: 20 }
+]
+const SPACE = 'test-piece'
 
 const FIRST = SEQUENCES[0].id
 
 function Probe() {
-    const timing = useSavedTiming()
+    const timing = useSavedTiming({ spaceId: SPACE, baseline: SEQUENCES })
     if (!timing.ready) return <p>waiting</p>
     const first = timing.sequences.find((row) => row.id === FIRST)
     return <p>{`ready ${first.endSec}`}</p>
@@ -66,7 +73,7 @@ describe('useSavedTiming', () => {
         putSpaceSettings.mockResolvedValue({})
         const handle = { save: null }
         function Saver() {
-            const timing = useSavedTiming()
+            const timing = useSavedTiming({ spaceId: SPACE, baseline: SEQUENCES })
             React.useEffect(() => { handle.save = timing.save }, [timing.save])
             return <p>{timing.ready ? 'ready' : 'waiting'}</p>
         }

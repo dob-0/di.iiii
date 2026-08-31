@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getSpaceSettings, putSpaceSettings } from '../services/spaceSettings.js'
-import { ALGO_VRITHM_SPACE_ID } from './algoVrithmRouting.js'
-import { SEQUENCES } from './sequences/index.js'
+import { getSpaceSettings, putSpaceSettings } from '../../services/spaceSettings.js'
 import {
     applyTimingOverlay,
     readTimingSettings,
     timingOverlayFrom,
     writeTimingSettings
-} from './timingOverlay.js'
+} from '../../timeline/timingOverlay.js'
 
 /**
  * How long the piece will wait for the server before starting on the timing
@@ -27,12 +25,19 @@ export const TIMING_LOAD_TIMEOUT_MS = 1500
  *
  * `ready` is what the caller gates the piece on. It goes true when the answer
  * arrives OR the deadline passes, whichever is first, and never goes back.
+ *
+ * `spaceId` and `baseline` used to be algovrithm's, imported directly — which
+ * put a piece's identity inside the director. They are arguments now, so a
+ * second piece needs no second hook. Disabled without a spaceId rather than
+ * falling back to one, because a fallback here would write one piece's timing
+ * into another piece's space.
  */
-export const useSavedTiming = ({ enabled = true } = {}) => {
+export const useSavedTiming = ({ spaceId = null, baseline = [], enabled: wanted = true } = {}) => {
+    const enabled = wanted && Boolean(spaceId)
     const [state, setState] = useState(() => (
         enabled
-            ? { ready: false, sequences: SEQUENCES, overlay: null }
-            : { ready: true, sequences: SEQUENCES, overlay: null }
+            ? { ready: false, sequences: baseline, overlay: null }
+            : { ready: true, sequences: baseline, overlay: null }
     ))
     // Ref so a late server answer cannot overwrite an edit the director has
     // already made in this session — the deadline path leaves the fetch in
@@ -48,13 +53,13 @@ export const useSavedTiming = ({ enabled = true } = {}) => {
             settledRef.current = true
             setState({
                 ready: true,
-                sequences: applyTimingOverlay(SEQUENCES, overlay),
+                sequences: applyTimingOverlay(baseline, overlay),
                 overlay: overlay || null
             })
         }
 
         const timer = window.setTimeout(() => settle(null), TIMING_LOAD_TIMEOUT_MS)
-        getSpaceSettings(ALGO_VRITHM_SPACE_ID)
+        getSpaceSettings(spaceId)
             .then((settings) => settle(readTimingSettings(settings)))
             .catch(() => settle(null))
 
@@ -62,19 +67,19 @@ export const useSavedTiming = ({ enabled = true } = {}) => {
             alive = false
             window.clearTimeout(timer)
         }
-    }, [enabled])
+    }, [enabled, spaceId, baseline])
 
     /**
      * Save the current edit list as this space's timing. Returns how many rows
      * moved, so the panel can say something truthful about what it just did.
      */
     const save = useCallback(async (sequences) => {
-        const overlay = timingOverlayFrom(sequences, SEQUENCES)
-        const settings = await getSpaceSettings(ALGO_VRITHM_SPACE_ID)
-        await putSpaceSettings(ALGO_VRITHM_SPACE_ID, writeTimingSettings(settings, overlay))
+        const overlay = timingOverlayFrom(sequences, baseline)
+        const settings = await getSpaceSettings(spaceId)
+        await putSpaceSettings(spaceId, writeTimingSettings(settings, overlay))
         setState((current) => ({ ...current, overlay }))
         return { changed: Object.keys(overlay).length }
-    }, [])
+    }, [spaceId, baseline])
 
     return { ...state, save }
 }
