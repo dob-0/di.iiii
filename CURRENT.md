@@ -11,12 +11,9 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session (2026-08-24, camp day — the /dilijan design marathon)
+## Last session
 
-- `/dilijan` REBUILT as "The Islands Between Two Skies", then **rebuilt again after a human walk-test** found the root cause of a day of ugliness: **every primitive is BASE-anchored and cylinder/cone are 1.5 units tall**, so the island was a 2.1m drum with its surface at y=1.4 and the 1.6m-eye walker was crawling on it. Current space: `~/Documents/hosq-camp/room/islands-v9.mjs` + `dens-v9.mjs` (real-metre helpers — use them).
-- Also found by testing as a human: the **gate entity overrides `worldState.spawn`** (spawn = gate.z+6); a **portal ring is hard-rotated FLAT** and at scale 0.85 is untappable (0/25 sweep hits) — stand it upright from the entity (`rotation:[-1.5708,yaw,0]`) at scale 1.7; a portal within 2.2m of a spawn **bounces arrivals straight back**. All in `docs`/memory `reference_dii_room_craft`.
-- Verified end-to-end on staging, phone-sized, zero console errors: tap a door / tap home / walk a door (4.9s) arriving in WALK mode / walk home.
-- Platform today: #262-#268 (approach-revealed door names, arrive-walking, gate glow, wiki, mouse-look −35%, reveal radius, `worldState.fog` + translucency depthWrite).
+- the one-line install stopped shipping di-studio.xyz, and platform stopped being tangled with works
 
 Full detail: `PROGRESS.md`.
 
@@ -27,7 +24,7 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
-- **PROD IS BEHIND** — everything of 2026-08-22/23 sits on staging only; prod still serves the retired three-door landing, and still previews the bare domain as an Express error page (fixed on staging). Owner promotes after checking staging. The three copy misses that would have baked pre-sweep positioning into every link preview are FIXED and verified live 08-24.
+- **PROD IS CURRENT** — dev→main promoted 2026-08-25 (PR #269, 364 commits, all CI green; needed an admin merge because main requires a review the sole owner cannot self-give, plus the `production` environment approval). Verified live: di-studio.xyz serves the new front door ("Step inside"), the positioning eyebrow and the rebuilt wiki, zero console errors. **The Dilijan camp space stays on STAGING by decision — nothing about it moved.**
 - Doors audit: only embed-link copy is left; the rest is decided and shipped. Ledger: memory `project_dii_doors_audit_2026_08_21` (also still open there: the bare PHONE canvas has no visible exit).
 - Viewer seams left: the entry auto-frame direction is still hardcoded (0.8,0.45,1) — portrait entries tilt unless a composed fixed camera is authored (fixed-camera is NAVIGABLE now unless `locked:true`, #262); graph-only rooms still hide Walk/Fly by design; 3D text at eye level unsolved.
 - **Live DB renames owed on PROD** — the four above are staging-only. The sandbox writes to `dii-staging-server-1` and refuses `dii-server-1`: needs `"Bash(ssh dii-vps:*)"` in settings, or four renames from the owner's Spaces page.

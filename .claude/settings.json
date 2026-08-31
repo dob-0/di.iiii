@@ -58,7 +58,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'printf \"\\n  ● di.iiii session started\\n  CURRENT.md:\\n\\n\"; cat CURRENT.md 2>/dev/null || printf \"  (CURRENT.md not found — run git pull)\\n\"; printf \"\\n\"; node \"${CLAUDE_PROJECT_DIR:-.}/scripts/repo-state.mjs\" 2>/dev/null'"
+            "command": "bash -c 'printf \"\\n  \u25cf di.iiii session started\\n  CURRENT.md:\\n\\n\"; cat CURRENT.md 2>/dev/null || printf \"  (CURRENT.md not found \u2014 run git pull)\\n\"; printf \"\\n\"; node \"${CLAUDE_PROJECT_DIR:-.}/scripts/repo-state.mjs\" 2>/dev/null'"
           }
         ]
       }
@@ -90,11 +90,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -qE \"src/shared/.*Schema\\.js$\" && BASE=$(basename \"$FILE\" .js) && printf \"\\n  ⚡ SCHEMA SYNC REQUIRED\\n  You are editing: %s\\n  → Also update: shared/%s.cjs (CJS mirror that serverXR actually loads)\\n  → Forgetting this = 503 on deploy (server crashes on startup)\\n  → Check diff before saving: diff %s shared/%s.cjs | head -40\\n\\n\" \"$FILE\" \"$BASE\" \"$FILE\" \"$BASE\"; exit 0'"
+            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -qE \"src/shared/.*Schema\\.js$\" && BASE=$(basename \"$FILE\" .js) && printf \"\\n  \u26a1 SCHEMA SYNC REQUIRED\\n  You are editing: %s\\n  \u2192 Also update: shared/%s.cjs (CJS mirror that serverXR actually loads)\\n  \u2192 Forgetting this = 503 on deploy (server crashes on startup)\\n  \u2192 Check diff before saving: diff %s shared/%s.cjs | head -40\\n\\n\" \"$FILE\" \"$BASE\" \"$FILE\" \"$BASE\"; exit 0'"
           },
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"vite.config.js\" && printf \"\\n  ⚡ VITE three-vendor CHECK\\n  Every pkg that imports three must be in the three-vendor chunk.\\n  Missing one → TDZ crash in production (invisible in dev).\\n  Required members: three, three-mesh-bvh, three-stdlib,\\n    @react-three/*, @react-spring/three, troika-*,\\n    camera-controls, detect-gpu, maath,\\n    @monogrid/gainmap-js, meshoptimizer, meshline,\\n    r3f-perf, @pmndrs/*, @iwer/*\\n  After editing: npx vite build 2>&1 | grep -i circular\\n\\n\"; exit 0'"
+            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"vite.config.js\" && printf \"\\n  \u26a1 VITE three-vendor CHECK\\n  Every pkg that imports three must be in the three-vendor chunk.\\n  Missing one \u2192 TDZ crash in production (invisible in dev).\\n  Required members: three, three-mesh-bvh, three-stdlib,\\n    @react-three/*, @react-spring/three, troika-*,\\n    camera-controls, detect-gpu, maath,\\n    @monogrid/gainmap-js, meshoptimizer, meshline,\\n    r3f-perf, @pmndrs/*, @iwer/*\\n  After editing: npx vite build 2>&1 | grep -i circular\\n\\n\"; exit 0'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; node \"${CLAUDE_PROJECT_DIR:-.}/scripts/works-boundary.mjs\" \"$FILE\" 2>/dev/null; exit 0'"
           }
         ]
       }
@@ -105,7 +109,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -qE \"(auth|session|db\\.js|migrate|spaceStore|projectStore|Dockerfile|config\\.js)\" && echo \"\" && echo \"  ● High-signal file edited: $FILE\" && echo \"    If this revealed something non-obvious → ./scripts/capture-rule.sh\" && echo \"\"; exit 0'"
+            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -qE \"(auth|session|db\\.js|migrate|spaceStore|projectStore|Dockerfile|config\\.js)\" && echo \"\" && echo \"  \u25cf High-signal file edited: $FILE\" && echo \"    If this revealed something non-obvious \u2192 ./scripts/capture-rule.sh\" && echo \"\"; exit 0'"
           }
         ]
       },
@@ -114,7 +118,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -qE \"\\.(js|jsx|cjs|mjs)$\" || exit 0; echo \"$FILE\" | grep -q \"node_modules\" && exit 0; RESULT=$(npx eslint \"$FILE\" 2>&1); CODE=$?; [[ $CODE -eq 0 ]] && exit 0; printf \"\\n  ✗ Lint failed in %s:\\n%s\\n  → Fix before committing\\n\" \"$FILE\" \"$RESULT\"; exit 2'",
+            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -qE \"\\.(js|jsx|cjs|mjs)$\" || exit 0; echo \"$FILE\" | grep -q \"node_modules\" && exit 0; RESULT=$(npx eslint \"$FILE\" 2>&1); CODE=$?; [[ $CODE -eq 0 ]] && exit 0; printf \"\\n  \u2717 Lint failed in %s:\\n%s\\n  \u2192 Fix before committing\\n\" \"$FILE\" \"$RESULT\"; exit 2'",
             "statusMessage": "Linting...",
             "asyncRewake": true
           }
@@ -125,19 +129,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"AGENTS.md\" || exit 0; RESULT=$(npm run docs:ai:sync --silent 2>&1 && npm run docs:ai:check --silent 2>&1); CODE=$?; [[ $CODE -eq 0 ]] && printf \"  ● docs:ai:sync ran after AGENTS.md edit\\n\" && exit 0; printf \"  ✗ docs:ai:sync failed:\\n%s\\n  → Run npm run docs:ai:sync manually\\n\" \"$RESULT\"; exit 2'",
+            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"AGENTS.md\" || exit 0; RESULT=$(npm run docs:ai:sync --silent 2>&1 && npm run docs:ai:check --silent 2>&1); CODE=$?; [[ $CODE -eq 0 ]] && printf \"  \u25cf docs:ai:sync ran after AGENTS.md edit\\n\" && exit 0; printf \"  \u2717 docs:ai:sync failed:\\n%s\\n  \u2192 Run npm run docs:ai:sync manually\\n\" \"$RESULT\"; exit 2'",
             "statusMessage": "Syncing AI docs...",
             "asyncRewake": true
           },
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"src/wiki/wikiContent.js\" || exit 0; RESULT=$(npm run docs:wiki:check --silent 2>&1); CODE=$?; [[ $CODE -eq 0 ]] && printf \"  ● docs:wiki:check passed after wikiContent.js edit\\n\" && exit 0; printf \"  ✗ docs:wiki:check failed:\\n%s\\n\" \"$RESULT\"; exit 2'",
+            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"src/wiki/wikiContent.js\" || exit 0; RESULT=$(npm run docs:wiki:check --silent 2>&1); CODE=$?; [[ $CODE -eq 0 ]] && printf \"  \u25cf docs:wiki:check passed after wikiContent.js edit\\n\" && exit 0; printf \"  \u2717 docs:wiki:check failed:\\n%s\\n\" \"$RESULT\"; exit 2'",
             "statusMessage": "Checking wiki...",
             "asyncRewake": true
           },
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"src/wiki/\" && exit 0; echo \"$FILE\" | grep -qE \"src/(studio|beta|landing|project|wcc)/.*\\.(js|jsx)$|serverXR/src/.*routes.*\\.js$\" || exit 0; printf \"\\n  ● User-facing surface edited: %s\\n    If this changed how visitors use the platform → update src/wiki/wikiContent.js\\n    (the /wiki help + landing teaser) and bump that article\\x27s updated date.\\n\\n\" \"$FILE\"; exit 0'"
+            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"src/wiki/\" && exit 0; echo \"$FILE\" | grep -qE \"src/(studio|beta|landing|project|wcc)/.*\\.(js|jsx)$|serverXR/src/.*routes.*\\.js$\" || exit 0; printf \"\\n  \u25cf User-facing surface edited: %s\\n    If this changed how visitors use the platform \u2192 update src/wiki/wikiContent.js\\n    (the /wiki help + landing teaser) and bump that article\\x27s updated date.\\n\\n\" \"$FILE\"; exit 0'"
           }
         ]
       }

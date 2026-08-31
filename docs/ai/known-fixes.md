@@ -21,6 +21,35 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## A fit that centres the content leaves the dead space where it hurts
+
+`/<space>/make/<project>` fits the camera so nothing is cropped. On a portrait
+phone the WIDTH binds — measured on the camp's real rooms, 94% of the width and
+35% of the height, at every bearing from 0 to 180 and every elevation from 18 to
+42 degrees. That two-thirds is geometry, not a bug: a camp room is five metres
+across, four deep and two tall, and a phone is 0.58 as wide as it is tall.
+
+The bug was where the leftover went. A centred fit splits it evenly and the
+lower half is blank near-floor, lit flat, right where a thumb rests — which is
+what "the room looks empty" actually meant. Two fixes, and the second is worth
+more than the first:
+
+1. `makeFraming.js` seats the room on the LOWER part of the screen (`SEAT`) and
+   gives the rest to the sky, so the horizon comes into the picture. It pans the
+   eye rather than tilting it, so nothing that was in frame leaves it.
+   Guard: `src/make/makeFraming.test.js`, which measures every corner of every
+   object in normalised device coordinates and fails at `SEAT = 0`.
+2. The room's own ARRANGEMENT. The camp scaffold stood its pieces in a row
+   across the room, and a row across is the one shape a portrait phone cannot
+   hold. Re-seated as a room you look INTO — the picture at the back under the
+   child's name, one block in the middle, two in front — the same objects come
+   out two to three times bigger on the same screen. Data, not code: see
+   `LAYOUT` in the camp's `roomplan.mjs`.
+
+So: when a room reads as empty on a phone, check what shape its contents are in
+before touching the lens. No elevation, field of view or margin can make a row
+across fill a tall screen; rearranging it can.
+
 ## A bare `*` route stops serverXR booting, it does not fail a request
 
 serverXR is on Express 5, whose router uses path-to-regexp v8. That version
@@ -41,6 +70,7 @@ If you add a wildcard route, add that check with it.
 
 | Symptom | Root cause | Fix | File |
 |---------|-----------|-----|------|
+| **Every uploaded asset 404s on a `di` install** — the upload returns 201 with a URL, the API answers, the app loads, and that exact URL is 404 on GET and HEAD. Found by putting a real 51-PDF library into a real install; invisible on staging, on prod and in every test, because none of them live under a dotted path | `res.sendFile(absolutePath)`. `send` applies `dotfiles: 'ignore'` to **every segment** of an absolute path, and the default install home is `~/.di`. Same trap that was found and fixed for `index.html` in `index.js` — the identical line was left in the project asset route and survived, because nothing exercised it from a hidden directory | `res.sendFile(path.basename(servePath), { root: path.dirname(servePath) })` — with `root`, the dotfiles policy applies only to the part after it. Guard: `httpContracts.test.js` → "assets serve from a hidden directory (~/.di is one)" boots a server whose DATA_ROOT is a `.dii-hidden-data-*` temp dir and round-trips an uploaded asset byte for byte; verified 404 without the fix, 200 with it | `serverXR/src/routes/projectRoutes.js`, `serverXR/src/httpContracts.test.js` |
 | **Studio's empty state told people to "add a Room" — a card the palette does not contain** — it offers **Scene**. Not cosmetic drift: it sends someone looking for a node that does not exist, which dead-ends them mid-task. Six more live strings said Room too (`Room Config`, `Room tools are empty`, RawViewport's kicker and aria-label, a Studio split-pane title, the wiki), plus a lowercase "Build rooms" on the landing page | Room was retired for Scene on 2026-08-19 — the owner's call, recorded in `docs/ai/vocabulary.md` ("no 3D tool in the world says Room, and the engine underneath is literally `THREE.Scene`") — but **`Room` was never added to `copyVocabulary.test.js`'s `BANNED` list**. The guard already read every one of these files; it simply was not looking for the word, so the retirement never took effect anywhere | Added the rule, capital-R only for the same reason `Raw` is: "place it in your own room" is ordinary English about the room a visitor stands in and is correct AR copy. Fixed all eight strings. **Known hole, deliberate**: a lowercase `rooms` meaning a di.iiii place still slips through — read new copy for the sense, the guard only catches the proper noun. Guard bites: the rule reported six files before they were fixed | `src/copyVocabulary.test.js`, `src/studio/components/StudioWorldSurface.jsx`, `src/components/MobileEditorShell.jsx`, `src/components/PreferencesPage.jsx`, `src/raw/components/RawViewport.jsx`, `src/studio/components/StudioViewportLayout.jsx`, `src/wiki/wikiContent.js`, `src/landing/LandingPage.jsx` |
 | **A project built out of nodes publishes as an EMPTY ROOM** — the maker sees their room in the editor, a visitor opening the same project's public address gets bare grid | The published page rendered `document.entities` and nothing else. It was read as needing a node→entity compiler, which is why it stayed open for months. It did not: **`RawViewport` already renders a scope's spatial nodes AND the root-scope entities in one room** — it is what the node editor's own viewport shows and what `/out` has handed projectors all along. The published page had simply never been pointed at it | Mount it, behind the same lazy boundary as the other two renderers, whenever the document has nodes; an entities-only document keeps `StudioViewport` untouched, which is nearly every published page. **The trap that cost the first attempt:** a lane's components carry a lane's stylesheet, and `raw.css` is imported by `RawApp`/`BlankNodeWorkspaceApp` only — mounted bare, `.raw-viewport-shell` lost its `position: absolute; inset: 0` and the canvas collapsed into a band across the top of the page with dead space beneath. Same class as the ruling that kept Studio's MUI `PublishPanel` out of Raw, hit from the other side. The stylesheet now rides the same chunk via `src/raw/PublicGraphSurface.jsx`, which is safe because every rule in it is class-scoped — no element, `:root`, `html` or `body` selectors. Guards: `PublicProjectViewer.test.jsx` | `src/project/components/PublicProjectSceneSurface.jsx`, `src/raw/PublicGraphSurface.jsx` |
 | **"Copy projector link" hands the audience a sign-in card** — the one Raw address meant for people who are not authoring was gated exactly like the editor | `RootApp.jsx`'s Raw branch wrapped every page in `ProtectedSurface` with no public-space escape, while `SpaceSurfaceRoute` beside it has consulted `useSpacePublicFlag` all along. Every visitor is auto-issued a guest session scoped to the communal open space plus their own sandbox, so any other space was out of scope → the sign-in card. Meanwhile an unauthenticated `GET /api/projects/{id}/document` on a public space already returned `nodes` and `edges`, so the gate protected nothing it claimed to | Give the Raw branch the same bypass, narrowed twice: `RAW_PAGE_OUT` **and** a real `projectId`. A private space stays gated, the editor stays gated, and the space's own canvas `/out` stays gated because it renders the VIEWER's localStorage — to a stranger it is their own empty canvas. Hooks cannot be called conditionally, so this needed its own component (`RawSurfaceRoute`), the same shape `SpaceSurfaceRoute` already used. Guards: 4 cases in `RootApp.test.jsx` | `src/RootApp.jsx` |

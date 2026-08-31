@@ -4,7 +4,7 @@
     min-height: 100dvh;
     background: var(--di-black);
     color: var(--di-text);
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
 }
 
 /* ── Blank root canvas (entry state) ── */
@@ -31,7 +31,7 @@
 .raw-root-canvas-hint {
     text-align: center;
     color: rgba(244, 247, 251, 0.2);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     font-size: 13px;
     letter-spacing: 0.18em;
     text-transform: lowercase;
@@ -96,7 +96,7 @@
 .raw-world-node-type {
     font-size: calc(10px * var(--card-scale, 1));
     color: rgba(244, 247, 251, 0.38);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.05em;
     max-width: 100%;
     overflow: hidden;
@@ -157,7 +157,7 @@
 .raw-printer-profile-actions span {
     font-size: 11px;
     color: rgba(244, 247, 251, 0.5);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
 }
 
 /* ── Node palette (minimalist double-click command input) ── */
@@ -195,7 +195,7 @@
     outline: none;
     color: #f4f7fb;
     font-size: 14px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.03em;
     caret-color: #4f9eff;
 }
@@ -271,7 +271,7 @@
 .raw-node-palette-item-title span {
     color: rgba(244, 247, 251, 0.36);
     font-size: 11px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     white-space: nowrap;
 }
 
@@ -303,7 +303,7 @@
     padding: 12px 14px;
     color: rgba(244, 247, 251, 0.32);
     font-size: 12px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.08em;
 }
 
@@ -321,7 +321,7 @@
     background: #0a0a0a;
     color: rgba(210, 245, 255, 0.55);
     font-size: 10px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.15em;
     text-transform: lowercase;
     border-left: 2px solid var(--family-color, transparent);
@@ -360,7 +360,7 @@
 
 .raw-world-type-label {
     font-size: 12px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.16em;
     text-transform: lowercase;
     color: rgba(244, 247, 251, 0.3);
@@ -391,7 +391,7 @@
     flex-direction: column;
     gap: 12px;
     transition: border-color 0.15s, background 0.15s;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
 
 }
 
@@ -518,7 +518,7 @@
     border: 1px solid var(--di-cyan-border);
     color: rgba(244, 247, 251, 0.75);
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     background: rgba(77, 249, 255, 0.04);
 }
 
@@ -564,7 +564,7 @@
     color: var(--di-text);
     padding: 12px 14px;
     font-size: 13px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.03em;
     min-width: 0;
 }
@@ -583,7 +583,7 @@
     color: var(--di-text-muted);
     padding: 12px 16px;
     font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: color 0.1s, background 0.1s;
@@ -619,7 +619,7 @@
     padding: 20px 14px;
     margin: 0;
     font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     color: var(--di-text-muted);
     letter-spacing: 0.04em;
 }
@@ -638,7 +638,7 @@
     flex: 1;
     padding: 10px 14px;
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     color: var(--di-text-muted);
     letter-spacing: 0.04em;
     white-space: nowrap;
@@ -693,7 +693,7 @@
     color: var(--di-text-muted);
     padding: 10px 14px;
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: color 0.1s, background 0.1s;
@@ -727,7 +727,7 @@
     color: var(--di-text-muted);
     padding: 10px 16px;
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: color 0.1s, background 0.1s;
@@ -747,7 +747,7 @@
     border-top: none;
     padding: 12px 14px;
     font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     color: #f4877e;
 }
 
@@ -767,7 +767,7 @@
     font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
 }
 
 .raw-chip,
@@ -1096,7 +1096,7 @@
     font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1146,7 +1146,7 @@
     background: transparent;
     color: rgba(244, 247, 251, 0.45);
     font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     padding: 4px 8px;
     border-radius: 4px;
     cursor: pointer;
@@ -1245,7 +1245,7 @@
     padding: 7px 12px;
     font-size: 12px;
     font-weight: 600;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: background 0.12s, border-color 0.12s;
@@ -1268,7 +1268,7 @@
 .raw-topbar-scale-control label {
     font-size: 12px;
     color: rgba(244, 247, 251, 0.56);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.02em;
 }
 
@@ -1282,7 +1282,7 @@
     color: #f4f7fb;
     padding: 4px 8px;
     font-size: 11px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     cursor: pointer;
     border: 1px solid rgba(107, 147, 255, 0.28);
     min-width: 50px;
@@ -1302,7 +1302,7 @@
     cursor: pointer;
     font-size: 11px;
     color: rgba(244, 247, 251, 0.36);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.04em;
     transition: color 0.1s;
 }
@@ -1818,7 +1818,7 @@
 .raw-property-sheet-header p {
     font-size: 11px;
     color: rgba(244, 247, 251, 0.4);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.04em;
     margin: 0;
 }
@@ -1846,7 +1846,7 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: rgba(244, 247, 251, 0.36);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     margin: 0 0 10px;
 }
 
@@ -1867,7 +1867,7 @@
     font-size: 11px;
     color: rgba(244, 247, 251, 0.45);
     letter-spacing: 0.02em;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2182,6 +2182,37 @@
     height: 100%;
 }
 
+.raw-chat-tabs {
+    display: flex;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--di-cyan-border);
+}
+
+.raw-chat-tab {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    /* 40px+ of height on a phone: this is the control that decides which room
+       you are talking into, and a mis-tap sends a private line to the wrong
+       four people. */
+    padding: 11px 8px;
+    font-family: var(--di-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.raw-chat-tab.is-active {
+    color: var(--di-cyan);
+    border-bottom-color: var(--di-cyan);
+}
+
 .raw-chat-messages {
     flex: 1;
     overflow-y: auto;
@@ -2202,11 +2233,34 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--di-text-muted);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
+}
+
+.raw-chat-message-author {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .raw-chat-message.is-self .raw-chat-message-author {
     color: var(--di-cyan);
+}
+
+/* Only ever rendered for an admin, in the space room. Deliberately quiet: it
+   is an adult's eraser, not a control the children are invited to press. */
+.raw-chat-message-remove {
+    background: transparent;
+    border: 0;
+    color: var(--di-text-muted);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 4px 8px;
+    margin: -4px 0;
+}
+
+.raw-chat-message-remove:hover {
+    color: #ff8080;
 }
 
 .raw-chat-message-text {
@@ -2229,13 +2283,20 @@
 
 .raw-chat-input {
     flex: 1;
+    /* A flex item will not shrink below its intrinsic width without this, and a
+       bare <input> is ~258px wide by default. In a 280px window at 390px that
+       pushed the whole row to 325px: Send sat outside the window, and the
+       horizontal scroll it created shifted the tabs and everybody's messages
+       off the left edge as soon as anyone touched the field. Measured on the
+       phone profile 2026-08-26 — it predates space chat. */
+    min-width: 0;
     background: transparent;
     border: 1px solid var(--di-cyan-border);
     outline: none;
     color: #f4f7fb;
     padding: 8px 10px;
     font-size: 13px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
 }
 
 .raw-chat-input::placeholder {
@@ -2264,7 +2325,7 @@
 .raw-image-panel-empty p {
     margin: 0;
     color: rgba(244, 247, 251, 0.52);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     font-size: 12px;
 }
 
@@ -2291,7 +2352,7 @@
 .raw-activity-row strong,
 .raw-asset-row strong,
 .raw-outliner strong {
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     font-size: 12px;
     text-transform: uppercase;
 }
@@ -2320,7 +2381,7 @@
     align-items: center;
     gap: 14px;
     text-align: center;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
 }
 
 .raw-empty-state p {
@@ -2568,7 +2629,7 @@
 .raw-hub-tagline {
     font-size: 11px;
     color: var(--di-text-muted);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     margin: 0;
     letter-spacing: 0.06em;
 }
@@ -2696,7 +2757,7 @@
     min-width: 3.75rem;
     text-align: center;
     color: var(--di-text-muted);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     font-size: 11px;
 }
 
@@ -2805,7 +2866,7 @@
     color: var(--di-text-muted);
     white-space: nowrap;
     flex-shrink: 0;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
 }
 
 /* THE DOOR — the way into a container.
@@ -3024,7 +3085,7 @@
     border-radius: 0;
     background: rgba(6, 10, 18, 0.92);
     color: var(--di-text-muted);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     font-size: 11px;
     min-height: 32px;
     padding: 0 12px;
@@ -3049,7 +3110,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
 }
 
 .raw-op-create-backdrop {
@@ -3316,7 +3377,7 @@
     border: 1px solid var(--di-cyan-border);
     color: rgba(244, 247, 251, 0.75);
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
 }
 
 .raw-help-diagram-start {
@@ -3516,7 +3577,7 @@
     height: 28px;
     color: var(--di-cyan);
     border: 1px solid var(--di-cyan-border);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     font-size: 12px;
 }
 
@@ -3554,7 +3615,7 @@
 
 .raw-help-control-row span {
     color: rgba(244, 247, 251, 0.58);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     font-size: 12px;
 }
 
@@ -3577,7 +3638,7 @@
     border: 1px solid var(--di-cyan-border);
     color: rgba(244, 247, 251, 0.75);
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     background: rgba(77, 249, 255, 0.04);
 }
 
@@ -3589,7 +3650,7 @@
 
 .raw-help-footer span {
     color: rgba(244, 247, 251, 0.56);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     font-size: 12px;
     word-break: break-word;
 }
@@ -4387,7 +4448,7 @@
     flex-direction: column;
     background: #05080f;
     color: #f4f7fb;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     font-size: 11px;
     overflow: hidden;
 }
@@ -4632,7 +4693,7 @@
     padding: 6px 10px;
     border-bottom: 1px solid rgba(244, 247, 251, 0.08);
     color: rgba(244, 247, 251, 0.52);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     font-size: 10px;
     line-height: 1.5;
 }
@@ -4645,11 +4706,12 @@
    is no viewport to hang off — it has to be a normal block in the flow, or it
    floats over the window's own header. Scoped here so the artwork's own
    stylesheet stays exactly as she wrote it. */
-.raw-director-window .algo-vrithm-director {
+.raw-director-window .di-director {
     position: static;
     flex: 1;
     min-height: 0;
     border-top: none;
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: transparent;
 }
@@ -4664,7 +4726,7 @@
     bottom: 18px;
     left: 50%;
     transform: translateX(-50%);
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-weight: 800;
     font-size: 15px;
     letter-spacing: -0.02em;
@@ -4737,7 +4799,7 @@
 }
 
 .raw-drop-veil span {
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-weight: 700;
     font-size: 15px;
     letter-spacing: 0.02em;
@@ -4754,7 +4816,7 @@
     bottom: 52px;
     transform: translateX(-50%);
     max-width: min(520px, calc(100vw - 32px));
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-size: 13px;
     line-height: 1.45;
     text-align: center;
@@ -4785,7 +4847,7 @@
     align-items: center;
     gap: 4px;
     max-width: min(420px, calc(100vw - 24px));
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-size: 12px;
     color: rgba(255, 255, 255, 0.78);
     background: rgba(10, 14, 22, 0.92);
@@ -4900,7 +4962,7 @@
     background: rgba(10, 14, 22, 0.97);
     border: 1px solid rgba(77, 249, 255, 0.35);
     border-radius: 10px;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
 }
 
 .raw-graph-port-menu-title {
@@ -4950,7 +5012,7 @@
     gap: 6px;
     max-width: min(520px, calc(100vw - 32px));
     padding: 4px 4px 4px 14px;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-size: 13px;
     color: rgba(255, 255, 255, 0.9);
     background: rgba(10, 14, 22, 0.95);
@@ -5007,7 +5069,7 @@
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     padding: 14px 16px 20px;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-size: 12px;
     line-height: 1.55;
     color: rgba(244, 247, 251, 0.72);
@@ -5039,7 +5101,7 @@
     justify-content: space-between;
     gap: 10px;
     margin: 0 0 8px;
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 10px;
     font-weight: 500;
     letter-spacing: 0.14em;
@@ -5060,7 +5122,7 @@
 
 .raw-anatomy-slot h5 {
     margin: 12px 0 6px;
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 10px;
     font-weight: 400;
     letter-spacing: 0.14em;
@@ -5096,7 +5158,7 @@
 }
 
 .raw-anatomy-port-head em {
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 10px;
     font-style: normal;
     letter-spacing: 0.06em;
@@ -5108,7 +5170,7 @@
     align-items: center;
     gap: 6px;
     margin-top: 2px;
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 12px;
     color: var(--di-text);
     /* A vector or a long string must not push the window wider than the screen;
@@ -5236,7 +5298,7 @@
 
 .raw-anatomy-loc {
     display: inline-block;
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 11px;
     color: rgba(244, 247, 251, 0.5);
 }
@@ -5274,7 +5336,7 @@
     padding: 10px 12px;
     background: #0a0a0a;
     border-left: 2px solid rgba(255, 255, 255, 0.14);
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 11px;
     line-height: 1.5;
     color: rgba(244, 247, 251, 0.78);
@@ -5306,7 +5368,7 @@
     color: rgba(77, 249, 255, 0.92);
     border: 1px solid rgba(77, 249, 255, 0.45);
     border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     font-size: 13px;
     letter-spacing: 0.06em;
     cursor: pointer;

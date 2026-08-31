@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { smoothstep } from '../ritualClock.js'
+import { smoothstep } from '../../timeline/clock.js'
 import { createRandom } from '../random.js'
 import { attachLimiter } from '../audioBus.js'
 import {

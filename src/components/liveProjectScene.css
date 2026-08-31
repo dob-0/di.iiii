@@ -28,6 +28,7 @@
     border-radius: 999px;
     cursor: pointer;
     transition: background-color 220ms ease, border-color 220ms ease;
+    -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
 }
 
@@ -81,6 +82,7 @@
     opacity: 0.8;
     background: rgba(0, 0, 0, 0.35);
     border-radius: 10px;
+    -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     white-space: normal;
 }
@@ -145,6 +147,7 @@
     border-radius: 50%;
     border: 1.5px solid rgba(217, 0, 0, 0.45);
     background: rgba(0, 0, 0, 0.28);
+    -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
@@ -181,6 +184,7 @@
     letter-spacing: 0.15em;
     text-transform: uppercase;
     cursor: pointer;
+    -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     z-index: 11;
     touch-action: manipulation;
@@ -214,6 +218,7 @@
     color: rgba(255, 255, 255, 0.75);
     font-size: 16px;
     cursor: pointer;
+    -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
@@ -243,7 +248,8 @@
 /* Ghost joystick (mobile) */
 .ls-ghost-joy {
     position: absolute; bottom: 124px; left: 52px; width: 96px; height: 96px; border-radius: 50%;
-    border: 1.5px solid rgba(217,0,0,0.5); background: rgba(0,0,0,0.22); backdrop-filter: blur(6px);
+    border: 1.5px solid rgba(217,0,0,0.5); background: rgba(0,0,0,0.22);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     display: flex; align-items: center; justify-content: center; animation: ls-ring-pulse 2.4s ease-in-out infinite;
 }
 .ls-ghost-thumb { width: 36px; height: 36px; border-radius: 50%; background: rgba(217,0,0,0.8); animation: ls-thumb-demo 2.4s ease-in-out infinite; }

@@ -1,3 +1,4 @@
+/* global __APP_VERSION__ */
 import React from 'react'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -199,7 +200,11 @@ describe('PreferencesPage', () => {
         // System section — frontend build + backend release metadata.
         gotoSection('System')
         expect(await screen.findByText('Build / Release')).toBeInTheDocument()
-        expect(screen.getByText('0.2.0')).toBeInTheDocument()
+        // The build's own version, not a literal. It was '0.2.0', which is what
+        // package.json happened to say for three releases — so this assertion
+        // was really testing that nobody had touched package.json, and it broke
+        // the moment someone did.
+        expect(screen.getByText(__APP_VERSION__)).toBeInTheDocument()
         expect(await screen.findByText('cpanel-20260415-150000')).toBeInTheDocument()
         expect(screen.getByText('abcdef1234567890')).toBeInTheDocument()
 

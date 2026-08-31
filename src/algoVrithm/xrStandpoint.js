@@ -1,4 +1,4 @@
-import { STANDPOINT } from './stageView.js'
+import { STANDPOINT } from '../timeline/stageView.js'
 
 // Making the headset agree with the browser about where the floor is.
 //

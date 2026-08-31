@@ -1,3 +1,4 @@
+/* global __APP_VERSION__ */
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
@@ -5,7 +6,6 @@ import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { getApiSession } from '../services/apiClient.js'
-import { ALGO_VRITHM_LABEL, ALGO_VRITHM_PATH, ALGO_VRITHM_SPACE_ID } from '../algoVrithm/algoVrithmRouting.js'
 import { buildSpacesPath, buildStudioHubPath } from '../studio/utils/studioRouting.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
@@ -40,7 +40,7 @@ const FEATURED_SPACES = [
     { id: 'wcc', label: 'WCC Exhibition', href: '/wcc', className: 'landing-cta-wcc' },
     { id: 'br-id-ge', label: 'br_id_ge · live at Notations #2', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
     { id: 'beyond-form', label: 'beyond_form', href: '/beyond-form', className: 'landing-cta-beyond-form' },
-    { id: ALGO_VRITHM_SPACE_ID, label: ALGO_VRITHM_LABEL, href: ALGO_VRITHM_PATH, className: 'landing-cta-algo-vrithm' }
+    { id: 'algovrithm', label: 'algovrithm', href: '/algovrithm', className: 'landing-cta-algo-vrithm' }
 ]
 
 // A `di up` install on the visitor's own machine has no accounts and no
@@ -50,7 +50,24 @@ const FEATURED_SPACES = [
 // below get local-truthful variants. Voice matches the wiki's local-install
 // article ("Run di.iiii on your own machine").
 const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Click "Step inside" or go to any space URL. This is your machine — everything here is yours to edit, no account involved.' }
+// The hero's two lines are the hosted pitch. "No download. No install." is
+// read, on a local install, by someone who has just done both — and the
+// featured row below advertises di-studio.xyz's own exhibitions, which are not
+// in this copy and whose spaces do not exist in a fresh install, so every chip
+// is a door onto nothing. Same one boolean, no second mode.
+const LOCAL_TAGLINE = 'Running on your own machine. Offline, no account, and the work stays in your home folder.'
+const LOCAL_CTA_SUB = 'no account, no quota. Studio is a room on the same desk.'
 const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', desc: 'This di.iiii runs locally. Create as many spaces as you like — no sign-in, no quota, and your work stays in your own home folder.' }
+
+// Two of the three pillars, and step 04, promise reach a local install does not
+// have: `di up` binds 127.0.0.1, so there is no link anyone else can open and
+// no public URL to share. Saying so is not a smaller product — the same scene
+// carries to a hosted space when you want an audience, and that is the honest
+// version of the sentence. (LAN exposure is a deliberate later feature, see
+// docs/deploy/DI_CLI.md.)
+const LOCAL_PILLAR_COLLAB = 'Everything is live in this browser and in any other on this machine. To work with someone else, push the space to a di.iiii you both can reach.'
+const LOCAL_PILLAR_PUBLISH = 'Spaces live at their own URL on this machine. Nothing leaves it until you send it somewhere — this server answers only to you.'
+const LOCAL_STEP_SHARE = { n: '04', title: 'Keep or carry', body: 'Your work sits in your home folder. `di backup` writes the whole thing to one file, and a space can be carried to a hosted di.iiii when it wants an audience.' }
 
 const STEPS = [
     { n: '01', title: 'Open a space', body: 'Click "Step inside" — you get a space of your own, no account needed. Sign in to keep it and to make more.' },
@@ -293,7 +310,7 @@ export default function LandingPage() {
                         the refusal list. */}
                     <Typography className="lp-tagline">
                         Make a space, hand out the address.<br />
-                        A link while it runs, a file when it ends.
+                        {isLocalInstall ? LOCAL_TAGLINE : 'A link while it runs, a file when it ends.'}
                     </Typography>
 
                     {/* One door. Three peer buttons asked a stranger to pick a
@@ -319,13 +336,13 @@ export default function LandingPage() {
                     </Stack>
 
                     <Typography className="lp-cta-sub">
-                        no account, nothing to install — for you or for whoever opens your link.
+                        {isLocalInstall ? LOCAL_CTA_SUB : 'no account, nothing to install — for you or for whoever opens your link.'}
                         <br />
                         <a href={studioHref}>Already have spaces? Open Studio →</a>
                     </Typography>
 
                     <Stack direction="row" spacing={1.5} sx={{ pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        {FEATURED_SPACES.map((space) => (
+                        {(isLocalInstall ? [] : FEATURED_SPACES).map((space) => (
                             <Button
                                 key={space.id}
                                 className={`landing-cta-ghost ${space.className}`}
@@ -400,7 +417,7 @@ export default function LandingPage() {
                                     </Box>
                                 ),
                                 title: 'Collaborate',
-                                body: 'Invite anyone with a link. See live cursors and changes. Work together across the world without any setup.'
+                                body: isLocalInstall ? LOCAL_PILLAR_COLLAB : 'Invite anyone with a link. See live cursors and changes. Work together across the world without any setup.'
                             },
                             {
                                 vis: (
@@ -410,7 +427,7 @@ export default function LandingPage() {
                                     </Box>
                                 ),
                                 title: 'Publish',
-                                body: 'Every space has a public URL. Share the link — visitors see your work in their browser or in a VR/AR headset.'
+                                body: isLocalInstall ? LOCAL_PILLAR_PUBLISH : 'Every space has a public URL. Share the link — visitors see your work in their browser or in a VR/AR headset.'
                             }
                         ].map((col) => (
                             <Box key={col.title} className="lp-col-card">
@@ -433,7 +450,7 @@ export default function LandingPage() {
                     </Typography>
 
                     <Box className="lp-steps">
-                        {(isLocalInstall ? [LOCAL_STEP_OPEN, ...STEPS.slice(1)] : STEPS).map((step) => (
+                        {(isLocalInstall ? [LOCAL_STEP_OPEN, ...STEPS.slice(1, 3), LOCAL_STEP_SHARE] : STEPS).map((step) => (
                             <Box key={step.n} className="lp-step">
                                 <Typography className="lp-step-num" aria-hidden="true">{step.n}</Typography>
                                 <Box>
@@ -545,7 +562,11 @@ export default function LandingPage() {
                                 {[
                                     ['name', 'di.iiii'],
                                     ['type', 'public 3D spaces on the open web'],
-                                    ['version', '0.2.0'],
+                                    // Was the literal '0.2.0', so this card announced 0.2.0
+                                    // through v0.3.1 and every release after it. __APP_VERSION__
+                                    // is the build's own version (vite.config.js prefers the
+                                    // packed/tagged one over package.json, which is also stale).
+                                    ['version', __APP_VERSION__],
                                     ['backend', 'serverXR (Node.js)'],
                                     ['storage', 'SQLite + disk assets'],
                                     ['realtime', 'WebSocket (socket.io)']

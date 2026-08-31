@@ -21,6 +21,13 @@ export const RESERVED_APP_SEGMENTS = [
     'seed',
     'open_jam',
     'studio',
+    // The toybox — /{space}/make/{projectId}, src/make/makeRouting.js. Reserved
+    // for the same reason 'raw' and 'studio' are: without it, /{space}/make/{id}
+    // parses as a project slug with an unrecognised tail and heals to the
+    // published page, so the address a child was handed would silently open
+    // something else. Checked before reserving — no project and no space
+    // answers to the word on any tier.
+    'make',
     // The layered addresses (studioRouting.js): /spaces and /{space}/projects.
     // Reserved here so a project slug can never shadow the space's own project
     // list. Checked against production and staging before reserving — no space

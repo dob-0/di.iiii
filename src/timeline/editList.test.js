@@ -25,8 +25,7 @@ import {
     totalDurationSec,
     trimClip
 } from './editList.js'
-import { addLight, removeLight, setLightValue } from './worldLights.js'
-import { LIGHT_DEFAULTS } from './palette.js'
+import { LIGHT_DEFAULTS, addLight, removeLight, setLightValue } from './worldLights.js'
 
 const ASSET = { id: 'ritual-01', title: 'ritual 01', kind: 'image', fileName: 'ritual-01.png', src: '/build/r.hash.png' }
 const Fake = () => null

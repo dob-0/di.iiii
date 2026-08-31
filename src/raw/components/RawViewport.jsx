@@ -1,6 +1,6 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
+import { ContactShadows, Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import ConeObject from '../../objectComponents/ConeObject.jsx'
 import CylinderObject from '../../objectComponents/CylinderObject.jsx'
@@ -259,6 +259,44 @@ const resolveSpatialValues = (node, graphContext, allNodes) => {
     return values
 }
 
+// Whether the surface around this scene has painted its own world
+// (RawViewport's `ambience`, below). A context rather than one more argument
+// threaded through renderNodeBody — the note above resolveSpatialValues gives
+// the reason, and it holds for exactly one type here as it did for that one.
+const AmbienceContext = createContext(null)
+
+// A geo's footprint: the faint floor tile that makes an empty container read as
+// a PLACE rather than as void. Cyan on near-black, which is Raw's language and
+// is right on Raw's bench. A surface with an ambience of its own has already
+// said what its ground looks like, and a second, smaller, differently-coloured
+// grid inside it is the technical look leaking back in — so there, the geo is
+// its contents and nothing else.
+function GeoFootprint() {
+    const ambience = useContext(AmbienceContext)
+    if (ambience) return null
+    return (
+        <group>
+            {/* the pickable ground of the place — near-invisible but
+                clickable, so an empty geo can still be selected and
+                dragged in the room */}
+            <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[2, 2]} />
+                <meshBasicMaterial color="#4df9ff" transparent opacity={0.05} side={2} />
+            </mesh>
+            <Grid
+                args={[2, 2]}
+                position={[0, 0.02, 0]}
+                cellSize={0.25}
+                sectionSize={1}
+                cellColor="rgba(77,249,255,0.35)"
+                sectionColor="rgba(77,249,255,0.6)"
+                fadeDistance={14}
+                infiniteGrid={false}
+            />
+        </group>
+    )
+}
+
 export function renderNodeBody(node, values, assetMap = null) {
     switch (node.typeId) {
         case 'geom.model': {
@@ -453,27 +491,7 @@ export function renderNodeBody(node, values, assetMap = null) {
             // report of an empty container reading as void. Children render
             // through the childMap like any spatial parent's; this body adds
             // nothing else, which is the whole point of the type.
-            return (
-                <group>
-                    {/* the pickable ground of the place — near-invisible but
-                        clickable, so an empty geo can still be selected and
-                        dragged in the room */}
-                    <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                        <planeGeometry args={[2, 2]} />
-                        <meshBasicMaterial color="#4df9ff" transparent opacity={0.05} side={2} />
-                    </mesh>
-                    <Grid
-                        args={[2, 2]}
-                        position={[0, 0.02, 0]}
-                        cellSize={0.25}
-                        sectionSize={1}
-                        cellColor="rgba(77,249,255,0.35)"
-                        sectionColor="rgba(77,249,255,0.6)"
-                        fadeDistance={14}
-                        infiniteGrid={false}
-                    />
-                </group>
-            )
+            return <GeoFootprint />
         case 'world.light':
             // Standing INSIDE a container, a Light is a real point light plus
             // a small glowing marker — "collect what you need: object,
@@ -682,7 +700,10 @@ function SceneContent({
     // false = a pure LOOK: no picking, no dragging, no double-click placing.
     // The /out projector view passes false — "handlers simply not passed" was
     // not enough, because OrbitControls mounts its own DOM listeners.
-    interactive = true
+    interactive = true,
+    // A STANDING PLACE instead of a technical grid. Null everywhere but the
+    // toybox — see the prop on RawViewport below for the whole argument.
+    ambience = null
 }) {
     // Keyed on assets + project id so the map only rebuilds when assets change,
     // not on every document identity change from a sync tick.
@@ -716,10 +737,16 @@ function SceneContent({
             ? !constructorIds.has(node.parentId || null)
             : (node.parentId || null) === scopeId
     )
+    // `ambience` also leaves the BENCH'S OWN RIG out of the picture. A
+    // `world.camera` node draws itself as a wireframe gizmo with a frustum fan,
+    // and a `world.light` as a marker; both are controls, and both were sitting
+    // in the middle of a child's room looking like something they had made by
+    // accident. Raw keeps them — that is where they are controls.
     const renderableNodes = useMemo(
-        () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)),
+        () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)
+            && !(ambience && String(node.typeId || '').startsWith('world.'))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [document.nodes, scopeId]
+        [document.nodes, scopeId, ambience]
     )
     // Everything standing inside a container, keyed by the container it stands
     // in. Descent stops at a nested universe.world: a World is its own stage,
@@ -897,8 +924,33 @@ function SceneContent({
 
 
     return (
-        <>
-            <color attach="background" args={[getRawWorldBackgroundColor(document, graphContext, { scopeId, worldNode })]} />
+        <AmbienceContext.Provider value={ambience}>
+            <color attach="background" args={[ambience?.sky || getRawWorldBackgroundColor(document, graphContext, { scopeId, worldNode })]} />
+            {ambience ? (
+                <>
+                    {/* Fog the colour of the sky. This is the whole horizon
+                        trick: a flat ground plane dissolving into the
+                        background at distance reads as somewhere that carries
+                        on past the frame, where a hard-edged one reads as a
+                        tabletop. */}
+                    <fog attach="fog" args={[ambience.sky, ambience.fogNear ?? 12, ambience.fogFar ?? 60]} />
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.004, 0]}>
+                        <planeGeometry args={[400, 400]} />
+                        <meshStandardMaterial color={ambience.ground} roughness={1} metalness={0} />
+                    </mesh>
+                    {ambience.shadow === false ? null : (
+                        <ContactShadows
+                            position={[0, 0.006, 0]}
+                            scale={ambience.shadowScale ?? 24}
+                            far={4}
+                            blur={2.6}
+                            opacity={ambience.shadowOpacity ?? 0.3}
+                            resolution={384}
+                            color={ambience.shadowColor || '#4a4034'}
+                        />
+                    )}
+                </>
+            ) : null}
             <ambientLight
                 color={resolvedLight?.ambientColor ?? document.worldState?.ambientLight?.color ?? '#ffffff'}
                 intensity={resolvedLight?.ambientIntensity ?? document.worldState?.ambientLight?.intensity ?? 0.8}
@@ -908,7 +960,7 @@ function SceneContent({
                 intensity={resolvedLight?.directionalIntensity ?? document.worldState?.directionalLight?.intensity ?? 1.05}
                 position={resolvedLight?.directionalPosition ?? document.worldState?.directionalLight?.position ?? [8, 12, 4]}
             />
-            {(resolvedGrid?.visible ?? document.worldState?.gridVisible) !== false ? (
+            {!ambience && (resolvedGrid?.visible ?? document.worldState?.gridVisible) !== false ? (
                 <Grid
                     args={[resolvedGrid?.size ?? document.worldState?.gridSize ?? 24, resolvedGrid?.size ?? document.worldState?.gridSize ?? 24]}
                     cellColor={resolvedGrid?.color ?? 'rgba(255,255,255,0.10)'}
@@ -1012,8 +1064,73 @@ function SceneContent({
                     </SceneEntityErrorBoundary>
                 ))}
             </Suspense>
-        </>
+        </AmbienceContext.Provider>
     )
+}
+
+// RE-AIM AFTER MOUNT.
+//
+// The Canvas `camera` prop is read once, when the renderer is created, and
+// never again — handing it a new position on a later render does nothing at
+// all. That is fine for every Raw surface, whose camera is either the saved
+// view or the mentor's authored one and does not move on its own. It is not
+// fine for a surface that has to re-frame when the phone is turned or when a
+// child adds something outside the current shot, so this applies a view
+// imperatively, once per `key`, through the same OrbitControls the hand is
+// using.
+function ViewRequestApplier({ request }) {
+    const camera = useThree((state) => state.camera)
+    const controls = useThree((state) => state.controls)
+    const appliedRef = useRef(null)
+
+    useEffect(() => {
+        if (!request?.key) return
+        // Keyed on the controls too: this effect runs once before OrbitControls
+        // has registered itself, and a target set on nothing is a target lost.
+        const stamp = `${request.key}::${controls ? 'controls' : 'bare'}`
+        if (appliedRef.current === stamp) return
+        const isFirst = appliedRef.current === null
+        appliedRef.current = stamp
+
+        const target = request.target || [0, 0, 0]
+        let position = request.position || [0, 2.4, 6.5]
+
+        // KEEP THE WAY THEY WERE ALREADY LOOKING. A re-frame exists to put what
+        // somebody just made back in the picture — spinning the room round to
+        // north while doing it takes away the one thing they had already
+        // chosen. So on every re-frame after the first, the distance and the
+        // elevation come from the request and the compass bearing comes from
+        // wherever the camera is now.
+        if (isFirst || !Number.isFinite(request.distance) || !Number.isFinite(request.elevation)) {
+            // The first application has no "already looking" to keep.
+        } else {
+            const dx = camera.position.x - target[0]
+            const dz = camera.position.z - target[2]
+            if (Math.hypot(dx, dz) > 1e-4) {
+                const bearing = Math.atan2(dx, dz)
+                const cosE = Math.cos(request.elevation)
+                position = [
+                    target[0] + Math.sin(bearing) * cosE * request.distance,
+                    target[1] + Math.sin(request.elevation) * request.distance,
+                    target[2] + Math.cos(bearing) * cosE * request.distance
+                ]
+            }
+        }
+
+        if (Number.isFinite(request.fov) && camera.fov !== request.fov) {
+            camera.fov = request.fov
+            camera.updateProjectionMatrix()
+        }
+        camera.position.set(position[0], position[1], position[2])
+        if (controls?.target) {
+            controls.target.set(target[0], target[1], target[2])
+            controls.update?.()
+        } else {
+            camera.lookAt(target[0], target[1], target[2])
+        }
+    }, [request, camera, controls])
+
+    return null
 }
 
 export default function RawViewport({
@@ -1039,7 +1156,29 @@ export default function RawViewport({
     // (the "GEO" chip the audit photographed). Fullscreen keeps pills — the
     // cards are gone there.
     showSelectionPills = true,
-    interactive = true
+    interactive = true,
+    // The lens. 50° vertical is what every Raw surface has always used and what
+    // a wide screen wants — the default keeps every existing caller byte-
+    // identical. A full-bleed PORTRAIT surface needs a wider one: three.js
+    // derives the horizontal field from the aspect, so 50° across a 390×750
+    // canvas is 27° of room and everything else is off both edges. See
+    // src/make/makeFraming.js, which is where the number that gets passed in
+    // is worked out.
+    cameraFov = 50,
+    // A STANDING PLACE instead of a technical grid.
+    //
+    // Null for every existing caller, and null is exactly today's behaviour:
+    // the document's own background colour and its white technical grid. Raw's
+    // world is right for a bench in a dark studio and it is the language the
+    // toybox exists to escape — a child asked to make a room should feel they
+    // are standing somewhere, not inspecting a scene. Given
+    // `{ sky, ground, fogNear, fogFar }` this paints a calm ground, fogs it into
+    // the sky at the horizon, drops a soft contact shadow under everything, and
+    // leaves the grid unmounted.
+    ambience = null,
+    // A view to apply AFTER mount — `{ key, target, position, fov }`, applied
+    // once per key. See ViewRequestApplier above.
+    viewRequest = null
 }) {
     const viewportRef = useRef(null)
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
@@ -1134,7 +1273,7 @@ export default function RawViewport({
                 onCreated={({ gl }) => bindContextGuard(gl)}
                 camera={{
                     position: camera.position || [0, 2.4, 6.5],
-                    fov: 50,
+                    fov: cameraFov,
                     near: 0.1,
                     far: 200
                 }}
@@ -1147,7 +1286,9 @@ export default function RawViewport({
                 } : undefined}
             >
                 {interactive && !hasAuthoredCamera && <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />}
+                {viewRequest ? <ViewRequestApplier request={viewRequest} /> : null}
                 <SceneContent
+                    ambience={ambience}
                     showSelectionPills={showSelectionPills}
                     interactive={interactive}
                     document={document}

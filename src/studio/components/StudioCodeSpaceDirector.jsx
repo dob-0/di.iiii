@@ -1,6 +1,7 @@
-import { Suspense, lazy, useMemo } from 'react'
+import { Suspense, useMemo } from 'react'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { getCodeSpace } from '../utils/codeSpaces.js'
+import { WORK_DIRECTOR_SURFACES } from '../../works/routes.jsx'
 import { buildStudioHubPath, buildSpacesPath } from '../utils/studioRouting.js'
 import '../styles/studio-hub.css'
 import './studioCodeSpaceDirector.css'
@@ -20,16 +21,16 @@ import './studioCodeSpaceDirector.css'
 // all of it and then keeping two versions honest. Two props do the whole job.
 //
 // LAZY, and it must stay lazy. The experience pulls three.js and warms ~190 MB of
-// footage on mount. Studio's hub pays neither today and must not start.
-const AlgoVrithmExperience = lazy(() => import('../../algoVrithm/AlgoVrithmExperience.jsx'))
-
-const SURFACES = {
-    algovrithm: AlgoVrithmExperience
-}
+// footage on mount. Studio's hub pays neither today and must not start. The
+// registry keeps it lazy for the same reason, and is the only place a work's
+// module is named — see src/works/works.js.
 
 export default function StudioCodeSpaceDirector({ spaceId }) {
     const codeSpace = useMemo(() => getCodeSpace(spaceId), [spaceId])
-    const Surface = SURFACES[spaceId] ?? null
+    // Indexed, not called: react-hooks reads a component that arrives from a
+    // function call as one created during render, and warns that its state
+    // will reset. The map holds the lazy component itself.
+    const Surface = WORK_DIRECTOR_SURFACES[spaceId] ?? null
 
     // A space id that is not a code space, or is one this build has no surface
     // for. Says which, and offers the way out — a blank page here would read as
