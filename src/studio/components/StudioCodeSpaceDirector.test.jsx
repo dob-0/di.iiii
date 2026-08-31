@@ -46,7 +46,7 @@ describe('StudioCodeSpaceDirector', () => {
     it('can get back to Spaces and to Projects', async () => {
         render(<StudioCodeSpaceDirector spaceId="algovrithm" />)
         fireEvent.click(await screen.findByRole('button', { name: '← Spaces' }))
-        expect(navigate).toHaveBeenCalledWith('/studio')
+        expect(navigate).toHaveBeenCalledWith('/spaces')
         navigate.mockClear()
         fireEvent.click(screen.getByRole('button', { name: 'Projects' }))
         expect(navigate).toHaveBeenCalledWith('/algovrithm/studio')
@@ -65,6 +65,6 @@ describe('StudioCodeSpaceDirector', () => {
         render(<StudioCodeSpaceDirector spaceId="main" />)
         expect(screen.getByRole('heading', { name: 'No director here' })).toBeTruthy()
         expect(screen.queryByTestId('experience')).toBeNull()
-        expect(screen.getByText(/project documents/i)).toBeTruthy()
+        expect(screen.getByText(/keeps its work as projects/i)).toBeTruthy()
     })
 })

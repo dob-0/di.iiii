@@ -35,8 +35,8 @@ describe('NodePalette family grouping', () => {
         const { container } = open()
         const numbers = [...container.querySelectorAll('.raw-node-palette-group')]
             .find((el) => el.firstChild.textContent === 'numbers')
-        // value.* (5) + time + 9 math nodes, all placeable
-        expect(numbers.querySelector('.raw-node-palette-group-count').textContent).toBe('15')
+        // value.* (6) + time + 9 maths + the logic trio + Lag/Noise + the TD-audit waves
+        expect(numbers.querySelector('.raw-node-palette-group-count').textContent).toBe('46')
     })
 
     it('any typed character dissolves the grouping into the flat list', () => {
@@ -68,5 +68,30 @@ describe('NodePalette family grouping', () => {
         open()
         fireEvent.change(input(), { target: { value: 'work.agent' } })
         expect(screen.getByText('local dev')).toBeInTheDocument()
+    })
+})
+
+describe('NodePalette first contact (plan PR 1.8)', () => {
+    it('browsing leads with make — the first family a first-timer sees holds the scene atoms', () => {
+        const { container } = open()
+        const firstHeader = container.querySelector('.raw-node-palette-group')?.firstChild?.textContent
+        expect(firstHeader).toBe('make')
+    })
+
+    it('commands sit after the node families when browsing, not before', () => {
+        const { container } = open({ commands: [{ id: 'help', label: 'Help', hint: '', run: () => {} }] })
+        const rows = [...container.querySelectorAll('.raw-node-palette li')].map((el) => el.textContent)
+        const helpIndex = rows.findIndex((text) => text.startsWith('Help'))
+        const cubeIndex = rows.findIndex((text) => text.startsWith('Cube'))
+        expect(cubeIndex).toBeGreaterThanOrEqual(0)
+        expect(helpIndex).toBeGreaterThan(cubeIndex)
+    })
+
+    it('the working Monitor carries no shell tag', () => {
+        const { container } = open()
+        const monitorRow = [...container.querySelectorAll('.raw-node-palette li')]
+            .find((el) => el.textContent.startsWith('Monitor'))
+        expect(monitorRow).toBeTruthy()
+        expect(monitorRow.textContent).not.toMatch(/shell/i)
     })
 })

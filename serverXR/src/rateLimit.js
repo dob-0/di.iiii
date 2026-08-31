@@ -19,11 +19,25 @@ const clientKey = (req) => {
 // createRateLimiter({ windowMs, max, name }) -> Express middleware.
 // Over-limit requests get 429 + Retry-After (seconds). Buckets are pruned on
 // each sweep so an idle server holds no per-IP state.
-function createRateLimiter({ windowMs = 60_000, max = 30, name = 'requests', keyFn = clientKey } = {}) {
+// A limiter counts strangers. On `di up` there are none: the server binds
+// loopback, auth is off, and the only address it can ever see is the person who
+// started it. Counting them turns "put my library on my own machine" into "wait
+// ten minutes" — 51 files against a 60-per-10-minutes cap written for a public
+// address. Read per request rather than at boot so tests can toggle it, same as
+// everywhere else DI_LOCAL is consulted.
+const isLocalInstall = () => process.env.DI_LOCAL === '1'
+
+// `scope` is the half of the 429 sentence that names WHAT was counted. It
+// defaults to the address because that is what the default keyFn counts —
+// a limiter given a keyFn that counts something else (a session subject,
+// say) must say so, or it tells a throttled person their whole building is
+// to blame when only they are.
+function createRateLimiter({ windowMs = 60_000, max = 30, name = 'requests', keyFn = clientKey, scope = 'from this address' } = {}) {
   const buckets = new Map()
   let lastSweep = Date.now()
 
   return function rateLimit(req, res, next) {
+    if (isLocalInstall()) return next()
     const now = Date.now()
 
     if (now - lastSweep > windowMs) {
@@ -45,7 +59,7 @@ function createRateLimiter({ windowMs = 60_000, max = 30, name = 'requests', key
       const retryAfterSeconds = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))
       res.set('Retry-After', String(retryAfterSeconds))
       return res.status(429).json({
-        error: `Too many ${name} from this address — retry in ${retryAfterSeconds}s.`
+        error: `Too many ${name} ${scope} — retry in ${retryAfterSeconds}s.`
       })
     }
     next()

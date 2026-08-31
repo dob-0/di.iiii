@@ -143,7 +143,7 @@
     background: rgba(255,255,255,0.02);
     color: var(--ui-text-primary);
     font-size: 11px;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
     min-height: var(--panel-control-height);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
 }

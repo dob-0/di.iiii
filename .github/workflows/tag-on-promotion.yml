@@ -1,0 +1,100 @@
+name: Tag on promotion
+
+# Every dev → main promotion becomes a version an installed di.iiii can update
+# to. Decided 2026-08-19, and it only became reasonable when the local artifact
+# went from 117 MB to 3.1 MB: at that size a release is a small thing to hand
+# someone, and an update over a phone hotspot at a venue is realistic.
+#
+# It is not an auto-update. `di up` mentions a newer version in one dim line and
+# never installs it — silent auto-update mid-gig is how you lose a show. This
+# only makes sure there is something to mention.
+#
+# AFTER the production deploy, not alongside it: a tag is a promise that this
+# code runs, and the honest moment to make that promise is once it has. A failed
+# or cancelled deploy tags nothing.
+
+on:
+  workflow_run:
+    workflows: ['Deploy VPS (GHCR + SSH)']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to tag, without the leading v. Empty = next patch.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.decide.outputs.version }}
+      tagged: ${{ steps.decide.outputs.tagged }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The commit that actually deployed, not whatever main points at by
+          # the time this runs.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Decide the version
+        id: decide
+        run: |
+          set -euo pipefail
+          git fetch --tags --quiet
+
+          # Already tagged? Then a human chose a version for this commit — a
+          # minor, a major, a name with meaning — and this must not add a
+          # second one beside it.
+          existing=$(git tag --points-at HEAD | grep '^v' | head -1 || true)
+          if [ -n "$existing" ]; then
+            echo "::notice::$existing already points at this commit — nothing to do."
+            echo "tagged=false" >> "$GITHUB_OUTPUT"
+            echo "version=${existing#v}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          asked="${{ inputs.version }}"
+          if [ -n "$asked" ]; then
+            next="$asked"
+          else
+            # Next patch from the newest v-tag. Patch, because a routine
+            # promotion is what this fires on; a minor or a major is a decision
+            # someone makes on purpose, by tagging by hand before merging.
+            latest=$(git tag --list 'v*' --sort=-v:refname | head -1)
+            latest=${latest:-v0.0.0}
+            base=${latest#v}
+            major=$(echo "$base" | cut -d. -f1)
+            minor=$(echo "$base" | cut -d. -f2)
+            patch=$(echo "$base" | cut -d. -f3 | cut -d- -f1)
+            next="$major.$minor.$((patch + 1))"
+          fi
+
+          echo "::notice::tagging v$next"
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag -a "v$next" -m "di.iiii v$next — promoted from dev"
+          git push origin "v$next"
+          echo "tagged=true" >> "$GITHUB_OUTPUT"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+
+  # Called, not triggered. A tag pushed with GITHUB_TOKEN does not fire
+  # `on: push: tags`, so waiting for release.yml to notice would leave every
+  # automatic tag without the artifact the installer downloads — a version that
+  # exists and cannot be installed, which is worse than no version at all.
+  release:
+    needs: tag
+    if: needs.tag.outputs.tagged == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ needs.tag.outputs.version }}
+    permissions:
+      contents: write
+    secrets: inherit

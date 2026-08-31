@@ -23,7 +23,19 @@ npm run test:server-contracts        # API contract tests (also run as a named C
 npm run test:schema-sync             # guards shared/*.cjs vs src/shared/*.js drift (also in CI + pre-push gate)
 npm run space:pull -- <spaceId>      # pull a space from the live server (local-write only, safe)
 npm run space:push -- <spaceId> --dry-run   # ALWAYS dry-run first; real push writes to production
+npm run local:mirror:check           # what the live tiers have that this dev box doesn't (read-only)
+npm run local:mirror                 # bring every live space (prod, then staging) down to the local DB
 ```
+
+The local DB is its own SQLite file and nothing keeps it in step with the live tiers —
+`spaces:audit` shows the local tier's drift and still exits 0, because `local` is
+declared `governed: false`. If a space is missing from `localhost:5173/spaces`,
+that is the reason: run `local:mirror`. It never deletes, and it leaves projects
+that already exist locally untouched unless you pass `--force`.
+
+It reads **production first, then staging for whatever production does not have** —
+a space can be built on staging and not yet promoted (`dilijan` was), and a
+prod-only read reports the estate complete while quietly lacking it.
 
 ## Before you start working
 

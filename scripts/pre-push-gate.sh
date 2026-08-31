@@ -23,6 +23,11 @@ run_gate() {
     fi
 }
 
+# Warn, never block: "is this the platform or a project?" is a judgement call,
+# and the answer is the developer's. src/works/boundary.test.js is the gate
+# that actually fails; this is the sentence that arrives in time to matter.
+node scripts/works-boundary.mjs || true
+
 run_gate "lint" npm run lint
 run_gate "schema-sync tests" npm run test:schema-sync
 run_gate "wiki/user-facing docs check" npm run docs:wiki:check

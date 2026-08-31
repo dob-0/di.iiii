@@ -321,7 +321,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
 
     const architectureNodes = [
         {
-            id: 'editor', col: 1, row: 1, kicker: 'surface', label: 'Editor',
+            id: 'editor', col: 1, row: 1, kicker: 'editor', label: 'Editor',
             status: ui?.interactionMode === 'edit' ? 'edit' : 'nav',
             detail: ui?.isUiVisible ? 'UI visible on canvas' : 'UI hidden',
             meta: 'floating panels',
@@ -351,12 +351,12 @@ export function usePreferencesData({ onNavigateToEditor }) {
             actions: [{ key: 'copy-link', label: 'Copy Link', onClick: () => actions?.handleCopySpaceLink?.(sync?.spaceId) }]
         },
         {
-            id: 'scene', col: 2, row: 1, kicker: 'world', label: 'Scene Graph',
+            id: 'scene', col: 2, row: 1, kicker: 'world', label: 'Objects',
             status: `${visibleObjectCount}/${objects?.length || 0}`,
             detail: selectedCount ? `${selectedCount} selected` : 'no active selection',
             meta: `bg ${sceneSettings?.backgroundColor || '#000000'}`,
             tone: visibleObjectCount ? 'success' : 'muted',
-            tooltip: 'Live object graph, visibility, and scene composition.',
+            tooltip: 'Live object graph, visibility, and how the room is composed.',
             facts: [
                 { label: 'Objects', value: String(objects?.length || 0) },
                 { label: 'Visible', value: String(visibleObjectCount) },
@@ -372,7 +372,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
             detail: selectedObject ? formatVector(selectedObject.position, 2) : 'nothing selected',
             meta: selectedObject?.id || 'Select an object in the editor',
             tone: selectedObject ? 'accent' : 'muted',
-            tooltip: 'Currently selected scene object.',
+            tooltip: 'Currently selected object.',
             facts: selectedObject
                 ? [
                       { label: 'Object ID', value: selectedObject.id, mono: true },

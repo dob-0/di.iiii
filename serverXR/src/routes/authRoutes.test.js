@@ -146,3 +146,45 @@ describe('registerAuthRoutes login CSRF state', () => {
     expect(first).not.toBe(second)
   })
 })
+
+describe('registerAuthRoutes post-login redirect', () => {
+  const runCallback = async (frontendUrl, returnTo) => {
+    const router = makeFakeRouter()
+    registerAuthRoutes(router, {
+      config: {
+        ...baseConfig,
+        authSession: { ttlMs: 60_000 },
+        oauth: { ...baseConfig.oauth, frontendUrl, github: { ...baseConfig.oauth.github, enabled: true } }
+      },
+      createAuthSessionValue: () => ({ value: 'session' }),
+      setAuthSessionCookie: vi.fn()
+    })
+    const handlers = router.routes['get /api/auth/github/callback']
+    const finish = handlers[handlers.length - 1]
+    const req = { query: { state: signLoginState('test-secret', { returnTo }) }, user: { id: 'u1', display_name: 'U', role: 'user', spaces: [] } }
+    const res = { redirect: vi.fn() }
+    const next = vi.fn()
+    await finish(req, res, next)
+    if (next.mock.calls.length) throw next.mock.calls[0][0]
+    return res.redirect.mock.calls[0][0]
+  }
+
+  // A '/' frontendUrl (the default when OAUTH_FRONTEND_URL is unset) joined to
+  // a '/spaces' returnTo used to make '//spaces' — which the browser resolves
+  // as the host `spaces`, not our own path.
+  it('never emits a protocol-relative destination when frontendUrl is the default "/"', async () => {
+    expect(await runCallback('/', '/spaces')).toBe('/spaces?auth=ok')
+  })
+
+  it('does not double the slash when frontendUrl carries a trailing one', async () => {
+    expect(await runCallback('https://app.example/', '/spaces')).toBe('https://app.example/spaces?auth=ok')
+  })
+
+  it('keeps an absolute frontendUrl joined to the return path', async () => {
+    expect(await runCallback('https://app.example', '/spaces?invite=abc')).toBe('https://app.example/spaces?invite=abc&auth=ok')
+  })
+
+  it('falls back to the frontend root when there is no return path', async () => {
+    expect(await runCallback('/', null)).toBe('/?auth=ok')
+  })
+})

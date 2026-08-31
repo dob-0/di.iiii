@@ -8,7 +8,7 @@ import {
     clampOrbitPitch,
     orbitPosition,
     zoomOrbitDistance
-} from '../../algoVrithm/stageView.js'
+} from '../../timeline/stageView.js'
 
 // The outside camera. Orbits the standpoint instead of sitting on it.
 //

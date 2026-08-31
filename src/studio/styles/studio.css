@@ -236,6 +236,7 @@
     padding: 6px 12px;
     cursor: pointer;
     border-radius: 5px;
+    -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     transition: background 0.1s;
 }
@@ -1346,6 +1347,7 @@
     border-radius: 4px;
     cursor: pointer;
     line-height: 1.6;
+    -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     transition: color 0.12s, background 0.12s, border-color 0.12s;
 }
@@ -1381,6 +1383,7 @@
     text-transform: uppercase;
     padding: 3px 8px;
     border-radius: 4px;
+    -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     pointer-events: none;
 }
@@ -1397,6 +1400,7 @@
     border: 1px solid rgba(255,255,255,0.1);
     padding: 6px 10px;
     border-radius: 4px;
+    -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     pointer-events: none;
 }
@@ -1443,6 +1447,7 @@
     text-transform: uppercase;
     padding: 3px 8px;
     border-radius: 4px;
+    -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     pointer-events: none;
 }

@@ -105,6 +105,7 @@ const defaultWorldState = {
   atmosphereBlend: false,
   hubDecor: false,
   spawn: null,
+  fog: null,
   gridVisible: true,
   gridSize: 24,
   gridCellSize: 0.75,
@@ -165,8 +166,67 @@ const defaultPublishState = {
   lastExportAt: 0
 }
 
+const defaultShowState = {
+  // Wall-clock ms stamped once, the first time a Time node exists in the
+  // document. Every window (editor, second tab, /out) derives the same
+  // elapsed value from it, so one show has ONE clock. 0 = not stamped yet;
+  // the clock falls back to each window's own monotonic time.
+  clockEpoch: 0
+}
+
+const defaultMappingSurface = {
+  id: '',
+  name: '',
+  enabled: true,
+  // Corners in the OUTPUT frame's normalised space, clockwise from top-left.
+  // Normalised so a mapping aligned on a laptop still lands on the wall when
+  // the projector runs at a different resolution.
+  corners: [[0.1, 0.1], [0.5, 0.1], [0.5, 0.5], [0.1, 0.5]],
+  // Polygon mask in the surface's OWN normalised space. Empty = the whole
+  // rectangle.
+  mask: [],
+  source: { kind: 'test', ref: 'grid' },
+  resolution: [1280, 720],
+  opacity: 1,
+  brightness: 1,
+  contrast: 1,
+  saturation: 1,
+  hue: 0,
+  blend: 'normal'
+}
+
+const defaultMappingCue = {
+  id: '',
+  name: '',
+  key: '',
+  fade: 0.6,
+  hold: 0,
+  // Per-surface state keyed by surface id. GEOMETRY IS DELIBERATELY NOT IN A
+  // CUE: corners and masks are the wall, cues are the show.
+  surfaces: {}
+}
+
+const defaultMappingReference = {
+  url: '',
+  opacity: 0.5,
+  visible: false
+}
+
+const defaultMappingState = {
+  output: { width: 1920, height: 1080 },
+  background: '#000000',
+  surfaces: [],
+  cues: [],
+  reference: defaultMappingReference,
+  grid: 0,
+  // Seconds a surface takes to reach a new opacity. 0 while somebody is
+  // editing; a cue writes its own fade here in the same op batch that changes
+  // the surfaces, and CSS transitions read the AFTER style, so the browser
+  // animates with the duration the cue just asked for.
+  fade: 0
+}
+
 const defaultWorkspaceState = {
-  activeSurface: 'world',
   selectedNodeId: null,
   // Which universe.world node is the "live"/output one for a given scope — a flat
   // map keyed by scopeId (root scope key is '') so it works uniformly without a
@@ -192,6 +252,8 @@ const defaultProjectDocument = {
   xrState: defaultXrState,
   presentationState: defaultPresentationState,
   publishState: defaultPublishState,
+  showState: defaultShowState,
+  mappingState: defaultMappingState,
   windowLayout: defaultWindowLayout,
   assets: []
 }
@@ -231,7 +293,9 @@ const buildDefaultComponentsForType = (type = 'box') => {
       base.media = { assetId: null, fit: 'contain', autoplay: false, loop: false, muted: true }
       break
     case 'video':
-      base.media = { assetId: null, fit: 'contain', autoplay: true, loop: true, muted: true, volume: 0.8 }
+      // spatial is off by default: routing a video's audio through a panner
+      // changes how an existing space sounds, so it is opted into per video.
+      base.media = { assetId: null, fit: 'contain', autoplay: true, loop: true, muted: true, volume: 0.8, spatial: false, distance: 6, maxDistance: 40 }
       break
     case 'audio':
       base.media = { assetId: null, autoplay: true, loop: true, muted: false, volume: 0.8, distance: 8 }
@@ -284,6 +348,26 @@ const buildDefaultComponentsForType = (type = 'box') => {
   return base
 }
 
+/**
+ * What a NEWLY ADDED entity starts with — deliberately separate from
+ * buildDefaultComponentsForType, which is also the fallback normalizeEntity
+ * applies to every document ever saved.
+ *
+ * The two must not be merged. Turning a default on in the builder above would
+ * switch that behaviour on retroactively for every existing space the moment
+ * its document was next loaded; changing it here only affects things added from
+ * now on. Anything a creator would expect "in the box" belongs here.
+ */
+const buildCreationComponentsForType = (type = 'box') => {
+  const base = buildDefaultComponentsForType(type)
+  if (type === 'video') {
+    // A video added to a space is expected to bring its sound with it,
+    // placed in the room rather than playing flat at a constant volume.
+    base.media = { ...base.media, spatial: true, muted: false }
+  }
+  return base
+}
+
 const normalizeAsset = (asset = {}) => ({
   id: ensureString(asset.id, generateId('asset')),
   name: ensureString(asset.name, 'Untitled Asset'),
@@ -325,6 +409,27 @@ const normalizeWindowLayout = (layout = {}) => {
   }
 }
 
+// Portal label fonts are chosen by name from a fixed set, never by URL — the
+// renderer fetches whatever it is given and a document is untrusted input.
+const LABEL_FONT_NAMES = ['default', 'helvetica']
+
+const TEXT_REVEAL_MODES = ['none', 'typewriter']
+
+// A text entity's optional reveal. Absent (or 'none') means the text draws in
+// full immediately, which is what every text entity authored before this did.
+const normalizeTextReveal = (source) => {
+  const mode = TEXT_REVEAL_MODES.includes(source?.mode) ? source.mode : 'none'
+  if (mode === 'none') return { mode: 'none' }
+  return {
+    mode,
+    speed: Math.min(400, Math.max(1, ensureNumber(source.speed, 28))),
+    delay: Math.max(0, ensureNumber(source.delay, 0.4)),
+    lineDelay: Math.max(0, ensureNumber(source.lineDelay, 0.35)),
+    hold: Math.max(0, ensureNumber(source.hold, 3)),
+    loop: ensureBoolean(source.loop, false)
+  }
+}
+
 const TIMELINE_PROPERTIES = ['position', 'rotation', 'scale', 'opacity']
 const TIMELINE_EASINGS = ['linear', 'ease']
 
@@ -353,6 +458,21 @@ const normalizeTimeline = (source) => {
     tracks.push({ property, keys })
   })
   return { duration, loop: ensureBoolean(source.loop, true), tracks }
+}
+
+// Who made this. `subject` is the session identity ('github:99', 'guest:abc')
+// and is the only half worth comparing — `label` is a display name a person
+// can change. Everything made before this field existed normalizes to null,
+// and null means UNOWNED: never read it as yours, never as someone else's.
+// It has to live in the normalizer or it does not exist: both normalizers
+// return a literal, so an unlisted field is silently dropped on every op
+// apply and every document load, leaving the op-log holding a value the
+// rebuilt document does not have.
+const normalizeAuthor = (author) => {
+  if (!author || typeof author !== 'object') return null
+  const subject = ensureString(author.subject, '')
+  if (!subject) return null
+  return { subject, label: ensureString(author.label, '') }
 }
 
 const normalizeEntity = (entity = {}) => {
@@ -392,7 +512,8 @@ const normalizeEntity = (entity = {}) => {
       ...nextComponents.text,
       value: typeof nextComponents.text.value === 'string' ? nextComponents.text.value : defaultComponents.text.value,
       variant: ensureString(nextComponents.text.variant, defaultComponents.text.variant || '2d'),
-      billboard: ensureBoolean(nextComponents.text.billboard, defaultComponents.text?.billboard ?? false)
+      billboard: ensureBoolean(nextComponents.text.billboard, defaultComponents.text?.billboard ?? false),
+      reveal: normalizeTextReveal(nextComponents.text.reveal)
     }
   }
   if (nextComponents.media) {
@@ -400,6 +521,16 @@ const normalizeEntity = (entity = {}) => {
       ...defaultComponents.media,
       ...nextComponents.media,
       assetId: nextComponents.media.assetId || null
+    }
+    // Spatial-sound fields only exist where the defaults introduced them, so
+    // an image or model's media object is left exactly as it was.
+    if ('spatial' in (defaultComponents.media || {})) {
+      const media = nextComponents.media
+      media.spatial = ensureBoolean(media.spatial, defaultComponents.media.spatial ?? false)
+      // A zero or negative reference distance makes the panner divide by
+      // zero and the sound never attenuates.
+      media.distance = Math.max(0.1, ensureNumber(media.distance, defaultComponents.media.distance ?? 6))
+      media.maxDistance = Math.max(media.distance, ensureNumber(media.maxDistance, defaultComponents.media.maxDistance ?? 40))
     }
   }
   if (sourceComponents.link || defaultComponents.link) {
@@ -416,7 +547,13 @@ const normalizeEntity = (entity = {}) => {
       spaceId: ensureString(refSource.spaceId, refDefault.spaceId || ''),
       projectId: ensureString(refSource.projectId, refDefault.projectId || ''),
       mode: ['embed', 'portal'].includes(refMode) ? refMode : 'portal',
-      label: ensureString(refSource.label, refDefault.label || '')
+      label: ensureString(refSource.label, refDefault.label || ''),
+      // Label styling. Defaults reproduce the original look exactly (white
+      // type on a dark plate, renderer's built-in font), so a portal
+      // authored before these existed is untouched.
+      labelColor: ensureString(refSource.labelColor, refDefault.labelColor || '#ffffff'),
+      labelPlate: ensureBoolean(refSource.labelPlate, refDefault.labelPlate ?? true),
+      labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default'
     }
   }
   if (sourceComponents.runtime || defaultComponents.runtime) {
@@ -444,6 +581,7 @@ const normalizeEntity = (entity = {}) => {
     type,
     name: ensureString(entity.name, `${type[0].toUpperCase()}${type.slice(1)} Entity`),
     parentId: ensureString(entity.parentId, '') || null,
+    createdBy: normalizeAuthor(entity.createdBy),
     components: nextComponents
   }
 }
@@ -462,6 +600,13 @@ const normalizeWorldState = (world = {}) => {
       yaw: ensureNumber(source.spawn.yaw, 0),
       pitch: ensureNumber(source.spawn.pitch, 0),
       altY: ensureNumber(source.spawn.altY, 1.6)
+    } : null,
+    // Walk-mode atmosphere: null keeps the built-in close fog (8..50m); an
+    // authored {near, far} opens the distance for VAST scenes — the walker's
+    // camera far plane follows it (LiveProjectScene).
+    fog: source.fog && typeof source.fog === 'object' ? {
+      near: Math.max(0, ensureNumber(source.fog.near, 8)),
+      far: Math.max(1, ensureNumber(source.fog.far, 50))
     } : null,
     gridVisible: ensureBoolean(source.gridVisible, defaultWorldState.gridVisible),
     gridSize: Math.max(1, ensureNumber(source.gridSize, defaultWorldState.gridSize)),
@@ -580,6 +725,140 @@ const normalizePublishState = (publish = {}) => {
   }
 }
 
+const normalizeShowState = (show = {}) => {
+  const source = show && typeof show === 'object' ? show : {}
+  return {
+    clockEpoch: Math.max(0, ensureNumber(source.clockEpoch, defaultShowState.clockEpoch))
+  }
+}
+
+const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera']
+const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
+
+const normalizePoint = (point, fallback = [0, 0]) => {
+  if (!Array.isArray(point)) return [...fallback]
+  return [ensureNumber(point[0], fallback[0]), ensureNumber(point[1], fallback[1])]
+}
+
+const normalizeCorners = (corners) => {
+  const source = Array.isArray(corners) ? corners : []
+  return defaultMappingSurface.corners.map((fallback, index) => normalizePoint(source[index], fallback))
+}
+
+// A mask of one or two points is one being DRAWN — the operator has clicked
+// the first corners of a shape and not closed it yet — so the points are kept.
+// Nothing is clipped until there are three (maskToClipPath), which is what
+// "fewer than three cannot enclose anything" actually means.
+const normalizeMask = (mask) => {
+  if (!Array.isArray(mask)) return []
+  return mask.map((point) => normalizePoint(point))
+}
+
+const normalizeMappingSurface = (surface = {}) => {
+  const source = surface && typeof surface === 'object' ? surface : {}
+  const rawSource = source.source && typeof source.source === 'object' ? source.source : {}
+  const kind = ensureString(rawSource.kind, defaultMappingSurface.source.kind)
+  const blend = ensureString(source.blend, defaultMappingSurface.blend)
+  const resolution = Array.isArray(source.resolution) ? source.resolution : defaultMappingSurface.resolution
+  return {
+    id: ensureString(source.id, ''),
+    name: ensureString(source.name, ''),
+    enabled: ensureBoolean(source.enabled, defaultMappingSurface.enabled),
+    corners: normalizeCorners(source.corners),
+    mask: normalizeMask(source.mask),
+    source: {
+      kind: MAPPING_SOURCE_KINDS.includes(kind) ? kind : defaultMappingSurface.source.kind,
+      ref: ensureString(rawSource.ref, '')
+    },
+    resolution: [
+      Math.max(1, ensureNumber(resolution[0], defaultMappingSurface.resolution[0])),
+      Math.max(1, ensureNumber(resolution[1], defaultMappingSurface.resolution[1]))
+    ],
+    opacity: Math.min(1, Math.max(0, ensureNumber(source.opacity, defaultMappingSurface.opacity))),
+    brightness: Math.max(0, ensureNumber(source.brightness, defaultMappingSurface.brightness)),
+    contrast: Math.max(0, ensureNumber(source.contrast, defaultMappingSurface.contrast)),
+    saturation: Math.max(0, ensureNumber(source.saturation, defaultMappingSurface.saturation)),
+    hue: ensureNumber(source.hue, defaultMappingSurface.hue),
+    blend: MAPPING_BLEND_MODES.includes(blend) ? blend : defaultMappingSurface.blend
+  }
+}
+
+const normalizeCueSurface = (state = {}) => {
+  const source = state && typeof state === 'object' ? state : {}
+  const patch = {}
+  if (source.enabled !== undefined) patch.enabled = ensureBoolean(source.enabled, true)
+  if (source.opacity !== undefined) patch.opacity = Math.min(1, Math.max(0, ensureNumber(source.opacity, 1)))
+  if (source.source && typeof source.source === 'object') {
+    const kind = ensureString(source.source.kind, '')
+    if (MAPPING_SOURCE_KINDS.includes(kind)) {
+      patch.source = { kind, ref: ensureString(source.source.ref, '') }
+    }
+  }
+  return patch
+}
+
+const normalizeMappingCue = (cue = {}) => {
+  const source = cue && typeof cue === 'object' ? cue : {}
+  const rawSurfaces = source.surfaces && typeof source.surfaces === 'object' ? source.surfaces : {}
+  const surfaces = {}
+  Object.entries(rawSurfaces).forEach(([surfaceId, state]) => {
+    const id = ensureString(surfaceId)
+    if (!id) return
+    const patch = normalizeCueSurface(state)
+    if (Object.keys(patch).length) surfaces[id] = patch
+  })
+  const key = ensureString(source.key, '')
+  return {
+    id: ensureString(source.id, ''),
+    name: ensureString(source.name, ''),
+    key: /^[1-9]$/.test(key) ? key : '',
+    fade: Math.max(0, ensureNumber(source.fade, defaultMappingCue.fade)),
+    hold: Math.max(0, ensureNumber(source.hold, defaultMappingCue.hold)),
+    surfaces
+  }
+}
+
+const normalizeMappingReference = (reference = {}) => {
+  const source = reference && typeof reference === 'object' ? reference : {}
+  return {
+    url: ensureString(source.url, ''),
+    opacity: Math.min(1, Math.max(0, ensureNumber(source.opacity, defaultMappingReference.opacity))),
+    visible: ensureBoolean(source.visible, defaultMappingReference.visible)
+  }
+}
+
+const normalizeMappingState = (mapping = {}) => {
+  const source = mapping && typeof mapping === 'object' ? mapping : {}
+  const output = source.output && typeof source.output === 'object' ? source.output : {}
+  const surfaces = Array.isArray(source.surfaces) ? source.surfaces : []
+  const seen = new Set()
+  const seenCues = new Set()
+  return {
+    output: {
+      width: Math.max(1, ensureNumber(output.width, defaultMappingState.output.width)),
+      height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height))
+    },
+    background: ensureString(source.background, defaultMappingState.background),
+    surfaces: surfaces
+      .map(normalizeMappingSurface)
+      .filter((surface) => {
+        if (!surface.id || seen.has(surface.id)) return false
+        seen.add(surface.id)
+        return true
+      }),
+    cues: (Array.isArray(source.cues) ? source.cues : [])
+      .map(normalizeMappingCue)
+      .filter((cue) => {
+        if (!cue.id || seenCues.has(cue.id)) return false
+        seenCues.add(cue.id)
+        return true
+      }),
+    reference: normalizeMappingReference(source.reference),
+    grid: Math.max(0, Math.min(200, Math.round(ensureNumber(source.grid, defaultMappingState.grid)))),
+    fade: Math.max(0, Math.min(30, ensureNumber(source.fade, defaultMappingState.fade)))
+  }
+}
+
 const normalizeProjectMeta = (meta = {}) => {
   const source = meta && typeof meta === 'object' ? meta : {}
   const now = Date.now()
@@ -642,7 +921,8 @@ const normalizeProjectNode = (node = {}) => {
     graphY,
     runtimeId: source.runtimeId ?? null,
     assetRef,
-    parentId: ensureString(source.parentId, '') || null
+    parentId: ensureString(source.parentId, '') || null,
+    createdBy: normalizeAuthor(source.createdBy)
   }
 }
 
@@ -674,17 +954,20 @@ const normalizeTemplate = (template = {}) => {
 
 const normalizeWorkspaceState = (workspace = {}) => {
   const source = workspace && typeof workspace === 'object' ? workspace : {}
-  const activeSurface = ensureString(source.activeSurface, defaultWorkspaceState.activeSurface)
   const liveMap = source.liveWorldNodeIdByScope
   const activeMap = source.activeNodeIdByTypeScope
-  return {
+  const next = {
     ...cloneValue(defaultWorkspaceState),
     ...cloneValue(source),
-    activeSurface: ['world', 'view', 'graph'].includes(activeSurface) ? activeSurface : defaultWorkspaceState.activeSurface,
     selectedNodeId: ensureString(source.selectedNodeId, '') || null,
     liveWorldNodeIdByScope: (liveMap && typeof liveMap === 'object' && !Array.isArray(liveMap)) ? cloneValue(liveMap) : {},
     activeNodeIdByTypeScope: (activeMap && typeof activeMap === 'object' && !Array.isArray(activeMap)) ? cloneValue(activeMap) : {}
   }
+  // The World/View/Graph surface axis is retired (2026-08-20). Old documents
+  // still carry the key; shedding it here means it disappears on next save
+  // instead of riding along forever. Mirrors src/shared/projectSchema.js.
+  delete next.activeSurface
+  return next
 }
 
 const normalizeNodesList = (list = []) => {
@@ -732,6 +1015,8 @@ const normalizeProjectDocument = (document = {}) => {
     xrState: normalizeXrState(source.xrState),
     presentationState: normalizePresentationState(source.presentationState, worldState),
     publishState: normalizePublishState(source.publishState),
+    showState: normalizeShowState(source.showState),
+    mappingState: normalizeMappingState(source.mappingState),
     windowLayout: normalizeWindowLayout(source.windowLayout),
     assets: Array.isArray(source.assets) ? source.assets.map(normalizeAsset) : []
   }
@@ -968,6 +1253,125 @@ const applyProjectOps = (document, ops = []) => {
       }
       case 'setPublishState': {
         nextDocument.publishState = normalizePublishState(mergePatch(nextDocument.publishState, payload.patch || {}))
+        break
+      }
+      case 'setShowState': {
+        nextDocument.showState = normalizeShowState(mergePatch(nextDocument.showState, payload.patch || {}))
+        break
+      }
+      case 'setMappingState': {
+        const patch = payload.patch || {}
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          ...patch,
+          // A doc-level patch never rewrites the surfaces or the cues
+          // wholesale; that is what the surface and cue ops are for.
+          surfaces: nextDocument.mappingState.surfaces,
+          cues: nextDocument.mappingState.cues
+        })
+        break
+      }
+      case 'createMappingSurface': {
+        const surface = normalizeMappingSurface(payload.surface || {})
+        if (!surface.id) break
+        if (nextDocument.mappingState.surfaces.some((existing) => existing.id === surface.id)) break
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          surfaces: [...nextDocument.mappingState.surfaces, surface]
+        })
+        break
+      }
+      case 'setMappingSurface': {
+        const surfaceId = ensureString(payload.surfaceId)
+        if (!surfaceId) break
+        const index = nextDocument.mappingState.surfaces.findIndex((surface) => surface.id === surfaceId)
+        if (index === -1) break
+        const surfaces = [...nextDocument.mappingState.surfaces]
+        surfaces[index] = normalizeMappingSurface({
+          ...mergePatch(surfaces[index], payload.patch || {}),
+          id: surfaceId
+        })
+        nextDocument.mappingState = normalizeMappingState({ ...nextDocument.mappingState, surfaces })
+        break
+      }
+      case 'reorderMappingSurfaces': {
+        const order = Array.isArray(payload.surfaceIds) ? payload.surfaceIds.map((id) => ensureString(id)) : []
+        if (!order.length) break
+        const byId = new Map(nextDocument.mappingState.surfaces.map((surface) => [surface.id, surface]))
+        const reordered = order.map((id) => byId.get(id)).filter(Boolean)
+        const named = new Set(reordered.map((surface) => surface.id))
+        const rest = nextDocument.mappingState.surfaces.filter((surface) => !named.has(surface.id))
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          surfaces: [...rest, ...reordered]
+        })
+        break
+      }
+      case 'createMappingCue': {
+        const cue = normalizeMappingCue(payload.cue || {})
+        if (!cue.id) break
+        if (nextDocument.mappingState.cues.some((existing) => existing.id === cue.id)) break
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          cues: [...nextDocument.mappingState.cues, cue]
+        })
+        break
+      }
+      case 'setMappingCue': {
+        const cueId = ensureString(payload.cueId)
+        if (!cueId) break
+        const index = nextDocument.mappingState.cues.findIndex((cue) => cue.id === cueId)
+        if (index === -1) break
+        const patch = payload.patch || {}
+        const cues = [...nextDocument.mappingState.cues]
+        // `surfaces` REPLACES rather than merges — a removal would otherwise
+        // be silently impossible.
+        const merged = mergePatch(cues[index], { ...patch, surfaces: undefined })
+        delete merged.surfaces
+        cues[index] = normalizeMappingCue({
+          ...merged,
+          surfaces: patch.surfaces !== undefined ? patch.surfaces : cues[index].surfaces,
+          id: cueId
+        })
+        nextDocument.mappingState = normalizeMappingState({ ...nextDocument.mappingState, cues })
+        break
+      }
+      case 'deleteMappingCue': {
+        const cueId = ensureString(payload.cueId)
+        if (!cueId) break
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          cues: nextDocument.mappingState.cues.filter((cue) => cue.id !== cueId)
+        })
+        break
+      }
+      case 'reorderMappingCues': {
+        const order = Array.isArray(payload.cueIds) ? payload.cueIds.map((id) => ensureString(id)) : []
+        if (!order.length) break
+        const byId = new Map(nextDocument.mappingState.cues.map((cue) => [cue.id, cue]))
+        const reordered = order.map((id) => byId.get(id)).filter(Boolean)
+        const named = new Set(reordered.map((cue) => cue.id))
+        const rest = nextDocument.mappingState.cues.filter((cue) => !named.has(cue.id))
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          cues: [...reordered, ...rest]
+        })
+        break
+      }
+      case 'deleteMappingSurface': {
+        const surfaceId = ensureString(payload.surfaceId)
+        if (!surfaceId) break
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          surfaces: nextDocument.mappingState.surfaces.filter((surface) => surface.id !== surfaceId),
+          // Every cue forgets it too.
+          cues: nextDocument.mappingState.cues.map((cue) => {
+            if (!cue.surfaces[surfaceId]) return cue
+            const surfaces = { ...cue.surfaces }
+            delete surfaces[surfaceId]
+            return { ...cue, surfaces }
+          })
+        })
         break
       }
       case 'setWindowState': {
@@ -1212,6 +1616,71 @@ const invertSingleOp = (document, op) => {
     case 'setXrState': return patchInverse('setXrState', document.xrState)
     case 'setPresentationState': return patchInverse('setPresentationState', document.presentationState)
     case 'setPublishState': return patchInverse('setPublishState', document.publishState)
+    case 'setShowState': return patchInverse('setShowState', document.showState)
+    case 'setMappingState': return patchInverse('setMappingState', document.mappingState)
+    case 'reorderMappingSurfaces': {
+      const surfaces = document.mappingState?.surfaces || []
+      if (!Array.isArray(payload.surfaceIds) || !payload.surfaceIds.length || !surfaces.length) break
+      return [{ type: 'reorderMappingSurfaces', payload: { surfaceIds: surfaces.map((surface) => surface.id) } }]
+    }
+    case 'createMappingSurface': {
+      const surfaceId = ensureString(payload.surface?.id)
+      if (!surfaceId) break
+      const prev = (document.mappingState?.surfaces || []).find((surface) => surface.id === surfaceId)
+      if (prev) return []
+      return [{ type: 'deleteMappingSurface', payload: { surfaceId } }]
+    }
+    case 'createMappingCue': {
+      const cueId = ensureString(payload.cue?.id)
+      if (!cueId) break
+      if ((document.mappingState?.cues || []).some((cue) => cue.id === cueId)) return []
+      return [{ type: 'deleteMappingCue', payload: { cueId } }]
+    }
+    case 'setMappingCue': {
+      const cueId = ensureString(payload.cueId)
+      const prev = (document.mappingState?.cues || []).find((cue) => cue.id === cueId)
+      if (!cueId || !prev || !hasPatchKeys(payload.patch)) break
+      const inverse = patchInverse('setMappingCue', prev, { cueId })
+      if (payload.patch.surfaces !== undefined) {
+        const entry = inverse[0] || { type: 'setMappingCue', payload: { cueId, patch: {} } }
+        entry.payload.patch = { ...entry.payload.patch, surfaces: cloneValue(prev.surfaces) }
+        return [entry]
+      }
+      return inverse
+    }
+    case 'deleteMappingCue': {
+      const cueId = ensureString(payload.cueId)
+      const cues = document.mappingState?.cues || []
+      const index = cues.findIndex((cue) => cue.id === cueId)
+      if (index === -1) break
+      const restore = [{ type: 'createMappingCue', payload: { cue: cloneValue(cues[index]) } }]
+      if (index < cues.length - 1) {
+        restore.push({ type: 'reorderMappingCues', payload: { cueIds: cues.map((cue) => cue.id) } })
+      }
+      return restore
+    }
+    case 'reorderMappingCues': {
+      const cues = document.mappingState?.cues || []
+      if (!Array.isArray(payload.cueIds) || !payload.cueIds.length || !cues.length) break
+      return [{ type: 'reorderMappingCues', payload: { cueIds: cues.map((cue) => cue.id) } }]
+    }
+    case 'setMappingSurface': {
+      const surfaceId = ensureString(payload.surfaceId)
+      const prev = (document.mappingState?.surfaces || []).find((surface) => surface.id === surfaceId)
+      if (!surfaceId || !prev || !hasPatchKeys(payload.patch)) break
+      return patchInverse('setMappingSurface', prev, { surfaceId })
+    }
+    case 'deleteMappingSurface': {
+      const surfaceId = ensureString(payload.surfaceId)
+      const surfaces = document.mappingState?.surfaces || []
+      const index = surfaces.findIndex((surface) => surface.id === surfaceId)
+      if (index === -1) break
+      const restore = [{ type: 'createMappingSurface', payload: { surface: cloneValue(surfaces[index]) } }]
+      if (index < surfaces.length - 1) {
+        restore.push({ type: 'reorderMappingSurfaces', payload: { surfaceIds: surfaces.map((surface) => surface.id) } })
+      }
+      return restore
+    }
     case 'setWindowState': {
       const windowId = ensureString(payload.windowId)
       const windows = document.windowLayout?.windows || {}
@@ -1276,12 +1745,18 @@ module.exports = {
   defaultXrState,
   defaultWindowLayout,
   defaultWorkspaceState,
+  defaultMappingState,
+  defaultMappingSurface,
+  defaultMappingCue,
+  defaultMappingReference,
   buildDefaultComponentsForType,
+  buildCreationComponentsForType,
   cloneValue,
   ensureVector,
   generateId,
   mergePatch,
   normalizeAsset,
+  normalizeAuthor,
   normalizeEntity,
   normalizePresentationState,
   normalizePublishState,
@@ -1289,6 +1764,10 @@ module.exports = {
   normalizeProjectNode,
   normalizeProjectEdge,
   normalizeProjectMeta,
+  normalizeMappingState,
+  normalizeMappingSurface,
+  normalizeMappingCue,
+  normalizeMappingReference,
   normalizeWindowLayout,
   normalizeWorkspaceState,
   applyProjectOps,

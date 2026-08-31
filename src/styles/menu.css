@@ -5,7 +5,7 @@
     min-width: 220px;
     border-radius: 14px;
     overflow: hidden;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
     font-size: 13px;
     background: linear-gradient(165deg, rgba(18,26,42,0.96), rgba(7,11,20,0.92));
     border: 1px solid rgba(255,255,255,0.08);

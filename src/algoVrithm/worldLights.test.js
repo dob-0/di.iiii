@@ -4,7 +4,6 @@ import { resolveBackdrop } from './Backdrop.jsx'
 import { applyAmbientTint } from './SceneLights.jsx'
 import {
     AMBIENT_VALUE,
-    LIGHT_DEFAULTS,
     TUNNEL_WHITE,
     WORLD_PRESETS,
     WORLD_SWATCHES,
@@ -12,6 +11,7 @@ import {
 } from './palette.js'
 import {
     DEFAULT_AMBIENT,
+    LIGHT_DEFAULTS,
     addLight,
     isLightName,
     lightObjectName,
@@ -23,7 +23,7 @@ import {
     setLightValue,
     setWorldValue,
     worldWeights
-} from './worldLights.js'
+} from '../timeline/worldLights.js'
 
 const list = () => ([
     { id: 'a', title: 'A', startSec: 0, endSec: 8, backdrop: { color: '#ffffff', fogNear: 3, fogFar: 34, ambient: 1 } },

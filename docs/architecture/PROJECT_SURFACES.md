@@ -64,7 +64,7 @@ This repo currently behaves like one platform with multiple editor generations r
 - current package cycle
   - `0.2.0`
 - latest tagged release
-  - `v0.1.0`
+  - `v0.3.1`
 
 ## Project Metadata Sources
 
@@ -104,10 +104,11 @@ formerly wrapping `BetaGraphSurface`/`BetaViewport`) now wrap Raw's
 depended on Beta's code rather than just linking to it.
 
 Longer-term: Studio itself is being drawn into the node model rather than
-staying a fourth parallel surface — see `feat/raw-studio-node`, which adds a
-`studio` container node type (interior = Outliner/Scene/Inspector) that a
-user enters like any other node. That does not retire Studio-the-lane yet;
-`entities[]` and `nodes[]` remain two separate document models, and
+staying a fourth parallel surface. The `studio` container node type has since
+shipped (`src/project/graph/studioNode.js`) — its interior is the room, the
+Outliner, the Inspector and the library, and a user enters it like any other
+node. That does not retire Studio-the-lane yet; `entities[]` and `nodes[]`
+remain two separate document models, and
 reconciling them is a separate, larger decision.
 
 ### On forking a new lane from Beta (Raw, 2026-07-19)

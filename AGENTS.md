@@ -65,7 +65,8 @@ Full routing guide: [docs/ai/roles/model-routing.md](docs/ai/roles/model-routing
 
 - public repo `dob-0/di.iiii` (legacy mirror `dob-0/di.i`, inactive). `serverXR` is authoritative for auth, persistence, publish state, realtime.
 - lanes: `Studio` (main shipped editor) · `Raw` (experimental node-first, free-form node nesting, no singletons — Beta retired 2026-08-06, its role absorbed into Raw) · `V1` (compatibility).
-- work targets: `src/studio/` (main) · `src/project/` (shared doc/collab logic) · `src/raw/` (experimental) · `src/shared/` + `shared/` (schema/runtime contracts) · `serverXR/` (backend) · `scripts/` (automation) · `deploy/` (deploy docs).
+- work targets: `src/studio/` (main) · `src/project/` (shared doc/collab logic) · `src/raw/` (experimental) · `src/timeline/` (timeline/clock/lights/camera vocabulary, shared by the director and the pieces it edits) · `src/shared/` + `shared/` (schema/runtime contracts) · `serverXR/` (backend) · `scripts/` (automation) · `deploy/` (deploy docs).
+- **works are not platform.** `src/algoVrithm/` and `src/wcc/` are artworks, grandfathered, registered in `src/works/works.js` and mounted lazily from `src/works/routes.jsx` — the only two platform files allowed to name one. Never import from inside a work anywhere else (`src/works/boundary.test.js` fails the build), and never add a third: a new work gets its own repo and arrives as a space, like `br_id_ge` and `beyond_form`. See `docs/ai/golden_rules.md` → "Platform and works".
 - defaults: prefer `Studio` unless explicitly experimental; `src/project/` for shared logic; node-first over growing legacy. Treat `worldState`/`windowLayout`/old entity structures and `V1` edits as compatibility work unless told otherwise.
 - do not assume: `Raw` is the shipped lane, physical/hardware sync is productized, old orchestration files are the right home for new logic, or that the public repo is the deploy source of truth.
 

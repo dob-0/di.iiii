@@ -1,0 +1,154 @@
+<!-- Mirror of https://claude.ai/code/artifact/681536b7-ce1e-4a22-ae91-e1817c3ead52 — fetched 2026-08-21. Per the home rule (docs/ai/golden_rules.md) this in-repo file is the source of truth; the claude.ai page is the mirror. -->
+<title>Tightening the Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+  :root {
+    --ground: #0d0f12;
+    --panel: #14181e;
+    --line: #262c35;
+    --ink: #e8e6e1;
+    --muted: #8a929c;
+    --cyan: #7fd4d8;
+    --yellow: #f1fa8c;
+    --orange: #ffb86c;
+    --pink: #ff79c6;
+    --high: #ff8a8a;
+    --med: #ffd479;
+    --low: #7fb8ff;
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+    --sans: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font: 15.5px/1.65 var(--sans);
+    padding: 48px 20px 96px;
+  }
+  main { max-width: 720px; margin: 0 auto; }
+  h1 {
+    font: 600 15px/1.4 var(--mono); letter-spacing: .22em; text-transform: uppercase;
+    color: var(--cyan); margin: 0 0 6px;
+  }
+  .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 36px; }
+  h2 {
+    font: 600 12.5px/1.4 var(--mono); letter-spacing: .18em; text-transform: uppercase;
+    color: var(--ink); margin: 48px 0 6px; text-wrap: balance;
+  }
+  h2 .tag { color: var(--muted); font-weight: 400; letter-spacing: .1em; }
+  .lede { color: var(--muted); margin: 0 0 16px; font-size: 14px; }
+  p { margin: 0 0 14px; }
+  /* the three truths */
+  .truths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 28px 0 8px; }
+  .truth { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+  .truth b { display: block; font: 600 26px/1.1 var(--mono); font-variant-numeric: tabular-nums; margin-bottom: 6px; }
+  .truth span { color: var(--muted); font-size: 12.5px; line-height: 1.45; display: block; }
+  .t1 b { color: var(--yellow); } .t2 b { color: var(--pink); } .t3 b { color: var(--cyan); }
+  /* item rows — the board idiom */
+  .row {
+    display: flex; gap: 12px; align-items: baseline;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
+    padding: 10px 14px; margin: 6px 0;
+  }
+  .row .name { font: 500 13.5px var(--mono); white-space: nowrap; }
+  .row .note { color: var(--muted); font-size: 13.5px; flex: 1; }
+  .row .note em { color: var(--ink); font-style: normal; }
+  .badge {
+    font: 600 10.5px var(--mono); letter-spacing: .08em; padding: 2px 9px;
+    border-radius: 99px; white-space: nowrap; align-self: center;
+  }
+  .b-bug  { background: #2d1a1a; color: var(--high); }
+  .b-s    { background: #16281c; color: #63e6a4; }
+  .b-m    { background: #2a2413; color: var(--med); }
+  .b-l    { background: #1a2333; color: var(--low); }
+  .b-you  { background: #241a2d; color: #c9a2ff; }
+  /* gesture table */
+  table { border-collapse: collapse; width: 100%; margin: 14px 0 6px; font-size: 13.5px; }
+  .tablewrap { overflow-x: auto; }
+  th { font: 600 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.n { font: 500 14px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.n b { color: var(--cyan); font-weight: 600; }
+  .divider { border: 0; border-top: 1px solid var(--line); margin: 44px 0 0; }
+  .quiet { color: var(--muted); font-size: 13px; }
+  .spend {
+    background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--orange);
+    border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 13.5px;
+  }
+  .spend b { font-family: var(--mono); }
+  a { color: var(--cyan); }
+  @media (max-width: 560px) { .truths { grid-template-columns: 1fr; } body { padding-top: 32px; } }
+</style>
+<main>
+  <h1>Tightening the Desk</h1>
+  <p class="sub">The ranked plan from the 2026-08-21 deep audit of Raw — ten agents: six researching TouchDesigner, cables.gl, Blender/Unreal, touch-first tools, minimal-density design and the 2025–26 field; four walking Raw itself at phone and desktop size, counting every gesture. Every finding below carries screenshot or code evidence, and the load-bearing ones were re-verified by hand.</p>
+
+  <div class="truths">
+    <div class="truth t1"><b>4.3%</b><span>of a blank desktop screen does any work. On the phone, one node card is 51% of the screen's width.</span></div>
+    <div class="truth t2"><b>12 → 8</b><span>steps for the commonest full task (place, wire, see a result) — a third of the work is recoverable without adding one control.</span></div>
+    <div class="truth t3"><b>0</b><span>gestures exist today for renaming a node. The verb is missing entirely — the schema supports it, the UI never offers it.</span></div>
+  </div>
+
+  <h2>Track 1 — the defect wave <span class="tag">· verified bugs, fix first</span></h2>
+  <p class="lede">Small, safe, high-value. All confirmed on screenshots I read myself.</p>
+  <div class="row"><span class="name">Phone stacking</span><span class="note">every double-tap placement clamps into a ~108px band, so new nodes land <em>on top of each other</em> and off-screen right. Scale the clamp to real screen width.</span><span class="badge b-bug">bug</span></div>
+  <div class="row"><span class="name">Fake fullscreen</span><span class="note">entering the Scene with a node selected keeps the inspector sheet over 38% of the room — with an armed <em>Delete</em> button floating over the stage. Clear selection on entry.</span><span class="badge b-bug">bug</span></div>
+  <div class="row"><span class="name">No way out</span><span class="note">the fullscreen exit is an unstyled 21px default-HTML button — on a phone in zen mode it is effectively invisible. Style it like its 44px siblings.</span><span class="badge b-bug">bug</span></div>
+  <div class="row"><span class="name">Tap-empty ≠ deselect</span><span class="note">phones have no Escape key, and tapping empty canvas never closes the inspector. One call to the existing clearSelection from the background-tap handler.</span><span class="badge b-bug">bug</span></div>
+  <div class="row"><span class="name">Example lands unfit</span><span class="note">"All nodes example" drops 94 nodes and leaves the view where it was — spaghetti with most of the graph off-screen. One line: call the existing fit after insert.</span><span class="badge b-bug">bug</span></div>
+  <div class="row"><span class="name">Palette off-screen</span><span class="note">summoned near an edge, the palette runs past the viewport with no scroll cue. Clamp its position like any menu.</span><span class="badge b-bug">bug</span></div>
+  <div class="row"><span class="name">Windows hide their card</span><span class="note">Button/Text/Timeline windows open at a hardcoded spot — usually on top of the very card just placed. Spawn beside the card instead.</span><span class="badge b-bug">bug</span></div>
+  <div class="row"><span class="name">Cards escape</span><span class="note">a card dragged left can carry its door button fully off-screen with no way back. Clamp drags the way placement already clamps.</span><span class="badge b-bug">bug</span></div>
+  <div class="row"><span class="name">Silent mis-drop</span><span class="note">a wire aimed at Size lands on Roughness when types don't match — <em>silently</em>. Say what happened, on the surface, when a drop is redirected.</span><span class="badge b-bug">bug</span></div>
+
+  <h2>Track 2 — short ways <span class="tag">· the time-savers</span></h2>
+  <p class="lede">Every tool studied converges on the same few moves. None needs new chrome — each reuses the palette, the wire drag, or the inspector that already exist.</p>
+  <div class="row"><span class="name">Wire into space</span><span class="note"><em>The flagship.</em> Dragging a wire into empty canvas today shows a dead-drop toast. Make it open the palette, pre-filtered by the wire's type; picking places the node <em>and</em> wires it. Standard in cables.gl, Unreal, Blender, Node-RED — and the biggest single cut to daily patching.</span><span class="badge b-m">M</span></div>
+  <div class="row"><span class="name">Rename</span><span class="note">click the inspector title, type, Enter — the same inline edit the number fields already use. A theatre graph fills with six Numbers and four Cubes; names are how a show stays legible.</span><span class="badge b-s">S</span></div>
+  <div class="row"><span class="name">Desk wakes up</span><span class="note">zen hides the topbar on an empty canvas and never re-checks — so the Scene button stays invisible all session. Re-resolve when the first node appears; entering the scene drops from 4 steps to 1.</span><span class="badge b-s">S</span></div>
+  <div class="row"><span class="name">Insert on wire</span><span class="note">long-press or click a wire to splice a node into an existing connection — the "I need a Lag between these two" move, one gesture instead of four.</span><span class="badge b-m">M</span></div>
+  <div class="row"><span class="name">Chain mode</span><span class="note">a toggle in the palette: consecutive picks auto-wire from the previous node's output. Linear chains are most of patching; TouchDesigner users live on this.</span><span class="badge b-s">S</span></div>
+  <div class="row"><span class="name">Duplicate, findable</span><span class="note">Cmd+D exists but nothing on screen says so — add Duplicate to the palette's command list where Chat and Help already live.</span><span class="badge b-s">S</span></div>
+
+  <div class="tablewrap"><table>
+    <tr><th>Task</th><th>Steps now</th><th>After</th></tr>
+    <tr><td>Place + wire + see a result</td><td class="n">12</td><td class="n"><b>8</b></td></tr>
+    <tr><td>Enter the scene (fresh canvas)</td><td class="n">4</td><td class="n"><b>1</b></td></tr>
+    <tr><td>Add a node already wired</td><td class="n">4</td><td class="n"><b>3</b></td></tr>
+    <tr><td>Rename a node</td><td class="n">impossible</td><td class="n"><b>2</b></td></tr>
+  </table></div>
+
+  <h2>Track 3 — space that works <span class="tag">· density without clutter</span></h2>
+  <p class="lede">The stylesheet has no levers: 5,165 lines, every spacing a hand-typed pixel value, and ~700 lines style things that no longer exist. Build the levers first, then tighten.</p>
+  <div class="row"><span class="name">Delete the dead</span><span class="note">~14% of the stylesheet paints nothing (a superseded onboarding flow, an unused dialog). Remove before any density work.</span><span class="badge b-s">S</span></div>
+  <div class="row"><span class="name">A spacing scale</span><span class="note">six tokens for the values already most common, plus one density variable the tightest surfaces multiply by. Turns "make it 15% tighter" from a 300-edit slog into one number.</span><span class="badge b-m">M</span></div>
+  <div class="row"><span class="name">One geometry</span><span class="note">card width and header height live as JS constants <em>and</em> separate CSS literals; wires are drawn from the JS numbers. Export once, read everywhere — otherwise cards can't ever change size safely.</span><span class="badge b-s">S</span></div>
+  <div class="row"><span class="name">Topbar carries state</span><span class="note">the 1440px bar holds three small clusters and ~1000px of black. Let the centre carry what's already computed: zoom, node count, scope path. No new widgets — relocation.</span><span class="badge b-s">S</span></div>
+  <div class="row"><span class="name">Honest reserves</span><span class="note">every window pays a flat 120px bottom margin for chrome that often isn't there; the phone placement clamp pre-reserves 45% of the height for a sheet that doesn't exist yet. Derive from what's actually mounted.</span><span class="badge b-m">M</span></div>
+
+  <h2>Track 4 — the phone as a main instrument</h2>
+  <p class="lede">Wiring two visible nodes one-finger already works — the 44px port targets earn their keep. What breaks is everything around it.</p>
+  <div class="row"><span class="name">Tap-tap connect</span><span class="note">tap an output to arm it, tap an input to close the wire — the drag stays, this is the forgiving second path every touch node editor converges on. An armed port + palette also gives one-finger place-and-wire.</span><span class="badge b-m">M</span></div>
+  <div class="row"><span class="name">Palette rows 44px</span><span class="note">rows are 33px on touch — below the app's own standard, in its most-used surface. One media-query bump.</span><span class="badge b-s">S</span></div>
+  <div class="row"><span class="name">Toolbar respects the card</span><span class="note">the floating zoom/delete cluster dodges the bottom sheet but lands on the selected card's own ports. Add the card's rect to the avoidance maths.</span><span class="badge b-s">S</span></div>
+  <div class="row"><span class="name">Reachable undo</span><span class="note">undo exists only as Ctrl+Z — nonexistent on glass. One-finger reachable, likely in the same zoom cluster.</span><span class="badge b-s">S</span></div>
+  <div class="row"><span class="name">Up &amp; home, pinned</span><span class="note">a fixed "up a level" + "fit to view" pair in the thumb zone — the one-finger answer to deep rooms and lost graphs, straight from TD's breadcrumb keys.</span><span class="badge b-s">S</span></div>
+
+  <h2>Track 5 — richness inside minimalism</h2>
+  <p class="lede">From the OP-1, Linear, and Arc studies: richness that appears under intent and vanishes at rest.</p>
+  <div class="row"><span class="name">Long-press peek</span><span class="note">hold a node or wire: a quiet overlay shows its live value, error state, cost. Release, gone. TouchDesigner's middle-click, made one-finger.</span><span class="badge b-m">M</span></div>
+  <div class="row"><span class="name">Status line</span><span class="note">one ambient line of truth (what's live, what's sending, what the clock says) in chrome that already exists — the board we built outside the product, moved inside it.</span><span class="badge b-m">M</span></div>
+  <div class="row"><span class="name">Live value on the node</span><span class="note">a small living number or waveform on the card itself — the single most informative pixel-per-pixel upgrade a patcher can have, and the costliest here. Worth a prototype before a promise.</span><span class="badge b-l">L</span></div>
+
+  <h2>Track 6 — bigger bets <span class="tag">· your call</span></h2>
+  <div class="row"><span class="name">App mode</span><span class="note">a second face for a finished graph: only its Buttons, Timelines and Monitors, arranged full-bleed — the operator's desk without the wiring. This is where "use Raw to show the show" fully lands, and it's the field's clear 2026 direction.</span><span class="badge b-you">yours</span></div>
+  <div class="row"><span class="name">Collapse to node</span><span class="note">fold a subgraph into one card with its promoted ports — touches the port-promotion seam, so it wants design care, not a quick wave.</span><span class="badge b-you">yours</span></div>
+  <div class="row"><span class="name">Spoken subgraphs</span><span class="note">describe a patch, get a proposal you accept or edit — the desk already has agents; the research says keep it a <em>proposal</em>, never an auto-apply.</span><span class="badge b-you">yours</span></div>
+
+  <h2>What we will not copy</h2>
+  <p class="quiet">Modal parameter dialogs that block the canvas · hotkey-only power layers with no visible equivalent (locks out touch) · four parameter modes per field · essential info behind mouse-only inputs · zoom gestures that fight pinch. The field's mistakes are as instructive as its wins.</p>
+
+  <hr class="divider">
+  <h2>The method &amp; the spend</h2>
+  <div class="spend">This ran as the standing research method: questions first, then <b>10 sonnet agents</b> in one workflow (<b>~1.05M</b> subagent tokens, ~24 min), structured returns only, synthesis done by the main session, everything banked to a dated ledger (<b>RAW_UX_LEDGER.md</b> + raw JSON) so no question here is ever paid for twice. Deep dives are earned by rank, not curiosity — nothing above needed one yet.</div>
+  <p class="quiet">Proposed order: Track 1 (defect wave, immediately) → Track 2's flagship + rename + desk-wakes-up → Track 3's levers → Track 4 → Track 5 prototypes → your word on Track 6. Every wave keeps the cadence: tests, lint, build, seen-before-shipped, staging as guest.</p>
+</main>

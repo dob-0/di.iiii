@@ -41,7 +41,7 @@
    height. The author can move the seam from there — see splitLayout.js for why
    a dragged divider does not contradict the fixed-share note above. */
 .algo-vrithm-root.is-split .algo-vrithm-stagearea {
-    bottom: var(--algo-vrithm-split, 45%);
+    bottom: var(--di-split, 45%);
 }
 
 /* One bar across the top: the words on the left, the buttons on the right, and
@@ -141,7 +141,9 @@
         display: inline-flex;
         align-items: center;
     }
+
 }
+
 
 /* The one trace the director panel leaves when it is closed. Author-only and
    deliberately quiet — it sits in the header line the audience also sees. */
@@ -161,7 +163,9 @@
     .algo-vrithm-panel-hint {
         display: none;
     }
+
 }
+
 
 .algo-vrithm-actions button:hover {
     color: #05060f;
@@ -196,418 +200,6 @@
     pointer-events: none;
 }
 
-/* ---- director panel — author only, never shipped to an audience ---- */
-
-.algo-vrithm-director {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 5;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 14px 18px 16px;
-    background: rgba(5, 6, 15, 0.88);
-    border-top: 1px solid rgba(77, 249, 255, 0.35);
-    backdrop-filter: blur(6px);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.72);
-    user-select: none;
-}
-
-.algo-vrithm-director-head {
-    display: flex;
-    align-items: baseline;
-    gap: 14px;
-    flex-wrap: wrap;
-}
-
-.algo-vrithm-director-tag {
-    color: #4df9ff;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    font-weight: 700;
-}
-
-.algo-vrithm-director-time {
-    font-size: 14px;
-    font-variant-numeric: tabular-nums;
-    color: #fff;
-}
-
-.algo-vrithm-director-now {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-.algo-vrithm-director-transport {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.algo-vrithm-director button {
-    font-family: inherit;
-    font-size: 11px;
-    color: #4df9ff;
-    background: rgba(77, 249, 255, 0.08);
-    border: 1px solid rgba(77, 249, 255, 0.4);
-    border-radius: 4px;
-    padding: 4px 9px;
-    cursor: pointer;
-}
-
-.algo-vrithm-director button:hover {
-    background: rgba(77, 249, 255, 0.2);
-}
-
-.algo-vrithm-director button.is-active {
-    color: #05060f;
-    background: #4df9ff;
-}
-
-.algo-vrithm-director-rates {
-    display: flex;
-    gap: 4px;
-    margin-left: 6px;
-}
-
-.algo-vrithm-director-hint {
-    margin-left: auto;
-    color: rgba(255, 255, 255, 0.32);
-}
-
-/* ---- timeline ---- */
-
-.algo-vrithm-director-track {
-    position: relative;
-    padding-top: 16px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 4px;
-    cursor: crosshair;
-    overflow: hidden;
-    /* NEVER shrink. The panel is a flex column inside a height-capped row, so
-       without this the track is the item flexbox chooses to squeeze — and
-       because it hides its own overflow, the clips simply VANISH one row at a
-       time from the bottom. Five sequences showed one, with no scrollbar and no
-       clue anything was missing: the timeline looked like a piece with a single
-       clip in it. The panel scrolls instead. */
-    flex-shrink: 0;
-}
-
-.algo-vrithm-director-ruler {
-    position: relative;
-    height: 14px;
-}
-
-/* Label sits to the RIGHT of its tick line rather than centred on it — the
-   0s label would otherwise be half off the left edge of the track. */
-.algo-vrithm-director-tick {
-    position: absolute;
-    top: -14px;
-    font-size: 9px;
-    color: rgba(255, 255, 255, 0.35);
-    border-left: 1px solid rgba(255, 255, 255, 0.12);
-    padding-left: 3px;
-    white-space: nowrap;
-}
-
-.algo-vrithm-director-row {
-    position: relative;
-    height: 26px;
-    margin: 3px 0;
-}
-
-.algo-vrithm-director-clip {
-    position: absolute;
-    top: 0;
-    height: 100%;
-    min-width: 3px;
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
-    background: rgba(77, 249, 255, 0.14);
-    border: 1px solid #4df9ff;
-    border-radius: 3px;
-    cursor: grab;
-    overflow: hidden;
-}
-
-.algo-vrithm-director-clip:active {
-    cursor: grabbing;
-}
-
-/* The clip whose controls are loaded in the inspector below — the timeline's
-   answer to "where am I?".
-   The border colour is set inline from the row's own backdrop, so the marker
-   cannot BE the border without either fighting it with !important or throwing
-   away the colour coding that tells the author which world a clip is in. A
-   brighter fill plus a white ring reads at a glance and leaves that intact. */
-.algo-vrithm-director-clip.is-inspected {
-    background: rgba(77, 249, 255, 0.34);
-    box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.75),
-        0 0 12px rgba(77, 249, 255, 0.45);
-    /* Above its neighbours, so the ring is not clipped where windows overlap —
-       and windows overlap on purpose here (see sequences/index.js). */
-    z-index: 1;
-}
-
-.algo-vrithm-director-clip-label {
-    flex: 1;
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding: 0 8px;
-    color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    pointer-events: none;
-}
-
-.algo-vrithm-director-clip-label em {
-    font-style: normal;
-    color: rgba(255, 255, 255, 0.45);
-    font-variant-numeric: tabular-nums;
-}
-
-.algo-vrithm-director-handle {
-    width: 8px;
-    align-self: stretch;
-    flex: 0 0 8px;
-    background: rgba(77, 249, 255, 0.55);
-    cursor: ew-resize;
-}
-
-.algo-vrithm-director-handle:hover {
-    background: #4df9ff;
-}
-
-/* A stretch with nothing on screen — the piece playing to an empty room.
-   Invisible in the numbers, unmissable here. */
-.algo-vrithm-director-gap {
-    position: absolute;
-    top: 16px;
-    bottom: 0;
-    background: repeating-linear-gradient(
-        45deg,
-        rgba(255, 76, 92, 0.28),
-        rgba(255, 76, 92, 0.28) 5px,
-        transparent 5px,
-        transparent 10px
-    );
-    border-left: 1px solid rgba(255, 76, 92, 0.7);
-    border-right: 1px solid rgba(255, 76, 92, 0.7);
-    pointer-events: none;
-}
-
-.algo-vrithm-director-cursor {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: #ff4c5c;
-    box-shadow: 0 0 6px rgba(255, 76, 92, 0.9);
-    pointer-events: none;
-}
-
-/* ---- numeric rows ---- */
-
-/* Names the clip whose controls are showing. Deliberately quiet — it is a
-   label, not a control, and the highlighted clip on the track above is already
-   doing the pointing. Without it the panel reads as though it has lost the
-   other rows rather than as focused on one. */
-.algo-vrithm-director-inspector-head {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin: 10px 0 6px;
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #fff;
-}
-
-.algo-vrithm-director-inspector-head em {
-    font-style: normal;
-    font-size: 10px;
-    letter-spacing: 0.02em;
-    text-transform: none;
-    color: rgba(255, 255, 255, 0.45);
-}
-
-.algo-vrithm-director-rows {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.algo-vrithm-director-rows li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.algo-vrithm-director-pair {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.algo-vrithm-director-jump {
-    min-width: 150px;
-    text-align: left;
-}
-
-.algo-vrithm-director-field {
-    width: 62px;
-    font-family: inherit;
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-    color: #fff;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 3px;
-    padding: 3px 6px;
-}
-
-.algo-vrithm-director-field:focus {
-    outline: none;
-    border-color: #4df9ff;
-}
-
-.algo-vrithm-director-ripple {
-    display: flex;
-    gap: 4px;
-}
-
-/* Collapsed: keep the timecode and transport, drop everything else. Done in
-   CSS rather than by branching the JSX so the timeline keeps its measured
-   width and does not have to re-measure every time you peek at the piece. */
-.algo-vrithm-director.is-collapsed > *:not(.algo-vrithm-director-head):not(.algo-vrithm-director-transport) {
-    display: none;
-}
-
-.algo-vrithm-director.is-collapsed .algo-vrithm-director-hint {
-    display: none;
-}
-
-.algo-vrithm-director-collapse {
-    padding: 2px 7px !important;
-}
-
-/* ---- media bin ---- */
-
-.algo-vrithm-director-bin {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    padding-top: 2px;
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.algo-vrithm-director-chip {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 6px;
-}
-
-.algo-vrithm-director-chip em {
-    font-style: normal;
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.35);
-}
-
-/* Asset clips read differently from written sequences on the timeline — one
-   is a file placed in the room, the other is the room. */
-.algo-vrithm-director-clip.is-asset {
-    background: rgba(255, 176, 77, 0.14);
-    border-color: #ffb04d;
-    border-style: dashed;
-}
-
-.algo-vrithm-director-clip.is-asset .algo-vrithm-director-handle {
-    background: rgba(255, 176, 77, 0.55);
-}
-
-.algo-vrithm-director-clip.is-asset .algo-vrithm-director-handle:hover {
-    background: #ffb04d;
-}
-
-.algo-vrithm-director-remove {
-    color: #ff8a94 !important;
-    border-color: rgba(255, 138, 148, 0.45) !important;
-    background: rgba(255, 138, 148, 0.08) !important;
-    line-height: 1;
-    /* Pushed to the end of the row so it is never adjacent to a field the
-       author is tabbing through — a destructive control next to a number input
-       gets hit by accident. */
-    margin-left: auto;
-}
-
-/* The last remaining sequence. Shown rather than hidden, so the row's shape
-   does not change and the reason is available on hover. */
-.algo-vrithm-director-remove:disabled {
-    color: rgba(255, 255, 255, 0.25) !important;
-    border-color: rgba(255, 255, 255, 0.14) !important;
-    background: transparent !important;
-    cursor: not-allowed;
-}
-
-.algo-vrithm-director-foot {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.algo-vrithm-director-warn {
-    color: #ff8a94;
-}
-
-.algo-vrithm-director-note {
-    color: rgba(255, 255, 255, 0.32);
-}
-
-/* Save and Copy sit together at the right end of the footer, save first: it is
-   the one to reach for, and Copy is the fallback for what it cannot do. The
-   `margin-left: auto` that used to push Copy over now pushes the pair. */
-.algo-vrithm-director-save {
-    margin-left: auto;
-    border-color: rgba(77, 249, 255, 0.55) !important;
-    color: #cfefff !important;
-}
-
-.algo-vrithm-director-save:disabled {
-    opacity: 0.5;
-    cursor: progress;
-}
-
-.algo-vrithm-director-source {
-    width: 100%;
-    height: 160px;
-    font-family: inherit;
-    font-size: 11px;
-    color: #cfefff;
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(77, 249, 255, 0.35);
-    border-radius: 4px;
-    padding: 8px;
-    resize: vertical;
-}
-
 /* ── Stage view (author-only) ─────────────────────────────────────────────
    The bottom stack: the "see whole installation" toggle sitting directly on
    top of the director panel. One flow column rather than two things fighting
@@ -623,7 +215,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: var(--algo-vrithm-split, 45%);
+    height: var(--di-split, 45%);
     z-index: 5;
     display: flex;
     flex-direction: column;
@@ -631,78 +223,6 @@
     /* A hairline, not a border-box: the split should read as two regions
        rather than as a panel sitting on the picture. */
     border-top: 1px solid rgba(77, 249, 255, 0.22);
-}
-
-/* The seam, and the only way to move it.
-   The visible line is the border above; this is a 9px grab strip centred on it,
-   because a 1px drag target is a test of aim rather than a control. It lives in
-   the root beside both halves rather than inside the editor — the editor clips
-   its own overflow, which would eat a handle straddling its top edge.
-   `touch-action: none` or a touch drag scrolls the page instead of resizing. */
-.algo-vrithm-split-handle {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: var(--algo-vrithm-split, 45%);
-    height: 9px;
-    margin-bottom: -4px;
-    z-index: 6;
-    cursor: ns-resize;
-    touch-action: none;
-}
-
-.algo-vrithm-split-handle:hover,
-.algo-vrithm-split-handle:focus-visible {
-    background: rgba(77, 249, 255, 0.35);
-    outline: none;
-}
-
-/* The panel positions itself for the standalone case; inside the stack it
-   flows instead — and scrolls within its own row rather than growing the row,
-   which is what keeps the stage's half of the split from being squeezed away
-   by a piece with a lot of clips. */
-.algo-vrithm-stage .algo-vrithm-director {
-    position: relative;
-    z-index: auto;
-    overflow-y: auto;
-    /* Somewhere to scroll TO. Without it the last control sits flush against
-       the window edge and reads as the end of the panel even when it is not. */
-    padding-bottom: 24px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(77, 249, 255, 0.45) transparent;
-}
-
-/* A scrollbar you can see and grab. The default overlay bar on Windows is
-   nearly invisible against this panel, so a list that scrolls looks like a list
-   that is simply cut off. */
-.algo-vrithm-stage .algo-vrithm-director::-webkit-scrollbar {
-    width: 10px;
-}
-
-.algo-vrithm-stage .algo-vrithm-director::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.algo-vrithm-stage .algo-vrithm-director::-webkit-scrollbar-thumb {
-    background: rgba(77, 249, 255, 0.35);
-    border-radius: 5px;
-}
-
-.algo-vrithm-stage .algo-vrithm-director::-webkit-scrollbar-thumb:hover {
-    background: rgba(77, 249, 255, 0.62);
-}
-
-/* ONE scroll region, not two nested ones.
-   The 34vh cap on the row list dates from when this list held EVERY row stacked
-   and the panel floated over a full-window canvas. Inside the split neither
-   condition holds: the stage is a fixed fraction of the window, the panel above
-   already scrolls within it, and the inspector shows a single clip. All the cap
-   does now is add a second scrollbar that hides that clip's world and lights
-   disclosures below an invisible inner fold.
-   The standalone case keeps its cap — see the note on the base rule. */
-.algo-vrithm-stage .algo-vrithm-director-rows {
-    max-height: none;
-    overflow-y: visible;
 }
 
 .algo-vrithm-stage-view {
@@ -901,395 +421,57 @@
     white-space: nowrap;
 }
 
-/* ---- world & lights ----
- *
- * Two disclosures per timeline row: the ROOM (colour, fog, fill) and the lamps
- * standing in it. Both closed by default — see the height note below.
+
+/* How the director looks when it is mounted INSIDE this piece's stage.
+ * The panel itself is the platform's (src/raw/director/director.css); these
+ * rules are this piece's opinion about it in its own room, so they live here.
  */
 
-/* The panel already covers roughly the bottom 45% of a full-window canvas, and
-   the outside view's framing is calibrated against that (ORBIT_AIM_DROP in
-   stageView.js aims below the pivot so the gizmo does not land behind this
-   panel). Four rows each opening two disclosures would push the panel past
-   two-thirds of the screen and silently invalidate that calibration — the
-   author would be judging placement through a letterbox.
-   So the row list scrolls instead of growing. Capped in vh rather than px
-   because the thing being protected is a PROPORTION of the viewport. */
-.algo-vrithm-director-rows {
-    max-height: 34vh;
+
+/* The panel positions itself for the standalone case; inside the stack it
+   flows instead — and scrolls within its own row rather than growing the row,
+   which is what keeps the stage's half of the split from being squeezed away
+   by a piece with a lot of clips. */
+.algo-vrithm-stage .di-director {
+    position: relative;
+    z-index: auto;
     overflow-y: auto;
-    /* Room for the scrollbar so it never sits on top of a number field. */
-    padding-right: 4px;
+    /* Somewhere to scroll TO. Without it the last control sits flush against
+       the window edge and reads as the end of the panel even when it is not. */
+    padding-bottom: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(77, 249, 255, 0.45) transparent;
 }
 
-/* Own line under the timing boxes, quiet enough to ignore once it is learned.
-   Full width so it never squeezes a number field onto a second row. */
-.algo-vrithm-director-rowhint {
-    width: 100%;
-    font-size: 10px;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.38);
-    padding-left: 2px;
+/* A scrollbar you can see and grab. The default overlay bar on Windows is
+   nearly invisible against this panel, so a list that scrolls looks like a list
+   that is simply cut off. */
+.algo-vrithm-stage .di-director::-webkit-scrollbar {
+    width: 10px;
 }
 
-.algo-vrithm-director-rowhint b {
-    font-weight: 400;
-    color: rgba(77, 249, 255, 0.75);
-}
-
-/* Breaks onto its own line inside the row's flex-wrap, so opening a disclosure
-   never reflows the clip's timing fields above it. */
-.algo-vrithm-director-sections {
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 14px;
-    padding-left: 2px;
-}
-
-.algo-vrithm-director-section-toggle {
-    color: rgba(255, 255, 255, 0.45) !important;
-    border-color: transparent !important;
-    background: transparent !important;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-size: 9px;
-}
-
-.algo-vrithm-director-section.is-open .algo-vrithm-director-section-toggle {
-    color: #4df9ff !important;
-}
-
-.algo-vrithm-director-section-body {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 10px;
-    margin-top: 5px;
-    padding: 7px 9px;
-    border-left: 1px solid rgba(77, 249, 255, 0.28);
-    background: rgba(255, 255, 255, 0.03);
-}
-
-/* ---- colour ---- */
-
-.algo-vrithm-director-color-choice,
-.algo-vrithm-director-swatches,
-.algo-vrithm-director-custom {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.algo-vrithm-director-color-choice {
-    flex-wrap: wrap;
-    gap: 4px 8px;
-}
-
-/* Wraps, and aligns to the top: the eight light swatches do not fit one line
-   at every panel width, and a two-line name must not push its own chip down
-   out of line with the rest of the row. */
-.algo-vrithm-director-swatches {
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 7px 5px;
-}
-
-/* A swatch is a chip PLUS its name, stacked.
- *
- * The chip alone is not a usable control here. Four of the five world colours
- * are near-black by design (#0D1114 through #2A3742) — as bare chips they are
- * four identical empty boxes on a dark panel, and the only way to tell them
- * apart is hovering each one for its tooltip. They are genuinely different in
- * the room, where fog fills the frame and the difference between lightness
- * 0.065 and 0.212 decides how far the distance recedes; they are only
- * indistinguishable at 17 pixels.
- *
- * So the name carries the identification and the chip carries the colour. That
- * also puts the palette's vocabulary in front of the author while she works,
- * which is worth having in a tool for a piece whose colours are all named. */
-.algo-vrithm-director-swatch-item {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    /* Bounded so a long name ("tunnel wall (s01 only)") cannot stretch one
-       column far wider than its neighbours and break the grid's rhythm. */
-    max-width: 62px;
-}
-
-.algo-vrithm-director-swatch-name {
-    font-style: normal;
-    font-size: 8px;
-    line-height: 1.25;
-    letter-spacing: 0.04em;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.38);
-    /* Names wrap rather than truncate. An ellipsis on "tunnel wall (s01 only)"
-       would hide the one part that matters. */
-    overflow-wrap: anywhere;
-}
-
-.algo-vrithm-director-swatch-item:hover .algo-vrithm-director-swatch-name {
-    color: rgba(255, 255, 255, 0.72);
-}
-
-.algo-vrithm-director-swatch-item:has(.is-selected) .algo-vrithm-director-swatch-name {
-    color: #4df9ff;
-}
-
-/* Square, not round: these read as sampled material rather than as status
-   dots, and a row of circles at this size turns into a progress indicator. */
-.algo-vrithm-director-swatch {
-    width: 17px;
-    height: 17px;
-    padding: 0 !important;
-    border-radius: 2px;
-    /* A pale swatch on a dark panel has no edge of its own, and a dark one is
-       invisible against the panel. A constant hairline gives every swatch the
-       same silhouette regardless of what it contains. */
-    border: 1px solid rgba(255, 255, 255, 0.22) !important;
-}
-
-/* Ring rather than a border swap: changing the border would move the swatch by
-   a pixel as it is selected, and a colour you are comparing must not jump. */
-.algo-vrithm-director-swatch.is-selected {
-    border-color: #fff !important;
-    box-shadow: 0 0 0 2px rgba(77, 249, 255, 0.9);
-}
-
-.algo-vrithm-director-custom-toggle {
-    font-size: 9px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-/* The panel's global `is-active` is a solid cyan fill with dark text — correct
-   for the transport rate, where one control reports a mode for the whole
-   piece. These are small toggles in a dense row, and four solid cyan blocks
-   per light would shout louder than the timeline above them. So selection here
-   is a tint and a border, not a fill.
-   The background MUST be restated rather than only the colour: without it the
-   global fill still applies and cyan text lands on a cyan block. */
-.algo-vrithm-director-custom-toggle.is-active {
-    color: #4df9ff !important;
-    border-color: rgba(77, 249, 255, 0.5) !important;
-    background: rgba(77, 249, 255, 0.1) !important;
-}
-
-.algo-vrithm-director-custom {
-    flex-basis: 100%;
-}
-
-.algo-vrithm-director-color {
-    width: 34px;
-    height: 22px;
-    padding: 0;
+.algo-vrithm-stage .di-director::-webkit-scrollbar-track {
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 3px;
-    cursor: pointer;
 }
 
-/* The palette warning speaks in the palette's own voice — peach, not the
-   destructive red and not the system cyan. Both of those already mean
-   something here (a delete, and the machine talking), and this is neither: it
-   is advisory, never blocking, and it is the WORK objecting rather than the
-   tool. Reading it in a colour the piece is actually made of makes that
-   distinction without a word of UI copy. */
-.algo-vrithm-director-warning {
-    flex-basis: 100%;
-    font-style: normal;
-    font-size: 10px;
-    line-height: 1.45;
-    color: #f8cca4;
+.algo-vrithm-stage .di-director::-webkit-scrollbar-thumb {
+    background: rgba(77, 249, 255, 0.35);
+    border-radius: 5px;
 }
 
-/* ---- lights ---- */
-
-.algo-vrithm-director-add-light {
-    font-size: 10px;
+.algo-vrithm-stage .di-director::-webkit-scrollbar-thumb:hover {
+    background: rgba(77, 249, 255, 0.62);
 }
 
-.algo-vrithm-director-light {
-    flex-basis: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 5px 9px;
-    padding-top: 6px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.algo-vrithm-director-light:first-of-type {
-    border-top: none;
-    padding-top: 0;
-}
-
-.algo-vrithm-director-light-head {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex-basis: 100%;
-}
-
-.algo-vrithm-director-kinds,
-.algo-vrithm-director-stops {
-    display: inline-flex;
-    gap: 3px;
-}
-
-.algo-vrithm-director-kind,
-.algo-vrithm-director-stop {
-    font-size: 9px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.42) !important;
-}
-
-.algo-vrithm-director-kind.is-active,
-.algo-vrithm-director-stop.is-active {
-    color: #4df9ff !important;
-    border-color: rgba(77, 249, 255, 0.5) !important;
-    background: rgba(77, 249, 255, 0.1) !important;
-}
-
-/* "place" hands the gizmo to this light. Amber while armed — the same amber
-   the timeline already uses for a clip you are manipulating, so "something in
-   the scene is under your cursor" keeps one colour across the panel. */
-.algo-vrithm-director-place.is-selected {
-    color: #ffb04d !important;
-    border-color: rgba(255, 176, 77, 0.55) !important;
-    background: rgba(255, 176, 77, 0.12) !important;
-}
-
-/* Same reasoning as the sequence remove: destructive, so it sits at the end of
-   the line and never next to a field being tabbed through. */
-.algo-vrithm-director-light-remove {
-    color: #ff8a94 !important;
-    border-color: rgba(255, 138, 148, 0.45) !important;
-    background: rgba(255, 138, 148, 0.08) !important;
-    line-height: 1;
-    margin-left: auto;
-}
-
-/* ---- dispersion sphere controls ------------------------------------------
-   Its own block rather than rows inside the director panel: these belong to
-   one sequence's material, not to the piece. Sits above the director in the
-   same bottom stack and inherits its typography. */
-.algo-vrithm-dispersion {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.72);
-    background: rgba(5, 6, 15, 0.82);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 10px;
-    padding: 10px 12px;
-    margin-bottom: 8px;
-    backdrop-filter: blur(6px);
-}
-
-.algo-vrithm-dispersion > header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    opacity: 0.75;
-    margin-bottom: 8px;
-}
-
-.algo-vrithm-dispersion-actions {
-    display: flex;
-    gap: 6px;
-}
-
-.algo-vrithm-dispersion-actions button {
-    font: inherit;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.72);
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 999px;
-    padding: 3px 10px;
-    cursor: pointer;
-}
-
-.algo-vrithm-dispersion-actions button:hover {
-    color: #4df9ff;
-    border-color: rgba(77, 249, 255, 0.6);
-}
-
-/* Two columns on anything wide enough. Eight sliders in one column pushes the
-   director panel's row list off the bottom, and stage-view framing in
-   stageView.js is calibrated against the panel's height — see the
-   ORBIT_AIM_DROP note before making this taller. */
-/* Hidden, not unmounted — see the note in DispersionPanel.jsx. Collapsing gives
-   the clip rows back the half of the editor these sliders were holding. */
-.algo-vrithm-dispersion.is-collapsed .algo-vrithm-dispersion-grid {
-    display: none;
-}
-
-.algo-vrithm-dispersion-collapse {
-    background: none;
-    border: none;
-    padding: 0 6px 0 0;
-    cursor: pointer;
-    color: inherit;
-    font: inherit;
-    line-height: 1;
-}
-
-.algo-vrithm-dispersion-collapse:focus-visible {
-    outline: 2px solid #80ffff;
-    outline-offset: 2px;
-}
-
-.algo-vrithm-dispersion-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    gap: 4px 18px;
-}
-
-.algo-vrithm-dispersion-row {
-    display: grid;
-    grid-template-columns: 92px 1fr 38px;
-    align-items: center;
-    gap: 8px;
-}
-
-.algo-vrithm-dispersion-name {
-    opacity: 0.7;
-}
-
-/* The moved-off-default marker. Bright, because the whole point is that it is
-   findable in a panel of eight identical rows. */
-.algo-vrithm-dispersion-name em {
-    color: #4df9ff;
-    font-style: normal;
-}
-
-.algo-vrithm-dispersion-row input[type='range'] {
-    width: 100%;
-    accent-color: #4df9ff;
-    cursor: pointer;
-}
-
-.algo-vrithm-dispersion-row output {
-    text-align: right;
-    opacity: 0.85;
-    font-variant-numeric: tabular-nums;
-}
-
-/* Spans all three columns so a long hint wraps under the whole row rather than
-   squeezing the slider. */
-.algo-vrithm-dispersion-hint {
-    grid-column: 1 / -1;
-    font-size: 9px;
-    line-height: 1.4;
-    opacity: 0.42;
-    letter-spacing: 0.04em;
-    margin: -2px 0 4px;
+/* ONE scroll region, not two nested ones.
+   The 34vh cap on the row list dates from when this list held EVERY row stacked
+   and the panel floated over a full-window canvas. Inside the split neither
+   condition holds: the stage is a fixed fraction of the window, the panel above
+   already scrolls within it, and the inspector shows a single clip. All the cap
+   does now is add a second scrollbar that hides that clip's world and lights
+   disclosures below an invisible inner fold.
+   The standalone case keeps its cap — see the note on the base rule. */
+.algo-vrithm-stage .di-director-rows {
+    max-height: none;
+    overflow-y: visible;
 }

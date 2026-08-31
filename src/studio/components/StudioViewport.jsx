@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import '../styles/studio.css'
@@ -40,20 +40,34 @@ function useSnapModifier() {
     return snapping
 }
 
+// True when this viewport is showing a finished piece rather than hosting an
+// edit session: authored timelines then play continuously off the render clock,
+// with no scrubber to drive them. StudioViewport is BOTH the editor viewport and
+// the published viewer's default (orbit) view — without this, keyframes only ever
+// moved while someone dragged the Timeline scrubber, so every published scene sat
+// frozen on its authored pose.
+const LiveTimelineContext = createContext(false)
+
 // Timeline preview: pose the group from the sampled timeline while the Scene
 // window's Timeline section is playing or scrubbing this entity, restore the
-// authored pose (and touched material opacities) the moment it stops.
+// authored pose (and touched material opacities) the moment it stops. In a
+// published viewer there is no scrubber, so the render clock drives it instead.
 function useTimelinePreviewPose(entity, groupRef, isDraggingRef = null) {
+    const playLive = useContext(LiveTimelineContext)
     const wasPosed = useRef(false)
     const opacityBackup = useRef(null)
     const timeline = entity.components?.timeline
-    useFrame(() => {
+    useFrame((state) => {
         const group = groupRef.current
         if (!group) return
         // Mid-drag the gizmo owns the group — neither pose nor restore may touch it.
         if (isDraggingRef?.current === true) return
-        if (isTimelinePreviewPosed(entity.id) && hasTimelineTracks(timeline)) {
-            const pose = sampleTimeline(timeline, getTimelinePreview().time)
+        // The scrubber wins when it is driving: an author scrubbing in a viewport
+        // that also plays live must see the frame they asked for, not the clock's.
+        const scrubbing = isTimelinePreviewPosed(entity.id)
+        if ((scrubbing || playLive) && hasTimelineTracks(timeline)) {
+            const at = scrubbing ? getTimelinePreview().time : state.clock.getElapsedTime()
+            const pose = sampleTimeline(timeline, at)
             if (pose?.opacity !== undefined && !opacityBackup.current) {
                 const backup = new Map()
                 group.traverse((object) => {
@@ -90,6 +104,46 @@ function useTimelinePreviewPose(entity, groupRef, isDraggingRef = null) {
 
 function TimelinePreviewDriver() {
     useFrame((_, delta) => advanceTimelinePreview(delta))
+    return null
+}
+
+// Published-viewer showreel: stand the camera at one point inside the piece and
+// turn it slowly on the spot, so a visitor who touches nothing is still shown
+// the whole room. Only ever runs in a published viewer (playTimelines), and
+// yields permanently the first time the visitor grabs the controls — an
+// auto-turn that fights the mouse is worse than no auto-turn at all.
+const AUTO_LOOK_REACH = 6
+function AutoLookAround({ controlsRef, config }) {
+    const startedAt = useRef(null)
+    const surrendered = useRef(false)
+
+    useEffect(() => {
+        const cc = controlsRef?.current
+        if (!cc) return undefined
+        const yield_ = () => { surrendered.current = true }
+        cc.addEventListener('controlstart', yield_)
+        return () => cc.removeEventListener('controlstart', yield_)
+    }, [controlsRef])
+
+    useFrame((state) => {
+        const cc = controlsRef?.current
+        if (!cc || surrendered.current) return
+        const now = state.clock.getElapsedTime()
+        if (startedAt.current === null) startedAt.current = now
+        // The camera takes its place immediately — only the TURN waits, so an
+        // intro title placed for this viewpoint is on screen from frame one
+        // rather than playing out behind the visitor.
+        const t = Math.max(0, now - startedAt.current - (config.delay || 0))
+        const [cx, cy, cz] = config.center || [0, 1.6, 0]
+        const angle = (config.startAngle || 0) + t * (config.speed ?? 0.18)
+        cc.setLookAt(
+            cx, cy, cz,
+            cx + Math.sin(angle) * AUTO_LOOK_REACH,
+            cy + (config.pitch || 0),
+            cz + Math.cos(angle) * AUTO_LOOK_REACH,
+            false
+        )
+    })
     return null
 }
 
@@ -510,7 +564,8 @@ function StudioSceneContent({
     onTransformCommitMany,
     onTransformCancel,
     onTransformStatus,
-    controlsRef
+    controlsRef,
+    playTimelines = false
 }) {
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
     // Keyed on assets + project id so the map only rebuilds when assets change,
@@ -556,7 +611,7 @@ function StudioSceneContent({
     const gizmoVisibleEffective = gizmoVisible && !transformOp
 
     return (
-        <>
+        <LiveTimelineContext.Provider value={playTimelines}>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
             {document.worldState?.environmentAssetId && (
@@ -575,6 +630,9 @@ function StudioSceneContent({
                 position={document.worldState?.directionalLight?.position || [8, 12, 4]}
             />
             <TimelinePreviewDriver />
+            {playTimelines && document.worldState?.autoLook?.enabled ? (
+                <AutoLookAround controlsRef={controlsRef} config={document.worldState.autoLook} />
+            ) : null}
             <group position={isArMode ? AR_SCENE_POSITION : DEFAULT_SCENE_POSITION}>
                 {document.worldState?.gridVisible !== false && !isArMode && (
                     <Grid
@@ -634,7 +692,7 @@ function StudioSceneContent({
                     onStatus={onTransformStatus}
                 />
             )}
-        </>
+        </LiveTimelineContext.Provider>
     )
 }
 
@@ -796,6 +854,7 @@ export default function StudioViewport({
     showHelp = false,
     onCloseHelp,
     onShowHelp,
+    playTimelines = false,
 }) {
     const viewportRef = useRef(null)
     const [transformStatus, setTransformStatus] = useState(null)
@@ -875,6 +934,7 @@ export default function StudioViewport({
                         onTransformCancel={onTransformCancel}
                         onTransformStatus={setTransformStatus}
                         controlsRef={controlsRef}
+                        playTimelines={playTimelines}
                     />
                 </XR>
             </Canvas>

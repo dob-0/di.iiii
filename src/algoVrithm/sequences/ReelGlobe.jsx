@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { smoothstep } from '../ritualClock.js'
+import { smoothstep } from '../../timeline/clock.js'
 import { createRandom } from '../random.js'
 import { attachLimiter } from '../audioBus.js'
 import {
@@ -9,7 +9,9 @@ import {
     playReels,
     advanceReels,
     armAudioUnlock,
-    reelAudioSource
+    reelAudioSource,
+    displayTextures,
+    healthSignature
 } from '../reelPlayers.js'
 
 // Sequence — the reel globe.
@@ -156,7 +158,19 @@ const MIX_SEED = 20260730
 // never mounted (see the note further down) every source was playing at the
 // origin at full level anyway, so nothing about the mix was being heard as
 // designed. Both bugs had to go together.
-const SOURCE_GAIN = 0.18
+// DERIVED, not typed in, because the pool size is no longer one number: the
+// headset gets a smaller pool than the desktop (see the two ceilings in
+// reelPlayers.js), and a constant tuned for one is wrong for the other in the
+// direction that matters — a hardcoded 0.18 on a pool of nine is the reel beat
+// arriving nearly two-thirds too quiet, which is indistinguishable from the
+// sound being broken.
+//
+// The formula reproduces both hand-derived values, which is the reason to trust
+// it: 9 sources → 0.34 (the originally tuned number), 31 → 0.183 (the corrected
+// one). Anything in between falls where it should.
+const REFERENCE_COUNT = 9
+const REFERENCE_GAIN = 0.34
+const sourceGain = (count) => REFERENCE_GAIN * Math.sqrt(REFERENCE_COUNT / Math.max(1, count))
 
 // The original reasoning, kept because it is still the argument for the number
 // being small: nine streams playing at once sum, and nine unrelated phone
@@ -356,10 +370,26 @@ uniform float uOpacity;
 varying vec2 vUv;
 
 void main() {
-    float v = vUv.y - uSwipe;
-    vec4 frame = v >= 0.0
-        ? texture2D(uCurrent, vec2(vUv.x, v))
-        : texture2D(uNext, vec2(vUv.x, v + 1.0));
+    // The hold is branched out, and the branch is free because uSwipe is a
+    // UNIFORM: the condition is identical for every fragment in the draw call,
+    // so there is no divergence and the whole wavefront takes one path.
+    //
+    // It is worth having because a ternary between two texture2D calls is not
+    // one fetch — the condition below varies per fragment, so the compiler
+    // emits BOTH fetches and selects between the results. This shell covers the
+    // entire field of view, in stereo, which makes that second fetch the
+    // largest avoidable fragment cost in the beat. And the feed is holding for
+    // most of it: HOLD_FRACTION is 0.73 of every calm cycle, plus the five
+    // seconds before the first swipe.
+    vec4 frame;
+    if (uSwipe <= 0.0) {
+        frame = texture2D(uCurrent, vUv);
+    } else {
+        float v = vUv.y - uSwipe;
+        frame = v >= 0.0
+            ? texture2D(uCurrent, vec2(vUv.x, v))
+            : texture2D(uNext, vec2(vUv.x, v + 1.0));
+    }
 
     gl_FragColor = vec4(frame.rgb, frame.a * uOpacity);
 }
@@ -585,7 +615,13 @@ const reelEars = (pool, centres) => {
 }
 
 export default function ReelGlobe({ progress }) {
+    // No argument: the warm-up at experience mount already chose the ceiling for
+    // this device and built the pool. Passing one here would only matter if this
+    // sequence somehow ran first, and then the desktop default is the safe way
+    // to be wrong.
     const pool = useMemo(() => reelPlayers(), [])
+    // Per-source level for THIS pool size — see sourceGain above.
+    const gain = useMemo(() => sourceGain(pool.length), [pool])
     // One arrangement, built once, read by both the picture and the sound — the
     // guarantee the mixCells docblock makes. Building it twice would be
     // harmless today (it is seeded and pure) and would silently stop being
@@ -598,6 +634,8 @@ export default function ReelGlobe({ progress }) {
     // shader is nine lines and does nothing else.
     const materials = useMemo(() => pool.map((player, index) => new THREE.ShaderMaterial({
         uniforms: {
+            // Replaced from `textures` on the first frame; the pool's own are
+            // the right starting value for a globe whose players are all alive.
             uCurrent: { value: player.texture },
             uNext: { value: pool[(index + 1) % pool.length].texture },
             uSwipe: { value: 0 },
@@ -631,6 +669,28 @@ export default function ReelGlobe({ progress }) {
         // noise, and a mirrored reel in a storm of them is not a legible
         // defect. The interior view is pixel-identical to what FrontSide drew.
         side: THREE.DoubleSide,
+        // ...and forceSinglePass, which is not a micro-optimisation — without it
+        // the two lines above cost twice the beat.
+        //
+        // three's renderObject has a special case for transparent + DoubleSide:
+        // it draws the mesh TWICE, once as BackSide and once as FrontSide, so
+        // that a genuinely translucent shell composites its far wall before its
+        // near one. It also sets material.needsUpdate = true before each pass,
+        // which forces a full program-cache-key rebuild — a ~60-entry array
+        // joined into a string — per mesh, per pass, per eye, per frame. At 31
+        // players in stereo that is 124 draw calls and 124 key rebuilds every
+        // frame, allocating continuously. (It does not show up in a per-sequence
+        // allocation profile: the garbage is three's, not this file's.)
+        //
+        // None of which buys anything here. The footage is opaque — alpha is 1
+        // everywhere and uOpacity is uniform across the whole shell, so there is
+        // no back-to-front compositing to get right, and depthWrite is on. From
+        // INSIDE, the BackSide pass draws literally nothing: every cell's normal
+        // points at the origin, so every visible cell is front-facing and gets
+        // culled. From outside during the step out, one depth-tested pass over
+        // both faces gives the same image as two. The rendered result is
+        // identical in both phases; only the cost differs.
+        forceSinglePass: true,
         // Unlit, unfogged and untone-mapped, as before: these are screens, not
         // surfaces being lit, every cell is exactly RADIUS away so fog could
         // only apply one flat tint to the whole globe, and the footage should
@@ -671,6 +731,46 @@ export default function ReelGlobe({ progress }) {
         const random = createRandom(MIX_SEED + 1)
         return pool.map(() => random())
     }, [pool])
+
+    // WHICH PLAYERS ACTUALLY HAVE A PICTURE.
+    //
+    // A decoder the device refused never produces a frame and its texture stays
+    // black, which on the shell reads as a hole rather than as a limit (see the
+    // note in reelPlayers.js). So the frame loop below draws from this array
+    // instead of straight from the pool: it is the pool's own textures, with any
+    // dead player standing in a live one.
+    //
+    // Polled rather than event-driven on purpose. `loadeddata` fires for the
+    // players that DO come up; the ones that fail emit nothing at all, so there
+    // is no event to hang this on — their silence is the whole symptom. Two
+    // seconds is far below the beat's own length and the work is a readyState
+    // compare per player.
+    const [health, setHealth] = useState(() => healthSignature(pool))
+    useEffect(() => {
+        const check = () => setHealth((current) => {
+            const next = healthSignature(pool)
+            return next === current ? current : next
+        })
+        check()
+        const timer = window.setInterval(check, 2000)
+        return () => window.clearInterval(timer)
+    }, [pool])
+
+    const textures = useMemo(() => {
+        const resolved = displayTextures(pool)
+        if (import.meta.env?.DEV && typeof window !== 'undefined') {
+            // Sound is invisible and so is this: nothing on screen says a cell
+            // is showing a substitute. Same DEV-only hook idea as
+            // window.__diiSpatialSounds.
+            window.__diiReelHealth = {
+                players: pool.length,
+                dead: health.split('').filter((flag) => flag === '0').length
+            }
+        }
+        return resolved
+        // `health` is the dependency that matters -- it changes exactly when a
+        // player's state does, which is when the substitution has to be redone.
+    }, [pool, health])
 
     // Free the GPU-side buffers when the sequence is finally torn down. The
     // player pool deliberately outlives this component; its geometries and
@@ -783,8 +883,8 @@ export default function ReelGlobe({ progress }) {
             const slotStep = Math.floor(position)
             const slotPhase = position - slotStep
 
-            uniforms.uCurrent.value = pool[(index + slotStep) % pool.length].texture
-            uniforms.uNext.value = pool[(index + slotStep + 1) % pool.length].texture
+            uniforms.uCurrent.value = textures[(index + slotStep) % textures.length]
+            uniforms.uNext.value = textures[(index + slotStep + 1) % textures.length]
             uniforms.uSwipe.value = chaos > 0
                 ? (slotPhase <= holdFraction ? 0 : smoothstep(holdFraction, 1, slotPhase))
                 : swipe
@@ -815,7 +915,7 @@ export default function ReelGlobe({ progress }) {
         // all of them at once was the note, and the spatial falloff is what
         // keeps that from being a single undifferentiated wall.
         for (let index = 0; index < audios.length; index++) {
-            audios[index].setVolume(envelope * SOURCE_GAIN)
+            audios[index].setVolume(envelope * gain)
         }
 
         for (let index = 0; index < materials.length; index++) {

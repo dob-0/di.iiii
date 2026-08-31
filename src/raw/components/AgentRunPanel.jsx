@@ -131,7 +131,7 @@ export default function AgentRunPanel({ node, prompt, trigger, onValuesChange })
             {error && (
                 <div className="raw-agent-run-panel-error" role="status">
                     {error.status === 404
-                        ? 'Not available — this endpoint only runs on a local dev server.'
+                        ? 'Not available — this only works on a dev server running on your own machine.'
                         : `Error: ${error.message}`}
                 </div>
             )}
@@ -151,7 +151,7 @@ export default function AgentRunPanel({ node, prompt, trigger, onValuesChange })
                             </p>
                         )}
                         <details className="raw-agent-run-panel-raw">
-                            <summary>Raw output</summary>
+                            <summary>Full output</summary>
                             <pre className="raw-agent-run-panel-tail">{run.tail}</pre>
                         </details>
                     </div>

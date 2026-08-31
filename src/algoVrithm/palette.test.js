@@ -7,9 +7,6 @@ import {
     FIELD_COLORS,
     IRIS_RAMP,
     AMBIENT_VALUE,
-    LIGHT_DEFAULTS,
-    LIGHT_INTENSITIES,
-    LIGHT_KINDS,
     LIGHT_SWATCHES,
     LUMINOUS_RAMP,
     NAMED_PALETTE,
@@ -27,6 +24,7 @@ import {
     paletteWarning,
     quieten
 } from './palette.js'
+import { LIGHT_DEFAULTS, LIGHT_INTENSITIES, LIGHT_KINDS } from '../timeline/worldLights.js'
 
 // Read back in sRGB, the space these hex values were chosen in. three.js
 // converts hex to Linear-sRGB on the way in, and the default getHSL reports

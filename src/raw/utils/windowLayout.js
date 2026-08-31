@@ -13,6 +13,11 @@ export const DEFAULT_RAW_WORKSPACE_TOP = 64
 // a node happens to be selected — the alternative is a window that jumps
 // size the moment a selection (and therefore the delete FAB) changes.
 export const RAW_WINDOW_BOTTOM_RESERVE = 120
+// What a minimized window actually occupies: its header, and nothing else
+// (DesktopWindow renders `height: auto` and drops the body and the resizer).
+// The placement maths below has to use THIS, not the stored height — see the
+// comment on maxY.
+export const RAW_WINDOW_MINIMIZED_HEIGHT = 56
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 const hasFiniteValue = (value) => Number.isFinite(Number(value))
@@ -74,10 +79,20 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
             ? viewportWidth - width - viewportPadding
             : Math.max(minLeft, viewportWidth - width - viewportPadding))
         : (allowOverflowLeft ? nextX : Math.max(minLeft, nextX))
+    // A minimized window is a title bar, but the clamp used to place it by its
+    // STORED height — so a collapsed bar authored near the bottom got yanked
+    // upward by however tall it would be if opened, landing on top of whatever
+    // was there. Measured: a bar at y=640 with height 430 jumped to y=248 at
+    // 1440x810, straight onto the card row. Place it by what it actually
+    // occupies; `height` is still returned untouched so expanding restores the
+    // authored size.
+    const placedHeight = frame.minimized === true
+        ? Math.min(height, RAW_WINDOW_MINIMIZED_HEIGHT)
+        : height
     const maxY = viewportHeight
         ? (allowOverflowTop
-            ? viewportHeight - height - bottomEdgePadding
-            : Math.max(minTop, viewportHeight - height - bottomEdgePadding))
+            ? viewportHeight - placedHeight - bottomEdgePadding
+            : Math.max(minTop, viewportHeight - placedHeight - bottomEdgePadding))
         : (allowOverflowTop ? nextY : Math.max(minTop, nextY))
 
     // Overflow is allowed, but never total: some of the header must stay
@@ -195,5 +210,95 @@ export function getGraphEdgeInsets({
         right: dodgeX ? right : 0,
         top: dodgeY ? top : 0,
         bottom: dodgeY ? bottom : 0
+    }
+}
+
+// The "what is it made of" sheet's opening frame.
+//
+// Derived rather than stored so the phone case is arithmetic a test can assert
+// as NUMBERS. Two facts drive it, and both are measurements of surfaces that
+// already exist:
+//
+//  1. The selection inspector is already docked somewhere, and entering a node
+//     selects it — so the inspector is up whenever this sheet opens. On a
+//     desktop it is `right: 24px, width: min(320px, …)`; MEASURED at 1440x900,
+//     a right-docked sheet landed underneath it and the reading was unreadable
+//     behind the Cube's own port fields. So this one docks LEFT. At <=640px the
+//     inspector becomes a bottom sheet at `max-height: 38dvh` instead, so the
+//     phone case is a TOP band ending where that one begins, and the two can
+//     both be up at once.
+//  2. Below a certain band there is no honest window left. The sheet is a
+//     stack of four sections; under ~220px it shows one heading and a scrollbar,
+//     which is worse than a header you tap to open. So it opens MINIMIZED, the
+//     same answer the starter welcome note reached on a 664px phone.
+export const RAW_ANATOMY_WIDTH = 400
+export const RAW_ANATOMY_HEIGHT = 620
+export const RAW_ANATOMY_MIN_BAND = 220
+// .raw-selection-scaffold's phone rule. Kept next to the arithmetic that
+// depends on it rather than as a bare 0.62 nobody can trace back to a rule.
+export const RAW_SELECTION_SHEET_FRACTION = 0.38
+// Above the fullscreen room, below the way out of it. Entering a Scene puts
+// `.raw-world-fullscreen` (z-index 1200) over everything, and at a panel
+// window's ordinary z-index 20 the sheet rendered BEHIND it: the button was
+// reachable, the reading was not, and pressing it looked like nothing
+// happening. Seen by hit-testing the middle of the sheet, which came back as
+// the room's <canvas>. The rest of the stack, so this number can be read
+// rather than guessed at: world-fullscreen 1200 · delete FAB 1300 ·
+// selection sheet 1350 · the "inside X" marker and its way out 1400.
+export const RAW_ANATOMY_Z = 1250
+// A window is taller than the height it is given: two 1px edges plus the 2px
+// family stripe on top. MEASURED — a band computed to land exactly on the
+// selection sheet's top edge rendered 3px into it, which is enough to eat the
+// first row of taps. The rest of the allowance is a visible gap, because two
+// panels touching read as one broken panel.
+const RAW_WINDOW_CHROME_ALLOWANCE = 12
+
+// Where the "inside X" marker sits. Exported and used by BOTH the marker's own
+// style and the sheet's opening frame, because the two must not drift: the
+// sheet opened at the same y as the marker and the marker (z-index 1400) sat
+// straight on top of the window's title. MEASURED at 1440x900 and 390x664: the
+// marker is 50px tall in both, whatever the viewport.
+export const RAW_SCOPE_MARKER_HEIGHT = 50
+export const getScopeMarkerTop = ({ chromeVisible = true, workspaceTop = DEFAULT_RAW_WORKSPACE_TOP } = {}) =>
+    (chromeVisible ? workspaceTop : 12) + 8
+
+export function getAnatomyDefaultFrame({
+    viewportWidth = 1280,
+    viewportHeight = 800,
+    workspaceTop = DEFAULT_RAW_WORKSPACE_TOP,
+    chromeVisible = true
+} = {}) {
+    // Below the marker, never level with it: the sheet only ever opens while you
+    // are standing inside a node, which is exactly when the marker is up.
+    const y = getScopeMarkerTop({ chromeVisible, workspaceTop }) + RAW_SCOPE_MARKER_HEIGHT + 8
+    const narrow = viewportWidth < 640
+    const base = { zIndex: RAW_ANATOMY_Z, pinned: false, minimized: false }
+
+    if (!narrow) {
+        return {
+            ...base,
+            x: RAW_WINDOW_PADDING * 2,
+            y,
+            width: RAW_ANATOMY_WIDTH,
+            // Never taller than the room below the topbar, minus the corner
+            // chrome the bottom reserve exists for.
+            height: Math.max(180, Math.min(
+                RAW_ANATOMY_HEIGHT,
+                viewportHeight - y - RAW_WINDOW_PADDING - RAW_WINDOW_BOTTOM_RESERVE
+            ))
+        }
+    }
+
+    // Ceil the sheet's own height, floor nothing: dvh resolves against the
+    // visual viewport and rounds against us.
+    const sheetTop = viewportHeight - Math.ceil(viewportHeight * RAW_SELECTION_SHEET_FRACTION)
+    const band = sheetTop - y - RAW_WINDOW_CHROME_ALLOWANCE
+    return {
+        ...base,
+        x: RAW_WINDOW_PADDING,
+        y,
+        width: Math.max(260, viewportWidth - RAW_WINDOW_PADDING * 2),
+        height: Math.max(180, band),
+        minimized: band < RAW_ANATOMY_MIN_BAND
     }
 }

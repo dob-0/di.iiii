@@ -11,7 +11,9 @@ import {
     purgeStaleSandboxes,
     uploadServerAsset,
     getServerSpaceAssetUrl,
-    mintSpaceInvite
+    mintSpaceInvite,
+    saveSpaceToFile,
+    openSpaceFromFile
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
@@ -20,40 +22,15 @@ import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
+import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
 import '../styles/studio-space-hub.css'
 
 // Each preview iframe is a full app instance, so a burst of simultaneous
-// boots janks the hub on first paint. At most this many previews boot at
-// once; a slot frees when the iframe's document loads (or the card unmounts
-// or scrolls away before that).
-const PREVIEW_BOOT_SLOTS = 2
-const previewBootQueue = { active: 0, waiting: [] }
-
-function requestPreviewBoot(start) {
-    const entry = { start, granted: false, released: false }
-    const grantNext = () => {
-        while (previewBootQueue.active < PREVIEW_BOOT_SLOTS && previewBootQueue.waiting.length) {
-            const next = previewBootQueue.waiting.shift()
-            next.granted = true
-            previewBootQueue.active += 1
-            next.start()
-        }
-    }
-    entry.release = () => {
-        if (entry.released) return
-        entry.released = true
-        if (entry.granted) {
-            previewBootQueue.active -= 1
-        } else {
-            const index = previewBootQueue.waiting.indexOf(entry)
-            if (index !== -1) previewBootQueue.waiting.splice(index, 1)
-        }
-        grantNext()
-    }
-    previewBootQueue.waiting.push(entry)
-    grantNext()
-    return entry.release
-}
+// boots janks the hub on first paint. At most PREVIEW_BOOT_SLOTS boot at once;
+// a slot frees when the iframe's document loads (or the card unmounts or
+// scrolls away before that). The queue itself now lives in utils, shared with
+// the projection mapper, which hit the same wall harder — see that file.
+const requestPreviewBoot = createPreviewBootQueue()
 
 // Preview iframes lay out at this virtual desktop viewport and are scaled
 // down with a CSS transform to fit the card — an iframe laid out at the
@@ -268,6 +245,56 @@ export default function SpaceHub() {
         }
     }, [loadSpaces])
 
+    // Work as files, the browser half. The same document `di save` writes and
+    // `di open` reads: one file holding the space, its whole history and its
+    // assets, openable on any di.iiii. Saving is a plain download; opening is a
+    // file picker, because a browser has no other way to reach a disk.
+    const fileInputRef = useRef(null)
+    const [openingFile, setOpeningFile] = useState(false)
+
+    const handleSaveToFile = useCallback((space, e) => {
+        e?.stopPropagation?.()
+        saveSpaceToFile(space.id)
+    }, [])
+
+    const handlePickFile = useCallback(() => {
+        fileInputRef.current?.click()
+    }, [])
+
+    const handleFileChosen = useCallback(async (event) => {
+        const file = event.target.files?.[0]
+        // Cleared immediately so choosing the same file twice still fires a
+        // change event — otherwise a failed open cannot be retried.
+        event.target.value = ''
+        if (!file) return
+        setOpeningFile(true)
+        setStatus('opening...')
+        try {
+            let result
+            try {
+                result = await openSpaceFromFile(file)
+            } catch (clash) {
+                // The one failure with a way out: this space is already here.
+                // A terminal would say "--as <newId>"; a page can just ask.
+                if (clash?.code !== 'space_exists') throw clash
+                const suggested = `${clash.spaceId}-copy`
+                const as = window.prompt(`${clash.message}\n\nOpen it under another name:`, suggested)?.trim()
+                if (!as) { setStatus(''); return }
+                result = await openSpaceFromFile(file, { as })
+            }
+            await loadSpaces()
+            // loadSpaces clears status on success, so this goes after it.
+            if (result?.spaceId) setStatus(`opened ${result.spaceId}`)
+        } catch (openError) {
+            // Everything else: the server passed the bundle tool's own sentence
+            // through, and showing it verbatim is the difference between "could
+            // not open" and "this file was written by a newer di.iiii".
+            setStatus(String(openError?.message || openError))
+        } finally {
+            setOpeningFile(false)
+        }
+    }, [loadSpaces])
+
     const handleDelete = useCallback(async (space, e) => {
         e.stopPropagation()
         if (!window.confirm(`Delete "${space.label || space.id}"? This cannot be undone.`)) return
@@ -459,6 +486,25 @@ export default function SpaceHub() {
                                 <button type="button" className={viewMode === 'map' ? 'on' : ''} onClick={() => selectView('map')} aria-pressed={viewMode === 'map'}>Map</button>
                             </div>
                         )}
+                        {isAccount && (
+                            <>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".diiii,.tar.gz"
+                                    onChange={handleFileChosen}
+                                    style={{ display: 'none' }}
+                                />
+                                <button
+                                    className="ssh-card-btn"
+                                    onClick={handlePickFile}
+                                    disabled={isBusy || openingFile}
+                                    title="Open a space someone saved as a file"
+                                >
+                                    {openingFile ? 'Opening…' : 'Open a file'}
+                                </button>
+                            </>
+                        )}
                         {isAccount ? (
                             creatingTitle === null ? (
                                 canCreateSpace ? (
@@ -467,7 +513,7 @@ export default function SpaceHub() {
                                         onClick={() => setCreatingTitle('')}
                                         disabled={isBusy}
                                     >
-                                        + Create
+                                        + New space
                                         {Number.isFinite(spaceLimit) && (
                                             <span className="ssh-quota"> · {ownedSpaceCount}/{spaceLimit}</span>
                                         )}
@@ -587,7 +633,17 @@ export default function SpaceHub() {
                                                 loading="lazy"
                                             />
                                         </div>
-                                    ) : space.isPublic && space.publishedProjectId ? (
+                                    ) : space.isPublic ? (
+                                        // isPublic alone, NOT isPublic && publishedProjectId.
+                                        // SpaceCardPreview embeds the SPACE's own live route
+                                        // (`buildAppSpacePath(spaceId)?preview=1`) — it never
+                                        // needed a published project, and the extra condition
+                                        // blanked exactly one card: the Open Space, which is the
+                                        // first card a visitor sees and the room the whole
+                                        // product points at. It has no published project because
+                                        // it is the communal scene itself, and /open renders it
+                                        // fine. Every other public space happened to have one,
+                                        // so the gate looked correct for two years of cards.
                                         <SpaceCardPreview spaceId={space.id} label={space.label || space.id} />
                                     ) : null}
                                     <p className="ssh-space-label">{space.label || space.id}</p>
@@ -653,6 +709,13 @@ export default function SpaceHub() {
                                                 GitHub sync
                                             </button>
                                             <button
+                                                className="ssh-card-btn"
+                                                onClick={e => handleSaveToFile(space, e)}
+                                                title="One file holding this space, its history and its assets — open it on any di.iiii"
+                                            >
+                                                Save to file
+                                            </button>
+                                            <button
                                                 className="ssh-card-btn ssh-card-btn--danger"
                                                 onClick={e => handleDelete(space, e)}
                                             >
@@ -712,10 +775,10 @@ export default function SpaceHub() {
 
                                     {isLinking && (
                                         <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                                            {linker.loading && <p className="ssh-linker-status">Loading projects...</p>}
+                                            {linker.loading && <p className="ssh-linker-status">Loading projects…</p>}
                                             {linker.error && <p className="ssh-linker-status ssh-linker-error">{linker.error}</p>}
                                             {!linker.loading && !linker.error && linker.projects.length === 0 && (
-                                                <p className="ssh-linker-status">No projects yet. Open this space in Studio to create one.</p>
+                                                <p className="ssh-linker-status">No projects yet — open this space to make one.</p>
                                             )}
                                             {!linker.loading && linker.projects.length > 0 && (
                                                 <div className="ssh-linker-list">

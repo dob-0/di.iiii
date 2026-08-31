@@ -16,6 +16,12 @@ describe('hasClockNode', () => {
         expect(hasClockNode([{ typeId: 'geom.cube' }, { typeId: 'time' }])).toBe(true)
     })
 
+    it('arms for a PLAYING timeline and stays cold for a paused one', () => {
+        expect(hasClockNode([{ typeId: 'view.timeline', values: { playing: true } }])).toBe(true)
+        expect(hasClockNode([{ typeId: 'view.timeline', values: { playing: false } }])).toBe(false)
+        expect(hasClockNode([{ typeId: 'view.timeline' }])).toBe(false)
+    })
+
     it('is false for a document without one, and survives junk entries', () => {
         expect(hasClockNode([{ typeId: 'geom.cube' }])).toBe(false)
         expect(hasClockNode([])).toBe(false)

@@ -1,9 +1,4 @@
-import {
-    ALGO_VRITHM_LABEL,
-    ALGO_VRITHM_PATH,
-    ALGO_VRITHM_SCENE_PATH,
-    ALGO_VRITHM_SPACE_ID
-} from '../../algoVrithm/algoVrithmRouting.js'
+import { WORKS } from '../../works/works.js'
 import { buildStudioDirectorPath } from './studioRouting.js'
 
 // Spaces whose scene is CODE rather than a project document.
@@ -20,31 +15,32 @@ import { buildStudioDirectorPath } from './studioRouting.js'
 // spaces exist to avoid. The code is the content; the registry just tells
 // Studio that.
 //
-// Add a space here when its route is real and its scene lives in src/.
-export const CODE_SPACES = [
-    {
-        spaceId: ALGO_VRITHM_SPACE_ID,
-        label: ALGO_VRITHM_LABEL,
-        path: ALGO_VRITHM_PATH,
+// Add a work to src/works/works.js, not here.
+// Derived from the works registry rather than restated here: a code space IS
+// a work whose scene is code, and two lists of the same works drift. The
+// Studio-shaped fields (the blurb, the director's label) live on the work's
+// `codeSpace` block; the rest is the work's own identity.
+export const CODE_SPACES = WORKS
+    .filter((work) => work.codeSpace)
+    .map((work) => ({
+        spaceId: work.id,
+        label: work.label,
+        path: work.path,
         // Shown on the card. Say what the thing IS, not that it is unusual.
-        blurb: 'A 30–60 second installation on hyperreality. Its scene is code, not a project document — open it to play, or open the director to retime the edit.',
+        blurb: work.codeSpace.blurb,
         // The authoring surface for a code space, inside Studio — the piece's
         // own timeline panel, under Studio's chrome, reached from the Spaces
         // list like any other editor.
         //
-        // It used to point at ALGO_VRITHM_PATH, which since the front door was
-        // split off is the LANDING page: a page with no director on it and no
-        // way to reach one. Silent, because the landing simply ignores a query
-        // param it does not read, so the button did navigate — to the wrong half
-        // of a route that had been split under it.
-        directorPath: buildStudioDirectorPath(ALGO_VRITHM_SPACE_ID),
-        directorLabel: 'Director',
-        // The bare piece with no Studio around it. Still the right thing for
-        // judging timing on the headset the work runs on, where a header above
-        // the picture is meaningless and XR entry owns the whole window.
-        scenePath: `${ALGO_VRITHM_SCENE_PATH}?director`
-    }
-]
+        // It must not point at the work's bare path: since the front door was
+        // split off that is the LANDING page, a page with no director on it
+        // and no way to reach one. Silent, too — the landing ignores a query
+        // param it does not read, so the button did navigate, to the wrong
+        // half of a route that had been split under it.
+        directorPath: buildStudioDirectorPath(work.id),
+        directorLabel: work.codeSpace.directorLabel,
+        scenePath: work.codeSpace.scenePath
+    }))
 
 export const getCodeSpace = (spaceId) =>
     CODE_SPACES.find((space) => space.spaceId === spaceId) ?? null

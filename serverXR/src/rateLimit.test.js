@@ -43,6 +43,32 @@ describe('createRateLimiter', () => {
         expect(res.statusCode).toBe(429)
     })
 
+    // A venue is one address and many people. Any limiter that must survive a
+    // classroom or a gallery keys on the person, not the wire they share — and
+    // then it has to say so in the 429, or a throttled visitor reads that their
+    // whole building is at fault.
+    it('counts by whatever keyFn returns, and names that scope in the 429', () => {
+        const limiter = createRateLimiter({
+            windowMs: 60_000,
+            max: 1,
+            name: 'uploads',
+            keyFn: (req) => req.subject,
+            scope: 'from this session'
+        })
+        const next = vi.fn()
+        const sharedAddress = { headers: { 'x-forwarded-for': '203.0.113.7, 10.0.0.1' } }
+
+        limiter(makeReq({ ...sharedAddress, subject: 'guest:a' }), makeRes(), next)
+        limiter(makeReq({ ...sharedAddress, subject: 'guest:b' }), makeRes(), next)
+        expect(next).toHaveBeenCalledTimes(2)
+
+        const blocked = makeRes()
+        limiter(makeReq({ ...sharedAddress, subject: 'guest:a' }), blocked, next)
+        expect(next).toHaveBeenCalledTimes(2)
+        expect(blocked.statusCode).toBe(429)
+        expect(blocked.body.error).toContain('Too many uploads from this session')
+    })
+
     it('resets the bucket after the window elapses', () => {
         vi.useFakeTimers()
         try {
@@ -75,5 +101,37 @@ describe('createRateLimiter', () => {
         expect(clientKey(makeReq({ headers: { 'x-forwarded-for': '1.2.3.4' } }))).toBe('1.2.3.4')
         expect(clientKey(makeReq())).toBe('10.0.0.1')
         expect(clientKey({ headers: {} })).toBe('unknown')
+    })
+})
+
+// A limiter counts strangers, and `di up` has none: loopback-bound, auth off,
+// one person. Counting them turned "put my own library on my own machine" into
+// "wait ten minutes" — 51 files against a cap of 60 per 10 minutes written for
+// a public address.
+describe('a local install has no strangers to count', () => {
+    const withLocal = (value, fn) => {
+        const before = process.env.DI_LOCAL
+        if (value === null) delete process.env.DI_LOCAL
+        else process.env.DI_LOCAL = value
+        try { return fn() } finally {
+            if (before === undefined) delete process.env.DI_LOCAL
+            else process.env.DI_LOCAL = before
+        }
+    }
+
+    const countPasses = (limiter, attempts) => {
+        let passes = 0
+        for (let i = 0; i < attempts; i += 1) limiter(makeReq(), makeRes(), () => { passes += 1 })
+        return passes
+    }
+
+    it('lets every upload through when DI_LOCAL=1', () => {
+        const limiter = createRateLimiter({ windowMs: 60_000, max: 2, name: 'uploads' })
+        withLocal('1', () => expect(countPasses(limiter, 20)).toBe(20))
+    })
+
+    it('still counts them on a hosted boot', () => {
+        const limiter = createRateLimiter({ windowMs: 60_000, max: 2, name: 'uploads' })
+        withLocal(null, () => expect(countPasses(limiter, 5)).toBe(2))
     })
 })

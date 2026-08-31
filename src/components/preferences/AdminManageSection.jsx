@@ -28,7 +28,7 @@ import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } fro
 
 const ROLES = [
     { key: 'viewer', hint: 'Read-only access' },
-    { key: 'editor', hint: 'Can edit scenes' },
+    { key: 'editor', hint: 'Can edit projects' },
     { key: 'admin', hint: 'Full control + this console' }
 ]
 
@@ -455,7 +455,7 @@ function SpaceDetail({
                 subtitle={`Space · ${space.id}`}
                 actions={
                     <div className="preferences-module-actions">
-                        <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildStudioHubPath(space.id))}>Open hub</button>
+                        <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildStudioHubPath(space.id))}>Projects</button>
                         <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildAppSpacePath(space.id))}>View live</button>
                         <button type="button" className="preferences-inline-action warning" onClick={onDelete}>Delete</button>
                     </div>
@@ -486,7 +486,7 @@ function SpaceDetail({
                         <button type="button" className={`toggle-button ${space.isPublic ? 'active success-button' : ''}`} onClick={() => onPatch({ isPublic: !space.isPublic })}>
                             {space.isPublic ? 'Public ✓' : 'Private'}
                         </button>
-                        <button type="button" className={`toggle-button ${isDefault ? 'active' : ''}`} onClick={onSetDefault} disabled={isDefault} title="Also what the landing page's 'Enter Space' button opens">
+                        <button type="button" className={`toggle-button ${isDefault ? 'active' : ''}`} onClick={onSetDefault} disabled={isDefault} title="The space a URL that names no space falls back to">
                             {isDefault ? 'Main space ✓' : 'Set as main'}
                         </button>
                         <button type="button" className={`toggle-button ${isGlobal ? 'active success-button' : ''}`} onClick={onSetGlobal} title="Signed-out visitors land in this shared space">
@@ -537,7 +537,7 @@ function SpaceDetail({
                         value={draftProject}
                         onChange={(e) => setDraftProject(e.target.value)}
                     />
-                    <button type="submit" className="toggle-button" disabled={!draftProject.trim()}>Add project</button>
+                    <button type="submit" className="toggle-button" disabled={!draftProject.trim()}>Create project</button>
                 </form>
             </ModuleSection>
 
@@ -546,7 +546,7 @@ function SpaceDetail({
             <ModuleSection title="Owner &amp; access" subtitle="Who holds this space, and who can reach it">
                 {/* A space with no owner still works, but every owner-gated
                     action in it (publish, invite, rename, delete) can only be
-                    done by a platform admin. Spaces provisioned over the API —
+                    done by a di.iiii admin. Spaces provisioned over the API —
                     every repo-synced one — arrive here. */}
                 <InfoPair
                     label="Owner"
@@ -574,7 +574,7 @@ function SpaceDetail({
                                             className={`toggle-button ${owns ? 'active success-button' : ''}`}
                                             onClick={() => onPatch({ ownerUserId: owns ? null : u.id })}
                                             title={owns
-                                                ? 'Release this space back to the platform (admins keep full control)'
+                                                ? 'Release this space back to di.iiii (admins keep full control)'
                                                 : 'Hand this space over — they get owner rights and access in one move'}
                                         >
                                             {owns ? 'Owner ✓' : 'Make owner'}

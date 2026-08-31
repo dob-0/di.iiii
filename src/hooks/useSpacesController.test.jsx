@@ -140,7 +140,7 @@ describe('useSpacesController', () => {
             await result.current.handleQuickSpaceCreate()
         })
 
-        expect(navigateToSpace).toHaveBeenCalledWith('/admin?space=showroom')
+        expect(navigateToSpace).toHaveBeenCalledWith('/showroom/admin')
         expect(createSpace).toHaveBeenCalledWith(expect.objectContaining({
             slug: 'showroom',
             label: 'Showroom'

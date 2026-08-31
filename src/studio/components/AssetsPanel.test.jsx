@@ -43,7 +43,7 @@ describe('AssetsPanel unified Files library', () => {
         expect(screen.getByTitle('photo.png — project · space')).toBeInTheDocument()
         expect(screen.getByTitle('notes.txt — space')).toBeInTheDocument()
         expect(screen.getByTitle('tree.glb — project')).toBeInTheDocument()
-        expect(screen.getByText('in scene ×2')).toBeInTheDocument()
+        expect(screen.getByText('placed ×2')).toBeInTheDocument()
         expect(screen.getByText('public')).toBeInTheDocument()
     })
 

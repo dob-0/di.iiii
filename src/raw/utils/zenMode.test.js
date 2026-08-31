@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { defaultZenFor, isPaletteSummons, readZenPreference, resolveZenPreference, writeZenPreference } from './zenMode.js'
+import { defaultZenFor, isPaletteSummons, liftAutoZen, readZenPreference, resolveZenPreference, writeZenPreference } from './zenMode.js'
 
 const fakeStorage = (initial = {}) => {
     const map = new Map(Object.entries(initial))
@@ -70,15 +70,18 @@ describe('writeZenPreference', () => {
 })
 
 describe('resolveZenPreference', () => {
-    it('remembers the default it just resolved, so it cannot change itself later', () => {
-        // The bug this prevents: an empty workspace opens zen; you add a node;
-        // next visit the default re-derives to "not new" and the chrome comes
-        // back on its own.
+    it('remembers a derived default as auto-on — stable while its premise holds', () => {
+        // Revised 2026-08-21: the derived default is remembered (an empty
+        // canvas stays zen across reloads) but as 'auto-on', not 'on' — it
+        // was never a person's choice, so the first node may lift it. The
+        // old contract stored it as a choice, and the Scene button stayed
+        // invisible for the whole session after the first node arrived.
         const storage = fakeStorage()
         expect(resolveZenPreference('w', { nodeCount: 0, storage })).toBe(true)
-        expect(storage._map.get('dii.raw.zen.w')).toBe('on')
-        // Same workspace, now with work in it — the stored choice still wins.
-        expect(resolveZenPreference('w', { nodeCount: 7, storage })).toBe(true)
+        expect(storage._map.get('dii.raw.zen.w')).toBe('auto-on')
+        expect(resolveZenPreference('w', { nodeCount: 0, storage })).toBe(true)
+        // Same workspace, now with work in it — the premise died, zen lifts.
+        expect(resolveZenPreference('w', { nodeCount: 7, storage })).toBe(false)
     })
 
     it('leaves a workspace that already had work with its chrome, and remembers that too', () => {
@@ -126,5 +129,43 @@ describe('isPaletteSummons', () => {
 
     it('ignores nothing', () => {
         expect(isPaletteSummons(null)).toBe(false)
+    })
+})
+
+describe('auto zen — a derived default is not a choice', () => {
+    it('resolve stores the empty-canvas default as auto-on, not on', () => {
+        const storage = fakeStorage()
+        expect(resolveZenPreference('w9', { nodeCount: 0, storage })).toBe(true)
+        expect(storage._map.get('dii.raw.zen.w9')).toBe('auto-on')
+    })
+
+    it('auto-on lifts itself the moment the canvas has work in it', () => {
+        const storage = fakeStorage({ 'dii.raw.zen.w9': 'auto-on' })
+        expect(readZenPreference('w9', { nodeCount: 0, storage })).toBe(true)
+        expect(readZenPreference('w9', { nodeCount: 3, storage })).toBe(false)
+    })
+
+    it('liftAutoZen lifts only the derived default, never a chosen zen', () => {
+        const auto = fakeStorage({ 'dii.raw.zen.a': 'auto-on' })
+        expect(liftAutoZen('a', { storage: auto })).toBe(true)
+        expect(auto._map.get('dii.raw.zen.a')).toBe('off')
+        expect(liftAutoZen('a', { storage: auto })).toBe(false)
+
+        const chosen = fakeStorage({ 'dii.raw.zen.b': 'on' })
+        expect(liftAutoZen('b', { storage: chosen })).toBe(false)
+        expect(chosen._map.get('dii.raw.zen.b')).toBe('on')
+    })
+
+    it('an explicit toggle still writes the unconditional choice', () => {
+        const storage = fakeStorage()
+        writeZenPreference('w9', true, { storage })
+        expect(storage._map.get('dii.raw.zen.w9')).toBe('on')
+        expect(readZenPreference('w9', { nodeCount: 12, storage })).toBe(true)
+    })
+
+    it('a stored explicit choice is never rewritten by resolve', () => {
+        const storage = fakeStorage({ 'dii.raw.zen.w9': 'on' })
+        expect(resolveZenPreference('w9', { nodeCount: 12, storage })).toBe(true)
+        expect(storage._map.get('dii.raw.zen.w9')).toBe('on')
     })
 })

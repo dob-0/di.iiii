@@ -423,7 +423,7 @@ export default function StudioInspector({
     values = {},
     onSectionChange,
     footer = null,
-    emptyMessage = 'Select an entity to edit it.',
+    emptyMessage = 'Select an object to edit it.',
 }) {
     if (!sections.length) {
         return (

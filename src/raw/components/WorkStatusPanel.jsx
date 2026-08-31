@@ -58,7 +58,7 @@ export default function WorkStatusPanel({ node, onValuesChange }) {
         return (
             <div className="raw-work-status-panel raw-work-status-panel-error" role="status">
                 {error.status === 404
-                    ? 'Not available — this endpoint only runs on a local dev server.'
+                    ? 'Not available — this only works on a dev server running on your own machine.'
                     : `Could not reach work status: ${error.message}`}
             </div>
         )

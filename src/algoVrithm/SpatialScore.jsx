@@ -1,17 +1,18 @@
 import { useEffect, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { clipProgress, smoothstep } from './ritualClock.js'
+import { clipProgress, smoothstep } from '../timeline/clock.js'
 import { totalVeil } from './transitions.js'
-import { armAudioUnlock } from './reelPlayers.js'
+import { armAudioUnlock, unlockAudio } from './reelPlayers.js'
 import { attachLimiter } from './audioBus.js'
+import { keepAudioAwake, resumeAudio } from '../utils/audioWake.js'
 import { createRandom } from './random.js'
 import { tickGate, stutterGate, ringPosition, scoreHash } from './spatialScore.js'
 import { STROBE_HZ, STROBE_SHARPNESS } from './sequences/WhiteTunnel.jsx'
 import {
     COLUMNS, STROBE_WINDOW, STROBE_RUNS, STROBE_DECAY, SPHERE_Z, sphereHeight
 } from './sequences/DispersionSphere.jsx'
-import { DISPERSION_DEFAULTS } from './dispersionControls.js'
+import { DISPERSION_DEFAULTS } from '../timeline/dispersionControls.js'
 
 // The spatial score — sound for every beat that has none, synthesized and
 // placed in the room (2026-07-31, her ask: "do you can create spatial
@@ -224,6 +225,8 @@ const rowLocal = (sequences, id, playheadSec) => {
 
 export default function SpatialScore({ sequences, playheadSec, durationSec }) {
     const camera = useThree((state) => state.camera)
+    // The renderer, only for its XR event target — see the session effect below.
+    const gl = useThree((state) => state.gl)
 
     // The listener rides the camera — in XR that is the headset, and the
     // visitor's head turning against the placed voices IS the spatial audio.
@@ -244,6 +247,43 @@ export default function SpatialScore({ sequences, playheadSec, durationSec }) {
         const context = listener.context
         if (context && context.state === 'suspended') context.resume()
     }), [listener])
+
+    // ...and that unlock only ever fires ONCE, which is the other half of the
+    // problem. A context suspended later — by the tab backgrounding, or by the
+    // headset switching audio device as an immersive session starts — had
+    // nothing left to wake it, and the piece went silent for good.
+    //
+    // Registered HERE, once, rather than in every sequence that makes a sound:
+    // three's AudioContext is a module singleton, so both listeners in the
+    // piece (this score and the reel globe's) are the same context, and waking
+    // it revives both paths. See audioWake.js.
+    useEffect(() => keepAudioAwake(listener.context), [listener])
+
+    // Entering XR is the case worth wiring by hand, for two reasons at once:
+    // the session start is a user activation that may never appear as a DOM
+    // event on this window (so the reels need the imperative unlock), and it is
+    // the moment most likely to have suspended the context in the first place.
+    //
+    // Both are cheap and idempotent, so this asks no questions about which of
+    // the two went wrong on any given device — it just does both.
+    useEffect(() => {
+        const xr = gl?.xr
+        if (typeof xr?.addEventListener !== 'function') return undefined
+
+        const onSessionStart = () => {
+            unlockAudio()
+            resumeAudio()
+        }
+        xr.addEventListener('sessionstart', onSessionStart)
+        // Leaving a session switches the device back, so it needs the same
+        // treatment — otherwise taking the headset off is its own silent page.
+        xr.addEventListener('sessionend', resumeAudio)
+
+        return () => {
+            xr.removeEventListener('sessionstart', onSessionStart)
+            xr.removeEventListener('sessionend', resumeAudio)
+        }
+    }, [gl])
 
     const voices = useMemo(() => {
         const context = listener.context

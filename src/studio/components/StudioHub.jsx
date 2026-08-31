@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRouting.js'
-import { buildRawHubPath } from '../../raw/utils/rawRouting.js'
+import { buildRawProjectsPath } from '../../raw/utils/rawRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import GridFloorBackground from '../../components/GridFloorBackground.jsx'
 import useAuthSession from '../../hooks/useAuthSession.js'
@@ -16,7 +16,7 @@ import {
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
-import { buildStudioProjectPath, buildStudioSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildStudioProjectPath, buildSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import '../styles/studio-hub.css'
 
@@ -33,8 +33,9 @@ const formatRelativeDate = (iso) => {
 const formatSource = (source = '') => {
     switch (source) {
         case 'studio-v3': return 'Studio'
+        case 'raw-v2': return 'Nodes'
         case 'legacy-import-studio': return 'Imported'
-        case 'beta-v2': return 'Beta'
+        case 'beta-v2': return 'Legacy'
         case 'legacy-import': return 'Legacy'
         default: return 'Project'
     }
@@ -181,7 +182,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                 try {
                     await updateServerSpace(spaceId, { publishedProjectId: null })
                 } catch (unpublishError) {
-                    setStatus(`Project deleted, but the space's live pointer could not be cleared: ${unpublishError.message || unpublishError}`)
+                    setStatus(`Project deleted, but this space still points at it as its live project: ${unpublishError.message || unpublishError}`)
                 }
             }
             await loadProjects()
@@ -211,13 +212,13 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         <div className="sh-top-actions">
                             <button
                                 className="sh-btn-outline"
-                                title="Raw — the experimental node-first editor"
-                                onClick={() => appNavigate(buildRawHubPath(spaceId))}
+                                title="The node editor"
+                                onClick={() => appNavigate(buildRawProjectsPath(spaceId))}
                             >
-                                Raw
+                                Nodes
                             </button>
                             <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
-                                + New
+                                + New project
                             </button>
                         </div>
                     ) : (
@@ -241,7 +242,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
                 {/* Secondary actions */}
                 <div className="sh-secondary-row">
-                    <button className="sh-link" onClick={() => appNavigate(buildStudioSpacesPath())}>← Spaces</button>
+                    <button className="sh-link" onClick={() => appNavigate(buildSpacesPath())}>← Spaces</button>
                     <span className="sh-sep">·</span>
                     <label className={`sh-link${isBusy ? ' sh-link-disabled' : ''}`}>
                         Import
@@ -273,7 +274,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         </>
                     )}
                     <span className="sh-sep">·</span>
-                    <button className="sh-link" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>Live</button>
+                    <button className="sh-link" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>View live</button>
                     {archivedProjects.length > 0 && (
                         <>
                             <span className="sh-sep">·</span>
@@ -299,7 +300,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     <div className="sh-empty-state">
                         <p className="sh-empty-title">No projects yet</p>
                         <p className="sh-empty-hint">
-                            A project is one scene you can build and publish.
+                            A project is one thing you build and publish.
                             Create your first one — you can rename or delete it anytime.
                         </p>
                         <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
@@ -323,7 +324,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                 onKeyDown={e => e.key === 'Enter' && appNavigate(codeSpace.path)}
                             >
                                 <p className="sh-project-title">{codeSpace.label}</p>
-                                <span className="sh-code-badge">code space</span>
+                                <span className="sh-code-badge">built from code</span>
                                 <p className="sh-code-blurb">{codeSpace.blurb}</p>
                                 <div className="sh-code-actions">
                                     <button

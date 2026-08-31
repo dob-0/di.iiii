@@ -43,6 +43,37 @@ const ROW = 130
 // claim about the runtime that has to survive that check.
 export const UNWIRABLE_PORTS = []
 
+// Outputs that are PASS-THROUGH: alive exactly when something is wired in,
+// and honestly NOTHING when nothing is. A third category the 2026-08-19
+// constructor work forced into existence — the liveness test used to know
+// only alive-bare (a clock, a value with defaults) and dead (decoration), and
+// Merge is neither: its inputs are geometry, which has no sensible default,
+// so a bare Merge carrying an empty group instead would draw as an invisible
+// something. The test holds this list in BOTH directions too: each entry must
+// be dead bare AND provably alive once fed.
+export const PASS_THROUGH_PORTS = [
+    {
+        port: 'shape.merge.out',
+        why: 'merges what arrives; with nothing wired it carries nothing, deliberately distinct from an empty group'
+    },
+    {
+        port: 'geom.geo.geometry',
+        why: 'gives out what the Geo collects; empty it carries nothing — an empty place is not an invisible shape'
+    },
+    {
+        port: 'geom.array.out',
+        why: 'repeats what arrives; with nothing wired it carries nothing — an empty array is not an invisible shape'
+    },
+    {
+        port: 'geom.transform.out',
+        why: 're-frames what arrives; with nothing wired it carries nothing — an empty transform is not a shape'
+    },
+    {
+        port: 'logic.gate.out',
+        why: 'passes through what arrives while open; bare or closed it carries nothing — a closed gate is an unplugged wire, not a zero'
+    }
+]
+
 // Ports that are declared and accept a value, but whose value is ignored by the
 // renderer — wiring them proves nothing, so the example leaves them alone.
 // Empty today: the registry's panel-2d/universe types were simplified down to
@@ -104,6 +135,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('numA', 'value.number', { label: 'Number A · 1.5', col: 0, row: 0, values: { value: 1.5 } })
     add('numB', 'value.number', { label: 'Number B · 0.5', col: 0, row: 1, values: { value: 0.5 } })
     add('numC', 'value.number', { label: 'Number C · 1.0', col: 0, row: 8, values: { value: 1 } })
+    add('numHalf', 'value.number', { label: 'Number ½', col: 0, row: 8, values: { value: 0.5 } })
     add('colorA', 'value.color', { label: 'Color A · cyan', col: 0, row: 2, values: { value: '#4df9ff' } })
     add('colorB', 'value.color', { label: 'Color B · magenta', col: 0, row: 3, values: { value: '#ff4dd8' } })
     add('vec', 'value.vec3', { label: 'Vector · position', col: 0, row: 4, values: { value: [0, 1, 0] } })
@@ -121,11 +153,57 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('mix', 'math.mix', { label: 'Mix', col: 1, row: 6 })
     add('subtract', 'math.subtract', { label: 'Subtract', col: 1, row: 7 })
     add('pow', 'math.pow', { label: 'Power', col: 1, row: 8 })
+    add('compare', 'logic.compare', { label: 'Compare', col: 1, row: 9 })
+    add('gate', 'logic.gate', { label: 'Gate', col: 1, row: 10 })
+    add('switch', 'logic.switch', { label: 'Switch', col: 1, row: 11 })
+    add('lag', 'signal.lag', { label: 'Lag', col: 1, row: 12 })
+    add('range', 'math.range', { label: 'Range', col: 1, row: 13 })
+    add('lfo', 'signal.lfo', { label: 'Oscillator', col: 0, row: 10 })
+    add('logicCombine', 'logic.combine', { label: 'Logic', col: 1, row: 14 })
+    add('extremes', 'math.extremes', { label: 'Extremes', col: 1, row: 15 })
+    add('abs', 'math.abs', { label: 'Absolute', col: 1, row: 16 })
+    add('round', 'math.round', { label: 'Round', col: 1, row: 17 })
+    add('ease', 'signal.ease', { label: 'Ease', col: 1, row: 18 })
+    add('counter', 'signal.counter', { label: 'Counter', col: 0, row: 11 })
+    add('hold', 'signal.hold', { label: 'Hold', col: 0, row: 12 })
+    add('delay', 'signal.delay', { label: 'Delay', col: 0, row: 13 })
+    add('timer', 'signal.timer', { label: 'Timer', col: 0, row: 14 })
+    add('trigger', 'signal.trigger', { label: 'Trigger', col: 0, row: 15 })
+    add('speed', 'signal.speed', { label: 'Speed', col: 0, row: 16 })
+    add('toggle', 'logic.toggle', { label: 'Toggle', col: 0, row: 17 })
+    add('vsplit', 'vector.split', { label: 'Split', col: 2, row: 10 })
+    add('vcombine', 'vector.combine', { label: 'Combine', col: 2, row: 11 })
+    add('channels', 'colour.split', { label: 'Channels', col: 2, row: 12 })
+    add('compose', 'colour.combine', { label: 'Compose', col: 2, row: 13 })
+    add('vdistance', 'vector.distance', { label: 'Distance', col: 2, row: 14 })
+    add('ramp', 'colour.ramp', { label: 'Ramp', col: 2, row: 15 })
+    add('dot', 'vector.dot', { label: 'Dot', col: 2, row: 16 })
+    add('crossN', 'vector.cross', { label: 'Cross', col: 2, row: 17 })
+    add('direction', 'vector.direction', { label: 'Direction', col: 2, row: 18 })
+    add('vrotation', 'vector.rotation', { label: 'Rotation', col: 2, row: 19 })
+    add('aim', 'vector.aim', { label: 'Aim', col: 2, row: 20 })
+    add('random', 'value.random', { label: 'Random', col: 2, row: 21 })
+    add('cylinder', 'geom.cylinder', { label: 'Cylinder', col: 3, row: 9, values: { position: [2.5, 0.75, -2] } })
+    add('cone', 'geom.cone', { label: 'Cone', col: 3, row: 10, values: { position: [4, 0.75, -2] } })
+    add('torus', 'geom.torus', { label: 'Torus', col: 3, row: 11, values: { position: [5.5, 0.5, -2] } })
+    add('transform', 'geom.transform', { label: 'Transform', col: 3, row: 12 })
+    add('lineStroke', 'geom.line', { label: 'Line', col: 3, row: 13, values: { from: [-4, 0, -2], to: [-4, 1.5, -2] } })
+    add('circle', 'geom.circle', { label: 'Circle', col: 3, row: 14, values: { position: [-5.5, 0.5, -2] } })
+    add('go', 'view.button', { label: 'Go', col: 4, row: 0 })
+    add('keys', 'device.keyboard', { label: 'Keyboard', col: 4, row: 1 })
+    add('midiOut', 'device.midi.out', { label: 'MIDI Out', col: 4, row: 2 })
+    add('dmxOut', 'device.dmx.out', { label: 'DMX Out', col: 4, row: 15 })
+    add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
+    add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
-    // --- column 2: world settings ---------------------------------------------
-    add('light', 'world.light', { label: 'Light', col: 2, row: 0 })
+    // --- column 2: scene settings ---------------------------------------------
+    // world.light is the RETIRED dual-identity node (paletteHidden; the
+    // split's back-compat path) — the example shows what the palette offers:
+    // Environment for the wash and sun, Light (light.point) for a lamp.
+    add('environment', 'world.environment', { label: 'Environment', col: 2, row: 0 })
     add('background', 'world.background', { label: 'Background', col: 2, row: 1 })
     add('grid', 'world.grid', { label: 'Grid', col: 2, row: 2 })
+    add('lamp', 'light.point', { label: 'Light', col: 2, row: 3, values: { position: [1.5, 1.6, 0.5] } })
 
     // --- column 3: geometry ----------------------------------------------------
     add('cube', 'geom.cube', { label: 'Cube', col: 3, row: 0 })
@@ -141,25 +219,57 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('sound', 'media.audio', { label: 'Sound', col: 3, row: 5 })
 
     // --- column 4: universe containers and panels ------------------------------
-    add('world', 'universe.world', { label: 'World', col: 4, row: 0 })
-    add('space', 'universe.space', { label: 'Space', col: 4, row: 1 })
-    add('desk', 'universe.desk.3d', { label: '3D Desk', col: 4, row: 2 })
+    add('world', 'universe.world', { label: 'Scene', col: 4, row: 0 })
+    add('space', 'universe.space', { label: 'Kiosk', col: 4, row: 1 })
+    // universe.desk.3d retired from the palette with the container story —
+    // Geo is THE place that renders its children; the example shows what the
+    // palette offers.
 
-    // The doorways. They sit INSIDE the 3D Desk, which is what makes them mean
-    // anything: each one puts a socket on that desk's outer face, so a wire can
+    // The doorways. They sit INSIDE the Geo, which is what makes them mean
+    // anything: each one puts a socket on that geo's outer face, so a wire can
     // reach through the wall. Deliberately UNWIRED here — this file's port tests
     // call getNodeInputs/getNodeOutputs with no node list, which is the correct
     // behaviour for every existing caller, so a promoted socket does not exist
     // from their point of view and an edge into one would look like a wire to
-    // nowhere. The desk is the portrait; the wiring is the wiki's job.
-    add('doorIn', 'port.in', { label: 'In · a way through the wall', col: 3, row: 6, insideKey: 'desk', values: { label: 'Tint', portType: 'color' } })
-    add('doorOut', 'port.out', { label: 'Out · a way back through', col: 3, row: 7, insideKey: 'desk', values: { label: 'Size', portType: 'vec3' } })
+    // nowhere. The geo is the portrait; the wiring is the wiki's job.
+    add('doorIn', 'port.in', { label: 'In · a way through the wall', col: 3, row: 6, insideKey: 'geo', values: { label: 'Tint', portType: 'color' } })
+    add('doorOut', 'port.out', { label: 'Out · a way back through', col: 3, row: 7, insideKey: 'geo', values: { label: 'Size', portType: 'vec3' } })
+
+    // The Geo: the plain place. It gets a resident — the example's job is
+    // showing what a thing IS, and an empty geo is a footprint tile, which is
+    // true but teaches less than a geo with something standing in it.
+    add('geo', 'geom.geo', { label: 'Geo', col: 5, row: 7, values: { position: [-2.5, 0, 0] } })
+    // The authored eye, standing in the example Geo so the census shows it
+    // carried by a container like anything else.
+    add('camera', 'world.camera', { label: 'Camera', col: 5, row: 8, insideKey: 'geo', values: { position: [2, 1.4, 2] } })
+    add('geoCube', 'geom.cube', { label: 'Cube', col: 4, row: 10, insideKey: 'geo', values: { size: [0.6, 0.6, 0.6], color: '#8be9fd', position: [0, 0.3, 0] } })
+
+    // --- the constructor cluster: a node made of nodes -----------------------
+    // WIRED, unlike the desk's doorways above, because here the wiring IS the
+    // point: the Merge's `out` must demonstrably carry something (the liveness
+    // test evaluates every placeable output against the runtime), and a
+    // Constructor standing empty would portray the one node whose whole idea
+    // is wearing its contents as a wireframe with no explanation. Two parts,
+    // merged, through a door — the smallest honest build.
+    add('ctor', 'geom.constructor', { label: 'Constructor', col: 4, row: 6, values: { position: [2.5, 0, 0] } })
+    add('ctorHead', 'geom.sphere', { label: 'Head', col: 3, row: 8, insideKey: 'ctor', values: { radius: 0.3, color: '#ffffff', position: [0, 1.2, 0] } })
+    add('ctorBody', 'geom.sphere', { label: 'Body', col: 3, row: 9, insideKey: 'ctor', values: { radius: 0.5, color: '#dfe8ff', position: [0, 0.5, 0] } })
+    add('ctorMerge', 'shape.merge', { label: 'Merge', col: 4, row: 8, insideKey: 'ctor' })
+    add('ctorDoor', 'port.out', { label: 'Out · the worn shape', col: 4, row: 9, insideKey: 'ctor', values: { label: 'Shape' } })
 
     add('text', 'view.text', { label: 'Text panel', col: 4, row: 3, values: { content: 'Every node type, one graph.' } })
     // Same-origin on purpose: the example must also open on a local install
     // with no network, where an iframe of di-studio.xyz is a dead panel.
     add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: '/wiki' } })
     add('image', 'view.image', { label: 'Image panel', col: 4, row: 5 })
+    add('publish', 'view.publish', { label: 'Public page panel', col: 4, row: 6, values: { title: 'The example project' } })
+    add('list', 'view.list', { label: 'List panel', col: 4, row: 7, values: {
+        groups: ['Core', 'Would be good'],
+        items: [
+            { id: 'ex-1', text: 'Six laptops', group: 'Core', order: 0 },
+            { id: 'ex-2', text: 'A second projector', group: 'Would be good', order: 1 }
+        ]
+    } })
 
     // --- column 5: the editor's own chrome, as nodes ---------------------------
     // `studio` is a container: on the canvas it is a card you enter, and its
@@ -169,7 +279,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('studio', 'studio', { label: 'Studio', col: 5, row: 0, values: { title: 'Studio' } })
     add('outliner', 'view.outliner', { label: 'Outliner panel', col: 5, row: 1 })
     add('inspector', 'view.inspector', { label: 'Inspector panel', col: 5, row: 2 })
-    add('library', 'view.library', { label: 'Create panel', col: 5, row: 3 })
+    // view.library (Create) is paletteHidden in the node editor — its buttons
+    // make OBJECTS, which the node vocabulary cannot describe. Not shown here.
     add('timeline', 'view.timeline', { label: 'Timeline panel', col: 5, row: 4 })
     add('director', 'view.director', { label: 'Director panel', col: 5, row: 5 })
     add('agent', 'agent', { label: 'Agent', col: 5, row: 6 })
@@ -180,6 +291,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // capture (handleLiveOutputChange in RawEditor), bypassing the pure
     // computeNodeOutput gap the rest of this file documents around.
     add('webcam', 'source.webcam', { label: 'Webcam', col: 6, row: 0 })
+    add('monitor', 'stream.monitor', { label: 'Monitor', col: 7, row: 0 })
     add('mic', 'source.mic', { label: 'Microphone', col: 6, row: 1 })
 
     // --- column 7: workflow nodes + the keeper -----------------------------
@@ -205,6 +317,12 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     }
 
     const edges = [
+        // The constructor's build: head + body through the Merge into the
+        // door. This is what makes Merge's output demonstrably alive, and the
+        // Constructor demonstrably a snowman rather than a wireframe.
+        wire('ctorHead', 'geometry', 'ctorMerge', 'a'),
+        wire('ctorBody', 'geometry', 'ctorMerge', 'b'),
+        wire('ctorMerge', 'out', 'ctorDoor', 'value'),
         // A sine of elapsed time scaled to ±0.5 and offset to 1.0, giving a
         // 0.5..1.5 band that exactly fills the clamp range — this is what makes
         // the sphere pulse. Scale it any wider and the clamp saturates, which
@@ -238,7 +356,94 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('time', 'cos', 'subtract', 'b'),
         wire('subtract', 'out', 'pow', 'a'),
         wire('numB', 'out', 'pow', 'b'),
-        wire('pow', 'out', 'light', 'directionalIntensity'),
+        wire('pow', 'out', 'environment', 'directionalIntensity'),
+
+        // The logic trio, driven by the same clock: Compare watches the
+        // sawtooth cross its midpoint, its verdict opens the Gate (proving
+        // the pass-through: Gate.out carries the sine only while open) and
+        // flips the Switch between the two colours.
+        wire('divide', 'out', 'compare', 'a'),
+        wire('numHalf', 'out', 'compare', 'b'),
+        wire('sin', 'out', 'gate', 'value'),
+        wire('compare', 'greater', 'gate', 'open'),
+        wire('colorA', 'out', 'switch', 'a'),
+        wire('colorB', 'out', 'switch', 'b'),
+        wire('compare', 'less', 'switch', 'pick'),
+
+        // Lag smooths the raw sine — the glide every window computes its own
+        // way (frameMemory is per-window), converging on the same target.
+        wire('sin', 'out', 'lag', 'in'),
+
+        // The numbers wave, fed by the same clock: the oscillator's triangle
+        // remaps through Range, its verdicts combine in Logic, and the
+        // sawtooth eases — every new operator provably alive on a wire.
+        wire('lfo', 'triangle', 'range', 'in'),
+        wire('compare', 'greater', 'logicCombine', 'a'),
+        wire('compare', 'less', 'logicCombine', 'b'),
+        wire('sin', 'out', 'extremes', 'a'),
+        wire('lfo', 'sine', 'extremes', 'b'),
+        wire('lfo', 'saw', 'abs', 'in'),
+        wire('lfo', 'square', 'round', 'in'),
+        wire('divide', 'out', 'ease', 'in'),
+
+        // The state wave, driven by the verdicts already in the graph: the
+        // comparator's crossings count, sample, time, fire, spin and latch.
+        wire('compare', 'greater', 'counter', 'count'),
+        wire('sin', 'out', 'hold', 'value'),
+        wire('compare', 'greater', 'hold', 'sample'),
+        wire('sin', 'out', 'delay', 'value'),
+        wire('compare', 'greater', 'timer', 'start'),
+        wire('compare', 'greater', 'trigger', 'fire'),
+        wire('numB', 'out', 'speed', 'rate'),
+        wire('compare', 'less', 'toggle', 'flip'),
+
+        // The vector/colour wave: the first colour opened into channels, its
+        // hue recomposed, positions split and measured, the sawtooth riding
+        // a three-stop ramp.
+        wire('colorA', 'out', 'channels', 'colour'),
+        wire('channels', 'red', 'compose', 'red'),
+        wire('vsplit', 'x', 'vcombine', 'y'),
+        wire('vcombine', 'out', 'vdistance', 'a'),
+        wire('divide', 'out', 'ramp', 'position'),
+        wire('colorA', 'out', 'ramp', 'a'),
+        wire('colorB', 'out', 'ramp', 'c'),
+
+        // The second vector wave: the same authored vector measured against
+        // the recombined one, pointed, spun by the sine, and aimed at — with
+        // one fixed random draw between the two numbers already on the desk.
+        wire('vec', 'out', 'dot', 'a'),
+        wire('vcombine', 'out', 'dot', 'b'),
+        wire('vec', 'out', 'crossN', 'a'),
+        wire('vcombine', 'out', 'crossN', 'b'),
+        wire('vec', 'out', 'direction', 'vector'),
+        wire('vec', 'out', 'vrotation', 'vector'),
+        wire('sin', 'out', 'vrotation', 'angle'),
+        wire('vec', 'out', 'aim', 'to'),
+        wire('numA', 'out', 'random', 'variant'),
+        wire('numB', 'out', 'random', 'greatest'),
+
+        // Line and Circle: the authored vector pulls the stroke's far end,
+        // and both wear colours already on the desk.
+        wire('vec', 'out', 'lineStroke', 'to'),
+        wire('colorA', 'out', 'lineStroke', 'color'),
+        wire('colorB', 'out', 'circle', 'color'),
+
+        // Array repeats the cube's own geometry value — the proving fixture
+        // for its pass-through out (bare, an Array carries nothing).
+        wire('cube', 'geometry', 'array', 'geometry'),
+        wire('torus', 'geometry', 'transform', 'geometry'),
+
+        // The operator's hands fire the state wave: Go presses count, the
+        // chosen key samples the sine.
+        wire('go', 'presses', 'counter', 'step'),
+        wire('keys', 'pressed', 'hold', 'sample'),
+
+        // The desk's hand on a cable: the comparator's verdict holds the
+        // note; the sine rides out as CC. The wiring shows the lanes without
+        // pretending hardware is attached.
+        wire('compare', 'greater', 'midiOut', 'trigger'),
+        wire('numB', 'out', 'midiOut', 'note'),
+        wire('sin', 'out', 'midiOut', 'value'),
 
         // A wire OUT of a container — new on 2026-08-19, and the thing that
         // used to be impossible: every container declared zero outputs, so
@@ -250,8 +455,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('world', 'title', 'text', 'content'),
 
         // Static world settings.
-        wire('colorA', 'out', 'light', 'ambientColor'),
-        wire('numB', 'out', 'light', 'ambientIntensity'),
+        wire('colorA', 'out', 'environment', 'ambientColor'),
+        wire('numB', 'out', 'environment', 'ambientIntensity'),
         wire('vec', 'out', 'light', 'directionalPosition'),
         wire('colorB', 'out', 'light', 'directionalColor'),
         wire('colorB', 'out', 'background', 'color'),
@@ -273,6 +478,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // a texture"); source.webcam has produced one for weeks, and the image
         // panel now draws it.
         wire('webcam', 'frame', 'image', 'src'),
+        wire('webcam', 'frame', 'monitor', 'src'),
         // geom.cube.bounds — likewise documented as dead, in fact a real vec3
         // of the cube's size. Wired to the desk's scale so the marker box grows
         // with the cube it is measuring.

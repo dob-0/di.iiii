@@ -38,6 +38,43 @@ describe('EntityContent mapping', () => {
         expect(twoD.type).toBe(Text2DObject)
     })
 
+    // Text was the one entity type never handed appearance.opacity, so fading it
+    // -- by hand or from a timeline, which can animate `opacity` -- did nothing.
+    it('passes opacity to 2D text like every other entity type', () => {
+        const el = render({
+            type: 'text',
+            components: { appearance: { opacity: 0.25 }, text: { variant: '2d', value: 'hi' } }
+        })
+        expect(el.type).toBe(Text2DObject)
+        expect(el.props.opacity).toBe(0.25)
+    })
+
+    // Spatial sound has to be opted into per video: switching it on for every
+    // video would change how every existing space sounds.
+    it('leaves video sound flat unless the media asks for spatial', () => {
+        const el = render(
+            { type: 'video', components: { media: { assetId: 'a' } } },
+            new Map([['a', { id: 'a', url: '/x.mp4' }]])
+        )
+        expect(el.props.spatial).toBe(false)
+    })
+
+    it('passes spatial sound settings through when the media asks for them', () => {
+        const el = render(
+            { type: 'video', components: { media: { assetId: 'a', spatial: true, distance: 3, maxDistance: 25 } } },
+            new Map([['a', { id: 'a', url: '/x.mp4' }]])
+        )
+        expect(el.props.spatial).toBe(true)
+        expect(el.props.distance).toBe(3)
+        expect(el.props.maxDistance).toBe(25)
+    })
+
+    it('passes the text reveal config through so a typewriter can run', () => {
+        const reveal = { mode: 'typewriter', speed: 40 }
+        const el = render({ type: 'text', components: { text: { variant: '2d', value: 'hi', reveal } } })
+        expect(el.props.reveal).toEqual(reveal)
+    })
+
     it('resolves media assets through the asset map', () => {
         const assetMap = new Map([['a1', { id: 'a1', url: 'https://cdn/x.png' }]])
         const el = render({ type: 'image', components: { media: { assetId: 'a1' } } }, assetMap)

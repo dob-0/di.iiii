@@ -2,7 +2,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
-import { fadeEnvelope } from '../ritualClock.js'
+import { fadeEnvelope } from '../../timeline/clock.js'
 
 // One component for every asset-backed beat: an image, a video, or a model.
 //
@@ -25,7 +25,7 @@ import {
     DEFAULT_PLACEMENT,
     placementPosition,
     resolvePlacement
-} from '../assetPlacement.js'
+} from '../../timeline/assetPlacement.js'
 
 export { DEFAULT_PLACEMENT, placementPosition, resolvePlacement }
 

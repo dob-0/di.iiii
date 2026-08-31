@@ -104,6 +104,31 @@ describe('raw colour roles', () => {
     // background silently never applied. Nothing failed; it just did nothing.
     // A token WITH a fallback (`var(--card-scale, 1)`) is a different thing —
     // a knob a component may set — so only the fallback-less ones are checked.
+    // "what is it made of" sits in the marker strip, which is the one thing a
+    // lost person on a phone reaches for; and the sheet's only control is a
+    // link-looking button that is still a finger's target.
+    it('holds the anatomy sheet\'s two controls to the same floor', () => {
+        for (const selector of ['.raw-scope-marker-what', '.raw-anatomy-goto']) {
+            const rule = block(selector)
+            expect(rule, `${selector} rule not found — did the selector change?`).toBeTruthy()
+            expect(rule, selector).toMatch(/min-height:\s*44px/)
+            expect(rule, selector).toMatch(/touch-action:\s*manipulation/)
+        }
+    })
+
+    // The sheet is a reading, not a selection: nothing in it rests in cyan, and
+    // the one hue it carries is the node's own family, through the window's
+    // accent property rather than a colour of its own.
+    it('keeps the anatomy sheet neutral at rest', () => {
+        expect(block('.raw-anatomy')).not.toMatch(/--di-cyan/)
+        expect(block('.raw-anatomy-slot')).not.toMatch(/--di-cyan/)
+        expect(block('.raw-anatomy-badge')).toMatch(/--window-accent/)
+        // …and cyan only where a pointer is.
+        expect(block('.raw-anatomy-goto:hover,\n.raw-anatomy-goto:focus-visible')
+            || css.slice(css.indexOf('.raw-anatomy-goto:hover'), css.indexOf('.raw-anatomy-goto:hover') + 160))
+            .toMatch(/--di-cyan/)
+    })
+
     it('defines every token it uses without a fallback', () => {
         const base = readFileSync(join(stylesDir, '../../styles/base.css'), 'utf8')
         const bare = [...css.matchAll(/var\((--[a-z0-9-]+)\s*\)/gi)].map((m) => m[1])
