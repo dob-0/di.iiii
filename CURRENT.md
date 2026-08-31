@@ -13,7 +13,9 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the one-line install stopped shipping di-studio.xyz, and platform stopped being tangled with works
+- Three Distances: the owner's shape for local, LAN, and hosted, written down
+- DMX Out: the graph reaches a real lighting rig over HTTP
+- a projection mapper in the platform, so a space can be put on a wall
 
 Full detail: `PROGRESS.md`.
 

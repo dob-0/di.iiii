@@ -26,6 +26,7 @@ import WorkStatusPanel from './WorkStatusPanel.jsx'
 import AgentRunPanel from './AgentRunPanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
+import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
@@ -1570,6 +1571,22 @@ export default function RawEditor({
                     // Endpoint and model are settable in the window itself, not
                     // only in the inspector: a node the palette can place must be
                     // usable where it lands, without also placing an inspector.
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'device.dmx.out') {
+            return (
+                <DmxOutPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onStatus={handleMidiOutStatus}
+                    // Host is settable in the window itself, not only in the
+                    // inspector — a node the palette can place must be usable
+                    // where it lands.
                     onConfigChange={(nodeId, patch) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
