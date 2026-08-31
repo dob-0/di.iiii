@@ -3,7 +3,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioHub from './StudioHub.jsx'
 import { setAppNavigate } from '../../utils/appNavigate.js'
-import { ALGO_VRITHM_PATH, ALGO_VRITHM_SCENE_PATH } from '../../algoVrithm/algoVrithmRouting.js'
+// Literals rather than an import from the piece: this is a test of Studio's
+// hub, and the paths are what a visitor types.
+const ALGO_VRITHM_PATH = '/algovrithm'
+const ALGO_VRITHM_SCENE_PATH = '/algovrithm/scene'
 // Resolves to the mock declared below, which is the point: the assertion then
 // checks that the button and codeSpaces.js agree on a destination, rather than
 // restating a literal that both could drift away from together.
@@ -122,6 +125,21 @@ describe('StudioHub', () => {
         })
     })
 
+    // The doors audit (2026-08-21): this button promised "The node editor" and
+    // landed on /{space}/raw — the localStorage scratch canvas — instead of the
+    // space's node project list one segment deeper. The label is a list promise.
+    it('sends Nodes to the node project list, not the local canvas', async () => {
+        const navigate = vi.fn()
+        setAppNavigate(navigate)
+        listProjects.mockResolvedValue([])
+
+        render(<StudioHub spaceId="gallery" />)
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Nodes' }))
+        expect(navigate).toHaveBeenCalledWith('/gallery/raw/projects', { replace: false })
+        setAppNavigate(null)
+    })
+
     describe('code spaces', () => {
         // algovrithm's scene is a React route, not a project document, so the
         // server correctly reports zero projects for it. Without the registry
@@ -142,7 +160,7 @@ describe('StudioHub', () => {
             render(<StudioHub spaceId="algovrithm" />)
 
             expect(await screen.findByText('algovrithm')).toBeTruthy()
-            expect(screen.getByText('code space')).toBeTruthy()
+            expect(screen.getByText('built from code')).toBeTruthy()
             expect(screen.queryByText('No projects yet')).toBeNull()
             expect(screen.queryByRole('button', { name: '+ Create your first project' })).toBeNull()
         })
@@ -191,7 +209,7 @@ describe('StudioHub', () => {
             render(<StudioHub spaceId="gallery" />)
 
             expect(await screen.findByText('No projects yet')).toBeTruthy()
-            expect(screen.queryByText('code space')).toBeNull()
+            expect(screen.queryByText('built from code')).toBeNull()
         })
     })
 

@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
     PROJECT_DOCUMENT_VERSION,
     applyProjectOps,
+    buildCreationComponentsForType,
+    buildDefaultComponentsForType,
     cloneValue,
     invertProjectOps,
     normalizeProjectDocument
+,
+    normalizeWorkspaceState,
+    defaultWorkspaceState
 } from './projectSchema.js'
 
 describe('projectSchema', () => {
@@ -41,8 +46,12 @@ describe('projectSchema', () => {
         })
 
         expect(document.entities[0].type).toBe('portal')
+        // Label styling defaults must reproduce the pre-existing look exactly —
+        // white type on a plate, renderer's own font — so portals authored
+        // before those fields existed render identically.
         expect(document.entities[0].components.reference).toEqual({
-            spaceId: 'wcc', projectId: 'arthur', mode: 'embed', label: 'Arthur'
+            spaceId: 'wcc', projectId: 'arthur', mode: 'embed', label: 'Arthur',
+            labelColor: '#ffffff', labelPlate: true, labelFont: 'default'
         })
         // unknown mode falls back to 'portal'
         expect(document.entities[1].components.reference.mode).toBe('portal')
@@ -462,6 +471,78 @@ describe('projectSchema', () => {
     })
 })
 
+// The author stamp only exists if the normalizer names it. Both normalizers
+// return a literal object, so an unlisted field is dropped on every op apply
+// and every document load — the op-log would hold an author the rebuilt
+// document does not have, and the delete guard would read every object in the
+// space as unowned.
+describe('the author stamp survives normalization', () => {
+    it('keeps createdBy on an entity, through creation and through an op apply', () => {
+        const createdBy = { subject: 'guest:ani', label: 'Ani' }
+        const document = normalizeProjectDocument({
+            entities: [{ id: 'e1', type: 'box', name: 'Tower', createdBy }]
+        })
+        expect(document.entities[0].createdBy).toEqual(createdBy)
+
+        const applied = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createEntity', payload: { entity: { id: 'e2', type: 'box', createdBy } } }
+        ])
+        expect(applied.entities[0].createdBy).toEqual(createdBy)
+    })
+
+    it('keeps createdBy on a node', () => {
+        const createdBy = { subject: 'guest:ani', label: 'Ani' }
+        const document = normalizeProjectDocument({
+            nodes: [{ id: 'n1', typeId: 'geom.cube', label: 'Cube', values: {}, createdBy }]
+        })
+        expect(document.nodes[0].createdBy).toEqual(createdBy)
+    })
+
+    // Editing somebody's object is not taking it over.
+    it('an updateEntity op does not erase who made it', () => {
+        const createdBy = { subject: 'guest:ani', label: 'Ani' }
+        const start = normalizeProjectDocument({
+            entities: [{ id: 'e1', type: 'box', name: 'Tower', createdBy }]
+        })
+        const after = applyProjectOps(start, [
+            { type: 'updateEntity', payload: { entityId: 'e1', patch: { name: 'Renamed' } } }
+        ])
+        expect(after.entities[0].name).toBe('Renamed')
+        expect(after.entities[0].createdBy).toEqual(createdBy)
+    })
+
+    // Everything made before the stamp existed. Unowned, not yours.
+    it('normalizes a legacy entity and any half-formed author to null', () => {
+        const document = normalizeProjectDocument({
+            entities: [
+                { id: 'old', type: 'box' },
+                { id: 'junk', type: 'box', createdBy: 'guest:ani' },
+                { id: 'nameless', type: 'box', createdBy: { label: 'Ani' } }
+            ]
+        })
+        for (const entity of document.entities) expect(entity.createdBy).toBeNull()
+    })
+
+    it('drops a label that is not a string rather than carrying it', () => {
+        const document = normalizeProjectDocument({
+            entities: [{ id: 'e1', type: 'box', createdBy: { subject: 'guest:ani', label: { evil: true } } }]
+        })
+        expect(document.entities[0].createdBy).toEqual({ subject: 'guest:ani', label: '' })
+    })
+})
+
+describe('the retired surface axis', () => {
+    it('normalizeWorkspaceState sheds activeSurface from old documents', () => {
+        const next = normalizeWorkspaceState({ activeSurface: 'world', selectedNodeId: 'n1' })
+        expect('activeSurface' in next).toBe(false)
+        expect(next.selectedNodeId).toBe('n1')
+    })
+
+    it('defaultWorkspaceState carries no activeSurface', () => {
+        expect('activeSurface' in defaultWorkspaceState).toBe(false)
+    })
+})
+
 describe('invertProjectOps', () => {
     // Undo restores content, not array position: re-created items append at
     // the end of the reducer's Maps, so collections compare sorted by id.
@@ -615,5 +696,60 @@ describe('invertProjectOps', () => {
         expect(invertProjectOps(base, [{ type: 'deleteEntity', payload: { entityId: 'ghost' } }])).toEqual([])
         expect(invertProjectOps(base, [{ type: 'setWorldState', payload: { patch: {} } }])).toEqual([])
         expect(invertProjectOps(base, [{ type: 'createEntity', payload: { entity: { type: 'box' } } }])).toEqual([])
+    })
+
+    // Creation defaults and normalization fallbacks come from two different
+    // builders on purpose. If they are ever merged, every video in every space
+    // ever saved starts playing sound the next time its document is loaded.
+    describe('creation defaults vs normalization fallbacks', () => {
+        it('gives a newly added video spatial sound, unmuted', () => {
+            const created = buildCreationComponentsForType('video')
+            expect(created.media.spatial).toBe(true)
+            expect(created.media.muted).toBe(false)
+        })
+
+        it('leaves an existing video silent when its document predates the fields', () => {
+            // Exactly what a document saved before spatial sound existed looks
+            // like: a media object with no spatial/muted keys at all.
+            const document = normalizeProjectDocument({
+                entities: [{ id: 'old', type: 'video', components: { media: { assetId: 'a' } } }]
+            })
+            expect(document.entities[0].components.media.spatial).toBe(false)
+            expect(document.entities[0].components.media.muted).toBe(true)
+        })
+
+        it('keeps the normalization fallback silent, whatever creation does', () => {
+            const fallback = buildDefaultComponentsForType('video')
+            expect(fallback.media.spatial).toBe(false)
+            expect(fallback.media.muted).toBe(true)
+        })
+
+        it('changes nothing for non-video types', () => {
+            for (const type of ['box', 'image', 'audio', 'model', 'text']) {
+                expect(buildCreationComponentsForType(type)).toEqual(buildDefaultComponentsForType(type))
+            }
+        })
+    })
+})
+
+describe('showState — the one show clock', () => {
+    it('normalizes junk to a clean, unstamped clock', () => {
+        expect(normalizeProjectDocument({}).showState).toEqual({ clockEpoch: 0 })
+        expect(normalizeProjectDocument({ showState: null }).showState).toEqual({ clockEpoch: 0 })
+        expect(normalizeProjectDocument({ showState: { clockEpoch: -5, junk: true } }).showState).toEqual({ clockEpoch: 0 })
+        expect(normalizeProjectDocument({ showState: { clockEpoch: 'soon' } }).showState).toEqual({ clockEpoch: 0 })
+    })
+
+    it('keeps a stamped epoch through normalize', () => {
+        expect(normalizeProjectDocument({ showState: { clockEpoch: 1755000000000 } }).showState.clockEpoch).toBe(1755000000000)
+    })
+
+    it('setShowState stamps the epoch and inverts back to unstamped', () => {
+        const base = normalizeProjectDocument({})
+        const op = { type: 'setShowState', payload: { patch: { clockEpoch: 1755000000000 } } }
+        const inverse = invertProjectOps(base, [op])
+        const stamped = applyProjectOps(base, [op])
+        expect(stamped.showState.clockEpoch).toBe(1755000000000)
+        expect(applyProjectOps(stamped, inverse).showState.clockEpoch).toBe(0)
     })
 })

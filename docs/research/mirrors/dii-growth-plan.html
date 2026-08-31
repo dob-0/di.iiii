@@ -1,0 +1,293 @@
+<!-- Mirror of https://claude.ai/code/artifact/27650751-40e4-4f49-b96b-a7c4da8e3f14 — fetched 2026-08-21. Per the home rule (docs/ai/golden_rules.md) this in-repo file is the source of truth; the claude.ai page is the mirror. -->
+
+<title>di.iiii growth_plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --ground:#050505; --panel:#0e1112; --line:#1d2426;
+    --text:#f2f2f2; --dim:#96a0a4; --faint:#5c6669;
+    --cyan:#4DF9FF; --cyan-dim:rgba(77,249,255,.10); --cyan-line:rgba(77,249,255,.35);
+    --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --body:'Inter',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--ground); color:var(--text);
+    font-family:var(--body); font-size:16px; line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:64px 24px 96px}
+  a{color:var(--cyan); text-decoration:none; border-bottom:1px solid var(--cyan-line)}
+  a:hover{border-bottom-color:var(--cyan)}
+  a:focus-visible,summary:focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
+
+  /* header */
+  header{display:flex; align-items:center; gap:20px; margin-bottom:12px}
+  .mark{width:56px; height:56px; color:var(--cyan); flex:none}
+  h1{font-size:clamp(2rem,6vw,2.9rem); font-weight:800; letter-spacing:-.03em; margin:0; line-height:1.05}
+  h1 .dot{color:var(--cyan)}
+  h1 .sub{display:block; font-family:var(--mono); font-weight:400; font-size:.95rem; letter-spacing:.18em; color:var(--dim); text-transform:uppercase; margin-top:10px}
+  .meta{font-family:var(--mono); font-size:.78rem; color:var(--faint); margin:20px 0 0; letter-spacing:.04em}
+
+  /* numbers strip */
+  .numbers{display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); margin:40px 0 0}
+  .numbers div{background:var(--panel); padding:14px 12px}
+  .numbers b{display:block; font-family:var(--mono); font-size:1.35rem; font-weight:700; color:var(--cyan); font-variant-numeric:tabular-nums}
+  .numbers span{font-family:var(--mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--dim)}
+
+  /* sections */
+  section{margin-top:72px}
+  .eyebrow{font-family:var(--mono); font-size:.75rem; letter-spacing:.22em; text-transform:uppercase; color:var(--cyan); margin:0 0 10px}
+  h2{font-size:1.6rem; font-weight:700; letter-spacing:-.02em; margin:0 0 16px; text-wrap:balance}
+  h3{font-size:1.05rem; font-weight:600; margin:32px 0 8px}
+  p{margin:0 0 14px; max-width:66ch}
+  .lead{font-size:1.15rem; color:var(--text)}
+  .quiet{color:var(--dim)}
+  em{color:var(--cyan); font-style:normal}
+
+  /* chips */
+  .chip{font-family:var(--mono); font-size:.66rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:2px 8px; border-radius:2px; white-space:nowrap; display:inline-block}
+  .chip.blocker{background:var(--cyan); color:#000}
+  .chip.warn{border:1px solid var(--cyan-line); color:var(--cyan)}
+  .chip.ok{border:1px solid var(--line); color:var(--dim)}
+
+  /* finding rows */
+  .findings{border-top:1px solid var(--line); margin-top:8px}
+  .finding{display:grid; grid-template-columns:92px 1fr; gap:16px; padding:14px 0; border-bottom:1px solid var(--line); align-items:baseline}
+  .finding p{margin:0; font-size:.95rem}
+  .finding .where{font-family:var(--mono); font-size:.72rem; color:var(--faint); margin-top:4px}
+  @media (max-width:560px){ .finding{grid-template-columns:1fr; gap:6px} }
+
+  /* exhibit */
+  figure{margin:28px 0 0; border:1px solid var(--line); background:var(--panel); padding:16px}
+  figure img{max-width:100%; display:block; border:1px solid var(--line)}
+  figcaption{font-family:var(--mono); font-size:.75rem; color:var(--dim); margin-top:12px; line-height:1.6}
+  figcaption b{color:var(--cyan); font-weight:700}
+
+  /* phases */
+  .phase{border:1px solid var(--line); background:var(--panel); margin-top:28px; padding:24px}
+  .phase .eyebrow{color:var(--faint)}
+  .phase h3{margin:0 0 4px; font-size:1.25rem; font-weight:700}
+  .phase .gate{font-family:var(--mono); font-size:.75rem; color:var(--cyan); margin:0 0 16px}
+  ul.tasks{list-style:none; margin:0; padding:0}
+  ul.tasks li{padding:9px 0 9px 26px; position:relative; border-top:1px solid var(--line); font-size:.95rem}
+  ul.tasks li::before{content:""; position:absolute; left:0; top:14px; width:12px; height:12px; border:1.5px solid var(--cyan-line)}
+  ul.tasks li b{font-weight:600}
+  ul.tasks .why{color:var(--dim)}
+
+  /* tables */
+  .scroll{overflow-x:auto; margin-top:16px; border:1px solid var(--line)}
+  table{border-collapse:collapse; width:100%; min-width:600px; font-size:.88rem}
+  th{font-family:var(--mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--dim); font-weight:500; text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); background:var(--panel)}
+  td{padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top}
+  td.mono, .mono{font-family:var(--mono); font-size:.8rem; color:var(--dim); font-variant-numeric:tabular-nums; white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+
+  /* decisions */
+  .decision{display:grid; grid-template-columns:34px 1fr; gap:14px; padding:16px 0; border-bottom:1px solid var(--line); align-items:baseline}
+  .decision .n{font-family:var(--mono); color:var(--cyan); font-size:.9rem}
+  .decision p{margin:0; font-size:.95rem}
+  .decision b{font-weight:600}
+
+  /* evidence */
+  .evidence p{font-size:.88rem; color:var(--dim); border-left:2px solid var(--line); padding-left:16px}
+  footer{margin-top:88px; padding-top:20px; border-top:1px solid var(--line); font-family:var(--mono); font-size:.72rem; color:var(--faint); letter-spacing:.05em}
+</style>
+
+<div class="wrap">
+
+<header>
+  <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+    <rect x="4" y="4" width="92" height="92" fill="none" stroke="currentColor" stroke-width="11"/>
+    <rect x="37" y="37" width="26" height="26" fill="currentColor"/>
+  </svg>
+  <h1>di<span class="dot">.</span>iiii growth_plan
+    <span class="sub">audit + first-users plan</span>
+  </h1>
+</header>
+<p class="meta">2026-08-18 · four parallel audits: repo surfaces · brand kit · live web presence · channel research · key claims re-verified by hand</p>
+
+<section>
+  <p class="eyebrow">where it stands</p>
+  <h2>the platform can receive strangers. it cannot be found.</h2>
+  <p class="lead">Signup is open and instant (GitHub/Google, guest sandbox carries over), the landing page explains the product well, and 35 fresh wiki articles are public. But the entire discoverable footprint is <em>one indexed homepage and one Instagram profile</em> — zero mentions on Reddit, HN, blogs, or any WebXR directory. And the card the site hands out when a link is shared carries a retired name.</p>
+
+  <div class="numbers">
+    <div><b>1</b><span>indexed page</span></div>
+    <div><b>0</b><span>third-party mentions</span></div>
+    <div><b>581</b><span>IG followers</span></div>
+    <div><b>0</b><span>analytics events</span></div>
+    <div><b>35</b><span>wiki articles</span></div>
+    <div><b>1</b><span>outbound link in UI</span></div>
+  </div>
+
+  <figure>
+    <img src="data:image/png;base64,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AAIlCAEAAAIlCAEAAAIlCAEAAAIlCAEAAAIlCAEAAAIlCAEAAAIlCAEAAAIlCAEAAAIlCAEAAAIlCAEAAAIlCAEAAALVEQHAS+GXLrs8osGuAOClckYEAMvjmqkXI5bCVzr98xqAZeEtowAAAIEShAAAAIEShAAAAIEShAAAAIEShAAAAIEShAAAAIEShAAAAIEShAAAAIEShAAAAIE6IwIAACBIZggBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAACJQgBAAAC1REBwKnpox/96Bve8Ib169dnMpnHHnvskUce2bVr11//9V9HL6nU+eev+483vfx1G1dtyHW8/OXP/csjB3aXn/jS3+/7x6+2fiEnvmmDg4NXXXVVfAmvfvWrf/SjH8WXMD4+Hl/sM888EwHAIWdEAHCq2bJlyxe+8IW4do781T333PPud7/70UcfjV4K/8fb33HJp//L2b/4i4f9/MUXX3zsc5998A8/8PN6/diXcOKbdt55533+85+Pa/DIXz3++OPvfe97v/71r0cA0CAIATjFXH311XfccccxBjz77LO/+qu/et9990Un12s/+Ge5D//nYwx49qEHd/3yJccYcOKbFtfg9773vfPPP/8YF3L99dffeuutEQAIQgBOLXHwxDmUyWSOPewHP/jBG9/4xueeey46WX7psst/ZeQbZ5x11rGHPbbz8+Pvf++Cv1qSTfvnf/7nnp6eY19C/LdvetOb7r///giA4FlUBoCTZGBg4MWWDQ8PL3ghX/ziF4+bTLGLL7745ptvjk6WX0inf/kLXzpuDcZede17znvb2xf81Ylv2p//+Z8ftwZj55577pe+9KVUKhUBEDxBCMApY/369a0ET1Pcn2eeeZL+MXfeb/3b1HnntTj4wn//+0f+cEk27b3vfW/Umrgqr7jiigiA4AlCAE4Z69ata33wWWed1db4E/GytdnWB5+z5oIjf3jimxYn4po1a6KWXXjhhREAwfO1EwCcMs4+++y2xp9zzjnRSXFGRxv/PD1zoa048U37+c9/flYL71md0dnZGQEQPDOEAJwyxsbGWh984MCB8fHx6KR4tvQ/2hj80INH/nBJNu3hhx+OWnbyV2EFYAUShACcMp5++unHHnusxcEncxXNZ77XRs5NlhYosSXZtAceeCBqzcGDB7/1rW9FAARPEAJwKmn9C/Q+9alPRSfLz374w313jbQy8uCBA3tv/S8L/urEN+1v/uZvXnjhhagFn/vc5+ImjAAIniAE4FTysY997Dvf+c5xhw0NDd12223RSfQ/rrv2+R//+LjDHvqj//A/jzITeOKbdvfdd3/yk5+MjueHP/zhH/7hH0YAIAgBOOW8733ve+SRR44x4Lvf/e4NN9wQnVzP79tX+nfvef4nPznGmL2fveWxz332GANOfNNuvPHGO+644xgDnnrqqd/5nd852vfaAxAaQQjAKebhhx9+3ete92d/9mc//elPD/vVvn374l7asmXLT44ZZstk4qtf+e8Xr3tsx//34hHv2/zpwz+4+y2F+39v8NiXsCSbds0117ztbW878hOJU1NT27Zt27Bhwz333BMBQMMZEQCcFAMDA5///OdbHHz77bf39fUdd9hll10WF9QFF1wQT6w9+OCD9957b7QCdHR1pX/5/3z56y75ha6uZx+4/9mHHvjZo49GbTrxTcvn85dcckkul6tWqw899FB8Cc8++2wEAHMIQgBOkuUIQgDgRHjLKAAAQKAEIQAAQKAEIQAAQKA6IgBYlC1btqxfv/7iiy9+/vnnn3nmmZ/85Cd79uyxgiUAnEIEIQBteOMb37h169Zf+ZVfyWazCw549NFH77jjjs9+9rMPPfRQtNTOO++8p556qsXBP/3pT1/xildEJ8X5/e/85Z1/3+LgfV+7a+ya3sN+uCSb9vDDD+dyuag1l19++Te/+c0IgLB5yygALXn7299eLBZHR0d/+7d/+2g1GHvNa17zgQ984N577/3Lv/zLc889NwIAVjBBCMBxXHTRRQ888MA//MM/xHNKZ5zR0vcVpVKpG2+88b777ov7MAIAVipBCMCxXHnllffcc8/GjRuj9q1fv/4b3/iGJgSAFUsQAnBUv/u7v/tP//RP6XQ6Wqy1a9feeeedJ+2zfABAWwQhAAv75Cc/+ZnPfCY6YfE84a233hoBACuPIARgATfeeOPWrVujJfKOd7zj6quvjgCAFUYQAnC4Cy644EMf+lC0pD7+8Y+/+OKLrY9vazAAsDi+hxCAw918881L/qm/Sy655IYbbmh9fIvLmQIAJ0IQAjBPX1/fb/7mb0bL4A1veEMEAKwkghCAef7iL/4iAgDCIAgBmNXb27t+/fpoUe68886xsbE9e/akUqm1a9e+/vWvf8tb3nIiX1kBACw3QQjArPe///1R+26//fabbrqpXC4f+audO3e++93vjgCAFckqowDMimcIozb90R/9UV9f34I1GLv22ms/8YlPRADAiiQIAZj2G7/xG+ecc05bf7J9+/a/+qu/OvaYP/mTP/niF78YAQArjyAEYNqVV17Z1vh6vf7BD36wlZHxLOLzzz8fAQArjCAEYFo+n29r/NDQ0DPPPNPKyCeffPLLX/5yBACsMIIQgGkXXnhhW+O3bdvW+uBPfepTEQCwwghCABJnn332BRdc0Pr4b3/72+Pj462PHx0djf8kAgBWEkEIQGLjxo1nnXVW6+PvvvvuqE3FYjECAFYS30MIQGLNmjVtja9Wq1Gbnn766QgAWEkEIQCJc889t63xTz31VNSmRfwJALCsBCEAiXaD2O1yTQAAEABJREFU8Mknn4za9Pjjj0cAwEoiCAFIrFq1qq3xi6i7xx57LAIAVhJBCECirRVlYs8++2zUpn379kUAwEpilVEAEvV6va3x69ati9qUy+UiAGAlEYQAJH72s5+1Nf5Vr3pV1KZ2v/geAFhu3jIKQOK5555ra/z5558ftWkRDQkALCtBCECi3Q/4LSIIL7jggggAWEkEIQCJ3bt3tzX+vPPOi9q0iIYEAJaVzxACkHj66afbWjj0iiuuOPPMNv4h0tHR8Wu/9msRALCSCEIApj3xxBOtD77gggve+c53tj5+YGDADCEArDSCEIBpDz74YFvjb7jhhtYH33jjjdGK9wvp9Csvfcuq3EVntPmtjABwihKEAEwrFovtDI8KhcIVV1zRysi3v/3t69evj1aquANfv/Pvf23v070Tz7z5G9/81fEf/EbtZz2lh9a8690RAJzWBCEA0772ta9FbfrCF75w3C+TuPjii2+99dZopUpvfsNlo/et6X9nKpOZ+eGZZ5/98osufv3ndv6rz9x6RocF2AA4bQlCAKY9+uij9913X1t/cv755//jP/7ja1/72qMN2LJly1133ZVOp6MVKfu7N7zpG9982YUXHm3A2vf9uzf/97vP8YUZAJymBCEAs4aGhqI2xROAo6OjN91002te85q5P9+8efNHPvKRYrG4Zs2aaEU6M5XKDt5wVip17GG/uKVw3tv+bQQApyNBCMCsnTt3Ru175Stf+fGPf3zPnj2Tk5P333//7t27Dxw48L3vfe/DH/5w6ni59RK6+P/+y5fnLmpl5IYP/+dz1q6NAOC0IwgBmLVv375Pf/rT0WK94hWvuOSSS9avX3/uuedGK9sZZ511wXve1+Lgjpe97FXvuS4CgNOOIARgng9+8INtfSHhKeplr35NnHmtj3/FJf8qAoDTjiAEYJ4DBw78/u//frQM7rzzzmjFePnrNrY1/tzXrIsA4LQjCAE43PDw8Je//OVoSY2Njf3pn/5p6+NffPHFaCX5+dRUBACnHUEIwAL+4A/+oFarRUvkhRdeeP/733/GGWe0/idtDV6Eye9/r63xzz74QAQApx1BCMACHn/88WuuuWb//v3RUvjbv/3b+++/P1pJ/ufjj0+1s3XPPrCybj8ALAlBCMDCvvWtb735zW/es2dPdGK+/vWv//Ef/3G08uz97PYWR/6vWu2JL/7/EQCcdgQhAEf1yCOPFAqFu+++O1qsO++889d//dfr9Xq08jzy0f/07EMPtjLyBzf9x+f37YsA4LQjCAE4lh//+MeXXXbZhz70oUV8F8VnPvOZq6+++uDBg9GK9OLBg/f/+/e/+MILxx6272t3Pfb5z0UAcDoShAAc38c+9rG1a9e+5z3v+f73v3/cwS+88MJtt922YcOGG264IVrZnhn9zj9vuvgno99Z8LcvTE3t/uh/+m7f1REAnKY6IgBowc9//vMdDeeff/6WLVs2btx40UUXvfa1r43/fzwH+KMf/ahare7bty+eSPy7v/u7BZeQiX+7bdu2Fq/ugQcWWNXzueeea/0SWnyf6nP/8si3e9786g/8h1e+6c3nrnvtyy589cFa7blH9xz4l0cqn/l0i2vJ/PQHD+35f/8qas1zj+xe4IdLsWk7d+7s7u6OWvPkk09GAARveRf1BgAAYMXyllEAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBACUIAAIBAdUQAzOhce9XgQE+mXh7esXNsIjpFncJb0bXp2q39udTcH9VKO7bdtnsqWkadm96xtT+fro5su3nXS7O/TuZd1rnhHVsH8um5P6qXh7btHJ+MTk2day8f6O/NRpXi0I679i7rkQJwGhKEALM607lcJq6RVCaX6RqbOEVPkE/lrahXS6OjtWYQptLZ5oac/k7qXTYV7+NiPd3YsalUJpvPpqNTWrzXGpuQzWbS0d5T9nUcgJeIIAQC0Jx2qg5/4paxY59qT9VKo6VsIZ6oKVZO1emSJd6KZOpqsCc1un3b7Sdj7mVqYvyu28enr7r7qsFcJhMF4OQeeJO7d921e/q/d225/pQPwsny6GglFc8QjpbVYFP35ddv7U2Xh7afuvO+wMkjCIHTX2c6k25xnmlqYuy2W8aiU9xSbkUq3nnxxF3Esjo9DryXyuT47beMR8zobDxqAVpjURng9Bc3TRDvO1wOnamWYxpYGVLptCAEWmaGEMLUtXZLT08+m05nGi8k12vVaqU8WiyOT8x9V2Bn96aenkKu8cmcqFatVErF4ujuuUO6L//A1t5UeWj7cC1X6MnnMpkkH2rVcqk4MufCWhw2c7UbCsmtawxKbltlwWHH24rO7sv7+wvZ2Z7J9t308b5DfztvFY3G+6uycy+6Wty2/a7DrrGtrehce2jfpZI9V473XD0/MNiTanOFlK5N1w7259LV4vbthy2X0XwvZ6Y287awlrYieRvm1p7MvCGjmZ6+ZHsap5C10tD228ajTe8Y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AAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShCspOhLAAABJUlEQVQCAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAEShACAAAE6n8DAAD//8Z2l+IAAAAGSURBVAMA0JoS6liZlGQAAAAASUVORK5CYII=" alt="The current Open Graph card: cyan square mark over the wordmark di.iii on black, tagline: connecting virtual_physical environments" width="1200" height="630">
+    <figcaption>the card every shared link shows today, fetched live from prod. it reads <b>di.iii</b> — the spelling NAMING.md retired — with the cyan accent on the dot <b>and</b> the first i, against the brand's own rule. the same wrong wordmark tops the public README, the YouTube banner, the story template, and both wordmark PNGs.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <p class="eyebrow">audit</p>
+  <h2>what a stranger meets</h2>
+
+  <div class="findings">
+    <div class="finding"><span class="chip blocker">blocker</span><div>
+      <p>Default OG image says <b>di.iii</b> — every link shared on Reddit/Discord/Telegram previews under the wrong name (only br_id_ge has its own card).</p>
+      <p class="where">public/brand/og-image.png · serverXR/src/routes/ogRoutes.js:19 — seen live</p>
+    </div></div>
+    <div class="finding"><span class="chip blocker">blocker</span><div>
+      <p>Zero analytics — no visit, signup, or drop-off is measured anywhere. A launch today would produce no numbers at all.</p>
+      <p class="where">grep across src/ + serverXR/: no matches for any analytics tool</p>
+    </div></div>
+    <div class="finding"><span class="chip blocker">blocker</span><div>
+      <p>No privacy policy, no terms, no contact email — while the site stores OAuth emails in the session cookie and a public unauthenticated form collects name/email/phone.</p>
+      <p class="where">docs/ai/privacy-data-inventory.md already maps exactly what a policy must say</p>
+    </div></div>
+    <div class="finding"><span class="chip blocker">blocker</span><div>
+      <p>A user who signs in before playing gets no onboarding — coach marks are hard-gated to guests. They land on an empty Spaces page.</p>
+      <p class="where">src/studio/utils/studioGuide.js:144</p>
+    </div></div>
+    <div class="finding"><span class="chip warn">warn</span><div>
+      <p>No robots.txt, no sitemap, no canonical tag; Google indexed the site under <b>www.</b> while og:url claims the apex. The SPA answers /robots.txt with HTML.</p>
+    </div></div>
+    <div class="finding"><span class="chip warn">warn</span><div>
+      <p>staging.di-studio.xyz is publicly reachable with nothing blocking indexing — one backlink away from appearing in Google.</p>
+    </div></div>
+    <div class="finding"><span class="chip warn">warn</span><div>
+      <p>Three entry buttons, and the primary one ("Step inside") opens Raw — the lane MANIFESTO §6 marks experimental. A stranger has no single obvious door.</p>
+      <p class="where">src/landing/LandingPage.jsx · CURRENT.md calls this an owner's call</p>
+    </div></div>
+    <div class="finding"><span class="chip warn">warn</span><div>
+      <p>Nothing to follow, nobody to contact: the only outbound link in the whole UI is GitHub. Instagram is never linked; thedi.studio is printed twice as unclickable text.</p>
+    </div></div>
+    <div class="finding"><span class="chip warn">warn</span><div>
+      <p>Brand kit has no product screenshot, GIF, or video anywhere — and no editable templates: all social copy is baked into pixels, the wordmark has no SVG master.</p>
+      <p class="where">di-brand audit — full gap list in the repo report</p>
+    </div></div>
+    <div class="finding"><span class="chip warn">warn</span><div>
+      <p>Small frictions: public wiki shows an "Admin" link to anonymous visitors and ships 1.47&nbsp;MB of three.js to phones; landing invites strangers to click /api/health, which discloses Node version, OS, and memory.</p>
+    </div></div>
+    <div class="finding"><span class="chip ok">works</span><div>
+      <p>Title, meta description, and full OG/twitter tag set are correct; a per-space link-preview system already serves custom cards to 14 crawler bots.</p>
+    </div></div>
+    <div class="finding"><span class="chip ok">works</span><div>
+      <p>Open signup with instant editor role, guest sandbox that survives sign-in, 3 free spaces, public wiki, AGPL-3.0 with self-hosting — the "try before signup" property Show HN and Reddit reward most is already true.</p>
+    </div></div>
+    <div class="finding"><span class="chip ok">works</span><div>
+      <p>Brand kit fundamentals are solid: clean mark SVG, transparent PNGs in all three colors, a usable avatar, and settled naming + voice rules (NAMING.md is the best document in the kit).</p>
+    </div></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">phase 0</p>
+  <div class="phase">
+    <h3>fix the front door</h3>
+    <p class="gate">before telling anyone — every post drives people into what exists today. ~2–3 sessions, all repo work.</p>
+    <ul class="tasks">
+      <li><b>Re-render every wordmark asset as di.iiii</b> — og-image.png, README wordmark, GitHub social preview (1280×640). Accent on the dot only. <span class="why">Fixes the single most visible defect; the correct wordmark already exists in brand-guide.html.</span></li>
+      <li><b>Add robots.txt + sitemap.xml + canonical tag; redirect www→apex; noindex staging</b> (x-robots-tag header). <span class="why">One nginx/Caddy + static-files change.</span></li>
+      <li><b>Self-hosted analytics</b> — Plausible CE or umami as one more container in the VPS compose stack. Cookie-free, fits the ethos, no consent banner needed. <span class="why">Without it, nothing learned from any post ever.</span></li>
+      <li><b>Ship /privacy + /terms + a contact surface</b> — privacy-data-inventory.md already lists the contents; add a footer row: email, Instagram, GitHub. <span class="why">Reddit and HN commenters check for these; their absence is a common top comment.</span></li>
+      <li><b>Onboarding for signed-in users</b> — extend the three existing coach marks past the guest-only gate. </li>
+      <li><b>Small fixes</b> — remove the Admin link from public wiki nav, lazy-load the wiki 3D background, stop advertising /api/health on the landing page.</li>
+      <li><b>Decide the one front door</b> — owner's call, see decisions below.</li>
+    </ul>
+  </div>
+
+  <p class="eyebrow" style="margin-top:48px">phase 1</p>
+  <div class="phase">
+    <h3>ammunition</h3>
+    <p class="gate">the assets every channel needs. can overlap phase 0.</p>
+    <ul class="tasks">
+      <li><b>One flagship space</b> — zero-signup, phone-tested, loads fast. <span class="why">The playable link is the entire campaign; every published space is the ad.</span></li>
+      <li><b>30–60s screen capture + short GIFs</b> of building and entering it. <span class="why">Motion outperforms stills in every channel researched.</span></li>
+      <li><b>COPY.md in di-brand</b> — bios, tagline, one-liners as pasteable text (currently trapped inside brand-guide.html), signed di.iiii per NAMING.md.</li>
+      <li><b>Missing assets</b> — wordmark SVG master, X header, Reddit icon + banner. <span class="why">So the next re-render is not archaeology.</span></li>
+      <li><b>Directory seeds</b> — PR to awesome-webxr, threejsresources.com/tools, an itch.io tools page. <span class="why">Permanent backlinks, no audience required.</span></li>
+    </ul>
+  </div>
+
+  <p class="eyebrow" style="margin-top:48px">phase 2</p>
+  <div class="phase">
+    <h3>quiet channels</h3>
+    <p class="gate">repeatable, no launch moment needed. each new scene is a post.</p>
+    <ul class="tasks">
+      <li><b>Hubs Foundation Discord</b> (21.8k) — the migrated Mozilla Hubs community: people who built social browser-XR spaces and lost their platform. <span class="why">The best-targeted room on the internet for this product.</span></li>
+      <li><b>WebXR Discord</b> (4.3k, monthly meetup with demo slots), <b>poimandres</b>, <b>three.js forum Showcase</b> (feeds the threejs.org featured list).</li>
+      <li><b>Reddit, per-artifact</b> — r/threejs (demo flair is the norm), r/WebXR, r/WebVR, r/creativecoding. <span class="why">Post the scene, not the product; founder voice, respond to comments.</span></li>
+      <li><b>Bluesky + #screenshotsaturday</b> mirrored to X; Instagram continues as is.</li>
+    </ul>
+  </div>
+
+  <p class="eyebrow" style="margin-top:48px">phase 3</p>
+  <div class="phase">
+    <h3>launch moments</h3>
+    <p class="gate">one-shots — spend only after phases 0–2 hold.</p>
+    <ul class="tasks">
+      <li><b>Show HN</b>, framed on the open-source / self-host / scene-as-hash story with the zero-signup playable link up front. <span class="why">The proven multiplier in this category — see evidence.</span></li>
+      <li><b>r/webdev Showoff Saturday</b> (weekly slot, technical framing), <b>r/SideProject</b>, <b>r/alphaandbetausers</b>, <b>r/virtualreality</b> under its developer flair.</li>
+      <li><b>Product Hunt — skip</b>, or treat as a badge only. 500+ submissions/day in 2026; no longer a user source for creative tools.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">channel map</p>
+  <h2>ranked by fit</h2>
+  <div class="scroll">
+    <table>
+      <tr><th>channel</th><th>size</th><th>self-promo</th><th>what performs</th></tr>
+      <tr><td>Hubs Foundation Discord</td><td class="mono">21.8k</td><td>show-off channels</td><td>a live space link — this audience already wants exactly this</td></tr>
+      <tr><td>r/threejs</td><td class="mono">53k ↑55%/yr</td><td>demo flair is the norm</td><td>playable link + short video</td></tr>
+      <tr><td>r/WebXR + WebXR Discord</td><td class="mono">3k + 4.3k</td><td>demos welcomed</td><td>Quest-compatible links; monthly meetup demo slot</td></tr>
+      <tr><td>r/creativecoding</td><td class="mono">74k ↑60%/yr</td><td>own work is the norm</td><td>the scene as art, tool named in comments</td></tr>
+      <tr><td>three.js forum Showcase</td><td class="mono">—</td><td>official category</td><td>per-project posts; feeds threejs.org featured</td></tr>
+      <tr><td>r/webdev Showoff Saturday</td><td class="mono">2.6M</td><td>Saturdays only</td><td>"publish a 3D space to a URL" — project, not product</td></tr>
+      <tr><td>Bluesky / #screenshotsaturday</td><td class="mono">—</td><td>open</td><td>weekly clips; creative-dev scene migrated here</td></tr>
+      <tr><td>Show HN</td><td class="mono">one-shot</td><td>no-signup demo required</td><td>open-source story + technical depth</td></tr>
+      <tr><td>r/SideProject · r/alphaandbetausers</td><td class="mono">812k · 42k</td><td>launch posts fine</td><td>founder story, 3–4 wk spacing</td></tr>
+      <tr><td>r/virtualreality</td><td class="mono">2.1M</td><td>dev flair only</td><td>finished experience, not the editor</td></tr>
+      <tr><td>r/InternetIsBeautiful · r/gamedev · Product Hunt</td><td class="mono">—</td><td>poor fit</td><td>rules or audience mismatch — skip</td></tr>
+    </table>
+  </div>
+  <p class="quiet" style="margin-top:14px">Dead ends checked so nobody wastes time on them: Immersive Web Weekly (last issue 2022) and A Week of A-Frame are both gone. Still alive: awesome-webxr, Web Game Dev newsletter, Immersive Wire.</p>
+</section>
+
+<section>
+  <p class="eyebrow">cadence</p>
+  <h2>a solo rhythm, 2–4 hours a week</h2>
+  <div class="scroll">
+    <table>
+      <tr><th>rhythm</th><th>action</th></tr>
+      <tr><td class="mono">per new scene</td><td>one Reddit post (r/threejs or r/WebXR) + three.js forum + Discord show-off + a Bluesky clip</td></tr>
+      <tr><td class="mono">weekly</td><td>#screenshotsaturday clip, mirrored X/Bluesky; Showoff Saturday when there's something web-shaped</td></tr>
+      <tr><td class="mono">monthly</td><td>WebXR Discord meetup demo; r/SideProject-class repost (3–4 wk spacing per sub norms)</td></tr>
+      <tr><td class="mono">one-shot</td><td>Show HN — only when phase 0 + 1 are done and analytics can see what happens</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">decisions</p>
+  <h2>yours to make — the plan doesn't decide these</h2>
+  <div class="decision"><span class="n">01</span><p><b>The front door.</b> "Step inside" currently opens Raw; MANIFESTO §6 says Studio is the shipped lane and CURRENT.md marks this an owner's call. Strangers need one obvious door before any posting starts.</p></div>
+  <div class="decision"><span class="n">02</span><p><b>The flagship space.</b> br_id_ge, WCC, or a new piece made to be shared? It must work signup-free on a phone.</p></div>
+  <div class="decision"><span class="n">03</span><p><b>Who signs the posts.</b> Reddit rewards a personal founder voice ("I built…"); brand-account posts get removed as spam. Platform posts sign di.iiii per NAMING.md — the many-names concept stays untouched; only the already-retired di.iii gets removed from assets.</p></div>
+  <div class="decision"><span class="n">04</span><p><b>Prod deploys.</b> Every phase-0 fix rides dev → staging → your approval → main, per the standing prod gate.</p></div>
+</section>
+
+<section class="evidence">
+  <p class="eyebrow">evidence</p>
+  <h2>why this shape</h2>
+  <p><b>The open-source framing is the multiplier.</b> cables.gl posted plainly on HN for years at 1–5 points; its <a href="https://news.ycombinator.com/item?id=41162036">"now open source" moment hit 272</a>. Transfer Thought, a no-code WebXR editor, got 67 with the same framing. VRland — nearly di.iiii's exact pitch, plain framing — <a href="https://news.ycombinator.com/item?id=27229221">sank at 6 points</a>. The category doesn't sell itself; the story does.</p>
+  <p><b>The signup wall is the killer.</b> Womp's <a href="https://news.ycombinator.com/item?id=33478459">152-point HN thread</a> is dominated by "signing up before trying = instant close." di.iiii already has no wall — guest sandbox, no email — which is the strongest card in the deck. Show HN's guidelines ask for exactly this.</p>
+  <p><b>Creative tools compound socially, not on launch platforms.</b> Spline's own Show HN got 3 points; it grew to 1M+ creators through the design community sharing work. Hence phase 2 (repeatable scene-posting) before phase 3 (one-shots).</p>
+</section>
+
+<footer>di.iiii — growth_plan · 2026-08-18 · sources: repo audit on dev @ f9e1708 · live fetches of di-studio.xyz + staging · di-brand @ main · channel data gummysearch/HN/sub rules, Aug 2026</footer>
+
+</div>
+

@@ -5,7 +5,7 @@ import { normalizeSpaceId } from '../utils/spaceNames.js'
 // spaces — a piece written as React in src/ has no project document, so
 // anything its author tunes had nowhere on the server to live.
 //
-// The platform does not know what the keys mean; the piece does. Namespace
+// di.iiii does not know what the keys mean; the piece does. Namespace
 // yours (see algoVrithm/timingOverlay.js) so two code spaces sharing this
 // blob cannot overwrite each other.
 

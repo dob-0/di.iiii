@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react'
 
-export const hasClockNode = (nodes = []) => nodes.some((node) => node?.typeId === 'time')
+// Every type whose output moves with the clock alone — placing ANY of these
+// starts the per-frame rebuild (and the show-clock stamp), not just Time.
+// Lag glides between answers; Noise wanders; both read context.now.
+export const CLOCK_DRIVEN_TYPE_IDS = new Set(['time', 'signal.lag', 'signal.lfo', 'signal.delay', 'signal.timer', 'signal.trigger', 'signal.speed', 'value.noise'])
+
+export const hasClockNode = (nodes = []) => nodes.some((node) => (
+    CLOCK_DRIVEN_TYPE_IDS.has(node?.typeId)
+    // A PLAYING timeline is clock-driven; a paused one costs nothing. The
+    // per-node condition keeps the rAF gate honest both ways.
+    || (node?.typeId === 'view.timeline' && node?.values?.playing === true)
+))
 
 // Drives the `time` node. Returns a monotonic millisecond clock that advances
 // once per animation frame, or a constant 0 when nothing needs it.

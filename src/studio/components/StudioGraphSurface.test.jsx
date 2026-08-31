@@ -18,7 +18,7 @@ describe('StudioGraphSurface', () => {
 
     it('shows the empty hint when the document has no graph nodes', () => {
         render(<StudioGraphSurface document={{ nodes: [], edges: [] }} />)
-        expect(screen.getByText(/no graph nodes yet/i)).toBeInTheDocument()
+        expect(screen.getByText(/no nodes in this project yet/i)).toBeInTheDocument()
     })
 
     it('tolerates a missing document without crashing', () => {

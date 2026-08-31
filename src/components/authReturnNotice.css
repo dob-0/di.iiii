@@ -13,6 +13,7 @@
     background: rgba(6, 10, 16, 0.92);
     color: var(--di-text, #fff);
     font-size: 13px;
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }

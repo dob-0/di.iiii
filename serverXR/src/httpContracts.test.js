@@ -75,10 +75,16 @@ const startServer = async ({
     apiToken = 'test-token',
     requireAuth,
     releaseManifest = null,
+    // The default install lives in ~/.di, and `send` applies dotfiles:'ignore'
+    // to every segment of an absolute path — so a hidden directory anywhere in
+    // the data root is a real, shipped condition, not an exotic one.
+    hiddenDataRoot = false,
     extraEnv = {}
 } = {}) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-server-cwd-'))
-    const sandboxDataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-server-data-'))
+    const sandboxDataRoot = hiddenDataRoot
+        ? await mkdtemp(path.join(os.tmpdir(), '.dii-hidden-data-'))
+        : await mkdtemp(path.join(os.tmpdir(), 'dii-server-data-'))
     const port = await getFreePort()
     const releaseFilePath = path.join(sandboxDataRoot, 'release.json')
 
@@ -935,6 +941,150 @@ describe('server write contracts', () => {
         expect(sharedState.type).toBe('guest')
         expect(sharedState.spaces[0]).toBe('shared-main')
         expect(sharedState.spaces[1]).toMatch(/^sandbox-/)
+    })
+
+    // The cookie the browser keeps and the expiry the signed payload claims are
+    // two different numbers, and they used to disagree: setAuthSessionCookie
+    // always stamped the 12h account ttl while guest sessions were minted for
+    // GUEST_SESSION_TTL_MS (a week). The browser dropped the cookie overnight,
+    // so every returning guest was a brand-new subject — new sandbox, and any
+    // space an invite had granted them gone with it. A six-day workshop lost a
+    // room of people's work every night. Both numbers, both directions.
+    it('stamps every session cookie with the ttl its own payload claims', async () => {
+        const guestTtlMs = 7 * 24 * 60 * 60 * 1000
+        const accountTtlMs = 12 * 60 * 60 * 1000
+        const editorToken = 'cookie-ttl-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                GUEST_SPACES: '',
+                SANDBOX_TTL_MS: String(guestTtlMs),
+                AUTH_SESSION_TTL_MS: String(accountTtlMs),
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'ttl-space'
+            }
+        })
+
+        const maxAgeOf = (response) => {
+            const header = response.headers.get('set-cookie') || ''
+            const match = /max-age=(\d+)/i.exec(header)
+            expect(match, `no Max-Age in Set-Cookie: ${header}`).toBeTruthy()
+            return Number(match[1])
+        }
+        // Max-Age is what the browser obeys; expiresAt is what the payload
+        // promises. Anything more than a minute apart is the bug.
+        const expectAgreement = (maxAgeSeconds, expiresAt) => {
+            expect(Number.isFinite(Number(expiresAt))).toBe(true)
+            const payloadSeconds = Math.round((Number(expiresAt) - Date.now()) / 1000)
+            expect(Math.abs(payloadSeconds - maxAgeSeconds)).toBeLessThan(60)
+        }
+
+        // A guest: cookie must last the guest ttl (the week its sandbox lives),
+        // not the 12h account ttl.
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestState = await guest.json()
+        expect(guestState.type).toBe('guest')
+        const guestMaxAge = maxAgeOf(guest)
+        expect(guestMaxAge).toBe(guestTtlMs / 1000)
+        expectAgreement(guestMaxAge, guestState.expiresAt)
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+
+        // An account: still its own shorter ttl — the fix must not hand a 12h
+        // payload a week-long cookie in the other direction.
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        expect(login.status).toBe(200)
+        const loginState = await login.json()
+        const accountMaxAge = maxAgeOf(login)
+        expect(accountMaxAge).toBe(accountTtlMs / 1000)
+        expectAgreement(accountMaxAge, loginState.expiresAt)
+        const ownerCookie = (login.headers.get('set-cookie') || '').split(';')[0]
+
+        // Redeeming an invite re-mints the guest session with the granted space
+        // in scope — also on the guest ttl, so the grant does not quietly
+        // expire with the cookie hours after it was handed out.
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+            body: JSON.stringify({ label: 'TTL Space', slug: 'ttl-space' })
+        })
+        expect(created.status).toBe(201)
+        const minted = await fetch(`${server.baseUrl}/api/spaces/ttl-space/invites`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+            body: JSON.stringify({ label: 'camp' })
+        })
+        expect(minted.status).toBe(201)
+        const { token: inviteToken } = await minted.json()
+
+        const redeemed = await fetch(`${server.baseUrl}/api/invites/redeem`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({ token: inviteToken })
+        })
+        expect(redeemed.status).toBe(200)
+        await expect(redeemed.json()).resolves.toMatchObject({ granted: true })
+        expect(maxAgeOf(redeemed)).toBe(guestTtlMs / 1000)
+
+        // And the re-minted cookie really is the week-long one the guest keeps.
+        const grantedCookie = (redeemed.headers.get('set-cookie') || '').split(';')[0]
+        const back = await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: grantedCookie } })
+        const backState = await back.json()
+        expect(backState.subject).toBe(guestState.subject)
+        expect(backState.spaces).toContain('ttl-space')
+    })
+
+    // A venue is one public address and many people. Keying the upload throttle
+    // on the address gave a whole room a single 60-per-10-minutes budget, so the
+    // first few uploaders spent everyone's and the rest got 429 on the day the
+    // class collects photos. Budgets belong to people.
+    it('gives two people behind one address independent upload budgets', async () => {
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                GUEST_SPACES: ''
+            }
+        })
+
+        // One venue wifi: the same forwarded client IP for both visitors.
+        const venue = { 'X-Forwarded-For': '203.0.113.7, 10.0.0.1' }
+
+        const newGuest = async () => {
+            const response = await fetch(`${server.baseUrl}/api/auth/session`, { headers: venue })
+            const state = await response.json()
+            expect(state.type).toBe('guest')
+            return {
+                cookie: (response.headers.get('set-cookie') || '').split(';')[0],
+                sandbox: state.sandboxSpaceId
+            }
+        }
+
+        const first = await newGuest()
+        const second = await newGuest()
+        expect(first.sandbox).not.toBe(second.sandbox)
+
+        // The limiter runs before the upload route validates anything, so an
+        // empty POST still spends budget — which is exactly what is being
+        // counted here. Only the 429 matters, not the rejection status.
+        const upload = (guest) => fetch(`${server.baseUrl}/api/spaces/${guest.sandbox}/assets`, {
+            method: 'POST',
+            headers: { ...venue, Cookie: guest.cookie }
+        })
+
+        // Spend the full window as the first person: 60 through, the 61st out.
+        const statuses = []
+        for (let i = 0; i < 61; i++) statuses.push((await upload(first)).status)
+        expect(statuses.slice(0, 60).every((status) => status !== 429)).toBe(true)
+        expect(statuses[60]).toBe(429)
+
+        // Same wifi, different person — untouched.
+        const neighbour = await upload(second)
+        expect(neighbour.status).not.toBe(429)
     })
 
     it('accounts reach their own persistent sandbox without cookie scope, and admins can purge stale guest sandboxes', async () => {
@@ -2699,6 +2849,24 @@ describe('local-install truth (DI_LOCAL)', () => {
         expect(config.config.requireAuth).toBe(false)
     })
 
+    // The quota is the other half of the sentence this describe block is about,
+    // and it was still being sent: SpaceHub renders `spaceLimit` as "+ Create ·
+    // 0/3" whenever the number is finite, so a local install advertised a free
+    // tier it does not have. null is the value that removes the counter — the
+    // client already guards on Number.isFinite.
+    it('reports no space quota on a local install', async () => {
+        const server = await startServer({ requireAuth: false, extraEnv: { DI_LOCAL: '1' } })
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()
+        expect(session.spaceLimit).toBeNull()
+        expect(session.canCreateSpace).toBe(true)
+    })
+
+    it('still reports the free-tier quota on a hosted boot', async () => {
+        const server = await startServer({ requireAuth: true })
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()
+        expect(Number.isFinite(session.spaceLimit)).toBe(true)
+    })
+
     it('reports local: false on a hosted-style boot, with requireAuth mirrored on config', async () => {
         const server = await startServer({ requireAuth: true })
         const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()
@@ -2759,5 +2927,154 @@ describe('nonexistent space vs restricted space', () => {
 
         const locked = await fetch(`${server.baseUrl}/api/spaces/secret-lab`, { headers: { Cookie: guestCookie } })
         expect(locked.status).toBe(403)
+    })
+})
+
+// Work as files, the browser's half. The same document `di save` writes and
+// `di open` reads — one file holding a space, its whole history and its assets
+// — reachable without a terminal.
+//
+// Both routes SPAWN scripts/space-bundle.mjs rather than reimplementing the
+// format. These check the two things that wiring can get wrong: that the file
+// coming out is really a bundle, and that the failures arrive as something a
+// browser can act on rather than as a 500.
+describe('saving and opening a space as a file', () => {
+    it('hands back a real bundle, named for the space', async () => {
+        const server = await startServer({ requireAuth: false })
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'saveable', permanent: true })
+        })
+
+        const response = await fetch(`${server.baseUrl}/api/spaces/saveable/bundle`)
+        expect(response.status).toBe(200)
+        expect(response.headers.get('content-disposition')).toContain('saveable.diiii')
+
+        // A gzip member, not an error page with a 200 on it.
+        const bytes = Buffer.from(await response.arrayBuffer())
+        expect(bytes.length).toBeGreaterThan(0)
+        expect(bytes[0]).toBe(0x1f)
+        expect(bytes[1]).toBe(0x8b)
+    })
+
+    it('opens a saved file back into a space', async () => {
+        const server = await startServer({ requireAuth: false })
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'round trip', permanent: true })
+        })
+        const saved = Buffer.from(await (await fetch(`${server.baseUrl}/api/spaces/round-trip/bundle`)).arrayBuffer())
+
+        const form = new FormData()
+        form.append('bundle', new Blob([saved]), 'round-trip.diiii')
+        form.append('as', 'came-back')
+        const response = await fetch(`${server.baseUrl}/api/spaces/bundle`, { method: 'POST', body: form })
+        expect(response.status).toBe(201)
+        expect((await response.json()).spaceId).toBe('came-back')
+
+        const listed = await (await fetch(`${server.baseUrl}/api/spaces`)).json()
+        expect(listed.spaces.map((space) => space.id)).toContain('came-back')
+    })
+
+    it('answers a name already taken with 409 and a code, not with terminal flags', async () => {
+        // The tool says "use --force to overwrite or --as <newId>", which is
+        // good advice in a terminal and meaningless in a page. The browser gets
+        // the fact and offers its own way out.
+        const server = await startServer({ requireAuth: false })
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'clashing', permanent: true })
+        })
+        const saved = Buffer.from(await (await fetch(`${server.baseUrl}/api/spaces/clashing/bundle`)).arrayBuffer())
+
+        const form = new FormData()
+        form.append('bundle', new Blob([saved]), 'clashing.diiii')
+        const response = await fetch(`${server.baseUrl}/api/spaces/bundle`, { method: 'POST', body: form })
+        expect(response.status).toBe(409)
+        const body = await response.json()
+        expect(body.code).toBe('space_exists')
+        expect(body.spaceId).toBe('clashing')
+        expect(body.error).not.toContain('--force')
+        expect(body.error).not.toContain('--as')
+    })
+
+    it('refuses something that is not a di.iiii file, with the reason', async () => {
+        // multer rejects by throwing, which the generic handler turns into a
+        // 500 "Server error" — so the one sentence that says what to do instead
+        // never arrives.
+        const server = await startServer({ requireAuth: false })
+        const form = new FormData()
+        form.append('bundle', new Blob([Buffer.from('not a bundle')]), 'notes.txt')
+        const response = await fetch(`${server.baseUrl}/api/spaces/bundle`, { method: 'POST', body: form })
+        expect(response.status).toBe(400)
+        expect((await response.json()).error).toMatch(/Not a di\.iiii file/)
+    })
+
+    it('keeps node\'s own warnings out of what the browser is shown', async () => {
+        // node prints an ExperimentalWarning the first time node:sqlite loads.
+        // In a terminal it is noise; in a dialog it is the first thing read.
+        const server = await startServer({ requireAuth: false })
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'noisy', permanent: true })
+        })
+        const saved = Buffer.from(await (await fetch(`${server.baseUrl}/api/spaces/noisy/bundle`)).arrayBuffer())
+        const form = new FormData()
+        form.append('bundle', new Blob([saved]), 'noisy.diiii')
+        const response = await fetch(`${server.baseUrl}/api/spaces/bundle`, { method: 'POST', body: form })
+        const body = await response.json()
+        expect(body.error).not.toMatch(/ExperimentalWarning|\(node:\d+\)/)
+    })
+})
+
+
+// THE DOTFILE TRAP, which has now bitten twice.
+//
+// `res.sendFile(absolutePath)` looks harmless and is not: `send` applies
+// dotfiles: 'ignore' to EVERY segment of the path, and the default install
+// lives in `~/.di`. So on a real `di` install every asset anyone uploaded
+// 404'd — while the API answered, the app loaded and the upload itself
+// returned 201 with a URL. It reads as a routing bug and it is not one.
+//
+// It was found and fixed once for index.html (index.js serves it with `root`),
+// and the same line was left in the project asset route, where it survived
+// until someone put a real library into a real install. Hence a test with a
+// dot in the path rather than a note in a doc.
+describe('assets serve from a hidden directory (~/.di is one)', () => {
+    it('serves an uploaded project asset back, byte for byte', async () => {
+        const server = await startServer({ requireAuth: false, hiddenDataRoot: true })
+        expect(server.dataRoot).toContain('/.dii-hidden-data-')
+
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'dotted', permanent: true })
+        })
+        const created = await (await fetch(`${server.baseUrl}/api/spaces/dotted/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'dotted project' })
+        })).json()
+        const projectId = created?.project?.id
+        expect(projectId).toBeTruthy()
+
+        const bytes = Buffer.from('%PDF-1.4 a small but real file\n')
+        const form = new FormData()
+        form.append('asset', new Blob([bytes], { type: 'application/pdf' }), 'paper.pdf')
+        const uploaded = await (await fetch(`${server.baseUrl}/api/projects/${projectId}/assets`, {
+            method: 'POST',
+            body: form
+        })).json()
+        const url = uploaded?.asset?.url
+        expect(url).toBeTruthy()
+
+        // The whole point: the URL the server just handed out must serve.
+        const fetched = await fetch(new URL(url, server.baseUrl.replace(/\/serverXR$/, '')))
+        expect(fetched.status).toBe(200)
+        expect(Buffer.from(await fetched.arrayBuffer()).equals(bytes)).toBe(true)
     })
 })

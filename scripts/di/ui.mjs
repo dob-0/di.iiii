@@ -56,12 +56,52 @@ export const ui = {
     starting: () => style.dim('starting…'),
     installing: (version) => style.dim(`installing ${version}…`),
 
+    // The file menu. A space bundle is one file holding everything a piece of
+    // work is made of; these are the four sentences that make it feel like one.
+    made: (id, url) => `made ${id}.\n  ${url}`,
+    saved: (id, file, size) => `${id} → ${file}${size ? ` (${size})` : ''}\n`
+        + `  one file, everything in it. open it on any di.iiii with: ${CMD} open ${file}`,
+    opened: (id, url) => `opened ${id}.\n  ${url}`,
+    openedNothing: (name) => `${name} was not opened — see above. Your di.iiii is unchanged.`,
+    spacesHere: (ids) => ['in this di.iiii:', ...ids.map((id) => `  ${id}`)].join('\n'),
+    noSpacesYet: () => `nothing here yet. make one with: ${CMD} new "my show"`,
+
     updated: (from, to) => `${from} → ${to}. your work was not touched.`,
     upToDate: (version) => `${version} — already the newest.`,
     updateAvailable: (current, next) => style.dim(`${current} → ${next} available — ${CMD} update`),
     rolledBack: (to) => `back on ${to}. your work was not touched.`,
     noPrevious: () => 'nothing to roll back to — only one version is installed.',
     updateFailed: (version) => `update failed, still on ${version}. your work was not touched.`,
+
+    // An update opens a copy of your work before it commits to anything. This
+    // line is what that second or two is.
+    rehearsing: () => style.dim('  checking it can open your work…'),
+
+    snapshotTaken: (dir) => style.dim(`  this update changes how your work is stored — copy kept at ${dir}`),
+
+    // "Not the same version" is not "newer". A machine installed from a file,
+    // or running an rc, is ahead of the feed and must not be walked backwards.
+    aheadOfRelease: (mine, theirs) =>
+        `${mine} is newer than the published ${theirs} — nothing to update to.\n`
+        + `  install it anyway with:  ${CMD} update --force`,
+
+    // The one an update cannot undo by itself: the app goes back, the data
+    // does not. Said BEFORE anything moves.
+    rollbackCrossesSchema: (dataSchema, targetSchema, snapshot) =>
+        `that version is older than your work.\n`
+        + `  your work is stored in shape ${dataSchema}; that version reads ${targetSchema}\n\n`
+        + `Rolling back would give you an app that misreads your own spaces rather\n`
+        + `than one that fails — so nothing has been moved.\n`
+        + (snapshot
+            ? `  the copy taken before that update:  ${CMD} restore --snapshot ${snapshot}\n`
+            : `  no snapshot was taken before that update\n`)
+        + `  or, if you know the difference and accept it:  DI_ALLOW_OLDER_CODE=1`,
+
+    snapshotList: (snapshots) => snapshots.length
+        ? ['copies of your work, newest first:', ...snapshots.map((s) => `  ${s.name}`)].join('\n')
+        : 'no snapshots yet — one is taken automatically before an update that changes how your work is stored.',
+
+    snapshotRestored: (name) => `restored ${name}. what was there was moved aside, not deleted.`,
 
     backed: (file, size) => [
         `saved ${file}${size ? ` (${size})` : ''}`,
@@ -195,13 +235,21 @@ export const ui = {
         `  ${CMD} status        what is running, where, and how big`,
         `  ${CMD} open          open it in your browser`,
         '',
+        `  ${CMD} new NAME      start a new space`,
+        `  ${CMD} save SPACE    save it as one file you can carry anywhere`,
+        `  ${CMD} open FILE     open a file someone saved (or ${CMD} open, for di.iiii itself)`,
+        `  ${CMD} spaces        what is in this di.iiii`,
         `  ${CMD} backup        write your whole di.iiii to one file`,
         `  ${CMD} restore FILE  read one back in`,
+        `  ${CMD} restore --snapshot   the copies taken automatically before an update`,
+        '',
+        `  ${CMD} mcp           hand this di.iiii to Claude, or any agent that speaks MCP`,
         '',
         `  ${CMD} link SPACE --remote URL   connect one space to an online di.iiii`,
         `  ${CMD} sync SPACE    compare it with its online copy — writes nothing`,
         '',
         `  ${CMD} update        get the newest version — never touches your work`,
+        `  ${CMD} update --from FILE   update from an artifact on this machine (no network)`,
         `  ${CMD} logs [-f]     what the server is saying`,
         `  ${CMD} doctor        what this machine can and cannot do`,
         `  ${CMD} where         the three paths that matter`,

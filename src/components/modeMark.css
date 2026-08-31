@@ -1,0 +1,57 @@
+/* The frame and the chip are one overlay and never take a click: this tells you
+   where you are, it does not add a control. */
+.mode-mark {
+    position: fixed;
+    inset: 0;
+    /* Above the loading screen (9999) and the auth notice (10000) on purpose:
+       "which di.iiii is this" must be answerable in the half-second a surface
+       is still black, which is exactly when someone types into the wrong one. */
+    z-index: 10001;
+    pointer-events: none;
+}
+
+.mode-mark-frame {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--mode-color);
+    opacity: 0.45;
+}
+
+.mode-mark-chip {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 9px;
+    border: 1px solid var(--mode-color);
+    background: rgba(6, 10, 16, 0.88);
+    color: var(--mode-color);
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    white-space: nowrap;
+    backdrop-filter: blur(6px);
+}
+
+.mode-mark-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--mode-color);
+    flex: none;
+}
+
+.mode-mark-host {
+    color: var(--di-text-muted, rgba(255, 255, 255, 0.4));
+    letter-spacing: 0.04em;
+}
+
+/* A phone has no room for the address and the frame reads as a border on a
+   small screen; the chip alone still answers the question. */
+@media (max-width: 560px) {
+    .mode-mark-host {
+        display: none;
+    }
+}

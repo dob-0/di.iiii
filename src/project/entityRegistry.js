@@ -1,5 +1,5 @@
 import {
-    buildDefaultComponentsForType,
+    buildCreationComponentsForType,
     generateId,
     normalizeEntity
 } from '../shared/projectSchema.js'
@@ -27,7 +27,7 @@ const TRANSFORM_FIELDS = [
 ]
 
 const APPEARANCE_FIELDS = [
-    { label: 'Color', component: 'appearance', path: ['color'], type: 'color' },
+    { label: 'Colour', component: 'appearance', path: ['color'], type: 'color' },
     { label: 'Opacity', component: 'appearance', path: ['opacity'], type: 'number', min: 0, max: 1, step: 0.05 }
 ]
 
@@ -270,7 +270,10 @@ const DEFINITIONS = {
                     { label: 'Autoplay', component: 'media', path: ['autoplay'], type: 'checkbox' },
                     { label: 'Loop', component: 'media', path: ['loop'], type: 'checkbox' },
                     { label: 'Muted', component: 'media', path: ['muted'], type: 'checkbox' },
-                    { label: 'Volume', component: 'media', path: ['volume'], type: 'number', min: 0, max: 1, step: 0.05 }
+                    { label: 'Volume', component: 'media', path: ['volume'], type: 'number', min: 0, max: 1, step: 0.05 },
+                    { label: 'Spatial sound', component: 'media', path: ['spatial'], type: 'checkbox' },
+                    { label: 'Full-volume radius', component: 'media', path: ['distance'], type: 'number', min: 0.5, max: 40, step: 0.5 },
+                    { label: 'Falloff ends at', component: 'media', path: ['maxDistance'], type: 'number', min: 1, max: 200, step: 1 }
                 ]
             }
         ]
@@ -318,7 +321,7 @@ const DEFINITIONS = {
                 VECTOR_FIELD('Position Z', 'transform', ['position', 2])
             ]},
             { id: 'light', label: 'Light', fields: [
-                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 },
                 { label: 'Distance', component: 'light', path: ['distance'], type: 'number', min: 0, max: 100, step: 0.5 },
                 { label: 'Decay', component: 'light', path: ['decay'], type: 'number', min: 0, max: 4, step: 0.1 }
@@ -334,7 +337,7 @@ const DEFINITIONS = {
                 VECTOR_FIELD('Position Z', 'transform', ['position', 2])
             ]},
             { id: 'light', label: 'Light', fields: [
-                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 },
                 { label: 'Distance', component: 'light', path: ['distance'], type: 'number', min: 0, max: 100, step: 0.5 },
                 { label: 'Angle (rad)', component: 'light', path: ['angle'], type: 'number', min: 0.01, max: 1.57, step: 0.01 },
@@ -352,7 +355,7 @@ const DEFINITIONS = {
                 VECTOR_FIELD('Position Z', 'transform', ['position', 2])
             ]},
             { id: 'light', label: 'Light', fields: [
-                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 }
             ]}
         ]
@@ -361,7 +364,7 @@ const DEFINITIONS = {
         label: 'Ambient Light',
         sections: [
             { id: 'light', label: 'Light', fields: [
-                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 4, step: 0.05 }
             ]}
         ]
@@ -403,8 +406,17 @@ export const createEntityOfType = (type = 'box', overrides = {}) => {
         type,
         name: overrides.name || definition.label,
         parentId: overrides.parentId || null,
+        // Handed in, never looked up: this is the one funnel every "add an
+        // entity" path goes through, and it stays pure so the tests and the
+        // clipboard can call it with no session in reach. A caller with no
+        // author leaves the entity unowned, which is what everything made
+        // before the stamp existed already is.
+        createdBy: overrides.createdBy || null,
         components: {
-            ...buildDefaultComponentsForType(type),
+            // Creation defaults, NOT normalization fallbacks — see
+            // buildCreationComponentsForType. A clone or paste passes the
+            // source's own components as overrides, so it keeps its settings.
+            ...buildCreationComponentsForType(type),
             ...(overrides.components || {})
         }
     })

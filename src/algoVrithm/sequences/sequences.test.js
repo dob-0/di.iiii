@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { ritualDurationSec, SEQUENCES } from './index.js'
 import { DATA_WHITE, paletteWarning } from '../palette.js'
-import { clipProgress, fadeEnvelope } from '../ritualClock.js'
-import { analyseEditList } from '../editList.js'
+import { clipProgress, fadeEnvelope } from '../../timeline/clock.js'
+import { analyseEditList } from '../../timeline/editList.js'
 
 describe('algovrithm edit list', () => {
     it('opens on the first frame of the piece', () => {

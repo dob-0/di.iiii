@@ -6,7 +6,7 @@
     overflow-y: auto;
     background: var(--di-black);
     color: var(--di-text);
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     scroll-behavior: smooth;
 }
 
@@ -323,6 +323,7 @@ body.is-landing .account-btn-wrapper {
     letter-spacing: 0.02em;
     padding: 9px 16px;
     cursor: pointer;
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
@@ -502,9 +503,9 @@ body.is-landing .account-btn-wrapper {
 .lp-three-cols {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--di-cyan-border);
-    border: 1px solid var(--di-cyan-border);
+    gap: 0;
+    border-top: 1px solid var(--di-cyan-border);
+    border-left: 1px solid var(--di-cyan-border);
 }
 
 .lp-col-card {
@@ -622,9 +623,9 @@ body.is-landing .account-btn-wrapper {
 .lp-steps {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1px;
-    background: var(--di-cyan-border);
-    border: 1px solid var(--di-cyan-border);
+    gap: 0;
+    border-top: 1px solid var(--di-cyan-border);
+    border-left: 1px solid var(--di-cyan-border);
     margin-bottom: 24px;
 }
 
@@ -705,9 +706,9 @@ body.is-landing .account-btn-wrapper {
 .lp-audience-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1px;
-    background: var(--di-cyan-border);
-    border: 1px solid var(--di-cyan-border);
+    gap: 0;
+    border-top: 1px solid var(--di-cyan-border);
+    border-left: 1px solid var(--di-cyan-border);
 }
 
 .lp-audience-card {
@@ -746,9 +747,9 @@ body.is-landing .account-btn-wrapper {
 .lp-feature-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--di-cyan-border);
-    border: 1px solid var(--di-cyan-border);
+    gap: 0;
+    border-top: 1px solid var(--di-cyan-border);
+    border-left: 1px solid var(--di-cyan-border);
 }
 
 .lp-feature-card {
@@ -806,9 +807,9 @@ body.is-landing .account-btn-wrapper {
 .lp-ai-cols {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1px;
-    background: var(--di-cyan-border);
-    border: 1px solid var(--di-cyan-border);
+    gap: 0;
+    border-top: 1px solid var(--di-cyan-border);
+    border-left: 1px solid var(--di-cyan-border);
     margin-bottom: 1px;
 }
 
@@ -951,7 +952,11 @@ body.is-landing .account-btn-wrapper {
 
 .lp-enter-note {
     font-size: 0.7rem !important;
-    color: rgba(255, 255, 255, 0.2) !important;
+    /* Was 0.2 — 1.66:1, and it carries a real link (thedi.studio). A whisper is
+       a legitimate choice for a credit line; an unreadable link is not, and no
+       alpha below ~0.46 clears the floor. It stays quieter than body copy by
+       size, caps and letter-spacing rather than by being invisible. */
+    color: var(--di-text-muted) !important;
     letter-spacing: 0.14em !important;
     text-transform: uppercase !important;
     font-family: var(--di-mono) !important;
@@ -1067,3 +1072,37 @@ body.is-landing .account-btn-wrapper {
     -webkit-user-select: text;
     user-select: text;
 }
+
+.lp-col-card {
+    border-right: 1px solid var(--di-cyan-border);
+    border-bottom: 1px solid var(--di-cyan-border);
+}
+
+.lp-step {
+    border-right: 1px solid var(--di-cyan-border);
+    border-bottom: 1px solid var(--di-cyan-border);
+}
+
+.lp-audience-card {
+    border-right: 1px solid var(--di-cyan-border);
+    border-bottom: 1px solid var(--di-cyan-border);
+}
+
+.lp-feature-card {
+    border-right: 1px solid var(--di-cyan-border);
+    border-bottom: 1px solid var(--di-cyan-border);
+}
+
+.lp-ai-block {
+    border-right: 1px solid var(--di-cyan-border);
+    border-bottom: 1px solid var(--di-cyan-border);
+}
+
+/* ─── HAIRLINE GRIDS ──────────────────────────────────────────
+   These grids used the classic `gap: 1px` over a cyan background to draw
+   their hairlines. That works only while the last row is FULL: any empty
+   cell shows the raw background as a solid teal slab. The features grid
+   holds 8 cards in 3 columns, so one slab has been live on the marketing
+   page the whole time (seen on prod 2026-08-25). The cards draw their own
+   right/bottom hairlines instead, and the container draws top/left — same
+   1px lattice, nothing behind an empty cell to expose. */

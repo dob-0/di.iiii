@@ -84,7 +84,7 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     if (isLocalRootWorkspace) {
         return (
-            <Suspense fallback={<LoadingScreen label="Loading surface" />}>
+            <Suspense fallback={<LoadingScreen label="Loading the node editor" />}>
                 <BlankNodeWorkspaceApp spaceId={spaceId} />
             </Suspense>
         )
@@ -102,7 +102,7 @@ export default function SpaceSurfaceApp({ routeState }) {
     // the Studio Projects window.
     if (shouldResolvePublishedSurface && routeProjectId) {
         return (
-            <Suspense fallback={<LoadingScreen label="Loading surface" />}>
+            <Suspense fallback={<LoadingScreen label="Loading project" />}>
                 <PublicProjectViewer
                     key={`${spaceId}:${routeProjectId}`}
                     spaceId={spaceId}
@@ -115,7 +115,7 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     if (shouldResolvePublishedSurface && publishedProjectId) {
         return (
-            <Suspense fallback={<LoadingScreen label="Loading surface" />}>
+            <Suspense fallback={<LoadingScreen label="Loading space" />}>
                 <PublicProjectViewer
                     key={`${spaceId}:${publishedProjectId}`}
                     spaceId={spaceId}
@@ -127,8 +127,8 @@ export default function SpaceSurfaceApp({ routeState }) {
     }
 
     if (page === APP_PAGE_PREFERENCES) {
-        return <Suspense fallback={<LoadingScreen label="Loading surface" />}><App /></Suspense>
+        return <Suspense fallback={<LoadingScreen label="Loading the admin console" />}><App /></Suspense>
     }
 
-    return <Suspense fallback={<LoadingScreen label="Loading surface" />}><App /></Suspense>
+    return <Suspense fallback={<LoadingScreen label="Loading space" />}><App /></Suspense>
 }

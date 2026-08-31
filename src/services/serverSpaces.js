@@ -49,6 +49,48 @@ export const createServerSpace = async ({ label, slug, isPermanent = false } = {
     return data.space
 }
 
+/**
+ * Save a space as one file — the same document `di save` writes, downloaded by
+ * the browser instead of the terminal.
+ *
+ * A plain navigation rather than a fetch: the file can be large, and the point
+ * is to land in the artist's Downloads folder with its own name, which is what
+ * Content-Disposition already tells the browser to do. Reading a whole bundle
+ * into memory to hand it back as a blob would only be a slower way to get to
+ * the same place.
+ */
+export const saveSpaceToFile = (spaceId) => {
+    const id = resolveServerSpaceId(spaceId)
+    window.location.assign(`${apiBaseUrl}/api/spaces/${id}/bundle`)
+}
+
+/**
+ * Open a file someone saved. Multipart because it is a file, and the server
+ * hands it to the same tool `di open` uses — one implementation of the format.
+ */
+export const openSpaceFromFile = async (file, { as = null } = {}) => {
+    const form = new FormData()
+    form.append('bundle', file)
+    if (as) form.append('as', as)
+    const response = await fetch(`${apiBaseUrl}/api/spaces/bundle`, {
+        method: 'POST',
+        body: form,
+        credentials: 'include'
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+        // The server passes the bundle tool's own sentence through — "this file
+        // was written by a newer di.iiii" — and those are the words worth
+        // showing. `code` travels with it so the caller can offer a way out of
+        // the one failure that has one: a name already taken.
+        const error = new Error(data?.error || 'That file could not be opened.')
+        error.code = data?.code || null
+        error.spaceId = data?.spaceId || null
+        throw error
+    }
+    return data
+}
+
 export const updateServerSpace = async (spaceId, updates = {}) => {
     const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`, {
         method: 'PATCH',
@@ -62,7 +104,7 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
             previewImageAssetId: updates.previewImageAssetId,
             // Forwarded explicitly because both are meaningfully null: a null
             // slug clears the public handle back to id-only addressing, and a
-            // null owner returns the space to the platform. undefined (the key
+            // null owner returns the space to di.iiii. undefined (the key
             // absent) still means "don't touch" — JSON.stringify drops it.
             ...(updates.slug !== undefined ? { slug: updates.slug } : {}),
             ...(updates.ownerUserId !== undefined ? { ownerUserId: updates.ownerUserId } : {}),

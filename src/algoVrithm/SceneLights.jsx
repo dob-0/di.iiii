@@ -1,10 +1,10 @@
 import { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { AMBIENT_VALUE, LIGHT_INTENSITIES } from './palette.js'
-import { fadeEnvelope } from './ritualClock.js'
+import { AMBIENT_VALUE } from './palette.js'
+import { fadeEnvelope } from '../timeline/clock.js'
 import { hazeTexture } from './LightHaze.jsx'
-import { DEFAULT_AMBIENT, lightObjectName, resolveAmbient, resolveLight, rowLights } from './worldLights.js'
+import { DEFAULT_AMBIENT, LIGHT_INTENSITIES, lightObjectName, resolveAmbient, resolveLight, rowLights } from '../timeline/worldLights.js'
 
 // One row's lamps, mounted for as long as that row is on screen.
 //

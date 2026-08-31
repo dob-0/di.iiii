@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
+import { NODE_RUNTIMES } from './nodes/index.js'
 import { resolve } from 'node:path'
 import { cwd } from 'node:process'
 import { describe, expect, it } from 'vitest'
@@ -19,6 +20,15 @@ import {
     isNodeMadeOfCode,
     CONTAINER_TYPE_IDS,
 } from './nodeRegistry.js'
+
+describe('paletteHidden', () => {
+    it('view.library (Create) is implemented but not offered — its buttons make objects, not nodes', () => {
+        const offered = listNodeTypes().map((type) => type.id)
+        expect(offered).not.toContain('view.library')
+        const everything = listNodeTypes({ includeUnimplemented: true }).map((type) => type.id)
+        expect(everything).toContain('view.library')
+    })
+})
 
 describe('PORT_TYPES', () => {
     it('defines core port types with label and color', () => {
@@ -65,10 +75,27 @@ describe('NODE_TYPES', () => {
         expect(NODE_TYPES['view.image'].render).toBe('panel-2d')
     })
 
-    it('world and math nodes are hidden', () => {
-        expect(NODE_TYPES['world.light'].render).toBe('hidden')
+    it('world and math nodes are hidden — except Light and Camera, which stand somewhere', () => {
+        // world.light went spatial 2026-08-19 so a Light can be COLLECTED
+        // inside a container (a real point light with a marker); at root it
+        // still draws nothing and keeps its settings job. world.camera went in
+        // spatial 2026-08-20: the authored eye stands in the room, carried by
+        // containers like anything else.
+        expect(NODE_TYPES['world.light'].render).toBe('spatial-3d')
+        expect(NODE_TYPES['world.camera'].render).toBe('spatial-3d')
         expect(NODE_TYPES['world.background'].render).toBe('hidden')
         expect(NODE_TYPES['math.add'].render).toBe('hidden')
+    })
+
+    it('a fresh Camera is the room\'s own default view — authored without a jump', () => {
+        // These three defaults are byte-identical to RawViewport's built-in
+        // camera (position [0,2.4,6.5], target [0,0.75,0], fov 50). If either
+        // side drifts, placing a Camera would CUT to a different shot the
+        // moment it lands.
+        const inputs = Object.fromEntries(NODE_TYPES['world.camera'].inputs.map((i) => [i.id, i.default]))
+        expect(inputs.position).toEqual([0, 2.4, 6.5])
+        expect(inputs.lookAt).toEqual([0, 0.75, 0])
+        expect(inputs.fov).toBe(50)
     })
 
     // Product decision 2026-07-19: no node type is a singleton — every type,
@@ -95,7 +122,12 @@ describe('NODE_TYPES', () => {
         const runtimePath = ['project/graph/nodeGraphRuntime.js', 'src/project/graph/nodeGraphRuntime.js']
             .map((p) => resolve(cwd(), p)).find(existsSync)
         const runtimeSource = readFileSync(runtimePath, 'utf8')
-        const evaluatedTypeIds = [...runtimeSource.matchAll(/case '([^']+)':/g)].map((m) => m[1])
+        // Evaluated types live in TWO homes since the colocation seed: the
+        // legacy switch (scanned from source) and the NODE_RUNTIMES map.
+        const evaluatedTypeIds = [
+            ...[...runtimeSource.matchAll(/case '([^']+)':/g)].map((m) => m[1]),
+            ...NODE_RUNTIMES.keys()
+        ]
         expect(evaluatedTypeIds).toContain('time')
         for (const typeId of evaluatedTypeIds) {
             if (!NODE_TYPES[typeId]) continue
@@ -160,6 +192,14 @@ describe('createNode', () => {
         expect(node.graphY).toBe(200)
     })
 
+    // Same contract as createEntityOfType's stamp: handed in so this stays
+    // pure, and absent means unowned rather than yours.
+    it('stamps the author the caller hands it, and leaves it unowned otherwise', () => {
+        expect(createNode('geom.cube', { createdBy: { subject: 'guest:ani', label: 'Ani' } }).createdBy)
+            .toEqual({ subject: 'guest:ani', label: 'Ani' })
+        expect(createNode('geom.cube').createdBy).toBeNull()
+    })
+
     it('returns null for unknown typeId', () => {
         expect(createNode('does.not.exist')).toBeNull()
     })
@@ -200,9 +240,11 @@ describe('createEdge', () => {
 describe('listNodeTypes', () => {
     it('returns every implemented type when no filter given', () => {
         // Not every declared type: unimplemented ones are withheld from the
-        // palette so the editor stops offering nodes that do nothing.
+        // palette so the editor stops offering nodes that do nothing, and
+        // paletteHidden ones are implemented but deliberately not offered.
+        const paletteHidden = Object.values(NODE_TYPES).filter((t) => t.paletteHidden && !UNIMPLEMENTED_NODE_TYPES.has(t.id)).length
         const all = listNodeTypes()
-        expect(all.length).toBe(Object.keys(NODE_TYPES).length - UNIMPLEMENTED_NODE_TYPES.size)
+        expect(all.length).toBe(Object.keys(NODE_TYPES).length - UNIMPLEMENTED_NODE_TYPES.size - paletteHidden)
     })
 
     it('filters by category', () => {
@@ -299,18 +341,22 @@ describe('unimplemented node types', () => {
     it('withholds types with nothing behind them from the palette', () => {
         const offered = listNodeTypes().map((type) => type.id)
         // device.midi.in left this list on 2026-08-08 — Web MIDI is real in the
-        // page, so it is implemented. device.midi.out stands in its place: it
-        // has no sender yet.
-        for (const id of ['source.ar', 'device.midi.out', 'stream.compositor', 'universe.link']) {
+        // page, so it is implemented. Same for device.midi.out since 2026-08-21.
+        // device.osc.out stands in their place: no UDP without the bridge.
+        for (const id of ['source.ar', 'device.osc.out', 'stream.compositor', 'universe.link']) {
             expect(offered).not.toContain(id)
         }
     })
 
     it('still offers everything that actually works', () => {
         const offered = listNodeTypes().map((type) => type.id)
+        // world.light left this list with the Light split: it still WORKS
+        // (old documents keep both its behaviours) but is paletteHidden —
+        // the palette offers Environment and Light (light.point) instead.
         for (const id of [
-            'value.number', 'math.add', 'geom.cube', 'world.light',
-            'universe.world', 'view.image', 'view.browser', 'time',
+            'value.number', 'math.add', 'geom.cube', 'light.point',
+            'device.midi.out',
+            'world.environment', 'universe.world', 'view.image', 'view.browser', 'time',
             'source.webcam', 'source.mic', 'agent.keeper', 'device.midi.in'
         ]) {
             expect(offered).toContain(id)

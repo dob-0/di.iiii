@@ -69,7 +69,7 @@ const githubApp = require('./githubApp')
 const spaceSyncPlan = require('./spaceSyncPlan')
 const spaceLinkStore = require('./spaceLinkStore')
 const { httpRequest } = require('./httpClient')
-const { createRateLimiter } = require('./rateLimit')
+const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
@@ -189,6 +189,7 @@ const {
   readOpsHistory,
   readOpsHistorySince,
   removeAssetThumbnails,
+  restoreSpaceProjectDocuments,
   saveSpaceMeta,
   serveAsset,
   snapshotSpaceScene,
@@ -396,6 +397,10 @@ app.use((req, res, next) => {
 const router = express.Router()
 router.use(express.static(PUBLIC_DIR))
 
+// `di up` sets DI_LOCAL=1. Read at request time rather than at boot so tests
+// can toggle it, which is why it is a function and not a constant.
+const isLocalInstall = () => process.env.DI_LOCAL === '1'
+
 const buildAuthState = ({
   authenticated = false,
   type = null,
@@ -540,12 +545,20 @@ const getPublicAuthState = (req) => {
   return getAuthState(req)
 }
 
-const setAuthSessionCookie = (res, value) => {
+// The cookie's Max-Age must be the SAME ttl the session payload was minted
+// with. It used to always stamp config.authSession.ttlMs (12h) while guest
+// sessions were minted for GUEST_SESSION_TTL_MS (7 days) — so the browser
+// dropped the cookie overnight and every returning guest came back as a
+// brand-new subject: new sandbox, and any space grant redeemed from an
+// invite gone with it. Callers minting anything other than an account
+// session MUST pass the ttl they used; the default only covers the
+// account/OAuth sessions that genuinely claim config.authSession.ttlMs.
+const setAuthSessionCookie = (res, value, ttlMs = config.authSession.ttlMs) => {
   res.setHeader('Set-Cookie', serializeAuthSessionCookie(value, {
     name: config.authSession.cookieName,
     path: config.authSession.cookiePath,
     secure: config.authSession.cookieSecure,
-    ttlMs: config.authSession.ttlMs
+    ttlMs
   }))
 }
 
@@ -734,7 +747,7 @@ const issueGuestSession = async (res) => {
       spaces
     }
   })
-  setAuthSessionCookie(res, result.value)
+  setAuthSessionCookie(res, result.value, GUEST_SESSION_TTL_MS)
   return { guestId, expiresAt: result.expiresAt, spaces }
 }
 
@@ -747,7 +760,49 @@ const authAttemptLimiter = createRateLimiter({ windowMs: 60_000, max: 10, name: 
 const syncKeyMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'sync-key mints' })
 const inviteMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite mints' })
 const inviteRedeemLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite redeems' })
-const uploadLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'uploads' })
+// A separate multer from `upload`: the asset filter is an allow-list of media
+// types, and a space bundle is none of them. Its own filter (the two names a
+// bundle is ever written under) and its own destination, so a rejected upload
+// never lands anywhere the asset pipeline looks.
+const bundleUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+    filename: (req, file, cb) => cb(null, `${Date.now()}-bundle.diiii`)
+  }),
+  limits: { fileSize: config.maxUploadBytes },
+  fileFilter: (req, file, cb) => {
+    const name = String(file.originalname || '').toLowerCase()
+    if (name.endsWith('.diiii') || name.endsWith('.space-bundle.tar.gz') || name.endsWith('.tar.gz')) {
+      cb(null, true)
+      return
+    }
+    cb(new Error('Not a di.iiii file. Save one with `di save`, or from the Spaces page.'))
+  }
+})
+
+// Uploads are keyed per PERSON, not per address. A venue — a classroom, a
+// gallery, a day camp — is a dozen people behind one NAT, so an address key
+// gave the whole room a single 60-per-10-minutes budget and the first few
+// uploaders spent everyone's. Every browser caller has a subject by the time
+// this runs (the authState middleware issues/reads the session cookie before
+// any route), guests included; the address key stays as the fallback for
+// callers with no subject at all, so an anonymous flood is still bounded.
+// With REQUIRE_AUTH off, getPublicAuthState hands EVERY caller the same
+// 'auth-disabled' sentinel subject — keying on that would put a whole server
+// in one bucket, strictly worse than the address. Type 'disabled' is not a
+// person, so it falls back with the anonymous callers.
+const uploadKey = (req) => {
+  const state = req.authState
+  const subject = state && state.type !== 'disabled' ? state.subject : null
+  return subject ? `subject:${subject}` : `addr:${clientKey(req)}`
+}
+const uploadLimiter = createRateLimiter({
+  windowMs: 10 * 60_000,
+  max: 60,
+  name: 'uploads',
+  keyFn: uploadKey,
+  scope: 'from this session'
+})
 // pull/push do real disk I/O plus an outbound HTTP call to the configured
 // live server, with no limiter previously — same class of gap the upload
 // route already had one for (audit finding #9).
@@ -840,7 +895,7 @@ router.get('/api/auth/session', async (req, res, next) => {
       // is a `di up` install on the artist's own machine (the CLI runner sets
       // DI_LOCAL=1). The client uses it to stop speaking hosted-product copy
       // ("sign in to edit", space quotas) to someone who owns the whole disk.
-      local: process.env.DI_LOCAL === '1',
+      local: isLocalInstall(),
       authenticated: Boolean(state.authenticated),
       type: isGuest ? 'guest' : (state.type || null),
       role: state.role || null,
@@ -851,7 +906,14 @@ router.get('/api/auth/session', async (req, res, next) => {
       expiresAt: state.session?.expiresAt || null,
       openSpaceId: getCommunalSpaceId(),
       sandboxSpaceId,
-      spaceLimit,
+      // null, not 3, on a local install. The comment above promises this page
+      // stops speaking quotas to someone who owns the disk, and canCreateSpace
+      // already ignores the limit here (requireAuth is off) — but the number
+      // was still sent, and SpaceHub renders it: "+ Create · 0/3" on a machine
+      // with no quota at all. SpaceHub already guards on Number.isFinite, so
+      // null is the value that makes the counter disappear rather than a
+      // second branch in the client.
+      spaceLimit: isLocalInstall() ? null : spaceLimit,
       ownedSpaceCount,
       canCreateSpace
     })
@@ -1497,6 +1559,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   applySceneOps,
   blankScene: BLANK_SCENE,
   broadcastLiveEvent,
+  broadcastProjectLiveEvent,
   buildMeta,
   collectSceneAssetRefs,
   config,
@@ -1537,6 +1600,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   readOpsHistory,
   readOpsHistorySince,
   removeAssetThumbnails,
+  restoreSpaceProjectDocuments,
   saveSpaceMeta,
   serveAsset,
   setUserSpaces,
@@ -1544,6 +1608,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   spaceExists,
   upsertSpaceMeta,
   upload,
+  bundleUpload,
   writeJson,
   approvalGate
 })
@@ -1687,7 +1752,10 @@ router.post('/api/invites/redeem', inviteRedeemLimiter, async (req, res, next) =
           isUnrestricted: false
         }
       })
-      setAuthSessionCookie(res, session.value)
+      // Minted with GUEST_SESSION_TTL_MS above — the cookie has to say the
+      // same, or the grant this invite just handed out expires with the
+      // cookie long before the payload it is written into does.
+      setAuthSessionCookie(res, session.value, GUEST_SESSION_TTL_MS)
     }
     markInviteUsed(resolved.inviteId)
     res.json({ ok: true, granted: true, space: spacePublic })
@@ -1959,8 +2027,9 @@ initStorage()
     setInterval(() => {
       pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
     }, 1000 * 60 * 30)
-    // Daily scene snapshot of the open space — vandalism insurance (admin
-    // restores via POST /api/spaces/:id/restore-snapshot).
+    // Daily snapshot of the open space — its scene and its project documents,
+    // which is where the jam's contributions actually live. Vandalism
+    // insurance (admin restores via POST /api/spaces/:id/restore-snapshot).
     snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
     setInterval(() => {
       snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))

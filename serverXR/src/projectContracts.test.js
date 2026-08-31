@@ -319,6 +319,70 @@ describe('project contracts', () => {
         expect(repeatDelete.status).toBe(404)
     })
 
+    // A published project is a public URL, so an asset that still carries the
+    // photographer's GPS is a leak. The scrubber handles the formats sharp can
+    // re-encode; anything else must be refused rather than stored verbatim,
+    // because storing it is the silent, dangerous half of the choice.
+    it('scrubs an uploaded photo and refuses an image whose metadata it cannot strip', async () => {
+        const server = await startServer()
+        const { readdir } = await import('node:fs/promises')
+        const { createHash } = await import('node:crypto')
+        const sharp = (await import('sharp')).default
+
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Camp Photos', slug: 'camp-photos' })
+        })
+
+        const photo = await sharp({
+            create: { width: 24, height: 24, channels: 3, background: { r: 9, g: 9, b: 9 } }
+        }).withMetadata({
+            exif: { IFD0: { Make: 'ACME' }, GPS: { GPSLatitudeRef: 'N', GPSLatitude: '40/1 47/1 0/1' } }
+        }).jpeg().toBuffer()
+        expect((await sharp(photo).metadata()).exif).toBeTruthy()
+
+        const photoForm = new FormData()
+        photoForm.append('asset', new Blob([photo], { type: 'image/jpeg' }), 'town.jpg')
+        const photoUpload = await fetch(`${server.baseUrl}/api/projects/camp-photos/assets`, {
+            method: 'POST',
+            body: photoForm
+        })
+        expect(photoUpload.status).toBe(200)
+        const storedPhoto = await fetch(new URL((await photoUpload.json()).asset.url, server.baseUrl))
+        const storedBytes = Buffer.from(await storedPhoto.arrayBuffer())
+        expect((await sharp(storedBytes).metadata()).exif).toBeUndefined()
+
+        // An iPhone HEIC: identifiable as a still image, not decodable by this
+        // libvips build (no HEVC), therefore not scrubbable, therefore refused.
+        const heic = Buffer.concat([
+            Buffer.from([0, 0, 0, 24]),
+            Buffer.from('ftypheic', 'latin1'),
+            Buffer.from([0, 0, 0, 0]),
+            Buffer.from('mif1heic', 'latin1'),
+            Buffer.from('hevc-payload-with-gps-exif', 'latin1')
+        ])
+        const heicForm = new FormData()
+        heicForm.append('asset', new Blob([heic], { type: 'image/heic' }), 'IMG_0001.HEIC')
+        const heicUpload = await fetch(`${server.baseUrl}/api/projects/camp-photos/assets`, {
+            method: 'POST',
+            body: heicForm
+        })
+        expect(heicUpload.status).toBe(415)
+        expect((await heicUpload.json()).error).toMatch(/location and camera data/i)
+
+        // nothing of it survives: no blob, no project asset, no temp upload
+        const blobs = await readdir(path.join(server.dataRoot, 'spaces', 'main', 'blobs')).catch(() => [])
+        const heicHash = createHash('sha256').update(heic).digest('hex')
+        expect(blobs).not.toContain(heicHash)
+        const projectAssets = await readdir(
+            path.join(server.dataRoot, 'spaces', 'main', 'projects', 'camp-photos', 'assets')
+        ).catch(() => [])
+        expect(projectAssets.some((name) => name.startsWith(heicHash))).toBe(false)
+        const uploads = await readdir(path.join(server.dataRoot, 'uploads')).catch(() => [])
+        expect(uploads.filter((name) => /heic/i.test(name))).toEqual([])
+    })
+
     it('content-addresses project assets: verifies supplied sha256 ids and exposes a meta check', async () => {
         const server = await startServer()
 

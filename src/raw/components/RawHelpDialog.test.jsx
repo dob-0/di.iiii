@@ -3,35 +3,28 @@ import { describe, expect, it, vi } from 'vitest'
 import RawHelpDialog from './RawHelpDialog.jsx'
 
 describe('RawHelpDialog', () => {
-    it('opens on the current surface guide by default', () => {
-        render(<RawHelpDialog open surface="view" onClose={() => {}} />)
+    it('opens on the one truthful section — no surface prop, no surface teaching', () => {
+        render(<RawHelpDialog open onClose={() => {}} />)
 
-        expect(screen.getByRole('heading', { name: 'Make panels' })).toBeTruthy()
-        expect(screen.getByText('Open View.')).toBeTruthy()
-    })
-
-    it('switches sections from the help tabs', () => {
-        render(<RawHelpDialog open surface="world" onClose={() => {}} />)
-
-        fireEvent.click(screen.getByRole('tab', { name: 'Graph' }))
-
-        expect(screen.getByRole('heading', { name: 'Wire values' })).toBeTruthy()
-        expect(screen.getByText('Add Number, String, or Color.')).toBeTruthy()
-        expect(screen.getAllByText('Graph').length).toBeGreaterThan(0)
+        expect(screen.getByRole('heading', { name: 'Start small' })).toBeTruthy()
+        // The retired product must not be taught here.
+        expect(screen.queryByText(/Switch View|Open View\.|Open World/)).toBeNull()
+        expect(screen.queryByRole('tab', { name: 'World' })).toBeNull()
+        expect(screen.queryByRole('tab', { name: 'View' })).toBeNull()
     })
 
     it('switches to the compact controls view', () => {
-        render(<RawHelpDialog open surface="world" onClose={() => {}} />)
+        render(<RawHelpDialog open onClose={() => {}} />)
 
         fireEvent.click(screen.getByRole('tab', { name: 'All Controls' }))
 
-        expect(screen.getByText('Add node')).toBeTruthy()
-        expect(screen.getAllByText('Double-click world').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Wire').length).toBeGreaterThan(0)
+        expect(screen.getAllByText(/Double-click or double-tap/).length).toBeGreaterThan(0)
     })
 
     it('closes when escape is pressed', () => {
         const onClose = vi.fn()
-        render(<RawHelpDialog open surface="graph" onClose={onClose} />)
+        render(<RawHelpDialog open onClose={onClose} />)
 
         fireEvent.keyDown(window, { key: 'Escape' })
 

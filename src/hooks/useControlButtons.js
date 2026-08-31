@@ -120,7 +120,7 @@ export function useControlButtons({
                 { key: 'offline-mode', label: isOfflineMode ? 'Exit Offline' : 'Work Offline', onClick: handleToggleOfflineMode },
                 { key: 'undo', label: 'Undo', onClick: handleUndo, disabled: !canUndo, hint: 'Cmd/Ctrl+Z' },
                 { key: 'redo', label: 'Redo', onClick: handleRedo, disabled: !canRedo, hint: 'Shift+Cmd/Ctrl+Z' },
-                { key: 'clear', label: 'Clear Scene', onClick: () => handleClear({ silent: false }), variant: 'warning' }
+                { key: 'clear', label: 'Clear changes', onClick: () => handleClear({ silent: false }), variant: 'warning' }
             )
         }
 
@@ -154,7 +154,7 @@ export function useControlButtons({
                         variant: isLiveSyncEnabled ? 'success' : undefined
                     }]
                     : []),
-                { key: 'reload-server', label: 'Reload Server Scene', onClick: handleReloadFromServer, disabled: !canPublishToServer },
+                { key: 'reload-server', label: 'Reload from Server', onClick: handleReloadFromServer, disabled: !canPublishToServer },
                 { key: 'publish', label: 'Publish to Server', onClick: handlePublishToServer, disabled: !canPublishToServer }
             ]
             : []
@@ -169,14 +169,14 @@ export function useControlButtons({
                 label: '3D View',
                 onClick: () => setPresentationMode('scene'),
                 isActive: isSceneView,
-                title: 'Use the normal interactive 3D scene camera.'
+                title: 'Use the normal interactive 3D camera.'
             })
             displayButtons.push({
                 key: 'presentation-fixed-camera',
                 label: '2D Camera',
                 onClick: () => setPresentationMode('fixed-camera'),
                 isActive: isFixedCameraView,
-                title: 'Lock the scene to a saved presentation camera.'
+                title: 'Lock the room to a saved presentation camera.'
             })
             displayButtons.push({
                 key: 'presentation-code',
@@ -189,7 +189,7 @@ export function useControlButtons({
                 key: 'xr-focus',
                 label: 'XR Focus',
                 onClick: handleEnterXrFocus,
-                title: 'Hide the editor UI and switch to the 3D scene so only XR controls remain.'
+                title: 'Hide the editor UI and switch to the room so only XR controls remain.'
             })
             displayButtons.push({ key: 'hide-ui', label: 'Hide UI', onClick: () => setIsUiVisible(false), variant: 'warning' })
             displayButtons.push({

@@ -84,7 +84,10 @@ export const buildReparentPatch = (entities, entityId, newParentId) => {
 
 // Fresh ids for every clone, parentIds remapped onto the cloned parents; the
 // root is nudged +0.4 x/z (children keep their parent-relative transforms).
-export const cloneSubtree = (subtree) => {
+// The clone is stamped to whoever made the copy, not to the source's author —
+// a duplicate is their object now, and inheriting the stamp would warn them
+// off deleting their own work.
+export const cloneSubtree = (subtree, createdBy = null) => {
     const idMap = new Map()
     return subtree.map((source, index) => {
         const isRoot = index === 0
@@ -92,6 +95,7 @@ export const cloneSubtree = (subtree) => {
         const clone = createEntityOfType(source.type, {
             name: isRoot ? `${source.name} copy` : source.name,
             parentId: isRoot ? null : (idMap.get(source.parentId) || null),
+            createdBy,
             components: {
                 ...structuredClone(source.components),
                 ...(isRoot ? {

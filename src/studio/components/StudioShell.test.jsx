@@ -126,9 +126,9 @@ describe('StudioShell mobile chrome', () => {
 
     it('opens one window at a time as a bottom sheet and toggles it closed', () => {
         renderShell({ isMobile: true })
-        fireEvent.click(screen.getByRole('button', { name: 'Scene' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Objects' }))
         expect(screen.getByLabelText('Close panel')).toBeInTheDocument()
-        fireEvent.click(screen.getByRole('button', { name: 'Scene' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Objects' }))
         expect(screen.queryByLabelText('Close panel')).not.toBeInTheDocument()
     })
 

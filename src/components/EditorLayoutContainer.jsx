@@ -282,7 +282,7 @@ export default function EditorLayoutContainer({
             drawerSections: [
                 {
                     key: 'scene',
-                    label: 'Scene',
+                    label: 'This space',
                     items: pick(
                         'new-space',
                         'group-selection',
@@ -329,8 +329,8 @@ export default function EditorLayoutContainer({
                     ].includes(button.key)
             )
             .map((button) => {
-                if (button.key === 'save') return { ...button, label: 'Export Scene' }
-                if (button.key === 'load') return { ...button, label: 'Load Scene' }
+                if (button.key === 'save') return { ...button, label: 'Export Project' }
+                if (button.key === 'load') return { ...button, label: 'Import Project' }
                 return button
             }),
         panelButtons,

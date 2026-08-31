@@ -127,3 +127,45 @@ describe('PropertyInspector', () => {
         expect(onSectionChange).toHaveBeenCalledWith('values', { color: '#5fa8ff', __code: 'some code' })
     })
 })
+
+describe('the number edit buffer (phone audit, 2026-08-20)', () => {
+    const numberSection = () => [{
+        id: 'values',
+        label: 'Ports',
+        fields: [{ label: 'Radius', path: ['radius'], type: 'number', portType: 'number', default: 0.5 }]
+    }]
+
+    it('never commits an emptied field — Number("") is 0 and that 0 was corrupting values', () => {
+        const onSectionChange = vi.fn()
+        render(
+            <PropertyInspector
+                title="Sphere"
+                sections={numberSection()}
+                values={{ values: { radius: 0.5 } }}
+                onSectionChange={onSectionChange}
+            />
+        )
+        const input = screen.getByDisplayValue('0.5')
+        fireEvent.focus(input)
+        fireEvent.change(input, { target: { value: '' } })
+        expect(onSectionChange).not.toHaveBeenCalled()
+        fireEvent.change(input, { target: { value: '2' } })
+        expect(onSectionChange).toHaveBeenCalledWith('values', { radius: 2 })
+    })
+
+    it('blur drops the draft back to the canonical value', () => {
+        render(
+            <PropertyInspector
+                title="Sphere"
+                sections={numberSection()}
+                values={{ values: { radius: 0.5 } }}
+                onSectionChange={vi.fn()}
+            />
+        )
+        const input = screen.getByDisplayValue('0.5')
+        fireEvent.focus(input)
+        fireEvent.change(input, { target: { value: '' } })
+        fireEvent.blur(input)
+        expect(input.value).toBe('0.5')
+    })
+})

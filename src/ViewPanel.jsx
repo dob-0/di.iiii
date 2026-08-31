@@ -641,7 +641,7 @@ export default function ViewPanel({ onClose, surfaceMode = 'floating' }) {
                             id={`${fieldPrefix}-shadows`}
                             type="button"
                             className="toggle-button-small"
-                            aria-label="Toggle scene shadows"
+                            aria-label="Toggle shadows"
                             aria-pressed={renderSettings.shadows}
                             onClick={() => setRenderSettings(prev => ({ ...prev, shadows: !prev.shadows }))}
                         >

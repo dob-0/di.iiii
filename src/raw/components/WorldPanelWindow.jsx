@@ -18,7 +18,6 @@ export default function WorldPanelWindow({
     isLive = false,
     onSetLive,
     onEnterFullscreen,
-    onEnterOverlay,
     liveOutputs = null,
 }) {
     return (
@@ -51,8 +50,8 @@ export default function WorldPanelWindow({
                     type="button"
                     className={`raw-world-panel-btn${isLive ? ' is-live' : ''}`}
                     onClick={onSetLive}
-                    title={isLive ? 'Live output for this scope' : 'Mark as live output for this scope'}
-                    aria-label={isLive ? 'Live output for this scope' : 'Mark as live output for this scope'}
+                    title={isLive ? 'The live Scene here' : 'Make this the live Scene here'}
+                    aria-label={isLive ? 'The live Scene here' : 'Make this the live Scene here'}
                     aria-pressed={isLive}
                 >
                     ●
@@ -60,18 +59,9 @@ export default function WorldPanelWindow({
                 <button
                     type="button"
                     className="raw-world-panel-btn"
-                    onClick={onEnterOverlay}
-                    title="World as background"
-                    aria-label="World as background"
-                >
-                    ◫
-                </button>
-                <button
-                    type="button"
-                    className="raw-world-panel-btn"
                     onClick={onEnterFullscreen}
-                    title="Fullscreen world"
-                    aria-label="Fullscreen world"
+                    title="Fullscreen scene"
+                    aria-label="Fullscreen scene"
                 >
                     ⤢
                 </button>

@@ -26,8 +26,29 @@
     --di-black: #000;
     --di-surface: #0a0a0a;
     --di-text: #fff;
-    --di-text-muted: rgba(255, 255, 255, 0.4);
+    /* 0.4 measured 3.66:1 against the black ground — below the 4.5:1 floor for
+       body text, on 54 text nodes of the landing page alone and 6 more on
+       /spaces. Every one of them was secondary copy doing real explaining: what
+       di.iiii is, what a space holds, what the guest session gives you. 0.5
+       measures 5.28:1 and still reads as muted beside --di-text. Raise this
+       token, never a single call site: it is the one place the whole dark
+       theme's secondary text is set. */
+    --di-text-muted: rgba(255, 255, 255, 0.5);
     --di-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    /* The sans stack existed 24 times as a copy-pasted literal in two
+       incompatible spellings -- 'Inter','SF Pro Text',-apple-system,Blink…
+       (preferences/wiki/legal) and 'Inter','Segoe UI' (landing/raw) -- so a
+       typeface change meant 24 edits and the two families fell back
+       differently per OS. This is their union, in preference order. Inter is
+       self-hosted (see the @font-face above), so the fallbacks fire only when
+       it genuinely fails to load. */
+    --di-sans: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* Motion. 0.12s and 0.15s already cover most transitions in the codebase;
+       naming them is what makes a future prefers-reduced-motion sweep a
+       one-file change instead of a 174-site one. */
+    --di-motion-fast: 0.12s;
+    --di-motion-base: 0.15s;
     --di-danger: #f25f5c;
     --di-success: #4df9c0;
     --di-warning: #ffb347;
@@ -100,6 +121,13 @@ body,
     background: var(--di-black);
     cursor: default;
     color: var(--di-text);
+    /* The document had no base font-family, so the browser default (Times)
+       was the real inherited value on every page -- each surface only looked
+       right because its own root container set a font. Anything rendering
+       outside those containers silently fell back to serif. Nothing visible
+       does today (checked live on /, /wiki and /spaces), so this changes no
+       pixels; it stops the next stray element from arriving in Times. */
+    font-family: var(--di-sans);
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;

@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { MeshReflectorMaterial } from '@react-three/drei'
 import * as THREE from 'three'
-import { fadeEnvelope } from '../ritualClock.js'
+import { fadeEnvelope } from '../../timeline/clock.js'
 import { PALETTE, mixHex, quieten } from '../palette.js'
 import {
     apertureOpening,

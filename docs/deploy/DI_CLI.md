@@ -18,11 +18,77 @@ Then:
 di up          start it, and open it
 di down        stop it
 di status      what is running, where, and how big
+
+di new NAME    start a new space
+di save SPACE  save it as one file you can carry anywhere
+di open FILE   open a file someone saved
+di spaces      what is in this di.iiii
+
 di backup      write your whole di.iiii to one file
 di update      get the newest — never touches your work
 di doctor      what this machine can and cannot do
 di help        the rest
 ```
+
+## Work as files
+
+The model is Blender: you install the app, and your work is files you open, save,
+copy to a stick and still open in ten years.
+
+A **space bundle** is that file — `my-show.diiii`, one tar.gz holding everything a
+space is made of: its scene, its whole op-log, every project document, its assets
+and its blob store. Sync keys and GitHub links are stripped on the way out, so it
+carries no secrets and no host-specific bindings and lands cleanly on any other
+install.
+
+The format is older than the commands. `scripts/space-bundle.mjs` has done this
+since before `di` existed — what it did not have was a door, and
+`node scripts/space-bundle.mjs export <id>` is not a thing anyone saves their work
+with. `di new` / `di save` / `di open` / `di spaces` are that door and nothing more:
+they run the same tool against this install's data root.
+
+**Where the Blender model deliberately stops.** A `.blend` is yours alone and
+"save" means flushing your buffer. A di.iiii space is *live* — someone else may be
+standing in it — so there is no unsaved state and no moment where the work exists
+only in memory. The server keeps it, continuously. A file is therefore the
+**portable form** of the work, not the place it lives, and `di save` never means
+"flush", it means "give me a copy I can carry". `di save` runs against a running
+server for exactly that reason; `di open` stops it, imports, and puts it back,
+because that one does write.
+
+**In the browser too.** Every space card on the Spaces page has **Save to file**;
+**Open a file** sits beside + Create. Two routes back them —
+`GET /api/spaces/:id/bundle` and `POST /api/spaces/bundle` — and both SPAWN the
+same `scripts/space-bundle.mjs` rather than reimplementing the format. One
+implementation, because a second one living in the server would drift from it
+quietly, in a file format, which is the worst place for a drift to hide. Export
+only reads; import does its inserts in one transaction, and the server holds no
+cache of space metadata (`listSpaces` hits the database every call), so an
+imported space is visible immediately.
+
+The two things that have to be translated on the way to a browser: node's
+`ExperimentalWarning` when `node:sqlite` first loads (noise in a terminal, the
+first thing read in a dialog) and the tool's "use `--force` or `--as <newId>`",
+which is good advice where there are flags and meaningless where there are not.
+A name already taken comes back as `409 { code: 'space_exists' }` and the page
+asks for another name instead.
+
+**A file says what wrote it.** The manifest carries `writtenBy` (the di.iiii
+version) and `schemaVersion` (the shape its data was in) alongside the existing
+`format`/`version`. A file from a NEWER di.iiii is refused by name rather than
+half-imported:
+
+```
+this file was written by a newer di.iiii (0.9.0).
+  the file stores work in shape 9; this di.iiii reads 1
+  update first:  di update
+```
+
+Same rule as the database, for the same reason: a partial import does not fail, it
+succeeds and means something slightly different. Files with no stamp at all — every
+bundle written before 2026-08-19 — still open, because unknown must read as "open
+it", never as "shape 0". `.diiii` is the extension now; `.space-bundle.tar.gz` files
+keep opening, which is the entire point of having a format.
 
 Offline is the default state, not a degraded one. The page requests zero
 external origins (down to the 3D text labels, whose font is vendored — troika's
@@ -49,11 +115,21 @@ venue with no wifi runs exactly the same as one at a desk.
 uninstall physically cannot reach it. `di uninstall` removes the app and keeps
 your work; `di uninstall --with-data` is the only thing that deletes it.
 
-About 170 MB installed — a 103 MB download plus serverXR's production
-dependencies. (`npm run di:pack -- --lean` drops algovrithm's reels for a 32 MB
-artifact, and says so; that surface then shows missing media.) The repo's own
-`node_modules` is 877 MB, which is why an artist gets a built runtime rather
-than a checkout.
+About 70 MB installed — a 3.1 MB download plus serverXR's production
+dependencies. The repo's own `node_modules` is 877 MB, which is why an artist
+gets a built runtime rather than a checkout.
+
+It used to be 170 MB from a 103 MB download, because the artifact carried
+di-studio.xyz along with the program: algovrithm's 31 reels and scan (88 MB),
+the wcc exhibition microsite (25 MB), and the site's own hosting furniture —
+against ~10 MB of di.iiii. The build now runs under `DI_PROFILE=local`, which
+leaves those out of the graph rather than deleting the files afterwards (see
+the local profile in `vite.config.js` — the reels were reached through
+`raw/director/pieces.js`, the general tool, not through the piece's own route,
+which is why the old `--lean` had to warn that a surface would show missing
+media). `npm run di:pack -- --full` builds the complete hosted shape for
+anyone who wants the pieces on their own machine; `--lean` is gone, and says
+so if you pass it.
 
 Nothing is written outside `$HOME`. Nothing asks for sudo, on any OS.
 
@@ -110,6 +186,78 @@ installs dependencies and health-checks it **on a scratch port** before stopping
 anything. `current` flips last. Any failure leaves you exactly where you were
 and says so. `di update --rollback` returns to `previous`.
 
+### What an update actually risks
+
+An update moves two things: the app, and sometimes the shape the work is stored
+in. `--rollback` only moves one of them back. Four things stand between an
+artist and finding that out afterwards.
+
+**The health check opens your work, not an empty directory.** It used to boot the
+staged build against a fresh `mkdtemp`, which proves the binary starts and
+nothing else. It now copies the whole data root — database, spaces, assets — lets
+the new build open the copy and run its migrations there, and throws the copy
+away. A migration that cannot read *your* database fails before the flip, while
+the old version is still running. `rehearseAgainst()` in `scripts/di/install.mjs`.
+
+**The database says how far forward it has come.** `SCHEMA_VERSION` in
+`serverXR/src/db.js`, written to `PRAGMA user_version` after the migrations run.
+A build that cannot read that far **refuses to open the data** rather than
+guessing — because the failure mode of guessing is not a crash.
+`v2_user_is_unrestricted` rewrote every `spaces = 'null'` (the old spelling of
+"unrestricted") into `'[]'` plus a flag; a build from before that reads `'[]'` as
+"no access to anything" and locks people out of their own spaces, silently. Bump
+`SCHEMA_VERSION` when a change would make an older build MISREAD data — not for
+every schema edit, since adding a column is invisible to older code.
+`DI_ALLOW_OLDER_CODE=1` opens it anyway, for a recovery that knows the difference.
+
+**A copy is taken before the flip, when the schema moves.** Automatic, into
+`~/.di/snapshots/before-<version>-<stamp>/`, and only when the update actually
+moves the schema — otherwise there is nothing rollback cannot undo. `di restore
+--snapshot` lists them; `di restore --snapshot <name> --yes` puts one back, and
+moves what it replaces aside under `replaced-<stamp>` rather than deleting it.
+
+**Rollback refuses to cross a schema boundary**, before moving anything, and
+names the snapshot that fixes it:
+
+```
+that version is older than your work.
+  your work is stored in shape 2; that version reads 1
+  the copy taken before that update:  di restore --snapshot before-0.5.0-...
+```
+
+And `di update` refuses to walk backwards: a machine ahead of the release feed —
+a build installed from a file, an rc, a test install — is told so rather than
+downgraded. `--force` if you mean it.
+
+### Updating with no network
+
+```
+di update --from ./di-runtime-0.5.0.tar.gz
+```
+
+The artifact on a USB stick, at a venue, with nothing to reach. `download()` has
+spoken `file://` since the beginning and this document promised the capability,
+but no command exposed it until 2026-08-19 — a promise no command keeps is not a
+feature. Naming a file skips the feed and the is-this-newer question: someone who
+names a file has chosen that file.
+
+### Where versions come from
+
+**Every `dev → main` promotion is tagged**, by `.github/workflows/tag-on-promotion.yml`,
+which runs *after* the production deploy succeeds — a tag is a promise that this
+code runs, and the honest moment to make it is once it has. It bumps the patch
+from the newest tag, unless the commit is already tagged (someone chose a version
+on purpose) or a `workflow_dispatch` names one.
+
+It then **calls** `release.yml` rather than letting the tag trigger it: a tag
+pushed with `GITHUB_TOKEN` does not fire `on: push: tags`, so waiting would leave
+every automatic tag with no artifact behind it — a version that exists and cannot
+be installed, which is worse than no version at all.
+
+Tagging this often is only reasonable because the artifact is 3.1 MB. At that
+size a release is a small thing to hand someone, and an update over a phone
+hotspot at a venue is realistic.
+
 `di up` mentions a newer version in one dim line and never installs it — silent
 auto-update mid-gig is how you lose a show. That check runs *after* the app is
 already up, swallows every failure, and only looks once a day, so an offline
@@ -138,9 +286,17 @@ anything is stopped, and the artist stays exactly where they were.
 ## Releasing
 
 `.github/workflows/release.yml` builds and attaches `di-runtime-<version>.tar.gz`
-and `checksums.txt` to the GitHub Release for every `v*` tag. The installer reads
-`releases/latest`, so the tag and the artifact filename must agree — the packer
-takes the version from the tag for exactly that reason.
+and `checksums.txt` to the GitHub Release — for every `v*` tag a human pushes, and
+on demand when `tag-on-promotion.yml` calls it (see "Where versions come from"
+above). The installer reads `releases/latest`, so the tag and the artifact
+filename must agree — the packer takes the version from the tag, or from the
+caller's input, for exactly that reason. Never from `package.json`, which is not
+the released number and has read 0.2.0 since v0.2.0.
+
+`release.json` inside the artifact records `version`, `profile` (local or hosted
+— two artifacts with the same filename are otherwise indistinguishable) and
+`schemaVersion`, which is what `di update` compares against the artist's own
+database before it flips anything.
 
 `.github/workflows/install-matrix.yml` is the stranger's-machine test: debian,
 ubuntu, fedora, alpine (busybox ash + musl), node 20 (too old) and node 22, plus
@@ -213,9 +369,33 @@ looked nothing like a real install — see below.
   Pick the rc file from `$SHELL`, not from which files happen to exist —
   `.zshenv` for zsh, `.bash_profile` before `.bashrc` on macOS.
 
+## Handing it to an agent
+
+`di mcp` speaks MCP over stdio, so Claude — or anything else that speaks it —
+can drive this di.iiii with the same moves a person has.
+
+```
+claude mcp add di -- di mcp
+```
+
+Reading is free. Anything that opens a door — making a space public, minting an
+invite, deleting a space — is **refused outright** unless the person who
+launched the server set `DI_MCP_ALLOW_PUBLIC=1`, and even then every such call
+must carry `confirm: true`. The decision to let an agent publish is made once,
+by a human, outside the conversation that would ask for it.
+
+The moves themselves are `sdk/` — one core, used by the library face and the
+MCP face alike. `sdk/README.md` has the whole list and the traps it encodes.
+The CLI does not run on that core yet; that is its own change.
+
 ## Not here yet
 
-`di sync` (phase 2), `di venue` with a QR for the room (phase 3), and the VJ
-output nodes (phase 4). Sync's hard part is not transport — it is that
-`PUT /scene` replaces a space wholesale and wipes its op-log, and `PUT /document`
-is last-write-wins with no version check.
+`di venue` with a QR for the room (phase 3) and the VJ output nodes (phase 4).
+
+`di sync` (phase 2) has landed — `di link` verifies a sync key against the
+remote and stores it 0600 with a ledger, `di sync <space>` reads both sides
+verbatim-or-refuses, and a diverged pair is refused in both directions. What
+made it hard was real and is fixed: `PUT /scene` replaced a space wholesale and
+wiped its op-log both ways, and `GET /scene` returned a rendering rather than
+the stored scene, so pull-then-push permanently deleted upstream entries this
+machine had merely not downloaded.

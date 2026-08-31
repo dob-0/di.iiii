@@ -5,6 +5,3931 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+# Session notes — docs/three-distances
+
+## 2026-08-31 — Three Distances: the owner's shape for local, LAN, and hosted, written down
+
+- New `docs/architecture/THREE_DISTANCES.md`: one product at three distances —
+  this machine (the show runs here, offline), this network (festival LAN:
+  stages, rigs, phones, live control), the world (thedi.studio = "our local
+  that happens to be public"; sync and sharing). The rule that falls out: the
+  internet is for sharing, never in the signal path of a running show.
+- The doc records why two existing walls ARE the architecture (https cannot
+  reach a http rig; vizzz fleet is distance two already) and sketches the
+  sync door in three steps: (1) originId + per-peer sync ledger so
+  /api/sync status can say ahead/behind/diverged instead of unknown;
+  (2) peer list + LAN discovery, Sync control on the space card;
+  (3) op-level exchange riding non-negotiable #3's CRDT discipline.
+- MANIFESTO "Where It Is Going" gained one paragraph pointing at the doc —
+  recording the owner's stated direction, not inventing one.
+- Docs only; no runtime code touched.
+
+# Session notes — feat/light-vizzz
+
+## 2026-08-31 — DMX Out: the graph reaches a real lighting rig over HTTP
+
+- New node `device.dmx.out` ("DMX Out", send-out family): drives a vizzz node —
+  the studio's ESP32 Art-Net/DMX box (repo `vizzz.di`) — over its HTTP routes.
+  Master, Channel+Value and Blackout in; Status out via the liveOutputs side
+  channel (the MIDI Out shape). Host is config, not a port (the keeper's
+  endpoint rationale), settable in the panel itself.
+- Why HTTP and not Art-Net: Art-Net is UDP and a browser tab cannot send it —
+  the same wall that gates NDI/OSC (docs/architecture/RAW_WORKSPACE.md). The
+  vizzz firmware's HTTP API is the honest bridge that needs no local daemon.
+- The firmware is honest about only half of CORS: JSON routes answer with
+  Access-Control-Allow-Origin, command routes return bare 204s. So `/status`
+  is a readable poll (the truth about reachability) and commands go out as
+  no-cors fire-and-forget GETs (`src/raw/utils/dmxRigClient.js`).
+- The mixed-content wall is named, not suffered: a https page cannot fetch a
+  http rig, so on the hosted editor the panel and Status SAY that and send
+  nothing. The local editor is the surface that reaches a rig.
+- Change discipline: send only when a number CHANGES (the CC idiom); per-lane
+  100ms throttle that coalesces to the LATEST value so an oscillator cannot
+  hammer an ESP32 at frame rate; Blackout is a rising edge, unthrottled, and
+  cancels queued levels so a stale brightness cannot land after it.
+- No fest data baked in: the node knows no fixtures, no patch chart, no
+  scenes — it is a clean hand on whatever rig it is pointed at (owner's call,
+  2026-08-31: "fest is over, keep the light controller clean").
+- NOT verified against hardware: no vizzz node was powered during the session
+  (no UDP beacons on the LAN). Verified at the faked fetch boundary + the
+  panel's honest status text; the cable test with a real rig is still owed.
+- Wiki: new `dmx-out-node` entry.
+
+## 2026-08-27 — a projection mapper in the platform, so a space can be put on a wall
+
+Built the `map` lane: `/{space}/map/{projectId}` (the desk) and
+`/{space}/map/{projectId}/out` (the signal). A map is a project whose entities
+are other projects — a list of surfaces, each one four corners, a polygon mask
+and a source. Written for the hosq Dilijan showcase, where five children's
+worlds have to land on five coloured rectangles of paper taped to a container
+wall, from one projector.
+
+- **DOM, not WebGL, and that is the architecture rather than a shortcut.** A
+  browser cannot sample a cross-origin page into a texture, and half the sources
+  that matter are cross-origin pages. `transform: matrix3d` from a solved
+  homography IS a corner-pin, and an `<iframe>` pins exactly like a `<canvas>`.
+  Accepts quad corner-pin only — no mesh warp, no soft-edge blending.
+- `mappingState` added to the document schema with five ops, all invertible;
+  undo puts a deleted surface back in its place in the paint order. Mirrored
+  into `shared/projectSchema.cjs`.
+- Sources: project, web page, video, image, colour, and five alignment test
+  patterns that carry the surface's name.
+- The desk and the output render the same `MapStage`, so there is no second
+  path that could disagree about the geometry.
+- Preview-boot queue lifted out of `SpaceHub.jsx` into
+  `src/utils/previewBootQueue.js` and shared. SpaceHub's behaviour is unchanged.
+
+Three things were measured rather than reasoned about, all of them after
+something looked wrong on screen:
+
+- **A project surface is an iframe, not a mounted `<LiveProjectScene>`.** Mounted
+  directly it rendered at a third of its surface, anchored top-left: R3F sizes
+  its drawing surface from `getBoundingClientRect()`, and under a corner-pin
+  that is the transformed rect.
+- **Over HTTP/1.1 a wall caps at four live page surfaces.** Each page holds a
+  project event stream open and a browser allows ~6 persistent connections per
+  origin; at five, four stayed black on "Loading live experience" forever.
+  Proved it was the transport by putting an HTTP/2 front in front of the same
+  dev stack — all five then came up. Both deployments answer h2, so this bites
+  `npm run dev`, not di-studio.xyz. The desk warns when it applies
+  (`transportCeiling.js`).
+- **Arrow nudge is one OUTPUT pixel**, not one preview pixel — the first version
+  made the step depend on how wide the browser window happened to be.
+
+Also: a mask below three points is now KEPT rather than normalized away, or a
+shape could not be traced click by click at all. `serverXR` watches only
+`serverXR/src`, so that schema change needed a server restart — which looked
+exactly like the client silently refusing to save.
+
+Seen, not inferred: desk and output shot at every stage; corner drag, arrow
+nudge and mask trace driven through a real browser and read back from the
+server; five di.iiii scenes and three of the camp's own recovered pages
+confirmed running live and correctly pinned.
+
+Still open: no mesh warp or edge blending; the output has no fullscreen button
+of its own (drag the window and press F11); nothing schedules or sequences
+surfaces over time.
+
+## 2026-08-28 — the toolkit around the mapper, and the Dilijan wall actually traced
+
+The lane grew the tools a wall needs on a show night, and the camp's own wall
+was traced out of its photograph into a real mapping.
+
+- **Cues.** A named state of the show under a number key: which surfaces are up,
+  how bright, showing what. Play advances on each cue's hold time; a hold of
+  zero is a standby and playback stops there. **A cue holds no geometry and the
+  schema enforces it** — corners and masks are dropped on the way in, because a
+  keystroke must never be able to move an alignment. Firing is one op batch, and
+  the fade is a CSS transition read off the same document by the desk and the
+  wall, so one cue cannot fade at two speeds. Playback state is deliberately not
+  in the document.
+- **Snapping and guides.** Corners snap to every other surface's corners and to
+  the frame, x and y independently, with the agreed line drawn while dragging.
+  Optional grid. Alt ignores everything — which forced removing a mask point
+  onto shift-click, since alt already meant "don't snap" and the two met.
+- **A wall photo behind the surfaces on the desk**, to trace over. Never
+  projected. A file from disk stays a blob URL in that browser only.
+- **Camera surfaces**, duplicate, copy/paste shape and look, mask-from-outline,
+  and export/import of a whole mapping as text.
+- **Fullscreen and a display picker on `/out`**, hiding with the cursor.
+- `serverXR`'s dev script now watches `../shared`. Editing the CJS schema mirror
+  and getting a stale normalizer cost an hour twice; that class is closed.
+
+**The Dilijan wall is traced.** `scripts/` has no part in this — the tracing was
+done against the photograph in the camp's own material and the result lives at
+`~/Documents/hosq-camp/dilijan-wall-mapping.json`: five surfaces named for the
+five kids, corners from each paper's extreme points, and a MASK per surface from
+the simplified convex hull of its blob, which is what carries the cut corners the
+papers actually have (9–13 points each). Verified by underlaying the photograph
+on the desk and seeing every surface sit on its paper.
+
+Two silent failures, both found by driving the desk and reading the SERVER back,
+neither visible in a screenshot:
+
+- **Duplicate did nothing.** `{ id, ...patch }` let the copied surface's own id
+  win over the generated one, so `createMappingSurface` saw an existing id and
+  dropped the op. The generated id goes last now.
+- **The camera branch was unreachable.** A `!ref` fallback caught every kind, so
+  a camera surface with no named device — which IS the default camera — rendered
+  a test pattern. Only `url`, `video` and `image` are meaningless without an
+  address.
+
+Also fixed on the way: a `python` edit that silently did not apply because it had
+no assertion, which is why the duplicate fix appeared not to work the first time.
+
+Not built, deliberately: **automatic shape detection from a wall photo.** A phone
+photo is taken from where a person stood and the projector stands somewhere else,
+so the quad it yields is the wrong quad — it would look like an alignment and be
+a lie. The photo is an underlay to trace over instead. **A scrubbing timeline**
+is also not here; cues with hold times are what a room actually runs on, and a
+scrub bar needs a time model the document does not have. Still no mesh warp and
+no soft-edge blending.
+
+## 2026-08-19 — the one-line install stopped shipping di-studio.xyz, and platform stopped being tangled with works
+
+`curl … /get | sh` handed an artist a 117 MB artifact of which ~10 MB was di.iiii.
+The rest was the studio's own website riding along: algovrithm's 31 reels and scan
+(88 MB), the wcc microsite (25 MB), and cPanel/OpenGraph furniture that only means
+anything on that domain.
+
+The reels were not reached through the algovrithm route. `assetLibrary.js` globs its
+own `assets/` folder eagerly and `raw/director/pieces.js` imported that glob — so the
+media bin sat in the MAIN graph via the Raw director, a general tool, and was emitted
+whether or not anything rendered the piece. That is why the old `--lean` could only
+delete `.mp4` files after the build and had to warn that a surface would show missing
+media: it was cutting files out from under a graph that still referred to them.
+
+- `DI_PROFILE=local` cuts at the seams the code already has (the glob, the piece's
+  asset URLs, its lazy entry points), so nothing is emitted and nothing is left
+  pointing at a hole. `public/` became an include-list rather than copy-then-delete.
+  **123 MB dist → 9.6 MB. 117.5 MB download → 3.1 MB. 170 MB installed → 70 MB.**
+  The hosted build is untouched — verified by serving both shapes.
+- A missed cut is now an error, not a quiet full-size build: the transform refuses if
+  `assetLibrary.js` stops matching, the packer refuses a dist built under the other
+  profile, and `scripts/packProfile.test.js` holds every pattern plus a 15 MB budget
+  on the local build — the backstop that needs no list to be right.
+
+**Platform and works, told apart.** 62 of 372 source files in `src/` were two
+artworks, and the Raw director imported one of them for its timeline maths, clock,
+light model and camera: 13 files, ~1,650 lines. `raw/director/pieces.js` claimed to be
+"the only part of the director that knows algovrithm exists" and 13 siblings made that
+false.
+
+- The tool moved to `src/timeline/` and `src/hooks/` (editList, clock — was
+  `ritualClock`, `useRitualClock` → `useSceneClock` — worldLights and the light
+  vocabulary lifted out of the piece's palette with values unchanged, stageView,
+  sequenceTransform, dispersionControls, assetPlacement, timingOverlay,
+  useAutoHideChrome). The descriptor moved INTO the piece
+  (`src/algoVrithm/directorPiece.js`). The director's stylesheet came out of the
+  artwork's (`algo-vrithm-director-*` → `di-director-*`).
+- `src/works/works.js` is the only file allowed to name a work; `routes.jsx` mounts
+  them, always lazily; the offline profile reads the same registry instead of a
+  hand-typed list that could go stale in silence.
+- **Platform → work edges: 19 → 0** outside the registry, held by
+  `src/works/boundary.test.js` (verified by breaking it both ways and watching it
+  fail) and warned about at writing time by `scripts/works-boundary.mjs` — on every
+  Edit/Write in a session, in the push gate, and via `npm run check:works`. It warns
+  and never blocks: "platform or project?" is a judgement call and the answer belongs
+  to whoever is building. The rule is in `docs/ai/golden_rules.md` → "Platform and
+  works" and in `AGENTS.md`.
+
+**The update method.** An update moves the app and sometimes the shape the work is
+stored in; `--rollback` only moved one of them back.
+
+- The health check opens a COPY of the real data now, not an empty `mkdtemp`, and runs
+  the migration there before the flip.
+- `SCHEMA_VERSION` (`serverXR/src/db.js`) is stamped to `PRAGMA user_version`, and a
+  build that cannot read that far refuses the file rather than misreading it —
+  `v2_user_is_unrestricted` rewrote `spaces = 'null'` into `'[]'`, which an older
+  build reads as "no access to anything", silently.
+- A snapshot is taken automatically when the schema moves (`di restore --snapshot`),
+  rollback across a schema boundary is refused by name, and `di update` no longer
+  walks backwards. `di update --from FILE` finally exposes the USB-stick path the docs
+  had promised since the beginning.
+- **Every dev → main promotion is tagged**, by `tag-on-promotion.yml`, after the prod
+  deploy succeeds. It CALLS `release.yml` — a tag pushed with `GITHUB_TOKEN` does not
+  fire `on: push: tags`, so waiting would publish a version with no artifact behind it.
+
+**Work as files (the Blender shape).** The document format already existed — a space
+bundle carries the scene, the whole op-log, every project and asset, portable, secrets
+stripped — but it had no door on it.
+
+- `di new` / `di save` / `di open FILE` / `di spaces`, and **Save to file** on every
+  space card plus **Open a file** beside + Create, backed by
+  `GET /api/spaces/:id/bundle` and `POST /api/spaces/bundle`. Both spawn
+  `scripts/space-bundle.mjs`: one implementation of the format, because a second one
+  in the server would drift quietly, in a file format.
+- Extension is `.diiii`; `.space-bundle.tar.gz` still opens. The manifest records
+  `writtenBy` and `schemaVersion`, so a file from a newer di.iiii is refused by name
+  instead of half-imported, and an unstamped file still opens.
+- Where the Blender model stops: a space is LIVE, so there is no unsaved buffer. A
+  file is the portable FORM of the work, not where it lives.
+
+Verified by running it, not by asserting it: installed the packed artifact under a
+`DI_HOME` with a dot in it and walked the landing, Spaces, Raw and a space (no console
+errors, zero external origins); opened the director on a hosted build after moving its
+CSS; drove an 0.4.0 → 0.5.0 update with a moved schema through rehearse → snapshot →
+refuse-rollback → restore → rollback; saved a space to a file, deleted it, opened the
+file back and diffed the scene byte for byte (identical, all 9 ops with it); clicked
+Save to file and Open a file in a real browser.
+
+**Still undone, deliberately:** nothing is released. `package.json` is bumped to 0.4.0
+but no `v*` tag exists, so `curl … /get | sh` still serves v0.3.1 — the fat, older
+artifact. Tag `v0.4.0` by hand after this reaches main (the automatic tagger skips a
+commit a human already tagged, and will carry on from 0.4.x). There is also no UI for
+`di link`/`di sync`, and a mistyped space URL still lands in an empty 3D void rather
+than the "Nothing lives at…" card, because that card lives in `AuthGate` and never
+runs when auth is off.
+
+**Suite note, corrected.** I first read the `PreferencesPage` failure as part of the
+suite's flakiness. It was not: the test asserted the literal string `0.2.0`, so it was
+really asserting that nobody had touched `package.json` — and it broke the moment the
+version was bumped to 0.4.0 in this branch. It reads `__APP_VERSION__` now. CI caught
+it, having run the full suite on a clean checkout, which is exactly what a local
+"passes on the third try" reading could not.
+
+What IS pre-existing: a full run on plain `origin/dev` failed `httpContracts` "lets a
+space owner self-manage their space", with nothing of this branch in the tree. That
+one passes in isolation and is worth someone's attention separately.
+
+## 2026-08-19 (later) — two bugs that only a real install could show
+
+Installed for real at `~/.di` and put di-library, di-funding and di-atlas into it.
+Both of these were invisible on staging, on prod and in the whole suite, and both
+turned up within ten minutes of using it as an artist would.
+
+- **Every uploaded asset 404s on a `di` install.** `res.sendFile(absolutePath)` makes
+  `send` apply `dotfiles: 'ignore'` to every segment, and the install home is `~/.di`.
+  The upload returns 201 with a URL and that URL is dead. Already found once for
+  `index.html` and fixed there; the identical line survived in the project asset
+  route because nothing exercised it from a dotted path. The guard now has a dot in
+  it — `startServer({ hiddenDataRoot: true })`.
+- **The upload rate limiter counted the one person using it.** 60 per 10 minutes,
+  written for a public address, applied to loopback with auth off. The library push
+  died at file 60 with "retry in 587s". Every limiter is exempt on `DI_LOCAL=1`;
+  hosted keeps all of them.
+
+Also worth knowing for anyone doing this next: `di up` treats a healthy port as
+"already running", so a server left over from a previous install — one whose files
+have been deleted out from under it — is indistinguishable from the real one. It
+looked exactly like a working install writing to a database that no longer existed.
+Not fixed here.
+
+## 2026-08-21 — which di.iiii is this?
+
+Two di.iiii that render identically are two di.iiii you will eventually
+confuse, and that confusion has already cost work: di-library published a PROD
+page whose 51 PDFs every one 404'd, because an asset cache written against
+STAGING looked correct on screen and asset ids are per-server. The address bar
+always held the answer; nothing on the page ever did.
+
+- `src/utils/deployMode.js` — pure, **hostname-first**. Loopback, private v4,
+  `.local`, and any name with no dot (a LAN or tailnet machine) read local;
+  a first label starting `staging` reads staging; everything else is the live
+  site. Hostname first because the answer has to be right on the FIRST paint —
+  a mark that changes its mind once a request lands is a mark nobody trusts.
+- The server's `local` flag still wins when it has spoken. A `di up` install
+  reached over a tailnet name (`aylmo.tail1234.ts.net`) is indistinguishable
+  from a public host by address alone, and that is exactly the case where being
+  told "hosted" would be a lie. Read from `/api/config`, never
+  `/api/auth/session` — learning where you are must not mint a guest session
+  for someone who only opened a public space.
+- `ModeMark` (mounted once in `RootApp`, so there is nowhere in di.iiii you can
+  stand and not know where you are): a 2px frame at the viewport edge plus a
+  mono chip bottom-left with the mode and the host. **Local green `#4df9c0`,
+  staging amber `#ffb347`, hosted nothing at all** — existing tokens, no new
+  colours, and the live site renders exactly what it rendered before, so an
+  audience sees no chrome that was not already there.
+- `z-index: 10001`, above the loading screen (9999) and the auth notice
+  (10000): "which di.iiii is this" must be answerable in the half-second a
+  surface is still black, which is precisely when someone types into the wrong
+  one. `pointer-events: none` throughout — it tells you where you are, it is
+  not a control.
+- Suppressed inside an iframe and under `?preview=1`: Studio space cards render
+  the app as a thumbnail, and a frame drawn inside every card is noise rather
+  than an answer.
+- The `getServerConfig()` call is wrapped in try/catch, not only `.catch()`.
+  This overlay sits above the entire app, so anything it throws synchronously
+  takes every surface down with it — which is not hypothetical: it is exactly
+  what happened to all 12 `RootApp` route tests the first time it ran against a
+  mock that had no `getServerConfig`. A decorative mark that can kill di.iiii
+  is worse than no mark.
+
+Seen, not asserted: screenshotted on the landing page, Studio, Raw and a 3D
+space of a REAL packed install (`di-runtime-0.4.0.tar.gz`, scratch `DI_HOME`,
+port 4100) with a live backend and zero console errors; on a 390px phone
+viewport at DPR 3, where the address drops and the badge stays; and on all
+three tiers by mapping `staging.di-studio.xyz` and `di-studio.xyz` to 127.0.0.1
+in Chromium, confirming amber, green, and — on the live hostname — no element
+in the DOM at all.
+
+**Deliberately not done:** the accent itself is untouched. Repainting the UI
+green would mean folding **261 hardcoded `#4df9ff` / `rgba(77,249,255,…)`
+literals across 22 files** into `var(--di-cyan)` first (155 uses already go
+through the token), or the app ships half-repainted. That is its own reviewable
+chore — identical hosted pixels before and after — and the token flip becomes
+one line once it is true.
+
+## 2026-08-21 (later) — the SDK: one core, and a gate on the doors
+
+Three projects in this studio each hand-rolled their own way to talk to di.iiii
+— 241, 103 and 101 lines doing the same eight moves. All three re-derived the
+same traps; two of them got a token by reading
+`/home/nooo/di.iiii/serverXR/.env.local` **by absolute path**, which is a
+project depending on the platform's working tree — the exact boundary this
+branch spent a day drawing. And an agent calling the same API knew none of it.
+
+`sdk/` is that written once. Fourteen moves, three faces: a library
+(`connect()`), an MCP server for Claude (`sdk/mcp.mjs`, `di mcp`), and — not
+yet — the CLI, which predates the core and is its own change. `sdk/README.md`
+says so rather than claiming three.
+
+**Reach is the safety model, and it is one word per move.** `read` shows
+nothing to anyone new, `private` writes where the caller can already reach,
+`public` opens a door. Public moves are refused unless something explicitly
+confirmed them, and **a refusal never touches the network** (guarded: the fake
+server records zero requests). Reach can depend on the arguments —
+`space.ensure` is private, `space.ensure({isPublic:true})` is not — because a
+reach read from the name alone can be walked straight past. Closing a door
+never asks; only opening one does.
+
+**No confirm means refused, not performed.** An agent holding a token with
+nobody watching must not publish by omission. Over MCP the default is harder
+still: public moves are refused outright unless whoever launched the server set
+`DI_MCP_ALLOW_PUBLIC=1`, and even then each call needs `confirm: true` — the
+decision to let an agent publish is made once, by a person, outside the
+conversation that would ask for it. The honest limit is in the README: once
+that flag is on, nothing stops a model confirming itself; what it buys is that
+the intent is in the transcript. The hard guarantee is the default.
+
+**Six traps stopped being comments and became code:** a space id comes from the
+LABEL (mismatch refused by name); asset ids are per-server (cache keyed by host,
+plus one HEAD before trusting a cached run — the failure it prevents is a page
+that loads perfectly with all 51 PDFs dead); `PUT` normalises silently (read,
+merge, write, read back, compare byte for byte); **202 is not success** but an
+armed approval gate; a token-created space belongs to nobody; and everything is
+born `permanent: true` or the 30-day sweep eats it.
+
+`sdk/credentials.js` exists so the `.env.local`-by-absolute-path habit has
+somewhere to go: `DI_TOKEN`, then per-tier, then `~/.config/di/credentials.json`,
+**never a repository**. Loopback needs no token — a `di up` install runs with
+auth off, and demanding one would break the SDK exactly where it is safest.
+
+Two things this turned up that were nothing to do with the SDK:
+
+- **A new top-level tree is not linted just because eslint.config.js has a block
+  for it.** `npm run lint` names its trees, and `sdk` was not among them — so
+  `npx eslint sdk` reported zero problems while checking nothing. This is the
+  same failure `scripts/lint-scope.test.js` was written about; `sdk` is now in
+  the script, the config and that test's list, and the gate was watched to fail
+  by breaking a file on purpose.
+- **The gate quoted `undefined` back at the person it was asking.** The moves
+  are keyed by name in an object literal and carry no `name` field, so every
+  refusal read "undefined would open a door" — a safety prompt nobody can act
+  on is not a safety prompt. The names are stamped on at module load.
+
+Seen, not asserted: driven over real stdio against the running install on :4000
+(initialize → 14 tools → real space list → a public move refused); the whole
+catalogue exercised end to end against a scratch space (ensure → project →
+writeHtml verified byte for byte → front door → invite → delete), and then
+**out of the packed 3.1 MB artifact**, where `di mcp` resolves `sdk/` beside
+`cli/` and answers — because a command that only works in a checkout works for
+whoever wrote it and nobody else.
+
+## 2026-08-21 (later still) — `di up` opens your work, not a tour of it
+
+`di up` opened `/`, and `/` was the landing page: a tour of a hosted product,
+shown to somebody who had just finished installing it, with their own spaces
+two clicks away behind "Already have spaces?". The first question on a local
+install is not "what is di.iiii" — it is "what have I got, and where do I go".
+
+- `src/landing/LocalHome.jsx` — one bar (version, *on this machine*, the
+  address, the space count, and doors) above the existing **SpaceHub**. Not a
+  new hub: SpaceHub already answers the question and the repo's rule is that a
+  surface consolidating existing ones looks indistinguishable from them, so
+  nothing was restyled and no second header was invented.
+- **The tour is moved, not deleted:** `/?tour=1` still renders the landing, and
+  the bar links to it by name.
+- **No lane is declared primary.** Studio and Raw are both doors on the same
+  bar, deliberately: MANIFESTO non-negotiable 6 forbids forcing that choice on
+  a landing before the Studio-into-Raw unification lands. Flagged for the owner
+  rather than decided here.
+- `useLocalInstall` answers from the **hostname first**, so a hosted visitor
+  never waits on `/api/config` to be shown the landing — holding the public
+  site behind a request that only matters locally would be paying for the local
+  case on every page load everywhere. Only an already-loopback address waits
+  for the server's word.
+- A local install with auth switched **on** is someone serving other people
+  from their own machine; they get the ordinary front door, because their
+  visitors are not them. Guarded both ways.
+- `StudioThemeProvider` extracted from `StudioApp`, because LocalHome mounts
+  SpaceHub outside StudioApp and a second copy of the palette would drift —
+  the first sign being one surface a slightly different blue from the other.
+
+`RootApp.test.jsx` had **no test that rendered `/` at all**, so the most
+important URL in the app was about to be re-routed untested. Four now cover it
+(local, `?tour=1`, hosted, local-with-auth), and the first was watched to fail
+before it was trusted.
+
+Seen: the new client served in front of the REAL install's API, so the page was
+looked at with the actual five spaces in it — atlas, funding, library, main,
+open, each with its published project and its public/private state — and the
+tour confirmed still reachable. No console errors.
+
+**What this does not yet do**, from the same conversation: no per-space sync
+status (nothing is `di link`-ed anywhere, so the honest answer today is "not
+linked"), and code projects are still hard to manage — no UI creates one,
+`mode:'code'` and `entryView:'code'` are set in two different panels, and a
+code project is indistinguishable from a 3D one in every list because the list
+API carries no presentation mode.
+
+## 2026-08-21 (last) — what the audit found, and what is still open
+
+The gate the owner set on this branch was "check before any public". The audit
+that answers it produced findings that belong here because they are di.iiii's,
+not the estate's:
+
+- **A public space publishes every project inside it.** `wcc` holds 11, ten of
+  them named after people, all with `shareEnabled: false`, all readable with no
+  account, no cookie and no invite. Every one was scanned for contact-data
+  shapes and none carries any — so this is a design fact to know before making
+  a space public, not a live leak. Private spaces correctly 401 on prod and do
+  not appear in the anonymous listing.
+- **The owner cannot open his own spaces on prod.** `canAccessSpace`
+  (`serverXR/src/authAccess.js`) never reads `role` — only `isUnrestricted` or
+  an explicit `spaces` scope grants anything, so `role: admin` grants nothing.
+  library, funding, atlas and decisions are unreachable to the person who owns
+  them. Two invites that would fix it expire **2026-08-26**.
+- **prod's `di-library` promises 51 PDFs and serves zero.** The nightly backup
+  manifest has reported it since 2026-08-20; nobody reads that file.
+  `project.checkAssets` in the SDK is the move that catches this class, and it
+  says so in words rather than a count.
+
+**Why nothing is in sync, plainly:** there is no sync. Nothing in the estate is
+`di link`-ed; every space was hand-pushed by one of three different scripts. 7
+of 13 differ, in no single direction. `lastTouchedAt` is not an ahead/behind
+signal — a read touches it — which is why `sdk/compare.js` decides ahead-ness by
+`sceneVersion` and puts a differing front door first. `main` names two different
+spaces on the two tiers.
+
+**Undone and named:** per-space sync status on the local home (`di link` has no
+UI, so the only honest status today is "not linked"); the code/Studio/Raw
+connection (no UI creates a code project; `mode:'code'` and `entryView:'code'`
+live in two different panels and forgetting the second publishes an empty 3D
+scene; the project list API carries no presentation mode, so a code project
+cannot be told from a 3D one in any list; `codeFiles` accepts svg/json/md but
+the bundler inlines only `.css` and `.js`, so the rest is stored and unreachable
+at render). Also still owed from earlier on this branch: `v0.4.0` is bumped in
+`package.json` but untagged, so `curl … /get | sh` serves the fat v0.3.1.
+
+**One for whoever lands next:** `CURRENT.md` on `dev` is 53 lines against its own
+enforced limit of 50, so `npm run docs:ai:check` is currently red on `dev`. It
+was written by `npm run land` folding four notes at once. A feature branch cannot
+fix it — trimming it trips the "differs from origin/dev" rule instead.
+
+## 2026-08-21 (push sweep) — three branches on this machine and nowhere else
+
+A sweep of every repo on the desktop for committed-but-unpushed work. Four
+repos went out (`di-bo` 20 commits, `br_id_ge-ops`, `di-jet`, `br_id_ge`, plus
+`di-atlas`'s public/private and sync maps) — none of them di.iiii's, so the
+detail lives with them. What belongs here is the di.iiii half:
+
+**Three task branches hold work that exists only on this desktop**, none of it
+in `origin/dev`, none of it ever pushed:
+
+- `fix/og-empty-splat` (`~/di.iiii-ogfix`) — 2 commits: the front door's link
+  preview was a 404, and "Room" outlived its retirement. Committed today, tree
+  clean. Note that `dev` has since landed its own front-door/copy work and an
+  `og-image` re-render from a different branch, so this one may now overlap or
+  conflict — check before pushing rather than assuming it still applies.
+- `night/dijet-verify` (`~/di.iiii/.claude/worktrees/night-dijet`) — 5 commits
+  from 08-19: a read-only di.jet source node, driving/lighting/speaking to it
+  from a graph, its wiki entry, a lint fix.
+- `fix/keeper-openai-endpoint` (`~/di.iiii-raw-ws`) — 3 commits from 08-11: the
+  live-port contract with a reason per port, and the keeper reporting a working
+  llama.cpp server as broken.
+
+Not pushed here, deliberately: a task-branch push opens a PR into
+`dob-0/di.iiii` `dev` via `auto-pr.yml`, which is a shared-repo action on work
+this session did not write and has not verified. Left for the owner.
+
+Also uncommitted and therefore unreachable by any push, recorded so it is not
+lost: `~/di.iiii-dijetnode` (119 files), `feat/raw-admin` (36),
+`di-spaces` (15), `beyond_form` (8).
+
+**`CURRENT.md` note for the next session:** `dev` moved twice during this one,
+and this branch's copy had to be reverted to `origin/dev` both times. It was
+briefly 53 lines against its own 50-line limit — that is fixed on `dev` now
+(46 lines, `docs:ai:check` green). A feature branch cannot fix that class of
+breakage; only `dev` can.
+
+## 2026-08-27 — the room stands on the lower part of the screen
+
+The toybox fit the camera so nothing was ever cropped, and on a portrait phone
+that meant the width binding at 94% while the height reached 35%. Measured on
+Gor's real room at every bearing from 0 to 180 and every elevation from 18 to
+42: the leftover two-thirds is geometry, not arithmetic anyone got wrong.
+
+What was wrong was where it went. Centring the content splits it evenly, and the
+lower half is blank near-floor, flat-lit, under the child's own thumb — which is
+what "the room looks empty" meant when it was said. `makeFraming.js` now seats
+the room below the middle of the screen and gives the rest to the sky, so the
+horizon is in the picture and the room has a distance in it. It PANS the eye
+rather than tilting it, so the elevation the rest of that file reasons about
+stays what it says and nothing in frame leaves it sideways; the seat asks, and a
+foot margin and a headroom margin refuse.
+
+Three were looked at on a 390×844 screen before this one was picked: centred
+(the even split), 0.5 (objects standing on the bottom edge with two-thirds of
+haze above them), and 0.22.
+
+`makeFraming.test.js` is new and measures every corner of every object in
+normalised device coordinates — nothing off any edge, the room seated low but
+not touching the bar, the horizon in shot, and the same on a laptop. It fails at
+`SEAT = 0`, which is what it is for.
+
+Not code, but the larger half of the same fix and recorded in `known-fixes.md`:
+the camp scaffold stood its pieces in a ROW across the room, and a row across is
+the one shape a portrait phone cannot hold. Re-seated as a room you look into,
+the same objects come out two to three times bigger.
+
+## 2026-08-26 — chat that reaches the other rooms, not just this one
+
+Project chat has always been real, and always been per-project: a message
+reaches whoever is standing in the same project and nobody else. At the Dilijan
+camp that is exactly the wrong shape — each child works alone in a room of their
+own, so the project channel is a room with one person in it, and the four people
+they mean when they say "talk" are each in a different room.
+
+This adds a **space** channel beside the project one. Two rooms, one window.
+
+- `serverXR/src/spaceChatStore.js` + `socketHandlers.js`: space-scoped chat,
+  space membership checked the same way the scene socket already checks it.
+  Moderation (remove a message) is there for whoever holds the space.
+- `useProjectPresence` grows `spaceMessages` / `sendSpaceChatMessage`, opt-in on
+  a `spaceId` argument — a caller that passes none keeps exactly the behaviour it
+  had, which is what keeps every existing surface byte-identical.
+- `ChatPanelWindow` gains the two tabs. Every string it says out loud is now a
+  prop with its old value as the default, so Raw is unchanged and a bilingual
+  surface can say them in its own language.
+
+## 2026-08-27 — and the children can reach it
+
+Merged `dev` in (the toybox landed there in the meantime) and wired the space
+channel through to `src/make/` as well, because a chat the kids cannot open is
+not the chat this was built for. In the toybox the two tabs read **ԲՈԼՈՐԸ** and
+**ԱՅՍՏԵՂ** — everyone, and here. Not the space id: a ten-year-old does not know
+they are standing in `dilijan`, they know the other four are somewhere else and
+they want to reach them. One unread badge over the single ԽՈՍԵԼ button counts
+both rooms, because a child has one talk button, not two inboxes.
+
+The conflict in `ChatPanelWindow` was real and both sides were right — the space
+branch wanted the wording to describe the room, the toybox wanted the wording to
+be Armenian. Resolved by keeping both: the project room's three strings stay
+caller-supplied, and the space room now has its own three, defaulting to what
+Raw has always said.
+
+Not verified: two children in two different rooms on real phones over camp wifi.
+Two browser contexts on one machine is what was actually tested.
+
+## 2026-08-26 — a making surface for a ten-year-old with a phone
+
+Camp day 2 in Dilijan showed the problem plainly: a kid opening their own project
+in Raw got eight window bars stacked down a portrait screen, a node graph at 34%
+zoom, and the thing they were actually making nowhere in shot. This branch adds
+`/<space>/make/<project>` — the same document underneath, a different lid. Mentors
+still open the identical project in Raw and see everything the child made; Raw
+itself is unchanged, which was verified by opening the same project both ways.
+
+- The room fills the screen and stays filled. `makeFraming.js` measures every
+  object as a box turned onto the camera's axes rather than guessing at a bounding
+  sphere — a sphere is the wrong shape for a flat photograph and was standing the
+  camera ~55% too far back. Re-fits on rotation and on every add, through a new
+  opt-in `viewRequest` prop, and keeps whichever way the child has already turned
+  the room. It fills the width edge to edge; it cannot fill the height too — a
+  room is wider than it is deep and a portrait phone is the opposite — so the
+  leftover is the room's own ground, not void.
+- Four words under it, no chrome: ԱՎԵԼԱՑՆԵԼ · ԳՈՒՅՆ · ՆԿԱՐ · ԽՈՍԵԼ. Photo is a
+  full-width filled block above the other three, because a photograph of Dilijan
+  is what this camp actually produces.
+- A real iPhone HEIC was refused by the server — HTTP 415, and not for the reason
+  anyone assumed. The libheif inside serverXR's `sharp` rejects the file outright
+  ("Number of references in iref box (48) exceeds the security limits of 16"), so
+  metadata reading throws and the scrubber correctly refuses to store an image it
+  could not strip GPS from. The guard is right, the outcome was not:
+  `makePhoto.js` now decodes and re-encodes to JPEG in the browser, so the server
+  gets an ordinary JPEG and the child's GPS never leaves the phone at all.
+- `ImageObject` lays every image flat on the floor on every surface in the
+  platform, so a child's photograph arrived as a rug. Countered in the entity's
+  own transform; nothing shared changes.
+- The child's name, not `TEAM 3`. Read from the document's `projectMeta.title` —
+  the project record is a mirror written on every op batch, so it is only the
+  first-paint fallback.
+- Calm world behind it: warm ground, fog into the sky at the horizon, a contact
+  shadow, no grid, and the mentor's camera gizmo out of the picture. All opt-in
+  via a new `ambience` prop, null for every existing caller.
+
+Still unverified, and worth saying plainly: the HEIC re-encode itself needs a real
+iPhone — headless Chromium cannot decode HEIC, so it takes the fallback path.
+Two children in one room at once, a redeemed guest invite, and camp network
+conditions are all untested.
+
+# "Look around" walked you into an empty corner (2026-08-25)
+
+The landing page's second CTA drops the visitor into the `main` space in walk
+mode. It looked broken — an empty blue grid, one clipped plane at the edge,
+none of the gallery you were admiring one click earlier. Screenshot-confirmed
+on staging.
+
+Cause, measured against the live document: `main` has **no gate entity and no
+`worldState.spawn`**, so the walker started at the world origin. Its 83
+entities span x −6..57 / z −38..54 with a centroid at **(20.6, 24.4)** — the
+visitor arrived roughly 32m away in a corner. The idle orbit frames the
+centroid, which is exactly why the same scene looks full until you click.
+
+Fix: when a space authored neither form of arrival, stand at the content
+centroid, backed off along +z by 22% of the scene depth (clamped 6–14m) and
+facing into it. Authored gates and spawns are untouched and still win. Pure
+helper `centroidSpawn()` exported and unit-tested with the real `main`
+numbers.
+
+This is general: every space that never authored an arrival gets it.
+
+# /wcc previewed as the generic platform tile (2026-08-25)
+
+`ogRoutes.js` gives every space its own link card, and it works — a crawler
+fetching `/br_id_ge` gets a 984-byte card naming the space. A crawler fetching
+`/wcc` got the **3548-byte SPA, byte-identical to what a human gets**, and
+therefore the generic "di.iiii — public spaces on the open web" tile.
+
+Cause: the crawler branch lives inside `location /`, and `location ~ ^/wcc/?$`
+(added so the exhibition's own doorway loads the app rather than 403-ing on a
+directory) matches first. So the one space with a hand-made doorway was the
+one space whose link previewed as nothing — and it is the landing page's own
+second chip, i.e. one of the most-shared URLs on the site.
+
+Fix: repeat the crawler branch in the `/wcc` block, exactly as the security
+headers are already repeated there for the same inheritance reason. Config
+validated with `nginx -t` in a container.
+
+Follow-up worth doing (owner's data, not code): the `wcc` space record has no
+`ogTitle`/`ogDescription`, so its card will now read "wcc" rather than
+"WCC: Women Creating Change". Setting those two fields on the space finishes
+the job.
+
+# The design system was colour-only (2026-08-25)
+
+Auditing all surfaces as one suite turned up the reason type, spacing and
+motion had never been unified: **there were no tokens for them.** `base.css`
+defines 11 colour tokens and a mono stack; that is the whole system. So:
+
+- the sans stack existed as **24 copy-pasted literals** in two incompatible
+  spellings — `'Inter','SF Pro Text',-apple-system,Blink…` (preferences,
+  wiki, legal) vs `'Inter','Segoe UI'` (landing, raw) — which fall back
+  differently per OS, and a typeface change meant 24 edits
+- the mono stack was written out 45 more times, in four spellings, three of
+  them byte-identical to `--di-mono`
+- `html, body, #root` set colour, background and size but **no font-family**,
+  so the document's inherited default was the browser serif. Every surface
+  only looked right because its own root container re-set a font.
+
+Added `--di-sans` (the union of both stacks, in preference order),
+`--di-motion-fast`/`--di-motion-base`, and a base font on the document.
+Pointed 73 duplicated literals at the tokens. Left `wcc` and `algoVrithm`
+alone — they are independent by documented decision.
+
+Verified: nothing visible rendered in serif before the change (checked live
+on /, /wiki, /spaces), and after it `body`, headings and body copy resolve to
+Inter on landing/wiki/privacy/terms at both phone and desktop. Guards pass
+(contrast, colourRoles, cssBraceBalance).
+
+# The cyan slab, and Safari's missing blur (2026-08-25)
+
+Two cross-surface defects found while auditing the UI as one suite.
+
+## 1. The hairline-grid slab (public, on prod)
+Six grids draw their 1px lattice with the classic `gap: 1px` over a
+`--di-cyan-border` background. That only works while the last row is FULL —
+any empty cell shows the raw background as a solid teal slab.
+
+- `.lp-feature-grid` holds **8 cards in 3 columns**, so one slab has been live
+  on the marketing page the whole time. Confirmed by screenshot on BOTH
+  di-studio.xyz and staging.
+- `.sh-projects-grid` (Studio) is `auto-fill`, so its column count varies with
+  the viewport and a partial row is the normal case — seen as a bright teal
+  block across half the last row of /dilijan/studio.
+
+Fix: the cards draw their own right/bottom hairlines and the container draws
+top/left. Same 1px lattice, but there is nothing behind an empty cell to
+expose. Verified against a local build: the full grids render identically,
+the slab is gone.
+
+## 2. backdrop-filter without the -webkit- twin
+23 of 39 blur declarations had no `-webkit-backdrop-filter`, so every one of
+those frosted panels rendered flat on iOS Safari — the browser most visitors
+and every camp phone actually use. `ui-system.md:229` already required the
+pair. Added the missing 23 (purely additive: no Chrome pixel changes).
+
+Guards: contrast, colourRoles and cssBraceBalance tests all pass.
+
+# worldState.fog + translucency depth (2026-08-24, the vast-space unlock)
+
+The owner asked for VAST — "the box is closing the space; in 3D we can build
+the impossible". VPE's audit found walk mode hard-capped at a 50m fog wall
+with a 200m far plane (LiveProjectScene 8..50 fog), so no vast composition
+could be seen at all.
+
+- `worldState.fog: null | {near, far}` (both schema mirrors, validated,
+  default null = exactly the old look). Walk-mode fog reads it; the camera
+  far plane follows (`min(600, max(200, far*1.15))`). View mode already saw
+  1000m with no fog — untouched.
+- PrimitiveMaterial: translucent surfaces below opacity 0.5 stop writing
+  depth — overlapping ghost boxes no longer hole-punch particles/grids
+  behind them (three.js default depthWrite bit us the moment two glass
+  boxes overlapped).
+- Tests: fog normalization (defaults, clamping, junk rejection).
+
+# Door-name reveal radius 8 → 6.5 (2026-08-24)
+
+The hub's walk spawn is 7.3–7.9m from its five doors, inside the 8m reveal —
+so every nameplate was faintly on at arrival, smudging the projected screen
+behind the doors. FAR 6.5 / NEAR 4: the spawn is clean, names begin one
+stride in and are full two strides later. Tests use the exported constants,
+so they follow.
+
+# Mouse-look sensitivity −35% (2026-08-24)
+
+Owner request after walking the hub on a desktop: at 0.018 a small mouse sweep
+spun the room. POINTER_LOCK_SENSITIVITY 0.018 → 0.0117 (−35%). Drag-look and
+the broken-lock fallback derive from it (×0.35), so they calm down with it —
+that coupling is the point of the one-reference family in walkModeConfig.js.
+Touch and trackpad sensitivities untouched: the phones at camp were tuned
+separately and nobody complained about them.
+
+# Wiki: doors announce themselves; fixed camera is not a cage (2026-08-24)
+
+The viewer behavior shipped in #262/#263/#264 is visitor-facing, so the wiki
+follows in the same session: 'walking-through-a-portal' gains the
+arrive-walking bullet and the approach-reveal paragraph (with the view-mode
+hover and editor always-on cases); the Walk/Fly article's fixed-camera
+paragraph now says the mouse stays live on the composed shot unless the
+camera's explicit "locked" switch is set.
+
+# GateGlow: alarm-red ring → the gate's own colour (2026-08-24)
+
+Walk mode floats a pulsing ring over the gate entity. It was hardcoded
+0xd90000 at y+1.2 — head height, alarm-red, sitting visually AMONG the hub's
+colour-coded doors. In a room where hue IS the wayfinding, red means nothing
+good. Now: the gate entity's authored appearance colour (fallback warm),
+floor-level (y+0.06), calmer pulse (0.2–0.5 opacity). It reads as "you
+arrived here", not "something is wrong here".
+
+# Arrive-walking was stomped by the entryView reset (2026-08-24)
+
+The arrive-walking flag (#262) consumed correctly but arrival stayed in view
+mode. Cause: an existing effect resets navMode to 'orbit' whenever
+`presentationState.entryView` changes — and on the document-ready commit it
+always changes (undefined → authored value). It was declared after the consume
+effect, so it ran after it and stomped the walk before paint.
+
+Fix: the consume effect now lives BELOW the reset effect — same commit,
+declaration order decides, walk wins. Regression test added: flag set →
+mount → '← View mode' appears (the test that reproduced the stomp in jsdom).
+
+# Portal approach-reveal + camera cage fix (2026-08-24, camp morning)
+
+The owner's screenshot of /dilijan: five wide bilingual door nameplates
+overlapping each other and the sign text from the entry camera. The labels
+were always-on billboards — from any distance, five of them stack.
+
+- **PortalObject**: door nameplates now reveal on APPROACH (≤8m fade-in, walk),
+  on hover (orbit), and always in the editor. Entry view is clean geometry +
+  colour. Exported `labelRevealTarget` (tested). Ring got a fake-bloom additive
+  glow sprite + a translucent membrane disc — the membrane is also a click/tap
+  target, fixing the ring-band-only ~40px tap trap. Hover lifts emissive +
+  cursor. `reference.labelPlate` honoured in gateway mode.
+- **PublicProjectSceneSurface**: `entryView:'fixed-camera'` no longer disables
+  navigation wholesale — only `fixedCamera.locked === true` does (exported
+  `isCameraCaged`, tested). An authored camera is the opening shot, not a cage;
+  this was the owner's "can't move the camera" bug, properly this time.
+- **arriveWalking.js** (new): walking through a portal sets a one-shot
+  sessionStorage flag; the destination viewer consumes it when ready and enters
+  walk mode if its walk gate is open. You walk through a door, you arrive
+  walking.
+
+No bloom via EffectComposer anywhere: it renders black in WebXR (memory
+`reference_dii_room_craft`); the glow is geometry on purpose.
+
+## 2026-08-24 — a portal opens by walking into it, not only by clicking it
+
+- Portals were click-to-enter only (`PortalObject.jsx`'s `PortalGateway`). That is the right
+  verb in orbit mode and the wrong one in walk: the hands are on WASD or the joystick, the
+  mouse is looking, and in a headset there is no cursor to aim at a ring at all. Walking into
+  the ring now travels through it. Clicking is untouched and still works everywhere it did.
+- The proximity check is a small state machine of its own, `src/components/portalWalkThrough.js`,
+  because the hard part is the latch rather than the distance — a per-frame "am I inside the
+  ring" fires sixty times a second while a visitor stands in one, and a boolean that never
+  resets means they can never come back the other way. `Walker` owns one instance for its
+  lifetime and calls it once per frame; `LiveProjectScene` navigates with the existing
+  `portalHref` + `appNavigate`, so a jump is the same SPA route change a click makes.
+- Enter radius **1.3 metres**, scaled by the portal's own `transform.scale` on X/Z (the ring
+  lies flat). The drawn torus is major radius 1.1 + tube 0.12 = 1.22 outer edge, so this fires
+  as the visitor's feet reach the ring they can see, and a portal scaled 3x is a 3x bigger door
+  that opens from proportionally further out. Re-arm at 2x that, 2.6 m: standing in the ring
+  cannot repeat and a step backwards onto the threshold is still one arrival. Nothing to do
+  with the nearest-zone pass's squared 900 (30 m) — that is the atmosphere tint, deliberately
+  generous, and it is unchanged.
+- The check sits ABOVE Walker's `if (isPresenting) return`, on purpose: it reads the pose and
+  never writes it, and `XrLocomotion` keeps `playerRef` in sync for the whole session — so a
+  headset visitor walks through a ring too, which is the only way they can reach one. No
+  XR-specific code was added. Not verified on hardware; nobody has walked a headset through
+  this yet.
+- **Embed portals are excluded, and that is the load-bearing exclusion.** WCC's exhibition
+  floor is ten `mode: 'embed'` portals and every one of them carries a real `spaceId` and
+  `projectId` (checked against the prod space snapshot in `~/di-spaces`). Treating them as
+  doors would fling a visitor out of the gallery the moment they walked up to a sculpture.
+  Hidden portals and portals with no `spaceId` are excluded too.
+- The bounce-loop risk (arrive in a room standing on the way back, get sent straight out
+  again) is guarded rather than argued away: nothing travels until the walker has been seen
+  clear of every ring at least once. Checked against every project document in the prod
+  snapshot — only `wcc/main.json` has portals at all, all of them embeds, so no live room
+  exercises this today; the camp's `dilijan` rooms are staging-only and could not be read from
+  here. The guard was then made to earn itself in a browser (below).
+- **Walked, in a real browser, and looked at.** Seeded a throwaway serverXR + vite on spare
+  ports (the recipe `.github/workflows/browser-checks.yml` uses for `input-check`) with a space
+  of three rooms — a hall, a room, and a trap room whose way back sits exactly on the spawn —
+  and drove headless Chromium at DPR 2 through it. Seven checks, all green: walking into the
+  hall's ring lands in the room; standing still there for four seconds does not jump again; the
+  room's return ring walks back to the hall; spawning 0.00 m from the trap's ring does NOT
+  bounce, and after stepping 5.2 m clear, walking back in DOES travel; `?preview=1` and
+  `?embed=1` offer no Walk / Fly and never move. Screenshots opened, not just captured: the
+  ring on the floor with its label in walk mode, the arrival room, the trap spawn standing
+  inside the ring, and the hall after the return.
+- What the walk showed that the code does not: **arrival is in view mode, not walk.**
+  `SpaceSurfaceApp` keys the viewer on `space:project`, so a jump remounts it and `navMode`
+  resets to `orbit` — you go through the door and find yourself looking at the next room from
+  outside, having to press Walk / Fly again. That is exactly what a click does today, so it is
+  not a regression, but it is the seam that makes a hub of rooms feel like a website rather
+  than a building. Left alone deliberately: carrying walk mode across a jump is its own change.
+- Not verified: the headset path (no hardware here), and how the crossing FEELS at 1.3 m to a
+  person rather than to a script — whether it reads as going through a door or as being
+  grabbed. That is a staging job.
+- Tests: `src/components/portalWalkThrough.test.js` (22, the state machine walked step by step)
+  and `src/components/walkThroughPortalWiring.test.jsx` (10 — four of them a real render + real
+  click on the ring, proving click-to-enter intact; the rest source guards over
+  `LiveProjectScene.jsx`, in the style of `livePlayerRef.test.js` next door and for the same
+  reason). Each guard was watched to fail with the feature deliberately broken.
+- Wiki: new "Walking through a door" article in `wikiContent.js`.
+
+## 2026-08-24 — a portal could name a project and still not go there
+
+- `PortalGateway` navigated to `/${spaceId}` and ignored `reference.projectId`
+  entirely, even though the reference component has always carried one and the
+  portal's own label falls back to it. So a hub whose doors point at rooms
+  INSIDE one space was inert: every door re-opened the room you were already
+  standing in, with no error and no console warning.
+- Found building the Dilijan camp hub — five doors, all `spaceId: 'dilijan'`,
+  clicking any of them left the URL unchanged.
+- The routing decision is now `portalHref(spaceId, projectId)`, pure and
+  exported so it is testable without mounting a canvas: a named project gives
+  `/space/project`, no project still gives `/space`, no space refuses to
+  navigate at all, and whitespace is trimmed rather than baked into a broken
+  path.
+- Embed mode already used `reference.projectId` correctly — only the gateway
+  jump was ignoring it, which is why nobody had noticed.
+
+## 2026-08-24 — a room with a graph beside it can be walked into again, and worn
+
+- A published page hid Walk / Fly whenever the document had any `nodes`. That guard was
+  written for graph-ONLY rooms, where it is right: walk mode enters `LiveProjectScene`,
+  which renders `entities` and not `nodes`, so the visitor would be moved from the work
+  they are looking at into an empty version of it and read the emptiness as the room.
+- The owner has since settled the mixed model — one document carries both lanes, wires
+  and scene and light in the node editor, anything that must survive for a visitor made
+  as an entity. Under that model a graph beside a real entity room proved nothing, and
+  the button was being refused to rooms that had a body to walk into.
+- The cost was larger than the button: Enter VR / Enter AR live inside
+  `LiveProjectScene`, and walk mode is the only door to it. No walk meant no headset
+  entry at all on every mixed room.
+- The gate is now `(!hasGraph || hasWalkableEntities)` — hidden only when the graph is
+  all there is. `?preview=1` and `?embed=1` still suppress it, untouched.
+- The same gate had a second half, found while designing a room against it: it also
+  required `entryView === 'scene'`, so choosing `fixed-camera` made an author give up
+  a walkable room to get a composed opening shot. Those are unrelated things — the
+  authored camera only replaces the auto-framed opening shot, and `LiveProjectScene`
+  never read `entryView` at all. It is now `isSpatialEntry` (`scene` or
+  `fixed-camera`); `code` still hides the button, being a page in an iframe with no
+  room to offer.
+- `hasWalkableEntities` skips entities marked `components.runtime.visible === false`,
+  the same flag `LiveProjectScene` uses to drop an entity with its whole subtree; an
+  all-hidden entity array would otherwise rebuild the empty room the original guard
+  exists to prevent. It does NOT try to judge which entity types draw pixels — a
+  lights-only or group-only room, and a visible entity whose only parent is hidden,
+  can still pass. Classifying types in the viewer would duplicate renderer knowledge
+  and would hide walk from every entity type added after it.
+- Guards in `PublicProjectViewer.test.jsx`: a mixed room shows the button and really
+  reaches `LiveProjectScene`; a graph-only room still hides it (that test now states
+  the protection in full, so it is not deleted as redundant); hidden entities do not
+  count. Both new guards were watched failing against the pre-fix gate.
+- No document data touched, no `xrDefaultMode` flip. Viewer gating only.
+- Looked at but deliberately NOT done: letting a document open already standing in the
+  room. `navMode` is `useState('orbit')` and no data path reaches it, so a visitor
+  always lands in orbit and must press a button. It is not the one-liner it looks
+  like: the effect at `PublicProjectViewer.jsx:196` resets `navMode` to `'orbit'`
+  whenever `presentationState.entryView` changes, and that fires a second time when
+  the document ARRIVES (`undefined` → a real string), so any initial `'walk'` seeded
+  in `useState` is silently stomped between the first paint and the loaded document.
+  A real opt-in means giving that effect a way to tell "the author changed the entry
+  view mid-session" from "the document just loaded" — a ref holding the last seen
+  entryView — and only then reading the opt-in (a `walk` entryView, or `?walk=1`).
+  Two or three lines plus a test, but it changes when the reset fires, which is
+  load-order behaviour on every published page. Not the week for it.
+- LOOKED at, not only tested: an isolated serverXR (spare port, its own DATA_ROOT,
+  this branch's `dist` as CLIENT_DIR) served three hand-authored rooms to a headless
+  Chromium at DPR 2, signed in as nobody. Seen: a mixed room offers Walk / Fly and
+  walking it lands in the real entity room — plinth and sphere in their authored
+  colours, WASD chrome, FLY, "← View mode" — not an empty grid; a graph-only room
+  renders its node cube with NO button anywhere; a fixed-camera room opens on the
+  composed off-axis shot AND offers the button; `?preview=1` and `?embed=1` on the
+  mixed room show no button at all. Zero console errors on every one.
+- NOT verified on a live tier by anyone: this branch is not deployed. The check owed
+  on staging is the same mixed room with a real anonymous session, and a headset
+  finding Enter VR once inside walk mode — no XR device was involved here.
+
+## 2026-08-24 — deleting asks first, and says whose work it is
+
+- Delete/Backspace took any selected object with no confirm and no ownership check,
+  across all four paths (`useEditorShortcuts`, `StudioEditor`, `RawGraphSurface` for
+  nodes, `RawEditor` for objects). Undo is per-client, so the person whose work
+  vanished had nothing to undo — only an admin rollback of the WHOLE space to the last
+  daily snapshot, which costs everyone else their day to undo one accident. Now every
+  path asks first.
+- A hard ownership *block* was not buildable: nothing in a document carried an author.
+  So one was added — `createdBy` stamped at `createEntityOfType` (the single
+  add-an-entity funnel) and at `createNode` (`nodeRegistry`, sole node constructor,
+  all nine call sites checked). The confirm escalates to name the author instead of
+  blocking, because a block on the unowned content that already exists would gate
+  nothing.
+- **The trap:** `normalizeEntity` and `normalizeProjectNode` both return a fixed
+  literal, so a field added only at the funnel is silently dropped on every op apply
+  and every document load — the op-log would have carried an author the rebuilt
+  document did not have. `createdBy` therefore had to go into both schema mirrors
+  (`src/shared/projectSchema.js` and `shared/projectSchema.cjs`), guarded by a new
+  `schemaSync.test.js` case. No document-version bump: it normalizes to `null` for
+  everything older, and `updateEntity` preserves it — editing someone's object is not
+  taking it over.
+- Compared on `author.subject`, never `author.label` — a label is a name a person can
+  change. Missing author reads as UNOWNED, never as "yours".
+- No generic confirm component existed; the convention for destructive actions was
+  `window.confirm` at 14 sites. New `ConfirmDeleteDialog` follows the existing
+  Raw/Studio help-dialog chrome, square-edged `--di-*` tokens, buttons 44px tall and
+  bottom-docked so they land in thumb reach on a phone. Nothing existing was restyled.
+- Three tests that fired Delete and expected an immediate delete were rewritten to go
+  through the confirm rather than weakened. The 2026-07-17 decision they encoded is
+  preserved: Node 0 gets the *same* question as any node, never an extra one, and
+  `window.confirm` is still asserted never to be called.
+- Still undone, and it is the check that matters most: this has not been exercised in a
+  running session against a real server, or on the `dilijan` staging space as an actual
+  guest — the weakest session that has to work, and the one the camp depends on.
+- Not stamped: `src/project/jam/jamObject.js` and `importLegacyScene.js` (which bypasses
+  the funnel via `normalizeEntity` at six sites). Both outside the camp's surfaces;
+  what they make reads as unowned, which is the safe direction.
+
+# Session notes — wt/jam-surface
+
+## 2026-08-23 — the jam stops being a stripped editor and becomes a place you stand in
+
+The Open Jam was Studio with about twenty things switched off (`jamMinimal` in
+`StudioShell.jsx`). On the device the QR code actually targets that was worse than a
+reduced editor — it was a broken one:
+
+- the whole desktop layer sits behind `!isMobile`, so a phone at `/open_jam` had six
+  controls and no route at all to the full toolset (the "All tools" escape lives in the
+  desktop-only control cluster);
+- presence emits on `pointermove`, which a touch screen never fires, so twenty phones
+  were twenty solo sessions editing one document and never seeing each other;
+- placement is `getViewPlacement` — the orbit target plus a six-slot ring keyed to the
+  global object count — and everyone opens on the same saved view, so everyone's work
+  landed in the same six spots.
+
+### What shipped
+
+A separate surface at **`/open_jam/scene`**, its own component tree under
+`src/project/components/`, deliberately NOT a twenty-first conditional inside
+`StudioShell.jsx`. Full-bleed first-person scene, no toolbar, one persistent `+`, a
+thumb-reachable sheet with the five shapes and a photo, a count at the top, in-scene
+markers where the other people are standing, and a plain link out to the full editor.
+
+It writes through the existing ops pipeline (`useProjectDocumentSync`) into the same
+project, so the editor at `/open/studio/projects/open-jam` opens exactly what was made.
+No server change, no new op type, no schema change.
+
+The address is a **sub-path of the already-reserved `open_jam` segment**, not a new
+top-level `/jam`. Reserving a new word means first proving no space and no project
+answers to it on any live tier, and this branch was not allowed to touch live data.
+`/open_jam` itself is untouched and still opens the editor.
+
+### The three pure modules
+
+The scene is the hardest thing in this repo to check without eyes on a phone, so the
+decisions that matter are plain functions with tests and no renderer:
+
+- `src/project/jam/jamPlacement.js` — ground-plane raycast from the walker's own pose,
+  clamped to arm's reach. The same technique as `computeGroundPoint` in
+  `StudioShell.jsx`, written as maths because there is no DOM event here and the camera
+  lives inside the renderer's tree. Studio's placement is untouched.
+- `src/project/jam/jamOwnership.js` — the "mine" list, in localStorage, with the warning
+  in capitals at the top of the file: a courtesy against accidents, **not** a security
+  control. serverXR is the authority (MANIFESTO §5) and anyone with `editor` on the open
+  space can already change anything in the document.
+- `src/project/jam/jamPresence.js` — `standing` added as a SECOND field beside the
+  existing 2D `x`/`y` cursor. The 2D fields are still sent, pinned to screen centre,
+  because in a first-person view the crosshair IS the pointer and because
+  `EditorOverlays` and `RawViewport` both read `cursor.x || 0` — dropping the field
+  would have parked every jam visitor in the top-left corner of somebody's Studio.
+
+### Four optional seams opened in `LiveProjectScene`
+
+`document` (skip the duplicate fetch + SSE), `walkerRef` (publish the pose object),
+`sceneExtras` (three.js children inside its Canvas), `showModeControls` (hide Fly and
+the XR-entry buttons; the joystick is never hidden — it is the only way a phone moves).
+Every default preserves today's behaviour exactly, and
+`src/components/liveProjectSceneSeams.test.js` guards that they stay optional, because
+four surfaces already render this walker and none of them pass any of these.
+
+### One bug fixed on the way
+
+Walk mode listens for WASD / arrows / space on `window` with no "is somebody typing"
+guard, and preventDefaults space. Nothing had ever put a text field over a walkable
+scene, so it had never bitten; the jam surface does, and there typing "was" walked you
+backwards and no caption could contain a space. Guard extracted to
+`src/components/walkKeyboard.js`, applied to both `window` listeners, tested.
+
+### Still owed — a human has to look
+
+Nothing on this branch has been seen. I have no browser and no phone. The list of what
+must be looked at, and where, is in the PR body. In particular: the QR code and every
+flyer still point at `/open_jam`, which still opens the editor — repointing them (or
+`/open_jam` itself) is the owner's call and is one line either way.
+
+## 2026-08-23 — the jam was on no backup path; snapshots now carry project documents
+
+- The Open Space snapshot only ever wrote `scene.json`. Everything people made in the
+  communal jam — photos, text, placed objects — lives in the `open-jam` PROJECT
+  document, so the daily snapshot backed up the room and not the work in it. Any guest
+  holds `role: editor` there, which made one accidental mass-delete unrecoverable.
+- A snapshot file is now a v2 envelope: `{ snapshotVersion, takenAt, scene, projects }`,
+  written to the same directory under the same timestamped name, one file per snapshot,
+  so the `keep` rotation and its retention math are untouched. Files written before this
+  are bare scene objects and still read back as scene-only snapshots — prod's existing
+  snapshots stay restorable.
+- Documents are read raw from disk, never through `readProjectDocument`: that one
+  normalizes and can write the normalized form back, and a backup path must not write to
+  the thing it is backing up.
+- Restore is symmetric. `restoreSpaceProjectDocuments` recreates a project row the vandal
+  deleted, writes the document, appends a `replaceDocument` reset op and bumps
+  `documentVersion` — the same shape as `PUT /api/projects/:id/document` — and
+  `POST /api/spaces/:id/restore-snapshot` emits each one on its project SSE channel so an
+  editor still holding the wiped copy resyncs instead of believing it is current. The
+  response now reports `projects: [{ id, version }]` alongside the scene deltas.
+- Assets stay out of snapshots, deliberately, and the comment saying why is still there:
+  they are content-addressed files, copying them per snapshot would multiply the heaviest
+  bytes on disk by `keep`, and restored JSON names the same ids. Growth is written down at
+  the call site — ~30 KB per document, several per space, ~1 MB across `keep=7`.
+- Guard: four cases in `serverXR/src/spaceStore.test.js`, watched failing against the
+  unfixed store (`snapshot.projects` undefined, `restoreSpaceProjectDocuments is not a
+  function`) and passing after.
+
+### Not done, deliberately
+
+- Idle account sandboxes that hold projects are still skipped by
+  `archiveIdleAccountSandboxes` rather than folded into a snapshot. The snapshot could
+  now carry them, but deciding to fold somebody's real work down to a backup is an
+  owner's call, not a TTL sweep's — the comment there was corrected, the behaviour was
+  not changed.
+- The sandbox revive path (`ensureOwnSandbox`) still restores only the scene, which is
+  correct today because the only snapshots it reads come from that project-free archive
+  path. If the point above is ever changed, this one has to change with it.
+- Nothing was verified against staging or prod — offline work against code and tests
+  only, and no live API was called. The restore endpoint's new `projects` field has not
+  been exercised against a real browser session.
+
+## 2026-08-23 — the one card with nothing in it was the room the product points at
+
+- From the walkthrough audit: on `/spaces` every public space showed a live thumbnail except the
+  **Open Space**, which showed an empty rectangle under a LIVE badge. It is the first card a
+  visitor sees.
+- The call site gated on `space.isPublic && space.publishedProjectId`. But `SpaceCardPreview`
+  embeds the **space's** own live route — `buildAppSpacePath(spaceId)?preview=1` — so it never
+  needed a project at all. `open` has no published project because it *is* the communal scene
+  rather than a link to one, and `/open?preview=1` renders it fine (checked directly).
+- Every other public space happens to have a project linked, so the extra condition looked
+  correct on every card except the one it broke.
+- Gate is now `space.isPublic` alone. Private spaces still get no preview — the condition that
+  actually matters is untouched.
+
+### Two corrections to the audit that produced this
+
+- I reported "`main` / `azd` / `platform-recordar` show as LIVE with **black thumbnails**". They
+  do not. I screenshotted before the preview iframes finished booting — the boot queue allows
+  two at a time and they are lazy behind an IntersectionObserver. With a real wait, every one of
+  them renders. The only genuinely empty card was `open`.
+- I also reported the Guest Sandbox tile as **dead**. It is not: it opens the sandbox space hub,
+  which carries Projects, Nodes, New project, Import and View live. What is true is weaker — it
+  is the only card with no thumbnail, no address and no button, so it *reads* inert beside the
+  others.
+
+### Worth knowing
+
+- **This fix cannot be verified on a local box.** A space's scene arrives over realtime, which
+  the vite dev proxy does not forward, so the card renders black locally even when pointed at
+  staging's API. Verified on staging after merge instead — the fix is one condition and the
+  component is the same one nine other cards already use.
+
+## 2026-08-23 — the one link most likely to be shared had no preview card
+
+- Found while answering "what's left": as a crawler sees it, `staging.di-studio.xyz/` returned
+  **no Open Graph tags at all**, while `/beyond-form` returned a proper card with its own title.
+  Production only looked right because it is still serving the old build.
+- Cause: `router.get('/og/*splat')`. In Express 5 / path-to-regexp v8 a named wildcard needs **at
+  least one segment**, so `/og` and `/og/` matched nothing and fell past the router to nginx —
+  which answered 403. nginx proxies a crawler to `/serverXR/og$uri`, and for the bare domain
+  `$uri` is `/`.
+- The handler's own "no handle → platform card" fallback was already written, already correct,
+  and simply unreachable. The fix registers the same handler for `/og` and `/og/` as well; no
+  logic changed.
+- Guard hits both bare spellings through the real `app.use('/serverXR', router)` mount and
+  asserts a 200 with the platform tile, plus a canonical pointing at the **origin** rather than
+  back at `/og` — sending a crawler to the path that just missed is a loop. Watched failing at
+  404, which is the live symptom exactly.
+- **This was worth doing before the prod promotion, not after**: promoting as-is would have
+  taken di-studio.xyz's working preview card away, because the new landing reaches this route
+  and the old one did not.
+
+### Worth knowing
+
+- Every existing route test hit a path WITH a handle, so none of them could see this. Same shape
+  as the `/serverXR/serverXR/og/…` double-prefix bug recorded in this file: the builder was
+  tested, the mount was not, and then the mount was tested but only where the wildcard matched.
+
+## 2026-08-23 — the badge that advertised the work by covering it
+
+- Audit item #3. On Beyond Form the "Made with di.iiii — build yours" badge landed squarely on
+  the exhibition's own "ԱՇԽԱՏԱՆՔՆԵՐ / WORKS" nav — and because the badge difference-blends, the
+  two texts inverted through each other into mush. Neither could be read.
+- **Not a placement mistake.** The badge is platform chrome pinned to a fixed corner of a page
+  the platform did not author, and the published page is a sandboxed frame the parent cannot
+  read (`iframe.contentDocument` is null — checked). There is no way to detect what is under
+  the badge and dodge it. Any fixed corner eventually lands on somebody's content.
+- So it stops being big enough to cause one: the ◈ mark alone at rest, the whole sentence on
+  hover or keyboard focus. 221px → 44px, and the 44 is mostly transparent padding so the tap
+  target still clears the minimum. The link, the tooltip and the accessible name are unchanged.
+- Expanded, it drops `mix-blend-mode` and brings its own dark ground. Difference-blending is
+  right for a 14px mark that has to survive an unknown background and wrong the moment a
+  sentence unfolds across someone's text — the first version of this fix expanded into exactly
+  the same mush it was meant to end.
+- **Owner's decision**, taken with the cost stated: on touch there is no hover, so mobile
+  visitors see only the mark. That is reach given up on purpose.
+
+### Worth knowing
+
+- `box-sizing: border-box` is load-bearing here. Without it `min-width: 44px` sits outside the
+  12px padding and the mark claims **68px** of an exhibition's corner instead of the 44 it asked
+  for — measured, not reasoned.
+- The `chrome` variant (inside the live-scene header, where the platform owns the row) is
+  deliberately untouched. Only `--floating` is a guest on somebody else's page.
+
+## 2026-08-23 — the dark theme's secondary text was below the readability floor, and nothing could have told us
+
+- Came out of a walkthrough audit of the product as a stranger: the landing page's own
+  explanation of what di.iiii is was hard to read on a phone. Measured rather than argued —
+  `rgba(255,255,255,0.4)` on black is **3.66:1**, under the 4.5:1 WCAG AA floor for body text.
+- **61 failing text nodes** across `/` (54) and `/spaces` (6), plus one hardcoded outlier. All
+  but one came from a single token, `--di-text-muted`, so the fix is one line: `0.4` → `0.5`
+  (5.28:1). It still reads as muted next to `--di-text`; nothing about the design changes.
+- The outlier was `.lp-enter-note` at `rgba(255,255,255,0.2)` — **1.66:1, wrapped around a real
+  link**. No alpha below ~0.46 clears the floor, so a credit line that stays readable has to be
+  quiet by size, caps and letter-spacing rather than by being invisible.
+- Guard reads the stylesheets and computes WCAG luminance itself (`src/styles/contrast.test.js`):
+  one test on the token, one sweeping `landing.css` for any faint hardcoded white. Both watched
+  failing against the old values before being restored — the second one is what found the
+  outlier the token change alone left behind.
+- Verified by eye at 1440×900 and on iPhone 13, before vs after, on a clean worktree served
+  beside staging.
+
+### Worth knowing
+
+- This class of defect is invisible to every gate the repo has — lint, tests, build and the
+  docs check all pass on unreadable text, and it looks intentional on screen. The guard above is
+  the first thing in the repo that reads a colour and judges it.
+
+## 2026-08-23 — "where did my cube go", and the phone topbar that had already lost its ⋯
+
+- From the walkthrough audit: place a Cube in the node editor and no cube appears. It was the
+  widest gap in the whole product between what a first-timer expects and what is on screen.
+- **Working as designed — and the design was mute.** The desk is deliberately clear (owner,
+  2026-08-20: "i mean clear desk"), so what you place stands in a room reached through the
+  topbar's Scene button. That button said the same single word whether the room was empty or
+  held your whole scene, so placing the first object changed nothing in the chrome.
+- Fixed inside the ruling, not around it: **`Scene · 3`** counts what stands in the room at the
+  current scope — spatial nodes in scope plus root-scope entities, the same rule the viewport
+  draws by. Plain `Scene` when empty. No wallpaper; that was tried and rejected twice in August.
+- **Then the phone said no**, and it turned out to be saying no already. Measuring at 390px:
+  the bar carried **433px of content**, so the ⋯ button was off the right edge — on `dev`,
+  before any of this. ⋯ is the only route on a phone to "Save to <space>", Spaces, Wiki and
+  Home, so a phone canvas had no way to save the work on it. My longer label pushed the node
+  count off too, which is how I found it.
+- Both words now drop at ≤640px — "Projects" beside the arrow, "nodes" beside the count — never
+  the controls. 83px bought; measured **390/390 with nothing off-screen**, and the ⋯ visible on
+  a phone for the first time.
+
+### The gate that should have caught it
+
+`check:toolbar-overlap` is REQUIRED by `src/raw/AGENTS.md` for every topbar change, and it
+tests whether siblings *intersect* — never whether the container overflows. Every child was
+overlap-free while the last one sat past the edge, so it passed the whole time. It now measures
+`scrollWidth` vs `clientWidth` as well, and was watched failing against `dev` (426/390).
+
+### Worth carrying
+
+- A checker's blind spot is not visible from its output. This one printed "0 overlaps" in a
+  reassuring green while the thing it guards was broken — the same shape as the empty-bar bug
+  its own header comment already records. Second time for this script.
+
+## 2026-08-23 — the crossing from Studio to Nodes landed on a screen that said the work was gone
+
+- Owner's report: "landing page still the same and actually nothing is wired — Studio and Raw
+  is connected?" Two separate things, and only one of them was a bug.
+- **Not a bug:** the landing. The one-door landing shipped 2026-08-21 and is on dev and
+  staging; production still serves the retired three-door version because nothing has been
+  promoted. The owner's own dev server was also 31 commits behind `origin/dev` with a peer
+  agent's uncommitted `LandingPage.jsx` rewrite in the tree, so it showed a third variant that
+  exists nowhere else. Verified from a clean worktree on a second port rather than pulling
+  under the peer.
+- **Not a bug either:** Studio→Raw exists. `⇄ Nodes` sits in the control cluster's Display
+  section (`StudioControlCluster.jsx`), with a mobile twin in the phone topbar, and it
+  navigates to the right project.
+- **The bug:** what it arrived at. A project authored in Studio holds entities and no nodes,
+  so Raw's graph is genuinely empty — and the empty-graph sentence, "Double-click to place
+  your first node", is written for a project with nothing in it. Crossing over therefore read
+  as "the other editor threw my work away", when `RawViewport` had been rendering those same
+  entities at root scope the whole time.
+- Fixed by saying the true thing and offering the way to it: "Built in Studio — N objects in
+  the room, no nodes yet", plus a `See the room` button that opens the scene fullscreen.
+  `Build an example` is now suppressed whenever entities exist — it injects six nodes, and
+  offering that as the primary action on somebody's project invites them to bury it.
+- The sentence became a pure helper (`src/raw/utils/emptyCanvasHint.js`) because a server
+  project's document arrives through sync, which every test in `RawEditor.test.jsx` mocks —
+  in place it was unreachable from a test.
+- Verified by looking, on the local build: Studio `mini` → `⇄ Nodes` → the new sentence →
+  `See the room` → the project's video object standing on its floor, with `‹ graph` back.
+  Desktop 1440×900 and iPhone 13 (button 129×44, no horizontal scroll).
+
+### Still open, deliberately
+
+- **Jam mode hides every lane door.** In a jam project `minimal` suppresses `← Projects`,
+  `⇄ Nodes` and `↗ View live` alike. `/open/studio` redirects to `open-jam`, so the first
+  Studio a visitor sees is the one variant with no way anywhere. Left alone: whether a jam
+  kiosk should offer the crossing is the owner's call, not a defect to patch quietly.
+- **Both doors are buried.** Studio's `⇄ Nodes` lives under "Display", next to Fullscreen and
+  Hide UI; Raw's "Open in Studio" lives in the ⋯ overflow. Switching editors is not a display
+  setting. Moving them is a UI decision, not a fix.
+- **Production is still behind everything** — this, and the 2026-08-21 doors-audit wave.
+
+## 2026-08-22 — Emily's algovrithm branch, landed without its typography half
+
+Emily pushed one commit to `emilyanikoghosyan/di.iiii feat/algovrithm-space` on
+2026-08-20, on a base three weeks behind dev. It carried three unrelated strands;
+this branch is two of them, rebased onto dev, with the third left where it was.
+
+- **Kept — algovrithm audio.** `audioWake.js` keeps the AudioContext running as a
+  repeatable question (gesture, tab visibility, XR sessionstart/sessionend, and the
+  context's own `statechange`), instead of the one-shot gesture unlock that left the
+  piece silent for good when a headset switched audio device mid-entry. The reel pool
+  now applies the unlock state to a pool built after the gesture, so the
+  idle-callback warm-up can no longer land on the wrong side of the first tap.
+- **Kept — the reel globe's "holes".** Black patches in the headset were never
+  geometry: they were video decoders that could not be allocated, failing silently at
+  a pool of 31. Two ceilings now, chosen by `navigator.xr.isSessionSupported`.
+  Left at nine on the merge and marked OPEN in the file — nine was measured against
+  full-resolution sources, and dev has since compressed the reels to 360x640, so the
+  headset ceiling is very likely raisable once someone measures it on the device.
+- **Kept — viewport.** `ringTour` and `textReveal` as pure helpers with tests; the
+  typewriter reveal on text objects, which needed a real defect fixed first (text was
+  the only type whose `appearance.opacity` did nothing, so timelines animating opacity
+  silently no-op'd); positional video sound, opt-in per video; a parented entity no
+  longer gets the legacy idle bob/spin, which is what pulled the 360 Cinema's cabinets
+  away from their video planes in the walk viewer but never in the editor.
+- **Dropped — the typography strand.** Self-hosted Montserrat, `muiTheme.js`, the
+  `--di-sans` pass across landing, studio, inspector, panels, wiki and wcc, and the
+  wiki's `platform-typeface` article are NOT here. They stay on Emily's fork for a
+  decision of their own. `@fontsource/arimo` is kept, because portal labels use it.
+
+Re-homed during the rebase, since dev had moved underneath all of it:
+- `playTimelines` and the `?xrdebug=1` panel now live in `PublicProjectSceneSurface`,
+  which dev extracted out of `PublicProjectViewer` after Emily's base.
+- Spatial video sound became a child component (`SpatialVideoSound`) rather than an
+  effect in `VideoObject`: dev's shared video cache means `VideoObject` is rendered
+  by plain react-dom tests that never open a Canvas, and `useThree` throws there.
+  Mounting it only when a video asks for spatial sound keeps those tests honest.
+- `LABEL_FONTS.default` is dev's vendored troika face, not "no font prop" — the
+  latter sends troika to a CDN at render time and paints nothing offline.
+
+Verified here: full suite 300 files / 2662 tests green, lint 0 errors, build clean,
+`docs:wiki:check`, `check:three-vendor`, `check:fallback-patterns`, `test:schema-sync`
+all pass. Looked at, at DPR 2: `/algovrithm` front door and the piece running through
+its sequences (no console errors), and `/wcc/scene` side by side against dev — same
+picture. `check:input` fails identically on plain dev in this environment, so it is
+not this branch.
+
+Not done: nothing on this branch is verified in an actual headset, which is where
+every audio fix in it was aimed.
+
+## 2026-08-22 — and then brought up to date instead of merged as found
+
+A second pass, on the owner's word: her fixes are right, but several were
+written against a codebase that has since answered part of the same question.
+Merging them as found would have shipped stale assumptions with a green suite.
+
+- **The headset ceiling stopped being a number.** `HEADSET_MAX_PLAYERS = 9` is
+  gone. In its place: `HEADSET_PIXEL_BUDGET` (nine 1080x1920 frames — the load
+  the pool was known to run at) divided by what one frame actually costs, probed
+  from a single reel's metadata by `probeReelPixels()` before the pool is built.
+  At the folder's current 360x640 that clears all 31 clips, so a headset gets the
+  whole folder — the thing her own comment said the compression was supposed to
+  buy, which dev had already done on 2026-08-08 and nobody had gone back for.
+  Re-encode the reels heavier and it tightens again on its own. A probe that
+  cannot answer falls back to nine.
+- **And the ceiling stopped being load-bearing.** A budget is still a prediction
+  about hardware this repo cannot test every variant of, so the failure it
+  predicts is now caught rather than assumed away: `hasPicture`/`displayTextures`
+  hand the globe its textures with any player that never produced a frame
+  replaced by a live one, dealt round-robin so substitutes spread across the
+  folder. Guessing too high now costs a repeat — which is what a feed looks like
+  — instead of a hole in the shell.
+- **That repair was wrong on its first draft, and the browser said so.** Polling
+  `readyState` reported three of thirty-one dead mid-beat on a desktop where
+  every clip was decoding: each player seeks to a random point in its own
+  timeline, and readyState drops for the length of a seek while the texture keeps
+  showing its last frame. It latches on the first frame ever decoded instead —
+  the one thing a refused decoder never does. Pinned as a test.
+- **audioWake moved to `src/utils/`.** It answers "is this context still
+  running", which is not algovrithm's question: any surface that puts a sound in
+  a room meets the same headset audio-device switch. `positionalVideoSound` now
+  registers through it instead of its own one-shot gesture listener — that
+  listener was the exact bug audioWake exists to kill, two files apart in the
+  same commit.
+- **A spatial video takes its own element.** dev's video cache shares one
+  element per (source, muted, volume, loop), and a media element can be routed
+  into Web Audio only once — so two spatial videos on one clip would have left
+  the second with flat sound in the wrong place. `exclusive` opts a caller out of
+  sharing; muted videos and every existing space are untouched.
+
+Seen, in a real browser at DPR 2: the globe beat with all 31 players decoding
+and `window.__diiReelPool` / `__diiReelHealth` reporting 0 dead; then eleven of
+them marked frameless by hand and the same shell coming back full of repeated
+clips with no black cells in it.
+
+Still not seen in a headset — which is where the ceiling this pass raised is
+actually decided. `__diiReelHealth` is there to be read on the device.
+
+## 2026-08-22 — the front door, the copy, and a page you could see but not open
+
+Three commits straight onto `dev` (`ea2dd731`, `af8a3b0e`, `466f2b17`), each one
+looked at in a browser before it was called done.
+
+- **A legacy `codeHtml` page opens in the Code window again.** `funding-board`
+  keeps 299,595 characters in `presentationState.codeHtml`, from before the file
+  list existed. The viewport rendered it, so the owner could *see* the page while
+  the Code window said "No code files yet" and offered a manual convert button —
+  visible and unopenable at the same time. The file list now falls back to
+  `codeHtml` as `index.html` and the first write migrates it (render-identical: a
+  lone index.html bundles to itself). The editor had to become usable first: a
+  whole-page file re-issued a document op per keystroke and the autosizing field
+  re-measured the whole file each time, growing to the page's height instead of
+  scrolling. Now a bounded scrolling box with a local buffer that commits on idle,
+  on blur and on unmount — **4ms per keystroke** on the 299KB page.
+
+- **"Step inside" opens the visitor's own space.** It pointed at `/open/raw`, the
+  browser-local canvas; `4b897db8` gave that canvas an exit the same day, but a
+  first visitor still has to know to use it. The door now lands where Projects and
+  **Nodes** already sit side by side with View live — so the Studio↔node-editor
+  connection is made by the door choosing the room that holds both, with no bridge
+  to build. This is doors-audit owner decision 1, and the positioning doc's item 4.
+  Mechanics: the four doors keep `href="/spaces"` as a real destination (no-JS,
+  middle-click, crawlers) and upgrade on click; `getApiSession()` runs on the
+  CLICK, never on a page view, because asking for a session mints one.
+
+- **The copy says what di.iiii is.** Hero, eyebrow, tab title and both share cards
+  now carry the 2026-08-21 position (*the visit is the product; the editor is
+  backstage*). Two sentences were false and are gone: "Nothing is empty when you
+  arrive: a live 3D room…" (untrue since the starter seed was deleted) and "Sign
+  in only to edit" (untrue the moment the door hands out an editable sandbox).
+  "Immersive" is on the refusal list and left with them.
+
+Measured, so nobody re-derives it:
+- The landing's decorative hero already calls `/api/auth/session` on every desktop
+  view (`LiveProjectScene.jsx:1389 → ensureGuestSession`), so "nothing is minted on
+  a passive visit" was already half-false. It mints a session but **no space row** —
+  the sandbox row appears only when someone actually opens it.
+- The landing is not slow any more: hero visible **1.6s on prod**, 0.9s on dev. The
+  10.2s figure in the positioning doc is stale.
+
+Paid for twice, worth writing down:
+- An uncommitted edit in this shared checkout can be **silently wiped** by another
+  session's checkout — `wikiContent.js` was back at HEAD an hour after being edited,
+  no stash, no diff, while five sibling files survived. Grep for your own edit
+  before reporting it done.
+- `npm run test` does not run the docs gate. This push failed CI on a session note
+  left by another branch — run `node scripts/check-agent-docs.mjs` AFTER rebasing,
+  not before.
+
+## 2026-08-22 — a graph publishes as the room it makes
+
+The owner's call on "what publishing a graph means": build the real thing.
+
+It turned out not to need a compiler, which is why it had stayed open. `RawViewport`
+already renders a scope's spatial nodes **and** the root-scope entities in one room —
+it is what the node editor's own viewport shows, and what `/out` has been handing
+projectors all along. The published page had never been pointed at it. It is now,
+behind the same lazy boundary as the other two renderers, whenever a document has
+nodes; an entities-only document keeps `StudioViewport` and is untouched, which is
+nearly every published page there is.
+
+`/dilijan/team-1` now shows the three cubes, the picture plane and the TEAM 1 title
+together, full-bleed — the same room the desk shows. It used to show the title alone.
+
+**The trap, and it cost the first attempt:** a lane's components carry that lane's
+stylesheet. `raw.css` is imported by `RawApp`/`BlankNodeWorkspaceApp` and nowhere
+else, so mounted bare the viewport lost `.raw-viewport-shell`'s
+`position: absolute; inset: 0` and the canvas collapsed into a band across the top of
+the page with dead space under it. Seen in a browser, not caught by any test — the
+unit tests were green throughout. It is the same ruling that kept Studio's MUI
+`PublishPanel` out of Raw, arriving from the other direction. The stylesheet now rides
+the same chunk, via `src/raw/PublicGraphSurface.jsx`, which is safe to bring along
+because every rule in `raw.css` is class-scoped: no element, `:root`, `html` or `body`
+selectors, so it cannot reach the viewer's own chrome.
+
+This also removes the "This project is a node graph" notice added earlier the same
+day. It was an honest apology for an empty room; there is no empty room now.
+
+Still not done, and not this branch's business: `/{space}/{project}` for a node
+project renders the room but Walk / Fly still enters `LiveProjectScene`, which is
+entities-only — a visitor who walks into a node-built room finds it bare.
+
+## 2026-08-22 — the dev box says when it is behind, and Raw's work can leave the building
+
+Two questions from the owner ("why is the local not synced" and "raw is not connected")
+turned out to be the same shape: something was absent, and absence has no symptom.
+
+**A dev box is four clocks, not one** — code, dependencies, data, identity — drifting
+apart in silence. Only the tree ever spoke. Now `npm run dev` also reports how long
+since the last `git fetch` (the behind-count is measured against that ref, so an
+un-fetched clone reports itself current while six commits behind), which packages
+disagree with the lockfile (nothing had ever checked; this box was 11 behind), and which
+spaces the live tiers have that this box does not. New `npm run local:mirror` walks
+**production first, then staging for what production lacks** — `dilijan` was built on
+staging and never promoted, so a production-only read called the estate complete while
+lacking the space the camp runs on. `docs/ai/local-workflow.md` is the sequence and,
+more usefully, what each step does *not* cover: content already on the box is never
+refreshed by anything, because every pull path tests existence rather than version.
+
+**Raw's entrance was never the problem; its exit was.** Three changes, in the order they
+matter. A local canvas can now **save into its space** (⋯ → "Save to <space>") — the
+landing sends every first-time visitor to a browser-only scratchpad, and until now
+nothing made there could become a project at all, which made the front door a dead end
+by construction. It copies rather than moves, so a failed save cannot cost the work.
+The **projector view of a public space is now public** — `/…/raw/projects/{id}/out`
+renders for a stranger with no session, while the editor beside it and every surface of
+a private space stay gated; "Copy projector link" used to hand an audience a sign-in
+card. And a project whose work is a node graph **says so in the public viewer** instead
+of publishing as an empty room, offering the live view — an empty grid reads as "the
+artist made nothing", which is the opposite of true.
+
+Repairs alongside: `/raw/projects` and `/studio/projects` both rendered "Nothing lives at
+raw" (Studio's parser runs first and read the lane name as a space; the order of the
+three path parsers IS the routing table). A phone canvas had no exit at all — the
+wordmark that leads home was `display:none` under 640px and zen hides the topbar; it
+moves to the top-left now with a real finger target. `RawHub`'s "open the Studio node"
+409'd in every space after the first, because project ids are a global primary key.
+`npm run space:push` refuses a production target it inherited from the environment
+rather than one someone named — the root `.env` points at production and `.env.local`
+overrides it to staging, so one lost line in an untracked file turned a routine push
+live. `ONBOARDING.md` was wrong in four ways, including telling newcomers to set
+`REQUIRE_AUTH=false`, which makes every access bug unreproducible.
+
+**MANIFESTO §6 amended** to record decisions the owner had already taken — Studio-as-a-node
+merged, "both lanes, ONE UI" chosen, the one-door landing shipped — because the clause
+saying the landing must not pick a lane was contradicted by the shipped landing, and a
+non-negotiable the product contradicts protects nothing. What was always load-bearing is
+untouched: Studio is still the stable shipped surface, and experimental Raw behaviour must
+not become its default.
+
+Still the owner's, deliberately untouched: whether a graph should compile into the
+published page (the projector view is its public face for now), and the production
+deploy moment — wave A and everything above is on staging and local only, while
+production still serves the retired three-door landing.
+
+Audit that produced this: https://claude.ai/code/artifact/832266ce-487e-4dcd-b5ee-3283e232a39a
+
+## 2026-08-21 — the Public page as a node, and two windows that were lying about themselves
+
+Built for a children's workshop in Dilijan, where the whole week's work is authored in
+Raw and taken home as a published link. Three things were in the way.
+
+- **`view.publish` — the public page as a panel node.** Entry view, headset default,
+  camera/mic opt-in, and the address with a copy button. Deliberately not Studio's
+  `PublishPanel` imported across the lane boundary: that one is MUI and Raw loads
+  neither MUI's styles nor the control cluster's, so it would render as a column of
+  unstyled text — the same ruling `CreatePanelWindow` already made. Everything on it is
+  a document op, so a guest holding a redeemed invite can use it. The two space-level
+  switches (make public, set live project) are owner-or-admin and would 403 for exactly
+  that person, so they are not rendered as buttons that always fail; the space's state
+  is reported as a sentence instead. `shareEnabled` is absent on purpose — grep it,
+  nothing on the published page reads it.
+
+- **A Text window could not be written in.** `TextPanelWindow` rendered a `<p>`. A desk
+  seeded with "Our room is about ______" was an instruction nobody could obey, and the
+  only way to change a note was the inspector or a one-line port field on a card that
+  may be off-screen or past the LOD threshold. It is a textarea now, writing through
+  `updateNode` — per keystroke, which is what the surrounding code already does and what
+  the sync throttle and the history's same-field coalescing are built for. When an edge
+  feeds `content` the box stays read-only and says who is holding the pen: the wire wins
+  on every evaluation, so an editable box there would swallow the typing.
+
+- **A minimized window was placed by the panel it would open to.** `clampWindowFrame`
+  reserved the stored full height for a collapsed bar, so a bar authored near the bottom
+  was yanked up onto whatever sat above it. Measured on a 1440x810 desk: three bars
+  authored at y=640 landed at 392, 248 and 94, stacked on the row of cards and on each
+  other.
+
+  **The part worth remembering:** the first fix was in `clampWindowFrame`, with a unit
+  test over `clampWindowFrame`, and it passed while every window on screen stayed
+  exactly as wrong as before. `DesktopWindow` rebuilds the frame it clamps from
+  x/y/width/height alone, so the `minimized` the clamp reads never arrived — the guard
+  sat one layer above the break. The real fix carries `minimized` in the window's draft;
+  the guard now renders a `DesktopWindow` and reads where it actually lands (64 before,
+  580 after, in jsdom's 1024x768). A test of the helper is not a test of the surface.
+
+Also: `docs/ai/known-fixes.md` rows for both window defects, and wiki entries for the
+Public page window and for writing on a Text window.
+
+Not done here, and not this branch's business: the guest session cookie is stamped with
+`config.authSession.ttlMs` (12h) regardless of the caller's ttl, so `GUEST_SESSION_TTL_MS`
+(7 days) never reaches the browser and every returning guest is a new subject; and the
+upload limiter is keyed by IP, so a venue behind one NAT is a single 60-per-10-min
+bucket. Both verified against staging, both fixable in a line, both filed.
+
+## 2026-08-21 — a list you can actually maintain
+
+`view.list`. A list with headings, where a person adds, edits, deletes,
+reorders and moves a row from one heading to another — all of it document ops,
+so undo works and a collaborator sees it.
+
+It exists because the thing it replaced was a Text window holding a list as
+prose. That reads fine and cannot be maintained: moving one line from "core" to
+"would be good" means retyping two paragraphs and hoping you did not lose a
+line. The camp's gear list went through four rewrites in one session and every
+one of them was me editing a build script, because there was no surface on
+which the person who owns the list could change it.
+
+Decisions worth keeping:
+
+- **Groups are plain strings on the node, not a fixed set.** The grouping IS
+  the thinking — gear wants core/would-be-good, a shot list wants shot/cut, a
+  packing list wants bag/van. Fixing the vocabulary would make the node good
+  for exactly one list.
+- **Rows carry their group by name**, so renaming a heading has to carry its
+  rows along or the group silently empties. Guarded.
+- **Deleting a heading never deletes work** — its rows move to the first
+  remaining group. Guarded.
+- **Up/down reorder within the group, not within the flat array.** Swapping in
+  the flat array moves a row past a neighbour from another group, so on screen
+  nothing happens — the render is grouped, not flat. Guarded, because this is
+  the one that looks like it works.
+- No ports, per the dead-port rule: a list is read by people. `view.timeline`
+  only grew outputs once the transport actually read them.
+
+Nine guards in `ListPanelWindow.test.jsx`, and the four gestures were driven
+through a real browser against a real server, each one read back out of the
+saved document rather than trusted from the DOM.
+
+Also: `view.list` added to the all-nodes example in the same change — the
+palette-coverage test is the one that caught `view.publish` missing, and it
+only catches it if you run the whole suite.
+
+## 2026-08-22 — an image whose EXIF could not be stripped is never stored
+
+- `SCRUBBABLE_FORMATS` had no `heif`, so an iPhone HEIC passed the mime filter, failed the
+  scrubber with `unsupported-format`, and was stored byte-for-byte with its GPS
+  coordinates, device serial and capture time — on URLs served to anyone who has them.
+  `unsupported-format` read as benign and was in fact the leak.
+- **AVIF was leaking the same way and nobody knew.** sharp reports an AVIF's format as
+  `heif`, so the `avif` entry in the set was dead code and every AVIF upload kept its EXIF.
+- **The two Google Drive import loops never called the scrubber at all**, writing whatever
+  Drive handed them straight to the same public asset URLs. Plain JPEGs with GPS included.
+- The invariant is now the other way round: anything that cannot be scrubbed is refused
+  with a 415 and its temp file deleted, rather than stored verbatim. What counts as an
+  image is decided by magic-byte sniffing — ISO-BMFF still-image ftyp brands included,
+  video brands deliberately excluded — not by the mime type the client claims.
+- Studio's asset input had no `accept` at all, so iOS never transcoded on pick; it now
+  matches Raw's. A rejected import lands in the activity feed with the server's reason
+  instead of being a dead button.
+- The new guard was watched failing against the unfixed code: the HEIC was stored, 200
+  where 415 was expected.
+
+**Still undone, and it needs a phone.** This machine's libvips has the HEIF container but
+no HEVC decoder, and there is no `.heic` file on it, so the rejection path is proven with a
+genuine HEIC container header whose payload will not decode — the same state a real photo
+reaches here, but an inference rather than a photograph. Put one real iPhone photo through
+the upload button before relying on this.
+
+## 2026-08-22 — a guest cookie lasts the week it claims, and uploads are counted per person
+
+- The auth cookie always stamped `config.authSession.ttlMs` (12h) no matter what ttl the
+  session was actually minted with, while guest sessions are minted for
+  `GUEST_SESSION_TTL_MS`. The signed payload claimed a week, the browser dropped the
+  cookie overnight, and every returning guest came back as a new subject — new sandbox,
+  and any space grant redeemed from an invite gone with it. `setAuthSessionCookie` now
+  takes the ttl, and the two guest-minting call sites pass the one they used. All six
+  minting sites were audited; account and OAuth sessions keep their 12h, which is what
+  their payload claims.
+- The guest week is absolute from issuance, not rolling — the session re-sync never fires
+  for a guest, so the cookie is never refreshed. Fine for a six-day workshop; a longer one
+  would need the guest to re-enter.
+- `uploadLimiter` used the default address key, so 60 uploads per 10 minutes was the budget
+  for an entire NAT — a room full of people on one venue wifi shared one bucket and the
+  first few uploaders spent everyone's. It now keys on the session subject, falling back to
+  the address for callers with no subject. With `REQUIRE_AUTH` off every caller shares the
+  `auth-disabled` sentinel, so that type falls back too rather than putting a whole server
+  in one bucket. `createRateLimiter` gained a `scope` string so the 429 stops blaming
+  "this address" for a per-session count.
+- Both guards were watched failing against the unfixed code before being accepted.
+
+Still undone, found while here and deliberately out of scope: **no client code handles a
+429 anywhere**. `apiClient.js` never reads `Retry-After`, Studio's `importAssetFiles` has
+no catch so a throttled import dies silently mid-batch, and `useAssetPipeline.js` tells the
+user to check their connection when the connection is fine.
+
+## 2026-08-22 — published pages stop cropping on a portrait phone
+
+- `computeFramingCamera` fitted the entry camera to the **vertical** fov only and never
+  read the aspect, while `frameSphereInControls` — 25 lines below it in the same file —
+  already did it correctly. Two copies of one calculation that had drifted; that drift
+  is the actual defect, not the missing line. Both now go through one shared
+  `getLimitingHalfFov` / `computeFitDistance` helper so they cannot separate again.
+- The trap that makes a naive fix invisible: `PublicProjectSceneSurface` passes
+  `AUTO_FRAME_MAX_DISTANCE = 25` as `maxDistance` and it is clamped with `Math.min`, so
+  on any scene wider than about 4 units the corrected larger distance is yanked straight
+  back down. The clamp is now scaled by `getAspectFitScale(fov, aspect)` — it caps how
+  much of a sprawl the shot swallows, not a raw metric distance. The factor is exactly 1
+  for any aspect >= 1, so landscape/desktop framing is unchanged.
+- Guard: `src/utils/cameraFraming.test.js`. Portrait must be >1.9x landscape for the same
+  sphere **and** the clamped case must stay >1.9x. Both clamp tests were watched go red
+  with the scaling removed, then green with it back.
+- Looked at it, did not just test it: headless Chromium at 390x844, deviceScaleFactor 3,
+  on a real published scene page served from this worktree. Before, the entry shot sat at
+  half the needed distance — the grey plane bled off three edges, the title was jammed
+  under the Walk/Fly button, the aircraft model was out of frame entirely. After, the same
+  scene from ~2x back: aircraft, box and plane all inside the frame with margin. Landscape
+  before/after at 1440x900 are identical, as intended.
+- Two things found in the same area and deliberately NOT changed:
+  - The auto-frame bounding sphere is still built from entity **positions only**, ignoring
+    size/scale, so a large object near the edge can still overflow. A correct fix needs real
+    geometry bounds, which do not exist before mount; the cheap proxy (expand by scale) would
+    let one big ground plane or skybox blow the sphere up and push every scene far away. Left
+    open on purpose rather than shipped blind three days before a camp.
+  - `entryView: 'fixed-camera'` removing Walk/Fly is deliberate, not a bug — recorded in
+    `known-fixes.md` ("fixed-camera/code presentation modes are a deliberate per-project
+    choice and stay untouched").
+
+## 2026-08-21 — the sweep, and the one defect that destroys work
+
+Owner asked whether the routes were fixed and the interface checked. The honest answer was
+no: recent work verified only what it touched. So: a browser sweep of every anonymous route
+plus a five-lens code audit.
+
+**The browser sweep** — 27 routes × desktop and phone, against production data. 40 of 54
+renders clean. Of the 14 flagged, 8 were correct behaviour (403 on `/admin` for a stranger,
+404 from `/api/resolve` on a name that does not exist), 2 were false positives (deliberate
+ellipsis truncation with a title tooltip), and 4 were one real defect: **`algovrithm`'s
+space-card preview points at an asset that 404s on production.** The space holds exactly one
+asset, `algovrithm-preview.webp`, and staging's preview points at that same id — so the
+pointer simply went stale. The repair is written
+(`$CLAUDE_JOB_DIR/tmp/fixpreview.mjs`) but the production write is blocked by the local
+permission classifier; it is a handover.
+
+**The code audit** returned 27 confirmed defects. Fixed here, the worst of them:
+
+### Silent sync death — the only one on the list that loses work
+
+`useProjectDocumentSync` handles a 401 by keeping the queued edits, dispatching
+`pendingSyncError` / `authExpired`, and **halting retries** (`clearTimeout`, `break`). The
+state was correct. Nothing rendered it:
+
+- `src/raw/` had **zero** references to either field — the node editor was silent on every
+  device;
+- Studio's only indicator was a 10px dot inside the control cluster, gated `!isMobile`, so
+  a phone showed nothing at all;
+- and that dot's tooltip read *"Sync failed, retrying — …"* on the exact path where retry is
+  halted. The one existing signal said the opposite of the truth.
+
+So an expired session kept accepting edits into a queue in memory and a reload dropped them,
+with no warning anywhere. Now both lanes render the message the sync layer already wrote,
+outside the zen and `uiHidden` gates — losing an hour of work is not furniture.
+
+**Verified with a real 401**, not a mocked state: intercepted the document/ops writes,
+placed a node, watched the banner appear reading *"Session expired — sign in again to keep
+syncing."* Studio's copy was proven by forcing the condition and screenshotting at 1280 and
+390, because a headless click could not drive an edit through Studio's viewport — that half
+is render-verified, not 401-verified, and it is the same four lines as Raw's.
+
+**A bug I introduced and caught:** both the alert and the toolbars are `position: fixed;
+top: 0`, so the banner covered the toolbar — taking away "← Projects" exactly when someone
+needs to leave and sign in again. Fixed with an adjacent-sibling offset. That exposed a
+second one: `workspaceTop` is measured from the toolbar's rect via a `ResizeObserver`, which
+never fires when the bar MOVES rather than resizes, so the scope pill landed on the toolbar.
+The effect now re-measures on `pendingSyncError`. Both confirmed by looking.
+
+### /spaces had no inbound links
+
+My own loose end from the previous branch: `/spaces` shipped as a canonical address and
+`buildSpacesPath` had zero callers — every "Spaces" control still minted the legacy
+`/studio`. All five now point at it (`LandingPage`, `StudioHub`, `StudioCodeSpaceDirector`,
+`RawEditor`'s ⋯ menu, the admin gate).
+
+Four tests pinned `/studio`; their names state the intent ("sends 'Go to my spaces' to the
+Spaces page"), which `/spaces` satisfies. One needed more than a string swap: the helper
+matched hrefs by substring, and `/wiki#free-spaces` contains "spaces" — a false match my
+rename created. Those two now select by link name.
+
+**Not fixed, from the same audit** — 25 further confirmed defects, the heaviest being asset
+imports failing silently (`StudioEditor.jsx` try/finally with no catch), publish and share
+outcomes reaching only a collapsed activity log, and touch targets across Studio below the
+44px floor Raw's own CSS enforces. Full ranked list in the session artifact.
+
+### Carry into CURRENT.md's "Open" at land time
+
+`land` writes only the "Last session" list, so these need a human hand on `dev`:
+
+- **25 confirmed UX defects unfixed** — asset imports fail silently, publish and share
+  outcomes reach only a collapsed activity log, Studio touch targets under the 44px floor
+  Raw's own CSS enforces. Ranked list above.
+- **`algovrithm`'s space-card preview 404s on prod** — data, not code; repair written, the
+  production write is blocked by the local permission classifier.
+- Two invite tokens were printed into a session log (`library`, `funding`) and are live for
+  7 days — reusable keys, not single-use. Revoke them.
+
+### The protocol has a deadlock — it fired, and it cost four deploys
+
+`check-agent-docs.mjs` enforces two rules that can contradict: **CURRENT.md must be ≤50
+lines**, and **CURRENT.md must not differ from `origin/dev`** on any branch. When dev's own
+copy goes over budget, no branch can trim it — the trim itself trips the second rule. The
+fix has to be a commit on `dev`.
+
+It fired on 2026-08-21. Every dev deploy from the `fix/lexicon-level` merge onward failed
+the docs gate: first on `docs/ai/sessions/` not being empty, then — once `land` ran and
+cleared that — on CURRENT.md at 53 lines, then 59 after a hand-written recap. Four
+consecutive staging deploys failed, and every open PR went red on that one line; PR #240's
+`build-and-test` failed on it alone with nothing of its own broken.
+
+Demonstrated rather than assumed: a 50-line trim placed in the tree cleared the budget error
+and left exactly one complaint — that it was not on dev.
+
+A parallel session trimmed it to 49 lines on `dev` and the gate went green. Worth keeping:
+**the file that every agent is told to update is the one file a branch may not touch**, so
+when it overflows, the whole repo stops shipping until someone commits on dev.
+
+## The home rule — work lands in the ecosystem, and the audit ledger moves in
+
+The owner, after watching the UX audit deliver onto a scratchpad, an ad-hoc
+local port, and claude.ai: "we burn credits work but info is not have the
+right path to ecosystem… make rules to not mess."
+
+- golden_rules.md gains "the home rule": durable work product lands in-repo
+  in the same effort that made it; external pages are mirrors of an in-repo
+  source; session servers die with the session and are never a deliverable;
+  long-lived listeners are di-atlas facts before they start.
+- docs/research/ exists — the paid-knowledge ledger, one dated file per
+  topic, updated never re-bought. README states the convention;
+  RESEARCH_METHOD.md rule 4 now points at it as the required destination.
+- The 08-21 audit's full findings ledger moved in as
+  docs/research/2026-08-21-raw-ux-audit.md (plan mirror URL + spend
+  recorded); the ad-hoc verification servers were killed this session.
+
+## The mirrors came home
+
+Owner: "take all needed artifacts from claude in the di.iiii… and ran the
+local that i can see." docs/research/mirrors/ now holds full-fidelity copies
+of every platform-connected claude.ai artifact (ten pages: both Raw audits,
+the workshop map, the UX plan, lexicon, name tree, growth plan, the 08-05
+full audit, promotion/licensing, The Same Rectangle) plus an index.html —
+view with `python3 -m http.server` in that directory. "What Is Actual" was
+deliberately not mirrored: it is the estate-wide audit and belongs with
+di-atlas. The claude.ai pages remain as mirrors; these files are the truth.
+
+## 2026-08-21 — the space stops being a query parameter
+
+The last layer gap reachable without a signature. `/admin?space=wcc` put the one level that
+**owns** everything being administered into a parameter you could delete and still be left
+with a valid address. Now:
+
+    /{space}/admin          the space's ops        NEW, canonical
+    /{space}/preferences    same, via the alias    NEW
+    /admin?space={id}       still parses           unchanged, forever
+    /admin                  no space               unchanged
+
+`buildPreferencesPath(spaceId)` emits the new shape, so all four of its callers moved
+together; the old form is still read by the parser, so nothing already in the wild rots.
+
+**Checked before claiming the word,** the same way as `spaces` and `projects`: no space and
+no project on production or staging answers to `admin`, `preferences`, or either of the two
+historical misspellings the aliases carry. `admin` was already reserved as a SPACE slug but
+**not** as a project slug — so a project could have taken it and shadowed the console. Added
+to `PROJECT_RESERVED_SLUGS` alongside `preferences`.
+
+Only the bare two-segment form is the console: `/{space}/admin/extra` deliberately does not
+match, leaving the deeper path free.
+
+**Verified in a browser, all five cases:** `/atlas/admin` and `/atlas/preferences` render
+the console and stay at their own address with the space chip reading `atlas`;
+`/admin?space=atlas` still works; `/admin` still defaults; `/atlas/admin/extra` is not the
+console.
+
+Three tests pinned the old URL and were updated — they asserted the shape, not the
+behaviour, so this is a deliberate change of contract rather than a regression. Suite back
+to baseline: 2428 passing, the 12 serverXR files that cannot import `express` here.
+
+**Still open after this:** the editor addresses, `/{space}/{tool}/projects/{id}`. That is
+§7.1 of `SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04, and it
+is the last inversion left.
+
+## 2026-08-21 — the two layer gaps the doors audit left
+
+Owner: *"we just need to fix layer gaps"*. Checked `dev` first this time, which retired
+one of the three candidates before any code was written — `/{space}/raw` being called a
+"hub" while rendering a blank canvas is **already fixed** on dev (`RAW_PAGE_CANVAS`,
+`buildRawCanvasPath`, with a comment saying the old name "taught every caller the
+opposite"). Two gaps were real.
+
+**The way between the tools ran in one direction on a phone.** The node editor has
+carried "Open in Studio" in its ⋯ menu since the doors audit, but Studio's return trip
+lived only in the desktop floating cluster — so on a phone you could go node editor →
+Studio and not back. Studio's mobile topbar gains **Nodes**, using the `onOpenNodeEditor`
+prop dev already threaded through the shell. Verified by tapping it: `/atlas/studio/
+projects/estate-map` → `/atlas/raw/projects/estate-map`, same project, other tool. The
+bar reads `← · estate map · Nodes · Edit` at 390 with no overflow.
+
+**Raw's chrome never named the space.** Studio's cluster header has always shown
+`space · project`; Raw showed the project alone — and `@media (max-width: 1200px)` hid
+even that, so on every phone AND most laptops nothing on screen said which space you were
+editing in. It was recoverable only from the URL.
+
+Now `open · Open Jam` above 1200px, and **`open` alone below it** — the title drops, the
+space survives. A space id is short enough to afford at 390; a project title is not. Done
+by folding into the existing `.raw-topbar-name` element rather than adding chrome, with
+the project half in its own span so the narrow rule can drop exactly that.
+
+Measured: `1440 "open · Open Jam" 106px · 1199 "open" 32px · 900 "open" · 390 "open"`.
+
+**Toolbar overlap** re-checked at 1440 / 1201 / 1199 / 900 / 700 / 390 — 3 slots, zero
+overlap at every width, including both sides of the breakpoint I introduced. Run with the
+zen preference forced off (`dii.raw.zen.<projectId>` = `off`), because the repo's own
+`check:toolbar-overlap` measures an empty bar and passes vacuously otherwise — see the
+note on the previous branch.
+
+**And the check itself is repaired.** `scripts/check-toolbar-overlap.mjs` reported
+*"0 children checked … PASS"* on a real topbar change — green while asserting nothing, on
+a check `src/raw/AGENTS.md` REQUIRES for every topbar change. Three fixes:
+
+- an init script clears `dii.raw.zen.*` before the app boots, so the bar has content;
+- zero-width boxes no longer count as "children checked", because a `display:none` slot
+  cannot overlap anything and counting it hides an empty bar behind a real number;
+- **it now FAILS when nothing was measured at any width**, naming the route and selector.
+
+Confirmed both ways: 3 children on `/open/raw` where it used to find 0, and a hard exit 1
+with a bogus selector. It is not wired into any CI workflow — only an npm script — so this
+cannot turn a pipeline red; it only stops misleading whoever runs it.
+
+**Still not done, and not for lack of trying:** the editor addresses still read
+`/{space}/{tool}/projects/{id}` — tool above project. That is §7.1 of
+`SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04. And
+`/admin?space=` still demotes the space to a query parameter; `/{space}/admin` is free
+(`admin` is already reserved on both axes) but it is another canonical address and did
+not belong in a gap-closing pass.
+
+## 2026-08-20 — name what each create button makes, and stop two strings saying "project" about things that aren't
+
+Fallout from a lexicon audit of the space/project pair. The audit's own recommendation was
+**keep `project`** — every candidate replacement is already spent inside the product, and
+`piece`, the strongest one, is live one level UP (`StudioCodeSpaceDirector.jsx:74` ships
+"Open the piece" and it navigates to a *space* root, 26 lines from ":48 This space keeps its
+work as projects"). So nothing here renames anything. These are the corrections that are
+true under the current dictionary.
+
+- **Three create buttons now name what they make.** `+ Create` (made a space) and `+ New`
+  (made a project) sat one route apart, both unqualified; the node editor's hub said `new`.
+  Now `+ New space`, `+ New project`, and `new project` — lowercase in the node editor
+  because its neighbour is `import` and its register is its own. Looked at in a browser at
+  1280 and 390: nothing clips, no row overflows, the widest row still fits a phone.
+- **`/<space>/<page>` → `/<space>/<slug>`** in the wiki's published-page article. It was a
+  live violation of the rule three sentences earlier, teaching the reader that the slot
+  after a space id is *named* page when it holds a project's slug.
+- **"Project Snapshot" → "Session Snapshot"** in preferences. It is subtitled with a space
+  id and renders space routes, scene version, socket, scene stream, collaborators and save
+  state — not one project fact. Deliberately NOT "Space Snapshot": over half of what it
+  shows is session, not space.
+- **Guard added** for the one that can silently come back: `copyVocabulary.test.js` now
+  fails on any wiki string writing the slot after a space id as `<page>`/`{page}`/`:page`.
+  Narrow on purpose — `page` cannot join `BANNED`, because it is both sanctioned prose (a
+  published web page) and a live identifier (`window.diiPageQuery`). Confirmed by putting
+  the exact defect back and watching it fail, then restoring.
+
+Two rows added to `docs/ai/known-fixes.md`.
+
+## 2026-08-21 — the last two create buttons, on the owner's call to fix all of them
+
+- **`AdminManageSection.jsx`: "Add project" → "Create project".** NOT the audit's suggested
+  "+ New project": that console uses bare verbs throughout — Create space, Save, Cancel,
+  Rename, Search — and no `+` anywhere, so a plus would have broken its register. "Create
+  project" now matches its own "Create space" in the New Space form. Seen on screen.
+- **`StudioProjectsPanel.jsx`: `＋ New project` → `+ New project`.** The fullwidth `＋` was
+  the only one in the whole studio tree; every sibling create button uses ASCII. **Not seen
+  on screen** — that panel does not surface from any route reachable with the local dev
+  data, and I would not write test projects into another session's dev database to force
+  it. The same string renders correctly in `StudioHub`, which was verified, so the glyph
+  itself is proven; its placement in that panel is not.
+
+## 2026-08-21 — the tool doorway: append a word to a project link and it opens there
+
+The owner's shape, in his words: *"it great when you can go in studio with just easy add
+where you go and it run"*. And, on raw: *"raw and studio is for building so we can add layer
+layer"* — so the project is the address and the tool is a view of it.
+
+    /wcc/mery-petrosyan          the project, published        (already worked)
+    /wcc/mery-petrosyan/studio   the same project, in Studio    NEW
+    /wcc/mery-petrosyan/raw      the same project, node editor  NEW
+    /wcc/p/<id>/studio           the same, on the permanent form  NEW
+
+**A doorway, not an address.** The slug resolves, then the router `replace:`s the bar with
+the lane's existing canonical path. No new permanent URL is minted, so nothing new has to be
+supported forever — and it does not prejudge §7.1 of the URL spec, unsigned since 08-04,
+which stages an addressing model where this level stops existing.
+
+**It fixed a real silent fall-through.** `getAppLocationState` classified the two-segment
+shape and never read `segments[2]`, so `/wcc/x/studio` AND `/wcc/x/banana` both rendered the
+published project at HTTP 200 with the wrong URL in the bar. Measured on prod by rendering,
+because the SPA answers 200 for every path.
+
+Two things added beyond the plan the design agents produced, both from their own adversarial
+pass: **`?query` and `#hash` are carried across** (every other heal in `RootApp` drops them,
+which silently eats `?embed=1`), and **the `/p/` form gets the doorway too**, or "append the
+tool" would have been true of the pretty link and quietly false of the permanent one — the
+form published links actually use.
+
+Three parts of that plan were deliberately **dropped**: a robots.txt change (it would have
+de-indexed URLs the sitemap advertises — the pass's only blocker), an og:image rewrite, and a
+server-side reserved-word guard on project creation that would have turned imports and backup
+restores into hard 400s.
+
+Verified in a browser against production data: all eight cases land correctly, and
+`/wcc/mery-petrosyan/studio` reaches the editor's **auth gate** — "Sign in to open the editor
+for wcc" — not the viewer. The doorway respects the permission model rather than routing past
+it. Full suite: 269 client files pass, +10 new tests, failure set identical to baseline (12
+serverXR files that cannot import `express` in this worktree).
+
+## 2026-08-21 — the layering, Tier 1: one name per level, and a way across
+
+Owner: *"still some thing wrong with namings so we need to do right layering, by example in
+raw when you click back to projects it open .../open/raw/projects"*. He is right, and the
+fault is deeper than that URL. Measured on staging, one space with one project, three entry
+points behaving three ways: `/open/studio` redirects INTO the project; `/open/raw` opens a
+blank canvas that is not that project; `/open/raw/projects` shows onboarding. And the same
+space's projects have two addresses, each nested under a tool.
+
+**The model** (from the audit, and it is just the dictionary made spatial): di.iiii holds
+spaces; a space holds projects; a **tool is a way of opening a project, never a container**.
+
+Shipped — Tier 1 only: copy, navigation targets and prompts. **No new routes.**
+
+- **A way across.** Studio's cluster gains "Node editor", Raw's topbar gains "Studio →",
+  both on the same project. Before this the only path between the two building tools was up
+  to a list and back down, via a blank canvas. This is what the owner meant by *"raw and
+  studio is for building so we can add layer layer"*.
+- **One name per level.** `← Hub` → `← Projects` in Studio; Raw's back stops flipping between
+  `Projects` and `Hub` for one destination; RawHub's `studio projects` → `studio`.
+- **Two silent mis-targets fixed**: Studio's "Nodes" went to a blank canvas, not the node
+  editor's projects; "Go to my spaces" went to one space's project list, not the spaces list.
+- **The chat stops inventing counts.** Nothing injects the caller's spaces or projects, so
+  every "you have N spaces and M projects" was fabricated. Both prompts now carry the
+  hierarchy and an explicit rule against answering from nothing.
+- Ops copy: the prod delete prompt says "N spaces — and the N projects inside them" (they go
+  because their space goes); `project-pull` says objects, not the banned "entities".
+
+**Tier 2 was dropped, not deferred by taste.** The audit proposed `/{space}/projects` and
+`/spaces` as redirect aliases. Neither word is reserved — `PROJECT_RESERVED_SLUGS` is
+{studio, beta, raw, seed, p} and `RESERVED_SPACE_SLUGS` has no `spaces` — so those aliases
+would shadow a project legitimately named "projects" or a space named "spaces". Reserving
+them now is itself a breaking change. It needs a decision, not a patch.
+
+**Tier 3 (flipping the canonical to `/{space}/{project}/{tool}`) stays blocked** on §7.1 of
+`SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04.
+
+**Verified by looking**, not by passing: Raw's topbar at 1440 and 390 reads
+`← Projects · Open Jam · Studio →` with zero slot overlap at all five checked widths.
+
+Worth knowing: **`npm run check:toolbar-overlap` passes vacuously.** Raw defaults to zen, so
+the bar is empty and the script reported "0 children checked" — a green run asserting
+nothing. I measured with the zen preference forced off (`dii.raw.zen.<project>` = `off`), and
+the check should probably do the same.
+
+**Two honest gaps in this pass:**
+- The cross-tool control is **desktop-only in Studio**. Studio's phone chrome is a separate
+  topbar (`smb-topbar`) with room for three controls; adding a fourth would crowd a working
+  surface at 390. Raw's works on both.
+- Studio's cluster now shows `Projects` twice — a window toggle in WINDOWS, my `← Projects`
+  in DISPLAY. Distinguishable by the arrow and the section headings, and still better than
+  `← Hub`, which named nothing. Not clean.
+- Raw still shows no space in its chrome (Studio does: `Atlas · estate map`). Left alone for
+  the same 390px crowding reason; the space is in the URL and the back button's tooltip.
+
+## 2026-08-21 — the lists move to the level they list
+
+The owner's original complaint was an ADDRESS: *"in raw when you click back to projects it
+open .../open/raw/projects"*. The doors audit on `dev` relabelled that button `← Projects` but
+left it navigating to `buildRawProjectsPath` — so the URL was unchanged and the complaint
+stood. An alias that redirects would not have fixed it either: you would still end up looking
+at a tool-nested address.
+
+So these are **canonical**, not aliases. They stay in the bar.
+
+    /spaces              all of your spaces
+    /{space}/projects    that space's projects
+
+Both `← Projects` controls now go to `/{space}/projects`. Every older shape —
+`/{space}/studio`, `/{space}/raw/projects`, `/studio`, `/{space}/studio/projects/{id}` —
+keeps working, and is covered by a test that says so.
+
+**Safe because it was checked, not assumed.** `spaces` and `projects` were reserved in
+`RESERVED_APP_SEGMENTS`, `RESERVED_SPACE_SLUGS` and `PROJECT_RESERVED_SLUGS` — after querying
+production and staging and finding **no space and no project answering to either word on
+either tier** (12 prod spaces, 11 staging). Reserving was free that day and gets more
+expensive every day it waits.
+
+Only the bare two-segment form is the list: `/{space}/projects/extra` deliberately does NOT
+match, so a future addressing model can still use the deeper path.
+
+**Verified in a browser** against both local and production data: `/spaces` renders the
+spaces list and stays; `/wcc/projects` and `/wcc/studio` land on the *same* auth gate at
+their own addresses, so the new one is gated identically rather than routing around it;
+`/open/raw/projects` still works. `/open/projects` does hop into the project — but so does
+`/open/studio`: that is StudioHub's existing open-the-only-project behaviour, not a new one,
+and `open` has exactly one project.
+
+**This does not settle §7.1.** Nothing here touches the editor addresses, which still read
+`/{space}/{tool}/projects/{id}`. Flipping those is the part still waiting on a signature.
+
+**Not done here:**
+
+- `scripts/works-boundary.mjs` — the one place the repo states `project ⊇ space`, the exact
+  inverse of the dictionary — is **not on `dev`**. It lives only on
+  `feat/clean-local-artifact`, which is checked out in another worktree, so the fix went to
+  its own branch `fix/works-boundary-wording` rather than into someone else's in-flight work.
+- The audit's larger finding is untouched and is the real one: production runs **12 spaces,
+  26 projects, median 1, mode 1 — 8 of 12 spaces hold exactly one project**, and `wcc`, the
+  one genuine multi, already fakes nesting with 10 portal entities inside its `main`
+  project. The level is the defect, not the noun. Anything structural waits on §7.1 of
+  `SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04, which stages an
+  end state where this level stops existing.
+
+## Links say where they go, and copy what they mean
+
+Doors audit wave A, fifth slice.
+
+- Studio's "Copy share link" for a non-live project copies the PUBLIC viewer
+  address (/{space}/p/{id}) instead of the auth-gated editor URL a recipient
+  could never open. Same isPublic gate as the live link.
+- "Copy projector link" in the node editor's ⋯ menu — /out had zero inbound
+  links and was reachable only by typing the address. Server projects only;
+  a local canvas /out would show the visitor's own browser storage, not
+  the author's work. The Help sheet's Output row now points at the menu.
+- One label per destination (the audit counted six labels for /{space} and
+  seven for /{space}/studio): opening the public space view says "View live"
+  (StudioHub, admin space rows); opening a space's project list says
+  "Projects" (Studio toolbar "← Projects", admin rows — "Hub" is gone from
+  labels; it was never in the vocabulary).
+
+## The canvas gets its doors
+
+Doors audit wave A, fourth slice. /open/raw — the landing's one front door —
+was a sealed room: no nav, no way back to the landing, no path to Spaces or
+the Wiki.
+
+- The zen wordmark (bottom centre) is now the way home: a link to /, wearing
+  the same ambient clothes (same resting colour, quiet hover, focus ring).
+  This deliberately reverses the recorded "non-interactive by design" note —
+  the sealed-room P0 outweighed it, and a wordmark that links home adds no
+  furniture.
+- The ⋯ menu gains Spaces and Wiki under the existing Home entry.
+- Known gap, left honest: on a phone the wordmark is display:none (it sat on
+  the cards) and zen hides the toolbar — a bare phone canvas still has only
+  the sign-in chip until the toolbar is summoned. Wants its own touch-first
+  pass, not a squeeze into this one.
+- Wiki: the zen article says the wordmark is the way home.
+
+Verified by LOOKING at the preview build (1280×800): resting first-visit
+unchanged, menu entries native, ← Projects label live.
+
+## Sign-in returns you to where you stood
+
+Doors audit wave A, third slice. Every OAuth sign-in dumped the person on the
+landing page — destination lost, ?invite= token lost with it.
+
+- getOAuthUrl (the one builder every sign-in button uses) sends
+  returnTo=path+query; the start routes seal it into the signed anti-CSRF
+  state; the callback redirects there with the ?auth=ok marker appended.
+- sanitizeReturnTo admits only same-site paths (no absolute URLs, no
+  //host, no backslashes, 600-char cap) — the callback cannot become an
+  open redirect. Off-site values sign as if absent.
+- AuthReturnNotice already mounts at RootApp level and preserves foreign
+  params while stripping auth/kept, so the toast and an ?invite= token
+  both work on any return path.
+- Wiki: joining-a-space says sign-in brings you back, invite intact.
+
+## One project, two editors — the door between them
+
+Wave A, second slice of the 2026-08-21 doors audit. A project has always been
+editable in both editors, with no way across and no marker saying which one
+made it — opened in the wrong editor it renders a silent blank.
+
+- Studio's toolbar gains "⇄ Nodes" (Display section, next to ← Hub): opens the
+  same project in the node editor.
+- The node editor's ⋯ menu gains "Open in Studio" for server projects; the
+  local canvas has no Studio twin, so no entry there (guarded).
+- Studio's project list stops disguising node projects as "Project" —
+  `raw-v2` now shows as "Nodes".
+- Wiki (node-editor article) documents the door.
+
+## The doors point where they say
+
+Wave A of the 2026-08-21 doors audit (links/naming/hierarchy, artifact in the
+owner's gallery). Pure link fixes — no design decisions taken, no routes changed.
+
+- `buildRawHubPath` → `buildRawCanvasPath`, `RAW_PAGE_HUB` → `RAW_PAGE_CANVAS`:
+  the name now says the route renders the per-browser canvas, not a hub.
+- Studio's "Nodes" button and admin's "Nodes"/"Node Editor Path" now open
+  `/{space}/raw/projects` — the list their labels promise.
+- `/admin`'s non-admin "Go to my spaces" goes to `/studio` (was `/main/studio`
+  behind a second auth wall); gate copy says "the Spaces page", not "the hub".
+- Raw's back button says "← Projects" in both mounts (was "Hub" in one).
+- Wiki: the false claim that "Step inside" lands in the Open Space's shared
+  build is rewritten to the truth (browser-local canvas); the node-editor
+  article now names `/…/raw/projects` vs `/…/raw` correctly.
+
+Known-fixes rows + regression guards added for both broken doors.
+
+## The defect wave from the 08-21 deep audit — nine verified fixes plus the rename verb
+
+Source: a ten-agent audit (six tool-research scouts, four UI walkers at phone
+and desktop size) whose ledger lives outside the repo; every finding below was
+re-verified live before and after the fix.
+
+- Placement anti-stack: double-tap placement on a phone clamped every card
+  into a ~108px band, stacking new cards on the last one. The clamp stays;
+  an occupied spot now walks down (then wraps) until free.
+- Node drags clamp like placement — a card could carry its door fully
+  off-screen with no way back.
+- Tap on empty canvas clears the selection — the phone's only deselect
+  (registered synchronously at pointerdown; a quick tap's pointerup beats
+  the React effect that attaches the pan listeners).
+- Entering the fullscreen room clears the selection: the inspector sheet
+  covered 38% of "fullscreen" with an armed Delete floating over the stage.
+- .raw-room-exit had NO base style — a 21px default-HTML button as the only
+  way out. Styled like its topbar siblings, 44px.
+- The all-nodes example now force-fits after insert (new fitSignal prop on
+  RawGraphSurface) — 93 of 93 cards in view where before most sat off-screen.
+- The palette measures its real box and lifts itself back inside the
+  viewport (the JS assumed the list's 280px; the input row made it ~336px).
+- Palette rows get the 44px touch minimum the rest of the file enforces.
+- A redirected wire drop says so: "Size can't take Number — wired to
+  Roughness instead" — the snap-to-nearest-compatible stays, the silence goes.
+- RENAME exists: the inspector title is click-to-edit (the schema always
+  supported label patches; no surface offered the verb). Help's controls
+  list teaches it.
+- Zen: a DERIVED empty-canvas default is stored as 'auto-on' and lifts
+  itself when the first node lands — the topbar (and its Scene button)
+  appear the moment there is a scene to look at. An explicit zen choice is
+  never touched. zenMode tests updated to the revised contract.
+- Auto-opened windows spread over a 16-slot 2D cascade instead of the 8-slot
+  32px staircase that piled three windows into one stack.
+
+## Also in this branch
+
+docs/ai/RESEARCH_METHOD.md — the standing credit-managed research method
+(questions first, cheap schema'd scouts, synthesis in the main session,
+ledger files, spend stated). The sessions README now warns that land quotes
+the note's first heading into CURRENT.md.
+
+## What this branch does
+
+Wakes device.midi.out — the first dormant send-out node made real. A
+MidiOutFeed (the KeyboardFeed shape: invisible, one per node, editor-level)
+sends over Web MIDI: Trigger truthy holds a note (rising edge strikes at
+Note/Velocity, falling releases the note actually struck), a truthy-but-
+changed trigger re-strikes (the rising-count idiom), and a changed Value
+leaves as CC. useMidiOutput joins useMidiInput in midiCapture.js — same
+status vocabulary, same hotplug behaviour, same navigator-boundary fake in
+tests. Status is a real output read from the live side channel.
+
+## Where things stand
+
+Registry entry un-shelled (runtime 'web', channel input added, hostHint
+default dropped), removed from UNIMPLEMENTED_NODE_TYPES, guard test now
+holds device.osc.out as the canonical shell. Wired in the all-nodes
+example; wiki article beside MIDI In's; behaviour-tested at the fake
+navigator boundary including the stuck-key release on unmount.
+
+## Decisions worth keeping
+
+- Sends to EVERY connected output; a device picker can come later — a
+  venue with exactly one synth cable is the common case.
+- Note release names the note that was STRUCK, not the current Note input —
+  anything else leaves stuck keys when Note moves while held.
+- No hardware in CI or on this machine: verified at the API boundary plus
+  a browser pass showing honest status text. The first real cable test is
+  the owner's — the node says plainly what it is doing either way.
+
+## 2026-08-21 — test:raw, and what the gate's minutes are actually spent on
+
+- `npm run test:raw` — the fast loop for Raw work. 1080 tests, 108 files, ~25s against
+  ~97s for the full run. Scope is Raw, the node graph, Studio's graph surfaces and the
+  node-vocabulary guards: `src/project` and `src/studio` are in because a node change
+  reaches them, and leaving them out would have made the subset feel fast by not looking.
+- **It guards its own scope.** `src/raw/rawTestScope.test.js` reads the filters out of
+  package.json rather than restating them, walks every test under `src/`, and goes red
+  naming the file if one imports from `src/raw` or `src/project` while sitting outside
+  what `test:raw` collects. A subset that silently stops covering something is worse than
+  no subset — it reads as "the Raw tests passed" while the failing file was never
+  collected. Watched red with a probe test, then watched green again with it removed.
+- One deliberate exclusion, stated in the open and asserted rather than assumed:
+  `AdminManageSection.test.jsx` imports `project/services/projectsApi.js`, the REST
+  client, not the graph. The test also fails if an excluded file stops existing.
+- **This does NOT shorten the PR gate, and it was never going to.** Measured: the full
+  suite is ~97s wall, and `serverXR/src/httpContracts.test.js` alone is 30–51s of it —
+  a third to a half, in one file. Slicing Raw out of CI would trade real coverage for
+  seconds that are not where the time is. test:raw is a local loop; CI keeps the full run.
+- **Found while measuring: `httpContracts.test.js` is flaky on dev.** "throttles repeated
+  sync status requests with 429 + Retry-After" — same file, same command, one run red and
+  the next fully green, duration swinging 30→42→51s. It is load-sensitive, not
+  order-dependent (an early read that it failed 3/3 in isolation was an artifact of `-t`
+  skipping the other 53 tests and their setup — discarded). Not touched here: it is a
+  serverXR concern and wants its own fix, but a gate with a coin-flip in it is the next
+  real velocity problem, ahead of any further slicing.
+- Still open in the workshop map's lane 2: widening the `authoringOnly` staleness guard,
+  which remains blind to viewport/window-only implementations.
+
+## What this branch does
+
+Line and Circle — the last two pure-geometry singles from the
+TouchDesigner-audit remainder. Line is a stroke between two wirable
+endpoints, drawn as a thin cylinder (GPU line width is unreliable across
+platforms), steered by two nested groups — yaw about Y, tilt about X —
+no quaternion, no new three import. Circle is a flat disc facing +Z,
+Plane's round sibling, with the standard material inputs.
+
+## Where things stand
+
+Both are colocated runtimes answering Geometry descriptors, so Array can
+build a fence out of Lines and Transform can carry a Circle. GEOMETRY_KINDS
+gains 'line' and 'circle'; GeometryPieces renders both as leaves;
+renderNodeBody renders both standing. Wired into the all-nodes example,
+behaviour-tested including a Line-through-Array pruner pass.
+
+## Decisions worth keeping
+
+- Line has NO position/rotation inputs — the endpoints ARE the placement.
+- Circle stands vertical by default like Plane; rotate it to lay a mark on
+  the floor. Consistency beat the theatrical default on purpose.
+
+## What this branch does
+
+Six more pure operators from the TouchDesigner-audit remainder — the second
+vector wave. Dot (agreement + angle in degrees), Cross (perpendicular),
+Direction (normalise, zero stays zero), Rotation (Rodrigues spin around an
+axis, degrees), Aim (the euler that makes a shape's +Z face a target —
+dependency-free, proven against three's lookAt in the tests), and Random
+(one fixed draw per Variant, the still counterpart to Noise).
+
+## Where things stand
+
+All six are colocated runtimes under `src/project/nodes/<typeId>/runtime.js`,
+registered in NODE_RUNTIMES and the registry (numbers family), wired into the
+all-nodes example, and covered by behaviour tests including an exact
+three-comparison for Aim. No clock involvement — all six are pure.
+
+## Decisions worth keeping
+
+- Angles a person types are degrees (Rotation's Angle input, Dot's Angle
+  output). Rotations a wire carries are radians, because they plug straight
+  into three (Aim's output). The wiki row says which is which.
+- "Face" means the flat +Z side, the way a monitor faces you.
+- Matrix and Curve from the audit were NOT built — without a real mesh lane
+  they would be shells; they move to the mesh-workshop project.
+
+# The operator's hands (TD audit, wave 5 of 5)
+
+## What changed
+
+- **Button** — the desk's Go: a window with one big pressable surface.
+  Presses is the authored count, written through an op so every window and
+  a Counter downstream agree how many times the show was told to go;
+  Pressed is this window's live finger through the side channel.
+- **Keyboard** — a chosen key (default Space) read by an invisible
+  editor-level KeyboardFeed: repeat events don't recount (a held key is
+  one event, the Counter convention), and keys typed into fields are
+  ignored — the spacebar that fires the show must not fire while naming a
+  node. Window-local by nature; /out has no fingers.
+
+Both wired into the example: Go's presses drive the Counter's step, the
+chosen key samples the sine through Hold.
+
+## Verified
+
+Runtime reads (authored count vs live hold, feed-quiet defaults), the
+feed's repeat/field/case rules, the window's press-and-hold contract and
+its disabled-without-a-writer state — all unit-proven. Full suite
+2553/2553 (one known local-dev-server fetch flake, clean on rerun); lint
+at baseline; build/wiki/docs green.
+
+## 2026-08-20 — the anatomy manifest is measured, not committed
+
+- `nodeAnatomy.generated.js` is gone. It was keyed by line number, so it changed
+  whenever any of the three files it measures changed, and it rode along in 10 of 13
+  Raw wave diffs as a pure conflict — never a reviewed line, always a rebase to redo.
+- The velocity plan offered "re-key to stable anchors, or regen post-merge in CI".
+  Neither survives contact: any stable anchor still has to resolve to line ranges
+  somewhere, and the browser is deliberately forbidden from pattern-matching source.
+  So the measurement moved instead of the keys — `virtual:node-anatomy`, a vite plugin
+  over the same acorn extractor, run during the build that ships the code.
+- Manifest and source are now the same revision by construction, so the whole staleness
+  class is gone and with it `check:node-anatomy` (off the PR gate) and
+  `docs:anatomy:sync` (off the add-a-node checklist). The dev server re-measures on
+  change to a measured file, so a long-running editor cannot drift either.
+- The extractor's semantic guards all stay — a build-time extractor with a bug is
+  exactly as wrong as a committed one. Only the round-trip freshness assertion went;
+  in its place, one that the manifest names no file outside `MEASURED_FILES`.
+- **Removing the check did not shorten the gate** (4m48s on this PR, against ~4m41s
+  measured before). The un-sliced vitest run is the whole cost, so `test:raw` is the
+  lane-2 item that actually buys time. This one buys rebases.
+- Seen, not inferred: `/raw` → inside Cube → "What it's made of" → "Show the lines"
+  quotes `nodeGraphRuntime.js` 203–221, the real `geom.cube` case. Re-checked after the
+  rebase, which also proved the point — the branch conflicted within the hour, on
+  exactly the file it deletes, because two Raw PRs regenerated it.
+- Carried across from #215, which landed real work into the file this branch deletes:
+  colocated runtimes (`src/project/nodes/<typeId>/runtime.js`) are a manifest source, so
+  `buildManifest` discovers and fingerprints them alongside the trio. The watch list
+  became a predicate (`isMeasuredFile`) rather than a list — migrating a type out of the
+  switch CREATES its runtime file, and a list built at server startup is blind to exactly
+  the file that just appeared, so the dev server now re-measures on `add` too. Seen:
+  inside Video, the sheet quotes `runtime.js` 1–8, the whole colocated module.
+- **Land this promptly.** It conflicts with every wave that touches what it deletes —
+  three times in one afternoon (#207/#208, #213/#214, then #215). The first two were the
+  generated file and resolved with one `git rm`; the third was a real change to carry.
+  Worth knowing while it waits: GitHub
+  queues no `pull_request` CI run while a PR is conflicting, so a stale branch here reads
+  as "no checks yet" rather than as a conflict, and polling for CI never resolves.
+- Still open in this lane: the `test:raw` script and widening the `authoringOnly`
+  staleness guard, which is still blind to viewport/window-only implementations.
+
+# The geometry wave (TD audit, wave 4 of 5)
+
+## What changed
+
+- **Cylinder, Cone, Torus** — primitives the entity system always had,
+  finally spoken as nodes: full material ports, wired colours reaching the
+  descriptor (the cube convention), each speaking its shape as a Geometry
+  value. GEOMETRY_KINDS and the renderer's leaf walk learned all three, so
+  they travel down wires into Arrays, Transforms, Geos and Constructors
+  like the original three.
+- **Transform** — re-frames one incoming shape (Position/Rotation/Scale
+  around it, internal frames intact): Array's sibling for a single copy.
+  Pass-through: bare it honestly carries nothing.
+
+## Verified
+
+Descriptor outputs with wired colour, Transform framing + bare-dead,
+descriptor-kind acceptance updated (torus in, teapot still out); the
+example gates all four with a Torus→Transform wire and the pass-through
+proof; full suite 2547/2547; lint at baseline. SEEN (screenshot read): red
+cylinder, green cone, tilted gold torus standing in the scene.
+
+# The vector/colour wave (TD audit, wave 3 of 5)
+
+## What changed
+
+Six pure taps and joins for the two compound wire types — the openers every
+node tool has and this desk was missing:
+- **Split** / **Combine** — a vector into its X/Y/Z and back; drive just
+  the height, read just the sideways.
+- **Channels** — a colour opened in BOTH alphabets at once: Red/Green/Blue
+  and Hue/Saturation/Lightness, all 0..1, wire the reading you mean.
+- **Compose** — R/G/B numbers back into a colour.
+- **Distance** — how far apart A and B stand, and how long A itself is
+  (the proximity trigger's other half: Distance → Compare → anything).
+- **Ramp** — a three-stop gradient read at Position: sunrise through noon,
+  where Mix only blends two.
+
+Shared `colourMaths.js`: pure hex↔RGB↔HSL arithmetic; the colour wire
+carries '#rrggbb', channels travel 0..1.
+
+## Verified
+
+Split/Combine inverse, 3-4-5 length, both colour alphabets on pure red,
+hex recomposition, ramp endpoints/midpoint/quarter and clamping — all
+unit-proven; example graph wires every one; family count 34→40; full
+suite green; lint at baseline.
+
+# The state wave (TD audit, wave 2 of 5)
+
+## What changed
+
+Seven remembering operators, all on frameMemory, all edge-driven:
+**Counter** (rising edges only — a held button is ONE event), **Hold**
+(passes through until sampled, then freezes), **Delay** (answers the past
+from a time ring), **Timer** (cued stopwatch: Elapsed/Progress/Done),
+**Trigger** (one attack-hold-release envelope per firing, re-fire
+restarts), **Speed** (integrates a rate into travel), **Toggle** (the
+latch — a held button versus a light switch).
+
+Shared `edge.js`: rising-edge detection over frameMemory whose transition
+fires on the FIRST evaluation after the flip — which also makes
+multi-output nodes safe: the first port's compute consumes the edge, the
+same pass's other ports read the settled state. The temporal four (Delay,
+Timer, Trigger, Speed) joined CLOCK_DRIVEN_TYPE_IDS; the edge three cost
+nothing at rest.
+
+## Verified
+
+Edge-only counting, hold-then-freeze, timer restart + progress + done,
+the exact envelope shape at five moments, dt integration with a same-now
+no-op, latch flips, and the delay ring answering the past — all
+unit-proven. Family count 27→34; full suite 2542/2542; lint at baseline.
+
+# The numbers wave (TD audit, wave 1 of 5)
+
+## Why
+
+The owner asked for the full TouchDesigner-and-similar audit and to add
+what it finds. A six-agent research pass over TD CHOPs/TOPs/SOPs/DATs and
+the cross-tool common set produced 105 gaps; re-tiered honestly against
+our engine (the descriptor lane is not a mesh engine; Sound already covers
+Envelope/Spectrum), the buildable-now set is ~26 nodes over five waves.
+This is wave 1: the pure number operators.
+
+## What changed
+
+Seven wire-first nodes, all colocated, all pure:
+- **Range** — the remap every show patch needs (From span → To span; no
+  clamping — Clamp chains; zero-width span answers To Low).
+- **Oscillator** — Sine/Square/Triangle/Saw of one document-clock phase
+  (clock-driven, so every window oscillates together); Phase in cycles.
+- **Logic** — Both/Either/One/Neither of two booleans, in plain words.
+- **Extremes** — Least/Greatest of A and B.
+- **Absolute**, **Round** (Nearest/Floor/Ceiling).
+- **Ease** — Smooth/Ease In/Ease Out/Bounce of a clamped 0..1 progress.
+
+## Verified
+
+Behaviour unit-proven (remap maths incl. inverted and zero-width spans,
+all four waveforms at known phases, the four logic verdicts, ease clamps
+and exact bounce landing); example graph wires every one; family count
+20→27; full suite 2536/2536; lint at baseline; LOOKED at (screenshot
+read): all four new cards with their wire-first ports, triangle→Range→
+Sphere radius wired.
+
+# Colocation, group one: time and the maths (plan phase 4)
+
+## What changed
+
+The first migration group leaves the legacy switch: `time` and the nine
+`math.*` types now live in `src/project/nodes/<typeId>/runtime.js`, behind
+the NODE_RUNTIMES map the dispatcher consults first. Behaviour is verbatim
+— Divide and Modulo keep their zero guards, Mix rides the shared
+shape-aware helper (now handed to colocated runtimes as `mix`), the Time
+comments travelled with the code. The switch shrank by ten cases; TAU
+left with its only user.
+
+The registry's authoringOnly guard learned that evaluated types live in
+TWO homes — it unions the switch scan with the map keys, so the day the
+last case leaves the switch it keeps holding.
+
+Remaining groups, deliberately later: value.* constants (a fall-through
+group), geom bodies, panels, room types.
+
+## Verified
+
+Full suite 2531/2531 (every existing runtime test now exercises the
+colocated paths — the example graph resolves every wire exactly as
+before); anatomy manifest points the ten computes at their folders and
+fingerprints them; lint at baseline; no type lives in both homes
+(nodeRuntimes.test.js holds it).
+
+# Mobile paper cuts (real-S24 audit, second pass)
+
+## What changed
+
+1. **Palette results scroll under the phone keyboard** — the graph surface
+   behind the palette claims touch-action none, and the list (its own
+   scroller) never said otherwise, so a fingertip could not scroll the
+   results. The list now declares pan-y.
+2. **The number edit buffer** — bare live-commit number inputs corrupted
+   mid-edit values: Number('') is 0, so clearing a field to retype
+   committed 0 under your thumbs. NumberField keeps a draft while focused,
+   commits only valid parses, snaps back on blur, selects everything on
+   focus (a fresh number replaces, not appends) and Enter closes the
+   keyboard. Scalar and vec3 fields both ride it.
+3. **Delete above the sheet, not under the banners** — the phone rule used
+   to move Delete to the top-right, where Android notification banners
+   drop over it and steal the tap (the audit's "dead Delete button"). It
+   now rides just above the docked inspector sheet, whose measured height
+   the editor already publishes; thumb-reachable, banner-safe.
+4. **The Colour swatch tells the truth** — an unset Colour showed a white
+   swatch while the cube stood there blue; it now falls back to the
+   port's real default.
+
+Room tap-empty deselect (audit paper cut 5) is expected fixed by #210's
+gesture work (onPointerMissed now receives the tap) — queued for the
+consolidated real-device pass rather than re-coded blind.
+
+## Verified
+
+Buffer contract unit-proven (empty never commits; blur restores); FAB
+geometry probed on the phone layout (fabBottom 510 < sheetTop 522) and
+LOOKED at — Delete sits above the sheet, material ports visible in card
+and inspector. Real-device confirmation of scroll/keyboard behaviour rides
+the next staging pass with the S24.
+
+# The Timeline learns to run (plan 3.9, minimal cues)
+
+## What changed
+
+- `view.timeline` gains its first REAL outputs — **Playhead** (frames — clips
+  are integer frames throughout) and **Playing** (boolean). The dead-port
+  rule that stripped its ports holds: these ship together with the runtime
+  that computes them.
+- **The transport lives in node.values** (playing / playheadFrame /
+  playFromFrame / playStartClockMs) and derives from the DOCUMENT clock:
+  playing, the head is `playFromFrame + (clockNow − playStartClockMs) × fps`
+  — every window and /out compute the same frame from the same press.
+  Pressing Play stamps the show clock if nothing had yet.
+- Panel: a Play/Pause button in the bar; the readout and marker follow the
+  derived head; a finished scrub WRITES where the show stands (paused → the
+  standing frame; playing → re-anchors the run from the scrubbed frame).
+  Clip-add and razor act at the visible head.
+- The rAF gate arms per-NODE for the timeline: a PLAYING timeline is
+  clock-driven, a paused one costs nothing.
+- Full keyframe engine stays out, per the plan.
+
+## Verified
+
+Runtime paused/playing/skew-guard unit-proven; gate arms only for playing;
+panel transport tests (Play anchors through values, Pause writes the frame
+back, no writer → no button); full suite 2529/2529; lint at baseline. SEEN
+(screenshots read): Play pressed on the local build — the readout runs, the
+marker crosses the clip, the card carries Playhead + Playing, and the
+document stamped its show clock.
+
+# Material inputs, pass 1 (plan 3.8)
+
+## What changed
+
+Cube, Sphere and Plane gain four appearance ports — **Roughness, Metalness,
+Emission, Opacity** — wired like any other input, so a Sound's Low band can
+breathe a cube's glow. Defaults mirror a bare meshStandardMaterial
+(roughness 1, metalness 0, black emission, opaque): documents that predate
+the ports render pixel-identical, LOOKED at side by side.
+
+PrimitiveMaterial (already carrying these props for Studio entities) gains
+`textureLive` — a live THREE.Texture (a webcam's or Video's Frame) used as
+the map directly, winning over URL-loaded textures — which let the Plane's
+live-texture branch join the same material path instead of a bare inline
+material.
+
+## Honest looks, stated
+
+- Metalness 1 renders DARK: physically correct with no environment map to
+  reflect — the scene has no reflective world yet. An artist sliding
+  Metalness up will see the cube go black; an environment map is future
+  work, not a bug here.
+- The Plane's legacy `textureUrl` branch (PlaneWithTexture) keeps its own
+  material and does not yet read the new ports.
+
+## Verified
+
+Body props unit-proven (values through to BoxObject/SphereObject, defaults
+exact); full suite 2522/2522; lint at baseline. SEEN (screenshot read):
+plain / metal / half-transparent-emissive cubes side by side — back-compat
+cube identical, ghost cube transmits the grid, metal cube correctly dark.
+
+# Sound learns to speak numbers (plan 3.7)
+
+## What changed
+
+- `media.audio` (Sound) declares four analysis outputs — **Volume, Low,
+  Mid, High**, all 0..1. Volume is time-domain RMS (the microphone's exact
+  measure); the bands average the byte spectrum under 250 Hz, 250–2000 Hz,
+  and above — edges chosen where stage material actually separates (kick /
+  voice / air).
+- `useSoundAnalysis` — the mic-capture idiom pointed at a FILE: an rAF loop
+  over an AnalyserNode, with one deliberate difference: the element's
+  output routes into the analyser and NOWHERE else, so the analysis is
+  SILENT. The scene's Sound object owns being heard.
+- `SoundAnalysisFeed` — invisible editor-level publisher per Sound node,
+  the VideoFrameFeed shape, throttled like the mic panel (100 ms), cleared
+  on unmount so a deleted Sound reads as silence.
+- Colocated `media.audio/runtime.js` reads the four channels back, 0 —
+  silence, not undefined — where nothing analyses.
+- Known seam, stated: analysis follows the editor's own playback; two
+  playbacks of one file started at different moments drift. Owed to the
+  show clock.
+- `beat` deliberately NOT shipped: a real onset detector or nothing — a
+  fake beat that misfires on stage is worse than its absence.
+
+## Verified
+
+Runtime reads unit-proven; full suite 2520/2520; lint at baseline. SEEN
+(headed browser, screenshots read): a 110 Hz test tone wired Volume →
+Sphere.Radius — the sphere breathes at the tone's level, lands in the Low
+band, and VANISHES the moment the tone ends. Headless Chromium's analyser
+reads all-zero (environment artifact, cost an hour — headed run settled it).
+
+# Video gains a Frame (plan 3.6)
+
+## What changed
+
+- `media.video` now declares a **Frame** output (texture) — the playing
+  picture as a wire value, the webcam idiom. A Monitor can watch a Video;
+  anything that eats a texture can wear one.
+- **VideoFrameFeed** — an invisible editor-level publisher, one per playing
+  Video node. The scene only mounts VideoObject in the fullscreen room, but
+  a Frame wire must carry the picture wherever the graph is looked at; the
+  feed owns the pipeline instead (found by LOOKING: the first cut threaded
+  the publish through the viewport, and the Monitor stayed honest-empty in
+  canvas view). VideoObject's texture registry is shared and refcounted by
+  (source, settings), so the room and the feed stand behind ONE video
+  element. `useVideoTextureSource` is now exported for this.
+- Colocated `media.video/runtime.js` reads the side channel back; null — no
+  frame, not a frozen one — where nothing renders the video (the read-only
+  /out shows the video in the scene itself).
+- **The anatomy extractor learned colocated runtimes** (this PR's enabling
+  infrastructure): `src/project/nodes/<typeId>/runtime.js` is measured
+  whole-file with answers extracted, fingerprinted like the three measured
+  files, and quotable in the sheet via a Vite glob — the trio/Lag/Noise/Array
+  entries stop reading "computes: null".
+- Monitor empty-state, manual and wiki: "a Webcam's Frame, for now" → "a
+  Webcam's or a Video's Frame".
+
+## Verified
+
+Runtime read (live texture / null), feed publish + clear-on-unmount, full
+suite 2519/2519, lint at baseline; SEEN: a seeded Video → Monitor document
+on the local build shows the playing footage inside the Monitor window in
+canvas view (screenshot read).
+
+# Array (plan 3.5)
+
+## What changed
+
+`geom.array` — **Array**, make family, the reserved name claimed. A pure
+descriptor transform: repeats what arrives as Count copies, each wrapped in
+a transform group offset by i × Offset, so the copy's internal frames stay
+intact. Copies ALIAS the source descriptor (the tree is walked pure, never
+mutated). Count clamps to MAX_GEOMETRY_PIECES; the renderer's prune still
+holds the real budget across the whole tree. Bare — or fed a non-geometry —
+it honestly carries nothing: `geom.array.out` joins PASS_THROUGH_PORTS with
+a proving fixture. Colocated runtime; helpers gained asVec3.
+
+## Verified
+
+Copy placement maths, aliasing, count clamp (0→1, 99999→256), junk-fed
+dead; example graph gains Array fed by the cube's geometry; full suite
+2515/2515; lint at baseline; canvas LOOKED at (screenshot read: the wired
+pair, typed ports, inspector fields).
+
+# Frame memory + Lag + Noise (plan 3.2 + 3.4)
+
+## What changed
+
+- **createFrameMemory()** — between-pass node state, the infrastructure the
+  audit called for (plan 3.2): a per-WINDOW Map injected via
+  createNodeGraphContext, never React state, cleared when the document
+  changes. null stays legal — memory-less evaluation (tests, one-off reads)
+  makes remembering nodes answer as if every frame were their first.
+- **signal.lag (Lag)** — exponential glide toward its input, frame-rate
+  independent (k from real dt), the FIRST consumer of frame memory. The
+  anatomy sheet carries its OWN memory — sharing the room's would write it
+  twice per frame at two different clocks and corrupt the glide.
+- **value.noise (Noise)** — smooth value noise over the document clock,
+  deterministic in (now, speed, variant): every window and /out see the
+  SAME wander. The variation input is Variant ("seed" is banned copy).
+- **CLOCK_DRIVEN_TYPE_IDS** — the rAF gate (and the show-clock stamp) now
+  arms for Lag and Noise too, not just Time; both read context.now.
+
+## Verified
+
+Lag glide maths (1s at lag 0.5 closes 1−e⁻² exactly), Noise determinism +
+range + frame-to-frame smoothness, no-memory fallback; family count 18→20;
+full suite 2512/2512; lint at baseline; cards + inspector LOOKED at
+(screenshot read). Example graph gains both (Lag smooths the sine).
+
+# The logic trio + the first colocated runtimes (plan 3.3)
+
+## What changed
+
+- `logic.compare` / `logic.gate` / `logic.switch` — the show operators'
+  decision nodes, in the numbers family, TD-informed names from the
+  vocabulary's reserved table (now claimed there).
+- **Compare is wire-first**: no operation menu machinery exists in the
+  registry, so instead of inventing an enum it answers with three boolean
+  outputs — Less · Equal · Greater. Equal tolerates float dust (1e-9): two
+  live numbers are never bit-identical.
+- **Gate** passes Value through while Open (default true); closed or bare
+  it carries NOTHING — a dead wire, not a zero, so downstream defaults take
+  over exactly as if unplugged. `logic.gate.out` joins PASS_THROUGH_PORTS
+  with a proving fixture.
+- **Switch**: Pick off speaks A, on speaks B; any type passes through.
+
+## The Phase-4 seed
+
+These are the first COLOCATED runtimes: `src/project/nodes/<typeId>/runtime.js`
+with `src/project/nodes/index.js` exporting NODE_RUNTIMES. The graph runtime
+consults the map BEFORE its legacy type switch; runtimes receive only
+`(node, portId, { input, asNumber, context })` and import nothing back, so
+the dependency stays one-way. `nodeRuntimes.test.js` holds the law both
+ways: no type in both map and switch, every map key implemented and not
+authoringOnly (the registry's own switch-scanning guard is blind to the map).
+
+## Verified
+
+Trio behaviour 10/10, allNodesExample gates the three (Compare watches the
+sawtooth midpoint, its verdict opens the Gate and flips the Switch), family
+count 15→18, full suite green, palette + cards LOOKED at (screenshots read:
+search resolves, ports typed and labelled).
+
+# The document show clock (plan 3.1)
+
+## Why
+
+`time` read each window's own `performance.now()`, so the editor, a second
+window, and /out disagreed about "now" by however far apart their page loads
+were — the manual even listed it as an honest limit. A show has ONE clock.
+
+## What changed
+
+- `document.showState.clockEpoch` (both schema mirrors + `setShowState` op
+  with inverse; junk-normalized; parity-tested). Wall-clock ms, stamped once.
+- `useDocumentClock(document)` wraps `useGraphClock`: with an epoch every
+  window computes `Date.now() - epoch` (same value everywhere); without one
+  it falls back to the old window-local clock. The rAF gate (no Time node,
+  no per-frame work) is unchanged.
+- RawEditor stamps the epoch ONCE, the first time a Time node exists —
+  `setShowState` rides `ignoreTypes` beside `setWorkspaceState`, so the
+  stamp never lands in undo history. /out never writes; a document only
+  ever opened on /out keeps the fallback.
+- Both clock call sites (RawEditor context, RawViewport SceneContent) now
+  read `useDocumentClock`; the anatomy frame derives from the same value.
+- Manual: the "two windows can be offset" honest-limit paragraph replaced
+  with the shared-clock truth.
+
+## Semantics shift (owner-facing)
+
+Time now means "since the show clock started", not "since this window
+opened". Existing documents with a running Time node get stamped on their
+next editor open — Time restarts near zero at that moment, once.
+
+## Verified
+
+Schema 35/35 + parity 23/23, useDocumentClock 3/3, RawEditor 65/65; full
+suite, lint, build, anatomy, wiki, docs checks green (see PR).
+
+# The mobile touch wave (real-S24 audit findings 1–5)
+
+## Findings, from a real-device audit driven over adb
+
+A hands-on audit on the owner's Galaxy S24 (real input stack, screenshots
+read) falsified "touch works in the room" and found the phone's real story.
+
+## What changed
+
+1. BLOCKER — objects could not be finger-moved in the scene (fine under
+   every emulation, dead on hardware). THE FIX THAT WORKED: the drag's
+   move/end handlers now hang on the grabbed object as well as the floor
+   plane, so the drag rides the grabbed object's own pointer capture.
+   The touch-action lead was a partial red herring: R3F writes an inline
+   touch-action auto on the canvas (a class rule loses to it) but an
+   inline none on its wrapper div, so browser gestures were already
+   blocked by the ancestor intersection. The CSS rule stays as defence in
+   depth, with !important so the canvas measurement finally reads none.
+2. Hardware Back at ROOT rendered a false-empty canvas over an intact
+   document (the depth guard was `> 0` against a stack whose root length is
+   1 — Back navigated to index -1). Now Back at root stays put and re-arms;
+   inside a scope it still pops one level. Tests prove both.
+3. New cards landed under the incoming docked inspector (3/3 creations on
+   the S24 occluded). The placement clamp now reserves the lower 45% of the
+   canvas on coarse pointers. Test proves the clamp.
+4. Wire endpoints: drop radius doubles for touch releases and every port
+   dot carries an invisible ~44px halo on coarse pointers.
+5. A wire that dies on release SAYS why, where it died ("Colour can't feed
+   Size (Vector)" / "release it on a lit port") — the two silent failure
+   modes were indistinguishable. Test asserts the notice.
+
+## Verified
+
+Suite 2489/2489, lint below baseline, build/anatomy/wiki/docs green.
+REAL-DEVICE CHECK (2026-08-20, S24 over adb, screenshots read): a single
+finger swipe moved the seeded cube from [0, 0.5, 0] to [1.11, 0.5, 2.42]
+and opened its inspector — drag, selection and inspector all live on
+hardware. Emulation is proven meaningless for this bug (it never
+reproduced there).
+
+# The container story (plan PR 2.5)
+
+## What changed
+
+- universe.desk.3d retires from the palette (paletteHidden): its role — a
+  place in the scene that renders its children — is exactly Geo's job, and
+  two containers with one job was the zoo. Existing desks keep working
+  (shell body, children, doors untouched).
+- The interior-rendering rule is written ONCE, at CONTAINER_TYPE_IDS: Geo
+  and 3D Desk draw their children; Scene and Constructor suppress; the
+  hidden containers never stand in the room. The anatomy sheet's container
+  sentence now derives to Scene · Kiosk · Geo · Studio · Constructor
+  automatically (PLACEABLE_CONTAINER_LABELS reads the palette).
+- All-nodes example: desk removed, doorways moved inside the Geo, the stale
+  'Stage' label corrected to Kiosk. Wiki states the one rule and the desk's
+  retirement.
+
+## Verified
+
+Full suite 2486/2486, lint clean, build/anatomy/wiki/docs green.
+
+# Help teaches the real product (plan PR 2.6)
+
+## What changed
+
+rawGuide.js becomes a four-section teach in the settled vocabulary: Start
+(double-click/tap, palette, families), Wires (port to port, compatibility
+lighting, maths on the way), Places (enter/leave, the trail, doorways,
+selection dies at the door), The scene (window / Full screen / /out,
+Environment vs Light, Camera ●, one sky). The dialog's tabs return
+automatically (they hide only below two sections).
+
+USER_MANUAL: the four July-30 fossils rewritten (visitor steps, the four
+first-exercises taught through the palette instead of retired surfaces),
+"The desk and the room" heading → "The canvas and the scene", the vs-Beta
+comparison frame dropped (its three living rules kept as "Three rules the
+node editor lives by").
+
+## Verified
+
+By eye (screenshots read): Help opens on Start with tabs Start · Wires ·
+Places · The scene; The scene tab teaches Window/Full screen//out with the
+Environment/Camera/one-sky steps; the dialog text screens clean of banned
+words. Full suite green, copyVocabulary 10/10, build/wiki/docs green.
+
+# Light and Environment — the split (plan PR 2.4)
+
+## What was wrong
+
+world.light was two things wearing one name: per-scope ambient/directional
+settings AND a placeable lamp, deciding which by whether it had a parent —
+and BOTH at once inside a container. Unparented at root it drew nothing.
+
+## What changed
+
+- New `world.environment` "Environment" (TD Environment Light): the scene's
+  settings only — ambient wash + one sun (British labels: Ambient Colour,
+  Sun Colour/Intensity/Position). Hidden render, ●-scoped.
+- New `light.point` "Light": the lamp only — a real point light standing
+  wherever it is placed, ROOT INCLUDED (the disappearing act is over).
+- `world.light` goes paletteHidden with both behaviours untouched — every
+  existing document renders exactly as it did (fixture + screenshot proven);
+  its port labels go British on the way.
+- Read side: `resolveSceneLighting(document, graphContext, {scopeId})` in
+  viewportWorldState.js — active Environment wins, legacy light drives when
+  no Environment exists, null keeps callers' worldState fallbacks.
+- ACTIVE_MARKER_TYPE_IDS gains world.environment; all-nodes example places
+  Environment + a lamp and wires the breathing-intensity chain into
+  Environment; wiki + manual teach the split.
+
+## Verified
+
+By eye (screenshots read): a lamp at root washes a cube's face warm against
+a near-black Environment (theatre practical, three nodes); a legacy dual
+Light document renders pixel-identical to before. Unit: env beats legacy
+beats null; lamp renders at root; legacy unparented still draws nothing.
+Full suite 2486/2486, lint clean, build/anatomy/wiki/docs green.
+
+# The node table — every label settled (plan Phase 2.1 + 2.2)
+
+## What changed
+
+docs/ai/vocabulary.md gains the full 68-type census: two labels changed
+(Director (algovrithm) → Director; node.null Node → Null, TD's exact term),
+everything else confirmed with reasons (Sound kept over Audio deliberately;
+3D Desk survives per the 2026-08-19 note until the container pass), and a
+RESERVED table so the coming waves don't invent names: Environment + Light
+(the split), Compare/Gate/Switch, Lag, Noise, Array, and the streaming four.
+
+New guard src/nodeLabelVocabulary.test.js — the label half of the contract:
+no banned words, British spelling, no leading article, no parentheticals
+(one shell survivor allow-listed with its reason), two words max, and no two
+palette-offered types may share a label.
+
+## Verified
+
+Full suite 2480/2480, lint clean, build/anatomy/wiki/docs green. Naming was
+delegated by the owner ("just make all right naming you can creat
+vocubulaary"); decisions recorded with reasons in the table itself.
+
+# Monitor untagged; the palette leads with make (plan PRs 1.3 + 1.8)
+
+## What changed
+
+- stream.monitor loses its stale `authoringOnly: true` — the palette called
+  the working Monitor "computes nothing yet" (implemented 2026-08-20, tag
+  never removed). The widened guard from PR #202's sibling scans RawEditor's
+  window branches, so this class of lie now fails tests.
+- NODE_FAMILIES declaration order (which IS browse order): make, numbers,
+  the scene, watch, bring in, send out, agents — scene atoms first, hardware
+  demoted.
+- Browse mode leads with NODES: the toolbar-recovery command stays pinned
+  first (in zen it is the only way back — the old test's reason stands),
+  every other command follows the families. Typing keeps exact/prefix rank.
+
+## Verified
+
+By eye (screenshot read): fresh zen desk palette opens Show the toolbar →
+make: Cube, Sphere, Plane, Merge, Constructor, Text…; Monitor row carries no
+shell tag. Full suite 2474/2474, lint clean, build/anatomy/wiki green.
+
+# One word, one meaning — the vocabulary pass lands (plan Phase 0)
+
+## Provenance
+
+Authored by the dob-88 vocabulary session (four commits, cb382339..10dbb9c2,
+including the Kiosk decision), stranded un-pushed on the main checkout's
+local dev when that session moved on. Recovered by fetching from
+/home/dob/di.iiii (read-only), merged onto origin/dev after the Phase-1
+defect wave (#196–#202), reviewed in full as the owner's requested
+"check and collab look".
+
+## What it is
+
+docs/ai/vocabulary.md — the dictionary (space, project, canvas, node,
+object, scene, page, Studio; banned: Raw, Beta, desk, chrome, workspace,
+entity, Universe, lane, surface…; British spelling; bare-noun labels) —
+enforced by src/copyVocabulary.test.js which FAILS THE BUILD when a banned
+word reaches a user-visible string. Node labels settled: universe.world
+World → Scene, universe.space Universe → Kiosk (not Container — Geo already
+took that word), Color → Colour, palette command Room → Full screen (a
+command and a node type were about to answer to one word), Show Chrome →
+Show the toolbar. ~200 user-visible strings reworded across 85 files; ids,
+op names, routes and CSS untouched by design.
+
+## Merge resolutions (this session)
+
+surfaceWorkflow.js/.test.js deletion in dev wins (guard's COPY_FILES row
+dropped); rawGuide.js + RawHelpDialog take dev's post-#200 rewrite with
+dictionary re-applied (aria-label "Raw help" → "Help", guide copy aligned to
+the Full screen command); wikiContent conflict resolved keeping the
+vocabulary wording plus #202's objects-at-root sentence reworded to the
+dictionary; nodeAnatomy.generated.js regenerated, never hand-merged.
+
+## Verified
+
+By eye (screenshot read): Scene kicker + topbar, Colour card and port,
+Kiosk and Full screen in the palette. copyVocabulary 10/10, full suite
+2471/2471 (one known server-contract flake passed on rerun), lint equal to
+dev baseline (18), build, anatomy, wiki (40 articles), docs checks green.
+
+# Chrome sweep + one room, one sky (plan PR 1.6)
+
+## What changed
+
+- Escape at the top of the stack exits the fullscreen room (it used to die
+  silently there); deeper down, scope-popping keeps priority so fullscreen
+  survives the walk as designed.
+- The topbar count is THIS room's card count, not the whole document; the
+  Outliner palette hint stops claiming "this scope" for a project-wide list.
+- The ⋯ menu no longer offers "Streaming Prototype" — one click built nine
+  nodes of which eight are unimplemented shells; handler deleted.
+- WINDOW_DEFAULT_POSITIONS lost its six phantoms (view.assets/activity/
+  project, legacy-world.*) and is exported with a guard test: every key must
+  name a registered type.
+- One room, one sky: WorldPanelWindow now passes the scope's ●-resolved
+  world to its viewport (was its own node), so two open Scene windows in one
+  room can no longer show two different skies. A non-live window's Sky field
+  is inert until ● marks it — that is what ● means.
+
+## Verified
+
+By eye (screenshots read): two Scene windows with different stored skies
+render ONE sky (the ●-marked one, its ● lit); Escape closes the fullscreen
+room; ⋯ menu clean; topbar shows the scope count. Full suite 2457/2457,
+lint at baseline, build/anatomy/wiki green.
+
+# Objects stand at root only; Create leaves the palette (plan PR 1.7)
+
+## What was wrong
+
+document.entities rendered UNSCOPED in every room at every depth — every
+object haunted every container's inside. And the Create window (view.library,
+family make) sat in the node palette making OBJECTS: things with no card, no
+ports, no outliner row, which the node vocabulary cannot describe.
+
+## What changed
+
+- RawViewport renders entities only when scopeId is root (null/undefined) —
+  objects have no parent concept; the top room is where they stand.
+- view.library gains `paletteHidden: true` (a new class: implemented but not
+  offered — distinct from the shells) honoured by listNodeTypes. Existing
+  documents with a Create window still render it; the Studio container node
+  keeps its interior Create (that is the sanctioned home for objects; its
+  guard test now says exactly that).
+- all-nodes example drops the Create panel; manual + wiki state the rule.
+
+## Safety check against real data
+
+Scanned today's di-spaces snapshot (git ~/di-spaces, PARTIAL 2026-08-20):
+zero projects mix entities and nodes, so no real document relied on the leak.
+(VPS DB query was blocked by permissions; the snapshot stands in for it.)
+
+## Verified
+
+By eye (screenshots read): root room shows a legacy box object; inside a Geo
+the room is clean of it; palette query "create" returns nothing; an existing
+Create window still renders. Full suite 2461/2461, build/anatomy/wiki green.
+
+# The surface axis retires; selection lives in its scope (plan PR 1.5)
+
+## What was wrong
+
+Selection visibility was filtered by node TYPE against a retired
+World/View/Graph "surface" axis. `activeSurface` defaults to 'world' in every
+document, so selecting a panel node (Text, Image, Monitor) produced NO
+inspector and NO Delete — the type filter ate it. And because navigation never
+cleared `selectedNodeId`, a red Delete FAB stayed armed for a node invisible
+in the current scope. The axis itself survived only as vestige: rawGuide and
+the Help dialog taught three switchable surfaces that no longer exist.
+
+## What changed
+
+- One predicate replaces the type filter: `isNodeInScope(node, scopeId)`
+  (useNodeGraphScope.js) — selection is visible only in the scope where the
+  node stands; entities count at root only.
+- Scope walks clear the selection (handleEnterNode/handleNavigateToScope),
+  so the stale id never travels.
+- Keyboard delete in RawEditor now serves OBJECTS only — node deletion is
+  RawGraphSurface's own scope-checked handler; both firing double-opped.
+- `activeSurface` is gone: schema default + clamp removed, normalize sheds
+  the key (mirrored in shared/projectSchema.cjs — the ESM/CJS sync test
+  caught the first attempt). No migration: it was UI state.
+- Deleted nodeSurfaceFilters.js + surfaceWorkflow.js (+tests). NodePalette
+  lost its surface filter (full palette everywhere). rawGuide trimmed to ONE
+  truthful section (make/wire/enter/Room); the Help dialog lost the three
+  surface diagrams and its surface prop. Full teach rewrite waits for the
+  naming wave's words.
+- Dead code out: workflowRef/workflowHeight (measured a ref never attached).
+
+## Verified
+
+By eye on the local build (screenshots read): a selected Note panel shows
+inspector + Delete (previously nothing); a stale foreign-scope selection
+shows no Delete; entering a Geo clears the stored selection to null. Full
+suite 2439/2439 (schema CJS mirror synced), lint below baseline, build,
+anatomy, wiki checks green.
+
+# Phone double-tap has a real handler (plan PR 1.9)
+
+## What was wrong
+
+The graph and the room relied on the browser synthesizing `dblclick` from
+two touch taps on `touch-action: none` elements. Chromium synthesizes it;
+the 2026-08-20 real-phone test found the canvas dead at step one.
+
+## What changed
+
+New `createTapTracker` (src/raw/utils/useDoubleTap.js): a pure state
+machine — touch only, second finger poisons (pinch), slide beyond 12px is a
+pan, two taps within 350ms/24px complete on the second up. `up()` returns
+whether a double-tap completed, so callers fire their own freshest handler;
+`justFired()` guards Chromium firing BOTH the tracker and its synthesized
+dblclick. Wired into RawGraphSurface (palette at the tap) and the room's
+floor plane (place at the raycast point, interactive views only). Thresholds
+exported for one-line tuning after the device pass.
+
+## Verified
+
+8 unit tests on the machine (interval, radius, slide, pinch-poison + recover,
+mouse ignored, double-fire guard, triple-tap fires once). Emulated iPhone
+(hasTouch, Chromium): double-tap opens the palette, cube created, screenshots
+read. REAL-DEVICE CHECK OWED: Chromium emulation cannot prove iOS — the owner
+must double-tap staging on their phone before this is called fixed;
+thresholds are exported constants for the tuning that may follow.
+
+# GeometryPieces: pure walk, no shared budget (plan PR 1.4)
+
+## What was wrong
+
+GeometryPieces carried one shared mutable countdown through recursion —
+self-documented as safe only while R3F v8 keeps StrictMode out of the
+Canvas. The R3F v9 upgrade would silently halve the piece cap in dev via
+double-invoked renders.
+
+## What changed
+
+New pure `pruneGeometryDescriptor(descriptor, {maxPieces, maxDepth})` in
+geometryDescriptor.js — returns a tree already inside the caps (leaves
+counted across sibling branches, exactly the old walk's accounting).
+GeometryPieces renders the pruned tree with no budget of its own; a
+double-invoked render prunes twice to the same tree (idempotence tested).
+
+## Verified
+
+Unit tests: cross-branch cap, depth cap, idempotence, transform-preserving
+prune, non-geometry → null. By eye on the local build: a Constructor wearing
+cube+sphere through a Merge renders exactly as before (screenshot read).
+Full suite 2441/2441, lint clean, build, anatomy current.
+
+# /out is truly read-only (plan PR 1.1)
+
+## What was wrong
+
+The overnight audit's sharpest new find: RawOutSurface claimed safety by
+"handlers simply not passed", but RawViewport mounted OrbitControls whenever
+no camera was ●-active — drei attaches its own DOM listeners, so the audience
+could orbit and zoom the projector image.
+
+## What changed
+
+RawViewport gained `interactive` (default true). When false: OrbitControls
+never mounts (camera or not), onPointerMissed is not attached, the floor
+plane carries no click/double-click/drag handlers, and node bodies take no
+pointer grabs. RawOutSurface passes `interactive={false}`.
+
+## Verified
+
+Screenshot-hash proof on the local build: /out before vs after a 340px drag +
+wheel zoom — identical hashes (LOCKED); the editor's fullscreen room with the
+same gesture — different hashes (still orbits). Screenshots read. Full suite
+2437/2437, lint, build, anatomy current.
+
+# No account chip over /out (plan PR 1.2)
+
+## What was wrong
+
+The whole Raw route — /out included — is wrapped in ProtectedSurface, whose
+AuthGate renders the floating account chip by default. A projector page with
+a login chip hanging over the image.
+
+## What changed
+
+RootApp passes `showAccountButton={rawState.page !== RAW_PAGE_OUT}` on the
+Raw ProtectedSurface. The auth gate itself stays — a stranger still meets
+the gate, never content.
+
+## Verified
+
+RootApp route tests: /gallery/raw/out renders RawApp with no chip;
+/gallery/raw keeps it. Full suite 2438/2438, lint, build. Staging /out
+checked as guest after deploy.
+
+# Raw: separate geos — the room picks up the place
+
+## What the owner hit
+
+"now the same cubes in the 2 geos.. i want to seperate geos." Two geos, a cube
+in each: the room showed two identical cubes HOVERING side by side, a click on
+either selected the CUBE (the Geo was unreachable from the room), and a drag —
+which did move the Geo — teleported it (measured: an 80px downward move threw
+a geo from z=0 to z=13.8, because a Geo floated at y=1.2, near the camera's
+eye line, where the drag plane's depth axis explodes).
+
+## What changed
+
+- `nodeGraphAuthoring.js`: a Geo is a PLACE — it spawns ON the floor
+  (liftY 0), not lifted 1.2 like a primitive. Point-placement lands exactly
+  where pointed; the step-aside ring stays at y=0.
+- `nodeGraphRuntime.js`: the geometry-output position fallback matches the
+  registry default ([0,0,0], was [0,1.2,0]).
+- `RawViewport.jsx`: the room selects what stands in THIS room. A nested node
+  carries no click of its own, so clicking a cube inside a Geo picks up the
+  GEO — pill says Geo, inspector edits the Geo, dragging parts the geos.
+  Enter the Geo and the cube is scope-level there, selectable again.
+- `RawViewport.jsx`: drag clamped to the grid (±40 on x/z, lift capped at 40)
+  so a near-horizon move can never throw a thing off past the camera.
+
+## Verified
+
+Palette flow end to end in the browser (DPR 2, screenshots read): two geos
+spawn at y=0 stepped apart; cubes stand ON the floor; click → pill "Geo",
+inspector Geo 0/0/0; the gesture that previously teleported to z=13.8 moves
+the geo a calm 2.7 units. Full suite 2436/2436, lint, build, anatomy, wiki
+checks green. Manual + wiki updated in the same change.
+
+# feat/raw-clear-always — the desk is clear, always; the room is a window you size
+
+Owner, 2026-08-20: "i can't change size … i mean window size of the room,
+world. and i mean clear desk."
+
+## What changed
+
+- **The backdrop is retired.** The desk is flat paper in every scope, whatever
+  stands in the document. The room is a view you open: the Scene window, the
+  fullscreen Room, /out. (Third iteration of this dial in two days: always-on
+  → only-with-content → never; the owner's verdict was the same each time.)
+- **"Room" joined the palette commands** — with the wallpaper gone this is the
+  zen route into the 3D view (the audit had flagged its absence as critical).
+- **The room window could not be resized — two stacked causes, both fixed:**
+  the handle was a 16px 4%-alpha square nobody could find, and the World
+  panel's ⤢/● buttons sat exactly ON it (z-index 10 over 6) and swallowed the
+  pointer. Now: a visible 22px corner glyph above all panel chrome, and the
+  action cluster moved clear of the corner. Verified: drag grew 422×303 →
+  651×462.
+- **Inspector zeros bug**: a vec3/number whose value was never stored showed
+  0/0/0 and a single-axis edit committed the zeros — editing one Scale axis
+  flattened the node to nothing. Fields now carry the port's default
+  (nodeInspectorSections) and PropertyInspector displays and merges against
+  it.
+- roomContent.js + tests deleted (nothing consumes it); dead overlay CSS
+  removed; RawEditor backdrop tests rewritten to the always-clear contract,
+  plus a palette-Room test.
+
+## Verify
+
+Seeded desk (Geo with cube + Scene window), read at DPR 2: desk flat with the
+Geo present; Scene window shows the room; corner glyph visible; drag resizes;
+Geo inspector reads Scale 1/1/1 with no stored scale.
+
+# feat/raw-defight — the cards stop fighting the room
+
+The remaining half of "still conflict with backdrop display and geo"
+(owner, 2026-08-20): the graph layer and the room fought for the same
+pixels, by construction.
+
+## What changed
+
+- A spatial node lands IN THE ROOM at the click — and its card used to land
+  centred on the very same click, burying the thing it had just made (the
+  audit photographed a cube hidden behind its own Cube card). The card now
+  steps ~90px below the click, so what you placed stays visible above it
+  (handlePaletteCreate; regression test compares a Cube's card Y against a
+  Number's from the same click).
+- Selection pills off in the backdrop (`showSelectionPills={false}` threaded
+  through RawViewport → SceneContent → NodeVisual/EntityVisual): the card is
+  the selection feedback there, and the floating name pill duplicated it in
+  the room's sky, detached from its object — the "GEO" chip. Fullscreen Room
+  and /out keep their behaviour (pills on selection where cards are absent;
+  /out has no selection at all).
+
+## Verify
+
+Same journey as the clear-desk probe, read at DPR 2: Geo placed → footprint
+visible, no sky chip; cube placed inside → cube stands fully visible above
+its card.
+
+# feat/raw-geo-connect — geos connect, and the demo stops trespassing
+
+Owner, 2026-08-20: "its still conflict with backdrop display and geo, i can't
+add multigeos and connect and make multiply geometries … create geometry
+inside geometry". Reproduced live: placing several Geos, a stray double-click
+hit a door (silent scope change) and another hit "Make me a scene" — which
+injected the six-node demo INTO the fresh Geo, stacking a demo World window
+over the backdrop. That stack was the "conflict". And Geos had no output, so
+nothing could connect them.
+
+## What changed
+
+- `geom.geo` gains a **Geometry output**: everything spatial standing in it,
+  as one group in the Geo's own transform (nodeGraphRuntime case). A Geo
+  inside a Geo answers recursively; a Light/Camera standing there is not a
+  shape and is skipped; an EMPTY Geo answers undefined (the Merge rule —
+  an empty place is not an invisible shape). Listed in PASS_THROUGH_PORTS
+  with a containment-based proving fixture.
+- "Make me a scene" only offers itself on a truly blank desk at the top
+  level (`currentScopeId === null && nodes.length === 0`); the ⋯ menu still
+  offers it anywhere, deliberately.
+- Runtime tests: empty geo, collected group + transform, recursive nesting,
+  Geo→Merge composition. RawEditor tests for the demo scoping. Wiki + manual.
+
+## Verify
+
+Seeded doc, read at DPR 2: Geo A (cube + inner Geo with sphere) and Geo B
+(plane) wired through Merge into a Constructor's door — the Constructor
+visibly wears the union of both scenes; Geometry sockets visible on the Geo
+cards.
+
+## Still open (the visual conflict)
+
+Cards still land over their own 3D objects and the 3D labels float detached —
+the layering fight is the next cut, tracked in the desk audit memory.
+
+# feat/raw-monitor — the desk's viewer
+
+Phase 1 of the show spine, part three: the View operator the owner asked for
+("we need to view operator"). TouchDesigner's answer is the viewer on every
+tile; the browser's honest version is one window you place where you want it.
+
+## What changed
+
+- `stream.monitor` implemented — it existed since 2026-07-30 as a gated shell
+  named "Program Monitor" whose window fell through to the text-panel
+  placeholder. Ungated, relabelled 'Monitor' (one word, one meaning), and its
+  position/width/height ports removed (dead-port rule: no runtime carried
+  them; a window has its own frame).
+- `MonitorPanelWindow.jsx`: wire any texture into Source and watch it live;
+  no wire → a quiet, honest empty state ("Wire a texture into Source"), not
+  the generic placeholder.
+- `LiveTextureView` extracted from ImagePanelWindow into its own module,
+  shared by Image and Monitor (a DOM video element cannot mount twice, so
+  frames are copied to a canvas — same code, one home).
+- allNodesExample: monitor wired from the webcam's Frame. RawEditor dispatch
+  case + empty-state test. Wiki bullet + USER_MANUAL section.
+
+## Verify
+
+Seeded webcam→monitor doc, fake media stream: the Monitor window shows the
+live feed (unmirrored — program out), the webcam panel its selfie view; with
+nothing wired the Monitor says so. Screenshot read at DPR 2.
+
+# fix/ci-playwright-bound2 — the bound was tighter than a cold install, and the retry tripped over its own corpse
+
+## What changed
+
+Two lessons from #184's first version, both learned on live runs:
+
+1. **150s per attempt was tighter than an honest install.** `--with-deps`
+   apt-installs on the fresh runner and a cold cache downloads ~160MB — the
+   bound failed the very deploy it was protecting (run 32305518130). Now 300s
+   per attempt, `timeout-minutes: 11` on the step.
+2. **Killing npx orphans the apt-get underneath it**, which keeps holding
+   `/var/lib/dpkg/lock-frontend`, so a naive retry dies instantly on the lock
+   (run 32306276793: "held by process 2863 (apt-get)"). The retry now buries
+   the orphan first: `pkill` apt/dpkg, wait for the lock to clear,
+   `dpkg --configure -a`, then reinstall.
+
+A true stall still self-heals once or goes red in eleven minutes; slow honest
+installs finish.
+
+# feat/raw-out — the projector cable
+
+Phase 1 of the show spine, part two: /out — a URL that renders just-the-room,
+read-only, zero chrome, for a projector or any second display. The audit's
+finding was blunt: no route rendered the room alone; the fullscreen Room was
+unaddressable component state behind an editor, and a show could not run
+clean.
+
+## What changed
+
+- Routing (`rawRouting.js`): `RAW_PAGE_OUT` + `buildRawOutPath`. Shapes:
+  `/{space}/raw/projects/{id}/out` (project — rides the op-log sync, live
+  across machines, works signed-out on public spaces) and `/{space}/raw/out`
+  (the space's local canvas — lives in that browser). `?scope=<nodeId>` aims
+  it at a container's room; parsed into `scopeId`.
+- `RawOutSurface.jsx`: RawViewport with NO handlers passed — read-only by
+  absence, not by guard. No graph, no topbar, no cursors, no selection.
+  Project documents ride `useProjectDocumentSync`; a local canvas follows the
+  desk live across windows via storage events (the desk already writes
+  localStorage on every change — the event is the free channel). Screen Wake
+  Lock requested and re-acquired on visibility. The ●-marked Camera of the
+  scope frames the shot for free (RawViewport honours it).
+- Known limits, documented in the manual: capture feeds (webcam/mic/MIDI)
+  live in the window that owns them; Time-driven motion runs per-window
+  clocks. Both named in USER_MANUAL's "Putting it on a projector".
+
+## Verify
+
+Two windows, one browser: desk on /open/raw places a cube; /open/raw/out
+shows the cube alone (0 cards, 0 topbar); desk adds a sphere → out follows
+live; a click in /out selects nothing. Screenshots read at DPR 2.
+
+## Note to the next session
+
+An `output.display` node (the projector as a patchable card: scope + camera
++ enable) and a read-only output key for private spaces are the designed
+next steps — see the TD-operators audit in auto-memory.
+
+# fix/ci-playwright-stall — the hang becomes a hiccup
+
+The "Install Playwright Chromium" step stalls forever some days (the known
+failure in reference_dii_ci_playwright_hang / CURRENT.md's deploy notes).
+2026-08-20 alone it hung four runs past 12 minutes; each needed a manual
+cancel + rerun.
+
+## What changed
+
+One change, one file: the step gets `timeout-minutes: 6` and two bounded
+attempts (`timeout 150 npx playwright install …` with one retry). A stall now
+self-heals in ~2.5 minutes or goes honestly red in six — no more zombie
+deploys. browser-checks.yml is the single home of the step (reused by PR CI
+and the deploy), so this covers both.
+
+# feat/raw-camera — the authored eye
+
+Phase 1 of the show spine (owner: "go", 2026-08-20, after the TD operator
+audit): a Camera node, so where the audience looks is authored, not wherever
+orbit was left.
+
+## What changed
+
+- `world.camera` in the registry: Position / Look At / FOV inputs (all
+  wireable — a Time→Sin→Position wire is a camera move), spatial-3d, family
+  "the room". Defaults are byte-identical to the room's built-in view.
+- Activation is EXPLICIT-ONLY via the card's ● toggle
+  (`pickAuthoredCameraNode` in RawViewport) — deliberately unlike
+  Light/Background/Grid's first-created fallback: the palette drops nodes at
+  the click point, and auto-activation cut the room to an accidental
+  floor-level close-up the moment the card landed (seen in browser before the
+  fix). Placing a Camera never steals the view.
+- Marked: the room is seen through it (useFrame drives position/fov/lookAt
+  every frame), OrbitControls unmounts (the two would fight over the eye),
+  and its body disappears. Unmarked: a small housing marker with a lens cone
+  aimed at Look At; unmarking releases the view in place, orbit remounts.
+- A camera counts as no room content in `scopeHasRoomContent` — the eye is
+  not something to look at; a camera alone must not summon an empty room.
+- allNodesExample: camera standing inside the example Geo. Wiki bullet +
+  USER_MANUAL section. Registry tests (spatial, defaults byte-identical),
+  viewport tests (never steals / owns view when marked / scope-local).
+
+## Verify
+
+Place cube + camera → view unchanged, housing visible. Click ● → the room is
+the camera's shot, housing gone; type Position in the inspector → view moves
+live. Unmark → orbit again. Screenshots read at DPR 2.
+
+# feat/raw-clear-desk — the room earns its place
+
+Owner, after the desk audit (2026-08-20): "yes its clear till you add geo".
+The always-on backdrop posed a clear desk as an empty stage whose floor
+rejected every click; prod's flat-paper desk was the honest look.
+
+## What changed
+
+- `src/raw/utils/roomContent.js` — `scopeHasRoomContent(nodes, scopeId)`:
+  something spatial stands at this level. An unparented Light does not count
+  (it draws nothing — it is the scope's light rig); a Scene card does not
+  count (the backdrop deliberately does not see through it, so it would pose
+  an empty room as the scene).
+- `RawEditor.jsx` — the world overlay mounts, and the shell wears
+  `is-world-overlay`, only when the current scope's room has content. Without
+  the class the graph surface's own 36px grid returns (the CSS was already
+  there, permanently shadowed until now).
+- Tests: `roomContent.test.js` (the predicate, per scope) and a
+  "room backdrop gating" describe in `RawEditor.test.jsx`; the old
+  "room in EVERY scope" test rewritten to the new contract (spatial doc →
+  room at root and inside; pure-code doc → flat everywhere).
+- Wiki raw-lane bullet + USER_MANUAL: replaced the retired "three surfaces"
+  section with the desk-and-room model.
+
+## Verify
+
+Fresh /open/raw → flat grid, no canvas. Add a Geo → room appears behind the
+cards. Enter the empty Geo → flat again until the first child. Screenshots
+read at DPR 2.
+
+## 2026-08-19 — the Geo: a clear place to collect a scene
+
+The owner, after the desk trilogy: "still mess — when add geo its empty geo,
+nothing in it, not even grid; it's a clear geo you can enter and in it collect
+what you need — object, light… and so on." Two facts made that true: no
+container was simply a PLACE (the desk draws a shell box, the constructor only
+wears primitive descriptors, a world hides its children), and a Light could
+not be collected at all — `world.light` was a settings card with no body.
+
+- **`geom.geo`, label Geo** — TouchDesigner's Geometry COMP by name, the
+  plainest container there is: spatial, a container, renders its children
+  through the childMap like any spatial parent, adds NOTHING of its own. Empty
+  it shows a faint cyan floor tile (2×2 grid + a near-invisible pickable
+  plate), because an empty place reading as void was the exact report.
+- **`world.light` is standable**: render spatial-3d, new `color`/`intensity`/
+  `position` inputs; placed INSIDE any container it renders a real
+  `pointLight` plus a small emissive marker. Unparented at root it draws
+  nothing — every existing document keeps exactly the look it had, and the
+  ambient/directional per-scope settings job is untouched. Guarded both ways
+  in RawViewport.test.
+- Anatomy manifest resynced (its gate caught the new cases, again);
+  PLACEABLE_CONTAINER_LABELS and all container hints pick Geo up automatically.
+
+### Verified
+
+Driven end-to-end at 1440×900 and screenshot-read: place Geo (footprint tile
+visible on the empty desk) → enter (`inside Geo ?`, grid there) → collect a
+Cube and a Light by double-click (both appear behind the cards as they land,
+the Light as a glowing orb) → walk out: the Geo card reads `2 ›` and the cube
+and light stand IN the geo in the room. No console errors.
+
+### Left deliberately
+
+- A Light inside a Geo lights the scene it renders in (one three.js tree), but
+  per-scope ambient settings still come from the CURRENT scope's active Light
+  only — TD's render-scoping (Light Masks) is its own feature.
+- The container zoo (Desk/Stage/Constructor) is untouched; the Geo is the
+  recommended default and the wiki says so. Retiring or folding the others is
+  an owner decision.
+
+## 2026-08-19 — the cut list: a minimal desk
+
+Third of the three audit answers ("you're shitting the UI with useless infos —
+keep UI clean and minimalistic"). Every cut is one the audit counted; the
+result was measured the same way it measured the problem: **first visit
+71 → 18 visible words** (desktop; 15 on a phone; TouchDesigner shows ~50),
+**one placed cube 95 → 27**, with a screenshot read at each state.
+
+- **The starter seed is gone.** First visit is the clean empty room — one
+  sentence, one offer. The demo lives behind "Make me a scene", where choosing
+  it is the person's act. Its four-node constellation, two open windows and
+  phone layout collisions go with it (`starterWorkspace.js` + its test
+  deleted; the zen default no longer needs the seeded-flag special case).
+- **The dead CODE box is gone from every fresh node** — the audit's one
+  systemic clutter generator. `Code — stored, not run` appears exactly where
+  it is true: node.null always, anything else only when `values.__code`
+  actually carries something. Contract test rewritten truthfully.
+- **Window title bars spell three actions with glyphs** (⌖ – ×), words kept in
+  the accessible names; Enter › keeps its word — it is the one action a
+  first-timer must find.
+- **The ◫ "world as background" button is gone** — the permanent backdrop made
+  it a synonym for Close. ● live-marking stays (it has a real job with several
+  rooms).
+- **The scope marker's four-word explainer is a ?** (44px, full sentence in
+  title/aria); the empty-canvas "Show me what it's made of" now appears only
+  inside CODE-made nodes, where the empty canvas is the question.
+- **Topbar**: Size select moved into ⋯ (configuration, not work); Chat hidden
+  on a solo local canvas until presence shows anyone; "Blank White Workspace"
+  — neither blank, nor white, nor (vocabulary) a workspace — is now
+  "Local canvas".
+- **The empty-state offer moved to the lower band** — the audit watched a
+  double-click land on the centred button and inject a demo into somebody's
+  node, because the hint says "double-click" and the centre is where people
+  do it.
+- **Palette: exact label match outranks every substring match** — typing
+  "Out" + Enter used to open an Outliner panel, detonating the documented
+  door flow on its own palette. Guard watched red without the sort.
+- **New cards step aside until clear** — a Merge used to bury a Cube's whole
+  header, and a card over another's door left that door silently unclickable.
+- **Help lost the repo path line** (`docs/raw/USER_MANUAL.md` shown to
+  visitors); the wordmark no longer renders on phones (it sat on the cards);
+  the backdrop no longer honours a topbar zen doesn't show (dead band, seen).
+- Wiki updated where it described the seeded desk as fact.
+
+### Verified
+
+First visit, one-cube, and phone states driven and screenshot-read after every
+cut; the one-cube screen now shows the cube standing in the room exactly where
+the double-click landed, its card beneath it, an inspector with no dead box.
+No console errors anywhere.
+
+## 2026-08-19 — the room behind the graph
+
+The owner's verdict on the constructor work: "IT JUST INFO. I NEED FULL USABLE
+DESK WHERE I CAN CREATE FULL SCENES." A four-agent UX audit (driving the real
+UI as a first-timer) plus a TouchDesigner COMP-model deep-dive found why, and
+this change is the first of three answers.
+
+**The diagnosis, measured**: geometry-in-geometry already WORKED in the
+renderer — a sphere placed inside a cube renders and travels with it — but the
+UI (a) gave no 3D view inside any non-World scope, so every build was blind,
+(b) actively taught the wrong belief ("made of code — there is nothing inside
+it to see"), and (c) demanded Merge-and-door plumbing before a Constructor
+showed anything: sixteen blind actions for a two-part shape. The owner never
+found the working feature because the interface denied having it.
+
+**This change** (TouchDesigner's backdrop model — its own answer to "watch the
+result while editing the graph", the network floating over the output):
+
+- The current scope's room renders BEHIND the graph, always, in every scope —
+  cards float on top, and placing something shows it behind your cards the
+  moment it lands. The old opt-in overlay was also broken (it painted OVER the
+  graph — a later positioned sibling — and its canvas ate every pointer, so
+  cards went unreachable the moment it was on); the backdrop mounts as the
+  shell's FIRST child and refuses all pointer events, killing both failure
+  modes structurally. `isWorldOverlay` state retired.
+- Fullscreen is scope-generic and SURVIVES walking through doors: each door
+  swaps which room fills the screen. The topbar button is now "Room"/"← Graph"
+  and works in every scope (the old one toggled the root World window's frame —
+  a silent no-op anywhere else, measured by the audit). Fullscreen carries its
+  own on-surface exit (`.raw-room-exit`), because zen has no topbar and the
+  audit measured the old ⤢ as a trap; the zen dead-strip (`top: workspaceTop`
+  with no topbar) is gone too.
+- The empty-scope sentence for a code-made node no longer teaches the wrong
+  belief: a spatial node says "What you place here becomes part of it"; only a
+  non-spatial code node says it has no room.
+- **The Constructor wears its spatial children automatically when it has no
+  doors** — the TD flag model: everything inside contributes, wires carry
+  data. A door still means "exactly this, nothing else" and suppresses the
+  automatic path. Wiki + manual rewritten around place-not-plumb.
+
+### Verified
+
+Seen at 1440×900: the root room (snowman + violet placeholder) as the canvas
+itself with all cards hit-testing reachable; inside the Snowman, the workshop
+room behind the wires with a just-placed cube appearing the instant the palette
+closed. Phone 390×664 looked at too: cards behind the seeded World window there
+— PRE-EXISTING (window-over-cards, unchanged by this diff) and on the Phase C
+cut list, where the backdrop makes that window redundant anyway.
+
+### The other two answers, still ahead (audit-ranked)
+
+- **Touch**: click an object in the room to select it (today it never selects),
+  drag moves it with the grab offset (today it teleports AND orbits), Shift-drag
+  lifts, Ctrl+D duplicates, gizmo for rotate/scale.
+- **The cut list**: kill the starter seed (empty canvas first visit), CODE box
+  only when code exists, title-bar text buttons → icons, palette exact-match
+  first ("Out" summons an Outliner today), collision-free card placement,
+  explainers into ⋯. Full inventory in the audit (audit-shots/ + four reports
+  in the workflow journal wf_9b0100a1-048).
+
+## 2026-08-19 — touch works in the room
+
+Second of the three audit answers (first: the room behind the graph, PR #174).
+Every fix below was REPRODUCED by hand before fixing and RE-MEASURED after —
+the numbers are from driving the real UI.
+
+- **Drag moved objects by teleport while orbiting the camera under them.**
+  Measured: a 160px drag threw a sphere from [0,1.2,0] to [13.8,1.2,-9.9]. Two
+  causes: the raw ground-plane hit was written straight into position (an
+  elevated object's grab ray meets y=0 far behind it), and drei's
+  OrbitControls listens on the DOM canvas, which R3F stopPropagation never
+  reaches. Now: the grab offset is measured on a plane at the OBJECT's height
+  (the first fix, on the floor plane, still gave a lever arm — 180px moved it
+  4.2 units; at its own height, 2.1, hand-matched) and the controls are
+  disabled for the drag's duration via R3F's makeDefault controls state.
+- **Click on empty floor never deselected** — the invisible 400×400 drag plane
+  catches the ray, so the Canvas-level onPointerMissed (which does clear) never
+  fired. The plane now clears selection itself, guarded by R3F's event.delta so
+  the click that ends a drag cannot clear what it just dragged.
+- **Shift-drag lifts.** Ray intersected with a vertical camera-facing plane
+  through the object; anchored to the drag-START position, because a lift that
+  began with Shift already held baked a sideways step into its anchor
+  (measured: z drifted −1.5 during a pure lift; now [0,1.2,0]→[0,2.27,0]).
+- **Ctrl/Cmd+D duplicates** the selected node — the audit found no duplication
+  path of any kind. Node alone, not its subtree (a deep clone with
+  re-identified interior wiring is its own change), stepped +0.6/+0.6 in the
+  room and +48px on the canvas so the copy never lands exactly on the original.
+- The fullscreen room's `‹ graph` exit moved bottom-left — the first render
+  put it exactly under the scope marker's own ‹ (seen).
+
+### Verified
+
+Driven end-to-end at 1440×900: select → deselect → 1:1 drag with the camera
+still → pure vertical lift → duplicate landing beside the original, screenshot
+read at each step. No console errors.
+
+Still ahead (third answer): the clutter cut list — starter seed, CODE box,
+title-bar text buttons, palette exact-match ("Out" summons an Outliner),
+collision-free card placement, explainers into ⋯.
+
+## 2026-08-19 — the Constructor: a node made of nodes
+
+Depth 3 of the owner's "we all have as a constructor", and the last of the three
+he asked for. A new container, `geom.constructor` (label **Constructor** — his
+word), that WEARS whatever shape the nodes inside it build: enter it, place
+shapes, wire them (through Merge if several) into an Out door, walk out — it
+stands in the room being that shape. Its inside is its definition; its outside
+is the result.
+
+- **Geometry is a value now.** Plain descriptors (`geometryDescriptor.js`:
+  box/sphere/plane/group, position/rotation/colour carried along) — not THREE
+  objects, so evaluation stays pure and a descriptor asserts in a unit test with
+  no WebGL in sight. The `geometry` port type, declared in PORT_TYPES since the
+  beginning and carried by nothing, finally carries something.
+- Cube, Sphere and Plane gained a `Geometry` output, computed through
+  `evaluateNodeInput` so a wired colour colours the descriptor too — the cube
+  standing in the room and the cube travelling down a wire cannot be two
+  different cubes wearing one name.
+- `shape.merge` (two geometry wires in, one out, chained for more). An unwired
+  Merge carries NOTHING, deliberately distinct from an empty group that would
+  draw as an invisible something — which forced a third category into the
+  all-nodes example's liveness model: `PASS_THROUGH_PORTS`, held in both
+  directions (dead bare AND provably alive once fed, one proving fixture per
+  entry, an entry without a proof fails).
+- **The inside is a workshop, not a room**: a constructor's parts are not drawn
+  as standing objects in the outer room — only what reaches a door is drawn
+  (childMap suppression in RawViewport, same split TouchDesigner draws between
+  a COMP's network and its output). Watched red without the rule: four sphere
+  renders for a two-sphere snowman, worn AND standing. Standing INSIDE it, the
+  parts render as objects again — that is what you are there to arrange.
+- No door wired → a violet wireframe placeholder in the geometry port's own
+  hue: "shape goes here". No schema change anywhere — doorways, edges and
+  containers already carried everything this needed.
+- Caps: 256 pieces, 16 levels (`MAX_GEOMETRY_*`), one shared budget across the
+  renderer walk so branch-by-branch caps cannot multiply past the total.
+- The anatomy manifest resynced through its own day-old gate
+  (`docs:anatomy:sync`), all ten semantic assertions holding over the new cases
+  — the first proof the gate does what it was built for. `formatPortValue`
+  learned to describe a descriptor ("a shape — 3 pieces") after the sheet was
+  SEEN calling a snowman "something this sheet cannot read".
+
+### Verified
+
+Seen at 1440×900: a three-part snowman (two spheres + an orange nose cube, two
+chained Merges, one door) standing in the room next to the violet placeholder of
+an empty Constructor, with the loose parts correctly absent from the room;
+inside it, the definition reading as a graph; the sheet answering "It holds 6
+nodes. You are standing in them." No console errors. An adversarial review
+workflow (four lenses, refute-by-default verification) ran over the full diff
+before push; its confirmed findings were fixed in this same change.
+
+### The review's confirmed findings, and what happened to each
+
+Eleven confirmed (four lenses, refute-by-default verification, most proved by
+EXECUTION against the real runtime). Fixed in this change: the merge-chain
+depth-cap defect (17 hand-placed parts silently dropped the first two — bare
+groups now splice instead of nest, guarded by a 20-part chain test); feedback
+loops now poisoned whole so every surface answers "wears nothing"
+deterministically in every ask order (was: first evaluator won, viewport and
+sheet contradicted each other on screen); the wiki's impossible wire (clock →
+Size is number → vec3; now clock's Sin → Sphere's Radius); the nesting sentence
+(requires standing inside, now says so); the sheet's slot-3 sentence
+contradicting slot 2 on a Constructor; the legacy unscoped viewport drawing
+parts AND result; the stale "used by nothing" registry comment; and both
+PASS_THROUGH gate holes (existence check now covers the list; proofs return the
+setup and the test evaluates the claimed port itself).
+
+DEFERRED, deliberately: a part selected inside a container stays selected after
+walking out — the Delete FAB stays armed for a node no longer on screen. Real,
+but a pre-existing behaviour of every container (a World's children do the
+same), not introduced here; fixing it belongs to selection/scope plumbing, not
+to this change. REFUTED and left: the StrictMode double-render halving the
+piece budget — R3F v8 hardcodes strictness off inside its own reconciler root,
+so the mutation cannot double-fire today; a comment at the budget records that
+an R3F v9 upgrade flips exactly that switch.
+
+### Still true, and said out loud
+
+- A worn shape carries colour but not textures or files; Model/Video/Sound give
+  no Geometry out. Stated in the wiki article's limits paragraph.
+- Depth 3 does not retire depth 2: a Cube is still made of code, and its sheet
+  still shows that code. The set of code-made things shrinking further —
+  built-ins REDEFINED as constructor graphs — is the long-term direction
+  `CONTAINER_TYPE_IDS`' comment records, not this change.
+
+## 2026-08-19 — the sheet can show the lines
+
+The second half of "what is it made of": where a node is worked out or drawn, the
+sheet now names the file and the exact lines, and "Show the lines" opens them —
+real, unedited, fetched lazily, and refused outright rather than ever shown wrong.
+This is the owner's original sentence — "it can be what code is the cube" — kept
+honest by machinery instead of by promises.
+
+- **The manifest is measured, never written.** `scripts/sync-node-anatomy.mjs`
+  parses the three places code lives — `computeNodeOutput`'s switch, `renderNodeBody`'s
+  switch, and `renderViewNodeContent`'s if-chain, which no `case`-shaped scan can see —
+  with acorn, and emits `src/project/graph/nodeAnatomy.generated.js`: per type, line
+  ranges, fall-through groups as structural fact, and which ports each case answers.
+  The repo's first generated file under `src/`; same sync/check contract as
+  `sync-agent-docs.mjs`, CI-gated by `npm run check:node-anatomy`.
+- **AST, not regex, because regex was tried and lied three ways** (measured during
+  design): a fall-through case came back as a bare label with no body, a section
+  header comment got glued to the wrong node, and the editor's if-chain was invisible
+  entirely. `scripts/nodeAnatomy.test.js` holds ten SEMANTIC assertions — no empty
+  slice, no trailing comment, no foreign label, full 64-type coverage both ways,
+  answers ⊆ declared outputs, fingerprints match disk — because round-trip
+  determinism alone would freeze a buggy extractor's wrong output forever.
+- **Live-fed agreement, by two independent means.** The text scan of each slice for
+  `liveOutputs` must equal the Symbol-substitution probe's verdict on a real node,
+  type by type. The day a live case lands without the sheet learning of it, CI goes red.
+- **The browser slices by line range only** (`nodeSourceSlices.js`): an explicit
+  two-file `?raw` thunk map (runtime 5.0 kB gz + viewport 7.0 kB gz, own lazy chunks,
+  paid only on first press), a shared djb2 fingerprint (`sourceFingerprint.js`, one
+  function imported by build and browser so they cannot drift — and over the JS
+  string, not bytes: the em-dashes in this codebase's comments make byte offsets and
+  string offsets disagree silently). Mismatch → a visible refusal, watched red with
+  the guard removed. `RawEditor.jsx` is deliberately NOT fetchable — ~23 kB gz for a
+  five-line branch — so panel types get a location row without a quote.
+- Containers get the doorway lines every one of them shares (the pre-switch block
+  that answers a promoted socket before the type is even consulted); the five value
+  nodes say "one piece answers for 5 — read it and you have read all 5"; `time`
+  carries the single hand-kept extra place (`useGraphClock.js`), itself guarded by a
+  test asserting the symbol still lives in the named file.
+- `acorn`/`acorn-jsx` promoted from transitive to declared devDependencies — a clean
+  `npm ci` would otherwise break the sync script with no warning. Lock updated with
+  exactly those two lines (the full `npm install` regeneration also wanted to strip
+  `libc` fields — npm-version churn, kept out).
+
+### Verified
+
+Seen at 1440×900 and 390×664: the cube's real five-line runtime case and its real
+two-line draw return, quoted verbatim (asserted against the file on disk, not against
+DOM presence), scrolling sideways inside their own boxes with no horizontal page
+scroll; the container's doorway lines; the unbuilt type showing a banner and no
+location rows. The fingerprint refusal exercised against the REAL loader with a
+corrupted expectation — nothing mocked anywhere in the new tests.
+
+Branch stacked on feat/raw-node-anatomy (PR #171); rebase onto dev after it lands.
+
+## 2026-08-19 — what a node is made of
+
+Standing inside any node, "what is it made of" opens a reading of that node. It asks
+the same four questions of all 64 node types — what it takes and gives, what works
+that out, what puts it on screen, what is inside it — and the ONLY structural
+difference between a Cube and a container is that the fourth answer is occupied. That
+sameness is the point: a container stops being a special kind of thing and becomes a
+node whose fourth answer has something in it, which is also the seat depth 3 fills.
+
+This is the second of the three things the owner asked for with "we all have as a
+constructor". The first (entering a code-made node says so instead of showing a blank
+canvas) shipped in `feat-raw-scene-placement`. The third — a cube that IS a graph —
+is still ahead, and slot four is where it lands.
+
+- Two ways in, both only while you are standing inside something: a control on the
+  "inside X" marker, and a button on the canvas when that scope is empty. Studio wraps
+  `RawGraphSurface` read-only and passes no handler, so no button appears there.
+- Every fact comes from the running program. `readNode` (`src/project/graph/nodeReading.js`)
+  asks the registry which ports exist, asks the runtime what is on them, and derives
+  the rest by substitution. There is no hand-written sentence describing what a node
+  DOES anywhere in it — such a sentence is wrong after the next edit and no test can
+  catch it. Node labels and port labels are rendered verbatim from the registry, which
+  is also why the parallel vocabulary pass cannot break this surface.
+- `resolveInputRow` replicates `evaluateNodeInput`'s decision EXACTLY rather than
+  asking "is there an edge". Those are different facts: the runtime follows the wire,
+  and falls back to the node's own value if the far end resolves to undefined. A row
+  that printed "wired from X" while showing the node's own number is the confident
+  wrong answer this whole surface exists to remove.
+- `isLiveFedOutput` asks the runtime by substitution — evaluate twice, once with an
+  empty liveOutputs map and once with a `Symbol` under the port's key — instead of
+  keeping a list. A live case written tomorrow classifies itself on the day it lands,
+  and it catches the two that a "the value is null" test misses (`device.midi.in`
+  coalesces with `?? 0`, `agent.keeper` with `?? ''`).
+
+### Found by looking, not by reading
+
+Five defects, none of which any unit test could have reported:
+
+- Opened inside a Scene, the sheet rendered BEHIND the room's canvas
+  (`.raw-world-fullscreen` is z-index 1200, a window frame's default is 20) while its
+  button stayed perfectly clickable — a control that looked like it did nothing. Found
+  by hit-testing the middle of the sheet with `elementFromPoint`.
+- It opened underneath the selection inspector on a desktop and 3px inside the
+  selection sheet on a phone. Entering a node selects it, so the inspector is up
+  every single time this opens: the collision was the default case.
+- It opened level with the "inside X" marker, which is z-index 1400 and printed
+  straight over the window's own title.
+- Its `aria-label` replaced the visible words rather than containing them, so the
+  button answered to a name nobody could see (WCAG 2.5.3).
+- The marker control was 120×21 — well under this lane's own 44px floor.
+
+All three window-placement facts are now arithmetic in `windowLayout.js` with the
+measurements that produced them, and `getScopeMarkerTop` is shared by the marker's own
+style and the frame that must clear it, so the two cannot drift.
+
+### Two things this surface revealed that are NOT fixed here
+
+- **A doorway's declared fallback never reaches the runtime.** `doorwaySocket` sets
+  `default: fallback ?? null` specifically so an unwired door does not carry undefined
+  — but `getNodeInputDefault` calls `getNodeInputs(node)` with no scope list, so it
+  cannot see doorway sockets at all and returns undefined anyway. The comment at
+  `nodeRegistry.js` claims the defect is prevented; at runtime it is not. The sheet
+  reports what the runtime actually hands out ("nothing wired in", value `nothing`),
+  because a nicer sheet describing a room that does not exist is the worse outcome.
+  Fixing the runtime is a real behavioural change and wants its own review.
+- **The way out of a scope is labelled `‹` with "Leave" only as a title**, so its
+  accessible name is the glyph. Left alone deliberately: it is an existing control and
+  the parallel vocabulary pass owns its wording.
+
+### Verified
+
+Seen in a browser at 1440×900 (DPR 2) and 390×664 (DPR 3), against a local server, as
+an ordinary visitor: inside a Cube, inside a container with a wired In door and an
+unwired Out door, and inside a fullscreen Scene. No console errors, every control
+reachable at its centre by `elementFromPoint`, nothing under 44px, and the sheet clear
+of both the marker and the selection inspector on both surfaces.
+
+Two guards were watched failing before their fix: the provenance rule (an
+edge-presence implementation mislabels a wire that carries nothing), and the wiring
+(handing the sheet the scoped card list instead of the document renders a raw uuid
+where a door's name belongs).
+
 ## 2026-08-19 — a second object no longer lands inside the first
 
 - Owner, after the scene example shipped: *"so problem in it that i have create other geometry

@@ -148,7 +148,7 @@ describe('useStatusItems', () => {
         const flushStatus = result.current.find((item) => item.key === 'scene-flush')
 
         expect(sceneStreamStatus?.label).toBe('Scene stream connected')
-        expect(flushStatus?.label).toBe('Scene changes not saved')
+        expect(flushStatus?.label).toBe('Changes not saved')
         expect(flushStatus?.detail).toContain('Scene sync failed.')
         expect(flushStatus?.detail).toContain('Retrying')
     })

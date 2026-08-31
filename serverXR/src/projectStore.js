@@ -34,7 +34,7 @@ const normalizeProjectId = (value) => {
 // link shape is /{spaceSlugOrId}/{projectSlugOrId}), and are additionally
 // blocked from 'studio'/'beta'/'p' — those would be ambiguous with the
 // existing /{space}/studio, /{space}/beta, /{space}/p/... routes.
-const PROJECT_RESERVED_SLUGS = new Set(['studio', 'beta', 'raw', 'seed', 'p'])
+const PROJECT_RESERVED_SLUGS = new Set(['studio', 'beta', 'raw', 'seed', 'p', 'projects', 'admin', 'preferences'])
 const normalizeProjectSlug = (value) => {
   if (value === null || value === undefined || value === '') return null
   const slug = safeSlug(value)

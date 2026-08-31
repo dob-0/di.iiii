@@ -1,47 +1,9 @@
-import { useEffect, useRef } from 'react'
+import LiveTextureView, { isLiveTexture } from './LiveTextureView.jsx'
 
 const getImageAssetFromNode = (node, assetMap = new Map()) => {
     const assetId = node?.values?.src || node?.assetRef || null
     if (!assetId || typeof assetId !== 'string') return null
     return assetMap.get(assetId) || null
-}
-
-// A wired `src` carries whatever the upstream texture port produced — for
-// source.webcam that is a live VideoTexture whose .image is the panel's own
-// <video> element. A DOM node cannot be mounted twice, so the frame is copied
-// to a canvas instead of the element being re-parented.
-const isLiveTexture = (value) => Boolean(value && typeof value === 'object' && value.image)
-
-function LiveTextureView({ texture, label }) {
-    const canvasRef = useRef(null)
-
-    useEffect(() => {
-        const canvas = canvasRef.current
-        const media = texture?.image
-        if (!canvas || !media) return undefined
-        const context = canvas.getContext('2d')
-        if (!context) return undefined
-
-        let frame = null
-        const draw = () => {
-            const width = media.videoWidth || media.width || 0
-            const height = media.videoHeight || media.height || 0
-            if (width && height) {
-                if (canvas.width !== width || canvas.height !== height) {
-                    canvas.width = width
-                    canvas.height = height
-                }
-                // A source that has not decoded its first frame throws rather
-                // than drawing nothing; the next tick usually succeeds.
-                try { context.drawImage(media, 0, 0, width, height) } catch { /* not ready */ }
-            }
-            frame = requestAnimationFrame(draw)
-        }
-        frame = requestAnimationFrame(draw)
-        return () => { if (frame !== null) cancelAnimationFrame(frame) }
-    }, [texture])
-
-    return <canvas ref={canvasRef} className="raw-image-panel-media" aria-label={label} />
 }
 
 export default function ImagePanelWindow({ node, values = null, assetMap }) {

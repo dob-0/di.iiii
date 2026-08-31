@@ -54,4 +54,23 @@ describe('where a new object stands', () => {
         const values = buildNodeValues('geom.cube', {}, {}, {})
         expect(values.position).toEqual([0, 0.5, 0])
     })
+
+    // A Geo is a PLACE — it stands on the floor. The generic 1.2 lift left
+    // every geo's contents hovering at eye height, where two geos read as one
+    // broken pair of floating clones (owner: "i want to seperate geos").
+    it('a Geo spawns ON the floor, not lifted like a primitive', () => {
+        const values = buildNodeValues('geom.geo', { position: [0, 0, 0] }, { graphX: 10, graphY: 10 }, {})
+        expect(values.position[1]).toBe(0)
+    })
+
+    it('a Geo placed by pointing into the room lands exactly where pointed', () => {
+        const values = buildNodeValues('geom.geo', { position: [0, 0, 0] }, { point: [2, 0, 3] }, {})
+        expect(values.position).toEqual([2, 0, 3])
+    })
+
+    it('a second Geo steps aside on the floor, staying at y=0', () => {
+        const values = buildNodeValues('geom.geo', { position: [0, 0, 0] }, { graphX: 10, graphY: 10 }, { occupied: [[0, 0, 0]] })
+        expect(values.position[1]).toBe(0)
+        expect(Math.hypot(values.position[0], values.position[2])).toBeGreaterThan(0.9)
+    })
 })

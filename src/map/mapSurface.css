@@ -1,0 +1,366 @@
+/* The mapper. Built on the platform's own tokens (src/styles/base.css) so the
+   desk reads as di.iiii and not as a second application bolted on. */
+
+.map-desk {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--di-black);
+    color: var(--ui-text-primary);
+    font-family: var(--di-sans);
+    font-size: 12px;
+}
+
+.map-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--ui-divider);
+    background: var(--ui-surface);
+    flex: 0 0 auto;
+}
+
+.map-bar-title { display: flex; align-items: baseline; gap: 8px; }
+.map-bar-lane { color: var(--ui-accent); font-family: var(--di-mono); text-transform: uppercase; letter-spacing: 0.12em; font-size: 10px; }
+.map-bar-project { color: var(--ui-text-primary); font-weight: 500; }
+.map-bar-controls { display: flex; align-items: center; gap: 8px; }
+
+.map-body {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr) 250px;
+    min-height: 0;
+}
+
+.map-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    overflow-y: auto;
+    background: var(--ui-surface);
+}
+.map-panel-left { border-right: 1px solid var(--ui-divider); }
+.map-panel-right { border-left: 1px solid var(--ui-divider); }
+
+.map-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.map-panel-head h2 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ui-text-muted); font-weight: 500; }
+.map-panel-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+.map-surface-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.map-surface-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 5px 6px;
+    border: 1px solid transparent;
+    background: var(--ui-surface-raised);
+}
+.map-surface-row.is-selected { border-color: var(--ui-border-strong); background: var(--ui-surface-highlight); }
+.map-surface-name {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--ui-text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.map-surface-kind { color: var(--ui-text-muted); font-family: var(--di-mono); font-size: 10px; }
+.map-surface-row-actions { display: flex; gap: 4px; }
+
+.map-empty { color: var(--ui-text-muted); line-height: 1.5; margin: 8px 0 0; }
+
+/* --- the frame ------------------------------------------------------- */
+
+.map-frame {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 0;
+    padding: 12px;
+    background: #050505;
+}
+
+.map-stage-holder { position: relative; flex: 0 0 auto; }
+
+.map-hint { margin: 0; color: var(--ui-text-muted); font-family: var(--di-mono); font-size: 10px; text-align: center; }
+
+/* --- the stage: shared by the desk preview and the output ------------- */
+
+.map-stage {
+    position: relative;
+    overflow: hidden;
+}
+
+/* transform-origin is load-bearing: the corner-pin matrix in cornerPin.js is
+   solved for a box whose own origin is its top-left. Any other origin silently
+   shifts every surface. */
+.map-stage-surface {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+    overflow: hidden;
+    background: #000;
+    /* Declared here at zero so a cue only has to change the DURATION. A
+       transition introduced for the first time in the same style change as the
+       value it should animate does not always run; one that already exists and
+       merely lengthens always does. */
+    transition: opacity 0s linear;
+}
+
+/* The wall, photographed, behind the surfaces on the desk. Never on the
+   output — it is a tracing aid, not part of the show. */
+.map-reference {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    pointer-events: none;
+    z-index: 1;
+}
+.map-stage-holder > .map-overlay { z-index: 2; }
+
+.map-guide {
+    stroke: var(--ui-warning);
+    stroke-width: 1;
+    stroke-dasharray: 6 4;
+    pointer-events: none;
+}
+
+.map-cue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.map-cue-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    background: var(--ui-surface-raised);
+    border: 1px solid transparent;
+}
+.map-cue-row.is-live { border-color: var(--ui-accent); background: var(--ui-surface-highlight); }
+.map-cue-key {
+    flex: 0 0 auto;
+    min-width: 16px;
+    text-align: center;
+    font-family: var(--di-mono);
+    font-size: 10px;
+    color: var(--ui-accent);
+}
+.map-cue-fire {
+    flex: 1 1 auto;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--ui-text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.map-cue-hold { flex: 0 0 auto; font-family: var(--di-mono); font-size: 10px; color: var(--ui-text-muted); }
+
+.map-section { border-top: 1px solid var(--ui-divider); margin-top: 8px; padding-top: 8px; }
+.map-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.map-stage-surface > * { display: block; width: 100%; height: 100%; border: 0; }
+.map-source-fill { width: 100%; height: 100%; }
+.map-source-media { width: 100%; height: 100%; object-fit: fill; }
+.map-source-frame { width: 100%; height: 100%; border: 0; background: #000; }
+.map-source-svg { width: 100%; height: 100%; display: block; }
+
+.map-source-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: repeating-linear-gradient(45deg, #14141a 0 18px, #1e1e26 18px 36px);
+    color: var(--ui-text-primary);
+    font-family: var(--di-mono);
+    text-align: center;
+    padding: 8px;
+}
+.map-source-placeholder-label { line-height: 1.1; }
+.map-source-placeholder-detail { color: var(--ui-text-muted); overflow-wrap: anywhere; line-height: 1.3; }
+
+/* --- the handles ----------------------------------------------------- */
+
+.map-overlay { position: absolute; inset: 0; pointer-events: none; }
+.map-overlay-surface { pointer-events: none; }
+
+.map-overlay-hit { fill: transparent; pointer-events: all; cursor: move; }
+.map-overlay-outline { fill: none; stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; stroke-dasharray: 4 4; pointer-events: none; }
+.map-overlay-surface.is-selected .map-overlay-outline { stroke: var(--ui-accent); stroke-width: 2; stroke-dasharray: none; }
+.map-overlay-surface.is-off .map-overlay-outline { stroke: rgba(255, 255, 255, 0.15); }
+
+.map-overlay-name { fill: rgba(255, 255, 255, 0.7); font-family: var(--di-mono); font-size: 11px; pointer-events: none; }
+.map-overlay-surface.is-selected .map-overlay-name { fill: var(--ui-accent); }
+.map-overlay-warn { fill: var(--ui-danger); font-family: var(--di-mono); font-size: 11px; pointer-events: none; }
+
+.map-overlay-handle circle {
+    fill: var(--di-black);
+    stroke: var(--ui-accent);
+    stroke-width: 2;
+    pointer-events: all;
+    cursor: grab;
+}
+.map-overlay-handle circle:hover { fill: var(--ui-accent); }
+.map-overlay-handle text { fill: var(--ui-accent); font-family: var(--di-mono); font-size: 9px; pointer-events: none; }
+
+.map-overlay-mask-point {
+    fill: var(--ui-warning);
+    stroke: var(--di-black);
+    stroke-width: 1.5;
+    pointer-events: all;
+    cursor: grab;
+}
+
+/* --- controls -------------------------------------------------------- */
+
+.map-field { display: flex; flex-direction: column; gap: 3px; color: var(--ui-text-muted); }
+.map-field > span { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+.map-field input,
+.map-field select {
+    background: var(--di-black);
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text-primary);
+    font: inherit;
+    padding: 3px 5px;
+    height: var(--panel-control-height);
+    min-width: 0;
+}
+.map-field input[type='color'] { padding: 1px; }
+.map-field-inline { flex-direction: row; align-items: center; gap: 5px; }
+.map-field-inline > span:first-child { flex: 0 0 auto; }
+.map-field-inline input { width: 68px; }
+.map-field-slider { flex-direction: row; align-items: center; gap: 6px; }
+.map-field-slider > span { flex: 0 0 66px; }
+.map-field-slider input[type='range'] { flex: 1 1 auto; height: auto; border: 0; padding: 0; accent-color: var(--ui-accent); }
+.map-field-slider output { flex: 0 0 34px; font-family: var(--di-mono); font-size: 10px; color: var(--ui-text-primary); text-align: right; }
+
+.map-action,
+.map-toggle,
+.map-mini {
+    background: var(--di-black);
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text-primary);
+    font: inherit;
+    padding: 3px 8px;
+    height: var(--panel-control-height);
+    cursor: pointer;
+}
+.map-mini { font-size: 10px; padding: 2px 5px; height: auto; }
+.map-action:hover,
+.map-toggle:hover,
+.map-mini:hover { border-color: var(--ui-border-strong); }
+.map-toggle.is-on,
+.map-mini.is-on { background: var(--ui-surface-highlight); border-color: var(--ui-accent); color: var(--ui-accent); }
+.map-mini.is-off { color: var(--ui-text-muted); }
+.map-mini.is-danger:hover { border-color: var(--ui-danger); color: var(--ui-danger); }
+.map-mini:disabled { opacity: 0.35; cursor: default; }
+
+.map-warning {
+    max-width: 460px;
+    color: var(--ui-warning);
+    font-family: var(--di-mono);
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+.map-sync { font-family: var(--di-mono); font-size: 10px; color: var(--ui-text-muted); }
+.map-sync-error { color: var(--ui-danger); }
+.map-sync-live { color: var(--ui-success); }
+
+/* --- the signal ------------------------------------------------------ */
+
+.map-output {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    overflow: hidden;
+}
+.map-output.is-idle { cursor: none; }
+
+@media (max-width: 900px) {
+    .map-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; }
+    .map-panel { max-height: 30vh; }
+    .map-panel-left { border-right: 0; border-bottom: 1px solid var(--ui-divider); }
+    .map-panel-right { border-left: 0; border-top: 1px solid var(--ui-divider); }
+}
+
+/* The output's only chrome. Present when the pointer moves, gone when it
+   stops — the same rule the cursor follows, because anything permanently on
+   this page is permanently on the wall. */
+.map-output-controls {
+    position: fixed;
+    left: 12px;
+    bottom: 12px;
+    display: flex;
+    gap: 6px;
+    opacity: 1;
+    transition: opacity 0.25s ease;
+}
+.map-output.is-idle .map-output-controls { opacity: 0; pointer-events: none; }
+.map-output-controls button {
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text-primary);
+    font: inherit;
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+.map-output-controls button:hover { border-color: var(--ui-accent); color: var(--ui-accent); }
+
+/* Carrying a mapping between machines. Deliberately a text box and not a file
+   download: the machine that aligns a wall is often not the machine that made
+   the mapping, and text crosses a chat window, a notes app or a USB stick. */
+.map-transfer {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10;
+}
+.map-transfer-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: min(720px, 90vw);
+    max-height: 80vh;
+    padding: 12px;
+    background: var(--ui-surface);
+    border: 1px solid var(--ui-border);
+}
+.map-transfer-text {
+    flex: 1 1 auto;
+    min-height: 320px;
+    background: var(--di-black);
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text-primary);
+    font-family: var(--di-mono);
+    font-size: 11px;
+    line-height: 1.5;
+    padding: 8px;
+    resize: vertical;
+}

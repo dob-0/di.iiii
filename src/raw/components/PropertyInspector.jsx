@@ -1,5 +1,40 @@
+import { useState } from 'react'
 import { cloneValue } from '../../shared/projectSchema.js'
 import { detectAssetMediaKind } from '../../utils/mediaAssetTypes.js'
+
+// A controlled number input with an EDIT BUFFER. Bare live-commit inputs
+// corrupted mid-edit values on the phone (2026-08-20 audit): Number('') is 0,
+// so clearing a field to retype committed 0 under your thumbs. While focused
+// the field shows what you typed; only valid parses commit; blur snaps back
+// to the canonical value; focus selects everything (a fresh number replaces,
+// not appends) and Enter closes the keyboard.
+function NumberField({ value, fallback = 0, min, max, step, onCommit }) {
+    const [draft, setDraft] = useState(null)
+    const canonical = Number.isFinite(Number(value)) ? value : fallback
+    return (
+        <input
+            type="number"
+            value={draft !== null ? draft : canonical}
+            min={min}
+            max={max}
+            step={step}
+            style={{ width: '100%', minWidth: 0 }}
+            onFocus={(event) => {
+                setDraft(String(canonical))
+                event.target.select()
+            }}
+            onChange={(event) => {
+                setDraft(event.target.value)
+                const next = Number(event.target.value)
+                if (event.target.value !== '' && Number.isFinite(next)) onCommit(next)
+            }}
+            onBlur={() => setDraft(null)}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur()
+            }}
+        />
+    )
+}
 
 const setNestedValue = (value, path, nextValue) => {
     const draft = cloneValue(value)
@@ -33,7 +68,9 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
         return <textarea value={value || ''} onChange={(event) => onChange(event.target.value)} rows={4} />
     }
     if (field.type === 'color') {
-        return <input type="color" value={value || '#ffffff'} onChange={(event) => onChange(event.target.value)} />
+        // The port's real default, not white: an unset Colour on a blue cube
+        // showed a white swatch while the cube stood there blue (S24 audit).
+        return <input type="color" value={value || field.default || '#ffffff'} onChange={(event) => onChange(event.target.value)} />
     }
     if (field.type === 'checkbox') {
         return <input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} />
@@ -83,30 +120,39 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
     }
     if (field.type === 'number') {
         return (
-            <input
-                type="number"
-                value={Number.isFinite(Number(value)) ? value : 0}
+            <NumberField
+                value={value}
+                fallback={Number.isFinite(Number(field.default)) ? field.default : 0}
                 min={field.min}
                 max={field.max}
                 step={field.step ?? 0.1}
-                onChange={(event) => onChange(Number(event.target.value))}
+                onCommit={onChange}
             />
         )
     }
     if (field.type === 'vec3') {
-        const arr = Array.isArray(value) ? value : [0, 0, 0]
+        // A node whose values never stored this field must show — and, on a
+        // single-axis edit, keep — the port's real default, not zeros. The
+        // zeros were live: editing one Scale axis on such a node committed
+        // [x, 0, 0] and flattened the thing to nothing ("i can't change
+        // size", 2026-08-20).
+        const fallback = Array.isArray(field.default) ? field.default : [0, 0, 0]
+        const arr = Array.isArray(value) ? value : fallback
         return (
             <div style={{ display: 'flex', gap: 4 }}>
                 {[0, 1, 2].map((axis) => (
-                    <input
+                    <NumberField
                         key={axis}
-                        type="number"
-                        value={Number.isFinite(Number(arr[axis])) ? arr[axis] : 0}
+                        value={Number.isFinite(Number(arr[axis])) ? arr[axis] : (fallback[axis] ?? 0)}
+                        fallback={fallback[axis] ?? 0}
                         step={field.step ?? 0.1}
-                        style={{ width: '100%', minWidth: 0 }}
-                        onChange={(event) => {
-                            const next = [arr[0] ?? 0, arr[1] ?? 0, arr[2] ?? 0]
-                            next[axis] = Number(event.target.value)
+                        onCommit={(committed) => {
+                            const next = [
+                                Number.isFinite(Number(arr[0])) ? arr[0] : (fallback[0] ?? 0),
+                                Number.isFinite(Number(arr[1])) ? arr[1] : (fallback[1] ?? 0),
+                                Number.isFinite(Number(arr[2])) ? arr[2] : (fallback[2] ?? 0)
+                            ]
+                            next[axis] = committed
                             onChange(next)
                         }}
                     />
@@ -128,8 +174,53 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
     return <input type="text" value={value || ''} onChange={(event) => onChange(event.target.value)} />
 }
 
+// The rename verb. It did not exist anywhere in the UI (audit 08-21: the
+// schema patches `label`, but no surface ever offered it — a graph full of
+// nodes named Number had no way to tell them apart). The inspector title is
+// the one element every selected node already shows its name on, so the name
+// is edited exactly where it is read: click, type, Enter. Same edit-buffer
+// manners as NumberField — Escape abandons, blur commits.
+function TitleField({ title, onRename }) {
+    const [draft, setDraft] = useState(null)
+    if (!onRename) return <h4>{title}</h4>
+    if (draft === null) {
+        return (
+            <h4>
+                <button
+                    type="button"
+                    className="raw-property-title-button"
+                    title="Rename"
+                    onClick={() => setDraft(title || '')}
+                >
+                    {title}
+                </button>
+            </h4>
+        )
+    }
+    return (
+        <input
+            className="raw-property-title-input"
+            type="text"
+            value={draft}
+            ref={(element) => element?.focus()}
+            onFocus={(event) => event.target.select()}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={() => {
+                const next = draft.trim()
+                if (next && next !== title) onRename(next)
+                setDraft(null)
+            }}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur()
+                if (event.key === 'Escape') setDraft(null)
+            }}
+        />
+    )
+}
+
 export default function PropertyInspector({
     title,
+    onRename = null,
     subtitle = '',
     sections = [],
     assetOptions = [],
@@ -145,7 +236,7 @@ export default function PropertyInspector({
     return (
         <div className="raw-property-sheet">
             <header className="raw-property-sheet-header">
-                <h4>{title}</h4>
+                <TitleField title={title} onRename={onRename} />
                 {subtitle ? <p>{subtitle}</p> : null}
             </header>
             <div className="raw-property-sections-scroll">

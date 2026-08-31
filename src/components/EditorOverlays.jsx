@@ -48,7 +48,7 @@ export default function EditorOverlays({
             {isFileDragActive && (
                 <div className="drop-overlay">
                     <div className="drop-panel">
-                        <p>Drop files to add to your scene</p>
+                        <p>Drop files to add to the room</p>
                     </div>
                 </div>
             )}

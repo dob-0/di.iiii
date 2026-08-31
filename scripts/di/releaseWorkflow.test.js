@@ -30,11 +30,32 @@ describe('the release workflow', () => {
         expect(pack, 'a legacy step must not be able to stop the artifact being built').toBeLessThan(cpanel)
     })
 
-    it('names the artifact from the tag, not package.json', () => {
+    it('names the artifact from the tag or the caller, never package.json', () => {
         // The installer resolves a version from the release feed and then asks for
         // di-runtime-<that>.tar.gz. If the name came from package.json the two
-        // could disagree, which is a 404 for everyone who pastes the line.
-        expect(workflow).toContain('npm run di:pack -- --version=${GITHUB_REF_NAME#v}')
+        // could disagree, which is a 404 for everyone who pastes the line —
+        // package.json has read 0.2.0 since v0.2.0.
+        //
+        // Two callers now: a human pushing a tag (GITHUB_REF_NAME) and
+        // tag-on-promotion.yml calling this workflow with the version it just
+        // tagged (inputs.version). Neither is package.json.
+        expect(workflow).toContain('DI_RELEASE_VERSION: ${{ inputs.version ||')
+        expect(workflow).toContain('VERSION="${DI_RELEASE_VERSION:-${GITHUB_REF_NAME#v}}"')
+        expect(workflow).toContain('npm run di:pack -- --version="$VERSION"')
+    })
+
+    it('can be called as well as triggered, because a bot-pushed tag triggers nothing', () => {
+        // A tag pushed with GITHUB_TOKEN does not fire `on: push: tags`. Without
+        // workflow_call, every automatic tag would exist with no artifact behind
+        // it — a version the installer can see and cannot install.
+        expect(workflow).toContain('workflow_call:')
+        expect(workflow).toContain('version:')
+    })
+
+    it('releases against the tag it was called for, not the branch it ran on', () => {
+        // On a workflow_call the ref is a branch, and the release action would
+        // otherwise try to publish from it.
+        expect(workflow).toContain("tag_name: ${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }}")
     })
 
     it('makes every legacy cPanel step conditional', () => {
@@ -50,5 +71,33 @@ describe('the release workflow', () => {
         expect(workflow).toContain('fail_on_unmatched_files: false')
         expect(workflow).toContain('dist-runtime/di-runtime-*.tar.gz')
         expect(workflow).toContain('dist-runtime/checksums.txt')
+    })
+})
+
+// Every dev → main promotion becomes a version an installed di.iiii can update
+// to (decided 2026-08-19). The workflow that does it has three properties that
+// are easy to lose in an edit and expensive to lose in practice.
+describe('the promotion tagger', () => {
+    const tagger = fs.readFileSync(path.join(repoRoot, '.github', 'workflows', 'tag-on-promotion.yml'), 'utf8')
+
+    it('waits for the production deploy to succeed', () => {
+        // A tag is a promise that this code runs. Tagging alongside the deploy
+        // would make that promise before it is known.
+        expect(tagger).toContain("workflows: ['Deploy VPS (GHCR + SSH)']")
+        expect(tagger).toContain("github.event.workflow_run.conclusion == 'success'")
+    })
+
+    it('tags the commit that deployed, not whatever main points at by then', () => {
+        expect(tagger).toContain('ref: ${{ github.event.workflow_run.head_sha || github.sha }}')
+    })
+
+    it('leaves a commit alone when a human already tagged it', () => {
+        // A hand-picked minor or major must not get an automatic patch beside it.
+        expect(tagger).toContain('git tag --points-at HEAD')
+        expect(tagger).toContain('tagged=false')
+    })
+
+    it('calls the release workflow instead of hoping the tag triggers it', () => {
+        expect(tagger).toContain('uses: ./.github/workflows/release.yml')
     })
 })

@@ -1,0 +1,53 @@
+/* One bar above the Spaces hub. Deliberately not a second header: SpaceHub
+   already says "di.iiii / Spaces", and the rule in this repo is that a new
+   surface consolidating existing ones looks indistinguishable from them. */
+.lh-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    background: rgba(6, 10, 16, 0.6);
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--di-text-muted, rgba(255, 255, 255, 0.4));
+}
+
+.lh-bar strong {
+    color: var(--di-text, #fff);
+    font-weight: 600;
+}
+
+.lh-here {
+    color: var(--di-success, #4df9c0);
+}
+
+.lh-sep {
+    opacity: 0.35;
+}
+
+.lh-doors {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.lh-doors a {
+    color: var(--di-cyan, #4df9ff);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+}
+
+.lh-doors a:hover {
+    border-bottom-color: var(--di-cyan, #4df9ff);
+}
+
+@media (max-width: 600px) {
+    .lh-doors {
+        margin-left: 0;
+        width: 100%;
+    }
+}

@@ -19,6 +19,10 @@ writes to. Two branches can never collide on this, because they never share a pa
 One file per branch: `docs/ai/sessions/<branch-slug>.md` (slugify the branch name —
 `/` becomes `-`; `chore/sync-safety-rescue` → `chore-sync-safety-rescue.md`).
 
+`npm run land` quotes the note's FIRST `## ` heading verbatim as `CURRENT.md`'s
+"Last session" line — give it a real title, never a template placeholder ("What
+this branch does" landed as dev's whole current-state summary on 2026-08-21).
+
 ```markdown
 ## 2026-08-06 — a one-line title for what this branch did
 

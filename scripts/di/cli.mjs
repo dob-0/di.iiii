@@ -17,12 +17,29 @@
  */
 
 import { spawn } from 'node:child_process'
+import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 import { decideMode } from './detect.mjs'
-import { activate, latestRelease, pruneVersions, rollback, smokeTest, stageVersion } from './install.mjs'
+import {
+    activate,
+    buildSchemaVersion,
+    dataSchemaVersion,
+    isNewerVersion,
+    latestRelease,
+    listSnapshots,
+    pruneVersions,
+    releaseFromFile,
+    rehearseAgainst,
+    restoreSnapshot,
+    rollback,
+    smokeTest,
+    snapshotData,
+    stageVersion
+} from './install.mjs'
 import { isWindows, paths } from './paths.mjs'
 import { probeAll, probeHealth } from './probe.mjs'
 import * as docker from './runner-docker.mjs'
@@ -45,6 +62,8 @@ const parseArgs = (argv) => {
         const name = token.slice(2)
         if (name === 'port') { args.flags.port = argv[++i]; continue }
         if (name === 'out') { args.flags.out = argv[++i]; continue }
+        if (name === 'from') { args.flags.from = argv[++i]; continue }
+        if (name === 'as') { args.flags.as = argv[++i]; continue }
         if (name === 'remote') { args.flags.remote = argv[++i]; continue }
         if (name === 'key') { args.flags.key = argv[++i]; continue }
         args.flags[name] = true
@@ -145,7 +164,7 @@ const noticeNewVersion = async (home) => {
         // already running and printed.
         const release = await latestRelease({ timeoutMs: UPDATE_CHECK_TIMEOUT_MS })
         const current = installedVersion(home)
-        if (release.version && current && release.version !== current) {
+        if (release.version && current && isNewerVersion(release.version, current)) {
             say(ui.updateAvailable(current, release.version))
         }
     } catch {
@@ -186,10 +205,152 @@ const cmdStatus = async () => {
 const cmdOpen = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
+    // `di open` opens di.iiii; `di open my-show.diiii` opens that work inside
+    // it. Both read as English and neither is ambiguous — a file argument is
+    // either there or it is not.
+    if (args._[1]) { await cmdOpenFile(args, args._[1]); return }
     const port = resolvePort(home)
     if (!(await probeHealth(port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
     say(localUrl(port))
     openBrowser(localUrl(port))
+}
+
+/**
+ * THE FILE MENU.
+ *
+ * Blender is the model, and it is closer than it looks: a space bundle already
+ * held everything a piece of work is made of — its scene, its whole op-log,
+ * every project document, its assets, its blobs — portable to any other
+ * install, with host bindings and secrets stripped on the way out. What it did
+ * not have was a door. It was `node scripts/space-bundle.mjs export <id>`, a
+ * maintenance script, which is not a thing anyone saves their work with.
+ *
+ * So: `di new`, `di save`, `di open FILE`, `di spaces`.
+ *
+ * Where the model deliberately stops: a space is LIVE, and someone else may be
+ * standing in it. There is no unsaved buffer to lose and no moment where the
+ * work is only in memory — the server keeps it, continuously. A file is the
+ * PORTABLE FORM of the work, not the place it lives. `di save` therefore never
+ * means "flush", it means "give me a copy I can carry".
+ */
+
+/** The bundle tool, shipped inside the runtime, run against this install's data. */
+const runBundleTool = async (home, toolArgs, { verbose = false } = {}) => {
+    const script = path.join(currentVersionDir(home), 'scripts', 'space-bundle.mjs')
+    if (!fs.existsSync(script)) {
+        fail('this install predates di save/open — run `di update` first.')
+        return 1
+    }
+    const child = spawn(node.nodeBinary(home), [script, ...toolArgs], {
+        stdio: verbose ? 'inherit' : ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, DATA_ROOT: paths(home).data }
+    })
+    let output = ''
+    if (!verbose) {
+        child.stdout?.on('data', (chunk) => { output += chunk })
+        child.stderr?.on('data', (chunk) => { output += chunk })
+    }
+    const code = await new Promise(resolve => child.on('exit', resolve))
+    if (code !== 0 && !verbose) process.stderr.write(output.replace(/^\[space-bundle\] /gm, '  '))
+    return code
+}
+
+const cmdSave = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const spaceId = args._[1]
+    if (!spaceId) {
+        fail('which space? — di save my-space')
+        const port = resolvePort(home)
+        const names = await spaceNames(port)
+        if (names.length) say(ui.spacesHere(names))
+        process.exitCode = 1
+        return
+    }
+    const out = path.resolve(args.flags.out || `${spaceId}.diiii`)
+    // Reading, not writing: the server can stay up and the artist can keep
+    // working while a copy is taken.
+    const code = await runBundleTool(home, ['export', spaceId, '--out', out], { verbose: Boolean(args.flags.verbose) })
+    if (code !== 0) { fail(`could not save ${spaceId} — run again with --verbose`); process.exitCode = 1; return }
+    let size = null
+    try { size = humanSize((await fsp.stat(out)).size) } catch { /* printed without it */ }
+    say(ui.saved(spaceId, out, size))
+}
+
+const cmdOpenFile = async (args, file) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const resolved = path.resolve(file)
+    if (!fs.existsSync(resolved)) { fail(`no such file: ${resolved}`); process.exitCode = 1; return }
+
+    // Importing writes rows the running server has open. Stop it, put the work
+    // in, start it again if it was up — the artist asked to open a file, not to
+    // manage a server.
+    const port = resolvePort(home)
+    const wasRunning = await probeHealth(port)
+    if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
+
+    const toolArgs = ['import', resolved]
+    if (args.flags.as) toolArgs.push('--as', args.flags.as)
+    if (args.flags.force) toolArgs.push('--force')
+    const code = await runBundleTool(home, toolArgs, { verbose: Boolean(args.flags.verbose) })
+
+    if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true } })
+    if (code !== 0) {
+        // The tool has already said what was wrong — a space of that name
+        // already here, or a file from a newer di.iiii — and said it in its own
+        // words, which are better than a summary of them. But the server's
+        // restart banner printed after that, so the last thing on screen would
+        // otherwise be "di.iiii is running" on a run that opened nothing.
+        fail(ui.openedNothing(path.basename(resolved)))
+        process.exitCode = 1
+        return
+    }
+    const opened = args.flags.as || path.basename(resolved).replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
+    say(ui.opened(opened, `${localUrl(resolvePort(home))}/${opened}`))
+}
+
+const cmdNew = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const name = args._.slice(1).join(' ').trim()
+    if (!name) { fail('what should it be called? — di new "my show"'); process.exitCode = 1; return }
+
+    // Through the API rather than straight into the database: the server owns
+    // what a legal space id is, which words are reserved, and what a new space
+    // starts out containing. A second implementation here would drift from it.
+    const port = resolvePort(home)
+    if (!(await probeHealth(port))) await cmdUp({ _: [], flags: { 'no-open': true } })
+    try {
+        const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: name, permanent: true })
+        })
+        const body = await response.json().catch(() => ({}))
+        if (!response.ok) { fail(body?.error || `could not make a space called "${name}"`); process.exitCode = 1; return }
+        const id = body?.space?.id || name
+        say(ui.made(id, `${localUrl(port)}/${id}`))
+    } catch (error) {
+        fail(String(error?.message || error))
+        process.exitCode = 1
+    }
+}
+
+const cmdSpaces = async () => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const port = resolvePort(home)
+    if (!(await probeHealth(port))) { say(ui.notRunning()); return }
+    try {
+        const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`)
+        const body = await response.json()
+        const spaces = (body?.spaces || []).map((space) => space.id)
+        say(spaces.length ? ui.spacesHere(spaces) : ui.noSpacesYet())
+    } catch {
+        fail('could not ask this di.iiii what it has.')
+        process.exitCode = 1
+    }
 }
 
 const cmdLogs = async (args) => {
@@ -264,6 +425,29 @@ const cmdBackup = async (args) => {
 const cmdRestore = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
+
+    // `di restore --snapshot [name]` — the automatic copies, taken before an
+    // update that changes how work is stored. Listed rather than guessed at:
+    // restoring the wrong one is a bad afternoon, and the names carry dates.
+    if (args.flags.snapshot !== undefined) {
+        const snapshots = listSnapshots(home)
+        const wanted = typeof args.flags.snapshot === 'string' ? args.flags.snapshot : args._[1]
+        if (!wanted) { say(ui.snapshotList(snapshots)); return }
+        const found = snapshots.find((entry) => entry.name === wanted)
+        if (!found) {
+            fail(`no snapshot called "${wanted}".`)
+            say(ui.snapshotList(snapshots))
+            process.exitCode = 1
+            return
+        }
+        say(ui.restoreWarning(paths(home).data))
+        if (!args.flags.yes) { say(style.dim('add --yes when you are sure.')); return }
+        try { await runnerFor(home).stop({ home }) } catch { /* already down */ }
+        await restoreSnapshot({ home, dir: found.dir })
+        say(ui.snapshotRestored(found.name))
+        return
+    }
+
     const file = args._[1]
     if (!file) { fail('which file? — di restore my-backup.tar.gz'); process.exitCode = 1; return }
 
@@ -305,6 +489,19 @@ const cmdUpdate = async (args) => {
     const from = installedVersion(home)
 
     if (args.flags.rollback) {
+        // Going back to a build that cannot read the data it is going back TO
+        // is the failure this whole arrangement exists for. Say it before
+        // moving anything, and name the snapshot that fixes it.
+        const p = paths(home)
+        const previousDir = fs.existsSync(p.previous) ? fs.realpathSync(p.previous) : null
+        const dataSchema = dataSchemaVersion(home)
+        const targetSchema = previousDir ? buildSchemaVersion(previousDir) : null
+        if (dataSchema !== null && targetSchema !== null && targetSchema < dataSchema) {
+            const snapshots = listSnapshots(home)
+            fail(ui.rollbackCrossesSchema(dataSchema, targetSchema, snapshots[0]?.name || null))
+            process.exitCode = 1
+            return
+        }
         const to = await rollback({ home })
         say(to ? ui.rolledBack(to) : ui.noPrevious())
         if (!to) process.exitCode = 1
@@ -313,20 +510,47 @@ const cmdUpdate = async (args) => {
 
     let release
     try {
-        release = await latestRelease()
+        // --from is the venue case: a machine with no network, an artifact on a
+        // USB stick. It skips the feed entirely, and with it the "is this newer"
+        // question — someone who names a file has chosen that file.
+        release = args.flags.from
+            ? await releaseFromFile(args.flags.from)
+            : await latestRelease()
     } catch (error) {
         fail(String(error.message || error))
         process.exitCode = 1
         return
     }
     if (release.version === from) { say(ui.upToDate(from)); return }
+    // A machine can be AHEAD of the release feed — a build installed from a
+    // file, an rc, a test install. "Not the same version" is not "newer", and
+    // walking someone backwards is not an update.
+    if (!args.flags.from && !isNewerVersion(release.version, from) && !args.flags.force) {
+        say(ui.aheadOfRelease(from, release.version))
+        return
+    }
 
     say(ui.installing(release.version))
     let staged
+    let rehearsal = null
     try {
         staged = await stageVersion({ home, release, verbose })
-        const healthy = await smokeTest({ home, versionDir: staged.partialDir, nodeBinary: node.nodeBinary(home) })
-        if (!healthy) throw new Error('the new version did not answer on a test port')
+        // The rehearsal: the new build opens a COPY of the artist's own data and
+        // runs its migrations there. An empty scratch directory only ever proved
+        // the binary starts, which is not what an update risks.
+        rehearsal = await rehearseAgainst({ home })
+        if (rehearsal) say(ui.rehearsing())
+        const healthy = await smokeTest({
+            home,
+            versionDir: staged.partialDir,
+            nodeBinary: node.nodeBinary(home),
+            dataRoot: rehearsal
+        })
+        if (!healthy) {
+            throw new Error(rehearsal
+                ? 'the new version could not open your work — nothing has been changed'
+                : 'the new version did not answer on a test port')
+        }
     } catch (error) {
         // Nothing has been stopped and `current` has not moved, so the artist
         // is exactly where they were — say so plainly rather than leaving them
@@ -336,6 +560,21 @@ const cmdUpdate = async (args) => {
         say(ui.updateFailed(from))
         process.exitCode = 1
         return
+    } finally {
+        // The rehearsal was a copy and its migrations are thrown away with it.
+        // The real database is migrated afterwards, by the build that has now
+        // proved it can.
+        if (rehearsal) await fsp.rm(rehearsal, { recursive: true, force: true }).catch(() => {})
+    }
+
+    // Before the flip, not after: if this update moves the schema, `--rollback`
+    // alone cannot undo it, so the way back has to exist first.
+    const dataSchema = dataSchemaVersion(home)
+    const nextSchema = buildSchemaVersion(staged.partialDir)
+    const movesSchema = dataSchema !== null && nextSchema !== null && nextSchema > dataSchema
+    if (movesSchema) {
+        const snapshot = await snapshotData({ home, label: `before-${release.version}` })
+        if (snapshot) say(ui.snapshotTaken(snapshot))
     }
 
     const runner = runnerFor(home)
@@ -425,6 +664,26 @@ const promptSecret = (question) => new Promise((resolve) => {
 
 const cmdVersion = () => { say(installedVersion(HOME()) || 'not installed') }
 
+// `di mcp` — hand this di.iiii to an agent.
+//
+// Not a server you leave running: an MCP client starts it, speaks to it over
+// stdin, and it dies with the conversation. Public moves are refused unless
+// DI_MCP_ALLOW_PUBLIC=1 is in the environment the client launched it with, so
+// the decision to let an agent publish is made once, by a person, outside the
+// conversation that would ask for it.
+const cmdMcp = async (args) => {
+    // In an install the SDK sits beside cli/; in a checkout it is two levels
+    // up. Try both rather than assume, or this command works for whoever
+    // wrote it and nobody else.
+    const here = path.dirname(fileURLToPath(import.meta.url))
+    const candidates = [path.join(here, '..', 'sdk', 'mcp.mjs'), path.join(here, '..', '..', 'sdk', 'mcp.mjs')]
+    const entry = candidates.find((p) => fs.existsSync(p))
+    if (!entry) { fail('this di.iiii has no sdk/ — it was packed before `di mcp` existed'); process.exitCode = 1; return }
+    const port = resolvePort(HOME(), args.flags?.port)
+    const child = spawn(process.execPath, [entry, '--base', `http://localhost:${port}/serverXR`], { stdio: 'inherit' })
+    await new Promise((resolve) => child.on('exit', resolve))
+}
+
 // ── routing ───────────────────────────────────────────────────────────────
 
 const COMMANDS = {
@@ -438,11 +697,15 @@ const COMMANDS = {
     where: cmdWhere,
     backup: cmdBackup,
     restore: cmdRestore,
+    new: cmdNew,
+    save: cmdSave,
+    spaces: cmdSpaces,
     link: cmdLink,
     sync: cmdSync,
     update: cmdUpdate,
     uninstall: cmdUninstall,
     version: cmdVersion,
+    mcp: cmdMcp,
     help: () => say(ui.help())
 }
 
