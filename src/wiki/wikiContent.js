@@ -998,6 +998,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-21'
     },
     {
+        id: 'dmx-out-node',
+        category: 'Editing',
+        title: 'DMX Out: the graph lights the room',
+        summary: 'Wire numbers out to real lamps through a vizzz node — an Art-Net/DMX box on your network.',
+        body: [
+            'Add a DMX Out node from the palette and give it the address of a vizzz node — the small box wired into your DMX rig. The panel says what it finds: the rig by its own name and universe when it answers, and plainly who is not answering when it does not. Its Status port says the same thing, so a Text panel wired to Status is an honest meter.',
+            'Master dims the whole rig: whenever it changes, the new level goes out. Value at Channel sets one DMX channel the same way — wire an Oscillator through Range into Value and a lamp breathes on its own. Wires carry 0 to 1, as everywhere on the canvas; the node turns them into DMX bytes.',
+            'Blackout kills every channel the moment it rises, ahead of anything else queued. A Button, a Compare, a Toggle — anything true-or-false — makes a good Blackout.',
+            'Nothing is sent for a value that merely stays what it was, and fast wires are paced so a small rig is never asked sixty times a second.',
+            'One honest limit: the hosted editor is a https page and a rig on the local network speaks http, which browsers refuse to mix — the panel says so instead of failing silently. The local editor (`di up`, or npm run dev) is the surface that reaches a rig.'
+        ],
+        tags: ['raw', 'nodes', 'dmx', 'artnet', 'light', 'device', 'performance'],
+        updated: '2026-08-31'
+    },
+    {
         id: 'raw-zen-workspace',
         category: 'Editing',
         title: 'A canvas with nothing on it',

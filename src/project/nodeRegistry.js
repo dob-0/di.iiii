@@ -177,6 +177,7 @@ export const FAMILY_BY_TYPE = {
     // Publish sits with the things that leave the browser: what this panel
     // changes is what a stranger receives, not what the graph makes.
     'view.publish': 'send-out',
+    'device.dmx.out': 'send-out',
     'device.midi.out': 'send-out',
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
@@ -607,6 +608,41 @@ export const NODE_TYPES = {
         // last-message line below the fold. Matches the keeper's width so the
         // header fits on one line.
         defaultFrame: { width: 380, height: 340 },
+    },
+
+    'device.dmx.out': {
+        id: 'device.dmx.out',
+        label: 'DMX Out',
+        category: 'device',
+        runtime: 'web',
+        singleton: false,
+        keywords: ['dmx', 'artnet', 'art-net', 'light', 'lights', 'rig', 'lamp', 'fixture', 'vizzz', 'stage'],
+        inputs: [
+            // Wires carry 0..1, the LFO/Range convention; the panel turns them
+            // into DMX bytes. Value without a Channel is meaningless, so both
+            // travel together.
+            { id: 'master',   type: 'number', label: 'Master' },
+            { id: 'channel',  type: 'number', label: 'Channel', default: 1 },
+            { id: 'value',    type: 'number', label: 'Value' },
+            // `any`, the MIDI Out idiom: a Button, a Compare, a Toggle are
+            // exactly what should kill the lights.
+            { id: 'blackout', type: 'any',    label: 'Blackout' },
+        ],
+        outputs: [
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        // Host is config, not a port — you set it once for the room you are
+        // in, and nothing upstream should be able to repoint the rig
+        // mid-graph (the keeper's endpoint rationale).
+        defaultValues: { host: '' },
+        configInputs: [
+            { id: 'host', type: 'string', label: 'Host' },
+        ],
+        // panel-2d for the capture-family reason: "no rig named" and "the rig
+        // isn't answering" are the normal states of this node, and both need
+        // somewhere to be said.
+        render: 'panel-2d',
+        defaultFrame: { width: 340, height: 200 },
     },
 
     'device.midi.out': {

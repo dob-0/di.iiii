@@ -4111,6 +4111,68 @@
     }
 }
 
+/* DMX Out — the keeper's ground and accents: both panels exist to say
+   whether a box on the network is answering. */
+.raw-dmx-panel {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background: #080c14;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--di-cyan-dim, #9fd7ff);
+}
+
+.raw-dmx-panel-setup {
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: rgba(77, 249, 255, 0.07);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+}
+
+.raw-dmx-panel-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.raw-dmx-panel-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.raw-dmx-panel-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 9px;
+    font: inherit;
+    color: #e8f6ff;
+    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    border-radius: 4px;
+}
+
+.raw-dmx-panel-input:focus-visible {
+    outline: 2px solid var(--di-cyan, #4df9ff);
+    outline-offset: 1px;
+}
+
+.raw-dmx-panel-status {
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: rgba(8, 12, 20, 0.7);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+    /* A host is one unbreakable token and the panel is narrow. */
+    overflow-wrap: anywhere;
+}
+
 /* Phones. The topbar is a fixed-height single flex row holding the back button,
    breadcrumb, surface toggles, window list, scale select, node count, chat and
    overflow — at 390px that overflowed with no wrap and no collapse, and
