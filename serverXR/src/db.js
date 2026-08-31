@@ -274,6 +274,37 @@ function addCompatLayer(db) {
   return db
 }
 
+/**
+ * What shape this build expects the database to be in.
+ *
+ * Bump it when a change would make an OLDER build misread this data — not for
+ * every schema edit. Adding a column is invisible to older code, which simply
+ * ignores it. Rewriting what a value MEANS is not: `v2_user_is_unrestricted`
+ * turned every `spaces = 'null'` (the old spelling of "unrestricted") into
+ * `'[]'` plus a flag, and a build from before that reads `'[]'` as "no access
+ * to anything". It would not crash. It would quietly lock people out of their
+ * own spaces, and nothing anywhere would say why.
+ *
+ * So the database says how far forward it has come, and a build that cannot
+ * read that far refuses to open it rather than guessing. That refusal is the
+ * whole point: `di update --rollback` restores the app, and the app is not the
+ * only thing an update moved.
+ *
+ * 1 — the baseline, stamped 2026-08-19. Existing databases are stamped on
+ *     first open; they are already at this shape.
+ */
+const SCHEMA_VERSION = 1
+
+// The escape hatch, documented rather than hidden: if you have restored an old
+// database on purpose, or you are recovering and you know what the difference
+// is, this lets the build open data from the future anyway.
+const ALLOW_OLDER_CODE = () => process.env.DI_ALLOW_OLDER_CODE === '1'
+
+const readSchemaVersion = (db) => {
+  const row = db.prepare('PRAGMA user_version').get()
+  return Number(row?.user_version ?? 0)
+}
+
 // CREATE TABLE IF NOT EXISTS only covers fresh databases; existing ones need
 // columns added explicitly since SQLite has no "ADD COLUMN IF NOT EXISTS".
 function ensureColumn(db, table, column, definition) {
@@ -331,6 +362,22 @@ function initDb(dbPath) {
   addCompatLayer(db)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
+  // BEFORE any migration runs: is this data from a build newer than this one?
+  const found = readSchemaVersion(db)
+  if (found > SCHEMA_VERSION && !ALLOW_OLDER_CODE()) {
+    try { db.close() } catch { /* closing a database we are refusing to use */ }
+    throw new Error(
+      `This di.iiii is older than its data.\n`
+      + `  the database is at schema ${found}, this build reads ${SCHEMA_VERSION}\n`
+      + `  ${dbPath}\n\n`
+      + `Nothing has been changed. A newer version wrote this data, and reading it\n`
+      + `with this one would not crash — it would misread it, quietly.\n\n`
+      + `  go forward again:   di update\n`
+      + `  or restore the snapshot taken before that update:  di restore --snapshot\n`
+      + `  or, if you know the difference and accept it:      DI_ALLOW_OLDER_CODE=1`
+    )
+  }
+
   db.exec(SCHEMA)
   ensureColumn(db, 'ai_chats', 'claude_session_id', 'TEXT')
   ensureColumn(db, 'spaces', 'is_public', 'INTEGER NOT NULL DEFAULT 0')
@@ -355,6 +402,9 @@ function initDb(dbPath) {
   // collide against each other on the NULL value.
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_spaces_slug ON spaces(slug) WHERE slug IS NOT NULL')
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_slug ON projects(space_id, slug) WHERE slug IS NOT NULL')
+  // Stamped last, so a run that dies half way through leaves the old number and
+  // the next start finishes the job rather than believing it already did.
+  if (found !== SCHEMA_VERSION) db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`)
   _db = db
   return _db
 }
@@ -371,4 +421,4 @@ function closeDb() {
   }
 }
 
-module.exports = { initDb, getDb, closeDb }
+module.exports = { initDb, getDb, closeDb, SCHEMA_VERSION, readSchemaVersion }

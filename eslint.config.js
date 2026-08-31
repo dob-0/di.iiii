@@ -122,7 +122,7 @@ export default [
         // Node tooling: automation scripts and the shared CommonJS schema contracts.
         // Browser globals are in scope because the verify/check scripts ship
         // page.evaluate() callbacks that run inside Playwright, not in Node.
-        files: ['scripts/**/*.{js,mjs}', 'shared/**/*.cjs', '*.config.js'],
+        files: ['scripts/**/*.{js,mjs}', 'sdk/**/*.{js,mjs}', 'shared/**/*.cjs', '*.config.js'],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'module',

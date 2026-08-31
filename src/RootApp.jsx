@@ -12,16 +12,19 @@ import {
     RAW_PAGE_PROJECTS
 } from './raw/utils/rawRouting.js'
 import AuthReturnNotice from './components/AuthReturnNotice.jsx'
+import ModeMark from './components/ModeMark.jsx'
 import LaneDefaultSpace from './components/LaneDefaultSpace.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
+import useLocalInstall from './hooks/useLocalInstall.js'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
 import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { getJamLocationState, isJamLocation } from './project/routing/jamRouting.js'
 import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
-import { ALGO_VRITHM_SPACE_ID, isAlgoVrithmSegment } from './algoVrithm/algoVrithmRouting.js'
+import { workSurface } from './works/routes.jsx'
+import { workForSegment } from './works/segments.js'
 import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
@@ -34,13 +37,14 @@ const MakeSurface = lazy(() => import('./make/MakeSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
+// What `di up` opens on your own machine: your spaces, not a tour of a hosted
+// product you have already installed. Lazy so a hosted visitor never downloads
+// MUI to render a page that will not use it.
+const LocalHome = lazy(() => import('./landing/LocalHome.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
-const WccExperience = lazy(() => import('./wcc/WccExperience.jsx'))
-const AlgoVrithmExperience = lazy(() => import('./algoVrithm/AlgoVrithmExperience.jsx'))
 // Its own chunk, and deliberately not part of the experience's: the landing
 // page draws on a 2D canvas and must never pull three.js for a visitor who has
 // not pressed Enter.
-const AlgoVrithmLanding = lazy(() => import('./algoVrithm/landing/AlgoVrithmLanding.jsx'))
 const WikiPage = lazy(() => import('./wiki/WikiPage.jsx'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'))
 const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
@@ -212,10 +216,14 @@ function ProjectToolDoorway({ appState }) {
     )
 }
 
-// wcc is a real space like any other — route it through the same
-// server-verified isPublic check instead of assuming it's always public.
-function WccSurfaceRoute({ mode }) {
-    const { isPublic, loading } = useSpacePublicFlag('wcc')
+// One route for every work in src/works/works.js. This was two components —
+// WccSurfaceRoute and AlgoVrithmSurfaceRoute — structurally identical down to
+// the comments, and a third work would have been a third copy. A work is a
+// real space like any other, so the public/private decision comes from the
+// server here too, never from an assumption in the router.
+function WorkSurfaceRoute({ work, mode }) {
+    const { isPublic, loading } = useSpacePublicFlag(work.id)
+    const render = workSurface(work.id)
 
     if (loading) {
         return <RouteSurfaceFallback label="Loading" detail="" />
@@ -223,7 +231,7 @@ function WccSurfaceRoute({ mode }) {
 
     const content = (
         <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-            <WccExperience initialMode={mode} />
+            {render ? render(mode) : null}
         </Suspense>
     )
 
@@ -231,30 +239,7 @@ function WccSurfaceRoute({ mode }) {
         return content
     }
 
-    return <ProtectedSurface requiredSpaceId="wcc">{content}</ProtectedSurface>
-}
-
-// Same shape as WccSurfaceRoute: algovrithm is a real space whose *contents*
-// happen to be code rather than a project document, so the public/private
-// decision still comes from the server, not from an assumption here.
-function AlgoVrithmSurfaceRoute({ mode }) {
-    const { isPublic, loading } = useSpacePublicFlag(ALGO_VRITHM_SPACE_ID)
-
-    if (loading) {
-        return <RouteSurfaceFallback label="Loading" detail="" />
-    }
-
-    const content = (
-        <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-            {mode === 'scene' ? <AlgoVrithmExperience /> : <AlgoVrithmLanding />}
-        </Suspense>
-    )
-
-    if (isPublic) {
-        return content
-    }
-
-    return <ProtectedSurface requiredSpaceId={ALGO_VRITHM_SPACE_ID}>{content}</ProtectedSurface>
+    return <ProtectedSurface requiredSpaceId={work.id}>{content}</ProtectedSurface>
 }
 
 function AppRouter() {
@@ -264,6 +249,9 @@ function AppRouter() {
         return () => setAppNavigate(null)
     }, [rrNavigate])
     const location = useLocation()
+    // Unconditional, at the top: the answer decides what "/" renders, and a
+    // hook behind an if is not a hook.
+    const localInstall = useLocalInstall()
     const rawState = getRawLocationState(location)
     const studioState = getStudioLocationState(location)
     const jamState = getJamLocationState(location)
@@ -427,6 +415,21 @@ function AppRouter() {
         && appState.page !== APP_PAGE_TERMS
 
     if (isRootLanding) {
+        // ?tour=1 keeps the landing reachable on a local install — the tour is
+        // moved, not deleted, and the local home links to it by name.
+        const wantsTour = new URLSearchParams(location.search).get('tour') === '1'
+        if (localInstall.isLocal && !wantsTour) {
+            return (
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <LocalHome />
+                </Suspense>
+            )
+        }
+        // Held only while an already-local-looking address waits for the
+        // server's word — a hosted visitor is never here.
+        if (!localInstall.resolved) {
+            return <RouteSurfaceFallback label="Loading" detail="" />
+        }
         return (
             <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
                 <LandingPage />
@@ -435,21 +438,14 @@ function AppRouter() {
     }
 
     const pathSegments = location.pathname.replace(/^\/+/, '').replace(/\/+$/, '').split('/')
-    const isWccSurface = appState.spaceId === 'wcc'
-        && appState.page !== APP_PAGE_PREFERENCES
+    // The bare segment is the work's landing page and `/scene` is the piece;
+    // deeper paths under the space (a project deep-link, /admin, …) still
+    // belong to the generic surfaces below.
+    const work = appState.page !== APP_PAGE_PREFERENCES ? workForSegment(appState.spaceId) : null
+    const isWorkSurface = work
         && (pathSegments.length === 1 || (pathSegments.length === 2 && pathSegments[1] === 'scene'))
-    if (isWccSurface) {
-        return <WccSurfaceRoute mode={pathSegments[1] === 'scene' ? 'scene' : 'landing'} />
-    }
-
-    // The bare segment is the landing page and `/scene` is the piece; deeper
-    // paths under the space (a project deep-link, /admin, …) still belong to
-    // the generic surfaces below.
-    const isAlgoVrithmSurface = isAlgoVrithmSegment(appState.spaceId)
-        && appState.page !== APP_PAGE_PREFERENCES
-        && (pathSegments.length === 1 || (pathSegments.length === 2 && pathSegments[1] === 'scene'))
-    if (isAlgoVrithmSurface) {
-        return <AlgoVrithmSurfaceRoute mode={pathSegments[1] === 'scene' ? 'scene' : 'landing'} />
+    if (isWorkSurface) {
+        return <WorkSurfaceRoute work={work} mode={pathSegments[1] === 'scene' ? 'scene' : 'landing'} />
     }
 
     if (appState.projectSlugSegment) {
@@ -471,6 +467,7 @@ export default function RootApp() {
     return (
         <BrowserRouter>
             <AuthReturnNotice />
+            <ModeMark />
             <AppRouter />
         </BrowserRouter>
     )

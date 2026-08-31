@@ -228,7 +228,7 @@ export const removeClip = (sequences, id) =>
  *
  * Both halves keep everything the original had — world, lights, placement,
  * component — and split its SOURCE range between them, so the animation runs
- * once across the pair instead of twice. See sourceProgress in ritualClock.js
+ * once across the pair instead of twice. See sourceProgress in clock.js
  * for why that is the whole difference between a cut and a duplicate.
  *
  * The cut point is mapped through the clip's existing source range rather than

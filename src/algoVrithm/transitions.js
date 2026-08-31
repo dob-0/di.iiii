@@ -1,4 +1,4 @@
-import { sortByStart } from './editList.js'
+import { sortByStart } from '../timeline/editList.js'
 
 // Handovers between sequences, and how hard to veil them.
 //

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { worldWeights } from './worldLights.js'
+import { worldWeights } from '../timeline/worldLights.js'
 import { SEQUENCES } from './sequences/index.js'
 
 // The room itself. Each sequence declares a backdrop colour and fog range in

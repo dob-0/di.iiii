@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import useXrAr from '../../hooks/useXrAr.js'
 import { computeFramingCamera, getPointsBoundingSphere, getViewportAspect } from '../../utils/cameraFraming.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
-import { XR_READY, xrAvailability } from '../../algoVrithm/xrAvailability.js'
+import { XR_READY, xrAvailability } from '../../xr/xrAvailability.js'
 import lazyWithReload from '../../utils/lazyWithReload.js'
 
 // Everything in this module -- the XR store, the camera framing math, the two

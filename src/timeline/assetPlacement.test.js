@@ -9,8 +9,8 @@ import {
     resolvePlacement,
     scalePlacementSize
 } from './assetPlacement.js'
-import { STANDPOINT } from './stageView.js'
-import { patchFromGizmo, resolveGroupTransform } from './sequenceTransform.js'
+import { STANDPOINT } from '../timeline/stageView.js'
+import { patchFromGizmo, resolveGroupTransform } from '../timeline/sequenceTransform.js'
 
 const assetRow = (placement = {}) => ({
     id: 'asset-x',

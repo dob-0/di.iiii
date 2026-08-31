@@ -102,7 +102,7 @@ export const MAX_STEP_SEC = 0.1
  * without it, someone who spends thirty seconds finding the headset would put
  * it on to a piece that had already finished playing to an empty room.
  */
-export const useRitualClock = ({
+export const useSceneClock = ({
     durationSec = 45,
     restartKey = null,
     loop = false

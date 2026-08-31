@@ -15,7 +15,7 @@ const eslintConfig = fs.readFileSync(path.join(ROOT_DIR, 'eslint.config.js'), 'u
 describe('the lint gate covers every tree it claims to', () => {
     const lint = pkg.scripts.lint
 
-    it.each(['src', 'serverXR', 'scripts', 'shared'])('lints %s', (tree) => {
+    it.each(['src', 'serverXR', 'scripts', 'sdk', 'shared'])('lints %s', (tree) => {
         expect(lint).toMatch(new RegExp(`(^|\\s)${tree}(\\s|$)`))
     })
 

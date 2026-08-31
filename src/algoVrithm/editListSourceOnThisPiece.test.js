@@ -8,11 +8,18 @@ import {
     matchBracket,
     patchEditListSource,
     scanCode
-} from './editListSource.js'
-import { SEQUENCES } from '../../algoVrithm/sequences/index.js'
+} from '../raw/director/editListSource.js'
+import { SEQUENCES } from './sequences/index.js'
+
+// The source patcher is the platform's (src/raw/director), but half of what it
+// has to survive is THIS piece's real file — a couple of hundred lines of prose
+// between the rows, which is the thing a regenerate-the-array approach would
+// destroy. So the fixture is the piece, and the test lives with the piece: a
+// platform test that read one artwork's source would be the coupling the works
+// registry exists to prevent.
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
-const INDEX_PATH = path.resolve(HERE, '../../algoVrithm/sequences/index.js')
+const INDEX_PATH = path.resolve(HERE, './sequences/index.js')
 const realSource = () => fs.readFileSync(INDEX_PATH, 'utf8')
 
 const TINY = `export const SEQUENCES = [

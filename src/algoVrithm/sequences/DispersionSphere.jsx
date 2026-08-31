@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { smoothstep } from '../ritualClock.js'
+import { smoothstep } from '../../timeline/clock.js'
 import { IRIS_RAMP, PALETTE, TUNNEL_WHITE } from '../palette.js'
-import { dispersionControls } from '../dispersionControls.js'
+import { dispersionControls } from '../../timeline/dispersionControls.js'
 
 // Dispersion sphere — a monumental floating sphere in a dark minimal
 // architectural space, its surface a procedural fluid: iridescent colour

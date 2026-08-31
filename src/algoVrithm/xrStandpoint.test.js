@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { STANDPOINT } from './stageView.js'
+import { STANDPOINT } from '../timeline/stageView.js'
 import {
     PLAUSIBLE_EYE_MIN,
     STANDPOINT_EYE,

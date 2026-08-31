@@ -1,35 +1,27 @@
-import { ASSET_FOLDER, ASSET_LIBRARY } from '../../algoVrithm/assetLibrary.js'
-import AssetClip, { resolvePlacement } from '../../algoVrithm/sequences/AssetClip.jsx'
-import { SEQUENCES } from '../../algoVrithm/sequences/index.js'
-import {
-    LIGHT_INTENSITIES,
-    LIGHT_KINDS,
-    LIGHT_SWATCHES,
-    WORLD_SWATCHES,
-    paletteWarning
-} from '../../algoVrithm/palette.js'
+import { WORKS } from '../../works/works.js'
+import { workPieceLoader } from '../../works/routes.jsx'
 
 // WHAT A PIECE IS, as far as the director is concerned.
 //
 // The director used to import algovrithm directly, which made it that piece's
-// editor rather than a tool. Everything piece-specific now arrives through one
-// of these descriptors, and THIS FILE is the only part of the director that
-// knows algovrithm exists. A second piece is a second entry here plus its own
-// modules; the panel does not change.
+// editor rather than a tool. A descriptor was introduced to fix that, and this
+// file carried the claim "THIS FILE is the only part of the director that
+// knows algovrithm exists" — which was not true: thirteen sibling files
+// imported the piece for the timeline maths, the clock, the light model and
+// the camera. Those are the TOOL and now live in src/timeline; the descriptor
+// itself is the PIECE's and now lives beside it, in src/algoVrithm.
 //
-// What is deliberately NOT in a descriptor: the timeline maths, the light
-// model, the clock and the source patcher. Those are the tool — every piece
-// gets the same ones, and a piece that wanted its own would be a different
-// tool rather than a different descriptor.
+// So this file names no work at all. It asks the registry which works declare
+// a director, and loads a descriptor on demand.
 //
-// Fields:
-//   id           stable key. Also the save allow-list key (see vite.config.js)
-//                — a piece the server does not know cannot be written to,
-//                and the browser never sends a path.
+// Fields a descriptor carries:
+//   id           stable key, and the space the piece lives at
 //   label        what the picker shows
 //   baseline     the committed edit list. Saving diffs the draft against this,
 //                so it must be the array as it is ON DISK, not a copy of the
 //                draft — see handleSave in DirectorPanel.jsx.
+//   savesToSpace the space "save to this space" writes timing into, or absent
+//                if the piece does not persist
 //   assetLibrary droppable assets, already resolved to ids/kinds/urls
 //   assetFolder  where those live, shown in the panel so the author knows
 //                where to put a new file
@@ -37,30 +29,26 @@ import {
 //   resolvePlacement  how a row's polar numbers become a position
 //   palette      the swatches and light vocabulary the pickers offer. A
 //                piece's colours are an argument it is making, not a default
-//                the tool should impose — algovrithm's live in its own
-//                palette.js and stay there.
+//                the tool should impose.
+//
+// Deliberately NOT in a descriptor: the timeline maths, the light model, the
+// clock and the source patcher. Those are the tool — every piece gets the same
+// ones, and a piece that wanted its own would be a different tool rather than
+// a different descriptor.
 
-export const ALGOVRITHM_PIECE = {
-    id: 'algovrithm',
-    label: 'algovrithm',
-    baseline: SEQUENCES,
-    assetLibrary: ASSET_LIBRARY,
-    assetFolder: ASSET_FOLDER,
-    AssetClip,
-    resolvePlacement,
-    palette: {
-        worldSwatches: WORLD_SWATCHES,
-        lightSwatches: LIGHT_SWATCHES,
-        lightKinds: LIGHT_KINDS,
-        lightIntensities: LIGHT_INTENSITIES,
-        warn: paletteWarning
-    }
+export const PIECE_IDS = WORKS.filter((work) => work.director).map((work) => work.id)
+
+/**
+ * Load a piece's descriptor. Async because a descriptor reaches the piece's
+ * own modules — its sequences, its media bin — and the director must not put
+ * those in the bundle everyone downloads. Returns null for an id no work
+ * claims, and under DI_PROFILE=local for every work, since that build carries
+ * no works at all. DirectorPanelWindow renders its empty state for both, which
+ * is the truthful answer in each case.
+ */
+export const loadPiece = async (id) => {
+    const load = workPieceLoader(id)
+    if (!load) return null
+    const module = await load()
+    return module?.default ?? null
 }
-
-export const PIECES = {
-    [ALGOVRITHM_PIECE.id]: ALGOVRITHM_PIECE
-}
-
-export const getPiece = (id) => PIECES[id] || ALGOVRITHM_PIECE
-
-export const PIECE_IDS = Object.keys(PIECES)

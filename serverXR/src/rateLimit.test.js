@@ -103,3 +103,35 @@ describe('createRateLimiter', () => {
         expect(clientKey({ headers: {} })).toBe('unknown')
     })
 })
+
+// A limiter counts strangers, and `di up` has none: loopback-bound, auth off,
+// one person. Counting them turned "put my own library on my own machine" into
+// "wait ten minutes" — 51 files against a cap of 60 per 10 minutes written for
+// a public address.
+describe('a local install has no strangers to count', () => {
+    const withLocal = (value, fn) => {
+        const before = process.env.DI_LOCAL
+        if (value === null) delete process.env.DI_LOCAL
+        else process.env.DI_LOCAL = value
+        try { return fn() } finally {
+            if (before === undefined) delete process.env.DI_LOCAL
+            else process.env.DI_LOCAL = before
+        }
+    }
+
+    const countPasses = (limiter, attempts) => {
+        let passes = 0
+        for (let i = 0; i < attempts; i += 1) limiter(makeReq(), makeRes(), () => { passes += 1 })
+        return passes
+    }
+
+    it('lets every upload through when DI_LOCAL=1', () => {
+        const limiter = createRateLimiter({ windowMs: 60_000, max: 2, name: 'uploads' })
+        withLocal('1', () => expect(countPasses(limiter, 20)).toBe(20))
+    })
+
+    it('still counts them on a hosted boot', () => {
+        const limiter = createRateLimiter({ windowMs: 60_000, max: 2, name: 'uploads' })
+        withLocal(null, () => expect(countPasses(limiter, 5)).toBe(2))
+    })
+})

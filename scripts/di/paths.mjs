@@ -44,6 +44,10 @@ export const paths = (home = diHome()) => ({
     run: path.join(home, 'run'),
     pidFile: path.join(home, 'run', 'server.pid'),
     credentials: path.join(home, 'credentials.json'),
+    // Taken automatically before an update that moves the schema, because
+    // `--rollback` restores the app and an update moves more than the app.
+    // Outside versions/ for the same reason data/ is.
+    snapshots: path.join(home, 'snapshots'),
     versionDir: (version) => path.join(home, 'versions', version)
 })
 
