@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the room stands on the lower part of the screen
+- the one-line install stopped shipping di-studio.xyz, and platform stopped being tangled with works
 
 Full detail: `PROGRESS.md`.
 
