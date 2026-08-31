@@ -2,7 +2,7 @@ import { Suspense, useMemo } from 'react'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import { WORK_DIRECTOR_SURFACES } from '../../works/routes.jsx'
-import { buildStudioHubPath, buildStudioSpacesPath } from '../utils/studioRouting.js'
+import { buildStudioHubPath, buildSpacesPath } from '../utils/studioRouting.js'
 import '../styles/studio-hub.css'
 import './studioCodeSpaceDirector.css'
 
@@ -45,8 +45,8 @@ export default function StudioCodeSpaceDirector({ spaceId }) {
                 <div className="scsd-empty">
                     <p>
                         {codeSpace
-                            ? 'This space is code-backed, but this build has no authoring surface for it.'
-                            : 'This space keeps its scenes as project documents. Open one from Projects.'}
+                            ? 'This space is built from code, and there is no editor for it here yet.'
+                            : 'This space keeps its work as projects. Open one from Projects.'}
                     </p>
                     <button className="sh-link" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>
                         ← Projects
@@ -64,7 +64,7 @@ export default function StudioCodeSpaceDirector({ spaceId }) {
                     <h1 className="sh-title">{codeSpace.directorLabel}</h1>
                 </div>
                 <nav className="scsd-links">
-                    <button className="sh-link" onClick={() => appNavigate(buildStudioSpacesPath())}>← Spaces</button>
+                    <button className="sh-link" onClick={() => appNavigate(buildSpacesPath())}>← Spaces</button>
                     <span className="sh-sep">·</span>
                     <button className="sh-link" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>Projects</button>
                     <span className="sh-sep">·</span>

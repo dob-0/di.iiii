@@ -27,7 +27,12 @@ const clientKey = (req) => {
 // everywhere else DI_LOCAL is consulted.
 const isLocalInstall = () => process.env.DI_LOCAL === '1'
 
-function createRateLimiter({ windowMs = 60_000, max = 30, name = 'requests', keyFn = clientKey } = {}) {
+// `scope` is the half of the 429 sentence that names WHAT was counted. It
+// defaults to the address because that is what the default keyFn counts —
+// a limiter given a keyFn that counts something else (a session subject,
+// say) must say so, or it tells a throttled person their whole building is
+// to blame when only they are.
+function createRateLimiter({ windowMs = 60_000, max = 30, name = 'requests', keyFn = clientKey, scope = 'from this address' } = {}) {
   const buckets = new Map()
   let lastSweep = Date.now()
 
@@ -54,7 +59,7 @@ function createRateLimiter({ windowMs = 60_000, max = 30, name = 'requests', key
       const retryAfterSeconds = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))
       res.set('Retry-After', String(retryAfterSeconds))
       return res.status(429).json({
-        error: `Too many ${name} from this address — retry in ${retryAfterSeconds}s.`
+        error: `Too many ${name} ${scope} — retry in ${retryAfterSeconds}s.`
       })
     }
     next()

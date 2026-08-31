@@ -15,12 +15,20 @@
 // in a normal build they cannot differ (one commit, one artifact), but a
 // hot-patched deploy could desync them, and that one check turns the only
 // silent-lie path into a visible refusal.
-import { SOURCE_FINGERPRINTS } from '../../project/graph/nodeAnatomy.generated.js'
+import { SOURCE_FINGERPRINTS } from 'virtual:node-anatomy'
 import { fingerprintSource } from './sourceFingerprint.js'
 
 const SOURCES = {
     'src/project/graph/nodeGraphRuntime.js': () => import('../../project/graph/nodeGraphRuntime.js?raw'),
     'src/raw/components/RawViewport.jsx': () => import('../components/RawViewport.jsx?raw')
+}
+
+// Colocated runtimes (src/project/nodes/<typeId>/runtime.js) are each a few
+// hundred bytes and each its own lazy chunk — the glob keeps the map honest
+// as types migrate out of the switch, with no hand-kept list to rot.
+const COLOCATED = import.meta.glob('../../project/nodes/*/runtime.js', { query: '?raw' })
+for (const [globPath, load] of Object.entries(COLOCATED)) {
+    SOURCES[globPath.replace('../../project/nodes/', 'src/project/nodes/')] = load
 }
 
 // The sheet may show a longer slice's location but not quote it — eighty lines

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { signLoginState, verifyLoginState, STATE_TTL_MS } from './loginState.js'
+import { signLoginState, verifyLoginState, readLoginState, sanitizeReturnTo, STATE_TTL_MS } from './loginState.js'
 
 describe('loginState', () => {
   it('accepts a state it just signed', () => {
@@ -23,6 +23,28 @@ describe('loginState', () => {
     expect(verifyLoginState('secret-a', undefined)).toBe(false)
     expect(verifyLoginState('secret-a', '')).toBe(false)
     expect(verifyLoginState('secret-a', 'not-a-valid-state')).toBe(false)
+  })
+
+  // Doors audit 2026-08-21: every OAuth sign-in returned to '/', losing the
+  // destination and any ?invite= token with it. The signed state now carries
+  // the path the person signed in from.
+  it('round-trips a same-site returnTo path through the signed state', () => {
+    const state = signLoginState('secret-a', { returnTo: '/gallery/studio?invite=tok' })
+    expect(readLoginState('secret-a', state)?.r).toBe('/gallery/studio?invite=tok')
+  })
+
+  it('refuses to sign an off-site or malformed returnTo', () => {
+    for (const bad of ['https://evil.example', '//evil.example', '/\\evil', 'gallery', '', null, `/${'a'.repeat(700)}`]) {
+      const state = signLoginState('secret-a', { returnTo: bad })
+      expect(readLoginState('secret-a', state)?.r).toBeUndefined()
+    }
+  })
+
+  it('sanitizeReturnTo admits only same-site paths', () => {
+    expect(sanitizeReturnTo('/gallery/studio')).toBe('/gallery/studio')
+    expect(sanitizeReturnTo('//evil.example')).toBeNull()
+    expect(sanitizeReturnTo('https://evil.example')).toBeNull()
+    expect(sanitizeReturnTo(42)).toBeNull()
   })
 
   it('rejects an expired state', () => {

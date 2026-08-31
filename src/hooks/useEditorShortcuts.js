@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import useDeleteConfirm from './useDeleteConfirm.jsx'
 
 export function useEditorShortcuts({
     isEnabled = true,
@@ -16,6 +17,10 @@ export function useEditorShortcuts({
     handleUndo,
     handleRedo,
     deleteSelectedObject,
+    // What Delete is about to take, so the confirm can name it. Returns
+    // [{ id, name, author }]; the legacy scene objects carry no author, so
+    // they read as unowned.
+    getDeleteTargets,
     copySelectedObject,
     pasteClipboardObject,
     cutSelectedObject,
@@ -26,6 +31,7 @@ export function useEditorShortcuts({
     handleFrameSelection
 } = {}) {
     const adminChordRef = useRef(false)
+    const { requestDelete, deleteConfirm } = useDeleteConfirm()
 
     useEffect(() => {
         if (!isEnabled) return undefined
@@ -72,7 +78,7 @@ export function useEditorShortcuts({
 
             if (!isTyping && (event.key === 'Delete' || event.key === 'Backspace')) {
                 event.preventDefault()
-                deleteSelectedObject?.()
+                requestDelete(getDeleteTargets?.() || [], () => deleteSelectedObject?.())
                 return
             }
 
@@ -240,6 +246,8 @@ export function useEditorShortcuts({
         deleteSelectedObject,
         duplicateSelectedObject,
         freeTransformRef,
+        getDeleteTargets,
+        requestDelete,
         handleCreateSelectionGroup,
         handleFrameSelection,
         handleRedo,
@@ -256,6 +264,8 @@ export function useEditorShortcuts({
         toggleAdminMode,
         toggleInteractionMode
     ])
+
+    return { deleteConfirm }
 }
 
 export default useEditorShortcuts

@@ -10,7 +10,7 @@
 //
 // This is the `geometry` port type — declared in PORT_TYPES since the
 // beginning and carried by nothing until now — finally carrying something.
-export const GEOMETRY_KINDS = new Set(['box', 'sphere', 'plane', 'group'])
+export const GEOMETRY_KINDS = new Set(['box', 'sphere', 'plane', 'cylinder', 'cone', 'torus', 'line', 'circle', 'group'])
 
 // A graph is allowed to describe something absurd — two constructors merged
 // into each other through enough Merge nodes make a tree, and trees grow. The
@@ -38,6 +38,35 @@ export function countGeometryPieces(descriptor, depth = 0) {
         if (count >= MAX_GEOMETRY_PIECES) return MAX_GEOMETRY_PIECES
     }
     return count
+}
+
+/**
+ * The same walk the renderer draws, as a PURE prune: returns a descriptor
+ * tree already inside the caps (leaves counted across the whole tree, depth
+ * counted down the branches), so the renderer needs no budget of its own.
+ *
+ * This exists because the renderer used to carry one shared mutable countdown
+ * through recursion — safe only while R3F v8 keeps StrictMode out of the
+ * Canvas; a double-invoked render would have silently halved the cap. A prune
+ * is idempotent: run it twice, get the same tree.
+ */
+export function pruneGeometryDescriptor(descriptor, { maxPieces = MAX_GEOMETRY_PIECES, maxDepth = MAX_GEOMETRY_DEPTH } = {}) {
+    const budget = { left: maxPieces }
+    const walk = (value, depth) => {
+        if (!isGeometryDescriptor(value) || depth >= maxDepth || budget.left <= 0) return null
+        if (value.kind !== 'group') {
+            budget.left -= 1
+            return value
+        }
+        const children = []
+        for (const child of value.children) {
+            const kept = walk(child, depth + 1)
+            if (kept) children.push(kept)
+            if (budget.left <= 0) break
+        }
+        return { ...value, children }
+    }
+    return walk(descriptor, 0)
 }
 
 /**

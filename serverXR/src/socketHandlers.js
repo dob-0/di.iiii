@@ -9,6 +9,7 @@ const {
 const { readCookie, verifyAuthSessionValue } = require('./authSession')
 const { buildCorsOriginHandler } = require('./config')
 const logger = require('./logger')
+const spaceChatStore = require('./spaceChatStore')
 
 // Store active connections
 const spaceConnections = new Map()
@@ -16,6 +17,21 @@ const projectConnections = new Map()
 
 const CHAT_MESSAGE_MAX_LENGTH = 500
 const CHAT_MESSAGE_MIN_INTERVAL_MS = 300
+// How many space lines survive on disk, and how many a joiner gets replayed.
+// The replay is smaller than the store so a week-long room does not push a
+// megabyte at every reconnect.
+const SPACE_CHAT_KEEP = 500
+const SPACE_CHAT_REPLAY = 100
+
+// The sender picks the id so its optimistic local copy and the persisted row
+// are the same message — without that, an admin removing a line clears it for
+// everyone EXCEPT the child who wrote it. Anything that is not a plain id gets
+// a server-generated one instead of being trusted into a SQL primary key.
+const normalizeChatMessageId = (value) => {
+  const raw = String(value || '').trim()
+  if (raw && raw.length <= 64 && /^[A-Za-z0-9_-]+$/.test(raw)) return raw
+  return crypto.randomUUID()
+}
 
 const readSocketToken = (socket) => {
   const authToken = socket?.handshake?.auth?.token
@@ -224,6 +240,25 @@ function initializeSocket(httpServer, config) {
     return null
   }
 
+  // Chat history is a convenience, never a precondition: a server whose DB is
+  // not open (unit harnesses, a half-booted install) must still carry live
+  // messages exactly the way project chat does, rather than refusing to join.
+  const readSpaceChatHistory = (spaceId) => {
+    try {
+      return spaceChatStore.listRecent(spaceId, { limit: SPACE_CHAT_REPLAY })
+    } catch (error) {
+      logger.error(`[Socket] Could not read space chat history for ${spaceId}:`, error)
+      return []
+    }
+  }
+
+  // Guests redeeming a camp invite are `editor`, so editor cannot be the bar
+  // for deleting other children's messages — this is deliberately admin-only.
+  const canModerateSpaceChat = (socket) => {
+    const authState = refreshSocketAuthState(socket, config) || socket.data?.authState || {}
+    return hasRequiredAuthRole(authState.role, 'admin')
+  }
+
   const joinConnectionBucket = ({
     bucketMap,
     bucketId,
@@ -283,7 +318,7 @@ function initializeSocket(httpServer, config) {
 
     // User joins a space
     socket.on('join-space', (data) => {
-      const { spaceId, userId, userName } = data
+      const { spaceId, userId, userName, chat } = data
       if (!spaceId) return
       if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) {
         socket.emit('space-forbidden', {
@@ -304,6 +339,17 @@ function initializeSocket(httpServer, config) {
         userId,
         userName
       })
+
+      // Opt-in: the scene-collaboration client (useSpaceSocket) joins this same
+      // room for ops and cursors and has no use for a hundred chat lines on
+      // every reconnect. Only a client that says `chat: true` gets the replay.
+      if (chat) {
+        socket.emit('space-chat-history', {
+          spaceId,
+          messages: readSpaceChatHistory(spaceId),
+          canModerate: canModerateSpaceChat(socket)
+        })
+      }
     })
 
     socket.on('join-project', async (data) => {
@@ -468,6 +514,91 @@ function initializeSocket(httpServer, config) {
         text: trimmed,
         timestamp: now
       })
+    })
+
+    // Space-wide chat — the same shape, cap, rate budget and scope check as
+    // project chat above, one room wider: everyone in the space hears it no
+    // matter which project they have open. Unlike project chat it IS persisted
+    // (spaceChatStore), so somebody arriving late reads what they missed.
+    socket.on('space-chat-message', (data) => {
+      const { spaceId, text, userId, userName, id } = data || {}
+      if (!spaceId) return
+      const trimmed = String(text || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH)
+      if (!trimmed) return
+
+      // One flood budget per socket, shared with project chat: the limit is on
+      // the person, not on which of the two boxes they type into.
+      const now = Date.now()
+      if (now - (socket.data.lastChatMessageAt || 0) < CHAT_MESSAGE_MIN_INTERVAL_MS) return
+      socket.data.lastChatMessageAt = now
+
+      if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) {
+        socket.emit('space-forbidden', {
+          spaceId,
+          message: 'Space access denied.'
+        })
+        return
+      }
+
+      const message = {
+        id: normalizeChatMessageId(id),
+        userId: userId || socket.id,
+        userName: userName || null,
+        socketId: socket.id,
+        text: trimmed,
+        timestamp: now
+      }
+
+      try {
+        spaceChatStore.appendMessage({
+          id: message.id,
+          spaceId,
+          userId: message.userId,
+          userName: message.userName,
+          text: trimmed,
+          ts: now
+        }, { keep: SPACE_CHAT_KEEP })
+      } catch (error) {
+        // Live delivery is the promise; the transcript is the bonus. Losing
+        // the write must not swallow the message people are waiting on.
+        logger.error(`[Socket] Could not persist space chat line for ${spaceId}:`, error)
+      }
+
+      socket.to(`space-${spaceId}`).emit('space-chat-message', { ...message, spaceId })
+    })
+
+    // The adult's eraser. Admin-only on purpose (camp guests are editors), and
+    // it goes to the whole room INCLUDING the sender so every open screen drops
+    // the line at once, not just on next reload.
+    socket.on('space-chat-remove', (data) => {
+      const { spaceId, id } = data || {}
+      if (!spaceId || !id) return
+      if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) {
+        socket.emit('space-forbidden', {
+          spaceId,
+          message: 'Space access denied.'
+        })
+        return
+      }
+      if (!canModerateSpaceChat(socket)) {
+        socket.emit('space-chat-forbidden', {
+          spaceId,
+          message: 'Only an admin can remove chat messages.'
+        })
+        return
+      }
+      try {
+        spaceChatStore.removeMessage(spaceId, id)
+      } catch (error) {
+        logger.error(`[Socket] Could not remove space chat line ${id} in ${spaceId}:`, error)
+        socket.emit('server-error', {
+          spaceId,
+          message: 'Unable to remove that message.'
+        })
+        return
+      }
+      logger.info(`[Socket] Space chat line ${id} removed from ${spaceId} by ${socket.id}`)
+      io.to(`space-${spaceId}`).emit('space-chat-removed', { spaceId, id: String(id) })
     })
 
     // Selection changes

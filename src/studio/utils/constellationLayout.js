@@ -15,7 +15,7 @@ const kindOf = (space, { openSpaceId } = {}) => {
     return NODE_KIND.SPACE
 }
 
-// Status drives color in the scene: amber = the platform's main space,
+// Status drives color in the scene: amber = di.iiii's main space,
 // cyan = public with a live face, slate = private work, faint = sandbox.
 export const nodeStatus = (space, { defaultSpaceId } = {}) => {
     if (space.id === defaultSpaceId) return 'main'

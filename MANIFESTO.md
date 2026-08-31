@@ -53,7 +53,13 @@ Auth, persistence, publish state, and realtime presence live in `serverXR/`. Fro
 ### 6. Studio is the main lane; Raw is where the future is being built
 Studio is di.iiii's stable, shipped surface — production work, bug fixes, and default UX improvements go there. Raw (absorbed Beta's role 2026-08-06) is experimental and intentionally unstable; do not ship experimental Raw behavior as Studio's default user experience.
 
-The long-term direction is unification, not two lanes running in parallel forever: Studio's own role is being drawn into Raw's node model as a container node — one palette entry you enter to find its subgraph (see `feat/raw-studio-node`) — rather than replaced by picking a landing-page winner ahead of that work landing. Do not force a "which lane is primary" decision on the public landing page or new-project default before the unification itself is real.
+The long-term direction is unification, not two lanes running in parallel forever: Studio's own role is being drawn into Raw's node model as a container node — one palette entry you enter to find its subgraph — rather than replaced by picking a landing-page winner ahead of that work landing.
+
+**Amended 2026-08-22, recording decisions already taken.** The clause this paragraph used to end with — *do not force a "which lane is primary" decision on the public landing page before the unification is real* — has been overtaken by the owner's own calls, and a non-negotiable that the shipped product contradicts protects nothing. What happened: Studio-as-a-node merged (PR #99, 2026-08-13); the owner chose "both lanes, ONE UI, built to be shown" (2026-08-18); the one-door landing shipped with every call to action pointing at the node canvas (wave A, 2026-08-21). So the landing has already chosen, and this document was the last place still saying it must not.
+
+What is **not** amended, and is the part that was always load-bearing: **Studio remains the stable, shipped surface, and experimental Raw behavior must not become Studio's default user experience.** A landing that opens on the node lane is a front door, not a promotion — it does not make Raw the place production work happens, and it does not license shipping unstable behavior into Studio.
+
+Two things still owed, and neither is settled by this amendment: a graph has no compile into the published page (a node-only project publishes an empty room, and the projector view is its public face for now), and the landing's canvas still cannot save into a space without the visitor asking it to. Until both are ordinary, "unified" describes the intent, not the product.
 
 ### 7. shared/ is the canonical schema layer
 `shared/` and `src/shared/` hold the runtime contracts. Do not fork schema logic into Studio or Beta. Do not skip the shared layer for convenience.

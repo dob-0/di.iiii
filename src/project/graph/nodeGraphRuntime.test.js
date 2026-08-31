@@ -541,3 +541,59 @@ describe('doorways', () => {
         expect(getNodeInputs(nullNode, [nullNode, door])).toEqual([])
     })
 })
+
+// The Geo gives out what it collects (owner, 2026-08-20: "i can't add
+// multigeos and connect… create geometry inside geometry"). Containment is
+// the wire: what stands in the Geo is its Geometry.
+describe('geom.geo geometry output', () => {
+    it('an empty Geo carries nothing — an empty place is not an invisible shape', () => {
+        const geo = createNode('geom.geo', { id: 'geo-1' })
+        const ctx = createNodeGraphContext({ nodes: [geo], edges: [] })
+        expect(evaluateNodeOutput(geo, 'geometry', ctx)).toBeUndefined()
+    })
+
+    it('collects its standing children as one group, in its own transform', () => {
+        const geo = createNode('geom.geo', { id: 'geo-1', values: { position: [2, 0, 0] } })
+        const cube = createNode('geom.cube', { id: 'cube-1' })
+        cube.parentId = geo.id
+        const light = createNode('world.light', { id: 'light-1' })
+        light.parentId = geo.id
+        const ctx = createNodeGraphContext({ nodes: [geo, cube, light], edges: [] })
+        const out = evaluateNodeOutput(geo, 'geometry', ctx)
+        expect(out.kind).toBe('group')
+        expect(out.position).toEqual([2, 0, 0])
+        // The Light stands there but is not a shape — skipped, not an error.
+        expect(out.children).toHaveLength(1)
+        expect(out.children[0].kind).toBe('box')
+    })
+
+    it('a Geo inside a Geo answers recursively — geometry inside geometry', () => {
+        const outer = createNode('geom.geo', { id: 'outer' })
+        const inner = createNode('geom.geo', { id: 'inner', values: { position: [0, 0, -1] } })
+        inner.parentId = outer.id
+        const sphere = createNode('geom.sphere', { id: 'sphere-1' })
+        sphere.parentId = inner.id
+        const ctx = createNodeGraphContext({ nodes: [outer, inner, sphere], edges: [] })
+        const out = evaluateNodeOutput(outer, 'geometry', ctx)
+        expect(out.kind).toBe('group')
+        expect(out.children).toHaveLength(1)
+        expect(out.children[0].kind).toBe('group')
+        expect(out.children[0].children[0].kind).toBe('sphere')
+    })
+
+    it('feeds a Merge like any primitive does — geos connect', () => {
+        const geo = createNode('geom.geo', { id: 'geo-1' })
+        const cube = createNode('geom.cube', { id: 'cube-1' })
+        cube.parentId = geo.id
+        const loose = createNode('geom.sphere', { id: 'loose-1' })
+        const merge = createNode('shape.merge', { id: 'merge-1' })
+        const edges = [
+            createEdge(geo.id, 'geometry', merge.id, 'a'),
+            createEdge(loose.id, 'geometry', merge.id, 'b')
+        ]
+        const ctx = createNodeGraphContext({ nodes: [geo, cube, loose, merge], edges })
+        const out = evaluateNodeOutput(merge, 'out', ctx)
+        expect(out.kind).toBe('group')
+        expect(out.children).toHaveLength(2)
+    })
+})

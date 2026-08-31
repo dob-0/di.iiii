@@ -1,7 +1,7 @@
 {
   "$schema": "https://di-studio.xyz/schemas/di-space.space.schema.json",
   "spaceId": "main",
-  "label": "di.ii",
+  "label": "di.iiii",
   "isPublic": true,
   "minEngine": 6,
   "note": "The platform's own space \u2014 what di-studio.xyz opens on. Authored in Studio; no page in this repo pushes it.",

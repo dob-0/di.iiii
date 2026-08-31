@@ -5,7 +5,7 @@ import {
     buildAllNodesExample,
     paletteTypeIds
 } from './allNodesExample.js'
-import {
+import { createEdge,
     arePortsCompatible,
     createNode,
     getNodeInputs,
@@ -154,6 +154,46 @@ describe('all-nodes example graph', () => {
                     edges: [{ id: 'proof-e', fromNodeId: cube.id, fromPort: 'geometry', toNodeId: merge.id, toPort: 'a' }]
                 })
                 return { node: merge, context }
+            },
+            // Containment, not a wire: a cube STANDING IN the geo is what
+            // brings its Geometry alive.
+            'geom.geo.geometry': () => {
+                const geo = createNode('geom.geo', { id: 'proof-geo' })
+                const cube = createNode('geom.cube', { id: 'proof-geo-cube' })
+                cube.parentId = geo.id
+                const context = createNodeGraphContext({ nodes: [geo, cube], edges: [] })
+                return { node: geo, context }
+            },
+            // Same law as the Array: fed the cube's shape, the Transform speaks.
+            'geom.transform.out': () => {
+                const transform = createNode('geom.transform', { id: 'proof-transform' })
+                const cube = createNode('geom.cube', { id: 'proof-transform-cube' })
+                const context = createNodeGraphContext({
+                    nodes: [transform, cube],
+                    edges: [createEdge('proof-transform-cube', 'geometry', 'proof-transform', 'geometry')]
+                })
+                return { node: transform, context }
+            },
+            // A cube's geometry value fed in is what brings the Array alive.
+            'geom.array.out': () => {
+                const array = createNode('geom.array', { id: 'proof-array' })
+                const cube = createNode('geom.cube', { id: 'proof-array-cube' })
+                const context = createNodeGraphContext({
+                    nodes: [array, cube],
+                    edges: [createEdge('proof-array-cube', 'geometry', 'proof-array', 'geometry')]
+                })
+                return { node: array, context }
+            },
+            // Feeding the value is enough — Open defaults true, so the wired
+            // gate speaks; the bare-dead half is proven by the main sweep.
+            'logic.gate.out': () => {
+                const gate = createNode('logic.gate', { id: 'proof-gate' })
+                const number = createNode('value.number', { id: 'proof-gate-number', values: { value: 7 } })
+                const context = createNodeGraphContext({
+                    nodes: [gate, number],
+                    edges: [createEdge('proof-gate-number', 'out', 'proof-gate', 'value')]
+                })
+                return { node: gate, context }
             }
         }
         for (const entry of PASS_THROUGH_PORTS) {
@@ -191,7 +231,7 @@ describe('all-nodes example graph', () => {
         expect(typeof color).toBe('string')
         expect(color).toMatch(/^#[0-9a-f]{6}$/i)
 
-        const light = nodes.find((node) => node.typeId === 'world.light')
+        const light = nodes.find((node) => node.typeId === 'world.environment')
         const intensity = evaluateNodeInputs(light, context).directionalIntensity
         // Not merely finite: Math.pow of a negative base by a fractional
         // exponent is NaN, which would black the light out without erroring.

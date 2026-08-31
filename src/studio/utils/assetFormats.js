@@ -23,8 +23,16 @@ export const canPlaceInScene = (asset) => {
     return mime.startsWith('model/')
 }
 
+// Naming image/* first matters on iOS: with an accept list that does not claim
+// HEIC, the photo picker hands over a transcoded JPEG instead of the camera's
+// HEIC original — which is both a format the server can scrub and one every
+// browser can display. Belt and braces; the server still refuses anything it
+// cannot strip metadata from.
+export const ASSET_ACCEPT =
+    'image/*,video/*,audio/*,application/pdf,.glb,.gltf,.obj,.mtl,.stl,.fbx,.pdf'
+
 export const ASSET_FORMAT_HINT =
-    'Scene formats: 3D models (.glb/.gltf incl. Draco/Meshopt, .obj, .stl, .fbx) · images · video · audio · PDF (imported as image pages). Other files are stored and usable by URL.'
+    'Placeable formats: 3D models (.glb/.gltf incl. Draco/Meshopt, .obj, .stl, .fbx) · images · video · audio · PDF (imported as image pages). Other files are stored and usable by URL.'
 
 // Render a PDF's pages to PNG File objects (page 1..maxPages). pdfjs is
 // imported lazily so it never lands in the main bundle.

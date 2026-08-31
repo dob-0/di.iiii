@@ -15,7 +15,10 @@ export const EYE_HEIGHT = 1.6
 // Pointer-lock is the reference; every other method below is defined
 // relative to it, so bumping this one value re-scales the whole family
 // instead of drifting out of sync one input method at a time.
-export const POINTER_LOCK_SENSITIVITY = 0.018
+// 0.018 until 2026-08-24; owner asked for 35% less after walking the Dilijan
+// hub on a desktop — at 0.018 a small sweep spun the room. Drag-look and its
+// broken-lock fallback scale from this on purpose, so they calm down with it.
+export const POINTER_LOCK_SENSITIVITY = 0.0117
 // Drag-look is the fallback used exactly when pointer lock is silently
 // denied (Wayland and some other Linux browsers) — user-tuned live down
 // from matching pointer-lock (too sensitive) through 0.75x and 0.5x

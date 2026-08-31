@@ -21,7 +21,7 @@ export default function StudioQuickInsert({ position, worldPos = null, onClose, 
     return (
         <div className="sqi-overlay" onClick={onClose} onKeyDown={(e) => e.key === 'Escape' && onClose()} role="button" tabIndex={0} aria-label="Close quick insert">
             <div className="sqi-popup" style={{ left, top }} onClick={(e) => e.stopPropagation()} role="none">
-                <div className="sqi-section-label">Add entity</div>
+                <div className="sqi-section-label">Add object</div>
                 <div className="sqi-grid">
                     {(palette || [...PRIMITIVES, ...LIGHTS]).map(({ key, label, icon }) => (
                         <button

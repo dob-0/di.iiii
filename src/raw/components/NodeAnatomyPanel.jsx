@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { PORT_TYPES, getNodeType } from '../../project/nodeRegistry.js'
 import { formatPortValue } from '../../project/graph/formatPortValue.js'
-import { DOORWAY_PLACE, NODE_ANATOMY } from '../../project/graph/nodeAnatomy.generated.js'
+import { DOORWAY_PLACE, NODE_ANATOMY } from 'virtual:node-anatomy'
 import { MAX_QUOTED_LINES, canShowLines, loadSourceSlice } from '../utils/nodeSourceSlices.js'
 
 // What a node is made of — the same four questions for every node there is.

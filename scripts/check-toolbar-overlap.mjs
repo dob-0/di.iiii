@@ -26,14 +26,32 @@ const arg = (name, fallback = null) => {
 const BASE = arg('base', 'http://localhost:5173')
 const ROUTE = arg('route', '/open/raw')
 const CHILD_SELECTOR = arg('children', '.raw-topbar-left,.raw-topbar-center,.raw-topbar-right')
+const CONTAINER = arg('container', '.raw-topbar')
 const WIDTHS = arg('widths', '1440,900,889,700,390').split(',').map(Number)
 
 const intersects = (a, b) => a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom
 
 async function main() {
   const browser = await chromium.launch()
-  const page = await browser.newPage()
-  await page.goto(`${BASE}${ROUTE}`, { waitUntil: 'networkidle' })
+  const context = await browser.newContext()
+  // Raw's chrome is hidden by default — zen is the default for a new workspace
+  // (docs/architecture/RAW_WORKSPACE.md). Without turning it off, every selector
+  // below matches an EMPTY bar: this script reported "0 children checked ... PASS"
+  // on a topbar change, green while asserting nothing. The empty-state guard at
+  // the bottom now makes that impossible, and this makes the common case work.
+  await context.addInitScript(() => {
+    try {
+      for (const key of Object.keys(window.localStorage)) {
+        if (key.startsWith('dii.raw.zen.')) window.localStorage.removeItem(key)
+      }
+      window.localStorage.setItem('dii.raw.zen.default', 'off')
+    } catch { /* private mode — the guard below still catches an empty bar */ }
+  })
+  const page = await context.newPage()
+  // domcontentloaded, not networkidle: a project-bearing editor holds a socket
+  // open, so networkidle never fires and the check times out instead of running.
+  await page.goto(`${BASE}${ROUTE}`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(3000)
 
   // seed real toolbar content: place a node so the topbar leaves its empty state
   await page.mouse.dblclick(500, 300).catch(() => {})
@@ -46,13 +64,17 @@ async function main() {
   await page.waitForTimeout(200)
 
   let failures = []
+  let measuredAnything = false
   for (const w of WIDTHS) {
     await page.setViewportSize({ width: w, height: 900 })
     await page.waitForTimeout(150)
-    const rects = await page.$$eval(CHILD_SELECTOR, els => els.map(el => {
+    // Zero-width boxes are not "children checked" — a display:none slot cannot
+    // overlap anything, and counting it hides an empty bar behind a real number.
+    const rects = (await page.$$eval(CHILD_SELECTOR, els => els.map(el => {
       const r = el.getBoundingClientRect()
-      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }
-    }))
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width }
+    }))).filter(r => r.width > 0)
+    if (rects.length) measuredAnything = true
     for (let i = 0; i < rects.length; i++) {
       for (let j = i + 1; j < rects.length; j++) {
         if (intersects(rects[i], rects[j])) {
@@ -60,7 +82,20 @@ async function main() {
         }
       }
     }
-    console.log(`${w}px: ${rects.length} children checked, ${failures.length} overlaps so far`)
+    // Overlap is not the only way a toolbar breaks. Measured 2026-08-23: at
+    // 390px the Raw topbar held 433px of content, so the row simply ENDED past
+    // the right edge and took the ⋯ button with it — the only route on a phone
+    // to "Save to <space>", Spaces, Wiki and Home. Every child was overlap-free
+    // the whole time, so this script passed while a canvas on a phone had no
+    // way to save the work on it.
+    const overflow = await page.$eval(CONTAINER, (el) => ({
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth
+    })).catch(() => null)
+    if (overflow && overflow.scrollWidth > overflow.clientWidth) {
+      failures.push(`width ${w}px: ${CONTAINER} overflows — ${overflow.scrollWidth}px of content in ${overflow.clientWidth}px, so whatever sits last is off-screen`)
+    }
+    console.log(`${w}px: ${rects.length} children checked, ${overflow ? `${overflow.scrollWidth}/${overflow.clientWidth}px` : 'container not found'}, ${failures.length} problems so far`)
   }
 
   await browser.close()
@@ -70,6 +105,18 @@ async function main() {
     failures.forEach(f => console.error(`  ${f}`))
     process.exit(1)
   }
+
+  // The check that makes the rest of it mean something. This script once reported
+  // "0 children checked ... PASS" on a real topbar change, because Raw's chrome is
+  // hidden by default — a green run asserting nothing, on a check src/raw/AGENTS.md
+  // REQUIRES for every topbar change. A guard that cannot fail is decoration.
+  if (!measuredAnything) {
+    console.error(`\nFAIL — nothing to measure: "${CHILD_SELECTOR}" matched no visible box at any width.`)
+    console.error(`  The bar is probably hidden (Raw is zen by default), or the selector/route is wrong.`)
+    console.error(`  Route was ${BASE}${ROUTE}. A pass here would assert nothing.`)
+    process.exit(1)
+  }
+
   console.log('\nPASS — no sibling overlap at any tested width')
 }
 

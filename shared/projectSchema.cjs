@@ -105,6 +105,7 @@ const defaultWorldState = {
   atmosphereBlend: false,
   hubDecor: false,
   spawn: null,
+  fog: null,
   gridVisible: true,
   gridSize: 24,
   gridCellSize: 0.75,
@@ -165,8 +166,15 @@ const defaultPublishState = {
   lastExportAt: 0
 }
 
+const defaultShowState = {
+  // Wall-clock ms stamped once, the first time a Time node exists in the
+  // document. Every window (editor, second tab, /out) derives the same
+  // elapsed value from it, so one show has ONE clock. 0 = not stamped yet;
+  // the clock falls back to each window's own monotonic time.
+  clockEpoch: 0
+}
+
 const defaultWorkspaceState = {
-  activeSurface: 'world',
   selectedNodeId: null,
   // Which universe.world node is the "live"/output one for a given scope — a flat
   // map keyed by scopeId (root scope key is '') so it works uniformly without a
@@ -192,6 +200,7 @@ const defaultProjectDocument = {
   xrState: defaultXrState,
   presentationState: defaultPresentationState,
   publishState: defaultPublishState,
+  showState: defaultShowState,
   windowLayout: defaultWindowLayout,
   assets: []
 }
@@ -231,7 +240,9 @@ const buildDefaultComponentsForType = (type = 'box') => {
       base.media = { assetId: null, fit: 'contain', autoplay: false, loop: false, muted: true }
       break
     case 'video':
-      base.media = { assetId: null, fit: 'contain', autoplay: true, loop: true, muted: true, volume: 0.8 }
+      // spatial is off by default: routing a video's audio through a panner
+      // changes how an existing space sounds, so it is opted into per video.
+      base.media = { assetId: null, fit: 'contain', autoplay: true, loop: true, muted: true, volume: 0.8, spatial: false, distance: 6, maxDistance: 40 }
       break
     case 'audio':
       base.media = { assetId: null, autoplay: true, loop: true, muted: false, volume: 0.8, distance: 8 }
@@ -284,6 +295,26 @@ const buildDefaultComponentsForType = (type = 'box') => {
   return base
 }
 
+/**
+ * What a NEWLY ADDED entity starts with — deliberately separate from
+ * buildDefaultComponentsForType, which is also the fallback normalizeEntity
+ * applies to every document ever saved.
+ *
+ * The two must not be merged. Turning a default on in the builder above would
+ * switch that behaviour on retroactively for every existing space the moment
+ * its document was next loaded; changing it here only affects things added from
+ * now on. Anything a creator would expect "in the box" belongs here.
+ */
+const buildCreationComponentsForType = (type = 'box') => {
+  const base = buildDefaultComponentsForType(type)
+  if (type === 'video') {
+    // A video added to a space is expected to bring its sound with it,
+    // placed in the room rather than playing flat at a constant volume.
+    base.media = { ...base.media, spatial: true, muted: false }
+  }
+  return base
+}
+
 const normalizeAsset = (asset = {}) => ({
   id: ensureString(asset.id, generateId('asset')),
   name: ensureString(asset.name, 'Untitled Asset'),
@@ -325,6 +356,27 @@ const normalizeWindowLayout = (layout = {}) => {
   }
 }
 
+// Portal label fonts are chosen by name from a fixed set, never by URL — the
+// renderer fetches whatever it is given and a document is untrusted input.
+const LABEL_FONT_NAMES = ['default', 'helvetica']
+
+const TEXT_REVEAL_MODES = ['none', 'typewriter']
+
+// A text entity's optional reveal. Absent (or 'none') means the text draws in
+// full immediately, which is what every text entity authored before this did.
+const normalizeTextReveal = (source) => {
+  const mode = TEXT_REVEAL_MODES.includes(source?.mode) ? source.mode : 'none'
+  if (mode === 'none') return { mode: 'none' }
+  return {
+    mode,
+    speed: Math.min(400, Math.max(1, ensureNumber(source.speed, 28))),
+    delay: Math.max(0, ensureNumber(source.delay, 0.4)),
+    lineDelay: Math.max(0, ensureNumber(source.lineDelay, 0.35)),
+    hold: Math.max(0, ensureNumber(source.hold, 3)),
+    loop: ensureBoolean(source.loop, false)
+  }
+}
+
 const TIMELINE_PROPERTIES = ['position', 'rotation', 'scale', 'opacity']
 const TIMELINE_EASINGS = ['linear', 'ease']
 
@@ -353,6 +405,21 @@ const normalizeTimeline = (source) => {
     tracks.push({ property, keys })
   })
   return { duration, loop: ensureBoolean(source.loop, true), tracks }
+}
+
+// Who made this. `subject` is the session identity ('github:99', 'guest:abc')
+// and is the only half worth comparing — `label` is a display name a person
+// can change. Everything made before this field existed normalizes to null,
+// and null means UNOWNED: never read it as yours, never as someone else's.
+// It has to live in the normalizer or it does not exist: both normalizers
+// return a literal, so an unlisted field is silently dropped on every op
+// apply and every document load, leaving the op-log holding a value the
+// rebuilt document does not have.
+const normalizeAuthor = (author) => {
+  if (!author || typeof author !== 'object') return null
+  const subject = ensureString(author.subject, '')
+  if (!subject) return null
+  return { subject, label: ensureString(author.label, '') }
 }
 
 const normalizeEntity = (entity = {}) => {
@@ -392,7 +459,8 @@ const normalizeEntity = (entity = {}) => {
       ...nextComponents.text,
       value: typeof nextComponents.text.value === 'string' ? nextComponents.text.value : defaultComponents.text.value,
       variant: ensureString(nextComponents.text.variant, defaultComponents.text.variant || '2d'),
-      billboard: ensureBoolean(nextComponents.text.billboard, defaultComponents.text?.billboard ?? false)
+      billboard: ensureBoolean(nextComponents.text.billboard, defaultComponents.text?.billboard ?? false),
+      reveal: normalizeTextReveal(nextComponents.text.reveal)
     }
   }
   if (nextComponents.media) {
@@ -400,6 +468,16 @@ const normalizeEntity = (entity = {}) => {
       ...defaultComponents.media,
       ...nextComponents.media,
       assetId: nextComponents.media.assetId || null
+    }
+    // Spatial-sound fields only exist where the defaults introduced them, so
+    // an image or model's media object is left exactly as it was.
+    if ('spatial' in (defaultComponents.media || {})) {
+      const media = nextComponents.media
+      media.spatial = ensureBoolean(media.spatial, defaultComponents.media.spatial ?? false)
+      // A zero or negative reference distance makes the panner divide by
+      // zero and the sound never attenuates.
+      media.distance = Math.max(0.1, ensureNumber(media.distance, defaultComponents.media.distance ?? 6))
+      media.maxDistance = Math.max(media.distance, ensureNumber(media.maxDistance, defaultComponents.media.maxDistance ?? 40))
     }
   }
   if (sourceComponents.link || defaultComponents.link) {
@@ -416,7 +494,13 @@ const normalizeEntity = (entity = {}) => {
       spaceId: ensureString(refSource.spaceId, refDefault.spaceId || ''),
       projectId: ensureString(refSource.projectId, refDefault.projectId || ''),
       mode: ['embed', 'portal'].includes(refMode) ? refMode : 'portal',
-      label: ensureString(refSource.label, refDefault.label || '')
+      label: ensureString(refSource.label, refDefault.label || ''),
+      // Label styling. Defaults reproduce the original look exactly (white
+      // type on a dark plate, renderer's built-in font), so a portal
+      // authored before these existed is untouched.
+      labelColor: ensureString(refSource.labelColor, refDefault.labelColor || '#ffffff'),
+      labelPlate: ensureBoolean(refSource.labelPlate, refDefault.labelPlate ?? true),
+      labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default'
     }
   }
   if (sourceComponents.runtime || defaultComponents.runtime) {
@@ -444,6 +528,7 @@ const normalizeEntity = (entity = {}) => {
     type,
     name: ensureString(entity.name, `${type[0].toUpperCase()}${type.slice(1)} Entity`),
     parentId: ensureString(entity.parentId, '') || null,
+    createdBy: normalizeAuthor(entity.createdBy),
     components: nextComponents
   }
 }
@@ -462,6 +547,13 @@ const normalizeWorldState = (world = {}) => {
       yaw: ensureNumber(source.spawn.yaw, 0),
       pitch: ensureNumber(source.spawn.pitch, 0),
       altY: ensureNumber(source.spawn.altY, 1.6)
+    } : null,
+    // Walk-mode atmosphere: null keeps the built-in close fog (8..50m); an
+    // authored {near, far} opens the distance for VAST scenes — the walker's
+    // camera far plane follows it (LiveProjectScene).
+    fog: source.fog && typeof source.fog === 'object' ? {
+      near: Math.max(0, ensureNumber(source.fog.near, 8)),
+      far: Math.max(1, ensureNumber(source.fog.far, 50))
     } : null,
     gridVisible: ensureBoolean(source.gridVisible, defaultWorldState.gridVisible),
     gridSize: Math.max(1, ensureNumber(source.gridSize, defaultWorldState.gridSize)),
@@ -580,6 +672,13 @@ const normalizePublishState = (publish = {}) => {
   }
 }
 
+const normalizeShowState = (show = {}) => {
+  const source = show && typeof show === 'object' ? show : {}
+  return {
+    clockEpoch: Math.max(0, ensureNumber(source.clockEpoch, defaultShowState.clockEpoch))
+  }
+}
+
 const normalizeProjectMeta = (meta = {}) => {
   const source = meta && typeof meta === 'object' ? meta : {}
   const now = Date.now()
@@ -642,7 +741,8 @@ const normalizeProjectNode = (node = {}) => {
     graphY,
     runtimeId: source.runtimeId ?? null,
     assetRef,
-    parentId: ensureString(source.parentId, '') || null
+    parentId: ensureString(source.parentId, '') || null,
+    createdBy: normalizeAuthor(source.createdBy)
   }
 }
 
@@ -674,17 +774,20 @@ const normalizeTemplate = (template = {}) => {
 
 const normalizeWorkspaceState = (workspace = {}) => {
   const source = workspace && typeof workspace === 'object' ? workspace : {}
-  const activeSurface = ensureString(source.activeSurface, defaultWorkspaceState.activeSurface)
   const liveMap = source.liveWorldNodeIdByScope
   const activeMap = source.activeNodeIdByTypeScope
-  return {
+  const next = {
     ...cloneValue(defaultWorkspaceState),
     ...cloneValue(source),
-    activeSurface: ['world', 'view', 'graph'].includes(activeSurface) ? activeSurface : defaultWorkspaceState.activeSurface,
     selectedNodeId: ensureString(source.selectedNodeId, '') || null,
     liveWorldNodeIdByScope: (liveMap && typeof liveMap === 'object' && !Array.isArray(liveMap)) ? cloneValue(liveMap) : {},
     activeNodeIdByTypeScope: (activeMap && typeof activeMap === 'object' && !Array.isArray(activeMap)) ? cloneValue(activeMap) : {}
   }
+  // The World/View/Graph surface axis is retired (2026-08-20). Old documents
+  // still carry the key; shedding it here means it disappears on next save
+  // instead of riding along forever. Mirrors src/shared/projectSchema.js.
+  delete next.activeSurface
+  return next
 }
 
 const normalizeNodesList = (list = []) => {
@@ -732,6 +835,7 @@ const normalizeProjectDocument = (document = {}) => {
     xrState: normalizeXrState(source.xrState),
     presentationState: normalizePresentationState(source.presentationState, worldState),
     publishState: normalizePublishState(source.publishState),
+    showState: normalizeShowState(source.showState),
     windowLayout: normalizeWindowLayout(source.windowLayout),
     assets: Array.isArray(source.assets) ? source.assets.map(normalizeAsset) : []
   }
@@ -968,6 +1072,10 @@ const applyProjectOps = (document, ops = []) => {
       }
       case 'setPublishState': {
         nextDocument.publishState = normalizePublishState(mergePatch(nextDocument.publishState, payload.patch || {}))
+        break
+      }
+      case 'setShowState': {
+        nextDocument.showState = normalizeShowState(mergePatch(nextDocument.showState, payload.patch || {}))
         break
       }
       case 'setWindowState': {
@@ -1212,6 +1320,7 @@ const invertSingleOp = (document, op) => {
     case 'setXrState': return patchInverse('setXrState', document.xrState)
     case 'setPresentationState': return patchInverse('setPresentationState', document.presentationState)
     case 'setPublishState': return patchInverse('setPublishState', document.publishState)
+    case 'setShowState': return patchInverse('setShowState', document.showState)
     case 'setWindowState': {
       const windowId = ensureString(payload.windowId)
       const windows = document.windowLayout?.windows || {}
@@ -1277,11 +1386,13 @@ module.exports = {
   defaultWindowLayout,
   defaultWorkspaceState,
   buildDefaultComponentsForType,
+  buildCreationComponentsForType,
   cloneValue,
   ensureVector,
   generateId,
   mergePatch,
   normalizeAsset,
+  normalizeAuthor,
   normalizeEntity,
   normalizePresentationState,
   normalizePublishState,

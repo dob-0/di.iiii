@@ -5,7 +5,7 @@ const os = require('node:os')
 const { spawn } = require('node:child_process')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
-const { scrubImageMetadata } = require('../assetScrub')
+const { UNSCRUBBABLE_IMAGE_ERROR, scrubImageBuffer, scrubImageMetadata } = require('../assetScrub')
 const defaultGoogleDrive = require('../googleDrive')
 const { getOwnSandboxSpaceId, isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
@@ -21,6 +21,7 @@ function registerSpaceRoutes(router, {
   applySceneOps,
   blankScene,
   broadcastLiveEvent,
+  broadcastProjectLiveEvent = null,
   buildMeta,
   collectSceneAssetRefs = null,
   config = {},
@@ -62,6 +63,7 @@ function registerSpaceRoutes(router, {
   readOpsHistory,
   readOpsHistorySince,
   removeAssetThumbnails,
+  restoreSpaceProjectDocuments = null,
   saveSpaceMeta,
   serveAsset,
   spacesDir,
@@ -975,8 +977,10 @@ function registerSpaceRoutes(router, {
   })
 
   // Vandalism insurance for the open space (works for any snapshotted space):
-  // put the latest scene snapshot back. Owner-or-admin; the open space has no
-  // owner, so there it is effectively admin-only.
+  // put the latest snapshot back — the scene AND the project documents it
+  // carries, since the Open Jam's contributions live in a project document.
+  // Owner-or-admin; the open space has no owner, so there it is effectively
+  // admin-only.
   router.post('/api/spaces/:spaceId/restore-snapshot', requireSpaceOwnerOrAdminWrite, async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -991,8 +995,21 @@ function registerSpaceRoutes(router, {
       // Deliberately unconditional: restoring a snapshot IS the act of
       // discarding what is there now. It reports the deltas so an accidental
       // restore is visible rather than silent.
-      const result = await replaceSceneAndBroadcast(spaceId, snapshot.scene)
-      res.json({ ok: true, restoredFrom: snapshot.takenAt, ...result })
+      const result = snapshot.scene ? await replaceSceneAndBroadcast(spaceId, snapshot.scene) : {}
+      // The other half of the room. Each restored document is announced to
+      // its own project channel the same way PUT .../document announces a
+      // full replace, so an editor holding the wiped copy resyncs live.
+      let projects = []
+      if (snapshot.projects?.length && typeof restoreSpaceProjectDocuments === 'function') {
+        const restored = await restoreSpaceProjectDocuments(spaceId, snapshot.projects, { maxOpHistory, maxOpAgeMs })
+        for (const entry of restored) {
+          if (typeof broadcastProjectLiveEvent === 'function') {
+            await broadcastProjectLiveEvent(entry.projectId, 'project-op', { version: entry.version, ops: entry.ops })
+          }
+        }
+        projects = restored.map(entry => ({ id: entry.projectId, version: entry.version }))
+      }
+      res.json({ ok: true, restoredFrom: snapshot.takenAt, projects, ...result })
     } catch (error) {
       next(error)
     }
@@ -1011,6 +1028,13 @@ function registerSpaceRoutes(router, {
       // Strip EXIF/GPS before anything hashes the file — the id must address
       // the bytes we actually store and serve.
       const scrub = await scrubImageMetadata(req.file.path)
+      // An image we could not scrub must not be stored — the whole point of
+      // the scrubber is that nothing reaches a public URL still carrying the
+      // photographer's GPS position. Refusing loudly beats storing quietly.
+      if (!scrub.safeToStore) {
+        await fsp.rm(req.file.path, { force: true }).catch(() => {})
+        return res.status(415).json({ error: UNSCRUBBABLE_IMAGE_ERROR, format: scrub.format || null })
+      }
       let assetId = ''
       // A scrubbed file no longer hashes to the id the client computed from the
       // original, so its requested id is moot — the content address is
@@ -1132,15 +1156,20 @@ function registerSpaceRoutes(router, {
           if (!isAllowedUpload({ mimetype: file.mimeType, originalname: file.name })) {
             throw new Error('Unsupported asset type.')
           }
-          const assetId = crypto.createHash('sha256').update(file.buffer).digest('hex')
+          // Imported bytes reach the same public URLs as an upload, so they get
+          // the same EXIF scrub — and the same refusal if it cannot be done.
+          const scrub = await scrubImageBuffer(file.buffer)
+          if (!scrub.safeToStore) throw new Error(UNSCRUBBABLE_IMAGE_ERROR)
+          const bytes = scrub.buffer
+          const assetId = crypto.createHash('sha256').update(bytes).digest('hex')
           const finalPath = path.join(assetsDir, assetId)
           const metaPath = path.join(assetsDir, `${assetId}.json`)
-          await fsp.writeFile(finalPath, file.buffer)
+          await fsp.writeFile(finalPath, bytes)
           const meta = {
             id: assetId,
             name: file.name || assetId,
             mimeType: file.mimeType || 'application/octet-stream',
-            size: file.buffer.length,
+            size: bytes.length,
             createdAt: Date.now(),
             source: 'google-drive'
           }
@@ -1201,13 +1230,16 @@ function registerSpaceRoutes(router, {
           if (!isAllowedUpload({ mimetype: file.mimeType, originalname: file.name })) {
             throw new Error('Unsupported asset type.')
           }
-          const assetId = crypto.createHash('sha256').update(file.buffer).digest('hex')
-          await fsp.writeFile(path.join(assetsDir, assetId), file.buffer)
+          const scrub = await scrubImageBuffer(file.buffer)
+          if (!scrub.safeToStore) throw new Error(UNSCRUBBABLE_IMAGE_ERROR)
+          const bytes = scrub.buffer
+          const assetId = crypto.createHash('sha256').update(bytes).digest('hex')
+          await fsp.writeFile(path.join(assetsDir, assetId), bytes)
           const meta = {
             id: assetId,
             name: file.name || assetId,
             mimeType: file.mimeType || 'application/octet-stream',
-            size: file.buffer.length,
+            size: bytes.length,
             createdAt: Date.now(),
             source: 'google-drive'
           }

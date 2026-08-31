@@ -22,7 +22,7 @@ describe('deriveNodeInspectorSections', () => {
     it('keeps regular node ports for standard node types', () => {
         const node = createNode('geom.cube')
         const sections = deriveNodeInspectorSections(node)
-        expect(sections[0].fields.map((field) => field.label)).toContain('Color')
+        expect(sections[0].fields.map((field) => field.label)).toContain('Colour')
         expect(sections[0].fields.map((field) => field.label)).not.toContain('Body')
     })
 

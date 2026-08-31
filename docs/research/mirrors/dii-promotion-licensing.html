@@ -1,0 +1,227 @@
+<!-- Mirror of https://claude.ai/code/artifact/0a261630-e6ec-4c39-bbbf-8efd91667f2c — fetched 2026-08-21. Per the home rule (docs/ai/golden_rules.md) this in-repo file is the source of truth; the claude.ai page is the mirror. -->
+<title>di.iiii — promotion & licensing: results</title>
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --ink: #16181a;
+    --muted: #5c6166;
+    --line: #d9dad6;
+    --card: #ffffff;
+    --accent: #0e7c86;
+    --accent-ink: #0a5d65;
+    --good: #1a7f37;
+    --warn: #9a6700;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101214; --ink: #e8e9e7; --muted: #9aa0a6; --line: #2a2e32;
+      --card: #17191c; --accent: #35c6c0; --accent-ink: #6fd9d4;
+      --good: #4cc26a; --warn: #d9a53a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101214; --ink: #e8e9e7; --muted: #9aa0a6; --line: #2a2e32;
+    --card: #17191c; --accent: #35c6c0; --accent-ink: #6fd9d4;
+    --good: #4cc26a; --warn: #d9a53a;
+  }
+  :root[data-theme="light"] {
+    --bg: #f7f7f5; --ink: #16181a; --muted: #5c6166; --line: #d9dad6;
+    --card: #ffffff; --accent: #0e7c86; --accent-ink: #0a5d65;
+    --good: #1a7f37; --warn: #9a6700;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: var(--sans);
+    line-height: 1.55; margin: 0; padding: 3rem 1.25rem 5rem;
+  }
+  .wrap { max-width: 60rem; margin: 0 auto; display: flex; flex-direction: column; gap: 2.75rem; }
+  .eyebrow {
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent-ink);
+  }
+  header h1 {
+    font-family: var(--mono); font-size: clamp(1.6rem, 4vw, 2.3rem);
+    font-weight: 600; margin: .35rem 0 .6rem; letter-spacing: -.02em; text-wrap: balance;
+  }
+  header p.lede { color: var(--muted); max-width: 42rem; margin: 0; }
+  section h2 {
+    font-family: var(--mono); font-size: .95rem; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    border-bottom: 1px solid var(--line); padding-bottom: .5rem; margin: 0 0 1rem;
+  }
+  section h2 .n { color: var(--accent); margin-right: .5rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .9rem; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); padding: 1rem 1.1rem;
+    display: flex; flex-direction: column; gap: .4rem;
+  }
+  .card b { font-size: .95rem; }
+  .card p { margin: 0; font-size: .88rem; color: var(--muted); }
+  .pill {
+    align-self: flex-start; font-family: var(--mono); font-size: .68rem;
+    letter-spacing: .08em; text-transform: uppercase; padding: .15rem .5rem;
+    border: 1px solid currentColor; border-radius: 999px;
+  }
+  .pill.done { color: var(--good); }
+  .pill.ready { color: var(--accent-ink); }
+  .pill.you { color: var(--warn); }
+  .tablebox { overflow-x: auto; border: 1px solid var(--line); background: var(--card); }
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; min-width: 42rem; }
+  th {
+    text-align: left; font-family: var(--mono); font-size: .7rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); font-weight: 600;
+    padding: .65rem .9rem; border-bottom: 1px solid var(--line);
+  }
+  td { padding: .6rem .9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.when { font-family: var(--mono); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.when.open { color: var(--good); font-weight: 600; }
+  .note { font-size: .82rem; color: var(--muted); margin-top: .6rem; }
+  ul.clean { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .55rem; }
+  ul.clean li { padding-left: 1.1rem; position: relative; font-size: .92rem; }
+  ul.clean li::before { content: "—"; position: absolute; left: 0; color: var(--accent); }
+  .verify { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .verify span {
+    font-family: var(--mono); font-size: .78rem; padding: .3rem .65rem;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  }
+  .verify span::before { content: "✓ "; color: var(--good); }
+  a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  code { font-family: var(--mono); font-size: .85em; background: var(--card); border: 1px solid var(--line); padding: .05em .35em; }
+  .flow {
+    font-family: var(--mono); font-size: .82rem; color: var(--muted);
+    border-left: 3px solid var(--accent); padding: .5rem 0 .5rem 1rem; margin: 1rem 0 0;
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">di.iiii · session results · 2026-07-19</div>
+    <h1>Audience, promotion &amp; licensing — shipped and verified</h1>
+    <p class="lede">The platform is now honestly open source, has a researched promotion plan with
+    drafts ready to post, a funding calendar verified against primary sources, and all of it is
+    deployed and checked live on staging. Nothing has been posted, mailed, or promoted to production
+    — every outbound step waits on your approval.</p>
+  </header>
+
+  <section>
+    <h2><span class="n">01</span>Shipped to dev · live on staging</h2>
+    <div class="cards">
+      <div class="card"><span class="pill done">done</span><b>AGPL-3.0 license</b>
+        <p><code>LICENSE</code> + package.json field. The landing's "Open source" claim is now true.
+        Anyone can read, use, self-host; nobody can enclose it; only you can sell hosting or exceptions.</p></div>
+      <div class="card"><span class="pill done">done</span><b>Wiki: License &amp; openness</b>
+        <p>New "For developers" article — verified rendering live on staging with the AGPL text.</p></div>
+      <div class="card"><span class="pill done">done</span><b>Promotion kit</b>
+        <p><code>docs/promo/</code> — plan, sustainability model, six outreach drafts, stakeholder list.</p></div>
+      <div class="card"><span class="pill done">done</span><b>CI unbricked</b>
+        <p>A parallel session's push referenced the uncommitted <code>src/seed/</code> lane and broke the
+        build. Committed the 41 missing files after full validation — 887/887 tests, deploy green.</p></div>
+    </div>
+    <div class="verify" style="margin-top:1rem">
+      <span>staging health = deployed sha</span><span>landing · "Open source"</span>
+      <span>/wiki · AGPL article</span><span>/wcc · WebGL scene</span>
+      <span>/beyond-form · open-call site</span><span>zero JS errors</span>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">02</span>Who it's for — ranked by fit today</h2>
+    <ul class="clean">
+      <li><b>XR artists &amp; curators</b> — strongest fit: three live cultural projects, open-call pattern, communal spaces. The exhibitions are the proof.</li>
+      <li><b>Cultural institutions &amp; festivals</b> — "exhibition in the browser, no app install." Warm entries via Gyumri Art Week and WCC.</li>
+      <li><b>WebXR / creative-coding developers</b> — node model, GitHub-sync publishing, API, self-hosting, AGPL. The contributor pipeline.</li>
+      <li><b>Educators &amp; workshops</b> — guest sandbox + shared Open Space + zero install is a ready classroom.</li>
+      <li><b>AI-agent builders</b> — the REST API makes di.iiii a 3D output surface for agents; niche but very shareable.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="n">03</span>Funding &amp; festival calendar — verified, 3-0 adversarial votes</h2>
+    <div class="tablebox">
+      <table>
+        <tr><th>When</th><th>Opportunity</th><th>What it's worth</th><th>Catch</th></tr>
+        <tr>
+          <td class="when open">OPEN → 23 Sep 2026</td>
+          <td><b>Horizon Europe HERITAGE call</b></td>
+          <td>€85.5M pool; explicitly funds digital-heritage tooling; Armenia fully associated</td>
+          <td>Multi-country consortium required — start a heritage-institution partnership now</td>
+        </tr>
+        <tr>
+          <td class="when open">3 Sep → 6 Nov 2026</td>
+          <td><b>EMAP residencies</b> (Creative Europe)</td>
+          <td>€4,000 artist grant + €4,000 project budget + covered 2-month residency (hosts incl. Ars Electronica, Onassis)</td>
+          <td>Nearest actionable window — prepare a work, not the platform</td>
+        </tr>
+        <tr>
+          <td class="when">Jan 2027</td>
+          <td><b>Prix Ars Electronica</b></td>
+          <td>Up to €10,000/category, free online entry (Digital Humanity, Interactive Art+)</td>
+          <td>2026 round closed; calendar it</td>
+        </tr>
+        <tr>
+          <td class="when">31 Jan 2027</td>
+          <td><b>ECHOES cascading grants</b></td>
+          <td>€60,000/project, EU cultural-heritage cloud</td>
+          <td>Heritage institutions lead — needs the same partner as HERITAGE</td>
+        </tr>
+        <tr>
+          <td class="when">next cycle</td>
+          <td><b>FIVARS</b></td>
+          <td>Best-verified WebXR fit — explicitly accepts WebXR; ran 2020 fully in-browser</td>
+          <td>2026 just closed (fest ran Jul 2–18); submit br_id_ge-class works next round</td>
+        </tr>
+        <tr>
+          <td class="when">mid-2027</td>
+          <td><b>Venice Biennale College Immersive</b></td>
+          <td>Up to €75,000 development support</td>
+          <td>"Immersive tech" — web not named; plausible fit, confirm first</td>
+        </tr>
+      </table>
+    </div>
+    <p class="note">Also verified: NewImages (monitor newimages.art for 2027) · Cannes Immersive and AWE
+    do not list WebXR — ask before submitting · Creative Armenia Spark Grants — rounds announced ad hoc,
+    email info@creativearmenia.org. One honest gap: no claims about launch-community norms (Show HN,
+    Three.js forum, r/WebXR) survived verification — read each forum's rules before posting.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">04</span>How it eats — the library model</h2>
+    <p style="max-width:42rem; margin:0 0 .9rem">The knowledge stays open like a library; income comes
+    from services around it, never from closing the shelves. The verified template is Blender's fund:
+    individual memberships from €5/month (badges + recognition only) work at any scale — corporate
+    sponsorship needs audience reach that comes later.</p>
+    <div class="cards">
+      <div class="card"><b>Hosted spaces</b><p>Free tier (3 spaces) exists; paid adds more spaces, storage, custom domains. Self-hosting stays free.</p></div>
+      <div class="card"><b>Exhibition commissions</b><p>br_id_ge, WCC, Beyond Form are the precedent — paid builds with the open tool.</p></div>
+      <div class="card"><b>Workshops &amp; education</b><p>Zero-install communal spaces are a ready classroom for schools, festivals, residencies.</p></div>
+      <div class="card"><b>Patronage &amp; grants</b><p>€5/mo memberships now; the grant calendar above is the nearest real money.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">05</span>Ready to fire — drafts awaiting your approval</h2>
+    <div class="cards">
+      <div class="card"><span class="pill ready">ready</span><b>Notations #2 announcement</b><p>Event-hook post for the br_id_ge opening (Jul 20) — short social + longer community variants. di.iiii links only.</p></div>
+      <div class="card"><span class="pill ready">ready</span><b>Show HN</b><p>Title + first comment leading with the live communal Open Space.</p></div>
+      <div class="card"><span class="pill ready">ready</span><b>Three.js forum showcase</b><p>Technical post — R3F, WebXR path, node model, self-hosting. Needs media attached.</p></div>
+      <div class="card"><span class="pill ready">ready</span><b>r/WebXR + r/threejs</b><p>Shorter variants, stack note for the threejs sub.</p></div>
+      <div class="card"><span class="pill ready">ready</span><b>Stakeholder mail template</b><p>One recipient, one reason, one link, one ask — with per-segment variants.</p></div>
+    </div>
+    <p class="note">All in <code>docs/promo/drafts/</code>. Suggested order: Notations #2 (the news hook) → Three.js forum → Reddit → Show HN.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">06</span>Waiting on you</h2>
+    <ul class="clean">
+      <li><span class="pill you" style="margin-right:.5rem">yours</span>60–90s demo recording (open URL → build → invite → enter in AR) — reused in every channel.</li>
+      <li><span class="pill you" style="margin-right:.5rem">yours</span>Fill warm-contact names in <code>docs/promo/drafts/stakeholders.md</code> (Gyumri, WCC, br_id_ge circles go first).</li>
+      <li><span class="pill you" style="margin-right:.5rem">yours</span>Approve each post/mail individually when ready — starting with tomorrow's Notations #2 if you want the hook.</li>
+      <li><span class="pill you" style="margin-right:.5rem">yours</span>Promote <code>dev → main</code> to put the license live on production.</li>
+      <li><span class="pill you" style="margin-right:.5rem">yours</span>Pick a heritage-institution partner conversation to open for the Sep 23 Horizon deadline.</li>
+    </ul>
+    <p class="flow">dev pushed → staging deployed → live-verified · production &amp; outreach: your call</p>
+  </section>
+</div>

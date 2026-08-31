@@ -88,7 +88,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
                     await updateServerSpace(spaceId, { publishedProjectId: null })
                     setPublishedProjectId(null)
                 } catch (unpublishError) {
-                    setStatus(`Project deleted, but the space's live pointer could not be cleared: ${unpublishError.message || unpublishError}`)
+                    setStatus(`Project deleted, but this space still points at it as its live project: ${unpublishError.message || unpublishError}`)
                 }
             }
             await loadProjects()
@@ -103,9 +103,9 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
         <div className="spp-root">
             <div className="spp-list">
                 {projects === null ? (
-                    <div className="spp-status">loading projects...</div>
+                    <div className="spp-status">Loading projects…</div>
                 ) : projects.length === 0 ? (
-                    <div className="spp-status">no projects in this space yet</div>
+                    <div className="spp-status">No projects in this space yet.</div>
                 ) : (
                     projects.map((project) => {
                         const isCurrent = project.id === currentProjectId
@@ -176,7 +176,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
                 </form>
             ) : (
                 <button type="button" className="spp-new" disabled={busy} onClick={() => setCreating(true)}>
-                    ＋ New project
+                    + New project
                 </button>
             )}
             {status && <div className="spp-status">{status}</div>}

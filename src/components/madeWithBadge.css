@@ -27,11 +27,68 @@
     opacity: 0.8;
 }
 
+/* Floating means: drawn on top of somebody else's page. The published page is a
+   sandboxed frame, so the platform cannot read it and can never know what sits
+   under this corner — measured on Beyond Form, where the full 221px badge landed
+   squarely on the exhibition's own "ԱՇԽԱՏԱՆՔՆԵՐ / WORKS" nav, difference-blending
+   two texts into mush. Since we cannot detect the collision, we stop being big
+   enough to cause one: the mark alone at rest (~14px), the whole sentence on
+   hover or keyboard focus. The link, the tooltip and the accessible name are
+   unchanged, so nothing is lost except the footprint.
+   Owner's call, 2026-08-23, knowing it costs the words on touch. */
 .made-with-di--floating {
     position: absolute;
-    left: 0.75rem;
-    bottom: 0.6rem;
+    left: 0;
+    bottom: 0;
     z-index: 20;
+    /* The mark lands where it always did; the padding is transparent and exists
+       only so the tap target clears 44px, which a bare 14px glyph never would. */
+    padding: 12px;
+    gap: 0;
+    /* border-box, or the 44px floor lands OUTSIDE the padding and the mark
+       claims 68px of an exhibition's corner instead of the 44 it asked for. */
+    box-sizing: border-box;
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.made-with-di--floating .made-with-di-text,
+.made-with-di--floating .made-with-di-cta {
+    max-width: 0;
+    margin-left: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-width 0.22s ease, margin-left 0.22s ease, opacity 0.16s ease;
+}
+
+.made-with-di--floating:hover .made-with-di-text,
+.made-with-di--floating:hover .made-with-di-cta,
+.made-with-di--floating:focus-visible .made-with-di-text,
+.made-with-di--floating:focus-visible .made-with-di-cta {
+    max-width: 14rem;
+    margin-left: 5px;
+    opacity: 1;
+}
+
+/* difference-blending is right for a 14px mark that must survive any ground,
+   and wrong the moment the sentence unfolds ACROSS somebody's text: the two
+   inverted through each other and neither could be read. Expanded, it stops
+   blending and brings its own ground, so the one state that covers content is
+   at least legible while it does. */
+.made-with-di--floating:hover,
+.made-with-di--floating:focus-visible {
+    mix-blend-mode: normal;
+    opacity: 1;
+    color: rgba(255, 255, 255, 0.92);
+    background: rgba(8, 10, 14, 0.92);
+    border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .made-with-di--floating .made-with-di-text,
+    .made-with-di--floating .made-with-di-cta {
+        transition: none;
+    }
 }
 
 .made-with-di--chrome {

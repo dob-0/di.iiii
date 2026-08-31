@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { loadSourceSlice, canShowLines, MAX_QUOTED_LINES } from './nodeSourceSlices.js'
-import { NODE_ANATOMY, SOURCE_FINGERPRINTS } from '../../project/graph/nodeAnatomy.generated.js'
+import { NODE_ANATOMY, SOURCE_FINGERPRINTS } from 'virtual:node-anatomy'
 
 // Nothing mocked: vitest runs through Vite, `?raw` is a Vite transform, and
 // the real files load. A stubbed loader here would keep every test green over

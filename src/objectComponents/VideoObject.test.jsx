@@ -103,6 +103,42 @@ describe('VideoObject network cost', () => {
         expect(created).toHaveLength(2)
     })
 
+    // Sharing is right up to the point where a caller needs the ELEMENT, not
+    // just its picture. A media element can be routed into Web Audio once, so
+    // two spatial videos on one element would leave the second with flat sound
+    // in the wrong place -- the failure this cache would otherwise introduce
+    // into the feature that arrived after it.
+    it('gives each spatial video its own element, and shares the rest', () => {
+        const created = countCreatedVideos()
+
+        render(
+            <>
+                <VideoObject assetRef={{ mimeType: 'video/mp4' }} muted={false} volume={1} spatial />
+                <VideoObject assetRef={{ mimeType: 'video/mp4' }} muted={false} volume={1} spatial />
+                <VideoObject assetRef={{ mimeType: 'video/mp4' }} muted={false} volume={1} />
+                <VideoObject assetRef={{ mimeType: 'video/mp4' }} muted={false} volume={1} />
+            </>
+        )
+
+        // Two exclusive + one shared by the two flat ones.
+        expect(created).toHaveLength(3)
+    })
+
+    // A muted video has no audio to place, so asking for spatial sound on one
+    // must not quietly cost it a decoder of its own.
+    it('does not take an exclusive element for a muted video', () => {
+        const created = countCreatedVideos()
+
+        render(
+            <>
+                <VideoObject assetRef={{ mimeType: 'video/mp4' }} spatial />
+                <VideoObject assetRef={{ mimeType: 'video/mp4' }} spatial />
+            </>
+        )
+
+        expect(created).toHaveLength(1)
+    })
+
     it('keeps the shared element alive until the last object lets go', () => {
         const created = countCreatedVideos()
 

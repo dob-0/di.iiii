@@ -11,6 +11,16 @@ it's the piece that actually touches new infrastructure (Caddy/DNS), not just ro
 Owner: Technical Architect to sequence remaining items; UI/UX (routing/link surfaces),
 Backend/API (domain routing), Infrastructure (Caddy/DNS) all touch 3c.
 
+**Amendment, 2026-08-21 — the tool doorway.** Appending a tool word to any project link
+opens it there: `/<space>/<project>/studio`, or `/raw` for the node editor, and the same on
+the `/<space>/p/<id>` form. This is an **alias, not an address**: the slug resolves, then the
+router replaces the bar with the lane's existing canonical path (`/<space>/studio/projects/<id>`),
+carrying `?query` and `#hash` across. No new permanent URL is minted, so nothing here has to
+outlive a future addressing model — which is also why it does not prejudge §7.1 of
+`SPEC_url_architecture_and_tree_addressing.md`, unsigned since 2026-08-04.
+It replaced a silent fall-through: before this, *anything* after a project slug rendered the
+published project at 200 while the address bar said otherwise. See `docs/ai/known-fixes.md`.
+
 ## Shipped (2026-07-19)
 
 - **3a — vanity slugs**: `spaces.slug` / `projects.slug` (nullable, independently renameable

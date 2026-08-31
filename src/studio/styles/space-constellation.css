@@ -119,6 +119,7 @@
     background: rgba(10, 16, 24, 0.92);
     border: 1px solid var(--di-line, #1b2634);
     border-radius: 8px;
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     overflow-y: auto;
     animation: scon-slide 0.22s ease;

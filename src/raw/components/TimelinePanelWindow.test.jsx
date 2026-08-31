@@ -44,3 +44,29 @@ describe('TimelinePanelWindow add clip', () => {
         expect(screen.getByText('add clip')).toBeDisabled()
     })
 })
+
+describe('TimelinePanelWindow transport', () => {
+    it('Play anchors the run to the document clock through node.values', () => {
+        const onTransport = vi.fn()
+        render(<TimelinePanelWindow node={makeNode()} onChange={vi.fn()} onTransport={onTransport} clockNow={5000} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+        expect(onTransport).toHaveBeenCalledWith({ playing: true, playFromFrame: 0, playStartClockMs: 5000 })
+    })
+
+    it('Pause writes the derived frame back as the standing head', () => {
+        const onTransport = vi.fn()
+        const playingNode = {
+            ...makeNode(),
+            values: { clips: [], fps: 60, playing: true, playFromFrame: 60, playStartClockMs: 1000 }
+        }
+        // 2 seconds after the press at 60fps: the head stands at 180
+        render(<TimelinePanelWindow node={playingNode} onChange={vi.fn()} onTransport={onTransport} clockNow={3000} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
+        expect(onTransport).toHaveBeenCalledWith({ playing: false, playheadFrame: 180 })
+    })
+
+    it('offers no transport at all without a writer', () => {
+        render(<TimelinePanelWindow node={makeNode()} />)
+        expect(screen.queryByRole('button', { name: 'Play' })).toBeNull()
+    })
+})

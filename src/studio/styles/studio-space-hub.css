@@ -309,7 +309,7 @@
 
 .ssh-live-url {
     font-size: 0.7rem;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     color: #53d79b;
     text-decoration: none;
     overflow: hidden;

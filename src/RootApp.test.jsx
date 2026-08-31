@@ -35,9 +35,10 @@ vi.mock('./services/serverSpaces.js', () => ({
 }))
 
 vi.mock('./components/AuthGate.jsx', () => ({
-    default: function MockAuthGate({ children, requiredSpaceId = null }) {
+    default: function MockAuthGate({ children, requiredSpaceId = null, showAccountButton = true }) {
         const { requireAuth, authenticated, spaces } = mockUseAuthSession()
-        if (!requireAuth) return children
+        const chip = showAccountButton ? <div>mock-account-chip</div> : null
+        if (!requireAuth) return <>{chip}{children}</>
         if (!authenticated) {
             return <div>Enter your access token to continue.</div>
         }
@@ -55,6 +56,12 @@ vi.mock('./SpaceSurfaceApp.jsx', () => ({
                 space-surface-app:{routeState?.page}:{routeState?.spaceId || 'main'}
             </div>
         )
+    }
+}))
+
+vi.mock('./raw/RawApp.jsx', () => ({
+    default: function MockRawApp({ initialRoute }) {
+        return <div>raw-app:{initialRoute.page}</div>
     }
 }))
 
@@ -201,6 +208,91 @@ describe('RootApp', () => {
 
 // docs/architecture/SPEC_space_urls_and_portability.md — the bare
 // /{space}/{project} public link shape.
+describe('RootApp /out chrome', () => {
+    afterEach(() => {
+        window.history.pushState({}, '', '/')
+    })
+
+    // The projector image: the gate stays, the floating account chip must not
+    // hang over the show (plan PR 1.2).
+    it('renders no account chip over the /out route', async () => {
+        window.history.pushState({}, '', '/gallery/raw/out')
+        render(<RootApp />)
+        expect(await screen.findByText('raw-app:out')).toBeInTheDocument()
+        expect(screen.queryByText('mock-account-chip')).toBeNull()
+    })
+
+    it('keeps the account chip on the ordinary editor route', async () => {
+        window.history.pushState({}, '', '/gallery/raw')
+        render(<RootApp />)
+        expect(await screen.findByText('raw-app:canvas')).toBeInTheDocument()
+        expect(screen.getByText('mock-account-chip')).toBeInTheDocument()
+    })
+
+    // A projector link that signs its audience out is not a projector link.
+    // /out is the only Raw address meant for people who are not authoring, and
+    // it was gated like the editor — so "Copy projector link" handed a show
+    // machine a sign-in card. The space viewer next door has had this bypass
+    // all along.
+    describe('the projector image of a public space', () => {
+        // These tests need a session scoped to nothing, and the auth mock is
+        // shared file-wide — restore it or every later test inherits it.
+        afterEach(() => {
+            mockUseAuthSession.mockReturnValue({
+                requireAuth: false,
+                authenticated: true,
+                loading: false,
+                login: vi.fn(),
+                logout: vi.fn(),
+                refresh: vi.fn()
+            })
+        })
+
+        const scopedOut = () => {
+            mockUseAuthSession.mockReturnValue({
+                requireAuth: true,
+                authenticated: true,
+                loading: false,
+                spaces: [],
+                login: vi.fn(),
+                logout: vi.fn(),
+                refresh: vi.fn()
+            })
+        }
+
+        it('opens a public space\'s /out to a session scoped to nothing', async () => {
+            scopedOut()
+            window.history.pushState({}, '', '/pub/raw/projects/team-1/out')
+            render(<RootApp />)
+            expect(await screen.findByText('raw-app:out')).toBeInTheDocument()
+        })
+
+        it('still gates the EDITOR of that same public space', async () => {
+            scopedOut()
+            window.history.pushState({}, '', '/pub/raw/projects/team-1')
+            render(<RootApp />)
+            expect(await screen.findByText(/Access restricted/)).toBeInTheDocument()
+        })
+
+        it('still gates /out of a PRIVATE space', async () => {
+            scopedOut()
+            window.history.pushState({}, '', '/secret/raw/projects/team-1/out')
+            render(<RootApp />)
+            expect(await screen.findByText(/Access restricted/)).toBeInTheDocument()
+        })
+
+        it('still gates a space CANVAS /out, which has no project', async () => {
+            // It renders the viewer's own localStorage, so opening it to a
+            // stranger would show them their own empty canvas — nothing is
+            // gained, and the surface stays an authoring one.
+            scopedOut()
+            window.history.pushState({}, '', '/pub/raw/out')
+            render(<RootApp />)
+            expect(await screen.findByText(/Access restricted/)).toBeInTheDocument()
+        })
+    })
+})
+
 describe('RootApp vanity project links', () => {
     afterEach(() => {
         window.history.pushState({}, '', '/')

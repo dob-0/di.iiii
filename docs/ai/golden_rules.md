@@ -68,6 +68,15 @@ npm run test
 ```
 Never claim a task is done without these passing. The baseline is always "0 lint errors, current `npm run test` count all green" — run it fresh rather than trusting a number written here; a pinned count (this doc has done it before — "219 tests," and separately "221"/"16" in the 2026-07-07 audit) always goes stale within a few sessions. If either degrades, fix it before stopping.
 
+**While iterating on Raw, `npm run test:raw` is the fast loop** — Raw, the node
+graph, Studio's graph surfaces and the node vocabulary guards, roughly a quarter
+of the wall-clock of the full run. It is a SUBSET and never the thing you finish
+on: run `npm run test` before calling anything done. Its scope is guarded by
+`src/raw/rawTestScope.test.js`, which goes red naming the file if a test that
+reaches into `src/raw` or `src/project` lands outside what `test:raw` collects —
+so the subset cannot quietly stop covering something. Add a test there, not a
+filter you remember to update.
+
 ### Coding is not done — test as a human would, in a real browser
 
 **Rule:** Writing the code and passing lint/build/unit tests is not "done." Before reporting a UI/data-flow fix complete, drive it in an actual browser the way a human user would (click the real button, wait for the real network round-trip, look at the real screenshot) and confirm the thing the user asked for actually happened on screen.
@@ -198,6 +207,44 @@ Guessing wrong on a destructive or architectural decision costs more than a one-
 
 ### Never commit .env files or secrets
 `.env`, credentials, API tokens, and session secrets are never committed. If a task requires adding a new secret, add the key to `.env.example` with a placeholder value only.
+
+### A shared link is a promise — never change what a public address resolves to
+
+**Rule:** On any live tier, treat every public address as permanent and already
+handed out. **Free to change:** a space's `label`, a project's `title` — they are
+what a name *reads* as. **Never change without the owner asking for that specific
+link to move:** a space `id`, a space `slug`, a project `id` or `slug`, and
+`publishedProjectId` — they are what a link *resolves* to. Renaming is a display
+change; re-addressing is a broken link in someone else's message, bookmark, QR code
+or printed wall text, and you cannot un-send those.
+
+**Why:** 2026-08-23, correcting retired names in the DB — `main` was labelled
+`di.ii`, `platform-recordar` was its own id, a project was titled
+`di.i: open_space`. The owner's reaction was not about the names: *"we used the
+links and shared… spaces main links are shared with people so they can lose the
+access."* The addresses of the flagship spaces are out in the world. The renames
+were safe — only `label`/`title` were sent, every slug stayed `null`, all ten public
+URLs still returned 200 — but that was true by construction, not by luck, and the
+same PATCH endpoint accepts `slug` and `publishedProjectId` in the same body. One
+extra field would have silently moved a link that people already hold.
+
+**How:** Before any write to a live tier, ask *"does an address depend on this
+field?"*
+1. Send only the fields you mean. `PATCH /api/spaces/:id {label}` — never spread a
+   whole record back, which re-sends `slug` and `publishedProjectId` along with it.
+2. Prove it afterwards, on the live tier, before saying it is done: re-fetch and
+   confirm `slug` and `publishedProjectId` are unchanged, then `curl -o /dev/null -w
+   "%{http_code}"` every public URL — spaces, and `/{space}/p/{project}` deep links.
+   A 200 on each is the evidence; the intent is not.
+3. Staging first, always. The rehearsal tier is where a mistake costs nothing,
+   because nobody has shared its links.
+4. If a public address genuinely must move, that is an owner decision with a
+   redirect plan, never a side effect of a naming pass.
+
+**Files:** `serverXR/src/routes/spaceRoutes.js` (the PATCH route: `slug` only moves
+when `slug !== undefined` — keep it that way), `serverXR/src/routes/projectRoutes.js`,
+`docs/architecture/SPEC_space_urls_and_portability.md`, `docs/ai/vocabulary.md`
+(the same scope rule: the contract governs sentences, never identifiers).
 
 ### Never discard another agent's uncommitted changes
 If `git status` shows unstaged edits you didn't make, assume another agent is mid-task in the same working tree. `git stash push -- <file>` to set them aside if you need a clean tree for an unrelated operation (e.g. a branch merge), then `git stash pop` immediately after to restore them exactly as found. Never `git checkout --` or discard them. See [parallel-agents.md](parallel-agents.md) for the full multi-agent setup (prefer `git worktree` over sharing one tree).
@@ -662,6 +709,17 @@ Do **not** implement a capability inside a bespoke per-space renderer/component.
 
 **Checklist for a new capability:** schema field (both files) → renders in `LiveProjectScene` → inspector/World-panel control → `test:schema-sync` + `lint` + `build` green → it now works in every space.
 
+**The trap inside step 1, paid for on 2026-08-24:** `normalizeEntity` and
+`normalizeProjectNode` **return a fixed object literal**. They do not spread the input.
+So a new field added anywhere else — at a creation funnel, in a type, on a call site —
+is silently deleted on every op apply and every document load, and nothing errors: the
+op-log carries a value the rebuilt document does not have, which reads as "it saved and
+then forgot". `test:schema-sync` does **not** catch this; it compares the two mirrors
+with each other, and a field missing from both is consistent. Add the field to the
+normalizer in both mirrors, and add a case asserting it *survives a normalize round-trip*
+— not merely that the mirrors agree. Check `updateEntity` too: a field that must outlive
+an edit has to be preserved there, or editing someone's object quietly rewrites it.
+
 **Files:** `src/shared/projectSchema.js`, `shared/projectSchema.cjs`, `src/components/LiveProjectScene.jsx`, `src/project/entityRegistry.js`, `src/studio/components/StudioShellPanels.jsx`
 
 ---
@@ -955,3 +1013,35 @@ The asymmetry is the whole argument. A wrong read costs a minute. A wrong
 publish cannot be taken back — the pitch deck was fixed upstream in one commit
 and is still served by two forked repositories three weeks later. What is
 already open, and every move that opens something, is `di-atlas/PUBLIC_PRIVATE.md`.
+---
+
+### Work has one home, and it is in a repo — the home rule
+
+**Rule:** Every durable work product lands inside the ecosystem, in the same
+effort that produced it: research → `docs/research/<yyyy-mm-dd>-<topic>.md`
+(update the existing file on a topic — never re-buy it); durable agent rules →
+this file; product truth → the wiki; running state → session notes folded by
+`npm run land`. External surfaces (a claude.ai artifact, a status page) are
+MIRRORS only: the in-repo file is the source of truth and records the mirror's
+URL. A session may run local servers for its own verification, but they die
+with the session and are never handed to a person as a deliverable — if
+someone must see it live, it goes to staging or into the product itself.
+Anything meant to outlive the session that listens on a port is an infra fact
+and gets recorded in di-atlas before it starts.
+
+**Why:** On 2026-08-21 a ten-agent UX audit (~1M tokens) delivered its ledger
+into a session-scratchpad directory, its plan onto claude.ai, and its live
+status onto an ad-hoc `localhost:8377` server — three homes, none of them
+di.iiii, all gone or unreachable the moment the session ends. The owner's
+words: "we burn credits work but info is not have the right path to
+ecosystem." Credits buy information; information that does not land in the
+repo has to be bought again. The same failure shape as the pre-2026-08-06
+CURRENT.md races: work happening, nothing durable owning the result.
+
+**How:** Largely process discipline, backed by two structural pieces:
+`docs/research/` exists with a README stating the ledger convention, and
+`docs/ai/RESEARCH_METHOD.md` names it as the required destination (rule 4).
+When reviewing a PR that contains research or a decision, ask where its file
+is; when a session offers a URL, ask whether the ecosystem owns it.
+
+**Files:** `docs/research/README.md, docs/ai/RESEARCH_METHOD.md`

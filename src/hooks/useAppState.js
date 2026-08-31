@@ -397,6 +397,7 @@ export function useAppState() {
         cutSelectedObject,
         duplicateSelectedObject,
         deleteSelectedObject,
+        deleteConfirm,
         handleSelectObjectFromOutliner,
         handleToggleObjectVisibility
     } = useAppEditorInteractionState({
@@ -765,6 +766,10 @@ export function useAppState() {
         refs,
         isPreferencesPage,
         navigateToEditor,
-        editorLayoutProps
+        editorLayoutProps,
+        // The Delete-key confirm. It belongs to the shortcut hook, which has
+        // no markup of its own, so it rides up here to be rendered once at the
+        // app root.
+        deleteConfirm
     }
 }

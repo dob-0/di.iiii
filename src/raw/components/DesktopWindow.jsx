@@ -23,11 +23,18 @@ export default function DesktopWindow({
     allowOverflowTop = false,
     canvasZoom = 1
 }) {
+    // `minimized` rides along in the draft on purpose. The clamp places a
+    // collapsed window by its bar rather than by the panel it would open to,
+    // and it reads that from the frame it is handed — so a draft built from
+    // x/y/width/height alone silently told the clamp every window was open,
+    // and the fix in windowLayout.js could never fire from here. It is never
+    // written back: onPatch below sends the four geometry fields only.
     const [draft, setDraft] = useState(() => ({
         x: windowState.x,
         y: windowState.y,
         width: windowState.width,
-        height: windowState.height
+        height: windowState.height,
+        minimized: windowState.minimized === true
     }))
     const interactionRef = useRef(null)
     const [dragMode, setDragMode] = useState(null)
@@ -40,7 +47,8 @@ export default function DesktopWindow({
             x: windowState.x,
             y: windowState.y,
             width: windowState.width,
-            height: windowState.height
+            height: windowState.height,
+            minimized: windowState.minimized === true
         }, {
             minTop,
             allowOverflowLeft,
@@ -48,7 +56,7 @@ export default function DesktopWindow({
             viewportWidth: typeof window !== 'undefined' ? window.innerWidth : undefined,
             viewportHeight: typeof window !== 'undefined' ? window.innerHeight : undefined
         }))
-    }, [allowOverflowLeft, allowOverflowTop, minTop, windowState.height, windowState.width, windowState.x, windowState.y])
+    }, [allowOverflowLeft, allowOverflowTop, minTop, windowState.height, windowState.minimized, windowState.width, windowState.x, windowState.y])
 
     // Re-clamp when the viewport itself changes — rotation, window resize, the
     // virtual keyboard shrinking the layout viewport. Without this a window
@@ -195,7 +203,7 @@ export default function DesktopWindow({
                     {onEnter && (
                         <button
                             type="button"
-                            title="Enter this node's scope to place children inside it"
+                            title="Go inside this node to put things in it"
                             onClick={(event) => { event.stopPropagation(); onEnter() }}
                         >
                             Enter ›

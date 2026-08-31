@@ -60,7 +60,10 @@ const loadEnvFile = async (filePath) => {
             if (idx === -1) continue
             const key = trimmed.slice(0, idx).trim()
             const value = trimmed.slice(idx + 1).trim().replace(/^['"]|['"]$/g, '')
-            if (key) env[key] = value
+            // An empty assignment is a placeholder, not a value. The root
+            // .env carries `LIVE_API_TOKEN=` with nothing after it; honouring
+            // it blanked the real token and this script then ran unauthenticated.
+            if (key && value) env[key] = value
         }
         return env
     } catch {
@@ -85,6 +88,11 @@ const apiFetch = async (url, options = {}) => {
 
 const main = async () => {
     const localEnv = {
+        // serverXR/.env.local is where the tokens actually live; the root pair
+        // carries the URLs. Reading only the root pair is why this script could
+        // not see LIVE_API_TOKEN at all.
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env'))),
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env'))),
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env.local'))),
     }

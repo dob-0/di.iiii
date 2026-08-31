@@ -7,6 +7,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 // UI-shell side effects that ride along with navigation (e.g. Raw's
 // world-fullscreen toggle when entering a world node) stay in the caller;
 // this hook only owns the stack itself.
+// Where a selection is allowed to be VISIBLE: only in the scope where the
+// node actually stands. The root scope is null; a node's home is its
+// parentId. Everything the editor shows about a selection — inspector,
+// Delete, pills — hangs off this one predicate.
+export const isNodeInScope = (node, scopeId) =>
+    Boolean(node) && (node.parentId || null) === (scopeId || null)
+
 export function useNodeGraphScope({ nodes, rootTypeId = null }) {
     const [navStack, setNavStack] = useState([null])
 

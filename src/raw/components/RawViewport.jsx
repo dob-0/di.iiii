@@ -1,7 +1,11 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
-import { Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
+import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { ContactShadows, Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
+import ConeObject from '../../objectComponents/ConeObject.jsx'
+import CylinderObject from '../../objectComponents/CylinderObject.jsx'
+import TorusObject from '../../objectComponents/TorusObject.jsx'
+import PrimitiveMaterial from '../../objectComponents/PrimitiveMaterial.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
@@ -10,16 +14,31 @@ import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
-import { getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
-import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
+import { createFrameMemory, createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
-import { MAX_GEOMETRY_DEPTH, MAX_GEOMETRY_PIECES, isGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
-import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
+import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
+import { createTapTracker } from '../utils/useDoubleTap.js'
+import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 
 const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
+
+// The authored eye is EXPLICIT-ONLY: unlike Light/Background/Grid (additive,
+// safe to default to first-created), an active camera hijacks the view — so
+// placing a Camera must never steal the shot. Seen 2026-08-20: the palette
+// drops spatial nodes at the click point, and the first-created fallback cut
+// the room to an accidental floor-level close-up the moment the card landed.
+// Only the ● toggle makes a camera the eye.
+const pickAuthoredCameraNode = (nodes, scopeId, activeMap) => {
+    const markedId = (activeMap || {})[`world.camera::${scopeId || ''}`]
+    if (!markedId) return null
+    return (nodes || []).find((node) =>
+        node.id === markedId && node.typeId === 'world.camera' && (node.parentId || null) === (scopeId || null)
+    ) || null
+}
 
 // A mesh that is drawn but never picked.
 const NO_RAYCAST = () => null
@@ -47,7 +66,7 @@ const asPositiveVec3 = (value, fallback = [1, 1, 1], min = 0.001, max = 100) => 
 }
 
 
-function EntityVisual({ entity, assetMap, selected, onSelect }) {
+function EntityVisual({ entity, assetMap, selected, onSelect, showSelectionPills = true }) {
     const transform = entity.components?.transform || {}
     const content = <EntityContent entity={entity} assetMap={assetMap} />
 
@@ -62,7 +81,7 @@ function EntityVisual({ entity, assetMap, selected, onSelect }) {
             }}
         >
             {content}
-            {selected && (
+            {selected && showSelectionPills && (
                 <Html position={[0, 1.8, 0]} center>
                     <span className="raw-selection-pill">{entity.name}</span>
                 </Html>
@@ -91,49 +110,75 @@ function PlaneWithTexture({ w, h, textureUrl }) {
 // versions (BoxObject, SphereObject), so a cube worn by a Constructor and a
 // cube standing beside it are pixel-identical by construction.
 //
-// `budget` is one shared countdown across the whole walk (an object so the
-// count survives recursion), because MAX_GEOMETRY_PIECES caps the DESCRIPTOR,
-// not each branch — see geometryDescriptor.js for why the caps exist at all.
-//
-// Mutating it during render is safe TODAY only because this renders inside
-// R3F v8's own reconciler root, which hardcodes strictness off — StrictMode
-// does not cross that boundary, so nothing double-invokes this body. R3F v9
-// inherits StrictMode into the Canvas; on that upgrade this must move to a
-// plain recursive walk with a local counter or the cap silently halves in dev.
-function GeometryPieces({ descriptor, depth = 0, budget = null }) {
-    const spent = budget || { left: MAX_GEOMETRY_PIECES }
-    if (!isGeometryDescriptor(descriptor) || depth >= MAX_GEOMETRY_DEPTH || spent.left <= 0) return null
-    if (descriptor.kind === 'group') {
+// The caps live in pruneGeometryDescriptor — a pure pass that hands this
+// component a tree already inside MAX_GEOMETRY_PIECES/DEPTH. The render walk
+// itself holds no budget: the old shared mutable countdown was safe only
+// while R3F v8 kept StrictMode out of the Canvas, and a double-invoked render
+// would have silently halved the cap on the v9 upgrade.
+// A stroke between two points, drawn as a thin cylinder so it has real
+// thickness (GPU line width is unreliable across platforms). The cylinder's
+// axis is +Y; two nested groups steer it: yaw about Y, then tilt about X —
+// spherical angles of the direction, no quaternion needed.
+function LineStroke({ from, to, thickness, color, opacity, emissive }) {
+    const a = asVec3(from, [0, 0, 0])
+    const b = asVec3(to, [0, 1.5, 0])
+    const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
+    const length = Math.hypot(d[0], d[1], d[2])
+    if (length < 0.0001) return null
+    const yaw = Math.atan2(d[0], d[2])
+    const tilt = Math.acos(Math.min(1, Math.max(-1, d[1] / length)))
+    const radius = Math.min(10, Math.max(0.0005, Math.abs(asFiniteNumber(thickness, 0.02)) / 2))
+    const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]
+    return (
+        <group position={mid} rotation={[0, yaw, 0]}>
+            <group rotation={[tilt, 0, 0]}>
+                <mesh>
+                    <cylinderGeometry args={[radius, radius, length, 12]} />
+                    <PrimitiveMaterial
+                        color={asColor(color, '#5fa8ff')}
+                        opacity={asFiniteNumber(opacity, 1)}
+                        emissive={emissive}
+                    />
+                </mesh>
+            </group>
+        </group>
+    )
+}
+
+function GeometryPieces({ descriptor, pruned = false }) {
+    const shaped = pruned ? descriptor : pruneGeometryDescriptor(descriptor)
+    if (!shaped) return null
+    if (shaped.kind === 'group') {
         return (
             <group
-                position={asVec3(descriptor.position, [0, 0, 0])}
-                rotation={asVec3(descriptor.rotation, [0, 0, 0])}
-                scale={asPositiveVec3(descriptor.scale, [1, 1, 1], 0.001, 20)}
+                position={asVec3(shaped.position, [0, 0, 0])}
+                rotation={asVec3(shaped.rotation, [0, 0, 0])}
+                scale={asPositiveVec3(shaped.scale, [1, 1, 1], 0.001, 20)}
             >
-                {descriptor.children.map((child, index) => (
-                    <GeometryPieces key={index} descriptor={child} depth={depth + 1} budget={spent} />
+                {shaped.children.map((child, index) => (
+                    <GeometryPieces key={index} descriptor={child} pruned />
                 ))}
             </group>
         )
     }
-    spent.left -= 1
+    const descriptorLeaf = shaped
     const place = {
-        position: asVec3(descriptor.position, [0, 0, 0]),
-        rotation: asVec3(descriptor.rotation, [0, 0, 0])
+        position: asVec3(descriptorLeaf.position, [0, 0, 0]),
+        rotation: asVec3(descriptorLeaf.rotation, [0, 0, 0])
     }
-    switch (descriptor.kind) {
+    switch (descriptorLeaf.kind) {
         case 'box':
             return (
                 <group {...place}>
-                    <BoxObject color={asColor(descriptor.color, '#5fa8ff')} boxSize={asPositiveVec3(descriptor.size, [1, 1, 1])} />
+                    <BoxObject color={asColor(descriptorLeaf.color, '#5fa8ff')} boxSize={asPositiveVec3(descriptorLeaf.size, [1, 1, 1])} />
                 </group>
             )
         case 'sphere':
             return (
                 <group {...place}>
                     <SphereObject
-                        color={asColor(descriptor.color, '#5fa8ff')}
-                        sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.radius, 0.5))))}
+                        color={asColor(descriptorLeaf.color, '#5fa8ff')}
+                        sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5))))}
                     />
                 </group>
             )
@@ -141,10 +186,59 @@ function GeometryPieces({ descriptor, depth = 0, budget = null }) {
             return (
                 <mesh {...place}>
                     <planeGeometry args={[
-                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.width, 2)))),
-                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.height, 2))))
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.width, 2)))),
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.height, 2))))
                     ]} />
-                    <meshStandardMaterial color={asColor(descriptor.color, '#ffffff')} side={2} />
+                    <meshStandardMaterial color={asColor(descriptorLeaf.color, '#ffffff')} side={2} />
+                </mesh>
+            )
+        case 'cylinder':
+            return (
+                <group {...place}>
+                    <CylinderObject
+                        color={asColor(descriptorLeaf.color, '#5fa8ff')}
+                        cylinderRadiusTop={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5))))}
+                        cylinderRadiusBottom={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5))))}
+                        cylinderHeight={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.height, 1.5))))}
+                    />
+                </group>
+            )
+        case 'cone':
+            return (
+                <group {...place}>
+                    <ConeObject
+                        color={asColor(descriptorLeaf.color, '#5fa8ff')}
+                        coneRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5))))}
+                        coneHeight={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.height, 1.5))))}
+                    />
+                </group>
+            )
+        case 'torus':
+            return (
+                <group {...place}>
+                    <TorusObject
+                        color={asColor(descriptorLeaf.color, '#5fa8ff')}
+                        torusRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5))))}
+                        torusTube={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.tube, 0.18))))}
+                    />
+                </group>
+            )
+        case 'line':
+            return (
+                <LineStroke
+                    from={descriptorLeaf.from}
+                    to={descriptorLeaf.to}
+                    thickness={descriptorLeaf.thickness}
+                    color={descriptorLeaf.color}
+                />
+            )
+        case 'circle':
+            return (
+                <mesh {...place}>
+                    <circleGeometry args={[
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptorLeaf.radius, 0.5)))), 48
+                    ]} />
+                    <meshStandardMaterial color={asColor(descriptorLeaf.color, '#5fa8ff')} side={2} />
                 </mesh>
             )
         default:
@@ -163,6 +257,44 @@ const resolveSpatialValues = (node, graphContext, allNodes) => {
         values.wornGeometry = wearConstructorGeometry(node, allNodes, graphContext)
     }
     return values
+}
+
+// Whether the surface around this scene has painted its own world
+// (RawViewport's `ambience`, below). A context rather than one more argument
+// threaded through renderNodeBody — the note above resolveSpatialValues gives
+// the reason, and it holds for exactly one type here as it did for that one.
+const AmbienceContext = createContext(null)
+
+// A geo's footprint: the faint floor tile that makes an empty container read as
+// a PLACE rather than as void. Cyan on near-black, which is Raw's language and
+// is right on Raw's bench. A surface with an ambience of its own has already
+// said what its ground looks like, and a second, smaller, differently-coloured
+// grid inside it is the technical look leaking back in — so there, the geo is
+// its contents and nothing else.
+function GeoFootprint() {
+    const ambience = useContext(AmbienceContext)
+    if (ambience) return null
+    return (
+        <group>
+            {/* the pickable ground of the place — near-invisible but
+                clickable, so an empty geo can still be selected and
+                dragged in the room */}
+            <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[2, 2]} />
+                <meshBasicMaterial color="#4df9ff" transparent opacity={0.05} side={2} />
+            </mesh>
+            <Grid
+                args={[2, 2]}
+                position={[0, 0.02, 0]}
+                cellSize={0.25}
+                sectionSize={1}
+                cellColor="rgba(77,249,255,0.35)"
+                sectionColor="rgba(77,249,255,0.6)"
+                fadeDistance={14}
+                infiniteGrid={false}
+            />
+        </group>
+    )
 }
 
 export function renderNodeBody(node, values, assetMap = null) {
@@ -211,9 +343,81 @@ export function renderNodeBody(node, values, assetMap = null) {
             )
         }
         case 'geom.cube':
-            return <BoxObject color={values.color || '#5fa8ff'} boxSize={asPositiveVec3(values.size, [1, 1, 1])} />
+            return (
+                <BoxObject
+                    color={values.color || '#5fa8ff'}
+                    boxSize={asPositiveVec3(values.size, [1, 1, 1])}
+                    opacity={asFiniteNumber(values.opacity, 1)}
+                    material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
+                />
+            )
         case 'geom.sphere':
-            return <SphereObject color={values.color || '#5fa8ff'} sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.6))))} />
+            return (
+                <SphereObject
+                    color={values.color || '#5fa8ff'}
+                    sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.6))))}
+                    opacity={asFiniteNumber(values.opacity, 1)}
+                    material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
+                />
+            )
+        case 'geom.cylinder':
+            return (
+                <CylinderObject
+                    color={values.color || '#5fa8ff'}
+                    cylinderRadiusTop={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.5))))}
+                    cylinderRadiusBottom={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.5))))}
+                    cylinderHeight={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.height, 1.5))))}
+                    opacity={asFiniteNumber(values.opacity, 1)}
+                    material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
+                />
+            )
+        case 'geom.cone':
+            return (
+                <ConeObject
+                    color={values.color || '#5fa8ff'}
+                    coneRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.5))))}
+                    coneHeight={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.height, 1.5))))}
+                    opacity={asFiniteNumber(values.opacity, 1)}
+                    material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
+                />
+            )
+        case 'geom.torus':
+            return (
+                <TorusObject
+                    color={values.color || '#5fa8ff'}
+                    torusRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.5))))}
+                    torusTube={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.tube, 0.18))))}
+                    opacity={asFiniteNumber(values.opacity, 1)}
+                    material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
+                />
+            )
+        case 'geom.line':
+            return (
+                <LineStroke
+                    from={values.from}
+                    to={values.to}
+                    thickness={values.thickness}
+                    color={values.color}
+                    opacity={values.opacity}
+                    emissive={values.emissive}
+                />
+            )
+        case 'geom.circle':
+            return (
+                <mesh>
+                    <circleGeometry args={[
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.5)))), 48
+                    ]} />
+                    <PrimitiveMaterial
+                        color={asColor(values.color, '#5fa8ff')}
+                        opacity={asFiniteNumber(values.opacity, 1)}
+                        roughness={asFiniteNumber(values.roughness, 1)}
+                        metalness={asFiniteNumber(values.metalness, 0)}
+                        emissive={values.emissive}
+                        side={2}
+                    />
+                </mesh>
+            )
         case 'geom.plane': {
             const w = Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.width, 1))))
             const h = Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.height, 1))))
@@ -224,7 +428,15 @@ export function renderNodeBody(node, values, assetMap = null) {
                 return (
                     <mesh>
                         <planeGeometry args={[w, h]} />
-                        <meshStandardMaterial map={values.texture} color="#ffffff" side={2} />
+                        <PrimitiveMaterial
+                            color="#ffffff"
+                            textureLive={values.texture}
+                            opacity={asFiniteNumber(values.opacity, 1)}
+                            roughness={asFiniteNumber(values.roughness, 1)}
+                            metalness={asFiniteNumber(values.metalness, 0)}
+                            emissive={values.emissive}
+                            side={2}
+                        />
                     </mesh>
                 )
             }
@@ -234,7 +446,14 @@ export function renderNodeBody(node, values, assetMap = null) {
             return (
                 <mesh>
                     <planeGeometry args={[w, h]} />
-                    <meshStandardMaterial color={asColor(values.color, '#5fa8ff')} side={2} />
+                    <PrimitiveMaterial
+                        color={asColor(values.color, '#5fa8ff')}
+                        opacity={asFiniteNumber(values.opacity, 1)}
+                        roughness={asFiniteNumber(values.roughness, 1)}
+                        metalness={asFiniteNumber(values.metalness, 0)}
+                        emissive={values.emissive}
+                        side={2}
+                    />
                 </mesh>
             )
         }
@@ -266,6 +485,88 @@ export function renderNodeBody(node, values, assetMap = null) {
                     </mesh>
                 </group>
             )
+        case 'geom.geo':
+            // A PLACE, visibly, even empty. The faint floor tile is the geo's
+            // footprint — "no even grid, nothing in it" was the owner's exact
+            // report of an empty container reading as void. Children render
+            // through the childMap like any spatial parent's; this body adds
+            // nothing else, which is the whole point of the type.
+            return <GeoFootprint />
+        case 'world.light':
+            // Standing INSIDE a container, a Light is a real point light plus
+            // a small glowing marker — "collect what you need: object,
+            // light…". Unparented at root it draws nothing, so every existing
+            // document keeps exactly the look it had (there, Light is the
+            // per-scope ambient/directional settings card it always was).
+            if (!node.parentId) return null
+            return (
+                <group>
+                    <pointLight
+                        color={asColor(values.color, '#ffe9c4')}
+                        intensity={Math.max(0, asFiniteNumber(values.intensity, 6))}
+                        distance={0}
+                        decay={2}
+                    />
+                    <mesh>
+                        <sphereGeometry args={[0.07, 12, 12]} />
+                        <meshStandardMaterial
+                            color={asColor(values.color, '#ffe9c4')}
+                            emissive={asColor(values.color, '#ffe9c4')}
+                            emissiveIntensity={2}
+                        />
+                    </mesh>
+                </group>
+            )
+        case 'light.point':
+            // The lamp half of the old dual Light, standing on its own two
+            // feet: a real point light wherever it is — root included, which
+            // is exactly what the legacy node refused to be.
+            return (
+                <group>
+                    <pointLight
+                        color={asColor(values.color, '#ffe9c4')}
+                        intensity={Math.max(0, asFiniteNumber(values.intensity, 6))}
+                        distance={0}
+                        decay={2}
+                    />
+                    <mesh>
+                        <sphereGeometry args={[0.07, 12, 12]} />
+                        <meshStandardMaterial
+                            color={asColor(values.color, '#ffe9c4')}
+                            emissive={asColor(values.color, '#ffe9c4')}
+                            emissiveIntensity={2}
+                        />
+                    </mesh>
+                </group>
+            )
+        case 'world.camera': {
+            // The eye you can pick up: a small housing with a lens cone aimed
+            // at its Look At. Only INACTIVE cameras are drawn — the active one
+            // is what the room is seen through (SceneContent filters it out;
+            // a housing centred on the near plane would only shed clipped
+            // fragments).
+            const camPos = asVec3(values.position, [0, 2.4, 6.5])
+            const camLook = asVec3(values.lookAt, [0, 0.75, 0])
+            const dx = camLook[0] - camPos[0]
+            const dy = camLook[1] - camPos[1]
+            const dz = camLook[2] - camPos[2]
+            const yaw = Math.atan2(dx, dz)
+            const pitch = -Math.atan2(dy, Math.sqrt(dx * dx + dz * dz) || 1)
+            return (
+                <group rotation={[0, yaw, 0]}>
+                    <group rotation={[pitch, 0, 0]}>
+                        <mesh>
+                            <boxGeometry args={[0.22, 0.16, 0.28]} />
+                            <meshStandardMaterial color="#9aa7ff" />
+                        </mesh>
+                        <mesh position={[0, 0, 0.24]} rotation={[Math.PI / 2, 0, 0]}>
+                            <coneGeometry args={[0.09, 0.16, 12, 1, true]} />
+                            <meshStandardMaterial color="#dfe6ff" wireframe />
+                        </mesh>
+                    </group>
+                </group>
+            )
+        }
         case 'universe.desk.3d':
             // The shell takes no clicks: it wraps whatever stands inside it, so
             // a pickable skin would swallow every pointer aimed at its contents
@@ -303,12 +604,15 @@ function NodeVisual({
     selected,
     onSelect,
     onPointerDown,
+    onPointerMove = null,
+    onPointerUp = null,
     nodeScale = 1,
     assetMap = null,
     childMap = null,
     selectedNodeId = null,
     onSelectNode = null,
-    depth = 0
+    depth = 0,
+    showSelectionPills = true
 }) {
     const values = node.values || {}
     const scale = asPositiveVec3(values.scale, [1, 1, 1], 0.001, 20)
@@ -331,10 +635,19 @@ function NodeVisual({
             rotation={asVec3(values.rotation, [0, 0, 0])}
             scale={nodeScaleFactor}
             onPointerDown={onPointerDown}
-            onClick={(event) => {
+            onPointerMove={onPointerMove || undefined}
+            onPointerUp={onPointerUp || undefined}
+            // The room selects what stands in THIS room. A nested node gets no
+            // click of its own (onSelect null) so the click bubbles to the
+            // scope-level node — clicking a cube inside a Geo picks up the GEO,
+            // the thing this room can actually move. Enter the Geo and the cube
+            // is scope-level there, selectable again. While the child also
+            // self-selected, the pill said "Cube", the inspector edited the
+            // cube, and the Geo was unreachable from the room entirely.
+            onClick={onSelect ? (event) => {
                 event.stopPropagation()
-                onSelect?.(node.id)
-            }}
+                onSelect(node.id)
+            } : undefined}
         >
             {body}
             {children.map((child) => (
@@ -342,12 +655,13 @@ function NodeVisual({
                     <NodeVisual
                         node={child}
                         selected={child.id === selectedNodeId}
-                        onSelect={onSelectNode}
+                        onSelect={null}
                         onSelectNode={onSelectNode}
                         selectedNodeId={selectedNodeId}
                         assetMap={assetMap}
                         childMap={childMap}
                         depth={depth + 1}
+                        showSelectionPills={showSelectionPills}
                         // Deliberately no onPointerDown below the top level.
                         // The drag writes a world-space raycast point into
                         // values.position, which is read as a position LOCAL to
@@ -360,7 +674,7 @@ function NodeVisual({
                     />
                 </SceneEntityErrorBoundary>
             ))}
-            {selected ? (
+            {selected && showSelectionPills ? (
                 <Html position={[0, 1.5, 0]} center>
                     <span className="raw-selection-pill">{node.label}</span>
                 </Html>
@@ -381,7 +695,15 @@ function SceneContent({
     nodeScale = 1,
     scopeId,
     worldNode,
-    liveOutputs = null
+    liveOutputs = null,
+    showSelectionPills = true,
+    // false = a pure LOOK: no picking, no dragging, no double-click placing.
+    // The /out projector view passes false — "handlers simply not passed" was
+    // not enough, because OrbitControls mounts its own DOM listeners.
+    interactive = true,
+    // A STANDING PLACE instead of a technical grid. Null everywhere but the
+    // toybox — see the prop on RawViewport below for the whole argument.
+    ambience = null
 }) {
     // Keyed on assets + project id so the map only rebuilds when assets change,
     // not on every document identity change from a sync tick.
@@ -389,10 +711,14 @@ function SceneContent({
     const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
-    const clockNow = useGraphClock(hasClockNode(document.nodes))
+    const clockNow = useDocumentClock(document)
+    // Between-pass node state (a Lag's last answer) — this window's own,
+    // never React state, dropped whole when the document changes.
+    const [frameMemory] = useState(() => createFrameMemory())
+    useEffect(() => { frameMemory.clear() }, [frameMemory, document.projectMeta?.id])
     const graphContext = useMemo(
-        () => createNodeGraphContext(document, { now: clockNow, liveOutputs }),
-        [document, clockNow, liveOutputs]
+        () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
+        [document, clockNow, liveOutputs, frameMemory]
     )
     // scopeId undefined = unscoped, matches the old document-wide behavior; a real
     // scope (including root, `null`) only renders/uses siblings of that scope — see
@@ -411,10 +737,16 @@ function SceneContent({
             ? !constructorIds.has(node.parentId || null)
             : (node.parentId || null) === scopeId
     )
+    // `ambience` also leaves the BENCH'S OWN RIG out of the picture. A
+    // `world.camera` node draws itself as a wireframe gizmo with a frustum fan,
+    // and a `world.light` as a marker; both are controls, and both were sitting
+    // in the middle of a child's room looking like something they had made by
+    // accident. Raw keeps them — that is where they are controls.
     const renderableNodes = useMemo(
-        () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)),
+        () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)
+            && !(ambience && String(node.typeId || '').startsWith('world.'))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [document.nodes, scopeId]
+        [document.nodes, scopeId, ambience]
     )
     // Everything standing inside a container, keyed by the container it stands
     // in. Descent stops at a nested universe.world: a World is its own stage,
@@ -446,15 +778,36 @@ function SceneContent({
         }
         return byParent
     }, [document.nodes, graphContext])
-    const lightNode = useMemo(
-        () => pickActiveTypeNode(document.nodes, 'world.light', { scopeId, activeMap: document.workspaceState?.activeNodeIdByTypeScope }),
+    const resolvedLight = useMemo(
+        () => resolveSceneLighting(document, graphContext, { scopeId }),
+        [document, graphContext, scopeId]
+    )
+    // The authored eye: the scope's active Camera node drives the view every
+    // frame (position, Look At, FOV — all wireable, so a Time→Sin dolly works
+    // with no further machinery). The active camera's own body is filtered out
+    // below: the room is seen THROUGH it, and a housing centred on the near
+    // plane would only shed clipped fragments.
+    const authoredCameraNode = useMemo(
+        () => pickAuthoredCameraNode(document.nodes, scopeId, document.workspaceState?.activeNodeIdByTypeScope),
         [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
     )
+    useFrame(({ camera }) => {
+        if (!authoredCameraNode) return
+        const values = resolveSpatialValues(authoredCameraNode, graphContext, document.nodes)
+        const pos = asVec3(values.position, [0, 2.4, 6.5])
+        const look = asVec3(values.lookAt, [0, 0.75, 0])
+        const fov = asFiniteNumber(values.fov, 50)
+        camera.position.set(pos[0], pos[1], pos[2])
+        if (camera.fov !== fov) {
+            camera.fov = fov
+            camera.updateProjectionMatrix()
+        }
+        camera.lookAt(look[0], look[1], look[2])
+    })
     const gridNode = useMemo(
         () => pickActiveTypeNode(document.nodes, 'world.grid', { scopeId, activeMap: document.workspaceState?.activeNodeIdByTypeScope }),
         [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
     )
-    const resolvedLight = lightNode ? evaluateNodeInputs(lightNode, graphContext) : null
     const resolvedGrid = gridNode ? evaluateNodeInputs(gridNode, graphContext) : null
     const [draggingNodeId, setDraggingNodeId] = useState(null)
     // Orbit yields while a node is being dragged: the controls listen on the
@@ -481,50 +834,22 @@ function SceneContent({
     // animation frame is a real, safe win with no change in drag feel.
     const dragRafRef = useRef(null)
     const dragPendingRef = useRef(null)
+    // Touch double-tap on the floor = place here, same as double-click. The
+    // browser cannot be trusted to synthesize dblclick from touch (dead on
+    // the 08-20 real-phone test); the tracker also guards Chromium's double
+    // fire. R3F pointer events carry pointerType/clientX/clientY and the
+    // floor raycast point, which is all the tracker and the palette need.
+    const roomTap = useMemo(() => createTapTracker(), [])
     useEffect(() => () => {
         if (dragRafRef.current !== null) cancelAnimationFrame(dragRafRef.current)
     }, [])
 
-    return (
-        <>
-            <color attach="background" args={[getRawWorldBackgroundColor(document, graphContext, { scopeId, worldNode })]} />
-            <ambientLight
-                color={resolvedLight?.ambientColor ?? document.worldState?.ambientLight?.color ?? '#ffffff'}
-                intensity={resolvedLight?.ambientIntensity ?? document.worldState?.ambientLight?.intensity ?? 0.8}
-            />
-            <directionalLight
-                color={resolvedLight?.directionalColor ?? document.worldState?.directionalLight?.color ?? '#fff7ea'}
-                intensity={resolvedLight?.directionalIntensity ?? document.worldState?.directionalLight?.intensity ?? 1.05}
-                position={resolvedLight?.directionalPosition ?? document.worldState?.directionalLight?.position ?? [8, 12, 4]}
-            />
-            {(resolvedGrid?.visible ?? document.worldState?.gridVisible) !== false ? (
-                <Grid
-                    args={[resolvedGrid?.size ?? document.worldState?.gridSize ?? 24, resolvedGrid?.size ?? document.worldState?.gridSize ?? 24]}
-                    cellColor={resolvedGrid?.color ?? 'rgba(255,255,255,0.10)'}
-                    sectionColor={resolvedGrid?.color ?? 'rgba(255,255,255,0.22)'}
-                    position={[0, 0, 0]}
-                    fadeDistance={60}
-                    fadeStrength={1}
-                />
-            ) : null}
-            <mesh
-                rotation={[-Math.PI / 2, 0, 0]}
-                position={[0, 0, 0]}
-                onClick={(event) => {
-                    if (draggingNodeId) return
-                    if ((event.delta ?? 0) > 4) return
-                    onClearSelection?.()
-                }}
-                onDoubleClick={(event) => {
-                    event.stopPropagation()
-                    if (draggingNodeId) return
-                    onWorldDoubleClick?.({
-                        point: event.point?.toArray?.() || [0, 0, 0],
-                        clientX: event.nativeEvent?.clientX || 0,
-                        clientY: event.nativeEvent?.clientY || 0
-                    })
-                }}
-                onPointerMove={(event) => {
+    // The drag's move/end logic, shared: it hangs on the floor plane AND on
+    // the grabbed object itself. On real touch hardware the browser can route
+    // the moves to the pressed object only — with the handler in both places
+    // the drag survives whichever one receives them (idempotent: same ray,
+    // same frame, last write wins in dragPendingRef).
+    const handleDragMove = (event) => {
                     if (!draggingNodeId) return
                     event.stopPropagation()
                     // Same plane the grab measured on — the object's height —
@@ -558,12 +883,17 @@ function SceneContent({
                         if (Math.abs(denom) > 1e-6) {
                             const t = (nx * (held[0] - origin.x) + nz * (held[2] - origin.z)) / denom
                             if (t > 0) {
-                                dragNodeYRef.current = Math.max(0, origin.y + direction.y * t)
+                                dragNodeYRef.current = Math.max(0, Math.min(40, origin.y + direction.y * t))
                                 dragPendingRef.current = [held[0], dragNodeYRef.current, held[2]]
                             }
                         }
                     } else {
-                        dragPendingRef.current = [point[0] + offX, dragNodeYRef.current, point[2] + offZ]
+                        // Near the drag plane's horizon the depth axis explodes
+                        // (measured: an 80px downward move threw a geo from z=0
+                        // to z=13.8 — off past the camera). The room is the
+                        // grid; nothing dragged by hand should leave it.
+                        const clampXZ = (value) => Math.max(-40, Math.min(40, value))
+                        dragPendingRef.current = [clampXZ(point[0] + offX), dragNodeYRef.current, clampXZ(point[2] + offZ)]
                     }
                     if (dragRafRef.current === null) {
                         dragRafRef.current = requestAnimationFrame(() => {
@@ -571,8 +901,16 @@ function SceneContent({
                             if (dragPendingRef.current) onMoveNode?.(draggingNodeId, dragPendingRef.current)
                         })
                     }
-                }}
-                onPointerUp={(event) => {
+    }
+    const handleDragEnd = (event) => {
+                    if (roomTap.up(event) && !draggingNodeId) {
+                        onWorldDoubleClick?.({
+                            point: event.point?.toArray?.() || [0, 0, 0],
+                            clientX: event.nativeEvent?.clientX ?? 0,
+                            clientY: event.nativeEvent?.clientY ?? 0
+                        })
+                        return
+                    }
                     if (!draggingNodeId) return
                     event.stopPropagation()
                     if (dragRafRef.current !== null) {
@@ -582,26 +920,103 @@ function SceneContent({
                     }
                     dragPendingRef.current = null
                     setDraggingNodeId(null)
-                }}
+    }
+
+
+    return (
+        <AmbienceContext.Provider value={ambience}>
+            <color attach="background" args={[ambience?.sky || getRawWorldBackgroundColor(document, graphContext, { scopeId, worldNode })]} />
+            {ambience ? (
+                <>
+                    {/* Fog the colour of the sky. This is the whole horizon
+                        trick: a flat ground plane dissolving into the
+                        background at distance reads as somewhere that carries
+                        on past the frame, where a hard-edged one reads as a
+                        tabletop. */}
+                    <fog attach="fog" args={[ambience.sky, ambience.fogNear ?? 12, ambience.fogFar ?? 60]} />
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.004, 0]}>
+                        <planeGeometry args={[400, 400]} />
+                        <meshStandardMaterial color={ambience.ground} roughness={1} metalness={0} />
+                    </mesh>
+                    {ambience.shadow === false ? null : (
+                        <ContactShadows
+                            position={[0, 0.006, 0]}
+                            scale={ambience.shadowScale ?? 24}
+                            far={4}
+                            blur={2.6}
+                            opacity={ambience.shadowOpacity ?? 0.3}
+                            resolution={384}
+                            color={ambience.shadowColor || '#4a4034'}
+                        />
+                    )}
+                </>
+            ) : null}
+            <ambientLight
+                color={resolvedLight?.ambientColor ?? document.worldState?.ambientLight?.color ?? '#ffffff'}
+                intensity={resolvedLight?.ambientIntensity ?? document.worldState?.ambientLight?.intensity ?? 0.8}
+            />
+            <directionalLight
+                color={resolvedLight?.directionalColor ?? document.worldState?.directionalLight?.color ?? '#fff7ea'}
+                intensity={resolvedLight?.directionalIntensity ?? document.worldState?.directionalLight?.intensity ?? 1.05}
+                position={resolvedLight?.directionalPosition ?? document.worldState?.directionalLight?.position ?? [8, 12, 4]}
+            />
+            {!ambience && (resolvedGrid?.visible ?? document.worldState?.gridVisible) !== false ? (
+                <Grid
+                    args={[resolvedGrid?.size ?? document.worldState?.gridSize ?? 24, resolvedGrid?.size ?? document.worldState?.gridSize ?? 24]}
+                    cellColor={resolvedGrid?.color ?? 'rgba(255,255,255,0.10)'}
+                    sectionColor={resolvedGrid?.color ?? 'rgba(255,255,255,0.22)'}
+                    position={[0, 0, 0]}
+                    fadeDistance={60}
+                    fadeStrength={1}
+                />
+            ) : null}
+            <mesh
+                rotation={[-Math.PI / 2, 0, 0]}
+                position={[0, 0, 0]}
+                onClick={interactive ? (event) => {
+                    if (draggingNodeId) return
+                    if ((event.delta ?? 0) > 4) return
+                    onClearSelection?.()
+                } : undefined}
+                onDoubleClick={interactive ? (event) => {
+                    event.stopPropagation()
+                    if (draggingNodeId) return
+                    if (roomTap.justFired()) return
+                    onWorldDoubleClick?.({
+                        point: event.point?.toArray?.() || [0, 0, 0],
+                        clientX: event.nativeEvent?.clientX || 0,
+                        clientY: event.nativeEvent?.clientY || 0
+                    })
+                } : undefined}
+                onPointerDown={interactive ? (event) => {
+                    roomTap.down(event)
+                } : undefined}
+                onPointerMove={interactive ? handleDragMove : undefined}
+                onPointerUp={interactive ? handleDragEnd : undefined}
             >
                 <planeGeometry args={[400, 400]} />
                 <meshBasicMaterial transparent opacity={0} />
             </mesh>
             <Suspense fallback={null}>
-                {(document.entities || []).map((entity) => (
+                {/* Objects (document.entities) are ROOT-scope citizens: they
+                    have no parent concept, so they stand in the top room and
+                    only there. They used to render unscoped — every object
+                    haunted every interior at every depth. */}
+                {(scopeId ? [] : (document.entities || [])).map((entity) => (
                     <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
                         <EntityVisual
                             entity={entity}
                             assetMap={assetMap}
                             selected={entity.id === selectedEntityId}
                             onSelect={onSelectEntity}
+                            showSelectionPills={showSelectionPills}
                         />
                     </SceneEntityErrorBoundary>
                 ))}
                 {/* Boundaried like entities are: a node can now load an
                     arbitrary file off someone's disk, and a corrupt mesh must
                     cost that one node, not the whole scene. */}
-                {renderableNodes.map((node) => (
+                {renderableNodes.filter((node) => node.id !== authoredCameraNode?.id).map((node) => (
                     <SceneEntityErrorBoundary key={node.id} resetKey={node.id}>
                         <NodeVisual
                             node={{ ...node, values: resolveSpatialValues(node, graphContext, document.nodes) }}
@@ -612,7 +1027,10 @@ function SceneContent({
                             childMap={childMap}
                             nodeScale={nodeScale}
                             assetMap={assetMap}
-                            onPointerDown={(event) => {
+                            showSelectionPills={showSelectionPills}
+                            onPointerMove={interactive ? handleDragMove : undefined}
+                            onPointerUp={interactive ? handleDragEnd : undefined}
+                            onPointerDown={interactive ? (event) => {
                                 if (event.button !== 0) return
                                 event.stopPropagation()
                                 const position = node.values?.position || [0, 0, 0]
@@ -641,13 +1059,78 @@ function SceneContent({
                                 }
                                 setDraggingNodeId(node.id)
                                 onSelectNode?.(node.id)
-                            }}
+                            } : undefined}
                         />
                     </SceneEntityErrorBoundary>
                 ))}
             </Suspense>
-        </>
+        </AmbienceContext.Provider>
     )
+}
+
+// RE-AIM AFTER MOUNT.
+//
+// The Canvas `camera` prop is read once, when the renderer is created, and
+// never again — handing it a new position on a later render does nothing at
+// all. That is fine for every Raw surface, whose camera is either the saved
+// view or the mentor's authored one and does not move on its own. It is not
+// fine for a surface that has to re-frame when the phone is turned or when a
+// child adds something outside the current shot, so this applies a view
+// imperatively, once per `key`, through the same OrbitControls the hand is
+// using.
+function ViewRequestApplier({ request }) {
+    const camera = useThree((state) => state.camera)
+    const controls = useThree((state) => state.controls)
+    const appliedRef = useRef(null)
+
+    useEffect(() => {
+        if (!request?.key) return
+        // Keyed on the controls too: this effect runs once before OrbitControls
+        // has registered itself, and a target set on nothing is a target lost.
+        const stamp = `${request.key}::${controls ? 'controls' : 'bare'}`
+        if (appliedRef.current === stamp) return
+        const isFirst = appliedRef.current === null
+        appliedRef.current = stamp
+
+        const target = request.target || [0, 0, 0]
+        let position = request.position || [0, 2.4, 6.5]
+
+        // KEEP THE WAY THEY WERE ALREADY LOOKING. A re-frame exists to put what
+        // somebody just made back in the picture — spinning the room round to
+        // north while doing it takes away the one thing they had already
+        // chosen. So on every re-frame after the first, the distance and the
+        // elevation come from the request and the compass bearing comes from
+        // wherever the camera is now.
+        if (isFirst || !Number.isFinite(request.distance) || !Number.isFinite(request.elevation)) {
+            // The first application has no "already looking" to keep.
+        } else {
+            const dx = camera.position.x - target[0]
+            const dz = camera.position.z - target[2]
+            if (Math.hypot(dx, dz) > 1e-4) {
+                const bearing = Math.atan2(dx, dz)
+                const cosE = Math.cos(request.elevation)
+                position = [
+                    target[0] + Math.sin(bearing) * cosE * request.distance,
+                    target[1] + Math.sin(request.elevation) * request.distance,
+                    target[2] + Math.cos(bearing) * cosE * request.distance
+                ]
+            }
+        }
+
+        if (Number.isFinite(request.fov) && camera.fov !== request.fov) {
+            camera.fov = request.fov
+            camera.updateProjectionMatrix()
+        }
+        camera.position.set(position[0], position[1], position[2])
+        if (controls?.target) {
+            controls.target.set(target[0], target[1], target[2])
+            controls.update?.()
+        } else {
+            camera.lookAt(target[0], target[1], target[2])
+        }
+    }, [request, camera, controls])
+
+    return null
 }
 
 export default function RawViewport({
@@ -667,7 +1150,35 @@ export default function RawViewport({
     showEmptyHint = true,
     scopeId,
     worldNode,
-    liveOutputs = null
+    liveOutputs = null,
+    // In the backdrop the graph card IS the selection feedback; a floating
+    // name pill duplicated it in the room's sky, detached from its object
+    // (the "GEO" chip the audit photographed). Fullscreen keeps pills — the
+    // cards are gone there.
+    showSelectionPills = true,
+    interactive = true,
+    // The lens. 50° vertical is what every Raw surface has always used and what
+    // a wide screen wants — the default keeps every existing caller byte-
+    // identical. A full-bleed PORTRAIT surface needs a wider one: three.js
+    // derives the horizontal field from the aspect, so 50° across a 390×750
+    // canvas is 27° of room and everything else is off both edges. See
+    // src/make/makeFraming.js, which is where the number that gets passed in
+    // is worked out.
+    cameraFov = 50,
+    // A STANDING PLACE instead of a technical grid.
+    //
+    // Null for every existing caller, and null is exactly today's behaviour:
+    // the document's own background colour and its white technical grid. Raw's
+    // world is right for a bench in a dark studio and it is the language the
+    // toybox exists to escape — a child asked to make a room should feel they
+    // are standing somewhere, not inspecting a scene. Given
+    // `{ sky, ground, fogNear, fogFar }` this paints a calm ground, fogs it into
+    // the sky at the horizon, drops a soft contact shadow under everything, and
+    // leaves the grid unmounted.
+    ambience = null,
+    // A view to apply AFTER mount — `{ key, target, position, fov }`, applied
+    // once per key. See ViewRequestApplier above.
+    viewRequest = null
 }) {
     const viewportRef = useRef(null)
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
@@ -675,6 +1186,13 @@ export default function RawViewport({
     const spatialNodes = useMemo(
         () => (document.nodes || []).filter((node) => isSpatialNode(node) && (scopeId === undefined || (node.parentId || null) === scopeId)),
         [document.nodes, scopeId]
+    )
+    // An active Camera node owns the view: orbit stays unmounted while one
+    // exists in this scope, or the two would fight over the same eye every
+    // frame. Deactivate (or delete) the Camera to orbit freely again.
+    const hasAuthoredCamera = useMemo(
+        () => Boolean(pickAuthoredCameraNode(document.nodes, scopeId, document.workspaceState?.activeNodeIdByTypeScope)),
+        [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
     )
     const isEmpty = spatialNodes.length === 0 && (document.entities || []).length === 0
 
@@ -727,7 +1245,7 @@ export default function RawViewport({
             style={{ top: `${topInset}px` }}
             role="button"
             tabIndex={0}
-            aria-label="World surface — double-click to place a node"
+            aria-label="Scene — double-click to place a node"
             onPointerMove={handlePointerMove}
             onPointerLeave={onCursorLeave}
             onDoubleClick={handleViewportDoubleClick}
@@ -740,7 +1258,7 @@ export default function RawViewport({
                         <div className="raw-viewport-empty-crosshair" />
                     </div>
                     <div className="raw-viewport-empty-panel">
-                        <span className="raw-window-kicker">World</span>
+                        <span className="raw-window-kicker">Scene</span>
                         <strong>Cursor is material.</strong>
                         <p>Double-click anywhere to place a node, or use the button below.</p>
                         <button type="button" onClick={openWorldCreateAtCenter}>
@@ -755,20 +1273,24 @@ export default function RawViewport({
                 onCreated={({ gl }) => bindContextGuard(gl)}
                 camera={{
                     position: camera.position || [0, 2.4, 6.5],
-                    fov: 50,
+                    fov: cameraFov,
                     near: 0.1,
                     far: 200
                 }}
-                onPointerMissed={() => {
+                onPointerMissed={interactive ? () => {
                     // A node selection lives in the shared workspace state, so
                     // clearing it costs an op — only pay that when a node is
                     // actually selected; otherwise keep the cheap local clear.
                     if (selectedNodeId && onClearSelection) onClearSelection()
                     else onSelectEntity?.(null)
-                }}
+                } : undefined}
             >
-                <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />
+                {interactive && !hasAuthoredCamera && <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />}
+                {viewRequest ? <ViewRequestApplier request={viewRequest} /> : null}
                 <SceneContent
+                    ambience={ambience}
+                    showSelectionPills={showSelectionPills}
+                    interactive={interactive}
                     document={document}
                     selectedEntityId={selectedEntityId}
                     selectedNodeId={selectedNodeId}

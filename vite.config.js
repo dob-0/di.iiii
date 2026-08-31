@@ -6,6 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 // Plain data, no imports of its own — see the note at the top of that file.
 import { workAssetDirs, workEntries, workPublicDirs } from './src/works/works.js'
+import { isMeasuredFile } from './scripts/node-anatomy-lib.mjs'
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const XR_EMULATE_STUB = path.resolve(ROOT_DIR, 'src/xr/emulateStub.js')
@@ -226,6 +227,54 @@ const localProfilePlugin = () => ({
     }
 })
 
+// `virtual:node-anatomy` — where every node type's code lives, as line ranges
+// the "what is it made of" sheet slices real source by.
+//
+// This used to be a committed nodeAnatomy.generated.js kept honest by a CI diff
+// (`check:node-anatomy`). The artifact was correct and the check worked; the
+// problem was that a file keyed by line number changes whenever any of the
+// three measured files changes, so it landed in 10 of 13 wave diffs as a pure
+// conflict — never a line anyone reviewed, always a rebase to redo. Measuring
+// during the build that ships the code removes both the conflict and the whole
+// staleness class: the manifest and the source it points into are the same
+// revision by construction, so there is nothing left to check.
+//
+// The measurement is still acorn, still in scripts/node-anatomy-lib.mjs, and
+// still never a pattern-match in the browser — only WHEN it runs has moved.
+const nodeAnatomyPlugin = () => {
+    const VIRTUAL_ID = 'virtual:node-anatomy'
+    const RESOLVED_ID = `\0${VIRTUAL_ID}`
+    return {
+        name: 'node-anatomy-manifest',
+        resolveId(id) {
+            return id === VIRTUAL_ID ? RESOLVED_ID : null
+        },
+        async load(id) {
+            if (id !== RESOLVED_ID) return null
+            // Imported here rather than at the top of the config: buildManifest
+            // pulls in the node registry, and the config must stay loadable
+            // without evaluating app code.
+            const { buildManifest, renderManifestModule } = await import('./scripts/node-anatomy-lib.mjs')
+            return renderManifestModule(await buildManifest())
+        },
+        configureServer(server) {
+            // Without this a running dev server keeps serving the line numbers
+            // it measured at startup — the same silent staleness the CI check
+            // existed to catch, just shorter-lived.
+            // 'add' as well as 'change': migrating a type out of the switch
+            // CREATES its colocated runtime, and that is the edit most worth
+            // seeing without a restart.
+            const reMeasure = (file) => {
+                if (!isMeasuredFile(file)) return
+                const module = server.moduleGraph.getModuleById(RESOLVED_ID)
+                if (module) server.moduleGraph.invalidateModule(module)
+            }
+            server.watcher.on('change', reMeasure)
+            server.watcher.on('add', reMeasure)
+        }
+    }
+}
+
 const stubXrEmulatorPlugin = () => ({
     name: 'stub-xr-emulator',
     enforce: 'pre',
@@ -381,6 +430,9 @@ export default {
         stubXrEmulatorPlugin(),
         // Restart server on static/public file change
         restartOnPublicChangePlugin(),
+
+        // virtual:node-anatomy — measured from the sources, never committed
+        nodeAnatomyPlugin(),
 
         // Publish install.sh / install.ps1 as /get.sh and /get.ps1
         emitInstallScriptsPlugin(),

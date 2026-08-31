@@ -24,8 +24,20 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
 const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
+// Production is the one host this script must never reach by inheritance.
+// Matches the live site and anything under it; staging is a different hostname
+// and is unaffected.
+export const isProductionTarget = (url) => {
+    try {
+        const { hostname } = new URL(url)
+        return hostname === 'di-studio.xyz' || hostname === 'www.di-studio.xyz'
+    } catch {
+        return false
+    }
+}
+
 const parseArgs = (argv) => {
-    const args = { spaceId: null, from: null, to: null, token: null, dryRun: false }
+    const args = { spaceId: null, from: null, to: null, token: null, dryRun: false, allowProduction: false }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
         if (!arg.startsWith('--')) {
@@ -36,6 +48,7 @@ const parseArgs = (argv) => {
         if (arg === '--to') { args.to = argv[++i]; continue }
         if (arg === '--token') { args.token = argv[++i]; continue }
         if (arg === '--dry-run') { args.dryRun = true; continue }
+        if (arg === '--allow-production') { args.allowProduction = true; continue }
     }
     return args
 }
@@ -51,7 +64,10 @@ const loadEnvFile = async (filePath) => {
             if (idx === -1) continue
             const key = trimmed.slice(0, idx).trim()
             const value = trimmed.slice(idx + 1).trim().replace(/^['"]|['"]$/g, '')
-            if (key) env[key] = value
+            // An empty assignment is a placeholder, not a value. The root
+            // .env carries `LIVE_API_TOKEN=` with nothing after it; honouring
+            // it blanked the real token and this script then ran unauthenticated.
+            if (key && value) env[key] = value
         }
         return env
     } catch {
@@ -76,6 +92,11 @@ const apiFetch = async (url, options = {}) => {
 
 const main = async () => {
     const localEnv = {
+        // serverXR/.env.local is where the tokens actually live; the root pair
+        // carries the URLs. Reading only the root pair is why this script could
+        // not see LIVE_API_TOKEN at all.
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env'))),
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env'))),
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env.local'))),
     }
@@ -93,6 +114,24 @@ const main = async () => {
     const toBase = (args.to || getEnv('LIVE_API_URL') || DEFAULT_LIVE_URL).replace(/\/+$/, '')
     const token = args.token || getEnv('LIVE_API_TOKEN') || ''
     const { spaceId, dryRun } = args
+
+    // Production has to be named out loud. This script's fallback IS production
+    // (DEFAULT_LIVE_URL), and the root .env sets LIVE_API_URL to production
+    // while .env.local overrides it to staging — so deleting or losing one line
+    // in an untracked file silently turns a routine push into a live one. The
+    // convention everywhere else is LIVE_* = staging, PROD_* = production, so a
+    // LIVE_API_URL pointing at production is already the anomaly.
+    if (isProductionTarget(toBase) && !args.to && !args.allowProduction) {
+        console.error(`Refusing to push to PRODUCTION (${toBase}) without being told to.`)
+        console.error('Nothing was read or written.\n')
+        console.error('This was not asked for on the command line — it came from the environment:')
+        console.error(`  LIVE_API_URL = ${getEnv('LIVE_API_URL') || '(unset, so the built-in production default was used)'}`)
+        console.error('\nIf you meant staging:      check .env.local still sets LIVE_API_URL to staging')
+        console.error('If you really meant production, say so:')
+        console.error(`  node scripts/space-push.mjs ${spaceId} --to ${toBase} --dry-run`)
+        process.exitCode = 1
+        return
+    }
 
     if (!token) {
         console.error('Error: LIVE_API_TOKEN is required to push to the live server.')
@@ -138,7 +177,10 @@ const main = async () => {
     console.log(`\nLive: https://di-studio.xyz/${spaceId}/`)
 }
 
-main().catch((error) => {
-    console.error(error?.message || error)
-    process.exitCode = 1
-})
+// Only run when invoked as a script, so the guard above can be unit-tested.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+    main().catch((error) => {
+        console.error(error?.message || error)
+        process.exitCode = 1
+    })
+}

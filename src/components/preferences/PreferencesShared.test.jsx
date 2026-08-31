@@ -16,16 +16,16 @@ describe('SpacePreviewRow', () => {
             />
         )
 
-        fireEvent.click(screen.getByRole('button', { name: 'Public' }))
+        fireEvent.click(screen.getByRole('button', { name: 'View live' }))
         expect(onOpenRoute).toHaveBeenCalledWith('/alpha')
 
-        fireEvent.click(screen.getByRole('button', { name: 'Studio' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Projects' }))
         expect(onOpenRoute).toHaveBeenCalledWith('/alpha/studio')
 
-        fireEvent.click(screen.getByRole('button', { name: 'Raw' }))
-        expect(onOpenRoute).toHaveBeenCalledWith('/alpha/raw')
+        fireEvent.click(screen.getByRole('button', { name: 'Nodes' }))
+        expect(onOpenRoute).toHaveBeenCalledWith('/alpha/raw/projects')
 
         fireEvent.click(screen.getByRole('button', { name: 'Admin' }))
-        expect(onOpenRoute).toHaveBeenCalledWith('/admin?space=alpha')
+        expect(onOpenRoute).toHaveBeenCalledWith('/alpha/admin')
     })
 })

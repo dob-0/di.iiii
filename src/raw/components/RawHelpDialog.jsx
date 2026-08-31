@@ -2,69 +2,31 @@ import { useEffect, useMemo, useState } from 'react'
 import {
     GUIDE_AUDIENCES,
     GUIDE_SECTIONS,
-    getGuideSectionForSurface
+    getGuideSection
 } from '../utils/rawGuide.js'
 
-function SurfaceDiagram({ sectionId = 'start' }) {
-    if (sectionId === 'world') {
-        return (
-            <div className="raw-help-diagram raw-help-diagram-world" aria-hidden="true">
-                <div className="raw-help-diagram-grid" />
-                <div className="raw-help-diagram-cube raw-help-diagram-world-node" />
-                <div className="raw-help-diagram-sphere raw-help-diagram-world-node" />
-                <div className="raw-help-diagram-pill raw-help-diagram-label-world">World</div>
-            </div>
-        )
-    }
-
-    if (sectionId === 'view') {
-        return (
-            <div className="raw-help-diagram raw-help-diagram-view" aria-hidden="true">
-                <div className="raw-help-diagram-window raw-help-diagram-window-a">
-                    <span />
-                    <span />
-                    <span />
-                </div>
-                <div className="raw-help-diagram-window raw-help-diagram-window-b">
-                    <span />
-                    <span />
-                </div>
-                <div className="raw-help-diagram-pill raw-help-diagram-label-view">View</div>
-            </div>
-        )
-    }
-
-    if (sectionId === 'graph') {
-        return (
-            <div className="raw-help-diagram raw-help-diagram-graph" aria-hidden="true">
-                <div className="raw-help-diagram-wire raw-help-diagram-wire-a" />
-                <div className="raw-help-diagram-wire raw-help-diagram-wire-b" />
-                <div className="raw-help-diagram-graph-node raw-help-diagram-graph-node-a" />
-                <div className="raw-help-diagram-graph-node raw-help-diagram-graph-node-b" />
-                <div className="raw-help-diagram-graph-node raw-help-diagram-graph-node-c" />
-                <div className="raw-help-diagram-pill raw-help-diagram-label-graph">Graph</div>
-            </div>
-        )
-    }
-
+// The graph diagram survives the surface axis: cards and wires are still the
+// truth of the product. The World/View diagrams taught surfaces that no
+// longer exist and are gone with them.
+function GuideDiagram() {
     return (
-        <div className="raw-help-diagram raw-help-diagram-start" aria-hidden="true">
-            <div className="raw-help-diagram-start-col raw-help-diagram-start-world" />
-            <div className="raw-help-diagram-start-col raw-help-diagram-start-view" />
-            <div className="raw-help-diagram-start-col raw-help-diagram-start-graph" />
-            <div className="raw-help-diagram-pill raw-help-diagram-label-start">Loop</div>
+        <div className="raw-help-diagram raw-help-diagram-graph" aria-hidden="true">
+            <div className="raw-help-diagram-wire raw-help-diagram-wire-a" />
+            <div className="raw-help-diagram-wire raw-help-diagram-wire-b" />
+            <div className="raw-help-diagram-graph-node raw-help-diagram-graph-node-a" />
+            <div className="raw-help-diagram-graph-node raw-help-diagram-graph-node-b" />
+            <div className="raw-help-diagram-graph-node raw-help-diagram-graph-node-c" />
         </div>
     )
 }
 
 export default function RawHelpDialog({
     open,
-    surface = 'graph',
     onClose
 }) {
     const [activeSectionId, setActiveSectionId] = useState('start')
     const [activeMode, setActiveMode] = useState('basics')
-    const suggestedSection = useMemo(() => getGuideSectionForSurface(surface), [surface])
+    const suggestedSection = useMemo(() => getGuideSection('start'), [])
 
     useEffect(() => {
         if (!open) return
@@ -94,7 +56,7 @@ export default function RawHelpDialog({
                 aria-label="Close help"
                 onClick={onClose}
             />
-            <section className="raw-help-dialog" role="dialog" aria-modal="true" aria-label="Raw help">
+            <section className="raw-help-dialog" role="dialog" aria-modal="true" aria-label="Help">
                 <header className="raw-help-header">
                     <div className="raw-help-header-mark" aria-hidden="true">
                         <span>{activeSection.icon}</span>
@@ -122,7 +84,7 @@ export default function RawHelpDialog({
                     ))}
                 </div>
 
-                <div className="raw-help-tabs" role="tablist" aria-label="Guide sections">
+                <div className="raw-help-tabs" role="tablist" aria-label="Guide sections" hidden={GUIDE_SECTIONS.length < 2}>
                     {GUIDE_SECTIONS.map((section) => (
                         <button
                             key={section.id}
@@ -139,7 +101,7 @@ export default function RawHelpDialog({
 
                 <div className={`raw-help-body raw-help-body-${activeMode}`}>
                     <div className="raw-help-visual-stage">
-                        <SurfaceDiagram sectionId={activeSection.id} />
+                        <GuideDiagram />
                         <div className="raw-help-callout-row">
                             {activeSection.callouts.map((item) => (
                                 <article key={item.title} className="raw-help-callout">
@@ -199,14 +161,7 @@ export default function RawHelpDialog({
                     )}
                 </div>
 
-                <footer className="raw-help-footer">
-                    {/* No repo path in front of a visitor: docs/raw/… is
-                        unclickable and unreachable for the audience this
-                        dialog serves — developer residue, cut by the audit. */}
-                    <button type="button" onClick={() => setActiveSectionId(suggestedSection.id)}>
-                        Jump to {suggestedSection.label}
-                    </button>
-                </footer>
+                <footer className="raw-help-footer" />
             </section>
         </div>
     )

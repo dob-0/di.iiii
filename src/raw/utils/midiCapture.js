@@ -159,3 +159,92 @@ export function useMidiInput({ deviceId = '', channel = 0, onMessage } = {}) {
 
     return { status, devices, errorMessage }
 }
+
+const listOutputs = (access) => {
+    if (!access?.outputs) return []
+    const outputs = typeof access.outputs.values === 'function'
+        ? Array.from(access.outputs.values())
+        : Array.from(access.outputs)
+    return outputs.map((output) => ({
+        id: output.id,
+        name: output.name || output.id,
+        manufacturer: output.manufacturer || ''
+    }))
+}
+
+/**
+ * Reach the MIDI outputs — the sending half of the same contract as
+ * useMidiInput: same status vocabulary, same hotplug behaviour, faked at the
+ * same navigator boundary in tests. `send` writes to every connected output
+ * ('' deviceId), or one when a device is chosen; it answers true when the
+ * bytes actually left, so a caller can report honestly.
+ *
+ * @param {object} options
+ * @param {string} options.deviceId  '' means "every output there is"
+ */
+export function useMidiOutput({ deviceId = '' } = {}) {
+    const [status, setStatus] = useState(MIDI_STATUS.REQUESTING)
+    const [devices, setDevices] = useState([])
+    const [errorMessage, setErrorMessage] = useState('')
+    const accessRef = useRef(null)
+    const deviceIdRef = useRef(deviceId)
+    useEffect(() => { deviceIdRef.current = deviceId })
+
+    useEffect(() => {
+        let cancelled = false
+
+        const attach = (access) => {
+            if (cancelled) return
+            const available = listOutputs(access)
+            setDevices(available)
+            setStatus(available.length ? MIDI_STATUS.ACTIVE : MIDI_STATUS.NO_DEVICES)
+        }
+
+        if (typeof navigator === 'undefined' || typeof navigator.requestMIDIAccess !== 'function') {
+            setStatus(MIDI_STATUS.UNSUPPORTED)
+            return undefined
+        }
+
+        setStatus(MIDI_STATUS.REQUESTING)
+        navigator.requestMIDIAccess({ sysex: false })
+            .then((access) => {
+                if (cancelled) return
+                accessRef.current = access
+                attach(access)
+                access.onstatechange = () => attach(access)
+            })
+            .catch((error) => {
+                if (cancelled) return
+                const denied = error?.name === 'SecurityError' || error?.name === 'NotAllowedError'
+                setStatus(denied ? MIDI_STATUS.DENIED : MIDI_STATUS.ERROR)
+                setErrorMessage(error?.message || '')
+            })
+
+        return () => {
+            cancelled = true
+            if (accessRef.current) accessRef.current.onstatechange = null
+        }
+    }, [])
+
+    const send = useCallback((data) => {
+        const access = accessRef.current
+        if (!access?.outputs) return false
+        const outputs = typeof access.outputs.values === 'function'
+            ? Array.from(access.outputs.values())
+            : Array.from(access.outputs)
+        const wanted = deviceIdRef.current
+        let sent = false
+        for (const output of outputs) {
+            if (wanted && output.id !== wanted) continue
+            try {
+                output.send(data)
+                sent = true
+            } catch {
+                // an output that vanished mid-send is a hotplug fact, not a crash
+            }
+        }
+        return sent
+    }, [])
+
+    return { status, devices, errorMessage, send }
+}

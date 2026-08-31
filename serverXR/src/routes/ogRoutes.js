@@ -83,7 +83,14 @@ function registerOgRoutes(router, { loadSpaceMeta, siteOrigin }) {
   // nginx crawler rule proxies to `/serverXR/og$uri`, which therefore 404'd.
   // The effect on prod was worse than the bug being fixed: every crawler, for
   // every di.iiii link, got a 404 and no preview at all.
-  router.get('/og/*splat', async (req, res, next) => {
+  //
+  // `*splat` requires AT LEAST ONE segment, so `/og` and `/og/` never matched
+  // it. nginx proxies a crawler to `/serverXR/og$uri`, and for the bare domain
+  // $uri is `/` — so the one link most likely to be shared, di-studio.xyz
+  // itself, fell past this router entirely and a crawler got nginx's 403 page.
+  // The fallback for "no handle" was already written a few lines below; it was
+  // simply unreachable. Registering the empty case is the whole fix.
+  const handler = async (req, res, next) => {
     try {
       const splat = req.params.splat
       const path = String(Array.isArray(splat) ? splat.join('/') : (splat || '')).replace(/^\/+/, '')
@@ -110,8 +117,11 @@ function registerOgRoutes(router, { loadSpaceMeta, siteOrigin }) {
           // The platform's own front door, not the path that missed — sending a
           // crawler back to a URL we just failed to resolve is a loop.
           url: origin || undefined,
-          title: 'di.iiii — browser-native XR authoring',
-          description: 'Build and publish spatial XR experiences without leaving the web.',
+          // Kept character-for-character in step with src/index.html: a link
+          // preview that says something different from the page it opens is
+          // how the pre-sweep positioning survived the lexicon pass.
+          title: 'di.iiii — public spaces on the open web',
+          description: 'Make a space, hand out the address — a link while it runs, a file when it ends. No app, no store, nothing to install; it opens in a browser, or in a headset.',
           // Absolute, like the per-space branch. A relative image resolves
           // against og:url, so on the fallback path it used to resolve against
           // the internal address and reach nothing.
@@ -126,7 +136,13 @@ function registerOgRoutes(router, { loadSpaceMeta, siteOrigin }) {
         image: origin + cardFor(handle),
       }))
     } catch (error) { next(error) }
-  })
+  }
+
+  router.get('/og/*splat', handler)
+  // The bare domain. Both spellings: nginx sends `/og/` for `/`, and `/og` is
+  // what a hand-typed or redirected request arrives as.
+  router.get('/og', handler)
+  router.get('/og/', handler)
 }
 
 module.exports = { registerOgRoutes, ogHtml }

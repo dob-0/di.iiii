@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createEdge, createNode } from '../../project/nodeRegistry.js'
 import { createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
-import { getRawWorldBackgroundColor, pickActiveTypeNode, resolveScopeWorldNode } from './viewportWorldState.js'
+import { getRawWorldBackgroundColor, pickActiveTypeNode, resolveSceneLighting, resolveScopeWorldNode } from './viewportWorldState.js'
 
 describe('resolveScopeWorldNode', () => {
     const nodes = [
@@ -172,5 +172,24 @@ describe('getRawWorldBackgroundColor', () => {
             workspaceState: { activeNodeIdByTypeScope: { 'world.background::my-world': 'bg-marked' } }
         }
         expect(getRawWorldBackgroundColor(document, null, { scopeId: 'my-world' })).toBe('#222222')
+    })
+})
+
+describe('resolveSceneLighting — the Light split, read side', () => {
+    const env = { id: 'env', typeId: 'world.environment', parentId: null, values: { ambientIntensity: 0.3 } }
+    const legacy = { id: 'leg', typeId: 'world.light', parentId: null, values: { ambientIntensity: 0.9 } }
+
+    it('an Environment in scope wins', () => {
+        const doc = { nodes: [env, legacy], workspaceState: {} }
+        expect(resolveSceneLighting(doc, null, { scopeId: null }).ambientIntensity).toBe(0.3)
+    })
+
+    it('with no Environment, the retired dual Light still drives — old documents light as they did', () => {
+        const doc = { nodes: [legacy], workspaceState: {} }
+        expect(resolveSceneLighting(doc, null, { scopeId: null }).ambientIntensity).toBe(0.9)
+    })
+
+    it('with neither, null — callers keep their own fallbacks', () => {
+        expect(resolveSceneLighting({ nodes: [], workspaceState: {} }, null, { scopeId: null })).toBeNull()
     })
 })

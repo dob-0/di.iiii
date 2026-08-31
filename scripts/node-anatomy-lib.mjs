@@ -12,8 +12,21 @@
 // label with no body, a section-header comment belonging to the NEXT case was
 // glued onto the previous one, and the editor's if-chain — a fourth place code
 // lives — was invisible to a `case '…':` pattern entirely.
+//
+// The measurement is taken at BUILD time and served as `virtual:node-anatomy`
+// (see the plugin in vite.config.js) — it used to be committed as
+// nodeAnatomy.generated.js and kept honest by a CI diff. Line numbers in a
+// tracked file are a conflict on every wave that touches a measured file, and
+// they were: the artifact appeared in 10 of 13 wave diffs and never once
+// carried a decision anyone reviewed. Measuring at build time cannot go stale,
+// so there is nothing left to check.
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { Parser } from 'acorn'
 import jsx from 'acorn-jsx'
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 const JsxParser = Parser.extend(jsx())
 
@@ -104,6 +117,21 @@ export function extractSwitchCases(source, fnName) {
 }
 
 /**
+ * A COLOCATED runtime module — the whole file is one type's compute code
+ * (src/project/nodes/<typeId>/runtime.js, the lookup-first side of the
+ * dispatcher). The slice is the entire module; answers come from the same
+ * portId-comparison walk the switch cases use.
+ */
+export function extractModuleAnswers(source) {
+    const ast = parse(source)
+    return {
+        fromLine: 1,
+        toLine: source.replace(/\n$/, '').split('\n').length,
+        answers: answersIn([ast])
+    }
+}
+
+/**
  * The `if (node.typeId === '…')` chain inside fnName — the fourth place code
  * lives, and the one a switch-shaped extractor reports as "no code" for every
  * type in it.
@@ -140,4 +168,118 @@ export function extractDoorwaySpan(source, fnName) {
     const switchIndex = body.findIndex((node) => node.type === 'SwitchStatement')
     if (switchIndex < 1) throw new Error(`no statements before the switch in ${fnName}`)
     return { fromLine: body[0].loc.start.line, toLine: body[switchIndex - 1].loc.end.line }
+}
+
+// The three hand-named files the manifest measures by parsing a function out of
+// them. Colocated runtimes are the fourth source and are DISCOVERED, not named —
+// see NODES_DIR below.
+export const RUNTIME_FILE = 'src/project/graph/nodeGraphRuntime.js'
+export const VIEWPORT_FILE = 'src/raw/components/RawViewport.jsx'
+export const EDITOR_FILE = 'src/raw/components/RawEditor.jsx'
+export const MEASURED_FILES = [RUNTIME_FILE, VIEWPORT_FILE, EDITOR_FILE]
+
+// One directory per type, whole file is that type's compute code.
+export const NODES_DIR = 'src/project/nodes'
+const COLOCATED_RE = /(^|\/)src\/project\/nodes\/[^/]+\/runtime\.js$/
+
+/**
+ * Does a change to this file change the manifest? The dev server asks per
+ * change event, rather than holding a list built at startup, because a type
+ * migrating out of the switch ADDS a colocated runtime — a list would be blind
+ * to exactly the file that just appeared.
+ */
+export const isMeasuredFile = (filePath) => {
+    const normalized = filePath.split('\\').join('/')
+    return MEASURED_FILES.some((file) => normalized.endsWith(file)) || COLOCATED_RE.test(normalized)
+}
+
+// The one hand-kept entry. `time` is the single type whose reality includes a
+// file no extractor can find: without useGraphClock's scan the context's clock
+// never advances and the case reads a dead `now`. Guarded by a test asserting
+// the named symbol still lives in the named file — a hand-kept fact is the one
+// thing here a person must remember, so a machine remembers it too.
+export const EXTRA_PLACES = {
+    time: {
+        file: 'src/project/graph/useGraphClock.js',
+        symbol: 'useGraphClock',
+        sentence: 'It only moves because something outside it keeps a clock — useGraphClock.js.'
+    }
+}
+
+export async function buildManifest() {
+    const { fingerprintSource } = await import('../src/raw/utils/sourceFingerprint.js')
+    const { NODE_TYPES } = await import('../src/project/nodeRegistry.js')
+
+    const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8')
+    const runtimeSource = read(RUNTIME_FILE)
+    const viewportSource = read(VIEWPORT_FILE)
+    const editorSource = read(EDITOR_FILE)
+
+    const anatomy = {}
+    for (const id of Object.keys(NODE_TYPES)) {
+        anatomy[id] = { computes: null, draws: null, panel: null, alsoNeeds: EXTRA_PLACES[id] || null }
+    }
+    const place = (slot, file) => (group) => {
+        for (const id of group.typeIds) {
+            if (!anatomy[id]) continue // a case for a type the registry dropped — assertion 2 in the test reports it
+            anatomy[id][slot] = {
+                file,
+                fromLine: group.fromLine,
+                toLine: group.toLine,
+                sharedWith: group.typeIds.filter((other) => other !== id),
+                ...(slot === 'computes' ? { answers: group.answers } : {})
+            }
+        }
+    }
+    extractSwitchCases(runtimeSource, 'computeNodeOutput').forEach(place('computes', RUNTIME_FILE))
+    extractSwitchCases(viewportSource, 'renderNodeBody').forEach(place('draws', VIEWPORT_FILE))
+    extractIfChain(editorSource, 'renderViewNodeContent').forEach(place('panel', EDITOR_FILE))
+
+    const fingerprints = {
+        [RUNTIME_FILE]: fingerprintSource(runtimeSource),
+        [VIEWPORT_FILE]: fingerprintSource(viewportSource),
+        [EDITOR_FILE]: fingerprintSource(editorSource)
+    }
+
+    // Colocated runtimes — the lookup-first side of the dispatcher. Whole file,
+    // one type, fingerprinted like the trio so an edit invalidates the manifest
+    // the same way. Placed AFTER the switch pass on purpose: a type that has
+    // migrated out still has a stale case standing in nodeGraphRuntime.js
+    // during the move, and the colocated module is the one that runs.
+    const nodesDir = path.join(ROOT, NODES_DIR)
+    if (fs.existsSync(nodesDir)) {
+        for (const entry of fs.readdirSync(nodesDir, { withFileTypes: true })) {
+            if (!entry.isDirectory()) continue
+            const typeId = entry.name
+            const file = `${NODES_DIR}/${typeId}/runtime.js`
+            if (!fs.existsSync(path.join(ROOT, file)) || !anatomy[typeId]) continue
+            const moduleSource = read(file)
+            anatomy[typeId].computes = { file, ...extractModuleAnswers(moduleSource), sharedWith: [] }
+            fingerprints[file] = fingerprintSource(moduleSource)
+        }
+    }
+
+    return {
+        anatomy,
+        doorway: { file: RUNTIME_FILE, ...extractDoorwaySpan(runtimeSource, 'computeNodeOutput') },
+        fingerprints
+    }
+}
+
+/**
+ * The source of `virtual:node-anatomy`. Line numbers reach the browser as a
+ * module built from the files as they are on disk in this very build — they
+ * cannot describe a different revision than the one that ships.
+ */
+export function renderManifestModule({ anatomy, doorway, fingerprints }) {
+    return `// MEASURED AT BUILD TIME from the files it points into — there is no copy of
+// this on disk to fall out of date. See scripts/node-anatomy-lib.mjs.
+export const NODE_ANATOMY = ${JSON.stringify(anatomy)}
+
+// The block at the top of computeNodeOutput that answers a container's
+// promoted sockets before the type switch is ever consulted.
+export const DOORWAY_PLACE = ${JSON.stringify(doorway)}
+
+export const SOURCE_FINGERPRINTS = ${JSON.stringify(fingerprints)}
+`
 }

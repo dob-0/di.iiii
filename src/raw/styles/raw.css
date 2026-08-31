@@ -4,7 +4,7 @@
     min-height: 100dvh;
     background: var(--di-black);
     color: var(--di-text);
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
 }
 
 /* ── Blank root canvas (entry state) ── */
@@ -31,7 +31,7 @@
 .raw-root-canvas-hint {
     text-align: center;
     color: rgba(244, 247, 251, 0.2);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     font-size: 13px;
     letter-spacing: 0.18em;
     text-transform: lowercase;
@@ -96,7 +96,7 @@
 .raw-world-node-type {
     font-size: calc(10px * var(--card-scale, 1));
     color: rgba(244, 247, 251, 0.38);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.05em;
     max-width: 100%;
     overflow: hidden;
@@ -157,7 +157,7 @@
 .raw-printer-profile-actions span {
     font-size: 11px;
     color: rgba(244, 247, 251, 0.5);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
 }
 
 /* ── Node palette (minimalist double-click command input) ── */
@@ -195,7 +195,7 @@
     outline: none;
     color: #f4f7fb;
     font-size: 14px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.03em;
     caret-color: #4f9eff;
 }
@@ -212,6 +212,10 @@
     gap: 2px;
     max-height: 280px;
     overflow-y: auto;
+    /* The graph surface behind the palette claims touch-action: none; the
+       list is its own scroller, so it must SAY pan-y or a fingertip can't
+       scroll the results while the phone keyboard is up (S24 audit). */
+    touch-action: pan-y;
 }
 
 /* The rows are flex children of the list, so their default `min-width: auto`
@@ -267,7 +271,7 @@
 .raw-node-palette-item-title span {
     color: rgba(244, 247, 251, 0.36);
     font-size: 11px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     white-space: nowrap;
 }
 
@@ -299,7 +303,7 @@
     padding: 12px 14px;
     color: rgba(244, 247, 251, 0.32);
     font-size: 12px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.08em;
 }
 
@@ -317,7 +321,7 @@
     background: #0a0a0a;
     color: rgba(210, 245, 255, 0.55);
     font-size: 10px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.15em;
     text-transform: lowercase;
     border-left: 2px solid var(--family-color, transparent);
@@ -356,7 +360,7 @@
 
 .raw-world-type-label {
     font-size: 12px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.16em;
     text-transform: lowercase;
     color: rgba(244, 247, 251, 0.3);
@@ -387,7 +391,7 @@
     flex-direction: column;
     gap: 12px;
     transition: border-color 0.15s, background 0.15s;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
 
 }
 
@@ -514,7 +518,7 @@
     border: 1px solid var(--di-cyan-border);
     color: rgba(244, 247, 251, 0.75);
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     background: rgba(77, 249, 255, 0.04);
 }
 
@@ -560,7 +564,7 @@
     color: var(--di-text);
     padding: 12px 14px;
     font-size: 13px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.03em;
     min-width: 0;
 }
@@ -579,7 +583,7 @@
     color: var(--di-text-muted);
     padding: 12px 16px;
     font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: color 0.1s, background 0.1s;
@@ -615,7 +619,7 @@
     padding: 20px 14px;
     margin: 0;
     font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     color: var(--di-text-muted);
     letter-spacing: 0.04em;
 }
@@ -634,7 +638,7 @@
     flex: 1;
     padding: 10px 14px;
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     color: var(--di-text-muted);
     letter-spacing: 0.04em;
     white-space: nowrap;
@@ -689,7 +693,7 @@
     color: var(--di-text-muted);
     padding: 10px 14px;
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: color 0.1s, background 0.1s;
@@ -723,7 +727,7 @@
     color: var(--di-text-muted);
     padding: 10px 16px;
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: color 0.1s, background 0.1s;
@@ -743,7 +747,7 @@
     border-top: none;
     padding: 12px 14px;
     font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     color: #f4877e;
 }
 
@@ -763,7 +767,7 @@
     font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
 }
 
 .raw-chip,
@@ -974,6 +978,31 @@
     display: none;
 }
 
+/* Above the topbar's own z-index and outside the zen gate: this is the one message
+   in the lane whose absence costs work rather than convenience. Full width so it
+   cannot be mistaken for a chip, and it stays until the sync layer clears it. */
+.raw-sync-alert {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1600;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1b1005;
+    background: #f0b429;
+    text-align: center;
+}
+
+/* Both are fixed at top:0, so without this the alert sits ON the toolbar and
+   takes away "← Projects" at the exact moment someone needs to leave and sign
+   back in. Adjacent-sibling, because the alert renders immediately before the
+   header — no JS, and it cannot get out of step with the condition. */
+.raw-sync-alert + .raw-topbar {
+    top: 40px;
+}
+
 .raw-topbar {
     position: fixed;
     top: 0;
@@ -1067,7 +1096,7 @@
     font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1117,7 +1146,7 @@
     background: transparent;
     color: rgba(244, 247, 251, 0.45);
     font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     padding: 4px 8px;
     border-radius: 4px;
     cursor: pointer;
@@ -1216,7 +1245,7 @@
     padding: 7px 12px;
     font-size: 12px;
     font-weight: 600;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: background 0.12s, border-color 0.12s;
@@ -1239,7 +1268,7 @@
 .raw-topbar-scale-control label {
     font-size: 12px;
     color: rgba(244, 247, 251, 0.56);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.02em;
 }
 
@@ -1253,7 +1282,7 @@
     color: #f4f7fb;
     padding: 4px 8px;
     font-size: 11px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     cursor: pointer;
     border: 1px solid rgba(107, 147, 255, 0.28);
     min-width: 50px;
@@ -1273,7 +1302,7 @@
     cursor: pointer;
     font-size: 11px;
     color: rgba(244, 247, 251, 0.36);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.04em;
     transition: color 0.1s;
 }
@@ -1476,6 +1505,31 @@
     margin: 0;
 }
 
+/* Rename lives on the title itself: the button IS the title, visually —
+   no chrome until it is touched. */
+.raw-property-title-button {
+    all: unset;
+    cursor: text;
+    display: inline-block;
+    min-width: 40px;
+    border-bottom: 1px dashed transparent;
+}
+.raw-property-title-button:hover,
+.raw-property-title-button:focus-visible {
+    border-bottom-color: rgba(77, 249, 255, 0.55);
+}
+.raw-property-title-input {
+    font: inherit;
+    font-weight: 600;
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(77, 249, 255, 0.06);
+    color: inherit;
+    border: 1px solid rgba(77, 249, 255, 0.45);
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
 /* Says the family, in the family's colour — "the room", not UNIVERSE.WORLD.
    The cards started speaking plainly when families landed; the windows were
    the half left behind, still showing the code's internal type id. Lowercase,
@@ -1504,16 +1558,30 @@
 
 .raw-window-resizer {
     position: absolute;
-    right: 8px;
-    bottom: 8px;
-    width: 16px;
-    height: 16px;
+    right: 2px;
+    bottom: 2px;
+    width: 22px;
+    height: 22px;
     cursor: nwse-resize;
     border-radius: 0;
-    background: rgba(77, 249, 255, 0.04);
+    /* Two visible corner strokes: the handle existed for weeks as a 16px
+       4%-alpha square nobody could find, wedged against the window's own
+       corner buttons over a pointer-hungry canvas ("i can't change size",
+       2026-08-20). An affordance that cannot be seen is not an affordance. */
+    background:
+        linear-gradient(135deg,
+            transparent 52%, rgba(77, 249, 255, 0.45) 52%, rgba(77, 249, 255, 0.45) 60%,
+            transparent 60%, transparent 70%,
+            rgba(77, 249, 255, 0.45) 70%, rgba(77, 249, 255, 0.45) 78%, transparent 78%);
+    opacity: 0.75;
+    /* Above every panel's own corner chrome — the handle owns this corner. */
+    z-index: 12;
     touch-action: none;
     -webkit-user-select: none;
-    user-select: none;
+}
+
+.raw-window-resizer:hover {
+    opacity: 1;
 }
 
 /* ── World panel window ── */
@@ -1528,7 +1596,10 @@
 .raw-world-panel-actions {
     position: absolute;
     bottom: 10px;
-    right: 10px;
+    /* Clear of the window's resize corner: at right:10 the ⤢/● cluster sat
+       exactly ON the resize handle and swallowed its pointer — the literal
+       "i can't change size" of the room window (2026-08-20). */
+    right: 34px;
     display: flex;
     gap: 6px;
     z-index: 10;
@@ -1576,27 +1647,6 @@
     z-index: 1200;
 }
 
-/* ── World overlay mode (3D behind graph) ── */
-
-.raw-world-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-}
-
-.raw-surface-shell.is-world-overlay {
-    background: transparent;
-    pointer-events: none;
-}
-
-.raw-surface-shell.is-world-overlay > * {
-    pointer-events: auto;
-}
-
-.raw-surface-shell.is-world-overlay .raw-graph-surface {
-    background: transparent;
-}
 
 .raw-viewport-shell,
 .raw-cursor-layer {
@@ -1768,7 +1818,7 @@
 .raw-property-sheet-header p {
     font-size: 11px;
     color: rgba(244, 247, 251, 0.4);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     letter-spacing: 0.04em;
     margin: 0;
 }
@@ -1796,7 +1846,7 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: rgba(244, 247, 251, 0.36);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     margin: 0 0 10px;
 }
 
@@ -1817,7 +1867,7 @@
     font-size: 11px;
     color: rgba(244, 247, 251, 0.45);
     letter-spacing: 0.02em;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1946,6 +1996,121 @@
     line-height: 1;
 }
 
+/* view.publish — what a visitor to the public page gets. Same rules as the
+   Create panel: neutral at rest, cyan only for the chosen state, 44px floor on
+   anything a finger lands on, radius 0. */
+.raw-publish-section + .raw-publish-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.raw-publish-heading {
+    font-family: var(--di-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    margin: 0 0 8px;
+}
+
+.raw-publish-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.raw-publish-choice {
+    flex: 1 1 auto;
+    min-height: 44px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.raw-publish-choice:hover,
+.raw-publish-choice:focus-visible {
+    background: rgba(77, 249, 255, 0.08);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-publish-choice.is-on {
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+    background: rgba(77, 249, 255, 0.12);
+}
+
+.raw-publish-hint {
+    margin: 8px 0 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--di-text-muted);
+}
+
+.raw-publish-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.raw-publish-toggle input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--di-cyan);
+    cursor: pointer;
+}
+
+.raw-publish-url {
+    margin: 0 0 8px;
+    font-family: var(--di-mono);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.82);
+    word-break: break-all;
+}
+
+.raw-publish-copy {
+    min-height: 44px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.raw-publish-copy:hover,
+.raw-publish-copy:focus-visible {
+    background: rgba(77, 249, 255, 0.08);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-publish-status {
+    margin: 12px 0 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--di-text-muted);
+}
+
+.raw-publish-status.is-warn {
+    color: #ffb86c;
+}
+
 .raw-text-panel {
     display: flex;
     align-items: flex-start;
@@ -1961,11 +2126,50 @@
     max-width: 100%;
 }
 
+/* The editable Text panel. `align-items: flex-start` on the parent would
+   shrink-wrap the box to its content, so the writing area is stretched back
+   to the window: a note is written by clicking anywhere in it, not by
+   hunting the last line of text. */
+.raw-text-panel-input {
+    align-self: stretch;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    resize: none;
+    font: inherit;
+    font-size: 20px;
+    line-height: 1.5;
+    color: #f4f7fb;
+    overflow-wrap: anywhere;
+}
+
+.raw-text-panel-input::placeholder {
+    color: rgba(244, 247, 251, 0.35);
+}
+
+.raw-text-panel-input:focus-visible {
+    outline: 1px solid rgba(110, 231, 249, 0.85);
+    outline-offset: 4px;
+}
+
+.raw-text-panel-driven {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: rgba(244, 247, 251, 0.55);
+}
+
 /* 20px is a presentation size on a desk; on a 390px phone it turns three
    sentences into a scrolling column, which is how the starter desk's last
    line — the one naming the way into Studio — ended up below the fold. */
 @media (max-width: 640px) {
-    .raw-text-panel-content {
+    .raw-text-panel-content,
+    .raw-text-panel-input {
         font-size: 17px;
         line-height: 1.45;
     }
@@ -1976,6 +2180,37 @@
     flex-direction: column;
     padding: 0;
     height: 100%;
+}
+
+.raw-chat-tabs {
+    display: flex;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--di-cyan-border);
+}
+
+.raw-chat-tab {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    /* 40px+ of height on a phone: this is the control that decides which room
+       you are talking into, and a mis-tap sends a private line to the wrong
+       four people. */
+    padding: 11px 8px;
+    font-family: var(--di-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.raw-chat-tab.is-active {
+    color: var(--di-cyan);
+    border-bottom-color: var(--di-cyan);
 }
 
 .raw-chat-messages {
@@ -1998,11 +2233,34 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--di-text-muted);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
+}
+
+.raw-chat-message-author {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .raw-chat-message.is-self .raw-chat-message-author {
     color: var(--di-cyan);
+}
+
+/* Only ever rendered for an admin, in the space room. Deliberately quiet: it
+   is an adult's eraser, not a control the children are invited to press. */
+.raw-chat-message-remove {
+    background: transparent;
+    border: 0;
+    color: var(--di-text-muted);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 4px 8px;
+    margin: -4px 0;
+}
+
+.raw-chat-message-remove:hover {
+    color: #ff8080;
 }
 
 .raw-chat-message-text {
@@ -2025,13 +2283,20 @@
 
 .raw-chat-input {
     flex: 1;
+    /* A flex item will not shrink below its intrinsic width without this, and a
+       bare <input> is ~258px wide by default. In a 280px window at 390px that
+       pushed the whole row to 325px: Send sat outside the window, and the
+       horizontal scroll it created shifted the tabs and everybody's messages
+       off the left edge as soon as anyone touched the field. Measured on the
+       phone profile 2026-08-26 — it predates space chat. */
+    min-width: 0;
     background: transparent;
     border: 1px solid var(--di-cyan-border);
     outline: none;
     color: #f4f7fb;
     padding: 8px 10px;
     font-size: 13px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
 }
 
 .raw-chat-input::placeholder {
@@ -2060,7 +2325,7 @@
 .raw-image-panel-empty p {
     margin: 0;
     color: rgba(244, 247, 251, 0.52);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     font-size: 12px;
 }
 
@@ -2087,7 +2352,7 @@
 .raw-activity-row strong,
 .raw-asset-row strong,
 .raw-outliner strong {
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     font-size: 12px;
     text-transform: uppercase;
 }
@@ -2116,7 +2381,7 @@
     align-items: center;
     gap: 14px;
     text-align: center;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
 }
 
 .raw-empty-state p {
@@ -2364,7 +2629,7 @@
 .raw-hub-tagline {
     font-size: 11px;
     color: var(--di-text-muted);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     margin: 0;
     letter-spacing: 0.06em;
 }
@@ -2492,7 +2757,7 @@
     min-width: 3.75rem;
     text-align: center;
     color: var(--di-text-muted);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     font-size: 11px;
 }
 
@@ -2601,7 +2866,7 @@
     color: var(--di-text-muted);
     white-space: nowrap;
     flex-shrink: 0;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
 }
 
 /* THE DOOR — the way into a container.
@@ -2820,7 +3085,7 @@
     border-radius: 0;
     background: rgba(6, 10, 18, 0.92);
     color: var(--di-text-muted);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     font-size: 11px;
     min-height: 32px;
     padding: 0 12px;
@@ -2834,6 +3099,9 @@
 
 @media (hover: none) {
     .raw-graph-fit-notice { min-height: 44px; }
+    /* The palette is the way every node is made; its rows sat at 33px —
+       under the same 44px minimum this file enforces on doors and dots. */
+    .raw-node-palette-item { min-height: 44px; }
 }
 
 .raw-graph-port-label {
@@ -2842,7 +3110,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
 }
 
 .raw-op-create-backdrop {
@@ -3109,7 +3377,7 @@
     border: 1px solid var(--di-cyan-border);
     color: rgba(244, 247, 251, 0.75);
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
 }
 
 .raw-help-diagram-start {
@@ -3309,7 +3577,7 @@
     height: 28px;
     color: var(--di-cyan);
     border: 1px solid var(--di-cyan-border);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     font-size: 12px;
 }
 
@@ -3347,7 +3615,7 @@
 
 .raw-help-control-row span {
     color: rgba(244, 247, 251, 0.58);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     font-size: 12px;
 }
 
@@ -3370,7 +3638,7 @@
     border: 1px solid var(--di-cyan-border);
     color: rgba(244, 247, 251, 0.75);
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     background: rgba(77, 249, 255, 0.04);
 }
 
@@ -3382,7 +3650,7 @@
 
 .raw-help-footer span {
     color: rgba(244, 247, 251, 0.56);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--di-mono);
     font-size: 12px;
     word-break: break-word;
 }
@@ -3806,7 +4074,15 @@
         grid-template-columns: 1fr;
     }
 
+    /* Keep the SPACE below 1200px, drop the project title. The bar used to hide
+       both, so on every phone and most laptops nothing on screen said which space
+       you were editing in — recoverable only from the URL. A space id is short
+       enough to afford; a project title is not. */
     .raw-topbar-name {
+        max-width: 88px;
+    }
+
+    .raw-topbar-name-project {
         display: none;
     }
 }
@@ -3917,15 +4193,16 @@
         padding-bottom: env(safe-area-inset-bottom);
     }
 
-    /* The Delete FAB lives in the bottom-right corner, which the sheet now
-       occupies — and the sheet is only ever up when something is selected,
-       i.e. exactly when Delete is the button you want. Move it above the
-       sheet's reach. Pinch still zooms the canvas that stays visible, so the
-       zoom controls being covered while a node is selected is survivable;
-       losing Delete is not. */
+    /* The Delete FAB rides just ABOVE the docked sheet (the editor publishes
+       the sheet's measured height as --raw-sheet-inset). It used to move to
+       the top-right instead — where Android notification banners drop over
+       it and steal the tap, which read as a dead Delete button on the real
+       S24 (2026-08-20). Bottom-right above the sheet is thumb-reachable and
+       banner-safe, and the sheet is only ever up when something is selected
+       — exactly when Delete is the button you want. */
     .raw-delete-fab {
-        top: calc(58px + env(safe-area-inset-top));
-        bottom: auto;
+        top: auto;
+        bottom: calc(var(--raw-sheet-inset, 0px) + 12px);
         right: calc(12px + env(safe-area-inset-right));
     }
 }
@@ -4171,7 +4448,7 @@
     flex-direction: column;
     background: #05080f;
     color: #f4f7fb;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     font-size: 11px;
     overflow: hidden;
 }
@@ -4187,6 +4464,21 @@
 .raw-timeline-title {
     font-weight: 600;
     letter-spacing: 0.04em;
+}
+
+.raw-timeline-transport {
+    background: none;
+    border: 1px solid #2c3a4d;
+    border-radius: 4px;
+    color: #4f9eff;
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1;
+    padding: 4px 8px;
+}
+
+.raw-timeline-transport:hover {
+    border-color: #4f9eff;
 }
 
 .raw-timeline-readout {
@@ -4401,7 +4693,7 @@
     padding: 6px 10px;
     border-bottom: 1px solid rgba(244, 247, 251, 0.08);
     color: rgba(244, 247, 251, 0.52);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--di-mono);
     font-size: 10px;
     line-height: 1.5;
 }
@@ -4419,6 +4711,7 @@
     flex: 1;
     min-height: 0;
     border-top: none;
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: transparent;
 }
@@ -4426,31 +4719,68 @@
 /* Zen's third resident — the wordmark, ambient on the workspace surface.
    Fixed so it neither pans with the graph nor collides with the windows;
    bottom-centre keeps it clear of the zoom cluster (left), the account
-   button and delete FAB (right). Non-interactive by design. */
-/* Ambient, and only where there is room to be ambient: on a phone it sat on
-   top of the cards (measured in the audit). */
-@media (max-width: 640px) {
-    .raw-surface-wordmark { display: none; }
-}
-
+   button and delete FAB (right). Since the 2026-08-21 doors audit it is
+   the way home — a link wearing the same ambient clothes. */
 .raw-surface-wordmark {
     position: fixed;
     bottom: 18px;
     left: 50%;
     transform: translateX(-50%);
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-weight: 800;
     font-size: 15px;
     letter-spacing: -0.02em;
     color: rgba(255, 255, 255, 0.28);
-    pointer-events: none;
     user-select: none;
     z-index: 1200;
+    text-decoration: none;
+}
+
+.raw-surface-wordmark:hover {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.raw-surface-wordmark:focus-visible {
+    outline: 1px solid var(--di-cyan);
+    outline-offset: 4px;
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .raw-surface-wordmark span {
     color: var(--di-cyan);
     opacity: 0.75;
+}
+
+/* Phone. At the bottom centre it sat on top of the cards (measured in the
+   2026-08-21 audit), and it was hidden outright for that — which left a phone
+   canvas under zen with NO way out at all, because zen hides the topbar and
+   this is the only other door. So it moves rather than disappears: the top-left
+   corner is empty on a phone (measured at 390×844), it is where a way home is
+   looked for, and it is clear of the zoom cluster bottom-left and the account
+   button bottom-right.
+
+   This block must stay AFTER the base rule above — it overrides `bottom`,
+   `left` and `transform`, and at equal specificity the later rule is the one
+   that wins. Placed before it, the phone kept the desktop position and grew to
+   full height from having both `top` and `bottom` set. */
+@media (max-width: 640px) {
+    .raw-surface-wordmark {
+        bottom: auto;
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        left: calc(env(safe-area-inset-left, 0px) + 14px);
+        transform: none;
+        font-size: 14px;
+        /* It can still pass over a card up here, so it carries just enough
+           ground to stay readable when it does — and a real finger's worth of
+           target, which the bare text (29px tall) was not. */
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 6px;
+        background: rgba(10, 14, 22, 0.62);
+        color: rgba(255, 255, 255, 0.44);
+    }
 }
 
 /* Dropping a file in. The veil is the only thing that tells someone mid-drag
@@ -4469,7 +4799,7 @@
 }
 
 .raw-drop-veil span {
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-weight: 700;
     font-size: 15px;
     letter-spacing: 0.02em;
@@ -4486,7 +4816,7 @@
     bottom: 52px;
     transform: translateX(-50%);
     max-width: min(520px, calc(100vw - 32px));
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-size: 13px;
     line-height: 1.45;
     text-align: center;
@@ -4517,7 +4847,7 @@
     align-items: center;
     gap: 4px;
     max-width: min(420px, calc(100vw - 24px));
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-size: 12px;
     color: rgba(255, 255, 255, 0.78);
     background: rgba(10, 14, 22, 0.92);
@@ -4632,7 +4962,7 @@
     background: rgba(10, 14, 22, 0.97);
     border: 1px solid rgba(77, 249, 255, 0.35);
     border-radius: 10px;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
 }
 
 .raw-graph-port-menu-title {
@@ -4682,7 +5012,7 @@
     gap: 6px;
     max-width: min(520px, calc(100vw - 32px));
     padding: 4px 4px 4px 14px;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-size: 13px;
     color: rgba(255, 255, 255, 0.9);
     background: rgba(10, 14, 22, 0.95);
@@ -4739,7 +5069,7 @@
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     padding: 14px 16px 20px;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--di-sans);
     font-size: 12px;
     line-height: 1.55;
     color: rgba(244, 247, 251, 0.72);
@@ -4771,7 +5101,7 @@
     justify-content: space-between;
     gap: 10px;
     margin: 0 0 8px;
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 10px;
     font-weight: 500;
     letter-spacing: 0.14em;
@@ -4792,7 +5122,7 @@
 
 .raw-anatomy-slot h5 {
     margin: 12px 0 6px;
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 10px;
     font-weight: 400;
     letter-spacing: 0.14em;
@@ -4828,7 +5158,7 @@
 }
 
 .raw-anatomy-port-head em {
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 10px;
     font-style: normal;
     letter-spacing: 0.06em;
@@ -4840,7 +5170,7 @@
     align-items: center;
     gap: 6px;
     margin-top: 2px;
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 12px;
     color: var(--di-text);
     /* A vector or a long string must not push the window wider than the screen;
@@ -4968,7 +5298,7 @@
 
 .raw-anatomy-loc {
     display: inline-block;
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 11px;
     color: rgba(244, 247, 251, 0.5);
 }
@@ -5006,7 +5336,7 @@
     padding: 10px 12px;
     background: #0a0a0a;
     border-left: 2px solid rgba(255, 255, 255, 0.14);
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 11px;
     line-height: 1.5;
     color: rgba(244, 247, 251, 0.78);
@@ -5023,35 +5353,326 @@
    graph (later positioned sibling), which is why cards went unreachable the
    moment it was on; mounting it as the shell's first child and refusing all
    events removes both failure modes at once. */
-.raw-world-overlay,
-.raw-world-overlay * {
-    pointer-events: none !important;
-}
-
-/* Fullscreen's own exit — zen has no topbar, and a room with no visible way
-   back is a trap. Same furniture as the scope marker. */
+/* The way OUT of the fullscreen room. This button had no base rule at all
+   and rendered as a 21px default-HTML button — invisible against the room on
+   a phone in zen, which made fullscreen a trap (audit 08-21). Same visual
+   family as the topbar-back / zoom controls. */
 .raw-room-exit {
-    -webkit-appearance: none;
-    appearance: none;
     position: absolute;
-    /* Bottom-left, where the zoom cluster lives in graph mode — the top-left
-       corner belongs to the scope marker, and the first render put the two
-       ‹ buttons on top of each other (seen). */
-    bottom: 24px;
+    top: 14px;
     left: 14px;
-    z-index: 10;
-    display: inline-flex;
-    align-items: center;
+    z-index: 5;
     min-height: 44px;
-    padding: 0 16px;
-    border: 1px solid rgba(77, 249, 255, 0.35);
-    border-radius: 999px;
-    background: rgba(10, 14, 22, 0.92);
-    color: var(--di-cyan);
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-    font-size: 12px;
+    padding: 8px 18px;
+    background: rgba(10, 14, 18, 0.82);
+    color: rgba(77, 249, 255, 0.92);
+    border: 1px solid rgba(77, 249, 255, 0.45);
+    border-radius: 6px;
+    font-family: var(--di-mono);
+    font-size: 13px;
+    letter-spacing: 0.06em;
     cursor: pointer;
-    touch-action: manipulation;
+}
+.raw-room-exit:hover { background: rgba(77, 249, 255, 0.14); }
+.raw-room-exit:focus-visible { outline: 2px solid rgba(77, 249, 255, 0.7); outline-offset: 2px; }
+
+/* The projector cable: /out is a room and nothing else. Fixed and black so a
+   reload flashes dark, not white, on a projector; the viewport shell inside
+   paints its own room. */
+.raw-out-surface {
+    position: fixed;
+    inset: 0;
+    background: #05070c;
 }
 
-.raw-room-exit:hover { background: rgba(77, 249, 255, 0.14); }
+.raw-out-message {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 14px;
+}
+
+/* The Monitor: a window that watches a texture wire. The canvas letterboxes
+   inside whatever frame the window is dragged to. */
+.raw-monitor-panel {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: #05070c;
+}
+
+.raw-monitor-panel canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.raw-monitor-panel.is-empty p {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 13px;
+    padding: 0 18px;
+    text-align: center;
+}
+
+/* The view owns its gestures. R3F writes an inline touch-action: auto on
+   the canvas element itself (measured on the S24, 2026-08-20 — a class
+   rule loses to it, hence !important), while its wrapper div carries an
+   inline none. Effective touch-action is the intersection down the
+   ancestor chain, so browser pan/zoom is already blocked; this rule makes
+   the shell and the canvas SAY so too, as defence in depth against R3F
+   changing its inline styles. The drag itself was revived by riding the
+   grabbed object's own pointer capture, not by CSS. */
+.raw-viewport-shell {
+    touch-action: none;
+}
+
+.raw-viewport-shell canvas {
+    touch-action: none !important;
+}
+
+/* The desk's Go button — one big pressable surface, thumb-sized on
+   anything, the press state visible from across a booth. */
+.raw-button-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.raw-button-panel-go {
+    flex: 1;
+    min-height: 64px;
+    border: 1px solid #2c6e4f;
+    border-radius: 6px;
+    background: #0d2018;
+    color: #7dffb8;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    touch-action: none;
+}
+
+.raw-button-panel-go:active {
+    background: #16563a;
+    color: #d2ffe8;
+}
+
+.raw-button-panel-count {
+    color: rgba(244, 247, 251, 0.55);
+    font-size: 11px;
+    text-align: center;
+}
+
+/* A wire that died on release says why, where it died. */
+.raw-wire-notice {
+    position: fixed;
+    transform: translate(-50%, -130%);
+    background: rgba(10, 14, 22, 0.95);
+    border: 1px solid rgba(255, 107, 122, 0.55);
+    color: #ffb3bc;
+    font-family: var(--raw-mono, ui-monospace, monospace);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 3px;
+    pointer-events: none;
+    z-index: 60;
+    max-width: 260px;
+}
+
+/* A fingertip is not a cursor: on coarse pointers every port dot carries an
+   invisible touch halo (~44px total target, Android's minimum), without
+   changing what the eye sees. */
+@media (pointer: coarse) {
+    .raw-graph-port-dot {
+        position: relative;
+    }
+    .raw-graph-port-dot::after {
+        content: '';
+        position: absolute;
+        inset: -14px;
+    }
+}
+
+/* view.list — a list somebody maintains. Rows are controls, not prose, so
+   every target clears the 44px floor the touch audit set: on a phone these
+   are thumbs, and a 24px × next to a 24px ↑ is a coin toss. */
+.raw-list-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.raw-list-group-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(244, 247, 251, 0.14);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+}
+
+.raw-list-group-name {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(244, 247, 251, 0.72);
+}
+
+.raw-list-count {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-list-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.raw-list-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+}
+
+.raw-list-text {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 0;
+    background: rgba(244, 247, 251, 0.04);
+    font: inherit;
+    font-size: 16px;
+    color: #f4f7fb;
+}
+
+.raw-list-text:focus-visible {
+    outline: none;
+    border-color: rgba(110, 231, 249, 0.85);
+}
+
+.raw-list-row-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+}
+
+.raw-list-btn {
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(244, 247, 251, 0.16);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.78);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.raw-list-btn:hover:not(:disabled) { background: rgba(244, 247, 251, 0.08) }
+.raw-list-btn:disabled { opacity: 0.3; cursor: default }
+.raw-list-btn.is-danger:hover { border-color: #ff8a7a; color: #ff8a7a }
+
+.raw-list-move {
+    height: 44px;
+    max-width: 118px;
+    padding: 0 8px;
+    border: 1px solid rgba(244, 247, 251, 0.16);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.78);
+    font: inherit;
+    font-size: 13px;
+}
+
+.raw-list-move option { background: #0d1219; color: #f4f7fb }
+
+.raw-list-add {
+    align-self: flex-start;
+    margin-top: 8px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px dashed rgba(244, 247, 251, 0.24);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.62);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Removing a heading is rarer and more consequential than removing a row, so
+   it must not compete with the row controls for the eye. It keeps the full
+   44px hit area — it just stops wearing a box until you reach for it. */
+.raw-list-group-head .raw-list-btn {
+    border-color: transparent;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-list-group-head .raw-list-btn:hover {
+    border-color: #ff8a7a;
+    color: #ff8a7a;
+}
+
+.raw-list-add:hover { border-style: solid; color: #f4f7fb }
+.raw-list-add.is-group { border-color: rgba(110, 231, 249, 0.4); color: rgba(110, 231, 249, 0.9) }
+
+/* The controls stack under the text on a phone rather than squeezing a
+   44px row into 90px of leftover width. */
+@media (max-width: 520px) {
+    .raw-list-row { align-items: stretch; flex-wrap: wrap }
+    .raw-list-text { flex-basis: 100% }
+    .raw-list-move { flex: 1; max-width: none }
+}
+
+/* The one line a portless card can afford. Clipped rather than wrapped: the
+   body is a single 22px row and its height is the geometry the wires are
+   drawn from, so this must never push it taller. */
+.raw-graph-node-summary {
+    position: absolute;
+    inset: 0 10px auto 10px;
+    top: 4px;
+    font-size: 11px;
+    line-height: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(244, 247, 251, 0.5);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+
+/* The Raw topbar overflowed a 390px phone BEFORE the room count was added:
+   measured at 433px of content in a 390px bar, which pushed the ⋯ button clean
+   off the right edge — and ⋯ is the only route on a phone to "Save to <space>",
+   Spaces, Wiki and Home. A canvas you cannot save from is a canvas that loses
+   your work, and nothing failed: check:toolbar-overlap tests sibling overlap,
+   not scrollWidth, so a row that simply ends past the edge passes.
+   Both words drop, never the controls: the arrow still navigates (aria-label
+   carries "Back to projects"), the number still toggles the outliner and still
+   announces "N nodes". Buys 83px, which the row spends on staying whole. */
+@media (max-width: 640px) {
+    .raw-topbar-word {
+        display: none;
+    }
+}

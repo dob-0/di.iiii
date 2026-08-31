@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { NODE_ANATOMY } from '../../project/graph/nodeAnatomy.generated.js'
+import { NODE_ANATOMY } from 'virtual:node-anatomy'
 import NodeAnatomyPanel from './NodeAnatomyPanel.jsx'
 import { createEdge, createNode } from '../../project/nodeRegistry.js'
 import { createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
@@ -130,7 +130,7 @@ describe('NodeAnatomyPanel', () => {
     })
 
     it('warns on a type that is registered but not built', () => {
-        const unbuilt = createNode('stream.monitor')
+        const unbuilt = createNode('stream.recorder')
         const { container, text } = sheetFor(unbuilt, [unbuilt])
         expect(container.querySelector('.raw-anatomy-banner')).toBeTruthy()
         expect(text).toContain('not built yet')
@@ -221,7 +221,7 @@ describe('where the code lives', () => {
     })
 
     it('shows no location rows on a type that is not built', () => {
-        const unbuilt = createNode('stream.monitor')
+        const unbuilt = createNode('stream.recorder')
         const { container } = sheetFor(unbuilt, [unbuilt])
         expect(container.querySelectorAll('.raw-anatomy-place')).toHaveLength(0)
         expect(container.querySelectorAll('.raw-anatomy-disclosure')).toHaveLength(0)

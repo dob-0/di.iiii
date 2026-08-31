@@ -20,7 +20,16 @@ sound, and it respects mute/volume.
 **route:** XRC defines the what/why (entry moment, comfort, per-space defaults) →
 VPE implements (Three.js audio, autoplay-gesture gating) · BAE only if a new asset
 type needs server work · **size:** M (phase 1) / L (with positional)
-**status:** parked
+**status:** shape (2) DELIVERED 2026-08-07 for video, on the user asking for it
+directly while arranging the WCC exhibition ("theres videos i want sound also play
+when your going close"). A video's own audio track now routes through a
+PositionalAudio at the video's position (`media.spatial`/`distance`/`maxDistance`,
+opt-in per video, default off so no existing space changes). Audio *entities* already
+had positional sound; video was the gap. Measured in-browser: gain 1.0 at 3.9m,
+0.24 at 13m. Note for whoever picks up the rest: past `maxDistance` the inverse
+distance model FLOORS at ~10% rather than reaching silence, so a room with many
+videos accumulates a murmur — a selectable `linear` falloff would fix it and is not
+done. Shapes (1) per-space ambient track and (3) audio-as-node-type remain parked.
 
 ## 2026-07-19 · lane-naming-simplify
 **raw:** "we have the 4 names dev main staging prod lets merge them and take simple way"

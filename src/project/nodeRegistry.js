@@ -7,7 +7,7 @@ import { generateId } from '../shared/projectSchema.js'
 export const PORT_TYPES = {
     number:   { label: 'Number',   color: '#a8d8ff' },
     vec3:     { label: 'Vector',   color: '#ffb86c' },
-    color:    { label: 'Color',    color: '#ff79c6' },
+    color:    { label: 'Colour',    color: '#ff79c6' },
     boolean:  { label: 'Boolean',  color: '#50fa7b' },
     string:   { label: 'String',   color: '#f1fa8c' },
     geometry: { label: 'Geometry', color: '#bd93f9' },
@@ -17,7 +17,11 @@ export const PORT_TYPES = {
 }
 
 // --- Categories ---
-// Used for palette grouping and filtering.
+// ONLY the colors are live. The palette groups by NODE_FAMILIES (the plain-word
+// names a person reads: "bring in", "make", "the scene"), not by these — and no
+// surface renders a `label` from this array. Left in place because
+// getCategoryColor reads `color`; do not trust the labels, and do not add a
+// user-visible one here. Checked 2026-08-19: zero consumers outside this file.
 
 export const NODE_CATEGORIES = [
     { id: 'source',   label: 'Source',   color: '#5fa8ff' },
@@ -44,12 +48,16 @@ export const getCategoryColor = (categoryId) =>
 // both directions. Categories stay untouched underneath: search, surface
 // filters and old documents keep working.
 
+// Declaration order IS the palette's browse order. It leads with what a
+// builder reaches for by the minute (make, numbers, the scene) and demotes
+// session-setup hardware (bring in) — the audit's first-contact test opened
+// the palette to Chat/Outliner/Webcam/MIDI with no scene atom in sight.
 export const NODE_FAMILIES = [
-    { id: 'bring-in', label: 'bring in', color: '#5fa8ff' },
     { id: 'make',     label: 'make',     color: '#8be9fd' },
     { id: 'numbers',  label: 'numbers',  color: '#f1fa8c' },
-    { id: 'room',     label: 'the room', color: '#bd93f9' },
+    { id: 'room',     label: 'the scene', color: '#bd93f9' },
     { id: 'watch',    label: 'watch',    color: '#ff79c6' },
+    { id: 'bring-in', label: 'bring in', color: '#5fa8ff' },
     { id: 'send-out', label: 'send out', color: '#ffb86c' },
     { id: 'agents',   label: 'agents',   color: '#a8ff9e' },
 ]
@@ -79,8 +87,18 @@ export const FAMILY_BY_TYPE = {
     'geom.sphere': 'make',
     'geom.plane': 'make',
     'shape.merge': 'make',
+    'geom.array': 'make',
+    'geom.cylinder': 'make',
+    'geom.cone': 'make',
+    'geom.torus': 'make',
+    'geom.line': 'make',
+    'geom.circle': 'make',
+    'geom.transform': 'make',
+    'view.button': 'bring-in',
+    'device.keyboard': 'bring-in',
     'geom.constructor': 'make',
     'view.text': 'make',
+    'view.list': 'make',
     // Create sits with the things it makes, not with the panels it looks like.
     'view.library': 'make',
     'view.image': 'make',
@@ -102,13 +120,48 @@ export const FAMILY_BY_TYPE = {
     'math.sin': 'numbers',
     'math.mix': 'numbers',
     'math.clamp': 'numbers',
-    // the room — light, sky, grid, worlds, desks, containers
+    'logic.compare': 'numbers',
+    'logic.gate': 'numbers',
+    'logic.switch': 'numbers',
+    'signal.lag': 'numbers',
+    'value.noise': 'numbers',
+    'math.range': 'numbers',
+    'signal.lfo': 'numbers',
+    'logic.combine': 'numbers',
+    'math.extremes': 'numbers',
+    'math.abs': 'numbers',
+    'math.round': 'numbers',
+    'signal.ease': 'numbers',
+    'signal.counter': 'numbers',
+    'signal.hold': 'numbers',
+    'signal.delay': 'numbers',
+    'signal.timer': 'numbers',
+    'signal.trigger': 'numbers',
+    'signal.speed': 'numbers',
+    'logic.toggle': 'numbers',
+    'vector.split': 'numbers',
+    'vector.combine': 'numbers',
+    'colour.split': 'numbers',
+    'colour.combine': 'numbers',
+    'vector.distance': 'numbers',
+    'vector.dot': 'numbers',
+    'vector.cross': 'numbers',
+    'vector.direction': 'numbers',
+    'vector.rotation': 'numbers',
+    'vector.aim': 'numbers',
+    'value.random': 'numbers',
+    'colour.ramp': 'numbers',
+    // the scene — light, sky, grid, scenes, desks, containers
     'world.light': 'room',
+    'world.environment': 'room',
+    'light.point': 'room',
+    'world.camera': 'room',
     'world.background': 'room',
     'world.grid': 'room',
     'universe.world': 'room',
     'universe.space': 'room',
     'universe.desk.3d': 'room',
+    'geom.geo': 'room',
     'universe.desk.2d': 'room',
     'universe.node0': 'room',
     'universe.activate': 'room',
@@ -121,6 +174,9 @@ export const FAMILY_BY_TYPE = {
     'view.director': 'watch',
     'stream.monitor': 'watch',
     // send out — leave the browser: MIDI/OSC out, streams, recordings
+    // Publish sits with the things that leave the browser: what this panel
+    // changes is what a stranger receives, not what the graph makes.
+    'view.publish': 'send-out',
     'device.midi.out': 'send-out',
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
@@ -133,6 +189,28 @@ export const FAMILY_BY_TYPE = {
     'agent.keeper': 'agents',
     'work.agent': 'agents',
     'work.status': 'agents',
+}
+
+// What a card says about itself when it has no ports to draw.
+//
+// A card's body is nothing but port rows, so the dead-port rule has a side
+// effect nobody designed: a node that correctly declares no ports gets a card
+// that is visibly empty, and a list holding 23 rows looks identical to one
+// holding none. This is the one line such a card can afford — the body is
+// `max(inputs, outputs, 1)` rows tall, and that height is the geometry the
+// wires are drawn from, so it must not grow.
+//
+// Returns null for types with nothing worth saying, which is most of them.
+export const getNodeCardSummary = (node) => {
+    if (!node) return null
+    if (node.typeId === 'view.list') {
+        const items = Array.isArray(node.values?.items) ? node.values.items : []
+        const rows = items.filter((it) => String(it?.text || '').trim()).length
+        const groups = Array.isArray(node.values?.groups) ? node.values.groups.length : 0
+        if (!rows) return 'empty'
+        return `${rows} row${rows === 1 ? '' : 's'} · ${groups} group${groups === 1 ? '' : 's'}`
+    }
+    return null
 }
 
 export const getNodeFamily = (typeId) => {
@@ -186,13 +264,13 @@ export const NODE_TYPES = {
 
     'value.color': {
         id: 'value.color',
-        label: 'Color',
+        label: 'Colour',
         category: 'source',
         runtime: 'any',
         singleton: false,
         inputs: [],
         outputs: [
-            { id: 'out', type: 'color', label: 'Color' },
+            { id: 'out', type: 'color', label: 'Colour' },
         ],
         defaultValues: { value: '#5fa8ff' },
         render: 'hidden',
@@ -535,21 +613,23 @@ export const NODE_TYPES = {
         id: 'device.midi.out',
         label: 'MIDI Out',
         category: 'device',
-        runtime: 'local',
-        authoringOnly: true,
+        runtime: 'web',
         singleton: false,
+        keywords: ['midi', 'out', 'send', 'note', 'cc', 'controller', 'synth', 'lighting'],
         inputs: [
             { id: 'note',     type: 'number', label: 'Note',     default: 60 },
             { id: 'velocity', type: 'number', label: 'Velocity', default: 100 },
             { id: 'cc',       type: 'number', label: 'CC',       default: 1 },
             { id: 'value',    type: 'number', label: 'Value',    default: 0 },
-            { id: 'trigger',  type: 'signal', label: 'Trigger' },
+            // `any`, not `signal`: a Button, a Compare, a Toggle are exactly
+            // what should hold a note — and MIDI In's rising count re-strikes.
+            { id: 'trigger',  type: 'any',    label: 'Trigger' },
+            { id: 'channel',  type: 'number', label: 'Channel',  default: 1 },
         ],
         outputs: [
             { id: 'status', type: 'string', label: 'Status' },
         ],
         defaultValues: {
-            hostHint: 'windows',
             channel: 1,
         },
         render: 'hidden',
@@ -658,17 +738,18 @@ export const NODE_TYPES = {
 
     'stream.monitor': {
         id: 'stream.monitor',
-        label: 'Program Monitor',
+        label: 'Monitor',
         category: 'stream',
         runtime: 'any',
-        authoringOnly: true,
         singleton: false,
+        // TouchDesigner's viewer, as a window: wire any texture into Source
+        // and watch it live while you keep wiring. Implemented 2026-08-20 —
+        // it was declared as "Program Monitor" with position/width/height
+        // ports no runtime carried; those fell to the dead-port rule and the
+        // label to one-word vocabulary.
         inputs: [
-            { id: 'src',      type: 'texture', label: 'Source'                 },
-            { id: 'title',    type: 'string',  label: 'Title', default: 'Live Monitor' },
-            { id: 'position', type: 'vec3',    label: 'Position', default: [0, 1.5, 0] },
-            { id: 'width',    type: 'number',  label: 'Width', default: 640     },
-            { id: 'height',   type: 'number',  label: 'Height', default: 360    },
+            { id: 'src',   type: 'texture', label: 'Source'                    },
+            { id: 'title', type: 'string',  label: 'Title', default: 'Monitor' },
         ],
         outputs: [],
         defaultValues: {},
@@ -714,7 +795,7 @@ export const NODE_TYPES = {
         // top-level "root dir" entry, placeable multiple times like any other type.
         inputs: [
             { id: 'title',       type: 'string',  label: 'Title',       default: 'Node 0' },
-            { id: 'description', type: 'string',  label: 'Description', default: 'Root seed node for this space' },
+            { id: 'description', type: 'string',  label: 'Description', default: 'The first node in this space' },
             { id: 'active',      type: 'boolean', label: 'Active',      default: true },
         ],
         outputs: [
@@ -724,7 +805,7 @@ export const NODE_TYPES = {
         ],
         defaultValues: {
             title: 'Node 0',
-            description: 'Root seed node for this space',
+            description: 'The first node in this space',
             active: true,
             hostHint: 'any',
         },
@@ -733,7 +814,7 @@ export const NODE_TYPES = {
 
     'universe.world': {
         id: 'universe.world',
-        label: 'World',
+        label: 'Scene',
         category: 'universe',
         runtime: 'any',
         // Free-form, not a singleton (product decision 2026-07-19) — any number
@@ -742,7 +823,7 @@ export const NODE_TYPES = {
         // liveWorldNodeIdByScope / activeNodeIdByTypeScope), not a schema-level
         // restriction — see src/shared/projectSchema.js.
         inputs: [
-            { id: 'title',    type: 'string',  label: 'Title',    default: 'World'    },
+            { id: 'title',    type: 'string',  label: 'Title',    default: 'Scene'    },
             { id: 'bgColor',  type: 'color',   label: 'Sky',      default: '#0a0e16'  },
         ],
         // A CONTAINER OUTPUTS ITS OWN SETTINGS, NEVER ITS CONTENTS.
@@ -769,7 +850,7 @@ export const NODE_TYPES = {
             { id: 'bgColor', type: 'color',  label: 'Sky'   },
         ],
         defaultValues: {
-            title: 'World',
+            title: 'Scene',
             bgColor: '#0a0e16',
             hostHint: 'any',
         },
@@ -778,7 +859,7 @@ export const NODE_TYPES = {
 
     'universe.space': {
         id: 'universe.space',
-        label: 'Universe',
+        label: 'Kiosk',
         category: 'universe',
         runtime: 'any',
         // Not authoringOnly: showChrome is consumed for real (RawEditor's
@@ -793,7 +874,7 @@ export const NODE_TYPES = {
             // RawEditor walks up from the current scope to the nearest
             // ancestor universe.space node and reads this; Esc always pops
             // back up a scope regardless (unrelated to this flag).
-            { id: 'showChrome', type: 'boolean', label: 'Show Chrome', default: true },
+            { id: 'showChrome', type: 'boolean', label: 'Show the toolbar', default: true },
         ],
         // NO outputs, and this is a decision rather than an oversight. Its one
         // setting is showChrome, read by RawEditor's chrome walk and by nothing
@@ -834,11 +915,17 @@ export const NODE_TYPES = {
         render: 'panel-2d',
     },
 
+    // RETIRED FROM THE PALETTE (2026-08-20, the container story): its role —
+    // "a place in the scene that renders its children" — is exactly what Geo
+    // is, and two containers with one job was the zoo the owner called a
+    // mess. Existing desks keep working: the shell body still draws, children
+    // still render inside, doors still work. It is simply never offered again.
     'universe.desk.3d': {
         id: 'universe.desk.3d',
         label: '3D Desk',
         category: 'universe',
         runtime: 'any',
+        paletteHidden: true,
         singleton: false,
         inputs: [
             { id: 'position',    type: 'vec3',   label: 'Position', default: [0, 0, 0]  },
@@ -892,14 +979,14 @@ export const NODE_TYPES = {
 
     'universe.link': {
         id: 'universe.link',
-        label: 'Universe Link',
+        label: 'Kiosk Link',
         category: 'universe',
         runtime: 'any',
         authoringOnly: true,
         singleton: false,
         inputs: [
-            { id: 'from', type: 'string', label: 'From Universe', default: '' },
-            { id: 'to',   type: 'string', label: 'To Universe',   default: '' },
+            { id: 'from', type: 'string', label: 'From Kiosk', default: '' },
+            { id: 'to',   type: 'string', label: 'To Kiosk',   default: '' },
         ],
         outputs: [
             { id: 'route',  type: 'string', label: 'Route'  },
@@ -922,8 +1009,15 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'color',    type: 'color',  label: 'Color',    default: '#5fa8ff'  },
+            { id: 'color',    type: 'color',  label: 'Colour',    default: '#5fa8ff'  },
             { id: 'size',     type: 'vec3',   label: 'Size',     default: [1, 1, 1]  },
+            // Appearance (2026-08-20, material pass 1). Defaults mirror a bare
+            // meshStandardMaterial, so documents that predate these ports
+            // render pixel-identical.
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
         ],
@@ -946,8 +1040,15 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'color',    type: 'color',  label: 'Color',    default: '#5fa8ff'   },
+            { id: 'color',    type: 'color',  label: 'Colour',    default: '#5fa8ff'   },
             { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5         },
+            // Appearance (2026-08-20, material pass 1). Defaults mirror a bare
+            // meshStandardMaterial, so documents that predate these ports
+            // render pixel-identical.
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
         ],
@@ -965,7 +1066,7 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'color',      type: 'color',   label: 'Color',       default: '#ffffff' },
+            { id: 'color',      type: 'color',   label: 'Colour',       default: '#ffffff' },
             { id: 'width',      type: 'number',  label: 'Width',       default: 2         },
             { id: 'height',     type: 'number',  label: 'Height',      default: 2         },
             { id: 'textureUrl', type: 'string',  label: 'Texture URL', default: ''        },
@@ -974,6 +1075,13 @@ export const NODE_TYPES = {
             // textureUrl because a MediaStream-backed texture isn't a loadable
             // URL, and 'texture'/'string' ports aren't wire-compatible.
             { id: 'texture',    type: 'texture', label: 'Texture'                         },
+            // Appearance (2026-08-20, material pass 1). Defaults mirror a bare
+            // meshStandardMaterial, so documents that predate these ports
+            // render pixel-identical.
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
             { id: 'position',   type: 'vec3',    label: 'Position',    default: [0, 0, 0] },
             { id: 'rotation',   type: 'vec3',    label: 'Rotation',    default: [0, 0, 0] },
         ],
@@ -1021,6 +1129,42 @@ export const NODE_TYPES = {
         ],
         defaultValues: {},
         render: 'hidden',
+    },
+
+    // -----------------------------------------------------------------------
+    // THE GEO — TouchDesigner's Geometry COMP, by the owner's own word: "it's
+    // a clear geo you can enter and in it collect what you need — object,
+    // light... and so on." A container that IS simply a place: it arrives
+    // empty but never reads as void (a faint floor tile marks its footprint),
+    // everything spatial placed inside renders inside it and travels with it,
+    // and it adds NOTHING of its own — no shell box like the desk, no
+    // descriptor plumbing like the constructor. The plainest container there
+    // is, and deliberately so: the zoo of containers each doing something
+    // clever is what read as mess.
+    // -----------------------------------------------------------------------
+
+    'geom.geo': {
+        id: 'geom.geo',
+        label: 'Geo',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['geo', 'geometry', 'container', 'group', 'place', 'collect', 'comp', 'scene', 'assemble'],
+        inputs: [
+            { id: 'position', type: 'vec3', label: 'Position', default: [0, 0, 0] },
+            { id: 'rotation', type: 'vec3', label: 'Rotation', default: [0, 0, 0] },
+            { id: 'scale',    type: 'vec3', label: 'Scale',    default: [1, 1, 1] },
+        ],
+        // The Geo gives out what it collects — every spatial child's shape as
+        // one group, carried with the Geo's own transform — so geos CONNECT:
+        // Geo → Merge → another container composes collected geometry exactly
+        // like primitives do, and a Geo standing inside a Geo answers
+        // recursively (geometry inside geometry; owner, 2026-08-20).
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
     },
 
     'geom.constructor': {
@@ -1081,7 +1225,7 @@ export const NODE_TYPES = {
         // change freely — the socket's identity is this node's id, so renaming
         // never touches a wire.
         configInputs: [
-            { id: 'label',    type: 'string', label: 'Socket name' },
+            { id: 'label',    type: 'string', label: 'Port name' },
             { id: 'portType', type: 'string', label: 'Carries' },
         ],
         defaultValues: { label: 'In', portType: 'any', fallback: null },
@@ -1101,7 +1245,7 @@ export const NODE_TYPES = {
         // No outputs: what goes OUT leaves through the container's outer face.
         outputs: [],
         configInputs: [
-            { id: 'label',    type: 'string', label: 'Socket name' },
+            { id: 'label',    type: 'string', label: 'Port name' },
             { id: 'portType', type: 'string', label: 'Carries' },
         ],
         defaultValues: { label: 'Out', portType: 'any' },
@@ -1160,7 +1304,12 @@ export const NODE_TYPES = {
             { id: 'volume',   type: 'number',  label: 'Volume',   default: 1, min: 0, max: 1, step: 0.05 },
             { id: 'loop',     type: 'boolean', label: 'Loop',     default: true      },
         ],
-        outputs: [],
+        outputs: [
+            // The playing picture as a wire value (the webcam idiom): live in
+            // the window that renders the video, so a Monitor can watch it
+            // and a material can wear it.
+            { id: 'frame', type: 'texture', label: 'Frame' },
+        ],
         defaultValues: {},
         render: 'spatial-3d',
     },
@@ -1180,7 +1329,15 @@ export const NODE_TYPES = {
             { id: 'loop',     type: 'boolean', label: 'Loop',     default: true      },
             { id: 'autoplay', type: 'boolean', label: 'Autoplay', default: true      },
         ],
-        outputs: [],
+        outputs: [
+            // The playing sound as numbers (0..1), published silently by the
+            // editor's SoundAnalysisFeed — the scene's Sound object owns
+            // being HEARD. Analysis follows the editor's own playback.
+            { id: 'volume', type: 'number', label: 'Volume' },
+            { id: 'low',    type: 'number', label: 'Low'    },
+            { id: 'mid',    type: 'number', label: 'Mid'    },
+            { id: 'high',   type: 'number', label: 'High'   },
+        ],
         defaultValues: {},
         render: 'spatial-3d',
     },
@@ -1219,7 +1376,7 @@ export const NODE_TYPES = {
 
     'view.director': {
         id: 'view.director',
-        label: 'Director (algovrithm)',
+        label: 'Director',
         category: 'view',
         runtime: 'any',
         singleton: false,
@@ -1242,18 +1399,52 @@ export const NODE_TYPES = {
         category: 'view',
         runtime: 'any',
         singleton: false,
-        // Ports stripped per review (dead-port rule): no runtime carries
-        // playhead/fps in or frame/clip out yet. Wire via nodeGraphRuntime
-        // when the data is real; the panel keeps its own playhead locally.
+        // Inputs still stripped per the dead-port rule; the OUTPUTS became
+        // real with the transport (2026-08-20): playhead/playing derive from
+        // the document clock in the colocated runtime, so every window and
+        // /out agree about where the show stands.
         inputs: [],
-        outputs: [],
+        outputs: [
+            { id: 'playhead', type: 'number',  label: 'Playhead' },
+            { id: 'playing',  type: 'boolean', label: 'Playing'  },
+        ],
         // Clips are integer frames throughout — see src/project/timeline/
         // timelineCore.js for why seconds are not stored anywhere.
         defaultValues: {
             fps: 60,
             clips: [],
+            // The transport. playheadFrame is where the paused head stands;
+            // playing + playFromFrame + playStartClockMs derive the moving
+            // head from the document clock (see the colocated runtime).
+            playing: false,
+            playheadFrame: 0,
+            playFromFrame: 0,
+            playStartClockMs: 0,
         },
         defaultFrame: { width: 900, height: 260 },
+        render: 'panel-2d',
+    },
+
+    'view.list': {
+        id: 'view.list',
+        label: 'List',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        // No ports. A list is read by people, and the dead-port rule says a
+        // socket nothing consumes should not exist — see view.timeline, which
+        // only grew outputs once the transport actually read them.
+        inputs: [],
+        outputs: [],
+        // `groups` are plain strings and the rows carry their group by name,
+        // so the headings are editable without a migration. The defaults are
+        // deliberately generic: the grouping is the thinking, and fixing the
+        // vocabulary here would make the node good for one list only.
+        defaultValues: {
+            groups: ['To do'],
+            items: [],
+        },
+        defaultFrame: { width: 660, height: 560 },
         render: 'panel-2d',
     },
 
@@ -1310,8 +1501,37 @@ export const NODE_TYPES = {
         keywords: ['create', 'add', 'library', 'shape', 'primitive', 'light', 'cube', 'box'],
         runtime: 'any',
         singleton: false,
+        // Implemented, but not OFFERED in the node editor: every button in
+        // this window creates an OBJECT (document.entities) — a thing with no
+        // card, no ports, no outliner row, which the node vocabulary cannot
+        // describe. Objects belong to Studio; existing documents with a
+        // Create window still render it (the window branch stays).
+        paletteHidden: true,
         inputs: [
             { id: 'title', type: 'string', label: 'Title', default: 'Create' },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    // What a visitor to the public page gets. Everything the panel changes is
+    // a document op (presentationState / publishState), so it works for any
+    // session that can edit this project — a workshop participant holding a
+    // redeemed invite included. The space-level switches (make public, set
+    // live project) are owner-or-admin and 403 for exactly that person, so
+    // the panel reports the space as a sentence rather than offering buttons
+    // that always fail. No output port: nothing in the graph consumes publish
+    // state, and a port with no consumer draws, persists and carries nothing.
+    'view.publish': {
+        id: 'view.publish',
+        label: 'Public page',
+        category: 'view',
+        keywords: ['publish', 'public', 'share', 'live', 'visitor', 'audience', 'link', 'page'],
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Public page' },
         ],
         outputs: [],
         defaultValues: {},
@@ -1558,25 +1778,907 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    // The logic trio (show operators, 2026-08-20). Wire-first where TD uses a
+    // menu: Compare answers with three boolean outputs instead of an operation
+    // dropdown — you wire the question you mean.
+    'logic.compare': {
+        id: 'logic.compare',
+        label: 'Compare',
+        category: 'logic',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'a', type: 'number', label: 'A', default: 0 },
+            { id: 'b', type: 'number', label: 'B', default: 0 },
+        ],
+        outputs: [
+            { id: 'less',    type: 'boolean', label: 'Less'    },
+            { id: 'equal',   type: 'boolean', label: 'Equal'   },
+            { id: 'greater', type: 'boolean', label: 'Greater' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'logic.gate': {
+        id: 'logic.gate',
+        label: 'Gate',
+        category: 'logic',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            // No default on value: a Gate passes through what arrives, and a
+            // bare Gate honestly carries nothing (PASS_THROUGH_PORTS).
+            { id: 'value', type: 'any',     label: 'Value'                 },
+            { id: 'open',  type: 'boolean', label: 'Open',   default: true },
+        ],
+        outputs: [
+            { id: 'out', type: 'any', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'logic.switch': {
+        id: 'logic.switch',
+        label: 'Switch',
+        category: 'logic',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'a',    type: 'any',     label: 'A',    default: 0     },
+            { id: 'b',    type: 'any',     label: 'B',    default: 0     },
+            { id: 'pick', type: 'boolean', label: 'Pick', default: false },
+        ],
+        outputs: [
+            { id: 'out', type: 'any', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // Motion operators (show operators, 2026-08-20). Lag is the one node
+    // whose state lives between passes (context.frameMemory); Noise is pure —
+    // deterministic in the document clock, so every window sees one wander.
+    'signal.lag': {
+        id: 'signal.lag',
+        label: 'Lag',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'in',  type: 'number', label: 'Value',   default: 0   },
+            { id: 'lag', type: 'number', label: 'Lag (s)', default: 0.5 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'value.noise': {
+        id: 'value.noise',
+        label: 'Noise',
+        category: 'value',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'speed',   type: 'number', label: 'Speed',   default: 1 },
+            { id: 'variant', type: 'number', label: 'Variant', default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'value.random': {
+        id: 'value.random',
+        label: 'Random',
+        category: 'value',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['random', 'chance', 'draw', 'pick', 'variant', 'scatter'],
+        inputs: [
+            { id: 'least',    type: 'number', label: 'Least',    default: 0 },
+            { id: 'greatest', type: 'number', label: 'Greatest', default: 1 },
+            { id: 'variant',  type: 'number', label: 'Variant',  default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'geom.array': {
+        id: 'geom.array',
+        label: 'Array',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['array', 'repeat', 'copies', 'row', 'grid', 'duplicate', 'pattern'],
+        inputs: [
+            // No default on geometry: an Array repeats what arrives, and a
+            // bare Array honestly carries nothing (PASS_THROUGH_PORTS).
+            { id: 'geometry', type: 'geometry', label: 'Geometry'                    },
+            { id: 'count',    type: 'number',   label: 'Count',  default: 3          },
+            { id: 'offset',   type: 'vec3',     label: 'Offset', default: [1.5, 0, 0] },
+        ],
+        outputs: [
+            { id: 'out', type: 'geometry', label: 'Out' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The numbers wave (TD audit, 2026-08-20). All pure, all wire-first —
+    // where TD offers a menu these offer one output per meaning.
+    'math.range': {
+        id: 'math.range',
+        label: 'Range',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['range', 'remap', 'map', 'rescale', 'normalise', 'span'],
+        inputs: [
+            { id: 'in',     type: 'number', label: 'Value',     default: 0 },
+            { id: 'inMin',  type: 'number', label: 'From Low',  default: 0 },
+            { id: 'inMax',  type: 'number', label: 'From High', default: 1 },
+            { id: 'outMin', type: 'number', label: 'To Low',    default: 0 },
+            { id: 'outMax', type: 'number', label: 'To High',   default: 1 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.lfo': {
+        id: 'signal.lfo',
+        label: 'Oscillator',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['lfo', 'oscillator', 'wave', 'sine', 'square', 'triangle', 'saw', 'pulse', 'cycle'],
+        inputs: [
+            { id: 'frequency', type: 'number', label: 'Frequency', default: 1 },
+            { id: 'phase',     type: 'number', label: 'Phase',     default: 0 },
+        ],
+        outputs: [
+            { id: 'sine',     type: 'number', label: 'Sine'     },
+            { id: 'square',   type: 'number', label: 'Square'   },
+            { id: 'triangle', type: 'number', label: 'Triangle' },
+            { id: 'saw',      type: 'number', label: 'Saw'      },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'logic.combine': {
+        id: 'logic.combine',
+        label: 'Logic',
+        category: 'logic',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['logic', 'and', 'or', 'xor', 'nor', 'boolean', 'combine'],
+        inputs: [
+            { id: 'a', type: 'boolean', label: 'A', default: false },
+            { id: 'b', type: 'boolean', label: 'B', default: false },
+        ],
+        outputs: [
+            { id: 'both',    type: 'boolean', label: 'Both'    },
+            { id: 'either',  type: 'boolean', label: 'Either'  },
+            { id: 'one',     type: 'boolean', label: 'One'     },
+            { id: 'neither', type: 'boolean', label: 'Neither' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'math.extremes': {
+        id: 'math.extremes',
+        label: 'Extremes',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['min', 'max', 'least', 'greatest', 'smallest', 'largest', 'extremes'],
+        inputs: [
+            { id: 'a', type: 'number', label: 'A', default: 0 },
+            { id: 'b', type: 'number', label: 'B', default: 0 },
+        ],
+        outputs: [
+            { id: 'least',    type: 'number', label: 'Least'    },
+            { id: 'greatest', type: 'number', label: 'Greatest' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'math.abs': {
+        id: 'math.abs',
+        label: 'Absolute',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['abs', 'absolute', 'magnitude', 'positive'],
+        inputs: [
+            { id: 'in', type: 'number', label: 'Value', default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'math.round': {
+        id: 'math.round',
+        label: 'Round',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['round', 'floor', 'ceil', 'ceiling', 'integer', 'quantise', 'snap'],
+        inputs: [
+            { id: 'in', type: 'number', label: 'Value', default: 0 },
+        ],
+        outputs: [
+            { id: 'round',   type: 'number', label: 'Nearest' },
+            { id: 'floor',   type: 'number', label: 'Floor'   },
+            { id: 'ceiling', type: 'number', label: 'Ceiling' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.ease': {
+        id: 'signal.ease',
+        label: 'Ease',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['ease', 'easing', 'tween', 'smooth', 'smoothstep', 'bounce', 'curve', 'motion'],
+        inputs: [
+            { id: 'in', type: 'number', label: 'Progress', default: 0 },
+        ],
+        outputs: [
+            { id: 'smooth',  type: 'number', label: 'Smooth'   },
+            { id: 'easeIn',  type: 'number', label: 'Ease In'  },
+            { id: 'easeOut', type: 'number', label: 'Ease Out' },
+            { id: 'bounce',  type: 'number', label: 'Bounce'   },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The state wave (TD audit, 2026-08-20). Every one remembers through
+    // context.frameMemory — per window, never React state — and reacts to
+    // RISING EDGES, so a held button is one event, not sixty a second.
+    'signal.counter': {
+        id: 'signal.counter',
+        label: 'Counter',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['count', 'counter', 'increment', 'cue', 'index', 'step', 'tally'],
+        inputs: [
+            { id: 'count', type: 'boolean', label: 'Count', default: false },
+            { id: 'reset', type: 'boolean', label: 'Reset', default: false },
+            { id: 'step',  type: 'number',  label: 'Step',  default: 1     },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Total' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.hold': {
+        id: 'signal.hold',
+        label: 'Hold',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['hold', 'sample', 'freeze', 'latch', 'capture', 'snapshot'],
+        inputs: [
+            { id: 'value',  type: 'number',  label: 'Value',  default: 0     },
+            { id: 'sample', type: 'boolean', label: 'Sample', default: false },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Held' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.delay': {
+        id: 'signal.delay',
+        label: 'Delay',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['delay', 'echo', 'lateness', 'shift', 'time', 'offset'],
+        inputs: [
+            { id: 'value', type: 'number', label: 'Value',     default: 0   },
+            { id: 'delay', type: 'number', label: 'Delay (s)', default: 0.5 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Later' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.timer': {
+        id: 'signal.timer',
+        label: 'Timer',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['timer', 'stopwatch', 'countdown', 'cue', 'duration', 'progress'],
+        inputs: [
+            { id: 'start',  type: 'boolean', label: 'Start',      default: false },
+            { id: 'length', type: 'number',  label: 'Length (s)', default: 5     },
+        ],
+        outputs: [
+            { id: 'elapsed',  type: 'number',  label: 'Elapsed (s)' },
+            { id: 'progress', type: 'number',  label: 'Progress'    },
+            { id: 'done',     type: 'boolean', label: 'Done'        },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.trigger': {
+        id: 'signal.trigger',
+        label: 'Trigger',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['trigger', 'envelope', 'pulse', 'attack', 'release', 'fire', 'bang', 'hit'],
+        inputs: [
+            { id: 'fire',    type: 'boolean', label: 'Fire',        default: false },
+            { id: 'attack',  type: 'number',  label: 'Attack (s)',  default: 0.1   },
+            { id: 'hold',    type: 'number',  label: 'Hold (s)',    default: 0.2   },
+            { id: 'release', type: 'number',  label: 'Release (s)', default: 0.5   },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Envelope' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'signal.speed': {
+        id: 'signal.speed',
+        label: 'Speed',
+        category: 'signal',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['speed', 'accumulate', 'integrate', 'travel', 'spin', 'drive'],
+        inputs: [
+            { id: 'rate',  type: 'number',  label: 'Rate',  default: 0     },
+            { id: 'reset', type: 'boolean', label: 'Reset', default: false },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Travel' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'logic.toggle': {
+        id: 'logic.toggle',
+        label: 'Toggle',
+        category: 'logic',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['toggle', 'latch', 'flip', 'switch', 'on', 'off', 'state'],
+        inputs: [
+            { id: 'flip',  type: 'boolean', label: 'Flip',  default: false },
+            { id: 'reset', type: 'boolean', label: 'Reset', default: false },
+        ],
+        outputs: [
+            { id: 'out', type: 'boolean', label: 'On' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The vector/colour wave (TD audit, 2026-08-20). Pure taps and joins for
+    // the two compound wire types — both alphabets, wire the reading you mean.
+    'vector.split': {
+        id: 'vector.split',
+        label: 'Split',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['split', 'xyz', 'axis', 'component', 'unpack', 'vector'],
+        inputs: [
+            { id: 'vector', type: 'vec3', label: 'Vector', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'x', type: 'number', label: 'X' },
+            { id: 'y', type: 'number', label: 'Y' },
+            { id: 'z', type: 'number', label: 'Z' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.combine': {
+        id: 'vector.combine',
+        label: 'Combine',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['combine', 'xyz', 'pack', 'build', 'vector', 'compose'],
+        inputs: [
+            { id: 'x', type: 'number', label: 'X', default: 0 },
+            { id: 'y', type: 'number', label: 'Y', default: 0 },
+            { id: 'z', type: 'number', label: 'Z', default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Vector' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'colour.split': {
+        id: 'colour.split',
+        label: 'Channels',
+        category: 'colour',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['channels', 'rgb', 'hsl', 'hue', 'saturation', 'lightness', 'red', 'green', 'blue', 'split'],
+        inputs: [
+            { id: 'colour', type: 'color', label: 'Colour', default: '#5fa8ff' },
+        ],
+        outputs: [
+            { id: 'red',        type: 'number', label: 'Red'        },
+            { id: 'green',      type: 'number', label: 'Green'      },
+            { id: 'blue',       type: 'number', label: 'Blue'       },
+            { id: 'hue',        type: 'number', label: 'Hue'        },
+            { id: 'saturation', type: 'number', label: 'Saturation' },
+            { id: 'lightness',  type: 'number', label: 'Lightness'  },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'colour.combine': {
+        id: 'colour.combine',
+        label: 'Compose',
+        category: 'colour',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['compose', 'rgb', 'build', 'colour', 'combine', 'mix'],
+        inputs: [
+            { id: 'red',   type: 'number', label: 'Red',   default: 0 },
+            { id: 'green', type: 'number', label: 'Green', default: 0 },
+            { id: 'blue',  type: 'number', label: 'Blue',  default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'color', label: 'Colour' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.distance': {
+        id: 'vector.distance',
+        label: 'Distance',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['distance', 'length', 'proximity', 'near', 'far', 'apart', 'magnitude'],
+        inputs: [
+            { id: 'a', type: 'vec3', label: 'A', default: [0, 0, 0] },
+            { id: 'b', type: 'vec3', label: 'B', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'distance', type: 'number', label: 'Distance' },
+            { id: 'length',   type: 'number', label: 'Length'   },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.dot': {
+        id: 'vector.dot',
+        label: 'Dot',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['dot', 'product', 'facing', 'angle', 'alignment', 'agree', 'towards'],
+        inputs: [
+            { id: 'a', type: 'vec3', label: 'A', default: [0, 0, 0] },
+            { id: 'b', type: 'vec3', label: 'B', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'dot',   type: 'number', label: 'Dot'   },
+            { id: 'angle', type: 'number', label: 'Angle' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.cross': {
+        id: 'vector.cross',
+        label: 'Cross',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['cross', 'product', 'perpendicular', 'normal', 'sideways'],
+        inputs: [
+            { id: 'a', type: 'vec3', label: 'A', default: [0, 0, 0] },
+            { id: 'b', type: 'vec3', label: 'B', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.direction': {
+        id: 'vector.direction',
+        label: 'Direction',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['direction', 'normalise', 'normalize', 'unit', 'heading', 'way'],
+        inputs: [
+            { id: 'vector', type: 'vec3', label: 'Vector', default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.rotation': {
+        id: 'vector.rotation',
+        label: 'Rotation',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['rotation', 'rotate', 'spin', 'orbit', 'axis', 'turn', 'revolve'],
+        inputs: [
+            { id: 'vector', type: 'vec3',   label: 'Vector', default: [0, 0, 0] },
+            { id: 'axis',   type: 'vec3',   label: 'Axis',   default: [0, 1, 0] },
+            { id: 'angle',  type: 'number', label: 'Angle',  default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'vector.aim': {
+        id: 'vector.aim',
+        label: 'Aim',
+        category: 'vector',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['aim', 'face', 'look', 'lookat', 'towards', 'point at', 'orient'],
+        inputs: [
+            { id: 'from', type: 'vec3', label: 'From', default: [0, 0, 0] },
+            { id: 'to',   type: 'vec3', label: 'To',   default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'out', type: 'vec3', label: 'Rotation' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'colour.ramp': {
+        id: 'colour.ramp',
+        label: 'Ramp',
+        category: 'colour',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['ramp', 'gradient', 'palette', 'lookup', 'journey', 'blend', 'stops'],
+        inputs: [
+            { id: 'position', type: 'number', label: 'Position', default: 0         },
+            { id: 'a',        type: 'color',  label: 'A',        default: '#000000' },
+            { id: 'b',        type: 'color',  label: 'B',        default: '#5fa8ff' },
+            { id: 'c',        type: 'color',  label: 'C',        default: '#ffffff' },
+        ],
+        outputs: [
+            { id: 'out', type: 'color', label: 'Colour' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The geometry wave (TD audit, 2026-08-20): three primitives the entity
+    // system always had, finally spoken as nodes — plus Transform, Array's
+    // sibling for a single re-framed copy.
+    'geom.cylinder': {
+        id: 'geom.cylinder',
+        label: 'Cylinder',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['cylinder', 'tube', 'column', 'pillar', 'drum'],
+        inputs: [
+            { id: 'color',    type: 'color',  label: 'Colour',   default: '#5fa8ff'   },
+            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5         },
+            { id: 'height',   type: 'number', label: 'Height',   default: 1.5         },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.75, 0] },
+            { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
+        ],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'geom.cone': {
+        id: 'geom.cone',
+        label: 'Cone',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['cone', 'spike', 'funnel', 'point'],
+        inputs: [
+            { id: 'color',    type: 'color',  label: 'Colour',   default: '#5fa8ff'   },
+            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5         },
+            { id: 'height',   type: 'number', label: 'Height',   default: 1.5         },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.75, 0] },
+            { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
+        ],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'geom.torus': {
+        id: 'geom.torus',
+        label: 'Torus',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['torus', 'ring', 'donut', 'hoop', 'loop'],
+        inputs: [
+            { id: 'color',    type: 'color',  label: 'Colour',   default: '#5fa8ff'  },
+            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5        },
+            { id: 'tube',     type: 'number', label: 'Tube',     default: 0.18       },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
+            { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
+        ],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'geom.line': {
+        id: 'geom.line',
+        label: 'Line',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['line', 'stroke', 'segment', 'edge', 'beam', 'ray', 'between'],
+        inputs: [
+            { id: 'from',      type: 'vec3',   label: 'From',      default: [0, 0, 0] },
+            { id: 'to',        type: 'vec3',   label: 'To',        default: [0, 1.5, 0] },
+            { id: 'thickness', type: 'number', label: 'Thickness', default: 0.02 },
+            { id: 'color',     type: 'color',  label: 'Colour',    default: '#5fa8ff' },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1 },
+        ],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'geom.circle': {
+        id: 'geom.circle',
+        label: 'Circle',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['circle', 'disc', 'round', 'ring', 'mark', 'spot'],
+        inputs: [
+            { id: 'color',     type: 'color',  label: 'Colour',    default: '#5fa8ff' },
+            { id: 'radius',    type: 'number', label: 'Radius',    default: 0.5 },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1 },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0 },
+            { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1 },
+            { id: 'position',  type: 'vec3',   label: 'Position',  default: [0, 0.5, 0] },
+            { id: 'rotation',  type: 'vec3',   label: 'Rotation',  default: [0, 0, 0] },
+        ],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'geom.transform': {
+        id: 'geom.transform',
+        label: 'Transform',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['transform', 'move', 'rotate', 'scale', 'reframe', 'offset', 'place'],
+        inputs: [
+            // No default on geometry: a Transform re-frames what arrives, and
+            // a bare Transform honestly carries nothing (PASS_THROUGH_PORTS).
+            { id: 'geometry', type: 'geometry', label: 'Geometry'                    },
+            { id: 'position', type: 'vec3',     label: 'Position', default: [0, 0, 0] },
+            { id: 'rotation', type: 'vec3',     label: 'Rotation', default: [0, 0, 0] },
+            { id: 'scale',    type: 'vec3',     label: 'Scale',    default: [1, 1, 1] },
+        ],
+        outputs: [
+            { id: 'out', type: 'geometry', label: 'Out' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    // The operator's hands (TD audit, 2026-08-20): the desk's Go button and
+    // a chosen key — the two ways a human fires a cue without leaving the
+    // canvas.
+    'view.button': {
+        id: 'view.button',
+        label: 'Button',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['button', 'go', 'press', 'fire', 'cue', 'bang', 'push'],
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Go' },
+        ],
+        outputs: [
+            { id: 'presses', type: 'number',  label: 'Presses' },
+            { id: 'pressed', type: 'boolean', label: 'Pressed' },
+        ],
+        defaultValues: {
+            presses: 0,
+        },
+        defaultFrame: { width: 220, height: 160 },
+        render: 'panel-2d',
+    },
+
+    'device.keyboard': {
+        id: 'device.keyboard',
+        label: 'Keyboard',
+        category: 'device',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['keyboard', 'key', 'spacebar', 'shortcut', 'press', 'go'],
+        inputs: [
+            { id: 'key', type: 'string', label: 'Key', default: 'Space' },
+        ],
+        outputs: [
+            { id: 'pressed', type: 'boolean', label: 'Pressed' },
+            { id: 'count',   type: 'number',  label: 'Count'   },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     // -----------------------------------------------------------------------
     // WORLD — nodes that define the space itself
     // -----------------------------------------------------------------------
 
+    // RETIRED FROM THE PALETTE (2026-08-20, the Light split): one node was
+    // two things — per-scope ambient/directional settings AND a placeable
+    // lamp, deciding which by whether it had a parent. New documents use
+    // `world.environment` (the settings) and `light.point` (the lamp). This
+    // type keeps BOTH behaviours untouched so every existing document renders
+    // exactly as it did; it is simply never offered again.
     'world.light': {
         id: 'world.light',
         label: 'Light',
         category: 'world',
         runtime: 'any',
+        paletteHidden: true,
         inputs: [
-            { id: 'ambientColor',           type: 'color',  label: 'Ambient Color',     default: '#ffffff'  },
+            { id: 'ambientColor',           type: 'color',  label: 'Ambient Colour',     default: '#ffffff'  },
             { id: 'ambientIntensity',        type: 'number', label: 'Ambient Intensity', default: 0.8        },
-            { id: 'directionalColor',        type: 'color',  label: 'Dir Color',         default: '#fff7ea'  },
-            { id: 'directionalIntensity',    type: 'number', label: 'Dir Intensity',     default: 1.05       },
-            { id: 'directionalPosition',     type: 'vec3',   label: 'Dir Position',      default: [8, 12, 4] },
+            { id: 'directionalColor',        type: 'color',  label: 'Sun Colour',         default: '#fff7ea'  },
+            { id: 'directionalIntensity',    type: 'number', label: 'Sun Intensity',      default: 1.05       },
+            { id: 'directionalPosition',     type: 'vec3',   label: 'Sun Position',       default: [8, 12, 4] },
+            { id: 'color',     type: 'color',  label: 'Colour',    default: '#ffe9c4'  },
+            { id: 'intensity', type: 'number', label: 'Intensity', default: 6          },
+            { id: 'position',  type: 'vec3',   label: 'Position',  default: [0, 1.6, 0] },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    // The scene's lighting SETTINGS, and only that: ambient wash + one sun.
+    // TD's Environment Light, Blender's World + Sun. One per scope does the
+    // work; the ● toggle picks the active one when several stand together.
+    'world.environment': {
+        id: 'world.environment',
+        label: 'Environment',
+        category: 'world',
+        runtime: 'any',
+        keywords: ['environment', 'lighting', 'ambient', 'sun', 'mood', 'wash', 'daylight'],
+        inputs: [
+            { id: 'ambientColor',        type: 'color',  label: 'Ambient Colour',    default: '#ffffff'  },
+            { id: 'ambientIntensity',    type: 'number', label: 'Ambient Intensity', default: 0.8        },
+            { id: 'directionalColor',    type: 'color',  label: 'Sun Colour',        default: '#fff7ea'  },
+            { id: 'directionalIntensity', type: 'number', label: 'Sun Intensity',     default: 1.05       },
+            { id: 'directionalPosition', type: 'vec3',   label: 'Sun Position',      default: [8, 12, 4] },
         ],
         outputs: [],
         defaultValues: {},
         render: 'hidden',
+    },
+
+    // The lamp, and only that: a real point light standing where you put it —
+    // root or inside any container, no dual identity, no disappearing act.
+    'light.point': {
+        id: 'light.point',
+        label: 'Light',
+        category: 'world',
+        runtime: 'any',
+        keywords: ['light', 'lamp', 'point', 'glow', 'practical'],
+        inputs: [
+            { id: 'color',     type: 'color',  label: 'Colour',    default: '#ffe9c4'   },
+            { id: 'intensity', type: 'number', label: 'Intensity', default: 6           },
+            { id: 'position',  type: 'vec3',   label: 'Position',  default: [0, 1.6, 0] },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'world.camera': {
+        id: 'world.camera',
+        label: 'Camera',
+        category: 'world',
+        runtime: 'any',
+        inputs: [
+            // Defaults are byte-identical to the room's built-in view, so a
+            // Camera marked as the eye before being moved holds the shot the
+            // room already had.
+            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 2.4, 6.5] },
+            { id: 'lookAt',   type: 'vec3',   label: 'Look At',  default: [0, 0.75, 0]  },
+            { id: 'fov',      type: 'number', label: 'FOV',      default: 50            },
+        ],
+        outputs: [],
+        defaultValues: {},
+        // spatial so it can stand somewhere and be carried by a container.
+        // The ● toggle marks the eye per scope — EXPLICIT-ONLY, unlike
+        // Light/Background/Grid's first-created fallback: an active camera
+        // hijacks the view, so placing one must never steal the shot
+        // (RawViewport.pickAuthoredCameraNode). The marked camera draws no
+        // body; unmarked cameras draw a small housing marker.
+        render: 'spatial-3d',
     },
 
     'world.background': {
@@ -1585,7 +2687,7 @@ export const NODE_TYPES = {
         category: 'world',
         runtime: 'any',
         inputs: [
-            { id: 'color', type: 'color', label: 'Color' },
+            { id: 'color', type: 'color', label: 'Colour' },
         ],
         defaultValues: { color: '#0a0e16' },
         outputs: [],
@@ -1600,7 +2702,7 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'visible', type: 'boolean', label: 'Visible', default: true     },
             { id: 'size',    type: 'number',  label: 'Size',    default: 24       },
-            { id: 'color',   type: 'color',   label: 'Color',   default: '#333333'},
+            { id: 'color',   type: 'color',   label: 'Colour',   default: '#333333'},
         ],
         outputs: [],
         defaultValues: {},
@@ -1655,7 +2757,7 @@ export const NODE_TYPES = {
 
     'node.null': {
         id: 'node.null',
-        label: 'Node',
+        label: 'Null',
         category: 'custom',
         runtime: 'any',
         singleton: false,
@@ -1706,6 +2808,9 @@ export const createNode = (typeId, options = {}) => {
         graphY:    options.graphY    ?? 0,
         runtimeId: options.runtimeId || null,
         parentId:  options.parentId  || null,
+        // Same contract as createEntityOfType's: handed in by the caller so
+        // this stays pure, and absent means unowned.
+        createdBy: options.createdBy || null,
     }
 }
 
@@ -1739,19 +2844,17 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'source.insta360',
     'source.stereo',
     'source.realsense.d405',
-    // devices — no OSC client (UDP, needs the local bridge), and MIDI Out has
-    // no sender yet. device.midi.in came off this list on 2026-08-08: Web MIDI
-    // is real in the page, so that one is implemented.
+    // devices — no OSC client (UDP, needs the local bridge).
+    // device.midi.in came off this list on 2026-08-08, device.midi.out on
+    // 2026-08-21: Web MIDI is real in the page in BOTH directions now.
     'device.ptz.osc',
     'device.osc.in',
     'device.osc.out',
-    'device.midi.out',
     // streaming — no compositor, no transport
     'stream.compositor',
     'stream.switcher',
     'stream.output',
     'stream.recorder',
-    'stream.monitor',
     'stream.controller',
     // structure — zero consumers outside this file
     'universe.node0',
@@ -1765,10 +2868,18 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
 // any node hold any other, and that is deliberate (product decision
 // 2026-07-19) — but an intention: these are the ones whose whole point is
 // having an inside.
+// THE INTERIOR-RENDERING RULE, in one place (the code lives in RawViewport's
+// childMap): Geo and 3D Desk DRAW their children in the room — a place shows
+// what stands in it. Scene (universe.world) and Constructor SUPPRESS them —
+// a Scene is its own stage seen through its window, and a Constructor's
+// inside is a workshop whose only public face is what reaches its doors.
+// Kiosk, Studio and the code containers never stand in the room at all
+// (render 'hidden'), so the rule does not touch them.
 export const CONTAINER_TYPE_IDS = new Set([
     'universe.world',
     'universe.space',
     'universe.desk.3d',
+    'geom.geo',
     'universe.node0',
     'studio',
     'node.null',
@@ -1802,6 +2913,9 @@ export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any', i
     const q = String(query || '').trim().toLowerCase()
     return Object.values(NODE_TYPES).filter(type => {
         if (!includeUnimplemented && !isNodeTypeImplemented(type.id)) return false
+        // paletteHidden = implemented but not offered here (a different class
+        // from the shells: the code works, the palette just does not sell it).
+        if (!includeUnimplemented && type.paletteHidden) return false
         if (category !== 'all' && type.category !== category) return false
         if (runtime !== 'any' && type.runtime !== 'any' && type.runtime !== runtime) return false
         if (!q) return true
