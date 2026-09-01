@@ -3,9 +3,13 @@
 - **`/` opens the home room instead of a page about it.** The landing already rendered
   the `main` space as a decorative backdrop and wrote the wordmark and the one line in
   HTML on top of it, so `/` and `/main` showed the same room and only one of them let
-  you into it. `/` now opens the room itself. `/main` is untouched and still works — a
-  public address is never withdrawn — and the landing page is moved, not deleted: it is
-  at `/?tour=1`, the same escape hatch the local home already used.
+  you into it. `/` now opens the room itself, and **`/main` heals to `/`** — the room has
+  one address and a visitor is never shown one called "main". The old link still resolves
+  rather than 404s, because a link already handed out is never withdrawn; it just arrives
+  at the canonical door. Only the BARE path heals: `/main/studio`, `/main/raw/…` and
+  `/main/p/…` keep their names, and a LOCAL install keeps `/main` as an ordinary space
+  address, because there `/` is the owner's own home. The landing page is moved, not
+  deleted: `/?tour=1`, the same escape hatch the local home already used.
 - **"Made with di.iiii — build yours" no longer appears inside di.iiii's own space.**
   Its href is a hard-coded `/`, and `/` renders `main`, so in that room the one
   affordance meant to lead somewhere led back to where the visitor was standing. Owner

@@ -277,9 +277,31 @@ function AppRouter() {
                 : buildRawCanvasPath(rawState.spaceId)
         rrNavigate(target, { replace: true })
     }, [legacyRawPath, rawState.page, rawState.projectId, rawState.spaceId, rrNavigate])
+    // `/main` heals to `/`. The home room has one address, and it is the bare
+    // domain — a visitor should never be told the room they are standing in is
+    // called "main". The link still resolves, because links already handed out
+    // are never withdrawn; it just arrives at the canonical door. Only the BARE
+    // path heals: `/main/studio`, `/main/raw/…` and `/main/p/…` are the editor
+    // and project addresses inside that space and keep their names.
+    // Not on a local install: there `/` is the owner's own home (their spaces),
+    // so healing this path would answer "show me the room" with a different
+    // page entirely. `isLocal` is already false once a local server turns auth
+    // on, which is the case where `/` does open the room.
+    const isBareHomeSpacePath = location.pathname.replace(/\/+$/, '') === `/${PLATFORM_HOME_SPACE_ID}`
+        && localInstall.resolved && !localInstall.isLocal
+    useEffect(() => {
+        if (!isBareHomeSpacePath) return
+        rrNavigate(`/${location.search || ''}${location.hash || ''}`, { replace: true })
+    }, [isBareHomeSpacePath, location.search, location.hash, rrNavigate])
+
     if (legacyRawPath) {
         return <RouteSurfaceFallback label="Loading the node editor" detail="" />
     }
+
+    if (isBareHomeSpacePath) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+
 
     // `/open_jam/scene` — the jam as a place you stand in, beside the editor at
     // `/open_jam` rather than instead of it. Dispatched first because it is the

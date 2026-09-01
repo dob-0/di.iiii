@@ -141,6 +141,24 @@ describe('what "/" opens', () => {
 
     // Someone serving other people from their own machine has turned auth ON.
     // They get the ordinary front door, because their visitors are not them.
+    // The home room has one address and it is the bare domain — a visitor is
+    // never shown a room called "main". The old link still resolves.
+    it('heals /main to /, so the name never appears in the bar', async () => {
+        mockServerConfig.value = { local: false }
+        window.history.pushState({}, '', '/main')
+        render(<RootApp />)
+        expect(await screen.findByText(/space-surface-app:.*:main/)).toBeInTheDocument()
+        expect(window.location.pathname).toBe('/')
+    })
+
+    it('leaves the editor and project addresses inside that space alone', async () => {
+        mockServerConfig.value = { local: false }
+        window.history.pushState({}, '', '/main/studio')
+        render(<RootApp />)
+        expect(await screen.findByText(/studio-app/)).toBeInTheDocument()
+        expect(window.location.pathname).toBe('/main/studio')
+    })
+
     it('opens the home room on a local install that requires auth', async () => {
         mockServerConfig.value = { local: true, requireAuth: true }
         window.history.pushState({}, '', '/')
@@ -204,6 +222,8 @@ describe('RootApp', () => {
         expect(await screen.findByText('space-surface-app:editor:beta')).toBeInTheDocument()
         unmount()
 
+        // A local install keeps `/main` as a plain space address: there `/` is
+        // the owner's own home, so the heal deliberately does not apply.
         window.history.pushState({}, '', '/main')
         render(<RootApp />)
         expect(await screen.findByText('space-surface-app:editor:main')).toBeInTheDocument()
