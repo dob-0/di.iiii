@@ -149,6 +149,7 @@ export const flyInside = ({ root, cameraPoseRef, onDone, reducedMotion = false, 
     root.classList.add('lp-root--flying')
 
     let frame = 0
+    let settling = 0
     const duration = flightDuration()
     const started = performance.now()
 
@@ -165,13 +166,23 @@ export const flyInside = ({ root, cameraPoseRef, onDone, reducedMotion = false, 
             frame = requestAnimationFrame(tick)
             return
         }
-        cleanup()
+        frame = 0
+        // Hand over FIRST, tear down after. Taking the clones away before the
+        // walker was rendered left one frame of bare landing between the two,
+        // and putting the originals back before React had hidden them left the
+        // page visible while it faded. The clones cover that commit; they are
+        // removed two frames later, by which time the room owns the screen.
         finish()
+        settling = requestAnimationFrame(() => {
+            settling = requestAnimationFrame(cleanup)
+        })
     }
 
     const cleanup = () => {
         if (frame) cancelAnimationFrame(frame)
+        if (settling) cancelAnimationFrame(settling)
         frame = 0
+        settling = 0
         stage.destroy()
         hidden.forEach(({ el, previous }) => { el.style.visibility = previous })
         root.classList.remove('lp-root--flying')

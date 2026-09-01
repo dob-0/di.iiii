@@ -1148,6 +1148,17 @@ body.is-landing .account-btn-wrapper {
     transition: opacity 0.45s ease;
 }
 
+/* The copy has to be ALREADY gone when the flight ends, not start going then.
+   The originals are only `visibility: hidden` while their clones fly, so the
+   moment the flight put them back the hero was still at opacity 1 — and
+   `.lp-hero-inner--hidden` then faded it out over half a second, which read as
+   the landing page reappearing after you had already arrived. Fading it here
+   costs nothing (nobody can see a hidden element fade) and leaves the handover
+   with nothing left to hide. */
+.lp-root--flying .lp-hero-inner {
+    opacity: 0;
+}
+
 .lp-root--flying .lp-section,
 .lp-root--flying .lp-footer {
     visibility: hidden;

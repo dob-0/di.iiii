@@ -248,6 +248,20 @@ export default function LandingPage() {
     // it is left alone and follows the href.
     const handleArrivalPose = useCallback((pose) => { arrivalPoseRef.current = pose }, [])
 
+    // Coming back out has to undo everything going in did. The room was given
+    // its words back at the first frame of the flight; if it keeps them while
+    // the page is speaking again, the wordmark and the line are drawn twice,
+    // one behind the other, and neither reads. Going in and coming out are the
+    // same switch, and it has to be thrown both ways.
+    const leaveRoom = useCallback(() => {
+        cancelFlightRef.current?.()
+        cancelFlightRef.current = null
+        cameraPoseRef.current = { ...REST_POSE }
+        setRoomSpeaks(false)
+        setViewMode(false)
+        setEntered(false)
+    }, [])
+
     const openDoor = (event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
         event.preventDefault()
@@ -428,7 +442,7 @@ export default function LandingPage() {
 
                 {entered && (
                     <>
-                        <button type="button" className="lp-enter-exit" onClick={() => { setEntered(false); setViewMode(false) }}>
+                        <button type="button" className="lp-enter-exit" onClick={leaveRoom}>
                             ← Back
                         </button>
                         <button type="button" className="lp-enter-exit lp-enter-viewtoggle" onClick={() => setViewMode((v) => !v)}>
