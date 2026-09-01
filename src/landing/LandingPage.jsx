@@ -7,6 +7,7 @@ import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildSpacesPath } from '../studio/utils/studioRouting.js'
 import { flyInside, REST_POSE } from './enterFlight.js'
+import PageDebris from './PageDebris.jsx'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
 // LiveProjectScene into the landing chunk for every visitor — including phones,
@@ -196,6 +197,9 @@ export default function LandingPage() {
     // the tap arms it: the scene mounts, and the flight waits for the chunk
     // rather than starting over nothing.
     const [flightArmed, setFlightArmed] = useState(false)
+    // The page once it has stopped being a page: real meshes in the room's
+    // scene, falling. Held in state because the scene has to render them.
+    const [pieces, setPieces] = useState([])
     // Walk/fly and the calm orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to
     // the orbit view once you'd moved was a full Exit + Enter Space round
@@ -260,6 +264,7 @@ export default function LandingPage() {
         setRoomSpeaks(false)
         setViewMode(false)
         setEntered(false)
+        setPieces([])
     }, [])
 
     const openDoor = (event) => {
@@ -275,6 +280,7 @@ export default function LandingPage() {
                 endPose: arrivalPoseRef.current,
                 reducedMotion: typeof window !== 'undefined'
                     && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+                onPieces: setPieces,
                 onDone: () => {
                     cancelFlightRef.current = null
                     setEntered(true)
@@ -368,6 +374,9 @@ export default function LandingPage() {
                                 cameraPoseRef={cameraPoseRef}
                                 hideEntityTypes={roomSpeaks ? null : HERO_ECHO_TYPES}
                                 onArrivalPose={handleArrivalPose}
+                                sceneExtras={pieces.length
+                                    ? <PageDebris pieces={pieces} cameraPose={REST_POSE} />
+                                    : null}
                             />
                         </Suspense>
                     </Box>

@@ -1,4 +1,4 @@
-import { liftPageIntoSpace } from './pageInSpace.js'
+import { makePagePieces } from './pagePieces.js'
 
 // Where the visit starts and where it lands.
 //
@@ -105,7 +105,7 @@ export const visibleLayers = (root, viewportHeight, viewportWidth = Infinity) =>
  * @param {boolean}  [options.reducedMotion]
  * @returns {Function} cancel
  */
-export const flyInside = ({ root, cameraPoseRef, onDone, reducedMotion = false, endPose = null }) => {
+export const flyInside = ({ root, cameraPoseRef, onDone, onPieces, reducedMotion = false, endPose = null }) => {
     // The room's own arrival if it reported one, the default if it did not.
     const destination = endPose?.position && endPose?.target
         ? { position: endPose.position, target: endPose.target, fov: WALK_FOV }
@@ -129,13 +129,17 @@ export const flyInside = ({ root, cameraPoseRef, onDone, reducedMotion = false, 
     }
 
     const layers = visibleLayers(root, window.innerHeight, window.innerWidth)
-    const dollyMetres = distance3(REST_POSE.position, destination.position)
-    const stage = liftPageIntoSpace({
-        container: window.document.body,
-        layers,
-        fov: REST_POSE.fov,
-        dollyMetres
+
+    // The page stops being a page here. Each element is drawn onto a canvas
+    // and handed to the caller as a piece standing in the ROOM's own scene —
+    // not a DOM layer above it — so from this frame on the doors can pass in
+    // front of it, the fog can take it, and the floor can stop it.
+    const pieces = makePagePieces({
+        elements: layers.map(({ el }) => el),
+        camera: REST_POSE,
+        viewport: { width: window.innerWidth, height: window.innerHeight }
     })
+    onPieces?.(pieces)
 
     // The clones are standing exactly on top of the originals at this instant,
     // so hiding the originals now is invisible. `visibility` and not `display`:
@@ -156,7 +160,6 @@ export const flyInside = ({ root, cameraPoseRef, onDone, reducedMotion = false, 
     const tick = (now) => {
         const t = Math.min(1, (now - started) / duration)
         const eased = easeInOutCubic(t)
-        stage.setProgress(t)
         cameraPoseRef.current = {
             position: lerp3(REST_POSE.position, destination.position, eased),
             target: lerp3(REST_POSE.target, destination.target, eased),
@@ -183,7 +186,6 @@ export const flyInside = ({ root, cameraPoseRef, onDone, reducedMotion = false, 
         if (settling) cancelAnimationFrame(settling)
         frame = 0
         settling = 0
-        stage.destroy()
         hidden.forEach(({ el, previous }) => { el.style.visibility = previous })
         root.classList.remove('lp-root--flying')
     }

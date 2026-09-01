@@ -136,21 +136,58 @@ describe('flyInside', () => {
         expect(cameraPoseRef.current.fov).not.toBe(REST_POSE.fov)
     })
 
-    it('hides the originals only once their clones are standing on them', () => {
+    // jsdom has no 2D canvas, and without one a piece cannot be drawn. That is
+    // a real path, not a test artefact: a browser that refuses a context still
+    // has to open the door, so the flight goes ahead with nothing to throw.
+    const withCanvas = (fn) => {
+        const original = window.HTMLCanvasElement.prototype.getContext
+        window.HTMLCanvasElement.prototype.getContext = function stub() {
+            return {
+                scale() {}, fillRect() {}, strokeRect() {}, fillText() {},
+                measureText: (text) => ({ width: (text || '').length * 8 }),
+                set font(_v) {}, get font() { return '' },
+                set fillStyle(_v) {}, set strokeStyle(_v) {}, set lineWidth(_v) {},
+                set textBaseline(_v) {}, set letterSpacing(_v) {}
+            }
+        }
+        try { fn() } finally { window.HTMLCanvasElement.prototype.getContext = original }
+    }
+
+    it('opens the door even where a 2D canvas is refused', () => {
+        const el = addElement(root, 'lp-wordmark', { left: 500, top: 300, width: 400, height: 120 })
+        const pieces = []
+        const cancel = flyInside({ root, cameraPoseRef, onDone: () => {}, onPieces: (p) => pieces.push(...p) })
+        expect(pieces).toHaveLength(0)
+        expect(el.style.visibility).toBe('hidden')
+        cancel()
+        expect(el.style.visibility).toBe('')
+    })
+
+    // The page becomes objects in the ROOM'S scene, not a DOM layer above it —
+    // that is what lets a door pass in front of a fallen piece. The handover is
+    // the same shape as before: the piece is standing where the element stood
+    // before the element is hidden.
+    it('hands the page over as pieces, then hides the originals', () => {
         const el = addElement(root, 'lp-wordmark', { left: 500, top: 300, width: 400, height: 120 })
         expect(el.style.visibility).toBe('')
+        const pieces = []
+        let cancel = () => {}
 
-        const cancel = flyInside({ root, cameraPoseRef, onDone: () => {} })
+        withCanvas(() => {
+            cancel = flyInside({ root, cameraPoseRef, onDone: () => {}, onPieces: (p) => pieces.push(...p) })
+        })
 
+        expect(pieces).toHaveLength(1)
+        expect(pieces[0].el).toBe(el)
         expect(el.style.visibility).toBe('hidden')
-        expect(window.document.querySelector('.lp-in-space')).not.toBeNull()
         expect(root.classList.contains('lp-root--flying')).toBe(true)
+        // No DOM layer is left over the room any more.
+        expect(window.document.querySelector('.lp-in-space')).toBeNull()
 
         // A cancelled flight puts the page back exactly as it found it —
         // otherwise an interrupted entry leaves a landing with holes in it.
         cancel()
         expect(el.style.visibility).toBe('')
-        expect(window.document.querySelector('.lp-in-space')).toBeNull()
         expect(root.classList.contains('lp-root--flying')).toBe(false)
     })
 

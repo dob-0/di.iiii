@@ -43,3 +43,34 @@ the same one.
   again, so the wordmark and the line were drawn twice, one behind the other. Going in and
   coming out are the same switch and it is now thrown both ways — `leaveRoom` cancels any
   flight in progress, returns the camera to the composed rest pose, and hushes the room.
+
+### And then the page stopped being a page
+
+The owner, on the entry: *"i want to like in game liminal they all can be 3d objects but
+with right physics it can look other's"*. Offered the trade, he chose **swap at the seam** —
+real HTML at rest, real objects from the moment the door is pressed.
+
+- **CSS3D was a ceiling, not a bug.** The browser draws DOM in its own compositing layer
+  above the WebGL canvas and cannot interleave the two by depth, so a door could pass
+  behind the wordmark and never in front of it. No arrangement of the maths gets past that;
+  the elements have to become objects in the room's own scene.
+- **They do now.** Each visible element is drawn onto a canvas from its own computed style
+  — family, weight, size, colour, tracking, border, fill, and each coloured run separately,
+  so the wordmark keeps its cyan dot — and handed to a mesh in the room through the
+  `sceneExtras` seam. `placeInWorld` is the inverse projection: the piece lands on exactly
+  the pixels its element covered, verified to a tenth of a pixel, so the first frame of the
+  fall is the last frame of the page.
+- **Then gravity.** Hand-written, about forty lines: weight, a floor, and rest. No engine —
+  ~500KB on the one page whose load time is already on the defect list, to buy three things
+  worth forty lines. Pages do not bounce, so the vertical speed is killed rather than
+  reflected and friction eats the slide; they turn as they fall and lie flat, face up, in
+  the same pose the room's own 77 floor pages are already in. The page you arrived from
+  ends up on the floor of the room, and you walk in among it.
+- Deterministic scatter: `Math.random()` during render is impure and React's lint says so.
+  Seeded from the piece's index, which also means a fall can be looked at twice and
+  compared.
+- `pageInSpace.js` and its test are deleted. The CSS3D lift is superseded, and keeping a
+  second entry mechanism nobody reaches would be two implementations of one moment.
+
+Guards: 4 in `pagePieces.test.js`, and the no-2D-canvas path in `enterFlight.test.js` —
+a browser that refuses a context still opens the door, with nothing to throw.
