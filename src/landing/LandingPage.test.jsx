@@ -75,11 +75,13 @@ describe('LandingPage CTA routing', () => {
         }
     })
 
-    it('opens the visitor own space on click, and asks for nothing on a passive view', () => {
-        // GET /api/auth/session mints a guest session for whoever asks, so the
-        // page must not ask on a page view — only when someone chooses to
-        // enter. The href stays a real destination for no-JS, middle-click and
-        // crawlers; the click upgrades it to the visitor's own space.
+    it('flies into the room on click instead of navigating, and asks for nothing either way', () => {
+        // The door is a camera move now, not a destination: the room is
+        // already on screen behind this page, so pressing it must not leave.
+        // It also must not ask for a session — GET /api/auth/session mints a
+        // guest one for whoever asks, and this page no longer has any reason
+        // to. The href stays a real destination for no-JS, middle-click and
+        // crawlers, which is why it is still a link and not a button.
         getApiSession.mockClear()
         Object.assign(sessionState, { authenticated: true, type: 'user' })
         render(<LandingPage />)
@@ -91,8 +93,24 @@ describe('LandingPage CTA routing', () => {
             expect(link.getAttribute('href')).toBe('/spaces')
         }
 
-        fireEvent.click(doors[0], { button: 0 })
-        expect(getApiSession).toHaveBeenCalledTimes(1)
+        const event = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })
+        doors[0].dispatchEvent(event)
+        expect(event.defaultPrevented).toBe(true)
+        expect(getApiSession).not.toHaveBeenCalled()
+    })
+
+    it('lets a modified click stay a link, so a new tab still opens the destination', () => {
+        // Cmd/Ctrl/Shift-click and the middle button belong to the browser.
+        // Swallowing them would make the one control on the page that looks
+        // like a link the one that cannot be opened in a tab.
+        Object.assign(sessionState, { authenticated: false, type: null })
+        render(<LandingPage />)
+        const door = screen.getAllByRole('link', { name: 'Step inside' })[0]
+        for (const modifier of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { button: 1 }]) {
+            const event = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, ...modifier })
+            door.dispatchEvent(event)
+            expect(event.defaultPrevented).toBe(false)
+        }
     })
 })
 

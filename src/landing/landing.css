@@ -1106,3 +1106,49 @@ body.is-landing .account-btn-wrapper {
    page the whole time (seen on prod 2026-08-25). The cards draw their own
    right/bottom hairlines instead, and the container draws top/left — same
    1px lattice, nothing behind an empty cell to expose. */
+
+/* ─── THE PAGE, STANDING IN THE ROOM ──────────────────────── */
+
+/* Each element that flies is a clone of the real one, rendered by
+   CSS3DRenderer outside `.lp-root`. It keeps its own classes, so the
+   stylesheet dresses it identically — but custom properties and the inherited
+   font live on `.lp-root`, so the wrapper carries that class back purely to
+   restore them, and this rule takes away the layout the class also brings. */
+.lp-in-space {
+    width: auto;
+    height: auto;
+    overflow: visible;
+    background: transparent;
+}
+
+/* A clone is a picture of a control, never a control. Without this the button
+   the visitor just pressed keeps the cursor sitting on it and stays in its
+   :hover state for the whole flight — and this button's hover is white, so the
+   cyan door turned white the instant it left the page. Hover has to be
+   impossible here, not merely unlikely. */
+.lp-in-space,
+.lp-in-space * {
+    pointer-events: none !important;
+}
+
+/* While the page is flying, its own ground has to get out of the way or the
+   room never appears behind it. The 3D background is a child of .lp-hero and
+   must keep painting, so this hides the page's surfaces and not the scene. */
+.lp-root--flying {
+    overflow: hidden;
+}
+
+.lp-root--flying .lp-hero {
+    background: transparent;
+}
+
+.lp-root--flying .lp-hero::after,
+.lp-root--flying .lp-hero-overlay {
+    opacity: 0;
+    transition: opacity 0.45s ease;
+}
+
+.lp-root--flying .lp-section,
+.lp-root--flying .lp-footer {
+    visibility: hidden;
+}

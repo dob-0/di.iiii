@@ -441,9 +441,11 @@ function AppRouter() {
         && appState.page !== APP_PAGE_TERMS
 
     if (isRootLanding) {
-        // ?tour=1 keeps the landing reachable on a local install — the tour is
-        // moved, not deleted, and the local home links to it by name.
-        const wantsTour = new URLSearchParams(location.search).get('tour') === '1'
+        // ?tour=1 keeps the landing reachable on a local install, where `/` is
+        // the owner's own home; ?room=1 opens the room bare, without the door.
+        const rootQuery = new URLSearchParams(location.search)
+        const wantsTour = rootQuery.get('tour') === '1'
+        const wantsRoom = rootQuery.get('room') === '1'
         if (localInstall.isLocal && !wantsTour) {
             return (
                 <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
@@ -456,23 +458,23 @@ function AppRouter() {
         if (!localInstall.resolved) {
             return <RouteSurfaceFallback label="Loading" detail="" />
         }
-        // The front door IS the room. `/` and `/main` rendered the same space
-        // either way — the landing drew it as a decorative backdrop and wrote
-        // the name and the one line in HTML on top of it, so a visitor met a
-        // picture of the room instead of the room. Both now open the room
-        // itself, which carries the wordmark and the line as things standing
-        // in it, and the doors to the works are the page's real links.
-        // `/main` keeps working: it is in circulation and a public address is
-        // never withdrawn. Same `?tour=1` escape hatch the local home already
-        // uses — the landing is moved, not deleted.
-        if (wantsTour) {
-            return (
-                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-                    <LandingPage />
-                </Suspense>
-            )
+        // The front door is the room — and the landing IS the front door.
+        // #283 made `/` open `main` directly, on the grounds that the landing
+        // was only a picture of the room. It is no longer a picture of it:
+        // every element on this page now stands in that room, at its own
+        // depth, and "Step inside" flies the camera off the flat view instead
+        // of navigating (src/landing/enterFlight.js). So `/` is the landing
+        // again, and the room it opens onto is the same one, reached without
+        // a page load. `?room=1` still opens the room bare, for anyone who
+        // wants the space and not the door.
+        if (wantsRoom) {
+            return <SpaceSurfaceRoute appState={{ page: appState.page, spaceId: PLATFORM_HOME_SPACE_ID }} />
         }
-        return <SpaceSurfaceRoute appState={{ page: appState.page, spaceId: PLATFORM_HOME_SPACE_ID }} />
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <LandingPage />
+            </Suspense>
+        )
     }
 
     const pathSegments = location.pathname.replace(/^\/+/, '').replace(/\/+$/, '').split('/')
