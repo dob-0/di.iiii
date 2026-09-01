@@ -13,7 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the landing page is in the room, and the door is a camera move
+- a composed arrival stops cropping on a phone
+- what the flight lifts, and where /main lands
 
 Full detail: `PROGRESS.md`.
 
