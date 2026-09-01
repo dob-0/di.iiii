@@ -39,6 +39,33 @@ describe('visibleLayers', () => {
         expect(visibleLayers(root, HEIGHT)).toHaveLength(0)
     })
 
+    // A section taller than the frame does not come apart, it smears: on a
+    // 390px phone the closing section is 1918px tall, and pushing it toward
+    // the eye drew a wall of clipped display type past both edges with the
+    // same sentence at two scales. It stays with the page.
+    it('leaves behind anything too big to be seen leaving', () => {
+        addElement(root, 'lp-section-inner', { left: 20, top: 0, width: 350, height: 1918 })
+        addElement(root, 'lp-cta-sub', { left: 20, top: 100, width: 2000, height: 40 })
+        expect(visibleLayers(root, HEIGHT, 390)).toHaveLength(0)
+
+        const fits = addElement(root, 'lp-wordmark', { left: 100, top: 200, width: 200, height: 90 })
+        expect(visibleLayers(root, HEIGHT, 390).map((l) => l.el)).toEqual([fits])
+    })
+
+    // The same words must never fly twice. A section carries its own copy of
+    // the sub-line, and lifting both drew the sentence at two depths at once.
+    it('lifts an ancestor or its child, never both', () => {
+        const section = addElement(root, 'lp-section-inner', { left: 20, top: 100, width: 350, height: 400 })
+        const child = window.document.createElement('div')
+        child.className = 'lp-cta-sub'
+        child.getBoundingClientRect = () => ({ left: 30, top: 200, width: 300, height: 30, right: 330, bottom: 230 })
+        section.appendChild(child)
+
+        const layers = visibleLayers(root, HEIGHT, 390)
+        expect(layers).toHaveLength(1)
+        expect(layers[0].el).toBe(section)
+    })
+
     it('has nothing to lift without a page', () => {
         expect(visibleLayers(null, HEIGHT)).toEqual([])
     })

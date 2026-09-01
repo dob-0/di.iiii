@@ -55,7 +55,13 @@ const distance3 = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])
 // footer and pressed the door there is looking at a section, not at the hero,
 // and it is that section that has to come apart — otherwise the flight lifts
 // six things nobody can see and the screen just empties.
-export const visibleLayers = (root, viewportHeight) => {
+//
+// But it has to FIT, too. A section is up to 1918px tall on a 390px phone;
+// pushed toward the eye it does not come apart, it smears — a wall of clipped
+// display type sliding past both edges, with the same sentence drawn twice at
+// two scales. Anything larger than the frame it is leaving cannot be seen
+// leaving it, so it stays with the page and fades instead.
+export const visibleLayers = (root, viewportHeight, viewportWidth = Infinity) => {
     if (!root) return []
     const layers = []
     LIFTABLE.forEach(({ selector, depth }) => {
@@ -63,10 +69,16 @@ export const visibleLayers = (root, viewportHeight) => {
             const rect = el.getBoundingClientRect()
             if (rect.width <= 0 || rect.height <= 0) return
             if (rect.bottom <= 0 || rect.top >= viewportHeight) return
+            if (rect.height > viewportHeight || rect.width > viewportWidth) return
             layers.push({ el, depth })
         })
     })
-    return layers
+    // Nothing flies twice. `.lp-section-inner` contains a `.lp-cta-sub`, so a
+    // door pressed in the closing section lifted that sentence as its own
+    // layer AND again inside its ancestor — the same words drawn twice at two
+    // depths, sliding apart. An outer layer carries its children with it, so
+    // the outer one wins and the descendants stay inside it.
+    return layers.filter(({ el }) => !layers.some((other) => other.el !== el && other.el.contains(el)))
 }
 
 /**
@@ -101,7 +113,7 @@ export const flyInside = ({ root, cameraPoseRef, onDone, reducedMotion = false }
         return () => {}
     }
 
-    const layers = visibleLayers(root, window.innerHeight)
+    const layers = visibleLayers(root, window.innerHeight, window.innerWidth)
     const dollyMetres = distance3(REST_POSE.position, WALK_POSE.position)
     const stage = liftPageIntoSpace({
         container: window.document.body,

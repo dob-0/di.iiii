@@ -277,12 +277,16 @@ function AppRouter() {
                 : buildRawCanvasPath(rawState.spaceId)
         rrNavigate(target, { replace: true })
     }, [legacyRawPath, rawState.page, rawState.projectId, rawState.spaceId, rrNavigate])
-    // `/main` heals to `/`. The home room has one address, and it is the bare
-    // domain — a visitor should never be told the room they are standing in is
-    // called "main". The link still resolves, because links already handed out
-    // are never withdrawn; it just arrives at the canonical door. Only the BARE
-    // path heals: `/main/studio`, `/main/raw/…` and `/main/p/…` are the editor
-    // and project addresses inside that space and keep their names.
+    // `/main` heals to `/?room=1`. Two promises have to hold at once. The name
+    // never appears in the bar — a visitor should never be told the room they
+    // are standing in is called "main" — AND a link already handed out keeps
+    // showing what it showed. Healing to the bare `/` kept the first and broke
+    // the second: `/main` had opened the room for months, and after the front
+    // door moved back to `/` it would have started answering with a landing
+    // page instead. `?room=1` is the room without the door, so the old link
+    // arrives where it always did, under a name that is no longer a name.
+    // Only the BARE path heals: `/main/studio`, `/main/raw/…` and `/main/p/…`
+    // are the editor and project addresses inside that space and keep theirs.
     // Not on a local install: there `/` is the owner's own home (their spaces),
     // so healing this path would answer "show me the room" with a different
     // page entirely. `isLocal` is already false once a local server turns auth
@@ -291,7 +295,9 @@ function AppRouter() {
         && localInstall.resolved && !localInstall.isLocal
     useEffect(() => {
         if (!isBareHomeSpacePath) return
-        rrNavigate(`/${location.search || ''}${location.hash || ''}`, { replace: true })
+        const params = new URLSearchParams(location.search)
+        params.set('room', '1')
+        rrNavigate(`/?${params.toString()}${location.hash || ''}`, { replace: true })
     }, [isBareHomeSpacePath, location.search, location.hash, rrNavigate])
 
     if (legacyRawPath) {

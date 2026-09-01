@@ -179,3 +179,38 @@ export const frameSphereInControls = (controls, sphere, options = {}) => {
     }
 }
 
+
+// An authored camera is composed on the screen the author happened to be
+// using, and that screen is landscape far more often than not. A portrait
+// phone reading the same fov sees roughly half the horizontal field, so the
+// composition arrives cropped — on di.iiii's own front room that put two of
+// the four doors off both sides of the frame, and the doors ARE the page's
+// links. Dolly the camera back along its own view axis by the same aspect
+// correction computeFramingCamera already applies to a fitted shot, so a
+// narrow viewport sees at least what was composed, never less.
+//
+// getAspectFitScale is 1 for every square-or-wider viewport, so an author
+// looking at their own landscape screen gets their shot back untouched, and
+// this can only ever widen — it is the same "err wider, never crop" rule
+// getViewportAspect is written to.
+export const fitCameraToAspect = (camera, aspect = 1) => {
+    if (!camera) return camera
+    const scale = getAspectFitScale(camera.fov, aspect)
+    if (!Number.isFinite(scale) || scale <= 1) return camera
+
+    if (camera.projection === 'orthographic') {
+        const zoom = Number(camera.zoom)
+        if (!Number.isFinite(zoom) || zoom <= 0) return camera
+        return { ...camera, zoom: zoom / scale }
+    }
+
+    const position = new THREE.Vector3(...(camera.position || []))
+    const target = new THREE.Vector3(...(camera.target || []))
+    if (!Number.isFinite(position.x) || !Number.isFinite(target.x)) return camera
+
+    const offset = position.clone().sub(target)
+    // A camera sitting on its own target has no view axis to dolly along.
+    if (offset.lengthSq() <= 1e-8) return camera
+
+    return { ...camera, position: target.clone().add(offset.multiplyScalar(scale)).toArray() }
+}

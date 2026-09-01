@@ -82,7 +82,7 @@ export const WIKI_ARTICLES = [
             { list: [
                 '/ \u2014 the front door: the page, with the room behind it.',
                 '/?room=1 \u2014 the room on its own, without the page. For anyone who wants the space and not the door.',
-                '/main \u2014 the old address of that same room. It still resolves and always will; it heals to / so the name never appears in the bar.'
+                '/main \u2014 the old address of that same room. It still resolves and always will, and it still opens the room; the name just never reaches the address bar.'
             ] },
             'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately. The destination is never different, only the journey.',
             'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.',
@@ -451,10 +451,11 @@ export const WIKI_ARTICLES = [
             'A caution for headsets: in VR the tour rotates the world around a body that is sitting still, which is the classic recipe for motion sickness — the visitor sees movement they do not feel. Keep turn slow and dwell long, and test on one person before an audience. If comfort matters more than a fixed running order, leave ringTour off and let the visitor turn their own head.',
             'Idle motion is separate and older: an object with no authored animation and no timeline gets a gentle drift in the live view (models float and turn, flat media sways) so imported legacy scenes keep the look they had. Objects that were placed deliberately should say animation.mode: static, and anything parented to a group is left alone automatically — otherwise the parts of one object drift away from each other.',
             'Whether the button is there at all: a published page offers Walk / Fly whenever the room holds objects for it to show — and it does not matter whether the project also has a graph, so a project built in both editors is walkable on the strength of its objects. A project made of nodes and nothing else still has no button, because walk/fly renders objects and would drop the visitor into an empty version of the room they are already looking at. Give that project one real object and the door opens — and VR and AR open with it, since a headset session is entered from inside walk/fly.',
-            'A composed opening shot does not close that door either: a project whose entry view is Fixed camera opens on the shot you framed and still offers Walk / Fly, because the shot is where the visit starts rather than a promise the visitor may never move. The mouse and touch stay live on that shot too — the visitor can orbit away from your framing the moment they arrive. Only the camera\u2019s explicit “locked” switch freezes the shot into a still, and only a Code entry view has no button, since it has no room to give one to.'
+            'A composed opening shot does not close that door either: a project whose entry view is Fixed camera opens on the shot you framed and still offers Walk / Fly, because the shot is where the visit starts rather than a promise the visitor may never move. The mouse and touch stay live on that shot too — the visitor can orbit away from your framing the moment they arrive. Only the camera\u2019s explicit “locked” switch freezes the shot into a still, and only a Code entry view has no button, since it has no room to give one to.',
+            'You frame that shot on whatever screen you are sitting at, and that screen is almost always a wide one. A phone held upright sees about half as much from side to side, so a shot framed to the edges of a laptop arrived on a phone with its edges cut off — in a room whose doors are spread across the width, the outer doors were simply not there. A composed shot now steps back on a narrow screen until it holds what you framed, so a visitor on a phone gets the whole shot instead of the middle of it. Nothing changes on a screen as wide as it is tall or wider: there you get exactly the frame you set. Locked shots step back too — that visitor is the one who cannot move to find what was cut.'
         ],
         tags: ['scene', 'room', 'spawn', 'vr', 'exhibition', 'tour', 'walk', 'animation'],
-        updated: '2026-08-24'
+        updated: '2026-09-01'
     },
     {
         id: 'spatial-video-sound',
