@@ -22,6 +22,12 @@ const PIXELS_PER_CANVAS = 2
 // that they have room to fall into the room rather than onto the lens.
 export const PIECE_DISTANCE_M = 7
 
+// The nearest a piece hangs, and the furthest. A page at 4 metres is close
+// enough to read as you pass it; one at 16 is still ahead of you when you
+// reach the doors.
+export const PIECE_NEAR_M = 4
+export const PIECE_FAR_M = 16
+
 const parseRgb = (value) => {
     const match = /rgba?\(([^)]+)\)/.exec(value || '')
     if (!match) return null
@@ -169,17 +175,27 @@ export const placeInWorld = ({ rect, camera, viewport, distance = PIECE_DISTANCE
  * Returns [] rather than throwing if anything is unmeasurable — a door that
  * does nothing is worse than a door that opens on a plainer transition.
  */
-export const makePagePieces = ({ elements, camera, viewport, distance = PIECE_DISTANCE_M }) => {
+export const makePagePieces = ({ elements, camera, viewport, near = PIECE_NEAR_M, far = PIECE_FAR_M }) => {
     if (!Array.isArray(elements) || !elements.length) return []
     const pieces = []
+    const count = elements.length
     elements.forEach((el, index) => {
         const drawn = drawElement(el)
         if (!drawn) return
+        // Each piece hangs at its OWN distance along its own view ray. It
+        // still covers exactly the pixels its element covered — a ray through
+        // the eye projects to the same point at any depth — but the page is
+        // now spread through the room's depth before it has even started to
+        // fall. Throwing them harder to achieve the same thing put them all
+        // past the doors; this puts one at arm's length and one by the far
+        // wall, which is what gives a walker parallax.
+        const distance = count > 1 ? near + (far - near) * (index / (count - 1)) : (near + far) / 2
         const placed = placeInWorld({ rect: drawn.rect, camera, viewport, distance })
         pieces.push({
             id: `piece-${index}`,
             el,
             texture: drawn.texture,
+            distance,
             ...placed
         })
     })

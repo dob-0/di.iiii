@@ -17,6 +17,10 @@ import * as THREE from 'three'
 
 const GRAVITY = -9.8
 const FLOOR_Y = 0.03
+// Coplanar transparent planes z-fight. A few millimetres of separation per
+// piece costs nothing and stops two overlapping pages flickering through each
+// other as the walker moves.
+const STACK_STEP = 0.004
 // A page does not bounce. It meets the floor, gives up, and lies there — so
 // the vertical speed is killed rather than reflected, and what remains is a
 // short slide that friction eats.
@@ -28,7 +32,6 @@ const SETTLE_SPEED = 0.05
 // enough that nothing is still turning by the time a visitor looks at it.
 const FLATTEN_RATE = 3.5
 
-const _flat = new THREE.Quaternion()
 const _axis = new THREE.Vector3()
 
 // Deterministic scatter. `Math.random()` during render is impure — React's
@@ -36,21 +39,46 @@ const _axis = new THREE.Vector3()
 // tumble mid-fall. Seeding from the piece's own index gives the same varied
 // throw every time, which also means the fall can be looked at twice and
 // compared.
-const jitter = (seed, salt) => {
-    const x = Math.sin((seed + 1) * 127.1 + salt * 311.7) * 43758.5453
-    return (x - Math.floor(x)) - 0.5
+// A real integer hash, not `sin` of a nearly-linear input: the sine trick is
+// only well distributed over large or irregular inputs, and for eight
+// consecutive indices with one salt it returned the SAME SIGN seven times —
+// so every centred page fell to the same side of the room. Measured, then
+// replaced.
+const hash = (n) => {
+    let h = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b)
+    h ^= h >>> 13
+    h = Math.imul(h, 0xc2b2ae35)
+    h ^= h >>> 16
+    return (h >>> 0) / 4294967296
 }
+
+const jitter = (seed, salt) => hash(seed * 977 + salt * 131) - 0.5
 
 // Everything leaves the page in the direction the eye is going: forward, with
 // the outer pieces carrying the sideways drift they already had. Nothing is
 // thrown at the visitor — a piece that flies at the face is the one thing that
 // reads as a fault rather than a transition.
 const initialVelocity = (piece, forward, right, seed) => {
-    const lateral = piece.position.clone().sub(piece.origin).setY(0)
-    const sideways = lateral.lengthSq() > 1e-6 ? lateral.normalize() : right.clone()
-    return forward.clone().multiplyScalar(2.05 + jitter(seed, 1) * 0.9)
-        .addScaledVector(sideways, 0.9 + jitter(seed, 2) * 0.8)
-        .add(new THREE.Vector3(0, 0.85 + jitter(seed, 3) * 0.5, 0))
+    // The piece's own offset from the eye, with the FORWARD part removed —
+    // otherwise "sideways" is dominated by how far away the piece is and every
+    // page is thrown straight down the middle. Measured: every piece came to
+    // rest at x = 0 before this line existed.
+    const offset = piece.position.clone().sub(piece.origin)
+    offset.addScaledVector(forward, -offset.dot(forward))
+    offset.y = 0
+    // Centred elements — the wordmark, the line, the button — have no side to
+    // drift to, and every one of them fell to the same side of the room on the
+    // fallback. Alternating the sign scatters them left and right instead.
+    const side = jitter(seed, 8) > 0 ? 1 : -1
+    // The sign is applied ONCE, on the scale below. Putting it on this vector
+    // too squared it, so every centred piece went the same way again.
+    const sideways = offset.lengthSq() > 1e-4 ? offset.normalize() : right.clone()
+
+    // Depth is already spread by where each piece hangs, so the throw only has
+    // to carry it a little further out and apart.
+    return forward.clone().multiplyScalar(1.5 + jitter(seed, 1) * 1.1)
+        .addScaledVector(sideways, (1.8 + jitter(seed, 2) * 1.6) * side)
+        .add(new THREE.Vector3(0, 1.0 + jitter(seed, 3) * 0.6, 0))
 }
 
 export default function PageDebris({ pieces, cameraPose }) {
@@ -68,6 +96,13 @@ export default function PageDebris({ pieces, cameraPose }) {
                 position: piece.position.clone(),
                 quaternion: piece.quaternion.clone(),
                 velocity: initialVelocity(seeded, forward, right, index),
+                // Each page lies at its own angle. One shared resting pose put
+                // every piece down in the same direction, which reads as a
+                // printed pattern rather than as paper that fell.
+                rest: new THREE.Quaternion()
+                    .setFromAxisAngle(new THREE.Vector3(0, 1, 0), jitter(index, 7) * Math.PI * 1.4)
+                    .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2)),
+                restY: FLOOR_Y + index * STACK_STEP,
                 spin: new THREE.Vector3(
                     jitter(index, 4) * 1.6,
                     jitter(index, 5) * 1.2,
@@ -80,6 +115,11 @@ export default function PageDebris({ pieces, cameraPose }) {
             }
         })
     }, [pieces, cameraPose])
+
+    // Dev-only observability, the same shape as the walker's `__diiWalkerRef`:
+    // where a page actually comes to rest is a number, and tuning a throw by
+    // squinting at screenshots is how it ended up flung past the doors.
+    if (import.meta.env.DEV && typeof window !== 'undefined') window.__diiPageDebris = bodies
 
     useFrame((state, rawDelta) => {
         const group = groupRef.current
@@ -97,22 +137,21 @@ export default function PageDebris({ pieces, cameraPose }) {
                 body.velocity.multiplyScalar(1 - Math.min(1, AIR_DRAG * delta))
                 body.position.addScaledVector(body.velocity, delta)
 
-                if (body.position.y <= FLOOR_Y) {
-                    body.position.y = FLOOR_Y
+                if (body.position.y <= body.restY) {
+                    body.position.y = body.restY
                     body.velocity.y *= -LANDING_KEEP
                     body.velocity.x *= Math.max(0, 1 - FLOOR_FRICTION * delta)
                     body.velocity.z *= Math.max(0, 1 - FLOOR_FRICTION * delta)
                     body.spin.multiplyScalar(Math.max(0, 1 - FLOOR_FRICTION * delta))
 
-                    // Lie flat, face up — the pose every page on this floor is
-                    // already in.
-                    _flat.setFromAxisAngle(_axis.set(1, 0, 0), -Math.PI / 2)
-                    body.quaternion.slerp(_flat, Math.min(1, FLATTEN_RATE * delta))
+                    // Lie flat, face up, at its own angle — the pose every page
+                    // on this floor is already in.
+                    body.quaternion.slerp(body.rest, Math.min(1, FLATTEN_RATE * delta))
 
                     if (body.velocity.lengthSq() < SETTLE_SPEED * SETTLE_SPEED
-                        && body.quaternion.angleTo(_flat) < 0.02) {
+                        && body.quaternion.angleTo(body.rest) < 0.02) {
                         body.resting = true
-                        body.quaternion.copy(_flat)
+                        body.quaternion.copy(body.rest)
                     }
                 } else if (body.spin.lengthSq() > 1e-6) {
                     const angle = body.spin.length() * delta

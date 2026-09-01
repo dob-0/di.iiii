@@ -74,3 +74,34 @@ real HTML at rest, real objects from the moment the door is pressed.
 
 Guards: 4 in `pagePieces.test.js`, and the no-2D-canvas path in `enterFlight.test.js` —
 a browser that refuses a context still opens the door, with nothing to throw.
+
+### Perspective when you walk
+
+*"it would be great to keep perspective when you walk it will not all in the one on one"* —
+and he was right: every piece came to rest in one band at one depth, so walking past them
+gave no parallax and the floor read as a single decal.
+
+Fixed by where they HANG, not by how hard they are thrown. Each piece now hangs at its own
+distance along its own view ray, spread 4m to 16m. A ray through the eye projects to the
+same point at any depth, so every piece still covers exactly the pixels its element covered
+— the identity at the seam is untouched — but the page is already spread through the room's
+depth before it starts to fall. Throwing them harder to get the same effect had put them
+all past the doors as specks.
+
+Three bugs found by measuring rather than squinting, with a dev-only `__diiPageDebris`
+readout added for exactly that:
+
+- **Every piece came to rest at x = 0.** The "sideways" vector was the piece's whole offset
+  from the eye, which is dominated by how far away it is — so it pointed forward, and every
+  page was thrown down the middle. The forward component is removed now.
+- **Then every piece went to the same side.** `jitter` was `sin()` of a nearly-linear input:
+  fine over large or irregular values, and for eight consecutive indices with one salt it
+  returned the same sign **seven times out of eight**. Replaced with a real integer hash.
+- **And then they still did**, because the sign was applied twice — once on the fallback
+  vector and once on the scale — which squares it, for exactly the centred pieces that
+  needed it.
+
+Measured after: resting distances 6.5, 7.3, 8.6, 9.9, 11.5, 14.7, 14.8, 19.0 metres from
+where the walker stands, spread to both sides. Each page also lies at its own yaw and its
+own few millimetres above the floor — one shared resting pose read as a printed pattern
+rather than paper that fell, and coplanar transparent planes z-fight.
