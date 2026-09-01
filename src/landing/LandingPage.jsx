@@ -36,10 +36,15 @@ const DOOR_FALLBACK_MS = 1500
 // narrower destination was the better one.
 import './landing.css'
 
+// These labels are hardcoded rather than read from the space rows, so they
+// drift from the DB silently. Keep them equal to each space's live label —
+// checked 2026-09-01 against prod — and never put a dated claim in one: the
+// br_id_ge button advertised "live at Notations #2" for a month after the show
+// closed on 2026-08-02, because nothing here expires.
 const FEATURED_SPACES = [
     { id: 'wcc', label: 'WCC Exhibition', href: '/wcc', className: 'landing-cta-wcc' },
-    { id: 'br-id-ge', label: 'br_id_ge · live at Notations #2', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
-    { id: 'beyond-form', label: 'beyond_form', href: '/beyond-form', className: 'landing-cta-beyond-form' },
+    { id: 'br-id-ge', label: 'br_id_ge', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
+    { id: 'beyond-form', label: 'Beyond Form', href: '/beyond-form', className: 'landing-cta-beyond-form' },
     { id: 'algovrithm', label: 'algovrithm', href: '/algovrithm', className: 'landing-cta-algo-vrithm' }
 ]
 
