@@ -35,7 +35,7 @@ jobs:
     name: pack the runtime
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -71,7 +71,7 @@ jobs:
           - { name: 'node 20 (too old)', image: 'node:20-bookworm', prep: 'true' }
           - { name: 'node 22 (happy path)', image: 'node:22-bookworm', prep: 'true' }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@v8
         with:
           name: di-runtime
@@ -142,7 +142,7 @@ jobs:
         # every change, or it drifts until the day someone actually runs it.
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@v8
         with:
           name: di-runtime
@@ -266,7 +266,7 @@ jobs:
     needs: pack
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@v8
         with:
           name: di-runtime
@@ -327,7 +327,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@v8
         with:
           name: di-runtime
@@ -362,7 +362,7 @@ jobs:
     needs: pack
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: are the images public yet?
         id: images
         run: |
