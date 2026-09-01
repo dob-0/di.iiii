@@ -150,16 +150,17 @@ describe('what "/" opens', () => {
         expect(screen.queryByText('landing-page')).toBeNull()
     })
 
-    // The home room still has one address and it is the bare domain — a
-    // visitor is never shown a room called "main" ("i don't want have main").
-    // The old link still resolves; it now resolves to the front door, which is
-    // the same room with a way in rather than a different destination.
-    it('heals /main to /, so the name never appears in the bar', async () => {
+    // Two promises at once. The name never appears in the bar ("i don't want
+    // have main"), AND a link already handed out keeps showing what it showed.
+    // `/main` opened the room for months; healing it to the bare `/` kept the
+    // first promise and broke the second, because `/` is the landing now.
+    it('heals /main to the room, without the name reaching the bar', async () => {
         mockServerConfig.value = { local: false }
         window.history.pushState({}, '', '/main')
         render(<RootApp />)
-        expect(await screen.findByText('landing-page')).toBeInTheDocument()
+        expect(await screen.findByText(/space-surface-app:.*:main/)).toBeInTheDocument()
         expect(window.location.pathname).toBe('/')
+        expect(new URLSearchParams(window.location.search).get('room')).toBe('1')
     })
 
     it('leaves the editor and project addresses inside that space alone', async () => {

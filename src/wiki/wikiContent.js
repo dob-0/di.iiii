@@ -82,7 +82,7 @@ export const WIKI_ARTICLES = [
             { list: [
                 '/ \u2014 the front door: the page, with the room behind it.',
                 '/?room=1 \u2014 the room on its own, without the page. For anyone who wants the space and not the door.',
-                '/main \u2014 the old address of that same room. It still resolves and always will; it heals to / so the name never appears in the bar.'
+                '/main \u2014 the old address of that same room. It still resolves and always will, and it still opens the room; the name just never reaches the address bar.'
             ] },
             'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately. The destination is never different, only the journey.',
             'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.'
