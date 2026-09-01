@@ -13,9 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Three Distances: the owner's shape for local, LAN, and hosted, written down
-- DMX Out: the graph reaches a real lighting rig over HTTP
-- a projection mapper in the platform, so a space can be put on a wall
+- install-matrix was the last workflow still on actions/checkout@v4
+- react-router-dom 6.30.4 → 7.18.2, the park condition fired
 
 Full detail: `PROGRESS.md`.
 

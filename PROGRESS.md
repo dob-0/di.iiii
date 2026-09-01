@@ -5,6 +5,53 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-19 — install-matrix was the last workflow still on actions/checkout@v4
+
+- Every other workflow in `.github/workflows/` already pins
+  `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1` — nine call sites
+  across ci, release, browser-checks, both deploys, both publish jobs, deploy-space-code
+  and auto-pr. `install-matrix.yml` alone still floated on `@v4`, in six jobs.
+- This pins those six the same way, by hash with the version in a trailing comment, so
+  the repo has exactly one checkout version and no floating tags. `actions/checkout@v` no
+  longer appears anywhere in the tree.
+- Verified: the file still parses as YAML and all six jobs (`pack`, `linux`, `update`,
+  `offline`, `windows`, `docker-mode`) survive the edit. Nothing else in the workflow
+  changed, and no application code is touched, so there is nothing to look at in a
+  browser.
+- Supersedes Dependabot PR #143, which proposed the same bump as a floating `@v7` tag
+  and conflicts on current `dev`.
+- Still unproven, and it is the reason to watch this one: the windows install-test job
+  in this matrix was already failing before the pin. Pinning checkout does not fix it and
+  was never meant to — if that job is still red after this lands, it is the pre-existing
+  failure, not the pin.
+
+## 2026-08-19 — react-router-dom 6.30.4 → 7.18.2, the park condition fired
+
+- The bump was parked since 2026-07-28 because every 7.x carried GHSA-qwww-vcr4-c8h2
+  (RSC CSRF, high) and high severity trips the CI gate. 7.18.2 is the first patched
+  release — the advisory range ends exactly there. `npm audit --production
+  --audit-level=high` now reports 0 vulnerabilities on the root and on `serverXR`,
+  re-run by hand and confirmed, so the gate that blocked this is green and the two
+  moderates that sat on 6.30.x are gone with it.
+- Zero code changes. The whole react-router surface here is `BrowserRouter`,
+  `useLocation` and `useNavigate` across `src/RootApp.jsx` and `src/hooks/useAppRoute.js`
+  — all unchanged in v7. None of the v7 future flags apply: there are no `<Routes>`,
+  no data router, no loaders. `docs/ai/dependency-decisions.md` records why, flag by flag.
+- Verified by looking, not by inference. `npm run verify:surfaces` and
+  `verify:surfaces:mobile` were run against this branch's own dev stack after merging
+  `dev` in: 24 of 25 device × page combos clean, 0 horizontal overflow everywhere. The
+  landing, `/wiki`, `/studio` and `/raw` screenshots were opened and read — Raw's starter
+  desk still wires Sky into World and paints the room, on desktop and on iPhone.
+- The 5 failing combos are all `/main`, all the same 401/403 on
+  `/serverXR/api/spaces/main`. That is a local dev database with no `main` space and a
+  guest session, not a router regression — the local Spaces list holds only `open` and
+  `sandbox`.
+- Left deliberately undone: `react-router-dom` is a deprecated re-export shim in v7 and
+  is removed in v8. Renaming to `react-router` and rewriting the two imports belongs to
+  the v8 upgrade — it would also move the package Dependabot tracks.
+- Supersedes Dependabot PR #150, which bumps the same package but is not rebased on
+  current `dev` and carries no decision record.
+
 # Session notes — docs/three-distances
 
 ## 2026-08-31 — Three Distances: the owner's shape for local, LAN, and hosted, written down
