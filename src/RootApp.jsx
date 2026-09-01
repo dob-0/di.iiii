@@ -37,6 +37,7 @@ const MakeSurface = lazy(() => import('./make/MakeSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
+const DeskSurface = lazy(() => import('./desk/DeskSurface.jsx'))
 
 // The space `/` opens. Kept in step with GridFloorBackground's PREFERRED_SPACE_ID
 // and MadeWithBadge's PLATFORM_HOME_SPACE_ID — all three name the same room.
@@ -492,6 +493,19 @@ function AppRouter() {
         && (pathSegments.length === 1 || (pathSegments.length === 2 && pathSegments[1] === 'scene'))
     if (isWorkSurface) {
         return <WorkSurfaceRoute work={work} mode={pathSegments[1] === 'scene' ? 'scene' : 'landing'} />
+    }
+
+    // di.desk — `/{space}/desk`. A second shell over the same windows Raw
+    // already draws, in the desk's own language: an infinite surface, windows
+    // as plain hairline rectangles, and named arrangements instead of a
+    // remembered mess. Raw keeps its address and keeps working; nothing is
+    // withdrawn while the desk earns its place.
+    if (pathSegments.length === 2 && pathSegments[1] === 'desk' && appState.spaceId) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading the desk" detail="" />}>
+                <DeskSurface spaceId={appState.spaceId} />
+            </Suspense>
+        )
     }
 
     if (appState.projectSlugSegment) {

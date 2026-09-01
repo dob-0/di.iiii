@@ -18,6 +18,11 @@ export default function GridFloorBackground({
     cameraPoseRef = null,
     // Entity types this background leaves out — see LiveProjectScene.
     hideEntityTypes = null,
+    // `contained`: draw inside whatever box the caller puts this in, rather
+    // than across the whole viewport. The default is `fixed` because that is
+    // what a page BACKGROUND is; a room standing in a desk window is not a
+    // background, and fixed made it paint over the desk and every window on it.
+    contained = false,
     showNodes = true,
     overlayGradient = 'radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.35) 100%), linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 25%, transparent 75%, rgba(0,0,0,0.5) 100%)',
     className = ''
@@ -44,7 +49,7 @@ export default function GridFloorBackground({
 
     return (
         <div className={`grid-floor-background ${className}`} style={{
-            position: 'fixed',
+            position: contained ? 'absolute' : 'fixed',
             inset: 0,
             zIndex: 0,
             pointerEvents: interactive ? 'auto' : 'none',

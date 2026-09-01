@@ -1,0 +1,299 @@
+/* di.desk — the shell.
+   One hairline, one mono, one accent. Nothing is rounded, nothing casts a
+   shadow, nothing has a gradient. Everything that is not content is a 1px
+   line, which is what makes a desk of twenty windows read as one surface
+   instead of twenty cards. */
+
+.desk-root {
+    --desk-bg: #000;
+    --desk-panel: #0a0a0a;
+    --desk-ink: #fff;
+    --desk-ink-2: rgba(255, 255, 255, 0.7);
+    --desk-mut: rgba(255, 255, 255, 0.45);
+    --desk-line: rgba(255, 255, 255, 0.12);
+    --desk-line-2: rgba(255, 255, 255, 0.06);
+    --desk-accent: #4df9ff;
+    --desk-accent-dim: rgba(77, 249, 255, 0.1);
+    --desk-accent-line: rgba(77, 249, 255, 0.3);
+    --desk-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+    position: fixed;
+    inset: 0;
+    background: var(--desk-bg);
+    color: var(--desk-ink);
+    overflow: hidden;
+}
+
+/* ── the bar ─────────────────────────────────────────── */
+
+.desk-top {
+    position: absolute;
+    inset: 0 0 auto 0;
+    z-index: 200;
+    height: 56px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--desk-line-2);
+}
+
+.desk-mark {
+    font: 600 15px/1 var(--desk-mono);
+    letter-spacing: -0.01em;
+    color: var(--desk-ink);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-decoration: none;
+}
+
+.desk-mark::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    background: var(--desk-accent);
+}
+
+.desk-mark span { color: var(--desk-accent); }
+
+.desk-where {
+    font: 400 12px/1 var(--desk-mono);
+    color: var(--desk-mut);
+    margin-left: 4px;
+}
+
+.desk-tools {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.desk-btn {
+    font: 400 12px/1 var(--desk-mono);
+    color: var(--desk-mut);
+    background: transparent;
+    border: 1px solid var(--desk-line);
+    border-radius: 0;
+    padding: 9px 13px;
+    min-height: 32px;
+    cursor: pointer;
+}
+
+.desk-btn:hover { color: var(--desk-ink); border-color: var(--desk-accent-line); }
+.desk-btn:focus-visible { outline: 2px solid var(--desk-accent); outline-offset: 2px; }
+.desk-btn[aria-pressed="true"],
+.desk-btn.is-on {
+    color: var(--desk-accent);
+    border-color: var(--desk-accent-line);
+    background: var(--desk-accent-dim);
+}
+
+.desk-seg { display: flex; }
+.desk-seg .desk-btn + .desk-btn { border-left: 0; }
+
+/* ── the menus: sentences, not a taxonomy ────────────── */
+
+.desk-menu {
+    position: absolute;
+    top: 52px;
+    z-index: 300;
+    min-width: 260px;
+    padding: 6px;
+    background: #0b0b0b;
+    border: 1px solid var(--desk-line);
+}
+
+.desk-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    color: var(--desk-ink-2);
+    font: 400 13px/1.35 var(--desk-mono);
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.desk-menu button:hover { background: rgba(255, 255, 255, 0.05); color: var(--desk-ink); }
+.desk-menu button:focus-visible { outline: 2px solid var(--desk-accent); outline-offset: -2px; }
+.desk-menu .desk-menu-what { color: var(--desk-mut); }
+.desk-menu hr { border: 0; border-top: 1px solid var(--desk-line-2); margin: 6px 0; }
+
+/* ── the surface ─────────────────────────────────────── */
+
+.desk-viewport {
+    position: absolute;
+    inset: 56px 0 0 0;
+    overflow: hidden;
+    cursor: grab;
+}
+
+.desk-viewport.is-panning { cursor: grabbing; }
+
+/* The lattice is the only thing that says "this goes on forever". It moves
+   with the world, so panning reads as moving over a surface rather than
+   sliding a picture. */
+.desk-weave {
+    position: absolute;
+    inset: -50vh -50vw;
+    pointer-events: none;
+    background-image:
+        linear-gradient(var(--desk-line-2) 1px, transparent 1px),
+        linear-gradient(90deg, var(--desk-line-2) 1px, transparent 1px);
+    background-size: 48px 48px;
+}
+
+.desk-world {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    will-change: transform;
+}
+
+.desk-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    pointer-events: none;
+    font: 400 13px/1.7 var(--desk-mono);
+    color: var(--desk-mut);
+}
+
+.desk-empty b { display: block; color: var(--desk-ink-2); font-weight: 400; margin-bottom: 6px; }
+
+/* ── what a window holds ─────────────────────────────── */
+
+.desk-note {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    resize: none;
+    background: transparent;
+    border: 0;
+    color: var(--desk-ink-2);
+    font: 400 13px/1.55 var(--desk-mono);
+    padding: 12px 14px;
+    outline: none;
+}
+
+.desk-hosted {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: #000;
+}
+
+.desk-hosted-note {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 8px 12px;
+    font: 400 11px/1.4 var(--desk-mono);
+    color: var(--desk-mut);
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .desk-world { transition: none !important; }
+}
+
+/* ── the windows ─────────────────────────────────────────
+   The desk reuses Raw's DesktopWindow for the behaviour — drag, resize,
+   minimise, clamp — and dresses it itself. Importing raw.css for the look
+   would drag 5000 lines of another lane's chrome onto this surface; these
+   forty give the desk its own hairline instead. Scoped under .desk-root so
+   Raw's own windows are untouched. */
+
+.desk-root .raw-window,
+.desk-root .raw-window * { box-sizing: border-box; }
+
+.desk-root .raw-window {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    background: var(--desk-panel);
+    border: 1px solid var(--desk-line);
+    overflow: hidden;
+}
+
+.desk-root .raw-window.is-minimized { height: auto !important; }
+
+.desk-root .raw-window-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 12px 9px;
+    flex-shrink: 0;
+    cursor: grab;
+    border-bottom: 1px solid var(--desk-line-2);
+}
+
+.desk-root .raw-window-header:active { cursor: grabbing; }
+
+.desk-root .raw-window-header h3 {
+    margin: 0;
+    font: 500 13px/1.2 var(--desk-mono);
+    color: var(--desk-ink);
+    letter-spacing: 0.01em;
+}
+
+.desk-root .raw-window-kicker {
+    display: block;
+    font: 400 10px/1.4 var(--desk-mono);
+    color: var(--desk-mut);
+    margin-bottom: 3px;
+}
+
+.desk-root .raw-window-actions { display: flex; gap: 2px; flex-shrink: 0; }
+
+.desk-root .raw-window-actions button {
+    background: transparent;
+    border: 0;
+    color: var(--desk-mut);
+    font: 400 13px/1 var(--desk-mono);
+    padding: 3px 6px;
+    cursor: pointer;
+}
+
+.desk-root .raw-window-actions button:hover { color: var(--desk-ink); }
+.desk-root .raw-window-actions button:focus-visible { outline: 2px solid var(--desk-accent); outline-offset: 1px; }
+.desk-root .raw-window-actions button.is-active { color: var(--desk-accent); }
+
+.desk-root .raw-window-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.desk-root .raw-window-resizer {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    background: linear-gradient(
+        135deg,
+        transparent 0 50%,
+        var(--desk-line) 50% 60%,
+        transparent 60% 70%,
+        var(--desk-line) 70% 80%,
+        transparent 80%
+    );
+}

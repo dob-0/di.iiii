@@ -91,6 +91,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-01'
     },
     {
+        id: 'di-desk',
+        category: 'Getting started',
+        title: 'di.desk',
+        summary: 'A surface you put things down on \u2014 the room, your notes, the nodes \u2014 and two ways of arranging them.',
+        body: [
+            'di.desk is at /<space>/desk. It is a surface rather than a page: an endless dark lattice you drag around, with windows standing on it. Each window holds one thing \u2014 the space itself drawn live, a note you type into, and the nodes as they move in.',
+            '+ add puts something down. The menu says what each one is in plain words rather than sorting them into categories, because you are choosing a thing, not navigating a filing system.',
+            'layouts sets a whole desk out at once, and each one is named for what you get: a workbench is the room with a place to write beside it. Two more are always there \u2014 see it all brings every window into view however far you have wandered, and recenter takes you back to the top left.',
+            'canvas and grid are two ways of looking at the SAME desk, not two desks. In canvas things sit where you put them; grid tidies them into rows without moving anything, so switching back finds your desk exactly as you left it.',
+            'The node editor is untouched and stays where it is, at /<space>/raw. Nothing has been taken away while the desk earns its place.'
+        ],
+        tags: ['desk', 'basics', 'windows', 'nodes', 'raw'],
+        updated: '2026-09-02'
+    },
+    {
         id: 'spaces-map-view',
         category: 'Spaces & access',
         title: 'Grid or Map: two ways to see your spaces',
