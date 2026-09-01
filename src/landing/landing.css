@@ -1138,12 +1138,20 @@ body.is-landing .account-btn-wrapper {
     overflow: hidden;
 }
 
-.lp-root--flying .lp-hero {
+/* The hero's scrim and its black ground exist for ONE job: making the landing
+   copy readable over a bright room. The moment the copy leaves — flying, or
+   gone because the visitor is inside — they are a 34% black wash over the room
+   and nothing else, which is why arriving used to darken it. They come back
+   only when the page does. */
+.lp-root--flying .lp-hero,
+.lp-root--inside .lp-hero {
     background: transparent;
 }
 
 .lp-root--flying .lp-hero::after,
-.lp-root--flying .lp-hero-overlay {
+.lp-root--flying .lp-hero-overlay,
+.lp-root--inside .lp-hero::after,
+.lp-root--inside .lp-hero-overlay {
     opacity: 0;
     transition: opacity 0.45s ease;
 }
