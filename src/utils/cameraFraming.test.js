@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import {
     computeFramingCamera,
     computeFitDistance,
+    fitCameraToAspect,
     getAspectFitScale,
     getLimitingHalfFov,
     getViewportAspect,
@@ -149,5 +150,55 @@ describe('getViewportAspect', () => {
         } finally {
             Object.defineProperty(window, 'innerWidth', { value: innerWidth, configurable: true })
         }
+    })
+})
+
+
+describe('fitCameraToAspect', () => {
+    // The front room's composed arrival: a level shot with the four doors
+    // spread across the width. On a phone the outer two used to fall off both
+    // sides of the frame, and a door nobody can see is a link nobody can take.
+    const authored = {
+        projection: 'perspective',
+        position: [0, 3, 14.5],
+        target: [0, 1.2, -14],
+        fov: 50,
+        zoom: 1,
+        near: 0.1,
+        far: 200,
+        locked: false
+    }
+
+    it('hands a landscape viewport the authored shot untouched', () => {
+        expect(fitCameraToAspect(authored, LANDSCAPE_ASPECT)).toBe(authored)
+        expect(fitCameraToAspect(authored, 1)).toBe(authored)
+    })
+
+    it('dollies straight back along the view axis on a portrait phone', () => {
+        const fitted = fitCameraToAspect(authored, PORTRAIT_ASPECT)
+        const scale = getAspectFitScale(authored.fov, PORTRAIT_ASPECT)
+        expect(scale).toBeGreaterThan(1)
+        expect(distanceOf(fitted)).toBeCloseTo(distanceOf(authored) * scale, 6)
+        // Same axis, so the composition is only ever wider -- never re-aimed.
+        const authoredAxis = new THREE.Vector3(...authored.position)
+            .sub(new THREE.Vector3(...authored.target)).normalize()
+        const fittedAxis = new THREE.Vector3(...fitted.position)
+            .sub(new THREE.Vector3(...fitted.target)).normalize()
+        expect(fittedAxis.angleTo(authoredAxis)).toBeCloseTo(0, 6)
+        expect(fitted.target).toEqual(authored.target)
+        expect(fitted.fov).toBe(authored.fov)
+    })
+
+    it('widens an orthographic shot by zooming out instead of dollying', () => {
+        const ortho = { ...authored, projection: 'orthographic', zoom: 2 }
+        const fitted = fitCameraToAspect(ortho, PORTRAIT_ASPECT)
+        expect(fitted.zoom).toBeCloseTo(2 / getAspectFitScale(ortho.fov, PORTRAIT_ASPECT), 6)
+        expect(fitted.position).toEqual(ortho.position)
+    })
+
+    it('leaves a camera with nothing to dolly along alone', () => {
+        const degenerate = { ...authored, position: [1, 2, 3], target: [1, 2, 3] }
+        expect(fitCameraToAspect(degenerate, PORTRAIT_ASPECT)).toBe(degenerate)
+        expect(fitCameraToAspect(null, PORTRAIT_ASPECT)).toBe(null)
     })
 })
