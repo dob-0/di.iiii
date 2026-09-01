@@ -1335,6 +1335,7 @@ function HubDecor({ zones }) {
 
 export default function LiveProjectScene({
     projectId,
+    spaceId = null,
     interactive = true,
     showChrome = true,
     showEntities = true,
@@ -1745,7 +1746,7 @@ export default function LiveProjectScene({
                         <span className="live-scene-title">
                             {title}{nearestLabel ? ` · ${nearestLabel}` : ''}
                         </span>
-                        <MadeWithBadge variant="chrome" />
+                        <MadeWithBadge variant="chrome" spaceId={spaceId} />
                     </header>
 
                     {interactive && !isMobile && !isLocked && (

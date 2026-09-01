@@ -37,6 +37,10 @@ const MakeSurface = lazy(() => import('./make/MakeSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
+
+// The space `/` opens. Kept in step with GridFloorBackground's PREFERRED_SPACE_ID
+// and MadeWithBadge's PLATFORM_HOME_SPACE_ID — all three name the same room.
+const PLATFORM_HOME_SPACE_ID = 'main'
 // What `di up` opens on your own machine: your spaces, not a tour of a hosted
 // product you have already installed. Lazy so a hosted visitor never downloads
 // MUI to render a page that will not use it.
@@ -430,11 +434,23 @@ function AppRouter() {
         if (!localInstall.resolved) {
             return <RouteSurfaceFallback label="Loading" detail="" />
         }
-        return (
-            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-                <LandingPage />
-            </Suspense>
-        )
+        // The front door IS the room. `/` and `/main` rendered the same space
+        // either way — the landing drew it as a decorative backdrop and wrote
+        // the name and the one line in HTML on top of it, so a visitor met a
+        // picture of the room instead of the room. Both now open the room
+        // itself, which carries the wordmark and the line as things standing
+        // in it, and the doors to the works are the page's real links.
+        // `/main` keeps working: it is in circulation and a public address is
+        // never withdrawn. Same `?tour=1` escape hatch the local home already
+        // uses — the landing is moved, not deleted.
+        if (wantsTour) {
+            return (
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <LandingPage />
+                </Suspense>
+            )
+        }
+        return <SpaceSurfaceRoute appState={{ page: appState.page, spaceId: PLATFORM_HOME_SPACE_ID }} />
     }
 
     const pathSegments = location.pathname.replace(/^\/+/, '').replace(/\/+$/, '').split('/')

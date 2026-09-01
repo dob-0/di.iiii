@@ -127,21 +127,25 @@ describe('what "/" opens', () => {
         expect(await screen.findByText('landing-page')).toBeInTheDocument()
     })
 
-    it('shows the landing page on a hosted server', async () => {
+    // The front door IS the room. `/` used to draw that same space as a
+    // decorative backdrop with the name written in HTML on top of it; it now
+    // opens the room itself, which carries the name as a thing standing in it.
+    it('opens the home room on a hosted server, not a picture of it', async () => {
         mockServerConfig.value = { local: false }
         window.history.pushState({}, '', '/')
         render(<RootApp />)
-        expect(await screen.findByText('landing-page')).toBeInTheDocument()
+        expect(await screen.findByText(/space-surface-app:.*:main/)).toBeInTheDocument()
+        expect(screen.queryByText('landing-page')).toBeNull()
         expect(screen.queryByText('local-home')).toBeNull()
     })
 
     // Someone serving other people from their own machine has turned auth ON.
     // They get the ordinary front door, because their visitors are not them.
-    it('shows the landing page on a local install that requires auth', async () => {
+    it('opens the home room on a local install that requires auth', async () => {
         mockServerConfig.value = { local: true, requireAuth: true }
         window.history.pushState({}, '', '/')
         render(<RootApp />)
-        expect(await screen.findByText('landing-page')).toBeInTheDocument()
+        expect(await screen.findByText(/space-surface-app:.*:main/)).toBeInTheDocument()
     })
 })
 
