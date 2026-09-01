@@ -99,7 +99,8 @@ describe('flyInside', () => {
         flyInside({ root, cameraPoseRef, onDone, reducedMotion: true })
 
         expect(onDone).toHaveBeenCalledTimes(1)
-        expect(cameraPoseRef.current).toEqual(WALK_POSE)
+        expect(cameraPoseRef.current.position).toEqual(WALK_POSE.position)
+        expect(cameraPoseRef.current.target).toEqual(WALK_POSE.target)
         expect(window.document.querySelector('.lp-in-space')).toBeNull()
         expect(root.classList.contains('lp-root--flying')).toBe(false)
     })
@@ -108,7 +109,31 @@ describe('flyInside', () => {
         const onDone = vi.fn()
         flyInside({ root: null, cameraPoseRef, onDone })
         expect(onDone).toHaveBeenCalledTimes(1)
-        expect(cameraPoseRef.current).toEqual(WALK_POSE)
+        expect(cameraPoseRef.current.position).toEqual(WALK_POSE.position)
+    })
+
+    // The room decides where a visitor stands. This one authors a spawn nine
+    // metres behind the default, and the flight used to land on the default
+    // and then snap backwards the instant the walker took over.
+    it('lands where the ROOM says the walker stands, not where the default does', () => {
+        const endPose = { position: [0, 1.6, 15], target: [0, 1.6, -5] }
+        flyInside({ root, cameraPoseRef, onDone: () => {}, reducedMotion: true, endPose })
+        expect(cameraPoseRef.current.position).toEqual([0, 1.6, 15])
+        expect(cameraPoseRef.current.target).toEqual([0, 1.6, -5])
+    })
+
+    it('falls back to the default when the room reports nothing usable', () => {
+        flyInside({ root, cameraPoseRef, onDone: () => {}, reducedMotion: true, endPose: { position: [1, 2, 3] } })
+        expect(cameraPoseRef.current.position).toEqual(WALK_POSE.position)
+    })
+
+    // The walk camera is wider than the composed shot, and the swap lands on
+    // the same frame as the handover — so the flight has to arrive already
+    // wearing it, or the room visibly pops open.
+    it('arrives at the walk field of view, not the composed one', () => {
+        flyInside({ root, cameraPoseRef, onDone: () => {}, reducedMotion: true })
+        expect(cameraPoseRef.current.fov).toBe(60)
+        expect(cameraPoseRef.current.fov).not.toBe(REST_POSE.fov)
     })
 
     it('hides the originals only once their clones are standing on them', () => {

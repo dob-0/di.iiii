@@ -1369,6 +1369,14 @@ export default function LiveProjectScene({
     // handover. A rule about types, not a list of ids: the landing has no
     // business knowing what the room's entities are called.
     hideEntityTypes = null,
+    // `onArrivalPose`: where the walker will actually stand, reported as soon
+    // as the document resolves. A caller that flies a camera into this scene
+    // has to land on that spot and not a guess — the landing's entry ended at
+    // the walker's DEFAULT start while this room authors `worldState.spawn` 9
+    // metres further back, so the handover lurched backwards every time.
+    // The authored spawn is the author's decision about where a visitor
+    // stands; the flight's job is to deliver them to it.
+    onArrivalPose = null,
     // `cameraPoseRef`: a non-interactive scene the caller aims itself, instead
     // of the decorative idle orbit. The landing's entry flight needs the room
     // to hold still behind the page and then move exactly with it, which an
@@ -1472,6 +1480,28 @@ export default function LiveProjectScene({
             pitch: s.pitch ?? 0, altY: s.altY ?? EYE_HEIGHT
         })
     }, [doc, projectId])
+
+    // Publish that arrival, spawn or default, in the camera's own terms.
+    useEffect(() => {
+        if (!onArrivalPose || !doc) return
+        const spawn = doc.worldState?.spawn
+        const pose = {
+            x: spawn?.x ?? playerRef.current.x,
+            z: spawn?.z ?? playerRef.current.z,
+            yaw: spawn?.yaw ?? playerRef.current.yaw,
+            pitch: spawn?.pitch ?? 0,
+            altY: spawn?.altY ?? EYE_HEIGHT
+        }
+        const look = 20
+        onArrivalPose({
+            position: [pose.x, pose.altY, pose.z],
+            target: [
+                pose.x + Math.sin(pose.yaw) * Math.cos(pose.pitch) * look,
+                pose.altY + Math.sin(pose.pitch) * look,
+                pose.z + Math.cos(pose.yaw) * Math.cos(pose.pitch) * look
+            ]
+        })
+    }, [doc, onArrivalPose])
 
     // The library only toggles display:block/none on this element -- it has
     // no inherent size/position, so anything portaled into it (the touch

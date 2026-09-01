@@ -1,5 +1,5 @@
 /* global __APP_VERSION__ */
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
@@ -182,6 +182,10 @@ export default function LandingPage() {
     // against that shot and have to stay in register with it.
     const cameraPoseRef = useRef({ ...REST_POSE })
     const cancelFlightRef = useRef(null)
+    // Where the room says the walker will stand. Held in a ref, not state: it
+    // arrives when the document resolves and is only read at the moment the
+    // door is pressed, so re-rendering the page for it would buy nothing.
+    const arrivalPoseRef = useRef(null)
     // While the page is saying the wordmark and the line in HTML, the room
     // must not say them too — they sit one behind the other and neither reads.
     // Given back at the first frame of the flight, so the flat words hand off
@@ -242,6 +246,8 @@ export default function LandingPage() {
     // apart into the space they were always standing in. A modified click
     // (new tab, new window, middle button) still has to behave like a link, so
     // it is left alone and follows the href.
+    const handleArrivalPose = useCallback((pose) => { arrivalPoseRef.current = pose }, [])
+
     const openDoor = (event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
         event.preventDefault()
@@ -252,6 +258,7 @@ export default function LandingPage() {
             cancelFlightRef.current = flyInside({
                 root: rootRef.current,
                 cameraPoseRef,
+                endPose: arrivalPoseRef.current,
                 reducedMotion: typeof window !== 'undefined'
                     && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
                 onDone: () => {
@@ -346,6 +353,7 @@ export default function LandingPage() {
                                 interactive={entered && !viewMode}
                                 cameraPoseRef={cameraPoseRef}
                                 hideEntityTypes={roomSpeaks ? null : HERO_ECHO_TYPES}
+                                onArrivalPose={handleArrivalPose}
                             />
                         </Suspense>
                     </Box>

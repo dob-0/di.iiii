@@ -9,7 +9,18 @@ import { liftPageIntoSpace } from './pageInSpace.js'
 // between them, which is why the handover has nothing to cover up: the last
 // frame of the flight and the first frame of walking are the same pose.
 export const REST_POSE = { position: [0, 3, 14.5], target: [0, 1.2, -14], fov: 50 }
+
+// Where the walker stands when the room authors no spawn of its own. A room
+// that DOES author one reports it (`onArrivalPose`) and that wins — this
+// number is the fallback, not the destination. Getting that backwards is what
+// made the handover lurch: the flight landed here while the room's authored
+// spawn put the walker 9 metres further back, and the camera snapped.
 export const WALK_POSE = { position: [0, 1.6, 6], target: [0, 1.6, -14], fov: 50 }
+
+// The walk camera is wider than the composed entry shot (60 against 50), and
+// the swap happens on the same frame as the handover. Crossing the difference
+// during the flight turns a zoom pop into part of the move.
+const WALK_FOV = 60
 
 export const FLIGHT_MS = 2200
 
@@ -94,9 +105,14 @@ export const visibleLayers = (root, viewportHeight, viewportWidth = Infinity) =>
  * @param {boolean}  [options.reducedMotion]
  * @returns {Function} cancel
  */
-export const flyInside = ({ root, cameraPoseRef, onDone, reducedMotion = false }) => {
+export const flyInside = ({ root, cameraPoseRef, onDone, reducedMotion = false, endPose = null }) => {
+    // The room's own arrival if it reported one, the default if it did not.
+    const destination = endPose?.position && endPose?.target
+        ? { position: endPose.position, target: endPose.target, fov: WALK_FOV }
+        : { ...WALK_POSE, fov: WALK_FOV }
+
     const finish = () => {
-        cameraPoseRef.current = { ...WALK_POSE }
+        cameraPoseRef.current = { ...destination }
         onDone?.()
     }
 
@@ -113,7 +129,7 @@ export const flyInside = ({ root, cameraPoseRef, onDone, reducedMotion = false }
     }
 
     const layers = visibleLayers(root, window.innerHeight, window.innerWidth)
-    const dollyMetres = distance3(REST_POSE.position, WALK_POSE.position)
+    const dollyMetres = distance3(REST_POSE.position, destination.position)
     const stage = liftPageIntoSpace({
         container: window.document.body,
         layers,
@@ -141,9 +157,9 @@ export const flyInside = ({ root, cameraPoseRef, onDone, reducedMotion = false }
         const eased = easeInOutCubic(t)
         stage.setProgress(t)
         cameraPoseRef.current = {
-            position: lerp3(REST_POSE.position, WALK_POSE.position, eased),
-            target: lerp3(REST_POSE.target, WALK_POSE.target, eased),
-            fov: REST_POSE.fov
+            position: lerp3(REST_POSE.position, destination.position, eased),
+            target: lerp3(REST_POSE.target, destination.target, eased),
+            fov: REST_POSE.fov + (WALK_FOV - REST_POSE.fov) * eased
         }
         if (t < 1) {
             frame = requestAnimationFrame(tick)

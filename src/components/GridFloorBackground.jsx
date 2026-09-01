@@ -18,6 +18,8 @@ export default function GridFloorBackground({
     cameraPoseRef = null,
     // Entity types this background leaves out — see LiveProjectScene.
     hideEntityTypes = null,
+    // Where the walker will stand — see LiveProjectScene.
+    onArrivalPose = null,
     showNodes = true,
     overlayGradient = 'radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.35) 100%), linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 25%, transparent 75%, rgba(0,0,0,0.5) 100%)',
     className = ''
@@ -63,6 +65,7 @@ export default function GridFloorBackground({
                             interactive={interactive}
                             cameraPoseRef={cameraPoseRef}
                             hideEntityTypes={hideEntityTypes}
+                            onArrivalPose={onArrivalPose}
                             showChrome={false}
                             showEntities={showNodes}
                         />
