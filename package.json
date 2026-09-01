@@ -79,7 +79,7 @@
         "check:responsive": "node scripts/responsive-check.mjs"
     },
     "devDependencies": {
-        "acorn": "^8.17.0",
+        "acorn": "^8.18.0",
         "acorn-jsx": "^5.3.2",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.0",
