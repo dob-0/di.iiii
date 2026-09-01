@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the front door is the room, and the badge stops looping back to it
+- the landing page is in the room, and the door is a camera move
 
 Full detail: `PROGRESS.md`.
 
