@@ -1137,6 +1137,28 @@ function VerticalTouchControls({ vertTouchRef }) {
     )
 }
 
+// A camera the caller poses every frame, by ref rather than by prop: the
+// landing's entry flight moves it 60 times a second, and routing that through
+// React state would re-render the whole scene on every one of those frames.
+// Reading a ref inside useFrame is the only way to drive it for free.
+function PosedCamera({ poseRef }) {
+    const { camera } = useThree()
+    useFrame(() => {
+        const pose = poseRef?.current
+        if (!pose) return
+        const p = pose.position
+        const t = pose.target
+        if (!p || !t) return
+        camera.position.set(p[0], p[1], p[2])
+        camera.lookAt(t[0], t[1], t[2])
+        if (Number.isFinite(pose.fov) && camera.fov !== pose.fov) {
+            camera.fov = pose.fov
+            camera.updateProjectionMatrix()
+        }
+    })
+    return null
+}
+
 // Decorative, click-through camera: slow orbit around the scene centroid.
 // Used wherever `interactive` is false (e.g. the landing page before
 // "Enter Space" is clicked).
@@ -1339,6 +1361,20 @@ export default function LiveProjectScene({
     interactive = true,
     showChrome = true,
     showEntities = true,
+    // `hideEntityTypes`: entity types this render leaves out. The landing says
+    // the room's own wordmark and line in HTML, directly in front of the room
+    // saying them in 3D — two copies of the same three words, one behind the
+    // other. The page hides the room's while it is speaking for it, and gives
+    // them back the moment it flies away, which turns a collision into a
+    // handover. A rule about types, not a list of ids: the landing has no
+    // business knowing what the room's entities are called.
+    hideEntityTypes = null,
+    // `cameraPoseRef`: a non-interactive scene the caller aims itself, instead
+    // of the decorative idle orbit. The landing's entry flight needs the room
+    // to hold still behind the page and then move exactly with it, which an
+    // orbit that ignores its caller cannot do. Ignored while `interactive`,
+    // where the walker owns the camera.
+    cameraPoseRef = null,
     onExit = null,
     exitLabel = '← Exit',
     title = '',
@@ -1475,7 +1511,14 @@ export default function LiveProjectScene({
         }
         return map
     }, [entities])
-    const rootEntities = useMemo(() => entities.filter((e) => !e.parentId), [entities])
+    const hiddenTypes = useMemo(
+        () => (Array.isArray(hideEntityTypes) && hideEntityTypes.length ? new Set(hideEntityTypes) : null),
+        [hideEntityTypes]
+    )
+    const rootEntities = useMemo(
+        () => entities.filter((e) => !e.parentId && !(hiddenTypes && hiddenTypes.has(e.type))),
+        [entities, hiddenTypes]
+    )
 
     const center = useMemo(() => {
         if (!entities.length) return new THREE.Vector3(0, 0, 0)
@@ -1627,6 +1670,8 @@ export default function LiveProjectScene({
                         isArActive={isArActive}
                         arTouchElRef={arTouchElRef}
                     />
+                ) : cameraPoseRef ? (
+                    <PosedCamera poseRef={cameraPoseRef} />
                 ) : (
                     <IdleOrbit center={center} />
                 )}

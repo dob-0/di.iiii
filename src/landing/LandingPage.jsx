@@ -5,8 +5,8 @@ import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
-import { getApiSession } from '../services/apiClient.js'
-import { buildSpacesPath, buildStudioHubPath } from '../studio/utils/studioRouting.js'
+import { buildSpacesPath } from '../studio/utils/studioRouting.js'
+import { flyInside, REST_POSE } from './enterFlight.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
 // LiveProjectScene into the landing chunk for every visitor — including phones,
@@ -15,18 +15,25 @@ import { buildSpacesPath, buildStudioHubPath } from '../studio/utils/studioRouti
 // after to confirm.
 const GridFloorBackground = lazy(() => import('../components/GridFloorBackground.jsx'))
 
+// The room's own words, kept quiet while the page is saying them. Frozen so
+// the prop identity is stable and the scene is not re-rendered every frame.
+const HERO_ECHO_TYPES = Object.freeze(['text'])
+
+// How long the door waits for the 3D chunk on a device that had not mounted it
+// — a ceiling, not a delay: the import usually resolves well inside it.
+const DOOR_SCENE_WAIT_MS = 1200
+
 // The door used to be `buildRawCanvasPath('open')` — the node canvas that lives
 // in the browser's own storage. It cannot save into a space and cannot publish,
 // so the front page's one door opened onto the one surface where nothing a
 // visitor makes survives or can be handed to anyone. It now opens the visitor's
 // OWN space, where Studio and Nodes sit side by side and "View live" exists.
 //
-// Progressive enhancement, on purpose: the href is a real destination for
-// no-JS, middle-click and crawlers, and the click upgrades it to the sandbox.
-// The session is fetched on the CLICK, never on page view — GET
-// /api/auth/session mints a guest session (and a sandbox space) for whoever
-// asks, and a passive visit must not do that.
-const DOOR_FALLBACK_MS = 1500
+// Progressive enhancement, on purpose: the href stays a real destination for
+// no-JS, middle-click and crawlers. The click no longer upgrades it to a
+// sandbox — it flies into the room that is already on screen — so nothing on
+// this page asks for a session any more, which also means a passive visit can
+// no longer mint a guest one by accident.
 // "Open Studio" goes to the spaces hub (`/studio`) for everyone. Two earlier
 // passes landed one level too deep: `/open/studio?browse=1` is StudioHub, which
 // despite the name is a *single space's project list* — the open space's — so
@@ -170,6 +177,21 @@ export default function LandingPage() {
     // signed-in owner and you got sent somewhere else entirely.
     const studioHref = buildSpacesPath()
     const [entered, setEntered] = useState(false)
+    // The room behind the page is held at the space's own composed entry
+    // camera, not the decorative orbit — the page's elements are measured
+    // against that shot and have to stay in register with it.
+    const cameraPoseRef = useRef({ ...REST_POSE })
+    const cancelFlightRef = useRef(null)
+    // While the page is saying the wordmark and the line in HTML, the room
+    // must not say them too — they sit one behind the other and neither reads.
+    // Given back at the first frame of the flight, so the flat words hand off
+    // to the standing ones instead of colliding with them.
+    const [roomSpeaks, setRoomSpeaks] = useState(false)
+    // A phone never mounts the decorative scene — three.js is 1.47 MB and a
+    // passive visit must not pay it. But the door needs a room to fly into, so
+    // the tap arms it: the scene mounts, and the flight waits for the chunk
+    // rather than starting over nothing.
+    const [flightArmed, setFlightArmed] = useState(false)
     // Walk/fly and the calm orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to
     // the orbit view once you'd moved was a full Exit + Enter Space round
@@ -214,15 +236,45 @@ export default function LandingPage() {
         return () => { cancelled = true }
     }, [])
 
+    // Stepping inside is not a navigation any more. The room is already on
+    // screen behind this page — the same `main` document, rendered by the same
+    // scene — so the door is a camera move, and the page's own elements come
+    // apart into the space they were always standing in. A modified click
+    // (new tab, new window, middle button) still has to behave like a link, so
+    // it is left alone and follows the href.
     const openDoor = (event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
         event.preventDefault()
-        const fallback = new Promise((resolve) => setTimeout(() => resolve(null), DOOR_FALLBACK_MS))
-        Promise.race([getApiSession().catch(() => null), fallback]).then((session) => {
-            window.location.href = session?.sandboxSpaceId
-                ? buildStudioHubPath(session.sandboxSpaceId)
-                : buildSpacesPath()
-        })
+        if (cancelFlightRef.current) return
+        setRoomSpeaks(true)
+        setFlightArmed(true)
+        const start = () => {
+            cancelFlightRef.current = flyInside({
+                root: rootRef.current,
+                cameraPoseRef,
+                reducedMotion: typeof window !== 'undefined'
+                    && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+                onDone: () => {
+                    cancelFlightRef.current = null
+                    setEntered(true)
+                }
+            })
+        }
+        // Where the scene is already on screen, fly on the next frame — the
+        // clones have to be measured against a page that has finished being
+        // laid out. Where it is not (a phone), wait for the chunk first, and
+        // fly anyway if it never arrives: a door that does nothing is worse
+        // than a door that opens onto a room still drawing itself.
+        if (showBackground) {
+            requestAnimationFrame(start)
+            return
+        }
+        let started = false
+        const once = () => { if (!started) { started = true; start() } }
+        const timeout = window.setTimeout(once, DOOR_SCENE_WAIT_MS)
+        import('../components/GridFloorBackground.jsx')
+            .then(() => { window.clearTimeout(timeout); once() })
+            .catch(() => { window.clearTimeout(timeout); once() })
     }
 
     const handleEnterSpace = () => {
@@ -263,7 +315,7 @@ export default function LandingPage() {
     // `entered` is exempt from the small-screen gate: "Step inside" *is* the
     // walkable scene, so a phone visitor who taps it has asked for three.js
     // and gets it then — on demand, rather than on every passive page view.
-    const showBackground = entered || (heroInView && !isSmallScreen)
+    const showBackground = entered || flightArmed || (heroInView && !isSmallScreen)
 
     return (
         <Box className="lp-root" data-page="landing" ref={rootRef}>
@@ -290,7 +342,11 @@ export default function LandingPage() {
                 {showBackground && (
                     <Box className="lp-hero-bg" aria-hidden="true">
                         <Suspense fallback={null}>
-                            <GridFloorBackground interactive={entered && !viewMode} />
+                            <GridFloorBackground
+                                interactive={entered && !viewMode}
+                                cameraPoseRef={cameraPoseRef}
+                                hideEntityTypes={roomSpeaks ? null : HERO_ECHO_TYPES}
+                            />
                         </Suspense>
                     </Box>
                 )}
@@ -324,7 +380,7 @@ export default function LandingPage() {
                         page renders itself — it only exists where there is no
                         real main space to enter, otherwise it is another door
                         wearing a preview's clothes. */}
-                    <Stack direction="row" spacing={2} sx={{ pt: 1, pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <Stack className="lp-hero-cta-row" direction="row" spacing={2} sx={{ pt: 1, pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                         <Button className="landing-cta-primary" variant="contained" size="large" href={studioHref} onClick={openDoor}>
                             Step inside
                         </Button>
@@ -341,7 +397,7 @@ export default function LandingPage() {
                         <a href={studioHref}>Already have spaces? Open Studio →</a>
                     </Typography>
 
-                    <Stack direction="row" spacing={1.5} sx={{ pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <Stack className="lp-hero-space-row" direction="row" spacing={1.5} sx={{ pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                         {(isLocalInstall ? [] : FEATURED_SPACES).map((space) => (
                             <Button
                                 key={space.id}

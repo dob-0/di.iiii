@@ -277,12 +277,16 @@ function AppRouter() {
                 : buildRawCanvasPath(rawState.spaceId)
         rrNavigate(target, { replace: true })
     }, [legacyRawPath, rawState.page, rawState.projectId, rawState.spaceId, rrNavigate])
-    // `/main` heals to `/`. The home room has one address, and it is the bare
-    // domain — a visitor should never be told the room they are standing in is
-    // called "main". The link still resolves, because links already handed out
-    // are never withdrawn; it just arrives at the canonical door. Only the BARE
-    // path heals: `/main/studio`, `/main/raw/…` and `/main/p/…` are the editor
-    // and project addresses inside that space and keep their names.
+    // `/main` heals to `/?room=1`. Two promises have to hold at once. The name
+    // never appears in the bar — a visitor should never be told the room they
+    // are standing in is called "main" — AND a link already handed out keeps
+    // showing what it showed. Healing to the bare `/` kept the first and broke
+    // the second: `/main` had opened the room for months, and after the front
+    // door moved back to `/` it would have started answering with a landing
+    // page instead. `?room=1` is the room without the door, so the old link
+    // arrives where it always did, under a name that is no longer a name.
+    // Only the BARE path heals: `/main/studio`, `/main/raw/…` and `/main/p/…`
+    // are the editor and project addresses inside that space and keep theirs.
     // Not on a local install: there `/` is the owner's own home (their spaces),
     // so healing this path would answer "show me the room" with a different
     // page entirely. `isLocal` is already false once a local server turns auth
@@ -291,7 +295,9 @@ function AppRouter() {
         && localInstall.resolved && !localInstall.isLocal
     useEffect(() => {
         if (!isBareHomeSpacePath) return
-        rrNavigate(`/${location.search || ''}${location.hash || ''}`, { replace: true })
+        const params = new URLSearchParams(location.search)
+        params.set('room', '1')
+        rrNavigate(`/?${params.toString()}${location.hash || ''}`, { replace: true })
     }, [isBareHomeSpacePath, location.search, location.hash, rrNavigate])
 
     if (legacyRawPath) {
@@ -441,9 +447,11 @@ function AppRouter() {
         && appState.page !== APP_PAGE_TERMS
 
     if (isRootLanding) {
-        // ?tour=1 keeps the landing reachable on a local install — the tour is
-        // moved, not deleted, and the local home links to it by name.
-        const wantsTour = new URLSearchParams(location.search).get('tour') === '1'
+        // ?tour=1 keeps the landing reachable on a local install, where `/` is
+        // the owner's own home; ?room=1 opens the room bare, without the door.
+        const rootQuery = new URLSearchParams(location.search)
+        const wantsTour = rootQuery.get('tour') === '1'
+        const wantsRoom = rootQuery.get('room') === '1'
         if (localInstall.isLocal && !wantsTour) {
             return (
                 <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
@@ -456,23 +464,23 @@ function AppRouter() {
         if (!localInstall.resolved) {
             return <RouteSurfaceFallback label="Loading" detail="" />
         }
-        // The front door IS the room. `/` and `/main` rendered the same space
-        // either way — the landing drew it as a decorative backdrop and wrote
-        // the name and the one line in HTML on top of it, so a visitor met a
-        // picture of the room instead of the room. Both now open the room
-        // itself, which carries the wordmark and the line as things standing
-        // in it, and the doors to the works are the page's real links.
-        // `/main` keeps working: it is in circulation and a public address is
-        // never withdrawn. Same `?tour=1` escape hatch the local home already
-        // uses — the landing is moved, not deleted.
-        if (wantsTour) {
-            return (
-                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-                    <LandingPage />
-                </Suspense>
-            )
+        // The front door is the room — and the landing IS the front door.
+        // #283 made `/` open `main` directly, on the grounds that the landing
+        // was only a picture of the room. It is no longer a picture of it:
+        // every element on this page now stands in that room, at its own
+        // depth, and "Step inside" flies the camera off the flat view instead
+        // of navigating (src/landing/enterFlight.js). So `/` is the landing
+        // again, and the room it opens onto is the same one, reached without
+        // a page load. `?room=1` still opens the room bare, for anyone who
+        // wants the space and not the door.
+        if (wantsRoom) {
+            return <SpaceSurfaceRoute appState={{ page: appState.page, spaceId: PLATFORM_HOME_SPACE_ID }} />
         }
-        return <SpaceSurfaceRoute appState={{ page: appState.page, spaceId: PLATFORM_HOME_SPACE_ID }} />
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <LandingPage />
+            </Suspense>
+        )
     }
 
     const pathSegments = location.pathname.replace(/^\/+/, '').replace(/\/+$/, '').split('/')
