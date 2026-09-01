@@ -43,12 +43,16 @@
     box-shadow: none !important;
 }
 
+/* A button reads as a button. At --di-text-muted on a 0.3-alpha cyan hairline
+   the section CTAs ("Open the Wiki →", "Look around") were quieter than the
+   plain "Read →" links in the cards above them, which inverted the order of the
+   page: the thing you are meant to press was the faintest thing on the screen. */
 .landing-cta-ghost,
 .lp-btn-ghost {
     display: inline-flex !important;
     align-items: center !important;
     background: transparent !important;
-    color: var(--di-text-muted) !important;
+    color: rgba(255, 255, 255, 0.82) !important;
     font-weight: 500 !important;
     font-size: 0.9rem !important;
     padding: 10px 24px !important;
@@ -70,56 +74,76 @@
     box-shadow: none !important;
 }
 
-.landing-cta-wcc {
-    color: #fff !important;
-    background: #d90000 !important;
-    border: 2px solid #fff !important;
-    font-weight: 700 !important;
-}
+/* ─── THE FOUR SPACES THAT ARE ALREADY OPEN ───────────────────
+   Four doors onto real public spaces, and until now four unrelated stickers:
+   a solid red slab, two 2px outlines in different colours, one tinted fill —
+   all at weight 700, which made the group shout louder than the single lit
+   door above it and read as noise rather than as a set of four peer places.
+   The visit is the product, so these matter; they just have to be ONE thing
+   with four identities, not four things.
 
-.landing-cta-wcc:hover {
-    color: #d90000 !important;
-    background: #fff !important;
-    border-color: #fff !important;
+   So: one shape, one type colour, one border weight, and each space's own
+   colour kept as the mark in front of its name. That is also the only version
+   of this row that survives becoming a grid of every public space — N spaces
+   cannot carry N bespoke button treatments.
+
+   Each stays a separate <a> with its own stable class and its own box: the
+   mark is a ::before, not an added element, so nothing here changes what
+   getBoundingClientRect() returns for the button itself. */
+.landing-cta-wcc {
+    /* WCC's own red is #d90000, which is 2.6:1 on black — under the 3:1 floor
+       for a graphical mark this small. Lifted just far enough to be seen. */
+    --lp-space-accent: #ff2d2d;
 }
 
 .landing-cta-br-id-ge {
-    color: #00e5ff !important;
-    background: transparent !important;
-    border: 2px solid #00e5ff !important;
-    font-weight: 700 !important;
-}
-
-.landing-cta-br-id-ge:hover {
-    color: #000 !important;
-    background: #00e5ff !important;
-    border-color: #00e5ff !important;
+    --lp-space-accent: #00e5ff;
 }
 
 .landing-cta-beyond-form {
-    color: #fff !important;
-    background: transparent !important;
-    border: 2px solid #fff !important;
-    font-weight: 700 !important;
-}
-
-.landing-cta-beyond-form:hover {
-    color: #000 !important;
-    background: #fff !important;
-    border-color: #fff !important;
+    --lp-space-accent: #ffffff;
 }
 
 .landing-cta-algo-vrithm {
-    color: #4df9ff !important;
-    background: rgba(77, 249, 255, 0.08) !important;
-    border: 2px solid #4df9ff !important;
-    font-weight: 700 !important;
+    --lp-space-accent: #4df9ff;
 }
 
-.landing-cta-algo-vrithm:hover {
-    color: #05060f !important;
-    background: #4df9ff !important;
-    border-color: #4df9ff !important;
+.lp-hero-space-row .landing-cta-ghost {
+    color: var(--di-text) !important;
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.32) !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    padding: 9px 16px !important;
+    gap: 10px;
+}
+
+.lp-hero-space-row .landing-cta-ghost::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    flex: 0 0 auto;
+    background: var(--lp-space-accent, var(--di-cyan));
+}
+
+.lp-hero-space-row .landing-cta-ghost:hover {
+    color: var(--di-text) !important;
+    border-color: var(--lp-space-accent, var(--di-cyan)) !important;
+    background: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Names the row, so "spaces" is not a word that appears only in the top bar.
+   Quieter than the tagline and louder than the credit line: it is a label, and
+   the four things under it are the point. */
+.lp-space-row-label {
+    font-size: 0.72rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    color: rgba(255, 255, 255, 0.66) !important;
+    font-family: var(--di-mono) !important;
+    margin: 0 0 14px !important;
+    text-align: center;
 }
 
 .lp-btn-link {
@@ -171,9 +195,13 @@
     gap: 28px;
 }
 
+/* The page's third tier — the ways back for someone who already has work here.
+   They were the same 0.5 white as a footer credit while the one lit control sat
+   beside them, which is most of why the top bar read as a scatter of grey with
+   a single bright thing in it. Legible, still plainly below the door. */
 .lp-nav-link {
     font-size: 0.82rem;
-    color: var(--di-text-muted);
+    color: rgba(255, 255, 255, 0.72);
     text-decoration: none;
     letter-spacing: 0.01em;
     transition: color 0.15s;
@@ -254,24 +282,45 @@ body.is-landing .account-btn-wrapper {
     padding: 48px 24px 40px;
     border-bottom: 1px solid var(--di-cyan-border);
     background: #000;
+
+    /* The two numbers that decide whether the hero copy is readable, kept as
+       tokens because `src/styles/contrast.test.js` reads them and computes the
+       ratio the visitor actually gets.
+
+       The old flat 0.34 scrim was tuned against a dark tilted backdrop. The
+       hero now stands in the `main` room at its composed entry shot, and the
+       brightest thing the copy crosses is a door ring — measured off a real
+       1440x900 screenshot at rgb(144,153,153), over which even PURE white sits
+       at 2.9:1. No flat scrim fixes that: dark enough for the ring is dark
+       enough to put the room out. So the darkening is local — a veil over the
+       reading column, while the outer thirds keep the room's own light and the
+       rings stay vivid where nothing is written across them. */
+    --lp-hero-veil: 0.62;
+    --lp-hero-wash: 0.1;
 }
 
-/* Light scrim behind the hero text (~a quarter of the wiki's darkness) so the
-   wordmark/subtitle/buttons read over the bright 3D, while the edges stay vivid.
-   Sits above the fixed GL background (z 0) and below the hero content (z 2). */
+/* Sits above the fixed GL background (z 0) and below the hero content (z 2). */
 .lp-hero::after {
     content: '';
     position: absolute;
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: linear-gradient(
-        to bottom,
-        rgba(0, 0, 0, 0.06) 0%,
-        rgba(0, 0, 0, 0.34) 42%,
-        rgba(0, 0, 0, 0.34) 90%,
-        rgba(0, 0, 0, 0.06) 100%
-    );
+    background:
+        radial-gradient(
+            ellipse 44rem 30rem at 50% 50%,
+            rgba(0, 0, 0, var(--lp-hero-veil)) 0%,
+            rgba(0, 0, 0, 0.46) 48%,
+            rgba(0, 0, 0, 0.14) 78%,
+            rgba(0, 0, 0, 0) 100%
+        ),
+        linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 0.2) 0%,
+            rgba(0, 0, 0, var(--lp-hero-wash)) 34%,
+            rgba(0, 0, 0, var(--lp-hero-wash)) 82%,
+            rgba(0, 0, 0, 0.38) 100%
+        );
 }
 
 
@@ -378,9 +427,14 @@ body.is-landing .account-btn-wrapper {
     color: var(--di-cyan);
 }
 
+/* Tier 2 of the page, and it was being read as tier 5. These two lines ARE the
+   product — "make a space, hand out the address" — and they were set in the
+   same 0.5 white as a footer credit, over a room bright enough to swallow it.
+   Body copy that carries the pitch is body copy: it gets the page's own text
+   colour, and the veil above gives it a ground to sit on. */
 .lp-tagline {
     font-size: clamp(0.95rem, 2vw, 1.1rem) !important;
-    color: var(--di-text-muted) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
     line-height: 1.65 !important;
     max-width: 440px;
     margin: 0 0 40px !important;
@@ -391,10 +445,11 @@ body.is-landing .account-btn-wrapper {
    loud as the first is just the three-button hero again in prose. */
 .lp-cta-sub {
     font-size: 0.82rem !important;
-    /* NOT --di-text-muted (0.4 alpha): this line carries the second real
-       destination, and 0.4 white on the hero's near-black is under 3:1 at
-       13px. Quieter than the tagline, still readable. */
-    color: rgba(255, 255, 255, 0.55) !important;
+    /* NOT --di-text-muted: this line carries the second real destination.
+       0.55 cleared the floor over the near-black this page used to have; over
+       the room it measured 5.1:1 on the average backdrop and far less where a
+       door ring passes behind it. Quieter than the tagline, still readable. */
+    color: rgba(255, 255, 255, 0.72) !important;
     line-height: 1.9 !important;
     max-width: 400px;
     margin: 0 0 32px !important;
@@ -412,6 +467,39 @@ body.is-landing .account-btn-wrapper {
 .lp-cta-sub a:hover {
     color: var(--di-cyan);
     border-bottom-color: var(--di-cyan);
+}
+
+/* ─── WRAPPING ROWS ───────────────────────────────────────────
+   MUI's `spacing` prop is margin-left on every sibling and nothing else. A row
+   that wraps therefore gets ZERO vertical separation, and every line after the
+   first is shoved right by that same margin, so a centred row stops being
+   centred. At 390px the four space buttons stacked with their borders butting
+   into one another and each line landing at a different indent — live on
+   production since the row shipped. Real flex gap, and the margins off. */
+.lp-hero-cta-row {
+    gap: 16px;
+}
+
+.lp-hero-space-row {
+    gap: 12px;
+}
+
+.lp-hero-cta-row > *,
+.lp-hero-space-row > * {
+    margin-left: 0 !important;
+}
+
+/* ─── FOCUS ───────────────────────────────────────────────────
+   Nothing on this page had a focus ring anyone could see. Plain links fell back
+   to the UA's `outline: auto 1px rgb(16,16,16)` — a near-black hairline on a
+   near-black page — and every MUI button (the door itself, and all four spaces)
+   carries `outline: 0`, so the five controls that matter most showed a keyboard
+   visitor nothing at all. Measured by tabbing the live page, not inferred. */
+.lp-root a:focus-visible,
+.lp-root button:focus-visible,
+.lp-root .MuiButtonBase-root:focus-visible {
+    outline: 2px solid var(--di-cyan) !important;
+    outline-offset: 3px;
 }
 
 /* ─── HERO SCENE VISUALISER ───────────────────────────────── */
@@ -483,13 +571,15 @@ body.is-landing .account-btn-wrapper {
 }
 
 /* ─── SCROLL HINT ─────────────────────────────────────────── */
+/* The only wayfinding to the seven sections below the fold, and at 0.5 opacity
+   on 0.5 white it was a 1.6:1 chevron nobody could see over the room. */
 .lp-scroll-hint {
-    color: var(--di-text-muted);
+    color: var(--di-text);
     animation: lp-bounce 2s ease-in-out infinite;
     text-decoration: none;
     display: flex;
     align-items: center;
-    opacity: 0.5;
+    opacity: 0.62;
 }
 
 .lp-scroll-hint:hover { color: var(--di-cyan); opacity: 1; }

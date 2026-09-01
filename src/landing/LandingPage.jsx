@@ -45,7 +45,12 @@ import './landing.css'
 
 const FEATURED_SPACES = [
     { id: 'wcc', label: 'WCC Exhibition', href: '/wcc', className: 'landing-cta-wcc' },
-    { id: 'br-id-ge', label: 'br_id_ge · live at Notations #2', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
+    // Was "br_id_ge · live at Notations #2". Notations #2 closed 2026-08-02;
+    // the front door went on announcing it as live for a month, on prod. The
+    // space itself is still open and still worth visiting, which is the whole
+    // claim this row is allowed to make — so it says the name, like the other
+    // three, and stops dating itself.
+    { id: 'br-id-ge', label: 'br_id_ge', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
     { id: 'beyond-form', label: 'beyond_form', href: '/beyond-form', className: 'landing-cta-beyond-form' },
     { id: 'algovrithm', label: 'algovrithm', href: '/algovrithm', className: 'landing-cta-algo-vrithm' }
 ]
@@ -329,7 +334,10 @@ export default function LandingPage() {
                         yet. The nav now carries the same one door as the hero,
                         plus the return path for people who already have work. */}
                     <div className="lp-nav-links">
-                        <a href={studioHref} className="lp-nav-link">Spaces</a>
+                        {/* `lp-nav-spaces` is a hook, not a style: this link is
+                            where the spaces grid will unfold from, and the code
+                            that measures it needs to be able to name it. */}
+                        <a href={studioHref} className="lp-nav-link lp-nav-spaces">Spaces</a>
                         <a href={buildWikiPath()} className="lp-nav-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
                     </div>
@@ -396,6 +404,19 @@ export default function LandingPage() {
                         <br />
                         <a href={studioHref}>Already have spaces? Open Studio →</a>
                     </Typography>
+
+                    {/* The row had no name, so the only place the word "spaces"
+                        appeared above the fold was a grey link in the top bar,
+                        while four unlabelled coloured buttons sat at the bottom
+                        of the hero looking like decoration. Naming them is what
+                        turns them into the second thing on the page. Its own
+                        element, before the row rather than inside it, so the
+                        row still holds exactly the four doors. */}
+                    {!isLocalInstall && (
+                        <Typography className="lp-space-row-label">
+                            Or open one that&rsquo;s already running
+                        </Typography>
+                    )}
 
                     <Stack className="lp-hero-space-row" direction="row" spacing={1.5} sx={{ pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                         {(isLocalInstall ? [] : FEATURED_SPACES).map((space) => (

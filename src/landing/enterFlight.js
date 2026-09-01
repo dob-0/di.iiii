@@ -33,6 +33,7 @@ const LIFTABLE = [
     { selector: '.lp-tagline', depth: 130 },
     { selector: '.lp-hero-cta-row', depth: 70 },
     { selector: '.lp-cta-sub', depth: 20 },
+    { selector: '.lp-space-row-label', depth: -30 },
     { selector: '.lp-hero-space-row', depth: -40 },
     { selector: '.lp-eyebrow', depth: -110 },
     { selector: '.lp-scroll-hint', depth: -150 },

@@ -85,7 +85,9 @@ export const WIKI_ARTICLES = [
                 '/main \u2014 the old address of that same room. It still resolves and always will; it heals to / so the name never appears in the bar.'
             ] },
             'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately. The destination is never different, only the journey.',
-            'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.'
+            'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.',
+            'Under the door, marked \u201cor open one that\u2019s already running\u201d, are four public spaces \u2014 each one at its own address, open to anyone, and reachable without stepping inside first. Each carries the colour it uses for itself as the mark in front of its name. They are the shortest answer to what any of this is for: somebody else\u2019s space, handed out as a link.',
+            'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, the page coming apart in front of you is out of the way of both the tab key and a screen reader \u2014 what drifts past is a picture of the page you were reading, not a second set of its controls.'
         ],
         tags: ['landing', 'basics', 'navigation', 'room', 'walk'],
         updated: '2026-09-01'

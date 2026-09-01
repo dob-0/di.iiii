@@ -92,12 +92,26 @@ export const liftPageIntoSpace = ({ container, layers, fov = DEFAULT_FOV, dollyM
         holder.className = 'lp-root lp-in-space'
         holder.style.width = `${rect.width}px`
         holder.style.height = `${rect.height}px`
+        // A clone is a picture, and a picture is not a control — the same
+        // reason `.lp-in-space *` refuses pointer events. But pointer-events
+        // speaks only to the mouse: the clones carry real <a href> and
+        // <button> nodes, so during the flight a keyboard visitor tabbed
+        // through nine invisible copies of the page they had just left, and a
+        // screen reader was handed every heading and link twice. Measured by
+        // tabbing a live 6-second flight, not inferred.
+        holder.setAttribute('aria-hidden', 'true')
+        // `inert` is the modern answer and takes the whole subtree out of the
+        // tab order in one attribute; the explicit tabIndex below is what does
+        // the job in jsdom and in anything older than Chromium 102.
+        holder.setAttribute('inert', '')
 
         const clone = el.cloneNode(true)
         clone.style.width = `${rect.width}px`
         clone.style.height = `${rect.height}px`
         clone.style.margin = '0'
         holder.appendChild(clone)
+        holder.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')
+            .forEach((node) => { node.tabIndex = -1 })
 
         const object = new CSS3DObject(holder)
         object.position.set(

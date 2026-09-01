@@ -85,6 +85,33 @@ describe('liftPageIntoSpace', () => {
         stage.destroy()
     })
 
+    // 2026-09-01. `.lp-in-space *` refuses pointer events because a clone is a
+    // picture of a control and never a control — but that rule speaks only to
+    // the mouse. The clones carry the real <a href> nodes they copied, so a
+    // keyboard visitor tabbing during the flight walked through nine invisible
+    // copies of the page they had just left (measured on a live 6-second
+    // flight: nine tab stops), and a screen reader was read the whole hero
+    // twice. Watched failing with the two attributes and the tabIndex removed.
+    it('hands the clones to no keyboard and no screen reader', () => {
+        const el = makeElement({ left: 0, top: 0, width: 200, height: 40 })
+        const link = window.document.createElement('a')
+        link.href = '/studio'
+        link.textContent = 'Step inside'
+        el.appendChild(link)
+
+        const stage = liftPageIntoSpace({ container, layers: [{ el, depth: 0 }] })
+        const holder = container.querySelector('.lp-in-space')
+
+        expect(holder.getAttribute('aria-hidden')).toBe('true')
+        expect(holder.hasAttribute('inert')).toBe(true)
+        // inert is not implemented in jsdom, and was not in Chromium before
+        // 102, so the tab stop has to be taken away explicitly as well.
+        expect(holder.querySelector('a').tabIndex).toBe(-1)
+        // and the original is untouched — it is still the real control.
+        expect(link.tabIndex).toBe(0)
+        stage.destroy()
+    })
+
     it('starts at full opacity and only moves once progress does', () => {
         const el = makeElement({ left: 100, top: 100, width: 100, height: 100 })
         const stage = liftPageIntoSpace({ container, layers: [{ el, depth: 120 }] })
