@@ -82,6 +82,7 @@ export const resolveViewerCamera = (document, aspect = getViewportAspect()) => {
 
 export default function PublicProjectSceneSurface({
     projectId,
+    spaceId = null,
     document,
     title,
     entryView,
@@ -145,6 +146,7 @@ export default function PublicProjectSceneSurface({
             {navMode === 'walk' ? (
                 <LiveProjectScene
                     projectId={projectId}
+                    spaceId={spaceId}
                     interactive
                     showChrome
                     title={title}

@@ -37,6 +37,10 @@ const MakeSurface = lazy(() => import('./make/MakeSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
+
+// The space `/` opens. Kept in step with GridFloorBackground's PREFERRED_SPACE_ID
+// and MadeWithBadge's PLATFORM_HOME_SPACE_ID — all three name the same room.
+const PLATFORM_HOME_SPACE_ID = 'main'
 // What `di up` opens on your own machine: your spaces, not a tour of a hosted
 // product you have already installed. Lazy so a hosted visitor never downloads
 // MUI to render a page that will not use it.
@@ -273,9 +277,31 @@ function AppRouter() {
                 : buildRawCanvasPath(rawState.spaceId)
         rrNavigate(target, { replace: true })
     }, [legacyRawPath, rawState.page, rawState.projectId, rawState.spaceId, rrNavigate])
+    // `/main` heals to `/`. The home room has one address, and it is the bare
+    // domain — a visitor should never be told the room they are standing in is
+    // called "main". The link still resolves, because links already handed out
+    // are never withdrawn; it just arrives at the canonical door. Only the BARE
+    // path heals: `/main/studio`, `/main/raw/…` and `/main/p/…` are the editor
+    // and project addresses inside that space and keep their names.
+    // Not on a local install: there `/` is the owner's own home (their spaces),
+    // so healing this path would answer "show me the room" with a different
+    // page entirely. `isLocal` is already false once a local server turns auth
+    // on, which is the case where `/` does open the room.
+    const isBareHomeSpacePath = location.pathname.replace(/\/+$/, '') === `/${PLATFORM_HOME_SPACE_ID}`
+        && localInstall.resolved && !localInstall.isLocal
+    useEffect(() => {
+        if (!isBareHomeSpacePath) return
+        rrNavigate(`/${location.search || ''}${location.hash || ''}`, { replace: true })
+    }, [isBareHomeSpacePath, location.search, location.hash, rrNavigate])
+
     if (legacyRawPath) {
         return <RouteSurfaceFallback label="Loading the node editor" detail="" />
     }
+
+    if (isBareHomeSpacePath) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+
 
     // `/open_jam/scene` — the jam as a place you stand in, beside the editor at
     // `/open_jam` rather than instead of it. Dispatched first because it is the
@@ -430,11 +456,23 @@ function AppRouter() {
         if (!localInstall.resolved) {
             return <RouteSurfaceFallback label="Loading" detail="" />
         }
-        return (
-            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-                <LandingPage />
-            </Suspense>
-        )
+        // The front door IS the room. `/` and `/main` rendered the same space
+        // either way — the landing drew it as a decorative backdrop and wrote
+        // the name and the one line in HTML on top of it, so a visitor met a
+        // picture of the room instead of the room. Both now open the room
+        // itself, which carries the wordmark and the line as things standing
+        // in it, and the doors to the works are the page's real links.
+        // `/main` keeps working: it is in circulation and a public address is
+        // never withdrawn. Same `?tour=1` escape hatch the local home already
+        // uses — the landing is moved, not deleted.
+        if (wantsTour) {
+            return (
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <LandingPage />
+                </Suspense>
+            )
+        }
+        return <SpaceSurfaceRoute appState={{ page: appState.page, spaceId: PLATFORM_HOME_SPACE_ID }} />
     }
 
     const pathSegments = location.pathname.replace(/^\/+/, '').replace(/\/+$/, '').split('/')
