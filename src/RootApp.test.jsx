@@ -127,27 +127,38 @@ describe('what "/" opens', () => {
         expect(await screen.findByText('landing-page')).toBeInTheDocument()
     })
 
-    // The front door IS the room. `/` used to draw that same space as a
-    // decorative backdrop with the name written in HTML on top of it; it now
-    // opens the room itself, which carries the name as a thing standing in it.
-    it('opens the home room on a hosted server, not a picture of it', async () => {
+    // The front door is the room — and the landing IS the front door. It was
+    // briefly the other way round (#283): `/` opened `main` directly, because
+    // the landing was only a picture of the room. It is not a picture of it
+    // any more. Every element on that page now stands in that room at its own
+    // depth, and the door flies the camera off the flat view rather than
+    // navigating, so `/` is the landing and the room is one gesture inside it.
+    it('opens the front door on a hosted server, not the bare room', async () => {
         mockServerConfig.value = { local: false }
         window.history.pushState({}, '', '/')
         render(<RootApp />)
-        expect(await screen.findByText(/space-surface-app:.*:main/)).toBeInTheDocument()
-        expect(screen.queryByText('landing-page')).toBeNull()
+        expect(await screen.findByText('landing-page')).toBeInTheDocument()
         expect(screen.queryByText('local-home')).toBeNull()
     })
 
-    // Someone serving other people from their own machine has turned auth ON.
-    // They get the ordinary front door, because their visitors are not them.
-    // The home room has one address and it is the bare domain — a visitor is
-    // never shown a room called "main". The old link still resolves.
+    // For anyone who wants the space itself and not the door.
+    it('opens the room bare at /?room=1', async () => {
+        mockServerConfig.value = { local: false }
+        window.history.pushState({}, '', '/?room=1')
+        render(<RootApp />)
+        expect(await screen.findByText(/space-surface-app:.*:main/)).toBeInTheDocument()
+        expect(screen.queryByText('landing-page')).toBeNull()
+    })
+
+    // The home room still has one address and it is the bare domain — a
+    // visitor is never shown a room called "main" ("i don't want have main").
+    // The old link still resolves; it now resolves to the front door, which is
+    // the same room with a way in rather than a different destination.
     it('heals /main to /, so the name never appears in the bar', async () => {
         mockServerConfig.value = { local: false }
         window.history.pushState({}, '', '/main')
         render(<RootApp />)
-        expect(await screen.findByText(/space-surface-app:.*:main/)).toBeInTheDocument()
+        expect(await screen.findByText('landing-page')).toBeInTheDocument()
         expect(window.location.pathname).toBe('/')
     })
 
@@ -159,11 +170,13 @@ describe('what "/" opens', () => {
         expect(window.location.pathname).toBe('/main/studio')
     })
 
-    it('opens the home room on a local install that requires auth', async () => {
+    // Someone serving other people from their own machine has turned auth ON.
+    // They get the ordinary front door, because their visitors are not them.
+    it('opens the front door on a local install that requires auth', async () => {
         mockServerConfig.value = { local: true, requireAuth: true }
         window.history.pushState({}, '', '/')
         render(<RootApp />)
-        expect(await screen.findByText(/space-surface-app:.*:main/)).toBeInTheDocument()
+        expect(await screen.findByText('landing-page')).toBeInTheDocument()
     })
 })
 
