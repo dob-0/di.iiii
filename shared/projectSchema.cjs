@@ -872,6 +872,48 @@ const normalizeProjectMeta = (meta = {}) => {
   }
 }
 
+// --- The operator-family merge (2026-09-01) ---
+//
+// Hand-mirrored from src/shared/projectSchema.js. Eight math types and two
+// logic types became two operators with an operation menu; documents made
+// before that hold `math.add` nodes with real wires, and a saved project is
+// somebody's work. The server rebuilds every document through this file, so
+// if only the ESM side knew the migration the server would keep resurrecting
+// the retired type ids on the next sync. serverXR/src/schemaSync.test.js
+// holds the two together with a fixture.
+const LEGACY_OPERATOR_TYPES = {
+  'math.add': { typeId: 'math.op', operation: 'add' },
+  'math.subtract': { typeId: 'math.op', operation: 'subtract' },
+  'math.multiply': { typeId: 'math.op', operation: 'multiply' },
+  'math.divide': { typeId: 'math.op', operation: 'divide' },
+  'math.mod': { typeId: 'math.op', operation: 'modulo' },
+  'math.pow': { typeId: 'math.op', operation: 'power' },
+  'math.sin': { typeId: 'math.op', operation: 'sin' },
+  'math.abs': { typeId: 'math.op', operation: 'absolute' },
+  'logic.gate': { typeId: 'logic.route', operation: 'gate' },
+  'logic.switch': { typeId: 'logic.route', operation: 'switch' }
+}
+
+// Keyed by the NEW type: Sin/Absolute took `in`, Gate took `value`/`open`,
+// and neither merged type declares a port by any of those names.
+const LEGACY_OPERATOR_PORTS = {
+  'math.op': { in: 'a' },
+  'logic.route': { value: 'a', open: 'pick' }
+}
+
+const migrateLegacyNodeTypeId = (typeId) => LEGACY_OPERATOR_TYPES[typeId]?.typeId || typeId
+
+const migrateLegacyPortId = (typeId, portId) => LEGACY_OPERATOR_PORTS[typeId]?.[portId] || portId
+
+const nodeTypeIds = (nodesById) => new Map([...nodesById].map(([id, node]) => [id, node.typeId]))
+
+const migrateEdgeToPort = (edge, typeIdByNodeId) => {
+  if (!edge) return edge
+  const typeId = typeIdByNodeId?.get?.(edge.toNodeId)
+  const toPort = migrateLegacyPortId(typeId, edge.toPort)
+  return toPort === edge.toPort ? edge : { ...edge, toPort }
+}
+
 const mergeLegacyValues = (source = {}) => {
   const values = source.values && typeof source.values === 'object' ? cloneValue(source.values) : {}
   if (source.params && typeof source.params === 'object') {
@@ -889,12 +931,24 @@ const mergeLegacyValues = (source = {}) => {
 
 const normalizeProjectNode = (node = {}) => {
   const source = node && typeof node === 'object' ? node : {}
-  const typeId = ensureString(source.typeId, ensureString(source.definitionId, ''))
-  if (!typeId) return null
-  if (LEGACY_ROOT_TYPE_IDS.has(typeId)) return null
+  const declaredTypeId = ensureString(source.typeId, ensureString(source.definitionId, ''))
+  if (!declaredTypeId) return null
+  if (LEGACY_ROOT_TYPE_IDS.has(declaredTypeId)) return null
   if (LEGACY_ROOT_NODE_IDS.has(source.id)) return null
 
+  const merged = LEGACY_OPERATOR_TYPES[declaredTypeId]
+  const typeId = merged ? merged.typeId : declaredTypeId
+
   const values = mergeLegacyValues(source)
+  if (merged) values.operation = merged.operation
+  const portRenames = LEGACY_OPERATOR_PORTS[typeId]
+  if (portRenames) {
+    for (const [from, to] of Object.entries(portRenames)) {
+      if (values[from] === undefined) continue
+      if (values[to] === undefined) values[to] = values[from]
+      delete values[from]
+    }
+  }
   const graphX = Number.isFinite(Number(source.graphX))
     ? Number(source.graphX)
     : Number.isFinite(Number(source.params?.canvasPosition?.x))
@@ -980,13 +1034,13 @@ const normalizeNodesList = (list = []) => {
   return out
 }
 
-const normalizeEdgesList = (list = [], nodeIds = new Set()) => {
+const normalizeEdgesList = (list = [], typeIdByNodeId = new Map()) => {
   const out = []
   for (const raw of Array.isArray(list) ? list : []) {
     const normalized = normalizeProjectEdge(raw)
     if (!normalized) continue
-    if (!nodeIds.has(normalized.fromNodeId) || !nodeIds.has(normalized.toNodeId)) continue
-    out.push(normalized)
+    if (!typeIdByNodeId.has(normalized.fromNodeId) || !typeIdByNodeId.has(normalized.toNodeId)) continue
+    out.push(migrateEdgeToPort(normalized, typeIdByNodeId))
   }
   return out
 }
@@ -996,8 +1050,9 @@ const normalizeProjectDocument = (document = {}) => {
   const worldState = normalizeWorldState(source.worldState)
   const workspaceState = normalizeWorkspaceState(source.workspaceState)
   const nodes = normalizeNodesList(source.nodes)
-  const nodeIds = new Set(nodes.map((node) => node.id))
-  const edges = normalizeEdgesList(source.edges, nodeIds)
+  const typeIdByNodeId = new Map(nodes.map((node) => [node.id, node.typeId]))
+  const nodeIds = typeIdByNodeId
+  const edges = normalizeEdgesList(source.edges, typeIdByNodeId)
 
   return {
     version: PROJECT_DOCUMENT_VERSION,
@@ -1216,7 +1271,9 @@ const applyProjectOps = (document, ops = []) => {
         const edge = normalizeProjectEdge(payload.edge)
         if (!edge) break
         if (!nodes.has(edge.fromNodeId) || !nodes.has(edge.toNodeId)) break
-        edges.set(edge.id, edge)
+        // A stored op log replayed from the beginning carries wires aimed at
+        // ports the merged operator no longer declares.
+        edges.set(edge.id, migrateEdgeToPort(edge, nodeTypeIds(nodes)))
         break
       }
       case 'updateEdge': {
@@ -1224,7 +1281,7 @@ const applyProjectOps = (document, ops = []) => {
         if (!edgeId || !edges.has(edgeId)) break
         const merged = normalizeProjectEdge({ ...mergePatch(edges.get(edgeId), payload.patch || {}), id: edgeId })
         if (!merged) break
-        edges.set(edgeId, merged)
+        edges.set(edgeId, migrateEdgeToPort(merged, nodeTypeIds(nodes)))
         break
       }
       case 'deleteEdge': {
@@ -1764,6 +1821,8 @@ module.exports = {
   normalizeProjectNode,
   normalizeProjectEdge,
   normalizeProjectMeta,
+  migrateLegacyNodeTypeId,
+  migrateEdgeToPort,
   normalizeMappingState,
   normalizeMappingSurface,
   normalizeMappingCue,

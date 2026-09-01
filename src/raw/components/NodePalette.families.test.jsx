@@ -35,15 +35,18 @@ describe('NodePalette family grouping', () => {
         const { container } = open()
         const numbers = [...container.querySelectorAll('.raw-node-palette-group')]
             .find((el) => el.firstChild.textContent === 'numbers')
-        // value.* (6) + time + 9 maths + the logic trio + Lag/Noise + the TD-audit waves
-        expect(numbers.querySelector('.raw-node-palette-group-count').textContent).toBe('46')
+        // value.* (6) + time + the maths + the logic operators + Lag/Noise +
+        // the TD-audit waves. Nine fewer than before the 2026-09-01 operator
+        // merge: eight math types became Math's operation menu, and Gate and
+        // Switch became Route's.
+        expect(numbers.querySelector('.raw-node-palette-group-count').textContent).toBe('38')
     })
 
     it('any typed character dissolves the grouping into the flat list', () => {
         const { container } = open()
         fireEvent.change(input(), { target: { value: 'add' } })
         expect(container.querySelectorAll('.raw-node-palette-group').length).toBe(0)
-        expect(screen.getByText('math.add')).toBeInTheDocument()
+        expect(screen.getByText('math.op')).toBeInTheDocument()
     })
 
     it('ArrowDown skips headers — the highlight only ever rests on a choice', () => {

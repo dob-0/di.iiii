@@ -17,7 +17,7 @@ export const NOTHING = 'nothing'
 
 const trimNumber = (value) => {
     if (!Number.isFinite(value)) return String(value)
-    // 0.30000000000000004 is what a Vector arriving through math.add looks
+    // 0.30000000000000004 is what a Vector arriving through a Math node looks
     // like. Six places is past anything a person set by hand and short of
     // where float noise starts.
     const fixed = Number(value.toFixed(6))

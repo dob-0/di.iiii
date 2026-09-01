@@ -37,7 +37,7 @@ import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { currentAuthor } from '../../project/authorship.js'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
-import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode } from '../../project/nodeRegistry.js'
+import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode, operationLabelPatch } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { readNode } from '../../project/graph/nodeReading.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
@@ -652,7 +652,14 @@ export default function RawEditor({
                 type: 'updateNode',
                 payload: {
                     nodeId: scopedSelectedNode.id,
-                    patch: { [component]: nextComponentValue }
+                    patch: {
+                        [component]: nextComponentValue,
+                        // An operator family's card is named by the operation
+                        // it is set to, so changing the menu renames the card
+                        // — unless the person has typed their own name, which
+                        // is theirs and is never overwritten.
+                        ...operationLabelPatch(scopedSelectedNode, component, nextComponentValue)
+                    }
                 }
             })
             return

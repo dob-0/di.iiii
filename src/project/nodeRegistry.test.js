@@ -84,7 +84,7 @@ describe('NODE_TYPES', () => {
         expect(NODE_TYPES['world.light'].render).toBe('spatial-3d')
         expect(NODE_TYPES['world.camera'].render).toBe('spatial-3d')
         expect(NODE_TYPES['world.background'].render).toBe('hidden')
-        expect(NODE_TYPES['math.add'].render).toBe('hidden')
+        expect(NODE_TYPES['math.op'].render).toBe('hidden')
     })
 
     it('a fresh Camera is the room\'s own default view — authored without a jump', () => {
@@ -354,7 +354,7 @@ describe('unimplemented node types', () => {
         // (old documents keep both its behaviours) but is paletteHidden —
         // the palette offers Environment and Light (light.point) instead.
         for (const id of [
-            'value.number', 'math.add', 'geom.cube', 'light.point',
+            'value.number', 'math.op', 'geom.cube', 'light.point',
             'device.midi.out',
             'world.environment', 'universe.world', 'view.image', 'view.browser', 'time',
             'source.webcam', 'source.mic', 'agent.keeper', 'device.midi.in'
@@ -436,7 +436,7 @@ describe('node families', () => {
 // a case in a JavaScript switch and has no insides to look at.
 describe('what a node is made of', () => {
     it('calls a cube, a light and a number made of code', () => {
-        for (const typeId of ['geom.cube', 'geom.sphere', 'world.light', 'value.number', 'math.add', 'view.text']) {
+        for (const typeId of ['geom.cube', 'geom.sphere', 'world.light', 'value.number', 'math.op', 'view.text']) {
             expect(isNodeMadeOfCode(typeId), typeId).toBe(true)
         }
     })
