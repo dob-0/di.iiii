@@ -42,3 +42,14 @@
   four doors, the wordmark and the line with margin at 1440×900, and with the fix above
   keeps all four on a 390px phone. Verified by looking at both. It is an authoring act
   on the space, so it is the owner's to apply, not this branch's.
+
+### Applied to staging (data, this session)
+
+- `main-dii-project` presentation on **staging** moved to `position [0, 3, 14.5]` /
+  `target [0, 1.2, -14]` (op `setPresentationState`, version 155 → 156). Verified live and
+  signed out: desktop holds all four doors, the wordmark and the line. The phone still
+  crops there until this branch deploys — staging runs the pre-fix resolver. Rollback is
+  the previous value, `[-0.2, 4.3, 3]` → `[-0.2, 4.3, -19]`.
+- **`LIVE_API_TOKEN` writes fine.** `CURRENT.md` has carried "LIVE_API_TOKEN (staging)
+  401s on writes; PROD_API_TOKEN is the working one" — it took `POST /api/projects/
+  main-dii-project/ops` at 200 on the first try. Whatever 401'd, it was not this.
