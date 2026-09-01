@@ -13,8 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- install-matrix was the last workflow still on actions/checkout@v4
-- react-router-dom 6.30.4 → 7.18.2, the park condition fired
+- the front door is the room, and the badge stops looping back to it
 
 Full detail: `PROGRESS.md`.
 
