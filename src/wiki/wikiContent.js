@@ -892,10 +892,10 @@ export const WIKI_ARTICLES = [
     {
         id: 'br-id-ge',
         category: 'Spaces & access',
-        title: 'br_id_ge (կամուրջ): an Armenian XR rite — live at Notations #2',
-        summary: 'br_id_ge is a rite at /br_id_ge — cross the bridge, be read into Armenian letters, leave a chrome core. Showing at Notations #2, Jul 20 – Aug 2 2026, State Philharmonia of Armenia.',
+        title: 'br_id_ge (կամուրջ): an Armenian XR rite — shown at Notations #2',
+        summary: 'br_id_ge is a rite at /br_id_ge — cross the bridge, be read into Armenian letters, leave a chrome core. Shown at Notations #2, Jul 20 – Aug 2 2026, State Philharmonia of Armenia.',
         body: [
-            'br_id_ge (կամուրջ, "bridge") is an Armenian XR rite that lives in di.iiii as a space — the same pattern as WCC and Beyond Form, routed through the normal public/private check. It is showing at Notations #2 (theme: "Rituals"), hosted by hosq at the State Philharmonia of Armenia, Jul 20 – Aug 2 2026, with festival days Aug 1–2.',
+            'br_id_ge (կամուրջ, "bridge") is an Armenian XR rite that lives in di.iiii as a space — the same pattern as WCC and Beyond Form, routed through the normal public/private check. It was shown at Notations #2 (theme: "Rituals"), hosted by hosq at the State Philharmonia of Armenia, Jul 20 – Aug 2 2026, with festival days Aug 1–2.',
             { list: [
                 '/br_id_ge — the door: the entry page for the rite.',
                 '/br_id_ge/rite — cross the bridge: your silhouette is read into Armenian letters, you answer one question, and you leave a permanent chrome core.',
