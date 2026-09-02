@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Html } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
 import { attachVideoPlaybackRetry, attachVideoSound, configureVideoElement } from '../utils/videoPlayback.js'
+import { attachPositionalVideoSound, getOrCreateAudioListener, resumeContextOnGesture } from '../utils/positionalVideoSound.js'
 
 const DEFAULT_SIZE = [1, 1]
 
@@ -85,12 +87,12 @@ const releaseVideo = (entry) => {
 }
 
 export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = true } = {}) {
-    const [state, setState] = useState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE })
+    const [state, setState] = useState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE, video: null })
 
     useEffect(() => {
         const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
         if (!resolvedSrc || resolvedSrc === 'blob:null') {
-            setState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE })
+            setState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE, video: null })
             return undefined
         }
 
@@ -98,7 +100,8 @@ export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loo
         const sync = () => setState({
             texture: entry.ready ? entry.texture : null,
             playbackBlocked: entry.blocked,
-            size: entry.size
+            size: entry.size,
+            video: entry.video
         })
         entry.subscribers.add(sync)
         sync()
@@ -112,21 +115,56 @@ export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loo
     return state
 }
 
-export default function VideoObject({ assetRef, data, opacity = 1, linkActive, muted = true, volume = 1, loop = true }) {
+// useThree() throws outside a Canvas and VideoObject is unit-tested bare, so the
+// panner lives in a child that only mounts when spatial sound is actually asked
+// for. Videos are POOLED by source URL, so several planes showing one clip share
+// a single <video>; a media element can be routed into Web Audio only ONCE, so
+// the first plane to mount takes the panner and the rest no-op -- one clip stays
+// one sound, which is what a multi-screen piece wants.
+function PositionalVideoSound({ targetRef, video, volume, distance, maxDistance, distanceModel }) {
+    const { camera } = useThree()
+    useEffect(() => {
+        const target = targetRef.current
+        if (!target || !video) return undefined
+        const listener = getOrCreateAudioListener(camera)
+        const stopWaiting = resumeContextOnGesture(listener)
+        const detach = attachPositionalVideoSound(target, video, listener, {
+            volume, refDistance: distance, maxDistance, distanceModel
+        })
+        return () => { stopWaiting(); detach?.() }
+    }, [targetRef, video, camera, volume, distance, maxDistance, distanceModel])
+    return null
+}
+
+export default function VideoObject({
+    assetRef, data, opacity = 1, linkActive, muted = true, volume = 1, loop = true,
+    spatial = false, distance, maxDistance, distanceModel
+}) {
     const assetUrl = useAssetUrl(assetRef, { preferRemoteSource: true })
     const isVideoType = !assetRef?.mimeType || assetRef.mimeType.startsWith('video/')
     const rawSource = (isVideoType ? assetUrl : null) || data || null
     const sourceUrl = typeof rawSource === 'string' ? rawSource.trim() : null
-    const { texture, playbackBlocked, size } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
+    const { texture, playbackBlocked, size, video } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
+    const meshRef = useRef(null)
 
     if (!texture) {
         return null
     }
 
     return (
-        <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
+        <mesh ref={meshRef} position-y={0.01} rotation-x={-Math.PI / 2}>
             <planeGeometry args={size} />
             <meshBasicMaterial map={texture} toneMapped={false} transparent opacity={opacity} side={THREE.DoubleSide} />
+            {spatial && muted === false && video ? (
+                <PositionalVideoSound
+                    targetRef={meshRef}
+                    video={video}
+                    volume={volume}
+                    distance={distance}
+                    maxDistance={maxDistance}
+                    distanceModel={distanceModel}
+                />
+            ) : null}
             {playbackBlocked && (
                 <Html position={[0, 0.08, 0]} center>
                     <span className="link-label">Click or press a key to start video</span>

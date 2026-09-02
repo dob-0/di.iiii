@@ -175,6 +175,10 @@ function EntityVisual({ entity, assetMap }) {
                 muted={media.muted !== false}
                 volume={media.volume}
                 loop={media.loop !== false}
+                spatial={media.spatial === true}
+                distance={media.distance}
+                maxDistance={media.maxDistance}
+                distanceModel={media.distanceModel}
             />
         )
     case 'model':

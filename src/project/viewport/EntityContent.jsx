@@ -156,6 +156,10 @@ export default function EntityContent({ entity, assetMap }) {
                 muted={media.muted !== false}
                 volume={media.volume}
                 loop={media.loop !== false}
+                spatial={media.spatial === true}
+                distance={media.distance}
+                maxDistance={media.maxDistance}
+                distanceModel={media.distanceModel}
             />
         )
     case 'audio':
