@@ -16,7 +16,7 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ESCAPES
 
 // A space may name its own card. Anything without one falls back to the
 // platform tile, which is correct for a space that has no face of its own yet.
-const DEFAULT_IMAGE = '/brand/og-image.png'
+const DEFAULT_IMAGE = '/suite/og-image.png'
 
 // Explicit, not conventional. Deriving the filename from the handle would point
 // every space without a card at a URL that 404s, and a crawler given a broken

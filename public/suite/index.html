@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>di.iiii — name and mark</title>
+<meta name="description" content="di.iiii — the name, the mark, the files. Take the current version from here.">
+<link rel="icon" href="/suite/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/suite/apple-touch-icon.png">
+<meta property="og:title" content="di.iiii — name and mark">
+<meta property="og:description" content="The current name, mark and wordmark. Take the correct version from here.">
+<meta property="og:image" content="https://di-studio.xyz/suite/og-image.png">
+<style>
+/* Self-hosted, same faces the app uses — a venue laptop with no network still
+   renders the identity rather than a system fallback wearing its name. */
+@font-face{
+    font-family:'Inter';
+    src:url('/fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+    font-weight:100 900;font-style:normal;font-display:swap;
+}
+@font-face{
+    font-family:'JetBrains Mono';
+    src:url('/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations');
+    font-weight:100 800;font-style:normal;font-display:swap;
+}
+
+:root{
+    --black:#000;
+    --white:#fff;
+    --cyan:#4df9ff;
+    --cyan-bright:#00e5ff;
+    --cyan-dim:rgba(77,249,255,.10);
+    --cyan-line:rgba(77,249,255,.30);
+    --grey:#8a8f94;
+    --line:#1c1c1c;
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --mono:'JetBrains Mono','Fira Code',ui-monospace,monospace;
+}
+
+*{box-sizing:border-box;border-radius:0}
+html{background:var(--black)}
+body{
+    margin:0;background:var(--black);color:var(--white);
+    font-family:var(--sans);font-weight:400;font-size:16px;line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    padding:0 24px 96px;
+}
+.wrap{max-width:880px;margin:0 auto}
+
+.eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--grey);margin:0;
+}
+.eyebrow .dot{color:var(--cyan)}
+
+header{padding:72px 0 40px;border-bottom:1px solid var(--line)}
+.mark{width:64px;height:64px;display:block;color:var(--cyan);margin:0 0 28px}
+h1{
+    font-weight:800;font-size:clamp(34px,6vw,60px);line-height:1;
+    letter-spacing:-.035em;margin:18px 0 20px;
+}
+h1 .dot{color:var(--cyan)}
+.sub{max-width:60ch;color:var(--grey);margin:0;font-size:16px}
+.sub b{color:var(--white);font-weight:500}
+
+section{padding:44px 0;border-bottom:1px solid var(--line)}
+h2{
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--cyan);font-weight:400;margin:0 0 22px;
+}
+
+/* the two spellings */
+.names{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.name{background:var(--black);padding:24px 26px}
+.name .n{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1;margin:0 0 12px;color:var(--white)}
+.name .n .dot{color:var(--cyan)}
+.name .n.who{font-size:26px;letter-spacing:-.02em;font-weight:700}
+.name .role{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);margin:0 0 10px}
+.name p{margin:0;color:var(--grey);font-size:14px;line-height:1.55}
+.rule{
+    margin:22px 0 0;font-size:15px;color:var(--white);
+    border-left:2px solid var(--cyan);padding-left:16px;
+}
+
+.retired{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0 0}
+.dead{
+    font-family:var(--mono);font-size:13px;letter-spacing:.04em;
+    border:1px solid #2a2a2a;color:#5c6165;padding:7px 13px;text-decoration:line-through;
+}
+.note{margin:16px 0 0;color:var(--grey);font-size:14px;max-width:62ch}
+
+/* credit lines */
+.credit{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    border:1px solid var(--cyan-line);background:var(--cyan-dim);
+    padding:14px 16px;margin:0 0 12px;
+}
+.credit code{
+    font-family:var(--mono);font-size:14px;color:var(--white);
+    flex:1;min-width:220px;word-break:break-word;
+}
+.copy{
+    font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    background:transparent;border:1px solid var(--cyan-line);color:var(--cyan);
+    padding:7px 13px;cursor:pointer;
+}
+.copy:hover{border-color:var(--cyan-bright);color:var(--cyan-bright)}
+.copy:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+/* files */
+/* outline, not a gap-fill background: an unfilled grid cell in the last row
+   would otherwise show the container colour as a grey block. */
+.files{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1px;border:1px solid var(--line)}
+.file{background:var(--black);padding:0;display:flex;flex-direction:column;text-decoration:none;color:inherit;outline:1px solid var(--line)}
+.file:hover{background:#080808}
+.file:hover .fname{color:var(--cyan)}
+.file:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px}
+.thumb{
+    height:120px;display:flex;align-items:center;justify-content:center;
+    border-bottom:1px solid var(--line);overflow:hidden;
+}
+.thumb img{max-width:76%;max-height:76%;display:block}
+.thumb-mark{width:56px;height:56px;color:var(--cyan);display:block}
+.thumb.light{background:var(--white)}
+.fmeta{padding:12px 14px}
+.fname{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--white)}
+.fdesc{font-size:12px;color:var(--grey);margin-top:4px;line-height:1.45}
+
+/* rules list */
+.list{margin:0;padding:0;list-style:none;display:grid;gap:14px;max-width:66ch}
+.list li{padding-left:18px;position:relative;color:var(--grey);font-size:15px}
+.list li::before{content:'';position:absolute;left:0;top:.62em;width:6px;height:6px;background:var(--cyan)}
+.list li b{color:var(--white);font-weight:500}
+
+.swatches{display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line);margin-top:6px}
+.sw{background:var(--black);padding:14px 16px;min-width:150px;flex:1}
+.sw .chip{height:26px;margin-bottom:10px;border:1px solid var(--line)}
+.sw .hex{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--white)}
+.sw .use{font-size:11px;color:var(--grey);margin-top:3px}
+
+footer{padding:38px 0 0;color:var(--grey);font-size:14px}
+footer a{color:var(--cyan);text-decoration:none;border-bottom:1px solid var(--cyan-line)}
+footer a:hover{color:var(--cyan-bright)}
+.stamp{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:#5c6165;margin-top:22px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+    <p class="eyebrow">di<span class="dot">.</span>iiii — suite</p>
+    <svg class="mark" viewBox="0 0 100 100" role="img" aria-label="di.iiii mark">
+        <rect x="4" y="4" width="92" height="92" fill="none" stroke="currentColor" stroke-width="11"/>
+        <rect x="37" y="37" width="26" height="26" fill="currentColor"/>
+    </svg>
+    <h1>the name and the mark<span class="dot">.</span></h1>
+    <p class="sub">Take the current version from here. <b>This page is the source</b> — if a spelling or a file changes, it changes here first, and the link stays the same.</p>
+</header>
+
+<section>
+    <h2>which spelling</h2>
+    <div class="names">
+        <div class="name">
+            <p class="role">the platform</p>
+            <p class="n">di<span class="dot">.</span>iiii</p>
+            <p>The software, the spaces, di-studio.xyz. Anything that ships.</p>
+        </div>
+        <div class="name">
+            <p class="role">the studio</p>
+            <p class="n">di<span class="dot">.</span>i</p>
+            <p>The practice and its people. Bylines, credits, contracts, a signature.</p>
+        </div>
+    </div>
+    <p class="rule">If it ships, four i's. If it signs, one.</p>
+    <div class="retired">
+        <span class="dead">di.ii</span>
+        <span class="dead">di.iii</span>
+        <span class="dead">Di.iiii</span>
+        <span class="dead">DI</span>
+    </div>
+    <p class="note">Retired spellings — please don't use them. Lowercase always, and the dot is the accent: only the dot is ever cyan, never a letter.</p>
+</section>
+
+<section>
+    <h2>the studio</h2>
+    <div class="names">
+        <div class="name">
+            <p class="role">di.i</p>
+            <p class="n who">Gevorg Grigoryan</p>
+            <p>Founder. Theatre director turned XR builder.</p>
+        </div>
+        <div class="name">
+            <p class="role">di.i</p>
+            <p class="n who">Emilya Nikoghosyan</p>
+            <p>Artist and builder. algovrithm, and the WCC space.</p>
+        </div>
+    </div>
+    <p class="rule">di.i is two people. Together they build di.iiii.</p>
+</section>
+
+<section>
+    <h2>credit lines</h2>
+    <div class="credit">
+        <code>Gevorg Grigoryan — di.i</code>
+        <button class="copy" type="button">copy</button>
+    </div>
+    <div class="credit">
+        <code>Emilya Nikoghosyan — di.i</code>
+        <button class="copy" type="button">copy</button>
+    </div>
+    <div class="credit">
+        <code>Built on di.iiii — di-studio.xyz</code>
+        <button class="copy" type="button">copy</button>
+    </div>
+    <p class="note">For a programme, a wall label or a press release, a person's line stands alone. Add the platform line when the space itself is the work.</p>
+</section>
+
+<section>
+    <h2>files</h2>
+    <div class="files">
+        <a class="file" href="/suite/mark.svg" target="_blank" rel="noopener">
+            <span class="thumb"><svg viewBox="0 0 100 100" class="thumb-mark" aria-hidden="true">
+                <rect x="4" y="4" width="92" height="92" fill="none" stroke="currentColor" stroke-width="11"/>
+                <rect x="37" y="37" width="26" height="26" fill="currentColor"/>
+            </svg></span>
+            <span class="fmeta"><span class="fname">mark.svg</span>
+            <span class="fdesc">Vector master. Draws in currentColor — recolour it to any one palette colour.</span></span>
+        </a>
+        <a class="file" href="/suite/wordmark-on-black.png" target="_blank" rel="noopener">
+            <span class="thumb"><img src="/suite/wordmark-on-black.png" alt="wordmark on black"></span>
+            <span class="fmeta"><span class="fname">wordmark-on-black.png</span>
+            <span class="fdesc">Lockup for a dark ground. The default for programmes and slides.</span></span>
+        </a>
+        <a class="file" href="/suite/og-image.png" target="_blank" rel="noopener">
+            <span class="thumb"><img src="/suite/og-image.png" alt="share image"></span>
+            <span class="fmeta"><span class="fname">og-image.png</span>
+            <span class="fdesc">Share preview, 1200×630. For a link posted to social or a chat.</span></span>
+        </a>
+        <a class="file" href="/suite/icon-512.png" target="_blank" rel="noopener">
+            <span class="thumb"><img src="/suite/icon-512.png" alt="app icon"></span>
+            <span class="fmeta"><span class="fname">icon-512.png</span>
+            <span class="fdesc">Square app icon. Also the profile picture on any platform.</span></span>
+        </a>
+        <a class="file" href="/suite/favicon-32.png" target="_blank" rel="noopener">
+            <span class="thumb"><img src="/suite/favicon-32.png" alt="favicon"></span>
+            <span class="fmeta"><span class="fname">favicon-32.png</span>
+            <span class="fdesc">Browser tab. 16px version alongside it at /suite/favicon-16.png.</span></span>
+        </a>
+        <a class="file" href="/suite/apple-touch-icon.png" target="_blank" rel="noopener">
+            <span class="thumb"><img src="/suite/apple-touch-icon.png" alt="touch icon"></span>
+            <span class="fmeta"><span class="fname">apple-touch-icon.png</span>
+            <span class="fdesc">Home-screen icon, 180px, for a page saved on iOS.</span></span>
+        </a>
+    </div>
+</section>
+
+<section>
+    <h2>colour</h2>
+    <div class="swatches">
+        <div class="sw"><div class="chip" style="background:#000"></div><div class="hex">#000000</div><div class="use">base surface</div></div>
+        <div class="sw"><div class="chip" style="background:#fff"></div><div class="hex">#FFFFFF</div><div class="use">inverse surface</div></div>
+        <div class="sw"><div class="chip" style="background:#4df9ff"></div><div class="hex">#4DF9FF</div><div class="use">the single accent</div></div>
+        <div class="sw"><div class="chip" style="background:#00e5ff"></div><div class="hex">#00E5FF</div><div class="use">hover only</div></div>
+    </div>
+</section>
+
+<section>
+    <h2>using the mark</h2>
+    <ul class="list">
+        <li><b>Square corners, no radius.</b> The mark is a square holding a smaller square — an aperture. Every surface repeats it.</li>
+        <li><b>Cyan is the only accent.</b> Never a second hue.</li>
+        <li><b>Clearspace:</b> keep one mark-height of empty space on all four sides.</li>
+        <li><b>Never</b> stretch, skew, rotate or recolour off-palette; no shadow, glow or bevel.</li>
+        <li><b>Type:</b> Inter for everything, JetBrains Mono for labels and captions in uppercase.</li>
+    </ul>
+</section>
+
+<footer>
+    <p>Anything missing, or you need a format that isn't here — write to the door on Telegram, <a href="https://t.me/diiii111bot" target="_blank" rel="noopener">@diiii111bot</a>, or find the platform at <a href="https://di-studio.xyz">di-studio.xyz</a>.</p>
+    <p class="stamp">di-studio.xyz/suite</p>
+</footer>
+
+</div>
+
+<script>
+document.querySelectorAll('.copy').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        var text = btn.parentElement.querySelector('code').textContent;
+        var done = function(){
+            btn.textContent = 'copied';
+            setTimeout(function(){ btn.textContent = 'copy'; }, 1400);
+        };
+        if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(text).then(done, function(){ fallback(text, done); });
+        } else {
+            fallback(text, done);
+        }
+    });
+});
+function fallback(text, done){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch(e){ /* clipboard unavailable */ }
+    document.body.removeChild(ta);
+}
+</script>
+</body>
+</html>
