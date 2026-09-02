@@ -1,5 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
-import { clampWindowFrame } from '../utils/windowLayout.js'
+import { RAW_WINDOW_MIN_HEIGHT, RAW_WINDOW_MIN_WIDTH, clampWindowFrame } from '../utils/windowLayout.js'
+
+// Every edge and every corner. `dir` letters say which sides move.
+const RESIZE_DIRS = ['n', 's', 'e', 'w', 'ne', 'nw', 'sw']
+const KEY_STEP = 16
+const KEY_STEP_FINE = 1
+
+const resizeFrame = (origin, dir, dx, dy) => {
+    let { x, y, width, height } = origin
+    if (dir.includes('e')) width = origin.width + dx
+    if (dir.includes('w')) { width = origin.width - dx; x = origin.x + dx }
+    if (dir.includes('s')) height = origin.height + dy
+    if (dir.includes('n')) { height = origin.height - dy; y = origin.y + dy }
+    // The floor holds the edge that is NOT being dragged still.
+    if (width < RAW_WINDOW_MIN_WIDTH) {
+        if (dir.includes('w')) x = origin.x + origin.width - RAW_WINDOW_MIN_WIDTH
+        width = RAW_WINDOW_MIN_WIDTH
+    }
+    if (height < RAW_WINDOW_MIN_HEIGHT) {
+        if (dir.includes('n')) y = origin.y + origin.height - RAW_WINDOW_MIN_HEIGHT
+        height = RAW_WINDOW_MIN_HEIGHT
+    }
+    return { x, y, width, height }
+}
 
 export default function DesktopWindow({
     windowState,
@@ -18,17 +41,47 @@ export default function DesktopWindow({
     onToggleMinimize,
     onTogglePin,
     onEnter,
+    // Double-click on the title bar: "bring this window to working size" —
+    // on the canvas that means the graph zooms to it.
+    onFrame = null,
     minTop = undefined,
     allowOverflowLeft = false,
     allowOverflowTop = false,
-    canvasZoom = 1
+    // 'graph': the window is INSIDE the zoomable stage — x/y/width/height are
+    // graph units, the stage's transform does the rest, and there is no
+    // viewport to clamp against because the canvas has no edges.
+    // 'screen': the old viewport-fixed window (tools, pinned panels).
+    space = 'screen',
+    // The graph's current scale. Pointer deltas are screen pixels; a window on
+    // the canvas moves in graph units, so every delta is divided by this.
+    canvasZoom = 1,
+    // Far out on the canvas: keep the box, drop the paint (see raw.css).
+    far = false
 }) {
+    const onCanvas = space === 'graph'
+    const viewportBounds = () => ({
+        minTop,
+        allowOverflowLeft,
+        allowOverflowTop,
+        viewportWidth: typeof window !== 'undefined' ? window.innerWidth : undefined,
+        viewportHeight: typeof window !== 'undefined' ? window.innerHeight : undefined
+    })
+    // On the canvas the only rule is the size floor; on the screen the frame
+    // must stay reachable, which is what clampWindowFrame is for.
+    const settle = (frame, extra = {}) => (onCanvas
+        ? {
+            ...frame,
+            width: Math.max(RAW_WINDOW_MIN_WIDTH, Number(frame.width) || RAW_WINDOW_MIN_WIDTH),
+            height: Math.max(RAW_WINDOW_MIN_HEIGHT, Number(frame.height) || RAW_WINDOW_MIN_HEIGHT)
+        }
+        : clampWindowFrame(frame, { ...viewportBounds(), ...extra }))
+
     // `minimized` rides along in the draft on purpose. The clamp places a
     // collapsed window by its bar rather than by the panel it would open to,
     // and it reads that from the frame it is handed — so a draft built from
     // x/y/width/height alone silently told the clamp every window was open,
     // and the fix in windowLayout.js could never fire from here. It is never
-    // written back: onPatch below sends the four geometry fields only.
+    // written back: onPatch below sends geometry only.
     const [draft, setDraft] = useState(() => ({
         x: windowState.x,
         y: windowState.y,
@@ -40,37 +93,39 @@ export default function DesktopWindow({
     const [dragMode, setDragMode] = useState(null)
     const draftRef = useRef(draft)
     useEffect(() => { draftRef.current = draft }, [draft])
+    // The latest handlers, read by the one pointer effect below without
+    // re-registering it mid-gesture (an inline onPatch changes identity every
+    // render; a listener torn down mid-drag drops the pointerup).
+    const callbacksRef = useRef({ onPatch })
+    useEffect(() => { callbacksRef.current = { onPatch } })
 
     useEffect(() => {
         if (interactionRef.current) return
-        setDraft(clampWindowFrame({
+        setDraft(settle({
             x: windowState.x,
             y: windowState.y,
             width: windowState.width,
             height: windowState.height,
             minimized: windowState.minimized === true
-        }, {
-            minTop,
-            allowOverflowLeft,
-            allowOverflowTop,
-            viewportWidth: typeof window !== 'undefined' ? window.innerWidth : undefined,
-            viewportHeight: typeof window !== 'undefined' ? window.innerHeight : undefined
         }))
-    }, [allowOverflowLeft, allowOverflowTop, minTop, windowState.height, windowState.minimized, windowState.width, windowState.x, windowState.y])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allowOverflowLeft, allowOverflowTop, minTop, onCanvas, windowState.height, windowState.minimized, windowState.width, windowState.x, windowState.y])
 
-    // Re-clamp when the viewport itself changes — rotation, window resize, the
-    // virtual keyboard shrinking the layout viewport. Without this a window
-    // placed in landscape is stranded fully off-screen in portrait.
+    // Re-clamp a SCREEN window when the viewport itself changes — rotation,
+    // window resize, the virtual keyboard shrinking the layout viewport.
+    // From the stored frame, not the last draft: clamping is one-directional,
+    // so re-clamping the draft meant a window shrunk by a phone rotation
+    // stayed shrunk on the desktop for the rest of the session.
     useEffect(() => {
-        if (typeof window === 'undefined') return undefined
+        if (onCanvas || typeof window === 'undefined') return undefined
         const reclamp = () => {
             if (interactionRef.current) return
-            setDraft((current) => clampWindowFrame(current, {
-                minTop,
-                allowOverflowLeft,
-                allowOverflowTop,
-                viewportWidth: window.innerWidth,
-                viewportHeight: window.innerHeight
+            setDraft(settle({
+                x: windowState.x,
+                y: windowState.y,
+                width: windowState.width,
+                height: windowState.height,
+                minimized: windowState.minimized === true
             }))
         }
         window.addEventListener('resize', reclamp)
@@ -79,59 +134,44 @@ export default function DesktopWindow({
             window.removeEventListener('resize', reclamp)
             window.removeEventListener('orientationchange', reclamp)
         }
-    }, [allowOverflowLeft, allowOverflowTop, minTop])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allowOverflowLeft, allowOverflowTop, minTop, onCanvas, windowState.height, windowState.minimized, windowState.width, windowState.x, windowState.y])
 
     useEffect(() => {
         if (!dragMode) return undefined
         const handlePointerMove = (event) => {
             const state = interactionRef.current
-            if (!state) return
+            if (!state || event.pointerId !== state.pointerId) return
+            const dx = (event.clientX - state.startX) / canvasZoom
+            const dy = (event.clientY - state.startY) / canvasZoom
             if (state.mode === 'drag') {
-                setDraft((current) => clampWindowFrame({
+                setDraft((current) => settle({
                     ...current,
-                    x: state.origin.x + (event.clientX - state.startX) / canvasZoom,
-                    y: state.origin.y + (event.clientY - state.startY) / canvasZoom
-                }, {
-                    minTop,
-                    allowOverflowLeft,
-                    allowOverflowTop,
-                    viewportWidth: window.innerWidth,
-                    viewportHeight: window.innerHeight
+                    x: state.origin.x + dx,
+                    y: state.origin.y + dy
                 }))
             }
             if (state.mode === 'resize') {
-                setDraft((current) => clampWindowFrame({
+                setDraft((current) => settle({
                     ...current,
-                    width: Math.max(260, state.origin.width + (event.clientX - state.startX) / canvasZoom),
-                    height: Math.max(180, state.origin.height + (event.clientY - state.startY) / canvasZoom)
-                }, {
-                    minTop,
-                    allowOverflowLeft,
-                    allowOverflowTop,
-                    viewportWidth: window.innerWidth,
-                    viewportHeight: window.innerHeight
-                }))
+                    ...resizeFrame(state.origin, state.dir, dx, dy)
+                }, { resizing: true }))
             }
         }
-        const handlePointerUp = () => {
+        const handlePointerUp = (event) => {
             const state = interactionRef.current
+            if (!state || (event && event.pointerId !== state.pointerId)) return
             interactionRef.current = null
             setDragMode(null)
-            if (!state) return
-            const nextFrame = clampWindowFrame(draftRef.current, {
-                minTop,
-                allowOverflowLeft,
-                allowOverflowTop,
-                viewportWidth: window.innerWidth,
-                viewportHeight: window.innerHeight
-            })
+            const nextFrame = settle(draftRef.current, state.mode === 'resize' ? { resizing: true } : {})
             setDraft(nextFrame)
-            onPatch?.({
-                x: nextFrame.x,
-                y: nextFrame.y,
-                width: nextFrame.width,
-                height: nextFrame.height
-            })
+            // A resize from the east/south edges leaves x/y alone — and a
+            // window that was following its card keeps following it. Any
+            // gesture that moved the top-left corner writes a position.
+            const movedOrigin = state.mode === 'drag' || /[nw]/.test(state.dir || '')
+            callbacksRef.current.onPatch?.(movedOrigin
+                ? { x: nextFrame.x, y: nextFrame.y, width: nextFrame.width, height: nextFrame.height }
+                : { width: nextFrame.width, height: nextFrame.height })
         }
 
         window.addEventListener('pointermove', handlePointerMove)
@@ -142,38 +182,73 @@ export default function DesktopWindow({
             window.removeEventListener('pointerup', handlePointerUp)
             window.removeEventListener('pointercancel', handlePointerUp)
         }
-    }, [dragMode, allowOverflowLeft, allowOverflowTop, minTop, onPatch, canvasZoom])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dragMode, allowOverflowLeft, allowOverflowTop, minTop, canvasZoom, onCanvas])
+
+    // Capture the pointer on the element that was pressed. Without it the
+    // gesture died the moment the pointer left the document — inside an
+    // iframe that is the edge of the panel, which is exactly where a person
+    // drags to when enlarging a window. Captured events still bubble to the
+    // window listeners above. stopPropagation keeps the graph surface's own
+    // pan / pinch / double-tap from seeing the press at all.
+    const begin = (event, state) => {
+        event.preventDefault()
+        event.stopPropagation()
+        event.currentTarget.setPointerCapture?.(event.pointerId)
+        onFocus?.()
+        setDragMode(state.mode)
+        interactionRef.current = { ...state, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY }
+    }
 
     const startDrag = (event) => {
         if (event.target.closest('button')) return
-        event.preventDefault()
-        onFocus?.()
-        setDragMode('drag')
-        interactionRef.current = {
-            mode: 'drag',
-            startX: event.clientX,
-            startY: event.clientY,
-            origin: { x: draft.x, y: draft.y }
-        }
+        if (event.button !== undefined && event.button !== 0) return
+        begin(event, { mode: 'drag', origin: { x: draft.x, y: draft.y } })
     }
 
-    const startResize = (event) => {
-        event.preventDefault()
-        onFocus?.()
-        setDragMode('resize')
-        interactionRef.current = {
+    const startResize = (dir) => (event) => {
+        if (event.button !== undefined && event.button !== 0) return
+        begin(event, {
             mode: 'resize',
-            startX: event.clientX,
-            startY: event.clientY,
-            origin: { width: draft.width, height: draft.height }
-        }
+            dir,
+            origin: { x: draft.x, y: draft.y, width: draft.width, height: draft.height }
+        })
+    }
+
+    // Keyboard: arrows on the title bar move, arrows on the SE grip resize.
+    // Shift steps by one pixel. The grip and the header are focusable for it.
+    const keyDelta = (event) => {
+        const step = event.shiftKey ? KEY_STEP_FINE : KEY_STEP
+        const dx = event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0
+        const dy = event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0
+        if (!dx && !dy) return null
+        event.preventDefault()
+        event.stopPropagation()
+        return { dx, dy }
+    }
+    const commit = (nextFrame, movedOrigin) => {
+        const settled = settle(nextFrame, movedOrigin ? {} : { resizing: true })
+        setDraft(settled)
+        callbacksRef.current.onPatch?.(movedOrigin
+            ? { x: settled.x, y: settled.y, width: settled.width, height: settled.height }
+            : { width: settled.width, height: settled.height })
+    }
+    const handleHeaderKeyDown = (event) => {
+        const delta = keyDelta(event)
+        if (!delta) return
+        commit({ ...draft, x: draft.x + delta.dx, y: draft.y + delta.dy }, true)
+    }
+    const handleGripKeyDown = (event) => {
+        const delta = keyDelta(event)
+        if (!delta) return
+        commit({ ...draft, ...resizeFrame(draft, 'se', delta.dx, delta.dy) }, false)
     }
 
     const sectionCursor = dragMode === 'drag' ? 'grabbing' : dragMode === 'resize' ? 'nwse-resize' : undefined
 
     return (
         <section
-            className={`raw-window ${windowState.minimized ? 'is-minimized' : ''} ${windowState.pinned ? 'is-pinned' : ''}`}
+            className={`raw-window${onCanvas ? ' is-graph' : ''}${far ? ' is-far' : ''} ${windowState.minimized ? 'is-minimized' : ''} ${windowState.pinned ? 'is-pinned' : ''}`}
             role="dialog"
             aria-label={title}
             tabIndex={-1}
@@ -190,9 +265,22 @@ export default function DesktopWindow({
                 ...(accent ? { '--window-accent': accent } : {})
             }}
         >
+            {/* The title bar is the drag handle AND the keyboard handle for
+                moving; a landmark element carrying focus is what the rule
+                objects to, and a div would lose the header semantics the
+                dialog reads out. */}
+            {/* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
             <header
                 className="raw-window-header"
                 onPointerDown={startDrag}
+                onDoubleClick={(event) => {
+                    if (event.target.closest('button')) return
+                    event.stopPropagation()
+                    onFrame?.()
+                }}
+                onKeyDown={handleHeaderKeyDown}
+                tabIndex={0}
+                aria-label={`${title} — drag or use arrow keys to move`}
                 style={{ cursor: dragMode === 'drag' ? 'grabbing' : undefined }}
             >
                 <div>
@@ -204,9 +292,10 @@ export default function DesktopWindow({
                         <button
                             type="button"
                             title="Go inside this node to put things in it"
+                            aria-label="Enter"
                             onClick={(event) => { event.stopPropagation(); onEnter() }}
                         >
-                            Enter ›
+                            <span className="raw-window-enter-word">Enter </span>›
                         </button>
                     )}
                     {/* Glyphs, not words. Four words per title bar — and a
@@ -218,8 +307,8 @@ export default function DesktopWindow({
                     <button
                         type="button"
                         className={windowState.pinned ? 'is-active' : ''}
-                        aria-label={windowState.pinned ? 'Unpin' : 'Pin'}
-                        title={windowState.pinned ? 'Unpin' : 'Pin'}
+                        aria-label={windowState.pinned ? 'Unpin from the screen' : 'Pin to the screen'}
+                        title={windowState.pinned ? 'Unpin — back onto the canvas' : 'Pin to the screen — stays put while the canvas moves'}
                         onClick={(event) => { event.stopPropagation(); onTogglePin?.() }}
                     >
                         ⌖
@@ -242,8 +331,26 @@ export default function DesktopWindow({
                     </button>
                 </div>
             </header>
+            {/* eslint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
             {!windowState.minimized && <div className="raw-window-body">{children}</div>}
-            {!windowState.minimized && <div className="raw-window-resizer" onPointerDown={startResize} />}
+            {!windowState.minimized && RESIZE_DIRS.map((dir) => (
+                <div
+                    key={dir}
+                    className={`raw-window-handle ${dir}`}
+                    data-dir={dir}
+                    onPointerDown={startResize(dir)}
+                />
+            ))}
+            {!windowState.minimized && (
+                <button
+                    type="button"
+                    className="raw-window-resizer"
+                    data-dir="se"
+                    aria-label="Resize — drag or use arrow keys"
+                    onPointerDown={startResize('se')}
+                    onKeyDown={handleGripKeyDown}
+                />
+            )}
         </section>
     )
 }

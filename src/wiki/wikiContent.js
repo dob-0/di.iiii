@@ -871,6 +871,26 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'raw-windows-on-the-canvas',
+        category: 'Editing',
+        title: 'Windows on the canvas: one desk, any screen',
+        summary: 'A node\'s window sits on the canvas next to its card. Zoom and the whole desk scales; pan and it comes along; resize from any edge; pin a window to the screen when you want it held still.',
+        body: [
+            'In the node editor a panel node — Text, Scene, Image, List, Browser, Monitor — is two views of one thing: the card on the canvas and the window that shows its panel. The window now lives ON the canvas with its card, in the same space the graph is drawn in. Scrolling or pinching zooms cards and windows together, so a crowded desk is one zoom-out away from having room, and a phone is just a small view of the same canvas.',
+            { list: [
+                'A new window appears to the right of its card and follows the card until you move it. After that it keeps its own place.',
+                'Drag the title bar to move a window; drag any edge or corner to resize it. Arrow keys on the title bar move it, arrow keys on the corner grip resize it (hold Shift for one pixel).',
+                'Double-click a window\'s title bar to zoom the graph to that window — the quickest way to bring one thing to working size.',
+                'Press ⌖ to pin a window to the screen: it stays exactly where it is on screen while the canvas moves underneath. Press it again to put it back on the canvas.',
+                'Scrolling inside a window\'s body belongs to that window (a note scrolls, the Scene orbits). Scrolling on its title bar, on the canvas, or with Ctrl/⌘ held zooms the desk.',
+                'The ⤢ button fits everything — cards and windows. Far out, windows show as plain boxes until you come closer.'
+            ] },
+            'Windows made before this change have no canvas position of their own, so they appear beside their cards; the first time you move one it takes a place of its own. Nothing is rewritten just by opening a project.'
+        ],
+        tags: ['raw', 'nodes', 'windows', 'zoom', 'canvas', 'editor', 'phone'],
+        updated: '2026-09-02'
+    },
+    {
         id: 'raw-on-a-phone',
         category: 'Editing',
         title: 'Nodes on a phone: wiring with a finger',
@@ -1096,7 +1116,7 @@ export const WIKI_ARTICLES = [
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['glossary', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['glossary', 'raw-windows-on-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

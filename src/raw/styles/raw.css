@@ -1564,6 +1564,12 @@
     height: 22px;
     cursor: nwse-resize;
     border-radius: 0;
+    /* A button now (it takes the keyboard); none of a button's furniture. */
+    appearance: none;
+    border: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
     /* Two visible corner strokes: the handle existed for weeks as a 16px
        4%-alpha square nobody could find, wedged against the window's own
        corner buttons over a pointer-hungry canvas ("i can't change size",
@@ -1582,6 +1588,104 @@
 
 .raw-window-resizer:hover {
     opacity: 1;
+}
+
+/* ── Windows ON the canvas ──
+   A panel node's window lives inside .raw-graph-stage with its card, so the
+   graph's translate+scale moves and sizes both together: zoom out and the
+   desk gets more room, pan and the window comes along, drag the card and an
+   unmoved window follows it. Absolute, not fixed — fixed inside a transformed
+   ancestor is laid out in that ancestor's space anyway, and lies about it.
+   A pinned window (⌖) keeps the old viewport-fixed placement: it is held to
+   the screen on purpose. */
+.raw-window.is-graph {
+    position: absolute;
+    /* The window is a container so its own header can decide what fits at
+       the width it actually has, not at the viewport's. */
+    container-type: inline-size;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 12px 32px rgba(0, 0, 0, 0.7);
+}
+.raw-window.is-graph.is-far .raw-window-body {
+    /* Far out, a window is a rectangle with a title; its contents would be
+       a smear and each live one costs a paint. Keep the box, drop the paint. */
+    visibility: hidden;
+}
+
+/* The title bar never wraps: a second row of buttons under the title was
+   what made a 260px window 100px of chrome. The title gives way first. */
+.raw-window-header {
+    flex-wrap: nowrap;
+}
+.raw-window-header > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.raw-window-header h3 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.raw-window-actions {
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+}
+/* Below this width the word on the door goes and the glyph stays — the
+   accessible name keeps the word. */
+@container (max-width: 340px) {
+    .raw-window-actions .raw-window-enter-word {
+        display: none;
+    }
+}
+
+/* Eight resize handles — every edge and every corner, inside the frame so
+   overflow:hidden cannot clip them (the desk app lost its grips exactly that
+   way). Thin along the edges, 14px in the corners; the painted SE grip above
+   stays the one visible affordance and doubles as the SE corner. */
+.raw-window-handle {
+    position: absolute;
+    z-index: 12;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    background: transparent;
+}
+.raw-window-handle.n,
+.raw-window-handle.s {
+    left: 14px;
+    right: 14px;
+    height: 6px;
+    cursor: ns-resize;
+}
+.raw-window-handle.e,
+.raw-window-handle.w {
+    top: 14px;
+    bottom: 14px;
+    width: 6px;
+    cursor: ew-resize;
+}
+.raw-window-handle.n { top: 0; }
+.raw-window-handle.s { bottom: 0; }
+.raw-window-handle.e { right: 0; }
+.raw-window-handle.w { left: 0; }
+.raw-window-handle.ne,
+.raw-window-handle.nw,
+.raw-window-handle.sw {
+    width: 14px;
+    height: 14px;
+}
+.raw-window-handle.ne { top: 0; right: 0; cursor: nesw-resize; }
+.raw-window-handle.nw { top: 0; left: 0; cursor: nwse-resize; }
+.raw-window-handle.sw { bottom: 0; left: 0; cursor: nesw-resize; }
+/* A finger needs more than 6px. */
+@media (pointer: coarse) {
+    .raw-window-handle.n,
+    .raw-window-handle.s { height: 14px; }
+    .raw-window-handle.e,
+    .raw-window-handle.w { width: 14px; }
+    .raw-window-handle.ne,
+    .raw-window-handle.nw,
+    .raw-window-handle.sw { width: 28px; height: 28px; }
+    .raw-window-resizer { width: 32px; height: 32px; }
 }
 
 /* ── World panel window ── */
@@ -4094,6 +4198,22 @@
 
     .raw-topbar-right {
         gap: 4px;
+    }
+}
+
+/* At phone widths the seeded topbar becomes a horizontal scroller
+   (overflow-x:auto below), and an absolutely-positioned menu inside a
+   scroller is CLIPPED by it: measured at 390x844, the ⋯ menu's own centre
+   hit-tested to <html> — Home, Spaces, Wiki, Save to space, Clear the canvas
+   and node scale were all unreachable on a phone. Fixed to the viewport, it
+   escapes the scroller; the top is the topbar's height plus the gap. */
+@media (max-width: 640px) {
+    .raw-topbar-overflow-menu {
+        position: fixed;
+        top: 56px;
+        right: 8px;
+        max-height: calc(100dvh - 72px);
+        overflow-y: auto;
     }
 }
 

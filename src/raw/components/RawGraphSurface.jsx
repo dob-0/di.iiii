@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
+import { RAW_GRAPH_CARD_WIDTH } from '../utils/windowLayout.js'
 import {
     arePortsCompatible,
     getNodeCardSummary,
@@ -11,7 +12,7 @@ import {
     getPortType
 } from '../../project/nodeRegistry.js'
 
-const CARD_WIDTH = 200
+const CARD_WIDTH = RAW_GRAPH_CARD_WIDTH
 const HEADER_HEIGHT = 44
 const PORT_ROW_HEIGHT = 22
 const PORT_DOT_RADIUS = 5
@@ -188,7 +189,25 @@ export default function RawGraphSurface({
     // even show the toggle — most node types have no such concept.
     isNodeActive = () => false,
     onSetActive = () => {},
-    activeMarkerTypeIds = []
+    activeMarkerTypeIds = [],
+    // Windows ON the canvas. Rendered inside .raw-graph-stage after the cards,
+    // so the same translate+scale moves and sizes cards and windows together.
+    // A function receives the live viewport ({ panX, panY, zoom, tier }) —
+    // the editor's own render is not re-run per wheel tick that way. Studio
+    // passes nothing.
+    children = null,
+    // Graph-space boxes the FIT must also frame: the windows above. Cards
+    // alone used to define the graph's bounds, so a fit centred the cards
+    // and left every window off-screen.
+    extraBounds = null,
+    // Told on every pan/zoom, synchronously with the ref. Used for the one
+    // place the editor needs the viewport outside a render: converting a
+    // window's frame between canvas and screen when it is pinned/unpinned.
+    onViewportChange = null,
+    // A graph-space rectangle to bring to working size: { x, y, width,
+    // height, seq }. A new `seq` frames it (double-click on a window's title
+    // bar). Framing one thing is allowed to magnify, like frameSelection.
+    frameRect = null
 }) {
     const { requestDelete, deleteConfirm } = useDeleteConfirm()
     const containerRef = useRef(null)
@@ -242,6 +261,7 @@ export default function RawGraphSurface({
         setPanX(nextPanX)
         setPanY(nextPanY)
         setZoom(clamped)
+        onViewportChange?.(viewportRef.current)
     }
 
     const updateZoom = (nextZoom) => {
@@ -269,6 +289,20 @@ export default function RawGraphSurface({
         const minY = Math.min(...subset.map((n) => n.graphY ?? 0))
         const maxX = Math.max(...subset.map((n) => (n.graphX ?? 0) + CARD_WIDTH))
         const maxY = Math.max(...subset.map((n) => (n.graphY ?? 0) + cardHeight(n, portScopeNodes)))
+        return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }
+    }
+
+    // Cards plus the windows on the canvas. Only fit-all frames the windows;
+    // framing a selection or a neighbourhood stays about the cards.
+    const withExtraBounds = (bounds) => {
+        const boxes = (extraBounds || []).filter((box) => (
+            box && [box.x, box.y, box.width, box.height].every(Number.isFinite) && box.width > 0 && box.height > 0
+        ))
+        if (!boxes.length) return bounds
+        const minX = Math.min(bounds ? bounds.minX : Infinity, ...boxes.map((b) => b.x))
+        const minY = Math.min(bounds ? bounds.minY : Infinity, ...boxes.map((b) => b.y))
+        const maxX = Math.max(bounds ? bounds.maxX : -Infinity, ...boxes.map((b) => b.x + b.width))
+        const maxY = Math.max(bounds ? bounds.maxY : -Infinity, ...boxes.map((b) => b.y + b.height))
         return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }
     }
 
@@ -389,7 +423,7 @@ export default function RawGraphSurface({
      */
     const fitGraph = ({ force = false } = {}) => {
         if (!nodes.length) return
-        const all = boundsOf(nodes)
+        const all = withExtraBounds(boundsOf(nodes))
         const overviewZoom = zoomToFitBounds(all, { maxZoom: 1 })
         if (overviewZoom === null) return
 
@@ -437,7 +471,9 @@ export default function RawGraphSurface({
                 return x + w > 0 && x < box.width && y + h > 0 && y < box.height - Math.max(0, bottomInset)
             }).length
             : 0
-        setFitNotice({ shown, total: nodes.length })
+        // Windows widen the bounds now, so the floor can be hit while every
+        // card is in fact on screen — say nothing in that case.
+        setFitNotice(shown >= nodes.length ? null : { shown, total: nodes.length })
     }
 
     // Zoom to the selected node. Unlike fit-all this is ALLOWED to magnify —
@@ -511,6 +547,55 @@ export default function RawGraphSurface({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fitSignal])
 
+    // Bring one graph-space box to working size (a window's title bar was
+    // double-clicked). Allowed to magnify, capped like frameSelection.
+    const lastFrameSeqRef = useRef(frameRect?.seq ?? null)
+    useEffect(() => {
+        if (!frameRect || frameRect.seq === lastFrameSeqRef.current) return
+        lastFrameSeqRef.current = frameRect.seq
+        const bounds = {
+            minX: frameRect.x,
+            minY: frameRect.y,
+            maxX: frameRect.x + frameRect.width,
+            maxY: frameRect.y + frameRect.height,
+            width: Math.max(1, frameRect.width),
+            height: Math.max(1, frameRect.height)
+        }
+        const nextZoom = clamp(zoomToFitBounds(bounds, { maxZoom: FRAME_MAX_ZOOM }) ?? 1, GRAPH_MIN_ZOOM, FRAME_MAX_ZOOM)
+        applyFitTo(bounds, nextZoom)
+        setFitNotice(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [frameRect?.seq])
+
+    // The container itself changing size — a phone rotating, the browser
+    // window resized, the panel this is embedded in dragged bigger. Re-fit
+    // while the view is still where the last fit left it; once a person has
+    // moved the view, leave it alone (the same rule as the inset re-fit).
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container || typeof ResizeObserver === 'undefined') return undefined
+        let last = null
+        const observer = new ResizeObserver((entries) => {
+            const box = entries[0]?.contentRect
+            if (!box) return
+            const key = `${Math.round(box.width)}x${Math.round(box.height)}`
+            if (last === null) { last = key; return }
+            if (key === last) return
+            last = key
+            if (hasFitRef.current !== scopeKey || !nodes.length) return
+            const settled = lastFitViewportRef.current
+            const now = viewportRef.current
+            const untouched = settled
+                && Math.abs(settled.panX - now.panX) < 0.5
+                && Math.abs(settled.panY - now.panY) < 0.5
+                && Math.abs(settled.zoom - now.zoom) < 0.001
+            if (untouched) fitGraph()
+        })
+        observer.observe(container)
+        return () => observer.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [scopeKey, nodes.length])
+
     // The fit notice is transient — it reports on one fit, not a state.
     useEffect(() => {
         if (!fitNotice) return undefined
@@ -523,8 +608,19 @@ export default function RawGraphSurface({
         const container = containerRef.current
         if (!container) return undefined
         const handleWheel = (event) => {
+            // Inside a window's BODY the wheel belongs to the panel — a text
+            // note scrolls, a list scrolls, the Scene orbits. The frame of a
+            // window (title bar, edges) and the canvas zoom the graph. Ctrl
+            // (a trackpad pinch arrives as ctrl+wheel) zooms the graph from
+            // anywhere, so a pinch over a window still zooms the desk.
+            if (!event.ctrlKey && !event.metaKey && event.target?.closest?.('.raw-window-body')) return
             event.preventDefault()
-            const factor = event.deltaY < 0 ? 1.1 : 0.9
+            // Proportional to the delta, not a flat ±10% per event: a trackpad
+            // fires dozens of small events per swipe and a flat step made it
+            // fly; a mouse notch (deltaY 100) lands near the old step.
+            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1
+            const magnitude = clamp(Math.abs(event.deltaY) * unit, 1, 120)
+            const factor = Math.exp((event.deltaY < 0 ? 1 : -1) * magnitude * 0.0016)
             const vp = viewportRef.current
             const rect = container.getBoundingClientRect()
             const mx = event.clientX - rect.left
@@ -818,6 +914,9 @@ export default function RawGraphSurface({
         // The menu is a sibling of .raw-graph-stage, which carries the pan/zoom
         // transform — without this, tapping an item pans the canvas.
         if (target?.closest?.('.raw-graph-port-menu')) return false
+        // A window handles its own drag and resize; a press on one is never
+        // a pan (and its own handlers stop propagation anyway).
+        if (target?.closest?.('.raw-window')) return false
         if (event.button === 1) return true
         if (event.button !== 0) return false
         return !target?.closest?.('.raw-graph-node-card')
@@ -1043,6 +1142,9 @@ export default function RawGraphSurface({
         // …and the port menu, or a double-tap on an item opens the create
         // palette over the graph behind it.
         if (event.target?.closest?.('.raw-graph-port-menu')) return
+        // A double-click inside a window is the window's (title bar = frame
+        // it; body = whatever the panel does), never "create a node here".
+        if (event.target?.closest?.('.raw-window')) return
         const graphPoint = clientPointToGraphPoint(event.clientX, event.clientY)
         // Keep the whole card — and the door hanging off its left edge — inside
         // the part of the canvas you can SEE. Double-tapping near an edge used
@@ -1489,6 +1591,9 @@ export default function RawGraphSurface({
                             </div>
                         )
                     })}
+                    {/* Windows on the canvas: same stage, same transform, after
+                        the cards so they stack above them. */}
+                    {typeof children === 'function' ? children({ panX, panY, zoom, tier }) : children}
                 </div>
                 {/* Outside .raw-graph-stage on purpose: the stage carries the
                     pan/zoom transform, and position:fixed inside a transformed

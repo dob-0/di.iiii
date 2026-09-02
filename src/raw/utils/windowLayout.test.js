@@ -8,7 +8,14 @@ import {
     getScopeMarkerTop,
     RAW_SCOPE_MARKER_HEIGHT,
     RAW_WINDOW_BOTTOM_RESERVE,
-    RAW_WINDOW_PADDING
+    RAW_WINDOW_BOTTOM_RESERVE_WIDE,
+    RAW_WINDOW_CARD_GAP,
+    RAW_WINDOW_MIN_HEIGHT,
+    RAW_WINDOW_MIN_WIDTH,
+    RAW_WINDOW_PADDING,
+    graphToScreenFrame,
+    resolveGraphWindowFrame,
+    screenToGraphFrame
 } from './windowLayout.js'
 
 describe('selectMountedPanelNodes', () => {
@@ -91,8 +98,9 @@ describe('windowLayout', () => {
     it('places a minimized window by the bar it actually is, not by the height it would open to', () => {
         // The reported shape: a collapsed bar authored low on the surface, whose
         // stored height is a full panel. Clamped by the stored height it was
-        // dragged hundreds of pixels up, onto the cards. 810 - 56 - 132 = 622,
-        // so y: 640 lands at 622 rather than at 810 - 430 - 132 = 248.
+        // dragged hundreds of pixels up, onto the cards. On a 1440-wide
+        // (desktop) viewport the reserve is 40: 810 - 56 - 52 = 702, so
+        // y: 640 stays at 640 rather than landing at 810 - 430 - 52 = 328.
         expect(clampWindowFrame({
             x: 24,
             y: 640,
@@ -105,7 +113,7 @@ describe('windowLayout', () => {
             viewportWidth: 1440,
             viewportHeight: 810
         })).toEqual(expect.objectContaining({
-            y: 622,
+            y: 640,
             // the authored height survives, so expanding restores the real panel
             height: 430
         }))
@@ -122,7 +130,7 @@ describe('windowLayout', () => {
             allowOverflowTop: true,
             viewportWidth: 1440,
             viewportHeight: 810
-        })).toEqual(expect.objectContaining({ y: 248, height: 430 }))
+        })).toEqual(expect.objectContaining({ y: 328, height: 430 }))
     })
 
     it('allows view windows to overflow left while still clamping top and right edges', () => {
@@ -196,8 +204,8 @@ describe('windowLayout', () => {
             viewportWidth: 280,
             viewportHeight: 500
         })
-        expect(result.width).toBeGreaterThanOrEqual(260)
-        expect(result.height).toBeGreaterThanOrEqual(180)
+        expect(result.width).toBeGreaterThanOrEqual(RAW_WINDOW_MIN_WIDTH)
+        expect(result.height).toBeGreaterThanOrEqual(RAW_WINDOW_MIN_HEIGHT)
     })
 
     it('never lands a window flush against the bottom-right corner — the delete FAB and zoom controls live there', () => {
@@ -397,5 +405,82 @@ describe('getAnatomyDefaultFrame', () => {
             .toBe(true)
         expect(getAnatomyDefaultFrame({ viewportWidth: 390, viewportHeight: 664, workspaceTop: 300 }).minimized)
             .toBe(true)
+    })
+})
+
+describe('windows on the canvas (graph-space frames)', () => {
+    const card = { id: 'n1', graphX: 100, graphY: 50, values: { frame: { width: 300, height: 200 } } }
+
+    it('a frame with no position of its own sits beside its card and follows it', () => {
+        const a = resolveGraphWindowFrame(card, { cardWidth: 200 })
+        expect(a).toEqual({ x: 100 + 200 + RAW_WINDOW_CARD_GAP, y: 50, width: 300, height: 200, followsCard: true })
+        const moved = { ...card, graphX: 400, graphY: 90 }
+        expect(resolveGraphWindowFrame(moved, { cardWidth: 200 })).toMatchObject({ x: 640, y: 90 })
+    })
+
+    it('a legacy viewport-pixel frame is NOT converted through the viewport — it goes beside the card', () => {
+        // The stored x/y are screen pixels from before windows lived on the
+        // canvas. Converting them with whatever pan/zoom happens to be open
+        // would scatter every old project differently per screen.
+        const legacy = { ...card, values: { frame: { x: 512, y: 88, width: 560, height: 330 } } }
+        expect(resolveGraphWindowFrame(legacy, { cardWidth: 200 })).toMatchObject({ x: 340, y: 50, width: 560, height: 330, followsCard: true })
+    })
+
+    it('a frame that has been moved keeps its own graph position', () => {
+        const own = { ...card, values: { frame: { space: 'graph', x: -40, y: 900, width: 250, height: 150 } } }
+        expect(resolveGraphWindowFrame(own)).toEqual({ x: -40, y: 900, width: 250, height: 150, followsCard: false })
+    })
+
+    it('never yields a window below the size floor', () => {
+        const tiny = { ...card, values: { frame: { space: 'graph', x: 0, y: 0, width: 10, height: 10 } } }
+        expect(resolveGraphWindowFrame(tiny)).toMatchObject({ width: RAW_WINDOW_MIN_WIDTH, height: RAW_WINDOW_MIN_HEIGHT })
+    })
+
+    it('round-trips a frame between the canvas and the screen through the viewport', () => {
+        const vp = { panX: 120, panY: -30, zoom: 0.5 }
+        const graph = { x: 200, y: 400, width: 300, height: 200 }
+        const screen = graphToScreenFrame(graph, vp)
+        expect(screen).toEqual({ x: 220, y: 170, width: 150, height: 100 })
+        expect(screenToGraphFrame(screen, vp)).toEqual(graph)
+    })
+})
+
+describe('clampWindowFrame while resizing', () => {
+    it('a resize past the floor stops growing instead of sliding the window up', () => {
+        // Before: y was clamped AFTER height, against it, so a window grown
+        // past `viewportHeight - y - reserve` kept its bottom edge pinned and
+        // its top edge climbed to meet the cursor — the grip escaped from
+        // under the pointer and the window looked dead.
+        const grown = clampWindowFrame({ x: 100, y: 300, width: 760, height: 900 }, {
+            allowOverflowLeft: true, allowOverflowTop: true, viewportWidth: 1000, viewportHeight: 700, resizing: true
+        })
+        expect(grown.y).toBe(300)
+        expect(grown.x).toBe(100)
+        expect(grown.y + grown.height).toBeLessThanOrEqual(700 - RAW_WINDOW_PADDING - RAW_WINDOW_BOTTOM_RESERVE_WIDE)
+        expect(grown.x + grown.width).toBeLessThanOrEqual(1000 - RAW_WINDOW_PADDING)
+    })
+
+    it('never parks the header above the top edge on a very short viewport', () => {
+        const short = clampWindowFrame({ x: 20, y: 40, width: 300, height: 260 }, {
+            allowOverflowLeft: true, allowOverflowTop: true, viewportWidth: 500, viewportHeight: 300
+        })
+        expect(short.y).toBeGreaterThanOrEqual(0)
+    })
+
+    it('charges a window that spans BOTH axes to its nearest edge, so the fit does not land under it', () => {
+        // The phone case, numerically: one clamped window on 390x844.
+        const insets = getGraphEdgeInsets({
+            frames: [{ x: 12, y: 64, width: 366, height: 656 }],
+            surfaceRect: { left: 0, top: 0, width: 390, height: 844 }
+        })
+        // Nearest edge is the left (12px). The corridor to its right is 12px,
+        // thinner than the honest floor, so the x axis gives up — and the
+        // y axis is untouched. What must NOT happen is {0,0,0,0} on both.
+        expect(insets).toEqual({ left: 0, right: 0, top: 0, bottom: 0 })
+        const wide = getGraphEdgeInsets({
+            frames: [{ x: 0, y: 0, width: 700, height: 620 }],
+            surfaceRect: { left: 0, top: 0, width: 1000, height: 800 }
+        })
+        expect(wide.left + wide.top).toBeGreaterThan(0)
     })
 })

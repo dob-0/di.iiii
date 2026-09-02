@@ -60,7 +60,8 @@ import { describeRootEmptyCanvas } from '../utils/emptyCanvasHint.js'
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
-import { RAW_ANATOMY_Z, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { RAW_ANATOMY_Z, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop,
+    RAW_GRAPH_CARD_WIDTH, graphToScreenFrame, resolveGraphWindowFrame, screenToGraphFrame, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
@@ -111,6 +112,26 @@ const ACTIVE_MARKER_TYPE_IDS = ['world.light', 'world.environment', 'world.backg
 const buildWindowStateFromNode = (node, index = 0, graphContext = null) => {
     const def = WINDOW_DEFAULT_POSITIONS[node.typeId] || { x: 96, y: 140, width: 360, height: 280 }
     const frame = node.values?.frame || {}
+    const common = {
+        id: node.id,
+        title: frame.title || evaluateNodeInput(node, 'title', graphContext) || node.label,
+        zIndex: frame.zIndex || 6,
+        visible: frame.visible !== false,
+        minimized: Boolean(frame.minimized),
+        pinned: Boolean(frame.pinned)
+    }
+    // Unpinned = ON THE CANVAS, in graph units. A window with no position of
+    // its own (fresh, or a frame from before windows lived on the canvas)
+    // sits beside its card and follows it — see resolveGraphWindowFrame.
+    if (!common.pinned) {
+        const placed = resolveGraphWindowFrame(node, {
+            cardWidth: RAW_GRAPH_CARD_WIDTH,
+            defaultWidth: def.width,
+            defaultHeight: def.height
+        })
+        return { ...common, space: 'graph', x: placed.x, y: placed.y, width: placed.width, height: placed.height }
+    }
+    // Pinned = held to the SCREEN, in viewport pixels — the frame as stored.
     const hasSavedPos = frame.x != null && frame.y != null
     // Cascade unpositioned windows by a STABLE per-node offset, not the list
     // index — index shifts when a sibling closes, which made every later
@@ -125,16 +146,12 @@ const buildWindowStateFromNode = (node, index = 0, graphContext = null) => {
     const cascadeX = hasSavedPos ? 0 : (cascadeSlot % 4) * 72
     const cascadeY = hasSavedPos ? 0 : Math.floor(cascadeSlot / 4) * 56
     return {
-        id: node.id,
-        title: frame.title || evaluateNodeInput(node, 'title', graphContext) || node.label,
+        ...common,
+        space: 'screen',
         x: (frame.x ?? def.x) + cascadeX,
         y: (frame.y ?? def.y) + cascadeY,
         width: frame.width || def.width,
-        height: frame.height || def.height,
-        zIndex: frame.zIndex || 6,
-        visible: frame.visible !== false,
-        minimized: Boolean(frame.minimized),
-        pinned: Boolean(frame.pinned)
+        height: frame.height || def.height
     }
 }
 
@@ -329,6 +346,29 @@ export default function RawEditor({
         () => Math.max(6, ...visibleViewNodes.map((node) => node.values?.frame?.zIndex || 1)),
         [visibleViewNodes]
     )
+    // Windows split by where they live: on the canvas (inside the graph's
+    // transform, the default) or pinned to the screen (⌖).
+    const canvasViewNodes = useMemo(
+        () => visibleViewNodes.filter((node) => node.values?.frame?.pinned !== true),
+        [visibleViewNodes]
+    )
+    const pinnedViewNodes = useMemo(
+        () => visibleViewNodes.filter((node) => node.values?.frame?.pinned === true),
+        [visibleViewNodes]
+    )
+    // The canvas windows' boxes in graph units, for the fit: the graph's
+    // bounds are cards AND windows now, or a fit-all centres the cards and
+    // leaves the windows off-screen.
+    const graphWindowBoxes = useMemo(() => canvasViewNodes.map((node) => {
+        const state = buildWindowStateFromNode(node, 0, null)
+        return { x: state.x, y: state.y, width: state.width, height: state.minimized ? 44 : state.height }
+    }), [canvasViewNodes])
+    // The graph's live pan/zoom, kept OUTSIDE render: needed only when a
+    // window crosses between the canvas and the screen (pin / unpin), which
+    // converts its frame at that moment.
+    const graphViewportRef = useRef({ panX: 60, panY: 60, zoom: 1 })
+    // A window asking to be brought to working size (title bar double-click).
+    const [frameRect, setFrameRect] = useState(null)
     // Selection is visible only where it STANDS. The old filter was by node
     // TYPE against a retired World/View/Graph axis — with activeSurface
     // defaulting to 'world', selecting a panel node (Text, Image, Monitor)
@@ -1871,7 +1911,9 @@ export default function RawEditor({
             // has to dodge it too — otherwise the cards centre underneath the
             // window explaining them.
             ...(anatomyFrame && !anatomyFrame.minimized ? [anatomyFrame] : []),
-            ...visibleViewNodes
+            // Only windows held to the SCREEN can be in the graph's way. The
+            // ones on the canvas move with it, and are part of its bounds.
+            ...pinnedViewNodes
                 .filter((node) => node.values?.frame?.minimized !== true)
                 .map((node) => node.values?.frame)
                 .filter(Boolean)
@@ -1889,6 +1931,72 @@ export default function RawEditor({
             height: typeof window === 'undefined' ? 0 : window.innerHeight - graphTopInset
         }
     })
+
+    // One panel window, on the canvas or on the screen. The family, not the
+    // type id: the cards say "the room" and the windows used to say
+    // UNIVERSE.WORLD. Same node, two vocabularies — and the colour is what
+    // ties the window to its card.
+    const patchFrame = (node, patch) => applyLocalOps({
+        type: 'updateNode',
+        payload: {
+            nodeId: node.id,
+            patch: { values: { frame: { ...(node.values?.frame || {}), ...patch } } }
+        }
+    })
+    const renderPanelWindow = (node, index, { zoom = 1 } = {}) => {
+        const windowState = buildWindowStateFromNode(node, index, graphContext)
+        const family = getNodeFamily(node.typeId)
+        const onCanvas = windowState.space === 'graph'
+        return (
+            <DesktopWindow
+                key={node.id}
+                windowState={windowState}
+                title={windowState.title}
+                kicker={family?.label || node.typeId}
+                accent={family?.color || null}
+                space={windowState.space}
+                canvasZoom={onCanvas ? zoom : 1}
+                far={onCanvas && zoom < 0.3}
+                allowOverflowLeft
+                allowOverflowTop
+                onFocus={() => {
+                    selectNode(node.id)
+                    // already topmost → no op. Unconditional bumps
+                    // inflated zIndex forever AND pushed a real
+                    // undo entry per title-bar click, so Ctrl+Z
+                    // undid a focus instead of the last edit.
+                    if ((node.values?.frame?.zIndex || 6) >= topZIndex) return
+                    patchFrame(node, { zIndex: topZIndex + 1 })
+                }}
+                // Geometry written in the space the window lives in. A canvas
+                // window's first move is what gives it a position of its own.
+                onPatch={(patch) => patchFrame(node, { ...patch, space: onCanvas ? 'graph' : 'screen' })}
+                onClose={() => patchFrame(node, { visible: false })}
+                onToggleMinimize={() => patchFrame(node, { minimized: !node.values?.frame?.minimized })}
+                // Pin = leave the canvas for the screen, exactly where it is
+                // on screen right now; unpin = come back onto the canvas at
+                // the same place. Converted through the live viewport; the
+                // surface sits `graphTopInset` below the viewport's top.
+                onTogglePin={() => {
+                    const vp = graphViewportRef.current
+                    const geometry = { x: windowState.x, y: windowState.y, width: windowState.width, height: windowState.height }
+                    if (onCanvas) {
+                        const screen = graphToScreenFrame(geometry, vp)
+                        patchFrame(node, { pinned: true, space: 'screen', ...screen, y: screen.y + graphTopInset })
+                    } else {
+                        const graph = screenToGraphFrame({ ...geometry, y: geometry.y - graphTopInset }, vp)
+                        patchFrame(node, { pinned: false, space: 'graph', ...graph })
+                    }
+                }}
+                onFrame={onCanvas
+                    ? () => setFrameRect({ x: windowState.x, y: windowState.y, width: windowState.width, height: windowState.height, seq: Date.now() })
+                    : null}
+                onEnter={() => handleEnterNode(node.id)}
+            >
+                {renderViewNodeContent(node)}
+            </DesktopWindow>
+        )
+    }
 
     return (
         <main className="raw-editor-shell">
@@ -2193,7 +2301,16 @@ export default function RawEditor({
                     }
                     onSetActive={(node) => setActiveNodeId(node.typeId, node.parentId || null, node.id)}
                     activeMarkerTypeIds={activeMarkerTypeIds}
-                />
+                    extraBounds={graphWindowBoxes}
+                    onViewportChange={(viewport) => { graphViewportRef.current = viewport }}
+                    frameRect={frameRect}
+                >
+                    {/* Panel windows ON the canvas: inside the graph's
+                        transform with their cards. Zoom out and the desk gets
+                        more room; pan and they come along; a window that has
+                        not been moved follows its card. */}
+                    {({ zoom }) => canvasViewNodes.map((node, index) => renderPanelWindow(node, index, { zoom }))}
+                </RawGraphSurface>
                 {/* Zen's three residents are surface, nodes, wordmark — this is
                     the wordmark. Ambient, kept when the toolbar is summoned too.
                     It became the way home in the 2026-08-21 doors audit: the
@@ -2216,72 +2333,9 @@ export default function RawEditor({
                         {dropState.busy ? 'Bringing it in…' : dropState.notice}
                     </div>
                 )}
-                {/* Panel nodes float above the graph as viewport-fixed windows */}
-                {visibleViewNodes.map((node, index) => {
-                    const windowState = buildWindowStateFromNode(node, index, graphContext)
-                    // The family, not the type id: the cards say "the room" and
-                    // the windows used to say UNIVERSE.WORLD. Same node, two
-                    // vocabularies — and the colour is what ties the window to
-                    // its card on the canvas behind it.
-                    const family = getNodeFamily(node.typeId)
-                    return (
-                        <DesktopWindow
-                            key={node.id}
-                            windowState={windowState}
-                            title={windowState.title}
-                            kicker={family?.label || node.typeId}
-                            accent={family?.color || null}
-                            allowOverflowLeft
-                            allowOverflowTop
-                            onFocus={() => {
-                                selectNode(node.id)
-                                // already topmost → no op. Unconditional bumps
-                                // inflated zIndex forever AND pushed a real
-                                // undo entry per title-bar click, so Ctrl+Z
-                                // undid a focus instead of the last edit.
-                                if ((node.values?.frame?.zIndex || 6) >= topZIndex) return
-                                applyLocalOps({
-                                    type: 'updateNode',
-                                    payload: {
-                                        nodeId: node.id,
-                                        patch: { values: { frame: { ...(node.values?.frame || {}), zIndex: topZIndex + 1 } } }
-                                    }
-                                })
-                            }}
-                            onPatch={(patch) => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), ...patch } } }
-                                }
-                            })}
-                            onClose={() => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), visible: false } } }
-                                }
-                            })}
-                            onToggleMinimize={() => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), minimized: !node.values?.frame?.minimized } } }
-                                }
-                            })}
-                            onTogglePin={() => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), pinned: !node.values?.frame?.pinned } } }
-                                }
-                            })}
-                            onEnter={() => handleEnterNode(node.id)}
-                        >
-                            {renderViewNodeContent(node)}
-                        </DesktopWindow>
-                    )
-                })}
+                {/* Pinned panel windows: held to the SCREEN while the canvas
+                    moves under them. */}
+                {pinnedViewNodes.map((node, index) => renderPanelWindow(node, index, { zoom: 1 }))}
             </section>
 
             {/* The socket this made is one level up and off-screen, so the

@@ -64,3 +64,20 @@ describe('isRootGraphNode', () => {
         expect(isRootGraphNode(undefined, undefined)).toBe(false)
     })
 })
+
+describe('panel windows placed on the canvas', () => {
+    it('a placement with graph coordinates yields a graph-space frame with no position of its own', () => {
+        const values = buildNodeValues('view.text', {}, { clientX: 300, clientY: 200, graphX: 480, graphY: 260 }, { workspaceTop: 100 })
+        expect(values.frame.space).toBe('graph')
+        expect(values.frame.x).toBeUndefined()
+        expect(values.frame.y).toBeUndefined()
+        expect(values.frame.width).toBeGreaterThan(0)
+        expect(values.frame.visible).toBe(true)
+    })
+
+    it('a placement with only client coordinates keeps the legacy viewport-pixel frame', () => {
+        const values = buildNodeValues('view.text', {}, { clientX: 300, clientY: 200 }, { workspaceTop: 100 })
+        expect(values.frame.space).toBeUndefined()
+        expect(values.frame.x).toBe(120)
+    })
+})

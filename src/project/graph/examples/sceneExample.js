@@ -16,10 +16,9 @@ import { createEdge, createNode } from '../../nodeRegistry.js'
 
 const COL = 320
 const ROW = 140
-// How far below the workspace top the two seeded windows reach. Cards start
-// below it: the surface dodges top-docked windows, but only if there is a band
-// to dodge into — the starter workspace had to learn this twice.
-const WINDOW_BAND = 300
+// The two seeded windows sit on the canvas ABOVE the cards, 330 tall from
+// workspaceTop - 40; the card rows start under that band with a gap.
+const WINDOW_BAND = 330
 
 export const SCENE_EXAMPLE_CUBE_COLOR = '#ff8a3d'
 
@@ -65,7 +64,9 @@ export function buildSceneExample({ parentId = null, workspaceTop = 160 } = {}) 
         values: {
             title: 'Scene',
             bgColor: '#0b2330',
-            frame: { x: 512, y: 88, width: 560, height: 330, visible: true, zIndex: 7 }
+            // Graph units, on the canvas: above its own card (col 2), the
+            // room open where the words next to it say to look.
+            frame: { space: 'graph', x: 2 * COL - 40, y: workspaceTop - 40, width: 560, height: 330, visible: true, zIndex: 7 }
         }
     })
 
@@ -75,7 +76,8 @@ export function buildSceneExample({ parentId = null, workspaceTop = 160 } = {}) 
         row: 0,
         values: {
             content: HOW,
-            frame: { x: 24, y: 88, width: 470, height: 330, visible: true, zIndex: 8 }
+            // Above its card (col 0), level with the room's window.
+            frame: { space: 'graph', x: 0, y: workspaceTop - 40, width: 470, height: 330, visible: true, zIndex: 8 }
         }
     })
 

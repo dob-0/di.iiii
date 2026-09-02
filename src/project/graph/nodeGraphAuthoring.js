@@ -83,18 +83,33 @@ export const buildNodeValues = (definitionId, params, place, { workspaceTop = 0,
         // which is fine for a text note and useless for a timeline.
         const defaultW = type?.defaultFrame?.width ?? (isWorldNode ? 680 : 360)
         const defaultH = type?.defaultFrame?.height ?? (isWorldNode ? 480 : 280)
+        // Placed on the CANVAS (place.graphX present — Raw's palette): the
+        // window lives in graph space and has no position of its own yet, so
+        // it sits beside its card and follows it until someone moves it
+        // (resolveGraphWindowFrame). Legacy callers that pass only client
+        // coordinates keep the old viewport-pixel frame.
+        const onCanvas = Number.isFinite(Number(place?.graphX)) && Number.isFinite(Number(place?.graphY))
         const defaultX = isWorldNode
             ? Math.max(16, (place?.clientX ?? 400) - 340)
             : ((place?.clientX ?? 280) - 180)
-        values.frame = {
-            x: defaultX,
-            y: Math.max(workspaceTop + 24, (place?.clientY ?? (workspaceTop + 180)) - 36),
-            width: defaultW,
-            height: defaultH,
-            zIndex: topZIndex + 1,
-            title: params?.title || type?.label || definitionId,
-            visible: true
-        }
+        values.frame = onCanvas
+            ? {
+                space: 'graph',
+                width: defaultW,
+                height: defaultH,
+                zIndex: topZIndex + 1,
+                title: params?.title || type?.label || definitionId,
+                visible: true
+            }
+            : {
+                x: defaultX,
+                y: Math.max(workspaceTop + 24, (place?.clientY ?? (workspaceTop + 180)) - 36),
+                width: defaultW,
+                height: defaultH,
+                zIndex: topZIndex + 1,
+                title: params?.title || type?.label || definitionId,
+                visible: true
+            }
     }
     return values
 }

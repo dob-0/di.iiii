@@ -18,6 +18,77 @@ export const RAW_WINDOW_BOTTOM_RESERVE = 120
 // The placement maths below has to use THIS, not the stored height — see the
 // comment on maxY.
 export const RAW_WINDOW_MINIMIZED_HEIGHT = 56
+// The smallest honest window: a title bar with its four controls on ONE row,
+// and a body a person can still read one line in. 260x180 was the old floor;
+// at 260 the header wrapped to two rows and ate 100 of the 180px.
+export const RAW_WINDOW_MIN_WIDTH = 200
+export const RAW_WINDOW_MIN_HEIGHT = 120
+// A window with no position of its own sits this far to the right of its
+// card, top edges level — the card is the node, the window is its panel.
+export const RAW_WINDOW_CARD_GAP = 40
+// A graph card's width in graph units. Owned here (not exported from the
+// surface) because several tests mock RawGraphSurface.jsx wholesale and the
+// editor needs the number to place a window beside its card.
+export const RAW_GRAPH_CARD_WIDTH = 200
+// The bottom reserve exists for the phone, where AccountButton's "Sign in"
+// icon and the delete FAB sit under whatever a nearly-full-height window
+// lands on. On a desktop the same 120px band took 22% of a 584px-tall
+// embed for a corner nothing was going to touch.
+export const RAW_WINDOW_BOTTOM_RESERVE_WIDE = 40
+export const RAW_NARROW_VIEWPORT = 640
+export const getBottomReserve = (viewportWidth) => (
+    Number.isFinite(viewportWidth) && viewportWidth >= RAW_NARROW_VIEWPORT
+        ? RAW_WINDOW_BOTTOM_RESERVE_WIDE
+        : RAW_WINDOW_BOTTOM_RESERVE
+)
+
+// ── Where a window's frame lives ──
+//
+// A panel node's window is on the CANVAS with its card: `frame.space ===
+// 'graph'` means x/y/width/height are graph units and the window pans and
+// scales with the graph. A pinned window (`space: 'screen'`) is held to the
+// viewport in pixels — the one case the old fixed-position clamp is still for.
+// A frame with no `space` is legacy viewport pixels from before windows lived
+// on the canvas; those are NOT converted by arithmetic on whatever viewport
+// happens to be open (that would scatter every old project differently per
+// screen) — they are placed beside their card, deterministically, and follow
+// the card until the person moves the window, at which point the move writes
+// real graph coordinates. No migration op on read: opening a project never
+// changes it.
+export const isScreenFrame = (frame) => frame?.space === 'screen'
+export const hasOwnGraphPosition = (frame) => (
+    frame?.space === 'graph' && hasFiniteValue(frame.x) && hasFiniteValue(frame.y)
+)
+
+export function resolveGraphWindowFrame(node, { cardWidth = 200, defaultWidth = 360, defaultHeight = 280 } = {}) {
+    const frame = node?.values?.frame || {}
+    const width = Math.max(RAW_WINDOW_MIN_WIDTH, Number(frame.width) || defaultWidth)
+    const height = Math.max(RAW_WINDOW_MIN_HEIGHT, Number(frame.height) || defaultHeight)
+    if (hasOwnGraphPosition(frame)) {
+        return { x: Number(frame.x), y: Number(frame.y), width, height, followsCard: false }
+    }
+    return {
+        x: (Number(node?.graphX) || 0) + cardWidth + RAW_WINDOW_CARD_GAP,
+        y: Number(node?.graphY) || 0,
+        width,
+        height,
+        followsCard: true
+    }
+}
+
+export const graphToScreenFrame = (frame, { panX = 0, panY = 0, zoom = 1 } = {}) => ({
+    x: frame.x * zoom + panX,
+    y: frame.y * zoom + panY,
+    width: frame.width * zoom,
+    height: frame.height * zoom
+})
+
+export const screenToGraphFrame = (frame, { panX = 0, panY = 0, zoom = 1 } = {}) => ({
+    x: (frame.x - panX) / zoom,
+    y: (frame.y - panY) / zoom,
+    width: frame.width / zoom,
+    height: frame.height / zoom
+})
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 const hasFiniteValue = (value) => Number.isFinite(Number(value))
@@ -57,23 +128,29 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
     const viewportWidth = Number.isFinite(bounds.viewportWidth) ? bounds.viewportWidth : null
     const viewportHeight = Number.isFinite(bounds.viewportHeight) ? bounds.viewportHeight : null
     const viewportPadding = Number.isFinite(bounds.viewportPadding) ? bounds.viewportPadding : RAW_WINDOW_PADDING
-    const bottomReserve = Number.isFinite(bounds.bottomReserve) ? bounds.bottomReserve : RAW_WINDOW_BOTTOM_RESERVE
+    const bottomReserve = Number.isFinite(bounds.bottomReserve) ? bounds.bottomReserve : getBottomReserve(viewportWidth)
     const bottomEdgePadding = viewportPadding + bottomReserve
+    // A resize must never MOVE the window. Without this, growing a window past
+    // the floor pinned its bottom edge and slid its top edge up to meet the
+    // cursor — the grip escaped from under the pointer and the window looked
+    // like it had stopped responding. Cap the size against the window's own
+    // position instead, so growth simply stops at the edge.
+    const resizing = bounds.resizing === true
 
     // A node's default window size (e.g. universe.world's 680x480) is tuned for
     // desktop and is never re-derived per viewport. Without a ceiling here, that
     // fixed size ships as-is on a 390px phone: wider than the whole screen, and
     // tall enough to cover it below the topbar, with no way to see anything else.
-    const maxWidth = viewportWidth
-        ? Math.max(260, viewportWidth - viewportPadding * 2)
-        : Infinity
-    const maxHeight = viewportHeight
-        ? Math.max(180, viewportHeight - (effectiveMinTop ?? 0) - bottomEdgePadding)
-        : Infinity
-    const width = clamp(Math.max(260, Number(frame.width) || 260), 260, maxWidth)
-    const height = clamp(Math.max(180, Number(frame.height) || 180), 180, maxHeight)
     const nextX = hasFiniteValue(frame.x) ? Number(frame.x) : (minLeft ?? 0)
     const nextY = hasFiniteValue(frame.y) ? Number(frame.y) : (effectiveMinTop ?? 0)
+    const maxWidth = viewportWidth
+        ? Math.max(RAW_WINDOW_MIN_WIDTH, (resizing ? viewportWidth - nextX : viewportWidth - viewportPadding) - viewportPadding)
+        : Infinity
+    const maxHeight = viewportHeight
+        ? Math.max(RAW_WINDOW_MIN_HEIGHT, viewportHeight - (resizing ? Math.max(nextY, effectiveMinTop ?? 0) : (effectiveMinTop ?? 0)) - bottomEdgePadding)
+        : Infinity
+    const width = clamp(Math.max(RAW_WINDOW_MIN_WIDTH, Number(frame.width) || RAW_WINDOW_MIN_WIDTH), RAW_WINDOW_MIN_WIDTH, maxWidth)
+    const height = clamp(Math.max(RAW_WINDOW_MIN_HEIGHT, Number(frame.height) || RAW_WINDOW_MIN_HEIGHT), RAW_WINDOW_MIN_HEIGHT, maxHeight)
     const maxX = viewportWidth
         ? (allowOverflowLeft
             ? viewportWidth - width - viewportPadding
@@ -104,7 +181,9 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
     return {
         ...frame,
         x: allowOverflowLeft ? clamp(nextX, Math.min(overflowFloorX, maxX), maxX) : clamp(nextX, minLeft, maxX),
-        y: allowOverflowTop ? clamp(nextY, Math.min(0, maxY), maxY) : clamp(nextY, minTop, maxY),
+        // A viewport shorter than the reserve stack used to yield maxY < 0
+        // and park the header ABOVE the top edge, unreachable. The floor is 0.
+        y: allowOverflowTop ? clamp(nextY, 0, Math.max(0, maxY)) : clamp(nextY, minTop, Math.max(minTop, maxY)),
         width,
         height
     }
@@ -168,7 +247,15 @@ export function getGraphEdgeInsets({
             edge = distances.top <= distances.bottom ? 'top' : 'bottom'
         } else if (spansHeight && !spansWidth) {
             edge = distances.left <= distances.right ? 'left' : 'right'
-        } else if (!spansWidth && !spansHeight) {
+        } else if (spansWidth && spansHeight) {
+            // A window covering most of BOTH axes used to fall through every
+            // arm and count for nothing — on a 390x844 phone one clamped
+            // window (366x656) reported {0,0,0,0} and the graph fitted itself
+            // underneath it. Charge it to its nearest edge; the honest-corridor
+            // floor below then gives up on that axis rather than lying.
+            const nearest = Object.entries(distances).sort((a, b) => a[1] - b[1])[0]
+            if (nearest) edge = nearest[0]
+        } else {
             const nearest = Object.entries(distances).sort((a, b) => a[1] - b[1])[0]
             if (nearest && nearest[1] <= edgeSlack) edge = nearest[0]
         }

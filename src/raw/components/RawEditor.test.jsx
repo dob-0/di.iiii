@@ -24,6 +24,9 @@ vi.mock('./RawGraphSurface.jsx', () => ({
                     delete-via-graph-canvas
                 </button>
             )}
+            {/* The real surface renders the canvas windows INSIDE its stage
+                through a children function of the live viewport. */}
+            {typeof props.children === 'function' ? props.children({ panX: 0, panY: 0, zoom: 1, tier: 'full' }) : props.children}
             {props.nodes?.[0] && (
                 <button type="button" onClick={() => props.onEnterNode?.(props.nodes[0].id)}>
                     enter-first-node
@@ -1001,7 +1004,7 @@ describe('RawEditor world scope entry', () => {
 
         expect(screen.queryByRole('navigation', { name: 'Node scope' })).toBeNull()
 
-        fireEvent.click(screen.getByText('Enter ›'))
+        fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
 
         expect(screen.getByRole('navigation', { name: 'Node scope' })).toBeTruthy()
     })
@@ -1016,7 +1019,7 @@ describe('RawEditor world scope entry', () => {
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={ENTER_STORAGE_KEY} />)
 
-        fireEvent.click(screen.getByText('Enter ›'))
+        fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
         fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Cube' } })
         fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })

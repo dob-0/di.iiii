@@ -919,3 +919,87 @@ describe('the way into what a node is made of', () => {
         expect(onExplainScope).toHaveBeenCalledTimes(1)
     })
 })
+
+describe('windows on the canvas', () => {
+    it('renders its children INSIDE the stage that carries the pan/zoom transform, after the cards', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { container } = render(
+            <RawGraphSurface nodes={[colorNode]} edges={[]} initialZoom={1}>
+                {({ zoom }) => <div className="probe-window" data-zoom={zoom}>win</div>}
+            </RawGraphSurface>
+        )
+        const stage = container.querySelector('.raw-graph-stage')
+        const probe = stage.querySelector('.probe-window')
+        expect(probe).toBeTruthy()
+        expect(probe.dataset.zoom).toBe('1')
+        const card = stage.querySelector('.raw-graph-node-card')
+        expect(card.compareDocumentPosition(probe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+
+    // jsdom has no layout; give the surface a real box for these two.
+    const withSurfaceBox = (fn) => {
+        const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function boxOf() {
+            if (this.classList?.contains('raw-graph-surface')) {
+                return { left: 0, top: 0, right: 1000, bottom: 800, width: 1000, height: 800, x: 0, y: 0, toJSON() {} }
+            }
+            return { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON() {} }
+        })
+        try { fn() } finally { spy.mockRestore() }
+    }
+
+    it('the fit frames the windows too, not only the cards', () => withSurfaceBox(() => {
+        const colorNode = makeNode('value.color', { id: 'color-1', graphX: 0, graphY: 0 })
+        const { container, rerender } = render(
+            <RawGraphSurface nodes={[colorNode]} edges={[]} initialZoom={1} />
+        )
+        rerender(
+            <RawGraphSurface nodes={[colorNode]} edges={[]} initialZoom={1} extraBounds={[{ x: 0, y: 0, width: 4000, height: 3000 }]} />
+        )
+        fireEvent.click(container.querySelector('button[aria-label="Fit graph"]'))
+        const zoomAfter = Number.parseInt(container.querySelector('.raw-graph-zoom-value').textContent, 10)
+        // One card alone fits at 100%; a 4000-wide window box beside it does not.
+        expect(zoomAfter).toBeLessThan(100)
+    }))
+
+    it('a wheel inside a window body belongs to the panel; on the frame or with ctrl it zooms the graph', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { container } = render(
+            <RawGraphSurface nodes={[colorNode]} edges={[]} initialZoom={1}>
+                <section className="raw-window"><header className="raw-window-header">t</header><div className="raw-window-body">b</div></section>
+            </RawGraphSurface>
+        )
+        const readZoom = () => container.querySelector('.raw-graph-zoom-value').textContent
+        fireEvent.wheel(container.querySelector('.raw-window-body'), { deltaY: -100 })
+        expect(readZoom()).toBe('100%')
+        fireEvent.wheel(container.querySelector('.raw-window-body'), { deltaY: -100, ctrlKey: true })
+        expect(readZoom()).not.toBe('100%')
+        const mid = readZoom()
+        fireEvent.wheel(container.querySelector('.raw-window-header'), { deltaY: -100 })
+        expect(readZoom()).not.toBe(mid)
+    })
+
+    it('a press on a window never starts a pan', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { container } = render(
+            <RawGraphSurface nodes={[colorNode]} edges={[]} initialZoom={1}>
+                <section className="raw-window"><div className="raw-window-body">b</div></section>
+            </RawGraphSurface>
+        )
+        const stage = container.querySelector('.raw-graph-stage')
+        const before = stage.style.transform
+        fireEvent.pointerDown(container.querySelector('.raw-window-body'), { clientX: 10, clientY: 10, button: 0 })
+        fireEvent.pointerMove(window, { clientX: 90, clientY: 90 })
+        fireEvent.pointerUp(window)
+        expect(stage.style.transform).toBe(before)
+    })
+
+    it('frameRect brings a graph-space box to working size', () => withSurfaceBox(() => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { container, rerender } = render(
+            <RawGraphSurface nodes={[colorNode]} edges={[]} initialZoom={0.2} />
+        )
+        expect(container.querySelector('.raw-graph-zoom-value').textContent).toBe('20%')
+        rerender(<RawGraphSurface nodes={[colorNode]} edges={[]} initialZoom={0.2} frameRect={{ x: 0, y: 0, width: 300, height: 200, seq: 1 }} />)
+        expect(container.querySelector('.raw-graph-zoom-value').textContent).not.toBe('20%')
+    }))
+})
