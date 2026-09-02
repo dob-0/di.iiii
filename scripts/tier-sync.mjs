@@ -25,6 +25,14 @@
  *                       PRODUCTION first and never refreshes a project it has
  *                       already seen, so a project edited on staging reads
  *                       differently on localhost for as long as both exist.
+ *   --changed           Push what DIFFERS, not just what is missing — the audit's
+ *                       "same slug, different work" list plus the missing ones.
+ *                       Refuses any project that changed on BOTH sides since the
+ *                       last sync (see the baseline below), and never touches a
+ *                       project whose only difference is re-addressed assets.
+ *                       This is the "work local, push to staging" flow; without it
+ *                       the only way to push an EDIT was --force, which overwrites
+ *                       every shared project at once.
  *   --space <id>        Only this space (default: every space the source has)
  *   --no-assets         Documents only — faster, and leaves images unresolvable
  *   --force             Overwrite documents that already exist at the destination
@@ -59,6 +67,67 @@ export const isProductionTarget = (url) => {
     } catch {
         return false
     }
+}
+
+/**
+ * What --changed will push, and what it refuses.
+ *
+ * `push`    — missing at the destination, or differing where the destination
+ *             still matches what was last synced (so only the source moved).
+ * `refuse`  — differing where the destination ALSO moved since the last sync.
+ *             Pushing would overwrite someone's work on the other tier, and
+ *             which side is right is not a question about the data.
+ *
+ * With no baseline for a project (first push, or a pull that went around this
+ * script) a difference is treated as one-sided, which is exactly what --force
+ * would have done — scoped to the one project instead of all of them.
+ */
+export const planChanged = ({ audit, baseline = {} }) => {
+    const push = audit.missing.map(({ spaceId, projectId }) => ({ spaceId, projectId, why: 'missing' }))
+    const refuse = []
+    for (const row of audit.differs) {
+        const key = `${row.spaceId}/${row.projectId}`
+        const last = baseline[key]
+        if (!last) refuse.push({ ...row, why: 'no baseline — cannot tell which side changed' })
+        else if (row.destination.shape !== last) refuse.push({ ...row, why: 'both sides changed' })
+        else push.push({ spaceId: row.spaceId, projectId: row.projectId, why: 'changed here' })
+    }
+    return { push, refuse }
+}
+
+/**
+ * Every project the two tiers agree on IS the baseline — nothing has to be
+ * recorded by hand after a pull. Run --changed once after a mirror and every
+ * matching project is known-synced from then on; a later edit on one side
+ * reads as "changed here", on both sides as "refused".
+ */
+export const baselineFromAgreement = ({ source, destination }) => {
+    const agreed = {}
+    for (const spaceId of Object.keys(source)) {
+        for (const [projectId, a] of Object.entries(source[spaceId])) {
+            const b = destination[spaceId]?.[projectId]
+            if (b && a.shape === b.shape) agreed[`${spaceId}/${projectId}`] = b.shape
+        }
+    }
+    return agreed
+}
+
+// The baseline lives beside the data it describes, keyed by destination so a
+// box that pushes to staging and to prod keeps them apart.
+const baselinePath = () => {
+    // Same precedence as serverXR itself: the process environment wins over
+    // .env.local, so a stack started with DATA_ROOT=… inline and this script
+    // agree on where the local tier lives.
+    const dataRoot = process.env.DATA_ROOT || readEnv().DATA_ROOT
+    const root = dataRoot ? path.resolve(ROOT_DIR, 'serverXR', dataRoot) : path.join(ROOT_DIR, 'serverXR', 'data')
+    return path.join(root, 'tier-sync-baseline.json')
+}
+const readBaseline = () => {
+    try { return JSON.parse(fs.readFileSync(baselinePath(), 'utf8')) } catch { return {} }
+}
+const writeBaseline = (baseline) => {
+    fs.mkdirSync(path.dirname(baselinePath()), { recursive: true })
+    fs.writeFileSync(baselinePath(), JSON.stringify(baseline, null, 1))
 }
 
 // Fields that change without the work changing.
@@ -126,7 +195,12 @@ export const documentSignature = (document) => {
         // entities. Measuring substance by entity count alone reads a 358KB
         // brand guide as an empty project — which is exactly how a purge of
         // "empty" projects nearly took the whole Dilijan camp with it.
-        page: (presentation.codeHtml ?? '').length,
+        // Both places a page can live. `codeFiles` is the newer one and the
+        // br_id_ge landing only exists there — on `codeHtml` alone it read as
+        // an empty shell.
+        page: (presentation.codeHtml ?? '').length
+            + (Array.isArray(presentation.codeFiles) ? presentation.codeFiles : [])
+                .reduce((n, f) => n + (f?.content ?? '').length, 0),
         hash: sha1(stable(stripVolatile(d))),
         shape: sha1(byName(stripVolatile(d)))
     }
@@ -230,7 +304,7 @@ const readEnv = () => {
 }
 
 const parseArgs = (argv) => {
-    const args = { from: null, to: null, space: null, assets: true, force: false, dryRun: false, allowProduction: false, audit: false }
+    const args = { from: null, to: null, space: null, assets: true, force: false, dryRun: false, allowProduction: false, audit: false, changed: false }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
         if (arg === '--from') args.from = argv[++i]
@@ -240,10 +314,13 @@ const parseArgs = (argv) => {
         else if (arg === '--force') args.force = true
         else if (arg === '--dry-run') args.dryRun = true
         else if (arg === '--audit') args.audit = true
+        else if (arg === '--changed') args.changed = true
         else if (arg === '--allow-production') args.allowProduction = true
     }
     return args
 }
+
+const destination_has = (inventory, spaceId) => Object.prototype.hasOwnProperty.call(inventory, spaceId)
 
 const main = async () => {
     const args = parseArgs(process.argv.slice(2))
@@ -339,10 +416,42 @@ const main = async () => {
         return
     }
 
-    console.log(`tier-sync  ${args.from} → ${args.to}${args.dryRun ? '  (dry run)' : ''}`)
-    const source = await readInventory(from, args.space)
-    const destination = await readInventory(to, args.space)
-    const plan = planSync({ source, destination, force: args.force })
+    console.log(`tier-sync  ${args.from} → ${args.to}${args.changed ? '  --changed' : ''}${args.dryRun ? '  (dry run)' : ''}`)
+    let plan
+    // Read even on a plain run: every successful copy records a baseline
+    // entry, and writing back a file that started empty would erase the rest.
+    const baseline = readBaseline()
+    if (args.changed) {
+        console.log('reading every document on both tiers to find what differs — this takes a minute')
+        const signatures = { source: await readSignatures(from, args.space), destination: await readSignatures(to, args.space) }
+        const audit = planAudit(signatures)
+        // What the tiers agree on today is the baseline for tomorrow. Written
+        // even on a dry run: it records an observation, not a change to any
+        // tier, and it is what lets the NEXT run tell "I edited this" from
+        // "we both did".
+        const agreed = baselineFromAgreement(signatures)
+        baseline[args.to] = { ...(baseline[args.to] || {}), ...agreed }
+        writeBaseline(baseline)
+        const { push, refuse } = planChanged({ audit, baseline: baseline[args.to] })
+        if (refuse.length) {
+            console.log(`\nREFUSED (${refuse.length}) — will not overwrite work on ${args.to}:`)
+            refuse.forEach((r) => console.log(`   ${`${r.spaceId}/${r.projectId}`.padEnd(48)}${r.why}\n      ${args.from}: ${r.source.entities}e ${r.source.assets}a ${r.source.page}p   ${args.to}: ${r.destination.entities}e ${r.destination.assets}a ${r.destination.page}p`))
+            console.log('   look at both, decide which is right, then copy that one by hand: --space <s> --force, or pull it down.')
+            process.exitCode = 1
+        }
+        if (audit.readdressed.length) console.log(`\n${audit.readdressed.length} project(s) differ only by re-addressed assets — left alone.`)
+        const bySpace = {}
+        for (const item of push) (bySpace[item.spaceId] ||= []).push(item.projectId)
+        plan = Object.entries(bySpace).map(([spaceId, projects]) => ({ spaceId, createSpace: !destination_has(signatures.destination, spaceId), projects }))
+        if (!plan.length) {
+            console.log(refuse.length ? '\nnothing else to push.' : '\nnothing to push — the two tiers hold the same work.')
+            return
+        }
+    } else {
+        const source = await readInventory(from, args.space)
+        const destination = await readInventory(to, args.space)
+        plan = planSync({ source, destination, force: args.force })
+    }
 
     if (!plan.length) {
         // Deliberately not "in sync". This compared ids; two tiers can hold
@@ -413,6 +522,9 @@ const main = async () => {
                 }
                 copied++
                 console.log(`  ✓ ${item.spaceId}/${projectId}${assetNote}`)
+                // What the destination now holds, by shape, so the next
+                // --changed can tell "only I edited this" from "we both did".
+                ;((baseline[args.to] ||= {})[`${item.spaceId}/${projectId}`] = documentSignature(document).shape)
             } catch (error) {
                 failed++
                 console.log(`  ✗ ${item.spaceId}/${projectId} — ${error.message}`)
@@ -420,6 +532,7 @@ const main = async () => {
         }
     }
 
+    if (copied) writeBaseline(baseline)
     console.log(`\ncopied ${copied}, failed ${failed}`)
     if (failed) process.exitCode = 1
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { TIERS, documentSignature, isProductionTarget, planAudit, planSync } from './tier-sync.mjs'
+import { TIERS, baselineFromAgreement, documentSignature, isProductionTarget, planAudit, planChanged, planSync } from './tier-sync.mjs'
 
 describe('isProductionTarget', () => {
     // The whole reason this guard exists: a tool that can write to a tier must
@@ -167,5 +167,72 @@ describe('planAudit', () => {
         const both = { main: { 'main-dii-project': sig(85) }, wcc: { arthur: sig(1) } }
         expect(planAudit({ source: both, destination: both }))
             .toEqual({ missing: [], extra: [], differs: [], readdressed: [] })
+    })
+})
+
+describe('planChanged', () => {
+    const sig = (n) => documentSignature({ entities: Array.from({ length: n }, (_, i) => ({ id: `e${i}` })) })
+    const audit = (differs, missing = []) => ({ missing, extra: [], differs, readdressed: [] })
+    const row = (projectId, a, b) => ({ spaceId: 'dilijan', projectId, source: sig(a), destination: sig(b) })
+
+    it('pushes what is missing and what only the source changed', () => {
+        const r = row('welcome', 5, 3)
+        const { push, refuse } = planChanged({
+            audit: audit([r], [{ spaceId: 'open', projectId: 'new-thing', source: sig(1) }]),
+            // the destination is exactly what we last synced there
+            baseline: { 'dilijan/welcome': r.destination.shape }
+        })
+        expect(refuse).toEqual([])
+        expect(push.map((p) => `${p.spaceId}/${p.projectId}`)).toEqual(['open/new-thing', 'dilijan/welcome'])
+        expect(push[1].why).toBe('changed here')
+    })
+
+    // The whole reason this mode exists instead of --force: a project edited on
+    // BOTH tiers since the last sync must not be silently overwritten by
+    // whichever side happens to be pushing.
+    it('refuses a project that changed on both sides since the last sync', () => {
+        const r = row('welcome', 5, 3)
+        const { push, refuse } = planChanged({
+            audit: audit([r]),
+            baseline: { 'dilijan/welcome': sig(9).shape }   // destination moved since then
+        })
+        expect(push).toEqual([])
+        expect(refuse).toHaveLength(1)
+        expect(refuse[0].why).toBe('both sides changed')
+    })
+
+    // No baseline means no way to know which side moved. The first version
+    // pushed anyway, and its first live dry run queued an hour-old local copy
+    // over a page someone had just changed on staging. Refuse, and let the
+    // person look.
+    it('refuses a difference it has no baseline for', () => {
+        const { push, refuse } = planChanged({ audit: audit([row('welcome', 5, 3)]), baseline: {} })
+        expect(push).toEqual([])
+        expect(refuse[0].why).toMatch(/no baseline/)
+    })
+
+    it('counts a page kept in codeFiles, not only codeHtml', () => {
+        const inFiles = documentSignature({ presentationState: { codeFiles: [{ name: 'index.html', content: '<p>x</p>' }] } })
+        expect(inFiles.page).toBe(8)
+    })
+
+    it('never touches a project that only differs by re-addressed assets', () => {
+        const { push, refuse } = planChanged({
+            audit: { missing: [], extra: [], differs: [], readdressed: [row('welcome', 3, 3)] },
+            baseline: {}
+        })
+        expect(push).toEqual([])
+        expect(refuse).toEqual([])
+    })
+})
+
+describe('baselineFromAgreement', () => {
+    const sig = (n) => documentSignature({ entities: Array.from({ length: n }, (_, i) => ({ id: `e${i}` })) })
+    // Right after a mirror every project matches, and that agreement IS the
+    // baseline — nobody has to record anything by hand for --changed to work.
+    it('records every project the two tiers agree on, and nothing else', () => {
+        const source = { main: { a: sig(1), b: sig(2) }, open: { c: sig(3) } }
+        const destination = { main: { a: sig(1), b: sig(9) } }
+        expect(baselineFromAgreement({ source, destination })).toEqual({ 'main/a': sig(1).shape })
     })
 })

@@ -104,14 +104,51 @@ strict hash still catches it. Both cases are guarded.
 - Final audit: **0 projects with different work.** What remains is the 23 debris below, and 7
   projects whose assets were re-addressed on arrival.
 
+### "It's really not the same" — because every worktree is its own tier
+
+After all of the above the owner opened localhost and it still did not match staging. It
+could not: **each worktree's `serverXR/.env.local` says `DATA_ROOT=./data`**, relative, so
+every worktree runs its own database. Seven on this machine, five of them stale copies. I had
+synced the one in *my* worktree; the dev router hands the owner whichever stack booted first —
+a different tree, a different `di.db`. Verified on my surface, not theirs.
+
+Fix: **one shared local tier at `~/.local/share/di.iiii/data`** (the synced data copied there,
+WAL checkpointed first), and `DATA_ROOT=` pointed at it, absolute, in every worktree's
+`.env.local`. Proven, not assumed: `/proc/<pid>/fd` of the `:4000` server shows it reading the
+shared `di.db`, and `frontframe.dii.localhost:8088` serves it. The env-file edits themselves
+were refused by the permission classifier (they hold tokens) — `scripts/tmp-share-local-tier.sh`
+does all ten and the owner runs it. A stack already running keeps its old database until
+restarted.
+
+### `--changed` — the "work local, push to staging" flow
+
+Pushes what the audit says differs, plus what is missing; never touches a re-addressed one.
+Keeps a baseline (`<DATA_ROOT>/tier-sync-baseline.json`, keyed by destination) of what was
+last synced, and **refuses** a project that changed on both sides since — or that has no
+baseline at all. That second rule was learned the hard way: the first live dry run, with no
+baseline, queued an hour-old local copy over `br-id-ge/landing`, which someone had edited on
+staging twenty minutes earlier. The baseline is now established from whatever the two tiers
+already agree on, so one run after a mirror makes everything known-synced.
+
+Also found while running it: `platform-recordar` on **staging** references an image by one
+id in its page and lists it under another in `assets[]` (one image, two ids — a pre-scrub
+manifest). Local's copy is consistent; staging's is not; the audit refuses it correctly.
+
 ### Owed
 
 - **23 debris projects in `open`** — `debug3-true-false-1784237913844`, `td-check2-…`,
   `phase5-test-…`, `untitled-project` — local-only, deletion refused by Claude's permission
   classifier, so the owner runs `node scripts/tmp-purge.mjs` (untracked; archives every
   document to `~/di-backups/` first). Until then the audit's only finding is those 23.
-- **`scripts/tmp-purge.mjs` is untracked.** Either land it as a real script or delete it once
-  the purge has run — a one-off that survives in a worktree is a trap for the next session.
+- **Two owner-run scripts, both untracked:** `scripts/tmp-share-local-tier.sh` (points every
+  worktree at the shared tier) and `scripts/tmp-purge.mjs` (the `open` debris). Land or delete
+  after running — a one-off that survives in a worktree is a trap for the next session.
+- **`platform-recordar` on staging** — page uses asset `0bda33d5…`, manifest says `c8155802…`
+  for the same image. A re-save in Studio or a one-line manifest fix; until then `--changed`
+  refuses it, correctly.
+- **New worktrees still get `DATA_ROOT=./data`** unless whoever creates them copies a fixed
+  `.env.local`. The durable fix is `dev-stack.mjs` refusing a relative `DATA_ROOT` on this
+  machine, or the main checkout's `.env.local` being the template. Not done.
 - A `--pull` direction: `--audit` reports drift and stops, because which side is right is a
   question about the work, not about the data.
 - **`/tmp` is a 16 GB tmpfs and was found at 100%**, which killed commands mid-task with
