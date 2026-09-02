@@ -32,6 +32,13 @@ describe('space-sync engine', () => {
         expect(source).not.toMatch(/=\s*'https:\/\/di-studio\.xyz/)
     })
 
+    it('writes a page as ONE copy — codeFiles in, codeHtml out', () => {
+        // The viewer prefers codeFiles, so a leftover codeHtml is a stale second
+        // copy stored under the live one. Staging held brand-guide twice this way
+        // (2026-09-02); the audit could not see it because the address rendered.
+        expect(source).toMatch(/codeFiles, codeHtml: ''/)
+    })
+
     it('enforces slug and title on every run, not only at creation', () => {
         // Both were sent in the POST that creates a project and nowhere else,
         // so a tier that got its projects any other way kept null slugs (404 at
