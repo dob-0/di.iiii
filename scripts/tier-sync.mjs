@@ -127,8 +127,38 @@ export const documentSignature = (document) => {
         // brand guide as an empty project — which is exactly how a purge of
         // "empty" projects nearly took the whole Dilijan camp with it.
         page: (presentation.codeHtml ?? '').length,
-        hash: crypto.createHash('sha1').update(stable(stripVolatile(d))).digest('hex').slice(0, 12)
+        hash: sha1(stable(stripVolatile(d))),
+        shape: sha1(byName(stripVolatile(d)))
     }
+}
+
+const sha1 = (text) => crypto.createHash('sha1').update(text).digest('hex').slice(0, 12)
+
+/**
+ * The same document with every asset addressed by NAME instead of by id.
+ *
+ * Asset ids are content hashes, and the upload route strips EXIF/GPS before
+ * hashing — so the same photograph, uploaded to two tiers, is legitimately
+ * stored at two different addresses. Comparing ids alone reports every
+ * photo-carrying project as drifted, forever, on tiers that hold identical
+ * work. That is the report nobody reads.
+ *
+ * Comparing by name is not proof the pictures are the same — nothing in the
+ * document can prove that once the bytes have been rewritten — so this feeds a
+ * SEPARATE class in the report, never a claim of equality. A photograph
+ * actually swapped for another changes its filename, and `hash` catches
+ * anything that `shape` does not.
+ */
+const byName = (document) => {
+    const assets = Array.isArray(document.assets) ? document.assets : []
+    const names = assets.filter((a) => a?.id).map((a) => [a.id, a.name || a.id])
+    const reduced = {
+        ...document,
+        assets: assets.map((a) => ({ name: a?.name ?? '', mimeType: a?.mimeType ?? '' }))
+    }
+    let json = stable(reduced)
+    for (const [id, name] of names) json = json.split(id).join(`asset:${name}`)
+    return json
 }
 
 export const signaturesMatch = (a, b) => Boolean(a && b && a.hash === b.hash)
@@ -145,6 +175,7 @@ export const planAudit = ({ source, destination }) => {
     const missing = []
     const extra = []
     const differs = []
+    const readdressed = []
     const spaces = [...new Set([...Object.keys(source), ...Object.keys(destination)])].sort()
     for (const spaceId of spaces) {
         const from = source[spaceId] ?? {}
@@ -154,10 +185,15 @@ export const planAudit = ({ source, destination }) => {
             const b = to[projectId]
             if (a && !b) missing.push({ spaceId, projectId, source: a })
             else if (!a && b) extra.push({ spaceId, projectId, destination: b })
-            else if (!signaturesMatch(a, b)) differs.push({ spaceId, projectId, source: a, destination: b })
+            else if (signaturesMatch(a, b)) continue
+            // Same work, different asset addresses. Reported, but not drift to
+            // fix: the scrubber re-hashes on arrival, so this is what a
+            // correctly-copied photograph looks like across two tiers.
+            else if (a.shape && a.shape === b.shape) readdressed.push({ spaceId, projectId, source: a, destination: b })
+            else differs.push({ spaceId, projectId, source: a, destination: b })
         }
     }
-    return { missing, extra, differs }
+    return { missing, extra, differs, readdressed }
 }
 
 // What has to move for `to` to hold everything `from` holds. Pure, so the plan
@@ -277,7 +313,7 @@ const main = async () => {
     if (args.audit) {
         console.log(`tier-sync audit  ${args.from} ↔ ${args.to}  (reading every document — this takes a minute)`)
         const [a, b] = [await readSignatures(from, args.space), await readSignatures(to, args.space)]
-        const { missing, extra, differs } = planAudit({ source: a, destination: b })
+        const { missing, extra, differs, readdressed } = planAudit({ source: a, destination: b })
 
         const shape = (s) => s ? `${s.entities}e ${s.nodes}n ${s.assets}a ${s.page}p` : '—'
         const report = (title, rows, render) => {
@@ -289,11 +325,16 @@ const main = async () => {
         report(`only on ${args.to} (${extra.length})`, extra, (r) => shape(r.destination))
         report(`same slug, DIFFERENT work (${differs.length})`, differs,
             (r) => `${args.from}: ${shape(r.source).padEnd(22)}${args.to}: ${shape(r.destination)}`)
+        report(`same work, assets re-addressed on arrival (${readdressed.length}) — not drift to fix`,
+            readdressed, (r) => shape(r.source))
 
         const total = missing.length + extra.length + differs.length
         console.log(total
             ? `\n${total} difference(s). e=entities n=nodes a=assets p=published page, in characters.`
             : '\nthe two tiers hold the same work.')
+        if (readdressed.length && !total) {
+            console.log(`${readdressed.length} project(s) hold the same assets under different ids — see above.`)
+        }
         if (total) process.exitCode = 1
         return
     }

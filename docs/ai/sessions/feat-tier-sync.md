@@ -79,14 +79,30 @@ that list grows every time a component learns to carry media. Both `project-pull
 Re-pulling a photo-heavy space hits the local upload limiter (60 per 10 minutes). A 429 is a
 wait and a retry, not a failure.
 
+Fixed, re-pulled, and looked at again: **106 → 0 unresolvable**, and the photo wall on
+localhost now carries the same sixteen photographs as staging.
+
+**A consequence that had to be designed for.** Because each tier scrubs on arrival, the same
+photograph is legitimately stored at two different content addresses — so the audit reported
+all 7 photo-carrying projects as drifted *immediately after copying them correctly*. That is
+the cries-wolf failure again, arriving by a different road. `documentSignature` now carries a
+second `shape` hash, taken with every asset addressed by NAME instead of by id, and
+`planAudit` reports those as a separate class: **"same work, assets re-addressed on arrival —
+not drift to fix"**. It is not a claim of equality — nothing in a document can prove two
+rewritten files are the same picture — which is why it is a class of its own and never folded
+into a match. A photograph actually swapped for a different one changes its filename, and the
+strict hash still catches it. Both cases are guarded.
+
 ### Done
 
 - **71 `br-id-ge` projects local → staging**, 0 failed, documents verified equal and
   `n2-hub` looked at on staging as a plain visitor with no token.
-- **`--audit`** with 8 new guards (14 in the file).
+- **`--audit`** with 12 new guards (18 in `tier-sync.test.js`, 7 in `asset-remap-lib.test.js`).
 - **The dev box re-mirrored FROM staging** with `--tier staging --force`, so localhost and
   staging finally hold the same work. `serverXR/data/di.db` backed up to `~/di-backups/`
   first — a forced mirror overwrites every local copy.
+- Final audit: **0 projects with different work.** What remains is the 23 debris below, and 7
+  projects whose assets were re-addressed on arrival.
 
 ### Owed
 

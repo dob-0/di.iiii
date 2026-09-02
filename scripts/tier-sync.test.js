@@ -121,6 +121,41 @@ describe('planAudit', () => {
         expect(audit.differs).toEqual([])
     })
 
+    // The same photograph on two tiers is legitimately stored at two different
+    // addresses: the upload route strips EXIF before hashing, so the id is the
+    // hash of the scrubbed bytes, and each tier scrubs on arrival. Without this
+    // class the audit reports every photo-carrying project as drifted forever,
+    // on tiers that hold identical work — measured: 7 projects, immediately
+    // after copying them correctly.
+    it('separates a re-addressed asset from work that actually differs', () => {
+        const withAsset = (id) => documentSignature({
+            assets: [{ id, name: 'day2-01_photo.jpg', mimeType: 'image/jpeg' }],
+            entities: [{ components: { media: { assetId: id } } }]
+        })
+        const audit = planAudit({
+            source: { dilijan: { welcome: withAsset('a'.repeat(64)) } },
+            destination: { dilijan: { welcome: withAsset('b'.repeat(64)) } }
+        })
+        expect(audit.differs).toEqual([])
+        expect(audit.readdressed).toHaveLength(1)
+        expect(audit.readdressed[0].projectId).toBe('welcome')
+    })
+
+    // ...but a photograph swapped for a different one changes its filename, and
+    // that is real drift, not an address change.
+    it('still reports a picture actually replaced', () => {
+        const photo = (id, name) => documentSignature({
+            assets: [{ id, name, mimeType: 'image/jpeg' }],
+            entities: [{ components: { media: { assetId: id } } }]
+        })
+        const audit = planAudit({
+            source: { dilijan: { welcome: photo('a'.repeat(64), 'day2-01_photo.jpg') } },
+            destination: { dilijan: { welcome: photo('b'.repeat(64), 'day3-09_photo.jpg') } }
+        })
+        expect(audit.readdressed).toEqual([])
+        expect(audit.differs).toHaveLength(1)
+    })
+
     it('reports a space one tier has never heard of', () => {
         const audit = planAudit({ source: { atlas: { 'estate-map': sig(0) } }, destination: {} })
         expect(audit.missing).toEqual([
@@ -131,6 +166,6 @@ describe('planAudit', () => {
     it('is quiet when the two tiers hold the same work', () => {
         const both = { main: { 'main-dii-project': sig(85) }, wcc: { arthur: sig(1) } }
         expect(planAudit({ source: both, destination: both }))
-            .toEqual({ missing: [], extra: [], differs: [] })
+            .toEqual({ missing: [], extra: [], differs: [], readdressed: [] })
     })
 })
