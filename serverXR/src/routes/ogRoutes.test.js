@@ -8,7 +8,7 @@ describe('link preview cards', () => {
     expect(h).toContain('<meta property="og:title" content="br_id_ge">')
     expect(h).not.toContain('browser-native XR authoring')
     // the whole point: the card must not be the platform tile
-    expect(h).not.toContain('/brand/og-image.png')
+    expect(h).not.toContain('/suite/og-image.png')
   })
 
   it('escapes a title that carries markup', () => {
@@ -25,7 +25,7 @@ describe('link preview cards', () => {
 
   it('falls back to the platform tile when a space has no card', () => {
     const h = ogHtml({ url: 'https://x/y', title: 't', description: 'd' })
-    expect(h).toContain('/brand/og-image.png')
+    expect(h).toContain('/suite/og-image.png')
   })
 
   it('sends a human on to the real page rather than dead-ending', () => {
@@ -81,7 +81,7 @@ describe('the og route, through the real mount', () => {
   it('an unknown space still gets a card, never a 404', async () => {
     const r = await hit('/serverXR/og/nothing-here')
     expect(r.status).toBe(200)
-    expect(r.body).toContain('/brand/og-image.png')
+    expect(r.body).toContain('/suite/og-image.png')
   })
 
   // The bare domain — the single most-shared link there is. `*splat` requires at
@@ -92,7 +92,7 @@ describe('the og route, through the real mount', () => {
     for (const path of ['/serverXR/og/', '/serverXR/og']) {
       const r = await hit(path)
       expect(r.status, `${path} must answer`).toBe(200)
-      expect(r.body).toContain('/brand/og-image.png')
+      expect(r.body).toContain('/suite/og-image.png')
       expect(r.body).toContain('<meta property="og:title" content="di.iiii')
     }
   })
@@ -186,6 +186,6 @@ describe('the origin a card advertises', () => {
 
   it('the fallback card carries an absolute image too', async () => {
     const r = await hit(build('https://di-studio.xyz'), '/serverXR/og/no-such-space')
-    expect(r.body).toContain('content="https://di-studio.xyz/brand/og-image.png"')
+    expect(r.body).toContain('content="https://di-studio.xyz/suite/og-image.png"')
   })
 })
