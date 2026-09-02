@@ -9,6 +9,7 @@ import { buildAssetMap } from './buildAssetMap.js'
 import { getProjectDocument } from '../services/projectsApi.js'
 import { normalizeProjectDocument } from '../../shared/projectSchema.js'
 import { resolveAnimation, applyAnimation } from './entityAnimation.js'
+import { resolveProximity, applyProximity } from './entityProximity.js'
 import { appNavigate } from '../../utils/appNavigate.js'
 
 const MAX_EMBED_DEPTH = 3
@@ -28,6 +29,8 @@ function EmbeddedEntity({ entity, childMap, assetMap }) {
     const baseScale = t.scale || [1, 1, 1]
     const children = childMap.get(entity.id) || []
     const anim = useMemo(() => resolveAnimation(entity), [entity])
+    const prox = useMemo(() => resolveProximity(entity), [entity])
+    const proxPoint = useRef(null)
     const seed = useMemo(() => {
         let h = 0
         for (let i = 0; i < (entity.id || '').length; i += 1) h = (h * 31 + entity.id.charCodeAt(i)) % 1000
@@ -36,6 +39,10 @@ function EmbeddedEntity({ entity, childMap, assetMap }) {
 
     useFrame((state) => {
         if (!groupRef.current) return
+        if (prox) {
+            if (!proxPoint.current) proxPoint.current = state.camera.position.clone()
+            applyProximity(groupRef.current, prox, state.camera.position, proxPoint.current)
+        }
         applyAnimation(groupRef.current, anim, basePos, baseRot, state.clock.getElapsedTime() + seed)
     })
 
