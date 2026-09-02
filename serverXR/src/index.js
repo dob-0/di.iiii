@@ -1186,7 +1186,7 @@ approvalGate.registerReauthorizer('spaces.delete', (args, subject, actorType) =>
 // point at the server's own public origin (e.g. https://di-studio.xyz/serverXR).
 const internalApiBase = () =>
   process.env.SELF_API_URL?.replace(/\/$/, '') || `http://127.0.0.1:${config.port}${config.basePath || ''}`
-const internalHeaders = () => ({ 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${config.apiToken}` })
+const internalHeaders = () => ({ 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${config.internalApiToken}` })
 
 // Upload one binary into a project through the server's own multipart asset
 // route (the route computes the content-hash id and returns the public URL).
@@ -1201,7 +1201,7 @@ async function uploadSyncedAsset(base, projectId, rel, buf) {
   const r = await httpRequest(`${base}/api/projects/${projectId}/assets`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${config.apiToken}`,
+      Authorization: `Bearer ${config.internalApiToken}`,
       'Content-Type': `multipart/form-data; boundary=${boundary}`,
       'Content-Length': body.length
     },

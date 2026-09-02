@@ -85,6 +85,21 @@ describe('config: auth session secret fallback (2026-07-16 audit fix #7)', () =>
         })
     })
 
+    it('internalApiToken: the server calls itself with the admin token when API_TOKEN is absent (the Docker case)', () => {
+        withFreshConfig({ REQUIRE_AUTH: 'true', ADMIN_API_TOKEN: 'admin-secret-token', VIEWER_API_TOKEN: 'viewer-secret-token' }, (config) => {
+            expect(config.internalApiToken).toBe('admin-secret-token')
+        })
+    })
+
+    it('internalApiToken: prefers API_TOKEN when it is set, and never a lower-role token', () => {
+        withFreshConfig({ REQUIRE_AUTH: 'true', API_TOKEN: 'legacy-admin-token', ADMIN_API_TOKEN: 'admin-secret-token' }, (config) => {
+            expect(config.internalApiToken).toBe('legacy-admin-token')
+        })
+        withFreshConfig({ REQUIRE_AUTH: 'false', EDITOR_API_TOKEN: 'editor-secret-token' }, (config) => {
+            expect(config.internalApiToken).toBe('')
+        })
+    })
+
     it('prefers AUTH_SESSION_SECRET over any token fallback', () => {
         withFreshConfig({ REQUIRE_AUTH: 'false', AUTH_SESSION_SECRET: 'dedicated-secret', ADMIN_API_TOKEN: 'admin-secret-token' }, (config) => {
             expect(config.auth.sessionSecret).toBe('dedicated-secret')
