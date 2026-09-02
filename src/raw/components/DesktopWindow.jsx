@@ -1,6 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { clampWindowFrame } from '../utils/windowLayout.js'
 
+// A window lives in one of two spaces.
+//
+// `screen` — the old behaviour: the frame is viewport pixels, the window is
+// position:fixed, and clampWindowFrame keeps it reachable on any viewport.
+// `world` — the frame is graph units, exactly like a node card's graphX/Y:
+// the window is placed through the canvas viewport (pan + zoom), travels when
+// the canvas pans, shrinks when it zooms, and is never clamped to the screen —
+// a scene parked at world x=5000 is supposed to be off-screen until you pan
+// there. That is what lets a person spread many scenes across one canvas.
+const MIN_WIDTH = 260
+const MIN_HEIGHT = 180
+
+const worldSettle = (frame) => ({
+    ...frame,
+    width: Math.max(MIN_WIDTH, Number(frame.width) || MIN_WIDTH),
+    height: Math.max(MIN_HEIGHT, Number(frame.height) || MIN_HEIGHT)
+})
+
 export default function DesktopWindow({
     windowState,
     title,
@@ -21,8 +39,32 @@ export default function DesktopWindow({
     minTop = undefined,
     allowOverflowLeft = false,
     allowOverflowTop = false,
-    canvasZoom = 1
+    canvasZoom = 1,
+    // 'screen' | 'world' — see the note at the top of the file.
+    space = 'screen',
+    // The canvas viewport a world window is placed through:
+    // { panX, panY, zoom, originLeft, originTop }. originLeft/Top is where the
+    // graph surface's own box starts in the page, so a world point lands at
+    // origin + pan + point * zoom. Ignored for screen windows.
+    viewport = null
 }) {
+    const inWorld = space === 'world' && viewport != null
+    // Pointer deltas are screen pixels; a world window moves in graph units.
+    const dragZoom = inWorld ? Math.max(viewport.zoom || 1, 0.01) : canvasZoom
+
+    // Where a frame is allowed to settle. Screen windows go through the clamp
+    // that keeps them on the viewport; world windows keep only their minimum
+    // size, because "on the viewport" means nothing in canvas coordinates.
+    const settle = (frame) => inWorld
+        ? worldSettle(frame)
+        : clampWindowFrame(frame, {
+            minTop,
+            allowOverflowLeft,
+            allowOverflowTop,
+            viewportWidth: typeof window !== 'undefined' ? window.innerWidth : undefined,
+            viewportHeight: typeof window !== 'undefined' ? window.innerHeight : undefined
+        })
+
     // `minimized` rides along in the draft on purpose. The clamp places a
     // collapsed window by its bar rather than by the panel it would open to,
     // and it reads that from the frame it is handed — so a draft built from
@@ -43,26 +85,22 @@ export default function DesktopWindow({
 
     useEffect(() => {
         if (interactionRef.current) return
-        setDraft(clampWindowFrame({
+        setDraft(settle({
             x: windowState.x,
             y: windowState.y,
             width: windowState.width,
             height: windowState.height,
             minimized: windowState.minimized === true
-        }, {
-            minTop,
-            allowOverflowLeft,
-            allowOverflowTop,
-            viewportWidth: typeof window !== 'undefined' ? window.innerWidth : undefined,
-            viewportHeight: typeof window !== 'undefined' ? window.innerHeight : undefined
         }))
-    }, [allowOverflowLeft, allowOverflowTop, minTop, windowState.height, windowState.minimized, windowState.width, windowState.x, windowState.y])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allowOverflowLeft, allowOverflowTop, minTop, inWorld, windowState.height, windowState.minimized, windowState.width, windowState.x, windowState.y])
 
     // Re-clamp when the viewport itself changes — rotation, window resize, the
     // virtual keyboard shrinking the layout viewport. Without this a window
-    // placed in landscape is stranded fully off-screen in portrait.
+    // placed in landscape is stranded fully off-screen in portrait. A world
+    // window has nothing to re-clamp against: it moves with the canvas.
     useEffect(() => {
-        if (typeof window === 'undefined') return undefined
+        if (typeof window === 'undefined' || inWorld) return undefined
         const reclamp = () => {
             if (interactionRef.current) return
             setDraft((current) => clampWindowFrame(current, {
@@ -79,7 +117,7 @@ export default function DesktopWindow({
             window.removeEventListener('resize', reclamp)
             window.removeEventListener('orientationchange', reclamp)
         }
-    }, [allowOverflowLeft, allowOverflowTop, minTop])
+    }, [allowOverflowLeft, allowOverflowTop, minTop, inWorld])
 
     useEffect(() => {
         if (!dragMode) return undefined
@@ -87,29 +125,17 @@ export default function DesktopWindow({
             const state = interactionRef.current
             if (!state) return
             if (state.mode === 'drag') {
-                setDraft((current) => clampWindowFrame({
+                setDraft((current) => settle({
                     ...current,
-                    x: state.origin.x + (event.clientX - state.startX) / canvasZoom,
-                    y: state.origin.y + (event.clientY - state.startY) / canvasZoom
-                }, {
-                    minTop,
-                    allowOverflowLeft,
-                    allowOverflowTop,
-                    viewportWidth: window.innerWidth,
-                    viewportHeight: window.innerHeight
+                    x: state.origin.x + (event.clientX - state.startX) / dragZoom,
+                    y: state.origin.y + (event.clientY - state.startY) / dragZoom
                 }))
             }
             if (state.mode === 'resize') {
-                setDraft((current) => clampWindowFrame({
+                setDraft((current) => settle({
                     ...current,
-                    width: Math.max(260, state.origin.width + (event.clientX - state.startX) / canvasZoom),
-                    height: Math.max(180, state.origin.height + (event.clientY - state.startY) / canvasZoom)
-                }, {
-                    minTop,
-                    allowOverflowLeft,
-                    allowOverflowTop,
-                    viewportWidth: window.innerWidth,
-                    viewportHeight: window.innerHeight
+                    width: Math.max(MIN_WIDTH, state.origin.width + (event.clientX - state.startX) / dragZoom),
+                    height: Math.max(MIN_HEIGHT, state.origin.height + (event.clientY - state.startY) / dragZoom)
                 }))
             }
         }
@@ -118,13 +144,7 @@ export default function DesktopWindow({
             interactionRef.current = null
             setDragMode(null)
             if (!state) return
-            const nextFrame = clampWindowFrame(draftRef.current, {
-                minTop,
-                allowOverflowLeft,
-                allowOverflowTop,
-                viewportWidth: window.innerWidth,
-                viewportHeight: window.innerHeight
-            })
+            const nextFrame = settle(draftRef.current)
             setDraft(nextFrame)
             onPatch?.({
                 x: nextFrame.x,
@@ -142,7 +162,8 @@ export default function DesktopWindow({
             window.removeEventListener('pointerup', handlePointerUp)
             window.removeEventListener('pointercancel', handlePointerUp)
         }
-    }, [dragMode, allowOverflowLeft, allowOverflowTop, minTop, onPatch, canvasZoom])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dragMode, allowOverflowLeft, allowOverflowTop, minTop, onPatch, dragZoom, inWorld])
 
     const startDrag = (event) => {
         if (event.target.closest('button')) return
@@ -171,14 +192,23 @@ export default function DesktopWindow({
 
     const sectionCursor = dragMode === 'drag' ? 'grabbing' : dragMode === 'resize' ? 'nwse-resize' : undefined
 
+    // Screen windows keep the exact `translate(Xpx, Ypx)` string: tests parse
+    // it positionally, and nothing else changes for them. A world window is
+    // placed through the canvas viewport and scaled with it — the whole
+    // window, body included, so a scene reads smaller as you zoom out, the
+    // same way its card does.
+    const transform = inWorld
+        ? `translate(${(viewport.originLeft || 0) + viewport.panX + draft.x * viewport.zoom}px, ${(viewport.originTop || 0) + viewport.panY + draft.y * viewport.zoom}px) scale(${viewport.zoom})`
+        : `translate(${draft.x}px, ${draft.y}px)`
+
     return (
         <section
-            className={`raw-window ${windowState.minimized ? 'is-minimized' : ''} ${windowState.pinned ? 'is-pinned' : ''}`}
+            className={`raw-window ${windowState.minimized ? 'is-minimized' : ''} ${windowState.pinned ? 'is-pinned' : ''} ${inWorld ? 'is-world' : ''}`}
             role="dialog"
             aria-label={title}
             tabIndex={-1}
             style={{
-                transform: `translate(${draft.x}px, ${draft.y}px)`,
+                transform,
                 width: draft.width,
                 height: windowState.minimized ? 'auto' : draft.height,
                 zIndex: windowState.zIndex,
@@ -219,7 +249,7 @@ export default function DesktopWindow({
                         type="button"
                         className={windowState.pinned ? 'is-active' : ''}
                         aria-label={windowState.pinned ? 'Unpin' : 'Pin'}
-                        title={windowState.pinned ? 'Unpin' : 'Pin'}
+                        title={windowState.pinned ? 'Unpin: let it travel with the canvas' : 'Pin to the screen'}
                         onClick={(event) => { event.stopPropagation(); onTogglePin?.() }}
                     >
                         ⌖

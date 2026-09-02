@@ -1489,6 +1489,13 @@
     border-bottom-color: transparent;
 }
 
+/* A window placed in the world is scaled with the canvas — the whole window,
+   from its own top-left, so it shrinks toward where it stands rather than
+   toward the page corner. */
+.raw-window.is-world {
+    transform-origin: 0 0;
+}
+
 /* The window title used to be nothing but this zero margin, which left its
    size and weight to the browser's built-in h3 — 18.72px, louder than any
    authored label in the lane and the reason a window shouted while its card

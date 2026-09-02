@@ -5,6 +5,46 @@ import DesktopWindow from './DesktopWindow.jsx'
 const windowState = { x: 10, y: 10, width: 300, height: 200, zIndex: 1, minimized: false, pinned: false }
 
 describe('DesktopWindow', () => {
+    // A window in the world is placed through the canvas viewport: origin +
+    // pan + frame * zoom, and scaled with the zoom — so it travels with a pan
+    // and shrinks with the cards. Its frame is graph units, never clamped to
+    // the screen: y=2000 is simply off-screen until you pan there.
+    it('places a world window through the viewport and scales it with the zoom', () => {
+        const far = { x: 200, y: 2000, width: 400, height: 300, zIndex: 1, minimized: false, pinned: false }
+        const viewport = { panX: 100, panY: 50, zoom: 0.5, originLeft: 0, originTop: 64 }
+        const { container } = render(
+            <DesktopWindow windowState={far} title="Scene" space="world" viewport={viewport}>content</DesktopWindow>
+        )
+        const el = container.querySelector('.raw-window')
+        expect(el.classList.contains('is-world')).toBe(true)
+        expect(el.style.transform).toBe('translate(200px, 1114px) scale(0.5)')
+        expect(el.style.width).toBe('400px')
+    })
+
+    // Pointer deltas are screen pixels; a world window's frame is graph units,
+    // so a 40px drag at zoom 0.5 moves the window 80 units.
+    it('drags a world window in graph units, dividing the pointer delta by the zoom', () => {
+        const onPatch = vi.fn()
+        const viewport = { panX: 0, panY: 0, zoom: 0.5, originLeft: 0, originTop: 0 }
+        const { container } = render(
+            <DesktopWindow windowState={windowState} title="Scene" space="world" viewport={viewport} onPatch={onPatch}>content</DesktopWindow>
+        )
+        const header = container.querySelector('.raw-window-header')
+        fireEvent.pointerDown(header, { clientX: 100, clientY: 100 })
+        fireEvent.pointerMove(window, { clientX: 140, clientY: 120 })
+        fireEvent.pointerUp(window)
+        expect(onPatch).toHaveBeenCalledWith(expect.objectContaining({ x: 90, y: 50 }))
+    })
+
+    it('keeps a screen window on the plain translate, unscaled', () => {
+        const { container } = render(
+            <DesktopWindow windowState={windowState} title="Gear" space="screen" viewport={{ panX: 500, panY: 500, zoom: 2 }}>content</DesktopWindow>
+        )
+        const el = container.querySelector('.raw-window')
+        expect(el.classList.contains('is-world')).toBe(false)
+        expect(el.style.transform).toMatch(/^translate\([-\d.]+px, [-\d.]+px\)$/)
+    })
+
     // Regression, and a lesson about where a guard has to sit: clampWindowFrame
     // already placed a minimized window by its bar, and a unit test over that
     // function passed — while every window on screen was still misplaced,
