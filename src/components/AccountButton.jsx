@@ -8,6 +8,7 @@ import {
     getOAuthUrl,
     logoutApiSession
 } from '../services/apiClient.js'
+import { startOAuth } from '../utils/oauthNavigate.js'
 
 const GitHubIcon = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
@@ -87,9 +88,7 @@ export default function AccountButton({ authState, onLogout }) {
         }
     }
 
-    const handleOAuth = (provider) => {
-        window.location.href = getOAuthUrl(provider)
-    }
+    const handleOAuth = (provider) => { startOAuth(getOAuthUrl(provider)) }
 
     const handleLogout = async () => {
         setLoggingOut(true)
