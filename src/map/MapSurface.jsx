@@ -7,6 +7,7 @@ import { useMapDocument } from './useMapDocument.js'
 import { buildMapOutputPath } from './mapRouting.js'
 import { listProjects } from '../project/services/projectsApi.js'
 import { transportWarning } from './transportCeiling.js'
+import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
 import './mapSurface.css'
 
 // THE MAPPER'S DESK.
@@ -89,6 +90,7 @@ export default function MapSurface({ projectId, spaceId }) {
     const [projectOptions, setProjectOptions] = useState([])
     const [localReference, setLocalReference] = useState('')
     const [transferText, setTransferText] = useState(null)
+    const [lightingHere, setLightingHere] = useState(false)
 
     const output = useMemo(() => mapping?.output || { width: 1920, height: 1080 }, [mapping])
     const cues = useMemo(() => mapping?.cues || [], [mapping])
@@ -119,6 +121,16 @@ export default function MapSurface({ projectId, spaceId }) {
             .catch(() => { if (!cancelled) setProjectOptions([]) })
         return () => { cancelled = true }
     }, [spaceId, projectId])
+
+    // The lighting desk is a LOCAL runtime only. Probed once, on mount: if
+    // nothing answers, the link is not drawn at all rather than offered and
+    // then leading to a 404 — a hosted tab must not advertise a rig it has no
+    // way to reach.
+    useEffect(() => {
+        let cancelled = false
+        probeLightingDesk().then((here) => { if (!cancelled) setLightingHere(here) })
+        return () => { cancelled = true }
+    }, [])
 
     // --- geometry -------------------------------------------------------
 
@@ -313,6 +325,15 @@ export default function MapSurface({ projectId, spaceId }) {
                     <button type="button" className={`map-toggle${live ? ' is-on' : ''}`} onClick={() => setLive((value) => !value)}
                         title="Run project, page and camera sources on this screen too. Off by default: the wall needs those pixels more than the desk does.">Live</button>
                     <button type="button" className="map-action" onClick={openOutput}>Open output</button>
+                    {lightingHere ? (
+                        <a
+                            className="map-action"
+                            href={lightingDeskPath()}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="The lighting desk on this machine — a map cue can recall one of its scenes"
+                        >Light</a>
+                    ) : null}
                     {syncLabel ? <span className={`map-sync map-sync-${syncLabel.tone}`} title={syncLabel.detail}>{syncLabel.text}</span> : null}
                     {transportNote ? <span className="map-warning" role="status">{transportNote}</span> : null}
                 </div>
