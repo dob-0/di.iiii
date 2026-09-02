@@ -1,3 +1,4 @@
+import { portalHref } from './portalHref.js'
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
@@ -137,14 +138,6 @@ function LabelPlate({ text, fontSize, maxWidth }) {
 const STUDIO_PATH_SEGMENT_RE = /(?:^|\/)studio(?:\/|$)/
 export const isStudioEditorPath = (pathname = '') => STUDIO_PATH_SEGMENT_RE.test(pathname)
 
-// Where a gateway portal lands. Pure and exported so the routing decision is
-// testable without mounting a canvas.
-export const portalHref = (spaceId, projectId) => {
-    const space = String(spaceId || '').trim()
-    if (!space) return null
-    const project = String(projectId || '').trim()
-    return project ? `/${space}/${project}` : `/${space}`
-}
 
 // A door's name is the reward for approaching it, not a poster over the room:
 // five doors × a wide bilingual label each = a wall of overlapping plates from
@@ -343,3 +336,5 @@ export default function PortalObject({ entity }) {
         />
     )
 }
+
+export { portalHref }

@@ -33,5 +33,23 @@
 </head>
 <body>
     <div id="root"></div>
+    <!-- The front page is a room drawn on a canvas. Anything that reads rather
+         than renders — a crawler that does not run scripts, a browser where
+         WebGL failed — would otherwise receive an empty document, because the
+         head's title and card are all there is. This is the floor under that:
+         what the place is, and the way on to the works. Kept short on purpose;
+         the room itself is the real thing, and this must never claim more. -->
+    <noscript>
+        <h1>di.iiii — public spaces on the open web</h1>
+        <p>Make a space, hand out the address — a link while it runs, a file when it ends.</p>
+        <p>This page opens a space you can walk through, which needs JavaScript. The works it holds:</p>
+        <ul>
+            <li><a href="/wcc">WCC Exhibition</a></li>
+            <li><a href="/br_id_ge">br_id_ge</a></li>
+            <li><a href="/beyond-form">beyond_form</a></li>
+            <li><a href="/algovrithm">algovrithm</a></li>
+        </ul>
+        <p><a href="/wiki">How it works</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
+    </noscript>
     <script type="module" src="./index.jsx"></script></body>
 </html>
