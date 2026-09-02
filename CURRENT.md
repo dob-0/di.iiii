@@ -13,8 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a composed arrival stops cropping on a phone
-- what the flight lifts, and where /main lands
+- The Light Put Back arrives as a space, and space:code-push turns out to be broken three ways
 
 Full detail: `PROGRESS.md`.
 
