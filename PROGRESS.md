@@ -5,6 +5,34 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-03 — the lighting desk moves in: /light, DMX Out on the desk, map cues with light, MIDI in the suite
+
+The club's Art-Net desk (a zero-dependency Node.js DMX desk that arrived as three Telegram
+zips, hardened the same day in `~/artnet-desk`: crash paths, NaN guards, atomic saves,
+UTF-8 bodies, Linux/macOS serial, phone layout) is now di.iiii's own tool at
+`serverXR/src/lighting`, CLEAN — no rig, no scenes; a rig gets patched here when wanted.
+`docs/architecture/LIGHTING_DESK.md` is the note.
+
+- `desk.js` is the desk as a factory; `standalone.js` the same desk on its own port (what
+  the club machine runs — `~/artnet-desk` is now an INSTALL that syncs `desk/` from here).
+- Mounted at `/light` behind the local-runtime guard (hosted → 404), BEFORE the JSON
+  parser, built on first request, output OFF by default so a dev server never
+  broadcasts on the studio wifi. `light` reserved in both space routers; Vite proxies it.
+- The DMX Out node's default rig is the desk (`rig: desk|vizzz`, a config select): master,
+  blackout as a state, raw channel, and a new Scene input recalling by id or name off
+  `/light/api/scenes/summary`; `/light/api/summary` is the cheap poll.
+- A map cue carries an optional `lightScene` and fires it through `fireCue`; the map desk
+  shows a Light link when the desk answers.
+- MIDI is the desk's fifth page: one dispatcher (the old separate page silently unhooked
+  the scene menu's pad binds), map saved with the show via `api/midi`.
+- Gates: the desk's three suites run under `npm test` (lighting.test.js); lightingRoutes,
+  dmxRigClient, DmxOutPanelWindow, nodeRegistry, map and schemaSync tests extended; wiki
+  `lighting-desk` + `dmx-out-node` + `projection-mapping` updated.
+
+Left: a real ENTTEC widget on Linux (the serial path is proven on a pty only); the club
+desk still runs the pre-hardening build; the AI-director routes beyond summary (events,
+beat, preview, the AI lane) are listed in `~/artnet-desk/AI-DIRECTOR.md`.
+
 ## 2026-09-03 — dev absorbs main so the promotion can go
 
 The dev → main promotion (#284) had turned CONFLICTING. Not on new work: the suite/brand
