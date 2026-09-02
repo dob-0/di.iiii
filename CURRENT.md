@@ -13,7 +13,11 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- The Light Put Back arrives as a space, and space:code-push turns out to be broken three ways
+- dev folds its own session notes: the staging deploy lands them
+- both tiers send HSTS
+- GitHub space-sync stops answering itself with 401
+- a null frame no longer takes the server down
+- Cap space/project chat identity fields and check the disk floor on space chat writes
 
 Full detail: `PROGRESS.md`.
 

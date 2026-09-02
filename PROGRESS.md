@@ -5,6 +5,141 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-02 — dev folds its own session notes: the staging deploy lands them
+
+- The single biggest source of failed deploys, measured: in the 14 days to today, 111
+  merges into `dev`, 82 hand-run `chore(land)` fold commits, and a 60% failure rate on
+  `Deploy VPS Staging`. Cause: every PR is REQUIRED to carry a `docs/ai/sessions/` note,
+  so every merge commit puts a note on `dev`, and `docs:ai:check` (run inside the deploy
+  via ci.yml) refuses a non-empty sessions dir on `dev`. Staging only moved once a human
+  ran `npm run land` and pushed.
+- Fix, two halves in `deploy-vps-staging.yml` + `ci.yml`:
+  1. A first job `land` (push to `dev` only, `contents: write`, `continue-on-error`)
+     checks out `dev`'s tip, runs `scripts/session-land.mjs`, and pushes the fold commit
+     as `github-actions[bot]`. Fetch → re-fold → push, bounded to three tries, re-folding
+     from the new tip instead of rebasing so a note merged in the gap is never left
+     unfolded. No `npm ci` — the scripts import only node builtins.
+  2. `ci.yml` gains a `workflow_call` input `land_in_place` (default false, so PRs and
+     the production deploy are unchanged). The staging `test` job passes it, and the
+     checkout is folded in place before any check runs — the tree under test is the
+     tree the fold produces, whether or not the push in (1) was accepted.
+- Why not "push and let the fold commit trigger the deploy": a `GITHUB_TOKEN` push
+  never triggers another workflow. So there is no second run and no loop; this run
+  deploys `github.sha`, the merge commit. The fold touches only `PROGRESS.md`,
+  `CURRENT.md` and `docs/ai/sessions/`, so the image is the same code — accepted, and
+  written into the workflow comments: `release.gitCommit` on staging reads one commit
+  behind `dev`'s tip after a merge.
+- The known unknown: `dev` has classic branch protection with required status checks
+  (`build-and-test`, `browser-checks / browser-checks`) and no bypass for GitHub
+  Actions (`enforce_admins` off is why the owner's hand pushes go through). A fresh
+  fold commit cannot carry those checks, so the bot push will most likely be rejected
+  (GH006) until the owner gives the github-actions app a bypass or moves `dev` to a
+  ruleset with one. The job treats that as a warning, not a failure: staging deploys
+  either way, and `npm run land` by hand remains the fallback for the bookkeeping
+  commit. A live probe on a throwaway protected branch was prepared but not run (it
+  needs a repo-settings write); the first real answer is this PR's own merge — read the
+  `land` job's annotation on that run.
+- `scripts/session-land.mjs`: with nothing to fold it now still runs the worktree
+  sweep. CI folding cannot see anyone's disk, and without this the "landing sweeps it,
+  not memory" rule would have quietly stopped being true the day the fold stopped being
+  manual. Docs updated in the same change: sessions README, golden rule "CURRENT.md has
+  exactly one writer", LIVE_DEPLOY.md, `.claude/commands/land.md`, parallel-agents.md.
+- Validated locally: both workflows YAML-parse; `session-land.mjs --dry-run` against a
+  planted note; lint, the session-land/repo-state unit tests, `docs:ai:check` and
+  `docs:wiki:check` all pass. Not testable locally: the Actions run itself.
+
+## 2026-09-02 — both tiers send HSTS
+
+The 2026-09-02 live walk read the response headers of `/` on prod and staging:
+`X-Frame-Options`, `Referrer-Policy` and `nosniff` were there, `Strict-Transport-Security`
+was not. Caddy issues the certificates but never adds that header by itself, so a
+browser that has visited before still tried `http://` first on every fresh tab.
+
+- One `header Strict-Transport-Security "max-age=31536000"` line in each site block
+  of the tracked `Caddyfile`. A year, no `preload`, no `includeSubDomains` — nothing
+  that could strand a future host under the domain.
+- Reaches the live Caddy only on the next `main` promotion: the prod deploy workflow
+  is the one that checks out `Caddyfile` and reloads Caddy; the staging block lives
+  in the same file, so staging gets it at the same moment.
+- A Content-Security-Policy is deliberately NOT added: published spaces are arbitrary
+  HTML that pulls Leaflet, CARTO tiles, jsdelivr, Google fonts and the default draco
+  decoder from third parties. A platform-wide CSP would break the works; it belongs
+  per-route, decided later.
+
+## 2026-09-02 — GitHub space-sync stops answering itself with 401
+
+When a linked repo pushes, or a space is first connected, `serverXR` pulls the
+repo and then writes it back through its own HTTP routes, authenticating with
+`config.apiToken` — that is `API_TOKEN`/`SERVERXR_API_TOKEN`. `docker-compose.yml`
+passes only `ADMIN_API_TOKEN` into the container (compose env is an allow-list), so
+on prod and staging the self-call header was a bare `Bearer ` and every webhook and
+every initial sync failed with `internal document GET failed (401)`. Failed closed,
+so never a hole — but the feature was dead on both tiers since it shipped.
+
+- `config.internalApiToken` = `API_TOKEN` if set, else the admin-role fallback the
+  session secret already trusts (`adminFallbackToken`), never a lower-role token.
+  Both self-call sites in `index.js` use it.
+- Tests: the Docker case (only `ADMIN_API_TOKEN`) resolves to it; `API_TOKEN` still
+  wins when present; an editor-only token yields nothing.
+- Not verified end to end against a real GitHub App push — that needs a linked
+  repo on staging; the first real webhook after this lands is the proof.
+
+## 2026-09-02 — a null frame no longer takes the server down
+
+A whole-platform audit found the one thing that was dangerous: `JSON.parse('null')`
+succeeds, and both the unauthenticated mesh relay (`meshHub.js handleMessage`) and
+seven Socket.IO space handlers (`join-space`, `scene-update`, `object-changed`,
+`object-added`, `object-deleted`, `user-cursor`, `selection-changed`) then read a
+field off the result. `ws` surfaces the throw as an uncaught exception; socket.io
+dispatches listeners inside `nextTick`, so it is uncaught there too. serverXR has no
+`uncaughtException` handler, so one WebSocket frame from any visitor, or one emit
+from any guest session, exited the process on both tiers. Docker restarted it; a
+two-line loop would have been a standing outage.
+
+- The relay now drops any frame that is not a plain object; the seven handlers
+  default `data` to `{}`, which is what the other five already did.
+- Two regression tests, one per file, send the bad payloads and assert the server
+  still answers. Both fail against the pre-fix code with the exact
+  `Cannot destructure property 'spaceId' of 'data' as it is null` crash.
+- Not done, on purpose: a process-level `uncaughtException` logger. Node's default
+  already exits with a stack; adding a handler that swallows would hide the next
+  one of these.
+
+## Cap space/project chat identity fields and check the disk floor on space chat writes
+
+- `userName`/`userId` on both `project-chat-message` and `space-chat-message` were
+  unbounded — only `text` was capped (`CHAT_MESSAGE_MAX_LENGTH`, 500). socket.io's
+  1MB default frame size meant a guest could ride ~1MB of identity into a persisted
+  chat line, and `space-chat-message` writes 500 kept lines per space to SQLite. Added
+  a shared `normalizeChatIdentity` (64-char cap) used at both socket handlers, and a
+  matching cap inside `spaceChatStore.appendMessage` itself so the store is safe
+  regardless of caller.
+- The disk-full guard on HTTP writes (`diskGuard.js` → `createDiskWriteGuard`, wired
+  in `index.js`) never saw socket traffic — a chat line skips multer and the JSON
+  body parser entirely. Extracted the guard's cached statfs check into a new
+  `createFreeSpaceChecker` export (same caching/warn-once behaviour, no duplicated
+  numbers) and reused it from `space-chat-message`: below `config.minFreeDiskBytes`
+  free, the message is dropped before it reaches `spaceChatStore.appendMessage` —
+  no new client-facing event, matching how a flood-limited message is already
+  silently dropped.
+- `project-chat-message` isn't persisted (ephemeral, room-scoped like
+  `project-cursor`), so it isn't part of the disk-fill vector — only got the
+  identity cap, for the same reason its `text` is already capped: a large frame is
+  still a large frame in memory/on the wire even if nothing hits SQLite.
+- `normalizeChatMessageId` already capped and charset-validated the client-supplied
+  `id` (64 chars, `[A-Za-z0-9_-]+`) before this change — no gap there.
+- Left as-is: a `sandbox-*` space accepted by `canAccessSpace` before the space
+  exists on disk. No existing socket-side "space must exist" check to reuse in one
+  line; a real fix would need its own review of sandbox provisioning, out of scope
+  for this pass.
+- Tests: `serverXR/src/spaceChatStore.test.js` gained a truncation test (100KB
+  userName/userId → stored at 64 chars). `serverXR/src/socketHandlers.test.js`
+  gained a real socket.io integration test (in-process server + `socket.io-client`,
+  same pattern as `meshHub.test.js`) proving a message is dropped without
+  broadcasting below the configured free-disk floor, and still broadcasts/persists
+  above it. `npx vitest run serverXR/src` — 455/455 passing. `npx eslint` clean on
+  all touched files.
+
 ## 2026-09-02 — The Light Put Back arrives as a space, and space:code-push turns out to be broken three ways
 
 A new work — 14 laser photographs from MOCT × MECHATRONICA (Davit Nersisyan) run
