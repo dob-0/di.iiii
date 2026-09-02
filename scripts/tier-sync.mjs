@@ -39,6 +39,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const TIMEOUT_MS = 30000
@@ -356,8 +357,18 @@ const main = async () => {
 
                 let assetNote = ''
                 if (args.assets) {
-                    const moved = await copyAssets({ call, from, to, projectId, document })
+                    const { moved, remap } = await copyAssets({ call, from, to, projectId, document })
                     assetNote = moved ? `, ${moved} asset(s)` : ''
+                    // The document above carries the SOURCE's asset ids. Any the
+                    // destination re-addressed must be followed there, or the copy
+                    // renders grey where the original renders a photograph.
+                    if (Object.keys(remap).length) {
+                        await call(to, `/api/projects/${projectId}/document`, {
+                            method: 'PUT',
+                            body: JSON.stringify(remapAssetIds(document, remap))
+                        }, TRANSFER_TIMEOUT_MS)
+                        assetNote += `, ${Object.keys(remap).length} re-addressed`
+                    }
                 }
                 copied++
                 console.log(`  ✓ ${item.spaceId}/${projectId}${assetNote}`)
@@ -372,10 +383,15 @@ const main = async () => {
     if (failed) process.exitCode = 1
 }
 
-// Assets carry their ids across so the document's existing
-// /api/projects/<id>/assets/<assetId> references resolve without rewriting.
+// Assets USUALLY carry their ids across, so the document's existing
+// /api/projects/<id>/assets/<assetId> references usually resolve untouched.
+// They do not when the destination rewrites the bytes: the upload route strips
+// EXIF/GPS before hashing, and a scrubbed file no longer hashes to the id we
+// sent, so it is stored under a new content address and the route still
+// answers 200. Returns the remap the caller must follow in the document.
 const copyAssets = async ({ call, from, to, projectId, document }) => {
     const assets = Array.isArray(document?.assets) ? document.assets : []
+    const remap = {}
     let moved = 0
     for (const asset of assets) {
         const assetId = asset?.id
@@ -393,9 +409,12 @@ const copyAssets = async ({ call, from, to, projectId, document }) => {
             type: asset.mimeType || source.headers.get('content-type') || 'application/octet-stream'
         }), asset.name || assetId)
         const upload = await call(to, `/api/projects/${projectId}/assets`, { method: 'POST', body: form }, TRANSFER_TIMEOUT_MS)
-        if (upload.ok) moved++
+        if (!upload.ok) continue
+        const changed = remapFromUpload({ requestedId: assetId, response: await upload.json().catch(() => null) })
+        if (changed) Object.assign(remap, changed)
+        moved++
     }
-    return moved
+    return { moved, remap }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -52,6 +52,33 @@ the id comparison could not see.
 
 After stripping: 55 real differences — 23 debris in `open`, 32 genuine content drift.
 
+### The audit said equal. The screenshot said grey.
+
+`dilijan/welcome` on localhost and on staging, side by side after the mirror: same room, same
+camera, same 265 objects — and the photo wall **grey on local, sixteen photographs on
+staging**. The audit compared documents and the documents matched.
+
+The upload route strips EXIF/GPS **before** hashing, so a scrubbed file no longer hashes to
+the id the caller sent. The route drops the requested id, stores under the new content
+address, and answers **200**. `project-pull` counted a success and left the document pointing
+at ids that are now nowhere. Its own comment said the opposite: *"Ids are preserved so the
+document's existing references resolve without rewriting."*
+
+    16 assets stored locally, 16 referenced by the document, ZERO ids in common
+
+Measured across the dev box: **106 of 244 assets unresolvable, in 8 projects** —
+`library/di-library` 51/51, `dilijan/desk` 17/17, `dilijan/welcome` 14/16.
+
+`scripts/asset-remap-lib.mjs` reads the id the server actually stored out of its own
+response and follows it through the document — `assets[].id`, `assets[].url`,
+`components.media.assetId`, `worldState.environmentAssetId`, and asset URLs inside
+`presentationState.codeHtml`. Deliberately a generic walk rather than a field list, because
+that list grows every time a component learns to carry media. Both `project-pull.mjs` and
+`tier-sync.mjs` re-PUT the document when anything moved.
+
+Re-pulling a photo-heavy space hits the local upload limiter (60 per 10 minutes). A 429 is a
+wait and a retry, not a failure.
+
 ### Done
 
 - **71 `br-id-ge` projects local → staging**, 0 failed, documents verified equal and
