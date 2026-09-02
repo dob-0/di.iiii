@@ -1,0 +1,208 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>di.iiii — the landing page</title>
+<style>
+/* A standing copy of di.iiii's landing page as it read in 2026. Self-contained
+   on purpose: no fonts, scripts or assets are fetched, so it keeps working
+   whatever happens to the app that first rendered it.
+
+   Every link carries target="_top". A published page is a sandboxed srcdoc
+   frame, and a link without it navigates the frame instead of the tab — the
+   room dies with CORS errors and the visitor is stranded. */
+:root{
+  --room:#1B1BCB; --room-deep:#0B0B6E; --night:#05052A;
+  --cyan:#4FD6FF; --ink:#F4F5FA; --dim:#A9B0D6; --line:rgba(255,255,255,.14);
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;color:var(--ink);font:400 16px/1.6 var(--sans);
+  -webkit-font-smoothing:antialiased;
+  background:
+    linear-gradient(180deg,rgba(5,5,42,.55) 0%,rgba(11,11,110,.25) 38%,rgba(5,5,42,.9) 100%),
+    repeating-linear-gradient(90deg,rgba(79,214,255,.10) 0 1px,transparent 1px 92px),
+    repeating-linear-gradient(0deg,rgba(79,214,255,.07) 0 1px,transparent 1px 92px),
+    radial-gradient(120% 80% at 50% 8%,var(--room) 0%,var(--room-deep) 52%,var(--night) 100%);
+  background-attachment:fixed
+}
+.wrap{max-width:1120px;margin-inline:auto;padding:0 clamp(16px,4vw,32px)}
+
+nav{
+  position:sticky;top:0;z-index:10;background:rgba(4,4,22,.86);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line)
+}
+nav .wrap{display:flex;align-items:center;gap:22px;height:58px}
+.brand{font-weight:700;letter-spacing:-.02em;text-decoration:none;color:var(--ink);font-size:18px}
+.brand i{color:var(--cyan);font-style:normal}
+nav .spacer{flex:1}
+nav a{color:var(--dim);text-decoration:none;font-size:14px}
+nav a:hover{color:var(--ink)}
+.nav-cta{
+  border:1px solid var(--cyan);color:var(--cyan)!important;
+  padding:8px 14px;border-radius:2px;font-weight:600
+}
+.nav-cta:hover{background:var(--cyan);color:#04202A!important}
+
+header.hero{padding:clamp(56px,10vw,110px) 0 clamp(40px,6vw,72px);text-align:center}
+.eyebrow{
+  font:600 11px/1 var(--mono);letter-spacing:.34em;text-transform:uppercase;
+  color:var(--cyan);margin:0 0 26px
+}
+h1.mark{
+  font-size:clamp(58px,13vw,150px);line-height:.86;font-weight:800;letter-spacing:-.05em;
+  margin:0 0 26px
+}
+h1.mark i{color:var(--cyan);font-style:normal}
+.tagline{font-size:clamp(17px,2.3vw,23px);color:var(--dim);margin:0 auto 34px;max-width:26ch}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
+.btn{
+  display:inline-block;text-decoration:none;font-weight:600;font-size:15px;
+  padding:13px 26px;border-radius:2px
+}
+.btn.solid{background:var(--cyan);color:#04202A}
+.btn.solid:hover{filter:brightness(1.1)}
+.btn.ghost{border:1px solid var(--line);color:var(--ink)}
+.btn.ghost:hover{border-color:var(--dim)}
+.fine{font-size:14px;color:var(--dim);margin:0 auto 8px;max-width:46ch}
+.fine a{color:var(--ink)}
+.doors{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+.door{
+  text-decoration:none;font-weight:600;font-size:14px;padding:11px 18px;
+  border:1px solid var(--line);border-radius:2px;color:var(--ink)
+}
+.door:hover{border-color:currentColor}
+.door.wcc{background:#E01B1B;border-color:#E01B1B;color:#fff}
+.door.bridge{border-color:var(--cyan);color:var(--cyan)}
+.door.algo{border-color:#8FE3FF;color:#8FE3FF}
+
+section{padding:clamp(44px,7vw,84px) 0;border-top:1px solid var(--line)}
+h2{
+  font-size:clamp(26px,3.6vw,38px);line-height:1.15;font-weight:700;letter-spacing:-.02em;
+  margin:0 0 12px;text-wrap:balance
+}
+.sub{color:var(--dim);margin:0 0 34px;max-width:62ch}
+.grid{display:grid;gap:20px;grid-template-columns:1fr}
+@media(min-width:680px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:920px){.grid.four{grid-template-columns:repeat(4,1fr)}}
+.card{
+  border:1px solid var(--line);border-radius:3px;padding:20px 21px;
+  background:rgba(6,6,44,.42)
+}
+.card h3{font-size:17px;font-weight:650;margin:0 0 8px;letter-spacing:-.01em}
+.card p{margin:0;color:var(--dim);font-size:14.5px}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step .n{
+  flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--cyan);
+  color:var(--cyan);font:600 12px/24px var(--mono);text-align:center
+}
+.readmore{display:block;text-decoration:none;color:inherit}
+.readmore:hover{border-color:var(--dim)}
+.readmore .go{color:var(--cyan);font-size:13.5px;display:inline-block;margin-top:9px}
+
+footer{padding:44px 0 60px;border-top:1px solid var(--line);color:var(--dim);font-size:14px}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+footer a{color:var(--dim)}
+.note{
+  margin-top:26px;padding:14px 16px;border:1px solid var(--line);border-left:2px solid var(--cyan);
+  border-radius:2px;background:rgba(6,6,44,.5);font-size:13.5px;color:var(--dim);max-width:70ch
+}
+a:focus-visible,.btn:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+</style></head><body>
+
+<nav><div class="wrap">
+  <a class="brand" href="/" target="_top">di<i>.</i>iiii</a>
+  <a href="/spaces" target="_top">Spaces</a>
+  <a href="/wiki" target="_top">Wiki</a>
+  <a href="https://github.com/dob-0/di.iiii" target="_top" rel="noopener">GitHub</a>
+  <span class="spacer"></span>
+  <a class="nav-cta" href="/spaces" target="_top">Step inside</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <p class="eyebrow">Public spaces · on the open web</p>
+  <h1 class="mark">di<i>.</i>iiii</h1>
+  <p class="tagline">Make a space, hand out the address. A link while it runs, a file when it ends.</p>
+  <div class="cta">
+    <a class="btn solid" href="/spaces" target="_top">Step inside</a>
+    <a class="btn ghost" href="/main" target="_top">Look around</a>
+  </div>
+  <p class="fine">no account, nothing to install — for you or for whoever opens your link.</p>
+  <p class="fine"><a href="/spaces" target="_top">Already have spaces? Open Studio →</a></p>
+  <div class="doors">
+    <a class="door wcc" href="/wcc" target="_top">WCC Exhibition</a>
+    <a class="door bridge" href="/br_id_ge" target="_top">br_id_ge</a>
+    <a class="door" href="/beyond-form" target="_top">Beyond Form</a>
+    <a class="door algo" href="/algovrithm" target="_top">algovrithm</a>
+  </div>
+</div></header>
+
+<section><div class="wrap">
+  <h2>What is di.iiii?</h2>
+  <p class="sub">di.iiii is where you make a 3D space and hand out its address. Build scenes, place objects, set up lighting and cameras, and invite others into the same space in their browser.</p>
+  <div class="grid three">
+    <div class="card"><h3>Create</h3><p>Add 3D shapes, import models and images, write text in 3D space. Arrange everything with drag-and-drop controls.</p></div>
+    <div class="card"><h3>Collaborate</h3><p>Invite anyone with a link. See live cursors and changes. Work together across the world without any setup.</p></div>
+    <div class="card"><h3>Publish</h3><p>Every space has a public URL. Share the link — visitors see your work in their browser or in a VR/AR headset.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>How to use di.iiii</h2>
+  <p class="sub">You can be building your first 3D scene in under two minutes.</p>
+  <div class="grid two">
+    <div class="card step"><span class="n">1</span><div><h3>Open a space</h3><p>Click “Step inside” — you get a space of your own, no account needed. Sign in to keep it and to make more.</p></div></div>
+    <div class="card step"><span class="n">2</span><div><h3>Add objects</h3><p>A space holds projects — open one, then use the Create window for 3D shapes, text, images, or 3D models. Drag to position them.</p></div></div>
+    <div class="card step"><span class="n">3</span><div><h3>Set up the scene</h3><p>The Scene window sets the sky, background and lighting. Select an object and edit it in the Objects window.</p></div></div>
+    <div class="card step"><span class="n">4</span><div><h3>Share or publish</h3><p>Copy the space link to invite collaborators, or publish to make it live for the public.</p></div></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Made for everyone</h2>
+  <p class="sub">di.iiii works for artists, developers, organisers, and automated systems alike.</p>
+  <div class="grid four">
+    <div class="card"><h3>Artists &amp; creators</h3><p>Build 3D exhibitions and installations a visitor opens from a link. No 3D software experience needed.</p></div>
+    <div class="card"><h3>Developers</h3><p>Extend with node-based logic, connect via the serverXR API, embed in your own site, or build agent-driven experiences.</p></div>
+    <div class="card"><h3>Event organisers</h3><p>Create virtual venues, stage previews, and spatial layouts for live events, conferences, or art shows.</p></div>
+    <div class="card"><h3>AI agents</h3><p>Access scene state, modify objects, and read space data via the serverXR REST API. Machine-readable endpoints at /serverXR/api/.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>What you can do</h2>
+  <div class="grid four">
+    <div class="card"><h3>Objects and nodes on one canvas</h3><p>Every object is a typed node. Wire them, group them, script them.</p></div>
+    <div class="card"><h3>Real-time collaboration</h3><p>See teammates’ cursors and changes live, in the same space.</p></div>
+    <div class="card"><h3>WebXR ready</h3><p>Enter VR or AR from any supported browser — no app install.</p></div>
+    <div class="card"><h3>Asset pipeline</h3><p>Upload images, 3D models, audio. Optimised and served automatically.</p></div>
+    <div class="card"><h3>Spaces</h3><p>A space is a place that is yours — its own address, its own guest list, and the projects you make in it. Share by link. Lock editing or leave it open.</p></div>
+    <div class="card"><h3>Publish anywhere</h3><p>Each space has a public URL. Export JSON. Embed or link directly.</p></div>
+    <div class="card"><h3>Guest &amp; sandbox modes</h3><p>Visitors explore without an account — a shared global space, or a private sandbox each.</p></div>
+    <div class="card"><h3>3 free spaces</h3><p>Sign in and create up to three of your own spaces for free. Admins are unlimited.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Learn how it works</h2>
+  <p class="sub">New here? The Wiki explains spaces, guest &amp; sandbox modes, free accounts, publishing, and the API — and it’s kept up to date as di.iiii grows.</p>
+  <div class="grid two">
+    <a class="card readmore" href="/wiki#glossary" target="_top"><h3>The words, in one place</h3><p>Every word di.iiii uses for its own parts, one line each. One word, one meaning.</p><span class="go">Read →</span></a>
+    <a class="card readmore" href="/wiki#br-id-ge" target="_top"><h3>br_id_ge (կ_ա_մ_ու_ր_ջ): an Armenian XR rite</h3><p>A rite at /br_id_ge — cross the bridge, be read into Armenian letters, leave a chrome core. Shown at Notations #2, State Philharmonia of Armenia.</p><span class="go">Read →</span></a>
+    <a class="card readmore" href="/wiki#di-cli-local" target="_top"><h3>Run di.iiii on your own machine</h3><p>One line installs di.iiii locally. Your work lives on your disk, and it keeps working with no internet.</p><span class="go">Read →</span></a>
+    <a class="card readmore" href="/wiki#joining-a-space" target="_top"><h3>Invited to collaborate? Start here</h3><p>The whole path from an invite link to your first saved edit — in a browser tab, with nothing to install.</p><span class="go">Read →</span></a>
+    <a class="card readmore" href="/wiki#guest-and-sandbox-modes" target="_top"><h3>The Open Space, your sandbox &amp; guest mode</h3><p>Everyone shares one communal Open Space, and every visitor — guest or account — gets exactly one private sandbox.</p><span class="go">Read →</span></a>
+    <a class="card readmore" href="/wiki#publishing" target="_top"><h3>Publishing &amp; public spaces</h3><p>Make a project live and decide who can see it — right from your Spaces page.</p><span class="go">Read →</span></a>
+    <a class="card readmore" href="/wiki#invite-links" target="_top"><h3>Invite links: share a private space</h3><p>Owners mint invite links that let anyone — even guests — step into a private space. No admin needed.</p><span class="go">Read →</span></a>
+    <a class="card readmore" href="/wiki#github-sync" target="_top"><h3>GitHub sync</h3><p>Connect a space to a GitHub repo — pushes auto-update the live space.</p><span class="go">Read →</span></a>
+  </div>
+  <p class="note">A standing copy of the landing page as it read in 2026, kept as a project so it survives whatever the front door becomes next. Two things were corrected rather than preserved: the br_id_ge door no longer advertises Notations #2 as running — that show closed on 2 August 2026 — and Beyond Form is spelled the way its own space spells it.</p>
+</div></section>
+
+<footer><div class="wrap">
+  <span>di.iiii · public spaces on the open web</span>
+  <span>Armenia · Web XR · <a href="/spaces" target="_top">Spaces</a> · <a href="/wiki" target="_top">Wiki</a></span>
+</div></footer>
+
+</body></html>

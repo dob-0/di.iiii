@@ -1,0 +1,13 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "main",
+  "projectId": "di-landing",
+  "slug": "landing",
+  "label": "di.iiii — the landing page",
+  "mode": "code",
+  "entry": "spaces/main/code/landing/index.html",
+  "include": [],
+  "assets": [],
+  "publish": false,
+  "note": "A standing copy of the landing page as it read in 2026; the React front door at / is the live one."
+}
