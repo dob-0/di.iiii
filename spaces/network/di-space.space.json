@@ -4,7 +4,7 @@
   "label": "network",
   "isPublic": true,
   "minEngine": 6,
-  "note": "Everyone who makes di.iiii — the five-person team, then the network by discipline — and a room per person. The roster is spaces/network/code/index.html (project `network`, the space's door). Rooms are generated from people.json by build.mjs into code/people/<slug>.html, one manifest each; a room's project id is network-<slug> because ids are global and two of the names are already wcc rooms. Team names as on /suite. No contact details on purpose. When a person takes their room over in Studio, remove their manifest from `projects`.",
+  "note": "Everyone who makes di.iiii — the five-person team, then the network by discipline — and a room per person. The roster is spaces/network/code/index.html (project `network`, the space's door). Rooms are generated from people.json by build.mjs into pages/<slug>.html, one manifest each; a room's project id is network-<slug> because ids are global and two of the names are already wcc rooms. Team names as on /suite. No contact details on purpose. When a person takes their room over in Studio, remove their manifest from `projects`.",
   "tiers": {
     "prod": {
       "url": "https://di-studio.xyz/serverXR",
