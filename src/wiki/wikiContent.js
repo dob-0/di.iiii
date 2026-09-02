@@ -443,6 +443,7 @@ export const WIKI_ARTICLES = [
             'A published scene has to work for someone who walks up, puts a headset on, and touches nothing — an exhibition visitor rather than an author. Three worldState settings cover that, and they apply to the walk/fly view, which is also the view a VR or AR session runs in.',
             { list: [
                 'spawn — where the visitor arrives and which way they face (x, z, yaw, pitch, altY). Put whatever should be read first at that facing; the auto-framed camera of the orbit view ignores it, but walk, VR and AR all honour it.',
+                'walkBounds — the room\u2019s walls, for walk mode: a box {minX, maxX, minZ, maxZ} in metres the visitor cannot step out of. Without it the walker guesses the boundary from the objects\u2019 extent plus a margin, and a room loaded as one model is a single object at its origin — so the guess is a 36 m square around it and the visitor walks straight through the walls into the grid. Set it half a metre or so inside the real walls, so the eye never ends up inside their thickness. Added 2026-09-02.',
                 'ringTour — a guided turn for work arranged in a circle. The view holds still on one object for dwell seconds, eases turn seconds round to the next, and repeats: stops (how many objects in the ring), startAngle (which one is first), direction, delay (dead time at the start, so an intro title is read before anything moves) and loop.',
                 'The tour turns the visitor and never moves them, so it works the same on a laptop and in a headset. It surrenders permanently the moment the visitor turns the view themselves — an automatic turn that fights the mouse or the thumbstick is worse than none.'
             ] },
@@ -453,7 +454,7 @@ export const WIKI_ARTICLES = [
             'You frame that shot on whatever screen you are sitting at, and that screen is almost always a wide one. A phone held upright sees about half as much from side to side, so a shot framed to the edges of a laptop arrived on a phone with its edges cut off — in a room whose doors are spread across the width, the outer doors were simply not there. A composed shot now steps back on a narrow screen until it holds what you framed, so a visitor on a phone gets the whole shot instead of the middle of it. Nothing changes on a screen as wide as it is tall or wider: there you get exactly the frame you set. Locked shots step back too — that visitor is the one who cannot move to find what was cut.'
         ],
         tags: ['scene', 'room', 'spawn', 'vr', 'exhibition', 'tour', 'walk', 'animation'],
-        updated: '2026-09-01'
+        updated: '2026-09-02'
     },
     {
         id: 'spatial-video-sound',

@@ -624,6 +624,17 @@ export const normalizeEntity = (entity = {}) => {
     }
 }
 
+export const normalizeWalkBounds = (bounds) => {
+    if (!bounds || typeof bounds !== 'object') return null
+    const minX = ensureNumber(bounds.minX, NaN)
+    const maxX = ensureNumber(bounds.maxX, NaN)
+    const minZ = ensureNumber(bounds.minZ, NaN)
+    const maxZ = ensureNumber(bounds.maxZ, NaN)
+    if (![minX, maxX, minZ, maxZ].every(Number.isFinite)) return null
+    if (!(minX < maxX && minZ < maxZ)) return null
+    return { minX, maxX, minZ, maxZ }
+}
+
 const normalizeWorldState = (world = {}) => {
     const source = world && typeof world === 'object' ? world : {}
     return {
@@ -647,6 +658,12 @@ const normalizeWorldState = (world = {}) => {
             near: Math.max(0, ensureNumber(source.fog.near, 8)),
             far: Math.max(1, ensureNumber(source.fog.far, 50))
         } : null,
+        // Walk-mode boundary: null keeps the walker's guess (the entities' extent plus a
+        // margin). An authored {minX, maxX, minZ, maxZ} is where the visitor can stand —
+        // a room loaded as ONE model has one entity at its origin, so the guess is a
+        // 36 m square around it and the walls are walked straight through. A box that
+        // is not a box (min ≥ max) is dropped rather than trapping the visitor on a line.
+        walkBounds: normalizeWalkBounds(source.walkBounds),
         gridVisible: ensureBoolean(source.gridVisible, defaultWorldState.gridVisible),
         gridSize: Math.max(1, ensureNumber(source.gridSize, defaultWorldState.gridSize)),
         gridCellSize: Math.max(0.05, ensureNumber(source.gridCellSize, defaultWorldState.gridCellSize)),

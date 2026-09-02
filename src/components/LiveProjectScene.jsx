@@ -1531,7 +1531,11 @@ export default function LiveProjectScene({
         return new THREE.Vector3(sum.x / entities.length, 0, sum.z / entities.length)
     }, [entities])
 
+    const walkBounds = doc?.worldState?.walkBounds || null
     const bounds = useMemo(() => {
+        // An authored boundary is the room's walls; the extent guess below is for
+        // scenes that never said where their walls are.
+        if (walkBounds) return walkBounds
         if (!entities.length) {
             return { minX: -BOUNDS_MIN_HALF, maxX: BOUNDS_MIN_HALF, minZ: -BOUNDS_MIN_HALF, maxZ: BOUNDS_MIN_HALF }
         }
@@ -1552,7 +1556,7 @@ export default function LiveProjectScene({
             minZ: Math.min(minZ - BOUNDS_MARGIN, cz - BOUNDS_MIN_HALF),
             maxZ: Math.max(maxZ + BOUNDS_MARGIN, cz + BOUNDS_MIN_HALF)
         }
-    }, [entities])
+    }, [entities, walkBounds])
 
     // Start a little south of the entrance gate (if any), facing into the space.
     useEffect(() => {
