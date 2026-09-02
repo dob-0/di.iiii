@@ -1404,6 +1404,22 @@
     color: var(--di-cyan);
 }
 
+/* At phone widths the seeded topbar becomes a horizontal scroller
+   (overflow-x:auto below), and an absolutely-positioned menu inside a
+   scroller is CLIPPED by it: measured at 390x844, the ⋯ menu's own centre
+   hit-tested to <html> — Home, Spaces, Wiki, Save to space, Clear the canvas
+   and node scale were all unreachable on a phone. Fixed to the viewport, it
+   escapes the scroller; the top is the topbar's height plus the gap. */
+@media (max-width: 640px) {
+    .raw-topbar-overflow-menu {
+        position: fixed;
+        top: 56px;
+        right: 8px;
+        max-height: calc(100dvh - 72px);
+        overflow-y: auto;
+    }
+}
+
 .raw-delete-fab {
     position: fixed;
     bottom: calc(24px + env(safe-area-inset-bottom));
