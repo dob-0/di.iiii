@@ -19,7 +19,14 @@ end-to-end (both environments, real runs) on 2026-07-16.
   builds images, pushes to GHCR, SSHes into the VPS, restarts the staging
   Compose project (`docker-compose.staging.yml`) — small, isolated, shares
   the box with production but not its resources or secrets; served at
-  `staging.di-studio.xyz` via production's Caddy
+  `staging.di-studio.xyz` via production's Caddy. Its first job, `land`, runs
+  `npm run land` on `dev` and pushes the fold commit (`github-actions[bot]`) —
+  the merge commit's own deploy used to fail the docs gate on the note every PR
+  brings with it, and staging only moved once someone folded by hand. The
+  deployed image is the merge commit (the fold touches docs only), so
+  `release.gitCommit` reads one commit behind `dev`'s tip after a merge. If the
+  job warns that branch protection rejected its push, staging deployed anyway;
+  only the bookkeeping commit is missing — `npm run land` by hand still does it
 - push `main` → [deploy-vps.yml](../../.github/workflows/deploy-vps.yml) does
   the same for the production Compose project
 - both workflows `git checkout <deployed-sha> -- <tracked compose/Caddy

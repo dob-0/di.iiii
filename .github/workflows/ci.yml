@@ -15,6 +15,20 @@ on:
   # outcome (audit 2026-07-17 — deploys previously had no test gate at all,
   # only a post-deploy smoke check that itself silently skips if unconfigured).
   workflow_call:
+    inputs:
+      # deploy-vps-staging.yml sets this on a push to dev. Every PR merged into
+      # dev brings its docs/ai/sessions note with it (the docs gate REQUIRES one
+      # per PR branch), so the merge commit itself always fails this suite's
+      # "sessions dir must be empty on dev" check until someone runs `npm run
+      # land` -- 60% of staging deploys failed exactly there in the two weeks
+      # before 2026-09-02. With this on, the checkout is folded in place before
+      # anything is checked, so the tree under test is the one the fold
+      # produces. Default off: PRs stay strict, deploy-vps.yml is unchanged.
+      land_in_place:
+        description: 'Run scripts/session-land.mjs in the checkout before the checks (dev deploys only)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,6 +45,19 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+
+      # Local to this runner, never pushed. The fold is deterministic (same
+      # notes, same PROGRESS/CURRENT inputs, same script), so this tree equals
+      # the one deploy-vps-staging.yml's `land` job commits to dev -- only the
+      # commit sha differs -- and the checks below are honest about it whether
+      # or not that push was accepted. On a push event actions/checkout leaves
+      # us on a local `dev` branch, which is what session-land.mjs insists on.
+      - name: Fold session notes in place (dev deploys only)
+        if: inputs.land_in_place
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          node scripts/session-land.mjs
 
       - name: Install dependencies
         run: npm ci

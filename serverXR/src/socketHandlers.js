@@ -8,6 +8,7 @@ const {
 } = require('./authAccess')
 const { readCookie, verifyAuthSessionValue } = require('./authSession')
 const { buildCorsOriginHandler } = require('./config')
+const { createFreeSpaceChecker } = require('./diskGuard')
 const logger = require('./logger')
 const spaceChatStore = require('./spaceChatStore')
 
@@ -17,6 +18,10 @@ const projectConnections = new Map()
 
 const CHAT_MESSAGE_MAX_LENGTH = 500
 const CHAT_MESSAGE_MIN_INTERVAL_MS = 300
+// userName/userId ride in on the client's own say-so — unlike text, nothing
+// capped their length before this. socket.io's 1MB frame ceiling means an
+// uncapped identity is a bigger hole than the 500-char message body.
+const CHAT_IDENTITY_MAX_LENGTH = 64
 // How many space lines survive on disk, and how many a joiner gets replayed.
 // The replay is smaller than the store so a week-long room does not push a
 // megabyte at every reconnect.
@@ -31,6 +36,16 @@ const normalizeChatMessageId = (value) => {
   const raw = String(value || '').trim()
   if (raw && raw.length <= 64 && /^[A-Za-z0-9_-]+$/.test(raw)) return raw
   return crypto.randomUUID()
+}
+
+// Same trim-and-cap for both userId and userName, in both chat channels — a
+// name is a label, not a payload. `fallback` preserves each call site's
+// existing behaviour for a blank value (null for a name, the socket id for
+// an id).
+const normalizeChatIdentity = (value, fallback = null) => {
+  if (value === undefined || value === null) return fallback
+  const trimmed = String(value).trim().slice(0, CHAT_IDENTITY_MAX_LENGTH)
+  return trimmed || fallback
 }
 
 const readSocketToken = (socket) => {
@@ -169,6 +184,14 @@ function initializeSocket(httpServer, config) {
     }
     next()
   })
+
+  // Mirrors the gate in index.js around createDiskWriteGuard: no floor
+  // configured means no checker, same as the HTTP side. `config.diskStatfs`
+  // is only ever set by tests — production always falls through to the
+  // real fs.statfs default inside createFreeSpaceChecker.
+  const spaceChatFreeSpaceChecker = config.minFreeDiskBytes > 0
+    ? createFreeSpaceChecker({ dir: config.directories?.dataDir, statfs: config.diskStatfs })
+    : null
 
   const ensureSpaceAccess = async (spaceId, socket) => {
     const authState = refreshSocketAuthState(socket, config) || {}
@@ -508,8 +531,8 @@ function initializeSocket(httpServer, config) {
 
       socket.to(`project-${projectId}`).emit('project-chat-message', {
         id: crypto.randomUUID(),
-        userId: userId || socket.id,
-        userName: userName || null,
+        userId: normalizeChatIdentity(userId, socket.id),
+        userName: normalizeChatIdentity(userName),
         socketId: socket.id,
         text: trimmed,
         timestamp: now
@@ -520,7 +543,7 @@ function initializeSocket(httpServer, config) {
     // project chat above, one room wider: everyone in the space hears it no
     // matter which project they have open. Unlike project chat it IS persisted
     // (spaceChatStore), so somebody arriving late reads what they missed.
-    socket.on('space-chat-message', (data) => {
+    socket.on('space-chat-message', async (data) => {
       const { spaceId, text, userId, userName, id } = data || {}
       if (!spaceId) return
       const trimmed = String(text || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH)
@@ -540,10 +563,22 @@ function initializeSocket(httpServer, config) {
         return
       }
 
+      // The HTTP side of every other write refuses below the same floor
+      // (diskGuard.js); this is the socket path to that same volume — a
+      // chat line skips multer and the JSON body parser, so without this it
+      // would skip the ENOSPC check too.
+      if (spaceChatFreeSpaceChecker) {
+        const free = await spaceChatFreeSpaceChecker.freeBytes()
+        if (Number.isFinite(free) && free < config.minFreeDiskBytes) {
+          logger.warn(`[Socket] Refused space chat message for ${spaceId}: ${free} bytes free < ${config.minFreeDiskBytes} required`)
+          return
+        }
+      }
+
       const message = {
         id: normalizeChatMessageId(id),
-        userId: userId || socket.id,
-        userName: userName || null,
+        userId: normalizeChatIdentity(userId, socket.id),
+        userName: normalizeChatIdentity(userName),
         socketId: socket.id,
         text: trimmed,
         timestamp: now

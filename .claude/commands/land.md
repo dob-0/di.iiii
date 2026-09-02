@@ -6,6 +6,11 @@ allowed-tools: Read, Bash
 Run `npm run land` — the one command that writes `CURRENT.md`. See
 `docs/ai/sessions/README.md` for why this exists and what it does.
 
+Normally CI has already done the fold: every push to `dev` runs this same script in
+`deploy-vps-staging.yml`'s `land` job and pushes the commit. Running it by hand is for
+when that job warned it could not push (branch protection), or simply to get the
+worktree sweep, which still runs locally even when there is nothing to fold.
+
 Preconditions the command itself enforces (it refuses otherwise, loudly):
 - You must be on `dev`, tree clean.
 - There must be at least one note under `docs/ai/sessions/` (besides `README.md`) —
