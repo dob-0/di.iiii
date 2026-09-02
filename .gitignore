@@ -63,3 +63,6 @@ serverXR/.data-*
 
 # di runtime artifacts (built by `npm run di:pack`)
 dist-runtime/
+
+# generated page bundles — see spaces/the-light-put-back/README.md
+spaces/*/code/index.html
