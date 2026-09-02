@@ -230,6 +230,13 @@ export const defaultMappingCue = {
     // Seconds to hold before an auto-advancing show moves on. 0 = wait for a
     // person.
     hold: 0,
+    // OPTIONAL: the id of a scene on the lighting desk (serverXR/src/lighting,
+    // served at /light on a LOCAL di.iiii) to recall when this cue fires. The
+    // wall and the light in front of it are one show, so a cue can change
+    // both. The ID is stored, never the name — a renamed scene must stay the
+    // same scene. Absent unless set, so documents written before cues could
+    // carry light are byte-identical after a round-trip.
+    lightScene: '',
     // Per-surface state, keyed by surface id: { enabled, opacity, source }.
     // GEOMETRY IS DELIBERATELY NOT IN A CUE. Corners and masks are the wall;
     // cues are the show. A cue that could move an alignment is a cue that can
@@ -897,12 +904,17 @@ export const normalizeMappingCue = (cue = {}) => {
         if (Object.keys(patch).length) surfaces[id] = patch
     })
     const key = ensureString(source.key, '')
+    // Emitted only when it holds something: a cue that never named a lighting
+    // scene comes back exactly as it went in, so this field's arrival cannot
+    // rewrite every mapping that already exists.
+    const lightScene = ensureString(source.lightScene, '')
     return {
         id: ensureString(source.id, ''),
         name: ensureString(source.name, ''),
         key: /^[1-9]$/.test(key) ? key : '',
         fade: Math.max(0, ensureNumber(source.fade, defaultMappingCue.fade)),
         hold: Math.max(0, ensureNumber(source.hold, defaultMappingCue.hold)),
+        ...(lightScene ? { lightScene } : {}),
         surfaces
     }
 }

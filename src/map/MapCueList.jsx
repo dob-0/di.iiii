@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { fetchLightScenes } from './lightingLink.js'
 
 // THE CUE LIST.
 //
@@ -124,8 +125,41 @@ export default function MapCueList({
     )
 }
 
+// The lighting desk's scene list, asked for when a cue editor opens and again
+// whenever this window is focused: the desk is a SEPARATE tab, and the usual
+// way to add a scene is to go there, make it, and come back. A picker that
+// only ever asked once would be missing the scene you just saved.
+function useLightScenes() {
+    const [scenes, setScenes] = useState([])
+    const [reachable, setReachable] = useState(true)
+
+    useEffect(() => {
+        let cancelled = false
+        const load = () => {
+            fetchLightScenes()
+                .then((list) => { if (!cancelled) { setScenes(list); setReachable(true) } })
+                // 404 from a hosted di.iiii and a refused connection are one
+                // answer: there is no desk here. The cue's stored id is left
+                // alone — an operator on a laptop without the rig must not
+                // lose the light plot they wrote at the venue.
+                .catch(() => { if (!cancelled) { setScenes([]); setReachable(false) } })
+        }
+        load()
+        window.addEventListener('focus', load)
+        return () => { cancelled = true; window.removeEventListener('focus', load) }
+    }, [])
+
+    return { scenes, reachable }
+}
+
 function MapCueEditor({ cue, surfaceCount, onUpdate, onCapture, onDelete, onMove }) {
+    const { scenes, reachable } = useLightScenes()
     if (!cue) return null
+    const lightScene = cue.lightScene || ''
+    // A scene the desk no longer lists still gets an option of its own, or the
+    // select would read as "— none —" and the next edit to the cue would make
+    // that true.
+    const orphan = Boolean(lightScene) && !scenes.some((scene) => scene.id === lightScene)
     return (
         <div className="map-section">
             <label className="map-field">
@@ -159,6 +193,24 @@ function MapCueEditor({ cue, surfaceCount, onUpdate, onCapture, onDelete, onMove
                     value={cue.hold}
                     onChange={(event) => onUpdate?.(cue.id, { hold: Number(event.target.value) || 0 })}
                 />
+            </label>
+            <label className="map-field map-field-inline">
+                <span>Light</span>
+                {reachable ? (
+                    <select
+                        value={lightScene}
+                        onChange={(event) => onUpdate?.(cue.id, { lightScene: event.target.value })}
+                        title="Recall this scene on the lighting desk when the cue fires"
+                    >
+                        <option value="">— none —</option>
+                        {orphan ? <option value={lightScene}>{lightScene} (not on the desk)</option> : null}
+                        {scenes.map((scene) => (
+                            <option key={scene.id} value={scene.id}>{scene.name || scene.id}</option>
+                        ))}
+                    </select>
+                ) : (
+                    <p className="map-empty">Lighting desk not reachable — it runs on a local di.iiii</p>
+                )}
             </label>
             <div className="map-row">
                 <button

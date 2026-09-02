@@ -103,6 +103,43 @@ export default [
         }
     },
     {
+        // The lighting desk's interface (serverXR/src/lighting/ui) is plain browser
+        // JavaScript the desk serves as files — no bundler, no modules — so it gets
+        // browser globals, and the desk's own style keeps a named catch parameter.
+        files: ['serverXR/src/lighting/ui/**/*.js'],
+        languageOptions: {
+            ecmaVersion: 'latest',
+            sourceType: 'script',
+            globals: {
+                ...globals.browser,
+                ...globals.es2021
+            }
+        },
+        rules: {
+            ...js.configs.recommended.rules,
+            'no-unused-vars': ['warn', { caughtErrors: 'none', args: 'none' }]
+        }
+    },
+    {
+        // The desk's engine, drivers and its plain-node suites (tests/*.js are run by
+        // node directly on a show machine, then wrapped by lighting.test.js here).
+        files: ['serverXR/src/lighting/**/*.js'],
+        ignores: ['serverXR/src/lighting/ui/**', 'serverXR/**/*.test.js'],
+        languageOptions: {
+            ecmaVersion: 'latest',
+            sourceType: 'commonjs',
+            globals: {
+                ...globals.node,
+                ...globals.es2021
+            }
+        },
+        rules: {
+            ...js.configs.recommended.rules,
+            ...nodeRules,
+            'no-unused-vars': ['warn', { caughtErrors: 'none', args: 'none' }]
+        }
+    },
+    {
         files: ['serverXR/**/*.test.js'],
         languageOptions: {
             ecmaVersion: 'latest',

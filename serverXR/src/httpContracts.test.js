@@ -1963,6 +1963,12 @@ describe('server write contracts', () => {
                 if (entry.isDirectory()) { await scan(fullPath); continue }
                 if (!entry.name.endsWith('.js') || entry.name.endsWith('.test.js')) continue
                 if (entry.name === 'httpClient.js') continue
+                // The lighting desk's interface is BROWSER code the server hands out as
+                // files (fetch there is the page talking to the desk), and its tests/ are
+                // a plain-node harness against a throwaway desk, run by vitest — neither
+                // is outbound HTTP from the server process.
+                const rel = path.relative(SERVER_ROOT, fullPath)
+                if (rel.startsWith(path.join('src', 'lighting', 'ui')) || rel.startsWith(path.join('src', 'lighting', 'tests'))) continue
                 const source = fs.readFileSync(fullPath, 'utf8')
                 for (const [index, line] of source.split('\n').entries()) {
                     const code = line.replace(/\/\/.*$/, '')

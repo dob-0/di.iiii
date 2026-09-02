@@ -4171,6 +4171,15 @@
     outline-offset: 1px;
 }
 
+/* The way out to the desk itself: the panel's own ink, not the browser's link blue,
+   on a ground built for cyan. */
+.raw-dmx-panel-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+.raw-dmx-panel-link:hover { text-decoration: underline; }
+
 .raw-dmx-panel-status {
     padding: 8px 10px;
     border-radius: 4px;
