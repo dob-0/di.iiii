@@ -6,8 +6,9 @@
  *
  * Reads:   spaces/{spaceId}/code/** (html, css, js, ts, json, svg, txt, md)
  * Finds:   live space's publishedProjectId (or first project if unset)
- * Patches: PATCH {target}/api/projects/{projectId}/document
- *          sets presentationState.codeFiles and presentationState.mode = 'code'
+ * Writes:  PUT {target}/api/projects/{projectId}/document (full-document replace)
+ *          sets presentationState.codeFiles, .mode = 'code' and .entryView = 'code',
+ *          plus publishState.shareEnabled — the same shape spaceSyncPlan.js writes.
  *
  * Requires a target (--to, or LIVE_API_URL / STAGING_API_URL in
  * serverXR/.env.local) and LIVE_API_TOKEN. There is no default target.
@@ -169,17 +170,26 @@ const main = async () => {
         headers: buildHeaders(token),
     })
 
+    // Must match serverXR/src/spaceSyncPlan.js buildSyncedDocumentBody. The
+    // viewer keys on entryView ('showCodeView = entryView === "code"'), not on
+    // mode — setting mode alone pushed the file, printed "ok", and left the
+    // published page showing the empty scene. Silent success is the worst kind.
     const updated = {
         ...doc,
         presentationState: {
             ...(doc?.presentationState || {}),
             mode: 'code',
+            entryView: 'code',
             codeFiles,
         },
+        publishState: { ...(doc?.publishState || {}), shareEnabled: true },
     }
 
     await apiFetch(`${liveBase}/api/projects/${projectId}/document`, {
-        method: 'PATCH',
+        // PUT, not PATCH: serverXR registers only GET and PUT on this path
+        // (serverXR/src/routes/projectRoutes.js). A PATCH matched no route and
+        // came back 404 with an empty body, which read like a missing project.
+        method: 'PUT',
         headers: buildHeaders(token),
         body: JSON.stringify(updated),
     })

@@ -151,6 +151,22 @@ describe('the origin a card advertises', () => {
     })
   })
 
+  it("the platform's own space does not describe itself as a space on itself", async () => {
+    const a = express()
+    const router = express.Router()
+    registerOgRoutes(router, {
+      loadSpaceMeta: async (h) => (h === 'main'
+        ? { id: 'main', label: 'di.iiii', isPublic: true }
+        : null),
+      siteOrigin: 'https://di-studio.xyz',
+    })
+    a.use('/serverXR', router)
+    const r = await hit(a, '/serverXR/og/main')
+    expect(r.body).toContain('<meta property="og:title" content="di.iiii">')
+    expect(r.body).not.toContain('a space on di.iiii')
+    expect(r.body).toContain('a link while it runs, a file when it ends')
+  })
+
   it('never puts the internal service name in a card', async () => {
     // Exactly what nginx sent before the Host header was preserved.
     const r = await hit(build(), '/serverXR/og/br_id_ge', { host: 'server:4000' })

@@ -348,6 +348,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 <Suspense fallback={loadingOverlay}>
                     <PublicProjectSceneSurface
                         projectId={projectId}
+                        spaceId={resolvedRouteSpaceId}
                         document={document}
                         title={viewerTitle}
                         entryView={entryView}
@@ -408,7 +409,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             {/* the host page carries its own badge; a second one inside the
                 window reads as chrome belonging to the work itself */}
             {state.status === 'ready' && navMode === 'orbit' && !isPreview && !isEmbed ? (
-                <MadeWithBadge variant="floating" />
+                <MadeWithBadge variant="floating" spaceId={resolvedRouteSpaceId} />
             ) : null}
 
             {/* the loading screen is deliberately black and full-bleed, which is

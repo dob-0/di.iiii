@@ -26,7 +26,8 @@
     margin: 0 0 4px;
     font-size: 0.78rem;
     letter-spacing: 0.06em;
-    text-transform: uppercase;
+    /* the eyebrow reads "di.iiii" — the name is lowercase, always */
+    text-transform: none;
     color: var(--di-text-muted, rgba(200,230,240,0.45));
 }
 

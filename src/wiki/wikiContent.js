@@ -72,6 +72,25 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-21'
     },
     {
+        id: 'the-front-door',
+        category: 'Getting started',
+        title: 'The front door',
+        summary: 'di.iiii\u2019s own page is the room it describes \u2014 pressing Step inside moves the camera rather than loading anything.',
+        body: [
+            'The page at the bare address is a page you read and scroll like any other. It is also the room. The wordmark, the line under it, the buttons and the sections are laid out in the room\u2019s own space, each at its own distance, and the view starts square on to them \u2014 which is why it looks flat.',
+            'Press Step inside and nothing loads. The room is already on screen behind the page, so the door is a camera move \u2014 and at that moment the page stops being a page. Every part of it becomes a real thing in the room, with weight: the wordmark, the line, the buttons all fall, turn over, and come to rest flat on the floor, where the doors stand in front of them and the far ones go soft in the room\u2019s haze. You walk in as it lands. It is one continuous shot, not a page change, and the address does not move.',
+            { list: [
+                '/ \u2014 the front door: the page, with the room behind it.',
+                '/?room=1 \u2014 the room on its own, without the page. For anyone who wants the space and not the door.',
+                '/main \u2014 the old address of that same room. It still resolves and always will, and it still opens the room; the name just never reaches the address bar.'
+            ] },
+            'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. The destination is never different, only the journey.',
+            'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.'
+        ],
+        tags: ['landing', 'basics', 'navigation', 'room', 'walk'],
+        updated: '2026-09-01'
+    },
+    {
         id: 'spaces-map-view',
         category: 'Spaces & access',
         title: 'Grid or Map: two ways to see your spaces',
@@ -105,6 +124,7 @@ export const WIKI_ARTICLES = [
             'There are two ways in, and they are the same jam. di-studio.xyz/open_jam/scene puts you inside the scene — you stand in it, walk around, and add things where you are looking; it is the one to put on a flyer or a QR code for a phone. See "Standing in the jam" for what it does.',
             'The Open Jam opens in a simple mode: one Create window with file upload and a few basic shapes — the full editor’s other windows and import options stay out of the way. Tapping an object opens a small Edit window (change your text, pick a colour, or remove it). Anyone who wants the complete toolset can press “⚒ All tools” in the toolbar (and “◱ Simple” switches back); the choice is remembered on that device.',
             'For admins: Ops Graph → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
+            'The front door IS the room. Opening di-studio.xyz no longer shows a page about the space with the space drawn behind it — it opens the space: the name and the one line stand inside it as things you can walk past, and the doors to the works are the real links. The room has one address and it is the bare domain: an old /main link still resolves, it just heals to / so you are never shown a room called “main”. The addresses inside that space — /main/studio, /main/raw, a project deep-link — keep their names. The old landing page is moved rather than deleted: it is at /?tour=1.',
             'The landing page has one door. It used to offer three side by side — “Step inside”, “Open Studio” and “Enter Space” — which asked a first-time visitor to choose between them before they knew what any of them were. Studio is not a rival to the door now: step inside, and Studio is there to walk into. The quiet “Already have spaces? Open Studio →” line under the button is the return path for people who already have work of their own.',
             'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page. Where no Main space is set at all, the landing offers “Look around” instead — a decorative walkable preview of its own hero, not a real space.'
         ],
@@ -322,7 +342,7 @@ export const WIKI_ARTICLES = [
             'A public space also shares every project individually at /<space>/p/<project-id> — the same no-login viewer as the live route, without touching the published pointer. Handy for one-pagers, drafts, and projects that live next to the main one. Like the live route, these carry no toolbar of ours — nothing floats over your design; hop between a space’s projects from the Studio Projects window.',
             'A published-but-private space shows a login wall to visitors instead of the project. The editor’s Share window and the space card both tell you when that’s the case and offer a one-click “Make space public” right there — no hunting for the toggle.',
             'Opening an editor URL (like /<space>/studio) with an account that isn’t scoped to that space no longer dead-ends: if the space is public you are taken to its live view; only private spaces show the access-restricted screen.',
-            'Every public space carries a small “Made with di.iiii” mark in the bottom-left corner, so visitors who like what they see have a way in. At rest it is just the ◈ — the page is yours, and nothing of di.iiii’s should sit on top of your work; point at it (or reach it with the keyboard) and it opens into the full “Made with di.iiii — build yours” link. It never appears on hub-card preview thumbnails.',
+            'Every public space carries a small “Made with di.iiii” mark in the bottom-left corner, so visitors who like what they see have a way in. At rest it is just the ◈ — the page is yours, and nothing of di.iiii’s should sit on top of your work; point at it (or reach it with the keyboard) and it opens into the full “Made with di.iiii — build yours” link. It never appears on hub-card preview thumbnails, and it stays out of di.iiii’s own front space — there it would only be a link back to the room you are already standing in.',
             'Spaces and individual projects can each get a clean public link (a slug) that’s independent of their internal id — e.g. /wcc/artistplace instead of a longer id-based path. Set it from Ops Graph → Manage (“Edit public link” next to Rename); old id-based links keep working forever, they’re never replaced.',
             'Published code pages can use the visitor’s camera, microphone and motion sensors — but only if the project opts in by setting deviceAccess: true in its presentation state (repo-synced pages set it in their di-space manifest). Opted-in pages run without the usual origin isolation, so reserve it for pages you author yourself; everything else stays fully sandboxed. The visitor still gets the normal browser permission prompt either way.',
             'Opting into deviceAccess also gives the page real, persistent localStorage and sessionStorage — what it saves survives reloads and is shared with the space’s other opted-in pages on the same device, which is how one page can leave something for a sibling to find. Fully sandboxed pages keep an in-memory stand-in instead: calls succeed, but nothing outlives the visit.',
@@ -330,7 +350,7 @@ export const WIKI_ARTICLES = [
             'Add ?embed=1 to any published link and the viewer becomes glass: no dark shell of its own, no “Made with di.iiii” badge, no Walk/Fly button, no loading screen. Use it when the page is a window inside another page rather than somewhere you send people — put it in an iframe and whatever your host page draws shows through behind it. Your page keeps its own background, so make that transparent too if you want the host to show through.'
         ],
         tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access', 'query', 'url parameters', 'embed', 'iframe', 'transparent', 'storage', 'localstorage'],
-        updated: '2026-08-23'
+        updated: '2026-09-01'
     },
     {
         id: 'invite-links',
@@ -429,10 +449,11 @@ export const WIKI_ARTICLES = [
             'A caution for headsets: in VR the tour rotates the world around a body that is sitting still, which is the classic recipe for motion sickness — the visitor sees movement they do not feel. Keep turn slow and dwell long, and test on one person before an audience. If comfort matters more than a fixed running order, leave ringTour off and let the visitor turn their own head.',
             'Idle motion is separate and older: an object with no authored animation and no timeline gets a gentle drift in the live view (models float and turn, flat media sways) so imported legacy scenes keep the look they had. Objects that were placed deliberately should say animation.mode: static, and anything parented to a group is left alone automatically — otherwise the parts of one object drift away from each other.',
             'Whether the button is there at all: a published page offers Walk / Fly whenever the room holds objects for it to show — and it does not matter whether the project also has a graph, so a project built in both editors is walkable on the strength of its objects. A project made of nodes and nothing else still has no button, because walk/fly renders objects and would drop the visitor into an empty version of the room they are already looking at. Give that project one real object and the door opens — and VR and AR open with it, since a headset session is entered from inside walk/fly.',
-            'A composed opening shot does not close that door either: a project whose entry view is Fixed camera opens on the shot you framed and still offers Walk / Fly, because the shot is where the visit starts rather than a promise the visitor may never move. The mouse and touch stay live on that shot too — the visitor can orbit away from your framing the moment they arrive. Only the camera\u2019s explicit “locked” switch freezes the shot into a still, and only a Code entry view has no button, since it has no room to give one to.'
+            'A composed opening shot does not close that door either: a project whose entry view is Fixed camera opens on the shot you framed and still offers Walk / Fly, because the shot is where the visit starts rather than a promise the visitor may never move. The mouse and touch stay live on that shot too — the visitor can orbit away from your framing the moment they arrive. Only the camera\u2019s explicit “locked” switch freezes the shot into a still, and only a Code entry view has no button, since it has no room to give one to.',
+            'You frame that shot on whatever screen you are sitting at, and that screen is almost always a wide one. A phone held upright sees about half as much from side to side, so a shot framed to the edges of a laptop arrived on a phone with its edges cut off — in a room whose doors are spread across the width, the outer doors were simply not there. A composed shot now steps back on a narrow screen until it holds what you framed, so a visitor on a phone gets the whole shot instead of the middle of it. Nothing changes on a screen as wide as it is tall or wider: there you get exactly the frame you set. Locked shots step back too — that visitor is the one who cannot move to find what was cut.'
         ],
         tags: ['scene', 'room', 'spawn', 'vr', 'exhibition', 'tour', 'walk', 'animation'],
-        updated: '2026-08-24'
+        updated: '2026-09-01'
     },
     {
         id: 'spatial-video-sound',
@@ -871,10 +892,10 @@ export const WIKI_ARTICLES = [
     {
         id: 'br-id-ge',
         category: 'Spaces & access',
-        title: 'br_id_ge (կամուրջ): an Armenian XR rite — live at Notations #2',
-        summary: 'br_id_ge is a rite at /br_id_ge — cross the bridge, be read into Armenian letters, leave a chrome core. Showing at Notations #2, Jul 20 – Aug 2 2026, State Philharmonia of Armenia.',
+        title: 'br_id_ge (կամուրջ): an Armenian XR rite — shown at Notations #2',
+        summary: 'br_id_ge is a rite at /br_id_ge — cross the bridge, be read into Armenian letters, leave a chrome core. Shown at Notations #2, Jul 20 – Aug 2 2026, State Philharmonia of Armenia.',
         body: [
-            'br_id_ge (կամուրջ, "bridge") is an Armenian XR rite that lives in di.iiii as a space — the same pattern as WCC and Beyond Form, routed through the normal public/private check. It is showing at Notations #2 (theme: "Rituals"), hosted by hosq at the State Philharmonia of Armenia, Jul 20 – Aug 2 2026, with festival days Aug 1–2.',
+            'br_id_ge (կամուրջ, "bridge") is an Armenian XR rite that lives in di.iiii as a space — the same pattern as WCC and Beyond Form, routed through the normal public/private check. It was shown at Notations #2 (theme: "Rituals"), hosted by hosq at the State Philharmonia of Armenia, Jul 20 – Aug 2 2026, with festival days Aug 1–2.',
             { list: [
                 '/br_id_ge — the door: the entry page for the rite.',
                 '/br_id_ge/rite — cross the bridge: your silhouette is read into Armenian letters, you answer one question, and you leave a permanent chrome core.',
