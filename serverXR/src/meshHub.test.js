@@ -451,3 +451,33 @@ describe('room history — the room keeps its chat', () => {
     await new Promise((r) => bare.close(r))
   })
 })
+
+describe('mesh hub survives frames that parse to a non-object', () => {
+  const BASE = '/serverXR'
+  let httpServer
+  let wsBase
+
+  beforeAll(async () => {
+    httpServer = http.createServer((req, res) => { res.writeHead(200); res.end('ok') })
+    initializeMesh(httpServer, { basePath: BASE })
+    await new Promise((r) => httpServer.listen(0, '127.0.0.1', r))
+    wsBase = `ws://127.0.0.1:${httpServer.address().port}${BASE}/mesh`
+  })
+
+  afterAll(async () => {
+    await new Promise((r) => httpServer.close(r))
+  })
+
+  it('drops "null", numbers and arrays and keeps answering pings', async () => {
+    const a = new WebSocket(`${wsBase}?room=rn&node=a`)
+    await new Promise((r) => a.on('open', r))
+    for (const frame of ['null', '1', '[]', '"publish"', 'true']) a.send(frame)
+    await wait(30)
+    const pongP = nextMsg(a, (m) => m.type === 'control:pong')
+    a.send(JSON.stringify({ type: 'control', cmd: 'ping', sentAt: Date.now() }))
+    const pong = await pongP
+    expect(pong.type).toBe('control:pong')
+    a.close()
+    await wait(50)
+  })
+})

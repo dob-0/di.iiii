@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { createRequire } from 'node:module'
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { getSocketPath, applyFreshDbIdentity } = require('./socketHandlers.js')
@@ -58,4 +58,45 @@ describe('applyFreshDbIdentity', () => {
         const stale = { authenticated: true, type: 'session', role: 'editor', subject: 'user-1', spaces: null }
         expect(applyFreshDbIdentity(stale, {})).toBe(stale)
     })
+})
+
+describe('socket handlers survive a null payload', () => {
+  const http = require('node:http')
+  const { io: ioClient } = require('socket.io-client')
+  const { initializeSocket } = require('./socketHandlers.js')
+  const BASE = '/serverXR'
+  let httpServer
+  let io
+  let url
+
+  beforeAll(async () => {
+    httpServer = http.createServer((req, res) => { res.writeHead(200); res.end('ok') })
+    io = initializeSocket(httpServer, { basePath: BASE, requireAuth: false, corsOrigins: [] })
+    await new Promise((r) => httpServer.listen(0, '127.0.0.1', r))
+    url = `http://127.0.0.1:${httpServer.address().port}`
+  })
+
+  afterAll(async () => {
+    io?.close?.()
+    await new Promise((r) => httpServer.close(r))
+  })
+
+  it('ignores null for every space event instead of throwing out of the listener', async () => {
+    const client = ioClient(url, { path: `${BASE}/socket.io`, transports: ['websocket'] })
+    await new Promise((resolve, reject) => {
+      client.on('connect', resolve)
+      client.on('connect_error', reject)
+    })
+    const events = [
+      'join-space', 'join-project', 'scene-update', 'object-changed', 'object-added',
+      'object-deleted', 'user-cursor', 'project-cursor', 'project-chat-message',
+      'space-chat-message', 'space-chat-remove', 'selection-changed'
+    ]
+    for (const event of events) client.emit(event, null)
+    await new Promise((r) => setTimeout(r, 150))
+    expect(client.connected).toBe(true)
+    expect(io.engine.clientsCount).toBe(1)
+    client.close()
+    await new Promise((r) => setTimeout(r, 50))
+  })
 })
