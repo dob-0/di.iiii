@@ -14,8 +14,17 @@
  *
  * Usage:
  *   node scripts/tier-sync.mjs --from local --to staging [options]
+ *   node scripts/tier-sync.mjs --from local --to staging --audit
  *
  * Options:
+ *   --audit             Compare DOCUMENTS, write nothing, exit 1 on any drift.
+ *                       The plain run only ever compares project ids, so it
+ *                       reports "in sync" while two tiers hold the same slug
+ *                       with different work inside it. That is the drift that
+ *                       actually bites: `local-mirror` fills the dev box from
+ *                       PRODUCTION first and never refreshes a project it has
+ *                       already seen, so a project edited on staging reads
+ *                       differently on localhost for as long as both exist.
  *   --space <id>        Only this space (default: every space the source has)
  *   --no-assets         Documents only — faster, and leaves images unresolvable
  *   --force             Overwrite documents that already exist at the destination
@@ -26,6 +35,7 @@
  * (staging), PROD_API_TOKEN (production).
  */
 
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -48,6 +58,105 @@ export const isProductionTarget = (url) => {
     } catch {
         return false
     }
+}
+
+// Fields that change without the work changing.
+//
+// `projectMeta.createdAt` and `updatedAt` are the big ones, and they are not
+// about the work at all: they record when THAT DATABASE first saw the row. A
+// project copied from one tier to another is stamped on arrival, so every
+// project this script has ever moved reads as changed the moment it lands.
+// Measured on the first run — 155 differences reported, of which 138 were
+// nothing but these two numbers.
+//
+// `lastExportAt` is stamped by the act of publishing and `clockEpoch` by the
+// first Time node to exist in a window, so two tiers holding the identical
+// page disagree on both.
+//
+// Reporting any of them would teach someone to ignore the audit, which costs
+// more than not having written it.
+export const VOLATILE_PATHS = [
+    'projectMeta.createdAt',
+    'projectMeta.updatedAt',
+    'publishState.lastExportAt',
+    'showState.clockEpoch'
+]
+
+const stripVolatile = (document) => {
+    const copy = JSON.parse(JSON.stringify(document ?? {}))
+    for (const dotted of VOLATILE_PATHS) {
+        const parts = dotted.split('.')
+        const leaf = parts.pop()
+        let node = copy
+        for (const part of parts) node = node?.[part]
+        if (node && typeof node === 'object') delete node[leaf]
+    }
+    return copy
+}
+
+// Key order is whatever the two servers happened to serialize, and a document
+// that round-trips through a PUT can come back with its keys rearranged. Sort
+// them, or the audit reports drift on documents that are byte-for-byte the
+// same work.
+const stable = (value) => {
+    if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`
+    if (value && typeof value === 'object') {
+        return `{${Object.keys(value).sort().map((k) => `${JSON.stringify(k)}:${stable(value[k])}`).join(',')}}`
+    }
+    return JSON.stringify(value ?? null)
+}
+
+/**
+ * What a document IS, reduced to something two tiers can be compared on.
+ *
+ * The counts are for a human reading the report — "265 entities here, 0 there"
+ * says what went wrong far better than two hashes do. The hash is what the
+ * comparison actually turns on, because a page can be rewritten without any
+ * count moving at all.
+ */
+export const documentSignature = (document) => {
+    const d = document ?? {}
+    const presentation = d.presentationState ?? {}
+    return {
+        entities: (d.entities ?? []).length,
+        nodes: (d.nodes ?? []).length,
+        assets: (d.assets ?? []).length,
+        // A published page lives in `presentationState.codeHtml`, NOT in
+        // entities. Measuring substance by entity count alone reads a 358KB
+        // brand guide as an empty project — which is exactly how a purge of
+        // "empty" projects nearly took the whole Dilijan camp with it.
+        page: (presentation.codeHtml ?? '').length,
+        hash: crypto.createHash('sha1').update(stable(stripVolatile(d))).digest('hex').slice(0, 12)
+    }
+}
+
+export const signaturesMatch = (a, b) => Boolean(a && b && a.hash === b.hash)
+
+/**
+ * Every way two inventories of signatures disagree.
+ *
+ * `missing` and `extra` are what the id comparison already saw. `differs` is
+ * the class it was blind to: the same slug on both tiers, holding different
+ * work. Nothing here is a plan — the audit reports and stops, because which
+ * side is right is a question about the work and not about the data.
+ */
+export const planAudit = ({ source, destination }) => {
+    const missing = []
+    const extra = []
+    const differs = []
+    const spaces = [...new Set([...Object.keys(source), ...Object.keys(destination)])].sort()
+    for (const spaceId of spaces) {
+        const from = source[spaceId] ?? {}
+        const to = destination[spaceId] ?? {}
+        for (const projectId of [...new Set([...Object.keys(from), ...Object.keys(to)])].sort()) {
+            const a = from[projectId]
+            const b = to[projectId]
+            if (a && !b) missing.push({ spaceId, projectId, source: a })
+            else if (!a && b) extra.push({ spaceId, projectId, destination: b })
+            else if (!signaturesMatch(a, b)) differs.push({ spaceId, projectId, source: a, destination: b })
+        }
+    }
+    return { missing, extra, differs }
 }
 
 // What has to move for `to` to hold everything `from` holds. Pure, so the plan
@@ -84,7 +193,7 @@ const readEnv = () => {
 }
 
 const parseArgs = (argv) => {
-    const args = { from: null, to: null, space: null, assets: true, force: false, dryRun: false, allowProduction: false }
+    const args = { from: null, to: null, space: null, assets: true, force: false, dryRun: false, allowProduction: false, audit: false }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
         if (arg === '--from') args.from = argv[++i]
@@ -93,6 +202,7 @@ const parseArgs = (argv) => {
         else if (arg === '--no-assets') args.assets = false
         else if (arg === '--force') args.force = true
         else if (arg === '--dry-run') args.dryRun = true
+        else if (arg === '--audit') args.audit = true
         else if (arg === '--allow-production') args.allowProduction = true
     }
     return args
@@ -109,7 +219,7 @@ const main = async () => {
     const from = { ...TIERS[args.from], token: env[TIERS[args.from].tokenKey] }
     const to = { ...TIERS[args.to], token: env[TIERS[args.to].tokenKey] }
 
-    if (isProductionTarget(to.base) && !args.allowProduction) {
+    if (isProductionTarget(to.base) && !args.allowProduction && !args.audit) {
         console.error('refused: production is the destination. Re-run with --allow-production if that is really what you mean.')
         process.exit(1)
     }
@@ -145,13 +255,58 @@ const main = async () => {
         return inventory
     }
 
+    // The audit's inventory: every document, reduced to a signature. Far
+    // slower than listing ids — one request per project per tier — and the
+    // only reading that can see a slug whose contents have diverged.
+    const readSignatures = async (tier, only) => {
+        const spaces = (await listSpaces(tier)).filter((id) => !only || id === only)
+        const inventory = {}
+        for (const spaceId of spaces) {
+            inventory[spaceId] = {}
+            for (const projectId of await listProjects(tier, spaceId)) {
+                const res = await call(tier, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+                if (!res.ok) continue
+                const body = await res.json()
+                inventory[spaceId][projectId] = documentSignature(body.document || body)
+            }
+        }
+        return inventory
+    }
+
+    if (args.audit) {
+        console.log(`tier-sync audit  ${args.from} ↔ ${args.to}  (reading every document — this takes a minute)`)
+        const [a, b] = [await readSignatures(from, args.space), await readSignatures(to, args.space)]
+        const { missing, extra, differs } = planAudit({ source: a, destination: b })
+
+        const shape = (s) => s ? `${s.entities}e ${s.nodes}n ${s.assets}a ${s.page}p` : '—'
+        const report = (title, rows, render) => {
+            if (!rows.length) return
+            console.log(`\n${title}`)
+            rows.forEach((row) => console.log(`   ${`${row.spaceId}/${row.projectId}`.padEnd(48)}${render(row)}`))
+        }
+        report(`only on ${args.from} (${missing.length})`, missing, (r) => shape(r.source))
+        report(`only on ${args.to} (${extra.length})`, extra, (r) => shape(r.destination))
+        report(`same slug, DIFFERENT work (${differs.length})`, differs,
+            (r) => `${args.from}: ${shape(r.source).padEnd(22)}${args.to}: ${shape(r.destination)}`)
+
+        const total = missing.length + extra.length + differs.length
+        console.log(total
+            ? `\n${total} difference(s). e=entities n=nodes a=assets p=published page, in characters.`
+            : '\nthe two tiers hold the same work.')
+        if (total) process.exitCode = 1
+        return
+    }
+
     console.log(`tier-sync  ${args.from} → ${args.to}${args.dryRun ? '  (dry run)' : ''}`)
     const source = await readInventory(from, args.space)
     const destination = await readInventory(to, args.space)
     const plan = planSync({ source, destination, force: args.force })
 
     if (!plan.length) {
-        console.log('\nnothing to move — the destination already holds everything the source has.')
+        // Deliberately not "in sync". This compared ids; two tiers can hold
+        // every slug in common and different work inside every one of them.
+        console.log('\nno project is MISSING from the destination.')
+        console.log('this compared ids only — run with --audit to compare the documents themselves.')
         return
     }
 
