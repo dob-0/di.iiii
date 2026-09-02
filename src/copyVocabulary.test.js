@@ -49,7 +49,10 @@ const BANNED = [
     // proper noun is not. `RawEditor` has no word break after Raw, so an
     // identifier written into a string cannot trip this.
     { word: 'Raw', pattern: /\bRaw\b/, use: 'the node editor, or nothing at all' },
-    // The retired product name. `di.iiii` is not a hit — the lookahead stops it.
+    // The studio's signature, not the product's name: a person signs `Name — di.i`,
+    // the platform is `di.iiii` (di-brand NAMING.md). Product copy names the
+    // product, so `di.i` inside src/ is a slip. `di.iiii` is not a hit — the
+    // lookahead stops it.
     { word: 'di.i', pattern: /\bdi\.i(?!i)/, use: 'di.iiii' },
     // Capital R only, for the same reason as Raw. "place it in your own room"
     // is ordinary English about the room a visitor is standing in, and it is

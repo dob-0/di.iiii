@@ -1,10 +1,10 @@
 # di.iiii
 
-**Web XR Node-Based Reality Creation Language**
+**public spaces on the open web**
 
-*Web XR Spatial-Sync Creator Network*
+*make a space, hand out the address — a link while it runs, a file when it ends*
 
-`di.iiii` is an open-source, node-based Web XR reality creation system. It behaves like a visual programming language for linking digital logic, spatial media, and real environments through authored nodes, shared spaces, and live projects. Built on the web as a serious medium and universal substrate, not as a browser-only limitation.
+`di.iiii` is an open-source platform for public spaces on the open web. A space is an address with a guest list: what you make in it is exactly what a stranger opens, in a browser or a headset, with nothing to install. The visit is the product; the editor is backstage. Built on the web as a serious medium and universal substrate, not as a browser-only limitation.
 
 ## Live
 
@@ -13,8 +13,8 @@
 ## What di.iiii is
 
 - **As software** — a web-based authoring system built with React, Vite, Three.js, WebXR, and a Node.js backend (`serverXR`). SQLite via the built-in `node:sqlite` module — zero native deps.
-- **As a model** — treats authored reality as a graph of nodes, projects, assets, and runtime relationships
-- **As a direction** — aims toward broader reality creation across virtual and physical environments, while staying grounded in the web as an everywhere layer
+- **As a model** — a space holds projects, projects hold scenes and assets, and every one of them has an address
+- **As a direction** — spaces that reach into the physical world and linked hardware, while staying grounded in the web as an everywhere layer
 - **As a working repo** — contains Studio, the node editor, the older editor kept for compatibility, and the backend/runtime contract that holds them together
 
 ## Stack

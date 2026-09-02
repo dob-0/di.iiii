@@ -1,0 +1,34 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.space.schema.json",
+  "spaceId": "network",
+  "label": "network",
+  "isPublic": true,
+  "minEngine": 6,
+  "note": "Everyone who makes di.iiii — the five-person team, then the network by discipline — and a room per person. The roster is spaces/network/code/index.html (project `network`, the space's door). Rooms are generated from people.json by build.mjs into pages/<slug>.html, one manifest each; a room's project id is network-<slug> because ids are global and two of the names are already wcc rooms. Team names as on /suite. No contact details on purpose. When a person takes their room over in Studio, remove their manifest from `projects`.",
+  "tiers": {
+    "prod": {
+      "url": "https://di-studio.xyz/serverXR",
+      "tokenEnv": "PROD_API_TOKEN"
+    },
+    "staging": {
+      "url": "https://staging.di-studio.xyz/serverXR",
+      "tokenEnv": "LIVE_API_TOKEN"
+    },
+    "local": {
+      "url": "http://localhost:4000/serverXR",
+      "tokenEnv": "API_TOKEN",
+      "governed": false
+    }
+  },
+  "projects": [
+    "spaces/network/di-space.index.json",
+    "spaces/network/di-space.gevorg-grigoryan.json",
+    "spaces/network/di-space.emilya-nikoghosyan.json",
+    "spaces/network/di-space.syuzi-ginosyan.json",
+    "spaces/network/di-space.taron-grigoryan.json",
+    "spaces/network/di-space.yeva-abgaryan.json",
+    "spaces/network/di-space.mery-petrosyan.json",
+    "spaces/network/di-space.greta-grigoryan.json",
+    "spaces/network/di-space.shahane-harutyunyan.json"
+  ]
+}

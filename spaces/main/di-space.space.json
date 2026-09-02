@@ -4,7 +4,7 @@
   "label": "di.iiii",
   "isPublic": true,
   "minEngine": 6,
-  "note": "The platform's own space \u2014 what di-studio.xyz opens on. Authored in Studio; no page in this repo pushes it.",
+  "note": "The platform's own space — what di-studio.xyz opens on. The front room (main-dii-project) is authored in Studio and stays undeclared; the platform's own pages are declared below and pushed from this repo.",
   "tiers": {
     "prod": {
       "url": "https://di-studio.xyz/serverXR",
@@ -20,5 +20,9 @@
       "governed": false
     }
   },
-  "projects": []
+  "projects": [
+    "spaces/main/di-space.suite.json",
+    "spaces/main/di-space.landing.json",
+    "spaces/main/di-space.brand-guide.json"
+  ]
 }

@@ -46,7 +46,7 @@ import './landing.css'
 
 const FEATURED_SPACES = [
     { id: 'wcc', label: 'WCC Exhibition', href: '/wcc', className: 'landing-cta-wcc' },
-    { id: 'br-id-ge', label: 'br_id_ge · live at Notations #2', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
+    { id: 'br-id-ge', label: 'br_id_ge · Notations #2', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
     { id: 'beyond-form', label: 'beyond_form', href: '/beyond-form', className: 'landing-cta-beyond-form' },
     { id: 'algovrithm', label: 'algovrithm', href: '/algovrithm', className: 'landing-cta-algo-vrithm' }
 ]
@@ -136,7 +136,7 @@ const AUDIENCES = [
 ]
 
 const FEATURES = [
-    { icon: '◈', title: 'Everything is a node', desc: 'Every object is a typed node. Wire them, group them, script them.' },
+    { icon: '◈', title: 'The visit is the product', desc: 'What you make is exactly what a stranger opens — a link while it runs, a file when it ends. The editor is backstage.' },
     { icon: '◉', title: 'Real-time collaboration', desc: 'See teammates\' cursors and changes live, in the same space.' },
     { icon: '⬡', title: 'WebXR ready', desc: 'Enter VR or AR from any supported browser — no app install.' },
     { icon: '◫', title: 'Asset pipeline', desc: 'Upload images, 3D models, audio. Optimized and served automatically.' },
