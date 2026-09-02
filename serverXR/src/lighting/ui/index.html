@@ -19,11 +19,12 @@
     <button class="page-tab" data-page="control">Control</button>
     <button class="page-tab" data-page="touch">Touch</button>
     <button class="page-tab" data-page="fader">Fader</button>
-    <!-- A real link, not a .page-tab: app.js binds every .page-tab to showPage(dataset.page),
-         and a tab with no data-page would call showPage(undefined) and break navigation.
-         The MIDI surface is a separate page because it needs Web MIDI, which the browser
-         only grants on localhost - see midi.html. -->
-    <a class="page-link" href="midi.html" title="MIDI control surface - map a hardware controller to the desk">MIDI</a>
+    <!-- MIDI was a separate midi.html with its own stylesheet and its own map in one
+         browser's localStorage. It is a page of this suite now: same shell, same styles,
+         and the mappings live with the show over api/midi, so the laptop and the phone
+         share one controller layout. Web MIDI itself is still only granted on localhost
+         or https - the page says so rather than showing an empty device list. -->
+    <button class="page-tab" data-page="midi" title="MIDI control surface - map a hardware controller to the desk">MIDI</button>
   </nav>
   <div class="title"><b>Art-Net Desk</b> <span id="showName" class="muted">— untitled</span></div>
   <!-- The pills and the panic button live outside .title because .title is hidden on a
@@ -532,6 +533,149 @@
     </div>
   </div>
   <div class="faderbank" id="faderBank"></div>
+</main>
+
+<!-- ===================== MIDI ===================== -->
+<!-- A hardware controller wired to the same HTTP routes every other page uses. Three
+     things stand between a knob and the rig: the ARM gate (nothing is sent while it
+     reads "safe"), soft takeover (a fader is ignored until it crosses the value the
+     desk already holds, so arming never jumps the room), and a coalescing queue that
+     merges by route and lets one request be in flight at a time. -->
+<main class="page" data-page="midi">
+  <div class="midiwrap">
+
+    <!-- the gate, and the four things you need to see while mapping -->
+    <div class="midibar">
+      <button id="miArm" class="miarm safe">Safe — not sending</button>
+      <span class="mipill" id="miMidiStat">MIDI <b>—</b></span>
+      <span class="mipill" id="miDeskStat">desk <b>—</b></span>
+      <span class="mipill" id="miMasterStat">master <b>—</b></span>
+      <span class="mipill" id="miMsgStat">msgs <b>0</b></span>
+      <span class="flex"></span>
+      <span class="muted mono" id="miSaveStat">map: —</span>
+    </div>
+
+    <div class="midicols">
+      <div class="midicol">
+
+        <section class="pane">
+          <div class="pane-head"><h2>1 — Check the controller</h2></div>
+          <div class="midibody">
+            <div class="inline">
+              <select id="miInputs"><option value="">no MIDI access yet</option></select>
+              <button class="sq" id="miRescan">Rescan</button>
+              <button class="sq accent" id="miEnable">Enable MIDI</button>
+            </div>
+            <p class="minote" id="miCheckNote">
+              Press <b>Enable MIDI</b>, pick your controller, then move a fader and press a pad.
+              Anything it sends appears in the monitor below. If nothing appears there, the
+              desk will never see it either — fix that before mapping.
+            </p>
+          </div>
+        </section>
+
+        <section class="pane">
+          <div class="pane-head">
+            <h2>Live input monitor</h2>
+            <span class="flex"></span>
+            <button class="sq" id="miClearMon">Clear</button>
+          </div>
+          <div class="midibody">
+            <div id="miMon" class="mimon"><div class="empty">waiting for MIDI…</div></div>
+            <p class="minote muted" id="miSeen">seen: 0 controls, 0 pads</p>
+          </div>
+        </section>
+
+        <section class="pane">
+          <div class="pane-head"><h2>2 — Auto-map</h2></div>
+          <div class="midibody">
+            <p class="minote">
+              <b>Wizard:</b> press start, then move each fader/knob once and press each pad
+              once, in the order you want them assigned — each new control is bound as it
+              arrives.<br>
+              <b>By number:</b> no wiggling — takes every control seen so far and assigns
+              them in numeric order.
+            </p>
+            <div class="inline">
+              <button class="sq accent" id="miWizard">Start wizard</button>
+              <button class="sq" id="miByNum">Map by number</button>
+              <button class="sq danger" id="miClearMap">Clear map</button>
+            </div>
+            <p class="minote" id="miWizNote">&nbsp;</p>
+          </div>
+        </section>
+
+        <section class="pane">
+          <div class="pane-head"><h2>Notes</h2></div>
+          <div class="midibody">
+            <p class="minote">
+              <b>Soft takeover is on.</b> After arming, a fader does nothing until it passes
+              through the desk's current value — so arming with your master fader at zero
+              will not black the room out. Rows waiting to be caught read
+              <span class="mibind pickup">catch → value</span>.
+            </p>
+            <p class="minote">
+              <b>Web MIDI only works on localhost or https.</b> Open the desk on the machine
+              the controller is plugged into, at <code>localhost</code> — on a plain LAN
+              address like <code>http://192.168.…</code> the browser refuses MIDI outright
+              and the device list stays empty. Every other page of this desk works fine
+              over the LAN; only this one needs the secure origin.
+            </p>
+            <p class="minote">
+              Sends are coalesced to 25/s and issued one at a time, so a fast fader sweep
+              cannot flood the desk or fight the 40 Hz DMX loop.
+            </p>
+            <p class="minote">
+              The map is saved <b>with the show</b>, not in this browser — every surface on
+              the desk gets the same controller layout.
+              <button class="sq" id="miImport" hidden>Import from this browser</button>
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <div class="midicol">
+        <section class="pane">
+          <div class="pane-head">
+            <h2>3 — Mapping</h2>
+            <span class="muted mono" id="miMapCount"></span>
+          </div>
+          <div class="midibody">
+            <p class="minote">Press <b>learn</b> on a row, then move the control you want on it.</p>
+            <div class="mitablewrap">
+              <table class="mitable">
+                <thead><tr>
+                  <th>Target</th><th>Control</th><th class="r">Value</th><th></th>
+                </tr></thead>
+                <tbody id="miMapBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="pane">
+          <div class="pane-head">
+            <h2>Scenes on pads</h2>
+            <span class="muted mono" id="miBankLabel"></span>
+          </div>
+          <div class="midibody">
+            <div class="search">
+              <input type="text" id="miSceneFilter" placeholder="filter scenes" autocomplete="off">
+              <button id="miSceneFilterClear" title="Clear">✕</button>
+            </div>
+            <p class="minote" id="miSceneMsg">&nbsp;</p>
+            <div class="michips" id="miSceneGrid"></div>
+            <p class="minote muted">
+              Tap a scene → press a pad or key on the controller → that pad fires that scene
+              directly, and gets its own row in the mapping table. Tap a bound scene again
+              to clear it. The numbered pads 1–16 from the auto-map still work as a bank on
+              top of this.
+            </p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
 </main>
 
 <!-- ===================== fixture builder ===================== -->

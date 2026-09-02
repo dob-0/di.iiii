@@ -1946,33 +1946,102 @@ $('#miBind').addEventListener('click', () => {
   setPopMode('capture'); placeBindPop(popAt.x, popAt.y);
 });
 
-// ---- MIDI pad binding, right here in the scene menu -------------------------------
-// Shares the map with midi.html (same localStorage key, same {type,ch,num} shape,
-// same 'recall:<sceneId>' target keys), so a pad bound on either page works on both.
-// This page listens for NOTES only and only fires scene recalls; faders and the full
-// surface stay on midi.html with its ARM gate.
-const MIDI_STORE = 'artnet.midi.map.v1';
+// ---- the MIDI map, shared by the scene menu and the MIDI page ---------------------
+// One map, two ways in: the "bind a pad" row of this scene menu, and the full control
+// surface on the MIDI page. It is stored WITH THE SHOW over api/midi, not in one
+// browser's localStorage, so the laptop at the desk and the phone in the room get the
+// same controller layout.
+//
+// In memory:  targetKey -> {type:'cc'|'note'|'bend', ch, num}
+// On the wire the server takes flat rows only, so it travels as
+//             [{key, type, ch, num}, ...]
+// Target keys: 'master', 'fxdepth', 'fix:<id>', 'scene:<0-15>', 'recall:<sceneId>'.
+const MIDI_STORE = 'artnet.midi.map.v1';   // the old per-browser map — read once, to offer an import
+const MIDI_TYPES = ['cc', 'note', 'bend'];
 let midiMap = {};
-try { midiMap = JSON.parse(localStorage.getItem(MIDI_STORE)) || {}; } catch (e) { midiMap = {}; }
-const saveMidiMap = () => { try { localStorage.setItem(MIDI_STORE, JSON.stringify(midiMap)); } catch (e) {} };
+let midiSaveTimer = null;
+
+const midiToWire = () => Object.entries(midiMap).slice(0, 400)
+  .map(([key, b]) => ({ key: String(key).slice(0, 120), type: b.type, ch: b.ch, num: b.num }));
+function midiFromWire(maps) {
+  const out = {};
+  for (const m of (maps || [])) {
+    if (!m || typeof m.key !== 'string' || !MIDI_TYPES.includes(m.type)) continue;
+    if (!Number.isFinite(+m.ch) || !Number.isFinite(+m.num)) continue;
+    out[m.key] = { type: m.type, ch: +m.ch, num: +m.num };
+  }
+  return out;
+}
+
+// Debounced: turning a knob during "learn" rewrites the map on every message, and the
+// desk writes show.json on every POST. 400ms is under the time it takes to reach for
+// the next control and far above the rate a wizard pass generates.
+function saveMidiMap() {
+  midiSayState('saving…');
+  clearTimeout(midiSaveTimer);
+  midiSaveTimer = setTimeout(() => {
+    midiSaveTimer = null;
+    post('api/midi', { midi: { maps: midiToWire() } }).then((r) => {
+      if (r && r.error) { midiSayState('NOT saved — ' + r.error, true); say('MIDI map did not save — ' + r.error, true); }
+      else midiSayState('saved with the show');
+    });
+  }, 400);
+}
+
+async function loadMidiMap() {
+  try {
+    const r = await (await fetch('api/midi')).json();
+    midiMap = midiFromWire(r.midi && r.midi.maps);
+    midiSayState(Object.keys(midiMap).length ? 'loaded from the show' : 'empty');
+    midiOfferImport();
+  } catch (e) { midiSayState('cannot reach the desk', true); }
+}
+
+// The old midi.html kept its map here. Never imported behind the operator's back — a
+// stale browser map silently replacing the show's would be a rig moving for no reason.
+function midiLocalLegacy() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(MIDI_STORE));
+    return (raw && typeof raw === 'object' && Object.keys(raw).length) ? raw : null;
+  } catch (e) { return null; }
+}
+function midiOfferImport() {
+  const btn = $('#miImport');
+  const old = midiLocalLegacy();
+  const show = !!old && !Object.keys(midiMap).length;
+  btn.hidden = !show;
+  if (show) btn.textContent = `Import ${Object.keys(old).length} mappings from this browser`;
+}
+
 const midiBindOf = (id) => midiMap['recall:' + id];
 let midiReady = false;
 
 function initMidi() {
   if (midiReady || !navigator.requestMIDIAccess) return;
-  // Permission is already granted for this origin (the MIDI page asked), so this
-  // resolves silently; if it ever prompts, the user is one click from wiring pads.
+  // One access object and ONE handler per input for the whole app: `onmidimessage` is a
+  // single property, so a second listener installed by the MIDI page would silently
+  // unhook the scene menu's pads (and the other way round).
   navigator.requestMIDIAccess({ sysex: false }).then((access) => {
     midiReady = true;
-    const hook = () => { for (const i of access.inputs.values()) i.onmidimessage = onPadMidi; };
-    access.onstatechange = hook;
-    hook();
-  }).catch(() => { /* no MIDI here - the menu row still binds by opening midi.html */ });
+    midiAccess = access;
+    access.onstatechange = () => { midiListInputs(); };
+    midiListInputs();
+    midiPill('#miMidiStat', 'MIDI <b>ready</b>', 'good');
+  }).catch((e) => {
+    midiPill('#miMidiStat', 'MIDI <b>blocked</b>', 'bad');
+    midiExplain('<b class="bad">Access refused:</b> ' + esc(e.message) + '<br>'
+      + 'Allow MIDI for this site, and make sure the address is <code>localhost</code>.');
+  });
 }
 
-function onPadMidi(e) {
+// The single dispatcher. Scene recalls bound from the scene menu fire whenever a pad is
+// pressed — that is what that menu promises, and a discrete press is a deliberate act.
+// Everything else (faders, knobs, the desk-function pads) stays behind the ARM gate on
+// the MIDI page, because a physical fader's resting position is not a decision.
+function onMidiMessage(e) {
   const [a, b, c] = e.data;
-  if ((a & 0xf0) !== 0x90 || c === 0) return;            // note-on only
+  midiPageMessage(e);
+  if ((a & 0xf0) !== 0x90 || c === 0) return;            // note-on only, below here
   const ch = (a & 0x0f) + 1;
   if (popMode === 'midicap' && bindSceneId != null) {
     // steal the pad from whatever held it, one pad per scene
@@ -1983,10 +2052,12 @@ function onPadMidi(e) {
     for (const k of Object.keys(midiMap)) if (k === 'recall:' + bindSceneId) delete midiMap[k];
     midiMap['recall:' + bindSceneId] = { type: 'note', ch, num: b };
     saveMidiMap();
+    if (page === 'midi') midiDraw();
     say(`pad ${b} now fires "${bindTarget}"`);
     closeBindPop();
     return;
   }
+  if (midiLearnRow || midiSceneLearn || midiWizardOn) return;   // the page is mapping, not playing
   for (const k of Object.keys(midiMap)) {
     const m = midiMap[k];
     if (m && m.type === 'note' && m.ch === ch && m.num === b && k.startsWith('recall:')) {
@@ -2011,6 +2082,9 @@ $('#miMidiRemove').addEventListener('click', () => {
   closeBindPop();
 });
 initMidi();
+// The map is read at boot, not when the MIDI page is first opened: pads bound from the
+// scene menu have to work on a surface that never visits it.
+loadMidiMap();
 $('#miRename').addEventListener('click', () => {
   setPopMode('rename');
   const t = $('#popText');
@@ -2883,15 +2957,559 @@ function renderAll(busy) {
   paintStage();
   paintSelection();
   if (!busy) syncAttr();
+  if (page === 'midi') safeBuild('buildMidi', buildMidi);
 }
+
+/* =============== MIDI page =============== */
+/* The control surface. It drives the desk through exactly the HTTP routes every other
+   page uses — it cannot stop or slow the DMX loop. Three things stand between a knob
+   and the rig:
+     - the ARM gate: midiSend() drops everything while it reads "safe";
+     - soft takeover: a fader is ignored until it crosses the value the desk already
+       holds, so arming never jumps the room;
+     - a coalescing queue: merged by route, one request in flight, 25/s ceiling. */
+
+let midiAccess = null;
+let midiInput = null;
+let midiArmed = false;
+let midiMsgCount = 0;
+let midiLearnRow = null;         // target key waiting for a control
+let midiWizardOn = false;
+let midiSceneLearn = null;       // scene id waiting for a pad
+let midiBank = 0;
+let midiTargets = [];
+let midiSig = '';
+const midiPickup = {};           // target key -> true while waiting to be caught
+const midiLastVal = {};          // target key -> last incoming 0..1
+const midiSeenCC = new Set();
+const midiSeenNote = new Set();
+
+// A mirror of the values this page drives. Soft takeover needs something to compare a
+// fader against, and re-reading a 500-scene state blob per message is not that. While
+// disarmed it is refreshed from the desk; while armed this page is the one moving them.
+const midiLive = { master: 255, blackout: false, fxDepth: 255, fxBpm: 120, fxMode: null,
+  fxOn: false, holdMs: 2000, fadeMs: 800, chase: false, allDim: 255 };
+
+/* ---- the send queue ---- */
+const midiPending = new Map();
+let midiFlushing = false;
+let midiFlushTimer = null;
+
+function midiSend(route, body, key) {
+  if (!midiArmed) return;
+  const k = key || route;
+  const cur = midiPending.get(k);
+  if (cur) Object.assign(cur.body, body);
+  else midiPending.set(k, { route, body: Object.assign({}, body) });
+  if (!midiFlushTimer && !midiFlushing) midiFlushTimer = setTimeout(midiFlush, 40);
+}
+
+async function midiFlush() {
+  midiFlushTimer = null;
+  if (midiFlushing) return;
+  midiFlushing = true;
+  try {
+    while (midiPending.size) {
+      const [k, item] = midiPending.entries().next().value;
+      midiPending.delete(k);
+      // Tell the slow poll this page is mid-gesture, exactly as a finger on a fader
+      // does — without it a poll landing between messages snaps the value back.
+      touchedAt = Date.now();
+      try {
+        await fetch(item.route, {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(item.body),
+        });
+      } catch (e) {
+        // The pill is the poll's, and the poll would paint over a flag set here within a
+        // second and a half. A send that died says so where messages go on every page.
+        say('a MIDI move did not reach the desk', true);
+      }
+      await new Promise((r) => setTimeout(r, 40));   // 25/s ceiling
+    }
+  } finally { midiFlushing = false; }
+}
+
+/* ---- what a control can be pointed at ---- */
+// Rebuilt whenever the rig changes. Continuous targets expose read() so soft takeover
+// knows where the desk currently is; both read() and apply() speak 0..1.
+function buildMidiTargets() {
+  const T = [];
+  const cc = (key, label, read, apply) => T.push({ key, label, kind: 'cc', read, apply });
+  const pad = (key, label, apply) => T.push({ key, label, kind: 'note', apply });
+  const fixtures = (S && S.fixtures) || [];
+  const chansOf = (f) => ((S.profiles[f.profile] || {}).channels || []);
+
+  T.push({ group: 'Faders & knobs' });
+
+  cc('master', 'Master', () => midiLive.master / 255,
+    (u) => { midiLive.master = Math.round(u * 255); midiSend('api/master', { master: midiLive.master }); });
+
+  cc('alldim', 'All fixtures dimmer', () => midiLive.allDim / 255,
+    (u) => { midiLive.allDim = Math.round(u * 255); midiSend('api/fixtures/all', { values: { dimmer: midiLive.allDim } }); });
+
+  cc('fxdepth', 'FX depth', () => midiLive.fxDepth / 255,
+    (u) => { midiLive.fxDepth = Math.round(u * 255); midiSend('api/fx', { depth: midiLive.fxDepth }); });
+
+  cc('fxbpm', 'FX tempo  20–300', () => (midiLive.fxBpm - 20) / 280,
+    (u) => { midiLive.fxBpm = Math.round(20 + u * 280); midiSend('api/fx', { bpm: midiLive.fxBpm }); });
+
+  cc('hold', 'Chase hold  50–2000ms', () => (midiLive.holdMs - 50) / 1950,
+    (u) => { midiLive.holdMs = Math.round(50 + u * 1950); midiSend('api/chase', { holdMs: midiLive.holdMs }); });
+
+  cc('fade', 'Chase fade  0–2000ms', () => midiLive.fadeMs / 2000,
+    (u) => { midiLive.fadeMs = Math.round(u * 2000); midiSend('api/chase', { fadeMs: midiLive.fadeMs }); });
+
+  // Two group knobs read far better on a small controller than fifteen per-fixture ones.
+  // The old page split them by the profile NAMES "Wash 8ch"/"Beam 16ch", which do not
+  // exist on this desk — so membership is read off the channel roles instead, which is
+  // what actually decides whether a fixture can move.
+  const movers = fixtures.filter((f) => chansOf(f).includes('pan') || chansOf(f).includes('tilt'));
+  const statics = fixtures.filter((f) => !chansOf(f).includes('pan') && !chansOf(f).includes('tilt'));
+  const spread = (list, values) => (u) => {
+    const v = Math.round(u * 255);
+    for (const f of list) midiSend('api/fixture', { id: f.id, values: values(v) }, 'api/fixture:' + f.id);
+  };
+  if (statics.length) {
+    cc('washdim', `Static fixtures dimmer  (${statics.length})`, () => 1, spread(statics, (v) => ({ dimmer: v })));
+  }
+  if (movers.length) {
+    cc('beamdim', `Movers dimmer  (${movers.length})`, () => 1, spread(movers, (v) => ({ dimmer: v })));
+    cc('beampan', 'Movers pan', () => 0.5, spread(movers, (v) => ({ pan: v })));
+    cc('beamtilt', 'Movers tilt', () => 0.5, spread(movers, (v) => ({ tilt: v })));
+  }
+
+  // Then every fixture on its own, for whatever faders are left over.
+  for (const f of fixtures) {
+    cc('fix:' + f.id, f.name + '  dimmer', () => 1,
+      (u) => midiSend('api/fixture', { id: f.id, values: { dimmer: Math.round(u * 255) } }, 'api/fixture:' + f.id));
+  }
+
+  T.push({ group: 'Pads & buttons' });
+
+  pad('blackout', 'Blackout  (toggle)', () => {
+    midiLive.blackout = !midiLive.blackout;
+    midiSend('api/master', { blackout: midiLive.blackout });
+  });
+  pad('chaseon', 'Chase run / stop', () => {
+    midiLive.chase = !midiLive.chase;
+    midiSend('api/chase', { enabled: midiLive.chase });
+  });
+  pad('fxon', 'FX on / off', () => {
+    midiLive.fxOn = !midiLive.fxOn;
+    midiSend('api/fx', { enabled: midiLive.fxOn });
+  });
+  pad('fxnext', 'FX mode  next', () => midiStepFx(1));
+  pad('fxprev', 'FX mode  prev', () => midiStepFx(-1));
+  pad('bankup', 'Scene bank  +', () => midiSetBank(midiBank + 1));
+  pad('bankdn', 'Scene bank  −', () => midiSetBank(midiBank - 1));
+
+  for (let i = 0; i < 16; i++) pad('scene:' + i, 'Scene pad ' + (i + 1), () => midiRecallPad(i));
+
+  midiTargets = T;
+}
+
+function midiStepFx(dir) {
+  const modes = (S && S.fxModes) || [];
+  if (!modes.length) return;
+  let i = modes.indexOf(midiLive.fxMode);
+  if (i < 0) i = 0;
+  midiLive.fxMode = modes[(i + dir + modes.length) % modes.length];
+  midiSend('api/fx', { mode: midiLive.fxMode });
+  midiFlash('FX mode → ' + midiLive.fxMode);
+}
+
+function midiRecallPad(i) {
+  if (!S) return;
+  const sc = S.scenes[midiBank * 16 + i];
+  if (!sc) { midiFlash(`pad ${i + 1}: no scene in this bank`); return; }
+  midiSend('api/scenes/recall', { id: sc.id }, 'recall');
+  midiFlash('recall → ' + sc.name);
+}
+
+function midiSetBank(n) {
+  if (!S) return;
+  midiBank = clamp(n, 0, Math.max(0, Math.ceil(S.scenes.length / 16) - 1));
+  midiDrawBank();
+}
+
+/* ---- incoming ---- */
+const midiKeyFor = (type, ch, num) => Object.keys(midiMap).find((k) => {
+  const b = midiMap[k];
+  return b && b.type === type && b.ch === ch && b.num === num;
+}) || null;
+
+function midiPageMessage(e) {
+  const [a, b, c] = e.data;
+  const type = a & 0xf0, ch = (a & 0x0f) + 1;
+  midiMsgCount++;
+  midiPill('#miMsgStat', `msgs <b>${midiMsgCount}</b>`);
+
+  if (type === 0xb0) {                                    // control change
+    midiSeenCC.add(ch + ':' + b);
+    midiMonitor('cc', `ch${mpad(ch, 2)}  CC ${mpad(b, 3)}   ${mpad(c, 3)}${midiBar(c / 127)}`);
+    // Clamped: a controller sending a byte above 127 is out of spec, and without this it
+    // drives a target past full and reads "157%" in the value column.
+    midiHandle('cc', ch, b, clamp(c / 127, 0, 1));
+  } else if (type === 0x90 && c > 0) {                    // note on
+    midiSeenNote.add(ch + ':' + b);
+    midiMonitor('note', `ch${mpad(ch, 2)}  NOTE ${mpad(b, 3)} on  vel ${mpad(c, 3)}`);
+    midiHandle('note', ch, b, 1);
+  } else if (type === 0x80 || (type === 0x90 && c === 0)) {
+    midiMonitor('other', `ch${mpad(ch, 2)}  NOTE ${mpad(b, 3)} off`);
+  } else if (type === 0xe0) {                             // pitch bend — some faders use it
+    const v = ((c << 7) | b) / 16383;
+    midiMonitor('cc', `ch${mpad(ch, 2)}  BEND      ${Math.round(v * 127)}${midiBar(v)}`);
+    midiHandle('bend', ch, 0, v);
+  } else {
+    midiMonitor('other', `ch${mpad(ch, 2)}  0x${a.toString(16)} ${b} ${c}`);
+  }
+  $('#miSeen').textContent = `seen: ${midiSeenCC.size} controls, ${midiSeenNote.size} pads`;
+}
+
+function midiHandle(type, ch, num, unit) {
+  // A scene armed on the grid takes the next PAD, whatever it was bound to before.
+  if (midiSceneLearn) {
+    if (type !== 'note') { midiSceneMsg('that was a fader — press a pad for a scene'); return; }
+    midiAssign('recall:' + midiSceneLearn, type, ch, num);
+    const sc = S && S.scenes.find((s) => s.id === midiSceneLearn);
+    midiSceneMsg(`bound "${sc ? sc.name : midiSceneLearn}" ← ch${ch} note ${num}`);
+    midiSceneLearn = null; midiDraw(); midiDrawSceneGrid();
+    return;
+  }
+  if (midiLearnRow) { midiAssign(midiLearnRow, type, ch, num); midiLearnRow = null; midiDraw(); return; }
+  if (midiWizardOn && !midiKeyFor(type, ch, num)) { midiWizardAssign(type, ch, num); return; }
+
+  const key = midiKeyFor(type, ch, num);
+  if (!key) return;
+  if (key.startsWith('recall:')) return;   // handled by the shared dispatcher, ungated
+  const t = midiTargets.find((x) => x.key === key);
+  if (!t) return;
+
+  if (t.kind === 'note') { if (type !== 'note') return; t.apply(); midiHit(key); return; }
+  if (type === 'note') return;
+
+  // soft takeover: ignore until the physical control crosses the desk's value
+  if (midiPickup[key]) {
+    const target = t.read ? t.read() : 0;
+    const prev = midiLastVal[key];
+    midiLastVal[key] = unit;
+    const crossed = prev != null
+      && ((prev <= target && unit >= target) || (prev >= target && unit <= target));
+    if (!crossed && Math.abs(unit - target) > 0.02) { if (page === 'midi') midiDraw(); return; }
+    // Caught. Redraw so the row stops reading "catch →" — a control that is live and
+    // still says it is waiting is the same lie the pickup marker exists to prevent.
+    midiPickup[key] = false;
+    if (page === 'midi') midiDraw();
+  }
+  midiLastVal[key] = unit;
+  t.apply(unit);
+  midiHit(key);
+}
+
+function midiAssign(key, type, ch, num) {
+  // one control drives one target — take it off whatever had it
+  for (const k of Object.keys(midiMap)) {
+    const b = midiMap[k];
+    if (b && b.type === type && b.ch === ch && b.num === num) delete midiMap[k];
+  }
+  midiMap[key] = { type, ch, num };
+  midiPickup[key] = true;
+  delete midiLastVal[key];
+  saveMidiMap();
+}
+
+function midiWizardAssign(type, ch, num) {
+  const want = (type === 'note') ? 'note' : 'cc';
+  const next = midiTargets.find((t) => t.key && t.kind === want && !midiMap[t.key]);
+  if (!next) { midiFlash(`every ${want} target is already mapped`); return; }
+  midiAssign(next.key, type, ch, num);
+  midiFlash(`bound ${next.label}  ←  ${midiDescribe(midiMap[next.key])}`);
+  midiDraw();
+}
+
+function midiMapByNumber() {
+  const cmp = (a, b) => (a[0] - b[0]) || (a[1] - b[1]);
+  const ccs = [...midiSeenCC].map((s) => s.split(':').map(Number)).sort(cmp);
+  const nts = [...midiSeenNote].map((s) => s.split(':').map(Number)).sort(cmp);
+  if (!ccs.length && !nts.length) { midiFlash('nothing seen yet — move a fader and press a pad first'); return; }
+  let n = 0;
+  for (const t of midiTargets) {
+    if (!t.key) continue;
+    if (t.kind === 'cc' && ccs.length) { const c = ccs.shift(); midiAssign(t.key, 'cc', c[0], c[1]); n++; }
+    else if (t.kind === 'note' && nts.length) { const c = nts.shift(); midiAssign(t.key, 'note', c[0], c[1]); n++; }
+  }
+  midiDraw();
+  midiFlash(`mapped ${n} controls by number`);
+}
+
+/* ---- drawing ---- */
+function buildMidi() {
+  // While disarmed the desk is the authority on where everything sits, so takeover has
+  // a true reference the moment you arm.
+  if (!midiArmed && S) {
+    midiLive.master = S.master; midiLive.blackout = !!S.blackout;
+    midiLive.fxDepth = S.fx.depth; midiLive.fxBpm = S.fx.bpm;
+    midiLive.fxMode = S.fx.mode; midiLive.fxOn = !!S.fx.enabled;
+    midiLive.holdMs = S.chase.holdMs; midiLive.fadeMs = S.chase.fadeMs;
+    midiLive.chase = !!S.chase.enabled;
+  }
+  // While armed this page is the one moving the master, and the slow poll deliberately
+  // holds S.master back mid-gesture — so read the mirror, or the pill reports a value the
+  // rig left several seconds ago.
+  // The desk readout is the app's own poll, not a second one of this page's: a "—" on a
+  // page that is plainly talking to the desk is a dead instrument.
+  midiPill('#miDeskStat', `desk <b>${pollFails ? 'error' : 'ok'}</b>`, pollFails ? 'bad' : 'good');
+  const mv = midiArmed ? midiLive.master : (S ? S.master : null);
+  const black = midiArmed ? midiLive.blackout : (S && S.blackout);
+  midiPill('#miMasterStat', `master <b>${mv == null ? '—' : mv}</b>${black ? ' · BLACK' : ''}`, black ? 'bad' : '');
+  const sig = (S ? S.fixtures.map((f) => f.id + f.name + f.profile).join('|') + '#' + S.scenes.length : '');
+  if (sig !== midiSig) { midiSig = sig; buildMidiTargets(); midiDraw(); midiDrawBank(); }
+}
+
+function midiDraw() {
+  const body = $('#miMapBody');
+  if (!body) return;
+  let html = '', n = 0;
+  for (const t of midiTargets) {
+    if (t.group) { html += `<tr class="migrp"><td colspan="4">${esc(t.group)}</td></tr>`; continue; }
+    const b = midiMap[t.key];
+    if (b) n++;
+    const bind = b
+      ? (midiPickup[t.key]
+        ? `<span class="mibind pickup">catch → ${midiPct(t)}</span>`
+        : `<span class="mibind">${midiDescribe(b)}</span>`)
+      : '<span class="mibind none">—</span>';
+    html += `<tr data-key="${esc(t.key)}"${midiLearnRow === t.key ? ' class="learning"' : ''}>
+      <td class="mitgt">${esc(t.label)}</td>
+      <td>${bind}</td>
+      <td class="mival">${b ? midiValText(t) : ''}</td>
+      <td class="miact"><button class="sq small" data-learn="${esc(t.key)}">${midiLearnRow === t.key ? 'move it…' : 'learn'}</button>${b ? ` <button class="sq small danger" data-clear="${esc(t.key)}" title="Unbind">✕</button>` : ''}</td>
+    </tr>`;
+  }
+  // Direct scene binds live outside the target table — they are made by tapping a scene.
+  const direct = Object.keys(midiMap).filter((k) => k.startsWith('recall:'));
+  if (direct.length) {
+    html += '<tr class="migrp"><td colspan="4">Scenes — direct binds</td></tr>';
+    for (const k of direct) {
+      n++;
+      const sc = S && S.scenes.find((s) => s.id === k.slice(7));
+      html += `<tr>
+        <td class="mitgt${sc ? '' : ' missing'}">${esc(sc ? sc.name : k.slice(7))}</td>
+        <td><span class="mibind">${midiDescribe(midiMap[k])}</span></td>
+        <td class="mival"></td>
+        <td class="miact"><button class="sq small danger" data-clear="${esc(k)}" title="Unbind">✕</button></td>
+      </tr>`;
+    }
+  }
+  body.innerHTML = html;
+  $('#miMapCount').textContent = n ? `${n} bound` : 'nothing bound';
+}
+
+function midiDescribe(b) {
+  if (b.type === 'note') return `ch${b.ch}  note ${b.num}`;
+  if (b.type === 'bend') return `ch${b.ch}  bend`;
+  return `ch${b.ch}  CC ${b.num}`;
+}
+const midiPct = (t) => (t.read ? Math.round(t.read() * 100) + '%' : '—');
+function midiValText(t) {
+  if (t.kind === 'note') return '';
+  const v = midiLastVal[t.key];
+  return v == null ? '—' : Math.round(v * 100) + '%';
+}
+
+function midiHit(key) {
+  if (page !== 'midi') return;
+  const tr = $(`tr[data-key="${CSS.escape(key)}"]`);
+  if (!tr) return;
+  tr.classList.add('hit');
+  clearTimeout(tr._t);
+  tr._t = setTimeout(() => tr.classList.remove('hit'), 160);
+  const t = midiTargets.find((x) => x.key === key);
+  if (tr.children[2] && t) tr.children[2].textContent = midiValText(t);
+}
+
+function midiDrawBank() {
+  if (!S) return;
+  const max = Math.max(1, Math.ceil(S.scenes.length / 16));
+  $('#miBankLabel').textContent = `pad bank ${midiBank + 1}/${max} · ${S.scenes.length} scenes`;
+  midiDrawSceneGrid();
+}
+
+function midiDrawSceneGrid() {
+  if (!S) return;
+  const q = ($('#miSceneFilter').value || '').toLowerCase();
+  const chips = S.scenes.filter((s) => !q || s.name.toLowerCase().includes(q)).map((s) => {
+    const b = midiMap['recall:' + s.id];
+    const cls = midiSceneLearn === s.id ? ' learning' : b ? ' bound' : '';
+    return `<button class="michip${cls}" data-scene="${esc(s.id)}" title="${b ? midiDescribe(b) + ' — tap to clear' : 'tap, then press a pad on the controller'}">${esc(s.name)}${b ? ` <i>${b.num}</i>` : ''}</button>`;
+  }).join('');
+  $('#miSceneGrid').innerHTML = chips || '<span class="empty">no scene matches</span>';
+}
+
+/* ---- monitor and status ---- */
+function midiMonitor(cls, text) {
+  if (page !== 'midi') return;   // the log is only ever read here; keep the show cheap
+  const m = $('#miMon');
+  const first = m.firstChild;
+  if (first && first.className === 'empty') m.innerHTML = '';
+  const d = document.createElement('div');
+  d.className = cls; d.textContent = text;
+  m.appendChild(d);
+  while (m.children.length > 220) m.removeChild(m.firstChild);
+  m.scrollTop = m.scrollHeight;
+}
+const mpad = (n, w) => String(n).padStart(w, ' ');
+const midiBar = (u) => '  ' + '█'.repeat(Math.round(clamp(u, 0, 1) * 20)).padEnd(20, '·');
+const midiFlash = (m) => { $('#miWizNote').textContent = m; };
+const midiSceneMsg = (m) => { $('#miSceneMsg').textContent = m; };
+function midiPill(sel, html, cls) {
+  const e = $(sel);
+  if (!e) return;
+  e.innerHTML = html;
+  e.className = 'mipill' + (cls ? ' ' + cls : '');
+}
+const midiSayState = (t, bad) => {
+  const e = $('#miSaveStat');
+  e.textContent = 'map: ' + t;
+  e.classList.toggle('bad', !!bad);
+};
+const midiExplain = (html) => { $('#miCheckNote').innerHTML = html; };
+
+/* ---- devices ---- */
+function midiListInputs() {
+  if (!midiAccess) return;
+  const sel = $('#miInputs');
+  const prev = sel.value;
+  const ins = [...midiAccess.inputs.values()];
+  if (!ins.length) {
+    sel.innerHTML = '<option value="">— no MIDI inputs found —</option>';
+    midiPill('#miMidiStat', 'MIDI <b>no devices</b>', 'bad');
+    return;
+  }
+  sel.innerHTML = ins.map((i) =>
+    `<option value="${esc(i.id)}">${esc(i.name + (i.manufacturer ? '  ·  ' + i.manufacturer : ''))}</option>`).join('');
+  // Prefer a real device over a loopback/"through" port, which never sends anything.
+  const pick = ins.find((i) => i.id === prev)
+    || ins.find((i) => !/through|loopmidi/i.test(i.name)) || ins[0];
+  sel.value = pick.id;
+  midiBindInput(pick.id);
+  midiPill('#miMidiStat', `MIDI <b>${ins.length} in</b>`, 'good');
+}
+
+function midiBindInput(id) {
+  if (!midiAccess) return;
+  for (const i of midiAccess.inputs.values()) i.onmidimessage = null;
+  midiInput = midiAccess.inputs.get(id) || null;
+  if (midiInput) midiInput.onmidimessage = onMidiMessage;
+}
+
+function midiEnable() {
+  if (!navigator.requestMIDIAccess) {
+    midiPill('#miMidiStat', 'MIDI <b>unsupported</b>', 'bad');
+    // The single most common reason this page looks broken, said plainly.
+    midiExplain('<b class="bad">This browser has no Web MIDI here.</b> Use Chrome or Edge, '
+      + 'and open the desk at <code>localhost</code> or over <code>https</code> — on a plain '
+      + 'LAN address the browser refuses Web MIDI outright and the device list stays empty.');
+    return;
+  }
+  initMidi();
+  $('#miEnable').disabled = true;
+  $('#miEnable').textContent = 'MIDI enabled';
+}
+
+/* ---- wiring ---- */
+$('#miEnable').addEventListener('click', midiEnable);
+$('#miRescan').addEventListener('click', midiListInputs);
+$('#miInputs').addEventListener('change', (e) => midiBindInput(e.target.value));
+$('#miClearMon').addEventListener('click', () => { $('#miMon').innerHTML = '<div class="empty">cleared</div>'; });
+
+$('#miArm').addEventListener('click', () => {
+  midiArmed = !midiArmed;
+  const b = $('#miArm');
+  b.className = 'miarm ' + (midiArmed ? 'live' : 'safe');
+  b.textContent = midiArmed ? 'ARMED — sending to rig' : 'Safe — not sending';
+  if (midiArmed) {
+    // Every fader must be caught again, so arming can never jump the rig.
+    for (const k of Object.keys(midiMap)) if (midiMap[k].type !== 'note') midiPickup[k] = true;
+    midiDraw();
+    say('MIDI armed — the controller is driving the rig');
+  } else {
+    midiPending.clear();
+    say('MIDI safe — the controller is not sending');
+  }
+});
+
+$('#miWizard').addEventListener('click', () => {
+  midiWizardOn = !midiWizardOn;
+  const b = $('#miWizard');
+  b.textContent = midiWizardOn ? 'Stop wizard' : 'Start wizard';
+  b.classList.toggle('accent', !midiWizardOn);
+  b.classList.toggle('danger', midiWizardOn);
+  midiFlash(midiWizardOn
+    ? 'wizard running — move one fader / press one pad at a time'
+    : 'wizard stopped');
+});
+$('#miByNum').addEventListener('click', midiMapByNumber);
+$('#miClearMap').addEventListener('click', () => {
+  if (!confirm('Clear the whole MIDI map? Every surface on this desk loses it.')) return;
+  midiMap = {};
+  for (const k of Object.keys(midiPickup)) delete midiPickup[k];
+  for (const k of Object.keys(midiLastVal)) delete midiLastVal[k];
+  saveMidiMap(); midiDraw(); midiDrawSceneGrid(); midiFlash('map cleared');
+});
+
+$('#miImport').addEventListener('click', () => {
+  const old = midiLocalLegacy();
+  if (!old) return;
+  for (const [k, b] of Object.entries(old)) {
+    if (b && MIDI_TYPES.includes(b.type)) midiMap[k] = { type: b.type, ch: +b.ch, num: +b.num };
+  }
+  saveMidiMap(); midiDraw(); midiDrawSceneGrid();
+  $('#miImport').hidden = true;
+  say(`imported ${Object.keys(old).length} mappings into the show`);
+});
+
+$('#miMapBody').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const l = btn.dataset.learn, c = btn.dataset.clear;
+  if (l) { midiLearnRow = (midiLearnRow === l) ? null : l; midiDraw(); }
+  if (c) {
+    delete midiMap[c]; delete midiPickup[c]; delete midiLastVal[c];
+    saveMidiMap(); midiDraw(); midiDrawSceneGrid();
+  }
+});
+
+// Tap a scene to arm it for the next pad; tap a bound one to let it go. The old page
+// used right-click, which a phone at the desk cannot do at all.
+$('#miSceneGrid').addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-scene]');
+  if (!chip) return;
+  const id = chip.dataset.scene;
+  if (midiMap['recall:' + id]) {
+    delete midiMap['recall:' + id];
+    saveMidiMap(); midiSceneMsg('bind cleared'); midiDrawSceneGrid(); midiDraw();
+    return;
+  }
+  midiSceneLearn = (midiSceneLearn === id) ? null : id;
+  const sc = S && S.scenes.find((s) => s.id === id);
+  midiSceneMsg(midiSceneLearn ? `press a pad for "${sc ? sc.name : id}"…` : '');
+  midiDrawSceneGrid();
+});
+$('#miSceneFilter').addEventListener('input', midiDrawSceneGrid);
+$('#miSceneFilterClear').addEventListener('click', () => { $('#miSceneFilter').value = ''; midiDrawSceneGrid(); });
 
 /* =============== wiring =============== */
 
 function showPage(name) {
-  page = ['setup', 'control', 'touch', 'fader'].includes(name) ? name : 'setup';
+  page = ['setup', 'control', 'touch', 'fader', 'midi'].includes(name) ? name : 'setup';
   $$('.page-tab').forEach((x) => x.classList.toggle('is-active', x.dataset.page === page));
   $$('.page').forEach((p) => p.classList.toggle('is-active', p.dataset.page === page));
   structSig = ''; attrSig = '';
+  // Opening MIDI re-reads the show's map, so a layout mapped on the laptop is already
+  // there on the phone. Skipped mid-edit: a pending save is newer than the server.
+  if (page === 'midi' && !midiSaveTimer) loadMidiMap();
   if (S) renderAll(false);
 }
 $$('.page-tab').forEach((t) => t.addEventListener('click', () => {

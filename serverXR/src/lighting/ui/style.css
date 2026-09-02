@@ -60,12 +60,6 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 }
 .page-tab.is-active { color: #fff; border-bottom-color: #fff; }
 /* Matches .page-tab, but it is an <a> to another page rather than a tab in this one. */
-.page-link {
-  background: none; border: 0; border-bottom: 2px solid transparent;
-  color: var(--muted); padding: 0 18px; letter-spacing: .01em; font-size: 13px;
-  display: flex; align-items: center; text-decoration: none;
-}
-.page-link:hover { color: #fff; }
 .title { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; }
 .topright { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 4px 12px 4px 0; min-height: 44px; }
 .go {
@@ -1025,3 +1019,102 @@ body.space .stage { cursor: grab; }
   min-width: 40px; min-height: 44px; font-size: 15px; border-radius: 6px; cursor: pointer;
 }
 .kindbtn.is-active { color: #fff; border-color: #fff; }
+
+/* ================ MIDI page ================ */
+/* The control surface, in the same panes and the same buttons as every other page. It
+   was a separate document with its own palette; nothing here invents a second look. */
+.midiwrap { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding: 4px; overflow: auto; }
+
+/* The gate and the four readouts you need while mapping — sticky, because the map table
+   is long and arming from the bottom of it must not mean scrolling back up. */
+.midibar {
+  position: sticky; top: 0; z-index: 5; flex: none;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  background: var(--pane); border: 1px solid var(--line); padding: 8px 10px;
+}
+.miarm {
+  border: 1px solid var(--line); border-radius: 0; padding: 9px 18px;
+  font-weight: 700; letter-spacing: .06em; min-height: 44px; min-width: 200px;
+}
+.miarm.safe { background: var(--pane2); color: var(--muted); }
+/* Live is the one place on this desk that is allowed to shout: the rig is being driven
+   by a box of knobs somebody else can lean on. */
+.miarm.live { background: var(--danger); border-color: var(--danger); color: #fff; }
+.mipill {
+  border: 1px solid var(--line); background: var(--field); color: var(--muted);
+  padding: 5px 10px; font-family: var(--mono); font-size: 11px; white-space: nowrap;
+}
+.mipill b { color: var(--text); font-weight: 600; }
+.mipill.good { border-color: var(--accent); color: var(--accent); }
+.mipill.good b { color: var(--accent); }
+.mipill.bad { border-color: var(--danger); color: var(--danger); }
+.mipill.bad b { color: var(--danger); }
+#miSaveStat.bad { color: var(--danger); }
+
+.midicols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; align-items: start; }
+@media (max-width: 1000px) { .midicols { grid-template-columns: minmax(0, 1fr); } }
+.midicol { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.midicol .pane { flex: none; }
+.midibody { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.minote { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.minote b { color: var(--text); }
+.minote .bad, .minote b.bad { color: var(--danger); }
+.midibody code {
+  font-family: var(--mono); font-size: 11px; background: var(--pane2);
+  border: 1px solid var(--line); padding: 1px 5px; color: var(--text);
+}
+.midibody select { max-width: 100%; flex: 1 1 180px; min-width: 0; }
+
+/* the input log: the one place that proves the controller is talking at all */
+.mimon {
+  height: 190px; overflow: auto; background: var(--field); border: 1px solid var(--line);
+  padding: 6px 8px; font-family: var(--mono); font-size: 11px;
+}
+.mimon div { white-space: pre; color: var(--muted); }
+.mimon div.cc { color: var(--accent); }
+.mimon div.note { color: var(--text); }
+.mimon div.other { color: #5b6273; }
+.empty { color: var(--muted); font-style: italic; }
+
+/* the mapping table */
+.mitablewrap { overflow-x: auto; min-width: 0; }
+.mitable { width: 100%; border-collapse: collapse; }
+.mitable th {
+  text-align: left; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; padding: 0 6px 6px; border-bottom: 1px solid var(--line);
+}
+.mitable th.r, .mitable .mival { text-align: right; }
+.mitable td { padding: 4px 6px; border-bottom: 1px solid #ffffff08; vertical-align: middle; }
+.mitable tr.learning td { background: var(--cell2); }
+.mitable tr.hit td { background: #35d2dd22; }
+.mitgt { color: var(--text); }
+.mitgt.missing { color: var(--danger); text-decoration: line-through; }
+.mival { color: var(--muted); font-family: var(--mono); font-size: 11px; width: 62px; white-space: nowrap; }
+.miact { text-align: right; white-space: nowrap; }
+.miact .sq { padding: 3px 8px; font-size: 11px; }
+.mibind { color: var(--text); font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+.mibind.none { color: var(--muted); }
+.mibind.pickup { color: var(--accent); }   /* waiting to be caught — soft takeover */
+.migrp td {
+  background: var(--field); color: var(--muted); font-size: 10px;
+  letter-spacing: .12em; text-transform: uppercase; padding: 7px 6px;
+}
+
+/* scene chips: tap one, then press a pad */
+.michips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 300px; overflow: auto; }
+.michip {
+  background: var(--pane2); border: 1px solid var(--line); border-radius: 0;
+  color: var(--muted); font-size: 12px; padding: 6px 10px; min-height: 34px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.michip:hover { border-color: var(--muted); }
+.michip.bound { color: var(--accent); border-color: var(--accent); }
+.michip.bound i { font-style: normal; font-family: var(--mono); font-size: 10px; opacity: .8; }
+.michip.learning { color: #fff; border-color: #fff; background: var(--cell2); }
+
+@media (pointer: coarse) {
+  .michip { min-height: 44px; }
+  .miact .sq { min-height: 40px; min-width: 44px; }
+  .mitable td { padding: 6px; }
+  .midibody select { min-height: 44px; }
+}

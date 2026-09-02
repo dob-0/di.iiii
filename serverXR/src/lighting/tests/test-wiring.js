@@ -73,7 +73,10 @@ check('every class a button in the markup carries is known to the code or the st
 
 check('every /api call the interface makes has a route on the server', () => {
   const routes = new Set([...server.matchAll(/'(?:GET|POST) (\/api\/[^']+)'/g)].map((m) => m[1]));
-  const called = new Set([...js.matchAll(/(?:post|fetch)\(\s*'\/?(api\/[^'?]+)'/g)].map((m) => '/' + m[1]));
+  // midiSend() is the MIDI page's own coalescing queue — it reaches the same routes as
+  // post()/fetch() and has to be checked the same way, or a renamed route goes dead only
+  // for the hardware controller, which is the surface nobody is watching while it breaks.
+  const called = new Set([...js.matchAll(/(?:post|fetch|midiSend)\(\s*'\/?(api\/[^'?]+)'/g)].map((m) => '/' + m[1]));
   const missing = [...called].filter((r) => !routes.has(r));
   if (missing.length) throw new Error('no such route: ' + missing.join(', '));
 });
