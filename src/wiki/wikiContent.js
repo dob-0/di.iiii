@@ -895,6 +895,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'raw-windows-travel-with-the-canvas',
+        category: 'Editing',
+        title: 'Panel windows: travelling with the canvas, or pinned to the screen',
+        summary: 'An unpinned panel window (Scene, Text, Image, List) lives on the canvas with its card — pan and it moves, zoom and it shrinks. Press ⌖ to pin one to the screen instead. Resize from any edge, and scrolling inside a window scrolls the window, not the desk.',
+        body: [
+            'A panel node — Text, Scene, Image, List, Browser, Monitor — is two views of one thing: the card on the canvas and the window that shows its panel. Unpinned, that window is placed in the same graph space as the card: panning the canvas carries it along, and zooming out shrinks it with everything else, the way a scene parked far from the rest of the desk stays reachable by panning to it rather than by scrolling a fixed sidebar.',
+            { list: [
+                'Press ⌖ to pin a window to the screen — it holds still at its current on-screen position and size while the canvas pans and zooms underneath it, the old behaviour. Press it again to release it back onto the canvas, where it keeps exactly where it was standing.',
+                'Drag the title bar to move a window; drag any edge or corner to resize it, not only the bottom-right grip. Arrow keys on the title bar move it, arrow keys on the corner grip resize it — hold Shift for a one-pixel nudge.',
+                'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk, and Ctrl/⌘ + scroll zooms the desk from anywhere, including over a window.',
+                'On a phone every window stays pinned — the clamp that fits a wide default frame into a narrow screen is the whole layout there, and a window that travelled freely on the canvas would walk straight off it.'
+            ] }
+        ],
+        tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor'],
+        updated: '2026-09-03'
+    },
+    {
         id: 'raw-on-a-phone',
         category: 'Editing',
         title: 'Nodes on a phone: wiring with a finger',
@@ -1126,7 +1143,7 @@ export const WIKI_ARTICLES = [
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['glossary', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['glossary', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))
