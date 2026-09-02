@@ -149,6 +149,29 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-23'
     },
     {
+        id: 'lighting-desk',
+        category: 'Spaces & access',
+        title: 'The lighting desk',
+        summary: 'di.iiii carries a full lighting desk. Patch your rig, save looks as scenes, run them from a phone — and let a graph play it.',
+        body: [
+            'A di.iiii running on your own machine has a lighting desk in it, at /light. Not a plugin and not a separate program: the same install that serves your projects also drives an Art-Net or ENTTEC rig, from the first fixture to the last scene of the night.',
+            'It opens on five pages, and they are five different jobs:',
+            { list: [
+                'Setup — patch the rig. Add each fixture, give it a profile and an address, and drag it into place on a plan of the room, so the desk looks like the room you are standing in.',
+                'Control — the desk proper. Fixtures, colours, a master, scenes, chases, effects and LFOs; save what you are looking at as a scene and give it a name you will recognise in the dark.',
+                'Touch — the show surface. Big scene buttons, made for a phone in one hand at the back of the room.',
+                'Fader — plain channel faders, for when a fixture is doing something no profile explains and you need to poke a channel by hand.',
+                'MIDI — map a controller. Mappings live with the desk, not in one browser, so the same knobs work from any screen you open it on.'
+            ] },
+            'One rule that matters more than any other: output is OFF until you switch it on, under OUTPUT. Until then the desk runs, the stage view moves, scenes recall — and nothing leaves the machine. A dev server on a shared wifi can never blast a frame at somebody else\'s rig by accident, and a rig only ever lights when a person decided it should.',
+            'The rig is yours. Nothing in the desk is patched to any particular room — you name the fixtures, you set the addresses, you save the looks. Its data lives with your di.iiii install, so the show survives a restart and can be carried to the venue on the same laptop.',
+            'A graph can play the desk. Drop a DMX Out node into a canvas, leave it on its default rig, and Master, Channel, Value, Blackout and Scene are wired straight into the desk you just patched — an oscillator on a lamp, a scene name recalled by a button, a whole rig blacked out by a wire. See “DMX Out: the graph lights the room”.',
+            'The desk lives on a local di.iiii only — `di up`, or npm run dev. A hosted di-studio.xyz has no /light in it at all, on purpose: a lighting desk is a thing that reaches hardware in a room, and the room is where you are.'
+        ],
+        tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up'],
+        updated: '2026-09-03'
+    },
+    {
         id: 'projection-mapping',
         category: 'Spaces & access',
         title: 'Putting a space on a wall',
@@ -163,12 +186,13 @@ export const WIKI_ARTICLES = [
             'Corners snap — to the other surfaces\' corners, and to the frame\'s edges and middle — and the line they agreed with is drawn while you drag, so you can see what just happened. There is a grid too if you want one. Hold alt while dragging and nothing snaps at all, for the surface that genuinely sits a hair off its neighbour.',
             'Put a photograph of the wall behind the surfaces while you work: choose a file, set how strongly it shows through, and trace each paper edge over it. It is never projected — it is there to draw against. Do not expect the traced corners to be final, though. A photo is taken from where you stood, and the projector stands somewhere else; the shapes will still want a pass on site.',
             'Cues are how a wall gets performed instead of operated. Set the wall the way you want it, add a cue, and it keeps that state under a number key — press the key and the wall goes there, over the fade you gave it. Give a cue a hold time and Play walks through them on its own; a hold of zero means the show waits for you. A cue remembers what each surface is showing and how bright it is, and deliberately nothing about where it is: no keystroke should ever be able to move an alignment you spent an afternoon on.',
+            'A cue can carry the light as well as the wall. If the lighting desk is running on this machine, a Light button appears in the toolbar and each cue gets a scene picker: choose one of the desk’s scenes and firing the cue recalls it, fading over the cue’s own fade time, so the room and the projection change together. The lighting desk is local only — on di-studio.xyz there is no desk to talk to, the picker says so, and a cue that names a scene simply keeps the name until you are back at the venue.',
             'A camera can be a surface, so the room is on the wall beside the work. Surfaces can be duplicated, and one surface\'s shape or look pasted onto another. And a whole mapping can be exported as text and pasted into another machine, which matters because the laptop that drives the projector is usually not the one the mapping was made on.',
             '“Open output” opens a second window with nothing in it but the surfaces on black — no toolbar, no title, no cursor once it has been still. Drag that window onto the projector and put it full screen. Keep the first window on your laptop: the two stay in step, so you drag a corner while watching the wall.',
             'One caution. A surface showing a project or a page is a whole page running, and over a plain http:// address a browser only allows a handful at once — past about four, the rest never load. On di-studio.xyz this does not apply. If you are running from a laptop and the bar warns you about it, use video or image surfaces for some of them.'
         ],
-        tags: ['projection', 'mapping', 'projector', 'wall', 'exhibition', 'show', 'surface', 'corner pin', 'mask', 'output', 'cues', 'snapping', 'camera'],
-        updated: '2026-08-28'
+        tags: ['projection', 'mapping', 'projector', 'wall', 'exhibition', 'show', 'surface', 'corner pin', 'mask', 'output', 'cues', 'snapping', 'camera', 'lighting', 'light'],
+        updated: '2026-09-03'
     },
     {
         id: 'joining-a-space',
@@ -1044,16 +1068,22 @@ export const WIKI_ARTICLES = [
         id: 'dmx-out-node',
         category: 'Editing',
         title: 'DMX Out: the graph lights the room',
-        summary: 'Wire numbers out to real lamps through a vizzz node — an Art-Net/DMX box on your network.',
+        summary: 'Wire numbers out to real lamps — either through di.iiii\'s own lighting desk, or through a vizzz box on your network.',
         body: [
-            'Add a DMX Out node from the palette and give it the address of a vizzz node — the small box wired into your DMX rig. The panel says what it finds: the rig by its own name and universe when it answers, and plainly who is not answering when it does not. Its Status port says the same thing, so a Text panel wired to Status is an honest meter.',
+            'Add a DMX Out node from the palette and choose which rig it speaks to. There are two, and the node says which one it is on.',
+            { list: [
+                'The lighting desk — di.iiii\'s own desk at /light, and what a new node picks. The rig, the scenes and the effects are already there; the graph is simply another pair of hands on it.',
+                'A vizzz node on the network — the small box wired straight into your DMX rig, given by address. This is what the node always did, and a graph you made before the desk existed keeps doing it: a node that names a host stays on its box.'
+            ] },
+            'On the desk, the panel says what the desk actually holds — how many fixtures are patched, how many scenes are saved, which look is up, whether an effect is running, and whether output is on. That sentence is also the Status port, so a Text panel wired to Status is an honest meter. “Open the desk” opens the desk itself in a new tab.',
             'Master dims the whole rig: whenever it changes, the new level goes out. Value at Channel sets one DMX channel the same way — wire an Oscillator through Range into Value and a lamp breathes on its own. Wires carry 0 to 1, as everywhere on the canvas; the node turns them into DMX bytes.',
-            'Blackout kills every channel the moment it rises, ahead of anything else queued. A Button, a Compare, a Toggle — anything true-or-false — makes a good Blackout.',
-            'Nothing is sent for a value that merely stays what it was, and fast wires are paced so a small rig is never asked sixty times a second.',
-            'One honest limit: the hosted editor is a https page and a rig on the local network speaks http, which browsers refuse to mix — the panel says so instead of failing silently. The local editor (`di up`, or npm run dev) is the surface that reaches a rig.'
+            'Scene is the desk\'s own port, and the strongest one: send a scene\'s name — the words you wrote on the desk — or its id, and the whole look is recalled with its fade. One string on a wire does what a hundred Channel and Value pairs could not. A name the node has not seen yet makes it re-read the desk\'s library and try again, so a scene saved a minute ago still fires.',
+            'Blackout kills the lights the moment it rises, ahead of anything else queued. A Button, a Compare, a Toggle — anything true-or-false — makes a good Blackout. The two rigs differ in one way worth knowing: on a vizzz node, blackout is a single blow and the rig recovers as soon as new levels arrive. On the desk it is a STATE — it stays down until it is lifted — so the node sends the falling edge too, and the lights come back when Blackout goes false.',
+            'Nothing is sent for a value that merely stays what it was, and fast wires are paced so neither a small box nor the desk is asked sixty times a second.',
+            'Both rigs need a di.iiii running on your own machine, for different reasons. The desk only exists on a local di.iiii (`di up`, or npm run dev) — a hosted di-studio.xyz has no desk in it, and the panel says so rather than going quiet. A vizzz box speaks http, and a https page is not allowed to reach it — the panel says that too. On a hosted tab the node is honest and idle; on your own machine it lights the room.'
         ],
-        tags: ['raw', 'nodes', 'dmx', 'artnet', 'light', 'device', 'performance'],
-        updated: '2026-08-31'
+        tags: ['raw', 'nodes', 'dmx', 'artnet', 'light', 'lighting desk', 'scene', 'device', 'performance'],
+        updated: '2026-09-03'
     },
     {
         id: 'raw-zen-workspace',
