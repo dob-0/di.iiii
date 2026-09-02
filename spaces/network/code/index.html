@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>who makes di.iiii</title>
+<style>
+  :root {
+    --paper: #f5f5f3;
+    --ink: #17191a;
+    --ink-2: #4f5356;
+    --ink-3: #868a8d;
+    --rule: #d6d8d5;
+    --mark: #b23a2c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #141615; --ink: #ebece9; --ink-2: #b4b8b5; --ink-3: #7d8280; --rule: #30342f; --mark: #e26a58; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); }
+  body {
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+  header { padding-bottom: 22px; border-bottom: 1px solid var(--rule); }
+  .eyebrow, .role, .group h2, footer { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+  h1 { font-size: clamp(34px, 7vw, 56px); line-height: 1; letter-spacing: -0.02em; font-weight: 600; margin: 8px 0 12px; }
+  .lede { max-width: 58ch; color: var(--ink-2); margin: 0; }
+
+  .team { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 18px 22px; padding: 26px 0 8px; }
+  .team a { display: block; border-top: 2px solid var(--ink); padding-top: 10px; color: inherit; text-decoration: none; }
+  .team a:hover .name, .team a:focus-visible .name { text-decoration: underline; text-underline-offset: 3px; }
+  .team .name { font-weight: 600; font-size: 17px; line-height: 1.25; text-wrap: balance; }
+  .role { display: block; font-size: 12px; color: var(--ink-2); margin-top: 4px; letter-spacing: .02em; }
+  .team .mark .role { color: var(--mark); }
+
+  section.network { padding-top: 28px; border-top: 1px solid var(--rule); margin-top: 24px; }
+  .group { padding: 14px 0; }
+  .group + .group { border-top: 1px solid var(--rule); }
+  .group h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; margin: 0 0 10px; }
+  .people { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0; padding: 0; list-style: none; }
+  .people li a, .people li span { display: inline-block; border: 1px solid var(--rule); border-radius: 999px; padding: 6px 13px; font-size: 14.5px; line-height: 1.2; color: inherit; text-decoration: none; }
+  .people li a:hover, .people li a:focus-visible { border-color: var(--ink); }
+  /* a pill that opens a room here, not a profile elsewhere */
+  .people li a[href^="/network/"] { border-color: var(--ink); }
+  .people li small { color: var(--ink-3); font-size: 12px; margin-left: 6px; }
+
+  footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); line-height: 1.6; }
+  a:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+  @media (min-width: 760px) { .team { grid-template-columns: repeat(5, 1fr); gap: 18px 18px; } .team .name { font-size: 16px; } }
+  @media (max-width: 480px) { .team { grid-template-columns: 1fr 1fr; gap: 16px; } .people li a, .people li span { padding: 7px 12px; } }
+</style>
+</head>
+<body>
+<div class="page">
+<header>
+  <div class="eyebrow">di.iiii · network</div>
+  <h1>who makes di.iiii</h1>
+  <p class="lede">Five people run it. Forty-seven more make with it: in Gyumri, Yerevan, Munich, Leipzig and further. This is everyone, by name.</p>
+</header>
+
+<div class="team">
+  <a href="/network/gevorg-grigoryan" target="_top"><span class="name">Gevorg Grigoryan</span><span class="role">head of di.iiii, development</span></a>
+  <a href="/network/emilya-nikoghosyan" target="_top"><span class="name">Emilya Nikoghosyan</span><span class="role">art director</span></a>
+  <a class="mark" href="/network/syuzi-ginosyan" target="_top"><span class="name">Syuzi Ginosyan</span><span class="role">curator</span></a>
+  <a href="/network/taron-grigoryan" target="_top"><span class="name">Taron Grigoryan</span><span class="role">multimedia, light</span></a>
+  <a href="/network/yeva-abgaryan" target="_top"><span class="name">Yeva Abgaryan</span><span class="role">set design, 3D</span></a>
+</div>
+
+<section class="network">
+  <div class="group"><h2>curators</h2><ul class="people">
+    <li><a href="https://www.instagram.com/maria_matinyan/" target="_blank" rel="noopener">Maria Matinyan<small>multimedia artist, curator</small></a></li>
+    <li><a href="https://www.instagram.com/carinearoyan_/" target="_blank" rel="noopener">Carine Aroyan<small>curator</small></a></li>
+    <li><a href="https://www.instagram.com/namor_votilav/" target="_blank" rel="noopener">Namor Votilav<small>curator, multimedia artist</small></a></li>
+    <li><a href="https://www.instagram.com/tateevee/" target="_blank" rel="noopener">Tatiana Vahani<small>curator</small></a></li>
+    <li><span>Artak Gevorgyan<small>curator</small></span></li>
+    <li><span>Lusine Mlke-Galstyan<small>curator</small></span></li>
+    <li><span>Shoghakat Mlke-Galstyan<small>curator</small></span></li>
+  </ul></div>
+
+  <div class="group"><h2>performers</h2><ul class="people">
+    <li><a href="https://www.instagram.com/ani___khachikyan/" target="_blank" rel="noopener">Ani Khachikyan<small>performer</small></a></li>
+    <li><a href="https://www.instagram.com/gnun_m/" target="_blank" rel="noopener">Gnun Martirosyan<small>performer</small></a></li>
+    <li><a href="https://www.instagram.com/mel_arshakyan/" target="_blank" rel="noopener">Meline Arshakyan<small>performer, dancer</small></a></li>
+    <li><a href="https://www.instagram.com/arsentrampmiqayelyan/" target="_blank" rel="noopener">Arsen Miqayelyan<small>performer</small></a></li>
+    <li><a href="https://www.instagram.com/____portalex____/" target="_blank" rel="noopener">Alexandra Martini<small>performer</small></a></li>
+  </ul></div>
+
+  <div class="group"><h2>sound</h2><ul class="people">
+    <li><a href="https://www.instagram.com/kaikhachatryan/" target="_blank" rel="noopener">Kay Khachatryan<small>audio artist</small></a></li>
+    <li><span>Areg Aydinyan<small>DJ, sound artist</small></span></li>
+    <li><span>Sasha Lenivec<small>sound artist</small></span></li>
+    <li><span>Vahagn Martirosyan<small>sound artist</small></span></li>
+    <li><span>Vera Vishnevaya<small>sound artist</small></span></li>
+    <li><span>Nikita Maksimenko<small>multimedia, sound</small></span></li>
+  </ul></div>
+
+  <div class="group"><h2>visual · multimedia</h2><ul class="people">
+    <li><a href="https://www.instagram.com/adam___adamyan/" target="_blank" rel="noopener">Adam Adamyan<small>visual artist</small></a></li>
+    <li><a href="https://www.instagram.com/artushkoshtoyan/" target="_blank" rel="noopener">Artush Koshtoyan<small>visual artist</small></a></li>
+    <li><a href="/network/greta-grigoryan" target="_top">Greta Grigoryan<small>visual artist</small></a></li>
+    <li><a href="https://www.instagram.com/mayneeey/" target="_blank" rel="noopener">Mane Meloyan<small>visual artist</small></a></li>
+    <li><a href="/network/mery-petrosyan" target="_top">Mery Petrosyan<small>visual artist</small></a></li>
+    <li><a href="https://www.instagram.com/pelageyaviter/" target="_blank" rel="noopener">Polina Vever<small>visual artist</small></a></li>
+    <li><a href="/network/shahane-harutyunyan" target="_top">Shahane Harutyunyan<small>visual artist</small></a></li>
+    <li><a href="https://www.instagram.com/gorgeooos/" target="_blank" rel="noopener">Gor Muradyan<small>visual artist</small></a></li>
+    <li><span>Luiza Khechoyan<small>visual artist</small></span></li>
+    <li><a href="https://www.instagram.com/je_fous_le_camp/" target="_blank" rel="noopener">Egor Lazensky<small>VJ, multimedia artist</small></a></li>
+    <li><span>Alvie Starr<small>audiovisual artist</small></span></li>
+    <li><span>Ani Rubenyan<small>audiovisual artist</small></span></li>
+    <li><span>Anna Khlechyan<small>multimedia artist</small></span></li>
+    <li><span>Misak Samakotian<small>multimedia artist</small></span></li>
+    <li><span>Nino Giorgadze<small>multimedia artist</small></span></li>
+    <li><a href="https://www.instagram.com/vilengaifejyan/" target="_blank" rel="noopener">Vilen Gayfejyan<small>multimedia artist</small></a></li>
+    <li><a href="https://www.instagram.com/night_editor_music/" target="_blank" rel="noopener">Yulia Stepanova<small>multimedia artist</small></a></li>
+    <li><a href="https://www.instagram.com/koltrye/" target="_blank" rel="noopener">Sergey Virabyan<small>audiovisual artist</small></a></li>
+  </ul></div>
+
+  <div class="group"><h2>3D · code · games</h2><ul class="people">
+    <li><a href="https://www.instagram.com/kaiz.ok.u/" target="_blank" rel="noopener">Albert Avetisyan<small>developer, sound</small></a></li>
+    <li><a href="https://www.instagram.com/_tadashii__/" target="_blank" rel="noopener">Gor Movsisyan<small>3D artist</small></a></li>
+    <li><a href="https://www.instagram.com/__21st_century_schizoid_man__/" target="_blank" rel="noopener">Varujan Movsisyan<small>3D artist</small></a></li>
+    <li><a href="https://www.instagram.com/lyo0ou/" target="_blank" rel="noopener">Levon Avetisyan<small>programmer</small></a></li>
+    <li><a href="https://www.instagram.com/avetisyan.gd/" target="_blank" rel="noopener">Slavik Avetisyan<small>unity developer</small></a></li>
+    <li><a href="https://www.instagram.com/_ruben_melikyan_/" target="_blank" rel="noopener">Ruben Melikyan<small>game designer</small></a></li>
+    <li><a href="https://www.instagram.com/gr1gorius/" target="_blank" rel="noopener">Grig Gevorgyan<small>game developer</small></a></li>
+    <li><span>Avetis Grigoryan<small>game designer</small></span></li>
+  </ul></div>
+
+  <div class="group"><h2>stage · costume · design</h2><ul class="people">
+    <li><a href="https://www.instagram.com/ritagrechen/" target="_blank" rel="noopener">Hannes Köpke<small>stage director</small></a></li>
+    <li><a href="https://www.instagram.com/ojmdra/" target="_blank" rel="noopener">Olivia Rosendorfer<small>costume designer</small></a></li>
+    <li><span>Nyusha Terbalyan<small>designer</small></span></li>
+  </ul></div>
+</section>
+
+<footer>52 people · 2022 to now · Gyumri, Yerevan, Munich, Leipzig, Los Angeles, Moscow, Paris.<br>Missing, or want your name to point somewhere else? Write to touch@thedi.studio.</footer>
+</div>
+</body>
+</html>

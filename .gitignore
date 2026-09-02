@@ -64,5 +64,6 @@ serverXR/.data-*
 # di runtime artifacts (built by `npm run di:pack`)
 dist-runtime/
 
-# generated page bundles — see spaces/the-light-put-back/README.md
-spaces/*/code/index.html
+# generated page bundle — see spaces/the-light-put-back/README.md. Hand-written
+# pages (spaces/network/code) are source and stay tracked.
+spaces/the-light-put-back/code/index.html
