@@ -5,6 +5,342 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-03 — dev absorbs main so the promotion can go
+
+The dev → main promotion (#284) had turned CONFLICTING. Not on new work: the suite/brand
+pages were committed straight to `main` (#300, 05:40) and separately to `dev` as PRs
+(#305/#307, 17:10 and 18:06) that went on to add the studio's third person. The two copies
+collided add/add in `public/suite/index.html` and `serverXR/src/routes/ogRoutes.js`.
+
+Resolution: `dev`'s copy on both files — the newer superset, three people not two. `main`'s
+other commits (earlier promotion merges, the nginx redirect fixes, the README wordmark) come
+across untouched. After this merge `origin/main ← dev` is clean, and #284 carries the other
+session's #306 (four cherry-picks already on dev), which closes as superseded.
+
+The lesson is the one the one-copy rule already states: a page committed to `main` directly
+and to `dev` separately is two copies, and the next promotion has to choose.
+
+## 2026-09-02 — the dev box was never a copy of staging
+
+`tier-sync.mjs` was written to move work UP a tier, because `local:mirror` and
+`project-pull` only ever move it down. It worked, and then it lied: after copying
+`br-id-ge`'s 71 Notations 2 scenes to staging it reported **"nothing to move — the
+destination already holds everything the source has"** while 32 documents differed
+between the two tiers.
+
+It compared **project ids**. Two tiers can hold every slug in common and different work
+inside every one of them, and that is exactly the drift that had been reported from the
+desk: *"when you work and push to staging and open local it not the same."*
+
+### Why they were never the same
+
+Two rules in `local-mirror.mjs` — both documented, both silent, both mine:
+
+1. **"Prod always wins for a space both tiers hold."** The dev box mirrors PRODUCTION
+   first. It was never a copy of staging.
+2. **"Existing local projects are left alone unless `--force`."** A project the mirror has
+   already seen never refreshes again.
+
+So local is a copy of *prod*, frozen at first contact. Measured across three tiers — 6 of
+12 sampled projects were byte-identical to production and differed from staging:
+
+| project | local | staging | prod | |
+|---|---|---|---|---|
+| dilijan/tsaghkanots | 20629p | 7261p | 20629p | local == prod |
+| dilijan/the-yard | 21602p | 23697p | 21602p | local == prod |
+| dilijan/welcome | 0e 1802p | **265e 16a** | 265e 16a | local behind BOTH |
+| open/open-jam | 3e 5n | 47e 16a | 49e 16a | three versions |
+
+### `--audit`
+
+    node scripts/tier-sync.mjs --from local --to staging --audit
+
+Reads every document from both tiers, compares signatures, exits 1 on any drift. Three
+classes: only-on-source, only-on-destination, and **same slug / different work** — the one
+the id comparison could not see.
+
+**Two traps it had to be taught, both found by running it:**
+
+- **A published page is not an entity.** It lives in `presentationState.codeHtml`. On
+  entity count alone, `main/brand-guide` (354KB), `funding/funding-board` (300KB),
+  `dilijan/t-workbench` (2.7MB) and every room of the Dilijan camp read as **empty**. The
+  first pass of a purge of "empty" projects had all of them on its list. Nothing may call a
+  project empty on entity count alone.
+- **`projectMeta.createdAt`/`updatedAt` are per-database bookkeeping** — when *that* tier
+  first saw the row, not when the work changed. Every project a sync has ever moved is
+  stamped on arrival. First live run: **155 differences, 138 of them nothing but those two
+  numbers.** `VOLATILE_PATHS` strips them, with `publishState.lastExportAt` and
+  `showState.clockEpoch`. Add to that list before adding a field a tier stamps for itself.
+
+After stripping: 55 real differences — 23 debris in `open`, 32 genuine content drift.
+
+### The audit said equal. The screenshot said grey.
+
+`dilijan/welcome` on localhost and on staging, side by side after the mirror: same room, same
+camera, same 265 objects — and the photo wall **grey on local, sixteen photographs on
+staging**. The audit compared documents and the documents matched.
+
+The upload route strips EXIF/GPS **before** hashing, so a scrubbed file no longer hashes to
+the id the caller sent. The route drops the requested id, stores under the new content
+address, and answers **200**. `project-pull` counted a success and left the document pointing
+at ids that are now nowhere. Its own comment said the opposite: *"Ids are preserved so the
+document's existing references resolve without rewriting."*
+
+    16 assets stored locally, 16 referenced by the document, ZERO ids in common
+
+Measured across the dev box: **106 of 244 assets unresolvable, in 8 projects** —
+`library/di-library` 51/51, `dilijan/desk` 17/17, `dilijan/welcome` 14/16.
+
+`scripts/asset-remap-lib.mjs` reads the id the server actually stored out of its own
+response and follows it through the document — `assets[].id`, `assets[].url`,
+`components.media.assetId`, `worldState.environmentAssetId`, and asset URLs inside
+`presentationState.codeHtml`. Deliberately a generic walk rather than a field list, because
+that list grows every time a component learns to carry media. Both `project-pull.mjs` and
+`tier-sync.mjs` re-PUT the document when anything moved.
+
+Re-pulling a photo-heavy space hits the local upload limiter (60 per 10 minutes). A 429 is a
+wait and a retry, not a failure.
+
+Fixed, re-pulled, and looked at again: **106 → 0 unresolvable**, and the photo wall on
+localhost now carries the same sixteen photographs as staging.
+
+**A consequence that had to be designed for.** Because each tier scrubs on arrival, the same
+photograph is legitimately stored at two different content addresses — so the audit reported
+all 7 photo-carrying projects as drifted *immediately after copying them correctly*. That is
+the cries-wolf failure again, arriving by a different road. `documentSignature` now carries a
+second `shape` hash, taken with every asset addressed by NAME instead of by id, and
+`planAudit` reports those as a separate class: **"same work, assets re-addressed on arrival —
+not drift to fix"**. It is not a claim of equality — nothing in a document can prove two
+rewritten files are the same picture — which is why it is a class of its own and never folded
+into a match. A photograph actually swapped for a different one changes its filename, and the
+strict hash still catches it. Both cases are guarded.
+
+### Done
+
+- **71 `br-id-ge` projects local → staging**, 0 failed, documents verified equal and
+  `n2-hub` looked at on staging as a plain visitor with no token.
+- **`--audit`** with 12 new guards (18 in `tier-sync.test.js`, 7 in `asset-remap-lib.test.js`).
+- **The dev box re-mirrored FROM staging** with `--tier staging --force`, so localhost and
+  staging finally hold the same work. `serverXR/data/di.db` backed up to `~/di-backups/`
+  first — a forced mirror overwrites every local copy.
+- Final audit: **0 projects with different work.** What remains is the 23 debris below, and 7
+  projects whose assets were re-addressed on arrival.
+
+### "It's really not the same" — because every worktree is its own tier
+
+After all of the above the owner opened localhost and it still did not match staging. It
+could not: **each worktree's `serverXR/.env.local` says `DATA_ROOT=./data`**, relative, so
+every worktree runs its own database. Seven on this machine, five of them stale copies. I had
+synced the one in *my* worktree; the dev router hands the owner whichever stack booted first —
+a different tree, a different `di.db`. Verified on my surface, not theirs.
+
+Fix: **one shared local tier at `~/.local/share/di.iiii/data`** (the synced data copied there,
+WAL checkpointed first), and `DATA_ROOT=` pointed at it, absolute, in every worktree's
+`.env.local`. Proven, not assumed: `/proc/<pid>/fd` of the `:4000` server shows it reading the
+shared `di.db`, and `frontframe.dii.localhost:8088` serves it. The env-file edits themselves
+were refused by the permission classifier (they hold tokens) — `scripts/tmp-share-local-tier.sh`
+does all ten and the owner runs it. A stack already running keeps its old database until
+restarted.
+
+### `--changed` — the "work local, push to staging" flow
+
+Pushes what the audit says differs, plus what is missing; never touches a re-addressed one.
+Keeps a baseline (`<DATA_ROOT>/tier-sync-baseline.json`, keyed by destination) of what was
+last synced, and **refuses** a project that changed on both sides since — or that has no
+baseline at all. That second rule was learned the hard way: the first live dry run, with no
+baseline, queued an hour-old local copy over `br-id-ge/landing`, which someone had edited on
+staging twenty minutes earlier. The baseline is now established from whatever the two tiers
+already agree on, so one run after a mirror makes everything known-synced.
+
+Also found while running it: `platform-recordar` on **staging** references an image by one
+id in its page and lists it under another in `assets[]` (one image, two ids — a pre-scrub
+manifest). Local's copy is consistent; staging's is not; the audit refuses it correctly.
+
+### Owed
+
+- **23 debris projects in `open`** — `debug3-true-false-1784237913844`, `td-check2-…`,
+  `phase5-test-…`, `untitled-project` — local-only, deletion refused by Claude's permission
+  classifier, so the owner runs `node scripts/tmp-purge.mjs` (untracked; archives every
+  document to `~/di-backups/` first). Until then the audit's only finding is those 23.
+- **Two owner-run scripts, both untracked:** `scripts/tmp-share-local-tier.sh` (points every
+  worktree at the shared tier) and `scripts/tmp-purge.mjs` (the `open` debris). Land or delete
+  after running — a one-off that survives in a worktree is a trap for the next session.
+- **`platform-recordar` on staging** — page uses asset `0bda33d5…`, manifest says `c8155802…`
+  for the same image. A re-save in Studio or a one-line manifest fix; until then `--changed`
+  refuses it, correctly.
+- **New worktrees still get `DATA_ROOT=./data`** unless whoever creates them copies a fixed
+  `.env.local`. The durable fix is `dev-stack.mjs` refusing a relative `DATA_ROOT` on this
+  machine, or the main checkout's `.env.local` being the template. Not done.
+- A `--pull` direction: `--audit` reports drift and stops, because which side is right is a
+  question about the work, not about the data.
+- **`/tmp` is a 16 GB tmpfs and was found at 100%**, which killed commands mid-task with
+  ENOSPC. 13.9 GB of it belongs to two *other* Claude sessions' scratchpads
+  (`2573aee0…` 9.7 GB, `7e7c16ea…` 4.2 GB) and was deliberately left alone. Anything a
+  session needs to survive a reboot does not belong in the scratchpad — `tmp-purge.mjs` was
+  moved to `~/di-backups/` for exactly this reason.
+
+### Not part of this branch, done live on prod the same session
+
+`library` and `funding` invite links minted for Emilya (label `Emilya`, link expires
+2026-09-09; the access it grants is permanent). Verified in a clean browser: refused with no
+link, full page with it, still open on a later visit with `?invite=` gone. The previous pair,
+labelled "Gevorg", had expired on 08-26 having never been opened. Details in auto-memory
+`reference_dii_prod_data_writes`.
+
+## 2026-09-02 — the entry stops lurching when the walker takes over
+
+Reported by the owner: *"click to step inside and you will see there are some bag when it
+turning the walking mode its like glich or something"*.
+
+- **The flight landed on the wrong spot.** It was written against the walker's DEFAULT
+  start, `z = 6`. This room authors `worldState.spawn` at `z = 15` and `LiveProjectScene`
+  applies it, so the camera flew to one place and the walker took over nine metres behind
+  it. Measured rather than reasoned about: `window.__diiWalkerRef` read `z: 15` while the
+  flight's end pose said 6, and sampling the handover every 140ms showed the room visibly
+  snapping back between two adjacent frames.
+- **The room reports its arrival now.** `onArrivalPose` resolves `worldState.spawn` (or
+  the default) into camera terms the moment the document loads, and the flight lands on
+  that. The authored spawn is the author's decision about where a visitor stands; the
+  flight's job is to deliver them to it, not to guess it.
+- **The field of view was moving too.** The composed entry shot is fov 50, the walk camera
+  is 60, and the swap happens on the same frame as the handover — a zoom pop on top of the
+  jolt. The flight crosses the difference as it goes, so the wider field is already on when
+  the walker arrives.
+
+Guards: 3 new cases in `enterFlight.test.js` — a reported pose wins over the default, an
+unusable one falls back, and the flight arrives wearing the walk fov. Two existing cases
+were loosened from `toEqual(WALK_POSE)` to position/target, because the fov is now
+deliberately different at the end.
+
+**Looked at**: the handover sampled every 140ms at `?flight=3000`, before and after. Before,
+the last flight frame and the first walk frame are two different shots. After, they are
+the same one.
+
+### Two more, reported while this was open
+
+- **The landing reappeared for about a second after arriving.** The originals are only
+  `visibility: hidden` while their clones fly, so the moment the flight put them back the
+  hero was still at opacity 1 — and `.lp-hero-inner--hidden` then faded it out over half a
+  second, which reads as the page coming back after you have already arrived. Two changes:
+  `.lp-root--flying` now takes the hero's opacity to 0 *during* the flight (nobody can see
+  a hidden element fade), so there is nothing left to hide at the end; and the flight hands
+  over FIRST and tears its clones down two frames later, so the clones cover React's commit
+  instead of leaving a bare frame between them. Measured per animation frame across the
+  handover: hero opacity was 1 → 0 over ~520ms, and is now 0 throughout.
+- **Coming back out left the room talking over the page.** The room is given its words back
+  at the first frame of the flight; `← Back` restored the page without taking them away
+  again, so the wordmark and the line were drawn twice, one behind the other. Going in and
+  coming out are the same switch and it is now thrown both ways — `leaveRoom` cancels any
+  flight in progress, returns the camera to the composed rest pose, and hushes the room.
+
+### And then the page stopped being a page
+
+The owner, on the entry: *"i want to like in game liminal they all can be 3d objects but
+with right physics it can look other's"*. Offered the trade, he chose **swap at the seam** —
+real HTML at rest, real objects from the moment the door is pressed.
+
+- **CSS3D was a ceiling, not a bug.** The browser draws DOM in its own compositing layer
+  above the WebGL canvas and cannot interleave the two by depth, so a door could pass
+  behind the wordmark and never in front of it. No arrangement of the maths gets past that;
+  the elements have to become objects in the room's own scene.
+- **They do now.** Each visible element is drawn onto a canvas from its own computed style
+  — family, weight, size, colour, tracking, border, fill, and each coloured run separately,
+  so the wordmark keeps its cyan dot — and handed to a mesh in the room through the
+  `sceneExtras` seam. `placeInWorld` is the inverse projection: the piece lands on exactly
+  the pixels its element covered, verified to a tenth of a pixel, so the first frame of the
+  fall is the last frame of the page.
+- **Then gravity.** Hand-written, about forty lines: weight, a floor, and rest. No engine —
+  ~500KB on the one page whose load time is already on the defect list, to buy three things
+  worth forty lines. Pages do not bounce, so the vertical speed is killed rather than
+  reflected and friction eats the slide; they turn as they fall and lie flat, face up, in
+  the same pose the room's own 77 floor pages are already in. The page you arrived from
+  ends up on the floor of the room, and you walk in among it.
+- Deterministic scatter: `Math.random()` during render is impure and React's lint says so.
+  Seeded from the piece's index, which also means a fall can be looked at twice and
+  compared.
+- `pageInSpace.js` and its test are deleted. The CSS3D lift is superseded, and keeping a
+  second entry mechanism nobody reaches would be two implementations of one moment.
+
+Guards: 4 in `pagePieces.test.js`, and the no-2D-canvas path in `enterFlight.test.js` —
+a browser that refuses a context still opens the door, with nothing to throw.
+
+### Perspective when you walk
+
+*"it would be great to keep perspective when you walk it will not all in the one on one"* —
+and he was right: every piece came to rest in one band at one depth, so walking past them
+gave no parallax and the floor read as a single decal.
+
+Fixed by where they HANG, not by how hard they are thrown. Each piece now hangs at its own
+distance along its own view ray, spread 4m to 16m. A ray through the eye projects to the
+same point at any depth, so every piece still covers exactly the pixels its element covered
+— the identity at the seam is untouched — but the page is already spread through the room's
+depth before it starts to fall. Throwing them harder to get the same effect had put them
+all past the doors as specks.
+
+Three bugs found by measuring rather than squinting, with a dev-only `__diiPageDebris`
+readout added for exactly that:
+
+- **Every piece came to rest at x = 0.** The "sideways" vector was the piece's whole offset
+  from the eye, which is dominated by how far away it is — so it pointed forward, and every
+  page was thrown down the middle. The forward component is removed now.
+- **Then every piece went to the same side.** `jitter` was `sin()` of a nearly-linear input:
+  fine over large or irregular values, and for eight consecutive indices with one salt it
+  returned the same sign **seven times out of eight**. Replaced with a real integer hash.
+- **And then they still did**, because the sign was applied twice — once on the fallback
+  vector and once on the scale — which squares it, for exactly the centred pieces that
+  needed it.
+
+Measured after: resting distances 6.5, 7.3, 8.6, 9.9, 11.5, 14.7, 14.8, 19.0 metres from
+where the walker stands, spread to both sides. Each page also lies at its own yaw and its
+own few millimetres above the floor — one shared resting pose read as a printed pattern
+rather than paper that fell, and coplanar transparent planes z-fight.
+
+### Why it went dark
+
+*"and why it goes dark?"* — because a scrim written for the page was still being painted
+over the room after the page had gone.
+
+`.lp-hero::after` is a `linear-gradient` to `rgba(0,0,0,0.34)` across the middle, and
+`.lp-hero` carries a black ground under it. Both exist for one job: making the landing copy
+readable over a bright room. The flight turns them off (`.lp-root--flying`) — which is why
+mid-flight looked right — and the teardown turned them straight back on, so a visitor who
+was now standing INSIDE the room was looking at it through a 34% black wash with no copy
+left to justify it.
+
+The wash follows the copy now: `.lp-root--inside` is set while `entered` and shares the
+flying rules. Measured rather than eyeballed — the computed `::after` opacity read
+1 / 0 / **1** across rest, flying and entered, and now reads 1 / 0 / **0**.
+
+## 2026-09-02 — the platform's space is `di.iiii`, and the network has a room per person
+
+- Space `main` is labelled `di.iiii` on prod and staging (was "Works"); the repo declaration
+  already said so — `npm run spaces:audit -- --space main` is green on both tiers.
+- `main` now declares three of the platform's own pages as projects, pushed from this repo
+  and live on BOTH tiers: `/main/suite` (the very file nginx serves at `/suite/`),
+  `/main/landing` (the 2026 standing copy of the front door), `/main/brand-guide` (a copy
+  of di-brand/brand-guide.html — edit there, copy here). All `publish:false`; the front
+  room `main-dii-project` stays the door and stays undeclared (Studio-authored scene).
+- The og card for `main` no longer reads "di.iiii — a space on di.iiii." — the platform's
+  own space carries the front-door line (`ogRoutes.js`, test added).
+- `spaces/network/` is in git (it was untracked in the shared checkout). The roster's team
+  names match `/suite` (Gevorg Grigoryan, Syuzi Ginosyan). Eight people have a room:
+  the five-person team + Mery Petrosyan, Greta Grigoryan, Shahane Harutyunyan (everyone
+  with a work already standing on prod). Rooms are generated from `people.json` by
+  `spaces/network/build.mjs`; ids are `network-<slug>` (ids are global; `yeva-abgaryan`
+  and `mery-petrosyan` are wcc's), addresses are `/network/<slug>`. Live on staging AND
+  prod, walked as a visitor (roster → room → work → back; phone too).
+- Still undone: staging's `main` keeps two stale drafts the repo does not declare —
+  `privacy` (July text, says studio_network, unreachable at `/main/privacy` because the
+  word is a reserved app segment) and `brand-directions` (rough, no source). Removal is
+  the owner's call. `/suite` static on prod still shows two people until the next
+  promotion carries #304.
+- Follow-up: declared-page sources moved out of `spaces/*/code/` (`main/pages/`,
+  `network/pages/`). The "Deploy space code files" workflow watches `spaces/*/code/**`
+  and runs `space-code-push`, which writes into a space's PUBLISHED project — for `main`
+  that is the front room. It fails today (no `LIVE_API_TOKEN` secret), which is the only
+  reason it did nothing; the layout no longer relies on that. The roster stays at
+  `spaces/network/code/index.html` on purpose — code-push and the sync write it the same.
+
 ## 2026-09-02 — dev folds its own session notes: the staging deploy lands them
 
 - The single biggest source of failed deploys, measured: in the 14 days to today, 111
