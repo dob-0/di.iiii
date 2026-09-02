@@ -1,10 +1,13 @@
 // @vitest-environment node
 
+import http from 'node:http'
 import { createRequire } from 'node:module'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { getSocketPath, applyFreshDbIdentity } = require('./socketHandlers.js')
+const { io: ioClient } = require('socket.io-client')
+const { getSocketPath, applyFreshDbIdentity, initializeSocket } = require('./socketHandlers.js')
+const { initDb, closeDb } = require('./db.js')
 
 describe('getSocketPath', () => {
     it('returns the root socket path when base path is empty', () => {
@@ -99,4 +102,86 @@ describe('socket handlers survive a null payload', () => {
     client.close()
     await new Promise((r) => setTimeout(r, 50))
   })
+})
+
+// A chat line skips multer and the JSON body parser entirely, so the HTTP
+// disk-full guard (diskGuard.js/createDiskWriteGuard, wired in index.js)
+// never sees it. Without a socket-side check of its own, a guest could keep
+// filling the data volume through chat after every HTTP write is refused.
+describe('space-chat-message disk guard', () => {
+    let httpServer
+
+    const startServer = (config) => new Promise((resolve) => {
+        httpServer = http.createServer()
+        initializeSocket(httpServer, config)
+        httpServer.listen(0, '127.0.0.1', () => resolve(httpServer.address().port))
+    })
+
+    const connectClient = (port) => new Promise((resolve, reject) => {
+        const client = ioClient(`http://127.0.0.1:${port}`, {
+            path: getSocketPath(''),
+            transports: ['websocket'],
+            reconnection: false
+        })
+        const timeout = setTimeout(() => reject(new Error('client did not connect')), 2000)
+        client.on('connect', () => { clearTimeout(timeout); resolve(client) })
+        client.on('connect_error', (error) => { clearTimeout(timeout); reject(error) })
+    })
+
+    const waitForEvent = (socket, event, timeoutMs) => new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error(`timed out waiting for ${event}`)), timeoutMs)
+        socket.once(event, (payload) => { clearTimeout(timeout); resolve(payload) })
+    })
+
+    afterEach(async () => {
+        if (httpServer) await new Promise((r) => httpServer.close(r))
+        httpServer = null
+    })
+
+    it('drops a space chat message without broadcasting it when free disk is below the configured floor', async () => {
+        const port = await startServer({
+            requireAuth: false,
+            minFreeDiskBytes: 500 * 1024 * 1024,
+            directories: { dataDir: '/tmp' },
+            // ~40KB free — comfortably under the 500MB floor.
+            diskStatfs: async () => ({ bavail: 10, bsize: 4096 })
+        })
+        const sender = await connectClient(port)
+        const listener = await connectClient(port)
+        listener.emit('join-space', { spaceId: 'floor-test', userId: 'listener', userName: 'Listener', chat: false })
+        sender.emit('join-space', { spaceId: 'floor-test', userId: 'sender', userName: 'Sender', chat: false })
+        await new Promise((r) => setTimeout(r, 50))
+
+        sender.emit('space-chat-message', { spaceId: 'floor-test', text: 'hello', userId: 'sender', userName: 'Sender' })
+
+        await expect(waitForEvent(listener, 'space-chat-message', 300)).rejects.toThrow()
+        sender.close()
+        listener.close()
+    })
+
+    it('still broadcasts and persists a space chat message when free disk is comfortably above the floor', async () => {
+        initDb(':memory:')
+        try {
+            const port = await startServer({
+                requireAuth: false,
+                minFreeDiskBytes: 500 * 1024 * 1024,
+                directories: { dataDir: '/tmp' },
+                // ~40GB free.
+                diskStatfs: async () => ({ bavail: 10 * 1024 * 1024, bsize: 4096 })
+            })
+            const sender = await connectClient(port)
+            const listener = await connectClient(port)
+            listener.emit('join-space', { spaceId: 'floor-ok', userId: 'listener', userName: 'Listener', chat: false })
+            sender.emit('join-space', { spaceId: 'floor-ok', userId: 'sender', userName: 'Sender', chat: false })
+            await new Promise((r) => setTimeout(r, 50))
+
+            sender.emit('space-chat-message', { spaceId: 'floor-ok', text: 'hello', userId: 'sender', userName: 'Sender' })
+            const payload = await waitForEvent(listener, 'space-chat-message', 1000)
+            expect(payload.text).toBe('hello')
+            sender.close()
+            listener.close()
+        } finally {
+            closeDb()
+        }
+    })
 })
