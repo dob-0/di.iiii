@@ -194,6 +194,11 @@ const authIdentityLookup = new Map(authIdentities.map(identity => [identity.toke
 // one isn't a new escalation the way falling back to a lower-role one would be.
 const adminFallbackToken = authIdentities.find(identity => identity.role === 'admin')?.token
 const authSessionSecret = (process.env.AUTH_SESSION_SECRET || apiToken || adminFallbackToken || '').trim()
+// The token the server uses to call ITSELF (GitHub space-sync pulls a repo and
+// then writes it back through its own HTTP routes). Docker passes only
+// ADMIN_API_TOKEN, never API_TOKEN, so without this fallback every webhook and
+// every first sync answered itself with 401 on both tiers.
+const internalApiToken = (apiToken || adminFallbackToken || '').trim()
 
 if (requireAuth && !authIdentities.length) {
   throw new Error('At least one auth token is required when REQUIRE_AUTH is enabled.')
@@ -265,6 +270,7 @@ const config = {
   basePath,
   mountPath: basePath || '/',
   apiToken,
+  internalApiToken,
   requireAuth,
   corsOrigins,
   maxUploadBytes,
