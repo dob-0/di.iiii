@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-shahane-harutyunyan",
+  "slug": "shahane-harutyunyan",
+  "label": "Shahane Harutyunyan",
+  "mode": "code",
+  "entry": "spaces/network/code/people/shahane-harutyunyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

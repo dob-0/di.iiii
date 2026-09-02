@@ -1,0 +1,48 @@
+{
+  "note": "One entry per person who has a room in the network space. `works` are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. build.mjs turns this into code/people/<slug>.html and one di-space.<slug>.json each. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make.",
+  "people": [
+    { "slug": "gevorg-grigoryan", "name": "Gevorg Grigoryan", "role": "head of di.iiii, development", "team": true,
+      "works": [
+        { "href": "/", "title": "di.iiii", "line": "the platform itself" },
+        { "href": "/br_id_ge", "title": "br_id_ge", "line": "Notations #2 — curated and developed" }
+      ],
+      "elsewhere": [ { "label": "GitHub", "href": "https://github.com/dob-0" }, { "label": "Instagram", "href": "https://www.instagram.com/dob______/" } ] },
+    { "slug": "emilya-nikoghosyan", "name": "Emilya Nikoghosyan", "role": "art director", "team": true,
+      "works": [
+        { "href": "/algovrithm", "title": "algovrithm", "line": "part of Notations #2 XR" },
+        { "href": "/azd", "title": "ազդ | azd", "line": "a-1" },
+        { "href": "/br_id_ge", "title": "br_id_ge", "line": "Notations #2 — team" }
+      ],
+      "elsewhere": [ { "label": "GitHub", "href": "https://github.com/emilyanikoghosyan" } ] },
+    { "slug": "syuzi-ginosyan", "name": "Syuzi Ginosyan", "role": "curator", "team": true, "mark": true,
+      "works": [
+        { "href": "/azd", "title": "ազդ | azd", "line": "bond (կապ)" },
+        { "href": "/br_id_ge", "title": "br_id_ge", "line": "Notations #2 — team" }
+      ],
+      "elsewhere": [ { "label": "Instagram", "href": "https://www.instagram.com/ginosyansuzy/" } ] },
+    { "slug": "taron-grigoryan", "name": "Taron Grigoryan", "role": "multimedia, light", "team": true,
+      "works": [],
+      "elsewhere": [ { "label": "Instagram", "href": "https://www.instagram.com/taronx_x_x/" } ] },
+    { "slug": "yeva-abgaryan", "name": "Yeva Abgaryan", "role": "set design, 3D", "team": true,
+      "works": [
+        { "href": "/wcc/yeva-abgaryan", "title": "WCC Exhibition", "line": "her room" },
+        { "href": "/azd", "title": "ազդ | azd", "line": "Faceless" }
+      ],
+      "elsewhere": [ { "label": "Instagram", "href": "https://www.instagram.com/6addreams/" } ] },
+    { "slug": "mery-petrosyan", "name": "Mery Petrosyan", "role": "visual artist",
+      "works": [ { "href": "/wcc/mery-petrosyan", "title": "WCC Exhibition", "line": "her room" } ],
+      "elsewhere": [] },
+    { "slug": "greta-grigoryan", "name": "Greta Grigoryan", "role": "visual artist",
+      "works": [
+        { "href": "/azd", "title": "ազդ | azd", "line": "Anahit (Անահիտ)" },
+        { "href": "/platform-recordar", "title": "RecordAR", "line": "a.004" }
+      ],
+      "elsewhere": [ { "label": "Instagram", "href": "https://www.instagram.com/gr.ettaaa/" } ] },
+    { "slug": "shahane-harutyunyan", "name": "Shahane Harutyunyan", "role": "visual artist",
+      "works": [
+        { "href": "/azd", "title": "ազդ | azd", "line": "Misfit (միսֆիթ)" },
+        { "href": "/beyond-form", "title": "Beyond Form", "line": "open call, part 2" }
+      ],
+      "elsewhere": [] }
+  ]
+}

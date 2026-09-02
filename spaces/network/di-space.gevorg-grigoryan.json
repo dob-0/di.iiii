@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-gevorg-grigoryan",
+  "slug": "gevorg-grigoryan",
+  "label": "Gevorg Grigoryan",
+  "mode": "code",
+  "entry": "spaces/network/code/people/gevorg-grigoryan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

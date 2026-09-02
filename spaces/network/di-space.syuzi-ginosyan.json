@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-syuzi-ginosyan",
+  "slug": "syuzi-ginosyan",
+  "label": "Syuzi Ginosyan",
+  "mode": "code",
+  "entry": "spaces/network/code/people/syuzi-ginosyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}
