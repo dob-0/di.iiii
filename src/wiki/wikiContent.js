@@ -78,13 +78,13 @@ export const WIKI_ARTICLES = [
         summary: 'di.iiii\u2019s own page is the room it describes \u2014 pressing Step inside moves the camera rather than loading anything.',
         body: [
             'The page at the bare address is a page you read and scroll like any other. It is also the room. The wordmark, the line under it, the buttons and the sections are laid out in the room\u2019s own space, each at its own distance, and the view starts square on to them \u2014 which is why it looks flat.',
-            'Press Step inside and nothing loads. The room is already on screen behind the page, so the door is a camera move: the page you were reading comes apart into the space it was always standing in, drifts past you, and leaves you standing among the doors to the works. It is one continuous shot, not a page change, and the address does not move.',
+            'Press Step inside and nothing loads. The room is already on screen behind the page, so the door is a camera move \u2014 and at that moment the page stops being a page. Every part of it becomes a real thing in the room, with weight: the wordmark, the line, the buttons all fall, turn over, and come to rest flat on the floor, where the doors stand in front of them and the far ones go soft in the room\u2019s haze. You walk in as it lands. It is one continuous shot, not a page change, and the address does not move.',
             { list: [
                 '/ \u2014 the front door: the page, with the room behind it.',
                 '/?room=1 \u2014 the room on its own, without the page. For anyone who wants the space and not the door.',
                 '/main \u2014 the old address of that same room. It still resolves and always will, and it still opens the room; the name just never reaches the address bar.'
             ] },
-            'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately. The destination is never different, only the journey.',
+            'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. The destination is never different, only the journey.',
             'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.'
         ],
         tags: ['landing', 'basics', 'navigation', 'room', 'walk'],

@@ -1,5 +1,5 @@
 /* global __APP_VERSION__ */
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
@@ -7,6 +7,7 @@ import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildSpacesPath } from '../studio/utils/studioRouting.js'
 import { flyInside, REST_POSE } from './enterFlight.js'
+import PageDebris from './PageDebris.jsx'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
 // LiveProjectScene into the landing chunk for every visitor — including phones,
@@ -182,6 +183,10 @@ export default function LandingPage() {
     // against that shot and have to stay in register with it.
     const cameraPoseRef = useRef({ ...REST_POSE })
     const cancelFlightRef = useRef(null)
+    // Where the room says the walker will stand. Held in a ref, not state: it
+    // arrives when the document resolves and is only read at the moment the
+    // door is pressed, so re-rendering the page for it would buy nothing.
+    const arrivalPoseRef = useRef(null)
     // While the page is saying the wordmark and the line in HTML, the room
     // must not say them too — they sit one behind the other and neither reads.
     // Given back at the first frame of the flight, so the flat words hand off
@@ -192,6 +197,9 @@ export default function LandingPage() {
     // the tap arms it: the scene mounts, and the flight waits for the chunk
     // rather than starting over nothing.
     const [flightArmed, setFlightArmed] = useState(false)
+    // The page once it has stopped being a page: real meshes in the room's
+    // scene, falling. Held in state because the scene has to render them.
+    const [pieces, setPieces] = useState([])
     // Walk/fly and the calm orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to
     // the orbit view once you'd moved was a full Exit + Enter Space round
@@ -242,6 +250,23 @@ export default function LandingPage() {
     // apart into the space they were always standing in. A modified click
     // (new tab, new window, middle button) still has to behave like a link, so
     // it is left alone and follows the href.
+    const handleArrivalPose = useCallback((pose) => { arrivalPoseRef.current = pose }, [])
+
+    // Coming back out has to undo everything going in did. The room was given
+    // its words back at the first frame of the flight; if it keeps them while
+    // the page is speaking again, the wordmark and the line are drawn twice,
+    // one behind the other, and neither reads. Going in and coming out are the
+    // same switch, and it has to be thrown both ways.
+    const leaveRoom = useCallback(() => {
+        cancelFlightRef.current?.()
+        cancelFlightRef.current = null
+        cameraPoseRef.current = { ...REST_POSE }
+        setRoomSpeaks(false)
+        setViewMode(false)
+        setEntered(false)
+        setPieces([])
+    }, [])
+
     const openDoor = (event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
         event.preventDefault()
@@ -252,8 +277,10 @@ export default function LandingPage() {
             cancelFlightRef.current = flyInside({
                 root: rootRef.current,
                 cameraPoseRef,
+                endPose: arrivalPoseRef.current,
                 reducedMotion: typeof window !== 'undefined'
                     && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+                onPieces: setPieces,
                 onDone: () => {
                     cancelFlightRef.current = null
                     setEntered(true)
@@ -318,7 +345,7 @@ export default function LandingPage() {
     const showBackground = entered || flightArmed || (heroInView && !isSmallScreen)
 
     return (
-        <Box className="lp-root" data-page="landing" ref={rootRef}>
+        <Box className={`lp-root${entered ? ' lp-root--inside' : ''}`} data-page="landing" ref={rootRef}>
 
             {/* ── NAV ──────────────────────────────────────────── */}
             {!entered && (
@@ -346,6 +373,10 @@ export default function LandingPage() {
                                 interactive={entered && !viewMode}
                                 cameraPoseRef={cameraPoseRef}
                                 hideEntityTypes={roomSpeaks ? null : HERO_ECHO_TYPES}
+                                onArrivalPose={handleArrivalPose}
+                                sceneExtras={pieces.length
+                                    ? <PageDebris pieces={pieces} cameraPose={REST_POSE} />
+                                    : null}
                             />
                         </Suspense>
                     </Box>
@@ -420,7 +451,7 @@ export default function LandingPage() {
 
                 {entered && (
                     <>
-                        <button type="button" className="lp-enter-exit" onClick={() => { setEntered(false); setViewMode(false) }}>
+                        <button type="button" className="lp-enter-exit" onClick={leaveRoom}>
                             ← Back
                         </button>
                         <button type="button" className="lp-enter-exit lp-enter-viewtoggle" onClick={() => setViewMode((v) => !v)}>
