@@ -88,10 +88,10 @@ const page = (p) => {
 `
 }
 
-fs.mkdirSync(path.join(HERE, 'code/people'), { recursive: true })
+fs.mkdirSync(path.join(HERE, 'pages'), { recursive: true })
 const missing = []
 for (const p of people) {
-  fs.writeFileSync(path.join(HERE, `code/people/${p.slug}.html`), page(p))
+  fs.writeFileSync(path.join(HERE, `pages/${p.slug}.html`), page(p))
   fs.writeFileSync(path.join(HERE, `di-space.${p.slug}.json`), JSON.stringify({
     $schema: 'https://di-studio.xyz/schemas/di-space.schema.json',
     spaceId: 'network',
@@ -101,14 +101,14 @@ for (const p of people) {
     slug: p.slug,
     label: p.name,
     mode: 'code',
-    entry: `${REL}/code/people/${p.slug}.html`,
+    entry: `${REL}/pages/${p.slug}.html`,
     include: [],
     assets: [],
     publish: false,
   }, null, 2) + '\n')
   if (!roster.includes(`href="/network/${p.slug}"`)) missing.push(p.slug)
 }
-console.log(`${people.length} rooms written under ${REL}/code/people/`)
+console.log(`${people.length} rooms written under ${REL}/pages/`)
 if (missing.length) {
   console.error(`roster has no door for: ${missing.join(', ')}`)
   process.exitCode = 1

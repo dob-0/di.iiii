@@ -21,3 +21,9 @@
   word is a reserved app segment) and `brand-directions` (rough, no source). Removal is
   the owner's call. `/suite` static on prod still shows two people until the next
   promotion carries #304.
+- Follow-up: declared-page sources moved out of `spaces/*/code/` (`main/pages/`,
+  `network/pages/`). The "Deploy space code files" workflow watches `spaces/*/code/**`
+  and runs `space-code-push`, which writes into a space's PUBLISHED project — for `main`
+  that is the front room. It fails today (no `LIVE_API_TOKEN` secret), which is the only
+  reason it did nothing; the layout no longer relies on that. The roster stays at
+  `spaces/network/code/index.html` on purpose — code-push and the sync write it the same.
