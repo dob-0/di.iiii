@@ -560,8 +560,19 @@ export default function RawGraphSurface({
         const container = containerRef.current
         if (!container) return undefined
         const handleWheel = (event) => {
+            // Inside a window's BODY the wheel belongs to the panel — a text
+            // note scrolls, a list scrolls, the Scene orbits. The frame of a
+            // window (title bar, edges) and the canvas zoom the graph. Ctrl
+            // (a trackpad pinch arrives as ctrl+wheel) zooms the graph from
+            // anywhere, so a pinch over a window still zooms the desk.
+            if (!event.ctrlKey && !event.metaKey && event.target?.closest?.('.raw-window-body')) return
             event.preventDefault()
-            const factor = event.deltaY < 0 ? 1.1 : 0.9
+            // Proportional to the delta, not a flat ±10% per event: a trackpad
+            // fires dozens of small events per swipe and a flat step made it
+            // fly; a mouse notch (deltaY 100) lands near the old step.
+            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1
+            const magnitude = clamp(Math.abs(event.deltaY) * unit, 1, 120)
+            const factor = Math.exp((event.deltaY < 0 ? 1 : -1) * magnitude * 0.0016)
             const vp = viewportRef.current
             const rect = container.getBoundingClientRect()
             const mx = event.clientX - rect.left

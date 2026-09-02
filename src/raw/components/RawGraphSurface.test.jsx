@@ -935,3 +935,29 @@ describe('the way into what a node is made of', () => {
         expect(onExplainScope).toHaveBeenCalledTimes(1)
     })
 })
+
+describe('wheel policy', () => {
+    // Panel windows are not React children of this component — they are
+    // placed by RawEditor and positioned through the published viewport — so
+    // a window's DOM node is not a descendant of `.raw-graph-surface` in
+    // production either. The guard is asserted directly against the DOM the
+    // wheel listener actually sees, which is what a real window's markup
+    // would look like if it ever did land inside this subtree.
+    it('a wheel inside a window body belongs to the panel; on the frame or with ctrl it zooms the graph', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { container } = render(<RawGraphSurface nodes={[colorNode]} edges={[]} initialZoom={1} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        const windowEl = document.createElement('section')
+        windowEl.className = 'raw-window'
+        windowEl.innerHTML = '<header class="raw-window-header">t</header><div class="raw-window-body">b</div>'
+        surface.appendChild(windowEl)
+        const readZoom = () => container.querySelector('.raw-graph-zoom-value').textContent
+        fireEvent.wheel(surface.querySelector('.raw-window-body'), { deltaY: -100 })
+        expect(readZoom()).toBe('100%')
+        fireEvent.wheel(surface.querySelector('.raw-window-body'), { deltaY: -100, ctrlKey: true })
+        expect(readZoom()).not.toBe('100%')
+        const mid = readZoom()
+        fireEvent.wheel(surface.querySelector('.raw-window-header'), { deltaY: -100 })
+        expect(readZoom()).not.toBe(mid)
+    })
+})
