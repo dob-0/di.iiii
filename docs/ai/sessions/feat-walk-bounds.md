@@ -18,3 +18,9 @@
 - Wiki: `scenes-that-show-themselves` gained the `walkBounds` line.
 - Not done: an inspector control for it; wall COLLISION proper (this is a box, not the
   room's geometry — an L-shaped room still needs the platform to read the mesh).
+- Found while composing the club's opening shot, NOT fixed here: **a locked fixed camera
+  ignores its target.** `StudioOrbit` returns null when `enabled` is false (a caged/locked
+  camera), so `setLookAt` never runs and the r3f camera sits at the authored position
+  staring at the origin — every locked composed entry stares at the floor. Workaround in
+  data: `locked: false`. The fix belongs in `StudioOrbit`: apply position + lookAt to the
+  raw camera when navigation is off. Needs a known-fixes entry and a guard when done.
