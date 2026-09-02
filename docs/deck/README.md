@@ -13,6 +13,12 @@ This folder is the public-context lane for `di.iiii` deck, portfolio, and proof 
 > **If you add anything here, read it first.** Portfolio material tends to arrive with
 > contact details baked in; this folder is world-readable under AGPL.
 
+> **The file is `di.i-deck.pdf`.** It was tracked as `di.ii XR studio_network .pdf` until
+> 2026-09-02 — a retired spelling and a retired descriptor, in a public path. The pages
+> inside still carry both; that needs a re-export from the source design, not a rename.
+> Until then this deck is history, not a reference for how the studio is named. The
+> current name, mark and credit lines live at `/suite` (`public/suite/index.html`).
+
 Use it for:
 
 - public-facing context that helps explain the project

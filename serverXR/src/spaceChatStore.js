@@ -11,6 +11,13 @@ const { getDb } = require('./db')
 
 const DEFAULT_KEEP = 500
 
+// The socket handler already caps these, but the store must be safe on its
+// own — anything else that ever calls appendMessage should not have to
+// rediscover this the way socketHandlers.js did.
+const IDENTITY_MAX_LENGTH = 64
+
+const capIdentity = (value) => String(value || '').slice(0, IDENTITY_MAX_LENGTH)
+
 function appendMessage(message, { keep = DEFAULT_KEEP } = {}) {
   const { id, spaceId, userId, userName, text, ts } = message || {}
   if (!id || !spaceId || !text) return false
@@ -21,8 +28,8 @@ function appendMessage(message, { keep = DEFAULT_KEEP } = {}) {
   `).run(
     String(id),
     String(spaceId),
-    String(userId || ''),
-    String(userName || ''),
+    capIdentity(userId),
+    capIdentity(userName),
     String(text),
     Number(ts) || Date.now()
   )

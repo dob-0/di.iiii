@@ -11,9 +11,13 @@ const logger = require('./logger')
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH'])
 
-const createDiskWriteGuard = ({
+// The cached statfs read, shared by anything that needs to know "is the data
+// disk nearly full" — the HTTP guard below, and the socket chat path, which
+// has no request/response to hang a 507 on but still writes to the same
+// volume. One cache, one warning-once, so the two callers never disagree
+// about how stale a reading is allowed to be.
+const createFreeSpaceChecker = ({
   dir,
-  minFreeBytes,
   statfs = fsp.statfs,
   cacheTtlMs = 5000,
   now = Date.now
@@ -25,17 +29,11 @@ const createDiskWriteGuard = ({
   const freeBytes = async () => {
     const at = now()
     if (cached !== null && at - cachedAt < cacheTtlMs) return cached
-    const stats = await statfs(dir)
-    cached = Number(stats.bavail) * Number(stats.bsize)
-    cachedAt = at
-    return cached
-  }
-
-  return async (req, res, next) => {
-    if (!WRITE_METHODS.has(req.method)) return next()
-    let free
     try {
-      free = await freeBytes()
+      const stats = await statfs(dir)
+      cached = Number(stats.bavail) * Number(stats.bsize)
+      cachedAt = at
+      return cached
     } catch (error) {
       // A filesystem statfs can't read is not a reason to take every write
       // down — but say so once, loudly, instead of degrading in silence.
@@ -43,12 +41,33 @@ const createDiskWriteGuard = ({
         warnedUnsupported = true
         logger.warn(`[diskGuard] statfs(${dir}) failed (${error.code || error.message}) — free-disk pre-check disabled`)
       }
-      return next()
+      return Infinity
     }
+  }
+
+  // A delete may free space; don't hold a refusal for the rest of the TTL.
+  const invalidate = () => { cached = null }
+
+  return { freeBytes, invalidate }
+}
+
+const createDiskWriteGuard = ({
+  dir,
+  minFreeBytes,
+  statfs = fsp.statfs,
+  cacheTtlMs = 5000,
+  now = Date.now
+} = {}) => {
+  const checker = createFreeSpaceChecker({ dir, statfs, cacheTtlMs, now })
+
+  return async (req, res, next) => {
+    if (!WRITE_METHODS.has(req.method)) return next()
+    const free = await checker.freeBytes()
+    if (!Number.isFinite(free)) return next() // statfs unsupported/failing: fail open
     const contentLength = Number(req.headers['content-length'])
     const incoming = Number.isFinite(contentLength) && contentLength > 0 ? contentLength : 0
     if (free >= minFreeBytes + incoming) return next()
-    cached = null // a delete may free space; don't hold the refusal for the TTL
+    checker.invalidate()
     logger.warn(`[diskGuard] refused ${req.method} ${req.path}: ${free} bytes free < ${minFreeBytes + incoming} required`)
     res.status(507).json({
       error: 'Server storage is nearly full — write refused to protect existing work. Free up space and retry.',
@@ -57,4 +76,4 @@ const createDiskWriteGuard = ({
   }
 }
 
-module.exports = { createDiskWriteGuard }
+module.exports = { createDiskWriteGuard, createFreeSpaceChecker }

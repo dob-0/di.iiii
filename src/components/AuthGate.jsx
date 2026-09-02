@@ -5,6 +5,7 @@ import useSpacePublicFlag from '../hooks/useSpacePublicFlag.js'
 import { getApiAuthProviders, getOAuthUrl, hasServerApi } from '../services/apiClient.js'
 import { redeemSpaceInvite } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
+import { startOAuth } from '../utils/oauthNavigate.js'
 import { buildAppSpacePath, buildWikiPath } from '../utils/spaceRouting.js'
 import AccountButton from './AccountButton.jsx'
 import { OUT_OF_SCOPE_EXPLAIN, OUT_OF_SCOPE_REDIRECT } from './authGateScope.js'
@@ -17,15 +18,29 @@ const readInviteTokenFromUrl = () => {
 
 // The one pair of OAuth buttons, shared by the sign-in card and the
 // out-of-scope editor card — same handlers, same styling, one source.
-const ProviderSignInButtons = ({ providers }) => {
+const ProviderSignInButtons = ({ providers, refresh }) => {
+    // Framed (a desk, an embed): the provider opens in a tab and this card keeps
+    // asking the server until the session exists, then the gate opens by itself.
+    const [waitingForTab, setWaitingForTab] = useState(false)
+    useEffect(() => {
+        if (!waitingForTab || typeof refresh !== 'function') return undefined
+        const t = setInterval(() => { refresh() }, 3000)
+        return () => clearInterval(t)
+    }, [waitingForTab, refresh])
     if (!providers?.github && !providers?.google) return null
+    const start = (provider) => { if (startOAuth(getOAuthUrl(provider))) setWaitingForTab(true) }
     return (
         <>
+            {waitingForTab && (
+                <Typography variant="body2" sx={{ color: 'var(--ui-text-secondary)' }}>
+                    Signing in continues in the new tab. This view opens as soon as you are in.
+                </Typography>
+            )}
             {providers.github && (
                 <Button
                     fullWidth
                     variant="outlined"
-                    onClick={() => { window.location.href = getOAuthUrl('github') }}
+                    onClick={() => start('github')}
                     sx={{
                         textTransform: 'none',
                         justifyContent: 'flex-start',
@@ -43,7 +58,7 @@ const ProviderSignInButtons = ({ providers }) => {
                 <Button
                     fullWidth
                     variant="outlined"
-                    onClick={() => { window.location.href = getOAuthUrl('google') }}
+                    onClick={() => start('google')}
                     sx={{
                         textTransform: 'none',
                         justifyContent: 'flex-start',
@@ -207,7 +222,7 @@ export default function AuthGate({
                                 Sign in to open the editor for &ldquo;{requiredSpaceId}&rdquo;. Your current
                                 session can view this space, but not edit it.
                             </Typography>
-                            <ProviderSignInButtons providers={providers} />
+                            <ProviderSignInButtons providers={providers} refresh={refresh} />
                             <Button
                                 variant="outlined"
                                 size="small"
@@ -286,7 +301,7 @@ export default function AuthGate({
                                 Your private sandbox
                             </Button>
                         )}
-                        <ProviderSignInButtons providers={providers} />
+                        <ProviderSignInButtons providers={providers} refresh={refresh} />
                         <AccountButton authState={authSession} onLogout={refresh} />
                     </Stack>
                 </Box>
@@ -364,7 +379,7 @@ export default function AuthGate({
                         <CircularProgress size={18} sx={{ color: 'var(--ui-accent)' }} />
                     </Box>
                 ) : null}
-                <ProviderSignInButtons providers={providers} />
+                <ProviderSignInButtons providers={providers} refresh={refresh} />
                 {(showToken || (providers !== null && !providers.github && !providers.google)) ? (
                     <>
                         {(providers?.github || providers?.google) ? (

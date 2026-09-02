@@ -105,3 +105,19 @@ Measured after: resting distances 6.5, 7.3, 8.6, 9.9, 11.5, 14.7, 14.8, 19.0 met
 where the walker stands, spread to both sides. Each page also lies at its own yaw and its
 own few millimetres above the floor — one shared resting pose read as a printed pattern
 rather than paper that fell, and coplanar transparent planes z-fight.
+
+### Why it went dark
+
+*"and why it goes dark?"* — because a scrim written for the page was still being painted
+over the room after the page had gone.
+
+`.lp-hero::after` is a `linear-gradient` to `rgba(0,0,0,0.34)` across the middle, and
+`.lp-hero` carries a black ground under it. Both exist for one job: making the landing copy
+readable over a bright room. The flight turns them off (`.lp-root--flying`) — which is why
+mid-flight looked right — and the teardown turned them straight back on, so a visitor who
+was now standing INSIDE the room was looking at it through a 34% black wash with no copy
+left to justify it.
+
+The wash follows the copy now: `.lp-root--inside` is set while `entered` and shares the
+flying rules. Measured rather than eyeballed — the computed `::after` opacity read
+1 / 0 / **1** across rest, flying and entered, and now reads 1 / 0 / **0**.

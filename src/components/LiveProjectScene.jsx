@@ -9,6 +9,7 @@ import { useXrAr } from '../hooks/useXrAr.js'
 import MadeWithBadge from './MadeWithBadge.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
+import { confineToAreas } from './walkableAreas.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
     buildProjectEventsUrl,
@@ -35,6 +36,7 @@ import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject, { portalHref } from '../project/viewport/PortalObject.jsx'
 import WorldEnvironment from '../project/viewport/WorldEnvironment.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
+import { resolveProximity, applyProximity } from '../project/viewport/entityProximity.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../project/viewport/timelinePlayback.js'
 import { ringTourYaw } from '../project/viewport/ringTour.js'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
@@ -309,12 +311,17 @@ function AnimatedEntity({ entity, assetMap, childMap = null }) {
     }, [entity.id])
 
     const anim = useMemo(() => resolveAnimation(entity), [entity])
+    const prox = useMemo(() => resolveProximity(entity), [entity])
+    const proxPoint = useRef(new THREE.Vector3())
     const timeline = entity.components?.timeline
     const timelineActive = hasTimelineTracks(timeline)
 
     useFrame((state) => {
         const group = groupRef.current
         if (!group) return
+        // Dimming is independent of the pose, so it runs before the early
+        // return the timeline branch takes.
+        if (prox) applyProximity(group, prox, state.camera.position, proxPoint.current)
         if (timelineActive) {
             // Authored keyframes replace idle motion — no seed, playback is deterministic.
             const pose = sampleTimeline(timeline, state.clock.getElapsedTime())
@@ -420,7 +427,7 @@ export const centroidSpawn = (center, bounds) => {
     return { x: center?.x ?? 0, z: (center?.z ?? 0) + back, yaw: Math.PI, pitch: 0 }
 }
 
-function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
+function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
@@ -810,8 +817,14 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, j
             const rightZ = Math.sin(player.yaw) * strafeSpeedRef.current
             const nextX = player.x + (forwardX + rightX) * delta
             const nextZ = player.z + (forwardZ + rightZ) * delta
-            player.x = THREE.MathUtils.clamp(nextX, bounds.minX, bounds.maxX)
-            player.z = THREE.MathUtils.clamp(nextZ, bounds.minZ, bounds.maxZ)
+            const moved = confineToAreas(
+                walkableAreas,
+                player.x, player.z,
+                THREE.MathUtils.clamp(nextX, bounds.minX, bounds.maxX),
+                THREE.MathUtils.clamp(nextZ, bounds.minZ, bounds.maxZ)
+            )
+            player.x = moved.x
+            player.z = moved.z
             bobPhaseRef.current += delta * Math.hypot(speedRef.current, strafeSpeedRef.current) * (fly ? 0 : 1.8)
         }
         // Scroll dolly steps along the horizontal facing direction, like
@@ -819,8 +832,14 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, j
         if (wheelDollyRef.current !== 0) {
             const dolly = wheelDollyRef.current
             wheelDollyRef.current = 0
-            player.x = THREE.MathUtils.clamp(player.x + Math.sin(player.yaw) * dolly, bounds.minX, bounds.maxX)
-            player.z = THREE.MathUtils.clamp(player.z + Math.cos(player.yaw) * dolly, bounds.minZ, bounds.maxZ)
+            const dollied = confineToAreas(
+                walkableAreas,
+                player.x, player.z,
+                THREE.MathUtils.clamp(player.x + Math.sin(player.yaw) * dolly, bounds.minX, bounds.maxX),
+                THREE.MathUtils.clamp(player.z + Math.cos(player.yaw) * dolly, bounds.minZ, bounds.maxZ)
+            )
+            player.x = dollied.x
+            player.z = dollied.z
         }
         if (fly && vert !== 0) {
             player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, -2, 60)
@@ -1636,8 +1655,14 @@ export default function LiveProjectScene({
     // Authored fog opens the walk-mode horizon for vast scenes; the far plane
     // tracks it so the opened distance is actually rendered. Defaults preserve
     // the close-world look every existing space was composed for.
+    //
+    // Colour and the off switch matter on light grounds: fog was locked to the
+    // background, which is an invisible fog on a white void — the room just
+    // ended at fogFar instead of receding.
     const fogNear = worldState.fog?.near ?? 8
     const fogFar = worldState.fog?.far ?? 50
+    const fogEnabled = worldState.fog?.enabled !== false
+    const fogColor = worldState.fog?.color || backgroundColor
     const cameraFar = Math.min(600, Math.max(200, fogFar * 1.15))
     // Zone tint sources for atmosphere blend: each portal's position + authored colour.
     const atmosphereZones = useMemo(() => entities
@@ -1660,7 +1685,7 @@ export default function LiveProjectScene({
             >
                 <XR store={xr.xrStore}>
                 <color attach="background" args={[backgroundColor]} />
-                <fog attach="fog" args={[backgroundColor, fogNear, fogFar]} />
+                {fogEnabled ? <fog attach="fog" args={[fogColor, fogNear, fogFar]} /> : null}
                 {interactive && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
                     <AtmosphereBlender zones={atmosphereZones} playerRef={playerRef} baseBg={backgroundColor} />
                 ) : null}
@@ -1675,7 +1700,15 @@ export default function LiveProjectScene({
                         intensity={worldState.environmentIntensity}
                     />
                 )}
-                <Grid args={[80, 80]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={40} infiniteGrid />
+                {/* worldState.gridVisible is authored in the Studio and was honoured
+                    by StudioViewport only -- walk mode drew the grid unconditionally,
+                    so a space with a real floor (the WCC corridor) got a grid printed
+                    through it. Defaults to visible, so spaces that never set the flag
+                    look exactly as they did. Hidden in AR for the same reason the
+                    studio hides it: the floor there is the room you are standing in. */}
+                {worldState.gridVisible !== false && !isArActive && (
+                    <Grid args={[80, 80]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={40} infiniteGrid />
+                )}
                 <AmbientField center={center} />
                 {showEntities && rootEntities.map((entity) => (
                     <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
@@ -1691,6 +1724,7 @@ export default function LiveProjectScene({
                         onPortalReached={handlePortalReached}
                         entities={entities}
                         bounds={bounds}
+                        walkableAreas={worldState.walkableAreas}
                         joystickRef={joystickRef}
                         joyVisRef={joyVisRef}
                         joyThumbRef={joyThumbRef}

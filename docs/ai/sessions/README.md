@@ -41,9 +41,15 @@ Append to your own file across a session; don't touch anyone else's.
 2. Open a PR into `dev` → CI (`docs:ai:check`) requires exactly one such file, matching
    your branch, with at least one `## ` heading. Exempt: branches matching
    `NOISE_BRANCH_PATTERNS` in `scripts/repo-state-lib.mjs` (dependabot, etc).
-3. Land the PR → whoever runs `npm run land` on `dev` folds every file in this
-   directory into `PROGRESS.md` (newest at top) and rewrites `CURRENT.md`'s "Last
-   session" from them, then deletes the note files and runs the worktree sweep.
+3. Land the PR → the staging deploy (`deploy-vps-staging.yml`, job `land`) runs
+   `npm run land` on `dev` for you: folds every file in this directory into
+   `PROGRESS.md` (newest at top), rewrites `CURRENT.md`'s "Last session" from them,
+   deletes the note files and pushes the fold commit as `github-actions[bot]`. The
+   same deploy's test job folds its own checkout in place before checking anything,
+   so the merge commit passes the gate whether or not that push was accepted (dev's
+   branch protection may reject it — the job says so as a warning, and then
+   `npm run land` by hand is still the fallback). `npm run land` locally still owns
+   the worktree sweep — CI cannot see your disk — and runs it even with nothing to fold.
 4. `docs/ai/sessions/` must be **empty** on `dev`/`main` — enforced by `docs:ai:check`,
    which is what makes step 3 non-optional instead of a courtesy nobody gets to.
 

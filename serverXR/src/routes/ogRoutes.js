@@ -16,7 +16,14 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ESCAPES
 
 // A space may name its own card. Anything without one falls back to the
 // platform tile, which is correct for a space that has no face of its own yet.
-const DEFAULT_IMAGE = '/brand/og-image.png'
+const DEFAULT_IMAGE = '/suite/og-image.png'
+// Kept character-for-character in step with src/index.html: a link preview
+// that says something different from the page it opens is how the pre-sweep
+// positioning survived the lexicon pass.
+const FRONT_DOOR = {
+  title: 'di.iiii — public spaces on the open web',
+  description: 'Make a space, hand out the address — a link while it runs, a file when it ends. No app, no store, nothing to install; it opens in a browser, or in a headset.',
+}
 
 // Explicit, not conventional. Deriving the filename from the handle would point
 // every space without a card at a URL that 404s, and a crawler given a broken
@@ -117,22 +124,22 @@ function registerOgRoutes(router, { loadSpaceMeta, siteOrigin }) {
           // The platform's own front door, not the path that missed — sending a
           // crawler back to a URL we just failed to resolve is a loop.
           url: origin || undefined,
-          // Kept character-for-character in step with src/index.html: a link
-          // preview that says something different from the page it opens is
-          // how the pre-sweep positioning survived the lexicon pass.
-          title: 'di.iiii — public spaces on the open web',
-          description: 'Make a space, hand out the address — a link while it runs, a file when it ends. No app, no store, nothing to install; it opens in a browser, or in a headset.',
+          title: FRONT_DOOR.title,
+          description: FRONT_DOOR.description,
           // Absolute, like the per-space branch. A relative image resolves
           // against og:url, so on the fallback path it used to resolve against
           // the internal address and reach nothing.
           image: origin ? origin + DEFAULT_IMAGE : undefined,
         }))
       }
+      // `main` is the space `/` opens on and is labelled after the platform
+      // itself, so the generic line would read "di.iiii — a space on di.iiii."
+      const own = (meta.id || handle) === 'main'
       res.type('html').send(ogHtml({
         url,
         title: meta.ogTitle || meta.label || handle,
         description: meta.ogDescription || meta.description
-          || `${meta.label || handle} — a space on di.iiii.`,
+          || (own ? FRONT_DOOR.description : `${meta.label || handle} — a space on di.iiii.`),
         image: origin + cardFor(handle),
       }))
     } catch (error) { next(error) }

@@ -6,7 +6,7 @@ This document is the permanent record of what di.i is, what it is becoming, and 
 
 ## What It Is
 
-di.i is a spatial authoring platform for immersive XR experiences.
+di.iiii is a platform for public spaces on the open web. Make a space, hand out the address — a link while it runs, a file when it ends. The visit is the product; the editor is backstage.
 
 It lets creators build, publish, and share 3D scenes — in the browser, on the web, in AR and VR. The core loop is: open a space, compose a scene, publish it to a URL, experience it in XR.
 
