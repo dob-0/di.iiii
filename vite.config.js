@@ -164,7 +164,7 @@ export default function HostedPiece() {
 // Naming it means the next thing dropped into public/ for the website does not
 // silently become part of every artist's install — which is how the 25 MB wcc
 // microsite, the cPanel php shims and the site's OpenGraph images got there.
-const LOCAL_PUBLIC_INCLUDE = ['fonts', 'draco', 'basis', 'brand']
+const LOCAL_PUBLIC_INCLUDE = ['fonts', 'draco', 'basis', 'suite']
 
 // Belt and braces: the include-list above already leaves a work's public
 // directory out, but if someone adds one to the list by accident the registry
@@ -394,7 +394,7 @@ export default {
     root: 'src/',
     // An include-list, not a delete-list: under the local profile the public
     // directory is copied by localPublicDirPlugin, which names what a copy of
-    // the program needs (fonts, draco, basis, brand) and therefore cannot
+    // the program needs (fonts, draco, basis, suite) and therefore cannot
     // silently start shipping whatever gets dropped into public/ next.
     publicDir: LOCAL_PROFILE ? false : '../public/',
     envDir: '../',
