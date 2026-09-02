@@ -108,6 +108,22 @@ strict hash still catches it. Both cases are guarded.
 
 - **23 debris projects in `open`** — `debug3-true-false-1784237913844`, `td-check2-…`,
   `phase5-test-…`, `untitled-project` — local-only, deletion refused by Claude's permission
-  classifier, so the owner runs it. Their documents are archived before the delete.
+  classifier, so the owner runs `node scripts/tmp-purge.mjs` (untracked; archives every
+  document to `~/di-backups/` first). Until then the audit's only finding is those 23.
+- **`scripts/tmp-purge.mjs` is untracked.** Either land it as a real script or delete it once
+  the purge has run — a one-off that survives in a worktree is a trap for the next session.
 - A `--pull` direction: `--audit` reports drift and stops, because which side is right is a
   question about the work, not about the data.
+- **`/tmp` is a 16 GB tmpfs and was found at 100%**, which killed commands mid-task with
+  ENOSPC. 13.9 GB of it belongs to two *other* Claude sessions' scratchpads
+  (`2573aee0…` 9.7 GB, `7e7c16ea…` 4.2 GB) and was deliberately left alone. Anything a
+  session needs to survive a reboot does not belong in the scratchpad — `tmp-purge.mjs` was
+  moved to `~/di-backups/` for exactly this reason.
+
+### Not part of this branch, done live on prod the same session
+
+`library` and `funding` invite links minted for Emilya (label `Emilya`, link expires
+2026-09-09; the access it grants is permanent). Verified in a clean browser: refused with no
+link, full page with it, still open on a later visit with `?invite=` gone. The previous pair,
+labelled "Gevorg", had expired on 08-26 having never been opened. Details in auto-memory
+`reference_dii_prod_data_writes`.
