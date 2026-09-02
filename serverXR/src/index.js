@@ -73,6 +73,7 @@ const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
+const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { createApprovalGate, createGatedRequestNet, verifyInboundSignature, GATED_ROUTES } = require('./approvalGate')
 const pendingActionStore = require('./pendingActionStore')
 const configStore = require('./configStore')
@@ -387,6 +388,15 @@ if (config.minFreeDiskBytes > 0) {
     minFreeBytes: config.minFreeDiskBytes
   }))
 }
+// The lighting desk (serverXR/src/lighting) at /light — a local-runtime lane, built on
+// first use, output off by default; see routes/lightingRoutes.js. Mounted ahead of the
+// JSON parser on purpose: the desk reads its own bodies.
+const lighting = registerLightingRoutes(app, {
+  dataDir: config.directories.dataDir,
+  mountPaths: [...new Set(['/light', `${config.mountPath || ''}/light`.replace(/\/+/g, '/')])],
+  offline: process.env.ARTNET_OFFLINE === '1'
+})
+
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
 app.use(morgan('tiny'))
 app.use((req, res, next) => {

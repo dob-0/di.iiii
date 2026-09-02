@@ -1,0 +1,1288 @@
+'use strict';
+// Local Art-Net light controller: HTTP UI on localhost, DMX out over UDP.
+
+const zlib = require('zlib');
+const fs = require('fs');
+const path = require('path');
+const { ArtNet, broadcastAddresses, localAddresses } = require('./artnet');
+const { Enttec, listPorts, describePort, PORT_NAME, DEFAULT_PORT } = require('./enttec');
+const {
+  Engine, PROFILES, makeFixture, DEFAULT_LIMITS, roleKinds, ROLE_DEFAULTS,
+  addProfile, removeProfile, customProfiles, findProfile,
+  AUDIO_MODES, sanitizeAudioCfg,
+} = require('./engine');
+const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive } = require('./fx');
+const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
+
+// The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
+// output loop, the HTTP routes and the interface files — and hands back `handle`, which
+// answers a request for a path relative to wherever the desk is mounted. `standalone.js`
+// puts it on a port of its own (the club desk); di.iiii mounts it at /light.
+function createDesk(opts = {}) {
+  const DATA = opts.dataDir || path.join(__dirname, 'data');
+  const PUBLIC = opts.uiDir || path.join(__dirname, 'ui');
+  const SHOW = path.join(DATA, 'show.json');
+  const SHOW_PREV = path.join(DATA, 'show.prev.json');
+  // Offline renders everything and transmits nothing — tests, and a desk with no rig.
+  const offline = !!opts.offline;
+  const bindPort = opts.bindPort == null ? null : Number(opts.bindPort);
+  const outputEnabledDefault = opts.outputEnabledDefault !== false;
+  const lanAllowed = opts.lanAllowed !== false;
+  const log = opts.log || console.log;
+
+  const DEFAULT_STATE = {
+    master: 255,
+    blackout: false,
+    fixtures: [],
+    groups: [],
+    raw: {},
+    scenes: [],
+    activeScene: null,
+    chase: { enabled: false, sceneIds: [], holdMs: 2000, fadeMs: 800 },
+    midi: { maps: [] },
+    // driver picks which wire the frames leave on: 'artnet' over UDP, or 'enttec' for a
+    // DMX USB PRO on a serial port. They are mutually exclusive because the widget owns
+    // its port outright and Art-Net gear does not exist on the same cable.
+    // `manual` is the devices added by hand as {ip, name}. Discovery cannot be the only way
+    // into the device list: plenty of Art-Net gear never answers an ArtPoll, and a show
+    // network has no DHCP or internet — the address is known in advance and typed in.
+    // The house light controller is a wifi access point: it deals out 192.168.4.x and sits
+    // on .1 itself, which is where its Art-Net has to go. It is seeded here rather than
+    // waiting to be typed because it is the one address that is always the same — a show
+    // with no defaults asks you to remember an IP in the dark. Remove it and it stays gone.
+    output: { driver: 'artnet', serialPort: DEFAULT_PORT, mode: 'broadcast', targets: [], enabled: true,
+      manual: [{ ip: '192.168.4.1', name: 'Light controller' }], port: 6454, refreshHz: 40 },
+    // The effects engine. The defaults live in fx.js next to the maths that reads them, so
+    // there is one answer to "what is depth when nobody has set it" rather than two.
+    fx: { ...DEFAULT_FX },
+    // Low-frequency oscillators: modulation riding on the scene in the render path. The
+    // list is replaced whole by POST /api/lfos and captured/recalled with scenes.
+    lfos: [],
+    // Audio-reactive configuration persists; the live audio LEVELS do not — they arrive
+    // many times a second and are attached to `state` as a non-enumerable property below,
+    // which is what keeps them out of every JSON.stringify(state) forever.
+    audioCfg: { enabled: false, mode: 'level', amount: 255, release: 300, useBeats: true },
+    customProfiles: [],
+    // Live sets: named, ordered scene playlists for running a planned show from the Touch
+    // page. They reference scenes by id and tolerate dead references — the player shows a
+    // missing step rather than silently renumbering the operator's set list mid-show.
+    sets: [],
+  };
+
+  function sanitizeSets(list) {
+    if (!Array.isArray(list)) return [];
+    return list.slice(0, 50).map((s) => ({
+      id: typeof s?.id === 'string' && s.id ? s.id.slice(0, 40) : 'set' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: String(s?.name || 'Set').slice(0, 40),
+      sceneIds: (Array.isArray(s?.sceneIds) ? s.sceneIds : [])
+        .filter((id) => typeof id === 'string' && id).slice(0, 1000),
+    }));
+  }
+
+  // AUDIO_MODES and sanitizeAudioCfg live in engine.js now — recallScene applies the same
+  // clamps this file's routes do, and there must be exactly one copy of them.
+
+  // The volatile half of audio-reactive: fed by POST /api/audio, read by the render loop,
+  // never written to disk. Non-enumerable so save()'s JSON.stringify cannot see it.
+  function attachAudio(s) {
+    delete s.audio;   // in case a hand-edited show.json carried one in
+    Object.defineProperty(s, 'audio', {
+      value: { level: 0, low: 0, mid: 0, high: 0, beatAt: 0, bpm: null, lastAt: 0 },
+      enumerable: false, writable: true, configurable: true,
+    });
+    return s;
+  }
+
+  // Address validation lives in one place because a rejected address has to be rejected the
+  // same way everywhere: 2.0.0.10 is a perfectly ordinary Art-Net address and 300.1.1.1 is
+  // not an address at all, and the difference must not depend on which route you came in by.
+  const IPV4 = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+  // A port name in this platform's spelling: COMn on Windows, a /dev path elsewhere.
+  const portName = (p) => (process.platform === 'win32' ? String(p).trim().toUpperCase() : String(p).trim());
+
+  function validIp(v) {
+    if (typeof v !== 'string') return null;
+    const ip = v.trim();
+    if (!IPV4.test(ip)) return null;
+    return ip.split('.').every((o) => Number(o) <= 255) ? ip : null;
+  }
+
+  function normaliseManual(list) {
+    const out = [];
+    for (const entry of Array.isArray(list) ? list : []) {
+      const ip = validIp(typeof entry === 'string' ? entry : entry && entry.ip);
+      if (!ip || out.some((m) => m.ip === ip)) continue;
+      const name = entry && typeof entry.name === 'string' ? entry.name.trim().slice(0, 40) : '';
+      out.push({ ip, name });
+    }
+    return out;
+  }
+
+  // A scene as stored. Anything that is not one is dropped at load, because a malformed
+  // entry did not fail at boot — it threw inside the chase tick, from a timer, and took
+  // the process with it.
+  function sanitizeScene(s) {
+    if (!s || typeof s !== 'object' || typeof s.id !== 'string' || !s.id) return null;
+    const fixtures = (Array.isArray(s.fixtures) ? s.fixtures : [])
+      .filter((sf) => sf && typeof sf === 'object' && sf.id != null)
+      .map((sf) => ({ id: String(sf.id), on: sf.on !== false, values: sanitizeValues(sf.values) }));
+    const out = {
+      ...s,
+      id: s.id.slice(0, 40),
+      name: String(s.name || 'Scene').slice(0, 60),
+      fadeMs: Number.isFinite(+s.fadeMs) ? Math.max(0, Math.min(60000, Math.round(+s.fadeMs))) : 1000,
+      fixtures,
+      raw: sanitizeRaw(s.raw),
+    };
+    if (s.fx && typeof s.fx === 'object') out.fx = withoutExcludeIfAbsent(sanitizeFxPatch({ ...DEFAULT_FX }, s.fx), s.fx);
+    else delete out.fx;
+    if (s.lfos != null) { const l = sanitizeLfos(s.lfos); if (l) out.lfos = l; else delete out.lfos; }
+    if (s.audioCfg && typeof s.audioCfg === 'object') out.audioCfg = sanitizeAudioCfg(s.audioCfg);
+    else delete out.audioCfg;
+    return out;
+  }
+
+  // sanitizeFxPatch fills a missing exclude from its `current` — for a stored scene that is
+  // DEFAULT_FX, i.e. []. Absent stays absent, so recall can tell "no opinion" from "none".
+  function withoutExcludeIfAbsent(fx, given) {
+    if (!Array.isArray(given && given.exclude)) delete fx.exclude;
+    return fx;
+  }
+
+  // The show file, or the newest complete copy of it. Order: the file itself; a finished
+  // temp file whose rename was interrupted; the previous save. A truncated file is never
+  // the reason for an empty desk while a complete one is sitting next to it.
+  function readShow() {
+    let firstError = null;
+    for (const file of [SHOW, SHOW + '.tmp', SHOW_PREV]) {
+      if (!fs.existsSync(file)) continue;
+      try {
+        const disk = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (file !== SHOW) log('  show.json was unreadable; loaded ' + path.basename(file) + ' instead');
+        return disk;
+      } catch (e) { if (!firstError) firstError = e; }
+    }
+    if (firstError) throw firstError;
+    const e = new Error('no show file'); e.code = 'ENOENT'; throw e;
+  }
+
+  function loadState() {
+    try {
+      const disk = readShow();
+      const s = { ...DEFAULT_STATE, ...disk };
+      s.chase = { ...DEFAULT_STATE.chase, ...(disk.chase || {}) };
+      // A show file saved with the chase armed but no steps is a landmine: the first scene
+      // added to the list would start a chase instantly. An empty chase is never armed.
+      if (!Array.isArray(s.chase.sceneIds)) s.chase.sceneIds = [];
+      if (s.chase.sceneIds.length === 0) s.chase.enabled = false;
+      s.output = { ...DEFAULT_STATE.output, ...(disk.output || {}) };
+      // The wire switch. A show file from before it existed takes the desk's default:
+      // ON standing alone (the club desk must come back transmitting after a restart),
+      // OFF inside di.iiii (a dev server must never broadcast on a studio network).
+      s.output.enabled = disk.output && disk.output.enabled != null ? !!disk.output.enabled : outputEnabledDefault;
+      s.output.manual = normaliseManual(s.output.manual);
+      s.fx = { ...DEFAULT_STATE.fx, ...(disk.fx || {}) };
+      s.fx.exclude = Array.isArray(s.fx.exclude)
+        ? s.fx.exclude.filter((p) => typeof p === 'string' && p).slice(0, 20)
+        : [];
+      s.lfos = sanitizeLfos(disk.lfos) || [];
+      s.audioCfg = sanitizeAudioCfg({ ...DEFAULT_STATE.audioCfg, ...(disk.audioCfg || {}) });
+      s.sets = sanitizeSets(disk.sets);
+      s.midi = sanitizeMidi(disk.midi) || { maps: [] };
+
+      // Custom profiles MUST be registered before the fixtures are built. makeFixture falls
+      // back to `rgb` for a profile it does not know, so loading them in the other order
+      // would silently turn every custom fixture into a 3-channel RGB one — the patch would
+      // come back from disk quietly wrong, which is the worst way to lose a rig.
+      for (const p of disk.customProfiles || []) {
+        try { addProfile(p.name, p.channels, { cat: p.cat, replace: true, defaults: p.defaults }); }
+        catch (e) { log('  skipped custom fixture "' + p.name + '": ' + e.message); }
+      }
+      s.customProfiles = customProfiles();
+
+      s.fixtures = (Array.isArray(disk.fixtures) ? disk.fixtures : [])
+        .filter((f) => f && typeof f === 'object').map(makeFixture);
+      s.groups = (Array.isArray(disk.groups) ? disk.groups : [])
+        .filter((g) => g && typeof g === 'object' && typeof g.id === 'string' && Array.isArray(g.ids))
+        .map((g) => ({ id: g.id, name: String(g.name || 'Group').slice(0, 24), ids: g.ids.filter((id) => typeof id === 'string') }));
+      s.scenes = (Array.isArray(disk.scenes) ? disk.scenes : []).map(sanitizeScene).filter(Boolean);
+      s.raw = sanitizeRaw(disk.raw);
+      s.master = Number.isFinite(+disk.master) ? Math.max(0, Math.min(255, Math.round(+disk.master))) : 255;
+      s.blackout = !!disk.blackout;
+      return s;
+    } catch (e) {
+      if (fs.existsSync(SHOW)) {
+        const aside = SHOW.replace(/.json$/, '-broken-' + Date.now() + '.json');
+        try { fs.copyFileSync(SHOW, aside); } catch (e2) {}
+        log('COULD NOT LOAD ' + SHOW + ': ' + e.message);
+        log('Starting with an EMPTY desk; your show is preserved at ' + aside);
+      }
+      const fresh = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      fresh.output.enabled = outputEnabledDefault;
+      return fresh;
+    }
+  }
+
+  const state = attachAudio(loadState());
+  const engine = new Engine(state);
+  const artnet = new ArtNet({
+    port: state.output.port,
+    // Tests bind an ephemeral local port so they never contend for 6454 with a running desk.
+    bindPort,
+    // ARTNET_OFFLINE=1 keeps a test run off the wire entirely.
+    offline: offline,
+  });
+
+  // The serial widget is only opened while it is the selected driver: holding COM3 open
+  // would lock TouchDesigner, Daslight or ENTTEC EMU out of it for no reason whenever the
+  // desk happens to be running on Art-Net.
+  let enttec = null;
+  function enttecDriver() {
+    if (state.output.driver !== 'enttec') { if (enttec) { enttec.close(); enttec = null; } return null; }
+    if (enttec && enttec.port !== state.output.serialPort) { enttec.close(); enttec = null; }
+    if (!enttec) {
+      enttec = new Enttec({
+        port: state.output.serialPort,
+        maxHz: state.output.refreshHz,
+        offline: offline,
+      });
+    }
+    return enttec;
+  }
+  enttecDriver();
+
+  // The show file is written whole, to a temp file, then renamed over the old one, with
+  // the previous good copy kept beside it. It used to be truncated in place: a crash or a
+  // power cut mid-write left half a file, and the next boot was an EMPTY desk on the wrong
+  // driver, mid-gig. Now every state the file can be in is a complete show.
+  //
+  // Writes coalesce for 400ms after the FIRST change, not the last — a fader drag that
+  // posts every 100ms used to restart the timer each time and never write at all, and
+  // Ctrl+C then threw the whole drag away. Exit flushes whatever is pending.
+  let saveTimer = null;
+  let dirty = false;
+  function writeShow() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    if (!dirty) return;
+    dirty = false;
+    fs.mkdirSync(DATA, { recursive: true });
+    const tmp = SHOW + '.tmp';
+    // Compact, not pretty-printed: at 500+ scenes the indented form cost ~29ms to
+    // stringify, over the 25ms frame budget at 40Hz. Compact is ~9ms and a third the size.
+    fs.writeFileSync(tmp, JSON.stringify(state));
+    try { fs.renameSync(SHOW, SHOW_PREV); } catch (e) { /* first save ever */ }
+    fs.renameSync(tmp, SHOW);
+  }
+  let stateVersion = 0;
+  function save() {
+    dirty = true;
+    stateVersion++;
+    if (!saveTimer) saveTimer = setTimeout(writeShow, 400);
+  }
+
+  // ---- output loop ----------------------------------------------------------
+  let timer = null;
+  const stats = { ticks: 0, lastSend: 0 };
+
+  function manualIps() { return state.output.manual.map((m) => m.ip); }
+
+  // The device list the interface shows. A hand-added device is a row whether or not it has
+  // ever spoken — it is the one the address was typed for, so it cannot disappear because it
+  // keeps quiet. If it does answer, the reply fills its name and last-seen in underneath.
+  function nodeList() {
+    const byIp = new Map(artnet.nodeList().map((n) => [n.ip, n]));
+    const manual = state.output.manual.map((m) => {
+      const live = byIp.get(m.ip);
+      byIp.delete(m.ip);
+      return { ip: m.ip, ageMs: null, ...(live || {}), manual: true, name: m.name };
+    });
+    return [...manual, ...byIp.values()];
+  }
+
+  function targetsFor() {
+    if (state.output.mode === 'unicast' && state.output.targets.length) return state.output.targets;
+    return broadcastAddresses();
+  }
+
+  // How much of each universe actually carries anything: the highest patched channel and
+  // the highest manual hold. Frames are trimmed to this, because a 518-byte frame takes
+  // ~21ms of a 25ms tick at 250k baud — one timer hiccup and writes start colliding. Her
+  // rig ends at channel 216: trimming more than halves the wire time and turns the felt
+  // tick-to-light delay with it.
+  function footprints() {
+    const out = new Map();
+    const bump = (u, ch) => { if (ch > (out.get(u) || 0)) out.set(u, ch); };
+    for (const f of state.fixtures) {
+      const w = (PROFILES[f.profile] || PROFILES.rgb).channels.length;
+      bump(f.universe, Math.min(512, f.address + w - 1));
+    }
+    for (const k of Object.keys(state.raw)) {
+      const [u, ch] = k.split(':').map(Number);
+      bump(u, ch);
+    }
+    // Minimum 24 channels (the widget's floor), rounded up to even.
+    for (const [u, ch] of out) out.set(u, Math.max(24, ch + (ch % 2)));
+    return out;
+  }
+
+  // One frame out NOW. Every mutating route calls this instead of leaving the change to
+  // wait out the remainder of the 25ms tick — the reply to the client means "already on
+  // the wire", not "queued for the next tick". The interval keeps running regardless; it
+  // is what carries fades, FX and the continuous refresh.
+  function pushFrame() {
+    const frames = engine.tick();
+    stats.ticks++;
+    // Output off: the engine still renders (the stage view is live, scenes still work),
+    // nothing leaves the machine and the serial port is left alone for other programs.
+    if (!state.output.enabled) { if (enttec) { enttec.close(); enttec = null; } return; }
+    const fp = footprints();
+    const wire = enttecDriver();
+    if (wire) {
+      // The unreachable warning is rebuilt from the PATCH every frame, not accumulated.
+      // The driver's set only ever grew, and the engine deliberately keeps draining zeros
+      // for a universe that lost its last fixture (so blackout can still reach an Art-Net
+      // node holding a frame) — together those latched "universe 2 is patched" forever,
+      // surviving the unpatch that made it untrue. Only the server knows the patch, so
+      // only the server can say it honestly: a universe is worth warning about while a
+      // fixture actually lives there.
+      wire.unreachable.clear();
+      const patched = new Set(state.fixtures.map((f) => f.universe));
+      for (const [universe, buf] of frames) {
+        if (universe === wire.universe || patched.has(universe)) {
+          wire.send(universe, buf.subarray(0, fp.get(universe) || 24));
+        }
+      }
+      // An empty desk still refreshes: fixtures time out into their built-in programs when
+      // frames stop, and "no fixtures patched" must not mean "no signal".
+      if (!frames.has(wire.universe)) wire.send(wire.universe, Buffer.alloc(24));
+    } else {
+      const targets = targetsFor();
+      for (const [universe, buf] of frames) {
+        for (const t of targets) artnet.send(t, universe, buf.subarray(0, fp.get(universe) || 24));
+      }
+    }
+    stats.lastSend = Date.now();
+  }
+
+  function startLoop() {
+    clearInterval(timer);
+    const hz = Math.max(1, Math.min(44, state.output.refreshHz || 40));
+    timer = setInterval(pushFrame, Math.round(1000 / hz));
+  }
+  startLoop();
+
+  // Poll the configured unicast targets by name as well as broadcasting: if you have typed
+  // the node's address in, that is the one address worth asking directly.
+  const pollTimer = setInterval(() => {
+    artnet.pruneNodes();
+    // No point broadcasting discovery on a network that is not carrying the show.
+    if (state.output.enabled && state.output.driver !== 'enttec') artnet.poll([...state.output.targets, ...manualIps()]);
+  }, 10000);
+  const firstPoll = setTimeout(() => { if (state.output.enabled && state.output.driver !== 'enttec') artnet.poll([...state.output.targets, ...manualIps()]); }, 800);
+
+  // ---- http -----------------------------------------------------------------
+  const MIME = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.svg': 'image/svg+xml',
+    '.json': 'application/json',
+  };
+
+  // Browsers request /favicon.ico no matter what the markup links. Answer quietly rather
+  // than logging a 404 on every page load.
+  const FAVICON_204 = '/favicon.ico';
+
+  // Big replies are gzipped when the client accepts it. /api/state carries the whole
+  // library — 1.9 MB raw, 45 KB gzipped, polled every 1.5 s by every open tab; on venue
+  // wifi the raw version was 10 Mbit/s per phone, and phones fell off the desk.
+  const GZIP_MIN = 4096;
+  function json(res, body, code, req) {
+    const text = typeof body === 'string' ? body : JSON.stringify(body);
+    const headers = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
+    const accepts = req && /\bgzip\b/.test(req.headers['accept-encoding'] || '');
+    if (!accepts || text.length < GZIP_MIN) {
+      res.writeHead(code || 200, headers);
+      return res.end(text);
+    }
+    zlib.gzip(text, { level: 1 }, (err, gz) => {
+      if (err) { res.writeHead(code || 200, headers); return res.end(text); }
+      res.writeHead(code || 200, { ...headers, 'content-encoding': 'gzip', vary: 'accept-encoding' });
+      res.end(gz);
+    });
+  }
+
+  // 16MB: a full 500-scene library POSTed to /api/scenes/replace is ~5MB. The old 1MB
+  // cap reset the socket mid-upload, which read as a dead server rather than a refusal.
+  const BODY_MAX = 16 * 1024 * 1024;
+
+  function readBody(req) {
+    return new Promise((resolve, reject) => {
+      // Chunks are joined as bytes, then decoded once. Decoding each chunk on its own
+      // split multi-byte characters at socket boundaries: a library push turned `›` and
+      // `·` in scene names into U+FFFD, silently, and the corruption reached show.json.
+      const chunks = [];
+      let size = 0;
+      let done = false;
+      req.on('data', (c) => {
+        if (done) return;
+        size += c.length;
+        if (size > BODY_MAX) {
+          done = true;
+          const e = new Error(`request body over ${BODY_MAX >> 20} MB`);
+          e.status = 413;
+          reject(e);
+          return;
+        }
+        chunks.push(c);
+      });
+      req.on('end', () => {
+        if (done) return;
+        done = true;
+        try {
+          const text = Buffer.concat(chunks).toString('utf8');
+          resolve(text ? JSON.parse(text) : {});
+        } catch (e) { reject(e); }
+      });
+      req.on('error', (e) => { if (!done) { done = true; reject(e); } });
+    });
+  }
+
+  // Fixture values as stored: a known role name, an integer 0..255. Anything else was
+  // reaching the render as NaN and putting that channel at 0 on the wire in silence.
+  function sanitizeValues(values) {
+    const out = {};
+    if (!values || typeof values !== 'object') return out;
+    for (const [k, v] of Object.entries(values)) {
+      if (typeof k !== 'string' || !k || k.length > 24) continue;
+      const n = +v;
+      if (!Number.isFinite(n)) continue;
+      out[k] = Math.max(0, Math.min(255, Math.round(n)));
+    }
+    return out;
+  }
+
+  // Manual holds as stored: `universe:channel` keys with a real universe and a channel in
+  // 1..512, values 0..255. A garbage key used to become a 512-channel universe that was
+  // rendered and transmitted every tick for the rest of the run.
+  function sanitizeRaw(raw) {
+    const out = {};
+    if (!raw || typeof raw !== 'object') return out;
+    for (const [k, v] of Object.entries(raw)) {
+      const m = /^(\d{1,5}):(\d{1,3})$/.exec(k);
+      if (!m) continue;
+      const u = +m[1];
+      const ch = +m[2];
+      if (u > 32767 || ch < 1 || ch > 512) continue;
+      const n = +v;
+      if (!Number.isFinite(n)) continue;
+      out[`${u}:${ch}`] = Math.max(0, Math.min(255, Math.round(n)));
+    }
+    return out;
+  }
+
+  function sanitizeLimits(l) {
+    const out = {};
+    for (const k of ['dimMin', 'dimMax', 'panMin', 'panMax', 'tiltMin', 'tiltMax']) {
+      if (l[k] != null) out[k] = Math.max(0, Math.min(255, l[k] | 0));
+    }
+    for (const k of ['invertPan', 'invertTilt', 'swapPT']) {
+      if (l[k] != null) out[k] = !!l[k];
+    }
+    return out;
+  }
+
+  // One manual channel override. Out-of-range channels are dropped rather than stored:
+  // render ignores them anyway, and letting them accumulate would quietly bloat show.json
+  // with keys that can never do anything.
+  function setRaw(universe, channel, value) {
+    const ch = channel | 0;
+    if (ch < 1 || ch > 512) return;
+    const key = Math.max(0, Math.min(32767, universe | 0)) + ':' + ch;
+    if (value == null || value < 0) delete state.raw[key];
+    else state.raw[key] = Math.max(0, Math.min(255, value | 0));
+  }
+
+  function snapshot() {
+    const out = {};
+    for (const [u, buf] of engine.toBuffers()) out[u] = Array.from(buf);
+    return out;
+  }
+
+  // The scenes are the bulk of /api/state and change only through routes, every one of
+  // which calls save(). Their JSON is built once per change and spliced in as text, so a
+  // poll costs the small part — fixtures, status, the dmx snapshot — not 15 ms of
+  // stringifying 600 scenes per tab per poll on the thread that runs the DMX loop.
+  let sceneJsonCache = { version: -1, text: '[]' };
+  const SCENES_PLACEHOLDER = '\u0000scenes\u0000';
+  const SCENES_TOKEN = JSON.stringify(SCENES_PLACEHOLDER);
+  function scenesJson() {
+    if (sceneJsonCache.version === stateVersion) return sceneJsonCache.text;
+    const patched = new Set(state.fixtures.map((f) => f.id));
+    const text = JSON.stringify(state.scenes.map((s) => {
+      const live = s.fixtures.filter((sf) => patched.has(sf.id)).length;
+      return Object.assign({}, s, { live, missing: s.fixtures.length - live });
+    }));
+    sceneJsonCache = { version: stateVersion, text };
+    return text;
+  }
+  function publicStateJson() {
+    const body = JSON.stringify(Object.assign(publicState(false), { scenes: SCENES_PLACEHOLDER }));
+    return body.replace(SCENES_TOKEN, scenesJson());
+  }
+
+  function summary() {
+    const active = state.activeScene ? state.scenes.find((s) => s.id === state.activeScene) : null;
+    const ser = enttec ? enttec.status() : null;
+    return {
+      master: state.master,
+      blackout: state.blackout,
+      activeScene: state.activeScene,
+      activeSceneName: active ? active.name : null,
+      fading: !!engine.fade,
+      fx: { mode: state.fx.mode, bpm: state.fx.bpm, depth: state.fx.depth, enabled: !!state.fx.enabled },
+      chase: { enabled: !!state.chase.enabled, index: engine.chase.index, count: state.chase.sceneIds.length },
+      fixtures: state.fixtures.length,
+      scenes: state.scenes.length,
+      universes: engine.universes(),
+      output: {
+        driver: state.output.driver,
+        enabled: !!state.output.enabled,
+        connected: state.output.driver === 'enttec' ? !!(ser && ser.connected) : !!artnet.ready,
+        packetsSent: enttec ? enttec.packetsSent : artnet.packetsSent,
+        lastError: enttec ? enttec.lastError : artnet.lastError,
+        lanAllowed,
+      },
+    };
+  }
+
+  // {maps: [...]} of flat objects — strings, finite numbers, booleans — nothing nested,
+  // nothing long. The MIDI page owns the meaning of the fields; the server keeps them.
+  function sanitizeMidi(midi) {
+    if (!midi || typeof midi !== 'object' || !Array.isArray(midi.maps)) return null;
+    if (midi.maps.length > 400) return null;
+    const maps = [];
+    for (const m of midi.maps) {
+      if (!m || typeof m !== 'object') return null;
+      const out = {};
+      for (const [k, v] of Object.entries(m)) {
+        if (typeof k !== 'string' || k.length > 32) return null;
+        if (typeof v === 'string') { if (v.length > 120) return null; out[k] = v; }
+        else if (typeof v === 'number') { if (!Number.isFinite(v)) return null; out[k] = v; }
+        else if (typeof v === 'boolean' || v === null) out[k] = v;
+        else return null;
+      }
+      maps.push(out);
+    }
+    return { maps };
+  }
+
+  function publicState(withScenes = true) {
+    const patched = new Set(state.fixtures.map((f) => f.id));
+    return Object.assign({}, state, {
+      // How much of each scene still exists. Recall skips fixtures that have been unpatched,
+      // so a scene saved against a rig that has since been repatched recalls silently and
+      // does nothing at all — which reads as a broken button. The counts let the interface
+      // say so instead. Pruning the dead entries would be worse: it would quietly rewrite
+      // looks she saved, and they come back if the fixtures are ever restored.
+      scenes: !withScenes ? [] : state.scenes.map((s) => {
+        const live = s.fixtures.filter((sf) => patched.has(sf.id)).length;
+        return Object.assign({}, s, { live, missing: s.fixtures.length - live });
+      }),
+      // `custom` tells the interface which ones can be edited or deleted; the built-ins
+      // cannot be, so the library can hide those controls rather than offering them and
+      // then refusing.
+      profiles: Object.fromEntries(Object.entries(PROFILES).map(([k, v]) =>
+        [k, { label: v.label, channels: v.channels, cat: v.cat, custom: !!v.custom }])),
+      // What each channel role IS, so the interface can ask rather than keep its own copy.
+      roleKinds: roleKinds(),
+      // Profiles patched on fixtures whose channels are ALL generic (c1, c2, ...): pure
+      // mode-switch banks with no dimmer or emitter, which blackout deliberately cannot
+      // touch (scaling a mode switch changes the mode). Empty on the current rig — the
+      // laser grew a real dimmer channel — but published so the UI can warn the moment
+      // such a profile is ever patched again.
+      blackoutBlind: [...new Set(state.fixtures
+        .filter((f) => isGenericChannels((PROFILES[f.profile] || PROFILES.rgb).channels))
+        .map((f) => f.profile))],
+      // Same rule for the effects: the pads are built from this list, so an effect added to
+      // fx.js appears on the page without anyone remembering to add it twice.
+      fxModes: FX_MODES,
+      fxSpatial: FX_SPATIAL,
+      lfoWaves: LFO_WAVES,
+      audioModes: AUDIO_MODES,
+      // Live audio input is non-enumerable on `state` (so it never persists); the page
+      // still gets a snapshot. `fresh` is the same 1.5s staleness gate the engine applies.
+      audio: {
+        fresh: (Date.now() - (state.audio.lastAt || 0)) < 1500,
+        level: state.audio.level, low: state.audio.low,
+        mid: state.audio.mid, high: state.audio.high,
+        bpm: state.audio.bpm,
+      },
+      status: {
+        nodes: nodeList(),
+        interfaces: localAddresses(),
+        broadcast: broadcastAddresses(),
+        // Whichever driver is live owns the counters the interface shows, so a frozen rig
+        // reads as a frozen count on the page rather than an Art-Net count ticking happily
+        // up while nothing leaves the serial port.
+        driver: state.output.driver,
+        outputEnabled: !!state.output.enabled,
+        lanAllowed,
+        serial: enttec ? enttec.status() : null,
+        serialPorts: listPorts(),
+        packetsSent: enttec ? enttec.packetsSent : artnet.packetsSent,
+        lastError: enttec ? enttec.lastError : artnet.lastError,
+        universes: engine.universes(),
+        fading: !!engine.fade,
+        chaseIndex: engine.chase.index,
+      },
+      dmx: snapshot(),
+    });
+  }
+
+  const routes = {
+
+    'GET /api/state': (req, res) => json(res, publicStateJson(), 200, req),
+
+    // The cheap read: a few hundred bytes for anything that polls fast — the graph's
+    // DMX Out node, a phone strip, an AI director. /api/state is the whole library.
+    'GET /api/summary': (req, res) => json(res, summary()),
+
+    // Scene names and health only — what a picker needs, ~50 bytes a scene.
+    'GET /api/scenes/summary': (req, res) => {
+      const patched = new Set(state.fixtures.map((f) => f.id));
+      json(res, { scenes: state.scenes.map((s) => {
+        const live = s.fixtures.filter((sf) => patched.has(sf.id)).length;
+        return { id: s.id, name: s.name, fadeMs: s.fadeMs, live, missing: s.fixtures.length - live };
+      }) });
+    },
+
+    // MIDI mappings live with the show, not in one browser's storage: every surface on
+    // the desk sees the same controller layout. Replace-whole, like sets and LFOs.
+    'GET /api/midi': (req, res) => json(res, { midi: state.midi }),
+    'POST /api/midi': (req, res, body) => {
+      const midi = sanitizeMidi(body.midi);
+      if (!midi) return json(res, { error: 'midi must be {maps: [...]} with at most 400 entries of plain fields' }, 400);
+      state.midi = midi;
+      save(); json(res, { ok: true, midi: state.midi });
+    },
+
+    // Just the live DMX buffers — polled fast so the stage view animates smoothly.
+    'GET /api/dmx': (req, res) => json(res, { dmx: snapshot(), master: state.master, blackout: state.blackout }),
+
+    'POST /api/master': (req, res, body) => {
+      if (body.master != null && Number.isFinite(+body.master)) state.master = Math.max(0, Math.min(255, Math.round(+body.master)));
+      if (body.blackout != null) state.blackout = !!body.blackout;
+      engine.cancelFade(); save(); pushFrame(); json(res, { ok: true });
+    },
+
+    'POST /api/fixture': (req, res, body) => {
+      const f = state.fixtures.find((x) => x.id === body.id);
+      if (!f) return json(res, { error: 'no such fixture' }, 404);
+      // Moving a fixture on the stage view or renaming it is housekeeping: it changes no
+      // channel, so it must not cancel a fade or make the desk forget the active scene —
+      // a stage tidy mid-show snapped 21 crossfades and blanked the scene bank's highlight.
+      const look = body.values != null || body.on != null || body.address != null
+        || body.universe != null || body.profile != null || body.limits != null;
+      if (body.values) Object.assign(f.values, sanitizeValues(body.values));
+      if (body.on != null) f.on = !!body.on;
+      if (body.name != null) f.name = String(body.name).slice(0, 40);
+      if (body.address != null) f.address = Math.max(1, Math.min(512, body.address | 0));
+      if (body.universe != null) f.universe = Math.max(0, Math.min(32767, body.universe | 0));
+      if (body.profile && PROFILES[body.profile]) f.profile = body.profile;
+      if (body.index != null) f.index = Math.max(1, body.index | 0);
+      // The stage world is -1..2: the visible rect at zoom 1 plus a full screen of space
+      // on every side. Clamped at all only so a broken client cannot fling a fixture to
+      // coordinates the Fit button would then zoom into oblivion trying to frame.
+      if (body.x != null) f.x = Math.max(-1, Math.min(2, +body.x));
+      if (body.y != null) f.y = Math.max(-1, Math.min(2, +body.y));
+      if (body.limits) Object.assign(f.limits, sanitizeLimits(body.limits));
+      if (look) { state.activeScene = null; engine.cancelFade(); pushFrame(); }
+      save(); json(res, { ok: true, fixture: f });
+    },
+
+    // Build a fixture type: {name, channels:[role, ...], cat?, replace?}. Channels are in
+    // the order the fixture expects them — that order is the whole definition.
+    'POST /api/profiles/add': (req, res, body) => {
+      const users = state.fixtures.filter((f) => f.profile === (body.name || '').trim());
+      const replacing = !!body.replace && users.length > 0;
+
+      // Reshaping a profile changes the patch width of every fixture using it, which can
+      // push them into their neighbours or off the end of the universe. Check before, not
+      // after: a rig that silently overlaps is far harder to notice than a refused edit.
+      if (replacing) {
+        const width = Array.isArray(body.channels) ? body.channels.length : 0;
+        const others = state.fixtures.filter((f) => f.profile !== body.name.trim());
+        const taken = new Map();
+        for (const f of others) {
+          const w = (PROFILES[f.profile] || PROFILES.rgb).channels.length;
+          for (let c = f.address; c < f.address + w && c <= 512; c++) taken.set(f.universe + ':' + c, f);
+        }
+        for (const f of users) {
+          if (f.address + width - 1 > 512) {
+            return json(res, { error: `${f.index}.${f.name} at ${f.address} would run off the end at ${width} channels` }, 409);
+          }
+          for (let c = f.address; c < f.address + width; c++) {
+            const hit = taken.get(f.universe + ':' + c);
+            if (hit) {
+              return json(res, { error: `${f.index}.${f.name} would grow into ${hit.index}.${hit.name} at channel ${c}` }, 409);
+            }
+          }
+        }
+      }
+
+      let name;
+      try {
+        name = addProfile(body.name, body.channels, { cat: body.cat, replace: !!body.replace, defaults: body.defaults });
+      } catch (e) {
+        return json(res, { error: e.message }, 400);
+      }
+      state.customProfiles = customProfiles();
+      // Fixtures already patched on this profile keep their address but change width. A
+      // channel the reshaped profile adds gets the profile's own resting value, the way a
+      // fresh patch would — otherwise a new shutter channel came up at the generic 0, which
+      // on these heads is closed, and six correctly patched beams went dark.
+      const own = PROFILES[name].defaults || {};
+      for (const f of users) {
+        for (const role of PROFILES[name].channels) {
+          if (f.values[role] == null) f.values[role] = own[role] != null ? own[role] : (ROLE_DEFAULTS[role] || 0);
+        }
+      }
+      engine.cancelFade(); save();
+      json(res, { ok: true, name, profile: PROFILES[name], inUse: users.length });
+    },
+
+    'POST /api/profiles/remove': (req, res, body) => {
+      // Built-in first: it is the more fundamental refusal. Reporting "still patched" for a
+      // built-in would send someone off to unpatch a rig and then fail them anyway.
+      const key = findProfile(body.name);
+      if (!key) return json(res, { error: `"${body.name}" does not exist` }, 400);
+      if (PROFILES[key].builtin) {
+        return json(res, { error: `"${key}" is a built-in fixture and cannot be deleted` }, 400);
+      }
+      const users = state.fixtures.filter((f) => f.profile === key);
+      if (users.length) {
+        return json(res, {
+          error: `${users.length} fixture${users.length === 1 ? ' is' : 's are'} still patched as "${key}" — unpatch ${users.length === 1 ? 'it' : 'them'} first`,
+          inUse: users.map((f) => ({ id: f.id, index: f.index, name: f.name, address: f.address })),
+        }, 409);
+      }
+      removeProfile(key);
+      state.customProfiles = customProfiles();
+      save(); json(res, { ok: true });
+    },
+
+    'POST /api/fixtures/add': (req, res, body) => {
+      const count = Math.max(1, Math.min(128, body.count || 1));
+      const profile = PROFILES[body.profile] ? body.profile : 'rgb';
+      const width = PROFILES[profile].channels.length;
+      const universe = Math.max(0, body.universe | 0);
+      let addr = body.address ? Math.max(1, Math.min(512, body.address | 0)) : engine.nextFreeAddress(universe, width);
+      let index = body.index != null ? Math.max(1, body.index | 0) : engine.nextIndex();
+      const row = state.fixtures.length;
+      const added = [];
+      for (let i = 0; i < count; i++) {
+        if (addr == null || addr + width - 1 > 512) break;
+        const f = makeFixture({
+          name: body.name || profile,
+          profile, address: addr, universe, index,
+          // lay new fixtures out left to right, wrapping every 12
+          x: 0.06 + ((row + i) % 12) * 0.075,
+          y: 0.28 + Math.floor((row + i) / 12) * 0.16,
+        });
+        state.fixtures.push(f); added.push(f);
+        addr += width; index++;
+      }
+      save(); json(res, { ok: true, added });
+    },
+
+    // Re-address patched fixtures — what dragging one across the patch grid does. Takes
+    // {id, universe, address} for one, or {moves:[{id, universe, address}, ...]} for a whole
+    // selection dragged together.
+    //
+    // Atomic on purpose: if any fixture would land on another, nothing moves at all and the
+    // blockers are named. A half-landed selection is worse than a refused one — you would
+    // have to work out which of them made it before you could undo anything. `force: true`
+    // stacks them anyway, because two fixtures sharing an address is legitimate (it mirrors
+    // them); it just has to be deliberate rather than the result of a slipped drag.
+    'POST /api/fixtures/readdress': (req, res, body) => {
+      const moves = Array.isArray(body.moves) ? body.moves
+        : (body.id != null ? [{ id: body.id, universe: body.universe, address: body.address }] : []);
+      if (!moves.length) return json(res, { error: 'nothing to move' }, 400);
+
+      const widthOf = (f) => (PROFILES[f.profile] || PROFILES.rgb).channels.length;
+      const moving = new Set(moves.map((m) => m.id));
+      const planned = [];
+      for (const m of moves) {
+        const f = state.fixtures.find((x) => x.id === m.id);
+        if (!f) return json(res, { error: 'no such fixture: ' + m.id }, 404);
+        const universe = m.universe != null ? Math.max(0, Math.min(32767, m.universe | 0)) : f.universe;
+        const address = Math.max(1, Math.min(512, (m.address != null ? m.address : f.address) | 0));
+        const width = widthOf(f);
+        if (address + width - 1 > 512) {
+          return json(res, {
+            error: `${f.index}.${f.profile} needs ${width} channels and runs off the end at ${address}`,
+          }, 409);
+        }
+        planned.push({ f, universe, address, width });
+      }
+
+      if (!body.force) {
+        // Occupancy of everything that is NOT moving, so a fixture never blocks itself when
+        // it shifts by less than its own width.
+        const occupied = new Map();
+        for (const f of state.fixtures) {
+          if (moving.has(f.id)) continue;
+          for (let c = f.address; c < f.address + widthOf(f) && c <= 512; c++) occupied.set(f.universe + ':' + c, f);
+        }
+        const claimed = new Map();
+        const blockers = new Map();
+        for (const p of planned) {
+          for (let c = p.address; c < p.address + p.width; c++) {
+            const key = p.universe + ':' + c;
+            const hit = occupied.get(key) || claimed.get(key);
+            if (hit && hit !== p.f && !blockers.has(hit.id)) {
+              blockers.set(hit.id, { channel: c, universe: p.universe, moved: p.f.id, by: hit });
+            }
+            claimed.set(key, p.f);
+          }
+        }
+        if (blockers.size) {
+          const list = [...blockers.values()];
+          const first = list[0];
+          return json(res, {
+            error: `channel ${first.channel} is taken by ${first.by.index}.${first.by.profile}`,
+            conflicts: list.map((c) => ({
+              channel: c.channel, universe: c.universe, moved: c.moved,
+              blockedBy: { id: c.by.id, index: c.by.index, profile: c.by.profile, address: c.by.address },
+            })),
+          }, 409);
+        }
+      }
+
+      for (const p of planned) { p.f.universe = p.universe; p.f.address = p.address; }
+      state.activeScene = null;
+      engine.cancelFade(); save();
+      json(res, { ok: true, moved: planned.map((p) => ({ id: p.f.id, universe: p.universe, address: p.address })) });
+    },
+
+    // Drag fixtures around the stage view: [{id, x, y}, ...]
+    'POST /api/fixtures/move': (req, res, body) => {
+      for (const m of body.moves || []) {
+        const f = state.fixtures.find((x) => x.id === m.id);
+        if (!f) continue;
+        f.x = Math.max(-1, Math.min(2, +m.x));
+        f.y = Math.max(-1, Math.min(2, +m.y));
+      }
+      save(); json(res, { ok: true });
+    },
+
+    'POST /api/fixtures/limits': (req, res, body) => {
+      const lim = sanitizeLimits(body.limits || {});
+      for (const id of body.ids || []) {
+        const f = state.fixtures.find((x) => x.id === id);
+        if (f) Object.assign(f.limits, lim);
+      }
+      engine.cancelFade(); save(); json(res, { ok: true });
+    },
+
+    'POST /api/groups/add': (req, res, body) => {
+      const ids = (body.ids || []).filter((id) => state.fixtures.some((f) => f.id === id));
+      if (!ids.length) return json(res, { error: 'select some fixtures first' }, 400);
+      const g = { id: `gp${Date.now().toString(36)}`, name: String(body.name || 'Group').slice(0, 24), ids };
+      state.groups.push(g); save(); json(res, { ok: true, group: g });
+    },
+
+    'POST /api/groups/remove': (req, res, body) => {
+      state.groups = state.groups.filter((g) => g.id !== body.id);
+      save(); json(res, { ok: true });
+    },
+
+    // Takes {id} or {ids:[...]}. Deleting from the patch grid unpatches a whole selection at
+    // once, and one request per fixture would be a burst of round trips racing the debounced
+    // save — the last one wins and the rest are lost work.
+    'POST /api/fixtures/remove': (req, res, body) => {
+      const ids = new Set(Array.isArray(body.ids) ? body.ids : (body.id != null ? [body.id] : []));
+      if (!ids.size) return json(res, { error: 'nothing to remove' }, 400);
+      const before = state.fixtures.length;
+      state.fixtures = state.fixtures.filter((f) => !ids.has(f.id));
+
+      // A group that still lists a deleted fixture keeps a phantom member: it selects
+      // nothing, and the group's count lies about what it holds. Prune the dead ids, and
+      // drop any group left with none — the same rule /api/groups/add applies at creation.
+      for (const g of state.groups) g.ids = g.ids.filter((id) => !ids.has(id));
+      const emptied = state.groups.filter((g) => g.ids.length === 0).map((g) => g.id);
+      state.groups = state.groups.filter((g) => g.ids.length > 0);
+
+      engine.cancelFade(); save();
+      json(res, { ok: true, removed: before - state.fixtures.length, groupsRemoved: emptied });
+    },
+
+    'POST /api/fixtures/all': (req, res, body) => {
+      const values = body.values ? sanitizeValues(body.values) : null;
+      for (const f of state.fixtures) {
+        if (values) Object.assign(f.values, values);
+        if (body.on != null) f.on = !!body.on;
+      }
+      state.activeScene = null;
+      engine.cancelFade(); save(); pushFrame(); json(res, { ok: true });
+    },
+
+    // {channel, value} sets one. {channels:[{universe, channel, value}, ...]} sets many in
+    // one request — a fader panel drags across a dozen channels at a time, and one request
+    // each would be a burst of round trips racing the 400ms debounced save. A null or
+    // negative value releases the channel back to whatever the fixtures are rendering.
+    'POST /api/raw': (req, res, body) => {
+      if (body.clear) {
+        // {clear:true} releases every manual channel; {clear:true, universe:N} releases just
+        // that one. "Reset all" on a fader page means the universe in front of you — wiping
+        // held channels on universes you cannot see would be a nasty surprise on a big rig.
+        if (body.universe != null) {
+          const prefix = (body.universe | 0) + ':';
+          for (const key of Object.keys(state.raw)) if (key.startsWith(prefix)) delete state.raw[key];
+        } else {
+          state.raw = {};
+        }
+      } else if (Array.isArray(body.channels)) {
+        for (const c of body.channels) setRaw(c && c.universe, c && c.channel, c && c.value);
+      } else if (body.channel) {
+        setRaw(body.universe, body.channel, body.value);
+      }
+      engine.cancelFade(); save(); pushFrame(); json(res, { ok: true, raw: state.raw });
+    },
+
+    'POST /api/scenes/save': (req, res, body) => {
+      const scene = engine.captureScene(body.name);
+      if (body.fadeMs != null) scene.fadeMs = Math.max(0, body.fadeMs | 0);
+      state.scenes.push(scene); save(); json(res, { ok: true, scene });
+    },
+
+    // Also accepts optional {fx}, {lfos}, {audioCfg} to edit those parts of a saved scene
+    // directly — validated by the SAME helpers their live routes use (sanitizeFxPatch,
+    // sanitizeLfos, sanitizeAudioCfg), so a scene cannot hold a value the live route would
+    // refuse. Only the parts present in the body are replaced: the UI can change a scene's
+    // effect without restaging it, and without touching the live desk at all.
+    'POST /api/scenes/update': (req, res, body) => {
+      const i = state.scenes.findIndex((s) => s.id === body.id);
+      if (i === -1) return json(res, { error: 'no such scene' }, 404);
+      // Validate the refusable part BEFORE mutating anything, so a rejected body never
+      // half-applies its restage or rename first.
+      let lfos = null;
+      if (body.lfos !== undefined) {
+        lfos = sanitizeLfos(body.lfos);
+        if (!lfos) return json(res, { error: 'lfos must be an array' }, 400);
+      }
+      if (body.restage) {
+        const captured = engine.captureScene(state.scenes[i].name);
+        captured.id = state.scenes[i].id;
+        captured.fadeMs = state.scenes[i].fadeMs;
+        state.scenes[i] = captured;
+      }
+      const scene = state.scenes[i];
+      if (body.name != null) scene.name = String(body.name).slice(0, 40);
+      if (body.fadeMs != null) scene.fadeMs = Math.max(0, body.fadeMs | 0);
+      if (body.fx && typeof body.fx === 'object') scene.fx = sanitizeFxPatch(scene.fx, body.fx);
+      if (lfos) scene.lfos = lfos;
+      if (body.audioCfg && typeof body.audioCfg === 'object') {
+        scene.audioCfg = sanitizeAudioCfg({ ...(scene.audioCfg || {}), ...body.audioCfg });
+      }
+      save(); json(res, { ok: true, scene });
+    },
+
+    // Live sets: replaced whole, like /api/lfos. Dead scene ids are kept on purpose — the
+    // player marks them missing instead of silently shortening the operator's set.
+    'POST /api/sets': (req, res, body) => {
+      if (!Array.isArray(body.sets)) return json(res, { error: 'sets must be an array' }, 400);
+      state.sets = sanitizeSets(body.sets);
+      save(); json(res, { ok: true, sets: state.sets });
+    },
+
+    // Replace the whole scene library in one call — a regenerated library lands on the
+    // running desk with zero downtime instead of a stop-edit-restart. Values are clamped
+    // and the fx/lfos/audioCfg parts go through the same validators as their live routes.
+    'POST /api/scenes/replace': (req, res, body) => {
+      if (!Array.isArray(body.scenes)) return json(res, { error: 'scenes must be an array' }, 400);
+      if (body.scenes.length > 2000) return json(res, { error: 'too many scenes' }, 400);
+      const clean = [];
+      for (const s of body.scenes) {
+        if (!s || typeof s.id !== 'string' || !Array.isArray(s.fixtures)) {
+          return json(res, { error: 'every scene needs an id and a fixtures array' }, 400);
+        }
+        const lfos = s.lfos == null ? undefined : sanitizeLfos(s.lfos);
+        if (s.lfos != null && !lfos) return json(res, { error: `scene "${s.name}": bad lfos` }, 400);
+        clean.push({
+          id: s.id.slice(0, 40),
+          name: String(s.name || 'Scene').slice(0, 60),
+          fadeMs: Math.max(0, Math.min(60000, s.fadeMs | 0)),
+          fixtures: s.fixtures.map((sf) => ({
+            id: String(sf.id),
+            on: sf.on !== false,
+            values: Object.fromEntries(Object.entries(sf.values || {})
+              .filter(([k]) => typeof k === 'string' && k.length <= 24)
+              .map(([k, v]) => [k, Math.max(0, Math.min(255, +v | 0))])),
+          })),
+          raw: sanitizeRaw(s.raw),
+          // A scene that names no exclude list must not arrive with an empty one: the empty
+          // list is "effects on everything", and recalling it un-protected the beams. It
+          // is left absent, and recall then keeps whatever the live desk has.
+          fx: s.fx ? withoutExcludeIfAbsent(sanitizeFxPatch({ ...DEFAULT_FX }, s.fx), s.fx) : undefined,
+          lfos,
+          audioCfg: s.audioCfg ? sanitizeAudioCfg(s.audioCfg) : undefined,
+        });
+      }
+      state.scenes = clean;
+      const keep = new Set(clean.map((s) => s.id));
+      state.chase.sceneIds = state.chase.sceneIds.filter((id) => keep.has(id));
+      // Replacing the library can empty the chase; an empty chase is never left armed.
+      if (state.chase.sceneIds.length === 0 && state.chase.enabled) {
+        state.chase.enabled = false;
+        engine.chase.running = false;
+      }
+      if (state.activeScene && !keep.has(state.activeScene)) state.activeScene = null;
+      save(); json(res, { ok: true, count: clean.length });
+    },
+
+    'POST /api/scenes/remove': (req, res, body) => {
+      state.scenes = state.scenes.filter((s) => s.id !== body.id);
+      state.chase.sceneIds = state.chase.sceneIds.filter((id) => id !== body.id);
+      // Removing the last step disarms the chase outright — see POST /api/chase.
+      if (state.chase.sceneIds.length === 0 && state.chase.enabled) {
+        state.chase.enabled = false;
+        engine.chase.running = false;
+      }
+      save(); json(res, { ok: true });
+    },
+
+    'POST /api/scenes/recall': (req, res, body) => {
+      const scene = state.scenes.find((s) => s.id === body.id);
+      // A manual recall takes the rig over: a running chase is PAUSED first, or its next
+      // hold would snap the operator's choice back within seconds. The chase engine itself
+      // never comes through here — tickChase calls engine.recallScene directly — so this
+      // only ever fires on a person pressing a scene button.
+      let chasePaused = false;
+      if (scene && state.chase.enabled) {
+        state.chase.enabled = false;
+        engine.chase.running = false;
+        chasePaused = true;
+      }
+      // Before/after comparison so the reply can say what the recall actually did — the UI
+      // toasts it, because a scene silently stopping a strobe or releasing held faders is
+      // otherwise invisible until something looks wrong.
+      const fxWasOn = fxActive(state.fx);
+      const rawBefore = Object.keys(state.raw);
+      const ok = engine.recallScene(scene, body.fadeMs);
+      const out = { ok };
+      if (chasePaused) out.chasePaused = true;
+      if (ok) {
+        const fxIsOn = fxActive(state.fx);
+        if (!fxWasOn && fxIsOn) out.fxStarted = state.fx.mode;
+        if (fxWasOn && !fxIsOn) out.fxStopped = true;
+        const released = rawBefore.filter((k) => !(k in state.raw)).length;
+        if (released > 0) out.releasedHolds = released;
+      }
+      save(); pushFrame(); json(res, out);
+    },
+
+    'POST /api/chase': (req, res, body) => {
+      const wasEmpty = state.chase.sceneIds.length === 0;
+      Object.assign(state.chase, {
+        enabled: body.enabled != null ? !!body.enabled : state.chase.enabled,
+        sceneIds: Array.isArray(body.sceneIds)
+          ? body.sceneIds.filter((id) => typeof id === 'string' && state.scenes.some((s) => s.id === id))
+          : state.chase.sceneIds,
+        holdMs: body.holdMs != null ? Math.max(50, body.holdMs | 0) : state.chase.holdMs,
+        fadeMs: body.fadeMs != null ? Math.max(0, body.fadeMs | 0) : state.chase.fadeMs,
+      });
+      // A chase with no steps can never be armed: `enabled` left true on an empty list is a
+      // landmine — the first "include in chase" later would start a fast chase instantly.
+      // For the same reason, adding the first step to an EMPTY list never starts the chase
+      // by itself: unless this very request said enabled:true, the transition from empty
+      // disarms it and running again is an explicit re-enable.
+      if (state.chase.sceneIds.length === 0) state.chase.enabled = false;
+      else if (wasEmpty && state.chase.enabled && body.enabled !== true) state.chase.enabled = false;
+      if (!state.chase.enabled) engine.chase.running = false;
+      save(); json(res, { ok: true, chase: state.chase });
+    },
+
+    // The effects engine: mode, tempo, depth and whether it is running. One route for all
+    // four because they are one control — setting a mode against a depth left at 4% from
+    // last time is exactly how an effect looks broken when it is working perfectly.
+    'POST /api/fx': (req, res, body) => {
+      // The clamps live in fx.js (sanitizeFxPatch), shared with scene editing — one answer
+      // to what a valid fx config is, whichever route it arrives by.
+      state.fx = sanitizeFxPatch(state.fx, body);
+      // Choosing a mode arms it and choosing "none" disarms it, unless the caller said
+      // otherwise: a pad that sets a mode and leaves the engine switched off is a button
+      // that visibly does nothing.
+      if (body.mode != null && body.enabled == null) state.fx.enabled = state.fx.mode !== 'none';
+      save(); pushFrame(); json(res, { ok: true, fx: state.fx });
+    },
+
+    // The LFO list, replaced whole. Per-LFO validation lives in lfo.js next to the maths
+    // that reads the fields, so a value that gets in is a value the oscillator can run.
+    'POST /api/lfos': (req, res, body) => {
+      const lfos = sanitizeLfos(body && body.lfos);
+      if (!lfos) return json(res, { error: 'lfos must be an array' }, 400);
+      state.lfos = lfos;
+      save(); pushFrame(); json(res, { ok: true, lfos: state.lfos });
+    },
+
+    // Live audio levels, arriving many times a second. Deliberately CHEAP: no save (the
+    // levels are volatile by design) and no pushFrame (the 40Hz loop reads them on its
+    // next tick anyway — pushing here would double the frame rate under load).
+    'POST /api/audio': (req, res, body) => {
+      const a = state.audio;
+      const now = Date.now();
+      const c01 = (v, old) => (Number.isFinite(+v) ? Math.max(0, Math.min(1, +v)) : old);
+      a.level = c01(body.level, a.level);
+      a.low = c01(body.low, a.low);
+      a.mid = c01(body.mid, a.mid);
+      a.high = c01(body.high, a.high);
+      if (body.beat) a.beatAt = now;
+      if (body.bpm !== undefined) {
+        a.bpm = Number.isFinite(+body.bpm) ? Math.max(20, Math.min(300, +body.bpm)) : null;
+      }
+      a.lastAt = now;
+      json(res, { ok: true });
+    },
+
+    // How the audio drives the rig — this half persists.
+    'POST /api/audiocfg': (req, res, body) => {
+      state.audioCfg = sanitizeAudioCfg({ ...state.audioCfg, ...(body || {}) });
+      save(); pushFrame(); json(res, { ok: true, audioCfg: state.audioCfg });
+    },
+
+    // Which widget is on the port, and does it open — answerable without moving a light.
+    'POST /api/serial/identify': (req, res, body) => {
+      const port = body && body.port && PORT_NAME.test(String(body.port).trim()) ? portName(body.port) : state.output.serialPort;
+      const probe = state.output.driver === 'enttec' && enttec && enttec.port === port
+        ? enttec
+        : new Enttec({ port, offline: offline });
+      const result = probe.identify();
+      if (probe !== enttec) probe.close();
+      json(res, { ok: !!result.ok, port, ...result, ports: listPorts(), device: describePort(port) });
+    },
+
+    'POST /api/output': (req, res, body) => {
+      if (body.mode) state.output.mode = body.mode === 'unicast' ? 'unicast' : 'broadcast';
+      if (Array.isArray(body.targets)) state.output.targets = body.targets.map(validIp).filter(Boolean);
+      if (body.refreshHz != null) state.output.refreshHz = Math.max(1, Math.min(44, body.refreshHz | 0));
+      if (body.driver) state.output.driver = body.driver === 'enttec' ? 'enttec' : 'artnet';
+      if (body.enabled != null) state.output.enabled = !!body.enabled;
+      if (body.serialPort && PORT_NAME.test(String(body.serialPort).trim())) state.output.serialPort = portName(body.serialPort);
+      // Rebuild the driver before answering, so the reply carries the real outcome of the
+      // switch. Selecting a port that will not open has to say so here — finding out by
+      // noticing the rig is dark is how this project loses an evening.
+      const wire = enttecDriver();
+      startLoop(); save();
+      json(res, {
+        ok: true,
+        output: state.output,
+        serial: wire ? wire.status() : null,
+        error: wire && !wire.connected ? wire.lastError : null,
+      });
+    },
+
+    // Add a device by typing its address. This is the path that works on a show network:
+    // no internet, no discovery service, nothing to browse — the node is at the address
+    // printed on it, and saying so is enough to make it selectable as a unicast target.
+    'POST /api/nodes/add': (req, res, body) => {
+      const ip = validIp(body && body.address);
+      if (!ip) throw new Error('that is not an IP address — four numbers 0-255, like 2.0.0.10');
+      const name = body && typeof body.name === 'string' ? body.name.trim().slice(0, 40) : '';
+      const existing = state.output.manual.find((m) => m.ip === ip);
+      // Adding an address already in the list renames it rather than refusing: the second
+      // add is how you correct a name, and a duplicate row would be two of the same device.
+      if (existing) existing.name = name || existing.name;
+      else state.output.manual.push({ ip, name });
+      save();
+      // Ask it who it is straight away, so a device that DOES answer shows its name in the
+      // list within the second rather than at the next 10s sweep.
+      if (state.output.driver !== 'enttec') artnet.poll([ip]);
+      // Typing an address means 'send the show there' — that is the whole reason the address
+      // is being typed. Broadcast only reaches the desk's own subnet, and Art-Net gear
+      // routinely ships on 2.x.x.x where the broadcast cannot follow, so adding a device and
+      // leaving the output pointed somewhere else would add a row that does nothing. Pass
+      // send:false to only list it.
+      const send = !body || body.send !== false;
+      if (send) {
+        state.output.mode = 'unicast';
+        if (!state.output.targets.includes(ip)) state.output.targets.push(ip);
+        save();
+      }
+      json(res, { ok: true, sending: send, output: state.output, manual: state.output.manual, nodes: nodeList() });
+    },
+
+    // Removing a device also stops the show being sent to it. Leaving the address behind in
+    // `targets` would keep unicasting at a device that is no longer listed anywhere — the
+    // desk would be talking to something the interface says is not part of the rig.
+    'POST /api/nodes/remove': (req, res, body) => {
+      const ip = validIp(body && body.address);
+      state.output.manual = state.output.manual.filter((m) => m.ip !== ip);
+      state.output.targets = state.output.targets.filter((t) => t !== ip);
+      save();
+      json(res, { ok: true, manual: state.output.manual, targets: state.output.targets, nodes: nodeList() });
+    },
+
+    // Optional {address} chases one specific node. Worth having when the node is on a
+    // foreign subnet and cannot hear the broadcast — the reply still finds its way back,
+    // so a direct poll answers "is it reachable at all" when the broadcast says nothing.
+    'POST /api/discover': (req, res, body) => {
+      const extra = [];
+      if (body && typeof body.address === 'string' && /^\d+\.\d+\.\d+\.\d+$/.test(body.address.trim())) {
+        extra.push(body.address.trim());
+      }
+      artnet.poll([...state.output.targets, ...extra]);
+      json(res, { ok: true, polled: artnet.pollTargets([...state.output.targets, ...extra]) });
+    },
+  };
+
+  async function handle(req, res, pathname) {
+    const url = new URL(req.url, 'http://localhost');
+    if (pathname == null) pathname = url.pathname;
+    if (pathname === '') pathname = '/';
+    if (pathname === FAVICON_204) { res.writeHead(204); return res.end(); }
+    const key = req.method + ' ' + pathname;
+    if (routes[key]) {
+      try {
+        // Under Express the JSON body has already been parsed (and the stream drained);
+        // standing alone the desk reads it itself.
+        const body = req.method !== 'POST' ? null : (req.body && typeof req.body === 'object' ? req.body : await readBody(req));
+        return routes[key](req, res, body);
+      } catch (e) {
+        json(res, { error: e.message }, e.status || 400);
+        // An oversize upload is not drained: the socket goes once the refusal is out.
+        if (e.status === 413) res.on('finish', () => req.destroy());
+        return undefined;
+      }
+    }
+    if (pathname.indexOf('/api/') === 0) return json(res, { error: 'not found' }, 404);
+
+    // A malformed escape in the path (`/%`) threw here, outside every catch, and one
+    // request from anyone on the wifi ended the process and the show with it.
+    let rel;
+    try { rel = pathname === '/' ? 'index.html' : decodeURIComponent(pathname.slice(1)); }
+    catch (e) { res.writeHead(400); return res.end('bad path'); }
+    const file = path.join(PUBLIC, rel);
+    if (file !== PUBLIC && file.indexOf(PUBLIC + path.sep) !== 0) { res.writeHead(403); return res.end('forbidden'); }
+    fs.readFile(file, (err, data) => {
+      if (err) { res.writeHead(404); return res.end('not found'); }
+      res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' });
+      res.end(data);
+    });
+  }
+
+  function close() {
+    clearInterval(timer);
+    clearInterval(pollTimer);
+    clearTimeout(firstPoll);
+    try { writeShow(); } catch (e) { log('could not save the show on close: ' + e.message); }
+    artnet.close();
+    if (enttec) enttec.close();
+  }
+
+  return { handle, close, state, engine, writeShow, summary, showFile: SHOW };
+}
+
+module.exports = { createDesk };
