@@ -523,6 +523,11 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
             ref={controlsRef}
             makeDefault
             dollyToCursor
+            // Without this the wheel stops dead at minDistance and every drag then orbits
+            // a pivot 35 cm in front of the lens — "zoom max and the camera is stuck"
+            // (owner, 2026-09-02, the Cascade club). With it, dollying past the minimum
+            // carries the pivot forward, so the wheel keeps walking you into the room.
+            infinityDolly
             smoothTime={0.15}
             draggingSmoothTime={0.0}
             minDistance={0.35}

@@ -24,3 +24,10 @@
   staring at the origin — every locked composed entry stares at the floor. Workaround in
   data: `locked: false`. The fix belongs in `StudioOrbit`: apply position + lookAt to the
   raw camera when navigation is off. Needs a known-fixes entry and a guard when done.
+- **View mode "zoom max and the camera is stuck"** (owner, same day): `CameraControls`
+  stopped dead at `minDistance` 0.35 and every drag then orbited a pivot 35 cm in front
+  of the lens. `infinityDolly` on — past the minimum the wheel now carries the pivot
+  forward, so zooming keeps walking you into the room. Reproduced and re-shot: 40 vs 65
+  wheel ticks were the same frame before, and a different room after. Everywhere, since
+  it is the one orbit rig (Studio, the public viewer, the hub). Guard:
+  `src/studio/components/studioOrbitInfinityDolly.test.js`.
