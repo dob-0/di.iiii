@@ -318,7 +318,7 @@ function initializeSocket(httpServer, config) {
 
     // User joins a space
     socket.on('join-space', (data) => {
-      const { spaceId, userId, userName, chat } = data
+      const { spaceId, userId, userName, chat } = data || {}
       if (!spaceId) return
       if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) {
         socket.emit('space-forbidden', {
@@ -377,7 +377,7 @@ function initializeSocket(httpServer, config) {
 
     // Scene update from client
     socket.on('scene-update', async (data) => {
-      const { spaceId, changes, version } = data
+      const { spaceId, changes, version } = data || {}
       if (!spaceId) return
       if (!(await ensureEditableSpace(spaceId, socket))) return
 
@@ -397,7 +397,7 @@ function initializeSocket(httpServer, config) {
 
     // Object add/delete/transform
     socket.on('object-changed', async (data) => {
-      const { spaceId, objectId, action, payload } = data
+      const { spaceId, objectId, action, payload } = data || {}
       if (!spaceId) return
       if (!(await ensureEditableSpace(spaceId, socket))) return
 
@@ -416,7 +416,7 @@ function initializeSocket(httpServer, config) {
 
     // Object added
     socket.on('object-added', async (data) => {
-      const { spaceId, object } = data
+      const { spaceId, object } = data || {}
       if (!spaceId || !object) return
       if (!(await ensureEditableSpace(spaceId, socket))) return
 
@@ -432,7 +432,7 @@ function initializeSocket(httpServer, config) {
 
     // Object deleted
     socket.on('object-deleted', async (data) => {
-      const { spaceId, objectId } = data
+      const { spaceId, objectId } = data || {}
       if (!spaceId || !objectId) return
       if (!(await ensureEditableSpace(spaceId, socket))) return
 
@@ -448,7 +448,7 @@ function initializeSocket(httpServer, config) {
 
     // User cursor position (for presence)
     socket.on('user-cursor', (data) => {
-      const { spaceId, cursor } = data
+      const { spaceId, cursor } = data || {}
       if (!spaceId) return
       if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) return
 
@@ -603,7 +603,7 @@ function initializeSocket(httpServer, config) {
 
     // Selection changes
     socket.on('selection-changed', (data) => {
-      const { spaceId, selectedObjects } = data
+      const { spaceId, selectedObjects } = data || {}
       if (!spaceId) return
       if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) return
 
