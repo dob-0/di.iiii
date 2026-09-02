@@ -121,9 +121,11 @@ Rules:
 - **…but the sweep only fires if someone lands.** Since merges moved to GitHub PRs
   (`gh pr merge`), sessions stopped running `npm run land`, and by 2026-08-10 seven
   finished worktrees had piled up as sediment — several on branches whose remote refs
-  were already pruned. If you merge via `gh`, the sweep is still your job: run
-  `npm run land` (or at least `npm run state` and act on its `finished?` hints) before
-  the session ends. Before removing ANY tree, three checks, no exceptions: its
+  were already pruned. Since 2026-09-02 CI folds the notes on every push to `dev`
+  (`deploy-vps-staging.yml`, job `land`), but it cannot see your disk: if you merge
+  via `gh`, the sweep is still your job — run `npm run land` (it sweeps even with
+  nothing left to fold; or at least `npm run state` and act on its `finished?` hints)
+  before the session ends. Before removing ANY tree, three checks, no exceptions: its
   `status --porcelain` is empty (a "finished" tree was found carrying an uncommitted
   known-fixes entry that had never landed anywhere), no session is sitting in it
   (name the directory and get an ack — a tree was once removed under a session

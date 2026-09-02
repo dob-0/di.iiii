@@ -9,6 +9,12 @@
 // files, sweeps worktrees (repo-state.mjs --sweep -- the enforced cleanup moment,
 // not "whenever someone remembers"), and commits. Does not push.
 //
+// Since 2026-09-02 the fold itself normally happens in CI: deploy-vps-staging.yml's
+// `land` job runs this script on every push to dev and pushes the commit (and ci.yml
+// folds in place so the docs gate sees the landed tree). What CI cannot do is sweep
+// YOUR worktrees, so with nothing to fold this still runs the sweep -- otherwise the
+// enforced cleanup moment quietly stops existing the day the fold stops being manual.
+//
 //   node scripts/session-land.mjs             # do it
 //   node scripts/session-land.mjs --dry-run   # show what would happen, touch nothing
 
@@ -25,6 +31,15 @@ const progressPath = path.join(repoRoot, 'PROGRESS.md')
 const currentMdPath = path.join(repoRoot, 'CURRENT.md')
 
 const git = (args) => execFileSync('git', args, { encoding: 'utf8', cwd: repoRoot }).trim()
+
+const sweepWorktrees = () => {
+  console.log('\nSweeping worktrees:')
+  try {
+    execFileSync('node', [path.join(repoRoot, 'scripts', 'repo-state.mjs'), '--sweep'], { stdio: 'inherit', cwd: repoRoot })
+  } catch (error) {
+    console.error(`worktree sweep failed (non-fatal, continuing): ${error.message}`)
+  }
+}
 
 const main = () => {
   const dryRun = process.argv.includes('--dry-run')
@@ -46,7 +61,8 @@ const main = () => {
     : []
 
   if (!noteFiles.length) {
-    console.log('Nothing to land — docs/ai/sessions/ has no notes beyond README.md.')
+    console.log('Nothing to fold — docs/ai/sessions/ has no notes beyond README.md (CI lands them on merge; see deploy-vps-staging.yml).')
+    if (!dryRun) sweepWorktrees()
     return
   }
 
@@ -70,12 +86,7 @@ const main = () => {
   fs.writeFileSync(currentMdPath, newCurrentMd)
   for (const name of noteFiles) fs.unlinkSync(path.join(sessionsDir, name))
 
-  console.log('\nSweeping worktrees:')
-  try {
-    execFileSync('node', [path.join(repoRoot, 'scripts', 'repo-state.mjs'), '--sweep'], { stdio: 'inherit', cwd: repoRoot })
-  } catch (error) {
-    console.error(`worktree sweep failed (non-fatal, continuing): ${error.message}`)
-  }
+  sweepWorktrees()
 
   execFileSync('git', ['add', 'PROGRESS.md', 'CURRENT.md', 'docs/ai/sessions'], { cwd: repoRoot })
   const titles = noteFiles.map((f) => f.replace(/\.md$/, '')).join(', ')
