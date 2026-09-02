@@ -5,7 +5,7 @@
   "slug": "landing",
   "label": "di.iiii — the landing page",
   "mode": "code",
-  "entry": "spaces/main/code/landing/index.html",
+  "entry": "spaces/main/pages/landing/index.html",
   "include": [],
   "assets": [],
   "publish": false,

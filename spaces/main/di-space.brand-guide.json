@@ -5,7 +5,7 @@
   "slug": "brand-guide",
   "label": "di.i — brand guide",
   "mode": "code",
-  "entry": "spaces/main/code/brand-guide/index.html",
+  "entry": "spaces/main/pages/brand-guide/index.html",
   "include": [],
   "assets": [],
   "publish": false,

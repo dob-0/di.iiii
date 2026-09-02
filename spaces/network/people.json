@@ -1,5 +1,5 @@
 {
-  "note": "One entry per person who has a room in the network space. `works` are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. build.mjs turns this into code/people/<slug>.html and one di-space.<slug>.json each. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make.",
+  "note": "One entry per person who has a room in the network space. `works` are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. build.mjs turns this into pages/<slug>.html and one di-space.<slug>.json each. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make.",
   "people": [
     { "slug": "gevorg-grigoryan", "name": "Gevorg Grigoryan", "role": "head of di.iiii, development", "team": true,
       "works": [
