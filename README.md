@@ -1,4 +1,4 @@
-<img src="public/brand/wordmark-on-black.png" alt="di.iiii" width="360">
+<img src="public/suite/wordmark-on-black.png" alt="di.iiii" width="360">
 
 ## di.iiii hosts 3D spaces on the web
 
