@@ -255,6 +255,22 @@ describe('RawGraphSurface', () => {
         expect(getByText('100%')).toBeTruthy()
     })
 
+    // The editor places world windows through this: every zoom and pan has to
+    // reach it, or a window sits still while the cards under it move.
+    it('publishes the viewport to onViewportChange on every zoom change', () => {
+        const onViewportChange = vi.fn()
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { getByRole } = render(
+            <RawGraphSurface nodes={[colorNode]} edges={[]} onViewportChange={onViewportChange} />
+        )
+        expect(onViewportChange).toHaveBeenCalled()
+        const before = onViewportChange.mock.calls.at(-1)[0]
+        expect(before).toEqual(expect.objectContaining({ zoom: expect.any(Number), panX: expect.any(Number), panY: expect.any(Number) }))
+        fireEvent.click(getByRole('button', { name: 'Zoom in' }))
+        const after = onViewportChange.mock.calls.at(-1)[0]
+        expect(after.zoom).toBeGreaterThan(before.zoom)
+    })
+
     it('calls onDeleteEdge when a wire path is clicked', () => {
         const colorNode = makeNode('value.color', { id: 'color-1' })
         const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320 })
