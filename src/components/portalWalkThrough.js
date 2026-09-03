@@ -14,7 +14,10 @@
 
 // Metres, in the portal's own scale. The gateway ring is a torus of major
 // radius 1.1 and tube 0.12 (PortalObject.jsx), so its outer edge sits at 1.22:
-// this fires as the visitor's feet reach the ring, not before. Deliberately
+// this fires as the visitor's feet reach the ring, not before. A 'frame' portal
+// is drawn to the same half-width and bar (PORTAL_FRAME), on purpose — its
+// jambs stand where the ring's outer edge lies, so one radius fits both door
+// shapes and neither needs a special case here. Deliberately
 // unrelated to the 30-metre atmosphere-tint radius in Walker's nearest-zone
 // pass — that one is generous on purpose, because tinting the sky early is
 // welcoming and leaving the room early is not.

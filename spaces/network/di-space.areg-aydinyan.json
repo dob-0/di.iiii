@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-areg-aydinyan",
+  "slug": "areg-aydinyan",
+  "label": "Areg Aydinyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/areg-aydinyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

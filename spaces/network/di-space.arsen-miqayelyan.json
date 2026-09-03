@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-arsen-miqayelyan",
+  "slug": "arsen-miqayelyan",
+  "label": "Arsen Miqayelyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/arsen-miqayelyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

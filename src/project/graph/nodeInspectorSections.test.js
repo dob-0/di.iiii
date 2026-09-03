@@ -156,6 +156,17 @@ describe('deriveNodeInspectorSections', () => {
         expect(fields.find((field) => field.path[0] === 'label')).toBeDefined()
     })
 
+    // Declared in the registry, not special-cased here: a config that names
+    // its own options is a choice. DMX Out's Rig is the first — two rigs answer
+    // to that node, and a typed word is how you get one that does nothing.
+    it('renders a config that declares options as a select', () => {
+        const fields = deriveNodeInspectorSections(createNode('device.dmx.out'))
+            .find((section) => section.id === 'values')?.fields || []
+        const rig = fields.find((field) => field.path[0] === 'rig')
+        expect(rig.type).toBe('select')
+        expect(rig.options.map((option) => option.value)).toEqual(['desk', 'vizzz'])
+    })
+
 it('keeps the Code section\'s values.__code distinct from node.null\'s own values.body', () => {
         const node = createNode('node.null', { values: { body: 'the null node body', portDefs: [] } })
         const sections = deriveNodeInspectorSections(node)

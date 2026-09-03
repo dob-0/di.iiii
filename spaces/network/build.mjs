@@ -1,97 +1,27 @@
-// Turns people.json into one code page + one page manifest per person, and
-// checks the roster has a door for each. Run from the repo root:
+// Turns people.json into one page + one di-space manifest per person. Run
+// from the repo root:
 //   node spaces/network/build.mjs
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { renderRoom } from './room-template.mjs'
+import { renderIndex } from './index-template.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const REL = path.relative(process.cwd(), HERE).split(path.sep).join('/') || '.'
 const { people } = JSON.parse(fs.readFileSync(path.join(HERE, 'people.json'), 'utf8'))
-const roster = fs.readFileSync(path.join(HERE, 'code/index.html'), 'utf8')
-
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-
-// Same tokens and faces as the roster, so a room reads as the same place.
-const CSS = `
-  :root { --paper: #f5f5f3; --ink: #17191a; --ink-2: #4f5356; --ink-3: #868a8d; --rule: #d6d8d5; --mark: #b23a2c; }
-  @media (prefers-color-scheme: dark) { :root { --paper: #141615; --ink: #ebece9; --ink-2: #b4b8b5; --ink-3: #7d8280; --rule: #30342f; --mark: #e26a58; } }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--paper); color: var(--ink); }
-  body { font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-  .page { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
-  .eyebrow, .role, h2, footer, .works .line { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); display: flex; gap: 14px; flex-wrap: wrap; }
-  .eyebrow a { color: inherit; text-decoration: none; }
-  .eyebrow a:hover, .eyebrow a:focus-visible { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-  header { padding-bottom: 22px; border-bottom: 1px solid var(--rule); }
-  h1 { font-size: clamp(34px, 7vw, 56px); line-height: 1; letter-spacing: -0.02em; font-weight: 600; margin: 8px 0 12px; text-wrap: balance; }
-  .role { display: block; font-size: 13px; color: var(--ink-2); letter-spacing: .02em; }
-  .mark .role { color: var(--mark); }
-  section { padding: 22px 0 6px; }
-  section + section { border-top: 1px solid var(--rule); }
-  h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; margin: 0 0 12px; }
-  .works { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 22px; margin: 0; padding: 0; list-style: none; }
-  .works a { display: block; border-top: 2px solid var(--ink); padding-top: 10px; color: inherit; text-decoration: none; }
-  .works a:hover .title, .works a:focus-visible .title { text-decoration: underline; text-underline-offset: 3px; }
-  .works .title { font-weight: 600; font-size: 17px; line-height: 1.25; display: block; }
-  .works .line { display: block; font-size: 12px; color: var(--ink-2); margin-top: 4px; letter-spacing: .02em; }
-  .people { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0; padding: 0; list-style: none; }
-  .people a { display: inline-block; border: 1px solid var(--rule); border-radius: 999px; padding: 6px 13px; font-size: 14.5px; line-height: 1.2; color: inherit; text-decoration: none; }
-  .people a:hover, .people a:focus-visible { border-color: var(--ink); }
-  .empty { color: var(--ink-2); margin: 0; max-width: 58ch; }
-  footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); line-height: 1.6; }
-  footer a { color: inherit; }
-  a:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
-`
-
-const page = (p) => {
-  const works = p.works.length
-    ? `<ul class="works">${p.works.map((w) => `
-    <li><a href="${esc(w.href)}" target="_top"><span class="title">${esc(w.title)}</span><span class="line">${esc(w.line)}</span></a></li>`).join('')}
-  </ul>`
-    : `<p class="empty">Nothing stands here yet. The room is open; the work comes when it comes.</p>`
-  const elsewhere = p.elsewhere.length
-    ? `
-<section>
-  <h2>elsewhere</h2>
-  <ul class="people">${p.elsewhere.map((e) => `
-    <li><a href="${esc(e.href)}" target="_blank" rel="noopener">${esc(e.label)}</a></li>`).join('')}
-  </ul>
-</section>`
-    : ''
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(p.name)} — di.iiii</title>
-<style>${CSS}</style>
-</head>
-<body>
-<div class="page${p.mark ? ' mark' : ''}">
-<header>
-  <div class="eyebrow"><a href="/network" target="_top">← everyone</a><span>di.iiii · network</span></div>
-  <h1>${esc(p.name)}</h1>
-  <span class="role">${esc(p.role)}${p.team ? ' · team' : ''}</span>
-</header>
-
-<section>
-  <h2>on di.iiii</h2>
-  ${works}
-</section>${elsewhere}
-
-<footer>A room in the <a href="/network" target="_top">network</a> — one per person who makes di.iiii. It is theirs to fill.</footer>
-</div>
-</body>
-</html>
-`
-}
 
 fs.mkdirSync(path.join(HERE, 'pages'), { recursive: true })
-const missing = []
+
+// The index is generated from the same roster as the rooms and shares their
+// stylesheet and field. It used to be a hand-kept file, which is how it came
+// to carry a second design — and counts in its opening sentence that no
+// longer matched the roster underneath it.
+fs.writeFileSync(path.join(HERE, 'code/index.html'), renderIndex(people))
+
+const written = []
 for (const p of people) {
-  fs.writeFileSync(path.join(HERE, `pages/${p.slug}.html`), page(p))
+  fs.writeFileSync(path.join(HERE, `pages/${p.slug}.html`), renderRoom(p, people))
   fs.writeFileSync(path.join(HERE, `di-space.${p.slug}.json`), JSON.stringify({
     $schema: 'https://di-studio.xyz/schemas/di-space.schema.json',
     spaceId: 'network',
@@ -106,10 +36,16 @@ for (const p of people) {
     assets: [],
     publish: false,
   }, null, 2) + '\n')
-  if (!roster.includes(`href="/network/${p.slug}"`)) missing.push(p.slug)
+  written.push(p.slug)
 }
+
+// The catalogue is the door: every person in people.json gets a room by
+// construction (the loop above), so the only thing worth checking is that
+// the loop actually ran for all of them — no separate roster to fall out of
+// sync with.
+const missing = people.filter((p) => !written.includes(p.slug)).map((p) => p.slug)
 console.log(`${people.length} rooms written under ${REL}/pages/`)
-if (missing.length) {
-  console.error(`roster has no door for: ${missing.join(', ')}`)
+if (missing.length || written.length !== people.length) {
+  console.error(`did not get a page: ${missing.join(', ') || '(count mismatch)'}`)
   process.exitCode = 1
 }

@@ -5,6 +5,303 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+# feat/network-all-of-us
+
+The network: a page listing everyone who makes di.iiii, and a room per person.
+
+## What it is
+
+`spaces/network/` holds 52 people in `people.json` and generates, from that one
+file, the index at `/network` and 52 rooms at `/network/<slug>`. `build.mjs`
+writes `code/index.html` (via `index-template.mjs`) and `pages/<slug>.html` plus
+one `di-space.<slug>.json` each (via `room-template.mjs`). Both templates share
+`lib/css.mjs` and `lib/field.client.js`. Nothing in the space is hand-kept; a
+test re-renders every page and compares bytes.
+
+## The rebuild
+
+The first version was built as "b, with elements of a" and delivered that as
+adjacency: a white roster column beside a black star panel, sharing a hard
+edge. On a phone it stacked into a black block over a white page. The owner
+saw it on staging and said so.
+
+What it is now: one sheet of paper. The field is drawn into that paper on a
+transparent 2D canvas, masked with a gradient so it dissolves into the right
+margin — no second background anywhere, so there is no edge to see. Hovering a
+name lights that person's point; a room opens with its person already lit and
+lines out to whoever they made something with, which is the same list the page
+prints underneath. The dark, turnable version of the field stays as its own
+page at `/network/constellation`, where it is the subject rather than a panel.
+
+Four defects behind it are in `docs/ai/known-fixes.md`: the seam, the AA
+failures, 229 KB of three.js for 52 dots, and a room's own person rendering
+inside the masked half.
+
+## Decisions worth keeping
+
+- **No per-row numbers.** A numbered list of named artists reads as a ranking
+  of them. Sections carry the structure and their own counts; inside a section
+  the order is alphabetical, which says plainly that it is not a ranking. Team
+  keeps its declared order — it is a masthead.
+- **The list drives the field, never the reverse.** The canvas is
+  `pointer-events: none`. It cannot steal a scroll or a tap, and the roster is
+  the only interface on the page.
+- **Every number in the copy is generated.** "Fifty-two people make di.iiii —
+  five run it, forty-seven make with it" comes from `people.json`. The hand-
+  typed version had already drifted.
+- **Two accent tokens.** `--accent` (#0097a3) draws marks; `--accent-ink`
+  (#00757f) carries text. The brand cyan #4DF9FF is the light-on-dark form and
+  fails as type on paper.
+- **Every mark on the ground comes from a fact.** A dot is a person; a clump
+  is a section and is as big as the number of people in it; the team sits at
+  the centre and the other sections ring them; a line means two of them made
+  the same thing; the lit dot is the name you are on. The test is a count: if
+  the page carries more kinds of mark than kinds of fact, the surplus reads as
+  dirt — and on paper dirt shows immediately. A soft halo under every dot and
+  a Fibonacci sphere that meant nothing both failed that count and are gone.
+- **A mark has to hold still relative to what it is about.** The drawing was
+  a fixed canvas behind a scrolling list, so the same lines hung in the same
+  place while different names passed behind them, and no line could be traced
+  to its two names. It is anchored now: a dot sits on its own row and scrolls
+  with it, and a bracket gathers everyone who made one work and carries that
+  work's name. Rooms dropped their field for the same reason — unlabelled
+  dots beside a list of names cannot be traced to it.
+- **The drawing hides itself when there is no margin to hold it** — below that width a bracket would be clipped by the window edge, and a clipped bracket stops meaning anything.
+- **On a phone the index draws nothing**.
+
+## Open
+
+- The owner has asked for some names to be removed from the roster ("we will
+  fix in the future"). A peer session has put the numbered 52 in front of him
+  and will forward which. When the numbers arrive it is a `people.json` edit
+  plus `node spaces/network/build.mjs` — and the removed person's room stays
+  on any tier it already reached, because the sync engine never deletes.
+- `/network/the-index` still holds the earlier stand-alone roster page, now
+  superseded by the index itself. It is unlinked but reachable. Retire it or
+  fold it in.
+- Prod holds 9 of the 55 network projects. Promoting needs the code first, then
+  `space-sync --all --tier prod`, then the owner's word.
+- No portraits exist for anyone on this machine. One image per row is the thing
+  that would turn a directory into a portrait, and it is the same data.
+
+## 2026-09-03 — a door can be a square-cornered frame, not only a glowing ring
+
+- `PortalObject.jsx` hardcoded one door: a torus ring lying flat on the floor
+  (`args=[1.1,0.12,16,48]`), an additive circular tap membrane, and an additive
+  radial-gradient glow sprite at scale 3.4. The brand's geometry rule is
+  absolute — square corners only, hairline borders, flat fills, never shadow,
+  glow or bevel — so the platform could not author a doorway that belonged in a
+  room built to its own identity. Every door was a glowing coloured circle.
+- `reference.style` on a portal now picks the shape: `'gateway'` (default, the
+  ring exactly as it was) or `'frame'` — four thin boxes (jamb left/right,
+  lintel, sill), butt-jointed, square corners, `meshBasicMaterial` in the
+  entity's `appearance.color`, no glow sprite and no additive blending. The
+  opening carries a flat 10% fill that is also the tap target, the same
+  "nearly invisible, full-size hit area" trick the ring's membrane uses, but
+  with normal blending — additive over a dark room *is* a glow.
+- Opt-in by construction: an unknown or absent `style` normalises to
+  `'gateway'`, so nothing authored before this changes.
+- The frame's opening half-width is deliberately the ring's major radius (1.1)
+  and its bar the ring's tube (0.12), so `portalWalkThrough`'s
+  `1.3 × XZ-scale` latch fits both shapes and needed **no** change — only a
+  comment saying why. Asserted in `PortalObject.frame.test.js` rather than left
+  to a coincidence.
+- The whole frame sits ABOVE y = 0 rather than centring the sill on it. The
+  first build centred it, and the screenshot showed why that is wrong: a room
+  whose floor is at y = 0 swallows the sill and leaves a П where the mark's
+  closed square should be. A sill is the thing you step over; 12cm of it now
+  stands on the floor and the rectangle closes.
+- The nameplate is the one thing that moves: a ring's plate floats at y=1.9
+  over a marker lying flat, which for a 2.64-tall frame would hang it in the
+  middle of the doorway. `portalLabelHeight(style)` clears the lintel instead.
+  Reveal, fade, plate and font behaviour are untouched.
+- **The mirror was the trap.** `shared/projectSchema.cjs` is what the SERVER
+  normalises with, and it silently dropped `style` — the ESM copy was correct,
+  every unit test was green, and the door still rendered as a ring in the
+  browser. Found by running the stack and looking, not by testing. Both copies
+  updated; `schemaSync.test.js` gained fixtures plus an explicit assertion,
+  because parity alone is satisfied by both copies dropping the field.
+- Verified by looking, as an anonymous visitor on a throwaway stack (vite 5198
+  / serverXR 4098, scratchpad DATA_ROOT), headless Chromium swiftshader at
+  1440×900: orbit arrival shows a glowing ring and a square-cornered doorway
+  side by side; walk mode shows both; walking into the frame travels to the
+  room it names.
+- Both renderers already delegate portals to `PortalObject`
+  (`EntityContent.jsx` in orbit, `LiveProjectScene.jsx` in walk), so one change
+  covers both — confirmed in the browser on both paths.
+- Not done: no Studio inspector control for `style`. It is document-authored,
+  exactly like `labelPlate`/`labelFont`/`labelColor`, which have no control
+  either.
+
+## 2026-09-03 — Raw panel window polish: resize, wheel policy, canvas scale, bottom reserve
+
+- Ported a set of Raw window fixes from an unpushed branch (bcd6b097,
+  `feat/raw-one-surface`) onto current `dev`, keeping PR #312's pin/world
+  model exactly (`frame.pinned === true` = screen pixels clamped to the
+  viewport; otherwise graph units through the viewport transform). No
+  `frame.space` field introduced.
+- `DesktopWindow.jsx`: resize from every edge/corner (`RESIZE_DIRS`), with
+  `setPointerCapture` on pointer-down and the pointer effect filtered by
+  `pointerId` so a fast drag or a second finger can't drop/steal the
+  gesture. `resizeFrame()` holds the non-dragged edge still. The SE grip is
+  a real `<button>`; header + grip take arrow keys (16px / Shift 1px).
+- `windowLayout.js`: `RAW_WINDOW_MIN_WIDTH`/`_MIN_HEIGHT` (200/120, was
+  260/180), `getBottomReserve(viewportWidth)` (40 on ≥640px, 120 below), a
+  `resizing` option on `clampWindowFrame` that caps growth against the
+  window's own position instead of sliding its top-left corner up.
+- `RawGraphSurface.jsx`: a wheel over `.raw-window-body` belongs to the
+  panel unless ctrl/meta held; zoom step is now proportional to `deltaY`.
+- `RawViewport.jsx`: `<Canvas resize={{..., offsetSize: true}}>` so a Scene
+  window's canvas doesn't double-shrink under the viewport's own `scale()`.
+- Phone overflow menu now fixes to the viewport below 640px (dev lacked it).
+- NOT ported: "window follows its card" placement, sceneExample changes.
+- Verified: `windowLayout.test.js` (30), `DesktopWindow.test.jsx` (13),
+  `RawGraphSurface.test.jsx` (44) green. `npm run lint`/`test`/`build` — see
+  PR. Headless Playwright at 1280×800 DPR2 on `/open/raw`: west resize grows
+  leftward without moving the top edge; wheel over a window body leaves
+  canvas zoom unchanged, wheel over empty canvas zooms; a Scene window's
+  canvas fills its body at canvas zoom 0.7.
+- Left open: panel windows are not DOM descendants of `.raw-graph-surface`
+  (positioned via the published viewport, not nested in the stage), so the
+  wheel guard's test builds the DOM shape directly since `RawGraphSurface`
+  takes no `children` prop.
+
+## 2026-09-03 — the arrival frame and walk mode stop disagreeing (fog, motion, grid, render settings)
+
+- A visitor meets TWO renderers a click apart, and they answered the same
+  document differently. On arrival (`navMode: 'orbit'`)
+  `PublicProjectSceneSurface` mounts `StudioViewport`; Walk / Fly swaps in
+  `LiveProjectScene`. Four world-level fields were read by exactly one of them:
+  `worldState.fog` and `components.animation`/`proximity` by walk only,
+  `worldState.grid*` and `renderSettings` by orbit only.
+- **Fog on arrival.** `StudioViewport` now renders `<fog>` with walk's exact
+  semantics (colour falls back to `backgroundColor`, `enabled: false` switches it
+  off). Deliberately narrower than walk in one respect: only an AUTHORED
+  `worldState.fog` is honoured. Walk's implicit 8..50m default is composed for a
+  camera standing inside the room at eye height; an orbit camera framing a large
+  scene from 40m outside would wash the whole arrival to the fog colour, so
+  rooms that never authored a fog are untouched.
+- **Motion on arrival — AUTHORED motion only.** `useTimelinePreviewPose` became
+  `useEntityPose` and now also applies `components.animation` and
+  `components.proximity`, in walk's order (dimming first, authored keyframes
+  beating idle motion). Two gates:
+  - the existing `LiveTimelineContext` (`playTimelines`), which only
+    `PublicProjectSceneSurface` sets — the Studio editor and the low-power space
+    card previews stay still, because objects that drift under the gizmo cannot
+    be placed;
+  - a new `authoredAnimation()` resolver instead of `resolveAnimation()`. The
+    latter's fallback (models float, flat media sways, anything named "fly"
+    orbits) has run in walk forever and is untouched there, but reaching it from
+    the arrival frame would set WCC's sculpture, the Dilijan camp room and every
+    other already-published room drifting on the first frame a stranger sees,
+    with no author having asked. Arrival shows motion someone chose, or none.
+  The phase seed moved to `animationSeed()` in `entityAnimation.js` and is
+  shared, so an authored spin does not jump when the visitor clicks Walk.
+- **The floor survives the click.** Walk mode's `<Grid>` read nothing from the
+  document — `args=[80,80] cellColor="#2a3038" sectionColor="#3c4654"
+  fadeDistance={40}` — so every walkable room had the same slate lattice.
+  It now reads the nine `worldState.grid*` fields, keeping `infiniteGrid`:
+  copying StudioViewport's `args` would end the walker's floor at gridSize/2
+  metres and every existing room would lose its ground.
+- **`gridCellColor` never worked anywhere.** StudioViewport passed it to drei's
+  `Grid` as `color`, which is not a prop — it was dropped and every grid drew
+  drei's default BLACK cells, so the Studio's "Grid cell colour" picker
+  (`StudioShellPanels.jsx:870`) wrote a field nothing read. Found while making
+  the two sides agree; fixing walk alone would have left them disagreeing the
+  other way. Now `cellColor` on both.
+- **`renderSettings` in walk.** `RenderSettingsEffect` moved out of
+  `StudioViewport` to `src/project/viewport/RenderSettingsEffect.jsx` and both
+  surfaces mount it (toneMapping, exposure, shadowMap). Walk's `<Canvas>` also
+  takes `shadows` and `antialias` from the document, and `dpr` from
+  `dprMin`/`dprMax` — clamped by a new `WALK_DPR_CEILING = 1.8`, walk's existing
+  ceiling: a still arrival frame can afford 2x on a retina phone, a
+  continuously-moving first-person camera cannot.
+- Guards: 7 new source-level tripwires in `rendererParity.test.js` (the file that
+  already guards this exact class of drift) + 3 behavioural ones for
+  `animationSeed`. 42 files / 273 tests green across the touched trees.
+- Verified by looking, not by asserting. Local stack on spare ports (vite 5197,
+  serverXR 4097, throwaway DATA_ROOT), one project authored through the API
+  carrying a fog (`#e2611c`, 4..30), a magenta/yellow grid, a `spin` entity and
+  `toneMappingExposure: 3`. Headless Playwright at 1440x900, anonymous, before
+  (origin/dev) and after:
+  - orbit before: posts white to the horizon, black grid cells, and **0 pixels
+    changed** between two frames a second apart. After: posts fading orange,
+    magenta cells, 13,684 pixels changed — bounded to the spinning bar while the
+    static posts held still.
+  - the asymmetry, on a second room holding one box with NO animation component:
+    orbit **0 changed pixels** across the whole frame, walk **3,799** on the bar
+    itself (cropped, so the ambient particles are not doing the arguing). The
+    fallback still drifts it in walk and never touches the arrival frame.
+  - walk before: dim slate floor at exposure 1. After: the authored magenta and
+    yellow floor, visibly brighter. Re-authoring the document to
+    `toneMappingExposure: 0.25` and re-shooting walk darkened the whole frame —
+    walk is reading the field, not inheriting a default.
+- Left open: `worldState.fog` has no Studio UI at all (authored via API/ops
+  only), which is why so few rooms will notice the arrival-fog change. Worth a
+  field in the World panel next to the grid controls.
+
+## 2026-09-03 — the lighting desk answers to the field: looks, layers, fan, a fixture library, sACN
+
+Owner: *"look to all light control apps … analyse why what is good … make best light
+controller that even can happen in world."* Four parallel audits — the consoles
+(grandMA3, Eos, MagicQ, Titan, Hog, ONYX), the club and VJ tools (Resolume, Daslight,
+MADRIX, Arkaos, TouchDesigner), the open-source and protocol layer, and an inventory of
+our own desk — are distilled in `docs/architecture/LIGHTING_DESK_DESIGN.md`.
+
+The finding: every serious desk is one machine, and its four load-bearing ideas are
+reference-not-value, tracking, selection order as data, and phase as an ordinary
+attribute. We had none of them. What shipped the same day (#328, #331):
+
+- **Looks and layers** (`looks.js`). One content object: a look is a list of steps. One
+  step is a scene or a palette; two that snap are a chase; two that ease and are spread
+  by phase are a wave. A layer is that look under a finger — level, merge, priority,
+  mask, rate — composited over the fixtures' own values, so an effect can ride on top of
+  a running look. An empty stack renders exactly as before, which is what let it land.
+- **Fan** (`fan.js`), seven Eos styles, seeded random, reading selection order.
+- **The fixture library** (`library.js`): Open Fixture Library by name, cached beside the
+  show, carrying each channel's resting value — the line that stops an imported head
+  coming up dark with a shut shutter.
+- **sACN** (`sacn.js`): multicast groups and a priority number, verified on the wire.
+- **Palettes**: a look can follow another look, and the interface says so in words.
+- The interface for all of it, seen at 1280×800 and 390×844, plus a Layers tab on the
+  phone strip; the desk clock now drives looks, so Tap retimes everything running.
+
+Also #326: a hosted tier serves its own index.html for an unknown address, so the DMX Out
+panel and the map toolbar were believing a 200 that was a web page. Both now require a
+JSON content type; an HTML 200 reads as "no desk here", which is the truth.
+
+Not built, in the design's order: cue lists with tracking, the drawn operator surface,
+a clock with visible phase and nudge, timecode/Link/OSC-in, and the end state only this
+repo can reach — one cue moving the lights, the projection and the room together.
+
+## 2026-09-03 — the lighting desk moves in: /light, DMX Out on the desk, map cues with light, MIDI in the suite
+
+The club's Art-Net desk (a zero-dependency Node.js DMX desk that arrived as three Telegram
+zips, hardened the same day in `~/artnet-desk`: crash paths, NaN guards, atomic saves,
+UTF-8 bodies, Linux/macOS serial, phone layout) is now di.iiii's own tool at
+`serverXR/src/lighting`, CLEAN — no rig, no scenes; a rig gets patched here when wanted.
+`docs/architecture/LIGHTING_DESK.md` is the note.
+
+- `desk.js` is the desk as a factory; `standalone.js` the same desk on its own port (what
+  the club machine runs — `~/artnet-desk` is now an INSTALL that syncs `desk/` from here).
+- Mounted at `/light` behind the local-runtime guard (hosted → 404), BEFORE the JSON
+  parser, built on first request, output OFF by default so a dev server never
+  broadcasts on the studio wifi. `light` reserved in both space routers; Vite proxies it.
+- The DMX Out node's default rig is the desk (`rig: desk|vizzz`, a config select): master,
+  blackout as a state, raw channel, and a new Scene input recalling by id or name off
+  `/light/api/scenes/summary`; `/light/api/summary` is the cheap poll.
+- A map cue carries an optional `lightScene` and fires it through `fireCue`; the map desk
+  shows a Light link when the desk answers.
+- MIDI is the desk's fifth page: one dispatcher (the old separate page silently unhooked
+  the scene menu's pad binds), map saved with the show via `api/midi`.
+- Gates: the desk's three suites run under `npm test` (lighting.test.js); lightingRoutes,
+  dmxRigClient, DmxOutPanelWindow, nodeRegistry, map and schemaSync tests extended; wiki
+  `lighting-desk` + `dmx-out-node` + `projection-mapping` updated.
+
+Left: a real ENTTEC widget on Linux (the serial path is proven on a pty only); the club
+desk still runs the pre-hardening build; the AI-director routes beyond summary (events,
+beat, preview, the AI lane) are listed in `~/artnet-desk/AI-DIRECTOR.md`.
+
 ## 2026-09-03 — dev absorbs main so the promotion can go
 
 The dev → main promotion (#284) had turned CONFLICTING. Not on new work: the suite/brand

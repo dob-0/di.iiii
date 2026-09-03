@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060607">
+<meta name="color-scheme" content="dark">
+<title>Art-Net Desk</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='9' fill='%2335d2dd'/></svg>">
+</head>
+<body>
+
+<!-- ===================== top bar ===================== -->
+<header class="topbar">
+  <button class="dots" id="menuBtn" title="Status">•••</button>
+  <nav class="pages">
+    <button class="page-tab is-active" data-page="setup">Setup</button>
+    <button class="page-tab" data-page="control">Control</button>
+    <button class="page-tab" data-page="touch">Touch</button>
+    <button class="page-tab" data-page="fader">Fader</button>
+    <!-- MIDI was a separate midi.html with its own stylesheet and its own map in one
+         browser's localStorage. It is a page of this suite now: same shell, same styles,
+         and the mappings live with the show over api/midi, so the laptop and the phone
+         share one controller layout. Web MIDI itself is still only granted on localhost
+         or https - the page says so rather than showing an empty device list. -->
+    <button class="page-tab" data-page="midi" title="MIDI control surface - map a hardware controller to the desk">MIDI</button>
+  </nav>
+  <div class="title"><b>Art-Net Desk</b> <span id="showName" class="muted">— untitled</span></div>
+  <!-- The pills and the panic button live outside .title because .title is hidden on a
+       narrow screen. These are the things you most need on a phone at the desk. -->
+  <div class="pills">
+    <button id="fxPill" class="fxpill" hidden title="An effect is running on every fixture — go to the Control page to change or stop it"></button>
+    <button id="lfoPill" class="fxpill" hidden title="An LFO is riding channels on top of the look — go to the Control page to change or stop it"></button>
+    <button id="heldPill" class="heldpill" hidden title="Manual faders are overriding the fixtures — go to the Fader page to release them"></button>
+    <button id="wirePill" class="wirepill" hidden title="Output"></button>
+  </div>
+  <div class="topright">
+    <button id="topBlackout" class="blackout topbo" title="Blackout (B) — reaches every page">Blackout</button>
+    <button id="goBtn" class="go">Go</button>
+    <div class="bpm"><span>BPM</span><div class="bpmbar"><i id="bpmBar"></i></div></div>
+    <input type="number" id="bpm" class="bpmnum" value="120" min="20" max="300">
+    <button id="tapBtn" class="tap" title="Tap tempo">Tap</button>
+    <button id="saveNow" class="savenow" title="Save what is on the wire right now as a scene">Save scene</button>
+  </div>
+</header>
+
+<div id="statusStrip" class="statusstrip" hidden></div>
+
+<!-- ===================== SETUP ===================== -->
+<main class="page is-active" data-page="setup">
+
+  <section class="top-split">
+    <div class="pane library">
+      <div class="pane-head">
+        <h2>Library</h2>
+        <button class="sq small" id="newProfile" title="Build your own fixture type">+ New</button>
+      </div>
+      <div class="lib-body">
+        <div class="search">
+          <input type="text" id="libSearch" placeholder="search" autocomplete="off">
+          <button id="libClear" title="Clear">✕</button>
+        </div>
+        <div class="combobar" id="comboBar" hidden></div>
+        <div class="tree" id="libTree"></div>
+        <div class="lib-form">
+          <div class="lib-sel" id="libSel">rgb (3 Channels)</div>
+          <label class="frow"><span>DMX Universe</span><select id="pUniverse"></select></label>
+          <label class="frow"><span>Starting address</span><input type="number" id="pAddress" min="1" max="512" value="1"></label>
+          <div class="frow2">
+            <label>How many <input type="number" id="pCount" min="1" max="128" value="1"></label>
+            <label>Index <input type="number" id="pIndex" min="1" value="1"></label>
+          </div>
+          <button class="patchbtn" id="patchBtn">Patch</button>
+          <div class="hint" id="patchHint"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="splitter v" data-split="setup-lib" title="Drag to resize — double-click to reset"></div>
+
+    <div class="pane patch">
+      <div class="pane-head"><h2>Patch</h2></div>
+      <div class="patch-tools">
+        <select id="gridUniverse"></select>
+        <button class="sq" id="uniPrev">‹</button>
+        <button class="sq" id="uniNext">›</button>
+        <span class="muted" id="patchInfo"></span>
+        <span id="gridMsg"></span>
+        <button class="sq danger" id="unpatchBtn" title="Unpatch selected">Unpatch</button>
+      </div>
+      <div class="grid" id="patchGrid"></div>
+    </div>
+  </section>
+
+  <div class="splitter h" data-split="setup-rows" title="Drag to resize — double-click to reset"></div>
+
+  <div class="groups">
+    <h2>Groups</h2>
+    <div class="grouptabs"></div>
+    <button class="sq addGroupBtn" title="New group from selection">+</button>
+  </div>
+
+  <section class="bottom-split">
+    <div class="pane stagepane">
+      <div class="stage-tools">
+        <button class="tool is-active" data-tool="select" title="Select">▭</button>
+        <span class="sep"></span>
+        <button class="tool snapBtn" title="Snap to grid">▦</button>
+        <button class="tool rowBtn" title="Arrange selection in a row">⇥</button>
+        <button class="tool colBtn" title="Arrange selection in a column">⇵</button>
+        <button class="tool gridBtn" title="Arrange selection in a grid">⊞</button>
+        <button class="tool circleBtn" title="Arrange selection in a circle">◎</button>
+        <span class="sep"></span>
+        <button class="tool zoomOut">⊖</button>
+        <input type="range" class="zoom" min="25" max="400" value="100">
+        <button class="tool zoomIn">⊕</button>
+        <button class="tool fitBtn" title="Fit everything in view — pan with the middle button or Space + drag, zoom with the wheel">⤢</button>
+      </div>
+      <div class="stage">
+        <div class="stage-inner"></div>
+        <div class="marquee" hidden></div>
+        <p class="stage-empty">Patch some fixtures — they appear here and light up live.</p>
+      </div>
+    </div>
+
+    <div class="splitter v" data-split="setup-sel" title="Drag to resize — double-click to reset"></div>
+
+    <div class="pane selpane">
+      <div class="pane-head"><h2>Selections</h2></div>
+      <div class="sellist"></div>
+    </div>
+
+    <div class="splitter v" data-split="setup-lim" title="Drag to resize — double-click to reset"></div>
+
+    <div class="pane limitpane">
+      <div class="limitcols">
+        <div class="limitcol">
+          <div class="pane-head"><h2>Dimmer limits</h2></div>
+          <div class="vslider">
+            <span class="vval" id="dimMaxVal">100.0%</span>
+            <div class="vtrack" id="dimTrack">
+              <i class="vfill" id="dimFill"></i>
+              <button class="vhandle" id="dimMaxH"></button>
+              <button class="vhandle" id="dimMinH"></button>
+            </div>
+            <span class="vval" id="dimMinVal">0.0%</span>
+          </div>
+        </div>
+        <div class="limitcol wide">
+          <div class="pane-head"><h2>Movement limits</h2></div>
+          <div class="movegrid">
+            <div class="movebox" id="panBox"><i></i><span>Pan</span></div>
+            <div class="movelabels">
+              <label>Min <input type="number" id="panMin" min="0" max="255" value="0"></label>
+              <label>Max <input type="number" id="panMax" min="0" max="255" value="255"></label>
+            </div>
+            <div class="movebox" id="tiltBox"><i></i><span>Tilt</span></div>
+            <div class="movelabels">
+              <label>Min <input type="number" id="tiltMin" min="0" max="255" value="0"></label>
+              <label>Max <input type="number" id="tiltMax" min="0" max="255" value="255"></label>
+            </div>
+          </div>
+          <div class="invert">
+            <span>Invert</span>
+            <label><input type="checkbox" id="invPan"> Pan</label>
+            <label><input type="checkbox" id="invTilt"> Tilt</label>
+            <label><input type="checkbox" id="swapPT"> Swap</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ===================== CONTROL ===================== -->
+<main class="page" data-page="control">
+
+  <section class="ctl-top">
+    <!-- scene bank -->
+    <div class="pane bankpane">
+      <div class="pane-head"><h2>Scenes</h2></div>
+      <div class="transport">
+        <button class="sq" id="chasePause" title="Stop the chase">❚❚</button>
+        <button class="sq" id="scenePrev" title="Previous scene">|◀</button>
+        <button class="sq" id="sceneNext" title="Next scene">▶|</button>
+        <button class="sq accent" id="saveScene" title="Save the current look as a scene">+</button>
+      </div>
+      <!-- At a few hundred scenes the bank is unfindable without this. Filters as you type. -->
+      <div class="search scenesearch">
+        <input type="text" id="sceneFilter" placeholder="filter scenes" autocomplete="off">
+        <button id="sceneFilterClear" title="Clear">✕</button>
+        <button class="kindbtn is-active" data-kind="all" title="Show all scenes">All</button>
+        <button class="kindbtn" data-kind="anim" title="Only › animations">›</button>
+        <button class="kindbtn" data-kind="static" title="Only · static looks">·</button>
+      </div>
+      <div class="banklist" id="bankList"></div>
+      <div class="inline pad">
+        <input type="text" id="sceneName" placeholder="name the next save" maxlength="40">
+      </div>
+      <div class="pane-head"><h2>Chase</h2><span class="muted" id="chaseCount"></span></div>
+      <div class="railchase">
+        <label>Hold <input type="number" id="chaseHold" min="0.05" step="0.1" value="2">s</label>
+        <label>Fade <input type="number" id="chaseFade" min="0" step="0.1" value="0.8">s</label>
+        <button class="sq accent" id="chaseToggle">Start</button>
+      </div>
+    </div>
+
+    <div class="splitter v" data-split="ctl-bank" title="Drag to resize — double-click to reset"></div>
+
+    <!-- scene detail -->
+    <div class="pane scenearea">
+      <div class="pane-head"><h2 id="sceneTitle">No scene selected</h2></div>
+      <div class="scenedetail" id="sceneDetail"></div>
+    </div>
+
+    <div class="splitter v" data-split="ctl-stack" title="Drag to resize — double-click to reset"></div>
+
+    <!-- THE STACK — layers, the look library, and the step editor, in one column.
+         A look is a list of steps; a layer is a look under a finger. They share a column
+         on purpose: a fader and the thing it is playing are one thought, and the desk
+         already learnt from Scenes/Chase what happens when they land on two screens. -->
+    <div class="pane stackpane">
+      <div class="pane-head">
+        <h2>Layers</h2><span class="muted" id="layerState"></span>
+        <button class="sq" id="layerAdd" title="Add a layer at the top of the stack — it arrives at 0%, so nothing changes in the room until you move its fader">+ Layer</button>
+      </div>
+      <div class="layerlist" id="layerList"></div>
+
+      <div class="pane-head"><h2>Looks</h2><span class="muted" id="lookState"></span></div>
+      <!-- One press builds a useful look out of whatever is patched and parks it on a
+           new layer at zero. The starter writes the look; the operator decides when. -->
+      <div class="inline pad starters">
+        <button class="sq" id="stColour" title="Two contrasting colours, snapping, walking round the rig">Colour chase</button>
+        <button class="sq" id="stSweep" title="A brightness wave travelling across the rig">Sweep</button>
+        <button class="sq" id="stStrobe" title="Two intensity steps, snapping, the whole rig together">Strobe</button>
+      </div>
+      <div class="inline pad recordrow">
+        <input type="text" id="lookName" placeholder="name the recording" maxlength="40">
+        <select id="lookKind" title="Which lane to record. 'colour' records only the colour, so the heads keep whatever they were doing."></select>
+        <button class="sq accent" id="lookRecord" title="Record the stage exactly as it stands into a look">Record</button>
+      </div>
+      <div class="looklist" id="lookList"></div>
+
+      <div class="pane-head"><h2 id="stepTitle">No look selected</h2></div>
+      <div class="stepbox" id="stepBox"></div>
+    </div>
+
+    <div class="splitter v" data-split="ctl-rail" title="Drag to resize — double-click to reset"></div>
+
+    <!-- right rail -->
+    <div class="pane railpane">
+      <div class="pane-head"><h2>Master</h2></div>
+      <div class="railmaster">
+        <div class="vwrap tall">
+          <input type="range" id="master" min="0" max="255" value="255">
+        </div>
+        <output id="masterOut">100%</output>
+        <button id="blackout" class="blackout">Blackout</button>
+      </div>
+
+      <!-- FX ride on top of the master: one level multiplier per fixture. -->
+      <div class="pane-head"><h2>FX</h2><span class="muted" id="fxState">Off</span></div>
+      <div class="fxbox">
+        <div class="fxpads" id="fxPads"></div>
+        <div class="inline pad" id="fxSpatial">
+          <span class="muted">Follow</span>
+          <!-- buttons are built from the server's list, like the pads above -->
+        </div>
+        <!-- chips built from the profiles in the rig: fixtures the effect leaves alone -->
+        <div class="inline pad" id="fxExclude"></div>
+        <div class="fxfader">
+          <label for="fxDepth">Depth</label>
+          <input type="range" id="fxDepth" min="0" max="255" value="255">
+          <output id="fxDepthOut">100%</output>
+        </div>
+        <p class="fxhint muted">Depth at 0% leaves the rig alone. Tempo is the BPM field at the top — Tap sets it.</p>
+      </div>
+
+      <!-- LFOs: continuous waves riding single channels on top of the look.
+           Rows are built by app.js from state.lfos, like the FX pads above. -->
+      <div class="pane-head"><h2>LFO</h2><span class="muted" id="lfoState"></span><button class="sq" id="lfoAllOff" title="Turn every LFO off in one press">All LFOs off</button></div>
+      <div class="lfobox">
+        <div id="lfoList"></div>
+        <div class="inline pad">
+          <button class="sq" id="lfoAdd">+ Add LFO</button>
+        </div>
+        <p class="fxhint muted">Each LFO rides one channel — bipolar sways around the current value (pan/tilt on beams), unipolar waves under it (dimmer on washes).</p>
+      </div>
+
+      <!-- Audio: the mic runs in THIS browser and streams levels to the desk.
+           The meters are painted from the analyser, not from state polls. -->
+      <div class="pane-head"><h2>Audio</h2><span class="muted" id="audioState">off</span></div>
+      <div class="audiobox">
+        <div class="inline pad">
+          <button class="sq" id="micBtn">Enable mic</button>
+          <span class="beatdot" id="beatDot" title="blinks on the beat"></span>
+          <span class="mono muted" id="beatBpm" title="what the mic hears — informational only; it never changes the BPM field at the top"></span>
+        </div>
+        <div class="ameters">
+          <div class="am"><span>lvl</span><div class="ambar" id="amLevel"><i></i></div></div>
+          <div class="am"><span>low</span><div class="ambar" id="amLow"><i></i></div></div>
+          <div class="am"><span>mid</span><div class="ambar" id="amMid"><i></i></div></div>
+          <div class="am"><span>hi</span><div class="ambar" id="amHigh"><i></i></div></div>
+        </div>
+        <div class="inline pad audiocfg">
+          <label title="Let the audio drive the rig"><input type="checkbox" id="audEnable"> react</label>
+          <select id="audMode" title="How the audio drives the rig">
+            <option value="level">Level — rig follows loudness</option>
+            <option value="bass">Bass — follows the low band</option>
+            <option value="beat-pump">Beat pump — hit on every beat</option>
+            <option value="bands">Bands — L/mid/R washes follow low/mid/high</option>
+          </select>
+        </div>
+        <div class="inline pad audiocfg">
+          <label title="ON: the beat-pump hits on beats the mic hears. OFF: it runs on the steady BPM clock at the top — for when the desk is far from the PA and mic beats are unreliable."><input type="checkbox" id="audUseBeats" checked> Mic beats</label>
+          <span class="muted" id="audUseBeatsHint"></span>
+        </div>
+        <div class="fxfader">
+          <label for="audAmount">Amount</label>
+          <input type="range" id="audAmount" min="0" max="255" value="255">
+          <output id="audAmountOut">100%</output>
+        </div>
+        <div class="fxfader">
+          <label for="audRelease">Release</label>
+          <input type="range" id="audRelease" min="50" max="2000" step="10" value="300">
+          <output id="audReleaseOut">300ms</output>
+        </div>
+        <p class="fxhint" id="audioNoSig" hidden>reacting is on, but no audio is reaching the desk — enable the mic here or on another device</p>
+        <p class="fxhint muted">The mic needs localhost or HTTPS — a phone on http://LAN-IP will be refused by its browser. Run the mic on this machine and the whole rig still follows.</p>
+      </div>
+
+      <details class="outdetails">
+        <summary><h2>Output</h2><span class="muted" id="outSummary"></span></summary>
+        <div class="outbox">
+        <div class="inline pad">
+          <label><input type="radio" name="driver" value="artnet"> Art-Net</label>
+          <label><input type="radio" name="driver" value="enttec"> DMX USB PRO</label>
+          <label class="muted" title="Frames per second on the wire. Lower it if the serial link reports skipped frames; below ~10 Hz fixtures fall back to their built-in programs.">refresh
+            <input type="number" id="refreshHz" min="1" max="44" step="1" style="width:4.5em"> Hz</label>
+        </div>
+
+        <!-- Art-Net -->
+        <div id="artnetOut">
+          <div class="inline pad">
+            <label><input type="radio" name="mode" value="broadcast"> Broadcast</label>
+            <label><input type="radio" name="mode" value="unicast"> Unicast</label>
+          </div>
+          <div class="inline pad">
+            <input type="text" id="targets" placeholder="192.168.1.50">
+            <button class="sq" id="saveOutput">Apply</button>
+          </div>
+          <div class="inline pad">
+            <input type="text" id="addNodeIp" placeholder="device IP — 192.168.4.1">
+            <input type="text" id="addNodeName" placeholder="name (optional)">
+            <button class="sq" id="addNode">Add device</button>
+          </div>
+          <div class="inline pad">
+            <button class="sq" id="discover">Scan for nodes</button>
+            <input type="text" id="pollAddress" placeholder="…or poll an IP directly">
+          </div>
+          <div class="muted pad mono" id="pollResult"></div>
+          <div id="nodes" class="nodes"></div>
+          <div id="ifaces" class="mono muted pad"></div>
+        </div>
+
+        <!-- ENTTEC DMX USB PRO -->
+        <div id="serialOut" hidden>
+          <div class="inline pad">
+            <select id="serialPort"></select>
+            <button class="sq" id="identify">Identify</button>
+          </div>
+          <div class="serialstat pad" id="serialStat"></div>
+          <!-- Identify's answer lives here, apart from the polled status line, so the
+               next poll cannot overwrite it while she is still reading it. -->
+          <div class="serialstat pad" id="identifyLine"></div>
+        </div>
+
+        <div id="err" class="err"></div>
+
+        <!-- Getting a phone onto the desk. The address changes with every network the
+             laptop joins — a hotspot deals a fresh IP — so this is computed live from the
+             server's interface list, and the QR exists so nobody types an IP on a phone
+             in the dark. -->
+        <div class="pad" id="phoneBox" style="border-top: 1px solid var(--line); margin-top: 6px; padding-top: 8px">
+          <h2 style="margin-bottom: 6px">Phone</h2>
+          <div id="phoneList" class="mono" style="line-height: 1.8"></div>
+          <div id="phoneQr" style="margin-top: 6px"></div>
+        </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <div class="splitter h" data-split="ctl-rows" title="Drag to resize — double-click to reset"></div>
+
+  <div class="groups">
+    <h2>Groups</h2>
+    <div class="grouptabs"></div>
+    <button class="sq addGroupBtn" title="New group from selection">+</button>
+  </div>
+
+  <section class="ctl-bottom">
+    <!-- the same light imitation as SETUP -->
+    <div class="pane stagepane">
+      <div class="stage-tools">
+        <button class="tool is-active" data-tool="select" title="Select">▭</button>
+        <span class="sep"></span>
+        <button class="tool rowBtn" title="Arrange selection in a row">⇥</button>
+        <button class="tool colBtn" title="Arrange selection in a column">⇵</button>
+        <button class="tool gridBtn" title="Arrange selection in a grid">⊞</button>
+        <button class="tool circleBtn" title="Arrange selection in a circle">◎</button>
+        <span class="sep"></span>
+        <button class="tool zoomOut">⊖</button>
+        <input type="range" class="zoom" min="25" max="400" value="100">
+        <button class="tool zoomIn">⊕</button>
+        <button class="tool fitBtn" title="Fit everything in view — pan with the middle button or Space + drag, zoom with the wheel">⤢</button>
+      </div>
+      <div class="stage">
+        <div class="stage-inner"></div>
+        <div class="marquee" hidden></div>
+        <p class="stage-empty">Patch some fixtures on Setup — they appear here and light up live.</p>
+      </div>
+    </div>
+
+    <div class="splitter v" data-split="ctl-sel" title="Drag to resize — double-click to reset"></div>
+
+    <div class="pane selpane">
+      <div class="pane-head"><h2>Selections</h2></div>
+      <div class="sellist"></div>
+      <div class="selfoot">
+        <button class="sq" id="attrAll">All</button>
+        <button class="sq" id="attrNone">None</button>
+      </div>
+    </div>
+
+    <div class="splitter v" data-split="ctl-attr" title="Drag to resize — double-click to reset"></div>
+
+    <!-- attribute editor -->
+    <div class="pane attrpane">
+      <div class="attr-head">
+        <span class="who" id="attrWho">nothing selected</span>
+        <button class="sq" id="attrOn">On</button>
+        <button class="sq" id="attrOff">Off</button>
+      </div>
+      <div class="attr-body">
+        <div class="attr-tabs" id="attrTabs"></div>
+        <div class="attr-panels" id="attrPanels"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ===================== TOUCH ===================== -->
+<!-- The live performance desk: scene tiles + a thumb-edge LIVE STRIP with everything a
+     set needs mid-song — FX, audio-reactive, the set player, and the master — so the
+     operator never has to leave this page during a show. Blackout stays in the topbar. -->
+<main class="page" data-page="touch">
+  <div class="touchwrap">
+    <!-- same filter, same state, as the Control bank — the grid runs to hundreds of tiles -->
+    <div class="search scenesearch touchsearch">
+      <input type="text" id="tSceneFilter" placeholder="filter scenes" autocomplete="off">
+      <button id="tSceneFilterClear" title="Clear">✕</button>
+      <button class="kindbtn is-active" data-kind="all" title="Show all scenes">All</button>
+      <button class="kindbtn" data-kind="anim" title="Only › animations">›</button>
+      <button class="kindbtn" data-kind="static" title="Only · static looks">·</button>
+    </div>
+    <div class="touchgrid" id="touchGrid"></div>
+
+    <div class="livestrip" id="liveStrip">
+      <div class="ls-tabs">
+        <button class="ls-tab is-active" data-ls="fx">FX</button>
+        <button class="ls-tab" data-ls="audio">Audio</button>
+        <button class="ls-tab" data-ls="set">Set</button>
+        <button class="ls-tab" data-ls="layers">Layers</button>
+        <button class="ls-tab" data-ls="master">Master</button>
+        <button class="ls-fold" id="lsFold" title="Collapse the strip">▾</button>
+      </div>
+      <div class="ls-body">
+        <!-- FX: pads scroll sideways, depth is fat, TAP is big -->
+        <div class="ls-panel is-active" data-ls="fx">
+          <div class="ls-pads" id="tFxPads"></div>
+          <div class="ls-row">
+            <label class="ls-fader"><span>Depth</span><input type="range" id="tFxDepth" min="0" max="255" value="255"><output id="tFxDepthOut">100%</output></label>
+            <div class="ls-bpm"><b id="tBpm">120</b><span>BPM</span></div>
+            <button class="ls-big" id="tTap">TAP</button>
+            <button class="ls-big danger" id="tFxOff">FX off</button>
+          </div>
+        </div>
+        <!-- Audio: the mic runs in this browser, same engine config as the Control rail -->
+        <div class="ls-panel" data-ls="audio">
+          <div class="ls-row wrap">
+            <button class="ls-big" id="tMicBtn">Mic</button>
+            <button class="ls-big" id="tAudReact">React</button>
+            <select id="tAudMode" title="How the audio drives the rig"></select>
+            <button class="ls-big" id="tAudBeats" title="ON: beat-pump follows mic beats. OFF: the steady BPM clock">Mic beats</button>
+          </div>
+          <div class="ls-row">
+            <label class="ls-fader"><span>Amount</span><input type="range" id="tAudAmount" min="0" max="255" value="255"><output id="tAudAmountOut">100%</output></label>
+            <div class="ambar tmeter" id="tAmLevel" title="live level"><i></i></div>
+            <span class="beatdot" id="tBeatDot" title="blinks on the beat"></span>
+          </div>
+        </div>
+        <!-- Set: the live set player — huge Prev/Next, the ordered list one tap away -->
+        <div class="ls-panel" data-ls="set">
+          <div class="sp-top">
+            <select id="setPick"></select>
+            <button class="sq" id="setEdit" title="Edit sets">Edit</button>
+            <span class="sp-prog" id="setProg"></span>
+          </div>
+          <div class="sp-main" id="setPlayerMain">
+            <button class="sp-now" id="setNow" title="Tap to open the set list and jump">
+              <b id="setNowName">—</b><span id="setNextName"></span>
+            </button>
+            <div class="sp-nav">
+              <button class="ls-big" id="setPrev">‹ Prev</button>
+              <button class="ls-big accent" id="setNext">Next ›</button>
+            </div>
+          </div>
+          <div class="sp-listwrap" id="setListWrap" hidden>
+            <div class="setlist" id="setList"></div>
+            <div class="sb-tools" id="sbTools" hidden>
+              <button class="sq" id="sbAddCur">+ add current scene</button>
+              <button class="sq" id="sbNew">New set</button>
+              <button class="sq" id="sbRen">Rename</button>
+              <button class="sq danger" id="sbDel">Delete set</button>
+            </div>
+          </div>
+          <p class="ls-note muted" id="setLocalNote" hidden>sets are saved in this browser only — the desk does not store them yet</p>
+        </div>
+        <!-- Layers: the same stack as the Control page, one fat fader per layer. This is
+             the tab a phone actually needs mid-song — the look is already built, and all
+             that is left is how much of it is in the room. -->
+        <div class="ls-panel" data-ls="layers">
+          <div class="ls-layers" id="tLayerList"></div>
+        </div>
+        <!-- Master: the fat fader plus the three "stop everything" switches -->
+        <div class="ls-panel" data-ls="master">
+          <label class="ls-fader master"><span>Master</span><input type="range" id="tMaster" min="0" max="255" value="255"><output id="tMasterOut">100%</output></label>
+          <div class="ls-row wrap">
+            <button class="ls-big danger" id="tLfoOff">LFOs off</button>
+            <button class="ls-big danger" id="tChaseStop">Chase stop</button>
+            <button class="ls-big" id="tReleaseHeld">Release held</button>
+            <button id="tBlackout" class="blackout lsbo">Blackout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ===================== FADER ===================== -->
+<main class="page" data-page="fader">
+  <div class="fader-tools">
+    <select id="fUniverse"></select>
+    <label class="jump">Jump to <input type="number" id="fJump" min="1" max="512" placeholder="ch"></label>
+    <button class="sq danger" id="fAllZero" title="Hold every channel in this universe at 0">All to 0</button>
+    <button class="sq danger" id="fAllFull" title="Hold every channel in this universe at full">All to full</button>
+    <span class="setall">
+      <input type="number" id="fSetAllVal" min="0" max="255" placeholder="0–255" title="Level to set every channel to">
+      <button class="sq" id="fSetAll" title="Hold every channel in this universe at the level you typed">Set all</button>
+    </span>
+    <button class="sq" id="fReleaseAll" title="Hand this universe's channels back to the fixtures">Release all</button>
+    <span class="muted" id="fOverCount"></span>
+    <span class="flex"></span>
+    <span class="muted small">faders are pre-master — the number under each is what is on the wire</span>
+    <div class="fmaster">
+      <label>Master</label>
+      <input type="range" id="fMaster" min="0" max="255" value="255">
+      <output id="fMasterOut">100%</output>
+      <button id="fBlackout" class="blackout">Blackout</button>
+    </div>
+  </div>
+  <div class="faderbank" id="faderBank"></div>
+</main>
+
+<!-- ===================== MIDI ===================== -->
+<!-- A hardware controller wired to the same HTTP routes every other page uses. Three
+     things stand between a knob and the rig: the ARM gate (nothing is sent while it
+     reads "safe"), soft takeover (a fader is ignored until it crosses the value the
+     desk already holds, so arming never jumps the room), and a coalescing queue that
+     merges by route and lets one request be in flight at a time. -->
+<main class="page" data-page="midi">
+  <div class="midiwrap">
+
+    <!-- the gate, and the four things you need to see while mapping -->
+    <div class="midibar">
+      <button id="miArm" class="miarm safe">Safe — not sending</button>
+      <span class="mipill" id="miMidiStat">MIDI <b>—</b></span>
+      <span class="mipill" id="miDeskStat">desk <b>—</b></span>
+      <span class="mipill" id="miMasterStat">master <b>—</b></span>
+      <span class="mipill" id="miMsgStat">msgs <b>0</b></span>
+      <span class="flex"></span>
+      <span class="muted mono" id="miSaveStat">map: —</span>
+    </div>
+
+    <div class="midicols">
+      <div class="midicol">
+
+        <section class="pane">
+          <div class="pane-head"><h2>1 — Check the controller</h2></div>
+          <div class="midibody">
+            <div class="inline">
+              <select id="miInputs"><option value="">no MIDI access yet</option></select>
+              <button class="sq" id="miRescan">Rescan</button>
+              <button class="sq accent" id="miEnable">Enable MIDI</button>
+            </div>
+            <p class="minote" id="miCheckNote">
+              Press <b>Enable MIDI</b>, pick your controller, then move a fader and press a pad.
+              Anything it sends appears in the monitor below. If nothing appears there, the
+              desk will never see it either — fix that before mapping.
+            </p>
+          </div>
+        </section>
+
+        <section class="pane">
+          <div class="pane-head">
+            <h2>Live input monitor</h2>
+            <span class="flex"></span>
+            <button class="sq" id="miClearMon">Clear</button>
+          </div>
+          <div class="midibody">
+            <div id="miMon" class="mimon"><div class="empty">waiting for MIDI…</div></div>
+            <p class="minote muted" id="miSeen">seen: 0 controls, 0 pads</p>
+          </div>
+        </section>
+
+        <section class="pane">
+          <div class="pane-head"><h2>2 — Auto-map</h2></div>
+          <div class="midibody">
+            <p class="minote">
+              <b>Wizard:</b> press start, then move each fader/knob once and press each pad
+              once, in the order you want them assigned — each new control is bound as it
+              arrives.<br>
+              <b>By number:</b> no wiggling — takes every control seen so far and assigns
+              them in numeric order.
+            </p>
+            <div class="inline">
+              <button class="sq accent" id="miWizard">Start wizard</button>
+              <button class="sq" id="miByNum">Map by number</button>
+              <button class="sq danger" id="miClearMap">Clear map</button>
+            </div>
+            <p class="minote" id="miWizNote">&nbsp;</p>
+          </div>
+        </section>
+
+        <section class="pane">
+          <div class="pane-head"><h2>Notes</h2></div>
+          <div class="midibody">
+            <p class="minote">
+              <b>Soft takeover is on.</b> After arming, a fader does nothing until it passes
+              through the desk's current value — so arming with your master fader at zero
+              will not black the room out. Rows waiting to be caught read
+              <span class="mibind pickup">catch → value</span>.
+            </p>
+            <p class="minote">
+              <b>Web MIDI only works on localhost or https.</b> Open the desk on the machine
+              the controller is plugged into, at <code>localhost</code> — on a plain LAN
+              address like <code>http://192.168.…</code> the browser refuses MIDI outright
+              and the device list stays empty. Every other page of this desk works fine
+              over the LAN; only this one needs the secure origin.
+            </p>
+            <p class="minote">
+              Sends are coalesced to 25/s and issued one at a time, so a fast fader sweep
+              cannot flood the desk or fight the 40 Hz DMX loop.
+            </p>
+            <p class="minote">
+              The map is saved <b>with the show</b>, not in this browser — every surface on
+              the desk gets the same controller layout.
+              <button class="sq" id="miImport" hidden>Import from this browser</button>
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <div class="midicol">
+        <section class="pane">
+          <div class="pane-head">
+            <h2>3 — Mapping</h2>
+            <span class="muted mono" id="miMapCount"></span>
+          </div>
+          <div class="midibody">
+            <p class="minote">Press <b>learn</b> on a row, then move the control you want on it.</p>
+            <div class="mitablewrap">
+              <table class="mitable">
+                <thead><tr>
+                  <th>Target</th><th>Control</th><th class="r">Value</th><th></th>
+                </tr></thead>
+                <tbody id="miMapBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="pane">
+          <div class="pane-head">
+            <h2>Scenes on pads</h2>
+            <span class="muted mono" id="miBankLabel"></span>
+          </div>
+          <div class="midibody">
+            <div class="search">
+              <input type="text" id="miSceneFilter" placeholder="filter scenes" autocomplete="off">
+              <button id="miSceneFilterClear" title="Clear">✕</button>
+            </div>
+            <p class="minote" id="miSceneMsg">&nbsp;</p>
+            <div class="michips" id="miSceneGrid"></div>
+            <p class="minote muted">
+              Tap a scene → press a pad or key on the controller → that pad fires that scene
+              directly, and gets its own row in the mapping table. Tap a bound scene again
+              to clear it. The numbered pads 1–16 from the auto-map still work as a bank on
+              top of this.
+            </p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ===================== fixture builder ===================== -->
+<div id="builder" class="overlay" hidden>
+  <div class="builderbox">
+    <div class="builder-head">
+      <h2 id="builderTitle">New fixture</h2>
+      <button class="sq" id="builderClose" title="Close">✕</button>
+    </div>
+    <div class="builder-body">
+      <label class="frow"><span>Name</span><input type="text" id="builderName" maxlength="30" placeholder="e.g. Wash"></label>
+
+      <div class="bsec">Channels <span class="muted">— the order is the fixture. Channel 1 is at the top.</span></div>
+      <div class="bchans" id="builderChans"></div>
+
+      <div class="bsec">Add a channel</div>
+      <div class="chips" id="builderChips"></div>
+      <div class="brow">
+        <input type="text" id="builderCustom" placeholder="or type your own channel name" maxlength="20">
+        <button class="sq" id="builderAddCustom">Add</button>
+      </div>
+
+      <div class="berr" id="builderErr"></div>
+    </div>
+    <div class="builder-foot">
+      <button class="sq danger" id="builderDelete" hidden>Delete fixture</button>
+      <span class="flex"></span>
+      <button class="sq" id="builderCancel">Cancel</button>
+      <button class="sq accent" id="builderSave">Save fixture</button>
+    </div>
+  </div>
+</div>
+
+<!-- scene context menu — opened by right-click / long-press on a scene tile. Key
+     bindings are per-browser (localStorage) and follow the scene NAME; the other
+     actions edit the scene itself on the server. -->
+<div id="bindPop" class="bindpop" hidden>
+  <div class="bindname" id="bindName"></div>
+  <div class="popmenu" id="popMenu">
+    <button class="popitem" id="miBind">Bind key…</button>
+    <button class="popitem" id="bindRemove" hidden>Remove key</button>
+    <button class="popitem" id="miMidi">Bind MIDI pad…</button>
+    <button class="popitem" id="miMidiRemove" hidden>Remove MIDI pad</button>
+    <button class="popitem" id="miRename">Rename…</button>
+    <button class="popitem" id="miFade">Fade…</button>
+    <button class="popitem" id="miRestage">Overwrite with current look</button>
+    <button class="popitem danger" id="miDelete">Delete scene</button>
+  </div>
+  <div class="bindhint" id="bindHint" hidden>Press a key to bind — Esc to cancel</div>
+  <div class="popedit" id="popEdit" hidden>
+    <input type="text" id="popText" maxlength="60" hidden>
+    <label class="popnum" id="popNumWrap" hidden><input type="number" id="popNum" min="0" step="100"><span>ms</span></label>
+    <button class="sq accent" id="popOk">OK</button>
+  </div>
+</div>
+
+<script src="qr.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

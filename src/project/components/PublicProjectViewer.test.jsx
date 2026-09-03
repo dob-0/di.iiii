@@ -276,6 +276,12 @@ describe('PublicProjectViewer', () => {
             expect(screen.queryByRole('button', { name: 'Walk / Fly' })).toBeNull()
             // hub-card preview thumbnails must not carry the view→create badge
             expect(screen.queryByText('Made with di.iiii')).toBeNull()
+            // Regression guard: a Studio space-card thumbnail is a still picture
+            // by design (SpaceHub.jsx's SpaceCardPreview) -- a directory page can
+            // render many of these at once, and authored animation/fog/render
+            // effects running in every one is exactly the laptop-killer the
+            // picture/live-card split (SpaceHub's SpaceCardLive) exists to avoid.
+            expect(screen.getByTestId('viewport-timelines').textContent).toBe('play:false')
         } finally {
             window.history.replaceState(null, '', '/')
         }

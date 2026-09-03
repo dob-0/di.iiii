@@ -7,6 +7,7 @@ const { getSpaceBlobPaths, storeBlobFromFile } = require('../blobStore')
 const { createKeyedLock } = require('../asyncLock')
 const { applyAssetSafetyHeaders } = require('../spaceStore')
 const { findIdlessCreateOp } = require('../opValidation')
+const { placeOps } = require('../../../shared/placement.cjs')
 
 const withProjectLock = createKeyedLock()
 
@@ -344,9 +345,16 @@ function registerProjectRoutes(router, {
         }
 
         const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
+        // Build zones. A room that turns placement on is not free space: every
+        // hangable thing that arrives is put in a numbered slot, whatever the
+        // client asked for. Rewriting HERE rather than in the editor is what
+        // makes it a rule — a phone, a script and a signed-in author all land
+        // on the same hanging line, and the rewritten ops are what goes into
+        // the log and out to every peer, so nobody sees a different room.
+        const placedOps = placeOps(document, newOps)
         let nextVersion = currentVersion
         const timestamp = Date.now()
-        const versionedOps = newOps.map((op) => ({
+        const versionedOps = placedOps.map((op) => ({
           ...op,
           version: ++nextVersion,
           timestamp
@@ -467,7 +475,9 @@ function registerProjectRoutes(router, {
       const assetMeta = buildProjectAssetMeta({
         assetId,
         file: { ...req.file, size: scrubbedSize },
-        source: 'server'
+        source: 'server',
+        width: scrub.width,
+        height: scrub.height
       })
       await writeJson(metaPath, assetMeta)
       const url = `${req.baseUrl || ''}/api/projects/${project.projectId}/assets/${assetId}`

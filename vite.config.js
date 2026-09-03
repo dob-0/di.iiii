@@ -491,6 +491,12 @@ export default {
                 changeOrigin: true,
                 ws: true
             },
+            // The lighting desk lives on the backend at /light (app-level, no /serverXR
+            // prefix) — its interface is plain files the desk serves itself.
+            '/light': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true
+            },
             // Project documents store asset/API URLs as bare `/api/...` (no
             // `/serverXR` prefix) because in production Express serves both
             // frontend and API from one origin, mounted at APP_BASE_PATH. In
@@ -622,7 +628,8 @@ export default {
             // test file under scripts/ is silently never collected, which is
             // worse than having no test at all: it looks covered and is not.
             '../scripts/**/*.{test,spec}.{js,mjs}',
-            '../sdk/**/*.{test,spec}.{js,mjs}'
+            '../sdk/**/*.{test,spec}.{js,mjs}',
+            '../spaces/**/*.{test,spec}.{js,mjs}'
         ],
         environment: 'jsdom',
         setupFiles: './setupTests.js',

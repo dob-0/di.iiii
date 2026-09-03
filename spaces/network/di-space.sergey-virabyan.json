@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-sergey-virabyan",
+  "slug": "sergey-virabyan",
+  "label": "Sergey Virabyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/sergey-virabyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}
