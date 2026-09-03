@@ -8,7 +8,7 @@
 // fact. The drawing lives where it is earned: anchored to the rows on the
 // index, and as its own subject at /network/constellation.
 import { CSS } from './lib/css.mjs';
-import { esc, roomContentHTML } from './lib/room-content.mjs';
+import { esc, roomContentHTML, resumeHTML } from './lib/room-content.mjs';
 import { neighborsOf, workKey } from './lib/neighbors.mjs';
 
 /**
@@ -59,6 +59,7 @@ export function renderRoom(person, people) {
   <p class="role">${esc(person.role)}</p>
   ${person.city ? `<p class="city">${esc(person.city)}</p>` : ''}
   ${content.bioHTML}
+  ${person.resume ? `<div class="section-label">the journey</div>${resumeHTML(person)}` : ''}
   <div class="section-label">on di.iiii</div>
   ${content.doorsHTML}
   ${content.hasElsewhere ? `<div class="section-label">elsewhere</div>${content.elsewhereHTML}` : ''}
