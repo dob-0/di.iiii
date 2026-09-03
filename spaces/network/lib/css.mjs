@@ -19,7 +19,7 @@ export const CSS = `
   --accent-soft:rgba(0,151,163,.07); --accent-rule:rgba(0,151,163,.35);
   --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
   --sans:'Inter',-apple-system,'Segoe UI',sans-serif;
-  --col:1180px; --pad:56px;
+  --col:1180px; --room:860px; --pad:56px;
 }
 @font-face{
   font-family:'Inter'; src:url('/fonts/inter-regular.woff') format('woff'); font-weight:400 800; font-style:normal; font-display:swap;
@@ -31,15 +31,7 @@ body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var
 a{color:inherit;}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
 
-/* ---------- the ground ----------
-   Fixed behind everything, masked to the right so it has no edge anywhere.
-   Non-interactive by design: the list is the instrument, this is the room
-   tone. The field you can grab and turn lives at /network/constellation. */
-.ground{position:fixed;inset:0;z-index:0;pointer-events:none;}
-.ground canvas{display:block;width:100%;height:100%;
-  -webkit-mask-image:linear-gradient(to right,transparent 0%,transparent 48%,rgba(0,0,0,.45) 66%,#000 88%);
-  mask-image:linear-gradient(to right,transparent 0%,transparent 48%,rgba(0,0,0,.45) 66%,#000 88%);}
-.sheet{position:relative;z-index:1;}
+.sheet{position:relative;}
 
 .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);}
 .eyebrow .dot{color:var(--accent);}
@@ -52,7 +44,21 @@ a{color:inherit;}
 .indexPane .dek{font-size:15.5px;color:var(--ink-2);line-height:1.6;margin:0;}
 .howto{font-family:var(--mono);font-size:12px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin:0;}
 
-.roster{max-width:var(--col);padding:0 var(--pad) 8px var(--pad);}
+.roster{max-width:var(--col);padding:0 var(--pad) 8px var(--pad);position:relative;}
+
+/* ---------- the ties ----------
+   One dot per person, pinned to the right edge of that person's own row and
+   scrolling with it; one arc per shared work, running between the two rows
+   that made it. Every mark can be followed to the names it is about. */
+.tie{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:0;}
+.tie-dot{fill:var(--ink-3);opacity:.5;transition:fill .14s ease,opacity .14s ease,r .14s ease;}
+.tie-dot.is-lit{fill:var(--accent);opacity:1;r:5;}
+.tie-arc{fill:none;stroke:var(--rule);stroke-width:1;transition:stroke .14s ease,stroke-width .14s ease;}
+.tie-arc.is-lit{stroke:var(--accent);stroke-width:1.4;}
+.tie-label{font-family:var(--mono);font-size:12px;fill:var(--ink-3);
+  transition:fill .14s ease;}
+.tie-label.is-lit{fill:var(--accent-ink);}
+.roster .group, .roster ul.catalogue, .roster .howto{position:relative;z-index:1;}
 
 /* Section labels are the strongest horizontal marks in the list — they are
    the structure, and they used to be smaller than the ornament beside them. */
@@ -91,11 +97,12 @@ a.row .made .arrow{opacity:.6;}
    link: a door out of the network, then a door out of a person's room. */
 .pagehead{padding:26px var(--pad) 0 var(--pad);max-width:var(--col);
   display:flex;justify-content:space-between;gap:16px;align-items:baseline;}
+.pagehead--room{max-width:var(--room);}
 .back{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);
   text-decoration:none;display:inline-flex;align-items:center;gap:8px;}
 .back:hover,.back:focus-visible{color:var(--accent-ink);}
 
-.room-stage{max-width:var(--col);padding:46px var(--pad) 0 var(--pad);}
+.room-stage{max-width:var(--room);padding:46px var(--pad) 0 var(--pad);}
 .room-stage h1{font-size:clamp(38px,5.2vw,64px);font-weight:700;line-height:1.0;letter-spacing:-0.028em;margin:0 0 10px 0;}
 .room-stage .role{font-size:17px;color:var(--ink-2);margin:0;max-width:46ch;}
 .room-stage .city{font-size:12.5px;color:var(--ink-3);margin:6px 0 0 0;font-family:var(--mono);letter-spacing:.04em;}
@@ -132,10 +139,14 @@ a.row .made .arrow{opacity:.6;}
   border-bottom:1px solid transparent;}
 .neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
 
-.room-foot{max-width:var(--col);padding:44px var(--pad) 72px var(--pad);}
+.room-foot{max-width:var(--room);padding:44px var(--pad) 72px var(--pad);}
 .room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
   padding-top:20px;border-top:1px solid var(--rule);}
 .room-foot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+
+/* Between these widths the list gives up a little of its own width so the
+   margin still exists — better than the drawing disappearing at 1280. */
+@media (max-width:1400px){ :root{--col:1040px;} }
 
 @media (max-width:1000px){
   :root{--pad:26px;}

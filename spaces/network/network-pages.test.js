@@ -75,6 +75,18 @@ describe('weight', () => {
             expect(read(file), file).not.toMatch(/three\.module|\/vendor\//)
         }
     })
+
+    // A room used to carry a drifting constellation whose dots were unlabelled,
+    // so no dot could be traced to the names printed underneath it.
+    it('leaves a room as a document — no script at all', () => {
+        for (const p of people) expect(read(`pages/${p.slug}.html`), p.slug).not.toMatch(/<script/i)
+    })
+
+    it('gives the index exactly one script, and it is not a module', () => {
+        const html = read('code/index.html')
+        expect(html.match(/<script/gi)).toHaveLength(1)
+        expect(html).not.toMatch(/<script[^>]+type="module"/i)
+    })
 })
 
 describe('visitor copy', () => {

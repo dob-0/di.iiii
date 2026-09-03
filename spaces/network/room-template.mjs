@@ -1,20 +1,15 @@
-// The room template: one self-contained page per person — inline CSS, three
-// loaded from the vendored copy at /vendor/three.module.min.js (root-relative,
-// which resolves fine from a code page's srcdoc frame), and only that
-// person's own corner of the field embedded, not all fifty-two.
+// The room template: one self-contained page per person. No script at all —
+// a room is a document.
 //
-// Same sheet of paper as the index, same ground behind it. The earlier
-// version put a black field beside a white column; the seam ran down the
-// middle of every room.
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+// It used to carry a drifting constellation of the person and their
+// neighbours. Every dot in it was unlabelled, so no dot could be traced to
+// the names printed underneath, and the lines said only "four people", which
+// the list of four names already said. An illustration of a fact is not a
+// fact. The drawing lives where it is earned: anchored to the rows on the
+// index, and as its own subject at /network/constellation.
 import { CSS } from './lib/css.mjs';
 import { esc, roomContentHTML } from './lib/room-content.mjs';
 import { neighborsOf, workKey } from './lib/neighbors.mjs';
-
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const FIELD_JS_PATH = path.join(HERE, 'lib/field.client.js');
 
 /**
  * renderRoom(person, people) -> html string
@@ -28,16 +23,10 @@ const FIELD_JS_PATH = path.join(HERE, 'lib/field.client.js');
  */
 export function renderRoom(person, people) {
   const neighbors = neighborsOf(person, people, 10);
-  const nodes = [person, ...neighbors].map((p) => ({ slug: p.slug, name: p.name, team: p.team, section: p.section }));
 
   const focusKeys = new Set((person.works || []).map(workKey));
-  const edges = [];
-  const sharedWith = [];
-  neighbors.forEach((n, i) => {
-    if ((n.works || []).some((w) => focusKeys.has(workKey(w)))) { edges.push([0, i + 1]); sharedWith.push(n); }
-  });
+  const sharedWith = neighbors.filter((n) => (n.works || []).some((w) => focusKeys.has(workKey(w))));
 
-  const fieldJs = fs.readFileSync(FIELD_JS_PATH, 'utf8');
   const content = roomContentHTML(person, neighbors);
   const tierLabel = person.team ? 'team' : person.sectionLabel;
 
@@ -60,9 +49,8 @@ export function renderRoom(person, people) {
 <style>${CSS}</style>
 </head>
 <body>
-<div class="ground"><canvas id="field" aria-hidden="true"></canvas></div>
 <div class="sheet">
-<header class="pagehead">
+<header class="pagehead pagehead--room">
   <a class="back" href="/network" target="_top"><span aria-hidden="true">←</span> the index</a>
   <div class="eyebrow">di<span class="dot">.</span>iiii · network · ${esc(tierLabel)}</div>
 </header>
@@ -80,10 +68,6 @@ export function renderRoom(person, people) {
   <p>A room in the <a href="/network" target="_top">network</a> — one for each person who makes di.iiii. It is theirs to fill.</p>
 </footer>
 </div>
-<script>
-${fieldJs}
-createField(document.getElementById('field'), ${JSON.stringify(nodes)}, 'room', ${JSON.stringify(person.slug)}, ${JSON.stringify(edges)});
-</script>
 </body>
 </html>
 `;

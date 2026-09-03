@@ -11,7 +11,7 @@ import { CSS, esc } from './lib/css.mjs';
 import { workKey } from './lib/neighbors.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const FIELD_JS_PATH = path.join(HERE, 'lib/field.client.js');
+const FIELD_JS_PATH = path.join(HERE, 'lib/roster-field.client.js');
 
 const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
   'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
@@ -41,25 +41,19 @@ function grouped(people) {
   return out;
 }
 
-// Every pair of people who made the same thing. Two works are shared so far;
-// this stays right if a third appears.
-export function sharedWorkEdges(people) {
+// Every work more than one person made, with the people who made it. Two so
+// far; this stays right if a third appears.
+export function sharedWorks(people) {
   const byWork = new Map();
-  people.forEach((p, i) => {
+  for (const p of people) {
     for (const w of p.works || []) {
       const k = workKey(w);
-      if (!byWork.has(k)) byWork.set(k, { title: w.title, idx: [] });
-      byWork.get(k).idx.push(i);
+      if (!byWork.has(k)) byWork.set(k, { title: w.title, slugs: [] });
+      const t = byWork.get(k);
+      if (!t.slugs.includes(p.slug)) t.slugs.push(p.slug);
     }
-  });
-  const edges = [];
-  const shared = [];
-  for (const { title, idx } of byWork.values()) {
-    if (idx.length < 2) continue;
-    shared.push(title);
-    for (let a = 0; a < idx.length; a++) for (let b = a + 1; b < idx.length; b++) edges.push([idx[a], idx[b]]);
   }
-  return { edges, shared };
+  return [...byWork.values()].filter((t) => t.slugs.length > 1);
 }
 
 function rowHTML(p) {
@@ -79,10 +73,10 @@ export function renderIndex(people) {
   const team = people.filter((p) => p.team).length;
   const rest = people.length - team;
   const withWork = people.filter((p) => (p.works || []).length).length;
-  const { edges, shared } = sharedWorkEdges(people);
 
-  const nodes = people.map((p) => ({ slug: p.slug, name: p.name, team: p.team, section: p.section }));
   const fieldJs = fs.readFileSync(FIELD_JS_PATH, 'utf8');
+  const ties = sharedWorks(people);
+  const shared = ties.map((t) => t.title);
 
   const dek = `${cap(words(people.length))} people make di.iiii — ${words(team)} run it, `
     + `${words(rest)} make with it. Every name here has a room of its own. `
@@ -101,7 +95,6 @@ export function renderIndex(people) {
 <style>${CSS}</style>
 </head>
 <body>
-<div class="ground"><canvas id="field" aria-hidden="true"></canvas></div>
 <div class="sheet">
 <header class="pagehead">
   <a class="back" href="/" target="_top"><span aria-hidden="true">←</span> di.iiii</a>
@@ -115,6 +108,7 @@ export function renderIndex(people) {
 </header>
 
 <main class="roster">
+  <svg class="tie" aria-hidden="true"></svg>
   <p class="howto">tap a name to open their room</p>
 ${groups.map((g) => `  <h2 class="group"><span class="g-name">${esc(g.label)}</span><span class="g-rule"></span><span class="g-count">${g.people.length}</span></h2>
   <ul class="catalogue">
@@ -130,23 +124,22 @@ ${g.people.map((p) => '    ' + rowHTML(p)).join('\n')}
 
 <script>
 ${fieldJs}
-const PEOPLE = ${JSON.stringify(nodes)};
-const EDGES = ${JSON.stringify(edges)};
-const field = createField(document.getElementById('field'), PEOPLE, 'index', null, EDGES);
-// the list drives the ground, never the other way round
+const roster = document.querySelector('main.roster');
+const field = createRosterField(roster.querySelector('svg.tie'), roster, ${JSON.stringify(ties)});
+// the list drives the drawing, never the other way round
 let active = null;
 function light(row) {
   if (active === row) return;
   if (active) active.classList.remove('is-active');
   active = row;
   if (row) row.classList.add('is-active');
-  field.setFocus(row ? row.dataset.slug : null);
+  field.light(row ? row.dataset.slug : null);
 }
-for (const row of document.querySelectorAll('a.row')) {
+for (const row of roster.querySelectorAll('a.row')) {
   row.addEventListener('pointerenter', () => light(row));
   row.addEventListener('focus', () => light(row));
 }
-document.querySelector('main.roster').addEventListener('pointerleave', () => light(null));
+roster.addEventListener('pointerleave', () => light(null));
 </script>
 </body>
 </html>
