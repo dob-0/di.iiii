@@ -138,6 +138,11 @@ const SUMMARY = {
 // same fetch boundary the vizzz rig is: GETs answer, POSTs are recorded.
 const fakeDesk = ({ summaryStatus = 200, scenes = [{ id: 's1', name: 'Red' }], recallOk = true } = {}) => {
     const posts = []
+    // A real Response carries headers, and the desk answers JSON. The client now checks
+    // that, because a hosted di.iiii answers 200 with its own index.html for an address
+    // it does not know — a page, not a desk.
+    const JSON_HEADERS = { get: (k) => (k.toLowerCase() === 'content-type' ? 'application/json; charset=utf-8' : null) }
+    const jsonBody = (body) => ({ ok: true, status: 200, headers: JSON_HEADERS, json: async () => body })
     const fetchImpl = vi.fn(async (url, options) => {
         const address = String(url)
         if (options?.method === 'POST') {
@@ -146,14 +151,14 @@ const fakeDesk = ({ summaryStatus = 200, scenes = [{ id: 's1', name: 'Red' }], r
             const ok = path === '/scenes/recall'
                 ? (typeof recallOk === 'function' ? recallOk(JSON.parse(options.body)) : recallOk)
                 : true
-            return { ok: true, status: 200, json: async () => ({ ok }) }
+            return jsonBody({ ok })
         }
         if (address.endsWith('/scenes/summary')) {
-            return { ok: true, status: 200, json: async () => ({ scenes: typeof scenes === 'function' ? scenes() : scenes }) }
+            return jsonBody({ scenes: typeof scenes === 'function' ? scenes() : scenes })
         }
         if (address.endsWith('/summary')) {
             if (summaryStatus !== 200) return { ok: false, status: summaryStatus }
-            return { ok: true, status: 200, json: async () => SUMMARY }
+            return jsonBody(SUMMARY)
         }
         return { ok: false, status: 404 }
     })
