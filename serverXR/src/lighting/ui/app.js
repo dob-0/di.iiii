@@ -535,31 +535,54 @@ async function oflShowFixture(key) {
     oflSay('');
     const box = $('#oflModes');
     box.hidden = false;
-    box.innerHTML = `<div class="cat">${esc(r.name)} — pick a mode</div>`
+    // How many of them are hanging, right here on the mode row. You look a fixture up
+    // BECAUSE there are some in the room — asking "how many" at the moment you pick the
+    // mode is one gesture; importing a profile and then hunting for it in the tree to
+    // patch it is three, in a dark room, before doors.
+    box.innerHTML = `<div class="cat">${esc(r.name)} — pick a mode, say how many are hanging</div>`
       + oflFixture.modes.map((m) => `<div class="oflmode">
           <div class="txt"><b>${esc(m.name)}</b><span class="muted">${m.channels} channels · ${esc((m.roles || []).join(' '))}</span></div>
-          <button class="sq small" data-mode="${m.index}">Import</button>
+          <label class="oflcount" title="How many of these are hanging. They are patched in a row from the first free address; 0 imports the profile without hanging any.">×
+            <input type="number" class="ofl-n" min="0" max="128" value="1"></label>
+          <button class="sq small" data-mode="${m.index}">Patch</button>
         </div>`).join('');
-    $$('[data-mode]', box).forEach((b) => b.addEventListener('click', () => oflImport(+b.dataset.mode)));
+    $$('[data-mode]', box).forEach((b) => b.addEventListener('click', () => {
+      const n = Math.max(0, Math.min(128, Math.round(+b.closest('.oflmode').querySelector('.ofl-n').value || 0)));
+      oflImport(+b.dataset.mode, n);
+    }));
   } catch (e) {
     oflSay('Could not read that fixture — try another, or check the connection.', true);
   }
 }
 
-// Import makes a PROFILE, not a fixture. Nothing is patched and nothing lights: the new
-// profile lands in this desk's own library, where it is dragged onto the patch grid or
-// the stage like any other. Two steps on purpose — importing a chart and hanging a lamp
-// are different decisions.
-async function oflImport(mode) {
-  oflSay('Importing…');
+// Import the chart AND hang `count` of them, in one press. They land in a row from the
+// first free address in the universe the patch form is pointed at — which is what the
+// rig itself looks like, because whoever addressed it counted up in steps of the mode's
+// width. count 0 imports the profile alone, for the fixture you are only looking up.
+async function oflImport(mode, count = 1) {
+  oflSay(count ? 'Importing and patching…' : 'Importing…');
   const r = await post('api/library/import', { manufacturer: oflMaker.key, key: oflFixture.key, mode });
   if (!r || r.error) return oflSay((r && r.error) || 'the import was refused', true);
   await pullState();
   libProfile = r.name;
+  if (!count) {
+    buildTree(); syncLibForm(); oflSay('');
+    say(`${r.name} is in your library — drag it onto the patch or the stage to hang one`);
+    $('#oflPane').hidden = true;
+    return;
+  }
+  const universe = +$('#pUniverse').value || 0;
+  const added = await post('api/fixtures/add', { profile: r.name, name: r.name, universe, count });
   buildTree(); syncLibForm();
+  const n = (added && added.added || []).length;
   oflSay('');
-  say(`${r.name} is in your library — drag it onto the patch or the stage to hang one`);
   $('#oflPane').hidden = true;
+  if (!n) return say(`${r.name} is in your library, but universe ${universe + 1} has no room for it`, true);
+  // Say WHERE they landed. Half of patching at a venue is checking the desk agrees with
+  // the numbers on the back of the fixtures, and a range is what you check against.
+  const first = added.added[0].address;
+  const last = added.added[n - 1].address + (S.profiles[r.name] || { channels: [] }).channels.length - 1;
+  say(`${n} × ${r.name} hung at ${first}–${last} on universe ${universe + 1} — check that against the fixtures' own displays`);
 }
 
 $('#oflOpen').addEventListener('click', async () => {
@@ -1252,7 +1275,8 @@ function paintSelList() {
         // the name is editable here — it is the only place in the UI that can set it,
         // and a rig of eight identical pars is unusable if they are all called "rgb"
         return f ? `<div class="selrow" data-id="${f.id}"><i></i><span class="n">${f.index}</span>
-          <input class="selname" maxlength="40" title="Rename this fixture"></div>` : '';
+          <input class="selname" maxlength="40" title="Rename this fixture">
+          <button class="findbtn" title="Flash this one white for ten seconds so you can see which lamp it is in the room. Nothing is changed — whatever is running comes straight back.">Find</button></div>` : '';
       }).join('') || '<div class="selrow muted" style="cursor:default"><span>nothing selected</span></div>';
       for (const row of $$('.selrow', list)) {
         const input = row.querySelector('.selname');
@@ -1271,17 +1295,30 @@ function paintSelList() {
         // The row is a click target — the README says so and the cursor says so. Click
         // selects just this fixture (ctrl adds to the selection); the rename field keeps
         // working because a click inside it stays a rename, not a reselect.
+        // Find: the answer to "which of these eight identical pars is number 5?" — the
+        // one question every patch at a venue turns on, and the one the desk could not
+        // answer at all. It does not select, it does not change a value, and it does not
+        // care what is running: the lamp flashes white for ten seconds and stops.
+        row.querySelector('.findbtn').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const r = await post('api/fixtures/identify', { ids: [id], seconds: 10 });
+          if (r && r.error) return say(r.error, true);
+          const f = S.fixtures.find((x) => x.id === id);
+          say(`${f ? f.name : 'it'} is flashing for ten seconds — go and look at the rig`);
+        });
         row.addEventListener('click', (e) => {
-          if (e.target === input) return;
+          if (e.target === input || e.target.closest('.findbtn')) return;
           if (!e.ctrlKey && !e.metaKey) sel.clear();
           sel.add(id);
           paintSelection();
         });
       }
     }
+    const finding = new Set((S.status && S.status.identifying) || []);
     for (const row of $$('.selrow', list)) {
       const f = S.fixtures.find((x) => x.id === row.dataset.id);
       if (!f) continue;
+      row.classList.toggle('finding', finding.has(f.id));
       row.querySelector('i').style.background = cssRgb(liveColor(f));
       const input = row.querySelector('.selname');
       if (input && document.activeElement !== input && input.value !== f.name) input.value = f.name;
