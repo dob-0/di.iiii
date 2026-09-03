@@ -650,6 +650,21 @@ const rig4 = () => ['a', 'b', 'c', 'd'].map((id, i) => makeFixture({
 }));
 const lookMap = (looks) => new Map(looks.map((l) => [l.id, l]));
 
+check('the desk clock drives a look, so one Tap retimes everything running', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([{ id: 'c', measure: 1,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  const layers = sanitizeLayers([{ id: 'l', lookId: 'c' }]);
+  // 120 bpm is a 500ms loop, so 260ms in is the second step; at 240 the loop is 250ms
+  // and 260ms has come round to the first again.
+  assert.strictEqual(layerValues({ looks, layers }, fixtures, 260, 120).get('a').r, 255);
+  assert.strictEqual(layerValues({ looks, layers }, fixtures, 260, 240).get('a').r, 0);
+  const own = sanitizeLooks([{ id: 'c', bpm: 120, measure: 1,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  assert.strictEqual(layerValues({ looks: own, layers }, fixtures, 260, 240).get('a').r, 255,
+    'a look with its own tempo has opted out of the clock on purpose');
+});
+
 check('a look with one step is a scene, and holds still', () => {
   const looks = sanitizeLooks([{ id: 'a', steps: [{ values: { '*': { r: 10, g: 20 } } }] }]);
   const at = (t) => evalLook(looks[0], rig4(), t, { looks: lookMap(looks) }).get('a');

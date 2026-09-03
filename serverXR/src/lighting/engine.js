@@ -269,7 +269,9 @@ class Engine {
     // is running, and then every line below reads exactly as it did before layers
     // existed: the fixtures' own values are the look. A desk with an empty stack cannot
     // tell this file is here, which is the property that let it land on a live rig.
-    const stack = layerValues(state, state.fixtures, now);
+    // The tempo the operator tapped drives the stack too, not only the FX engine —
+    // one clock, so Tap retimes every running look at the same moment.
+    const stack = layerValues(state, state.fixtures, now, state.fx && state.fx.bpm);
     const audioOn = this.audioActive(state, now);
     if (audioOn) this.audioTick(state, now);
     // Channels belonging to all-generic-channel fixtures (lasers): a raw hold on one of
