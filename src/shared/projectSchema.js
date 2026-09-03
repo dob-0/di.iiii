@@ -468,6 +468,14 @@ export const normalizeWindowLayout = (layout = {}) => {
 // renderer fetches whatever it is given and a document is untrusted input.
 const LABEL_FONT_NAMES = ['default', 'helvetica']
 
+// What shape a gateway portal draws. 'gateway' is the glowing ring every
+// portal has drawn since the type existed. 'frame' is a square-cornered
+// threshold — four thin bars, flat fill, no halo — the only door shape the
+// brand's geometry rule allows (square corners only; never shadow, glow or
+// bevel), which the ring made it impossible to build. Opt-in: anything
+// authored without this field keeps the ring.
+const PORTAL_STYLES = ['gateway', 'frame']
+
 const TEXT_REVEAL_MODES = ['none', 'typewriter']
 
 // A text entity's optional reveal. Absent (or 'none') means the text draws in
@@ -608,7 +616,10 @@ export const normalizeEntity = (entity = {}) => {
             // authored before these existed is untouched.
             labelColor: ensureString(refSource.labelColor, refDefault.labelColor || '#ffffff'),
             labelPlate: ensureBoolean(refSource.labelPlate, refDefault.labelPlate ?? true),
-            labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default'
+            labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default',
+            // Door shape. 'gateway' reproduces the ring exactly, so an
+            // unknown or absent value leaves an existing portal untouched.
+            style: PORTAL_STYLES.includes(refSource.style) ? refSource.style : 'gateway'
         }
     }
     if (sourceComponents.runtime || defaultComponents.runtime) {

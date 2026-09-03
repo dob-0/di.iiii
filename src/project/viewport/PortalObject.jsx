@@ -131,7 +131,9 @@ function LabelPlate({ text, fontSize, maxWidth }) {
     )
 }
 
-// Portal (gateway) mode: a ring marker + floating label. Clicking enters the
+// Portal (gateway) mode: a marker + floating label — a glowing ring lying flat
+// on the floor by default, or (reference.style: 'frame') a square-cornered
+// doorway standing on it. Clicking enters the
 // space in the live viewer; in the Studio editor the click is left to the
 // editor's own selection handling (so a portal stays selectable/movable).
 // Matches only an actual `/studio` path SEGMENT — the Studio app's reserved
@@ -196,12 +198,62 @@ const getGlowTexture = () => {
 
 const scratchWorldPos = new THREE.Vector3()
 
-function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate = true }) {
+// The 'frame' door, in the portal's own local units — the entity's transform
+// scale multiplies all of it, exactly as it does the ring.
+//
+// halfWidth is deliberately the ring's major radius: a frame door is entered
+// from the same distance a ring door is, so portalWalkThrough's 1.3 × XZ-scale
+// latch needs no special case. `bar` is the ring's tube radius, which reads as
+// a hairline at room scale.
+export const PORTAL_FRAME = { halfWidth: 1.1, height: 2.4, bar: 0.12, depth: 0.12 }
+
+// Four boxes, butt-jointed, square corners, no mitre and no bevel: a sill
+// across the bottom, two jambs standing on it, a lintel across the top. Sill
+// and lintel span the full outer width so the corners close — the mark is a
+// square holding a smaller square, and a threshold missing one side is not it.
+//
+// The whole frame sits ABOVE y = 0 rather than centring the sill on it. A room
+// whose floor is at y = 0 (the common case) would otherwise swallow the sill
+// whole and leave a П, and it costs nothing: a sill IS the thing you step over.
+//
+// Pure and exported so the geometry can be asserted without mounting a canvas.
+export const portalFrameBars = (dims = PORTAL_FRAME) => {
+    const { halfWidth, height, bar, depth } = dims
+    const outerWidth = (halfWidth + bar) * 2
+    return [
+        { key: 'sill', position: [0, bar / 2, 0], args: [outerWidth, bar, depth] },
+        { key: 'jamb-left', position: [-(halfWidth + bar / 2), bar + height / 2, 0], args: [bar, height, depth] },
+        { key: 'jamb-right', position: [halfWidth + bar / 2, bar + height / 2, 0], args: [bar, height, depth] },
+        { key: 'lintel', position: [0, bar + height + bar / 2, 0], args: [outerWidth, bar, depth] }
+    ]
+}
+
+// Middle of the opening — where the flat fill / tap target sits.
+export const portalFrameOpeningY = (dims = PORTAL_FRAME) => dims.bar + dims.height / 2
+
+// A ring's nameplate floats at 1.9 over a marker lying flat on the floor. A
+// frame stands 2.64 tall, so the same height would hang the plate in the
+// middle of the doorway; it clears the lintel instead. Reveal, fade and plate
+// behaviour are identical either way.
+export const portalLabelHeight = (style) => (
+    style === 'frame' ? PORTAL_FRAME.height + PORTAL_FRAME.bar * 2 + 0.45 : 1.9
+)
+
+// Flat fill in the opening, doubling as the tap target. Same trick as the
+// ring's membrane — nearly invisible, but a full-size hit area instead of a
+// 0.12-wide bar. Normal blending, not additive: additive over a dark room is
+// a glow, and the brand has no glow.
+const FRAME_FILL_IDLE = 0.1
+const FRAME_FILL_HOVER = 0.18
+
+function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate = true, style = 'gateway' }) {
+    const isFrame = style === 'frame'
     const inEditor = typeof window !== 'undefined' && isStudioEditorPath(window.location.pathname)
     const groupRef = useRef(null)
     const labelRef = useRef(null)
     const ringRef = useRef(null)
     const ringMatRef = useRef(null)
+    const fillMatRef = useRef(null)
     const revealRef = useRef(inEditor ? 1 : 0)
     const [hovered, setHovered] = useState(false)
     const enter = (event) => {
@@ -247,7 +299,59 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
             const s = THREE.MathUtils.damp(ringRef.current.scale.x, hovered ? 1.07 : 1, 8, delta)
             ringRef.current.scale.setScalar(s)
         }
+        // A frame cannot answer a hover with a brighter glow, so it answers
+        // with a slightly stronger flat fill in the opening — the brand's own
+        // hover-fill move, and the same damp curve as the ring's.
+        if (fillMatRef.current) {
+            fillMatRef.current.opacity = THREE.MathUtils.damp(
+                fillMatRef.current.opacity, hovered ? FRAME_FILL_HOVER : FRAME_FILL_IDLE, 8, delta)
+        }
     })
+
+    if (isFrame) {
+        return (
+            <group ref={groupRef}>
+                {portalFrameBars().map((bar) => (
+                    <mesh
+                        key={bar.key}
+                        position={bar.position}
+                        onClick={inEditor ? undefined : enter}
+                        onPointerOver={inEditor ? undefined : hoverOn}
+                        onPointerOut={inEditor ? undefined : hoverOff}
+                    >
+                        <boxGeometry args={bar.args} />
+                        <meshBasicMaterial color={color} />
+                    </mesh>
+                ))}
+                <mesh
+                    position={[0, portalFrameOpeningY(), 0]}
+                    onClick={inEditor ? undefined : enter}
+                    onPointerOver={inEditor ? undefined : hoverOn}
+                    onPointerOut={inEditor ? undefined : hoverOff}
+                >
+                    <planeGeometry args={[PORTAL_FRAME.halfWidth * 2, PORTAL_FRAME.height]} />
+                    <meshBasicMaterial
+                        ref={fillMatRef}
+                        color={color}
+                        transparent
+                        opacity={FRAME_FILL_IDLE}
+                        depthWrite={false}
+                        side={THREE.DoubleSide}
+                    />
+                </mesh>
+                {label ? (
+                    <group ref={labelRef} position={[0, portalLabelHeight('frame'), 0]} visible={inEditor}>
+                        <Billboard>
+                            {showPlate ? <LabelPlate text={label} fontSize={0.34} /> : null}
+                            <Text font={TROIKA_FONT_URL} fontSize={0.34} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.016} outlineColor="#04070c">
+                                {label}
+                            </Text>
+                        </Billboard>
+                    </group>
+                ) : null}
+            </group>
+        )
+    }
 
     return (
         <group ref={groupRef}>
@@ -293,7 +397,7 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
                 </sprite>
             ) : null}
             {label ? (
-                <group ref={labelRef} position={[0, 1.9, 0]} visible={inEditor}>
+                <group ref={labelRef} position={[0, portalLabelHeight('gateway'), 0]} visible={inEditor}>
                     <Billboard>
                         {showPlate ? <LabelPlate text={label} fontSize={0.34} /> : null}
                         <Text font={TROIKA_FONT_URL} fontSize={0.34} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.016} outlineColor="#04070c">
@@ -347,6 +451,7 @@ export default function PortalObject({ entity }) {
             label={reference.label || reference.projectId || reference.spaceId || 'Portal'}
             color={entity.components?.appearance?.color}
             showPlate={reference.labelPlate !== false}
+            style={reference.style === 'frame' ? 'frame' : 'gateway'}
         />
     )
 }

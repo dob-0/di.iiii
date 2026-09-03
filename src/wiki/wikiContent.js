@@ -542,6 +542,26 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-24'
     },
     {
+        id: 'portal-door-shape',
+        category: 'Editing',
+        title: 'What shape a door is',
+        summary: 'A gateway portal can be a square-cornered frame you walk through instead of a glowing ring on the floor.',
+        body: [
+            'A gateway portal has always drawn one thing: a glowing ring lying flat on the floor, with a soft halo around it. That reads well in a dark, atmospheric room, and it is still what every door does unless you say otherwise.',
+            'It is also the only thing a door could be, which made some rooms impossible to build. A ring is a circle with a glow — and a space built to the studio’s own identity has square corners everywhere, hairline edges, flat fills, and no glow at all. There was no way to author a doorway that belonged in one of those rooms.',
+            'So a portal now has a shape:',
+            { list: [
+                'style: "gateway" — the ring and its halo. The default, and exactly what it has always looked like.',
+                'style: "frame" — a threshold standing on the floor: two uprights, a lintel across the top, a sill across the bottom, all square-cornered and flat, with no halo. The opening carries a barely-there fill that is also its tap target, so pointing at the doorway itself works the way pointing at the ring does.'
+            ] },
+            'Both shapes are the same door in every other respect. They take the portal’s colour, they carry the same nameplate that appears as a visitor approaches, they open on a click in view mode, and they are entered on foot in walk mode from the same distance — a frame is drawn exactly as wide as the ring it replaces, so nothing about walking through changes. Scaling the portal scales the door.',
+            'A frame stands up out of the floor rather than lying in it, so it wants to sit at floor level; a portal placed high in the air will have its doorway hanging there. Rotating the portal aims the doorway, the same way it aims any other object.',
+            'Left alone, a portal keeps the ring — no existing room changes.'
+        ],
+        tags: ['portal', 'door', 'brand', 'exhibition', 'walk'],
+        updated: '2026-09-03'
+    },
+    {
         id: 'text-reveal',
         category: 'Editing',
         title: 'Text that types itself',
