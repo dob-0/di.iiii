@@ -47,6 +47,18 @@ export const cueFadeMs = (cue) => {
     return Number.isFinite(fade) && fade >= 0 ? Math.round(fade * 1000) : null
 }
 
+// What a cue names on the lighting desk, and WHICH KIND of thing it is. A cue may
+// carry a look (the desk's content model) or a scene (the older one); both are ids and
+// nothing about an id says which, so the cue stores them in separate fields and this is
+// the one place that reads them.
+export const cueLightTarget = (cue) => {
+    const look = typeof cue?.lightLook === 'string' ? cue.lightLook.trim() : ''
+    if (look) return { kind: 'look', id: look }
+    const scene = typeof cue?.lightScene === 'string' ? cue.lightScene.trim() : ''
+    if (scene) return { kind: 'scene', id: scene }
+    return null
+}
+
 export const cueLightScene = (cue) => {
     const id = cue?.lightScene
     return typeof id === 'string' && id.trim() ? id.trim() : ''
@@ -62,6 +74,23 @@ export async function fetchLightScenes({ fetchImpl, signal } = {}) {
     if (!answeredJson(response)) throw new Error('no lighting desk here')
     const body = await response.json()
     return Array.isArray(body?.scenes) ? body.scenes : []
+}
+
+// Everything a cue may fire, in the order a person would look for it: the looks the desk
+// is built around now, then the scenes it still holds. One call, because a picker that
+// asked twice would show half a list whenever one of the two answered slowly.
+export async function fetchLightTargets({ fetchImpl, signal } = {}) {
+    const call = resolveFetch(fetchImpl)
+    if (!call) throw new Error('no fetch')
+    const response = await call(lightingApiUrl('api/fireable'), { signal })
+    if (!response?.ok) throw new Error(`lighting desk answered ${response?.status ?? 'nothing'}`)
+    if (!answeredJson(response)) throw new Error('no lighting desk here')
+    const body = await response.json()
+    const looks = (Array.isArray(body?.looks) ? body.looks : [])
+        .map((l) => ({ kind: 'look', id: l.id, name: l.name, note: `${l.steps} step${l.steps === 1 ? '' : 's'}` }))
+    const scenes = (Array.isArray(body?.scenes) ? body.scenes : [])
+        .map((s) => ({ kind: 'scene', id: s.id, name: s.name, note: s.missing ? `${s.missing} missing` : 'scene' }))
+    return [...looks, ...scenes]
 }
 
 // A 200 alone is not a desk. A hosted tier serves the app's own index.html for
@@ -86,12 +115,26 @@ export async function probeLightingDesk({ fetchImpl, signal } = {}) {
 // What a fired cue does about light. Resolves true only when the desk took it;
 // it NEVER rejects, and a cue with no scene never touches the network at all.
 export function recallCueLighting(cue, { fetchImpl } = {}) {
-    const id = cueLightScene(cue)
-    if (!id) return Promise.resolve(false)
+    const target = cueLightTarget(cue)
+    if (!target) return Promise.resolve(false)
     const call = resolveFetch(fetchImpl)
     if (!call) return Promise.resolve(false)
 
     const fadeMs = cueFadeMs(cue)
+    // A look is content and is FIRED — it lands on the desk's cue layer and stays there
+    // until another cue replaces it. A scene is a state and is RECALLED, with a fade.
+    // The two verbs are different on purpose; the cue simply says which it named.
+    if (target.kind === 'look') {
+        return Promise.resolve()
+            .then(() => call(lightingApiUrl('api/looks/fire'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: target.id })
+            }))
+            .then((response) => Boolean(response?.ok))
+            .catch(() => false)
+    }
+    const id = target.id
     const payload = fadeMs === null ? { id } : { id, fadeMs }
     return Promise.resolve()
         .then(() => call(lightingApiUrl('api/scenes/recall'), {

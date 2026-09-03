@@ -305,6 +305,8 @@ function createDesk(opts = {}) {
     try { fs.renameSync(SHOW, SHOW_PREV); } catch (e) { /* first save ever */ }
     fs.renameSync(tmp, SHOW);
   }
+  // The layer an outside caller's cue drives, unless it names another.
+  const CUE_LAYER = 'cue';
   let nextLookId = 1;
   let nextLayerId = 1;
   // Add or replace by id, keeping the library's order — an edit must not make a look
@@ -842,6 +844,46 @@ function createDesk(opts = {}) {
       let emptied = 0;
       for (const layer of state.layers) if (layer.lookId === body.id) { layer.lookId = null; emptied++; }
       save(); pushFrame(); json(res, { ok: true, emptied });
+    },
+
+    // Fire a look from outside the desk — a map cue, a graph node, a phone. A look is
+    // content, not a state, so firing it means putting it ON something: one dedicated
+    // layer that outside callers drive, created on first use and visible in the stack
+    // like any other. Fire look A then look B and the layer holds B, which is the
+    // one-clip-per-layer rule the whole interface already reads by.
+    'POST /api/looks/fire': (req, res, body) => {
+      const look = state.looks.find((l) => l.id === body.id);
+      if (!look) return json(res, { error: 'no such look' }, 404);
+      const layerId = typeof body.layerId === 'string' && body.layerId ? body.layerId : CUE_LAYER;
+      let layer = state.layers.find((l) => l.id === layerId);
+      if (!layer) {
+        layer = sanitizeLayer({
+          id: layerId,
+          name: layerId === CUE_LAYER ? 'Cues' : layerId,
+          priority: state.layers.reduce((n, l) => Math.max(n, l.priority), 0) + 1,
+        });
+        state.layers.push(layer);
+      }
+      layer.lookId = look.id;
+      layer.on = true;
+      layer.level = body.level != null && Number.isFinite(+body.level)
+        ? Math.max(0, Math.min(1, +body.level)) : 1;
+      save(); pushFrame();
+      json(res, { ok: true, look: { id: look.id, name: look.name }, layer });
+    },
+
+    // What an outside caller may fire, in one list: the looks and the scenes, each
+    // saying which it is. A picker should not have to know the desk's history to offer
+    // both, and a cue that names one must be able to tell them apart.
+    'GET /api/fireable': (req, res) => {
+      const patched = new Set(state.fixtures.map((f) => f.id));
+      json(res, {
+        looks: state.looks.map((l) => ({ id: l.id, name: l.name, kind: l.kind, steps: l.steps.length })),
+        scenes: state.scenes.map((s) => {
+          const live = s.fixtures.filter((sf) => patched.has(sf.id)).length;
+          return { id: s.id, name: s.name, fadeMs: s.fadeMs, live, missing: s.fixtures.length - live };
+        }),
+      }, 200, req);
     },
 
     // The stack. Bottom to top by priority; each layer contributes what its mask allows.
