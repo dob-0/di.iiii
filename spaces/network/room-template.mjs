@@ -62,7 +62,7 @@ export function renderRoom(person, people) {
 <body>
 <div class="ground"><canvas id="field" aria-hidden="true"></canvas></div>
 <div class="sheet">
-<header class="room-header">
+<header class="pagehead">
   <a class="back" href="/network" target="_top"><span aria-hidden="true">←</span> the index</a>
   <div class="eyebrow">di<span class="dot">.</span>iiii · network · ${esc(tierLabel)}</div>
 </header>

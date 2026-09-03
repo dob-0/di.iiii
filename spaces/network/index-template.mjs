@@ -103,9 +103,12 @@ export function renderIndex(people) {
 <body>
 <div class="ground"><canvas id="field" aria-hidden="true"></canvas></div>
 <div class="sheet">
+<header class="pagehead">
+  <a class="back" href="/" target="_top"><span aria-hidden="true">←</span> di.iiii</a>
+  <div class="eyebrow">the network</div>
+</header>
 <header class="indexPane">
   <div class="masthead">
-    <div class="eyebrow">di<span class="dot">.</span>iiii · network</div>
     <h1>who makes di<span class="dot">.</span>iiii</h1>
     <p class="dek">${dek}</p>
   </div>
