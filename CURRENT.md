@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the lighting desk moves in at `/light` (local runtime only); DMX Out drives it, map cues carry light, MIDI is its fifth page — `docs/architecture/LIGHTING_DESK.md`
+- the lighting desk grew a content model after a field audit: looks and layers, fan, fixture-library import, sACN, palettes — `docs/architecture/LIGHTING_DESK_DESIGN.md`
 - the dev box was never a copy of staging
 - the entry stops lurching when the walker takes over
 - the platform's space is `di.iiii`, and the network has a room per person
@@ -27,7 +27,7 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
-- **Lighting desk (`/light`)**: on a hosted tier it is 404 by design — verify it on a local stack. Owed: a real ENTTEC widget on Linux (serial proven on a pty only); the club machine still runs the old standalone build (`~/artnet-desk` syncs `desk/` from here).
+- **Lighting desk (`/light`)**: local runtime only, 404 on a hosted tier by design — verify on a local stack, and note the edge answers 200 with the SPA there (proxying `/light*` to Node would let the guard's own 404 show; the clients now require JSON). Owed, in `LIGHTING_DESK_DESIGN.md` order: cue lists with tracking, the drawn operator surface, a clock with visible phase and nudge, timecode/Link/OSC-in, and one cue moving light + projection + room. Also owed: a real ENTTEC widget on Linux (serial proven on a pty only); the club machine still runs the old standalone build (`~/artnet-desk` syncs `desk/` from here).
 - **Prod = the 2026-08-25 promotion (#269).** The Dilijan camp space stays on STAGING by decision — yet `dilijan` IS listed on prod's spaces API (audit 2026-09-02); owner to decide. Prod also owes one `PATCH /api/spaces/algovrithm {previewImageAssetId: 1219e590…}` — the asset already exists there, the `/spaces` thumbnail 404s until then.
 - Doors audit: only embed-link copy left (ledger: memory `project_dii_doors_audit_2026_08_21`; the bare PHONE canvas has no visible exit). Viewer seams left: the entry auto-frame direction is still hardcoded (0.8,0.45,1) — portrait entries tilt unless a composed fixed camera is authored (fixed-camera is NAVIGABLE now unless `locked:true`, #262); graph-only rooms still hide Walk/Fly by design; 3D text at eye level unsolved.
 - `/wcc` false alarm closed; real leftover: `/wcc/main` needs >60s to settle. Camp decisions owed: kids name their own doors (labels only, first name/pseudonym — never full names on the public URL); consent for the public URL is hosq's call.
