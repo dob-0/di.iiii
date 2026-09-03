@@ -3903,6 +3903,7 @@ function renderAll(busy) {
   if (page === 'control') {
     safeBuild('buildBank', buildBank);
     safeBuild('buildOutput', buildOutput);
+    safeBuild('buildSends', buildSends);
     safeBuild('buildFx', buildFx);
     safeBuild('buildLfos', buildLfos);
     safeBuild('buildLayers', buildLayers);
@@ -4822,6 +4823,73 @@ $('#saveOutput').addEventListener('click', () => {
     mode: ($$('input[name=mode]').find((r) => r.checked) || {}).value || 'broadcast',
     targets: entries,
   }).then(pullState);
+});
+
+/* ---- more than one device at once ---- */
+// A universe list typed as "2" or "2,3" or "2 3". Empty means every universe the desk
+// has, which is right for a node mirroring the whole rig and wrong for a widget.
+function parseUniverses(text) {
+  return [...new Set(String(text || '').split(/[^0-9]+/).filter(Boolean).map((n) => Math.max(0, Math.min(32767, +n))))]
+    .sort((a, b) => a - b);
+}
+
+function buildSends() {
+  const list = (S.status && S.status.extra) || [];
+  const box = $('#sendList');
+  $('#sendsWhat').textContent = list.length
+    ? `${list.length} beside the main output`
+    : 'the main output is the only one';
+  const sig = JSON.stringify(list);
+  if (box.dataset.sig !== sig) {
+    box.dataset.sig = sig;
+    box.innerHTML = list.map((s) => {
+      const where = s.driver === 'enttec' ? s.serialPort : (s.targets.join(', ') || 'nowhere');
+      const unis = s.universes.length ? `universe ${s.universes.map((u) => u + 1).join(', ')}` : 'every universe';
+      const state = !s.enabled ? 'off'
+        : s.connected ? (s.packetsSent ? `${s.packetsSent.toLocaleString()} frames` : 'open')
+        : (s.lastError || 'not open');
+      return `<div class="sendrow${s.enabled && s.connected ? '' : ' dead'}" data-id="${esc(s.id)}">
+        <b>${esc(s.driver === 'enttec' ? 'USB PRO' : s.driver === 'sacn' ? 'sACN' : 'Art-Net')}</b>
+        <span>${esc(where)}</span>
+        <span class="muted">${esc(unis)}</span>
+        <span class="muted st">${esc(state)}</span>
+        <button class="sq small snd-on">${s.enabled ? 'On' : 'Off'}</button>
+        <button class="sq small danger snd-x" title="Stop sending to this device and forget it">✕</button>
+      </div>`;
+    }).join('') || '';
+    $$('.sendrow', box).forEach((row) => {
+      const id = row.dataset.id;
+      row.querySelector('.snd-on').addEventListener('click', async () => {
+        const s = ((S.status && S.status.extra) || []).find((x) => x.id === id);
+        const r = await post('api/output/send', { id, enabled: !(s && s.enabled) });
+        await pullState();
+        if (r && r.error) say(r.error, true);
+      });
+      row.querySelector('.snd-x').addEventListener('click', async () => {
+        await post('api/output/send/remove', { id });
+        await pullState();
+        say('that device is no longer being sent to');
+      });
+    });
+  }
+}
+
+$('#sendAdd').addEventListener('click', async () => {
+  const driver = $('#sendDriver').value;
+  const where = $('#sendWhere').value.trim();
+  const universes = parseUniverses($('#sendUni').value);
+  if (driver === 'enttec' && !where) return say('name the serial port the second widget is on', true);
+  if (driver !== 'enttec' && !where) return say('give the device an IP address', true);
+  // A widget is one DMX line. Adding one without saying which universe would leave it
+  // silently carrying universe 1 while the operator believes it is carrying the other.
+  if (driver === 'enttec' && !universes.length) return say('say which universe this widget carries — it can only carry one', true);
+  const body = { driver, universes };
+  if (driver === 'enttec') body.serialPort = where; else body.targets = where.split(/[ ,]+/).filter(Boolean);
+  const r = await post('api/output/send', body);
+  if (r && r.error) return say(r.error, true);
+  $('#sendWhere').value = ''; $('#sendUni').value = '';
+  await pullState();
+  say(`sending ${universes.length ? 'universe ' + universes.map((u) => u + 1).join(', ') : 'every universe'} to ${where} as well`);
 });
 
 // The wire switch. Turning output ON is the one action in this panel that can change a
