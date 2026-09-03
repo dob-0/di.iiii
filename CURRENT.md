@@ -13,9 +13,9 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- build zones: a room that arranges itself
-- the Open Jam room, and the rule that keeps a room one
-- `/network` is one paper world end to end: the constellation is generated from `people.json` like the rooms, and the third index — a second catalogue of the same 52, still printing Gevorg's old name — is gone
+- the network rooms carry a CV, and the landing names its three routes
+- `/network` is one paper world end to end and LIVE ON PROD: the constellation is generated from `people.json` like the rooms, the third index is gone, and all three tiers now agree
+- the two pages that still spoke the replaced design were the only HAND-KEPT ones in that space, which is how both kept printing a name the data had already corrected
 
 Full detail: `PROGRESS.md`.
 
