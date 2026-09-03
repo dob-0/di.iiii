@@ -400,6 +400,26 @@
           <div class="serialstat pad" id="identifyLine"></div>
         </div>
 
+        <!-- More than one device at once. The block above is the desk's main output;
+             each row here is another device sending the same frames, with its own list of
+             universes — which is what a rig on two universes looks like when the venue
+             has a node and you brought a widget, or when a widget is all there is and a
+             widget carries exactly one DMX line. -->
+        <div class="pad sends" style="border-top: 1px solid var(--line); margin-top: 6px; padding-top: 8px">
+          <h2 style="margin-bottom: 6px">More devices <span class="muted" id="sendsWhat"></span></h2>
+          <div id="sendList"></div>
+          <div class="inline">
+            <select id="sendDriver">
+              <option value="artnet">Art-Net</option>
+              <option value="sacn">sACN</option>
+              <option value="enttec">DMX USB PRO</option>
+            </select>
+            <input type="text" id="sendWhere" placeholder="IP, or the port for a widget" style="flex:1">
+            <input type="text" id="sendUni" placeholder="universes — 2, or 2,3" style="width:9em">
+            <button class="sq" id="sendAdd">Add device</button>
+          </div>
+        </div>
+
         <div id="err" class="err"></div>
 
         <!-- Getting a phone onto the desk. The address changes with every network the

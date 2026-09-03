@@ -723,6 +723,18 @@ input.pinned { border-color: var(--accent); }
 .outswitch #outEnable { border-color: var(--muted); color: var(--muted); }
 .outswitch #outEnable.on { border-color: var(--accent); color: var(--accent); }
 .outswitch #outEnable:hover { border-color: var(--text); color: var(--text); }
+/* Every other device the frames go to. A row that is off or will not open is dimmed and
+   says why, because the failure mode this list exists to prevent is half a rig going dark
+   for a reason nobody on the floor can see. */
+.sendrow {
+  display: flex; align-items: center; gap: 8px; padding: 4px 0;
+  border-bottom: 1px solid #ffffff08; font-size: 12px;
+}
+.sendrow b { flex: none; min-width: 60px; }
+.sendrow .st { margin-left: auto; }
+.sendrow.dead { color: var(--muted); }
+.sendrow.dead .st { color: var(--danger); }
+.sendrow .sq.small { padding: 1px 7px; font-size: 11px; }
 .topbo { padding: 4px 10px; font-size: 12px; }
 /* A control that has been pressed but not yet answered must not look like a finished one:
    the panic button in particular has to stop claiming success before the desk has agreed. */
