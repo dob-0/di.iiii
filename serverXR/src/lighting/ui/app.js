@@ -3201,6 +3201,20 @@ $('#lookRecord').addEventListener('click', async () => {
 // What this look actually is, in words. One step is a scene; two that snap are a chase;
 // two that crossfade and are spread across the rig are a wave. That distinction is the
 // whole content model, and it is invisible in a list of numbers.
+// Every attribute in this look that points at a palette rather than holding a number,
+// as paletteId -> how many cells name it.
+function lookRefs(look) {
+  const refs = new Map();
+  for (const step of look.steps) {
+    for (const cell of Object.values(step.values || {})) {
+      for (const v of Object.values(cell)) {
+        if (v && typeof v === 'object' && v.ref) refs.set(v.ref, (refs.get(v.ref) || 0) + 1);
+      }
+    }
+  }
+  return refs;
+}
+
 function lookInWords(look) {
   const n = look.steps.length;
   const kind = look.kind === 'all' ? '' : ` ${KIND_LABEL[look.kind]}`;
@@ -3213,6 +3227,19 @@ function lookInWords(look) {
   const bpm = look.bpm || (S && S.fx ? S.fx.bpm : 120);
   return `${n} steps, ${moving ? 'crossfading' : 'snapping'}, ${spread ? 'spread across the rig' : 'in unison'} — ${shape}. `
     + `One loop every ${look.measure} beat${look.measure === 1 ? '' : 's'} at ${bpm} BPM${look.bpm ? ' (its own tempo)' : ' (the desk clock)'}.`;
+}
+
+// Reference state has to be visible at all times. The one thing every desk in the field
+// gets support tickets about is an operator who cannot tell whether an edit will change
+// two hundred looks or quietly orphan one, so this says it in words, on the look.
+function refsInWords(look) {
+  const refs = lookRefs(look);
+  if (!refs.size) return '';
+  const names = [...refs.keys()].map((id) => {
+    const p = lookById(id);
+    return p ? p.name : 'a palette that is gone';
+  });
+  return `Follows ${names.join(' and ')} — change ${refs.size === 1 ? 'it' : 'them'} and this look changes with ${refs.size === 1 ? 'it' : 'them'}.`;
 }
 
 // The stage as it stands, as one step, through this look's mask. Recorded per fixture:
@@ -3240,12 +3267,19 @@ function buildSteps() {
     return;
   }
   const sig = look.id + '#' + JSON.stringify(look.steps.map((s) => s.transition))
-    + '#' + look.phase + '#' + look.measure + '#' + look.bpm + '#' + look.steps.length;
+    + '#' + look.phase + '#' + look.measure + '#' + look.bpm + '#' + look.steps.length
+    + '#' + [...lookRefs(look).keys()].join(',')
+    + '#' + (S.looks || []).filter((l) => l.steps.length === 1 && l.kind !== 'all').map((l) => l.id + l.name).join();
   if (box.dataset.sig === sig) return;
   box.dataset.sig = sig;
 
+  // Every one-step look narrower than "everything" is a palette: a colour, a position,
+  // a beam. That is the whole definition, so the picker simply lists them.
+  const palettes = (S.looks || []).filter((l) => l.id !== look.id && l.steps.length === 1 && l.kind !== 'all');
+  const refWords = refsInWords(look);
   box.innerHTML = `
     <p class="stepwords muted">${esc(lookInWords(look))}</p>
+    ${refWords ? `<p class="stepwords good">${esc(refWords)}</p>` : ''}
     ${look.steps.map((s, i) => `<div class="steprow" data-i="${i}">
       <b>${i + 1}</b>
       <input class="st-trans" type="range" min="0" max="1" step="0.05" value="${s.transition}" title="0 snaps to the next step — that is a chase. 1 never stops moving — that is a wave.">
@@ -3253,6 +3287,14 @@ function buildSteps() {
       <button class="sq danger st-del" title="Delete this step"${look.steps.length < 2 ? ' disabled' : ''}>✕</button>
     </div>`).join('')}
     <div class="inline"><button class="sq" id="stepAdd" title="Record the stage as it stands as one more step">+ Step from stage</button></div>
+    <div class="inline" title="Point this look's values at a palette instead of holding numbers. Re-record the palette later and every look that follows it is right, without touching them.">
+      <select id="stepRefPick">
+        <option value="">follow a palette&hellip;</option>
+        ${palettes.map((p) => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(KIND_LABEL[p.kind] || p.kind)}</option>`).join('')}
+      </select>
+      <button class="sq" id="stepRef"${palettes.length ? '' : ' disabled'}>Follow</button>
+      ${refWords ? '<button class="sq" id="stepUnref" title="Copy the palette\'s numbers in and stop following it">Stop following</button>' : ''}
+    </div>
     <div class="stepnums">
       <label title="Degrees of offset spread across the selection. 0 is the whole rig in unison; 360 walks one full cycle round it.">Phase
         <input class="st-phase" type="number" min="-3600" max="3600" step="45" value="${look.phase}"></label>
@@ -3281,6 +3323,57 @@ function buildSteps() {
     if (!S.fixtures.length) return say('nothing patched to record', true);
     if (l.steps.length >= 64) return say('that is as many steps as a look holds', true);
     edit({ steps: l.steps.concat([stageStep(l)]) });
+  });
+  // Follow: every role this palette carries stops being a number in this look and
+  // becomes a pointer at it. The values on the wire do not change — the look is simply
+  // saying WHERE they came from, which is what makes re-pointing the palette work.
+  $('#stepRef').addEventListener('click', () => {
+    const l = lookById(selLook);
+    const palette = lookById($('#stepRefPick').value);
+    if (!l || !palette) return say('pick a palette first', true);
+    const carried = new Set();
+    for (const cell of Object.values(palette.steps[0].values || {})) for (const role of Object.keys(cell)) carried.add(role);
+    if (!carried.size) return say('that palette holds nothing', true);
+    let touched = 0;
+    const steps = l.steps.map((step) => {
+      const values = {};
+      for (const [fixtureId, cell] of Object.entries(step.values || {})) {
+        const next = {};
+        for (const [role, v] of Object.entries(cell)) {
+          if (carried.has(role)) { next[role] = { ref: palette.id }; touched++; } else next[role] = v;
+        }
+        values[fixtureId] = next;
+      }
+      return Object.assign({}, step, { values });
+    });
+    if (!touched) return say(`nothing in this look uses what ${palette.name} holds`, true);
+    putLook(Object.assign({}, l, { steps }), `${l.name} follows ${palette.name} now`);
+  });
+  const unref = $('#stepUnref');
+  if (unref) unref.addEventListener('click', () => {
+    const l = lookById(selLook);
+    if (!l) return;
+    // Breaking the link copies the numbers in rather than emptying the look: the same
+    // rule the desk uses when a palette is deleted. Nothing silently goes dark.
+    let kept = 0;
+    const steps = l.steps.map((step) => {
+      const values = {};
+      for (const [fixtureId, cell] of Object.entries(step.values || {})) {
+        const next = {};
+        for (const [role, v] of Object.entries(cell)) {
+          if (v && typeof v === 'object' && v.ref) {
+            const p = lookById(v.ref);
+            const src = p && p.steps[0] ? (p.steps[0].values[fixtureId] || p.steps[0].values['*']) : null;
+            if (src && src[role] != null) { next[role] = src[role]; kept++; continue; }
+            continue;
+          }
+          next[role] = v;
+        }
+        if (Object.keys(next).length) values[fixtureId] = next;
+      }
+      return Object.assign({}, step, { values });
+    });
+    putLook(Object.assign({}, l, { steps }), `${l.name} holds its own numbers again (${kept} kept)`);
   });
   box.querySelector('.st-phase').addEventListener('change', (e) => edit({ phase: clamp(+e.target.value || 0, -3600, 3600) }));
   box.querySelector('.st-measure').addEventListener('change', (e) => edit({ measure: clamp(parseFloat(e.target.value) || 1, 0.25, 64) }));
