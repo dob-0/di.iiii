@@ -51,7 +51,7 @@ export function renderRoom(person, people) {
 <body>
 <div class="sheet">
 <header class="pagehead pagehead--room">
-  <a class="back" href="/network" target="_top"><span aria-hidden="true">←</span> the index</a>
+  <a class="back" href="/network" target="_top"><span aria-hidden="true">←</span> the network</a>
   <div class="eyebrow">di<span class="dot">.</span>iiii · network · ${esc(tierLabel)}</div>
 </header>
 <main class="room-stage">
