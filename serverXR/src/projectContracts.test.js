@@ -164,6 +164,71 @@ describe('project contracts', () => {
         expect(opsPayload.latestVersion).toBe(1)
     })
 
+    // Build zones, through the wire. The unit tests prove the geometry; this
+    // proves the RULE: a client that asks for a photo at the origin does not get
+    // one there, and the ops handed back to every peer carry the placement, so
+    // no two people are looking at a different room.
+    it('hangs a photo in a slot even when the client asks for the origin', async () => {
+        const server = await startServer()
+        const project = 'jam-room'
+        const api = `${server.baseUrl}/api/projects/${project}`
+        const post = (body) => fetch(`${api}/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        })
+
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Jam Room', slug: project, source: 'studio-v3' })
+        })
+
+        const turnOn = await post({
+            baseVersion: 0,
+            ops: [{ type: 'setWorldState', payload: { patch: { placement: { enabled: true } } } }]
+        })
+        expect(turnOn.status).toBe(200)
+
+        const add = await post({
+            baseVersion: (await turnOn.json()).newVersion,
+            ops: [{
+                type: 'createEntity',
+                payload: {
+                    entity: {
+                        id: 'photo-1',
+                        type: 'image',
+                        name: 'someone-phone.jpg',
+                        components: { transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] } }
+                    }
+                }
+            }]
+        })
+        expect(add.status).toBe(200)
+        const added = await add.json()
+        // The client sent one op and gets two back: its create, and the placement.
+        expect(added.ops).toHaveLength(2)
+
+        const document = (await (await fetch(`${api}/document`)).json()).document
+        const photo = document.entities.find((entity) => entity.id === 'photo-1')
+        expect(photo.components.transform.position).toEqual([0, 1.15, -7.5])
+        expect(photo.components.transform.scale).toEqual([2 / 3, 2 / 3, 2 / 3])
+
+        // And dragging it away puts it back on the wall, in the nearest slot.
+        const drag = await post({
+            baseVersion: added.newVersion,
+            ops: [{
+                type: 'updateComponent',
+                payload: { entityId: 'photo-1', component: 'transform', patch: { position: [40, 0, 40] } }
+            }]
+        })
+        expect(drag.status).toBe(200)
+        const afterDrag = (await (await fetch(`${api}/document`)).json()).document
+        const moved = afterDrag.entities.find((entity) => entity.id === 'photo-1')
+        expect(moved.components.transform.position[1]).toBeGreaterThan(0.5)
+        expect(Math.abs(moved.components.transform.position[0])).toBeLessThan(20)
+    })
+
     it('rejects stale project ops with 409 and does not mutate the document', async () => {
         const server = await startServer()
 

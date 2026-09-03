@@ -1103,6 +1103,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-03'
     },
     {
+        id: 'build-zones',
+        category: 'Editing',
+        title: 'A room that arranges itself',
+        summary: 'Turn build zones on and the room stops being free space: everything hung lands on the wall, in line, whoever adds it and however.',
+        body: [
+            'A room open to everybody fills up with everybody\'s aim. The Open Jam room came out of one night with thirty phones in it: photos at the origin, photos behind the wall, cones and empty text boxes left where someone found the editor. Nothing was wrong with any single edit. The room was simply free space, and free space is what a crowd makes a mess of.',
+            'Build zones make the wall a set of numbered slots. A photo that arrives is put in the next free one, scaled to the row height and squared to the hanging line — whether it came from a phone standing in the room, from the editor, or from a script. Drag one into the void and it goes to the nearest free slot instead: you still choose where on the wall it hangs, you just cannot choose nowhere.',
+            'The slots are a shape, not a stock. When the wall fills, the next photo starts a new bay and the room grows outward, so a jam never runs out of places to hang. Delete a photo and its slot is free again the moment it goes.',
+            'The rule lives on the server, which is what makes it a rule. Every edit passes through it, so nobody sees a differently arranged room and no client can talk its way around it.',
+            'Two things stay under your hand. Anything you pin keeps its place and takes no slot — that is how a QR code sits on its lectern instead of being hung as an exhibit. And the whole thing is a switch: turn build zones off and every picture stays exactly where it is, in a room that is free space again.'
+        ],
+        tags: ['room', 'space', 'jam', 'placement', 'build zones', 'photos', 'arrange'],
+        updated: '2026-09-03'
+    },
+    {
         id: 'raw-zen-workspace',
         category: 'Editing',
         title: 'A canvas with nothing on it',
@@ -1143,7 +1158,7 @@ export const WIKI_ARTICLES = [
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['glossary', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['glossary', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

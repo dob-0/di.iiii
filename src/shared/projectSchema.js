@@ -1,4 +1,5 @@
 
+import { normalizePlacement } from './placement.js'
 export const PROJECT_DOCUMENT_VERSION = 4
 export const ENTITY_TYPES = [
     'box',
@@ -115,6 +116,11 @@ export const defaultWorldState = {
     // plus a 22m margin). An array of {minX,maxX,minZ,maxZ} rectangles declares
     // the walkable floor plan, and the walker cannot leave their union.
     walkableAreas: null,
+    // null = free space, the historical behaviour. An object turns the room's
+    // build zones ON: everything hangable that arrives is put in a numbered slot
+    // by the server, so the room stays arranged no matter who edits it or how.
+    // See src/shared/placement.js; switching it off leaves every photo where it is.
+    placement: null,
     gridVisible: true,
     gridSize: 24,
     gridCellSize: 0.75,
@@ -683,6 +689,7 @@ const normalizeWorldState = (world = {}) => {
             altY: ensureNumber(source.spawn.altY, 1.6)
         } : null,
         walkableAreas: normalizeWalkableAreas(source.walkableAreas),
+        placement: normalizePlacement(source.placement),
         // Walk-mode atmosphere: null keeps the built-in close fog (8..50m); an
         // authored object opens the distance for VAST scenes — the walker's
         // camera far plane follows it (LiveProjectScene), so a 150m composition
