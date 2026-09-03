@@ -228,17 +228,28 @@ body.is-landing .account-btn-wrapper {
 }
 
 /* Scrim behind the hero text so the wordmark/subtitle/buttons read over the
-   bright 3D room. A flat wash, not a gradient — the brand kit treats a
-   gradient as decoration, and a flat 30% black reads the copy just as well as
-   the four-stop fade this replaced. Sits above the fixed GL background (z 0)
-   and below the hero content (z 2). */
+   bright 3D room, fading to fully opaque black by the very bottom edge. This
+   IS a gradient, deliberately, against the brand kit's usual "no gradient as
+   decoration" — it is not decoration, it is the seam fix: a flat wash left
+   the room's own blue cut off on a hard horizontal line exactly where the
+   hero met the next (solid black) section, at every width. Fading the last
+   ~40% of the hero to solid black means the section below never has an edge
+   to meet — the ground the room stands on is the same ground the page is
+   printed on, always, and the seam is gone at any viewport height. Sits
+   above the fixed GL background (z 0) and below the hero content (z 2). */
 .lp-hero::after {
     content: '';
     position: absolute;
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.06) 0%,
+        rgba(0, 0, 0, 0.3) 32%,
+        rgba(0, 0, 0, 0.55) 58%,
+        rgba(0, 0, 0, 1) 100%
+    );
 }
 
 .lp-hero-inner {
@@ -373,29 +384,38 @@ body.is-landing .account-btn-wrapper {
 }
 
 /* ─── ROOM TAGS ───────────────────────────────────────────────
-   The five moves, standing in the room as objects rather than living in a
-   features list further down the page. Desktop scatters them near the
-   hero's edges (absolute, relative to `.lp-hero`, escaping the centred
-   column they're written inside); a phone has no room for a scatter, so
-   below 861px they fall back to an ordinary stacked list, in document order,
-   right where a visitor would look for them next. */
+   The five moves. Tried first as objects scattered over the 3D scene —
+   found, on looking, sitting on top of a door in one shot and clipped by the
+   bottom of the viewport in another: a mark with no fact behind it the
+   moment it's cut off. One quiet row instead, in normal document flow
+   directly under the room — same ground, never floating over the canvas,
+   never able to clip. */
+.lp-room-tags-strip {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--di-cyan-border);
+    background: var(--di-black);
+    padding: 22px 24px;
+}
+
 .lp-room-tags {
     list-style: none;
-    margin: 0;
     padding: 0;
+    max-width: 1040px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 32px;
 }
 
 .lp-room-tag {
-    position: absolute;
-    max-width: 190px;
     font-family: var(--di-mono);
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     line-height: 1.5;
     color: var(--di-text-muted);
-    background: rgba(0, 0, 0, 0.82);
-    border: 1px solid var(--di-cyan-border);
-    padding: 8px 10px;
-    pointer-events: none;
+    border-left: 2px solid var(--di-cyan-border);
+    padding: 2px 0 2px 10px;
 }
 
 .lp-room-tag-n {
@@ -405,34 +425,12 @@ body.is-landing .account-btn-wrapper {
     margin-right: 6px;
 }
 
-/* The centred text column (wordmark, tagline, buttons) can run up to about
-   1050px wide on a 1440px hero at its widest row (the four exhibition
-   chips), so the tags stay inside the ~180px margins either side of it
-   rather than trying to dodge its height. */
-.lp-room-tag:nth-of-type(1) { top: 10%; left: 2.5%; text-align: left; }
-.lp-room-tag:nth-of-type(2) { top: 10%; right: 2.5%; text-align: right; }
-.lp-room-tag:nth-of-type(3) { top: 40%; left: 1.5%; text-align: left; }
-.lp-room-tag:nth-of-type(4) { top: 40%; right: 1.5%; text-align: right; }
-.lp-room-tag:nth-of-type(5) { bottom: 9%; right: 2.5%; text-align: right; }
-
-@media (max-width: 860px) {
+@media (max-width: 640px) {
     .lp-room-tags {
-        position: static;
-        display: flex;
         flex-direction: column;
-        gap: 8px;
-        margin: 4px 0 28px;
+        align-items: flex-start;
+        gap: 10px;
         max-width: 340px;
-    }
-
-    .lp-room-tag {
-        position: static;
-        max-width: none;
-        text-align: left !important;
-        background: transparent;
-        border: none;
-        border-left: 2px solid var(--di-cyan-border);
-        padding: 2px 0 2px 12px;
     }
 }
 
@@ -835,13 +833,13 @@ body.is-landing .account-btn-wrapper {
         padding: 64px 20px;
     }
 
+    /* No 3D room mounts below 520px (the isSmallScreen gate — three.js is
+       1.47MB nobody on a phone asked for). A drawn grid stood in for it here,
+       but on review it was the loudest thing on the screen and stood for
+       nothing a visitor could act on. Plain black instead: the same ground
+       the rest of the page stands on, and the type does the work. */
     .lp-hero {
         padding: 32px 20px 40px;
-        background:
-            linear-gradient(var(--di-cyan-border) 1px, transparent 1px),
-            linear-gradient(90deg, var(--di-cyan-border) 1px, transparent 1px),
-            #000;
-        background-size: 52px 52px, 52px 52px, auto;
     }
 
     .lp-feature-grid {
@@ -994,12 +992,12 @@ body.is-landing .account-btn-wrapper {
    the landing page reappearing after you had already arrived. Fading it here
    costs nothing (nobody can see a hidden element fade) and leaves the handover
    with nothing left to hide. */
-.lp-root--flying .lp-hero-inner,
-.lp-root--flying .lp-room-tags {
+.lp-root--flying .lp-hero-inner {
     opacity: 0;
 }
 
 .lp-root--flying .lp-section,
+.lp-root--flying .lp-room-tags-strip,
 .lp-root--flying .lp-footer {
     visibility: hidden;
 }
