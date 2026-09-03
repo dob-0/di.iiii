@@ -5,6 +5,93 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+# feat/lighting-spatial-waves — a look can fan across the room (2026-09-03)
+
+## What changed
+
+The desk could already stack looks on layers, but a wave only ever fanned by
+selection index — patch order. The old `fx.js` effects engine had known how to
+read the stage arrangement for years (x/x-/y/y-/radial/radial-); that fan is now
+in the Look/Layer content model, where it can be layered, coloured and masked
+instead of being the one global thing running on the whole rig. `angle` was
+added alongside: phase walking round the room's centre, which is a radar sweep.
+
+- `looks.js` — `SPATIAL`, a `spatial` field on a look (default `patch`, so every
+  existing look behaves exactly as before), `spatialFrac()`, and `stepPosition()`
+  taking the fixture so it can use geometry instead of index.
+- Three one-press starters — **Line sweep** (x), **Radar** (angle), **Grid** (two
+  orthogonal waves stacked HTP, different measures so the crossing point moves) —
+  and a **Follow** picker in the step editor for any look.
+- The arrange stage's world bound went from -1..2 to ±1000, min zoom 0.25 → 0.01,
+  and the grid backdrop moved off the transformed inner layer onto the outer pane
+  (JS-driven `background-position`/`-size`) so it tiles instead of running out at
+  the old margin. A truss run or an off-stage followspot has somewhere to sit.
+- Regression tests: patch-vs-spatial traces differ, a far-apart pair on x cannot
+  share a phase, opposite sides of centre differ under `angle`, and an unknown
+  spatial value falls back to patch rather than throwing.
+
+## Verified
+
+Ran a scratch desk on :8734 with 4 fixtures, fired each starter in a real
+headless browser, watched per-fixture brightness genuinely differ as Radar
+rotated, changed a look's Follow value from the UI and confirmed the round trip
+through the server. Panned the stage a long way — backdrop still there, no dead
+zone. Both lighting suites and ESLint clean. Landed as #350, pulled into the
+5173 dev stack and confirmed live there.
+
+## Not done, on purpose
+
+Video/image upload and pixel-mapped media playback (the Resolume media-engine
+half of the ask) is a different output model — RGB pixel buffers, not per-fixture
+DMX roles — too big to build and verify honestly in the time this session had.
+It is its own lane, not a leftover of this one.
+
+---
+## 2026-09-03 — a short door onto the map lane
+
+The owner: *"i want short link or it would better map.di-studio.xyz and
+light.di-studio.xyz, desk.di-studio.xyz audit that all and fix all link plz"*,
+then, on what "desk" meant and why: *"give all to use … keep our data … we have
+public and private info so keep how needed what needed … what we create as tool
+it need to be on hand."*
+
+Three different answers, because the three tools are not in the same state:
+
+- **`map.di-studio.xyz` — built here.** The map lane is already hosted on prod
+  and already sits behind `ProtectedSurface` (per-space sign-in), so a second
+  hostname adds a name, not a hole. `Caddyfile` gains a `{$MAP_DOMAIN}` block
+  reverse-proxying to the SAME `client:8080` as `{$SITE_DOMAIN}` — not a second
+  app, the identical one under a shorter name. `docker-compose.yml` wires the
+  var with the same inert-until-set default pattern `STAGING_DOMAIN` uses.
+  Two things still need the owner's hand: the DNS record (no registrar access
+  from this machine) and setting `MAP_DOMAIN` in prod's `.env`.
+- **`light.di-studio.xyz` — not a link problem.** The lighting desk has no
+  hosted implementation at all; a hosted di-studio.xyz says so rather than
+  going quiet, by design (`docs/architecture/LIGHTING_DESK_DESIGN.md`, real
+  ArtNet/DMX hardware access). A subdomain would proxy to the same "no desk
+  here" page. Making it real is a tunnel-a-machine-with-hardware-access
+  project, and a lighting rig facing the public internet is its own decision,
+  not a DNS edit.
+- **`desk.di-studio.xyz` — asked and answered "I meant something else."** The
+  literal reading (di.desk, the coordination workspace this session runs
+  inside) is local-only with zero auth by deliberate design — every framed
+  tier and every agent's chat, unguarded. Asked the owner directly rather than
+  guess; he confirmed that is not what he meant, without saying what he did.
+  Left open, not built.
+
+**One real limitation of `map.di-studio.xyz`, written down rather than found
+later:** the session cookie is host-only (no `Domain` attribute), so signing in
+on `di-studio.xyz` does not carry over to `map.di-studio.xyz` — separate
+sign-ins per hostname. That is consistent with "public and private stay how
+they are" (nothing shared that shouldn't be), but it is not "one session
+everywhere," and making it that would mean a shared-domain cookie readable by
+every subdomain added later — a real tradeoff, not made here.
+
+Not started this session: the "audit all links, audit UX/UI, make it simple"
+half of the ask — the machine this session runs on goes offline within the
+hour (unrelated shutdown notice), so the infra half was finished and the audit
+was left for whichever session picks this up next.
+
 # feat/network-all-of-us
 
 The network: a page listing everyone who makes di.iiii, and a room per person.
