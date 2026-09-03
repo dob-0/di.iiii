@@ -57,7 +57,11 @@ const PATH = [
 // reads as a picture frame with somebody's cat in it, and one at the side crowds
 // the arrival — but the moment you want the way on is the moment you turn round,
 // and then it is the only thing there.
-const DOOR = { name: 'path_door', spaceId: 'main', projectId: 'main-dii-project', label: 'the other spaces', at: [0, 0, 8.4], rotation: [0, PI, 0], scale: 0.9 }
+// The SPACE, not the project inside it. portalHref builds `/main/main-dii-project`
+// from a projectId and plain `/main` without one — and the front room is being
+// rebuilt, so a door that names today's project id breaks the day it lands. The
+// space address always serves whatever that space publishes.
+const DOOR = { name: 'path_door', spaceId: 'main', projectId: '', label: 'the other spaces', at: [0, 0, 8.4], rotation: [0, PI, 0], scale: 0.9 }
 
 // the four lines, as they should read (the originals had a typo, a missing step 3 and "assets")
 const COPY = {
