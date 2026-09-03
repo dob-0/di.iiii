@@ -1,707 +1,309 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>network — di.iiii</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>the constellation — di.iiii</title>
 <style>
-@font-face{
-  font-family:'Inter';
-  src:url('/fonts/inter-regular.woff') format('woff');
-  font-weight:100 900;
-  font-style:normal;
-  font-display:swap;
-}
-@font-face{
-  font-family:'JetBrains Mono';
-  src:url('/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
-  font-weight:100 900;
-  font-style:normal;
-  font-display:swap;
-}
 :root{
-  --bg0:#000000;
-  --ink:#ffffff;
-  --ink-dim:rgba(255,255,255,.55);
-  --ink-faint:rgba(255,255,255,.30);
-  --cyan:#4DF9FF;
-  --cyan-bright:#00E5FF;
-  --line:rgba(77,249,255,.20);
-  --line-soft:rgba(255,255,255,.10);
-  --sans:'Inter',-apple-system,'Segoe UI',Roboto,sans-serif;
-  --mono:'JetBrains Mono','Fira Code',ui-monospace,Menlo,Consolas,monospace;
+  --paper:#f7f7f5; --paper-2:#efefec;
+  --ink:#111214; --ink-2:#55595e; --ink-3:#63686d; --rule:#dededa;
+  /* --accent marks (dots, rules, the lit star); --accent-ink is the one
+     that carries text — #0097a3 is 3.29:1 on paper and fails as type. */
+  --accent:#0097a3; --accent-ink:#00757f;
+  --accent-soft:rgba(0,151,163,.07); --accent-rule:rgba(0,151,163,.35);
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --sans:'Inter',-apple-system,'Segoe UI',sans-serif;
+  --col:1180px; --room:860px; --pad:56px;
 }
-*{box-sizing:border-box;border-radius:0!important;}
-html,body{margin:0;padding:0;height:100%;background:var(--bg0);color:var(--ink);font-family:var(--sans);overflow:hidden;}
-button,a{font-family:inherit;}
-#field{position:fixed;inset:0;display:block;outline:none;}
+@font-face{
+  font-family:'Inter'; src:url('/fonts/inter-regular.woff') format('woff'); font-weight:400 800; font-style:normal; font-display:swap;
+}
+*{box-sizing:border-box; border-radius:0 !important;}
+html{background:var(--paper);}
+body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;}
+a{color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
 
-.mono{font-family:var(--mono);}
-.eyebrow{
-  font-family:var(--mono);
-  font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);
+.sheet{position:relative;}
+
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);}
+.eyebrow .dot{color:var(--accent);}
+
+/* ---------- index ---------- */
+.indexPane{max-width:var(--col);padding:30px var(--pad) 26px var(--pad);}
+.masthead{max-width:60ch;}
+.indexPane h1{font-size:clamp(26px,2.6vw,34px);font-weight:700;letter-spacing:-0.02em;line-height:1.05;margin:14px 0 14px 0;}
+.indexPane h1 .dot{color:var(--accent);}
+.indexPane .dek{font-size:15.5px;color:var(--ink-2);line-height:1.6;margin:0;}
+.howto{font-family:var(--mono);font-size:12px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin:0;}
+
+.roster{max-width:var(--col);padding:0 var(--pad) 8px var(--pad);position:relative;}
+
+/* ---------- the ties ----------
+   One dot per person, pinned to the right edge of that person's own row and
+   scrolling with it; one arc per shared work, running between the two rows
+   that made it. Every mark can be followed to the names it is about. */
+.tie{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:0;}
+.tie-dot{fill:var(--ink-3);opacity:.5;transition:fill .14s ease,opacity .14s ease,r .14s ease;}
+.tie-dot.is-lit{fill:var(--accent);opacity:1;r:5;}
+.tie-arc{fill:none;stroke:var(--rule);stroke-width:1;transition:stroke .14s ease,stroke-width .14s ease;}
+.tie-arc.is-lit{stroke:var(--accent);stroke-width:1.4;}
+.tie-label{font-family:var(--mono);font-size:12px;fill:var(--ink-3);
+  transition:fill .14s ease;}
+.tie-label.is-lit{fill:var(--accent-ink);}
+.roster .group, .roster ul.catalogue, .roster .howto{position:relative;z-index:1;}
+
+/* Section labels are the strongest horizontal marks in the list — they are
+   the structure, and they used to be smaller than the ornament beside them. */
+.group{display:flex;align-items:baseline;gap:14px;margin:38px 0 0 0;
+  border-bottom:1.5px solid var(--ink);padding-bottom:7px;}
+.group .g-name{font-size:15px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;}
+.group .g-rule{flex:1;}
+.group .g-count{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;}
+.group:first-of-type{margin-top:18px;}
+
+ul.catalogue{list-style:none;margin:0;padding:0;}
+ul.catalogue li+li{border-top:1px solid var(--rule);}
+a.row{display:grid;grid-template-columns:minmax(200px,23ch) 1fr;align-items:baseline;column-gap:30px;
+  text-decoration:none;color:inherit;padding:11px 10px 11px 14px;position:relative;
+  transition:background .14s ease;}
+a.row::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:5px;height:5px;background:var(--accent);opacity:0;transition:opacity .14s ease;}
+a.row:hover,a.row:focus-visible,a.row.is-active{background:var(--accent-soft);outline:none;}
+a.row:hover::before,a.row:focus-visible::before,a.row.is-active::before{opacity:1;}
+a.row .name{font-size:19px;font-weight:600;letter-spacing:-0.012em;line-height:1.25;}
+/* the role belongs next to the name, not across an empty gutter */
+a.row .role{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);line-height:1.45;}
+a.row .made{display:block;font-family:var(--mono);font-size:12px;color:var(--accent-ink);
+  margin-top:3px;letter-spacing:.01em;}
+a.row .made .arrow{opacity:.6;}
+
+.indexFoot{max-width:var(--col);padding:34px var(--pad) 72px var(--pad);}
+.indexFoot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0 0 12px 0;
+  padding-top:20px;border-top:1px solid var(--rule);}
+.indexFoot p+p{padding-top:0;border-top:none;}
+.indexFoot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+.indexFoot a:hover,.indexFoot a:focus-visible{border-bottom-color:var(--accent);}
+
+/* ---------- both page types ---------- */
+/* Same header at every depth, because people arrive on foot as well as by
+   link: a door out of the network, then a door out of a person's room. */
+.pagehead{padding:26px var(--pad) 0 var(--pad);max-width:var(--col);
+  display:flex;justify-content:space-between;gap:16px;align-items:baseline;}
+.pagehead--room{max-width:var(--room);}
+.back{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);
+  text-decoration:none;display:inline-flex;align-items:center;gap:8px;}
+.back:hover,.back:focus-visible{color:var(--accent-ink);}
+
+.room-stage{max-width:var(--room);padding:46px var(--pad) 0 var(--pad);}
+.room-stage h1{font-size:clamp(38px,5.2vw,64px);font-weight:700;line-height:1.0;letter-spacing:-0.028em;margin:0 0 10px 0;}
+.room-stage .role{font-size:17px;color:var(--ink-2);margin:0;max-width:46ch;}
+.room-stage .city{font-size:12.5px;color:var(--ink-3);margin:6px 0 0 0;font-family:var(--mono);letter-spacing:.04em;}
+.room-stage .bio{font-size:16px;line-height:1.7;color:var(--ink-2);max-width:58ch;
+  margin:30px 0 0 0;padding-top:26px;border-top:1px solid var(--rule);}
+
+/* ---------- the journey (a CV cut into segments, not handed over flat) ---------- */
+.focus-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px 0;}
+.chip{border:1px solid var(--rule);padding:6px 12px;font-size:12px;font-family:var(--mono);
+  color:var(--ink-2);letter-spacing:.02em;}
+.timeline{margin:0;}
+.timeline details{border-top:1px solid var(--rule);}
+.timeline details:last-child{border-bottom:1px solid var(--rule);}
+.timeline summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:16px;
+  padding:14px 2px;font-family:var(--mono);}
+.timeline summary::-webkit-details-marker{display:none;}
+.timeline summary .yr{font-size:14px;font-weight:700;color:var(--ink);min-width:4.5ch;}
+.timeline summary .ct{font-size:12px;color:var(--ink-3);flex:1;text-align:right;}
+.timeline summary::after{content:'+';color:var(--accent-ink);margin-left:2px;font-size:14px;}
+.timeline details[open] summary::after{content:'−';}
+.timeline .yr-items{padding:0 2px 18px 2px;display:flex;flex-direction:column;gap:12px;}
+.ti{font-size:14.5px;line-height:1.5;color:var(--ink-2);}
+.ti .ti-t{font-weight:600;color:var(--ink);}
+.ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
+.ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
+.cv-link{margin:20px 0 0 0;}
+
+.section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
+  margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--rule);}
+
+/* flex, not grid: an auto-fill grid left a phantom empty cell showing the
+   container's own colour whenever the row was not full. */
+.doors{display:flex;flex-wrap:wrap;gap:14px;margin:0;}
+.door{flex:0 1 260px;min-height:132px;border:1px solid var(--rule);background:var(--paper);
+  padding:16px 16px 14px 16px;text-decoration:none;display:flex;flex-direction:column;
+  justify-content:flex-end;position:relative;transition:border-color .14s ease,background .14s ease;}
+.door:hover,.door:focus-visible{background:var(--accent-soft);border-color:var(--accent-rule);outline:none;}
+.door .t{font-size:17px;font-weight:600;line-height:1.2;}
+.door .l{font-size:12px;color:var(--ink-2);margin-top:5px;font-family:var(--mono);line-height:1.45;}
+.door::after{content:'→';position:absolute;right:14px;top:12px;color:var(--accent);opacity:0;
+  transition:opacity .14s ease,transform .14s ease;}
+.door:hover::after,.door:focus-visible::after{opacity:1;transform:translateX(2px);}
+.door--unlinked{border-style:dashed;background:transparent;cursor:default;}
+.door--unlinked .t{color:var(--ink-2);font-weight:500;}
+.door--unlinked .l{color:var(--ink-3);}
+.empty-note{color:var(--ink-2);font-size:15.5px;max-width:48ch;line-height:1.65;margin:0;}
+.elsewhere{display:flex;gap:10px;flex-wrap:wrap;}
+.plate{border:1px solid var(--rule);padding:9px 15px;font-size:12.5px;text-decoration:none;
+  color:var(--ink-2);font-family:var(--mono);transition:border-color .14s ease,color .14s ease;}
+.plate:hover,.plate:focus-visible{color:var(--accent-ink);border-color:var(--accent-rule);}
+
+.neighbours{display:flex;flex-wrap:wrap;gap:0 22px;max-width:64ch;}
+.neighbours a{font-size:14.5px;color:var(--ink-2);text-decoration:none;padding:5px 0;
+  border-bottom:1px solid transparent;}
+.neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
+
+.room-foot{max-width:var(--room);padding:44px var(--pad) 72px var(--pad);}
+.room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
+  padding-top:20px;border-top:1px solid var(--rule);}
+.room-foot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+
+/* Between these widths the list gives up a little of its own width so the
+   margin still exists — better than the drawing disappearing at 1280. */
+@media (max-width:1400px){ :root{--col:1040px;} }
+
+@media (max-width:1000px){
+  :root{--pad:26px;}
+  /* the roster starts at the top of a phone — no band above it. There is no
+     margin to hold the drawing at this width, so it thins to a whisper
+     across the whole sheet rather than sitting behind the names as smudges. */
+  .ground{opacity:.2;}
+  .ground canvas{-webkit-mask-image:none;mask-image:none;}
+  /* the two halves of the room header do not fit one line on a phone;
+     side by side they each wrapped mid-phrase. */
+  .pagehead{flex-direction:column;gap:9px;}
+  /* the section eyebrow is 39 characters and overruns 390px by a hair */
+  .pagehead .eyebrow{letter-spacing:.08em;}
+  a.row{grid-template-columns:1fr;row-gap:3px;padding:14px 10px 15px 14px;}
+  a.row .name{font-size:19px;}
+  .indexPane{padding-top:30px;padding-bottom:28px;}
+  .indexPane h1{font-size:27px;}
+  .room-stage{padding-top:34px;}
+  .door{flex:1 1 100%;min-height:112px;}
+  .group{margin-top:34px;}
 }
 
-header.top{
-  position:fixed;top:0;left:0;right:0;z-index:20;
-  display:flex;justify-content:space-between;align-items:flex-start;
-  padding:26px 32px 0 32px;
-  pointer-events:none;
-}
-header.top .brand{pointer-events:auto;}
-header.top .brand .eyebrow{margin-bottom:6px;}
-header.top h1{
-  font-size:21px;font-weight:800;margin:0;letter-spacing:-0.01em;
-}
-header.top h1 .dot{color:var(--cyan);}
-header.top .hint{
-  pointer-events:auto;
-  font-size:11.5px;color:var(--ink-faint);font-family:var(--mono);
-  text-align:right;line-height:1.6;max-width:230px;
+@media (prefers-reduced-motion:reduce){
+  .door,.back,a.row,.plate,.neighbours a{transition:none;}
 }
 
-/* roster edge index — desktop: thin column, right edge. Real <nav>, real focus. */
-#roster{
-  position:fixed;top:0;right:0;bottom:0;z-index:20;
-  width:248px;
-  padding:104px 28px 28px 22px;
-  display:flex;flex-direction:column;
-  overflow-y:auto;
-  background:linear-gradient(to left, rgba(0,0,0,0.78), rgba(0,0,0,0));
+.constPane{max-width:var(--col);padding:30px var(--pad) 22px var(--pad);}
+.constPane h1{font-size:clamp(26px,2.6vw,34px);font-weight:700;letter-spacing:-0.02em;line-height:1.05;margin:14px 0 14px 0;}
+.constPane h1 .dot{color:var(--accent);}
+.constPane .dek{font-size:15.5px;color:var(--ink-2);line-height:1.6;margin:0;max-width:62ch;}
+.fieldWrap{overflow-x:auto;overflow-y:hidden;padding:0 var(--pad) 4px var(--pad);}
+.drag{display:none;}
+/* The ring is 910px of drawing and the names on it have to stay readable, so
+   a narrow screen scrolls it sideways rather than shrinking the type to
+   nothing. Below that width the figure goes full-bleed and says so. */
+@media (max-width:1020px){
+  .fieldWrap{padding-left:0;padding-right:0;}
+  .drag{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3);
+    letter-spacing:.1em;text-transform:uppercase;margin:0 0 10px 0;padding:0 var(--pad);}
 }
-#roster .group-label{
-  font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--ink-faint);margin:18px 0 8px 0;
-}
-#roster .group-label:first-child{margin-top:0;}
-#roster ul{list-style:none;margin:0;padding:0;}
-#roster li{margin:0;}
-#roster .item{
-  all:unset;display:block;width:100%;cursor:pointer;box-sizing:border-box;
-  padding:7px 0;
-  border-top:1px solid var(--line-soft)!important;
-  color:var(--ink-dim);
-  font-size:13px;
-  transition:color .15s ease, padding-left .15s ease;
-}
-#roster li:last-child .item{border-bottom:1px solid var(--line-soft)!important;}
-#roster .item .name{color:var(--ink);display:block;font-weight:500;}
-#roster .item .role{display:block;font-size:10.5px;color:var(--ink-faint);font-family:var(--mono);margin-top:1px;}
-#roster .item:hover,#roster .item:focus-visible,#roster .item.active{
-  color:var(--cyan);padding-left:8px;outline:none;
-}
-#roster .item:hover .name,#roster .item:focus-visible .name,#roster .item.active .name{color:var(--cyan);}
-#roster .item.active::before{content:'';display:inline-block;width:5px;height:5px;background:var(--cyan);margin-right:6px;vertical-align:middle;}
-#roster .item.has-room .name::after{content:' →';color:var(--ink-faint);font-weight:400;}
-#roster .item.has-room:hover .name::after,#roster .item.has-room:focus-visible .name::after,#roster .item.has-room.active .name::after{color:var(--cyan);}
-
-/* hover / select label + doors, floats near the node in 3D space */
-#node-label{
-  position:fixed;z-index:30;pointer-events:none;
-  transform:translate(18px,-50%);
-  opacity:0;transition:opacity .18s ease;
-  max-width:290px;
-}
-#node-label.show{opacity:1;pointer-events:auto;}
-#node-label .name{font-size:19px;font-weight:800;letter-spacing:-0.01em;margin:0 0 2px 0;}
-#node-label .role{font-family:var(--mono);font-size:10.5px;color:var(--cyan);letter-spacing:.03em;margin:0 0 10px 0;text-transform:lowercase;}
-#node-label .doors{display:flex;flex-direction:column;gap:5px;}
-#node-label .door{
-  border:1px solid var(--line);background:rgba(0,0,0,0.86);
-  padding:6px 10px;font-size:11.5px;color:var(--ink-dim);
-  display:flex;justify-content:space-between;gap:14px;
-  text-decoration:none;
-}
-#node-label .door:hover,#node-label .door:focus-visible{border-color:var(--cyan);outline:none;}
-#node-label .door .t{color:var(--ink);}
-#node-label .door.empty{color:var(--ink-faint);font-family:var(--mono);font-size:10.5px;}
-#node-label .tap{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:10px;}
-
-footer.legend{
-  position:fixed;left:32px;bottom:26px;z-index:20;
-  display:flex;gap:22px;align-items:center;
-  font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);
-}
-footer.legend .sw{display:inline-flex;align-items:center;gap:7px;}
-footer.legend .dot{width:7px;height:7px;background:var(--ink);display:inline-block;}
-footer.legend .dot.net{width:4px;height:4px;background:var(--ink-faint);}
-
-#sr-status{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
-#sheet-toggle{display:none;}
-
-@media (max-width: 760px){
-  header.top{padding:18px 18px 0 18px;}
-  header.top .hint{display:none;}
-  header.top h1{font-size:17px;}
-  footer.legend{left:18px;bottom:calc(64px + env(safe-area-inset-bottom));font-size:9.5px;gap:14px;}
-
-  #roster{
-    top:auto;right:0;left:0;bottom:0;width:auto;
-    height:56px;
-    padding:0;
-    background:#050505;
-    border-top:1px solid var(--line);
-    transition:height .28s cubic-bezier(.2,.7,.3,1);
-    overflow:hidden;
-  }
-  #roster.open{height:64vh;overflow-y:auto;}
-  #sheet-toggle{
-    all:unset;
-    display:flex;align-items:center;justify-content:space-between;
-    width:100%;height:56px;flex:none;box-sizing:border-box;
-    padding:0 18px;cursor:pointer;
-    font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);
-  }
-  #sheet-toggle .n{color:var(--ink-faint);}
-  #roster .scroll{padding:0 18px 24px 18px;}
-  #roster.open #sheet-toggle{border-bottom:1px solid var(--line-soft);}
-
-  #node-label{
-    left:16px!important;right:16px!important;top:auto!important;bottom:78px!important;
-    transform:none;max-width:none;
-  }
-}
-@media (prefers-reduced-motion: reduce){
-  #roster.open, #roster{transition:none;}
-}
+.fieldWrap svg{display:block;width:910px;height:910px;margin:0 auto;overflow:visible;}
+.c-arc{fill:none;stroke:var(--rule);stroke-width:1;}
+.c-dot{fill:var(--ink-3);}
+.c-dot.is-team{fill:var(--ink);}
+.c-dot.is-lit{fill:var(--accent);}
+.c-name{font-family:var(--sans);font-size:12.5px;fill:var(--ink-2);
+  paint-order:stroke;stroke:var(--paper);stroke-width:3px;stroke-linejoin:round;}
+.c-name.is-team{font-weight:600;fill:var(--ink);}
+.c-name.is-lit{fill:var(--ink);}
+.c-tie{fill:none;stroke:var(--accent-rule);stroke-width:1.2;}
+.c-hub{fill:var(--accent);}
+.c-worklabel{font-family:var(--mono);font-size:12px;fill:var(--accent-ink);letter-spacing:.04em;
+  paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round;}
+.fieldWrap a:hover .c-name,.fieldWrap a:focus-visible .c-name{fill:var(--accent-ink);}
+.constFoot{max-width:var(--col);padding:8px var(--pad) 64px var(--pad);}
+.constFoot .order{font-family:var(--mono);font-size:12px;color:var(--ink-3);letter-spacing:.08em;
+  text-transform:uppercase;margin:0 0 16px 0;line-height:1.9;}
+.constFoot p{font-size:14.5px;color:var(--ink-2);line-height:1.65;margin:0 0 10px 0;max-width:62ch;}
+.constFoot a{color:var(--accent-ink);}
 </style>
 </head>
 <body>
-
-<canvas id="field" aria-hidden="true"></canvas>
-
-<header class="top">
-  <div class="brand">
-    <div class="eyebrow">di<span style="color:var(--cyan)">.</span>iiii · network</div>
-    <h1>who makes di<span class="dot">.</span>iiii</h1>
+<div class="sheet">
+<header class="pagehead">
+  <a class="back" href="/network" target="_top"><span aria-hidden="true">←</span> the network</a>
+  <div class="eyebrow">the constellation</div>
+</header>
+<header class="constPane">
+  <div class="masthead">
+    <h1>the whole field</h1>
+    <p class="dek">The same fifty-two the roster lists, laid on one ring so you can see all of them at once. They sit clockwise from the top in the order the roster keeps them, held apart where one group ends and the next starts. A curve gathers the people who made the same thing — so far br_id_ge and ազդ | azd. Every name is a door into that person's room.</p>
   </div>
-  <div class="hint">drag to look<br>select a person to open their room</div>
 </header>
 
-<div id="node-label" role="status" aria-live="polite">
-  <div class="name"></div>
-  <div class="role"></div>
-  <div class="doors"></div>
+<p class="drag">drag the ring sideways <span aria-hidden="true">→</span></p>
+<div class="fieldWrap">
+<svg viewBox="45 45 910 910" role="img" aria-label="Every person who makes di.iiii, on one ring, with a curve for each work more than one of them made">
+  <path class="c-arc" d="M512.65 210.28 A290 290 0 0 1 661.12 258.87"/><path class="c-arc" d="M681.52 273.83 A290 290 0 0 1 787.52 462.15"/><path class="c-arc" d="M789.72 487.35 A290 290 0 0 1 754.25 639.49"/><path class="c-arc" d="M741.13 661.12 A290 290 0 0 1 593.22 774.61"/><path class="c-arc" d="M568.93 781.69 A290 290 0 0 1 213.38 455.88"/><path class="c-arc" d="M218.31 431.07 A290 290 0 0 1 371.74 239.91"/><path class="c-arc" d="M394.89 229.72 A290 290 0 0 1 487.35 210.28"/>
+  <g class="c-work" data-work="0"><path class="c-tie" d="M527.84 217.37 Q511.82 443.81 526.26 375.13"/><path class="c-tie" d="M558.44 222.08 Q511.82 443.81 526.26 375.13"/><path class="c-tie" d="M588.35 230.09 Q511.82 443.81 526.26 375.13"/><circle class="c-hub" cx="526.26" cy="375.13" r="3.5"/><text class="c-worklabel" x="526.26" y="361.13" text-anchor="middle" dominant-baseline="middle">br_id_ge</text></g>
+  <g class="c-work" data-work="1"><path class="c-tie" d="M558.44 222.08 Q491.56 469.84 481.24 432.98"/><path class="c-tie" d="M588.35 230.09 Q491.56 469.84 481.24 432.98"/><path class="c-tie" d="M644.67 255.61 Q491.56 469.84 481.24 432.98"/><path class="c-tie" d="M344.8 737.84 Q491.56 469.84 481.24 432.98"/><path class="c-tie" d="M218.04 534 Q491.56 469.84 481.24 432.98"/><circle class="c-hub" cx="481.24" cy="432.98" r="3.5"/><text class="c-worklabel" x="481.24" y="418.98" text-anchor="middle" dominant-baseline="middle">ազդ | azd</text></g>
+  <circle class="c-dot is-team is-lit" cx="528.42" cy="211.4" r="4.5"/><circle class="c-dot is-team is-lit" cx="559.68" cy="216.21" r="4.5"/><circle class="c-dot is-team is-lit" cx="590.22" cy="224.39" r="4.5"/><circle class="c-dot is-team" cx="619.69" cy="235.85" r="2.8"/><circle class="c-dot is-team is-lit" cx="647.73" cy="250.45" r="4.5"/><circle class="c-dot" cx="752.71" cy="357.75" r="2.8"/><circle class="c-dot" cx="715.93" cy="306.42" r="2.8"/><circle class="c-dot" cx="766.7" cy="386.11" r="2.8"/><circle class="c-dot" cx="785.03" cy="446.53" r="2.8"/><circle class="c-dot" cx="693.58" cy="284.07" r="2.8"/><circle class="c-dot" cx="735.73" cy="331.08" r="2.8"/><circle class="c-dot" cx="777.51" cy="415.82" r="2.8"/><circle class="c-dot" cx="787.91" cy="534.71" r="2.8"/><circle class="c-dot" cx="773.58" cy="596.21" r="2.8"/><circle class="c-dot" cx="761.48" cy="625.42" r="2.8"/><circle class="c-dot" cx="782.42" cy="565.85" r="2.8"/><circle class="c-dot" cx="789.98" cy="503.16" r="2.8"/><circle class="c-dot" cx="711.66" cy="698.24" r="2.8"/><circle class="c-dot" cx="731.98" cy="674.02" r="2.8"/><circle class="c-dot" cx="663.74" cy="739.35" r="2.8"/><circle class="c-dot" cx="636.71" cy="755.76" r="2.8"/><circle class="c-dot" cx="608.05" cy="769.12" r="2.8"/><circle class="c-dot" cx="688.82" cy="720.11" r="2.8"/><circle class="c-dot" cx="553.47" cy="785.03" r="2.8"/><circle class="c-dot" cx="428" cy="780.92" r="2.8"/><circle class="c-dot is-lit" cx="341.52" cy="742.87" r="4.5"/><circle class="c-dot" cx="292.71" cy="702.81" r="2.8"/><circle class="c-dot" cx="271.87" cy="679.04" r="2.8"/><circle class="c-dot" cx="226.42" cy="596.21" r="2.8"/><circle class="c-dot is-lit" cx="212.09" cy="534.71" r="4.5"/><circle class="c-dot" cx="368.91" cy="758.68" r="2.8"/><circle class="c-dot" cx="316.03" cy="724.17" r="2.8"/><circle class="c-dot" cx="397.85" cy="771.41" r="2.8"/><circle class="c-dot" cx="522.12" cy="789.15" r="2.8"/><circle class="c-dot" cx="490.51" cy="789.84" r="2.8"/><circle class="c-dot" cx="459.01" cy="787.09" r="2.8"/><circle class="c-dot" cx="253.73" cy="653.14" r="2.8"/><circle class="c-dot" cx="238.52" cy="625.42" r="2.8"/><circle class="c-dot" cx="210.02" cy="503.16" r="2.8"/><circle class="c-dot" cx="211.4" cy="471.58" r="2.8"/><circle class="c-dot" cx="217.58" cy="565.85" r="2.8"/><circle class="c-dot" cx="222.49" cy="415.82" r="2.8"/><circle class="c-dot" cx="247.29" cy="357.75" r="2.8"/><circle class="c-dot" cx="357.75" cy="247.29" r="2.8"/><circle class="c-dot" cx="284.07" cy="306.42" r="2.8"/><circle class="c-dot" cx="331.08" cy="264.27" r="2.8"/><circle class="c-dot" cx="306.42" cy="284.07" r="2.8"/><circle class="c-dot" cx="264.27" cy="331.08" r="2.8"/><circle class="c-dot" cx="233.3" cy="386.11" r="2.8"/><circle class="c-dot" cx="409.78" cy="224.39" r="2.8"/><circle class="c-dot" cx="471.58" cy="211.4" r="2.8"/><circle class="c-dot" cx="440.32" cy="216.21" r="2.8"/>
+    <a href="/network/gevorg-grigoryan" target="_top"><text class="c-name is-team is-lit" x="529.7" y="198.46" text-anchor="start" dominant-baseline="middle" transform="rotate(-84.37 529.7 198.46)">Gevorg Aram Grigoryan</text></a>
+  <a href="/network/emilya-nikoghosyan" target="_top"><text class="c-name is-team is-lit" x="562.35" y="203.48" text-anchor="start" dominant-baseline="middle" transform="rotate(-78.12 562.35 203.48)">Emilya Nikoghosyan</text></a>
+  <a href="/network/syuzi-ginosyan" target="_top"><text class="c-name is-team is-lit" x="594.26" y="212.03" text-anchor="start" dominant-baseline="middle" transform="rotate(-71.87 594.26 212.03)">Syuzi Ginosyan</text></a>
+  <a href="/network/taron-grigoryan" target="_top"><text class="c-name is-team" x="625.05" y="224.01" text-anchor="start" dominant-baseline="middle" transform="rotate(-65.62 625.05 224.01)">Taron Grigoryan</text></a>
+  <a href="/network/yeva-abgaryan" target="_top"><text class="c-name is-team is-lit" x="654.35" y="239.26" text-anchor="start" dominant-baseline="middle" transform="rotate(-59.37 654.35 239.26)">Yeva Abgaryan</text></a>
+  <a href="/network/maria-matinyan" target="_top"><text class="c-name" x="764.04" y="351.37" text-anchor="start" dominant-baseline="middle" transform="rotate(-29.37 764.04 351.37)">Maria Matinyan</text></a>
+  <a href="/network/carine-aroyan" target="_top"><text class="c-name" x="725.61" y="297.75" text-anchor="start" dominant-baseline="middle" transform="rotate(-41.87 725.61 297.75)">Carine Aroyan</text></a>
+  <a href="/network/namor-votilav" target="_top"><text class="c-name" x="778.65" y="381" text-anchor="start" dominant-baseline="middle" transform="rotate(-23.12 778.65 381)">Namor Votilav</text></a>
+  <a href="/network/tatiana-vahani" target="_top"><text class="c-name" x="797.81" y="444.13" text-anchor="start" dominant-baseline="middle" transform="rotate(-10.62 797.81 444.13)">Tatiana Vahani</text></a>
+  <a href="/network/artak-gevorgyan" target="_top"><text class="c-name" x="702.25" y="274.39" text-anchor="start" dominant-baseline="middle" transform="rotate(-48.12 702.25 274.39)">Artak Gevorgyan</text></a>
+  <a href="/network/lusine-mlke-galstyan" target="_top"><text class="c-name" x="746.29" y="323.51" text-anchor="start" dominant-baseline="middle" transform="rotate(-35.62 746.29 323.51)">Lusine Mlke-Galstyan</text></a>
+  <a href="/network/shoghakat-mlke-galstyan" target="_top"><text class="c-name" x="789.95" y="412.04" text-anchor="start" dominant-baseline="middle" transform="rotate(-16.87 789.95 412.04)">Shoghakat Mlke-Galstyan</text></a>
+  <a href="/network/ani-khachikyan" target="_top"><text class="c-name" x="800.82" y="536.27" text-anchor="start" dominant-baseline="middle" transform="rotate(6.88 800.82 536.27)">Ani Khachikyan</text></a>
+  <a href="/network/gnun-martirosyan" target="_top"><text class="c-name" x="785.84" y="600.52" text-anchor="start" dominant-baseline="middle" transform="rotate(19.38 785.84 600.52)">Gnun Martirosyan</text></a>
+  <a href="/network/meline-arshakyan" target="_top"><text class="c-name" x="773.2" y="631.04" text-anchor="start" dominant-baseline="middle" transform="rotate(25.63 773.2 631.04)">Meline Arshakyan</text></a>
+  <a href="/network/arsen-miqayelyan" target="_top"><text class="c-name" x="795.08" y="568.8" text-anchor="start" dominant-baseline="middle" transform="rotate(13.13 795.08 568.8)">Arsen Miqayelyan</text></a>
+  <a href="/network/alexandra-martini" target="_top"><text class="c-name" x="802.98" y="503.31" text-anchor="start" dominant-baseline="middle" transform="rotate(0.63 802.98 503.31)">Alexandra Martini</text></a>
+  <a href="/network/kay-khachatryan" target="_top"><text class="c-name" x="721.15" y="707.13" text-anchor="start" dominant-baseline="middle" transform="rotate(43.13 721.15 707.13)">Kay Khachatryan</text></a>
+  <a href="/network/areg-aydinyan" target="_top"><text class="c-name" x="742.38" y="681.82" text-anchor="start" dominant-baseline="middle" transform="rotate(36.88 742.38 681.82)">Areg Aydinyan</text></a>
+  <a href="/network/sasha-lenivec" target="_top"><text class="c-name" x="671.08" y="750.08" text-anchor="start" dominant-baseline="middle" transform="rotate(55.63 671.08 750.08)">Sasha Lenivec</text></a>
+  <a href="/network/vahagn-martirosyan" target="_top"><text class="c-name" x="642.83" y="767.22" text-anchor="start" dominant-baseline="middle" transform="rotate(61.88 642.83 767.22)">Vahagn Martirosyan</text></a>
+  <a href="/network/vera-vishnevaya" target="_top"><text class="c-name" x="612.89" y="781.18" text-anchor="start" dominant-baseline="middle" transform="rotate(68.13 612.89 781.18)">Vera Vishnevaya</text></a>
+  <a href="/network/nikita-maksimenko" target="_top"><text class="c-name" x="697.28" y="729.97" text-anchor="start" dominant-baseline="middle" transform="rotate(49.38 697.28 729.97)">Nikita Maksimenko</text></a>
+  <a href="/network/adam-adamyan" target="_top"><text class="c-name" x="555.87" y="797.81" text-anchor="start" dominant-baseline="middle" transform="rotate(79.38 555.87 797.81)">Adam Adamyan</text></a>
+  <a href="/network/artush-koshtoyan" target="_top"><text class="c-name" x="424.78" y="793.51" text-anchor="end" dominant-baseline="middle" transform="rotate(284.38 424.78 793.51)">Artush Koshtoyan</text></a>
+  <a href="/network/greta-grigoryan" target="_top"><text class="c-name is-lit" x="334.42" y="753.76" text-anchor="end" dominant-baseline="middle" transform="rotate(303.13 334.42 753.76)">Greta Grigoryan</text></a>
+  <a href="/network/mane-meloyan" target="_top"><text class="c-name" x="283.42" y="711.9" text-anchor="end" dominant-baseline="middle" transform="rotate(315.63 283.42 711.9)">Mane Meloyan</text></a>
+  <a href="/network/mery-petrosyan" target="_top"><text class="c-name" x="261.64" y="687.07" text-anchor="end" dominant-baseline="middle" transform="rotate(321.88 261.64 687.07)">Mery Petrosyan</text></a>
+  <a href="/network/polina-vever" target="_top"><text class="c-name" x="214.16" y="600.52" text-anchor="end" dominant-baseline="middle" transform="rotate(340.63 214.16 600.52)">Polina Vever</text></a>
+  <a href="/network/shahane-harutyunyan" target="_top"><text class="c-name is-lit" x="199.18" y="536.27" text-anchor="end" dominant-baseline="middle" transform="rotate(353.13 199.18 536.27)">Shahane Harutyunyan</text></a>
+  <a href="/network/gor-muradyan" target="_top"><text class="c-name" x="363.03" y="770.27" text-anchor="end" dominant-baseline="middle" transform="rotate(296.88 363.03 770.27)">Gor Muradyan</text></a>
+  <a href="/network/luiza-khechoyan" target="_top"><text class="c-name" x="307.78" y="734.22" text-anchor="end" dominant-baseline="middle" transform="rotate(309.38 307.78 734.22)">Luiza Khechoyan</text></a>
+  <a href="/network/egor-lazensky" target="_top"><text class="c-name" x="393.27" y="783.58" text-anchor="end" dominant-baseline="middle" transform="rotate(290.63 393.27 783.58)">Egor Lazensky</text></a>
+  <a href="/network/alvie-starr" target="_top"><text class="c-name" x="523.11" y="802.12" text-anchor="start" dominant-baseline="middle" transform="rotate(85.63 523.11 802.12)">Alvie Starr</text></a>
+  <a href="/network/ani-rubenyan" target="_top"><text class="c-name" x="490.09" y="802.84" text-anchor="end" dominant-baseline="middle" transform="rotate(271.88 490.09 802.84)">Ani Rubenyan</text></a>
+  <a href="/network/anna-khlechyan" target="_top"><text class="c-name" x="457.18" y="799.96" text-anchor="end" dominant-baseline="middle" transform="rotate(278.13 457.18 799.96)">Anna Khlechyan</text></a>
+  <a href="/network/misak-samakotian" target="_top"><text class="c-name" x="242.69" y="660" text-anchor="end" dominant-baseline="middle" transform="rotate(328.13 242.69 660)">Misak Samakotian</text></a>
+  <a href="/network/nino-giorgadze" target="_top"><text class="c-name" x="226.8" y="631.04" text-anchor="end" dominant-baseline="middle" transform="rotate(334.38 226.8 631.04)">Nino Giorgadze</text></a>
+  <a href="/network/vilen-gayfejyan" target="_top"><text class="c-name" x="197.02" y="503.31" text-anchor="end" dominant-baseline="middle" transform="rotate(359.38 197.02 503.31)">Vilen Gayfejyan</text></a>
+  <a href="/network/yulia-stepanova" target="_top"><text class="c-name" x="198.46" y="470.3" text-anchor="end" dominant-baseline="middle" transform="rotate(365.63 198.46 470.3)">Yulia Stepanova</text></a>
+  <a href="/network/sergey-virabyan" target="_top"><text class="c-name" x="204.92" y="568.8" text-anchor="end" dominant-baseline="middle" transform="rotate(346.88 204.92 568.8)">Sergey Virabyan</text></a>
+  <a href="/network/albert-avetisyan" target="_top"><text class="c-name" x="210.05" y="412.04" text-anchor="end" dominant-baseline="middle" transform="rotate(376.88 210.05 412.04)">Albert Avetisyan</text></a>
+  <a href="/network/gor-movsisyan" target="_top"><text class="c-name" x="235.96" y="351.37" text-anchor="end" dominant-baseline="middle" transform="rotate(389.38 235.96 351.37)">Gor Movsisyan</text></a>
+  <a href="/network/varujan-movsisyan" target="_top"><text class="c-name" x="351.37" y="235.96" text-anchor="end" dominant-baseline="middle" transform="rotate(420.63 351.37 235.96)">Varujan Movsisyan</text></a>
+  <a href="/network/levon-avetisyan" target="_top"><text class="c-name" x="274.39" y="297.75" text-anchor="end" dominant-baseline="middle" transform="rotate(401.88 274.39 297.75)">Levon Avetisyan</text></a>
+  <a href="/network/slavik-avetisyan" target="_top"><text class="c-name" x="323.51" y="253.71" text-anchor="end" dominant-baseline="middle" transform="rotate(414.38 323.51 253.71)">Slavik Avetisyan</text></a>
+  <a href="/network/ruben-melikyan" target="_top"><text class="c-name" x="297.75" y="274.39" text-anchor="end" dominant-baseline="middle" transform="rotate(408.13 297.75 274.39)">Ruben Melikyan</text></a>
+  <a href="/network/grig-gevorgyan" target="_top"><text class="c-name" x="253.71" y="323.51" text-anchor="end" dominant-baseline="middle" transform="rotate(395.63 253.71 323.51)">Grig Gevorgyan</text></a>
+  <a href="/network/avetis-grigoryan" target="_top"><text class="c-name" x="221.35" y="381" text-anchor="end" dominant-baseline="middle" transform="rotate(383.13 221.35 381)">Avetis Grigoryan</text></a>
+  <a href="/network/hannes-kopke" target="_top"><text class="c-name" x="405.74" y="212.03" text-anchor="end" dominant-baseline="middle" transform="rotate(431.88 405.74 212.03)">Hannes Köpke</text></a>
+  <a href="/network/olivia-rosendorfer" target="_top"><text class="c-name" x="470.3" y="198.46" text-anchor="end" dominant-baseline="middle" transform="rotate(444.38 470.3 198.46)">Olivia Rosendorfer</text></a>
+  <a href="/network/nyusha-terbalyan" target="_top"><text class="c-name" x="437.65" y="203.48" text-anchor="end" dominant-baseline="middle" transform="rotate(438.13 437.65 203.48)">Nyusha Terbalyan</text></a>
+</svg>
 </div>
 
-<footer class="legend">
-  <span class="sw"><span class="dot"></span> team</span>
-  <span class="sw"><span class="dot net"></span> network</span>
-  <span class="sw">— shared work</span>
+<footer class="constFoot">
+  <p class="order">clockwise from the top — team 5, curators 7, performers 5, sound 6, visual · multimedia 18, 3d · code · games 8, stage · costume · design 3</p>
+  <p>This is the whole roster and nothing else: no ranking, no size, no distance that means anything. The only line drawn between two people is a piece of work they both made.</p>
+  <p>The list, with what each person does, is on <a href="/network" target="_top">the network</a>.</p>
 </footer>
-
-<!-- real, keyboard-reachable, screen-reader index. Same data as the field, and the
-     only way this page can be operated without a pointer. -->
-<nav id="roster" aria-label="di.iiii network — everyone, by discipline">
-  <button type="button" id="sheet-toggle" aria-expanded="false">index — 52 people <span class="n">▲</span></button>
-  <div class="scroll" id="roster-scroll"></div>
-</nav>
-
-<div id="sr-status" aria-live="polite"></div>
-
-<script type="application/json" id="people-data">[{"slug":"gevorg-grigoryan","name":"Gevorg Grigoryan","role":"head of di.iiii, development","team":true,"disc":"development","city":null,"bio":null,"works":[{"href":"/","title":"di.iiii","line":"the platform itself"},{"href":"/br_id_ge","title":"br_id_ge","line":"Notations #2 — curated and developed"}],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/dob______/"},{"label":"GitHub","href":"https://github.com/dob-0"}],"room":"/network/gevorg-grigoryan"},{"slug":"emilya-nikoghosyan","name":"Emilya Nikoghosyan","role":"art director","team":true,"disc":"visual","city":null,"bio":null,"works":[{"href":"/algovrithm","title":"algovrithm","line":"part of Notations #2 XR"},{"href":"/azd","title":"ազդ | azd","line":"a-1"},{"href":"/br_id_ge","title":"br_id_ge","line":"Notations #2 — team"}],"elsewhere":[{"label":"GitHub","href":"https://github.com/emilyanikoghosyan"}],"room":"/network/emilya-nikoghosyan"},{"slug":"syuzi-ginosyan","name":"Syuzi Ginosyan","role":"curator","team":true,"disc":"curatorial","city":"Gyumri","bio":"\"The individual is not self-contained, but continuously shaped through external gazes and interventions… The thread functions as both connection and boundary — binding while constraining.\" — artist statement for \"bond / կապ\", azd","works":[{"href":"/azd","title":"ազդ | azd","line":"bond (կապ)"},{"href":"/br_id_ge","title":"br_id_ge","line":"Notations #2 — team"}],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/ginosyansuzy/"},{"label":"GitHub","href":"https://github.com/ginsyuz"}],"room":"/network/syuzi-ginosyan"},{"slug":"taron-grigoryan","name":"Taron Grigoryan","role":"multimedia, light","team":true,"disc":"multimedia","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/taronx_x_x/"}],"room":"/network/taron-grigoryan"},{"slug":"yeva-abgaryan","name":"Yeva Abgaryan","role":"set design, 3D","team":true,"disc":"3d & game","city":null,"bio":null,"works":[{"href":"/wcc/yeva-abgaryan","title":"WCC Exhibition","line":"her room"},{"href":"/azd","title":"ազդ | azd","line":"Faceless"}],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/6addreams/"}],"room":"/network/yeva-abgaryan"},{"slug":"mery-petrosyan","name":"Mery Petrosyan","role":"visual artist","team":false,"disc":"visual","city":null,"bio":null,"works":[{"href":"/wcc/mery-petrosyan","title":"WCC Exhibition","line":"her room"}],"elsewhere":[],"room":"/network/mery-petrosyan"},{"slug":"greta-grigoryan","name":"Greta Grigoryan","role":"visual artist","team":false,"disc":"visual","city":null,"bio":null,"works":[{"href":"/azd","title":"ազդ | azd","line":"Anahit (Անահիտ)"},{"href":"/platform-recordar","title":"RecordAR","line":"a.004"}],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/gr.ettaaa/"}],"room":"/network/greta-grigoryan"},{"slug":"shahane-harutyunyan","name":"Shahane Harutyunyan","role":"visual artist","team":false,"disc":"visual","city":null,"bio":null,"works":[{"href":"/azd","title":"ազդ | azd","line":"Misfit (միսֆիթ)"},{"href":"/beyond-form","title":"Beyond Form","line":"open call, part 2"}],"elsewhere":[],"room":"/network/shahane-harutyunyan"},{"slug":"maria-matinyan","name":"Maria Matinyan","role":"multimedia artist, curator","team":false,"disc":"curatorial","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/maria_matinyan/"}],"room":null},{"slug":"carine-aroyan","name":"Carine Aroyan","role":"curator","team":false,"disc":"curatorial","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/carinearoyan_/"}],"room":null},{"slug":"namor-votilav","name":"Namor Votilav","role":"curator, multimedia artist","team":false,"disc":"curatorial","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/namor_votilav/"}],"room":null},{"slug":"tatiana-vahani","name":"Tatiana Vahani","role":"curator","team":false,"disc":"curatorial","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/tateevee/"}],"room":null},{"slug":"artak-gevorgyan","name":"Artak Gevorgyan","role":"curator","team":false,"disc":"curatorial","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"lusine-mlke-galstyan","name":"Lusine Mlke-Galstyan","role":"curator","team":false,"disc":"curatorial","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"shoghakat-mlke-galstyan","name":"Shoghakat Mlke-Galstyan","role":"curator","team":false,"disc":"curatorial","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"ani-khachikyan","name":"Ani Khachikyan","role":"performer","team":false,"disc":"performance","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/ani___khachikyan/"}],"room":null},{"slug":"gnun-martirosyan","name":"Gnun Martirosyan","role":"performer","team":false,"disc":"performance","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/gnun_m/"}],"room":null},{"slug":"meline-arshakyan","name":"Meline Arshakyan","role":"performer, dancer","team":false,"disc":"performance","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/mel_arshakyan/"}],"room":null},{"slug":"arsen-miqayelyan","name":"Arsen Miqayelyan","role":"performer","team":false,"disc":"performance","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/arsentrampmiqayelyan/"}],"room":null},{"slug":"alexandra-martini","name":"Alexandra Martini","role":"performer","team":false,"disc":"performance","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/____portalex____/"}],"room":null},{"slug":"kay-khachatryan","name":"Kay Khachatryan","role":"audio artist","team":false,"disc":"sound","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/kaikhachatryan/"}],"room":null},{"slug":"areg-aydinyan","name":"Areg Aydinyan","role":"DJ, sound artist","team":false,"disc":"sound","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"sasha-lenivec","name":"Sasha Lenivec","role":"sound artist","team":false,"disc":"sound","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"vahagn-martirosyan","name":"Vahagn Martirosyan","role":"sound artist","team":false,"disc":"sound","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"vera-vishnevaya","name":"Vera Vishnevaya","role":"sound artist","team":false,"disc":"sound","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"nikita-maksimenko","name":"Nikita Maksimenko","role":"multimedia, sound","team":false,"disc":"sound","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"adam-adamyan","name":"Adam Adamyan","role":"visual artist","team":false,"disc":"visual","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/adam___adamyan/"}],"room":null},{"slug":"artush-koshtoyan","name":"Artush Koshtoyan","role":"visual artist","team":false,"disc":"visual","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/artushkoshtoyan/"}],"room":null},{"slug":"mane-meloyan","name":"Mane Meloyan","role":"visual artist","team":false,"disc":"visual","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/mayneeey/"}],"room":null},{"slug":"polina-vever","name":"Polina Vever","role":"visual artist","team":false,"disc":"visual","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/pelageyaviter/"}],"room":null},{"slug":"gor-muradyan","name":"Gor Muradyan","role":"visual artist","team":false,"disc":"visual","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/gorgeooos/"}],"room":null},{"slug":"luiza-khechoyan","name":"Luiza Khechoyan","role":"visual artist","team":false,"disc":"visual","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"egor-lazensky","name":"Egor Lazensky","role":"VJ, multimedia artist","team":false,"disc":"multimedia","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/je_fous_le_camp/"}],"room":null},{"slug":"alvie-starr","name":"Alvie Starr","role":"audiovisual artist","team":false,"disc":"sound","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"ani-rubenyan","name":"Ani Rubenyan","role":"audiovisual artist","team":false,"disc":"sound","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"anna-khlechyan","name":"Anna Khlechyan","role":"multimedia artist","team":false,"disc":"multimedia","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"misak-samakotian","name":"Misak Samakotian","role":"multimedia artist","team":false,"disc":"multimedia","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"nino-giorgadze","name":"Nino Giorgadze","role":"multimedia artist","team":false,"disc":"multimedia","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"vilen-gayfejyan","name":"Vilen Gayfejyan","role":"multimedia artist","team":false,"disc":"multimedia","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/vilengaifejyan/"}],"room":null},{"slug":"yulia-stepanova","name":"Yulia Stepanova","role":"multimedia artist","team":false,"disc":"multimedia","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/night_editor_music/"}],"room":null},{"slug":"sergey-virabyan","name":"Sergey Virabyan","role":"audiovisual artist","team":false,"disc":"sound","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/koltrye/"}],"room":null},{"slug":"albert-avetisyan","name":"Albert Avetisyan","role":"developer, sound","team":false,"disc":"sound","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/kaiz.ok.u/"}],"room":null},{"slug":"gor-movsisyan","name":"Gor Movsisyan","role":"3D artist","team":false,"disc":"3d & game","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/_tadashii__/"}],"room":null},{"slug":"varujan-movsisyan","name":"Varujan Movsisyan","role":"3D artist","team":false,"disc":"3d & game","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/__21st_century_schizoid_man__/"}],"room":null},{"slug":"levon-avetisyan","name":"Levon Avetisyan","role":"programmer","team":false,"disc":"development","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/lyo0ou/"}],"room":null},{"slug":"slavik-avetisyan","name":"Slavik Avetisyan","role":"unity developer","team":false,"disc":"3d & game","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/avetisyan.gd/"}],"room":null},{"slug":"ruben-melikyan","name":"Ruben Melikyan","role":"game designer","team":false,"disc":"3d & game","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/_ruben_melikyan_/"}],"room":null},{"slug":"grig-gevorgyan","name":"Grig Gevorgyan","role":"game developer","team":false,"disc":"3d & game","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/gr1gorius/"}],"room":null},{"slug":"avetis-grigoryan","name":"Avetis Grigoryan","role":"game designer","team":false,"disc":"3d & game","city":null,"bio":null,"works":[],"elsewhere":[],"room":null},{"slug":"hannes-kopke","name":"Hannes Köpke","role":"stage director","team":false,"disc":"performance","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/ritagrechen/"}],"room":null},{"slug":"olivia-rosendorfer","name":"Olivia Rosendorfer","role":"costume designer","team":false,"disc":"performance","city":null,"bio":null,"works":[],"elsewhere":[{"label":"Instagram","href":"https://www.instagram.com/ojmdra/"}],"room":null},{"slug":"nyusha-terbalyan","name":"Nyusha Terbalyan","role":"designer","team":false,"disc":"visual","city":null,"bio":null,"works":[],"elsewhere":[],"room":null}]</script>
-
-<script type="module">
-// ---------------------------------------------------------------------------
-// load three.js from the inlined source via Blob module imports — this page
-// ships as a single file inside a sandboxed srcdoc iframe with no CDN access.
-// three.module.min.js imports three.core.min.js by relative URL; both are
-// inlined as inert <script> text and wired together as blob: modules so that
-// specifier resolves, with no identifier surgery on the minified code.
-// ---------------------------------------------------------------------------
-const THREE = await import("/vendor/three.module.min.js");
-
-const PEOPLE = JSON.parse(document.getElementById('people-data').textContent);
-
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
-
-// ---------------------------------------------------------------------------
-// TOP-LEVEL NAVIGATION — every link off this page escapes the sandboxed
-// srcdoc iframe via a real target="_top" anchor. Root-relative hrefs resolve
-// against the parent (di.iiii) origin.
-// ---------------------------------------------------------------------------
-function navigateTop(href){
-  const a = document.createElement('a');
-  a.href = href; a.target = '_top'; a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
-
-// ---------------------------------------------------------------------------
-// DISCIPLINE CLUSTERS — network tier grouped by discipline; team stays its
-// own small, brightest cluster. Order is stable and drives both the field
-// layout and the roster grouping.
-// ---------------------------------------------------------------------------
-const DISC_LABEL = {
-  'curatorial':'curatorial', 'sound':'sound', 'performance':'performance',
-  '3d & game':'3d & game', 'multimedia':'multimedia', 'development':'development',
-  'visual':'visual'
-};
-const DISC_ORDER = ['curatorial','visual','sound','multimedia','3d & game','performance','development'];
-
-const team = PEOPLE.filter(p=>p.team);
-const network = PEOPLE.filter(p=>!p.team);
-const clusters = DISC_ORDER
-  .map(key=>({key, list: network.filter(p=>p.disc===key)}))
-  .filter(c=>c.list.length);
-
-// ---------------------------------------------------------------------------
-// LAYOUT — team on a tight inner ring; network wraps a full outer shell,
-// split into angular sectors sized by cluster population.
-// ---------------------------------------------------------------------------
-function place(){
-  team.forEach((p,i)=>{
-    const a = (i/team.length) * Math.PI*2 - Math.PI/2;
-    const r = 3.3;
-    p._pos = new THREE.Vector3(Math.cos(a)*r, Math.sin(i*1.7)*0.85, Math.sin(a)*r);
-    p._tier = 'team';
-  });
-
-  const gap = 0.10;
-  const totalNetwork = network.length;
-  let angleCursor = -Math.PI/2 - 0.4;
-  clusters.forEach(c=>{
-    const span = (c.list.length/totalNetwork) * (Math.PI*2 - gap*clusters.length);
-    c._angleStart = angleCursor;
-    c._angleSpan = span;
-    angleCursor += span + gap;
-    c.list.forEach((p,i)=>{
-      const t = c.list.length>1 ? i/(c.list.length-1) : 0.5;
-      const a = c._angleStart + t*c._angleSpan;
-      const r = 7.3 + Math.sin(i*2.3 + c.key.length)*1.15;
-      const y = -0.5 + Math.cos(i*1.9)*0.95;
-      p._pos = new THREE.Vector3(Math.cos(a)*r, y, Math.sin(a)*r);
-      p._tier = 'network';
-      p._cluster = c.key;
-    });
-  });
-}
-place();
-
-// ---------------------------------------------------------------------------
-// EDGES — faint lines only where work or discipline is shared. Chained
-// (not all-pairwise) so a cluster of N draws N lines, not N².
-// ---------------------------------------------------------------------------
-const edges = [];
-function chain(list, isWork){
-  for(let i=0;i<list.length-1;i++) edges.push({a:list[i], b:list[i+1], isWork});
-  if(list.length>2) edges.push({a:list[list.length-1], b:list[0], isWork});
-}
-chain(team, false);
-clusters.forEach(c=>{ if(c.list.length>1) chain(c.list, false); });
-{
-  const byHref = {};
-  PEOPLE.forEach(p=>(p.works||[]).forEach(w=>{
-    (byHref[w.href] = byHref[w.href] || []).push(p);
-  }));
-  Object.values(byHref).forEach(group=>{ if(group.length>1) chain(group, true); });
-}
-
-// ---------------------------------------------------------------------------
-// THREE SCENE
-// ---------------------------------------------------------------------------
-const canvas = document.getElementById('field');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false, powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000000);
-scene.fog = new THREE.FogExp2(0x000000, 0.05);
-
-const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 100);
-let camPos = new THREE.Vector3(0, 3.2, 14.5);
-let camTarget = new THREE.Vector3(0,0,0);
-camera.position.copy(camPos);
-camera.lookAt(camTarget);
-
-function resize(){
-  const w = innerWidth, h = innerHeight;
-  renderer.setSize(w,h);
-  camera.aspect = w/h;
-  camera.updateProjectionMatrix();
-}
-resize();
-window.addEventListener('resize', resize);
-
-// grid floor — the house motif
-{
-  const grid = new THREE.GridHelper(64, 64, 0x0f2a3a, 0x08151f);
-  grid.position.y = -3.4;
-  grid.material.transparent = true;
-  grid.material.opacity = 0.5;
-  scene.add(grid);
-}
-
-// faint starfield for depth — one pooled Points draw call
-{
-  const N = 700;
-  const g = new THREE.BufferGeometry();
-  const pos = new Float32Array(N*3);
-  for(let i=0;i<N;i++){
-    const r = 20 + Math.random()*40;
-    const th = Math.random()*Math.PI*2;
-    const ph = Math.acos((Math.random()*2)-1);
-    pos[i*3]   = r*Math.sin(ph)*Math.cos(th);
-    pos[i*3+1] = Math.abs(r*Math.cos(ph))*0.5 - 4;
-    pos[i*3+2] = r*Math.sin(ph)*Math.sin(th);
-  }
-  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
-  const m = new THREE.PointsMaterial({color:0x2a3444, size:0.045, transparent:true, opacity:0.5});
-  scene.add(new THREE.Points(g,m));
-}
-
-// ---------------------------------------------------------------------------
-// EDGE LINES — one pooled LineSegments draw call for all edges
-// ---------------------------------------------------------------------------
-const edgeGeo = new THREE.BufferGeometry();
-const edgePos = new Float32Array(edges.length*6);
-const edgeCol = new Float32Array(edges.length*6);
-edges.forEach((e,i)=>{
-  edgePos[i*6+0]=e.a._pos.x; edgePos[i*6+1]=e.a._pos.y; edgePos[i*6+2]=e.a._pos.z;
-  edgePos[i*6+3]=e.b._pos.x; edgePos[i*6+4]=e.b._pos.y; edgePos[i*6+5]=e.b._pos.z;
-});
-edgeGeo.setAttribute('position', new THREE.BufferAttribute(edgePos,3));
-edgeGeo.setAttribute('color', new THREE.BufferAttribute(edgeCol,3));
-const edgeMat = new THREE.LineBasicMaterial({vertexColors:true, transparent:true, opacity:1});
-const edgeLines = new THREE.LineSegments(edgeGeo, edgeMat);
-scene.add(edgeLines);
-
-const COL_COHESION = new THREE.Color(0x142230);
-const COL_WORK = new THREE.Color(0x1f4a5c);
-const COL_ACTIVE = new THREE.Color(0x4DF9FF);
-function paintEdges(){
-  const arr = edgeCol;
-  edges.forEach((e,i)=>{
-    const active = (hovered===e.a || hovered===e.b || selected===e.a || selected===e.b);
-    const c = active ? COL_ACTIVE : (e.isWork ? COL_WORK : COL_COHESION);
-    arr[i*6+0]=c.r; arr[i*6+1]=c.g; arr[i*6+2]=c.b;
-    arr[i*6+3]=c.r; arr[i*6+4]=c.g; arr[i*6+5]=c.b;
-  });
-  edgeGeo.attributes.color.needsUpdate = true;
-}
-
-// ---------------------------------------------------------------------------
-// NODES — two pooled Points clouds (one draw call each): a hard-edged dot
-// for the core, a soft falloff for the glow halo. Both are plain attribute-
-// driven custom shaders (position/aColor/aScale), not InstancedMesh — this
-// build's InstancedMesh.setColorAt()/instanceColor path renders solid black
-// on this three.js core+module combination (isolated and confirmed: uniform
-// instance color works, per-instance vertexColors does not), so per-instance
-// color here is carried the same verified way the glow layer already used.
-// ---------------------------------------------------------------------------
-const N = PEOPLE.length;
-const posArr = new Float32Array(N*3);
-PEOPLE.forEach((p,i)=>{
-  posArr[i*3]=p._pos.x; posArr[i*3+1]=p._pos.y; posArr[i*3+2]=p._pos.z;
-});
-
-const coreCol = new Float32Array(N*3);
-const coreScale = new Float32Array(N);
-const coreGeo = new THREE.BufferGeometry();
-coreGeo.setAttribute('position', new THREE.BufferAttribute(posArr,3));
-coreGeo.setAttribute('aColor', new THREE.BufferAttribute(coreCol,3));
-coreGeo.setAttribute('aScale', new THREE.BufferAttribute(coreScale,1));
-
-const glowCol = new Float32Array(N*3);
-const glowScale = new Float32Array(N);
-const glowGeo = new THREE.BufferGeometry();
-glowGeo.setAttribute('position', new THREE.BufferAttribute(posArr,3));
-glowGeo.setAttribute('aColor', new THREE.BufferAttribute(glowCol,3));
-glowGeo.setAttribute('aScale', new THREE.BufferAttribute(glowScale,1));
-
-// aScale is authored in target on-screen pixels at a 12-unit reference
-// camera distance (roughly where most nodes sit); uSizeK carries that
-// reference distance so core/glow can each convert it independently.
-const dotVertex = `
-  attribute vec3 aColor;
-  attribute float aScale;
-  varying vec3 vColor;
-  uniform float uPixelRatio;
-  uniform float uSizeK;
-  void main(){
-    vColor = aColor;
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    gl_PointSize = aScale * (uSizeK / -mv.z) * uPixelRatio;
-    gl_Position = projectionMatrix * mv;
-  }
-`;
-const coreMat = new THREE.ShaderMaterial({
-  uniforms:{ uPixelRatio: {value: Math.min(window.devicePixelRatio||1,2)}, uSizeK: {value: 12.0} },
-  vertexShader: dotVertex,
-  fragmentShader:`
-    varying vec3 vColor;
-    void main(){
-      vec2 c = gl_PointCoord - vec2(0.5);
-      float d = length(c) * 2.0;
-      float a = smoothstep(1.0, 0.72, d);
-      gl_FragColor = vec4(vColor, a);
-    }
-  `,
-  transparent:true, depthWrite:false
-});
-const corePoints = new THREE.Points(coreGeo, coreMat);
-scene.add(corePoints);
-
-const glowMat = new THREE.ShaderMaterial({
-  uniforms:{ uPixelRatio: {value: Math.min(window.devicePixelRatio||1,2)}, uSizeK: {value: 9.0} },
-  vertexShader: dotVertex,
-  fragmentShader:`
-    varying vec3 vColor;
-    void main(){
-      vec2 c = gl_PointCoord - vec2(0.5);
-      float d = length(c) * 2.0;
-      float a = smoothstep(1.0, 0.0, d);
-      a = pow(a, 1.8);
-      gl_FragColor = vec4(vColor, a * 0.9);
-    }
-  `,
-  transparent:true, depthWrite:false
-});
-const glowPoints = new THREE.Points(glowGeo, glowMat);
-scene.add(glowPoints);
-
-const COL_TEAM = new THREE.Color(0xffffff);
-const COL_NET = new THREE.Color(0x7c8ba0);
-const COL_HOVER = new THREE.Color(0x4DF9FF);
-
-function paintNodes(){
-  PEOPLE.forEach((p,i)=>{
-    const isTeam = p._tier==='team';
-    const active = (hovered===p) || (selected===p);
-
-    const coreSize = isTeam ? 13 : 8;
-    coreScale.set([active ? coreSize*1.5 : coreSize], i);
-    const cc = active ? COL_HOVER : (isTeam ? COL_TEAM : COL_NET);
-    coreCol.set([cc.r, cc.g, cc.b], i*3);
-
-    const baseGlow = isTeam ? 26 : 15;
-    glowScale.set([active ? baseGlow*1.7 : baseGlow], i);
-    const gc = active ? COL_HOVER : (isTeam ? COL_TEAM : new THREE.Color(0x3a4658));
-    glowCol.set([gc.r, gc.g, gc.b], i*3);
-  });
-  coreGeo.attributes.aScale.needsUpdate = true;
-  coreGeo.attributes.aColor.needsUpdate = true;
-  glowGeo.attributes.aScale.needsUpdate = true;
-  glowGeo.attributes.aColor.needsUpdate = true;
-}
-
-// ---------------------------------------------------------------------------
-// INTERACTION — drag orbit (weighty damping), hover/select, roster sync
-// ---------------------------------------------------------------------------
-let az = 0.35, pol = 0.24;
-let curAz = az, curPol = pol;
-let dragging = false, lastX=0, lastY=0, moved=false;
-
-canvas.addEventListener('pointerdown', e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; moved=false; });
-window.addEventListener('pointerup', ()=> dragging=false);
-window.addEventListener('pointermove', e=>{
-  if(!dragging) return;
-  const dx = e.clientX-lastX, dy = e.clientY-lastY;
-  if(Math.abs(dx)+Math.abs(dy) > 3) moved = true;
-  lastX=e.clientX; lastY=e.clientY;
-  az -= dx*0.0032;
-  pol = Math.max(-0.5, Math.min(0.75, pol - dy*0.0022));
-});
-
-let hovered = null;
-let selected = null;
-let flying = false, flyT=0, flyFrom=null, flyTo=null, flyLookFrom=null, flyLookTo=null, flyTarget=null;
-
-const raycaster = new THREE.Raycaster();
-raycaster.params.Points = {threshold: 0.32};
-const pointerNDC = new THREE.Vector2(-9,-9);
-
-canvas.addEventListener('pointermove', e=>{
-  if(dragging) return;
-  pointerNDC.x = (e.clientX/innerWidth)*2-1;
-  pointerNDC.y = -(e.clientY/innerHeight)*2+1;
-});
-canvas.addEventListener('pointerleave', ()=> setHover(null));
-
-canvas.addEventListener('click', e=>{
-  if(moved) return;
-  raycaster.setFromCamera(pointerNDC, camera);
-  const hits = raycaster.intersectObject(corePoints);
-  if(hits.length){
-    const p = PEOPLE[hits[0].index];
-    selectPerson(p);
-  }
-});
-
-function selectPerson(p){
-  selected = p;
-  setHover(p);
-  if(p.room){
-    flying = true; flyT = 0;
-    flyFrom = camera.position.clone();
-    flyTo = p._pos.clone().add(new THREE.Vector3(0,0.35,2.1));
-    flyLookFrom = camTarget.clone();
-    flyLookTo = p._pos.clone();
-    flyTarget = p.room;
-    setTimeout(()=>{ if(flyTarget===p.room) navigateTop(p.room); }, prefersReducedMotion ? 60 : 850);
-  }
-}
-
-function setHover(p){
-  if(hovered===p) return;
-  hovered = p;
-  updateLabel();
-  syncRosterActive();
-  paintNodes();
-  paintEdges();
-}
-
-function updateLabel(){
-  const el = document.getElementById('node-label');
-  const p = hovered;
-  if(!p){ el.classList.remove('show'); return; }
-  el.querySelector('.name').textContent = p.name;
-  el.querySelector('.role').textContent = p.role + ' · ' + (p._tier==='team' ? 'team' : p.disc);
-  const doorsEl = el.querySelector('.doors');
-  doorsEl.innerHTML = '';
-  let any = false;
-  if(p.room){
-    any = true;
-    const d = document.createElement('a');
-    d.className='door'; d.href=p.room; d.target='_top'; d.rel='noopener';
-    d.innerHTML = '<span class="t">their room</span><span>enter →</span>';
-    doorsEl.appendChild(d);
-  }
-  (p.works||[]).slice(0,3).forEach(w=>{
-    any = true;
-    const d = document.createElement('a');
-    d.className='door'; d.href=w.href; d.target='_top'; d.rel='noopener';
-    d.innerHTML = '<span class="t">'+esc(w.title)+'</span><span>'+esc(w.line)+'</span>';
-    doorsEl.appendChild(d);
-  });
-  if(!any){
-    const d = document.createElement('div');
-    d.className='door empty';
-    d.textContent = 'no door yet — theirs to open';
-    doorsEl.appendChild(d);
-  }
-  el.classList.add('show');
-  document.getElementById('sr-status').textContent = p.name + ', ' + p.role;
-}
-function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
-
-function positionLabel(){
-  const el = document.getElementById('node-label');
-  if(!hovered || window.innerWidth<=760) return;
-  const v = hovered._pos.clone().project(camera);
-  const x = (v.x*0.5+0.5)*innerWidth;
-  const y = (-v.y*0.5+0.5)*innerHeight;
-  el.style.left = x+'px';
-  el.style.top = y+'px';
-}
-
-// ---------------------------------------------------------------------------
-// ROSTER — same data, real DOM, keyboard + screen reader. Team first, then
-// network grouped by discipline cluster. A person with a room is a real
-// target="_top" anchor; everyone else is a selectable button.
-// ---------------------------------------------------------------------------
-const rosterScroll = document.getElementById('roster-scroll');
-function buildRoster(){
-  const groups = [['TEAM', team]].concat(clusters.map(c=>[DISC_LABEL[c.key], c.list]));
-  groups.forEach(([label,list])=>{
-    if(!list.length) return;
-    const gl = document.createElement('div');
-    gl.className='group-label'; gl.textContent = label + ' — ' + list.length;
-    rosterScroll.appendChild(gl);
-    const ul = document.createElement('ul');
-    list.forEach(p=>{
-      const li = document.createElement('li');
-      const el = document.createElement(p.room ? 'a' : 'button');
-      el.className = 'item' + (p.room ? ' has-room' : '');
-      if(p.room){ el.href = p.room; el.target='_top'; el.rel='noopener'; }
-      else { el.type = 'button'; }
-      el.dataset.slug = p.slug;
-      el.setAttribute('aria-label', p.name + ', ' + p.role + (p.room ? ' — opens their room' : ''));
-      el.innerHTML = '<span class="name">'+esc(p.name)+'</span><span class="role">'+esc(p.role)+'</span>';
-      el.addEventListener('mouseenter', ()=> setHover(p));
-      el.addEventListener('focus', ()=> setHover(p));
-      el.addEventListener('mouseleave', ()=> { if(hovered===p) setHover(null); });
-      if(!p.room){ el.addEventListener('click', ()=> selectPerson(p)); }
-      li.appendChild(el);
-      ul.appendChild(li);
-    });
-    rosterScroll.appendChild(ul);
-  });
-}
-buildRoster();
-function syncRosterActive(){
-  document.querySelectorAll('#roster .item').forEach(b=>{
-    b.classList.toggle('active', hovered && b.dataset.slug===hovered.slug);
-  });
-}
-
-// mobile bottom sheet
-const rosterEl = document.getElementById('roster');
-const sheetToggle = document.getElementById('sheet-toggle');
-sheetToggle.addEventListener('click', ()=>{
-  const open = rosterEl.classList.toggle('open');
-  sheetToggle.setAttribute('aria-expanded', String(open));
-  sheetToggle.querySelector('.n').textContent = open ? '▼' : '▲';
-});
-
-// ---------------------------------------------------------------------------
-// DEV/SCREENSHOT HOOK — ?hover=slug forces a hover state deterministically
-// ---------------------------------------------------------------------------
-(function(){
-  const q = new URLSearchParams(location.search);
-  const forced = q.get('hover');
-  if(forced){
-    const p = PEOPLE.find(pp=>pp.slug===forced);
-    if(p) setTimeout(()=> setHover(p), 60);
-  }
-  if(q.get('sheet')==='open'){ rosterEl.classList.add('open'); sheetToggle.setAttribute('aria-expanded','true'); }
-})();
-
-// ---------------------------------------------------------------------------
-// RENDER LOOP
-// ---------------------------------------------------------------------------
-paintNodes();
-paintEdges();
-let lastFrame = performance.now();
-function animate(){
-  requestAnimationFrame(animate);
-
-  if(!prefersReducedMotion && isCoarsePointer && !dragging && !flying){
-    az += 0.00028; // phone: drifting backdrop
-  }
-
-  curAz += (az-curAz)*0.06;
-  curPol += (pol-curPol)*0.06;
-
-  if(!flying){
-    const r = 14.5;
-    camPos.set(
-      Math.sin(curAz)*r*Math.cos(curPol),
-      3.2 + Math.sin(curPol)*4.4,
-      Math.cos(curAz)*r*Math.cos(curPol)
-    );
-    camera.position.copy(camPos);
-    camera.lookAt(camTarget);
-  } else {
-    flyT = Math.min(1, flyT + 0.02);
-    const e = 1 - Math.pow(1-flyT, 3);
-    camera.position.lerpVectors(flyFrom, flyTo, e);
-    const look = new THREE.Vector3().lerpVectors(flyLookFrom, flyLookTo, e);
-    camera.lookAt(look);
-  }
-
-  if(!dragging && !isCoarsePointer){
-    raycaster.setFromCamera(pointerNDC, camera);
-    const hits = raycaster.intersectObject(corePoints);
-    if(hits.length) setHover(PEOPLE[hits[0].index]);
-    else if(!new URLSearchParams(location.search).get('hover')) setHover(null);
-  }
-
-  positionLabel();
-  renderer.render(scene, camera);
-}
-animate();
-</script>
+</div>
 </body>
 </html>
