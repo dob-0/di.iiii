@@ -293,13 +293,17 @@ const deleteProject = async (spacesDir, spaceId, projectId) => {
   await fsp.rm(projectDir, { recursive: true, force: true })
 }
 
-const buildProjectAssetMeta = ({ assetId, file, source = 'server' }) => {
+const buildProjectAssetMeta = ({ assetId, file, source = 'server', width = 0, height = 0 }) => {
   if (!assetId) throw new Error('buildProjectAssetMeta: assetId is required (must be SHA-256 hex)')
   return {
   id: assetId,
   name: file?.originalname || file?.name || 'Untitled Asset',
   mimeType: file?.mimetype || file?.type || 'application/octet-stream',
   size: file?.size || 0,
+  // A picture's proportions, recorded once at upload. A room with build zones
+  // needs them to scale a banner into its slot; without them it can only hang
+  // everything at the row height. Absent for anything that is not a still.
+  ...(Number(width) > 0 && Number(height) > 0 ? { width: Number(width), height: Number(height) } : {}),
   createdAt: Date.now(),
   source
   }
