@@ -466,6 +466,134 @@ function buildTree() {
   });
 }
 
+/* =============== the Open Fixture Library browser =============== */
+// The desk's own profiles are deliberately generic — dimmer, drgb, a moving head with
+// the channels most of them have. A real rig is not generic: it is a Chauvet this and a
+// Martin that, each with its own chart, its own resting values and three modes to pick
+// between. The server has been able to fetch and convert those since the library lane
+// landed; this is the interface that was missing, so it was an API nobody could reach.
+
+let oflMakers = null;      // [{key, name, fixtures}] — fetched once, cached here
+let oflMaker = null;       // the manufacturer whose fixtures are listed
+let oflFixture = null;     // the fixture whose modes are showing
+
+const oflSay = (text, bad) => {
+  const el = $('#oflMsg');
+  el.textContent = text || '';
+  el.hidden = !text;
+  el.className = 'oflmsg ' + (bad ? 'bad' : 'muted');
+};
+
+async function oflLoad() {
+  if (oflMakers) return oflMakers;
+  oflSay('Loading the library…');
+  try {
+    const r = await fetch('api/library').then((x) => x.json());
+    oflMakers = Array.isArray(r.manufacturers) ? r.manufacturers : [];
+    // `from` says whether this came off the network or off the disk cache. Worth saying:
+    // at the venue, on no wifi, a cached library still works and an empty one is not a bug.
+    if (r.warning) oflSay(r.warning, true); else oflSay('');
+    return oflMakers;
+  } catch (e) {
+    oflMakers = null;
+    oflSay('The fixture library needs the internet the first time. Once fetched it is cached on this machine.', true);
+    return [];
+  }
+}
+
+// Manufacturers, or — once one is chosen — its fixtures. Typing filters whichever list
+// is showing, and a query long enough to mean something searches every manufacturer's
+// name too, so "mac 250" finds Martin without knowing it is Martin's.
+function oflRender() {
+  const list = $('#oflList');
+  const q = $('#oflSearch').value.trim().toLowerCase();
+  if (oflMaker) {
+    const fixtures = (oflMaker.fixtures || []).filter((f) => !q || f.name.toLowerCase().includes(q));
+    list.innerHTML = `<div class="cat oflback" data-back="1">◂ ${esc(oflMaker.name)} · ${oflMaker.fixtures.length} fixtures</div>`
+      + (fixtures.map((f) => `<div class="item" data-fx="${esc(f.key)}">${esc(f.name)}<i>${esc((f.categories || []).join(' · '))}</i></div>`).join('')
+        || `<div class="cat">nothing here matches "${esc(q)}"</div>`);
+    return;
+  }
+  // Not loaded yet is not the same answer as nothing matched. The first fetch pulls the
+  // whole index over the network, and telling someone their make does not exist while it
+  // is still arriving is the kind of lie that sends them off to look for another desk.
+  if (!oflMakers) { list.innerHTML = '<div class="cat">the library is still arriving…</div>'; return; }
+  const makers = oflMakers.filter((m) => !q || m.name.toLowerCase().includes(q));
+  list.innerHTML = makers.map((m) =>
+    `<div class="item" data-mk="${esc(m.key)}">${esc(m.name)}<i>${m.fixtures}</i></div>`).join('')
+    || `<div class="cat">no manufacturer matches "${esc(q)}"</div>`;
+}
+
+// What a fixture would become BEFORE anyone commits to it: every mode, its width, and
+// the roles it maps onto. A patch is tedious to undo; looking first costs one request.
+async function oflShowFixture(key) {
+  oflSay('Reading the chart…');
+  try {
+    const r = await fetch(`api/library/fixture?manufacturer=${encodeURIComponent(oflMaker.key)}&key=${encodeURIComponent(key)}`)
+      .then((x) => x.json());
+    oflFixture = { key, name: r.name, modes: r.modes || [] };
+    oflSay('');
+    const box = $('#oflModes');
+    box.hidden = false;
+    box.innerHTML = `<div class="cat">${esc(r.name)} — pick a mode</div>`
+      + oflFixture.modes.map((m) => `<div class="oflmode">
+          <div class="txt"><b>${esc(m.name)}</b><span class="muted">${m.channels} channels · ${esc((m.roles || []).join(' '))}</span></div>
+          <button class="sq small" data-mode="${m.index}">Import</button>
+        </div>`).join('');
+    $$('[data-mode]', box).forEach((b) => b.addEventListener('click', () => oflImport(+b.dataset.mode)));
+  } catch (e) {
+    oflSay('Could not read that fixture — try another, or check the connection.', true);
+  }
+}
+
+// Import makes a PROFILE, not a fixture. Nothing is patched and nothing lights: the new
+// profile lands in this desk's own library, where it is dragged onto the patch grid or
+// the stage like any other. Two steps on purpose — importing a chart and hanging a lamp
+// are different decisions.
+async function oflImport(mode) {
+  oflSay('Importing…');
+  const r = await post('api/library/import', { manufacturer: oflMaker.key, key: oflFixture.key, mode });
+  if (!r || r.error) return oflSay((r && r.error) || 'the import was refused', true);
+  await pullState();
+  libProfile = r.name;
+  buildTree(); syncLibForm();
+  oflSay('');
+  say(`${r.name} is in your library — drag it onto the patch or the stage to hang one`);
+  $('#oflPane').hidden = true;
+}
+
+$('#oflOpen').addEventListener('click', async () => {
+  const pane = $('#oflPane');
+  pane.hidden = !pane.hidden;
+  if (pane.hidden) return;
+  oflMaker = null; oflFixture = null;
+  $('#oflModes').hidden = true;
+  await oflLoad();
+  oflRender();
+  $('#oflSearch').focus();
+});
+$('#oflClose').addEventListener('click', () => { $('#oflPane').hidden = true; });
+$('#oflSearch').addEventListener('input', oflRender);
+$('#oflList').addEventListener('click', async (e) => {
+  const back = e.target.closest('.oflback');
+  if (back) { oflMaker = null; oflFixture = null; $('#oflModes').hidden = true; $('#oflSearch').value = ''; oflRender(); return; }
+  const item = e.target.closest('.item');
+  if (!item) return;
+  if (item.dataset.mk) {
+    oflSay('Reading that manufacturer…');
+    try {
+      const r = await fetch('api/library/manufacturer?key=' + encodeURIComponent(item.dataset.mk)).then((x) => x.json());
+      oflMaker = { key: r.key, name: r.name, fixtures: r.fixtures || [] };
+      $('#oflSearch').value = '';
+      $('#oflModes').hidden = true;
+      oflSay('');
+      oflRender();
+    } catch (err) { oflSay('Could not read that manufacturer.', true); }
+    return;
+  }
+  if (item.dataset.fx) oflShowFixture(item.dataset.fx);
+});
+
 // Fields the user set on purpose. The state poll runs every 1.5s and used to "helpfully"
 // overwrite these, guarded only by focus — so clicking a grid cell to aim at channel 12
 // held for about a second and then silently snapped back to the auto-advanced value.
