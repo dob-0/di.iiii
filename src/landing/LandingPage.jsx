@@ -463,24 +463,6 @@ export default function LandingPage() {
                     </Box>
                 </Stack>
 
-                {/* The room is the pitch. Five short spec-sheet tags, read as
-                    objects standing in the space rather than as a features
-                    list — the same room a visitor was just inside is what
-                    built this page. A sibling of `.lp-hero-inner`, not a
-                    child of it, so it positions against the whole hero
-                    (`.lp-hero` is the nearest OTHER positioned ancestor) —
-                    nested inside the centred text column it had nowhere to
-                    scatter to. */}
-                {!entered && (
-                    <Box component="ol" className="lp-room-tags">
-                        {ROOM_TAGS.map((tag) => (
-                            <Box component="li" key={tag.n} className="lp-room-tag">
-                                <span className="lp-room-tag-n">{tag.n}</span>{tag.label}
-                            </Box>
-                        ))}
-                    </Box>
-                )}
-
                 {entered && (
                     <>
                         <button type="button" className="lp-enter-exit" onClick={leaveRoom}>
@@ -502,6 +484,22 @@ export default function LandingPage() {
 
             {!entered && (
             <>
+            {/* ── THE FIVE MOVES ───────────────────────────────── */}
+            {/* Not laid over the room any more: a mark scattered across the
+                viewport corners sat on a door in one screen and was clipped
+                by the bottom edge in another — a fact with no room behind it.
+                One quiet row instead, directly under the room, same ground
+                (var(--di-black), no seam of its own). */}
+            <Box className="lp-room-tags-strip">
+                <Box component="ol" className="lp-room-tags">
+                    {ROOM_TAGS.map((tag) => (
+                        <Box component="li" key={tag.n} className="lp-room-tag">
+                            <span className="lp-room-tag-n">{tag.n}</span>{tag.label}
+                        </Box>
+                    ))}
+                </Box>
+            </Box>
+
             {/* ── HOW IT WAS BUILT ─────────────────────────────── */}
             <Box className="lp-section" component="section" id="what">
                 <Box className="lp-section-inner">
