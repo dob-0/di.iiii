@@ -54,12 +54,25 @@
     <div class="pane library">
       <div class="pane-head">
         <h2>Library</h2>
+        <button class="sq small" id="oflOpen" title="Find a real fixture by make and model in the Open Fixture Library, and import its chart as a profile">Find a fixture</button>
         <button class="sq small" id="newProfile" title="Build your own fixture type">+ New</button>
       </div>
       <div class="lib-body">
         <div class="search">
           <input type="text" id="libSearch" placeholder="search" autocomplete="off">
           <button id="libClear" title="Clear">✕</button>
+        </div>
+        <!-- The Open Fixture Library browser. The desk's own profiles are generic by
+             design; this is where a real make and model comes from, chart and resting
+             values included, so an imported head is not dark and its shutter is open. -->
+        <div class="ofl" id="oflPane" hidden>
+          <div class="oflbar">
+            <input type="text" id="oflSearch" placeholder="make or model — chauvet, martin, mac 250" autocomplete="off">
+            <button class="sq small" id="oflClose" title="Back to this desk's own profiles">✕</button>
+          </div>
+          <div class="oflmsg muted" id="oflMsg">Loading the library&hellip;</div>
+          <div class="ofllist" id="oflList"></div>
+          <div class="oflmodes" id="oflModes" hidden></div>
         </div>
         <div class="combobar" id="comboBar" hidden></div>
         <div class="tree" id="libTree"></div>

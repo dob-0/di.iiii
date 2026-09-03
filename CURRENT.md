@@ -13,9 +13,9 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a lighting look can fan across the ROOM, not just patch order (x/y/radial/angle) — Line sweep, Radar and Grid starters, on an arrange stage that no longer hits an edge
-- a short door onto the map lane
-- `/network` is one sheet of paper: the drawing is anchored to the rows it names, rooms are scriptless documents, and the index is generated from `people.json` like they are
+- build zones: a room that arranges itself
+- the Open Jam room, and the rule that keeps a room one
+- `/network` is one paper world end to end: the constellation is generated from `people.json` like the rooms, and the third index — a second catalogue of the same 52, still printing Gevorg's old name — is gone
 
 Full detail: `PROGRESS.md`.
 

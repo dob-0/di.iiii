@@ -4,7 +4,8 @@
 // second design because it was hand-kept while the rooms were generated; a
 // black panel sat beside a white column and the seam was visible on every
 // page; every small label failed AA on paper; 229 KB of three.js drew fifty-
-// two dots; and our own sourcing arguments were printed to visitors.
+// two dots; a hand-kept constellation printed a name the data had corrected;
+// and our own sourcing arguments were printed to visitors.
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -12,6 +13,7 @@ import { fileURLToPath } from 'node:url'
 import { CSS } from './lib/css.mjs'
 import { renderIndex } from './index-template.mjs'
 import { renderRoom } from './room-template.mjs'
+import { renderConstellation } from './constellation-template.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const read = (p) => fs.readFileSync(path.join(HERE, p), 'utf8')
@@ -35,6 +37,20 @@ describe('network pages are generated, not hand-kept', () => {
 
     it('every room page is exactly what renderRoom produces', () => {
         for (const p of people) expect(read(`pages/${p.slug}.html`)).toBe(renderRoom(p, people))
+    })
+
+    it('the constellation is exactly what renderConstellation produces', () => {
+        expect(read('pages/constellation.html')).toBe(renderConstellation(people))
+    })
+
+    // It was hand-kept, and it still printed a name and a role people.json had
+    // already corrected. Every name on the ring now comes from the data.
+    it('puts every person on the ring, named as the data names them', () => {
+        const html = read('pages/constellation.html')
+        for (const p of people) {
+            expect(html, p.slug).toContain(`>${p.name}</text>`)
+            expect(html, p.slug).toContain(`href="/network/${p.slug}"`)
+        }
     })
 })
 
@@ -71,7 +87,7 @@ describe('small type is legible on paper', () => {
 
 describe('weight', () => {
     it('loads no library to draw fifty-two dots', () => {
-        for (const file of ['code/index.html', 'pages/gevorg-grigoryan.html']) {
+        for (const file of ['code/index.html', 'pages/gevorg-grigoryan.html', 'pages/constellation.html']) {
             expect(read(file), file).not.toMatch(/three\.module|\/vendor\//)
         }
     })
@@ -80,6 +96,10 @@ describe('weight', () => {
     // so no dot could be traced to the names printed underneath it.
     it('leaves a room as a document — no script at all', () => {
         for (const p of people) expect(read(`pages/${p.slug}.html`), p.slug).not.toMatch(/<script/i)
+    })
+
+    it('leaves the constellation a document too', () => {
+        expect(read('pages/constellation.html')).not.toMatch(/<script/i)
     })
 
     it('gives the index exactly one script, and it is not a module', () => {
