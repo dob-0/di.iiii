@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchLightScenes } from './lightingLink.js'
+import { fetchLightTargets } from './lightingLink.js'
 
 // THE CUE LIST.
 //
@@ -125,41 +125,56 @@ export default function MapCueList({
     )
 }
 
-// The lighting desk's scene list, asked for when a cue editor opens and again
+// What the lighting desk can fire, asked for when a cue editor opens and again
 // whenever this window is focused: the desk is a SEPARATE tab, and the usual
-// way to add a scene is to go there, make it, and come back. A picker that
-// only ever asked once would be missing the scene you just saved.
-function useLightScenes() {
-    const [scenes, setScenes] = useState([])
+// way to add a look is to go there, make it, and come back. A picker that
+// only ever asked once would be missing the look you just recorded.
+function useLightTargets() {
+    const [targets, setTargets] = useState([])
     const [reachable, setReachable] = useState(true)
 
     useEffect(() => {
         let cancelled = false
         const load = () => {
-            fetchLightScenes()
-                .then((list) => { if (!cancelled) { setScenes(list); setReachable(true) } })
+            fetchLightTargets()
+                .then((list) => { if (!cancelled) { setTargets(list); setReachable(true) } })
                 // 404 from a hosted di.iiii and a refused connection are one
                 // answer: there is no desk here. The cue's stored id is left
                 // alone — an operator on a laptop without the rig must not
                 // lose the light plot they wrote at the venue.
-                .catch(() => { if (!cancelled) { setScenes([]); setReachable(false) } })
+                .catch(() => { if (!cancelled) { setTargets([]); setReachable(false) } })
         }
         load()
         window.addEventListener('focus', load)
         return () => { cancelled = true; window.removeEventListener('focus', load) }
     }, [])
 
-    return { scenes, reachable }
+    return { targets, reachable }
+}
+
+// The picker's value carries the KIND as well as the id, because a look and a scene are
+// both ids and the cue stores them in different fields.
+const targetValue = (kind, id) => `${kind}:${id}`
+const targetOf = (cue) => (cue?.lightLook ? targetValue('look', cue.lightLook)
+    : cue?.lightScene ? targetValue('scene', cue.lightScene) : '')
+// Setting one clears the other: a cue names one thing, and leaving the old field behind
+// would leave a cue that fires whatever the reader happens to check first.
+const targetPatch = (value) => {
+    const [kind, ...rest] = String(value || '').split(':')
+    const id = rest.join(':')
+    if (!id) return { lightLook: '', lightScene: '' }
+    return kind === 'look' ? { lightLook: id, lightScene: '' } : { lightScene: id, lightLook: '' }
 }
 
 function MapCueEditor({ cue, surfaceCount, onUpdate, onCapture, onDelete, onMove }) {
-    const { scenes, reachable } = useLightScenes()
+    const { targets, reachable } = useLightTargets()
     if (!cue) return null
-    const lightScene = cue.lightScene || ''
-    // A scene the desk no longer lists still gets an option of its own, or the
-    // select would read as "— none —" and the next edit to the cue would make
-    // that true.
-    const orphan = Boolean(lightScene) && !scenes.some((scene) => scene.id === lightScene)
+    const chosen = targetOf(cue)
+    // Something the desk no longer lists still gets an option of its own, or the select
+    // would read as "— none —" and the next edit to the cue would make that true.
+    const orphan = Boolean(chosen) && !targets.some((t) => targetValue(t.kind, t.id) === chosen)
+    const looks = targets.filter((t) => t.kind === 'look')
+    const scenesList = targets.filter((t) => t.kind === 'scene')
     return (
         <div className="map-section">
             <label className="map-field">
@@ -198,15 +213,30 @@ function MapCueEditor({ cue, surfaceCount, onUpdate, onCapture, onDelete, onMove
                 <span>Light</span>
                 {reachable ? (
                     <select
-                        value={lightScene}
-                        onChange={(event) => onUpdate?.(cue.id, { lightScene: event.target.value })}
-                        title="Recall this scene on the lighting desk when the cue fires"
+                        value={chosen}
+                        onChange={(event) => onUpdate?.(cue.id, targetPatch(event.target.value))}
+                        title="Fire this on the lighting desk when the cue fires. A look lands on the desk's cue layer; a scene is recalled with the cue's fade."
                     >
                         <option value="">— none —</option>
-                        {orphan ? <option value={lightScene}>{lightScene} (not on the desk)</option> : null}
-                        {scenes.map((scene) => (
-                            <option key={scene.id} value={scene.id}>{scene.name || scene.id}</option>
-                        ))}
+                        {orphan ? <option value={chosen}>{chosen.split(':').slice(1).join(':')} (not on the desk)</option> : null}
+                        {looks.length ? (
+                            <optgroup label="Looks">
+                                {looks.map((t) => (
+                                    <option key={targetValue(t.kind, t.id)} value={targetValue(t.kind, t.id)}>
+                                        {t.name || t.id} · {t.note}
+                                    </option>
+                                ))}
+                            </optgroup>
+                        ) : null}
+                        {scenesList.length ? (
+                            <optgroup label="Scenes">
+                                {scenesList.map((t) => (
+                                    <option key={targetValue(t.kind, t.id)} value={targetValue(t.kind, t.id)}>
+                                        {t.name || t.id}
+                                    </option>
+                                ))}
+                            </optgroup>
+                        ) : null}
                     </select>
                 ) : (
                     <p className="map-empty">Lighting desk not reachable — it runs on a local di.iiii</p>

@@ -213,6 +213,7 @@ const defaultMappingCue = {
   // OPTIONAL: id of a lighting-desk scene (/light) recalled when the cue
   // fires. Absent unless set, so older documents round-trip unchanged.
   lightScene: '',
+  lightLook: '',
   // Per-surface state keyed by surface id. GEOMETRY IS DELIBERATELY NOT IN A
   // CUE: corners and masks are the wall, cues are the show.
   surfaces: {}
@@ -872,12 +873,17 @@ const normalizeMappingCue = (cue = {}) => {
   })
   const key = ensureString(source.key, '')
   const lightScene = ensureString(source.lightScene, '')
+  // A look and a scene are both ids, and nothing about an id says which it is, so the
+  // cue keeps them apart. A look wins when both are set: the desk is built on looks now,
+  // and a cue that has been re-pointed at one has said what it means.
+  const lightLook = ensureString(source.lightLook, '')
   return {
     id: ensureString(source.id, ''),
     name: ensureString(source.name, ''),
     key: /^[1-9]$/.test(key) ? key : '',
     fade: Math.max(0, ensureNumber(source.fade, defaultMappingCue.fade)),
     hold: Math.max(0, ensureNumber(source.hold, defaultMappingCue.hold)),
+    ...(lightLook ? { lightLook } : {}),
     ...(lightScene ? { lightScene } : {}),
     surfaces
   }

@@ -1262,6 +1262,45 @@ check('fan refuses without an attribute, and says the styles it knows', async ()
   assert.ok(body.fanStyles.includes('mirror') && body.fanStyles.includes('random'));
 });
 
+check('an outside caller can fire a look, and it lands on one visible layer', async () => {
+  const f = await patch('drgb', { address: 480 });
+  await POST('/api/fixture', { id: f.id, values: { dimmer: 255, r: 0, g: 0, b: 0 } });
+  await POST('/api/looks', { looks: [
+    { id: 'cue-red', name: 'Red', kind: 'colour', steps: [{ values: { [f.id]: { r: 255 } } }] },
+    { id: 'cue-blue', name: 'Blue', kind: 'colour', steps: [{ values: { [f.id]: { b: 255 } } }] },
+  ] });
+  const { body } = await POST('/api/looks/fire', { id: 'cue-red' });
+  assert.strictEqual(body.layer.id, 'cue', 'one dedicated layer, not a new one each time');
+  assert.strictEqual(body.layer.level, 1);
+  await settle();
+  assert.strictEqual(await wire(0, 481), 255, 'red is on the rig');
+  // Fire another and the same layer holds it — one clip per layer, the rule the whole
+  // interface reads by.
+  await POST('/api/looks/fire', { id: 'cue-blue' });
+  await settle();
+  assert.strictEqual(await wire(0, 481), 0);
+  assert.strictEqual(await wire(0, 483), 255, 'blue took its place');
+  const { body: layers } = await GET('/api/layers');
+  assert.strictEqual(layers.layers.filter((l) => l.id === 'cue').length, 1);
+  assert.strictEqual((await POST('/api/looks/fire', { id: 'nope' })).status, 404);
+  await POST('/api/layers', { layers: [] });
+  await POST('/api/looks', { looks: [] });
+  await POST('/api/fixtures/remove', { id: f.id });
+});
+
+check('one list says what can be fired, looks and scenes both', async () => {
+  const f = await patch('drgb', { address: 490 });
+  await POST('/api/looks', { looks: [{ id: 'lk1', name: 'A look', kind: 'colour', steps: [{ values: { '*': { r: 1 } } }] }] });
+  const { body: saved } = await POST('/api/scenes/save', { name: 'A scene' });
+  const { body } = await GET('/api/fireable');
+  assert.deepStrictEqual(body.looks.map((l) => l.name), ['A look']);
+  assert.ok(body.scenes.some((s) => s.name === 'A scene'), 'and the scenes are there too');
+  assert.ok(body.looks[0].steps === 1 && body.looks[0].kind === 'colour', 'each says enough to be shown');
+  await POST('/api/scenes/remove', { id: saved.scene.id });
+  await POST('/api/looks', { looks: [] });
+  await POST('/api/fixtures/remove', { id: f.id });
+});
+
 // ---- harness ----------------------------------------------------------------
 
 async function main() {
