@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-carine-aroyan",
+  "slug": "carine-aroyan",
+  "label": "Carine Aroyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/carine-aroyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}
