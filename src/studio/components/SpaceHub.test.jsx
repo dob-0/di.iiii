@@ -63,6 +63,17 @@ vi.mock('../../utils/appNavigate.js', () => ({
     appNavigate: (...args) => mockAppNavigate(...args)
 }))
 
+// SpaceConstellation is a react-three-fiber Canvas -- irrelevant to what
+// SpaceHub hands it. Stubbed to a plain list of the space ids it received, so
+// a test can check Map's input without paying for a WebGL render.
+vi.mock('./SpaceConstellation.jsx', () => ({
+    default: ({ spaces }) => (
+        <div data-testid="mock-constellation">
+            {spaces.map(s => <span key={s.id}>{s.id}</span>)}
+        </div>
+    )
+}))
+
 const cardActionsFor = (spaceId) => {
     const card = screen.getByText(spaceId).closest('.ssh-space-card')
     return [...card.querySelectorAll('.ssh-card-btn')].map((btn) => btn.textContent)
@@ -296,6 +307,22 @@ describe('SpaceHub', () => {
         expect(screen.queryByText(/Space limit reached/)).toBeNull()
     })
 
+    it('draws an empty frame on the sandbox card instead of leaving it picture-less', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'sandbox-abc', label: 'Guest Sandbox', kind: 'sandbox', isOwner: false }
+        ])
+
+        render(<SpaceHub />)
+
+        await screen.findByText('Guest Sandbox')
+        const card = screen.getByText('Guest Sandbox').closest('.ssh-space-card')
+        const frame = card.querySelector('.ssh-card-preview')
+        expect(frame).not.toBeNull()
+        expect(frame.querySelector('img')).toBeNull()
+        expect(frame.querySelector('iframe')).toBeNull()
+        expect(frame.textContent).toMatch(/nothing in it yet/i)
+    })
+
     it('groups the directory into Open Space / sandbox / spaces shelves and opens the open space in the editor', async () => {
         const { navigateToStudioPath } = await import('../utils/studioRouting.js')
         authState = { ...authState, openSpaceId: 'open', sandboxSpaceId: 'sandbox-me' }
@@ -436,5 +463,52 @@ describe('SpaceHub', () => {
         const rootBlock = css.match(/\.ssh-root\s*\{[^}]*\}/)?.[0] ?? ''
         expect(rootBlock).toMatch(/overflow-y:\s*auto/)
         expect(rootBlock).not.toMatch(/min-height:\s*100vh/)
+    })
+
+    it('puts Open Space and the sandbox side by side from ~1024px up, stacked below it', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const cssPath = ['src/studio/styles/studio-space-hub.css', 'studio/styles/studio-space-hub.css']
+            .map(p => path.join(cwd(), p))
+            .find(p => fs.existsSync(p))
+        const css = fs.readFileSync(cssPath, 'utf8')
+        // Single column below the breakpoint -- everything just stacks.
+        const baseBlock = css.match(/\.ssh-shelves-grid\s*\{[^}]*\}/)?.[0] ?? ''
+        expect(baseBlock).toMatch(/grid-template-columns:\s*1fr\s*;/)
+        // Two columns from the breakpoint, with Open Space and the sandbox
+        // pinned to column 1 / column 2 of the same row, and the rest/collapsed
+        // shelf spanning both underneath.
+        const mediaBlock = css.match(/@media[^{]*min-width:\s*1024px[^{]*\{[\s\S]*?\n\}/)?.[0] ?? ''
+        expect(mediaBlock).toMatch(/grid-template-columns:\s*1fr 1fr\s*;/)
+        expect(mediaBlock).toMatch(/\.ssh-shelf--open\s*\{\s*grid-column:\s*1;\s*grid-row:\s*1;\s*\}/)
+        expect(mediaBlock).toMatch(/\.ssh-shelf--sandbox\s*\{\s*grid-column:\s*2;\s*grid-row:\s*1;\s*\}/)
+        expect(mediaBlock).toMatch(/\.ssh-shelf--spaces\s*\{\s*grid-column:\s*1\s*\/\s*-1;\s*grid-row:\s*2;\s*\}/)
+    })
+
+    it('the Grid fold never reaches Map — Map is always given every space, unfiltered', async () => {
+        authState = { ...authState, type: 'guest', canCreateSpace: false, openSpaceId: 'open', sandboxSpaceId: 'sandbox-me' }
+        listServerSpaces.mockResolvedValue([
+            { id: 'open', label: 'Open Space', kind: 'global', isPublic: true, isOwner: false },
+            { id: 'sandbox-me', label: 'Sandbox', kind: 'sandbox', isOwner: false },
+            { id: 'net', label: 'Network', isOwner: false, isPublic: true },
+            { id: 'azd', label: 'AZD', isOwner: false, isPublic: true }
+        ])
+
+        render(<SpaceHub />)
+        await screen.findByText('open')
+
+        // Grid: the rest shelf is folded for a guest by default.
+        expect(screen.getByRole('button', { name: /2 other spaces/ })).toHaveAttribute('aria-expanded', 'false')
+        expect(screen.queryByText('net')).toBeNull()
+
+        // Map is handed the full, unfiltered spaces list regardless — the same
+        // list SpaceHub loaded, not something derived from the fold state.
+        fireEvent.click(screen.getByRole('button', { name: 'Map' }))
+        const constellation = await screen.findByTestId('mock-constellation')
+        expect(constellation.textContent).toContain('open')
+        expect(constellation.textContent).toContain('sandbox-me')
+        expect(constellation.textContent).toContain('net')
+        expect(constellation.textContent).toContain('azd')
     })
 })

@@ -135,6 +135,27 @@
 
 .ssh-status-error { color: #ff6b6b; }
 
+/* Single column by default — every shelf just stacks, exactly as before. */
+.ssh-shelves-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+}
+
+/* From ~1024px, Open Space and the sandbox are a pair (the one everyone
+   shares, the one that is yours) and sit side by side instead of stacked in
+   one 480px-wide column with the rest of the screen empty. The rest/collapsed
+   shelf always spans both columns, under the pair. */
+@media (min-width: 1024px) {
+    .ssh-shelves-grid {
+        grid-template-columns: 1fr 1fr;
+        column-gap: 24px;
+    }
+
+    .ssh-shelf--open { grid-column: 1; grid-row: 1; }
+    .ssh-shelf--sandbox { grid-column: 2; grid-row: 1; }
+    .ssh-shelf--spaces { grid-column: 1 / -1; grid-row: 2; }
+}
+
 .ssh-shelf {
     margin-bottom: 22px;
 }
@@ -367,6 +388,24 @@
    pointer-events:none above. */
 .ssh-card-preview--live {
     cursor: default;
+}
+
+/* The sandbox has nothing to show yet -- drawn on purpose (same frame,
+   proportions and border as a real picture) rather than left blank, which
+   next to the Open Space's live picture read as broken. */
+.ssh-card-preview--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.ssh-card-preview-empty-line {
+    margin: 0;
+    max-width: 80%;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--di-text-muted, rgba(200,230,240,0.5));
 }
 
 /* SpaceCardPreview's own root -- fills the .ssh-card-preview box its caller
