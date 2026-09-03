@@ -55,3 +55,104 @@ describe('editor viewport ↔ public viewer renderer parity', () => {
             .toMatch(/gridVisible !== false[\s\S]{0,200}<Grid/)
     })
 })
+
+// A visitor meets TWO renderers a click apart: StudioViewport draws the arrival
+// frame (navMode 'orbit'), LiveProjectScene takes over on Walk/Fly. Four
+// world-level fields were read by exactly one of them, so the same document
+// answered differently depending on which one you were looking at. These guards
+// are source-level, like the ones above, because neither surface can be mounted
+// without a WebGL context.
+const studioSrc = read('../../studio/components/StudioViewport.jsx')
+const fullLiveSrc = read('../../components/LiveProjectScene.jsx')
+
+describe('arrival frame ↔ walk mode world parity', () => {
+    it('the arrival frame renders authored fog, which walk mode has always had', () => {
+        expect(studioSrc, 'StudioViewport draws no <fog>, so an authored atmosphere only appears after the Walk click')
+            .toMatch(/<fog attach="fog"/)
+        // Same semantics as LiveProjectScene: colour falls back to the
+        // background and `enabled: false` switches it off.
+        expect(studioSrc).toMatch(/fog\?\.color \|\| document\.worldState\?\.backgroundColor/)
+        expect(studioSrc).toMatch(/fog\.enabled !== false/)
+    })
+
+    it('walk mode reads every grid field instead of hardcoding a slate floor', () => {
+        const grid = fullLiveSrc.split('<Grid')[1]?.split('/>')[0] || ''
+        for (const field of [
+            'gridOffset', 'gridCellSize', 'gridCellThickness', 'gridCellColor',
+            'gridSectionSize', 'gridSectionThickness', 'gridSectionColor',
+            'gridFadeDistance', 'gridFadeStrength'
+        ]) {
+            expect(grid, `LiveProjectScene's <Grid> ignores worldState.${field}`).toContain(field)
+        }
+        // The walker's floor must still reach the horizon: `args` would end it
+        // at gridSize/2 metres and every existing walkable room would lose its
+        // ground.
+        expect(grid).toContain('infiniteGrid')
+    })
+
+    it('the editor passes the grid cell colour under the name drei actually reads', () => {
+        // `color` is not a Grid prop -- it was silently dropped and every grid
+        // drew drei's default black cells, ignoring the Studio's colour picker.
+        expect(studioSrc).toMatch(/cellColor=\{document\.worldState\?\.gridCellColor/)
+        expect(studioSrc).not.toMatch(/\bcolor=\{document\.worldState\?\.gridCellColor/)
+    })
+
+    it('both surfaces apply renderSettings through the same effect', () => {
+        for (const [label, src] of [['StudioViewport', studioSrc], ['LiveProjectScene', fullLiveSrc]]) {
+            expect(src, `${label} does not import the shared RenderSettingsEffect`)
+                .toMatch(/import RenderSettingsEffect from/)
+            expect(src, `${label} never mounts <RenderSettingsEffect>`)
+                .toMatch(/<RenderSettingsEffect renderSettings=/)
+        }
+    })
+
+    it('walk mode reads the canvas half of renderSettings too', () => {
+        const canvas = fullLiveSrc.split('<Canvas')[1]?.split('>')[0] || ''
+        expect(canvas, 'walk mode hardcodes antialias').toContain('renderSettings.antialias !== false')
+        expect(canvas, 'walk mode never enables shadows').toContain('renderSettings.shadows !== false')
+        expect(canvas, 'walk mode hardcodes dpr').toContain('renderSettings.dprMin')
+        // ...but keeps its own ceiling: a first-person camera in continuous
+        // motion cannot afford the 2x an authored dprMax may ask for.
+        expect(canvas).toContain('WALK_DPR_CEILING')
+    })
+
+    it('the arrival frame animates and dims like walk mode, and only when published', () => {
+        expect(studioSrc, 'StudioViewport never applies components.animation')
+            .toMatch(/applyAnimation\(/)
+        expect(studioSrc, 'StudioViewport never applies components.proximity')
+            .toMatch(/applyProximity\(/)
+        // Both are gated on the published-viewer context: an editor whose
+        // objects drift under the gizmo cannot be used to place anything.
+        expect(studioSrc).toMatch(/if \(playLive && prox\) applyProximity\(/)
+        expect(studioSrc).toMatch(/if \(playLive && anim\) \{[\s\S]{0,240}applyAnimation\(/)
+        expect(studioSrc).toMatch(/const playLive = useContext\(LiveTimelineContext\)/)
+    })
+
+    // The ONE place the two surfaces are meant to disagree, and it is load-bearing.
+    // `resolveAnimation`'s fallback floats models, sways flat media and orbits
+    // anything named "fly" when no animation component exists. Walk mode has
+    // always done that and keeps doing it. The arrival frame must not: it would
+    // set WCC's sculpture, the Dilijan camp room and every other already-published
+    // room drifting on the first frame a stranger sees, with no author having
+    // asked. Arrival shows authored motion or none.
+    it('the arrival frame resolves authored motion only, never the fallback', () => {
+        // A CALL, not the word: the prose above the hook names the resolver it
+        // deliberately does not use, and a comment is not a code path.
+        expect(studioSrc, 'StudioViewport reaches the name/type animation fallback')
+            .not.toMatch(/resolveAnimation\(/)
+        expect(studioSrc, 'StudioViewport still imports the fallback resolver')
+            .not.toMatch(/import \{[^}]*\bresolveAnimation\b[^}]*\} from/)
+        expect(studioSrc, 'StudioViewport does not use the authored-only resolver')
+            .toMatch(/authoredAnimation\(entity\)/)
+        // Walk keeps the fallback exactly as it was.
+        expect(fullLiveSrc, 'LiveProjectScene lost the imported-scene animation fallback')
+            .toMatch(/resolveAnimation\(entity\)/)
+    })
+
+    it('both surfaces take the idle phase offset from one shared seed', () => {
+        for (const [label, src] of [['StudioViewport', studioSrc], ['LiveProjectScene', fullLiveSrc]]) {
+            expect(src, `${label} computes its own animation seed`).toMatch(/animationSeed\(entity\.id\)/)
+            expect(src, `${label} still hashes charCodeAt itself`).not.toMatch(/charCodeAt\(i\)\) % 1000/)
+        }
+    })
+})
