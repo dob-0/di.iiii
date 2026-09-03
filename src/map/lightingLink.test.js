@@ -11,7 +11,11 @@ import {
     recallCueLighting
 } from './lightingLink.js'
 
-const ok = (body = {}) => ({ ok: true, status: 200, json: async () => body })
+const JSON_HEADERS = { get: (k) => (k.toLowerCase() === 'content-type' ? 'application/json; charset=utf-8' : null) }
+const HTML_HEADERS = { get: (k) => (k.toLowerCase() === 'content-type' ? 'text/html; charset=utf-8' : null) }
+const ok = (body = {}) => ({ ok: true, status: 200, headers: JSON_HEADERS, json: async () => body })
+// What a hosted di.iiii really answers at /light/api/summary: its own app page, 200.
+const htmlPage = () => ({ ok: true, status: 200, headers: HTML_HEADERS, json: async () => { throw new SyntaxError('Unexpected token <') } })
 const notFound = () => ({ ok: false, status: 404, json: async () => ({}) })
 
 afterEach(() => {
@@ -82,6 +86,9 @@ describe('asking the desk what it has', () => {
         await expect(probeLightingDesk({ fetchImpl: async () => notFound() })).resolves.toBe(false)
         await expect(probeLightingDesk({ fetchImpl: async () => { throw new Error('offline') } })).resolves.toBe(false)
         await expect(probeLightingDesk({ fetchImpl: async () => ok({ activeScene: null }) })).resolves.toBe(true)
+        // The staging case: a 200 that is a web page is not a desk, and the map desk
+        // must not grow a Light link to one.
+        await expect(probeLightingDesk({ fetchImpl: async () => htmlPage() })).resolves.toBe(false)
     })
 })
 

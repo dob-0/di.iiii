@@ -190,12 +190,20 @@ export async function sendDeskCommand(base, command, { fetchImpl = fetch } = {})
     }
 }
 
+// A 200 is not proof of a desk. On a hosted tier the edge serves the app's own
+// index.html for any address it does not know, so /light/api/summary answers 200
+// with HTML — and the panel then said "the desk is not answering", which implies a
+// desk exists somewhere and is sulking. An HTML answer means NO DESK HERE, the
+// same as a 404, and the panel says the true thing: this is a local-only lane.
+const answeredJson = (res) => /^application\/json\b/i.test(res?.headers?.get?.('content-type') || '')
+
 export async function readDeskSummary(base, { fetchImpl = fetch, signal } = {}) {
     try {
         const res = await fetchImpl(`${base}/summary`, { signal })
         if (res?.status === 404) return { ok: false, status: DESK_STATUS.ABSENT }
         if (res?.status === 403) return { ok: false, status: DESK_STATUS.FORBIDDEN }
         if (!res?.ok) return { ok: false, status: DESK_STATUS.UNREACHABLE }
+        if (!answeredJson(res)) return { ok: false, status: DESK_STATUS.ABSENT }
         return { ok: true, status: DESK_STATUS.ANSWERING, summary: await res.json() }
     } catch {
         return { ok: false, status: DESK_STATUS.UNREACHABLE }
@@ -205,7 +213,7 @@ export async function readDeskSummary(base, { fetchImpl = fetch, signal } = {}) 
 export async function readDeskScenes(base, { fetchImpl = fetch, signal } = {}) {
     try {
         const res = await fetchImpl(`${base}/scenes/summary`, { signal })
-        if (!res?.ok) return { ok: false, scenes: [] }
+        if (!res?.ok || !answeredJson(res)) return { ok: false, scenes: [] }
         const payload = await res.json()
         return { ok: true, scenes: Array.isArray(payload?.scenes) ? payload.scenes : [] }
     } catch {

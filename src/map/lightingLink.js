@@ -59,18 +59,25 @@ export async function fetchLightScenes({ fetchImpl, signal } = {}) {
     if (!call) throw new Error('no fetch')
     const response = await call(lightingApiUrl('api/scenes/summary'), { signal })
     if (!response?.ok) throw new Error(`lighting desk answered ${response?.status ?? 'nothing'}`)
+    if (!answeredJson(response)) throw new Error('no lighting desk here')
     const body = await response.json()
     return Array.isArray(body?.scenes) ? body.scenes : []
 }
 
-// Is there a desk at all? Only a 200 counts; a 404 from a hosted di.iiii and a
-// refused connection are the same answer — no.
+// A 200 alone is not a desk. A hosted tier serves the app's own index.html for
+// every address it does not know, so this asked for JSON and got a web page and
+// believed it — and the map desk grew a Light link to a desk that is not there.
+const answeredJson = (response) => /^application\/json\b/i.test(response?.headers?.get?.('content-type') || '')
+
+// Is there a desk at all? Only a 200 that is really JSON counts; a 404 from a
+// hosted di.iiii, an HTML fallback and a refused connection are all the same
+// answer — no.
 export async function probeLightingDesk({ fetchImpl, signal } = {}) {
     const call = resolveFetch(fetchImpl)
     if (!call) return false
     try {
         const response = await call(lightingApiUrl('api/summary'), { signal })
-        return Boolean(response?.ok)
+        return Boolean(response?.ok) && answeredJson(response)
     } catch {
         return false
     }
