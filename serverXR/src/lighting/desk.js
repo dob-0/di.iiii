@@ -79,7 +79,14 @@ function createDesk(opts = {}) {
       // the higher number wins and the receiver ignores the other, which is the thing
       // Art-Net cannot express at all.
       priority: 100,
-      manual: [{ ip: '192.168.4.1', name: 'Light controller' }], port: 6454, refreshHz: 40 },
+      manual: [{ ip: '192.168.4.1', name: 'Light controller' }], port: 6454, refreshHz: 40,
+      // MORE THAN ONE DEVICE AT ONCE. `driver` above is the desk's main output and is
+      // untouched; each entry here is another device sending alongside it, with its own
+      // driver, its own destination and its own list of universes. That is what a rig on
+      // two universes actually looks like when the venue has one Art-Net node and you
+      // brought a USB widget — or two widgets, one per universe, because a widget is one
+      // DMX line and always will be. Empty `universes` means "everything this desk has".
+      extra: [] },
     // The effects engine. The defaults live in fx.js next to the maths that reads them, so
     // there is one answer to "what is depth when nobody has set it" rather than two.
     fx: { ...DEFAULT_FX },
@@ -215,6 +222,10 @@ function createDesk(opts = {}) {
       // OFF inside di.iiii (a dev server must never broadcast on a studio network).
       s.output.enabled = disk.output && disk.output.enabled != null ? !!disk.output.enabled : outputEnabledDefault;
       s.output.manual = normaliseManual(s.output.manual);
+      // Every extra device goes back through the same clamps the route uses, so a show
+      // file edited by hand cannot smuggle in a send the live route would have refused.
+      s.output.extra = (Array.isArray(disk.output && disk.output.extra) ? disk.output.extra : [])
+        .slice(0, 16).map((raw) => sanitizeSend(raw, raw)).filter(Boolean);
       s.fx = { ...DEFAULT_STATE.fx, ...(disk.fx || {}) };
       s.fx.exclude = Array.isArray(s.fx.exclude)
         ? s.fx.exclude.filter((p) => typeof p === 'string' && p).slice(0, 20)
@@ -300,6 +311,64 @@ function createDesk(opts = {}) {
     if (sacn && (sacn.priority !== priority || sacn.targets.join() !== targets.join())) { sacn.close(); sacn = null; }
     if (!sacn) sacn = new SACN({ offline, targets, priority, sourceName: 'di.iiii lighting desk' });
     return sacn;
+  }
+
+  // ---- more than one device at once -----------------------------------------
+  // Each extra send owns a driver instance of its own, keyed by the send's id. They are
+  // built on first use and closed the moment their send is removed, changed onto another
+  // device, or switched off — a serial port held open by a send nobody is using is a port
+  // the next program cannot have.
+  const extraDrivers = new Map();
+
+  function sanitizeSend(raw, existing) {
+    if (!raw || typeof raw !== 'object') return null;
+    const prev = existing || {};
+    const driver = ['artnet', 'sacn', 'enttec'].includes(raw.driver) ? raw.driver : (prev.driver || 'artnet');
+    const serialPort = raw.serialPort && PORT_NAME.test(String(raw.serialPort).trim())
+      ? portName(raw.serialPort) : (prev.serialPort || DEFAULT_PORT);
+    return {
+      id: String(prev.id || raw.id || ('snd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6))).slice(0, 24),
+      name: String(raw.name != null ? raw.name : (prev.name || '')).slice(0, 40),
+      driver,
+      // Which universes go out of THIS device. Empty is every universe the desk has —
+      // right for a second Art-Net node mirroring the rig, wrong for a widget, which
+      // carries one DMX line and should be told which one.
+      universes: Array.isArray(raw.universes)
+        ? [...new Set(raw.universes.map((u) => u | 0).filter((u) => u >= 0 && u <= 32767))].slice(0, 64).sort((a, b) => a - b)
+        : (Array.isArray(prev.universes) ? prev.universes : []),
+      targets: Array.isArray(raw.targets) ? raw.targets.map(validIp).filter(Boolean).slice(0, 8)
+        : (Array.isArray(prev.targets) ? prev.targets : []),
+      serialPort,
+      priority: raw.priority != null ? Math.max(0, Math.min(200, raw.priority | 0)) : (prev.priority != null ? prev.priority : 100),
+      enabled: raw.enabled != null ? !!raw.enabled : (prev.enabled !== false),
+    };
+  }
+
+  // The driver for one extra send, built or rebuilt when what it points at changes.
+  function extraDriver(send) {
+    const held = extraDrivers.get(send.id);
+    const sig = [send.driver, send.serialPort, send.targets.join(), send.priority].join('|');
+    if (held && held.sig !== sig) { held.drv.close(); extraDrivers.delete(send.id); }
+    const again = extraDrivers.get(send.id);
+    if (again) return again.drv;
+    let drv = null;
+    if (send.driver === 'enttec') drv = new Enttec({ port: send.serialPort, maxHz: state.output.refreshHz, offline });
+    else if (send.driver === 'sacn') drv = new SACN({ offline, targets: send.targets, priority: send.priority, sourceName: 'di.iiii lighting desk' });
+    // Art-Net needs no instance: one socket carries every destination, so an extra
+    // Art-Net send is a list of addresses to also send each frame to, nothing more.
+    if (drv) extraDrivers.set(send.id, { sig, drv });
+    return drv;
+  }
+
+  function closeExtra(id) {
+    const held = extraDrivers.get(id);
+    if (held) { held.drv.close(); extraDrivers.delete(id); }
+  }
+
+  // Anything holding a device for a send that is gone or switched off lets it go.
+  function pruneExtra() {
+    const live = new Set((state.output.extra || []).filter((s) => s.enabled).map((s) => s.id));
+    for (const id of [...extraDrivers.keys()]) if (!live.has(id)) closeExtra(id);
   }
 
   // The show file is written whole, to a temp file, then renamed over the old one, with
@@ -420,6 +489,8 @@ function createDesk(opts = {}) {
     if (!state.output.enabled) {
       if (enttec) { enttec.close(); enttec = null; }
       if (sacn) { sacn.close(); sacn = null; }
+      // The wire switch is the wire switch: it stops every device, not only the main one.
+      for (const id of [...extraDrivers.keys()]) closeExtra(id);
       return;
     }
     const fp = footprints();
@@ -431,6 +502,7 @@ function createDesk(opts = {}) {
       // falling into their built-in programs.
       for (const [universe, buf] of frames) stream.send(universe, buf);
       if (!frames.size) stream.send(0, Buffer.alloc(512));
+      sendExtras(frames, fp);
       stats.lastSend = Date.now();
       return;
     }
@@ -459,7 +531,45 @@ function createDesk(opts = {}) {
         for (const t of targets) artnet.send(t, universe, buf.subarray(0, fp.get(universe) || 24));
       }
     }
+    sendExtras(frames, fp);
     stats.lastSend = Date.now();
+  }
+
+  // The same frame, out of every other device that has been added. Each send picks the
+  // universes it was told to carry — empty means all of them, which is right for a second
+  // node mirroring the rig and wrong for a widget, which is one DMX line.
+  function sendExtras(frames, fp) {
+    const list = state.output.extra || [];
+    if (!list.length) { if (extraDrivers.size) pruneExtra(); return; }
+    pruneExtra();
+    for (const send of list) {
+      if (!send.enabled) continue;
+      const wanted = send.universes.length ? new Set(send.universes) : null;
+      if (send.driver === 'artnet') {
+        if (!send.targets.length) continue;   // an Art-Net send with nowhere to go is not a send
+        for (const [universe, buf] of frames) {
+          if (wanted && !wanted.has(universe)) continue;
+          for (const t of send.targets) artnet.send(t, universe, buf.subarray(0, fp.get(universe) || 24));
+        }
+        continue;
+      }
+      const drv = extraDriver(send);
+      if (!drv) continue;
+      if (send.driver === 'sacn') {
+        for (const [universe, buf] of frames) {
+          if (wanted && !wanted.has(universe)) continue;
+          drv.send(universe, buf);
+        }
+        continue;
+      }
+      // A widget carries ONE line. Told which universe, it sends that one and keeps
+      // refreshing it even when nothing is patched there yet — a rig that stops receiving
+      // frames falls into its built-in programs, and "not patched yet" must not do that.
+      const only = send.universes.length ? send.universes[0] : 0;
+      const buf = frames.get(only);
+      drv.unreachable.clear();
+      drv.send(only, buf ? buf.subarray(0, fp.get(only) || 24) : Buffer.alloc(24));
+    }
   }
 
   function startLoop() {
@@ -739,6 +849,20 @@ function createDesk(opts = {}) {
         outputEnabled: !!state.output.enabled,
         lanAllowed,
         serial: enttec ? enttec.status() : null,
+        // Every other device, and whether it is actually connected. A second widget that
+        // will not open has to be visible as a dead line here, not as a dark half of the
+        // rig nobody can explain.
+        extra: (state.output.extra || []).map((s) => {
+          const held = extraDrivers.get(s.id);
+          const st = held && held.drv.status ? held.drv.status() : null;
+          return {
+            id: s.id, name: s.name, driver: s.driver, enabled: s.enabled,
+            universes: s.universes, targets: s.targets, serialPort: s.serialPort, priority: s.priority,
+            connected: s.driver === 'artnet' ? !!s.targets.length : !!(st && (st.connected || st.ready)),
+            packetsSent: st ? st.packetsSent : null,
+            lastError: st ? st.lastError : null,
+          };
+        }),
         serialPorts: listPorts(),
         packetsSent: enttec ? enttec.packetsSent : sacn ? sacn.packetsSent : artnet.packetsSent,
         lastError: enttec ? enttec.lastError : sacn ? sacn.lastError : artnet.lastError,
@@ -1102,6 +1226,33 @@ function createDesk(opts = {}) {
       const width = PROFILES[profile].channels.length;
       const universe = Math.max(0, body.universe | 0);
       let addr = body.address ? Math.max(1, Math.min(512, body.address | 0)) : engine.nextFreeAddress(universe, width);
+      // An address typed from a channel plot must be checked the way a dragged one is.
+      // Patching ON TOP of a patched fixture used to succeed silently: both kept receiving
+      // DMX every frame, the patch grid drew only the newer one, and the older fixture
+      // simply disappeared from the desk while still lighting the room. Deliberate stacking
+      // is legitimate — it mirrors two units — so `force: true` still allows it, exactly as
+      // the readdress route does. This is only the accident that could not be seen.
+      if (body.address && !body.force) {
+        const occupied = new Map();
+        for (const f of state.fixtures) {
+          if (f.universe !== universe) continue;
+          const w = (PROFILES[f.profile] || PROFILES.rgb).channels.length;
+          for (let c = f.address; c < f.address + w && c <= 512; c++) occupied.set(c, f);
+        }
+        for (let i = 0; i < count; i++) {
+          const start = addr + i * width;
+          if (start + width - 1 > 512) break;
+          for (let c = start; c < start + width; c++) {
+            const hit = occupied.get(c);
+            if (hit) {
+              return json(res, {
+                error: `channel ${c} is taken by ${hit.index}.${hit.profile} — patch somewhere else, or send force to stack them deliberately`,
+                conflict: { channel: c, universe, by: { id: hit.id, index: hit.index, profile: hit.profile } },
+              }, 409);
+            }
+          }
+        }
+      }
       let index = body.index != null ? Math.max(1, body.index | 0) : engine.nextIndex();
       const row = state.fixtures.length;
       const added = [];
@@ -1526,6 +1677,42 @@ function createDesk(opts = {}) {
         serial: wire ? wire.status() : null,
         error: wire && !wire.connected ? wire.lastError : null,
       });
+    },
+
+    // Add or change a device sending alongside the main output. {id} updates the one with
+    // that id; without an id a new send is added. A rig on two universes with one node and
+    // one widget is two lines in this list, and this is the only way to say so.
+    'POST /api/output/send': (req, res, body) => {
+      const list = state.output.extra || (state.output.extra = []);
+      const existing = body && body.id ? list.find((s) => s.id === body.id) : null;
+      if (body && body.id && !existing) return json(res, { error: 'no such output' }, 404);
+      const send = sanitizeSend(body, existing);
+      if (!send) return json(res, { error: 'nothing to add' }, 400);
+      if (existing) Object.assign(existing, send);
+      else {
+        if (list.length >= 16) return json(res, { error: 'sixteen devices is as many as this desk drives' }, 400);
+        list.push(send);
+      }
+      // A serial port cannot be opened twice: the second desk, or the second send, gets
+      // "resource busy" and a line that never lights. Say so here rather than at showtime.
+      const ports = new Map();
+      for (const s of list) {
+        if (s.driver !== 'enttec' || !s.enabled) continue;
+        if (ports.has(s.serialPort) || (state.output.driver === 'enttec' && s.serialPort === state.output.serialPort)) {
+          return json(res, { error: `${s.serialPort} is already driving another output — one program, one port` }, 409);
+        }
+        ports.set(s.serialPort, s.id);
+      }
+      closeExtra(send.id);   // rebuild against whatever it now points at
+      pruneExtra(); save();
+      json(res, { ok: true, send: existing || send, extra: list });
+    },
+
+    'POST /api/output/send/remove': (req, res, body) => {
+      const id = body && body.id;
+      state.output.extra = (state.output.extra || []).filter((s) => s.id !== id);
+      closeExtra(id); save();
+      json(res, { ok: true, extra: state.output.extra });
     },
 
     // Add a device by typing its address. This is the path that works on a show network:

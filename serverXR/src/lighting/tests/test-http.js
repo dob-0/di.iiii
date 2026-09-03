@@ -1118,6 +1118,64 @@ check('a fixture value that is not a number is dropped', async () => {
   await POST('/api/fixtures/remove', { id: f.id });
 });
 
+check('patching onto an address that is taken is refused, and says what is in the way', async () => {
+  const first = await patch('drgb', { address: 400 });     // 400-403
+  const r = await POST('/api/fixtures/add', { profile: 'drgb', address: 402 });
+  assert.strictEqual(r.status, 409, 'a collision is refused, not accepted silently');
+  assert.match(r.body.error, /402|taken/, 'and it names the channel and the fixture holding it');
+  assert.strictEqual(r.body.conflict.by.id, first.id);
+  const { body } = await GET('/api/state');
+  assert.strictEqual(body.fixtures.filter((f) => f.address === 402).length, 0, 'nothing was patched');
+  // Deliberate stacking is legitimate — two units mirroring one another — so force still works.
+  const forced = await POST('/api/fixtures/add', { profile: 'drgb', address: 402, force: true });
+  assert.strictEqual(forced.body.added.length, 1, 'force stacks them on purpose');
+  await POST('/api/fixtures/remove', { id: forced.body.added[0].id });
+  await POST('/api/fixtures/remove', { id: first.id });
+});
+
+check('a count patched without an address still lands in free space', async () => {
+  const a = await patch('drgb', { address: 500 });
+  const r = await POST('/api/fixtures/add', { profile: 'drgb', count: 2 });
+  assert.strictEqual(r.body.added.length, 2, 'no address given means the desk picks, and it never collides');
+  for (const f of r.body.added) assert.notStrictEqual(f.address, 500);
+  for (const f of r.body.added) await POST('/api/fixtures/remove', { id: f.id });
+  await POST('/api/fixtures/remove', { id: a.id });
+});
+
+check('a second device sends alongside the main output, carrying only its own universes', async () => {
+  const r = await POST('/api/output/send', { driver: 'artnet', targets: ['10.0.0.9'], universes: [1] });
+  assert.ok(r.body.send.id, 'it comes back with an id to address it by');
+  assert.deepStrictEqual(r.body.send.universes, [1]);
+  const { body } = await GET('/api/state');
+  const listed = body.status.extra.find((s) => s.id === r.body.send.id);
+  assert.ok(listed, 'and it is visible in status, where a dead one can be seen');
+  assert.strictEqual(listed.driver, 'artnet');
+  // Off, then on again, by id.
+  await POST('/api/output/send', { id: r.body.send.id, enabled: false });
+  const off = await GET('/api/state');
+  assert.strictEqual(off.body.status.extra.find((s) => s.id === r.body.send.id).enabled, false);
+  await POST('/api/output/send/remove', { id: r.body.send.id });
+  const gone = await GET('/api/state');
+  assert.strictEqual(gone.body.status.extra.length, 0, 'and removing it removes it');
+});
+
+check('two outputs cannot be told to open the same serial port', async () => {
+  const port = process.platform === 'win32' ? 'COM9' : '/dev/ttyUSB9';
+  const a = await POST('/api/output/send', { driver: 'enttec', serialPort: port, universes: [1] });
+  assert.ok(a.body.send, 'the first one is fine');
+  const b = await POST('/api/output/send', { driver: 'enttec', serialPort: port, universes: [2] });
+  assert.strictEqual(b.status, 409, 'the second is refused — one program, one port');
+  assert.match(b.body.error, /already driving/);
+  await POST('/api/output/send/remove', { id: a.body.send.id });
+});
+
+check('a hand-edited show cannot smuggle in an output the route would refuse', async () => {
+  const r = await POST('/api/output/send', { driver: 'artnet', targets: ['not-an-ip', '10.0.0.4'], universes: [1, 1, 99999, -3] });
+  assert.deepStrictEqual(r.body.send.targets, ['10.0.0.4'], 'a target that is not an address is dropped');
+  assert.deepStrictEqual(r.body.send.universes, [1], 'and the universe list is deduped and clamped');
+  await POST('/api/output/send/remove', { id: r.body.send.id });
+});
+
 check('the serial port has to be a serial device', async () => {
   const before = (await GET('/api/state')).body.output.serialPort;
   const bad = process.platform === 'win32' ? '\\\\.\\PhysicalDrive0' : '/dev/null';
