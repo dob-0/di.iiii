@@ -36,3 +36,36 @@ export function roomContentHTML(person, neighbors) {
 
   return { bioHTML, doorsHTML, elsewhereHTML, hasElsewhere };
 }
+
+// The journey: a person's CV, cut into segments instead of handed over as a
+// flat file. `<details>` gives the years fold — one open, the rest a click
+// away — with no script at all, matching the room's "a document, not an
+// application" rule. `resume` is optional; a room with none renders nothing.
+export function resumeHTML(person) {
+  const r = person.resume;
+  if (!r) return '';
+
+  const focusHTML = r.focus && r.focus.length
+    ? '<div class="focus-chips">' + r.focus.map((f) => '<span class="chip">' + esc(f) + '</span>').join('') + '</div>'
+    : '';
+
+  const timelineHTML = r.timeline && r.timeline.length
+    ? '<div class="timeline">' + r.timeline.map((y, i) => {
+        const n = y.items.length;
+        const itemsHTML = y.items.map((it) =>
+          '<div class="ti"><span class="ti-t">' + esc(it.title) + '</span>' +
+          (it.role ? ' <span class="ti-r">' + esc(it.role) + '</span>' : '') +
+          (it.place ? '<span class="ti-p">' + esc(it.place) + '</span>' : '') +
+          '</div>').join('');
+        return '<details' + (i === 0 ? ' open' : '') + '><summary><span class="yr">' + esc(y.year) +
+          '</span><span class="ct">' + n + (n === 1 ? ' credit' : ' credits') + '</span></summary>' +
+          '<div class="yr-items">' + itemsHTML + '</div></details>';
+      }).join('') + '</div>'
+    : '';
+
+  const cvHTML = r.cvUrl
+    ? '<p class="cv-link"><a class="plate" href="' + esc(r.cvUrl) + '" target="_blank" rel="noopener">' + esc(r.cvLabel || 'the full CV — PDF') + '</a></p>'
+    : '';
+
+  return focusHTML + timelineHTML + cvHTML;
+}

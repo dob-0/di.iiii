@@ -104,6 +104,27 @@ a.row .made .arrow{opacity:.6;}
 .room-stage .bio{font-size:16px;line-height:1.7;color:var(--ink-2);max-width:58ch;
   margin:30px 0 0 0;padding-top:26px;border-top:1px solid var(--rule);}
 
+/* ---------- the journey (a CV cut into segments, not handed over flat) ---------- */
+.focus-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px 0;}
+.chip{border:1px solid var(--rule);padding:6px 12px;font-size:12px;font-family:var(--mono);
+  color:var(--ink-2);letter-spacing:.02em;}
+.timeline{margin:0;}
+.timeline details{border-top:1px solid var(--rule);}
+.timeline details:last-child{border-bottom:1px solid var(--rule);}
+.timeline summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:16px;
+  padding:14px 2px;font-family:var(--mono);}
+.timeline summary::-webkit-details-marker{display:none;}
+.timeline summary .yr{font-size:14px;font-weight:700;color:var(--ink);min-width:4.5ch;}
+.timeline summary .ct{font-size:12px;color:var(--ink-3);flex:1;text-align:right;}
+.timeline summary::after{content:'+';color:var(--accent-ink);margin-left:2px;font-size:14px;}
+.timeline details[open] summary::after{content:'−';}
+.timeline .yr-items{padding:0 2px 18px 2px;display:flex;flex-direction:column;gap:12px;}
+.ti{font-size:14.5px;line-height:1.5;color:var(--ink-2);}
+.ti .ti-t{font-weight:600;color:var(--ink);}
+.ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
+.ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
+.cv-link{margin:20px 0 0 0;}
+
 .section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
   margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
 .section-label::after{content:'';flex:1;height:1px;background:var(--rule);}
@@ -178,6 +199,7 @@ a.row .made .arrow{opacity:.6;}
 <main class="room-stage">
   <h1>Nino Giorgadze</h1>
   <p class="role">multimedia artist</p>
+  
   
   
   <div class="section-label">on di.iiii</div>
