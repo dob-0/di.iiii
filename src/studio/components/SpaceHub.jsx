@@ -689,7 +689,17 @@ export default function SpaceHub() {
                     />
                 )}
 
-                {viewMode === 'grid' && shelves.map(({ key, label, hint, items }) => {
+                {/* .ssh-shelves-grid places Open Space / Your sandbox side by
+                    side from ~1024px up via grid-column on .ssh-shelf--open /
+                    .ssh-shelf--sandbox (see the CSS) -- they're a pair, the one
+                    everyone shares and the one that is yours, and stacking them
+                    in a single 480px column left roughly 900px of nothing beside
+                    them on a wide screen. The rest/collapsed shelf always spans
+                    both columns, sitting under the pair. Below 1024 all three
+                    stack exactly as before (grid-template-columns: 1fr). */}
+                {viewMode === 'grid' && (
+                <div className="ssh-shelves-grid">
+                {shelves.map(({ key, label, hint, items }) => {
                     // "Live spaces" is everything the visitor didn't come here
                     // for and (if a guest) usually can't edit. Collapse it to
                     // one line by default so the Open Space and the sandbox —
@@ -706,7 +716,7 @@ export default function SpaceHub() {
 
                     if (collapsible && !restShelfOpen) {
                         return (
-                            <section key={key} className="ssh-shelf">
+                            <section key={key} className={`ssh-shelf ssh-shelf--${key}`}>
                                 <button
                                     type="button"
                                     className="ssh-rest-toggle"
@@ -721,7 +731,7 @@ export default function SpaceHub() {
                     }
 
                     return (
-                    <section key={key} className="ssh-shelf">
+                    <section key={key} className={`ssh-shelf ssh-shelf--${key}`}>
                         <p className="ssh-shelf-label">
                             {label}
                             {hint ? <span className="ssh-shelf-hint"> — {hint}</span> : null}
@@ -775,11 +785,18 @@ export default function SpaceHub() {
                                         // isPublic is also what makes a picture clickable: only a
                                         // public space has a live route worth making interactive.
                                         const canGoLive = space.isPublic
-                                        if (!isLive && !canGoLive && !space.previewImageAssetId) return null
+                                        // A sandbox is never public, so it never gets a live
+                                        // preview or (short of the owner uploading one, which the
+                                        // card actions never offer a sandbox) a custom image — next
+                                        // to the Open Space's picture it read as broken rather than
+                                        // as "empty on purpose". Draw the absence instead: same
+                                        // frame, one muted line, no image request.
+                                        const isEmptySandbox = space.kind === 'sandbox' && !canGoLive && !space.previewImageAssetId
+                                        if (!isLive && !canGoLive && !space.previewImageAssetId && !isEmptySandbox) return null
                                         return (
                                             <div
-                                                className={`ssh-card-preview${isLive ? ' ssh-card-preview--live' : ''}`}
-                                                aria-hidden={!isLive && !canGoLive ? 'true' : undefined}
+                                                className={`ssh-card-preview${isLive ? ' ssh-card-preview--live' : ''}${isEmptySandbox ? ' ssh-card-preview--empty' : ''}`}
+                                                aria-hidden={!isLive && !canGoLive && !isEmptySandbox ? 'true' : undefined}
                                                 role={!isLive && canGoLive ? 'button' : undefined}
                                                 tabIndex={!isLive && canGoLive ? 0 : undefined}
                                                 aria-label={!isLive && canGoLive ? `Make ${space.label || space.id} interactive` : undefined}
@@ -798,6 +815,8 @@ export default function SpaceHub() {
                                                         alt=""
                                                         loading="lazy"
                                                     />
+                                                ) : isEmptySandbox ? (
+                                                    <p className="ssh-card-preview-empty-line">nothing in it yet — open it and put something in</p>
                                                 ) : (
                                                     <SpaceCardPreview spaceId={space.id} label={space.label || space.id} />
                                                 )}
@@ -1008,6 +1027,8 @@ export default function SpaceHub() {
                     </section>
                     )
                 })}
+                </div>
+                )}
 
                 {isAdmin && sandboxSummary && sandboxSummary.total > 0 && (
                     <div className="ssh-sandbox-row">
