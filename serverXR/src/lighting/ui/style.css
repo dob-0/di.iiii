@@ -253,6 +253,17 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .selrow { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid #ffffff08; cursor: pointer; }
 .selrow:hover { background: #ffffff08; }
 .selrow i { width: 12px; height: 12px; border-radius: 0; flex: none; border: 1px solid var(--line); }   /* an unlit fixture is a black chip — keep its edge */
+/* Find: flash one lamp so it can be picked out of a rig of identical ones. The row
+   pulses with it, so the desk visibly agrees while the operator is looking at the rig
+   rather than at the screen. */
+.selrow .findbtn {
+  margin-left: auto; flex: none; background: none; border: 1px solid var(--line);
+  color: var(--muted); font-size: 11px; padding: 1px 7px; border-radius: 0; cursor: pointer;
+}
+.selrow .findbtn:hover { color: var(--text); background: var(--pane2); border-color: var(--muted); }
+.selrow.finding { box-shadow: inset 2px 0 0 var(--accent); }
+.selrow.finding .findbtn { color: var(--accent); border-color: var(--accent); animation: findpulse 0.5s steps(1) infinite; }
+@keyframes findpulse { 0% { opacity: 1; } 50% { opacity: 0.35; } 100% { opacity: 1; } }
 .selrow .n { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 
 /* ---------------- limits ---------------- */
