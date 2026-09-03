@@ -5,6 +5,17 @@
 // to the legacy name conventions + sensible defaults (models float, flat media
 // sways) so existing content keeps the look it had before animation was data.
 
+// Deterministic per-entity phase offset so idle motion isn't synchronized.
+// Shared, because the arrival view (StudioViewport) and walk mode
+// (LiveProjectScene) animate the same room one click apart: a second seed
+// would restart every object's motion at the click.
+export function animationSeed(entityId) {
+    const id = String(entityId || '')
+    let hash = 0
+    for (let i = 0; i < id.length; i += 1) hash = (hash * 31 + id.charCodeAt(i)) % 1000
+    return (hash / 1000) * Math.PI * 2
+}
+
 export function resolveAnimation(entity) {
     const anim = entity?.components?.animation
     if (anim?.mode) {

@@ -7,9 +7,12 @@ import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
+import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransform.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../../project/viewport/timelinePlayback.js'
+import { animationSeed, applyAnimation, resolveAnimation } from '../../project/viewport/entityAnimation.js'
+import { applyProximity, resolveProximity } from '../../project/viewport/entityProximity.js'
 import {
     advanceTimelinePreview,
     getTimelinePreview,
@@ -48,20 +51,36 @@ function useSnapModifier() {
 // frozen on its authored pose.
 const LiveTimelineContext = createContext(false)
 
+// Pose driver for one entity group.
+//
 // Timeline preview: pose the group from the sampled timeline while the Scene
 // window's Timeline section is playing or scrubbing this entity, restore the
 // authored pose (and touched material opacities) the moment it stops. In a
 // published viewer there is no scrubber, so the render clock drives it instead.
-function useTimelinePreviewPose(entity, groupRef, isDraggingRef = null) {
+//
+// Idle motion (`components.animation`) and proximity dimming
+// (`components.proximity`) ride along, but ONLY in a published viewer
+// (LiveTimelineContext, i.e. the `playTimelines` surface). Walk mode has always
+// applied both, so a visitor's arrival frame was a still life of the room they
+// were about to see moving; the editor must stay still, because objects that
+// drift under the gizmo cannot be placed.
+function useEntityPose(entity, groupRef, isDraggingRef = null) {
     const playLive = useContext(LiveTimelineContext)
     const wasPosed = useRef(false)
     const opacityBackup = useRef(null)
     const timeline = entity.components?.timeline
+    const anim = useMemo(() => resolveAnimation(entity), [entity])
+    const prox = useMemo(() => resolveProximity(entity), [entity])
+    const seed = useMemo(() => animationSeed(entity.id), [entity.id])
+    const proxPoint = useRef(new THREE.Vector3())
     useFrame((state) => {
         const group = groupRef.current
         if (!group) return
         // Mid-drag the gizmo owns the group — neither pose nor restore may touch it.
         if (isDraggingRef?.current === true) return
+        // Dimming is independent of the pose, so it runs before the early
+        // return the timeline branch takes — same order as walk mode.
+        if (playLive && prox) applyProximity(group, prox, state.camera.position, proxPoint.current)
         // The scrubber wins when it is driving: an author scrubbing in a viewport
         // that also plays live must see the frame they asked for, not the clock's.
         const scrubbing = isTimelinePreviewPosed(entity.id)
@@ -82,6 +101,19 @@ function useTimelinePreviewPose(entity, groupRef, isDraggingRef = null) {
                 rotation: t.rotation || [0, 0, 0],
                 scale: t.scale || [1, 1, 1]
             })
+            wasPosed.current = true
+            return
+        }
+        // Authored keyframes replace idle motion, exactly as in walk mode.
+        if (playLive) {
+            const t = entity.components?.transform || {}
+            applyAnimation(
+                group,
+                anim,
+                t.position || [0, 0, 0],
+                t.rotation || [0, 0, 0],
+                state.clock.getElapsedTime() + seed
+            )
             wasPosed.current = true
             return
         }
@@ -203,7 +235,7 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
 
     const gizmoActive = isPrimary && editMode === 'edit' && gizmoVisible && !isLocked
     const snapping = useSnapModifier()
-    useTimelinePreviewPose(entity, groupRef, isDragging)
+    useEntityPose(entity, groupRef, isDragging)
 
     // Attach TransformControls to the group
     useEffect(() => {
@@ -284,7 +316,7 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
 
 function SceneEntityNode({ entity, childMap, assetMap, selectedIdSet, selectedEntityId, editMode, gizmoMode, gizmoAxis, gizmoVisible, overrideById, onSelectEntity, onToggleSelectEntity, onTransformCommit, orbitRef }) {
     const groupTimelineRef = useRef(null)
-    useTimelinePreviewPose(entity, groupTimelineRef)
+    useEntityPose(entity, groupTimelineRef)
     const t = entity.components?.transform || {}
     if (entity.type === 'group') {
         const children = childMap.get(entity.id) || []
@@ -438,16 +470,6 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
             )}
         </>
     )
-}
-
-function RenderSettingsEffect({ renderSettings }) {
-    const { gl } = useThree()
-    useEffect(() => {
-        gl.toneMapping = renderSettings?.toneMapping === 'none' ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping
-        gl.toneMappingExposure = renderSettings?.toneMappingExposure ?? 1
-        gl.shadowMap.enabled = renderSettings?.shadows !== false
-    }, [gl, renderSettings?.toneMapping, renderSettings?.toneMappingExposure, renderSettings?.shadows])
-    return null
 }
 
 // ACTION values from camera-controls (binary flags):
@@ -610,10 +632,28 @@ function StudioSceneContent({
     // Hide the drag-handle gizmo while the V1-parity modal transform is running.
     const gizmoVisibleEffective = gizmoVisible && !transformOp
 
+    // Same fog semantics as LiveProjectScene: colour falls back to the
+    // background, `enabled: false` switches it off.
+    const fog = document.worldState?.fog
+    const fogAuthored = Boolean(fog) && fog.enabled !== false
+    const fogColor = fog?.color || document.worldState?.backgroundColor || '#0a1118'
+    const fogNear = fog?.near ?? 8
+    const fogFar = fog?.far ?? 50
+
     return (
         <LiveTimelineContext.Provider value={playTimelines}>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
+            {/* Authored fog reached walk mode only. A room composed with
+                atmosphere therefore had none in the frame a visitor ARRIVES on
+                and gained it a click later — the same document, two answers.
+                Only an AUTHORED fog is honoured here: walk mode's implicit
+                8..50m default is composed for a camera standing inside the room
+                at eye height, and an orbit camera that frames a large scene from
+                40m outside would wash the whole arrival to the fog colour. */}
+            {fogAuthored && (
+                <fog attach="fog" args={[fogColor, fogNear, fogFar]} />
+            )}
             {document.worldState?.environmentAssetId && (
                 <WorldEnvironment
                     environmentAsset={assetMap?.get(document.worldState.environmentAssetId) || null}
@@ -634,13 +674,17 @@ function StudioSceneContent({
                 <AutoLookAround controlsRef={controlsRef} config={document.worldState.autoLook} />
             ) : null}
             <group position={isArMode ? AR_SCENE_POSITION : DEFAULT_SCENE_POSITION}>
+                {/* drei's Grid takes `cellColor`, not `color`: the prop name was
+                    wrong here, so the Studio's "Grid cell colour" picker wrote a
+                    field nothing read and every grid drew its cells in drei's
+                    default black. */}
                 {document.worldState?.gridVisible !== false && !isArMode && (
                     <Grid
                         position={[0, -(document.worldState?.gridOffset ?? 0.015), 0]}
                         args={[document.worldState?.gridSize || 24, document.worldState?.gridSize || 24]}
                         cellSize={document.worldState?.gridCellSize ?? 0.75}
                         cellThickness={document.worldState?.gridCellThickness ?? 0.3}
-                        color={document.worldState?.gridCellColor || '#2a6e73'}
+                        cellColor={document.worldState?.gridCellColor || '#2a6e73'}
                         sectionSize={document.worldState?.gridSectionSize ?? 6}
                         sectionThickness={document.worldState?.gridSectionThickness ?? 0.65}
                         sectionColor={document.worldState?.gridSectionColor || '#4df9ff'}

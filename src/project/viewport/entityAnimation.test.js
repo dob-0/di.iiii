@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveAnimation, applyAnimation } from './entityAnimation.js'
+import { animationSeed, resolveAnimation, applyAnimation } from './entityAnimation.js'
 
 const entity = (over = {}) => ({ id: 'e', type: 'box', name: '', ...over })
 
@@ -53,5 +53,25 @@ describe('applyAnimation', () => {
         applyAnimation(a, { mode: 'float' }, [0, 0, 0], [0, 0, 0], 1)
         applyAnimation(b, { mode: 'float' }, [0, 0, 0], [0, 0, 0], 5)
         expect(b.rotation.y).toBeGreaterThan(a.rotation.y)
+    })
+})
+
+// The arrival view and walk mode animate the same room one click apart. They
+// each used to compute the phase offset themselves; the seed is shared so the
+// click does not restart every object's motion from zero.
+describe('animationSeed', () => {
+    it('is deterministic and stays inside one full phase', () => {
+        expect(animationSeed('entity-42')).toBe(animationSeed('entity-42'))
+        const seed = animationSeed('entity-42')
+        expect(seed).toBeGreaterThanOrEqual(0)
+        expect(seed).toBeLessThan(Math.PI * 2)
+    })
+
+    it('separates two entities so their idle motion is not synchronised', () => {
+        expect(animationSeed('alpha')).not.toBe(animationSeed('beta'))
+    })
+
+    it('survives a missing id instead of throwing', () => {
+        expect(animationSeed(undefined)).toBe(0)
     })
 })
