@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ModeMark from './ModeMark.jsx'
 
@@ -80,5 +80,37 @@ describe('ModeMark', () => {
         getServerConfigMock.mockRejectedValue(new Error('offline'))
         render(<ModeMark />)
         expect(await screen.findByText('LOCAL')).toBeInTheDocument()
+    })
+
+    // The chip must never be the thing sitting on top of a page's own
+    // bottom-left controls — it introduces itself, then gets out of the way.
+    describe('the chip collapse', () => {
+        beforeEach(() => vi.useFakeTimers())
+        afterEach(() => vi.useRealTimers())
+
+        it('shows the label and hostname at mount, then collapses into the frame after 4s', async () => {
+            atHost('staging.di-studio.xyz')
+            const { container } = render(<ModeMark />)
+            // flush the getServerConfig microtask without advancing the collapse timer
+            await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+            expect(screen.getByText('STAGING')).toBeInTheDocument()
+            expect(screen.getByText('staging.di-studio.xyz')).toBeInTheDocument()
+            expect(container.querySelector('.mode-mark').getAttribute('data-collapsed')).toBe('false')
+
+            await act(async () => { await vi.advanceTimersByTimeAsync(4000) })
+
+            expect(container.querySelector('.mode-mark').getAttribute('data-collapsed')).toBe('true')
+            // The label is still in the DOM (CSS hides it) — assert on the
+            // attribute the CSS actually keys off, not on text removal.
+            expect(screen.getByText('STAGING')).toBeInTheDocument()
+        })
+
+        it('does not collapse early', async () => {
+            atHost('staging.di-studio.xyz')
+            const { container } = render(<ModeMark />)
+            await act(async () => { await vi.advanceTimersByTimeAsync(3999) })
+            expect(container.querySelector('.mode-mark').getAttribute('data-collapsed')).toBe('false')
+        })
     })
 })
