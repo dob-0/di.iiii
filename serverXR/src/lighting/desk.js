@@ -13,7 +13,10 @@ const {
 } = require('./engine');
 const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive } = require('./fx');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
-const { sanitizeLooks, sanitizeLayers, KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES } = require('./looks');
+const {
+  sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
+  KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, kindAllows,
+} = require('./looks');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
 // output loop, the HTTP routes and the interface files — and hands back `handle`, which
@@ -281,6 +284,15 @@ function createDesk(opts = {}) {
     try { fs.renameSync(SHOW, SHOW_PREV); } catch (e) { /* first save ever */ }
     fs.renameSync(tmp, SHOW);
   }
+  let nextLookId = 1;
+  let nextLayerId = 1;
+  // Add or replace by id, keeping the library's order — an edit must not make a look
+  // jump to the end of the list the operator is reading.
+  function putLook(look) {
+    const at = state.looks.findIndex((l) => l.id === look.id);
+    if (at >= 0) state.looks[at] = look; else state.looks.push(look);
+  }
+
   let stateVersion = 0;
   function save() {
     dirty = true;
@@ -680,8 +692,81 @@ function createDesk(opts = {}) {
       save(); json(res, { ok: true, count: looks.length });
     },
 
+    // Record: the stage as it stands right now becomes a look. This is the verb every
+    // desk in the audit has and calls Record or Store — with `kind` it stores only that
+    // lane, which is how a colour palette gets made without touching the heads.
+    'POST /api/looks/capture': (req, res, body) => {
+      const kind = LOOK_KINDS.includes(body.kind) ? body.kind : 'all';
+      const chosen = Array.isArray(body.fixtures) && body.fixtures.length
+        ? state.fixtures.filter((f) => body.fixtures.includes(f.id))
+        : state.fixtures;
+      if (!chosen.length) return json(res, { error: 'nothing patched to record' }, 400);
+      // Recorded through the mask, not merely rendered through it. A colour palette
+      // that quietly held pan and tilt would be a palette that lies about itself, and
+      // recalling it later would swing the heads for a reason nobody could see.
+      const values = {};
+      for (const f of chosen) {
+        const cell = {};
+        for (const [role, v] of Object.entries(f.values)) if (kindAllows(kind, role)) cell[role] = v;
+        if (Object.keys(cell).length) values[f.id] = cell;
+      }
+      const look = sanitizeLook({
+        id: body.id || `lk${Date.now().toString(36)}${(nextLookId++).toString(36)}`,
+        name: body.name || `Look ${state.looks.length + 1}`,
+        kind,
+        fixtures: chosen.map((f) => f.id),
+        steps: [{ values }],
+      });
+      if (!look) return json(res, { error: 'nothing in that lane to record' }, 400);
+      putLook(look);
+      save(); json(res, { ok: true, look });
+    },
+
+    // One look at a time. The replace-whole route is for a tool pushing a library; a
+    // person editing one look must not have to send the other five hundred, and two
+    // people on two phones must not overwrite each other.
+    'POST /api/looks/add': (req, res, body) => {
+      const look = sanitizeLook(body.look);
+      if (!look) return json(res, { error: 'a look needs an id and at least one step' }, 400);
+      putLook(look);
+      save(); json(res, { ok: true, look });
+    },
+    'POST /api/looks/remove': (req, res, body) => {
+      const before = state.looks.length;
+      state.looks = state.looks.filter((l) => l.id !== body.id);
+      if (state.looks.length === before) return json(res, { error: 'no such look' }, 404);
+      // A layer left pointing at nothing is emptied rather than deleted: the operator
+      // put that layer there, and its fader keeps its place in the stack.
+      let emptied = 0;
+      for (const layer of state.layers) if (layer.lookId === body.id) { layer.lookId = null; emptied++; }
+      save(); pushFrame(); json(res, { ok: true, emptied });
+    },
+
     // The stack. Bottom to top by priority; each layer contributes what its mask allows.
     'GET /api/layers': (req, res) => json(res, { layers: state.layers, merges: LAYER_MERGES }, 200, req),
+    'POST /api/layers/add': (req, res, body) => {
+      if (state.layers.length >= 64) return json(res, { error: 'that is as many layers as the stack holds' }, 400);
+      const top = state.layers.reduce((n, l) => Math.max(n, l.priority), 0);
+      const layer = sanitizeLayer({
+        id: `ly${Date.now().toString(36)}${(nextLayerId++).toString(36)}`,
+        name: body.name || `Layer ${state.layers.length + 1}`,
+        lookId: body.lookId || null,
+        // A new layer arrives at the top of the stack and OFF the rig: nothing an
+        // operator adds mid-show may change the room before they touch its fader.
+        level: body.level != null ? body.level : 0,
+        priority: top + 1,
+        mask: body.mask,
+        merge: body.merge,
+      });
+      state.layers.push(layer);
+      save(); json(res, { ok: true, layer });
+    },
+    'POST /api/layers/remove': (req, res, body) => {
+      const before = state.layers.length;
+      state.layers = state.layers.filter((l) => l.id !== body.id);
+      if (state.layers.length === before) return json(res, { error: 'no such layer' }, 404);
+      save(); pushFrame(); json(res, { ok: true });
+    },
     'POST /api/layers': (req, res, body) => {
       const layers = sanitizeLayers(body.layers);
       if (!layers) return json(res, { error: 'layers must be a list, each with an id' }, 400);

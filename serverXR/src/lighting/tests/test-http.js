@@ -1194,6 +1194,42 @@ check('looks and layers survive a reload of the show file', async () => {
   await POST('/api/looks', { looks: [] });
 });
 
+check('recording the stage makes a look, and a kind records only that lane', async () => {
+  const f = await patch('ptdrgb', { address: 420 });
+  await POST('/api/fixture', { id: f.id, values: { dimmer: 200, r: 10, g: 20, b: 30, pan: 77 } });
+  const { body: all } = await POST('/api/looks/capture', { name: 'Whole stage', fixtures: [f.id] });
+  assert.ok(all.look.steps[0].values[f.id].pan === 77 && all.look.steps[0].values[f.id].r === 10);
+  const { body: col } = await POST('/api/looks/capture', { name: 'Just colour', kind: 'colour', fixtures: [f.id] });
+  assert.deepStrictEqual(Object.keys(col.look.steps[0].values[f.id]).sort(), ['b', 'g', 'r'],
+    'a colour palette holds colour and nothing else');
+  await POST('/api/looks/remove', { id: all.look.id });
+  await POST('/api/looks/remove', { id: col.look.id });
+  await POST('/api/fixtures/remove', { id: f.id });
+});
+
+check('a new layer arrives on top and OFF, so nothing changes in the room', async () => {
+  await POST('/api/looks', { looks: [{ id: 'x', steps: [{ values: { '*': { dimmer: 255 } } }] }] });
+  const { body: first } = await POST('/api/layers/add', { name: 'One', lookId: 'x' });
+  assert.strictEqual(first.layer.level, 0, 'a layer added mid-show cannot light anything by itself');
+  const { body: second } = await POST('/api/layers/add', { name: 'Two' });
+  assert.ok(second.layer.priority > first.layer.priority, 'and it lands above what is already there');
+  const { body: gone } = await POST('/api/layers/remove', { id: first.layer.id });
+  assert.ok(gone.ok);
+  assert.strictEqual((await POST('/api/layers/remove', { id: first.layer.id })).status, 404);
+  await POST('/api/layers', { layers: [] });
+  await POST('/api/looks', { looks: [] });
+});
+
+check('deleting a look empties the layers that named it rather than deleting them', async () => {
+  await POST('/api/looks', { looks: [{ id: 'doomed', steps: [{ values: { '*': { r: 1 } } }] }] });
+  await POST('/api/layers', { layers: [{ id: 'holder', lookId: 'doomed', level: 1 }] });
+  const { body } = await POST('/api/looks/remove', { id: 'doomed' });
+  assert.strictEqual(body.emptied, 1);
+  const { body: state } = await GET('/api/layers');
+  assert.strictEqual(state.layers[0].lookId, null, 'the fader keeps its place in the stack');
+  await POST('/api/layers', { layers: [] });
+});
+
 // ---- harness ----------------------------------------------------------------
 
 async function main() {
