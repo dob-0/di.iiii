@@ -47,3 +47,37 @@ you can't"*.
 Prod writes are refused for a session, so the owner ran the two prod lines from
 his own terminal; staging and local went through from here. Walked on all three
 as a plain visitor, desktop and phone.
+
+### The path, later the same night
+
+The other half of the ask: *"a landing inside where people after scanning the QR
+start a path, where staged things teach and help you create, and the final point
+is seeing all the other spaces — a circle of working, all in eyes."* He picked
+direction A from three sketches: the landing is not a page in front of the room,
+it IS the room.
+
+- Three stations lie on the floor between the entry and the wall, each one
+  sentence at the moment it is true. They lie flat like the lectern for the same
+  reason: text at eye height in front of the walls reads through the photographs.
+- The door out stands BEHIND the visitor, facing back in. A door between them and
+  the wall reads as a picture frame with somebody's cat in it, and one at the side
+  crowds the arrival — but the moment you want the way on is the moment you turn
+  round, and then it is the only thing there. Square-cornered frame (#336), the
+  room's own blue.
+- It names the **space**, not the project: `portalHref` builds `/main/<project>`
+  from a projectId and plain `/main` without one, and the front room is being
+  rebuilt in another session — a door naming today's project id would break the
+  day that lands.
+- Everything the path is made of is `placement.pinned`. It is the building, not
+  the exhibition, and the build zones must never hang it.
+- The walkable floor now stops 2.5 units short of the back wall. At one unit a
+  walker's nose is pressed against somebody's photograph and the room disappears —
+  seen in a scripted walk, not guessed.
+
+**How to drive a walk in a test:** do NOT click to take pointer lock. A locked
+walker reads `movementX`, which a driven browser cannot fake, and every frame
+comes back looking at the sky. Unlocked drag-look reads clientX/clientY instead
+("the visible cursor's clientX/clientY is the one delta source that cannot lie",
+LiveProjectScene), so drive the whole journey by dragging. When a turn still will
+not verify, aim the entry camera at the thing on LOCAL, look, and put the camera
+back — that is how the door was confirmed.
