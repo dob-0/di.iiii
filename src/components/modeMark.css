@@ -17,10 +17,23 @@
     opacity: 0.45;
 }
 
+/* Collapsed state's whole footprint: a brighter, thicker stretch of the same
+   edge line, sitting exactly where the chip used to. Hidden until collapse. */
+.mode-mark-corner {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 28px;
+    height: 3px;
+    background: var(--mode-color);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
 .mode-mark-chip {
     position: absolute;
-    left: 10px;
-    bottom: 10px;
+    left: calc(10px + env(safe-area-inset-left, 0px));
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
     display: flex;
     align-items: center;
     gap: 7px;
@@ -34,6 +47,19 @@
     line-height: 1;
     white-space: nowrap;
     backdrop-filter: blur(6px);
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+/* The chip introduces where you are; after CHIP_VISIBLE_MS the frame alone
+   carries it — the whole point is that nothing is ever left sitting on top
+   of a page's own bottom-left controls. */
+.mode-mark[data-collapsed="true"] .mode-mark-chip {
+    opacity: 0;
+}
+
+.mode-mark[data-collapsed="true"] .mode-mark-corner {
+    opacity: 1;
 }
 
 .mode-mark-dot {
@@ -53,5 +79,13 @@
 @media (max-width: 560px) {
     .mode-mark-host {
         display: none;
+    }
+}
+
+/* Same collapse, same delay — just no fade to sit through. */
+@media (prefers-reduced-motion: reduce) {
+    .mode-mark-chip,
+    .mode-mark-corner {
+        transition: none;
     }
 }
