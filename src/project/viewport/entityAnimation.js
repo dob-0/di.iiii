@@ -5,6 +5,33 @@
 // to the legacy name conventions + sensible defaults (models float, flat media
 // sways) so existing content keeps the look it had before animation was data.
 
+// Deterministic per-entity phase offset so idle motion isn't synchronized.
+// Shared, because the arrival view (StudioViewport) and walk mode
+// (LiveProjectScene) animate the same room one click apart: a second seed
+// would restart every object's motion at the click.
+export function animationSeed(entityId) {
+    const id = String(entityId || '')
+    let hash = 0
+    for (let i = 0; i < id.length; i += 1) hash = (hash * 31 + id.charCodeAt(i)) % 1000
+    return (hash / 1000) * Math.PI * 2
+}
+
+// The AUTHORED animation only, or null — no fallback, ever.
+//
+// The arrival view (StudioViewport in orbit) uses this rather than
+// `resolveAnimation` below. The fallback exists so that scenes imported before
+// animation was data keep the drift they were built with, and it has run in
+// walk mode for as long as walk mode has existed. Reaching it from the arrival
+// frame would be a different thing entirely: it would set WCC's sculpture, the
+// Dilijan camp room and every other live room drifting on the first frame a
+// stranger sees, without any of their authors having asked for motion. So
+// arrival shows motion someone chose, and nothing else.
+export function authoredAnimation(entity) {
+    const anim = entity?.components?.animation
+    if (!anim?.mode || anim.mode === 'static') return null
+    return { mode: anim.mode, speed: anim.speed ?? 1, amplitude: anim.amplitude ?? 1 }
+}
+
 export function resolveAnimation(entity) {
     const anim = entity?.components?.animation
     if (anim?.mode) {
