@@ -794,6 +794,35 @@ check('a layer never escapes the master or the blackout', () => {
   assert.strictEqual(e.render(state, 0).get(0)[0], 0, 'and the panic button still kills it');
 });
 
+// ---- fan ---------------------------------------------------------------------
+
+const { fanValues } = require('../fan');
+
+check('a fan of one is just the value, and a fan of none is nothing', () => {
+  assert.deepStrictEqual(fanValues(1, 30, 200), [30]);
+  assert.deepStrictEqual(fanValues(0, 0, 255), []);
+});
+
+check('every fan style keeps both ends inside 0..255 and hits its extremes', () => {
+  for (const style of ['line', 'reverse', 'centre', 'mirror', 'repeat', 'cluster', 'random']) {
+    const out = fanValues(9, 0, 255, { style, groups: 3, seed: 5 });
+    assert.strictEqual(out.length, 9, style);
+    assert.ok(out.every((v) => v >= 0 && v <= 255 && Number.isInteger(v)), style + ' stayed in range');
+    assert.ok(out.includes(0) && out.includes(255), style + ' reaches both ends');
+  }
+});
+
+check('mirror is symmetrical about the middle of the selection', () => {
+  const out = fanValues(8, 0, 255, { style: 'mirror' });
+  for (let i = 0; i < 4; i++) assert.strictEqual(out[i], out[7 - i], 'pair ' + i);
+});
+
+check('random is reproducible from its seed, and a different seed is a different rig', () => {
+  const a = fanValues(8, 0, 255, { style: 'random', seed: 7 });
+  assert.deepStrictEqual(a, fanValues(8, 0, 255, { style: 'random', seed: 7 }));
+  assert.notDeepStrictEqual(a, fanValues(8, 0, 255, { style: 'random', seed: 8 }));
+});
+
 // ---- FX engine --------------------------------------------------------------
 // Nothing in fx.js reads the clock, so every one of these asserts an exact millisecond
 // rather than watching the rig for a while and believing what it saw.

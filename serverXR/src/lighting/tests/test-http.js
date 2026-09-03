@@ -1230,6 +1230,38 @@ check('deleting a look empties the layers that named it rather than deleting the
   await POST('/api/layers', { layers: [] });
 });
 
+check('fan lays related values across the selection, in the order it was given', async () => {
+  const ids = [];
+  for (let i = 0; i < 4; i++) ids.push((await patch('drgb', { address: 440 + i * 4 })).id);
+  const { body } = await POST('/api/fan', { fixtures: ids, role: 'dimmer', from: 0, to: 255 });
+  assert.deepStrictEqual(body.values, [0, 85, 170, 255]);
+  await settle();
+  assert.strictEqual(await wire(0, 440), 0);
+  assert.strictEqual(await wire(0, 452), 255, 'the last of the selection got the far end');
+  // The same fixtures in the other order are a different look — order is the input.
+  await POST('/api/fan', { fixtures: [...ids].reverse(), role: 'dimmer', from: 0, to: 255 });
+  await settle();
+  assert.strictEqual(await wire(0, 440), 255);
+  for (const id of ids) await POST('/api/fixtures/remove', { id });
+});
+
+check('fan leaves alone a fixture that has no such attribute', async () => {
+  const wash = await patch('drgb', { address: 460 });
+  const head = await patch('ptdrgb', { address: 470 });
+  const { body } = await POST('/api/fan', { fixtures: [wash.id, head.id], role: 'tilt', from: 0, to: 255 });
+  assert.strictEqual(body.fixtures, 2);
+  await settle();
+  assert.strictEqual(await wire(0, 471), 255, 'the head tilted');
+  assert.strictEqual(await wire(0, 460), 255, 'and the wash kept its dimmer, not a tilt it does not have');
+  await POST('/api/fixtures/remove', { ids: [wash.id, head.id] });
+});
+
+check('fan refuses without an attribute, and says the styles it knows', async () => {
+  assert.strictEqual((await POST('/api/fan', { from: 0, to: 255 })).status, 400);
+  const { body } = await GET('/api/state');
+  assert.ok(body.fanStyles.includes('mirror') && body.fanStyles.includes('random'));
+});
+
 // ---- harness ----------------------------------------------------------------
 
 async function main() {

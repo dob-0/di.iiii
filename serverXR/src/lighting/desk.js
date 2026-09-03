@@ -13,6 +13,7 @@ const {
 } = require('./engine');
 const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive } = require('./fx');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
+const { STYLES: FAN_STYLES, fanValues } = require('./fan');
 const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, kindAllows,
@@ -630,6 +631,7 @@ function createDesk(opts = {}) {
       // fx.js appears on the page without anyone remembering to add it twice.
       fxModes: FX_MODES,
       fxSpatial: FX_SPATIAL,
+      fanStyles: FAN_STYLES,
       lfoWaves: LFO_WAVES,
       audioModes: AUDIO_MODES,
       // Live audio input is non-enumerable on `state` (so it never persists); the page
@@ -690,6 +692,36 @@ function createDesk(opts = {}) {
       // that just vanished simply stops contributing on the next tick, which is the
       // honest behaviour — nothing snaps and nothing is quietly held.
       save(); json(res, { ok: true, count: looks.length });
+    },
+
+    // Fan: one gesture, N related values across the selection, in the order the
+    // interface sent them. The output is plain static values on the fixtures — nothing
+    // keeps running afterwards — so it records into a look like anything else.
+    'POST /api/fan': (req, res, body) => {
+      const role = typeof body.role === 'string' ? body.role : '';
+      if (!role) return json(res, { error: 'name the attribute to fan' }, 400);
+      const ids = Array.isArray(body.fixtures) && body.fixtures.length ? body.fixtures : state.fixtures.map((f) => f.id);
+      // Selection ORDER is the whole input: a fan across the rig left to right and the
+      // same fan in patch order are different looks, and the caller decides which.
+      const chosen = ids.map((id) => state.fixtures.find((f) => f.id === id)).filter(Boolean);
+      if (!chosen.length) return json(res, { error: 'no such fixtures' }, 404);
+      const style = FAN_STYLES.includes(body.style) ? body.style : 'line';
+      const from = Math.max(0, Math.min(255, Math.round(+body.from || 0)));
+      const to = Math.max(0, Math.min(255, Math.round(body.to == null ? 255 : +body.to)));
+      const values = fanValues(chosen.length, from, to, {
+        style,
+        groups: Math.max(2, Math.min(64, Math.round(+body.groups || 2))),
+        seed: Math.max(0, Math.min(32767, Math.round(+body.seed || 1))),
+      });
+      chosen.forEach((f, i) => {
+        // Only a role the fixture actually has: fanning tilt across a rig that is half
+        // washes must move the heads and leave the washes alone, not invent a channel.
+        const profile = PROFILES[f.profile] || PROFILES.rgb;
+        if (profile.channels.includes(role)) f.values[role] = values[i];
+      });
+      state.activeScene = null;
+      engine.cancelFade(); save(); pushFrame();
+      json(res, { ok: true, style, values, fixtures: chosen.length });
     },
 
     // Record: the stage as it stands right now becomes a look. This is the verb every
