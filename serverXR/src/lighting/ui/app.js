@@ -2892,10 +2892,20 @@ function buildOutput() {
   // actually using — a typo'd address quietly turned the desk into a broadcaster while
   // both status lines kept claiming unicast.
   const unicastEmpty = S.output.mode === 'unicast' && !S.output.targets.length;
-  $('#outSummary').textContent = serial
+  const on = !!S.output.enabled;
+  // The switch says which state it is IN, not which state pressing it would reach: an
+  // operator glancing at this in the dark is asking "is the rig live?", not "what will
+  // this button do?". The line beside it says the consequence in words.
+  const btn = $('#outEnable');
+  btn.textContent = on ? 'Output is ON' : 'Output is OFF';
+  btn.classList.toggle('on', on);
+  $('#outEnableWhat').textContent = on
+    ? 'frames are leaving this machine'
+    : 'nothing leaves this machine — the desk runs, the rig stays dark';
+  $('#outSummary').textContent = (on ? '' : 'OFF · ') + (serial
     ? `${S.output.serialPort}${ser && ser.connected ? '' : ' — not open'}`
     : unicastEmpty ? 'unicast with no target — sending broadcast'
-    : `${S.output.mode}${S.output.mode === 'unicast' ? ' → ' + S.output.targets.join(', ') : ''} · ${n} node${n === 1 ? '' : 's'}`;
+    : `${S.output.mode}${S.output.mode === 'unicast' ? ' → ' + S.output.targets.join(', ') : ''} · ${n} node${n === 1 ? '' : 's'}`);
   // Which pane is showing must ALWAYS follow the server, guard or no guard. This used to
   // sit below the focus check, and because clicking a driver radio leaves that radio
   // focused, every later poll bailed out before the swap: the show moved onto the serial
@@ -3850,7 +3860,15 @@ function renderAll(busy) {
   // symptom was a frame total two clicks deep inside a collapsed panel. A rate that has
   // gone quiet is the signal, so this shows a rate and turns red when it stalls.
   const wp = $('#wirePill');
-  if (S.output.driver === 'enttec' && st.serial) {
+  if (!S.output.enabled) {
+    // The loudest thing this pill can say. A desk that is patched, cued and running
+    // while the wire switch is off looks completely healthy from every other reading on
+    // the page — and inside di.iiii that is the state it starts in.
+    wp.hidden = false;
+    wp.classList.add('stale');
+    wp.textContent = 'output off';
+    wp.title = 'Nothing is leaving this machine. Open Output and switch it on.';
+  } else if (S.output.driver === 'enttec' && st.serial) {
     const s = st.serial;
     const stalled = !s.connected || s.ageMs == null || s.ageMs > 2000;
     wp.hidden = false;
@@ -3860,7 +3878,15 @@ function renderAll(busy) {
       : `${s.port} live`;
     wp.title = s.lastError || `${s.packetsSent.toLocaleString()} frames sent`;
   } else {
-    wp.hidden = true;
+    // Art-Net and sACN had no liveness reading at all — the only confirmation frames
+    // were going out was the rig itself, and a house node that ignores ArtPoll (most of
+    // them) left even the node count at zero. The frame counter is the honest signal.
+    const sent = st.packetsSent || 0;
+    wp.hidden = false;
+    wp.classList.toggle('stale', !sent);
+    wp.textContent = sent ? `${S.output.driver === 'sacn' ? 'sACN' : 'Art-Net'} · ${sent.toLocaleString()} frames`
+      : `${S.output.driver === 'sacn' ? 'sACN' : 'Art-Net'} · nothing sent yet`;
+    wp.title = st.lastError || (sent ? 'frames are leaving this machine' : 'patch a fixture — an empty rig has no universe to send');
   }
 
   const nextSig = S.fixtures.map((f) => `${f.id}${f.profile}${f.name}${f.universe}${f.address}${f.index}`).join('|')
@@ -4796,6 +4822,26 @@ $('#saveOutput').addEventListener('click', () => {
     mode: ($$('input[name=mode]').find((r) => r.checked) || {}).value || 'broadcast',
     targets: entries,
   }).then(pullState);
+});
+
+// The wire switch. Turning output ON is the one action in this panel that can change a
+// room, so it is confirmed the first time it is pressed in a session — but only the
+// first: an operator who has decided to go live should not be asked again all night.
+let outArmed = false;
+$('#outEnable').addEventListener('click', async () => {
+  const on = !!(S && S.output.enabled);
+  if (!on && !outArmed) {
+    outArmed = true;
+    $('#outEnable').textContent = 'Press again to go live';
+    $('#outEnableWhat').textContent = 'this will start sending DMX to whatever is listening';
+    setTimeout(() => { outArmed = false; buildOutput(); }, 4000);
+    return;
+  }
+  outArmed = false;
+  const res = await post('api/output', { enabled: !on });
+  await pullState();
+  if (res && res.error) return say(res.error, true);
+  say(!on ? 'output ON — the rig is live' : 'output OFF — nothing is leaving this machine');
 });
 
 // Switching driver takes effect immediately rather than behind an Apply button: it is a
