@@ -1,5 +1,5 @@
 // Compose the Open Jam room from what is inside it.
-// Usage: node compose-open-jam.mjs <apiBase> <token> <wall|floor> [--style=night|paper|blue] [--apply]
+// Usage: node compose-open-jam.mjs <apiBase> <token> <wall|floor> [--style=night|paper|blueprint|blue] [--apply]
 // Styles (wall only) set the ground, grid, fog, light and text colours; the objects stay the same.
 const args = process.argv.slice(2)
 const [base, token, layout = 'wall'] = args
@@ -20,6 +20,9 @@ const STYLES = {
   // a zine: paper ground, faint grid, ink text
   paper: { background: '#efece4', sign: '#ffffff', grid: { cell: '#d9d4c8', section: '#c4bdae' }, fog: { near: 30, far: 90, color: '#efece4', enabled: true }, ambient: 0.95, sun: 0.5,
     colors: { headline: '#141414', like: '#5a5a5a', scan: '#b5411d', howto: '#141414' } },
+  // paper + blue: the zine's light ground, the front room's blue drawn on it
+  blueprint: { background: '#eceef6', sign: '#ffffff', grid: { cell: '#c8cfe6', section: '#2a3fb8' }, fog: { near: 34, far: 110, color: '#eceef6', enabled: true }, ambient: 0.9, sun: 0.6,
+    colors: { headline: '#0000a0', like: '#5f6784', scan: '#0000a0', howto: '#15182b' } },
   // the front room's own world: deep blue, cyan grid
   blue: { background: '#0000a0', sign: '#000070', grid: { cell: '#2a6e73', section: '#4df9ff' }, fog: { near: 30, far: 120, color: null, enabled: true }, ambient: 0.5, sun: 1.5,
     colors: { headline: '#4df9ff', like: '#cfd8ff', scan: '#ffffff', howto: '#ffffff' } },
