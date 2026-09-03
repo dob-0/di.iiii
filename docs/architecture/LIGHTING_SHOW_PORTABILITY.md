@@ -119,11 +119,34 @@ says everyone else gets wrong by going quietly dead.
   the local serverXR; syncing is something you choose, later, when there is a network.
 - **The club's desk.** 588 scenes on a live rig. It runs standalone and must keep running
   standalone, on the same file, through this whole change. The migration is opt-in there.
-- **The sync engine.** A new top-level document key has to survive `space-sync`, the tier
-  push and the backup repo. This is the one place I cannot promise from reading alone: it
-  needs checking against `scripts/space-sync.mjs` and the sync routes before any schema
-  lands, because a key that is silently dropped on push would lose a show quietly, which
-  is the exact failure this document is trying to end.
+- **The sync engine — answered, by experiment, and the answer is a warning.** A new
+  top-level document key does **not** survive today. A document written with a key the
+  schema does not name comes back without it: the write returns 200, the version
+  increments, and the data is gone. Silently, which is the exact failure this document
+  exists to end.
+
+  The cause is not the sync engine. `normalizeProjectDocument`
+  (`src/shared/projectSchema.js:1122`, mirrored in `shared/projectSchema.cjs`) rebuilds
+  the document as a literal naming exactly fifteen keys and never spreads the source, so
+  anything else falls on the floor. `normalizeMappingState` does the same field-by-field
+  rebuild, so nesting inside the mapping does not help either. It is stripped twice — once
+  on write (`serverXR/src/routes/projectRoutes.js`) and again on read
+  (`serverXR/src/projectStore.js`), which also rewrites the file on disk when it differs.
+  `scripts/space-sync.mjs` would have carried the key — it spreads the whole fetched
+  document — but the server removed it long before the sync saw it. Note for anyone
+  verifying this later: `--dry-run` exits before the document step, so a dry run can never
+  show this failure.
+
+  There is one key that *does* survive an unknown field — `presentationState`, because its
+  normaliser spreads the source before applying the fields it knows. **That is a hiding
+  place, not a contract.** The next person to tighten that normaliser would take someone's
+  show with them, and the same spread-then-filter shape is already the cause of a known
+  trap elsewhere (a code file entry using `path` instead of `name` is dropped in silence).
+
+  So: the show must be an **explicitly normalised field**, named in both schema copies in
+  lockstep, guarded by `serverXR/src/schemaSync.test.js`, with a round-trip test that
+  writes, normalises, reads and normalises again and asserts every field survives. Once
+  the field is named, the sync push carries it.
 
 ## 7. Order of work, once someone says yes
 
@@ -146,3 +169,15 @@ same machine, which today it does not.
   venue might want the room's own looks kept locally and only the piece's travelling.
 - **Does the MIDI map travel?** The mapping is authored, but the controller is a fact
   about the desk in the room, like the rig.
+- **May a show reference a look in another space** — a house library the venue keeps —
+  **or must it always carry its own copy?** The one-copy rule says carry its own, and a
+  reference across spaces is a link that can break in a room with no network. Worth asking
+  anyway, because a venue with a standing rig genuinely does want one library.
+- **What does a visitor to a published space see** when the document carries a show they
+  cannot run? The answer should be *nothing at all* — not an empty desk, not a dead
+  button. A show is for whoever is running the room.
+- **What is it called, and does it stand alone?** There is already a `showState` on the
+  document, holding one number: the show's clock epoch, so every window derives the same
+  elapsed time. A light show could fold in beside it or take its own key. Folding in makes
+  "the show" one thing; standing apart keeps a four-byte clock from sharing a home with a
+  megabyte of looks.
