@@ -3,10 +3,11 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
-import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
+import { buildWikiPath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildSpacesPath } from '../studio/utils/studioRouting.js'
 import { flyInside, REST_POSE } from './enterFlight.js'
+import { crackAway } from './crackTransition.js'
 import PageDebris from './PageDebris.jsx'
 import { buildJamScenePath } from '../project/routing/jamRouting.js'
 
@@ -215,13 +216,6 @@ export default function LandingPage() {
     // the orbit view once you'd moved was a full Exit + Enter Space round
     // trip. This lets you flip between them without leaving "entered" at all.
     const [viewMode, setViewMode] = useState(false)
-    // di.iiii's "Main" space (set from /admin, or inline in Studio Hub's
-    // per-space "Main" badge) is the same space that already represents the
-    // di.iiii elsewhere — reuse it here instead of a second, parallel
-    // landing-only setting. When set, "Enter Space" opens that real,
-    // populated space instead of the decorative walkable void this page's
-    // own background renders.
-    const [mainSpaceId, setMainSpaceId] = useState(null)
     // True only when the server declares itself a local install AND auth is
     // off — the pair that makes "sign in to edit" a false sentence. Read from
     // /api/config, which this page already fetches; deliberately NOT from
@@ -248,7 +242,6 @@ export default function LandingPage() {
         let cancelled = false
         getServerConfig().then((cfg) => {
             if (cancelled) return
-            setMainSpaceId(cfg?.defaultSpaceId || null)
             setIsLocalInstall(Boolean(cfg?.local) && cfg?.requireAuth === false)
         }).catch(() => {})
         return () => { cancelled = true }
@@ -314,13 +307,25 @@ export default function LandingPage() {
             .catch(() => { window.clearTimeout(timeout); once() })
     }
 
-    const handleEnterSpace = () => {
-        if (mainSpaceId) {
-            window.location.href = buildAppSpacePath(mainSpaceId)
-            return
-        }
-        setEntered(true)
+    // The route below "Step inside": a real page (Spaces is a different
+    // surface, not a camera move within this one), so it gets the inverse
+    // of the glide — a crack, in the eyes, then the real navigation. A
+    // modified click still has to behave like a plain link.
+    const cancelCrackRef = useRef(null)
+    const openSpaces = (event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
+        event.preventDefault()
+        if (cancelCrackRef.current) return
+        cancelCrackRef.current = crackAway({
+            reducedMotion: typeof window !== 'undefined'
+                && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+            onDone: () => {
+                cancelCrackRef.current = null
+                window.location.href = studioHref
+            }
+        })
     }
+
     // The decorative WebGL background is fixed and full-screen; once the hero
     // scrolls out of view it's hidden behind opaque sections anyway. Stop
     // compositing/rendering it then so it doesn't stutter page scroll.
@@ -425,36 +430,48 @@ export default function LandingPage() {
                         margin has no vertical component, so a row that wraps on
                         a phone touches the one above it with zero space and the
                         two read as one broken box. */}
-                    <Stack className="lp-hero-cta-row" direction="row" sx={{ pt: 1, pb: 2, gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {/* Three routes, named the way the owner names them, in
+                        order of weight — not four peer buttons plus a chip
+                        row that left "the open space" impossible to find.
+                        Spaces is the 2nd main part, so it carries the accent
+                        wash even at rest instead of matching Open Jam's
+                        plain ghost treatment. "Look around" is folded in:
+                        it was only ever a stand-in for a real main space, and
+                        Spaces is that destination now. */}
+                    <Stack className="lp-hero-cta-row" direction="row" sx={{ pt: 1, pb: 1, gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
                         <Button className="landing-cta-primary" variant="contained" size="large" href={studioHref} onClick={openDoor}>
                             Step inside
                         </Button>
-                        {!mainSpaceId && (
-                            <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
-                                Look around
-                            </Button>
-                        )}
+                        <Button className="landing-cta-spaces" variant="outlined" size="large" href={studioHref} onClick={openSpaces}>
+                            The Spaces
+                        </Button>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildJamScenePath()}>
+                            Open Jam
+                        </Button>
                     </Stack>
 
                     <Typography className="lp-cta-sub">
                         {isLocalInstall ? LOCAL_CTA_SUB : 'no account, nothing to install — for you or for whoever opens your link.'}
-                        <br />
-                        <a href={studioHref}>Already have spaces? Open Studio →</a>
                     </Typography>
 
-                    <Stack className="lp-hero-space-row" direction="row" sx={{ pb: 2, gap: '10px 12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                        {(isLocalInstall ? [] : FEATURED_SPACES).map((space) => (
-                            <Button
-                                key={space.id}
-                                className={`landing-cta-ghost ${space.className}`}
-                                variant="outlined"
-                                size="small"
-                                href={space.href}
-                            >
-                                {space.label}
-                            </Button>
-                        ))}
-                    </Stack>
+                    {!isLocalInstall && (
+                        <>
+                            <Typography className="lp-hero-featured-label">Featured exhibitions</Typography>
+                            <Stack className="lp-hero-space-row" direction="row" sx={{ pb: 2, gap: '10px 12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                {FEATURED_SPACES.map((space) => (
+                                    <Button
+                                        key={space.id}
+                                        className={`landing-cta-ghost ${space.className}`}
+                                        variant="outlined"
+                                        size="small"
+                                        href={space.href}
+                                    >
+                                        {space.label}
+                                    </Button>
+                                ))}
+                            </Stack>
+                        </>
+                    )}
 
                     <Box component="a" className="lp-scroll-hint" href="#what" aria-label="Scroll to learn more">
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
