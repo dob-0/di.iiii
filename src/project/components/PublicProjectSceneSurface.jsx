@@ -184,7 +184,14 @@ export default function PublicProjectSceneSurface({
                     // Timeline scrubber was being dragged, so a published scene
                     // sat frozen on its authored pose forever -- invisibly, since
                     // it rendered perfectly and only walk mode animated.
-                    playTimelines
+                    // Gated on !isPreview: a Studio space-card thumbnail
+                    // (SpaceHub.jsx's SpaceCardPreview, `?preview=1`) is a
+                    // static picture by design -- a wall of cards each running
+                    // authored animation, fog and RenderSettingsEffect at once
+                    // is the laptop-killer the picture/live split exists to
+                    // avoid. Only the one card a visitor clicked into "live"
+                    // (SpaceCardLive, no ?preview=1) gets timelines playing.
+                    playTimelines={!isPreview}
                 />
             )}
 
