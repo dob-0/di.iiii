@@ -15,6 +15,7 @@ const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive } = require(
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
 const { STYLES: FAN_STYLES, fanValues } = require('./fan');
 const library = require('./library');
+const { SACN } = require('./sacn');
 const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, kindAllows,
@@ -63,6 +64,10 @@ function createDesk(opts = {}) {
     // waiting to be typed because it is the one address that is always the same — a show
     // with no defaults asks you to remember an IP in the dark. Remove it and it stays gone.
     output: { driver: 'artnet', serialPort: DEFAULT_PORT, mode: 'broadcast', targets: [], enabled: true,
+      // sACN's priority, 0..200. Two senders on one universe stop being a coin toss:
+      // the higher number wins and the receiver ignores the other, which is the thing
+      // Art-Net cannot express at all.
+      priority: 100,
       manual: [{ ip: '192.168.4.1', name: 'Light controller' }], port: 6454, refreshHz: 40 },
     // The effects engine. The defaults live in fx.js next to the maths that reads them, so
     // there is one answer to "what is depth when nobody has set it" rather than two.
@@ -265,6 +270,18 @@ function createDesk(opts = {}) {
   }
   enttecDriver();
 
+  // sACN, built on first use like the serial widget, and closed when the driver moves
+  // away from it: a socket nobody is sending on has no business being open.
+  let sacn = null;
+  function sacnDriver() {
+    if (state.output.driver !== 'sacn') { if (sacn) { sacn.close(); sacn = null; } return null; }
+    const targets = state.output.mode === 'unicast' ? state.output.targets : [];
+    const priority = state.output.priority;
+    if (sacn && (sacn.priority !== priority || sacn.targets.join() !== targets.join())) { sacn.close(); sacn = null; }
+    if (!sacn) sacn = new SACN({ offline, targets, priority, sourceName: 'di.iiii lighting desk' });
+    return sacn;
+  }
+
   // The show file is written whole, to a temp file, then renamed over the old one, with
   // the previous good copy kept beside it. It used to be truncated in place: a crash or a
   // power cut mid-write left half a file, and the next boot was an EMPTY desk on the wrong
@@ -358,8 +375,23 @@ function createDesk(opts = {}) {
     stats.ticks++;
     // Output off: the engine still renders (the stage view is live, scenes still work),
     // nothing leaves the machine and the serial port is left alone for other programs.
-    if (!state.output.enabled) { if (enttec) { enttec.close(); enttec = null; } return; }
+    if (!state.output.enabled) {
+      if (enttec) { enttec.close(); enttec = null; }
+      if (sacn) { sacn.close(); sacn = null; }
+      return;
+    }
     const fp = footprints();
+    const stream = sacnDriver();
+    if (stream) {
+      // sACN carries a whole universe or nothing: the packet fixes 512 slots, so there
+      // is no footprint to trim and no empty-desk special case — the universe goes out,
+      // zeros and all, which is what stops a node's own timeout firing and its fixtures
+      // falling into their built-in programs.
+      for (const [universe, buf] of frames) stream.send(universe, buf);
+      if (!frames.size) stream.send(0, Buffer.alloc(512));
+      stats.lastSend = Date.now();
+      return;
+    }
     const wire = enttecDriver();
     if (wire) {
       // The unreachable warning is rebuilt from the PATCH every frame, not accumulated.
@@ -574,9 +606,10 @@ function createDesk(opts = {}) {
       output: {
         driver: state.output.driver,
         enabled: !!state.output.enabled,
-        connected: state.output.driver === 'enttec' ? !!(ser && ser.connected) : !!artnet.ready,
-        packetsSent: enttec ? enttec.packetsSent : artnet.packetsSent,
-        lastError: enttec ? enttec.lastError : artnet.lastError,
+        connected: state.output.driver === 'enttec' ? !!(ser && ser.connected)
+          : state.output.driver === 'sacn' ? !!(sacn && sacn.ready) : !!artnet.ready,
+        packetsSent: enttec ? enttec.packetsSent : sacn ? sacn.packetsSent : artnet.packetsSent,
+        lastError: enttec ? enttec.lastError : sacn ? sacn.lastError : artnet.lastError,
         lanAllowed,
       },
     };
@@ -653,12 +686,13 @@ function createDesk(opts = {}) {
         // reads as a frozen count on the page rather than an Art-Net count ticking happily
         // up while nothing leaves the serial port.
         driver: state.output.driver,
+        sacn: sacn ? sacn.status() : null,
         outputEnabled: !!state.output.enabled,
         lanAllowed,
         serial: enttec ? enttec.status() : null,
         serialPorts: listPorts(),
-        packetsSent: enttec ? enttec.packetsSent : artnet.packetsSent,
-        lastError: enttec ? enttec.lastError : artnet.lastError,
+        packetsSent: enttec ? enttec.packetsSent : sacn ? sacn.packetsSent : artnet.packetsSent,
+        lastError: enttec ? enttec.lastError : sacn ? sacn.lastError : artnet.lastError,
         universes: engine.universes(),
         fading: !!engine.fade,
         chaseIndex: engine.chase.index,
@@ -1368,7 +1402,8 @@ function createDesk(opts = {}) {
       if (body.mode) state.output.mode = body.mode === 'unicast' ? 'unicast' : 'broadcast';
       if (Array.isArray(body.targets)) state.output.targets = body.targets.map(validIp).filter(Boolean);
       if (body.refreshHz != null) state.output.refreshHz = Math.max(1, Math.min(44, body.refreshHz | 0));
-      if (body.driver) state.output.driver = body.driver === 'enttec' ? 'enttec' : 'artnet';
+      if (body.driver) state.output.driver = ['enttec', 'sacn', 'artnet'].includes(body.driver) ? body.driver : 'artnet';
+      if (body.priority != null) state.output.priority = Math.max(0, Math.min(200, body.priority | 0));
       if (body.enabled != null) state.output.enabled = !!body.enabled;
       if (body.serialPort && PORT_NAME.test(String(body.serialPort).trim())) state.output.serialPort = portName(body.serialPort);
       // Rebuild the driver before answering, so the reply carries the real outcome of the
@@ -1483,6 +1518,7 @@ function createDesk(opts = {}) {
     try { writeShow(); } catch (e) { log('could not save the show on close: ' + e.message); }
     artnet.close();
     if (enttec) enttec.close();
+    if (sacn) sacn.close();
   }
 
   return { handle, close, state, engine, writeShow, summary, showFile: SHOW };

@@ -794,6 +794,66 @@ check('a layer never escapes the master or the blackout', () => {
   assert.strictEqual(e.render(state, 0).get(0)[0], 0, 'and the panic button still kills it');
 });
 
+// ---- sACN (E1.31) ------------------------------------------------------------
+
+const { buildPacket, multicastAddress, cidFor, SACN } = require('../sacn');
+
+check('an E1.31 data packet is laid out the way the spec says', () => {
+  const data = Buffer.alloc(512);
+  data[0] = 255; data[511] = 7;
+  const p = buildPacket({ cid: cidFor('test'), sourceName: 'desk', universe: 3, priority: 100, sequence: 9, data });
+  assert.strictEqual(p.length, 638, 'a full universe is 638 bytes');
+  assert.strictEqual(p.readUInt16BE(0), 0x0010, 'preamble size');
+  assert.strictEqual(p.toString('latin1', 4, 13), 'ASC-E1.17', 'the ACN packet identifier');
+  assert.strictEqual(p.readUInt16BE(16), 0x7000 | 622, 'root flags and length');
+  assert.strictEqual(p.readUInt32BE(18), 4, 'root vector: E1.31 data');
+  assert.strictEqual(p.readUInt16BE(38), 0x7000 | 600, 'framing flags and length');
+  assert.strictEqual(p.readUInt32BE(40), 2, 'framing vector: a data packet');
+  assert.strictEqual(p[108], 100, 'priority');
+  assert.strictEqual(p[111], 9, 'sequence');
+  assert.strictEqual(p.readUInt16BE(113), 3, 'universe');
+  assert.strictEqual(p.readUInt16BE(115), 0x7000 | 523, 'DMP flags and length');
+  assert.strictEqual(p[117], 2, 'DMP vector: set property');
+  assert.strictEqual(p[118], 0xa1, 'address and data type');
+  assert.strictEqual(p.readUInt16BE(123), 513, 'a start code and 512 slots');
+  assert.strictEqual(p[125], 0, 'the DMX start code');
+  assert.strictEqual(p[126], 255, 'slot 1');
+  assert.strictEqual(p[637], 7, 'slot 512');
+});
+
+check('a universe has one fixed multicast group and no discovery', () => {
+  assert.strictEqual(multicastAddress(1), '239.255.0.1');
+  assert.strictEqual(multicastAddress(3), '239.255.0.3');
+  assert.strictEqual(multicastAddress(258), '239.255.1.2');
+});
+
+check('the source id is stable across restarts, so a restart is not a second sender', () => {
+  const a = cidFor('di.iiii lighting desk');
+  assert.deepStrictEqual(a, cidFor('di.iiii lighting desk'));
+  assert.notDeepStrictEqual(a, cidFor('another desk'));
+  assert.strictEqual(a.length, 16);
+  assert.strictEqual(a[6] & 0xf0, 0x50, 'a version 5 uuid');
+  assert.strictEqual(a[8] & 0xc0, 0x80, 'with the right variant');
+});
+
+check('each universe counts its own packets, so a node watching one is never out of order', () => {
+  const s = new SACN({ offline: true });
+  const buf = Buffer.alloc(512);
+  s.send(1, buf); s.send(2, buf); s.send(1, buf);
+  assert.strictEqual(s.lastFrame.get(1)[111], 2, 'universe 1 has sent two');
+  assert.strictEqual(s.lastFrame.get(2)[111], 1, 'and universe 2 exactly one');
+  s.close();
+});
+
+check('an offline sender never opens a socket and never puts a frame on the wire', () => {
+  const s = new SACN({ offline: true });
+  assert.strictEqual(s.socket, undefined);
+  assert.strictEqual(s.ready, false);
+  s.send(0, Buffer.alloc(512));
+  assert.strictEqual(s.status().mode, 'multicast');
+  s.close();
+});
+
 // ---- the fixture library -----------------------------------------------------
 // The converter only. Nothing here touches the network: an OFL-shaped object goes in,
 // one of this desk's profiles comes out.
