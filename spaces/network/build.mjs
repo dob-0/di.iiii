@@ -6,6 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderRoom } from './room-template.mjs'
 import { renderIndex } from './index-template.mjs'
+import { renderConstellation } from './constellation-template.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const REL = path.relative(process.cwd(), HERE).split(path.sep).join('/') || '.'
@@ -18,6 +19,11 @@ fs.mkdirSync(path.join(HERE, 'pages'), { recursive: true })
 // to carry a second design — and counts in its opening sentence that no
 // longer matched the roster underneath it.
 fs.writeFileSync(path.join(HERE, 'code/index.html'), renderIndex(people))
+
+// The constellation is the same roster on one ring. It was hand-kept too,
+// and drifted the same way — a name and a role the data had already
+// corrected, in a design nothing else on the space uses.
+fs.writeFileSync(path.join(HERE, 'pages/constellation.html'), renderConstellation(people))
 
 const written = []
 for (const p of people) {

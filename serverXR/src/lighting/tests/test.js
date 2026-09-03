@@ -859,6 +859,42 @@ check('a layer never escapes the master or the blackout', () => {
   assert.strictEqual(e.render(state, 0).get(0)[0], 0, 'and the panic button still kills it');
 });
 
+// ---- identify ----------------------------------------------------------------
+// "Which of these eight identical pars is number 5?" — the question every patch at a
+// venue turns on. It has to beat whatever is running, and lose to the panic key.
+
+check('identify flashes a fixture white, on and off, and leaves the others alone', () => {
+  const a = makeFixture({ id: 'a', profile: 'drgb', address: 1, values: { dimmer: 0, r: 0, g: 0, b: 255 } });
+  const b = makeFixture({ id: 'b', profile: 'drgb', address: 5, values: { dimmer: 0, r: 0, g: 0, b: 255 } });
+  const state = { ...baseState([a, b]), identify: { a: 10000 } };
+  const e = new Engine(state);
+  // 250ms half-cycles: t=0 is on, t=250 is off.
+  const on = e.render(state, 0).get(0);
+  assert.strictEqual(on[0], 255, 'the dimmer goes full');
+  assert.strictEqual(on[1], 255, 'and it goes WHITE, not the deep blue it was holding');
+  assert.strictEqual(on[2], 255);
+  assert.strictEqual(e.render(state, 250).get(0)[0], 0, 'and off again — a flash, not a lamp left on');
+  assert.strictEqual(on[4], 0, 'the fixture beside it is untouched');
+});
+
+check('identify beats a running look but never the blackout', () => {
+  const f = makeFixture({ id: 'a', profile: 'drgb', address: 1, values: { dimmer: 0, r: 0, g: 0, b: 0 } });
+  const looks = sanitizeLooks([{ id: 'dark', steps: [{ values: { '*': { dimmer: 0 } } }] }]);
+  const state = { ...baseState([f]), looks, layers: sanitizeLayers([{ id: 'l', lookId: 'dark' }]), identify: { a: 10000 } };
+  const e = new Engine(state);
+  assert.strictEqual(e.render(state, 0).get(0)[0], 255, 'a look holding it at zero cannot hide it');
+  state.blackout = true;
+  assert.strictEqual(e.render(state, 0).get(0)[0], 0, 'the panic key still wins');
+});
+
+check('an expired identify stops on its own, without anything having to clear it', () => {
+  const f = makeFixture({ id: 'a', profile: 'drgb', address: 1, values: { dimmer: 0, r: 0, g: 0, b: 0 } });
+  const state = { ...baseState([f]), identify: { a: 5000 } };
+  const e = new Engine(state);
+  assert.strictEqual(e.render(state, 0).get(0)[0], 255);
+  assert.strictEqual(e.render(state, 5001).get(0)[0], 0, 'the timer runs out and the rig is as it was');
+});
+
 // ---- sACN (E1.31) ------------------------------------------------------------
 
 const { buildPacket, multicastAddress, cidFor, SACN } = require('../sacn');

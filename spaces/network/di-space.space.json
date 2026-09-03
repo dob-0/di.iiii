@@ -4,7 +4,7 @@
   "label": "network",
   "isPublic": true,
   "minEngine": 6,
-  "note": "Everyone who makes di.iiii — all 52, not only the ones with rooms wired up front. The roster is spaces/network/code/index.html (project `network`, the space's door): a catalogue with a living field of every person as its margin. Rooms are generated from people.json by build.mjs into pages/<slug>.html, one manifest each, via room-template.mjs's renderRoom(); a room's project id is network-<slug> because ids are global and two of the names are already wcc rooms. Two more code pages stand alongside the roster: network-constellation (pages/constellation.html, \"The Constellation\" — the field as the whole page) and network-index (pages/the-index.html, \"The Index\" — a dense printed-catalogue read with thumbnails). three.js is vendored once at public/vendor/ and loaded root-relative by every page and room that needs it, instead of ~700KB inlined per page. Team names as on /suite. No contact details on purpose. When a person takes their room over in Studio, remove their manifest from `projects`.",
+  "note": "Everyone who makes di.iiii — all 52, not only the ones with rooms wired up front. Every page in this space is generated from people.json by build.mjs and shares one stylesheet (lib/css.mjs): the roster is spaces/network/code/index.html (project `network`, the space's door), a catalogue with the ties drawn into its margin; rooms are pages/<slug>.html via room-template.mjs's renderRoom(); the constellation is pages/constellation.html via renderConstellation(), the same fifty-two on one ring. A room's project id is network-<slug> because ids are global and two of the names are already wcc rooms. Nothing here loads three.js or any script at all except the roster's one field builder — the pages that did were a second design language for the same data, and they drifted from it. Team names as on /suite. No contact details on purpose. When a person takes their room over in Studio, remove their manifest from `projects`.",
   "tiers": {
     "prod": {
       "url": "https://di-studio.xyz/serverXR",
@@ -23,7 +23,6 @@
   "projects": [
     "spaces/network/di-space.index.json",
     "spaces/network/di-space.constellation.json",
-    "spaces/network/di-space.the-index.json",
     "spaces/network/di-space.gevorg-grigoryan.json",
     "spaces/network/di-space.emilya-nikoghosyan.json",
     "spaces/network/di-space.syuzi-ginosyan.json",
