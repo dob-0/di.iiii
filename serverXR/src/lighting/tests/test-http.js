@@ -1262,6 +1262,105 @@ check('fan refuses without an attribute, and says the styles it knows', async ()
   assert.ok(body.fanStyles.includes('mirror') && body.fanStyles.includes('random'));
 });
 
+check('an outside caller can fire a look, and it lands on one visible layer', async () => {
+  const f = await patch('drgb', { address: 480 });
+  await POST('/api/fixture', { id: f.id, values: { dimmer: 255, r: 0, g: 0, b: 0 } });
+  await POST('/api/looks', { looks: [
+    { id: 'cue-red', name: 'Red', kind: 'colour', steps: [{ values: { [f.id]: { r: 255 } } }] },
+    { id: 'cue-blue', name: 'Blue', kind: 'colour', steps: [{ values: { [f.id]: { b: 255 } } }] },
+  ] });
+  const { body } = await POST('/api/looks/fire', { id: 'cue-red' });
+  assert.strictEqual(body.layer.id, 'cue', 'one dedicated layer, not a new one each time');
+  assert.strictEqual(body.layer.level, 1);
+  await settle();
+  assert.strictEqual(await wire(0, 481), 255, 'red is on the rig');
+  // Fire another and the same layer holds it — one clip per layer, the rule the whole
+  // interface reads by.
+  await POST('/api/looks/fire', { id: 'cue-blue' });
+  await settle();
+  assert.strictEqual(await wire(0, 481), 0);
+  assert.strictEqual(await wire(0, 483), 255, 'blue took its place');
+  const { body: layers } = await GET('/api/layers');
+  assert.strictEqual(layers.layers.filter((l) => l.id === 'cue').length, 1);
+  assert.strictEqual((await POST('/api/looks/fire', { id: 'nope' })).status, 404);
+  await POST('/api/layers', { layers: [] });
+  await POST('/api/looks', { looks: [] });
+  await POST('/api/fixtures/remove', { id: f.id });
+});
+
+check('one list says what can be fired, looks and scenes both', async () => {
+  const f = await patch('drgb', { address: 490 });
+  await POST('/api/looks', { looks: [{ id: 'lk1', name: 'A look', kind: 'colour', steps: [{ values: { '*': { r: 1 } } }] }] });
+  const { body: saved } = await POST('/api/scenes/save', { name: 'A scene' });
+  const { body } = await GET('/api/fireable');
+  assert.deepStrictEqual(body.looks.map((l) => l.name), ['A look']);
+  assert.ok(body.scenes.some((s) => s.name === 'A scene'), 'and the scenes are there too');
+  assert.ok(body.looks[0].steps === 1 && body.looks[0].kind === 'colour', 'each says enough to be shown');
+  await POST('/api/scenes/remove', { id: saved.scene.id });
+  await POST('/api/looks', { looks: [] });
+  await POST('/api/fixtures/remove', { id: f.id });
+});
+
+check('the show file is never absent, even for an instant, while it is being replaced', async () => {
+  const dir = process.env.DATA_DIR;
+  const show = path.join(dir, 'show.json');
+  // Watch the path across a save. A second desk booting into a window where show.json
+  // did not exist found no show, started empty, and saved that over the top — which is
+  // how a rig went missing on the dev stack. The live path must go straight from the
+  // old contents to the new.
+  let vanished = 0;
+  const watching = setInterval(() => { if (!fs.existsSync(show)) vanished++; }, 1);
+  await POST('/api/master', { master: 250 });
+  await sleep(700);
+  await POST('/api/master', { master: 255 });
+  await sleep(700);
+  clearInterval(watching);
+  assert.strictEqual(vanished, 0, 'show.json disappeared ' + vanished + ' times mid-save');
+  assert.ok(fs.existsSync(path.join(dir, 'show.prev.json')), 'and the previous copy is still kept');
+});
+
+// ---- the show file cannot be lost -------------------------------------------
+
+const http = require('http');
+const { createDesk } = require('../desk');
+
+const deskOn = async (dir) => {
+  const desk = createDesk({ dataDir: dir, offline: true, log: () => {} });
+  const server = http.createServer((q, r) => desk.handle(q, r));
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const post = (p, body) => new Promise((res) => {
+    const data = JSON.stringify(body);
+    const q = http.request({ host: '127.0.0.1', port: server.address().port, path: p, method: 'POST',
+      headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(data) } },
+    (r) => { let d = ''; r.on('data', (c) => { d += c; }); r.on('end', () => res(d)); });
+    q.end(data);
+  });
+  return { desk, post, stop: () => { desk.close(); server.close(); } };
+};
+
+check('a desk that started empty never quietly replaces a show that turned up', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'desk-race-'));
+  const show = path.join(dir, 'show.json');
+  const first = await deskOn(dir);
+  await first.post('/api/fixtures/add', { profile: 'drgb', count: 3 });
+  first.desk.writeShow();
+  assert.strictEqual(JSON.parse(fs.readFileSync(show, 'utf8')).fixtures.length, 3);
+  first.stop();
+
+  // The window a restart can boot into: for an instant there is no show file.
+  fs.renameSync(show, path.join(dir, 'hidden.json'));
+  const second = await deskOn(dir);
+  assert.strictEqual(second.desk.state.fixtures.length, 0, 'it has nothing, correctly');
+  fs.renameSync(path.join(dir, 'hidden.json'), show);   // and the real one comes back
+  await second.post('/api/master', { master: 100 });
+  second.desk.writeShow();
+  const found = fs.readdirSync(dir).filter((f) => f.includes('-found-'));
+  assert.strictEqual(found.length, 1, 'the show that turned up is kept, named, and said out loud');
+  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(dir, found[0]), 'utf8')).fixtures.length, 3);
+  second.stop();
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 // ---- harness ----------------------------------------------------------------
 
 async function main() {

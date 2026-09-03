@@ -94,7 +94,28 @@ describe('asking the desk what it has', () => {
 
 const cueOf = (patch = {}) => ({ id: 'c1', name: 'Open', key: '1', fade: 0.6, hold: 0, surfaces: {}, ...patch })
 
-const PICKER_TITLE = 'Recall this scene on the lighting desk when the cue fires'
+const PICKER_TITLE = 'Fire this on the lighting desk when the cue fires. A look lands on the desk\'s cue layer; a scene is recalled with the cue\'s fade.'
+
+describe('what a cue fires', () => {
+    it('fires a LOOK onto the desk cue layer, and recalls a SCENE with the fade', async () => {
+        const calls = []
+        const fetchImpl = async (url, init) => { calls.push({ url: String(url), body: JSON.parse(init.body) }); return ok({ ok: true }) }
+        await recallCueLighting(cueOf({ lightLook: 'lk-9' }), { fetchImpl })
+        expect(calls[0].url.endsWith('/light/api/looks/fire')).toBe(true)
+        expect(calls[0].body).toEqual({ id: 'lk-9' })
+        await recallCueLighting(cueOf({ lightScene: 'sc-3' }), { fetchImpl })
+        expect(calls[1].url.endsWith('/light/api/scenes/recall')).toBe(true)
+        expect(calls[1].body).toEqual({ id: 'sc-3', fadeMs: 600 })
+    })
+
+    it('a look wins when a cue somehow names both', async () => {
+        const calls = []
+        const fetchImpl = async (url) => { calls.push(String(url)); return ok({ ok: true }) }
+        await recallCueLighting(cueOf({ lightLook: 'lk-9', lightScene: 'sc-3' }), { fetchImpl })
+        expect(calls).toHaveLength(1)
+        expect(calls[0].endsWith('/light/api/looks/fire')).toBe(true)
+    })
+})
 
 describe('the picker in the cue editor', () => {
     const openEditor = (props = {}) => {
@@ -109,25 +130,50 @@ describe('the picker in the cue editor', () => {
         fireEvent.click(screen.getByText('Edit'))
     }
 
-    it('offers the desk scenes with none first', async () => {
-        vi.stubGlobal('fetch', vi.fn(async () => ok({ scenes: [{ id: 'sc-7', name: 'ԳՈՌ warm' }] })))
+    it('offers what the desk can fire, looks and scenes both, with none first', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ok({
+            looks: [{ id: 'lk-2', name: 'Ember wave', kind: 'colour', steps: 2 }],
+            scenes: [{ id: 'sc-7', name: 'ԳՈՌ warm', live: 3, missing: 0 }],
+        })))
         openEditor()
 
         const picker = await screen.findByTitle(PICKER_TITLE)
         const options = within(picker).getAllByRole('option')
         expect(options[0].textContent).toBe('— none —')
-        // The NAME is shown and the ID is what is stored: a renamed scene has
-        // to stay the same scene.
-        expect(options.some((option) => option.textContent === 'ԳՈՌ warm' && option.value === 'sc-7')).toBe(true)
-        expect(picker.value).toBe('sc-7')
+        // The NAME is shown and the ID is what is stored: a renamed look has to stay
+        // the same look. The kind travels in the value, because both are just ids.
+        expect(options.some((o) => o.textContent.startsWith('Ember wave') && o.value === 'look:lk-2')).toBe(true)
+        expect(options.some((o) => o.textContent === 'ԳՈՌ warm' && o.value === 'scene:sc-7')).toBe(true)
+        expect(picker.value).toBe('scene:sc-7')
+    })
+
+    it('a cue naming a look reads as that look, not as the scene field', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ok({
+            looks: [{ id: 'lk-2', name: 'Ember wave', kind: 'colour', steps: 2 }], scenes: [],
+        })))
+        openEditor({ cues: [cueOf({ lightLook: 'lk-2' })] })
+        const picker = await screen.findByTitle(PICKER_TITLE)
+        expect(picker.value).toBe('look:lk-2')
+    })
+
+    it('choosing one clears the other, so a cue never names two things', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ok({
+            looks: [{ id: 'lk-2', name: 'Ember wave', kind: 'colour', steps: 2 }],
+            scenes: [{ id: 'sc-7', name: 'Warm', live: 1, missing: 0 }],
+        })))
+        const onUpdate = vi.fn()
+        openEditor({ onUpdate })
+        const picker = await screen.findByTitle(PICKER_TITLE)
+        fireEvent.change(picker, { target: { value: 'look:lk-2' } })
+        expect(onUpdate).toHaveBeenCalledWith('c1', { lightLook: 'lk-2', lightScene: '' })
     })
 
     it('keeps a scene the desk no longer lists rather than reading as none', async () => {
-        vi.stubGlobal('fetch', vi.fn(async () => ok({ scenes: [{ id: 'sc-1', name: 'House' }] })))
+        vi.stubGlobal('fetch', vi.fn(async () => ok({ looks: [], scenes: [{ id: 'sc-1', name: 'House' }] })))
         openEditor()
 
         const picker = await screen.findByTitle(PICKER_TITLE)
-        expect(picker.value).toBe('sc-7')
+        expect(picker.value).toBe('scene:sc-7')
         expect(within(picker).getByText('sc-7 (not on the desk)')).toBeTruthy()
     })
 

@@ -243,6 +243,7 @@ export const defaultMappingCue = {
     // same scene. Absent unless set, so documents written before cues could
     // carry light are byte-identical after a round-trip.
     lightScene: '',
+    lightLook: '',
     // Per-surface state, keyed by surface id: { enabled, opacity, source }.
     // GEOMETRY IS DELIBERATELY NOT IN A CUE. Corners and masks are the wall;
     // cues are the show. A cue that could move an alignment is a cue that can
@@ -926,12 +927,17 @@ export const normalizeMappingCue = (cue = {}) => {
     // scene comes back exactly as it went in, so this field's arrival cannot
     // rewrite every mapping that already exists.
     const lightScene = ensureString(source.lightScene, '')
+    // A look and a scene are both ids, and nothing about an id says which it is, so the
+    // cue keeps them apart. A look wins when both are set: the desk is built on looks
+    // now, and a cue that has been re-pointed at one has said what it means.
+    const lightLook = ensureString(source.lightLook, '')
     return {
         id: ensureString(source.id, ''),
         name: ensureString(source.name, ''),
         key: /^[1-9]$/.test(key) ? key : '',
         fade: Math.max(0, ensureNumber(source.fade, defaultMappingCue.fade)),
         hold: Math.max(0, ensureNumber(source.hold, defaultMappingCue.hold)),
+        ...(lightLook ? { lightLook } : {}),
         ...(lightScene ? { lightScene } : {}),
         surfaces
     }

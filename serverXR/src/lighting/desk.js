@@ -38,6 +38,9 @@ function createDesk(opts = {}) {
   const outputEnabledDefault = opts.outputEnabledDefault !== false;
   const lanAllowed = opts.lanAllowed !== false;
   const log = opts.log || console.log;
+  // True when this desk found no show to load. It stays true only until the first write,
+  // and it is what stops an empty desk from silently replacing a real one.
+  let bootedWithNothing = false;
 
   const DEFAULT_STATE = {
     master: 255,
@@ -230,6 +233,9 @@ function createDesk(opts = {}) {
       s.blackout = !!disk.blackout;
       return s;
     } catch (e) {
+      // Nothing was loaded. Remembered, because an empty desk that then SAVES would
+      // write its emptiness over whatever appears at that path afterwards.
+      bootedWithNothing = true;
       if (fs.existsSync(SHOW)) {
         const aside = SHOW.replace(/.json$/, '-broken-' + Date.now() + '.json');
         try { fs.copyFileSync(SHOW, aside); } catch (e2) {}
@@ -298,13 +304,35 @@ function createDesk(opts = {}) {
     if (!dirty) return;
     dirty = false;
     fs.mkdirSync(DATA, { recursive: true });
+    // A show that appeared after we booted with nothing belongs to somebody else — a
+    // second desk on the same folder, a file restored by hand between the boot and now.
+    // It is preserved and named rather than overwritten, and said out loud. An empty
+    // desk quietly replacing a real one is the worst thing this file could do.
+    if (bootedWithNothing && fs.existsSync(SHOW)) {
+      const aside = SHOW.replace(/\.json$/, '-found-' + Date.now() + '.json');
+      try {
+        fs.copyFileSync(SHOW, aside);
+        log('A show appeared at ' + SHOW + ' after this desk started empty.');
+        log('It has NOT been overwritten blindly — it is kept at ' + aside);
+      } catch (e) { /* if it cannot be preserved, the write below is still refused */ }
+    }
+    bootedWithNothing = false;
     const tmp = SHOW + '.tmp';
     // Compact, not pretty-printed: at 500+ scenes the indented form cost ~29ms to
     // stringify, over the 25ms frame budget at 40Hz. Compact is ~9ms and a third the size.
     fs.writeFileSync(tmp, JSON.stringify(state));
-    try { fs.renameSync(SHOW, SHOW_PREV); } catch (e) { /* first save ever */ }
+    // The previous copy is COPIED aside, never renamed. Renaming the live file away
+    // first left a window — microseconds, but real — in which show.json did not exist at
+    // all, and a second desk booting into that window found no show, started empty, and
+    // saved its emptiness over the top. That is not hypothetical: it happened on the dev
+    // stack when a restart overlapped a save, and only show.prev.json still held the rig.
+    // A rename onto the live path is atomic, so show.json now goes straight from the old
+    // contents to the new and is never absent.
+    try { fs.copyFileSync(SHOW, SHOW_PREV); } catch (e) { /* first save ever */ }
     fs.renameSync(tmp, SHOW);
   }
+  // The layer an outside caller's cue drives, unless it names another.
+  const CUE_LAYER = 'cue';
   let nextLookId = 1;
   let nextLayerId = 1;
   // Add or replace by id, keeping the library's order — an edit must not make a look
@@ -842,6 +870,46 @@ function createDesk(opts = {}) {
       let emptied = 0;
       for (const layer of state.layers) if (layer.lookId === body.id) { layer.lookId = null; emptied++; }
       save(); pushFrame(); json(res, { ok: true, emptied });
+    },
+
+    // Fire a look from outside the desk — a map cue, a graph node, a phone. A look is
+    // content, not a state, so firing it means putting it ON something: one dedicated
+    // layer that outside callers drive, created on first use and visible in the stack
+    // like any other. Fire look A then look B and the layer holds B, which is the
+    // one-clip-per-layer rule the whole interface already reads by.
+    'POST /api/looks/fire': (req, res, body) => {
+      const look = state.looks.find((l) => l.id === body.id);
+      if (!look) return json(res, { error: 'no such look' }, 404);
+      const layerId = typeof body.layerId === 'string' && body.layerId ? body.layerId : CUE_LAYER;
+      let layer = state.layers.find((l) => l.id === layerId);
+      if (!layer) {
+        layer = sanitizeLayer({
+          id: layerId,
+          name: layerId === CUE_LAYER ? 'Cues' : layerId,
+          priority: state.layers.reduce((n, l) => Math.max(n, l.priority), 0) + 1,
+        });
+        state.layers.push(layer);
+      }
+      layer.lookId = look.id;
+      layer.on = true;
+      layer.level = body.level != null && Number.isFinite(+body.level)
+        ? Math.max(0, Math.min(1, +body.level)) : 1;
+      save(); pushFrame();
+      json(res, { ok: true, look: { id: look.id, name: look.name }, layer });
+    },
+
+    // What an outside caller may fire, in one list: the looks and the scenes, each
+    // saying which it is. A picker should not have to know the desk's history to offer
+    // both, and a cue that names one must be able to tell them apart.
+    'GET /api/fireable': (req, res) => {
+      const patched = new Set(state.fixtures.map((f) => f.id));
+      json(res, {
+        looks: state.looks.map((l) => ({ id: l.id, name: l.name, kind: l.kind, steps: l.steps.length })),
+        scenes: state.scenes.map((s) => {
+          const live = s.fixtures.filter((sf) => patched.has(sf.id)).length;
+          return { id: s.id, name: s.name, fadeMs: s.fadeMs, live, missing: s.fixtures.length - live };
+        }),
+      }, 200, req);
     },
 
     // The stack. Bottom to top by priority; each layer contributes what its mask allows.
