@@ -161,23 +161,63 @@ Steps 1 and 2 are worth doing whatever is decided about the document: an index t
 real identity makes the patch legible, and a look keyed by index survives a repatch on the
 same machine, which today it does not.
 
-## 8. Open questions for the owner
+## 8. The shape recommended, and where it can be overturned
 
-- **Is a scene library content or rig?** The club's 588 scenes were programmed against
-  that room's 21 fixtures and mean little elsewhere. Travelling by default may be noise.
-- **One document or one per room?** A touring piece might want its show in the space; a
-  venue might want the room's own looks kept locally and only the piece's travelling.
-- **Does the MIDI map travel?** The mapping is authored, but the controller is a fact
-  about the desk in the room, like the rig.
-- **May a show reference a look in another space** — a house library the venue keeps —
-  **or must it always carry its own copy?** The one-copy rule says carry its own, and a
-  reference across spaces is a link that can break in a room with no network. Worth asking
-  anyway, because a venue with a standing rig genuinely does want one library.
+Stated rather than asked, because a menu is not an answer. Each of these is a
+recommendation with its reason; any of them can be overturned in a sentence.
+
+**A show carries its own copy of everything it uses.** No shared house library across
+spaces. Two copies of anything drift, and a library shared between machines would drift
+while looking synced — which is the failure mode this whole note exists to end. If the
+same look is wanted in two shows, it is copied in, and the copy is the truth for that
+show.
+
+**One show per space, and it lives with the space** — a space is the thing that gets an
+address, gets handed to someone, and gets kept as a file when the night is over. A room
+inside a space uses that space's show. If a room ever needs its own, that is a sign it
+wanted to be its own space.
+
+> One consequence to accept deliberately, because it is not obvious: **the mapping does
+> not live where the show would.** Mapping cues live on a PROJECT document
+> (`/{space}/map/{projectId}`), one per project; a show per space sits beside them, not
+> inside them. So a cue in one project fires a look held at the space level. That is a
+> reference across containers — allowed here, and only here, because a space syncs and
+> travels as one unit, so the reference can never be half-present. The alternative — a
+> show per project document — keeps the cue and the look in one file, at the price of two
+> pieces in the same room owning two unrelated light libraries. The space is the better
+> unit; the crossing is the cost, and it should be named in the schema rather than
+> discovered later.
+
+**The MIDI map splits by nature, like everything else.** What a control DOES — button 3
+fires "Ember wave" — is content and travels. Which port, device and channel that control
+is on is the rig and stays. A show that lands on another desk offers the same verbs,
+bound to whatever controller is plugged in there.
+
+**The show gets its own key, and reads the clock rather than keeping one.** `showState`
+holds a clock stamped once so every window of a show derives the same elapsed time; that
+is a property of the running performance, not of the material, and a four-byte number
+should not share a home with a megabyte of looks.
+
+> Two clocks, and they are not rivals: the desk's **tempo** (beats per minute, tapped by
+> the operator, what a look's `measure` is counted in) and the show's **epoch** (a
+> wall-clock stamp every window derives elapsed time from). Today a look knows only
+> tempo, so two windows agree on speed but not on where in the bar they are. Anchoring the
+> beat grid to `showState.clockEpoch` is what would make them agree on the downbeat too —
+> and that is the same missing piece the AI-director notes call a beat anchor. Worth
+> doing when the show moves, not before.
+
+**Two tests are part of the change, not after it.** The field is named in both schema
+copies in lockstep, covered by `serverXR/src/schemaSync.test.js`; and a round trip —
+write a show, normalise, read, normalise again, assert nothing was lost. The failure this
+note exists to prevent is silent, and only a test that goes looking for silence will
+catch it coming back.
+
+## 9. Still open
+
+- **Is the club's existing scene library worth carrying at all?** Its 588 scenes were
+  programmed against that room's 21 fixtures and mean little anywhere else. Migrating them
+  may be work spent on noise, and leaving them on that machine may be the kinder answer.
 - **What does a visitor to a published space see** when the document carries a show they
   cannot run? The answer should be *nothing at all* — not an empty desk, not a dead
-  button. A show is for whoever is running the room.
-- **What is it called, and does it stand alone?** There is already a `showState` on the
-  document, holding one number: the show's clock epoch, so every window derives the same
-  elapsed time. A light show could fold in beside it or take its own key. Folding in makes
-  "the show" one thing; standing apart keeps a four-byte clock from sharing a home with a
-  megabyte of looks.
+  button. A show is for whoever is running the room. Worth confirming, because it is the
+  one place this could leak into a stranger's screen.
