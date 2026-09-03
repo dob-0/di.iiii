@@ -349,6 +349,14 @@
       <details class="outdetails">
         <summary><h2>Output</h2><span class="muted" id="outSummary"></span></summary>
         <div class="outbox">
+        <!-- The wire switch itself. Everything below it chooses HOW to transmit; this is
+             whether anything leaves the machine at all, and it had no control on the page:
+             inside di.iiii it starts OFF on purpose, so a desk could be patched, cued and
+             run perfectly with the rig dark and nothing on screen saying why. -->
+        <div class="inline pad outswitch">
+          <button class="sq" id="outEnable">Output</button>
+          <span class="muted" id="outEnableWhat"></span>
+        </div>
         <div class="inline pad">
           <label><input type="radio" name="driver" value="artnet"> Art-Net</label>
           <label><input type="radio" name="driver" value="enttec"> DMX USB PRO</label>

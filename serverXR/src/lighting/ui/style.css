@@ -718,6 +718,11 @@ input.pinned { border-color: var(--accent); }
 }
 .fxpill:hover, .wirepill:hover { background: var(--accent); color: #041012; }
 .wirepill.stale { border-color: var(--danger); color: var(--danger); }
+/* The wire switch. ON is stated in the affirmative and coloured like the accent, because
+   "the rig is live" is a fact worth being able to read across a dark booth. */
+.outswitch #outEnable { border-color: var(--muted); color: var(--muted); }
+.outswitch #outEnable.on { border-color: var(--accent); color: var(--accent); }
+.outswitch #outEnable:hover { border-color: var(--text); color: var(--text); }
 .topbo { padding: 4px 10px; font-size: 12px; }
 /* A control that has been pressed but not yet answered must not look like a finished one:
    the panic button in particular has to stop claiming success before the desk has agreed. */
