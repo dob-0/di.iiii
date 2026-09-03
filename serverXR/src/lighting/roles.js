@@ -27,6 +27,10 @@ const ROLE_DEFAULTS = {
   // each hold their own value — a profile is not allowed to repeat a role, because one
   // value driving two channels moves them together invisibly.
   aux1: 0, aux2: 0, aux3: 0, aux4: 0, aux5: 0, aux6: 0, aux7: 0, aux8: 0,
+  // Sixteen, not eight, since fixtures arrive from a library now: a 32-channel head
+  // full of macro, reset and effect channels needs somewhere for each of them to live,
+  // and a role that repeats would drive two channels from one value invisibly.
+  aux9: 0, aux10: 0, aux11: 0, aux12: 0, aux13: 0, aux14: 0, aux15: 0, aux16: 0,
 };
 // Roles that carry light output: scaled by the fixture dimmer (when the fixture has no
 // dimmer channel of its own), by the master fader and by blackout.

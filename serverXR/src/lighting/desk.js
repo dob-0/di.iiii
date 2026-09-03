@@ -14,6 +14,7 @@ const {
 const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive } = require('./fx');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
 const { STYLES: FAN_STYLES, fanValues } = require('./fan');
+const library = require('./library');
 const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, kindAllows,
@@ -28,6 +29,8 @@ function createDesk(opts = {}) {
   const PUBLIC = opts.uiDir || path.join(__dirname, 'ui');
   const SHOW = path.join(DATA, 'show.json');
   const SHOW_PREV = path.join(DATA, 'show.prev.json');
+  // The fixture catalogue, cached beside the show so it survives a night with no wifi.
+  const LIBRARY_DIR = path.join(DATA, 'library');
   // Offline renders everything and transmits nothing — tests, and a desk with no rig.
   const offline = !!opts.offline;
   const bindPort = opts.bindPort == null ? null : Number(opts.bindPort);
@@ -692,6 +695,39 @@ function createDesk(opts = {}) {
       // that just vanished simply stops contributing on the next tick, which is the
       // honest behaviour — nothing snaps and nothing is quietly held.
       save(); json(res, { ok: true, count: looks.length });
+    },
+
+    // The fixture library. Patching by name instead of by channel order: the catalogue
+    // is fetched when asked for and cached beside the show, so a venue with no internet
+    // still has whatever it imported before. See library.js.
+    'GET /api/library': async (req, res) => {
+      const { value, from, warning } = await library.manufacturers(LIBRARY_DIR);
+      const list = Object.entries(value).map(([key, m]) => ({ key, name: m.name, fixtures: m.fixtureCount || 0 }))
+        .filter((m) => m.fixtures > 0)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      json(res, { manufacturers: list, from, warning }, 200, req);
+    },
+    'GET /api/library/manufacturer': async (req, res) => {
+      const key = new URL(req.url, 'http://localhost').searchParams.get('key') || '';
+      const { value, from, warning } = await library.manufacturer(LIBRARY_DIR, key);
+      json(res, { name: value.name, key: value.key, fixtures: value.fixtures || [], from, warning }, 200, req);
+    },
+    // What a fixture would become before anyone commits to it: its modes, and the roles
+    // each mode maps onto. A patch is hard to undo; looking first is cheap.
+    'GET /api/library/fixture': async (req, res) => {
+      const params = new URL(req.url, 'http://localhost').searchParams;
+      const { value, from, warning } = await library.fixture(LIBRARY_DIR, params.get('manufacturer') || '', params.get('key') || '');
+      json(res, { ...library.describe(value), from, warning }, 200, req);
+    },
+    'POST /api/library/import': async (req, res, body) => {
+      const { value } = await library.fixture(LIBRARY_DIR, body.manufacturer, body.key);
+      const profile = library.toProfile(value, Math.max(0, Math.round(+body.mode || 0)), {
+        taken: (name) => !!PROFILES[name],
+      });
+      const name = addProfile(profile.name, profile.channels, { cat: profile.cat, defaults: profile.defaults });
+      state.customProfiles = customProfiles();
+      save();
+      json(res, { ok: true, name, profile: PROFILES[name], source: profile.source });
     },
 
     // Fan: one gesture, N related values across the selection, in the order the
@@ -1413,7 +1449,10 @@ function createDesk(opts = {}) {
         // Under Express the JSON body has already been parsed (and the stream drained);
         // standing alone the desk reads it itself.
         const body = req.method !== 'POST' ? null : (req.body && typeof req.body === 'object' ? req.body : await readBody(req));
-        return routes[key](req, res, body);
+        // Awaited, not merely returned: a route that reaches the network (the fixture
+      // library) rejects asynchronously, and an un-awaited rejection left the caller
+      // holding an open socket for ever while the desk logged to a console nobody reads.
+      return await routes[key](req, res, body);
       } catch (e) {
         json(res, { error: e.message }, e.status || 400);
         // An oversize upload is not drained: the socket goes once the refusal is out.

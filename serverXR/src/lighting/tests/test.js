@@ -794,6 +794,107 @@ check('a layer never escapes the master or the blackout', () => {
   assert.strictEqual(e.render(state, 0).get(0)[0], 0, 'and the panic button still kills it');
 });
 
+// ---- the fixture library -----------------------------------------------------
+// The converter only. Nothing here touches the network: an OFL-shaped object goes in,
+// one of this desk's profiles comes out.
+
+const oflLib = require('../library');
+
+const OFL_HEAD = {
+  name: 'Intimidator Spot 260',
+  categories: ['Moving Head', 'Color Changer'],
+  availableChannels: {
+    Pan: { fineChannelAliases: ['Pan fine'], capabilities: [{ type: 'Pan' }] },
+    Tilt: { fineChannelAliases: ['Tilt fine'], capabilities: [{ type: 'Tilt' }] },
+    'Color Wheel': { defaultValue: 0, capabilities: [{ type: 'WheelSlot' }, { type: 'WheelRotation' }] },
+    'Gobo Wheel': { defaultValue: 0, capabilities: [{ type: 'WheelSlot' }, { type: 'WheelShake' }] },
+    Dimmer: { defaultValue: 0, capabilities: [{ type: 'Intensity' }] },
+    // The whole reason the library is worth importing: 0 on this channel is a CLOSED
+    // shutter, and the chart is the only place that answer is written down.
+    Strobe: { defaultValue: 4, capabilities: [{ type: 'ShutterStrobe' }] },
+    Function: { defaultValue: 0, capabilities: [{ type: 'NoFunction' }, { type: 'Maintenance' }] },
+  },
+  modes: [
+    { name: '9-channel', channels: ['Pan', 'Pan fine', 'Tilt', 'Tilt fine', 'Color Wheel', 'Gobo Wheel', 'Dimmer', 'Strobe', 'Function'] },
+    { name: '4-channel', channels: ['Pan', 'Tilt', 'Dimmer', 'Strobe'] },
+  ],
+};
+
+const OFL_PAR = {
+  name: 'LED Par RGBAW+UV',
+  categories: ['Color Changer'],
+  availableChannels: {
+    Master: { capabilities: [{ type: 'Intensity' }] },
+    Red: { capabilities: [{ type: 'ColorIntensity', color: 'Red' }] },
+    Green: { capabilities: [{ type: 'ColorIntensity', color: 'Green' }] },
+    Blue: { capabilities: [{ type: 'ColorIntensity', color: 'Blue' }] },
+    Amber: { capabilities: [{ type: 'ColorIntensity', color: 'Amber' }] },
+    White: { capabilities: [{ type: 'ColorIntensity', color: 'White' }] },
+    UV: { capabilities: [{ type: 'ColorIntensity', color: 'UV' }] },
+  },
+  modes: [{ name: '7ch', channels: ['Master', 'Red', 'Green', 'Blue', 'Amber', 'White', 'UV'] }],
+};
+
+check('a library fixture becomes a profile with this desk own roles', () => {
+  const p = oflLib.toProfile(OFL_HEAD, 0);
+  assert.deepStrictEqual(p.channels,
+    ['pan', 'panFine', 'tilt', 'tiltFine', 'color', 'gobo', 'dimmer', 'strobe', 'aux1']);
+  assert.strictEqual(p.cat, '_MOVING', 'a moving head lands in the moving library');
+  const par = oflLib.toProfile(OFL_PAR, 0);
+  assert.deepStrictEqual(par.channels, ['dimmer', 'r', 'g', 'b', 'a', 'w', 'uv']);
+  assert.strictEqual(par.cat, '_GENERIC');
+});
+
+check('the chart resting value comes with it, so an imported head is not dark', () => {
+  const p = oflLib.toProfile(OFL_HEAD, 0);
+  assert.strictEqual(p.defaults.strobe, 4, 'the shutter opens at 4 on this fixture and the chart says so');
+  assert.strictEqual(p.defaults.dimmer, undefined, 'a resting zero is the generic default already');
+});
+
+check('a fine byte stays with its coarse channel', () => {
+  const p = oflLib.toProfile(OFL_HEAD, 0);
+  assert.strictEqual(p.channels[1], 'panFine');
+  assert.strictEqual(p.channels[3], 'tiltFine');
+  // and a mode without them simply does not have them
+  assert.deepStrictEqual(oflLib.toProfile(OFL_HEAD, 1).channels, ['pan', 'tilt', 'dimmer', 'strobe']);
+});
+
+check('every channel of a mode gets its own role, and the width is exact', () => {
+  for (const [f, i] of [[OFL_HEAD, 0], [OFL_HEAD, 1], [OFL_PAR, 0]]) {
+    const p = oflLib.toProfile(f, i);
+    assert.strictEqual(p.channels.length, f.modes[i].channels.length, f.name + ' ' + f.modes[i].name);
+    assert.strictEqual(new Set(p.channels).size, p.channels.length, 'no role drives two channels');
+  }
+});
+
+check('a channel a mode does not use still takes up its slot on the wire', () => {
+  const gappy = { ...OFL_HEAD, modes: [{ name: 'gap', channels: ['Pan', null, 'Dimmer'] }] };
+  assert.deepStrictEqual(oflLib.toProfile(gappy, 0).channels, ['pan', 'aux1', 'dimmer']);
+});
+
+check('the profile name fits this desk rules, and two of them never collide', () => {
+  const p = oflLib.toProfile(OFL_HEAD, 0);
+  assert.ok(/^[A-Za-z0-9][A-Za-z0-9 _-]{0,23}$/.test(p.name), 'usable as a profile name: ' + p.name);
+  const taken = new Set([p.name]);
+  const second = oflLib.toProfile(OFL_HEAD, 0, { taken: (n) => taken.has(n) });
+  assert.notStrictEqual(second.name, p.name);
+  assert.ok(/^[A-Za-z0-9][A-Za-z0-9 _-]{0,23}$/.test(second.name), second.name);
+});
+
+check('a fixture key that is a path is refused rather than tidied into a valid one', () => {
+  assert.throws(() => oflLib.safeKey('../../etc/passwd'));
+  assert.throws(() => oflLib.safeKey(''));
+  assert.strictEqual(oflLib.safeKey('chauvet-dj'), 'chauvet-dj');
+});
+
+check('a wheel is read from the channel name, since the capability cannot say which it is', () => {
+  const wheel = (name) => oflLib.roleFor(name, { capabilities: [{ type: 'WheelSlot' }] });
+  assert.strictEqual(wheel('Color Wheel'), 'color');
+  assert.strictEqual(wheel('Colour Wheel 2'), 'color');
+  assert.strictEqual(wheel('Gobo Wheel'), 'gobo');
+  assert.strictEqual(wheel('Gobo Rotation'), 'rotation');
+});
+
 // ---- fan ---------------------------------------------------------------------
 
 const { fanValues } = require('../fan');
