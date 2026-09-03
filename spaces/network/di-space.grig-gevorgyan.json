@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-grig-gevorgyan",
+  "slug": "grig-gevorgyan",
+  "label": "Grig Gevorgyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/grig-gevorgyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

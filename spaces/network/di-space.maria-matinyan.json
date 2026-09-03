@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-maria-matinyan",
+  "slug": "maria-matinyan",
+  "label": "Maria Matinyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/maria-matinyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

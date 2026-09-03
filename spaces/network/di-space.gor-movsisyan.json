@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-gor-movsisyan",
+  "slug": "gor-movsisyan",
+  "label": "Gor Movsisyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/gor-movsisyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}
