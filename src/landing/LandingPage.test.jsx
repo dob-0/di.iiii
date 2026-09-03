@@ -114,36 +114,40 @@ describe('LandingPage CTA routing', () => {
     })
 })
 
-// The one-door pass (2026-08-18): the hero used to offer three peer buttons,
-// two of which led somewhere worse than the first — "Open Studio" to a hub
-// that wants an account, "Enter Space" to the restricted 'main' space and its
-// read-only bounce. Studio is depth behind the door now, not a rival to it.
-describe('LandingPage one door', () => {
+// The one-door pass (2026-08-18) collapsed three peer buttons to one, two of
+// which led somewhere worse than the first. The three-routes pass
+// (2026-09-03) reopened the hero to three — but named and weighted the way
+// the owner names them, not peers: "Step inside" (primary), "The Spaces"
+// (2nd main part, carries the accent even at rest), "Open Jam" (third).
+// "Look around" and "Enter Space" are gone entirely — Spaces is that
+// destination now, and it no longer depends on a `defaultSpaceId` resolving.
+describe('LandingPage three routes', () => {
     afterEach(() => {
         serverConfigState.current = {}
     })
 
-    it('offers exactly one primary entrance, and no second button beside it', async () => {
+    it('names exactly the three routes, in weight order, and drops the old stand-ins', async () => {
         serverConfigState.current = { defaultSpaceId: 'main', local: false, requireAuth: true }
         render(<LandingPage />)
 
-        // The server's main space resolves asynchronously; "Look around" is
-        // only ever rendered while there is no main space to enter.
-        // Both the hero and the closing section carry it — findBy* would keep
-        // retrying on "multiple elements" until it timed out.
         await screen.findAllByText(/Already have spaces\?/)
         expect(screen.queryByRole('button', { name: 'Enter Space' })).not.toBeInTheDocument()
         expect(screen.queryByRole('button', { name: 'Look around' })).not.toBeInTheDocument()
-        const returnPath = screen.getAllByRole('link', { name: /Open Studio/ })
-        expect(returnPath.length).toBeGreaterThan(0)
-        for (const link of returnPath) expect(link.getAttribute('href')).toBe('/spaces')
+
+        const stepInside = screen.getAllByRole('link', { name: 'Step inside' })[0]
+        const spaces = screen.getByRole('link', { name: 'The Spaces' })
+        const jam = screen.getByRole('link', { name: 'Open Jam' })
+        expect(stepInside.getAttribute('href')).toBe('/spaces')
+        expect(spaces.getAttribute('href')).toBe('/spaces')
+        expect(jam.getAttribute('href')).toMatch(/jam/i)
+        expect(spaces.className).toMatch(/landing-cta-spaces/)
     })
 
-    it('keeps the walkable void reachable where there is no main space', async () => {
+    it('keeps Spaces reachable with no main space resolved yet', async () => {
         serverConfigState.current = { defaultSpaceId: null, local: false, requireAuth: true }
         render(<LandingPage />)
 
-        expect(await screen.findByRole('button', { name: 'Look around' })).toBeInTheDocument()
+        expect(await screen.findByRole('link', { name: 'The Spaces' })).toBeInTheDocument()
     })
 })
 

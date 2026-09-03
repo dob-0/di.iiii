@@ -92,6 +92,35 @@
    same studio, not four separate brands, so they take the one shared ghost
    treatment now like every other secondary link on this page. */
 
+/* The route below "Step inside" — Spaces, the owner's own "2nd main part"
+   — carries a wash of the accent even at rest, so it reads as the second
+   most important thing on the screen rather than a third ghost link tied
+   with Open Jam and everything else. */
+.landing-cta-spaces {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 44px;
+    background: var(--di-cyan-dim) !important;
+    color: var(--di-cyan) !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+    padding: 11px 24px !important;
+    border-radius: 0 !important;
+    border: 1.5px solid var(--di-cyan) !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+    transition: background 0.1s, color 0.1s !important;
+}
+
+.landing-cta-spaces:hover {
+    background: var(--di-cyan) !important;
+    color: #000 !important;
+}
+
 .lp-btn-link {
     color: var(--di-text-muted) !important;
     font-size: 0.82rem !important;
@@ -355,18 +384,30 @@ body.is-landing .account-btn-wrapper {
     margin: 0 0 40px !important;
 }
 
-/* The line under the single door. Deliberately quieter than .lp-tagline:
-   it carries the second destination, and a second destination that reads as
-   loud as the first is just the three-button hero again in prose. */
+/* The line under the three routes. Deliberately quieter than .lp-tagline:
+   the hierarchy is the three buttons above it, and a line as loud as the
+   tagline would be a fourth thing competing with them. */
 .lp-cta-sub {
     font-size: 0.82rem !important;
-    /* NOT --di-text-muted (0.4 alpha): this line carries the second real
-       destination, and 0.4 white on the hero's near-black is under 3:1 at
-       13px. Quieter than the tagline, still readable. */
+    /* NOT --di-text-muted (0.4 alpha): 0.4 white on the hero's near-black
+       is under 3:1 at 13px. Quieter than the tagline, still readable. */
     color: rgba(255, 255, 255, 0.55) !important;
     line-height: 1.9 !important;
     max-width: 400px;
-    margin: 0 0 32px !important;
+    margin: 0 0 20px !important;
+    text-align: center;
+}
+
+/* Labels the featured-exhibitions row as what it is — specific work, not a
+   fourth route — so it never reads as competing with Step inside / Spaces /
+   Open Jam above it. */
+.lp-hero-featured-label {
+    font-size: 0.68rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.16em !important;
+    text-transform: uppercase !important;
+    color: var(--di-text-muted) !important;
+    margin: 0 0 12px !important;
     text-align: center;
 }
 
@@ -1000,4 +1041,54 @@ body.is-landing .account-btn-wrapper {
 .lp-root--flying .lp-room-tags-strip,
 .lp-root--flying .lp-footer {
     visibility: hidden;
+}
+
+/* ─── THE CRACK (Spaces route) ───────────────────────────────
+   Step inside glides. This one breaks: the whole screen splits into shards
+   from a random point (crackTransition.js) and flies apart before the real
+   navigation happens. Each shard is `--di-black` — the page's own ground —
+   so at rest (opacity 0, no transform) the overlay is invisible; only the
+   `.is-live` flip reveals that it was ever there. */
+.lp-crack-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    pointer-events: none;
+}
+
+/* A shard the same colour as the ground would be invisible against it —
+   there is nothing to see cracking. Each one is a sliver of cyan light
+   fading to the ground colour, so the break itself is what's on screen:
+   glass catching light as it comes apart, not a black void moving. */
+.lp-crack-shard {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(var(--shard-deg, 45deg), var(--di-cyan) 0%, rgba(77, 249, 255, 0.35) 38%, var(--di-black) 72%);
+    opacity: 0;
+    transform-origin: var(--ox) var(--oy);
+    /* translate is the OUTER function on purpose — applied after scale, so
+       its vmax distance stays what it says rather than being multiplied by
+       the 2.6x growth (see crackTransition.js's dist comment). */
+    transform: translate(0, 0) rotate(0deg) scale(0.4);
+    transition: transform 640ms cubic-bezier(0.16, 0.9, 0.2, 1), opacity 640ms ease;
+}
+
+.lp-crack-overlay.is-live .lp-crack-shard {
+    opacity: 1;
+    transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(2.6);
+}
+
+.lp-crack-overlay.is-live {
+    animation: lp-crack-fade 640ms ease forwards;
+}
+
+@keyframes lp-crack-fade {
+    0%, 55% { background: transparent; }
+    100% { background: var(--di-black); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lp-crack-shard {
+        transition: none;
+    }
 }
