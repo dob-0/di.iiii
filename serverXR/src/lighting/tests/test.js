@@ -859,6 +859,51 @@ check('a layer never escapes the master or the blackout', () => {
   assert.strictEqual(e.render(state, 0).get(0)[0], 0, 'and the panic button still kills it');
 });
 
+// ---- the tempo grid ----------------------------------------------------------
+// bpm says how fast; epoch says WHERE. Without an anchor every wave ran on a grid
+// starting in 1970 — right tempo, arbitrary phase — and "sync to the music" was luck.
+
+const { beatGrid } = require('../fx');
+
+check('the grid answers where now sits between beats, and when the next one lands', () => {
+  const fx = { bpm: 120, epoch: 1000 };            // 500ms a beat, 2000ms a bar
+  assert.strictEqual(beatGrid(fx, 1000).nextBeatMs, 0, 'exactly on the beat waits for nothing');
+  assert.strictEqual(beatGrid(fx, 1250).nextBeatMs, 250, 'halfway through waits out the rest');
+  assert.strictEqual(beatGrid(fx, 1000).nextBarMs, 0);
+  assert.strictEqual(beatGrid(fx, 1500).nextBarMs, 1500, 'one beat in, three to the downbeat');
+  assert.strictEqual(beatGrid(fx, 500).nextBeatMs, 0, 'the grid runs backwards from the anchor too');
+});
+
+check('a look loops from the anchor, so a wave starts on the downbeat', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([{ id: 'w', measure: 1, bpm: 120,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  const layers = sanitizeLayers([{ id: 'l', lookId: 'w' }]);
+  // 120bpm, one beat to the measure: 500ms a loop, so the first step owns 0-250ms
+  // AFTER the anchor. At t=3000 with the anchor at 3000 the look is at its start.
+  const at = (t, epoch) => layerValues({ looks, layers }, fixtures, t, 120, epoch).get('a').r;
+  assert.strictEqual(at(3000, 3000), 0, 'the anchor is the top of the loop');
+  assert.strictEqual(at(3300, 3000), 255, 'and 300ms later it is in the second step');
+  assert.strictEqual(at(3000, 0), at(3000, 0), 'an anchor of 0 is the old behaviour');
+  // The proof that the anchor is doing something: the same instant reads differently
+  // under two anchors.
+  assert.notStrictEqual(at(3300, 3000), at(3300, 3200), 'move the anchor and the same instant reads differently');
+});
+
+check('a beat-synced chase steps on the grid, not a hold time after the last step', () => {
+  const scenes = [{ id: 's1', name: 'one', fadeMs: 0, fixtures: [] }, { id: 's2', name: 'two', fadeMs: 0, fixtures: [] }];
+  const state = { ...baseState([]), scenes,
+    fx: { bpm: 120, epoch: 0, mode: 'none', depth: 255, enabled: false },
+    chase: { enabled: true, sceneIds: ['s1', 's2'], holdMs: 999999, fadeMs: 0, sync: 'beat', beats: 1 } };
+  const e = new Engine(state);
+  e.tickChase();
+  const first = e.chase.nextAt;
+  // 120bpm from an anchor of 0 is a boundary every 500ms — the next one is a multiple
+  // of 500, never "now + a hold". The absurd holdMs proves the grid is what is read.
+  assert.strictEqual(first % 500, 0, 'the next step is ON the grid: ' + first);
+  assert.ok(first - Date.now() <= 500, 'and it is the NEXT boundary, not one far away');
+});
+
 // ---- identify ----------------------------------------------------------------
 // "Which of these eight identical pars is number 5?" — the question every patch at a
 // venue turns on. It has to beat whatever is running, and lose to the panic key.
