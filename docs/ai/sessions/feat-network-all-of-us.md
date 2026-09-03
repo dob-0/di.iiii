@@ -45,11 +45,23 @@ inside the masked half.
 - **Two accent tokens.** `--accent` (#0097a3) draws marks; `--accent-ink`
   (#00757f) carries text. The brand cyan #4DF9FF is the light-on-dark form and
   fails as type on paper.
+- **Every mark on the ground comes from a fact.** A dot is a person; a clump
+  is a section and is as big as the number of people in it; the team sits at
+  the centre and the other sections ring them; a line means two of them made
+  the same thing; the lit dot is the name you are on. The test is a count: if
+  the page carries more kinds of mark than kinds of fact, the surplus reads as
+  dirt — and on paper dirt shows immediately. A soft halo under every dot and
+  a Fibonacci sphere that meant nothing both failed that count and are gone.
 - **On a phone the diagram's lines are dropped** — there is no margin to draw
   them in, so they would cross the names. Only the dust of the points remains.
 
 ## Open
 
+- The owner has asked for some names to be removed from the roster ("we will
+  fix in the future"). A peer session has put the numbered 52 in front of him
+  and will forward which. When the numbers arrive it is a `people.json` edit
+  plus `node spaces/network/build.mjs` — and the removed person's room stays
+  on any tier it already reached, because the sync engine never deletes.
 - `/network/the-index` still holds the earlier stand-alone roster page, now
   superseded by the index itself. It is unlinked but reachable. Retire it or
   fold it in.

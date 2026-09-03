@@ -270,23 +270,44 @@ const GRAPHITE = '43,48,54';
 const ACCENT = '0,151,163';
 const FOV_F = 1.302; // (h/2) / tan(21deg), the same 42-degree lens the rooms had
 
-// Fibonacci-sphere spacing: isotropic, so it reads the same from any angle as
-// the view drifts. Team as a tight inner ball, everyone else on a wider shell
-// at a decorrelated phase so the two do not stripe together.
-function mixLayoutIndex(nodes) {
-  const team = nodes.filter((n) => n.team);
-  const rest = nodes.filter((n) => !n.team);
+// Every mark on this drawing has to come from a fact, or it reads as dirt —
+// and on paper dirt shows immediately. So position is not decoration: the
+// team sits at the centre, each other section is its own clump on a ring
+// around them, and a clump is as big as the number of people in it. A dot is
+// a person, a clump is a section, its size is that section's count. Inside a
+// clump, Fibonacci spacing, which is even from any angle.
+function ball(list, cx, cy, cz, R) {
   const golden = Math.PI * (3 - Math.sqrt(5));
-  function sphere(list, R, angleScale, yScale) {
-    list.forEach((n, i) => {
-      const y = list.length > 1 ? 1 - (i / (list.length - 1)) * 2 : 0;
-      const r = Math.sqrt(Math.max(0, 1 - y * y));
-      const theta = golden * i * angleScale;
-      n.pos = [Math.cos(theta) * r * R, y * R * yScale, Math.sin(theta) * r * R];
-    });
+  list.forEach((n, i) => {
+    const y = list.length > 1 ? 1 - (i / (list.length - 1)) * 2 : 0;
+    const r = Math.sqrt(Math.max(0, 1 - y * y));
+    const th = golden * i;
+    n.pos = [cx + Math.cos(th) * r * R, cy + y * R, cz + Math.sin(th) * r * R];
+  });
+}
+
+function mixLayoutIndex(nodes) {
+  const order = [];
+  const bySection = new Map();
+  for (const n of nodes) {
+    if (!bySection.has(n.section)) { bySection.set(n.section, []); order.push(n.section); }
+    bySection.get(n.section).push(n);
   }
-  sphere(team, 0.85, 1, 1);
-  sphere(rest, 2.0, 1.6, 0.92);
+  const outer = order.filter((s) => s !== 'team');
+  // radius by count, not by index: a clump of eighteen is visibly bigger than
+  // a clump of three, which is the one number the drawing can carry on its own
+  const spread = (list) => 0.34 * Math.cbrt(list.length / 5);
+
+  const team = bySection.get('team');
+  if (team) ball(team, 0, 0, 0, spread(team) * 1.05);
+
+  outer.forEach((section, i) => {
+    const list = bySection.get(section);
+    const a = (i / outer.length) * Math.PI * 2;
+    // a true ring, no vertical jitter: the circle is the fact, and the
+    // drift already shows it as an ellipse rather than a flat line
+    ball(list, Math.cos(a) * 2.1, 0, Math.sin(a) * 2.1, spread(list));
+  });
 }
 
 function mixLayoutRoom(nodes, focusSlug) {
@@ -309,8 +330,8 @@ function createField(canvas, nodes, mode, focusSlug, edges) {
   if (mode === 'index') mixLayoutIndex(nodes);
   else mixLayoutRoom(nodes, focusSlug);
 
-  const DIST = mode === 'index' ? 6.6 : 5.9;
-  const SPREAD = mode === 'index' ? 2.1 : 2.0; // half-depth of the cloud, for the near/far ramp
+  const DIST = mode === 'index' ? 7.4 : 5.9;
+  const SPREAD = mode === 'index' ? 2.5 : 2.0; // half-depth of the cloud, for the near/far ramp
   let W = 0, H = 0, dpr = 1;
   let focusIndex = focusSlug ? nodes.findIndex((n) => n.slug === focusSlug) : -1;
   const target = [0, 0, 0];
@@ -341,7 +362,6 @@ function createField(canvas, nodes, mode, focusSlug, edges) {
     cc.fillStyle = g; cc.fillRect(0, 0, 128, 128);
     return c;
   }
-  const dotHalo = stamp(GRAPHITE, 0.28);
   const dotMark = stamp(ACCENT, 0.3);
 
   // the core is a hard little disc, not a gradient: a soft point at this size
@@ -413,12 +433,10 @@ function createField(canvas, nodes, mode, focusSlug, edges) {
     }
 
     const coreR = mode === 'index' ? 0.016 : 0.019;
-    const haloR = mode === 'index' ? 0.16 : 0.2;
     for (let i = 0; i < nodes.length; i++) {
       const s = seen[i];
       if (!s.a) continue;
       const heavy = nodes[i].team ? 1 : 0.7;
-      blob(dotHalo, s.x, s.y, s.s * haloR, s.a * 0.14 * heavy);
       disc(s.x, s.y, Math.max(1.3, s.s * coreR), GRAPHITE, s.a * 0.9 * heavy);
     }
 
