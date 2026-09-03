@@ -17,11 +17,25 @@
     font-family: inherit;
 }
 
+/* ─── ACCESSIBILITY: FOCUS + TAP TARGETS ──────────────────────
+   None of this page's own rules set a focus style, so a keyboard visitor got
+   whatever the browser default happened to be — invisible in some Chromium
+   builds once `outline` is touched anywhere upstream. One rule, every real
+   control on the page (links and buttons are the only interactive elements
+   here). */
+.lp-root a:focus-visible,
+.lp-root button:focus-visible {
+    outline: 2px solid var(--di-cyan);
+    outline-offset: 2px;
+}
+
 /* ─── BUTTONS ─────────────────────────────────────────────── */
 .landing-cta-primary,
 .lp-btn-primary {
     display: inline-flex !important;
     align-items: center !important;
+    justify-content: center !important;
+    min-height: 44px;
     background: var(--di-cyan) !important;
     color: #000 !important;
     font-weight: 700 !important;
@@ -47,6 +61,8 @@
 .lp-btn-ghost {
     display: inline-flex !important;
     align-items: center !important;
+    justify-content: center !important;
+    min-height: 44px;
     background: transparent !important;
     color: var(--di-text-muted) !important;
     font-weight: 500 !important;
@@ -70,57 +86,11 @@
     box-shadow: none !important;
 }
 
-.landing-cta-wcc {
-    color: #fff !important;
-    background: #d90000 !important;
-    border: 2px solid #fff !important;
-    font-weight: 700 !important;
-}
-
-.landing-cta-wcc:hover {
-    color: #d90000 !important;
-    background: #fff !important;
-    border-color: #fff !important;
-}
-
-.landing-cta-br-id-ge {
-    color: #00e5ff !important;
-    background: transparent !important;
-    border: 2px solid #00e5ff !important;
-    font-weight: 700 !important;
-}
-
-.landing-cta-br-id-ge:hover {
-    color: #000 !important;
-    background: #00e5ff !important;
-    border-color: #00e5ff !important;
-}
-
-.landing-cta-beyond-form {
-    color: #fff !important;
-    background: transparent !important;
-    border: 2px solid #fff !important;
-    font-weight: 700 !important;
-}
-
-.landing-cta-beyond-form:hover {
-    color: #000 !important;
-    background: #fff !important;
-    border-color: #fff !important;
-}
-
-.landing-cta-algo-vrithm {
-    color: #4df9ff !important;
-    background: rgba(77, 249, 255, 0.08) !important;
-    border: 2px solid #4df9ff !important;
-    font-weight: 700 !important;
-}
-
-.landing-cta-algo-vrithm:hover {
-    color: #05060f !important;
-    background: #4df9ff !important;
-    border-color: #4df9ff !important;
-}
+/* The four exhibitions used to carry four different hues (WCC red, two
+   cyans, a white outline) — a second, third and fourth accent on the one
+   page the brand kit is strictest about. They read as one door each into the
+   same studio, not four separate brands, so they take the one shared ghost
+   treatment now like every other secondary link on this page. */
 
 .lp-btn-link {
     color: var(--di-text-muted) !important;
@@ -216,7 +186,7 @@ body.is-landing .account-btn-wrapper {
 }
 
 .lp-section-eyebrow {
-    font-size: 0.7rem !important;
+    font-size: 0.75rem !important;
     font-weight: 600 !important;
     letter-spacing: 0.2em !important;
     text-transform: uppercase !important;
@@ -248,6 +218,7 @@ body.is-landing .account-btn-wrapper {
     position: relative;
     min-height: calc(100vh - 56px);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     overflow: hidden;
@@ -256,33 +227,18 @@ body.is-landing .account-btn-wrapper {
     background: #000;
 }
 
-/* Light scrim behind the hero text (~a quarter of the wiki's darkness) so the
-   wordmark/subtitle/buttons read over the bright 3D, while the edges stay vivid.
-   Sits above the fixed GL background (z 0) and below the hero content (z 2). */
+/* Scrim behind the hero text so the wordmark/subtitle/buttons read over the
+   bright 3D room. A flat wash, not a gradient — the brand kit treats a
+   gradient as decoration, and a flat 30% black reads the copy just as well as
+   the four-stop fade this replaced. Sits above the fixed GL background (z 0)
+   and below the hero content (z 2). */
 .lp-hero::after {
     content: '';
     position: absolute;
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: linear-gradient(
-        to bottom,
-        rgba(0, 0, 0, 0.06) 0%,
-        rgba(0, 0, 0, 0.34) 42%,
-        rgba(0, 0, 0, 0.34) 90%,
-        rgba(0, 0, 0, 0.06) 100%
-    );
-}
-
-
-.lp-hero-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    background:
-        radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.35) 100%),
-        linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 25%, transparent 75%, rgba(0,0,0,0.5) 100%);
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .lp-hero-inner {
@@ -346,16 +302,18 @@ body.is-landing .account-btn-wrapper {
     transform: translateX(-50%);
     z-index: 50;
     margin: 0;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
+    /* Was --di-text-muted at a further 0.6 opacity — 2.46:1, under the 4.5:1
+       floor. The token alone already reads as quiet (5.28:1); stacking a
+       second dimmer on top of it was the bug, not the intended look. */
     color: var(--di-text-muted);
-    opacity: 0.6;
     pointer-events: none;
 }
 
 .lp-eyebrow {
-    font-size: 0.7rem !important;
+    font-size: 0.75rem !important;
     font-weight: 600 !important;
     letter-spacing: 0.2em !important;
     text-transform: uppercase !important;
@@ -414,72 +372,68 @@ body.is-landing .account-btn-wrapper {
     border-bottom-color: var(--di-cyan);
 }
 
-/* ─── HERO SCENE VISUALISER ───────────────────────────────── */
+/* ─── ROOM TAGS ───────────────────────────────────────────────
+   The five moves, standing in the room as objects rather than living in a
+   features list further down the page. Desktop scatters them near the
+   hero's edges (absolute, relative to `.lp-hero`, escaping the centred
+   column they're written inside); a phone has no room for a scatter, so
+   below 861px they fall back to an ordinary stacked list, in document order,
+   right where a visitor would look for them next. */
+.lp-room-tags {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
 
-.lp-scene-grid {
+.lp-room-tag {
     position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(var(--di-cyan-border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--di-cyan-border) 1px, transparent 1px);
-    background-size: 32px 32px;
-    opacity: 0.5;
+    max-width: 190px;
+    font-family: var(--di-mono);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--di-text-muted);
+    background: rgba(0, 0, 0, 0.82);
+    border: 1px solid var(--di-cyan-border);
+    padding: 8px 10px;
+    pointer-events: none;
 }
 
-.lp-scene-cube {
-    position: absolute;
-    border: 1.5px solid var(--di-cyan-border);
-    animation: lp-float 4s ease-in-out infinite;
+.lp-room-tag-n {
+    display: inline-block;
+    color: var(--di-cyan);
+    font-weight: 700;
+    margin-right: 6px;
 }
 
-.lp-cube-a {
-    width: 44px;
-    height: 44px;
-    left: 40px;
-    top: 48px;
-    background: var(--di-cyan-dim);
-    animation-delay: 0s;
-}
+/* The centred text column (wordmark, tagline, buttons) can run up to about
+   1050px wide on a 1440px hero at its widest row (the four exhibition
+   chips), so the tags stay inside the ~180px margins either side of it
+   rather than trying to dodge its height. */
+.lp-room-tag:nth-of-type(1) { top: 10%; left: 2.5%; text-align: left; }
+.lp-room-tag:nth-of-type(2) { top: 10%; right: 2.5%; text-align: right; }
+.lp-room-tag:nth-of-type(3) { top: 40%; left: 1.5%; text-align: left; }
+.lp-room-tag:nth-of-type(4) { top: 40%; right: 1.5%; text-align: right; }
+.lp-room-tag:nth-of-type(5) { bottom: 9%; right: 2.5%; text-align: right; }
 
-.lp-cube-b {
-    width: 28px;
-    height: 28px;
-    left: 130px;
-    top: 36px;
-    background: rgba(77, 249, 255, 0.06);
-    animation-delay: -1.3s;
-}
+@media (max-width: 860px) {
+    .lp-room-tags {
+        position: static;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 4px 0 28px;
+        max-width: 340px;
+    }
 
-.lp-cube-c {
-    width: 56px;
-    height: 36px;
-    left: 210px;
-    top: 52px;
-    background: rgba(77, 249, 255, 0.03);
-    animation-delay: -2.1s;
-}
-
-.lp-scene-cursor {
-    position: absolute;
-    width: 6px;
-    height: 6px;
-    left: 165px;
-    top: 60px;
-    background: var(--di-cyan);
-    animation: lp-cursor-move 5s ease-in-out infinite;
-}
-
-@keyframes lp-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
-}
-
-@keyframes lp-cursor-move {
-    0% { transform: translate(0, 0); }
-    25% { transform: translate(48px, -22px); }
-    50% { transform: translate(80px, 8px); }
-    75% { transform: translate(-40px, 12px); }
-    100% { transform: translate(0, 0); }
+    .lp-room-tag {
+        position: static;
+        max-width: none;
+        text-align: left !important;
+        background: transparent;
+        border: none;
+        border-left: 2px solid var(--di-cyan-border);
+        padding: 2px 0 2px 12px;
+    }
 }
 
 /* ─── SCROLL HINT ─────────────────────────────────────────── */
@@ -489,143 +443,48 @@ body.is-landing .account-btn-wrapper {
     text-decoration: none;
     display: flex;
     align-items: center;
-    opacity: 0.5;
 }
 
-.lp-scroll-hint:hover { color: var(--di-cyan); opacity: 1; }
+.lp-scroll-hint:hover { color: var(--di-cyan); }
 
 @keyframes lp-bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(6px); }
 }
 
-/* ─── WHAT — THREE COLUMNS ────────────────────────────────── */
-.lp-three-cols {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0;
-    border-top: 1px solid var(--di-cyan-border);
-    border-left: 1px solid var(--di-cyan-border);
+@media (prefers-reduced-motion: reduce) {
+    .lp-scroll-hint { animation: none; }
 }
 
-.lp-col-card {
-    background: var(--di-surface);
-    padding: 28px 24px;
-    transition: background 0.1s;
+/* ─── ONE THAT'S LIVE ─────────────────────────────────────── */
+.lp-example-frame {
+    border: 1px solid var(--di-cyan-border);
+    background: var(--di-cyan-dim);
+    padding: 22px 24px;
+    max-width: 640px;
 }
 
-.lp-col-card:hover {
-    background: rgba(77, 249, 255, 0.04);
+.lp-example-cap {
+    font-family: var(--di-mono) !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    color: var(--di-cyan) !important;
+    margin: 0 0 10px !important;
 }
 
-.lp-col-title {
-    font-size: 1rem !important;
-    font-weight: 600 !important;
+.lp-example-body {
+    font-size: 0.95rem !important;
     color: var(--di-text) !important;
-    margin: 16px 0 10px !important;
-}
-
-.lp-col-body {
-    font-size: 0.88rem !important;
-    color: var(--di-text-muted) !important;
     line-height: 1.65 !important;
     margin: 0 !important;
 }
 
-/* column visuals */
-.lp-col-vis {
-    height: 60px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.lp-vis-box {
-    width: 36px;
-    height: 36px;
-    border: 1.5px solid var(--di-cyan-border);
-    animation: lp-float 3.5s ease-in-out infinite;
-}
-
-.lp-vis-box-b {
-    width: 24px;
-    height: 24px;
-    animation-delay: -1.2s;
-    opacity: 0.6;
-}
-
-.lp-vis-collab {
-    height: 60px;
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.lp-vis-dot {
-    position: absolute;
-    width: 6px;
-    height: 6px;
-    background: var(--di-cyan);
-}
-
-.lp-dot-a { left: 8px; top: 14px; animation: lp-pulse-dot 2s ease-in-out infinite; }
-.lp-dot-b { left: 36px; top: 26px; animation: lp-pulse-dot 2s ease-in-out infinite 0.6s; }
-.lp-dot-c { left: 18px; top: 38px; animation: lp-pulse-dot 2s ease-in-out infinite 1.2s; }
-
-.lp-vis-pulse {
-    position: absolute;
-    left: 4px;
-    top: 10px;
-    width: 18px;
-    height: 18px;
-    border: 1px solid var(--di-cyan-border);
-    animation: lp-ripple 2s ease-out infinite;
-}
-
-@keyframes lp-pulse-dot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.7); }
-}
-
-@keyframes lp-ripple {
-    0% { transform: scale(1); opacity: 0.6; }
-    100% { transform: scale(4); opacity: 0; }
-}
-
-.lp-vis-publish {
-    height: 60px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.lp-vis-globe {
-    width: 38px;
-    height: 38px;
-    border: 1.5px solid var(--di-cyan-border);
-    background: var(--di-cyan-dim);
-}
-
-.lp-vis-arrow {
-    width: 22px;
-    height: 2px;
-    background: linear-gradient(90deg, var(--di-cyan), transparent);
-    animation: lp-arrow-move 1.8s ease-in-out infinite;
-}
-
-@keyframes lp-arrow-move {
-    0%, 100% { transform: translateX(0); opacity: 1; }
-    80% { transform: translateX(8px); opacity: 0; }
-    81% { transform: translateX(-4px); opacity: 0; }
-}
-
 /* ─── HOW — STEPS ─────────────────────────────────────────── */
 .lp-steps {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0;
+    display: flex;
+    flex-direction: column;
     border-top: 1px solid var(--di-cyan-border);
-    border-left: 1px solid var(--di-cyan-border);
     margin-bottom: 24px;
 }
 
@@ -633,20 +492,18 @@ body.is-landing .account-btn-wrapper {
     display: flex;
     gap: 20px;
     align-items: flex-start;
-    background: var(--di-surface);
-    padding: 24px;
-    transition: background 0.1s;
-}
-
-.lp-step:hover {
-    background: rgba(77, 249, 255, 0.04);
+    padding: 20px 4px;
+    border-bottom: 1px solid var(--di-cyan-border);
 }
 
 .lp-step-num {
     font-size: 1.8rem !important;
     font-weight: 700 !important;
     color: var(--di-cyan) !important;
-    opacity: 0.25;
+    /* Was opacity .25 — 1.80:1, failing even the large-text floor (3:1) this
+       size and weight qualify for. .55 clears full body-text AA (5.06:1) and
+       still reads lighter than the step title beside it. */
+    opacity: 0.55;
     line-height: 1 !important;
     flex-shrink: 0;
     font-family: var(--di-mono) !important;
@@ -714,11 +571,6 @@ body.is-landing .account-btn-wrapper {
 .lp-audience-card {
     background: var(--di-surface);
     padding: 28px 24px;
-    transition: background 0.1s;
-}
-
-.lp-audience-card:hover {
-    background: rgba(77, 249, 255, 0.04);
 }
 
 .lp-audience-icon {
@@ -755,17 +607,21 @@ body.is-landing .account-btn-wrapper {
 .lp-feature-card {
     background: var(--di-surface);
     padding: 24px 20px;
-    transition: background 0.1s;
 }
 
-.lp-feature-card:hover {
-    background: rgba(77, 249, 255, 0.04);
-}
-
+/* The only card in this grid that is also a real link — the plain feature
+   cards beside it do nothing on click, so they get no hover state to imply
+   otherwise. */
 .lp-wiki-card {
     display: block;
     color: inherit;
     text-decoration: none;
+    transition: background 0.1s, border-color 0.1s;
+}
+
+.lp-wiki-card:hover,
+.lp-wiki-card:focus-visible {
+    background: rgba(77, 249, 255, 0.06);
 }
 
 .lp-wiki-card-more {
@@ -825,7 +681,7 @@ body.is-landing .account-btn-wrapper {
 }
 
 .lp-ai-block-title {
-    font-size: 0.7rem !important;
+    font-size: 0.75rem !important;
     font-weight: 600 !important;
     letter-spacing: 0.14em !important;
     text-transform: uppercase !important;
@@ -929,19 +785,6 @@ body.is-landing .account-btn-wrapper {
     align-items: center;
 }
 
-.lp-enter-glow {
-    display: none;
-}
-
-.lp-enter-title {
-    font-size: clamp(2rem, 5vw, 3.2rem) !important;
-    font-weight: 700 !important;
-    letter-spacing: -0.04em !important;
-    color: var(--di-text) !important;
-    margin: 0 0 20px !important;
-    line-height: 1.1 !important;
-}
-
 .lp-enter-body {
     font-size: 0.95rem !important;
     color: var(--di-text-muted) !important;
@@ -951,7 +794,7 @@ body.is-landing .account-btn-wrapper {
 }
 
 .lp-enter-note {
-    font-size: 0.7rem !important;
+    font-size: 0.75rem !important;
     /* Was 0.2 — 1.66:1, and it carries a real link (thedi.studio). A whisper is
        a legitimate choice for a credit line; an unreadable link is not, and no
        alpha below ~0.46 clears the floor. It stays quieter than body copy by
@@ -964,14 +807,6 @@ body.is-landing .account-btn-wrapper {
 
 /* ─── RESPONSIVE ──────────────────────────────────────────── */
 @media (max-width: 860px) {
-    .lp-three-cols {
-        grid-template-columns: 1fr;
-    }
-
-    .lp-steps {
-        grid-template-columns: 1fr;
-    }
-
     .lp-audience-grid {
         grid-template-columns: 1fr;
     }
@@ -1040,26 +875,34 @@ body.is-landing .account-btn-wrapper {
 .lp-footer-nav {
     display: flex;
     align-items: center;
-    gap: 20px;
+    flex-wrap: wrap;
+    gap: 4px 20px;
 }
 
+/* Was --di-text-muted at a further 0.7 opacity — 3.01:1, under the 4.5:1
+   floor this size (12.5px, regular weight) needs. The token alone already
+   reads as secondary nav; the extra dimming was the bug. display:inline-flex
+   + min-height gives the link a real 40px tap target on a phone, where its
+   own text is barely a third of that tall. */
 .lp-footer-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
     font-size: 0.78rem;
     color: var(--di-text-muted);
     text-decoration: none;
-    opacity: 0.7;
-    transition: opacity 0.15s, color 0.15s;
+    transition: color 0.15s;
 }
 
 .lp-footer-link:hover {
-    opacity: 1;
     color: var(--di-text);
 }
 
+/* Was --di-text-muted at a further 0.35 opacity — 1.52:1 — around a real
+   link (thedi.studio). See the same fix on .lp-enter-note above. */
 .lp-footer-note {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: var(--di-text-muted);
-    opacity: 0.35;
     font-family: var(--di-mono);
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -1071,16 +914,6 @@ body.is-landing .account-btn-wrapper {
 .lp-root {
     -webkit-user-select: text;
     user-select: text;
-}
-
-.lp-col-card {
-    border-right: 1px solid var(--di-cyan-border);
-    border-bottom: 1px solid var(--di-cyan-border);
-}
-
-.lp-step {
-    border-right: 1px solid var(--di-cyan-border);
-    border-bottom: 1px solid var(--di-cyan-border);
 }
 
 .lp-audience-card {
@@ -1140,7 +973,7 @@ body.is-landing .account-btn-wrapper {
 
 /* The hero's scrim and its black ground exist for ONE job: making the landing
    copy readable over a bright room. The moment the copy leaves — flying, or
-   gone because the visitor is inside — they are a 34% black wash over the room
+   gone because the visitor is inside — they are a 30% black wash over the room
    and nothing else, which is why arriving used to darken it. They come back
    only when the page does. */
 .lp-root--flying .lp-hero,
@@ -1149,9 +982,7 @@ body.is-landing .account-btn-wrapper {
 }
 
 .lp-root--flying .lp-hero::after,
-.lp-root--flying .lp-hero-overlay,
-.lp-root--inside .lp-hero::after,
-.lp-root--inside .lp-hero-overlay {
+.lp-root--inside .lp-hero::after {
     opacity: 0;
     transition: opacity 0.45s ease;
 }
@@ -1163,7 +994,8 @@ body.is-landing .account-btn-wrapper {
    the landing page reappearing after you had already arrived. Fading it here
    costs nothing (nobody can see a hidden element fade) and leaves the handover
    with nothing left to hide. */
-.lp-root--flying .lp-hero-inner {
+.lp-root--flying .lp-hero-inner,
+.lp-root--flying .lp-room-tags {
     opacity: 0;
 }
 

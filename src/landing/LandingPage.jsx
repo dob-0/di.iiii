@@ -8,6 +8,7 @@ import { getServerConfig } from '../services/serverSpaces.js'
 import { buildSpacesPath } from '../studio/utils/studioRouting.js'
 import { flyInside, REST_POSE } from './enterFlight.js'
 import PageDebris from './PageDebris.jsx'
+import { buildJamScenePath } from '../project/routing/jamRouting.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
 // LiveProjectScene into the landing chunk for every visitor — including phones,
@@ -67,15 +68,24 @@ const LOCAL_TAGLINE = 'Running on your own machine. Offline, no account, and the
 const LOCAL_CTA_SUB = 'no account, no quota. Studio is a room on the same desk.'
 const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', desc: 'This di.iiii runs locally. Create as many spaces as you like — no sign-in, no quota, and your work stays in your own home folder.' }
 
-// Two of the three pillars, and step 04, promise reach a local install does not
-// have: `di up` binds 127.0.0.1, so there is no link anyone else can open and
-// no public URL to share. Saying so is not a smaller product — the same scene
-// carries to a hosted space when you want an audience, and that is the honest
-// version of the sentence. (LAN exposure is a deliberate later feature, see
+// Step 04's promise reaches further than a local install goes: `di up` binds
+// 127.0.0.1, so there is no link anyone else can open and no public URL to
+// share. Saying so is not a smaller product — the same scene carries to a
+// hosted space when you want an audience, and that is the honest version of
+// the sentence. (LAN exposure is a deliberate later feature, see
 // docs/deploy/DI_CLI.md.)
-const LOCAL_PILLAR_COLLAB = 'Everything is live in this browser and in any other on this machine. To work with someone else, push the space to a di.iiii you both can reach.'
-const LOCAL_PILLAR_PUBLISH = 'Spaces live at their own URL on this machine. Nothing leaves it until you send it somewhere — this server answers only to you.'
 const LOCAL_STEP_SHARE = { n: '04', title: 'Keep or carry', body: 'Your work sits in your home folder. `di backup` writes the whole thing to one file, and a space can be carried to a hosted di.iiii when it wants an audience.' }
+
+// The five moves, said once as short spec-sheet tags standing in the room
+// itself (the hero) rather than as a features list. Verbatim, owner's copy —
+// not to be reworded.
+const ROOM_TAGS = [
+    { n: '01', label: 'open a space, yours, at an address' },
+    { n: '02', label: 'put objects in the room' },
+    { n: '03', label: 'stand the camera where a visitor arrives' },
+    { n: '04', label: 'hand out the address' },
+    { n: '05', label: 'it stays as a file' }
+]
 
 const STEPS = [
     { n: '01', title: 'Open a space', body: 'Click "Step inside" — you get a space of your own, no account needed. Sign in to keep it and to make more.' },
@@ -411,7 +421,11 @@ export default function LandingPage() {
                         page renders itself — it only exists where there is no
                         real main space to enter, otherwise it is another door
                         wearing a preview's clothes. */}
-                    <Stack className="lp-hero-cta-row" direction="row" spacing={2} sx={{ pt: 1, pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {/* gap, not `spacing` (a margin-left on later siblings): the
+                        margin has no vertical component, so a row that wraps on
+                        a phone touches the one above it with zero space and the
+                        two read as one broken box. */}
+                    <Stack className="lp-hero-cta-row" direction="row" sx={{ pt: 1, pb: 2, gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
                         <Button className="landing-cta-primary" variant="contained" size="large" href={studioHref} onClick={openDoor}>
                             Step inside
                         </Button>
@@ -428,7 +442,7 @@ export default function LandingPage() {
                         <a href={studioHref}>Already have spaces? Open Studio →</a>
                     </Typography>
 
-                    <Stack className="lp-hero-space-row" direction="row" spacing={1.5} sx={{ pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <Stack className="lp-hero-space-row" direction="row" sx={{ pb: 2, gap: '10px 12px', flexWrap: 'wrap', justifyContent: 'center' }}>
                         {(isLocalInstall ? [] : FEATURED_SPACES).map((space) => (
                             <Button
                                 key={space.id}
@@ -448,6 +462,24 @@ export default function LandingPage() {
                         </svg>
                     </Box>
                 </Stack>
+
+                {/* The room is the pitch. Five short spec-sheet tags, read as
+                    objects standing in the space rather than as a features
+                    list — the same room a visitor was just inside is what
+                    built this page. A sibling of `.lp-hero-inner`, not a
+                    child of it, so it positions against the whole hero
+                    (`.lp-hero` is the nearest OTHER positioned ancestor) —
+                    nested inside the centred text column it had nowhere to
+                    scatter to. */}
+                {!entered && (
+                    <Box component="ol" className="lp-room-tags">
+                        {ROOM_TAGS.map((tag) => (
+                            <Box component="li" key={tag.n} className="lp-room-tag">
+                                <span className="lp-room-tag-n">{tag.n}</span>{tag.label}
+                            </Box>
+                        ))}
+                    </Box>
+                )}
 
                 {entered && (
                     <>
@@ -470,64 +502,36 @@ export default function LandingPage() {
 
             {!entered && (
             <>
-            {/* ── WHAT IS DI.I ─────────────────────────────────── */}
+            {/* ── HOW IT WAS BUILT ─────────────────────────────── */}
             <Box className="lp-section" component="section" id="what">
                 <Box className="lp-section-inner">
-                    <Typography className="lp-section-eyebrow">The short answer</Typography>
-                    <Typography className="lp-section-title" component="h2">What is di.iiii?</Typography>
-                    <Typography className="lp-section-body">
-                        di.iiii is where you make a 3D space and hand out its address.
-                        Build scenes, place objects, set up lighting and cameras,
-                        and invite others into the same space in real time — then publish,
-                        and anyone opens it in a browser or a headset with nothing to install.
+                    <Typography className="lp-section-eyebrow">How it was built</Typography>
+                    <Typography className="lp-section-title" component="h2">
+                        You just left a room like this one. Here&rsquo;s how it was built.
                     </Typography>
+                    <Typography className="lp-section-body" sx={{ mb: 0 }}>
+                        Five moves, done in order, by one person, with no crew. Everything on
+                        the label above is a step you can take today.
+                    </Typography>
+                </Box>
+            </Box>
 
-                    <Box className="lp-three-cols">
-                        {[
-                            {
-                                vis: (
-                                    <Box className="lp-col-vis">
-                                        <Box className="lp-vis-box" />
-                                        <Box className="lp-vis-box lp-vis-box-b" />
-                                    </Box>
-                                ),
-                                title: 'Create',
-                                body: 'Add 3D shapes, import models and images, write text in 3D space. Arrange everything with drag-and-drop controls.'
-                            },
-                            {
-                                vis: (
-                                    <Box className="lp-vis-collab">
-                                        <Box className="lp-vis-dot lp-dot-a" />
-                                        <Box className="lp-vis-dot lp-dot-b" />
-                                        <Box className="lp-vis-dot lp-dot-c" />
-                                        <Box className="lp-vis-pulse" />
-                                    </Box>
-                                ),
-                                title: 'Collaborate',
-                                body: isLocalInstall ? LOCAL_PILLAR_COLLAB : 'Invite anyone with a link. See live cursors and changes. Work together across the world without any setup.'
-                            },
-                            {
-                                vis: (
-                                    <Box className="lp-vis-publish">
-                                        <Box className="lp-vis-globe" />
-                                        <Box className="lp-vis-arrow" />
-                                    </Box>
-                                ),
-                                title: 'Publish',
-                                body: isLocalInstall ? LOCAL_PILLAR_PUBLISH : 'Every space has a public URL. Share the link — visitors see your work in their browser or in a VR/AR headset.'
-                            }
-                        ].map((col) => (
-                            <Box key={col.title} className="lp-col-card">
-                                {col.vis}
-                                <Typography className="lp-col-title" component="h3">{col.title}</Typography>
-                                <Typography className="lp-col-body">{col.body}</Typography>
-                            </Box>
-                        ))}
+            {/* ── ONE THAT'S LIVE ──────────────────────────────── */}
+            <Box className="lp-section" component="section" id="live">
+                <Box className="lp-section-inner">
+                    <Typography className="lp-section-eyebrow">One that&rsquo;s live</Typography>
+                    <Box className="lp-example-frame">
+                        <Typography className="lp-example-cap" component="p">Open Jam room</Typography>
+                        <Typography className="lp-example-body">
+                            Built for one night. Visitors held their phones up and their photos
+                            went straight onto the walls. By morning the jam was over — the room
+                            stayed, address and all.
+                        </Typography>
                     </Box>
                 </Box>
             </Box>
 
-            {/* ── HOW IT WORKS ─────────────────────────────────── */}
+            {/* ── HOW IT WORKS (the detailed version) ───────────── */}
             <Box className="lp-section" component="section" id="how">
                 <Box className="lp-section-inner">
                     <Typography className="lp-section-eyebrow">Getting started</Typography>
@@ -693,21 +697,19 @@ export default function LandingPage() {
                 </Box>
             </Box>
 
-            {/* ── ENTER ────────────────────────────────────────── */}
+            {/* ── WHAT YOU GET ─────────────────────────────────── */}
             <Box className="lp-section lp-enter-section" component="section" id="enter">
                 <Box className="lp-section-inner lp-enter-inner">
-                    <Box className="lp-enter-glow" aria-hidden="true" />
-                    <Typography className="lp-section-eyebrow">Ready?</Typography>
-                    <Typography className="lp-enter-title" component="h2">
-                        Start building your space.
-                    </Typography>
+                    <Typography className="lp-section-eyebrow">What you get</Typography>
                     <Typography className="lp-enter-body">
-                        A space of your own, empty and waiting. Build it in the browser, hand out the
-                        address while it runs, and take the whole thing away as one file when it ends.
-                        No account needed to start.
+                        A link while it runs, a file when it ends. Nothing to renew, nothing
+                        that vanishes because a server did.
                     </Typography>
-                    <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', justifyContent: 'center', mb: 2 }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href={studioHref} onClick={openDoor}>
+                    <Stack direction="row" sx={{ gap: '16px', flexWrap: 'wrap', justifyContent: 'center', mb: 2, mt: 3 }}>
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={buildJamScenePath()}>
+                            walk in and open your own room →
+                        </Button>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref} onClick={openDoor}>
                             Step inside
                         </Button>
                     </Stack>
