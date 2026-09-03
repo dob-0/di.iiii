@@ -142,6 +142,11 @@ a.row .made .arrow{opacity:.6;}
      across the whole sheet rather than sitting behind the names as smudges. */
   .ground{opacity:.2;}
   .ground canvas{-webkit-mask-image:none;mask-image:none;}
+  /* the two halves of the room header do not fit one line on a phone;
+     side by side they each wrapped mid-phrase. */
+  .room-header{flex-direction:column;gap:9px;}
+  /* the section eyebrow is 39 characters and overruns 390px by a hair */
+  .room-header .eyebrow{letter-spacing:.08em;}
   a.row{grid-template-columns:1fr;row-gap:3px;padding:14px 10px 15px 14px;}
   a.row .name{font-size:19px;}
   .indexPane{padding-top:30px;padding-bottom:28px;}
