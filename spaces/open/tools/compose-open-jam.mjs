@@ -1,10 +1,39 @@
 // Compose the Open Jam room from what is inside it.
-// Usage: node compose-open-jam.mjs <apiBase> <token> <wall|floor> [--apply]
-const [base, token, layout = 'wall', flag] = process.argv.slice(2)
-const apply = flag === '--apply'
+// Usage: node compose-open-jam.mjs <apiBase> <token> <wall|floor> [--style=night|paper|blue] [--apply]
+// Styles (wall only) set the ground, grid, fog, light and text colours; the objects stay the same.
+const args = process.argv.slice(2)
+const [base, token, layout = 'wall'] = args
+const apply = args.includes('--apply')
+const style = (args.find((a) => a.startsWith('--style=')) || '--style=night').slice(8)
 const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 const get = async (p) => { const r = await fetch(base + p, { headers: H }); if (!r.ok) throw new Error(`${r.status} ${p}`); return r.json() }
 const PI = Math.PI
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+const STYLES = {
+  // a night gallery: dark ground, the photos carry the light, warm text
+  night: { background: '#0b0b12', sign: '#181822', grid: false, fog: { near: 18, far: 60, color: '#0b0b12', enabled: true }, ambient: 0.55, sun: 1.1,
+    colors: { headline: '#fff3d6', like: '#a9b0c2', scan: '#ffd166', howto: '#eceaf2' } },
+  // a zine: paper ground, faint grid, ink text
+  paper: { background: '#efece4', sign: '#ffffff', grid: { cell: '#d9d4c8', section: '#c4bdae' }, fog: { near: 30, far: 90, color: '#efece4', enabled: true }, ambient: 0.95, sun: 0.5,
+    colors: { headline: '#141414', like: '#5a5a5a', scan: '#b5411d', howto: '#141414' } },
+  // the front room's own world: deep blue, cyan grid
+  blue: { background: '#0000a0', sign: '#000070', grid: { cell: '#2a6e73', section: '#4df9ff' }, fog: { near: 30, far: 120, color: null, enabled: true }, ambient: 0.5, sun: 1.5,
+    colors: { headline: '#4df9ff', like: '#cfd8ff', scan: '#ffffff', howto: '#ffffff' } },
+}
+const ST = STYLES[style]
+if (!ST) { console.error(`unknown style ${style}; one of ${Object.keys(STYLES).join(', ')}`); process.exit(1) }
+
+// the four lines, as they should read (the originals had a typo, a missing step 3 and "assets")
+const COPY = {
+  headline: "let's make some memories together",
+  like: 'like we did on the jam night, 21 July 2026',
+  scan: 'scan it',
+  howto: '1. scan the code\n2. open the room and add your photos\n3. tap edit and move them where you like\n4. they stay — this room is the record',
+}
 
 const { project } = await get('/api/projects/open-jam')
 const { document: doc } = await get('/api/projects/open-jam/document')
@@ -25,9 +54,9 @@ for (const e of ents) {
     seen.add(key); photos.push(e); continue
   }
   if (e.type === 'text') {
-    const t = textOf(e).trim()
+    const t = textOf(e).trim().toLowerCase()
     if (JUNK_TEXT(t)) { remove.push(e); continue }
-    if (t.startsWith('lets make')) texts.headline = e
+    if (t.startsWith('let')) texts.headline = e
     else if (t.startsWith('scan')) texts.scan = e
     else if (t.startsWith('1.')) texts.howto = e
     else if (t.startsWith('like we')) texts.like = e
@@ -46,31 +75,69 @@ const ops = []
 const del = (e) => ops.push({ type: 'deleteEntity', payload: { entityId: e.id } })
 const tf = (e, position, rotation, scale) => ops.push({ type: 'updateComponent', payload: { entityId: e.id, component: 'transform', patch: { position, rotation, scale: Array.isArray(scale) ? scale : [scale, scale, scale] } } })
 const txt = (e, patch) => ops.push({ type: 'updateComponent', payload: { entityId: e.id, component: 'text', patch } })
+const paint = (e, color) => ops.push({ type: 'updateComponent', payload: { entityId: e.id, component: 'appearance', patch: { color, opacity: 1 } } })
+const light = (e, intensity, color) => ops.push({ type: 'updateComponent', payload: { entityId: e.id, component: 'light', patch: { intensity, ...(color ? { color } : {}) } } })
 for (const e of remove) del(e)
 
 const STAND = [PI / 2, 0, 0]          // flat plane stood up, facing +z
 const FACE_PX = [PI / 2, 0, -PI / 2]  // stood up, then turned to face +x
 const FACE_NX = [PI / 2, 0, PI / 2]   // stood up, then turned to face -x
-let camera
+let camera, world
 
 if (layout === 'wall') {
-  // three panels around the visitor: a back wall and two wings, photos at eye height
-  const n = photos.length, perPanel = Math.ceil(n / 3)
-  const S = 1.1, GAP = 3.4, Y = 1.7
-  photos.forEach((e, i) => {
-    const panel = Math.floor(i / perPanel), j = i % perPanel
-    const count = Math.min(perPanel, n - panel * perPanel)
-    const off = (j - (count - 1) / 2) * GAP
-    if (panel === 0) tf(e, [off, Y, -9], STAND, S)                 // back wall
-    else if (panel === 1) tf(e, [-7.5, Y, -1.5 + off], FACE_PX, S)      // left wing
-    else tf(e, [7.5, Y, -1.5 + off], FACE_NX, S)                        // right wing
-  })
-  if (qr) tf(qr, [-3.2, 1.1, 1.5], STAND, 0.7)
-  if (texts.headline) { tf(texts.headline, [0, 3.7, -9], STAND, 0.32); txt(texts.headline, { billboard: false }) }
-  if (texts.like) { tf(texts.like, [0, 3.15, -9], STAND, 0.18); txt(texts.like, { billboard: false }) }
-  if (texts.scan) { tf(texts.scan, [-3.2, 2.15, 1.5], STAND, 0.16); txt(texts.scan, { billboard: false }) }
-  if (texts.howto) { tf(texts.howto, [3.6, 1.6, 1.5], STAND, 0.11); txt(texts.howto, { billboard: false }) }
-  camera = { projection: 'perspective', position: [0, 1.8, 10], target: [0, 1.6, -3], fov: 60, zoom: 1, near: 0.1, far: 300, locked: false }
+  // Three panels around the visitor, hung in TWO rows — one row of a wide wall shrank
+  // to a band across the middle of a portrait phone. A photo plane's HEIGHT follows its
+  // scale: ImageObject builds a plane 3 units TALL and 3·aspect wide, so height = 3·scale
+  // and a uniform scale already gives an even hanging line. The only thing to cap is a
+  // banner like the festival poster (3.3:1), which at the row scale would be 5 units wide.
+  const ROW_H = 2.0, MAX_W = 3.4, BASE = ROW_H / 3, ROWS = [1.15, 3.35], GAP = 3.7
+  const BACK_Z = -7.5, WING_X = 6.2, WING_Z = -2.0
+  const dims = new Map()
+  for (const e of photos) {
+    const id = e.components?.media?.assetId
+    const r = await fetch(`${base}/api/projects/open-jam/assets/${id}`, { headers: { Authorization: H.Authorization } })
+    const buf = Buffer.from(await r.arrayBuffer())
+    const p = join(mkdtempSync(join(tmpdir(), 'open-jam-dims-')), String(id))
+    writeFileSync(p, buf)
+    const [width, height] = execFileSync('magick', ['identify', '-format', '%w %h', p]).toString().trim().split(' ').map(Number)
+    dims.set(e.id, { width, height })
+  }
+  const scaleOf = (e) => { const d = dims.get(e.id); return d ? Math.min(BASE, MAX_W / (3 * (d.width / d.height))) : BASE }
+  const panels = [[], [], []]
+  photos.forEach((e, i) => panels[i % 3].push(e))     // deal round-robin so each wall gets a mix
+  const hang = (list, place) => {
+    const perRow = Math.ceil(list.length / 2)
+    list.forEach((e, i) => {
+      const row = Math.floor(i / perRow), j = i % perRow
+      const count = Math.min(perRow, list.length - row * perRow)
+      place(e, (j - (count - 1) / 2) * GAP, ROWS[1 - row], scaleOf(e))
+    })
+  }
+  hang(panels[0], (e, off, y, s) => tf(e, [off, y, BACK_Z], STAND, s))              // back wall
+  hang(panels[1], (e, off, y, s) => tf(e, [-WING_X, y, WING_Z + off], FACE_PX, s)) // left wing
+  hang(panels[2], (e, off, y, s) => tf(e, [WING_X, y, WING_Z + off], FACE_NX, s))  // right wing
+  // The front desk is a LECTERN on the floor, tilted up towards the entry camera.
+  // Standing it upright at eye height put it over the photo line — a portrait phone
+  // photo on the wall hangs from y 0.2 to 3.2, so there is no clear band up there.
+  // The floor in front of the walls is the only empty part of the entry frame.
+  // the scan caption goes in FRONT of the code: behind it, the code's own plane hides it
+  const LECTERN = [1.02, 0, 0]  // stood up, then leaned back ~30° to face the camera
+  if (qr) tf(qr, [-2.2, 0.3, 0.8], LECTERN, 0.34)
+  if (texts.scan) { tf(texts.scan, [-2.2, 0.12, 1.7], LECTERN, 0.07); txt(texts.scan, { value: COPY.scan, billboard: false, align: 'center', fontFamily: 'JetBrains Mono, monospace', fontWeight: '600' }); paint(texts.scan, ST.colors.scan) }
+  if (texts.howto) { tf(texts.howto, [1.7, 0.55, 1.0], LECTERN, 0.062); txt(texts.howto, { value: COPY.howto, billboard: false, align: 'left', fontFamily: 'Inter, sans-serif', fontWeight: '500' }); paint(texts.howto, ST.colors.howto) }
+  if (texts.headline) { tf(texts.headline, [0, 5.3, BACK_Z], STAND, 0.26); txt(texts.headline, { value: COPY.headline, billboard: false, align: 'center', fontFamily: 'Inter, sans-serif', fontWeight: '700' }); paint(texts.headline, ST.colors.headline) }
+  if (texts.like) { tf(texts.like, [0, 4.8, BACK_Z], STAND, 0.11); txt(texts.like, { value: COPY.like, billboard: false, align: 'center', fontFamily: 'JetBrains Mono, monospace', fontWeight: '500' }); paint(texts.like, ST.colors.like) }
+  camera = { projection: 'perspective', position: [0, 2.0, 6.8], target: [0, 1.9, -3], fov: 44, zoom: 1, near: 0.1, far: 300, locked: false }
+  // the walker starts where the camera stands and faces the back wall (yaw π = looking -z);
+  // the floor plan keeps them inside the three walls
+  world = {
+    backgroundColor: ST.background,
+    fog: ST.fog,
+    gridVisible: !!ST.grid,
+    ...(ST.grid ? { gridCellColor: ST.grid.cell, gridSectionColor: ST.grid.section, gridCellSize: 1, gridSectionSize: 5, gridFadeDistance: 40 } : {}),
+    spawn: { x: 0, z: 7, yaw: 3.14159, pitch: 0, altY: 1.6 },
+    walkableAreas: [{ minX: -5.6, maxX: 5.6, minZ: -6.5, maxZ: 8.6 }],
+  }
 } else {
   // a mosaic on the floor, seen from above: photos as they were left, gathered together
   const cols = 5, S = 0.8, GAP = 3.1
@@ -84,13 +151,16 @@ if (layout === 'wall') {
   if (texts.scan) { tf(texts.scan, [-8, 1.4, 0], [0, 0, 0], 0.9); txt(texts.scan, { billboard: true }) }
   if (texts.howto) { tf(texts.howto, [8, 1.4, 0], [0, 0, 0], 0.7); txt(texts.howto, { billboard: true }) }
   camera = { projection: 'perspective', position: [0, 11, 11], target: [0, 0, -1], fov: 55, zoom: 1, near: 0.1, far: 300, locked: false }
+  world = { spawn: { x: 0, z: 7, yaw: 3.14159, pitch: 0, altY: 1.6 } }
 }
-if (ambient) tf(ambient, [0, 4, 0], [0, 0, 0], 1)
-if (sun) tf(sun, [3, 9, 16], [0, 0, 0], 1)
+// every light draws a small helper sphere where it stands (the ambient one sat above the
+// back wall and read as a leftover): keep both high and behind the camera
+if (ambient) { tf(ambient, [-4, 12, 34], [0, 0, 0], 1); light(ambient, ST.ambient, '#ffffff') }
+if (sun) { tf(sun, [4, 14, 34], [0, 0, 0], 1); light(sun, ST.sun, style === 'paper' ? '#ffffff' : '#fff1dc') }
 ops.push({ type: 'setPresentationState', payload: { patch: { entryView: 'fixed-camera', fixedCamera: camera } } })
-ops.push({ type: 'setWorldState', payload: { patch: { spawn: layout === 'wall' ? [0, 0, 6] : [0, 0, 8] } } })
+ops.push({ type: 'setWorldState', payload: { patch: world } })
 
-console.log(`Open Jam @ ${base} v${project.documentVersion} — layout ${layout}: ${photos.length} photos, qr ${!!qr}, texts ${Object.keys(texts).join(',')}, remove ${remove.length}, ops ${ops.length}`)
+console.log(`Open Jam @ ${base} v${project.documentVersion} — layout ${layout}, style ${style}: ${photos.length} photos, qr ${!!qr}, texts ${Object.keys(texts).join(',')}, remove ${remove.length}, ops ${ops.length}`)
 if (!apply) { console.log('dry run'); process.exit(0) }
 const r = await fetch(`${base}/api/projects/open-jam/ops`, { method: 'POST', headers: H, body: JSON.stringify({ baseVersion: project.documentVersion, ops }) })
 const body = await r.json().catch(() => ({}))
