@@ -73,18 +73,40 @@ Three things follow, and they are the actual work:
 
 ## 4. Where content sits in the document
 
-Alongside the mapping, not inside it — the two are separate crafts joined by a cue:
+**A space file, not a project key** — and this is a correction to the obvious answer.
+The obvious answer is another key on the project document, beside `mappingState`. It is
+wrong for two reasons, both found by checking rather than reasoning:
+
+1. **The unit is the space, not the project.** A project document is one piece; a space
+   holds several. A show on the project document means two pieces in the same room own
+   two unrelated light libraries, which is not what anyone means by "the show".
+2. **Weight, and who pays it.** A visitor to a space fetches
+   `GET /api/spaces/:id/scene` — the scene, not a project document. Put the show on a
+   project document and everyone who opens that project downloads it, including the
+   people who can never run it. A megabyte of looks shipped to a stranger is a real cost
+   paid by someone who came to see a room.
+
+A space already carries small JSON beside its scene — `settings.json`, added for exactly
+this shape of problem — so the show is `show.json` in the space directory, with its own
+route, fetched by the operator's surface and by nothing else:
 
 ```
-document.mappingState   surfaces, cues (a cue may name a look or a scene)
-document.lightingState  looks, layers, scenes, cuelists, midi
+spaces/<id>/scene.json      what a visitor gets
+spaces/<id>/settings.json   what the space's author tunes
+spaces/<id>/show.json       looks, layers, scenes, cuelists, the MIDI verbs   ← new
 ```
 
-`normalizeLightingState` in `src/shared/projectSchema.js` and its twin in
-`shared/projectSchema.cjs`, in lockstep, guarded by the existing `schemaSync` test. The
-sanitisers already exist and are already conservative — `looks.js` exports
-`sanitizeLooks`/`sanitizeLayers` — so this is mostly moving a boundary, not writing new
-validation.
+The sanitisers already exist and are conservative — `looks.js` exports `sanitizeLooks`
+and `sanitizeLayers` — so this is mostly moving a boundary. But it is a **space file, and
+space files sync by their own path**, so the schema-normaliser trap in §6 does not apply
+to it in the same way; what does apply is that `space-sync` must be told the file exists,
+and the round-trip test must cover it.
+
+The join then crosses containers, deliberately: a mapping cue on a PROJECT document names
+a look in the SPACE's show. That is allowed here and only here, because a space syncs and
+travels as one unit, so the reference can never be half-present. It should be **one named
+resolver function with one failure path**, not an assumption spread between the mapper and
+the desk.
 
 The desk keeps `show.json` as its own store, because **the desk must still run standalone**
 — the club machine has no project document and never will. So:
@@ -143,10 +165,16 @@ says everyone else gets wrong by going quietly dead.
   show with them, and the same spread-then-filter shape is already the cause of a known
   trap elsewhere (a code file entry using `path` instead of `name` is dropped in silence).
 
-  So: the show must be an **explicitly normalised field**, named in both schema copies in
-  lockstep, guarded by `serverXR/src/schemaSync.test.js`, with a round-trip test that
-  writes, normalises, reads and normalises again and asserts every field survives. Once
-  the field is named, the sync push carries it.
+  So: anything that goes on the project **document** must be an **explicitly normalised
+  field**, named in both schema copies in lockstep, guarded by
+  `serverXR/src/schemaSync.test.js`, with a round-trip test that writes, normalises, reads
+  and normalises again and asserts every field survives.
+
+  §4 moves the show itself to a space file, which is not subject to this normaliser at all
+  — but the cue's reference to it still lives on the document (`lightLook`), so the rule
+  above governs the join whatever else changes. And a space file has the same failure
+  waiting in a different place: `space-sync` must be told the file exists, or the show
+  simply will not travel. Same test, different path.
 
 ## 7. Order of work, once someone says yes
 
@@ -212,12 +240,20 @@ write a show, normalise, read, normalise again, assert nothing was lost. The fai
 note exists to prevent is silent, and only a test that goes looking for silence will
 catch it coming back.
 
-## 9. Still open
+## 9. Two more answers, and one requirement that cannot be retrofitted
 
-- **Is the club's existing scene library worth carrying at all?** Its 588 scenes were
-  programmed against that room's 21 fixtures and mean little anywhere else. Migrating them
-  may be work spent on noise, and leaving them on that machine may be the kinder answer.
-- **What does a visitor to a published space see** when the document carries a show they
-  cannot run? The answer should be *nothing at all* — not an empty desk, not a dead
-  button. A show is for whoever is running the room. Worth confirming, because it is the
-  one place this could leak into a stranger's screen.
+**The club's 588 scenes stay where they are.** They are the install data of one venue's
+desk — a room's furniture, programmed against that room's 21 fixtures, and the lane was
+deliberately kept clean of that show's data when it moved in. Carrying them into a project
+would put a megabyte of one venue's history into every sync of every space, forever. If a
+scene is wanted in a di.iiii show it is imported as a look, once, deliberately, and the
+copy in the show is then the truth.
+
+**A visitor sees nothing at all.** No desk, no placeholder, no notice that lighting
+exists. Someone came to see a room, not to learn what software made it.
+
+And the requirement that follows, which is the reason §4 puts the show in a space file
+rather than on a project document: **the show is not in what a visitor downloads.** It
+loads for the operator's surface and is absent from the visitor's payload. That is a
+property of where it is stored, not a filter applied later — and filters applied later are
+exactly how 88 MB of one artwork's video once ended up inside every copy of this program.
