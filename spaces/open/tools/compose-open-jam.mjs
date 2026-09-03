@@ -8,6 +8,7 @@ const style = (args.find((a) => a.startsWith('--style=')) || '--style=night').sl
 const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 const get = async (p) => { const r = await fetch(base + p, { headers: H }); if (!r.ok) throw new Error(`${r.status} ${p}`); return r.json() }
 const PI = Math.PI
+import crypto from 'node:crypto'
 import { slotAt } from '../../../shared/placement.cjs'
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
@@ -31,6 +32,33 @@ const STYLES = {
 const ST = STYLES[style]
 if (!ST) { console.error(`unknown style ${style}; one of ${Object.keys(STYLES).join(', ')}`); process.exit(1) }
 
+// THE PATH — what a visitor walks past between arriving and leaving.
+//
+// The owner: "a landing inside where people after scanning the QR start a path
+// where staged things teach and help you create … and the final point is seeing
+// all the other spaces — a circle of working, all in eyes."
+//
+// So the teaching is not a page in front of the room, it is the room. Three
+// stations stand on the floor between the entry and the wall, each one sentence
+// at the moment it is true, and a door at the end that leads on. All of them are
+// PINNED: they are the building, not the exhibition, and the build zones must
+// never hang them.
+const PATH = [
+  { name: 'path_here', at: [0, 0.45, 4.3], scale: 0.058, align: 'center',
+    value: 'you are standing in a space.\nthis one is open — anyone may add to it.' },
+  { name: 'path_wall', at: [2.9, 0.45, -3.4], scale: 0.058, align: 'center',
+    value: 'everything on these walls\nsomebody put here on one night in July.' },
+  { name: 'path_yours', at: [-2.9, 0.45, -3.4], scale: 0.058, align: 'center',
+    value: 'add yours with the ＋ button.\nit hangs itself, in line, beside theirs.' },
+]
+// The door out. A space with nothing beyond it is a cul-de-sac; this one opens
+// onto the front room, which is where every other space is listed.
+// BEHIND the visitor, facing back into the room. A door between them and the wall
+// reads as a picture frame with somebody's cat in it, and one at the side crowds
+// the arrival — but the moment you want the way on is the moment you turn round,
+// and then it is the only thing there.
+const DOOR = { name: 'path_door', spaceId: 'main', projectId: 'main-dii-project', label: 'the other spaces', at: [0, 0, 8.4], rotation: [0, PI, 0], scale: 0.9 }
+
 // the four lines, as they should read (the originals had a typo, a missing step 3 and "assets")
 const COPY = {
   headline: "let's make some memories together",
@@ -47,7 +75,7 @@ const JUNK_TEXT = (s) => { const t = (s || '').trim(); return !t || t === 'New T
 const PRIMS = new Set(['cone', 'cylinder', 'sphere', 'ring', 'torus', 'box', 'plane'])
 
 // --- sort what we have
-const photos = [], texts = {}, remove = []
+const photos = [], texts = {}, remove = [], path = {}
 let qr = null, ambient = null, sun = null
 const seen = new Set()
 for (const e of ents) {
@@ -57,6 +85,7 @@ for (const e of ents) {
     if (seen.has(key)) { remove.push(e); continue }
     seen.add(key); photos.push(e); continue
   }
+  if (/^path_/.test(e.name || '')) { path[e.name] = e; continue }
   if (e.type === 'text') {
     const t = textOf(e).trim().toLowerCase()
     if (JUNK_TEXT(t)) { remove.push(e); continue }
@@ -129,6 +158,40 @@ if (layout === 'wall') {
   if (texts.howto) { tf(texts.howto, [1.7, 0.55, 1.0], LECTERN, 0.062); txt(texts.howto, { value: COPY.howto, billboard: false, align: 'left', fontFamily: 'Inter, sans-serif', fontWeight: '500' }); paint(texts.howto, ST.colors.howto) }
   if (texts.headline) { tf(texts.headline, [0, 5.3, BACK_Z], STAND, 0.26); txt(texts.headline, { value: COPY.headline, billboard: false, align: 'center', fontFamily: 'Inter, sans-serif', fontWeight: '700' }); paint(texts.headline, ST.colors.headline) }
   if (texts.like) { tf(texts.like, [0, 4.8, BACK_Z], STAND, 0.11); txt(texts.like, { value: COPY.like, billboard: false, align: 'center', fontFamily: 'JetBrains Mono, monospace', fontWeight: '500' }); paint(texts.like, ST.colors.like) }
+  // the path, laid on the floor like the lectern so it never reads through the wall
+  const pin = (id) => ops.push({ type: 'updateComponent', payload: { entityId: id, component: 'placement', patch: { pinned: true } } })
+  for (const station of PATH) {
+    const existing = path[station.name]
+    const components = {
+      transform: { position: station.at, rotation: LECTERN, scale: [station.scale, station.scale, station.scale] },
+      appearance: { color: ST.colors.howto, opacity: 1 },
+      text: { value: station.value, billboard: false, align: station.align, fontFamily: 'Inter, sans-serif', fontWeight: '500' },
+      placement: { pinned: true },
+    }
+    if (existing) {
+      tf(existing, station.at, LECTERN, station.scale)
+      txt(existing, components.text)
+      paint(existing, ST.colors.howto)
+      pin(existing.id)
+    } else {
+      ops.push({ type: 'createEntity', payload: { entity: { id: crypto.randomUUID(), type: 'text', name: station.name, parentId: null, components } } })
+    }
+  }
+  const door = path[DOOR.name]
+  const doorComponents = {
+    transform: { position: DOOR.at, rotation: DOOR.rotation, scale: [DOOR.scale, DOOR.scale, DOOR.scale] },
+    appearance: { color: ST.colors.headline, opacity: 1 },
+    reference: { spaceId: DOOR.spaceId, projectId: DOOR.projectId, mode: 'portal', label: DOOR.label, style: 'frame', labelColor: ST.colors.headline, labelPlate: false },
+    placement: { pinned: true },
+  }
+  if (door) {
+    tf(door, DOOR.at, DOOR.rotation, DOOR.scale)
+    ops.push({ type: 'updateComponent', payload: { entityId: door.id, component: 'reference', patch: doorComponents.reference } })
+    paint(door, ST.colors.headline)
+    pin(door.id)
+  } else {
+    ops.push({ type: 'createEntity', payload: { entity: { id: crypto.randomUUID(), type: 'portal', name: DOOR.name, parentId: null, components: doorComponents } } })
+  }
   camera = { projection: 'perspective', position: [0, 2.0, 6.8], target: [0, 1.9, -3], fov: 44, zoom: 1, near: 0.1, far: 300, locked: false }
   // the walker starts where the camera stands and faces the back wall (yaw π = looking -z);
   // the floor plan keeps them inside the three walls
@@ -149,7 +212,9 @@ if (layout === 'wall') {
     gridVisible: !!ST.grid,
     ...(ST.grid ? { gridCellColor: ST.grid.cell, gridSectionColor: ST.grid.section, gridCellSize: 1, gridSectionSize: 5, gridFadeDistance: 40 } : {}),
     spawn: { x: 0, z: 7, yaw: 3.14159, pitch: 0, altY: 1.6 },
-    walkableAreas: [{ minX: -5.6, maxX: 5.6, minZ: -6.5, maxZ: 8.6 }],
+    // the floor stops 2.5 units short of the back wall: at 1 unit a walker's nose is
+// pressed against somebody's photograph and the room disappears
+    walkableAreas: [{ minX: -5.2, maxX: 5.2, minZ: -5.0, maxZ: 9.0 }],
   }
 } else {
   // a mosaic on the floor, seen from above: photos as they were left, gathered together
