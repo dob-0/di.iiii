@@ -13,6 +13,13 @@ const {
 } = require('./engine');
 const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive } = require('./fx');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
+const { STYLES: FAN_STYLES, fanValues } = require('./fan');
+const library = require('./library');
+const { SACN } = require('./sacn');
+const {
+  sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
+  KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, kindAllows,
+} = require('./looks');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
 // output loop, the HTTP routes and the interface files — and hands back `handle`, which
@@ -23,6 +30,8 @@ function createDesk(opts = {}) {
   const PUBLIC = opts.uiDir || path.join(__dirname, 'ui');
   const SHOW = path.join(DATA, 'show.json');
   const SHOW_PREV = path.join(DATA, 'show.prev.json');
+  // The fixture catalogue, cached beside the show so it survives a night with no wifi.
+  const LIBRARY_DIR = path.join(DATA, 'library');
   // Offline renders everything and transmits nothing — tests, and a desk with no rig.
   const offline = !!opts.offline;
   const bindPort = opts.bindPort == null ? null : Number(opts.bindPort);
@@ -40,6 +49,10 @@ function createDesk(opts = {}) {
     activeScene: null,
     chase: { enabled: false, sceneIds: [], holdMs: 2000, fadeMs: 800 },
     midi: { maps: [] },
+    // The content model: looks are lists of steps, layers are looks under a finger.
+    // Both empty means the desk renders exactly as it did before they existed.
+    looks: [],
+    layers: [],
     // driver picks which wire the frames leave on: 'artnet' over UDP, or 'enttec' for a
     // DMX USB PRO on a serial port. They are mutually exclusive because the widget owns
     // its port outright and Art-Net gear does not exist on the same cable.
@@ -51,6 +64,10 @@ function createDesk(opts = {}) {
     // waiting to be typed because it is the one address that is always the same — a show
     // with no defaults asks you to remember an IP in the dark. Remove it and it stays gone.
     output: { driver: 'artnet', serialPort: DEFAULT_PORT, mode: 'broadcast', targets: [], enabled: true,
+      // sACN's priority, 0..200. Two senders on one universe stop being a coin toss:
+      // the higher number wins and the receiver ignores the other, which is the thing
+      // Art-Net cannot express at all.
+      priority: 100,
       manual: [{ ip: '192.168.4.1', name: 'Light controller' }], port: 6454, refreshHz: 40 },
     // The effects engine. The defaults live in fx.js next to the maths that reads them, so
     // there is one answer to "what is depth when nobody has set it" rather than two.
@@ -189,6 +206,8 @@ function createDesk(opts = {}) {
       s.audioCfg = sanitizeAudioCfg({ ...DEFAULT_STATE.audioCfg, ...(disk.audioCfg || {}) });
       s.sets = sanitizeSets(disk.sets);
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
+      s.looks = sanitizeLooks(disk.looks) || [];
+      s.layers = sanitizeLayers(disk.layers) || [];
 
       // Custom profiles MUST be registered before the fixtures are built. makeFixture falls
       // back to `rgb` for a profile it does not know, so loading them in the other order
@@ -251,6 +270,18 @@ function createDesk(opts = {}) {
   }
   enttecDriver();
 
+  // sACN, built on first use like the serial widget, and closed when the driver moves
+  // away from it: a socket nobody is sending on has no business being open.
+  let sacn = null;
+  function sacnDriver() {
+    if (state.output.driver !== 'sacn') { if (sacn) { sacn.close(); sacn = null; } return null; }
+    const targets = state.output.mode === 'unicast' ? state.output.targets : [];
+    const priority = state.output.priority;
+    if (sacn && (sacn.priority !== priority || sacn.targets.join() !== targets.join())) { sacn.close(); sacn = null; }
+    if (!sacn) sacn = new SACN({ offline, targets, priority, sourceName: 'di.iiii lighting desk' });
+    return sacn;
+  }
+
   // The show file is written whole, to a temp file, then renamed over the old one, with
   // the previous good copy kept beside it. It used to be truncated in place: a crash or a
   // power cut mid-write left half a file, and the next boot was an EMPTY desk on the wrong
@@ -274,6 +305,15 @@ function createDesk(opts = {}) {
     try { fs.renameSync(SHOW, SHOW_PREV); } catch (e) { /* first save ever */ }
     fs.renameSync(tmp, SHOW);
   }
+  let nextLookId = 1;
+  let nextLayerId = 1;
+  // Add or replace by id, keeping the library's order — an edit must not make a look
+  // jump to the end of the list the operator is reading.
+  function putLook(look) {
+    const at = state.looks.findIndex((l) => l.id === look.id);
+    if (at >= 0) state.looks[at] = look; else state.looks.push(look);
+  }
+
   let stateVersion = 0;
   function save() {
     dirty = true;
@@ -335,8 +375,23 @@ function createDesk(opts = {}) {
     stats.ticks++;
     // Output off: the engine still renders (the stage view is live, scenes still work),
     // nothing leaves the machine and the serial port is left alone for other programs.
-    if (!state.output.enabled) { if (enttec) { enttec.close(); enttec = null; } return; }
+    if (!state.output.enabled) {
+      if (enttec) { enttec.close(); enttec = null; }
+      if (sacn) { sacn.close(); sacn = null; }
+      return;
+    }
     const fp = footprints();
+    const stream = sacnDriver();
+    if (stream) {
+      // sACN carries a whole universe or nothing: the packet fixes 512 slots, so there
+      // is no footprint to trim and no empty-desk special case — the universe goes out,
+      // zeros and all, which is what stops a node's own timeout firing and its fixtures
+      // falling into their built-in programs.
+      for (const [universe, buf] of frames) stream.send(universe, buf);
+      if (!frames.size) stream.send(0, Buffer.alloc(512));
+      stats.lastSend = Date.now();
+      return;
+    }
     const wire = enttecDriver();
     if (wire) {
       // The unreachable warning is rebuilt from the PATCH every frame, not accumulated.
@@ -545,13 +600,16 @@ function createDesk(opts = {}) {
       chase: { enabled: !!state.chase.enabled, index: engine.chase.index, count: state.chase.sceneIds.length },
       fixtures: state.fixtures.length,
       scenes: state.scenes.length,
+      looks: state.looks.length,
+      layers: state.layers.map((l) => ({ id: l.id, name: l.name, on: l.on, level: l.level, lookId: l.lookId })),
       universes: engine.universes(),
       output: {
         driver: state.output.driver,
         enabled: !!state.output.enabled,
-        connected: state.output.driver === 'enttec' ? !!(ser && ser.connected) : !!artnet.ready,
-        packetsSent: enttec ? enttec.packetsSent : artnet.packetsSent,
-        lastError: enttec ? enttec.lastError : artnet.lastError,
+        connected: state.output.driver === 'enttec' ? !!(ser && ser.connected)
+          : state.output.driver === 'sacn' ? !!(sacn && sacn.ready) : !!artnet.ready,
+        packetsSent: enttec ? enttec.packetsSent : sacn ? sacn.packetsSent : artnet.packetsSent,
+        lastError: enttec ? enttec.lastError : sacn ? sacn.lastError : artnet.lastError,
         lanAllowed,
       },
     };
@@ -609,6 +667,7 @@ function createDesk(opts = {}) {
       // fx.js appears on the page without anyone remembering to add it twice.
       fxModes: FX_MODES,
       fxSpatial: FX_SPATIAL,
+      fanStyles: FAN_STYLES,
       lfoWaves: LFO_WAVES,
       audioModes: AUDIO_MODES,
       // Live audio input is non-enumerable on `state` (so it never persists); the page
@@ -627,12 +686,13 @@ function createDesk(opts = {}) {
         // reads as a frozen count on the page rather than an Art-Net count ticking happily
         // up while nothing leaves the serial port.
         driver: state.output.driver,
+        sacn: sacn ? sacn.status() : null,
         outputEnabled: !!state.output.enabled,
         lanAllowed,
         serial: enttec ? enttec.status() : null,
         serialPorts: listPorts(),
-        packetsSent: enttec ? enttec.packetsSent : artnet.packetsSent,
-        lastError: enttec ? enttec.lastError : artnet.lastError,
+        packetsSent: enttec ? enttec.packetsSent : sacn ? sacn.packetsSent : artnet.packetsSent,
+        lastError: enttec ? enttec.lastError : sacn ? sacn.lastError : artnet.lastError,
         universes: engine.universes(),
         fading: !!engine.fade,
         chaseIndex: engine.chase.index,
@@ -656,6 +716,180 @@ function createDesk(opts = {}) {
         const live = s.fixtures.filter((sf) => patched.has(sf.id)).length;
         return { id: s.id, name: s.name, fadeMs: s.fadeMs, live, missing: s.fixtures.length - live };
       }) });
+    },
+
+    // The content library. A look is a list of steps: one step is a scene or a palette,
+    // two or more are a chase or a wave, and a value may point at another look.
+    'GET /api/looks': (req, res) => json(res, { looks: state.looks, kinds: LOOK_KINDS, scopes: LOOK_SCOPES }, 200, req),
+    'POST /api/looks': (req, res, body) => {
+      const looks = sanitizeLooks(body.looks);
+      if (!looks) return json(res, { error: 'looks must be a list, each with an id and at least one step' }, 400);
+      state.looks = looks;
+      // No pushFrame: replacing the library is a data change. A layer pointing at a look
+      // that just vanished simply stops contributing on the next tick, which is the
+      // honest behaviour — nothing snaps and nothing is quietly held.
+      save(); json(res, { ok: true, count: looks.length });
+    },
+
+    // The fixture library. Patching by name instead of by channel order: the catalogue
+    // is fetched when asked for and cached beside the show, so a venue with no internet
+    // still has whatever it imported before. See library.js.
+    'GET /api/library': async (req, res) => {
+      const { value, from, warning } = await library.manufacturers(LIBRARY_DIR);
+      const list = Object.entries(value).map(([key, m]) => ({ key, name: m.name, fixtures: m.fixtureCount || 0 }))
+        .filter((m) => m.fixtures > 0)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      json(res, { manufacturers: list, from, warning }, 200, req);
+    },
+    'GET /api/library/manufacturer': async (req, res) => {
+      const key = new URL(req.url, 'http://localhost').searchParams.get('key') || '';
+      const { value, from, warning } = await library.manufacturer(LIBRARY_DIR, key);
+      json(res, { name: value.name, key: value.key, fixtures: value.fixtures || [], from, warning }, 200, req);
+    },
+    // What a fixture would become before anyone commits to it: its modes, and the roles
+    // each mode maps onto. A patch is hard to undo; looking first is cheap.
+    'GET /api/library/fixture': async (req, res) => {
+      const params = new URL(req.url, 'http://localhost').searchParams;
+      const { value, from, warning } = await library.fixture(LIBRARY_DIR, params.get('manufacturer') || '', params.get('key') || '');
+      json(res, { ...library.describe(value), from, warning }, 200, req);
+    },
+    'POST /api/library/import': async (req, res, body) => {
+      const { value } = await library.fixture(LIBRARY_DIR, body.manufacturer, body.key);
+      const profile = library.toProfile(value, Math.max(0, Math.round(+body.mode || 0)), {
+        taken: (name) => !!PROFILES[name],
+      });
+      const name = addProfile(profile.name, profile.channels, { cat: profile.cat, defaults: profile.defaults });
+      state.customProfiles = customProfiles();
+      save();
+      json(res, { ok: true, name, profile: PROFILES[name], source: profile.source });
+    },
+
+    // Fan: one gesture, N related values across the selection, in the order the
+    // interface sent them. The output is plain static values on the fixtures — nothing
+    // keeps running afterwards — so it records into a look like anything else.
+    'POST /api/fan': (req, res, body) => {
+      const role = typeof body.role === 'string' ? body.role : '';
+      if (!role) return json(res, { error: 'name the attribute to fan' }, 400);
+      const ids = Array.isArray(body.fixtures) && body.fixtures.length ? body.fixtures : state.fixtures.map((f) => f.id);
+      // Selection ORDER is the whole input: a fan across the rig left to right and the
+      // same fan in patch order are different looks, and the caller decides which.
+      const chosen = ids.map((id) => state.fixtures.find((f) => f.id === id)).filter(Boolean);
+      if (!chosen.length) return json(res, { error: 'no such fixtures' }, 404);
+      const style = FAN_STYLES.includes(body.style) ? body.style : 'line';
+      const from = Math.max(0, Math.min(255, Math.round(+body.from || 0)));
+      const to = Math.max(0, Math.min(255, Math.round(body.to == null ? 255 : +body.to)));
+      const values = fanValues(chosen.length, from, to, {
+        style,
+        groups: Math.max(2, Math.min(64, Math.round(+body.groups || 2))),
+        seed: Math.max(0, Math.min(32767, Math.round(+body.seed || 1))),
+      });
+      chosen.forEach((f, i) => {
+        // Only a role the fixture actually has: fanning tilt across a rig that is half
+        // washes must move the heads and leave the washes alone, not invent a channel.
+        const profile = PROFILES[f.profile] || PROFILES.rgb;
+        if (profile.channels.includes(role)) f.values[role] = values[i];
+      });
+      state.activeScene = null;
+      engine.cancelFade(); save(); pushFrame();
+      json(res, { ok: true, style, values, fixtures: chosen.length });
+    },
+
+    // Record: the stage as it stands right now becomes a look. This is the verb every
+    // desk in the audit has and calls Record or Store — with `kind` it stores only that
+    // lane, which is how a colour palette gets made without touching the heads.
+    'POST /api/looks/capture': (req, res, body) => {
+      const kind = LOOK_KINDS.includes(body.kind) ? body.kind : 'all';
+      const chosen = Array.isArray(body.fixtures) && body.fixtures.length
+        ? state.fixtures.filter((f) => body.fixtures.includes(f.id))
+        : state.fixtures;
+      if (!chosen.length) return json(res, { error: 'nothing patched to record' }, 400);
+      // Recorded through the mask, not merely rendered through it. A colour palette
+      // that quietly held pan and tilt would be a palette that lies about itself, and
+      // recalling it later would swing the heads for a reason nobody could see.
+      const values = {};
+      for (const f of chosen) {
+        const cell = {};
+        for (const [role, v] of Object.entries(f.values)) if (kindAllows(kind, role)) cell[role] = v;
+        if (Object.keys(cell).length) values[f.id] = cell;
+      }
+      const look = sanitizeLook({
+        id: body.id || `lk${Date.now().toString(36)}${(nextLookId++).toString(36)}`,
+        name: body.name || `Look ${state.looks.length + 1}`,
+        kind,
+        fixtures: chosen.map((f) => f.id),
+        steps: [{ values }],
+      });
+      if (!look) return json(res, { error: 'nothing in that lane to record' }, 400);
+      putLook(look);
+      save(); json(res, { ok: true, look });
+    },
+
+    // One look at a time. The replace-whole route is for a tool pushing a library; a
+    // person editing one look must not have to send the other five hundred, and two
+    // people on two phones must not overwrite each other.
+    'POST /api/looks/add': (req, res, body) => {
+      const look = sanitizeLook(body.look);
+      if (!look) return json(res, { error: 'a look needs an id and at least one step' }, 400);
+      putLook(look);
+      save(); json(res, { ok: true, look });
+    },
+    'POST /api/looks/remove': (req, res, body) => {
+      const before = state.looks.length;
+      state.looks = state.looks.filter((l) => l.id !== body.id);
+      if (state.looks.length === before) return json(res, { error: 'no such look' }, 404);
+      // A layer left pointing at nothing is emptied rather than deleted: the operator
+      // put that layer there, and its fader keeps its place in the stack.
+      let emptied = 0;
+      for (const layer of state.layers) if (layer.lookId === body.id) { layer.lookId = null; emptied++; }
+      save(); pushFrame(); json(res, { ok: true, emptied });
+    },
+
+    // The stack. Bottom to top by priority; each layer contributes what its mask allows.
+    'GET /api/layers': (req, res) => json(res, { layers: state.layers, merges: LAYER_MERGES }, 200, req),
+    'POST /api/layers/add': (req, res, body) => {
+      if (state.layers.length >= 64) return json(res, { error: 'that is as many layers as the stack holds' }, 400);
+      const top = state.layers.reduce((n, l) => Math.max(n, l.priority), 0);
+      const layer = sanitizeLayer({
+        id: `ly${Date.now().toString(36)}${(nextLayerId++).toString(36)}`,
+        name: body.name || `Layer ${state.layers.length + 1}`,
+        lookId: body.lookId || null,
+        // A new layer arrives at the top of the stack and OFF the rig: nothing an
+        // operator adds mid-show may change the room before they touch its fader.
+        level: body.level != null ? body.level : 0,
+        priority: top + 1,
+        mask: body.mask,
+        merge: body.merge,
+      });
+      state.layers.push(layer);
+      save(); json(res, { ok: true, layer });
+    },
+    'POST /api/layers/remove': (req, res, body) => {
+      const before = state.layers.length;
+      state.layers = state.layers.filter((l) => l.id !== body.id);
+      if (state.layers.length === before) return json(res, { error: 'no such layer' }, 404);
+      save(); pushFrame(); json(res, { ok: true });
+    },
+    'POST /api/layers': (req, res, body) => {
+      const layers = sanitizeLayers(body.layers);
+      if (!layers) return json(res, { error: 'layers must be a list, each with an id' }, 400);
+      state.layers = layers;
+      save(); pushFrame(); json(res, { ok: true, layers: state.layers });
+    },
+    // One layer, by id — the fader move. Kept apart from the replace-whole route because
+    // a fader is dragged: it must not carry the rest of the stack up the wire on every
+    // frame, and two people on two phones must not overwrite each other's layers.
+    'POST /api/layer': (req, res, body) => {
+      const layer = state.layers.find((l) => l.id === body.id);
+      if (!layer) return json(res, { error: 'no such layer' }, 404);
+      if (body.level != null && Number.isFinite(+body.level)) layer.level = Math.max(0, Math.min(1, +body.level));
+      if (body.on != null) layer.on = !!body.on;
+      if (body.lookId !== undefined) layer.lookId = typeof body.lookId === 'string' && body.lookId ? body.lookId.slice(0, 40) : null;
+      if (body.rate != null && Number.isFinite(+body.rate)) layer.rate = Math.max(0.01, Math.min(64, +body.rate));
+      if (body.name != null) layer.name = String(body.name).slice(0, 60);
+      if (LAYER_MERGES.includes(body.merge)) layer.merge = body.merge;
+      if (LOOK_KINDS.includes(body.mask)) layer.mask = body.mask;
+      if (body.priority != null && Number.isFinite(+body.priority)) layer.priority = Math.max(0, Math.min(999, Math.round(+body.priority)));
+      save(); pushFrame(); json(res, { ok: true, layer });
     },
 
     // MIDI mappings live with the show, not in one browser's storage: every surface on
@@ -1168,7 +1402,8 @@ function createDesk(opts = {}) {
       if (body.mode) state.output.mode = body.mode === 'unicast' ? 'unicast' : 'broadcast';
       if (Array.isArray(body.targets)) state.output.targets = body.targets.map(validIp).filter(Boolean);
       if (body.refreshHz != null) state.output.refreshHz = Math.max(1, Math.min(44, body.refreshHz | 0));
-      if (body.driver) state.output.driver = body.driver === 'enttec' ? 'enttec' : 'artnet';
+      if (body.driver) state.output.driver = ['enttec', 'sacn', 'artnet'].includes(body.driver) ? body.driver : 'artnet';
+      if (body.priority != null) state.output.priority = Math.max(0, Math.min(200, body.priority | 0));
       if (body.enabled != null) state.output.enabled = !!body.enabled;
       if (body.serialPort && PORT_NAME.test(String(body.serialPort).trim())) state.output.serialPort = portName(body.serialPort);
       // Rebuild the driver before answering, so the reply carries the real outcome of the
@@ -1249,7 +1484,10 @@ function createDesk(opts = {}) {
         // Under Express the JSON body has already been parsed (and the stream drained);
         // standing alone the desk reads it itself.
         const body = req.method !== 'POST' ? null : (req.body && typeof req.body === 'object' ? req.body : await readBody(req));
-        return routes[key](req, res, body);
+        // Awaited, not merely returned: a route that reaches the network (the fixture
+      // library) rejects asynchronously, and an un-awaited rejection left the caller
+      // holding an open socket for ever while the desk logged to a console nobody reads.
+      return await routes[key](req, res, body);
       } catch (e) {
         json(res, { error: e.message }, e.status || 400);
         // An oversize upload is not drained: the socket goes once the refusal is out.
@@ -1280,6 +1518,7 @@ function createDesk(opts = {}) {
     try { writeShow(); } catch (e) { log('could not save the show on close: ' + e.message); }
     artnet.close();
     if (enttec) enttec.close();
+    if (sacn) sacn.close();
   }
 
   return { handle, close, state, engine, writeShow, summary, showFile: SHOW };

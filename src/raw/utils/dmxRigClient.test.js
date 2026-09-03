@@ -151,9 +151,23 @@ describe('DESK_COMMANDS', () => {
     })
 })
 
+// A real Response always carries headers, and the desk's answers are JSON. A hosted
+// di.iiii serves its own index.html for an address it does not know, so a 200 full of
+// HTML is what "there is no desk here" actually looks like on the wire.
+const jsonResponse = (body) => ({
+    ok: true, status: 200,
+    headers: { get: (k) => (k.toLowerCase() === 'content-type' ? 'application/json; charset=utf-8' : null) },
+    json: async () => body,
+})
+const htmlResponse = () => ({
+    ok: true, status: 200,
+    headers: { get: (k) => (k.toLowerCase() === 'content-type' ? 'text/html; charset=utf-8' : null) },
+    json: async () => { throw new SyntaxError('Unexpected token <') },
+})
+
 describe('readDeskSummary', () => {
     it('reads the desk when it answers', async () => {
-        const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ fixtures: 21 }) })
+        const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ fixtures: 21 }))
         const result = await readDeskSummary('http://x/light/api', { fetchImpl })
         expect(fetchImpl).toHaveBeenCalledWith('http://x/light/api/summary', expect.anything())
         expect(result).toEqual({ ok: true, status: DESK_STATUS.ANSWERING, summary: { fixtures: 21 } })
@@ -170,12 +184,22 @@ describe('readDeskSummary', () => {
         const fetchImpl = vi.fn().mockRejectedValue(new TypeError('down'))
         expect(await readDeskSummary('http://x/light/api', { fetchImpl })).toEqual({ ok: false, status: DESK_STATUS.UNREACHABLE })
     })
+    // Seen on staging: the edge served index.html for /light/api/summary, the panel read
+    // it as a desk that would not answer, and told the operator a desk existed.
+    it('reads a page of HTML as no desk here, not as a desk that will not answer', async () => {
+        const fetchImpl = vi.fn().mockResolvedValue(htmlResponse())
+        expect(await readDeskSummary('http://x/light/api', { fetchImpl })).toEqual({ ok: false, status: DESK_STATUS.ABSENT })
+    })
 })
 
 describe('readDeskScenes', () => {
+    it('takes no scenes from a page of HTML', async () => {
+        const fetchImpl = vi.fn().mockResolvedValue(htmlResponse())
+        expect(await readDeskScenes('http://x/light/api', { fetchImpl })).toEqual({ ok: false, scenes: [] })
+    })
     it('reads the scene library', async () => {
         const fetchImpl = vi.fn().mockResolvedValue({
-            ok: true, status: 200, json: async () => ({ scenes: [{ id: 's1', name: 'Red' }] }),
+            ...jsonResponse({ scenes: [{ id: 's1', name: 'Red' }] }),
         })
         const result = await readDeskScenes('http://x/light/api', { fetchImpl })
         expect(fetchImpl).toHaveBeenCalledWith('http://x/light/api/scenes/summary', expect.anything())

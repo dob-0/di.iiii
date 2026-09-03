@@ -56,6 +56,25 @@ library push is up to 16 MB, byte-exact). Vite proxies `/light` to the backend i
 LAN reach follows the OSC lane: loopback only unless `DI_ALLOW_LAN_DEVICES=1`, which is
 what a phone on the Touch page needs. The desk's phone panel says so when it is off.
 
+## Looks and layers
+
+The content model, added 2026-09-03 after the field audit
+(`LIGHTING_DESK_DESIGN.md`). `looks.js` is the file; its header is the argument.
+
+A **look** is a list of steps — one step is a scene or a palette, two that snap are a
+chase, two that ease and are spread by phase are a wave crossing the rig, and a value
+may point at another look, which is what a palette is. A **layer** is that look under a
+finger: level, merge, priority, mask, rate. The renderer composites the stack over the
+fixtures' own values, so an effect can sit on top of a running look. An empty stack
+renders exactly as though the file were absent.
+
+`fan.js` lays related values across an ordered selection in one gesture, seven styles
+from the Eos vocabulary; the output is static values, recordable like anything else.
+`library.js` imports fixtures from the Open Fixture Library by name, cached beside the
+show, and brings each channel's resting value with it — which is what stops an imported
+head coming up dark with a shut shutter. `sacn.js` is E1.31 output: multicast groups and
+a priority number, beside the existing Art-Net and ENTTEC drivers.
+
 ## Talking to it
 
 - `GET /light/api/summary` — a few hundred bytes: master, blackout, active scene, fx,
@@ -69,6 +88,13 @@ what a phone on the Touch page needs. The desk's phone panel says so when it is 
 - The Raw graph's **DMX Out** node drives the desk (rig `desk`) or a vizzz box on the
   LAN (rig `vizzz`). A map **cue** can carry a desk scene and fires it when played.
 - `GET/POST /light/api/midi` — controller mappings, saved with the show.
+- `GET/POST /light/api/looks` and `/light/api/layers` — the content library and the
+  stack. `POST /light/api/looks/capture` records the stage through a kind's mask;
+  `/light/api/looks/add|remove` and `/light/api/layers/add|remove` are the one-object
+  verbs an interface wants; `POST /light/api/layer` is the fader move.
+- `POST /light/api/fan {fixtures, role, from, to, style}` — one gesture, N values.
+- `GET /light/api/library`, `/library/manufacturer?key=`, `/library/fixture?…` and
+  `POST /light/api/library/import {manufacturer, key, mode}` — patch by name.
 
 Data: `<dataDir>/lighting/show.json`, written whole to a temp file and renamed, with
 `show.prev.json` kept; boot falls back to the temp, then the previous copy.

@@ -639,6 +639,366 @@ check('two scenes captured in one millisecond have different ids', () => {
   assert.notStrictEqual(a.id, b.id);
 });
 
+// ---- looks and layers -------------------------------------------------------
+// A look is a list of steps. One step is a scene or a palette; two or more are the
+// thing every other desk keeps as a separate chase and a separate effects engine.
+
+const { sanitizeLooks, sanitizeLayers, evalLook, layerValues } = require('../looks');
+
+const rig4 = () => ['a', 'b', 'c', 'd'].map((id, i) => makeFixture({
+  id, profile: 'drgb', address: 1 + i * 4, values: { dimmer: 255, r: 100, g: 100, b: 100 },
+}));
+const lookMap = (looks) => new Map(looks.map((l) => [l.id, l]));
+
+check('the desk clock drives a look, so one Tap retimes everything running', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([{ id: 'c', measure: 1,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  const layers = sanitizeLayers([{ id: 'l', lookId: 'c' }]);
+  // 120 bpm is a 500ms loop, so 260ms in is the second step; at 240 the loop is 250ms
+  // and 260ms has come round to the first again.
+  assert.strictEqual(layerValues({ looks, layers }, fixtures, 260, 120).get('a').r, 255);
+  assert.strictEqual(layerValues({ looks, layers }, fixtures, 260, 240).get('a').r, 0);
+  const own = sanitizeLooks([{ id: 'c', bpm: 120, measure: 1,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  assert.strictEqual(layerValues({ looks: own, layers }, fixtures, 260, 240).get('a').r, 255,
+    'a look with its own tempo has opted out of the clock on purpose');
+});
+
+check('a look with one step is a scene, and holds still', () => {
+  const looks = sanitizeLooks([{ id: 'a', steps: [{ values: { '*': { r: 10, g: 20 } } }] }]);
+  const at = (t) => evalLook(looks[0], rig4(), t, { looks: lookMap(looks) }).get('a');
+  assert.deepStrictEqual(at(0), { r: 10, g: 20 });
+  assert.deepStrictEqual(at(99999), { r: 10, g: 20 }, 'one step never moves, whatever the clock says');
+});
+
+check('two steps with no transition snap — that is a chase', () => {
+  const looks = sanitizeLooks([{ id: 'c', measure: 1, bpm: 120,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  const at = (t) => evalLook(looks[0], rig4(), t, { looks: lookMap(looks) }).get('a').r;
+  // 120 bpm, one beat to the measure: 500ms a loop, 250ms a step.
+  assert.strictEqual(at(0), 0);
+  assert.strictEqual(at(240), 0, 'it holds, right up to the boundary');
+  assert.strictEqual(at(260), 255, 'and then it is simply the next step');
+});
+
+check('a transition makes the same two steps a wave', () => {
+  const looks = sanitizeLooks([{ id: 'w', measure: 1, bpm: 120,
+    steps: [{ values: { '*': { r: 0 } }, transition: 1 }, { values: { '*': { r: 255 } }, transition: 1 }] }]);
+  const at = (t) => evalLook(looks[0], rig4(), t, { looks: lookMap(looks) }).get('a').r;
+  assert.strictEqual(at(0), 0);
+  const mid = at(125);
+  assert.ok(mid > 20 && mid < 235, 'halfway through the step it is halfway to the next, not at either end: ' + mid);
+  assert.strictEqual(at(249), 255, 'and it arrives');
+});
+
+check('phase spreads a look across the selection in its stored order', () => {
+  const looks = sanitizeLooks([{ id: 'p', measure: 1, bpm: 120, phase: 360,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  const now = evalLook(looks[0], rig4(), 0, { looks: lookMap(looks) });
+  assert.deepStrictEqual(['a', 'b', 'c', 'd'].map((id) => now.get(id).r), [0, 0, 255, 255],
+    'a full 360 across four fixtures puts half the rig on the other step');
+  const unison = sanitizeLooks([{ ...looks[0], phase: 0 }]);
+  const flat = evalLook(unison[0], rig4(), 0, { looks: lookMap(unison) });
+  assert.deepStrictEqual(['a', 'b', 'c', 'd'].map((id) => flat.get(id).r), [0, 0, 0, 0],
+    'and no phase is the whole rig in unison');
+});
+
+check('a look can name only some fixtures, and that order is the one phase reads', () => {
+  const looks = sanitizeLooks([{ id: 'sel', fixtures: ['d', 'a'], measure: 1, bpm: 120, phase: 360,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  const out = evalLook(looks[0], rig4(), 0, { looks: lookMap(looks) });
+  assert.deepStrictEqual([...out.keys()].sort(), ['a', 'd'], 'nothing else is touched');
+  assert.strictEqual(out.get('d').r, 0, 'first in the list is first in the phase');
+  assert.strictEqual(out.get('a').r, 255);
+});
+
+check('a value can point at another look — that is a palette', () => {
+  const looks = sanitizeLooks([
+    { id: 'house-red', kind: 'colour', steps: [{ values: { '*': { r: 200, g: 10, b: 0 } } }] },
+    { id: 'uses-it', steps: [{ values: { '*': { r: { ref: 'house-red' }, dimmer: 255 } } }] },
+  ]);
+  const out = evalLook(looks[1], rig4(), 0, { looks: lookMap(looks) });
+  assert.deepStrictEqual(out.get('a'), { r: 200, dimmer: 255 });
+  // Re-point the palette and every look that named it is right, without re-recording.
+  const moved = sanitizeLooks([{ ...looks[0], steps: [{ values: { '*': { r: 40, g: 10, b: 0 } } }] }, looks[1]]);
+  assert.strictEqual(evalLook(moved[1], rig4(), 0, { looks: lookMap(moved) }).get('a').r, 40);
+});
+
+check('a palette that names itself costs a lookup, not a frame', () => {
+  const looks = sanitizeLooks([{ id: 'loop', steps: [{ values: { '*': { r: { ref: 'loop' } } } }] }]);
+  const out = evalLook(looks[0], rig4(), 0, { looks: lookMap(looks) });
+  assert.deepStrictEqual(out.get('a'), undefined, 'it resolves to nothing rather than hanging');
+});
+
+check('a kind keeps a colour palette off the heads', () => {
+  const looks = sanitizeLooks([{ id: 'k', kind: 'colour',
+    steps: [{ values: { '*': { r: 200, pan: 10, dimmer: 255 } } }] }]);
+  assert.deepStrictEqual(evalLook(looks[0], rig4(), 0, { looks: lookMap(looks) }).get('a'), { r: 200 });
+});
+
+check('an empty stack renders exactly as no stack at all', () => {
+  const fixtures = rig4();
+  assert.strictEqual(layerValues({ looks: [], layers: [] }, fixtures, 0), null);
+  assert.strictEqual(layerValues({}, fixtures, 0), null);
+  const looks = sanitizeLooks([{ id: 'x', steps: [{ values: { '*': { r: 1 } } }] }]);
+  const off = sanitizeLayers([{ id: 'l', lookId: 'x', on: false }]);
+  assert.strictEqual(layerValues({ looks, layers: off }, fixtures, 0), null, 'a layer switched off is not a layer');
+});
+
+check('a layer fader crossfades from what is underneath it', () => {
+  const fixtures = rig4();                       // r is 100 on every fixture
+  const looks = sanitizeLooks([{ id: 'red', kind: 'colour', steps: [{ values: { '*': { r: 200 } } }] }]);
+  const at = (level) => layerValues({ looks, layers: sanitizeLayers([{ id: 'l', lookId: 'red', level }]) }, fixtures, 0).get('a').r;
+  assert.strictEqual(at(1), 200, 'all the way up is the layer');
+  assert.strictEqual(at(0.5), 150, 'half way is half way');
+});
+
+check('intensity is HTP against what is under it, so a submaster only ever adds', () => {
+  const fixtures = rig4();                       // dimmer is 255
+  const looks = sanitizeLooks([{ id: 'half', steps: [{ values: { '*': { dimmer: 100 } } }] }]);
+  const htp = layerValues({ looks, layers: sanitizeLayers([{ id: 'l', lookId: 'half', merge: 'htp' }]) }, fixtures, 0);
+  assert.strictEqual(htp.get('a').dimmer, 255, 'a dimmer layer below the base cannot pull the rig down');
+  const ltp = layerValues({ looks, layers: sanitizeLayers([{ id: 'l', lookId: 'half', merge: 'ltp' }]) }, fixtures, 0);
+  assert.strictEqual(ltp.get('a').dimmer, 100, 'and ltp is how you say you meant it');
+});
+
+check('priority decides who has the last word', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([
+    { id: 'blue', kind: 'colour', steps: [{ values: { '*': { b: 255 } } }] },
+    { id: 'green', kind: 'colour', steps: [{ values: { '*': { b: 20 } } }] },
+  ]);
+  const stack = sanitizeLayers([
+    { id: 'top', lookId: 'green', priority: 9 },
+    { id: 'bottom', lookId: 'blue', priority: 1 },
+  ]);
+  assert.strictEqual(layerValues({ looks, layers: stack }, fixtures, 0).get('a').b, 20);
+});
+
+check('a mask keeps a layer inside its own lane', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([{ id: 'lot', steps: [{ values: { '*': { r: 200, pan: 30, dimmer: 10 } } }] }]);
+  const only = layerValues({ looks, layers: sanitizeLayers([{ id: 'l', lookId: 'lot', mask: 'position' }]) }, fixtures, 0);
+  assert.deepStrictEqual(Object.keys(only.get('a')), ['pan']);
+});
+
+check('the stack lands on the wire, over the fixtures own values', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([{ id: 'chase', kind: 'colour', measure: 1, bpm: 120, phase: 360,
+    steps: [{ values: { '*': { r: 255, b: 0 } } }, { values: { '*': { r: 0, b: 255 } } }] }]);
+  const state = { ...baseState(fixtures), looks, layers: sanitizeLayers([{ id: 'l', lookId: 'chase' }]) };
+  const e = new Engine(state);
+  const red = (buf, i) => buf[i * 4 + 1];
+  const buf = e.render(state, 0).get(0);
+  assert.deepStrictEqual([0, 1, 2, 3].map((i) => red(buf, i)), [255, 255, 0, 0],
+    'the chase is on the rig, and it is walking');
+  const later = e.render(state, 260).get(0);
+  assert.strictEqual(red(later, 0), 0, 'and it moves on');
+});
+
+check('a layer never escapes the master or the blackout', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([{ id: 'full', steps: [{ values: { '*': { dimmer: 255 } } }] }]);
+  const state = { ...baseState(fixtures), looks, layers: sanitizeLayers([{ id: 'l', lookId: 'full' }]) };
+  const e = new Engine(state);
+  assert.strictEqual(e.render(state, 0).get(0)[0], 255);
+  state.master = 128;
+  assert.ok(Math.abs(e.render(state, 0).get(0)[0] - 128) <= 1, 'the grand fader still rules it');
+  state.blackout = true;
+  assert.strictEqual(e.render(state, 0).get(0)[0], 0, 'and the panic button still kills it');
+});
+
+// ---- sACN (E1.31) ------------------------------------------------------------
+
+const { buildPacket, multicastAddress, cidFor, SACN } = require('../sacn');
+
+check('an E1.31 data packet is laid out the way the spec says', () => {
+  const data = Buffer.alloc(512);
+  data[0] = 255; data[511] = 7;
+  const p = buildPacket({ cid: cidFor('test'), sourceName: 'desk', universe: 3, priority: 100, sequence: 9, data });
+  assert.strictEqual(p.length, 638, 'a full universe is 638 bytes');
+  assert.strictEqual(p.readUInt16BE(0), 0x0010, 'preamble size');
+  assert.strictEqual(p.toString('latin1', 4, 13), 'ASC-E1.17', 'the ACN packet identifier');
+  assert.strictEqual(p.readUInt16BE(16), 0x7000 | 622, 'root flags and length');
+  assert.strictEqual(p.readUInt32BE(18), 4, 'root vector: E1.31 data');
+  assert.strictEqual(p.readUInt16BE(38), 0x7000 | 600, 'framing flags and length');
+  assert.strictEqual(p.readUInt32BE(40), 2, 'framing vector: a data packet');
+  assert.strictEqual(p[108], 100, 'priority');
+  assert.strictEqual(p[111], 9, 'sequence');
+  assert.strictEqual(p.readUInt16BE(113), 3, 'universe');
+  assert.strictEqual(p.readUInt16BE(115), 0x7000 | 523, 'DMP flags and length');
+  assert.strictEqual(p[117], 2, 'DMP vector: set property');
+  assert.strictEqual(p[118], 0xa1, 'address and data type');
+  assert.strictEqual(p.readUInt16BE(123), 513, 'a start code and 512 slots');
+  assert.strictEqual(p[125], 0, 'the DMX start code');
+  assert.strictEqual(p[126], 255, 'slot 1');
+  assert.strictEqual(p[637], 7, 'slot 512');
+});
+
+check('a universe has one fixed multicast group and no discovery', () => {
+  assert.strictEqual(multicastAddress(1), '239.255.0.1');
+  assert.strictEqual(multicastAddress(3), '239.255.0.3');
+  assert.strictEqual(multicastAddress(258), '239.255.1.2');
+});
+
+check('the source id is stable across restarts, so a restart is not a second sender', () => {
+  const a = cidFor('di.iiii lighting desk');
+  assert.deepStrictEqual(a, cidFor('di.iiii lighting desk'));
+  assert.notDeepStrictEqual(a, cidFor('another desk'));
+  assert.strictEqual(a.length, 16);
+  assert.strictEqual(a[6] & 0xf0, 0x50, 'a version 5 uuid');
+  assert.strictEqual(a[8] & 0xc0, 0x80, 'with the right variant');
+});
+
+check('each universe counts its own packets, so a node watching one is never out of order', () => {
+  const s = new SACN({ offline: true });
+  const buf = Buffer.alloc(512);
+  s.send(1, buf); s.send(2, buf); s.send(1, buf);
+  assert.strictEqual(s.lastFrame.get(1)[111], 2, 'universe 1 has sent two');
+  assert.strictEqual(s.lastFrame.get(2)[111], 1, 'and universe 2 exactly one');
+  s.close();
+});
+
+check('an offline sender never opens a socket and never puts a frame on the wire', () => {
+  const s = new SACN({ offline: true });
+  assert.strictEqual(s.socket, undefined);
+  assert.strictEqual(s.ready, false);
+  s.send(0, Buffer.alloc(512));
+  assert.strictEqual(s.status().mode, 'multicast');
+  s.close();
+});
+
+// ---- the fixture library -----------------------------------------------------
+// The converter only. Nothing here touches the network: an OFL-shaped object goes in,
+// one of this desk's profiles comes out.
+
+const oflLib = require('../library');
+
+const OFL_HEAD = {
+  name: 'Intimidator Spot 260',
+  categories: ['Moving Head', 'Color Changer'],
+  availableChannels: {
+    Pan: { fineChannelAliases: ['Pan fine'], capabilities: [{ type: 'Pan' }] },
+    Tilt: { fineChannelAliases: ['Tilt fine'], capabilities: [{ type: 'Tilt' }] },
+    'Color Wheel': { defaultValue: 0, capabilities: [{ type: 'WheelSlot' }, { type: 'WheelRotation' }] },
+    'Gobo Wheel': { defaultValue: 0, capabilities: [{ type: 'WheelSlot' }, { type: 'WheelShake' }] },
+    Dimmer: { defaultValue: 0, capabilities: [{ type: 'Intensity' }] },
+    // The whole reason the library is worth importing: 0 on this channel is a CLOSED
+    // shutter, and the chart is the only place that answer is written down.
+    Strobe: { defaultValue: 4, capabilities: [{ type: 'ShutterStrobe' }] },
+    Function: { defaultValue: 0, capabilities: [{ type: 'NoFunction' }, { type: 'Maintenance' }] },
+  },
+  modes: [
+    { name: '9-channel', channels: ['Pan', 'Pan fine', 'Tilt', 'Tilt fine', 'Color Wheel', 'Gobo Wheel', 'Dimmer', 'Strobe', 'Function'] },
+    { name: '4-channel', channels: ['Pan', 'Tilt', 'Dimmer', 'Strobe'] },
+  ],
+};
+
+const OFL_PAR = {
+  name: 'LED Par RGBAW+UV',
+  categories: ['Color Changer'],
+  availableChannels: {
+    Master: { capabilities: [{ type: 'Intensity' }] },
+    Red: { capabilities: [{ type: 'ColorIntensity', color: 'Red' }] },
+    Green: { capabilities: [{ type: 'ColorIntensity', color: 'Green' }] },
+    Blue: { capabilities: [{ type: 'ColorIntensity', color: 'Blue' }] },
+    Amber: { capabilities: [{ type: 'ColorIntensity', color: 'Amber' }] },
+    White: { capabilities: [{ type: 'ColorIntensity', color: 'White' }] },
+    UV: { capabilities: [{ type: 'ColorIntensity', color: 'UV' }] },
+  },
+  modes: [{ name: '7ch', channels: ['Master', 'Red', 'Green', 'Blue', 'Amber', 'White', 'UV'] }],
+};
+
+check('a library fixture becomes a profile with this desk own roles', () => {
+  const p = oflLib.toProfile(OFL_HEAD, 0);
+  assert.deepStrictEqual(p.channels,
+    ['pan', 'panFine', 'tilt', 'tiltFine', 'color', 'gobo', 'dimmer', 'strobe', 'aux1']);
+  assert.strictEqual(p.cat, '_MOVING', 'a moving head lands in the moving library');
+  const par = oflLib.toProfile(OFL_PAR, 0);
+  assert.deepStrictEqual(par.channels, ['dimmer', 'r', 'g', 'b', 'a', 'w', 'uv']);
+  assert.strictEqual(par.cat, '_GENERIC');
+});
+
+check('the chart resting value comes with it, so an imported head is not dark', () => {
+  const p = oflLib.toProfile(OFL_HEAD, 0);
+  assert.strictEqual(p.defaults.strobe, 4, 'the shutter opens at 4 on this fixture and the chart says so');
+  assert.strictEqual(p.defaults.dimmer, undefined, 'a resting zero is the generic default already');
+});
+
+check('a fine byte stays with its coarse channel', () => {
+  const p = oflLib.toProfile(OFL_HEAD, 0);
+  assert.strictEqual(p.channels[1], 'panFine');
+  assert.strictEqual(p.channels[3], 'tiltFine');
+  // and a mode without them simply does not have them
+  assert.deepStrictEqual(oflLib.toProfile(OFL_HEAD, 1).channels, ['pan', 'tilt', 'dimmer', 'strobe']);
+});
+
+check('every channel of a mode gets its own role, and the width is exact', () => {
+  for (const [f, i] of [[OFL_HEAD, 0], [OFL_HEAD, 1], [OFL_PAR, 0]]) {
+    const p = oflLib.toProfile(f, i);
+    assert.strictEqual(p.channels.length, f.modes[i].channels.length, f.name + ' ' + f.modes[i].name);
+    assert.strictEqual(new Set(p.channels).size, p.channels.length, 'no role drives two channels');
+  }
+});
+
+check('a channel a mode does not use still takes up its slot on the wire', () => {
+  const gappy = { ...OFL_HEAD, modes: [{ name: 'gap', channels: ['Pan', null, 'Dimmer'] }] };
+  assert.deepStrictEqual(oflLib.toProfile(gappy, 0).channels, ['pan', 'aux1', 'dimmer']);
+});
+
+check('the profile name fits this desk rules, and two of them never collide', () => {
+  const p = oflLib.toProfile(OFL_HEAD, 0);
+  assert.ok(/^[A-Za-z0-9][A-Za-z0-9 _-]{0,23}$/.test(p.name), 'usable as a profile name: ' + p.name);
+  const taken = new Set([p.name]);
+  const second = oflLib.toProfile(OFL_HEAD, 0, { taken: (n) => taken.has(n) });
+  assert.notStrictEqual(second.name, p.name);
+  assert.ok(/^[A-Za-z0-9][A-Za-z0-9 _-]{0,23}$/.test(second.name), second.name);
+});
+
+check('a fixture key that is a path is refused rather than tidied into a valid one', () => {
+  assert.throws(() => oflLib.safeKey('../../etc/passwd'));
+  assert.throws(() => oflLib.safeKey(''));
+  assert.strictEqual(oflLib.safeKey('chauvet-dj'), 'chauvet-dj');
+});
+
+check('a wheel is read from the channel name, since the capability cannot say which it is', () => {
+  const wheel = (name) => oflLib.roleFor(name, { capabilities: [{ type: 'WheelSlot' }] });
+  assert.strictEqual(wheel('Color Wheel'), 'color');
+  assert.strictEqual(wheel('Colour Wheel 2'), 'color');
+  assert.strictEqual(wheel('Gobo Wheel'), 'gobo');
+  assert.strictEqual(wheel('Gobo Rotation'), 'rotation');
+});
+
+// ---- fan ---------------------------------------------------------------------
+
+const { fanValues } = require('../fan');
+
+check('a fan of one is just the value, and a fan of none is nothing', () => {
+  assert.deepStrictEqual(fanValues(1, 30, 200), [30]);
+  assert.deepStrictEqual(fanValues(0, 0, 255), []);
+});
+
+check('every fan style keeps both ends inside 0..255 and hits its extremes', () => {
+  for (const style of ['line', 'reverse', 'centre', 'mirror', 'repeat', 'cluster', 'random']) {
+    const out = fanValues(9, 0, 255, { style, groups: 3, seed: 5 });
+    assert.strictEqual(out.length, 9, style);
+    assert.ok(out.every((v) => v >= 0 && v <= 255 && Number.isInteger(v)), style + ' stayed in range');
+    assert.ok(out.includes(0) && out.includes(255), style + ' reaches both ends');
+  }
+});
+
+check('mirror is symmetrical about the middle of the selection', () => {
+  const out = fanValues(8, 0, 255, { style: 'mirror' });
+  for (let i = 0; i < 4; i++) assert.strictEqual(out[i], out[7 - i], 'pair ' + i);
+});
+
+check('random is reproducible from its seed, and a different seed is a different rig', () => {
+  const a = fanValues(8, 0, 255, { style: 'random', seed: 7 });
+  assert.deepStrictEqual(a, fanValues(8, 0, 255, { style: 'random', seed: 7 }));
+  assert.notDeepStrictEqual(a, fanValues(8, 0, 255, { style: 'random', seed: 8 }));
+});
+
 // ---- FX engine --------------------------------------------------------------
 // Nothing in fx.js reads the clock, so every one of these asserts an exact millisecond
 // rather than watching the rig for a while and believing what it saw.
