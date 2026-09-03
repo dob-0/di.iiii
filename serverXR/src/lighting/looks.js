@@ -28,6 +28,14 @@ const { roleKind } = require('./roles');
 // and lets a layer own the beam while another owns intensity.
 const KINDS = ['all', 'intensity', 'colour', 'position', 'beam'];
 const MERGES = ['htp', 'ltp'];
+// What drives a wave ACROSS the rig — the audit's one recurring idea (Resolume's line/
+// radial generators, MADRIX's pixel mapper, the old fx.js spatial fan) done as a fan
+// setting instead of a fourth object: 'patch' is the desk's old behaviour (phase spread
+// by index, the order fixtures were added); the rest read the stage arrangement, so a
+// two-step wave becomes a line crossing the room, a ring breathing out from its centre,
+// or a beam turning round it — and dragging a fixture on the stage moves it inside every
+// look using one of these, the same promise fx.js's spatial fan already made for FX.
+const SPATIAL = ['patch', 'x', 'x-', 'y', 'y-', 'radial', 'radial-', 'angle', 'angle-'];
 // Whose value this is. Position is per fixture — every head points somewhere different.
 // Colour and gobo are per fixture TYPE — "open white" is the same DMX on every unit of
 // that model. The distinction is Avolites', and it is what makes a palette portable.
@@ -104,6 +112,7 @@ function sanitizeLook(look) {
     name: String(look.name || 'Look').slice(0, 60),
     kind: KINDS.includes(look.kind) ? look.kind : 'all',
     scope: SCOPES.includes(look.scope) ? look.scope : 'each',
+    spatial: SPATIAL.includes(look.spatial) ? look.spatial : 'patch',
     // The ordered selection this look runs across. Order is DATA: it is what phase,
     // fan and "next fixture" all read. Empty means every patched fixture.
     fixtures: (Array.isArray(look.fixtures) ? look.fixtures : [])
@@ -169,16 +178,43 @@ function sanitizeLayers(list) {
 
 // ---- evaluation -----------------------------------------------------------
 
-// Where a fixture sits in the loop, 0..1. Its own phase offset comes from its place in
-// the ordered selection — this is the one line that turns a two-step look into a wave.
-function stepPosition(look, index, count, now, rate, clockBpm) {
+// Where a fixture sits in the room, 0..1 along the axis `spatial` names — null for
+// 'patch' or a fixture with no position, which tells stepPosition to fall back to its
+// place in the ordered selection instead. The home rectangle is 0..1; -1..2 is the old
+// margin around it and anything further out (the stage can be dragged much wider than
+// that now) simply clamps to the wall nearest it, same as a fixture hung past the truss.
+function spatialFrac(spatial, fixture) {
+  if (!fixture || spatial === 'patch') return null;
+  const rev = spatial.endsWith('-');
+  const axis = rev ? spatial.slice(0, -1) : spatial;
+  const flip = (p) => (rev ? 1 - p : p);
+  const nx = clamp01((num(fixture.x, 0) + 1) / 3);
+  const ny = clamp01((num(fixture.y, 0) + 1) / 3);
+  if (axis === 'x') return flip(nx);
+  if (axis === 'y') return flip(ny);
+  const dx = nx - 0.5, dy = ny - 0.5;
+  // radial: 0 at the centre of the home rectangle, 1 at the corners of the full world —
+  // an expanding ring. angle: which way round the centre a fixture sits — a beam
+  // rotating past it reads as a radar sweep once phase and the clock are moving it.
+  if (axis === 'radial') return flip(Math.min(1, Math.sqrt(dx * dx + dy * dy) / 0.5));
+  if (axis === 'angle') return flip((((Math.atan2(dy, dx) / TAU) % 1) + 1) % 1);
+  return null;
+}
+
+// Where a fixture sits in the loop, 0..1. Its phase offset comes from its place in the
+// ordered selection by default, or from its room position when the look names a spatial
+// fan — this is the one line that turns a two-step look into a wave, and the one branch
+// that turns that wave into a line crossing the room instead of the patch order.
+function stepPosition(look, index, count, now, rate, clockBpm, fixture) {
   // The desk's clock unless the look insists on its own. This is what makes Tap mean
   // something: one tempo, and every running look retimes to it at once. A look with its
   // own bpm has opted out on purpose — a slow swell under a fast chase.
   const bpm = Math.max(1, look.bpm || clockBpm || 120);
   const beatMs = 60000 / bpm;
   const periodMs = Math.max(1, beatMs * look.measure / Math.max(0.01, rate));
-  const spread = count > 1 ? (index / count) * (look.phase / 360) : 0;
+  const geo = spatialFrac(look.spatial, fixture);
+  const frac = geo != null ? geo : (count > 1 ? index / count : 0);
+  const spread = frac * (look.phase / 360);
   const p = (now / periodMs + spread) % 1;
   return p < 0 ? p + 1 : p;
 }
@@ -237,7 +273,7 @@ function evalLook(look, fixtures, now, { rate = 1, looks = new Map(), bpm = 120 
     ? look.fixtures.map((id) => fixtures.find((f) => f.id === id)).filter(Boolean)
     : fixtures;
   chosen.forEach((f, index) => {
-    const pos = stepPosition(look, index, chosen.length, now, rate, bpm);
+    const pos = stepPosition(look, index, chosen.length, now, rate, bpm, f);
     const { a, b, t } = stepBlend(look, pos);
     // '*' is "every fixture in the selection" — one value set walking the rig by phase.
     // A per-fixture key is a snapshot. Both live in the same object.
@@ -317,7 +353,7 @@ function layerValues(state, fixtures, now, clockBpm) {
 }
 
 module.exports = {
-  KINDS, MERGES, SCOPES, MAX_LOOKS, MAX_LAYERS, MAX_STEPS,
+  KINDS, MERGES, SCOPES, SPATIAL, MAX_LOOKS, MAX_LAYERS, MAX_STEPS,
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
-  kindAllows, evalLook, layerValues, stepBlend, stepPosition,
+  kindAllows, evalLook, layerValues, stepBlend, stepPosition, spatialFrac,
 };
