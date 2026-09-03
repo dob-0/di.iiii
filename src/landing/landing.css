@@ -121,6 +121,37 @@
     color: #000 !important;
 }
 
+/* The hero's buttons sit on top of a live room whose brightness is not ours to
+   predict: the walkable slab drifts under them, and where it passed behind
+   Open Jam the muted-white label on a transparent ground fell to grey on grey.
+   Ghost stays ghost everywhere else on the page — inside the hero row only,
+   both outlined routes get a dark scrim of their own so the label survives
+   whatever the room does behind it. */
+.lp-hero-cta-row .landing-cta-ghost {
+    background: rgba(4, 6, 14, 0.74) !important;
+    color: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+.lp-hero-cta-row .landing-cta-ghost:hover {
+    background: rgba(4, 6, 14, 0.88) !important;
+    color: var(--di-cyan) !important;
+}
+
+.lp-hero-cta-row .landing-cta-spaces {
+    background-color: rgba(4, 6, 14, 0.74) !important;
+    background-image: linear-gradient(var(--di-cyan-dim), var(--di-cyan-dim)) !important;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+.lp-hero-cta-row .landing-cta-spaces:hover {
+    background-color: var(--di-cyan) !important;
+    background-image: none !important;
+    color: #000 !important;
+}
+
 .lp-btn-link {
     color: var(--di-text-muted) !important;
     font-size: 0.82rem !important;
