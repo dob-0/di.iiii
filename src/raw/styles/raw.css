@@ -1404,6 +1404,22 @@
     color: var(--di-cyan);
 }
 
+/* At phone widths the seeded topbar becomes a horizontal scroller
+   (overflow-x:auto below), and an absolutely-positioned menu inside a
+   scroller is CLIPPED by it: measured at 390x844, the ⋯ menu's own centre
+   hit-tested to <html> — Home, Spaces, Wiki, Save to space, Clear the canvas
+   and node scale were all unreachable on a phone. Fixed to the viewport, it
+   escapes the scroller; the top is the topbar's height plus the gap. */
+@media (max-width: 640px) {
+    .raw-topbar-overflow-menu {
+        position: fixed;
+        top: 56px;
+        right: 8px;
+        max-height: calc(100dvh - 72px);
+        overflow-y: auto;
+    }
+}
+
 .raw-delete-fab {
     position: fixed;
     bottom: calc(24px + env(safe-area-inset-bottom));
@@ -1571,6 +1587,12 @@
     height: 22px;
     cursor: nwse-resize;
     border-radius: 0;
+    /* A button now (it takes the keyboard); none of a button's furniture. */
+    appearance: none;
+    border: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
     /* Two visible corner strokes: the handle existed for weeks as a 16px
        4%-alpha square nobody could find, wedged against the window's own
        corner buttons over a pointer-hungry canvas ("i can't change size",
@@ -1589,6 +1611,57 @@
 
 .raw-window-resizer:hover {
     opacity: 1;
+}
+
+/* Eight resize handles — every edge and every corner, inside the frame so
+   overflow:hidden cannot clip them. Thin along the edges, 14px in the
+   corners; the painted SE grip above stays the one visible affordance and
+   doubles as the SE corner. */
+.raw-window-handle {
+    position: absolute;
+    z-index: 12;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    background: transparent;
+}
+.raw-window-handle.n,
+.raw-window-handle.s {
+    left: 14px;
+    right: 14px;
+    height: 6px;
+    cursor: ns-resize;
+}
+.raw-window-handle.e,
+.raw-window-handle.w {
+    top: 14px;
+    bottom: 14px;
+    width: 6px;
+    cursor: ew-resize;
+}
+.raw-window-handle.n { top: 0; }
+.raw-window-handle.s { bottom: 0; }
+.raw-window-handle.e { right: 0; }
+.raw-window-handle.w { left: 0; }
+.raw-window-handle.ne,
+.raw-window-handle.nw,
+.raw-window-handle.sw {
+    width: 14px;
+    height: 14px;
+}
+.raw-window-handle.ne { top: 0; right: 0; cursor: nesw-resize; }
+.raw-window-handle.nw { top: 0; left: 0; cursor: nwse-resize; }
+.raw-window-handle.sw { bottom: 0; left: 0; cursor: nesw-resize; }
+/* A finger needs more than 6px. */
+@media (pointer: coarse) {
+    .raw-window-handle.n,
+    .raw-window-handle.s { height: 14px; }
+    .raw-window-handle.e,
+    .raw-window-handle.w { width: 14px; }
+    .raw-window-handle.ne,
+    .raw-window-handle.nw,
+    .raw-window-handle.sw { width: 28px; height: 28px; }
+    .raw-window-resizer { width: 32px; height: 32px; }
 }
 
 /* ── World panel window ── */
