@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gevorg Grigoryan — di.iiii network</title>
+<title>Gevorg Aram Grigoryan — di.iiii network</title>
 <style>
 :root{
   --paper:#f7f7f5; --paper-2:#efefec;
@@ -104,6 +104,27 @@ a.row .made .arrow{opacity:.6;}
 .room-stage .bio{font-size:16px;line-height:1.7;color:var(--ink-2);max-width:58ch;
   margin:30px 0 0 0;padding-top:26px;border-top:1px solid var(--rule);}
 
+/* ---------- the journey (a CV cut into segments, not handed over flat) ---------- */
+.focus-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px 0;}
+.chip{border:1px solid var(--rule);padding:6px 12px;font-size:12px;font-family:var(--mono);
+  color:var(--ink-2);letter-spacing:.02em;}
+.timeline{margin:0;}
+.timeline details{border-top:1px solid var(--rule);}
+.timeline details:last-child{border-bottom:1px solid var(--rule);}
+.timeline summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:16px;
+  padding:14px 2px;font-family:var(--mono);}
+.timeline summary::-webkit-details-marker{display:none;}
+.timeline summary .yr{font-size:14px;font-weight:700;color:var(--ink);min-width:4.5ch;}
+.timeline summary .ct{font-size:12px;color:var(--ink-3);flex:1;text-align:right;}
+.timeline summary::after{content:'+';color:var(--accent-ink);margin-left:2px;font-size:14px;}
+.timeline details[open] summary::after{content:'−';}
+.timeline .yr-items{padding:0 2px 18px 2px;display:flex;flex-direction:column;gap:12px;}
+.ti{font-size:14.5px;line-height:1.5;color:var(--ink-2);}
+.ti .ti-t{font-weight:600;color:var(--ink);}
+.ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
+.ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
+.cv-link{margin:20px 0 0 0;}
+
 .section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
   margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
 .section-label::after{content:'';flex:1;height:1px;background:var(--rule);}
@@ -176,10 +197,11 @@ a.row .made .arrow{opacity:.6;}
   <div class="eyebrow">di<span class="dot">.</span>iiii · network · team</div>
 </header>
 <main class="room-stage">
-  <h1>Gevorg Grigoryan</h1>
-  <p class="role">head of di.iiii, development</p>
+  <h1>Gevorg Aram Grigoryan</h1>
+  <p class="role">XR director, developer</p>
   
-  
+  <p class="bio">dob_ — interdisciplinary artist and director, in the digital and artistic realms since 2009. Founder of di. studio; theatre-trained, now building the platform itself.</p>
+  <div class="section-label">the journey</div><div class="focus-chips"><span class="chip">director</span><span class="chip">new media artist</span><span class="chip">multimedia artist</span><span class="chip">electronic art production</span><span class="chip">digital art production</span><span class="chip">audiovisual production</span><span class="chip">curation</span><span class="chip">TouchDesigner</span><span class="chip">Blender</span></div><div class="timeline"><details open><summary><span class="yr">2025</span><span class="ct">4 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">RecordAR</span> <span class="ti-r">art director</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">Notations</span> <span class="ti-r">video art curator</span><span class="ti-p">Yerevan, Armenia</span></div><div class="ti"><span class="ti-t">Alter ego</span> <span class="ti-r">creative director</span><span class="ti-p">Public TV Company of Armenia</span></div><div class="ti"><span class="ti-t">Game changers: Intro to game dev. (UNICEF)</span> <span class="ti-r">soft skill trainer</span><span class="ti-p">Gyumri Technology Center</span></div></div></details><details><summary><span class="yr">2024</span><span class="ct">3 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Hayfilm cluster</span> <span class="ti-r">art director</span><span class="ti-p">Yerevan, Armenia</span></div><div class="ti"><span class="ti-t">OUT</span> <span class="ti-r">director</span><span class="ti-p">NPAK, Armenia</span></div><div class="ti"><span class="ti-t">F33d6ack</span> <span class="ti-r">multimedia artist</span><span class="ti-p">NPAK, Armenia</span></div></div></details><details><summary><span class="yr">2023</span><span class="ct">5 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">ex: bkss</span> <span class="ti-r">multimedia artist</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">bisetka v:2</span> <span class="ti-r">art director</span><span class="ti-p">Pathos Theatre, Munich, Germany</span></div><div class="ti"><span class="ti-t">taking space: ex:no_map</span> <span class="ti-r">multimedia artist</span><span class="ti-p">Yerevan, Armenia</span></div><div class="ti"><span class="ti-t">Creative cognition: in_it</span> <span class="ti-r">multimedia artist</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">Bisetka: talk place</span> <span class="ti-r">director</span><span class="ti-p">HochX Theater, Munich, Germany</span></div></div></details><details><summary><span class="yr">2022</span><span class="ct">6 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">SPCTR</span> <span class="ti-r">multimedia artist</span><span class="ti-p">Yerevan, Armenia</span></div><div class="ti"><span class="ti-t">Oda</span> <span class="ti-r">multimedia artist</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">Galique</span> <span class="ti-r">multimedia artist</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">Mards</span> <span class="ti-r">project manager</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">Dimensions: 004</span> <span class="ti-r">multimedia artist</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">di. studio</span> <span class="ti-r">founder</span><span class="ti-p">Armenia</span></div></div></details><details><summary><span class="yr">2021</span><span class="ct">4 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">#AygePar (Artworks For Peace)</span> <span class="ti-r">project manager</span><span class="ti-p">Aygepar, Armenia</span></div><div class="ti"><span class="ti-t">in Basen (Artworks For Peace)</span> <span class="ti-r">project manager</span><span class="ti-p">Basen, Armenia</span></div><div class="ti"><span class="ti-t">Ground art festival</span> <span class="ti-r">project manager</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">technoSapiens</span> <span class="ti-r">multimedia artist</span><span class="ti-p">Gyumri, Armenia</span></div></div></details><details><summary><span class="yr">2016 – 2020</span><span class="ct">3 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Wedding in the Back</span> <span class="ti-r">actor</span><span class="ti-p">Gyumri State Drama Theater</span></div><div class="ti"><span class="ti-t">smileOmetr</span> <span class="ti-r">stage director</span><span class="ti-p">Gyumri State Drama Theater</span></div><div class="ti"><span class="ti-t">Three Little Pigs</span> <span class="ti-r">stage director</span><span class="ti-p">Gyumri State Drama Theater</span></div></div></details><details><summary><span class="yr">2012 – 2019</span><span class="ct">3 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Aratta</span> <span class="ti-r">creative director / band</span></div><div class="ti"><span class="ti-t">seenThat</span> <span class="ti-r">multimedia artist</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">PROF</span> <span class="ti-r">PR manager</span><span class="ti-p">Gyumri, Armenia</span></div></div></details></div><p class="cv-link"><a class="plate" href="https://docs.google.com/document/d/14xkyBRArc9t7BqbKm_-2FDpzrjn84lPGdiDnuP23xr4/edit" target="_blank" rel="noopener">the full CV</a></p>
   <div class="section-label">on di.iiii</div>
   <div class="doors"><a class="door" href="/" target="_top"><span class="t">di.iiii</span><span class="l">the platform itself</span></a><a class="door" href="/br_id_ge" target="_top"><span class="t">br_id_ge</span><span class="l">Notations #2 — curated and developed</span></a></div>
   <div class="section-label">elsewhere</div><div class="elsewhere"><a class="plate" href="https://www.instagram.com/dob______/" target="_blank" rel="noopener">Instagram</a><a class="plate" href="https://github.com/dob-0" target="_blank" rel="noopener">GitHub</a></div>

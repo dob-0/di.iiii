@@ -104,6 +104,27 @@ a.row .made .arrow{opacity:.6;}
 .room-stage .bio{font-size:16px;line-height:1.7;color:var(--ink-2);max-width:58ch;
   margin:30px 0 0 0;padding-top:26px;border-top:1px solid var(--rule);}
 
+/* ---------- the journey (a CV cut into segments, not handed over flat) ---------- */
+.focus-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px 0;}
+.chip{border:1px solid var(--rule);padding:6px 12px;font-size:12px;font-family:var(--mono);
+  color:var(--ink-2);letter-spacing:.02em;}
+.timeline{margin:0;}
+.timeline details{border-top:1px solid var(--rule);}
+.timeline details:last-child{border-bottom:1px solid var(--rule);}
+.timeline summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:16px;
+  padding:14px 2px;font-family:var(--mono);}
+.timeline summary::-webkit-details-marker{display:none;}
+.timeline summary .yr{font-size:14px;font-weight:700;color:var(--ink);min-width:4.5ch;}
+.timeline summary .ct{font-size:12px;color:var(--ink-3);flex:1;text-align:right;}
+.timeline summary::after{content:'+';color:var(--accent-ink);margin-left:2px;font-size:14px;}
+.timeline details[open] summary::after{content:'−';}
+.timeline .yr-items{padding:0 2px 18px 2px;display:flex;flex-direction:column;gap:12px;}
+.ti{font-size:14.5px;line-height:1.5;color:var(--ink-2);}
+.ti .ti-t{font-weight:600;color:var(--ink);}
+.ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
+.ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
+.cv-link{margin:20px 0 0 0;}
+
 .section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
   margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
 .section-label::after{content:'';flex:1;height:1px;background:var(--rule);}
@@ -179,7 +200,8 @@ a.row .made .arrow{opacity:.6;}
   <h1>Yeva Abgaryan</h1>
   <p class="role">set design, 3D</p>
   
-  
+  <p class="bio">Set designer and production artist working with recycled materials — part of the art direction team renovating Hayfilm Studio into a new art venue.</p>
+  <div class="section-label">the journey</div><div class="focus-chips"><span class="chip">drawing</span><span class="chip">sculpting</span><span class="chip">piercing art</span><span class="chip">tattoo art</span><span class="chip">digital art production</span><span class="chip">Blender</span><span class="chip">Nomad Sculpt</span></div><div class="timeline"><details open><summary><span class="yr">2023</span><span class="ct">2 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">PACT Zollverein residency</span> <span class="ti-r">artist</span><span class="ti-p">Essen, Germany</span></div><div class="ti"><span class="ti-t">SeenThat Ruins</span> <span class="ti-r">artist, designer</span><span class="ti-p">Yerevan, Armenia</span></div></div></details><details><summary><span class="yr">2022</span><span class="ct">4 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">SPCTR</span> <span class="ti-r">art director, artist</span><span class="ti-p">Yerevan, Armenia</span></div><div class="ti"><span class="ti-t">Mards residency</span> <span class="ti-r">artist</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">Recycling Lamp</span> <span class="ti-r">concept artist, designer</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">Artbox Armenia</span> <span class="ti-r">incubator alumna</span><span class="ti-p">Yerevan, Armenia</span></div></div></details><details><summary><span class="yr">2021</span><span class="ct">2 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Ground art festival</span> <span class="ti-r">artist</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">MOCT Yerevan</span> <span class="ti-r">artist, volunteer</span><span class="ti-p">Yerevan, Armenia</span></div></div></details><details><summary><span class="yr">2019</span><span class="ct">1 credit</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">SeenThat</span> <span class="ti-r">designer, visual artist</span><span class="ti-p">Gyumri, Armenia</span></div></div></details></div><p class="cv-link"><a class="plate" href="https://drive.google.com/file/d/1ncpODwX9HJ5Oa9X7kj1MBXN4-rGWa8f5/view" target="_blank" rel="noopener">the full CV — PDF</a></p>
   <div class="section-label">on di.iiii</div>
   <div class="doors"><a class="door" href="/wcc/yeva-abgaryan" target="_top"><span class="t">WCC Exhibition</span><span class="l">her room</span></a><a class="door" href="/azd" target="_top"><span class="t">ազդ | azd</span><span class="l">Faceless</span></a></div>
   <div class="section-label">elsewhere</div><div class="elsewhere"><a class="plate" href="https://www.instagram.com/6addreams/" target="_blank" rel="noopener">Instagram</a></div>

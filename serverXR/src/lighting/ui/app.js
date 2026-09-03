@@ -20,9 +20,14 @@ let sceneKind = 'all';         // 'all' | 'anim' | 'static' — hide one kind wh
 let tool = 'select';
 let snap = false;
 let zoom = 1;
-// The stage viewport: pan in screen pixels, zoom 0.25-4. Shared by the Setup and
-// Control stages the way `zoom` always was, so the two views stay the same picture.
+// The stage viewport: pan in screen pixels, zoom 0.01-4 — wide enough to fit a rig
+// spread across the whole WORLD bound, not just the old fixed room. Shared by the Setup
+// and Control stages the way `zoom` always was, so the two views stay the same picture.
 const view = { x: 0, y: 0 };
+// Matches desk.js's WORLD — how far a fixture can be dragged from the room. Wide enough
+// that arranging a real rig never hits an edge; the server clamps to the same bound
+// regardless of what this page sends, so this is a UX courtesy, not the actual limit.
+const WORLD = 1000;
 let spaceHeld = false;   // Space + drag pans, like every canvas tool she uses
 let autoWhite = false;
 let attrTab = 'Color';
@@ -826,6 +831,14 @@ function placeStages() {
   if (!S) return;   // the resize observer can fire before the first state arrives
   for (const inner of $$('.stage-inner')) {
     inner.style.transform = `translate(${view.x}px, ${view.y}px) scale(${zoom})`;
+    // The backdrop grid lives on the outer, untransformed pane (see style.css) so it can
+    // tile forever — position and size just track the same pan/zoom the fixtures use, 40
+    // world-px apart at zoom 1, same as the grid dragging snaps fixtures to.
+    const outer = inner.closest('.stage');
+    if (outer) {
+      outer.style.backgroundPosition = `${view.x}px ${view.y}px`;
+      outer.style.backgroundSize = `${40 * zoom}px ${40 * zoom}px`;
+    }
     // Label crowding: labels scale with the zoom, and positions scale with (scale ×
     // zoom), so whether two labels collide depends only on the container size — a narrow
     // window overlaps them at every zoom. Hide the ones that would land on a neighbour's
@@ -882,8 +895,8 @@ function wireStage(stage) {
     const r = stage.getBoundingClientRect();
     const { sc, ox, oy } = stageMap(r.width, r.height);
     return {
-      x: clamp(((e.clientX - r.left - view.x) / zoom - ox) / sc, -1, 2),
-      y: clamp(((e.clientY - r.top - view.y) / zoom - oy) / sc, -1, 2),
+      x: clamp(((e.clientX - r.left - view.x) / zoom - ox) / sc, -WORLD, WORLD),
+      y: clamp(((e.clientY - r.top - view.y) / zoom - oy) / sc, -WORLD, WORLD),
     };
   };
 
@@ -931,7 +944,7 @@ function wireStage(stage) {
       for (const [id, o] of drag.origin) {
         const f = S.fixtures.find((x) => x.id === id);
         if (!f) continue;
-        f.x = clamp(o.x + dx, -1, 2); f.y = clamp(o.y + dy, -1, 2);
+        f.x = clamp(o.x + dx, -WORLD, WORLD); f.y = clamp(o.y + dy, -WORLD, WORLD);
         if (snap) { f.x = Math.round(f.x * 40) / 40; f.y = Math.round(f.y * 24) / 24; }
       }
       placeStages();
@@ -997,7 +1010,7 @@ async function patchProfile(profile, { universe, address, x, y, count = 1 }) {
     ? `patched ${added.length} × ${profile} at ${added[0].address}`
     : `no room for ${profile} there`;
   if (added.length && x != null) {
-    await post('api/fixtures/move', { moves: added.map((f, i) => ({ id: f.id, x: clamp(x + i * 0.07, -1, 2), y })) });
+    await post('api/fixtures/move', { moves: added.map((f, i) => ({ id: f.id, x: clamp(x + i * 0.07, -WORLD, WORLD), y })) });
   }
   if (added.length) {
     unpin('pAddress', 'pIndex');
@@ -1082,7 +1095,7 @@ function arrange(kind) {
     x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys),
   });
   fs.forEach((f, i) => {
-    f.x = clamp(pts[i].x, -1, 2); f.y = clamp(pts[i].y, -1, 2);
+    f.x = clamp(pts[i].x, -WORLD, WORLD); f.y = clamp(pts[i].y, -WORLD, WORLD);
     if (snap) { f.x = Math.round(f.x * 40) / 40; f.y = Math.round(f.y * 24) / 24; }   // same grid as dragging
   });
   placeStages();
@@ -2874,6 +2887,16 @@ const KIND_LABEL = {
   all: 'everything', intensity: 'intensity', colour: 'colour',
   position: 'position', beam: 'beam',
 };
+// What the phase spread reads. Patch is the desk's old behaviour; the rest turn a wave
+// into a shape in the room, the way the stage view already lets the old FX engine's
+// chase and radar modes work — brought into looks so it can be layered and coloured.
+let LOOK_SPATIAL = ['patch', 'x', 'x-', 'y', 'y-', 'radial', 'radial-', 'angle', 'angle-'];
+const SPATIAL_LABEL = {
+  patch: 'patch order', x: 'left → right', 'x-': 'right → left',
+  y: 'front → back', 'y-': 'back → front',
+  radial: 'centre → out', 'radial-': 'out → centre',
+  angle: 'round, clockwise', 'angle-': 'round, anti-clockwise',
+};
 const MERGE_LABEL = {
   htp: 'HTP — adds light',
   ltp: 'LTP — takes over',
@@ -3267,7 +3290,7 @@ function buildSteps() {
     return;
   }
   const sig = look.id + '#' + JSON.stringify(look.steps.map((s) => s.transition))
-    + '#' + look.phase + '#' + look.measure + '#' + look.bpm + '#' + look.steps.length
+    + '#' + look.phase + '#' + look.measure + '#' + look.bpm + '#' + look.spatial + '#' + look.steps.length
     + '#' + [...lookRefs(look).keys()].join(',')
     + '#' + (S.looks || []).filter((l) => l.steps.length === 1 && l.kind !== 'all').map((l) => l.id + l.name).join();
   if (box.dataset.sig === sig) return;
@@ -3302,6 +3325,9 @@ function buildSteps() {
         <input class="st-measure" type="number" min="0.25" max="64" step="0.25" value="${look.measure}"></label>
       <label title="Leave empty to follow the desk clock at the top of the page">BPM
         <input class="st-bpm" type="number" min="1" max="600" step="1" value="${look.bpm == null ? '' : look.bpm}" placeholder="clock"></label>
+      <label title="What the phase spread reads. Patch order is the desk's old behaviour; the rest read where fixtures actually sit on the stage — a wave becomes a line crossing the room, a ring, or a beam turning round it. Drag a fixture on the stage and any of these moves with it.">Follow
+        <select class="st-spatial">${LOOK_SPATIAL.map((s) =>
+          `<option value="${s}"${s === (look.spatial || 'patch') ? ' selected' : ''}>${esc(SPATIAL_LABEL[s] || s)}</option>`).join('')}</select></label>
     </div>`;
 
   const edit = (patch) => putLook(Object.assign({}, lookById(selLook), patch));
@@ -3381,6 +3407,7 @@ function buildSteps() {
     const v = e.target.value.trim();
     edit({ bpm: v === '' ? null : clamp(parseFloat(v) || 120, 1, 600) });
   });
+  box.querySelector('.st-spatial').addEventListener('change', (e) => edit({ spatial: e.target.value }));
 }
 
 /* ---- one-press starters ---- */
@@ -3479,6 +3506,57 @@ $('#stStrobe').addEventListener('click', () => {
   'strobe running — its fader is at the top of the stack');
 });
 
+$('#stLine').addEventListener('click', () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => x === 'dimmer').length) return say('nothing in the rig has a dimmer channel', true);
+  // spatial 'x' + phase reads stage x instead of patch order — a line, not a chase that
+  // happens to look like one from wherever the fixtures were plugged in.
+  startLook({
+    id: newId('lk'), name: 'Line sweep', kind: 'intensity', measure: 4, phase: 360, spatial: 'x',
+    fixtures: S.fixtures.map((f) => f.id),
+    steps: [
+      { values: { '*': { dimmer: 0 } }, width: 1, transition: 1 },
+      { values: { '*': { dimmer: 255 } }, width: 1, transition: 1 },
+    ],
+  }, { name: 'Line sweep', mask: 'intensity', merge: 'ltp' },
+  'line sweep running, crossing the room left to right — drag a fixture on the stage and watch it move inside the line');
+});
+
+$('#stRadar').addEventListener('click', () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => x === 'dimmer').length) return say('nothing in the rig has a dimmer channel', true);
+  // spatial 'angle' walks the phase round the centre of the room instead of across an
+  // axis — the wave the two-step model was always able to make, read as a rotation.
+  startLook({
+    id: newId('lk'), name: 'Radar', kind: 'intensity', measure: 6, phase: 360, spatial: 'angle',
+    fixtures: S.fixtures.map((f) => f.id),
+    steps: [
+      { values: { '*': { dimmer: 0 } }, width: 3, transition: 1 },
+      { values: { '*': { dimmer: 255 } }, width: 1, transition: 0.3 },
+    ],
+  }, { name: 'Radar', mask: 'intensity', merge: 'ltp' },
+  'radar running — a beam turning round the room; move a fixture on the stage to put it in the beam\'s path');
+});
+
+$('#stGrid').addEventListener('click', async () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => x === 'dimmer').length) return say('nothing in the rig has a dimmer channel', true);
+  // Two waves at right angles, both HTP so where they cross reads brighter — a grid
+  // of light moving through the room out of two looks the desk already knows how to
+  // run, stacked instead of a third thing built to do both at once.
+  const ids = S.fixtures.map((f) => f.id);
+  await startLook({
+    id: newId('lk'), name: 'Grid — rows', kind: 'intensity', measure: 5, phase: 360, spatial: 'x',
+    fixtures: ids,
+    steps: [{ values: { '*': { dimmer: 40 } }, width: 1, transition: 1 }, { values: { '*': { dimmer: 255 } }, width: 1, transition: 1 }],
+  }, { name: 'Grid — rows', mask: 'intensity', merge: 'htp' }, 'grid rows running');
+  await startLook({
+    id: newId('lk'), name: 'Grid — columns', kind: 'intensity', measure: 7, phase: 360, spatial: 'y',
+    fixtures: ids,
+    steps: [{ values: { '*': { dimmer: 40 } }, width: 1, transition: 1 }, { values: { '*': { dimmer: 255 } }, width: 1, transition: 1 }],
+  }, { name: 'Grid — columns', mask: 'intensity', merge: 'htp' }, 'grid running — two waves crossing the room; different measures so the crossing point keeps moving');
+});
+
 // The mask vocabulary comes from the server, so this page cannot offer a lane looks.js
 // would refuse. Until it answers, the select renders from the literal above.
 function fillLookKinds() {
@@ -3488,9 +3566,9 @@ function fillLookKinds() {
 }
 fillLookKinds();
 fetch('api/looks').then((r) => r.json()).then((d) => {
-  if (!d || !Array.isArray(d.kinds) || !d.kinds.length) return;
-  LOOK_KINDS = d.kinds;
-  fillLookKinds();
+  if (!d) return;
+  if (Array.isArray(d.kinds) && d.kinds.length) { LOOK_KINDS = d.kinds; fillLookKinds(); }
+  if (Array.isArray(d.spatial) && d.spatial.length) LOOK_SPATIAL = d.spatial;
 }).catch(() => { /* the state poll reports a desk that is not answering */ });
 
 /* ---- the phone's layer faders ---- */
@@ -4324,7 +4402,7 @@ $$('.circleBtn').forEach((b) => b.addEventListener('click', () => arrange('circl
 // Change the zoom while keeping one screen point fixed — the cursor for the wheel, the
 // viewport centre for the buttons. Without this, zooming in walks the rig off-screen.
 function zoomAt(stage, cx, cy, nz) {
-  nz = clamp(nz, 0.25, 4);
+  nz = clamp(nz, 0.01, 4);
   const r = stage.getBoundingClientRect();
   const mx = cx - r.left, my = cy - r.top;
   view.x = mx - (mx - view.x) * (nz / zoom);
@@ -4343,7 +4421,7 @@ function fitStage(stage) {
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   const { sc, ox, oy } = stageMap(r.width, r.height);
   const bw = Math.max(0.08, x1 - x0) * sc, bh = Math.max(0.08, y1 - y0) * sc;
-  zoom = clamp(Math.min(r.width * 0.8 / bw, r.height * 0.8 / bh, 4), 0.25, 4);
+  zoom = clamp(Math.min(r.width * 0.8 / bw, r.height * 0.8 / bh, 4), 0.01, 4);
   view.x = r.width / 2 - (ox + (x0 + x1) / 2 * sc) * zoom;
   view.y = r.height / 2 - (oy + (y0 + y1) / 2 * sc) * zoom;
   $$('.zoom').forEach((o) => { o.value = Math.round(zoom * 100); });

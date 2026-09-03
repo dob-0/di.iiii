@@ -3,14 +3,14 @@
   "people": [
     {
       "slug": "gevorg-grigoryan",
-      "name": "Gevorg Grigoryan",
-      "role": "head of di.iiii, development",
-      "discipline": "head of di.iiii, development",
+      "name": "Gevorg Aram Grigoryan",
+      "role": "XR director, developer",
+      "discipline": "XR director, developer",
       "team": true,
       "section": "team",
       "sectionLabel": "team",
       "city": null,
-      "bio": null,
+      "bio": "dob_ — interdisciplinary artist and director, in the digital and artistic realms since 2009. Founder of di. studio; theatre-trained, now building the platform itself.",
       "works": [
         {
           "url": "/",
@@ -38,7 +38,198 @@
         }
       ],
       "num": "01",
-      "order": 1
+      "order": 1,
+      "resume": {
+        "focus": [
+          "director",
+          "new media artist",
+          "multimedia artist",
+          "electronic art production",
+          "digital art production",
+          "audiovisual production",
+          "curation",
+          "TouchDesigner",
+          "Blender"
+        ],
+        "timeline": [
+          {
+            "year": "2025",
+            "items": [
+              {
+                "title": "RecordAR",
+                "role": "art director",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Notations",
+                "role": "video art curator",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Alter ego",
+                "role": "creative director",
+                "place": "Public TV Company of Armenia"
+              },
+              {
+                "title": "Game changers: Intro to game dev. (UNICEF)",
+                "role": "soft skill trainer",
+                "place": "Gyumri Technology Center"
+              }
+            ]
+          },
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "Hayfilm cluster",
+                "role": "art director",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "OUT",
+                "role": "director",
+                "place": "NPAK, Armenia"
+              },
+              {
+                "title": "F33d6ack",
+                "role": "multimedia artist",
+                "place": "NPAK, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "ex: bkss",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "bisetka v:2",
+                "role": "art director",
+                "place": "Pathos Theatre, Munich, Germany"
+              },
+              {
+                "title": "taking space: ex:no_map",
+                "role": "multimedia artist",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Creative cognition: in_it",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Bisetka: talk place",
+                "role": "director",
+                "place": "HochX Theater, Munich, Germany"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "SPCTR",
+                "role": "multimedia artist",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Oda",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Galique",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Mards",
+                "role": "project manager",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Dimensions: 004",
+                "role": "multimedia artist",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "di. studio",
+                "role": "founder",
+                "place": "Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2021",
+            "items": [
+              {
+                "title": "#AygePar (Artworks For Peace)",
+                "role": "project manager",
+                "place": "Aygepar, Armenia"
+              },
+              {
+                "title": "in Basen (Artworks For Peace)",
+                "role": "project manager",
+                "place": "Basen, Armenia"
+              },
+              {
+                "title": "Ground art festival",
+                "role": "project manager",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "technoSapiens",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2016 – 2020",
+            "items": [
+              {
+                "title": "Wedding in the Back",
+                "role": "actor",
+                "place": "Gyumri State Drama Theater"
+              },
+              {
+                "title": "smileOmetr",
+                "role": "stage director",
+                "place": "Gyumri State Drama Theater"
+              },
+              {
+                "title": "Three Little Pigs",
+                "role": "stage director",
+                "place": "Gyumri State Drama Theater"
+              }
+            ]
+          },
+          {
+            "year": "2012 – 2019",
+            "items": [
+              {
+                "title": "Aratta",
+                "role": "creative director / band"
+              },
+              {
+                "title": "seenThat",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "PROF",
+                "role": "PR manager",
+                "place": "Gyumri, Armenia"
+              }
+            ]
+          }
+        ],
+        "cvUrl": "https://docs.google.com/document/d/14xkyBRArc9t7BqbKm_-2FDpzrjn84lPGdiDnuP23xr4/edit",
+        "cvLabel": "the full CV"
+      }
     },
     {
       "slug": "emilya-nikoghosyan",
@@ -49,7 +240,7 @@
       "section": "team",
       "sectionLabel": "team",
       "city": null,
-      "bio": null,
+      "bio": "Multimedia artist, youth worker, activist — co-founder of di. studio, working across installation, concept art and production.",
       "works": [
         {
           "url": "/algovrithm",
@@ -87,7 +278,90 @@
         }
       ],
       "num": "02",
-      "order": 2
+      "order": 2,
+      "resume": {
+        "focus": [
+          "multimedia production",
+          "digital art production",
+          "project management",
+          "leadership",
+          "team collaboration",
+          "TouchDesigner",
+          "Resolume Arena"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "echo/4",
+                "role": "project coordinator, artist"
+              },
+              {
+                "title": "f33d6ack",
+                "role": "concept artist",
+                "place": "NPAK, Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Creative cognition: in_it",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "WIDS conference",
+                "role": "artist, manager",
+                "place": "EIF foundation, Gyumri, Armenia"
+              },
+              {
+                "title": "taking_place",
+                "role": "art coordinator",
+                "place": "Klopnikov groupe, Yerevan, Armenia"
+              },
+              {
+                "title": "di. studio",
+                "role": "founder",
+                "place": "Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "PELSA programme",
+                "role": "coordinator",
+                "place": "UNICEF Armenia, Gyumri"
+              }
+            ]
+          },
+          {
+            "year": "2019 – 2020",
+            "items": [
+              {
+                "title": "YIC Gyumri",
+                "role": "administrative assistant"
+              },
+              {
+                "title": "Aurora Forum",
+                "role": "event organizer",
+                "place": "IDEA foundation"
+              },
+              {
+                "title": "Children's World Day",
+                "role": "coordinator",
+                "place": "UNICEF Armenia"
+              }
+            ]
+          }
+        ],
+        "cvUrl": "https://drive.google.com/file/d/1AMSwsw7HOsf4u7v_IC6XSueuMMOZpiad/view",
+        "cvLabel": "the full CV — PDF"
+      }
     },
     {
       "slug": "syuzi-ginosyan",
@@ -98,7 +372,7 @@
       "section": "team",
       "sectionLabel": "team",
       "city": "Gyumri",
-      "bio": "\"The individual is not self-contained, but continuously shaped through external gazes and interventions… The thread functions as both connection and boundary — binding while constraining.\" — artist statement for \"bond / կապ\", azd",
+      "bio": "Curator based in Gyumri — MA in Art History and Theory. Co-founder of G.URBAN; curator for Gyumri Art Week; residencies and collaborations across Armenia and Germany.",
       "works": [
         {
           "url": "/azd",
@@ -133,7 +407,117 @@
         }
       ],
       "num": "03",
-      "order": 3
+      "order": 3,
+      "resume": {
+        "focus": [
+          "curation",
+          "art management",
+          "coordination",
+          "project direction",
+          "performing",
+          "Ableton",
+          "Logic Pro"
+        ],
+        "timeline": [
+          {
+            "year": "2026",
+            "items": [
+              {
+                "title": "WCC: Women Creating Change",
+                "role": "curator",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "azd",
+                "role": "curator and artist",
+                "place": "Gyumri, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2025",
+            "items": [
+              {
+                "title": "RecordAR: Analog and Digital Identities",
+                "role": "curator and coordinator",
+                "place": "Munich, Germany"
+              }
+            ]
+          },
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "Generator",
+                "role": "project manager, curator",
+                "place": "Munich, Germany / Barcelona, Spain"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Spielart Festival — bisetka: talk_place",
+                "role": "curator and performer",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "SUPERBOOKS4 — “Ground” book",
+                "role": "author, main coordinator",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Pact Zollverein Residency",
+                "role": "artist",
+                "place": "Essen, Germany"
+              },
+              {
+                "title": "HochX Residency",
+                "role": "artist",
+                "place": "Munich, Germany"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "MARDS residency",
+                "role": "curator and coordinator",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "di. studio",
+                "role": "curator",
+                "place": "Gyumri, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2015 – 2021",
+            "items": [
+              {
+                "title": "Ground art festival",
+                "role": "organizer and curator",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "With a Word",
+                "role": "curator and artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Anonymous",
+                "role": "curator",
+                "place": "Loft Gyumri"
+              }
+            ]
+          }
+        ],
+        "cvUrl": "https://drive.google.com/file/d/1sg6ytFluP_37HQHKvO1Ski4y7FjDn4gk/view",
+        "cvLabel": "the full CV — PDF"
+      }
     },
     {
       "slug": "taron-grigoryan",
@@ -144,7 +528,7 @@
       "section": "team",
       "sectionLabel": "team",
       "city": null,
-      "bio": null,
+      "bio": "Actor, lighting engineer and founder of SPCTR Lights — multimedia, audiovisual and music production, DJing.",
       "works": [],
       "elsewhere": [
         {
@@ -153,7 +537,105 @@
         }
       ],
       "num": "04",
-      "order": 4
+      "order": 4,
+      "resume": {
+        "focus": [
+          "audiovisual production",
+          "music production",
+          "DJing",
+          "acting",
+          "lighting",
+          "3D printing"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "Hayfilm",
+                "role": "musician, video artist",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Vahakni",
+                "role": "musician",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "The Black Fountain",
+                "role": "musician",
+                "place": "Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Candyland (album)",
+                "role": "musician",
+                "place": "Amsterdam, Netherlands"
+              },
+              {
+                "title": "PACT Zollverein residency",
+                "role": "musician",
+                "place": "Essen, Germany"
+              },
+              {
+                "title": "Spielart festival",
+                "role": "musician",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Versace — music for Versace",
+                "role": "music producer",
+                "place": "Milan, Italy"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "SPCTR",
+                "role": "founder, curator, producer",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Artbox Armenia",
+                "role": "incubator alumnus",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "MARDs residency",
+                "role": "visual artist",
+                "place": "Munich, Germany"
+              }
+            ]
+          },
+          {
+            "year": "2016 – 2021",
+            "items": [
+              {
+                "title": "technoSapiens",
+                "role": "musician",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Ground art festival",
+                "role": "musician",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Aratta",
+                "role": "lead guitarist"
+              }
+            ]
+          }
+        ],
+        "cvUrl": "https://drive.google.com/file/d/1UzTrZuwg1Go7Nf1Tm0Dg8a7yt5Z1waIY/view",
+        "cvLabel": "the full CV — PDF"
+      }
     },
     {
       "slug": "yeva-abgaryan",
@@ -164,7 +646,7 @@
       "section": "team",
       "sectionLabel": "team",
       "city": null,
-      "bio": null,
+      "bio": "Set designer and production artist working with recycled materials — part of the art direction team renovating Hayfilm Studio into a new art venue.",
       "works": [
         {
           "url": "/wcc/yeva-abgaryan",
@@ -188,7 +670,87 @@
         }
       ],
       "num": "05",
-      "order": 5
+      "order": 5,
+      "resume": {
+        "focus": [
+          "drawing",
+          "sculpting",
+          "piercing art",
+          "tattoo art",
+          "digital art production",
+          "Blender",
+          "Nomad Sculpt"
+        ],
+        "timeline": [
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "PACT Zollverein residency",
+                "role": "artist",
+                "place": "Essen, Germany"
+              },
+              {
+                "title": "SeenThat Ruins",
+                "role": "artist, designer",
+                "place": "Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "SPCTR",
+                "role": "art director, artist",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Mards residency",
+                "role": "artist",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Recycling Lamp",
+                "role": "concept artist, designer",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Artbox Armenia",
+                "role": "incubator alumna",
+                "place": "Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2021",
+            "items": [
+              {
+                "title": "Ground art festival",
+                "role": "artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "MOCT Yerevan",
+                "role": "artist, volunteer",
+                "place": "Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2019",
+            "items": [
+              {
+                "title": "SeenThat",
+                "role": "designer, visual artist",
+                "place": "Gyumri, Armenia"
+              }
+            ]
+          }
+        ],
+        "cvUrl": "https://drive.google.com/file/d/1ncpODwX9HJ5Oa9X7kj1MBXN4-rGWa8f5/view",
+        "cvLabel": "the full CV — PDF"
+      }
     },
     {
       "slug": "maria-matinyan",

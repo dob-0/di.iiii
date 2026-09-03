@@ -1,6 +1,14 @@
 'use strict';
 // Local Art-Net light controller: HTTP UI on localhost, DMX out over UDP.
 
+// How far a fixture can be dragged from the room. The room itself is 0..1 — what
+// looks.js's spatial fan and the old fx.js radar/x/y modes read as "the venue" — but the
+// stage is a canvas, not a fixed floor plan: a rig with a truss run or a followspot
+// position off to one side needs somewhere past the walls to put it. 1000 is not
+// infinite, it is "never hit the edge arranging a real rig" while keeping a fixture's
+// position a plain finite number on the wire and in the show file.
+const WORLD = 1000;
+
 const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
@@ -18,7 +26,7 @@ const library = require('./library');
 const { SACN } = require('./sacn');
 const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
-  KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, kindAllows,
+  KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows,
 } = require('./looks');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
@@ -748,7 +756,7 @@ function createDesk(opts = {}) {
 
     // The content library. A look is a list of steps: one step is a scene or a palette,
     // two or more are a chase or a wave, and a value may point at another look.
-    'GET /api/looks': (req, res) => json(res, { looks: state.looks, kinds: LOOK_KINDS, scopes: LOOK_SCOPES }, 200, req),
+    'GET /api/looks': (req, res) => json(res, { looks: state.looks, kinds: LOOK_KINDS, scopes: LOOK_SCOPES, spatial: LOOK_SPATIAL }, 200, req),
     'POST /api/looks': (req, res, body) => {
       const looks = sanitizeLooks(body.looks);
       if (!looks) return json(res, { error: 'looks must be a list, each with an id and at least one step' }, 400);
@@ -997,8 +1005,8 @@ function createDesk(opts = {}) {
       // The stage world is -1..2: the visible rect at zoom 1 plus a full screen of space
       // on every side. Clamped at all only so a broken client cannot fling a fixture to
       // coordinates the Fit button would then zoom into oblivion trying to frame.
-      if (body.x != null) f.x = Math.max(-1, Math.min(2, +body.x));
-      if (body.y != null) f.y = Math.max(-1, Math.min(2, +body.y));
+      if (body.x != null) f.x = Math.max(-WORLD, Math.min(WORLD, +body.x));
+      if (body.y != null) f.y = Math.max(-WORLD, Math.min(WORLD, +body.y));
       if (body.limits) Object.assign(f.limits, sanitizeLimits(body.limits));
       if (look) { state.activeScene = null; engine.cancelFade(); pushFrame(); }
       save(); json(res, { ok: true, fixture: f });
@@ -1174,8 +1182,8 @@ function createDesk(opts = {}) {
       for (const m of body.moves || []) {
         const f = state.fixtures.find((x) => x.id === m.id);
         if (!f) continue;
-        f.x = Math.max(-1, Math.min(2, +m.x));
-        f.y = Math.max(-1, Math.min(2, +m.y));
+        f.x = Math.max(-WORLD, Math.min(WORLD, +m.x));
+        f.y = Math.max(-WORLD, Math.min(WORLD, +m.y));
       }
       save(); json(res, { ok: true });
     },
