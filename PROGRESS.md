@@ -39,6 +39,30 @@ Not built, in the design's order: cue lists with tracking, the drawn operator su
 a clock with visible phase and nudge, timecode/Link/OSC-in, and the end state only this
 repo can reach — one cue moving the lights, the projection and the room together.
 
+## 2026-09-03 (cont'd) — cue-fires-look, the portability plan settled, a real save bug found and fixed
+
+Follow-on to the field-audit session above. Three things:
+
+- **A map cue can fire a look, not only a scene** (#340) — the newer content model was
+  unreachable from the mapper until now. A look is FIRED onto the desk's own cue layer
+  (created on first use, one-clip-per-layer); a scene is still RECALLED with the cue's
+  fade. `lightLook` sits beside `lightScene` in both schema copies.
+- **`docs/architecture/LIGHTING_SHOW_PORTABILITY.md`** — a plan, not a build, written and
+  answered across several rounds with a peer session relaying to the owner. Settled: the
+  show is a SPACE file (`spaces/<id>/show.json`), not a project-document key — a visitor
+  fetches the space's scene, not a document, so a document key would ship a megabyte of
+  looks to everyone who can never run them; the fixture id-vs-index problem is named as
+  the real blocker (a look is keyed by an id generated on one machine, meaningless
+  elsewhere — needs the fixture `index` to become a real, unique identity first); the
+  club's 588 scenes stay where they are; a visitor to a published space sees nothing.
+  Nothing built yet — waiting on the owner.
+- **Fixed a real bug, found by losing data to it**: the atomic save (this morning's own
+  work) renamed the live show file aside before renaming the new one in, leaving a window
+  where it did not exist. A desk restarting into that window found nothing, and would
+  have silently saved emptiness over a real show. Now: copy-aside + atomic rename onto the
+  live path (never absent), and a desk that booted empty refuses to overwrite a show that
+  turns up later — preserves it, names it, says so. Both covered by tests.
+
 ## 2026-09-03 — the lighting desk moves in: /light, DMX Out on the desk, map cues with light, MIDI in the suite
 
 The club's Art-Net desk (a zero-dependency Node.js DMX desk that arrived as three Telegram
