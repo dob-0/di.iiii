@@ -5,6 +5,48 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+# feat/lighting-spatial-waves — a look can fan across the room (2026-09-03)
+
+## What changed
+
+The desk could already stack looks on layers, but a wave only ever fanned by
+selection index — patch order. The old `fx.js` effects engine had known how to
+read the stage arrangement for years (x/x-/y/y-/radial/radial-); that fan is now
+in the Look/Layer content model, where it can be layered, coloured and masked
+instead of being the one global thing running on the whole rig. `angle` was
+added alongside: phase walking round the room's centre, which is a radar sweep.
+
+- `looks.js` — `SPATIAL`, a `spatial` field on a look (default `patch`, so every
+  existing look behaves exactly as before), `spatialFrac()`, and `stepPosition()`
+  taking the fixture so it can use geometry instead of index.
+- Three one-press starters — **Line sweep** (x), **Radar** (angle), **Grid** (two
+  orthogonal waves stacked HTP, different measures so the crossing point moves) —
+  and a **Follow** picker in the step editor for any look.
+- The arrange stage's world bound went from -1..2 to ±1000, min zoom 0.25 → 0.01,
+  and the grid backdrop moved off the transformed inner layer onto the outer pane
+  (JS-driven `background-position`/`-size`) so it tiles instead of running out at
+  the old margin. A truss run or an off-stage followspot has somewhere to sit.
+- Regression tests: patch-vs-spatial traces differ, a far-apart pair on x cannot
+  share a phase, opposite sides of centre differ under `angle`, and an unknown
+  spatial value falls back to patch rather than throwing.
+
+## Verified
+
+Ran a scratch desk on :8734 with 4 fixtures, fired each starter in a real
+headless browser, watched per-fixture brightness genuinely differ as Radar
+rotated, changed a look's Follow value from the UI and confirmed the round trip
+through the server. Panned the stage a long way — backdrop still there, no dead
+zone. Both lighting suites and ESLint clean. Landed as #350, pulled into the
+5173 dev stack and confirmed live there.
+
+## Not done, on purpose
+
+Video/image upload and pixel-mapped media playback (the Resolume media-engine
+half of the ask) is a different output model — RGB pixel buffers, not per-fixture
+DMX roles — too big to build and verify honestly in the time this session had.
+It is its own lane, not a leftover of this one.
+
+---
 ## 2026-09-03 — a short door onto the map lane
 
 The owner: *"i want short link or it would better map.di-studio.xyz and
