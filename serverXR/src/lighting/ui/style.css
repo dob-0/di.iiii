@@ -261,11 +261,13 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 /* ---------------- control page ---------------- */
 /* The rail default was 240px — too narrow for the FX/LFO/Audio stacks on a wide screen —
    and both side columns are now draggable (.splitter): the vars are the knobs. */
-.ctl-top { --sp-1: 250px; --sp-2: 300px; display: grid; grid-template-columns: var(--sp-1) 6px minmax(0, 1fr) 6px var(--sp-2); gap: 4px 0; padding: 4px; height: var(--sp-h, 50%); min-height: 260px; }
+.ctl-top { --sp-1: 250px; --sp-3: 290px; --sp-2: 300px; display: grid; grid-template-columns: var(--sp-1) 6px minmax(0, 1fr) 6px var(--sp-3) 6px var(--sp-2); gap: 4px 0; padding: 4px; height: var(--sp-h, 50%); min-height: 260px; }
 .ctl-bottom { --sp-1: 180px; --sp-2: 640px; display: grid; grid-template-columns: minmax(0, 1fr) 6px var(--sp-1) 6px var(--sp-2); gap: 4px 0; padding: 4px; flex: 1; min-height: 0; }
 @media (max-width: 1400px) { .ctl-bottom { --sp-1: 150px; --sp-2: 520px; } }
-@media (max-width: 1250px) { .ctl-top { --sp-2: 260px; } .ctl-bottom { --sp-1: 140px; --sp-2: 440px; } }
-@media (max-width: 1100px) { .ctl-top, .ctl-bottom { grid-template-columns: 1fr; height: auto; } }
+@media (max-width: 1250px) { .ctl-top { --sp-2: 260px; --sp-3: 250px; } .ctl-bottom { --sp-1: 140px; --sp-2: 440px; } }
+/* Stacked below 1100: the stack column becomes a full-width pane like every other one,
+   and needs a floor or it collapses to its sticky heads. */
+@media (max-width: 1100px) { .ctl-top, .ctl-bottom { grid-template-columns: 1fr; height: auto; } .stackpane { min-height: 420px; } }
 
 .transport { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); flex: none; }
 .transport .sq { flex: 1; }
@@ -732,6 +734,64 @@ body.space .stage { cursor: grab; }
 .lfo-bi { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
 .lfo-targets { display: flex; flex-wrap: wrap; gap: 4px; }
 
+/* ---------------- the stack: layers, looks, steps ---------------- */
+/* One scrolling column, same chrome as the right rail: the pane-heads stick so you can
+   always see which of the three lists you are in after a long look library. */
+.stackpane { overflow-y: auto; overflow-x: hidden; }
+.stackpane > * { flex: none; }
+.stackpane > .pane-head { position: sticky; top: 0; z-index: 2; background: var(--pane); }
+
+/* minmax(0, 1fr), not the default `auto`: an auto grid track sizes to its widest child's
+   MIN-CONTENT, and a <select> reports the width of its longest option — so one look named
+   "Colour chase" pushed the whole column past the pane and scrolled the layer names off
+   the left edge. Every track and every field below is pinned to the column for that
+   reason; a fixed-width column is only fixed if nothing inside it can vote. */
+#layerList, #lookList { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 8px 12px; }
+.layerrow { background: var(--bg); border: 1px solid var(--line); padding: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+/* A layer that exists but is putting nothing in the room — off, empty, or at zero. The
+   whole point of the pane is that you can tell the difference at a glance. */
+.layerrow.idle { opacity: .6; }
+.layerrow.is-sel { border-color: var(--accent); }
+.lay-top { display: flex; gap: 6px; align-items: center; }
+.lay-on { min-width: 44px; flex: none; }
+.lay-on.on { background: var(--accent); color: #041012; border-color: var(--accent); font-weight: 600; }
+.lay-name { flex: 1; min-width: 0; }
+.lay-top .sq { flex: none; }
+/* The live dot: lit means this layer's values are reaching the composite right now. */
+.lay-live { width: 8px; height: 8px; flex: none; border: 1px solid var(--line); background: var(--field); }
+.lay-live.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.lay-look { width: 100%; min-width: 0; }
+.lay-adv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; }
+/* Label above control, not beside it: "LTP — takes over" is a phrase, and at 290px a
+   side-by-side label ate enough of the field to clip it to "LTP — takes ove". */
+.lay-adv label { display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: var(--muted); min-width: 0; }
+.lay-adv select, .lay-adv input { width: 100%; min-width: 0; }
+.lay-adv .lay-del { grid-column: 1 / -1; }
+
+.lookrow { display: flex; gap: 4px; align-items: stretch; }
+.lk-pick {
+  flex: 1; min-width: 0; text-align: left; background: var(--bg);
+  border: 1px solid var(--line); border-radius: 0; padding: 6px 8px;
+  display: flex; flex-direction: column; gap: 2px; overflow: hidden;
+}
+.lk-pick:hover { border-color: var(--muted); }
+.lookrow.is-sel .lk-pick { border-color: var(--accent); }
+.lk-pick b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lk-pick span { font-size: 10px; font-family: var(--mono); }
+.lookrow .sq { flex: none; }
+.lk-name { width: 100%; }
+
+.stepbox { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 8px 12px 12px; }
+.steprow { display: flex; gap: 6px; align-items: center; }
+.steprow > b { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 34px; flex: none; }
+.steprow input[type=range] { flex: 1; min-width: 0; }
+.steprow output { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 52px; text-align: right; flex: none; }
+.stepnums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.stepnums label { display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: var(--muted); min-width: 0; }
+.stepnums input { width: 100%; min-width: 0; }
+/* The look, said in words. This is the line that tells you a chase is a chase. */
+.stepwords { margin: 0; font-size: 11px; line-height: 1.45; }
+
 /* ---------------- audio panel ---------------- */
 /* Meters are painted by the analyser tick, not the state poll — they move at music speed. */
 .ameters { display: grid; gap: 4px; padding: 0 12px 4px; }
@@ -856,6 +916,13 @@ body.space .stage { cursor: grab; }
   .exchip { min-height: 40px; }
   .lfo-en { min-width: 52px; }
   .lfo-bi, .audiocfg label { min-height: 40px; }
+  /* the stack: layer rows, look rows and the step editor are all finger targets */
+  .lay-on { min-width: 52px; }
+  .lay-top .sq, .lookrow .sq { min-height: 44px; }
+  .lk-pick { min-height: 44px; justify-content: center; }
+  .steprow, .lay-adv label { min-height: 44px; }
+  .steprow input[type=range] { height: 44px; }
+  .tlay .ls-big { min-width: 56px; }
   .beatdot { width: 18px; height: 18px; }
   .lfoslider { min-height: 40px; }
   /* scene context menu and tile badges: ≥40px rows for fingers */
@@ -957,6 +1024,14 @@ body.space .stage { cursor: grab; }
   .ls-body { height: auto; max-height: 45vh; overflow-y: auto; }
 }
 .ls-note { font-size: 11px; flex: none; margin: 0; }
+/* The Layers tab: one fat fader per layer, scrolling inside the strip's fixed height.
+   Nothing here builds or edits a layer — this is the tab you use with one thumb while
+   the song is running, and the only question it answers is "how much of it". */
+.ls-layers { flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 8px; align-content: start; }
+.tlay { display: flex; align-items: center; gap: 8px; }
+.tlay .ls-fader { flex: 1; }
+.tlay .ls-fader span { max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tlay.idle { opacity: .55; }
 
 /* pads scroll sideways in one fat row — every pad a real finger target */
 .ls-pads { display: flex; gap: 8px; overflow-x: auto; flex: none; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }

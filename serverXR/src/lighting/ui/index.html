@@ -214,6 +214,38 @@
       <div class="scenedetail" id="sceneDetail"></div>
     </div>
 
+    <div class="splitter v" data-split="ctl-stack" title="Drag to resize — double-click to reset"></div>
+
+    <!-- THE STACK — layers, the look library, and the step editor, in one column.
+         A look is a list of steps; a layer is a look under a finger. They share a column
+         on purpose: a fader and the thing it is playing are one thought, and the desk
+         already learnt from Scenes/Chase what happens when they land on two screens. -->
+    <div class="pane stackpane">
+      <div class="pane-head">
+        <h2>Layers</h2><span class="muted" id="layerState"></span>
+        <button class="sq" id="layerAdd" title="Add a layer at the top of the stack — it arrives at 0%, so nothing changes in the room until you move its fader">+ Layer</button>
+      </div>
+      <div class="layerlist" id="layerList"></div>
+
+      <div class="pane-head"><h2>Looks</h2><span class="muted" id="lookState"></span></div>
+      <!-- One press builds a useful look out of whatever is patched and parks it on a
+           new layer at zero. The starter writes the look; the operator decides when. -->
+      <div class="inline pad starters">
+        <button class="sq" id="stColour" title="Two contrasting colours, snapping, walking round the rig">Colour chase</button>
+        <button class="sq" id="stSweep" title="A brightness wave travelling across the rig">Sweep</button>
+        <button class="sq" id="stStrobe" title="Two intensity steps, snapping, the whole rig together">Strobe</button>
+      </div>
+      <div class="inline pad recordrow">
+        <input type="text" id="lookName" placeholder="name the recording" maxlength="40">
+        <select id="lookKind" title="Which lane to record. 'colour' records only the colour, so the heads keep whatever they were doing."></select>
+        <button class="sq accent" id="lookRecord" title="Record the stage exactly as it stands into a look">Record</button>
+      </div>
+      <div class="looklist" id="lookList"></div>
+
+      <div class="pane-head"><h2 id="stepTitle">No look selected</h2></div>
+      <div class="stepbox" id="stepBox"></div>
+    </div>
+
     <div class="splitter v" data-split="ctl-rail" title="Drag to resize — double-click to reset"></div>
 
     <!-- right rail -->
@@ -440,6 +472,7 @@
         <button class="ls-tab is-active" data-ls="fx">FX</button>
         <button class="ls-tab" data-ls="audio">Audio</button>
         <button class="ls-tab" data-ls="set">Set</button>
+        <button class="ls-tab" data-ls="layers">Layers</button>
         <button class="ls-tab" data-ls="master">Master</button>
         <button class="ls-fold" id="lsFold" title="Collapse the strip">▾</button>
       </div>
@@ -494,6 +527,12 @@
             </div>
           </div>
           <p class="ls-note muted" id="setLocalNote" hidden>sets are saved in this browser only — the desk does not store them yet</p>
+        </div>
+        <!-- Layers: the same stack as the Control page, one fat fader per layer. This is
+             the tab a phone actually needs mid-song — the look is already built, and all
+             that is left is how much of it is in the room. -->
+        <div class="ls-panel" data-ls="layers">
+          <div class="ls-layers" id="tLayerList"></div>
         </div>
         <!-- Master: the fat fader plus the three "stop everything" switches -->
         <div class="ls-panel" data-ls="master">
