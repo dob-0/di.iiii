@@ -370,7 +370,10 @@ function createField(canvas, nodes, mode, focusSlug, edges) {
       disc(s.x, s.y, Math.max(1.3, s.s * coreR), GRAPHITE, s.a * 0.9 * heavy);
     }
 
-    if (focusIndex >= 0) {
+    // Same reason the lines go: on a phone the drawing sits under the reading
+    // column, and a lit dot there is a mark in the middle of the text saying
+    // what the name at the top of the page already says.
+    if (focusIndex >= 0 && W > 620) {
       const s = seen[focusIndex];
       if (s.a) {
         blob(dotMark, s.x, s.y, s.s * (mode === 'index' ? 0.16 : 0.2), 0.42);
