@@ -274,6 +274,16 @@ class Engine {
     const stack = layerValues(state, state.fixtures, now, state.fx && state.fx.bpm);
     const audioOn = this.audioActive(state, now);
     if (audioOn) this.audioTick(state, now);
+    // IDENTIFY — "which lamp in this room is fixture 7?". It beats the stack, the LFOs
+    // and the FX, because the entire point is that it is unmistakable across a dark
+    // room; it still rides the master and blackout, so the panic key still reaches it.
+    // Nothing is written to the fixture: the flash is computed here and forgotten, so
+    // whatever look was running is exactly where it was when the timer runs out.
+    const ident = (fixtureId) => {
+      const until = state.identify ? state.identify[fixtureId] : null;
+      if (!until || until < now) return null;
+      return Math.floor(now / 250) % 2 === 0 ? 1 : 0;   // two flashes a second
+    };
     // Channels belonging to all-generic-channel fixtures (lasers): a raw hold on one of
     // these must NOT be master-scaled below — 64 scaled to 32 switches the laser's mode.
     let genericCells = null;
@@ -297,7 +307,8 @@ class Engine {
         if (lv && lv[role] != null) return lv[role];
         return f.values[role];
       };
-      const level = (f.on === false ? 0 : (val('dimmer') ?? 255));
+      const flash = ident(f.id);
+      const level = flash != null ? flash * 255 : (f.on === false ? 0 : (val('dimmer') ?? 255));
       const dim = mapRange(level, lim.dimMin, lim.dimMax) / 255;
       let lvl = master;
       if (fxOn && !noScale) {
@@ -325,7 +336,12 @@ class Engine {
         } else if (kind === 'emitter') {
           // Master and FX ride the dimmer channel when the fixture has one, so neither may
           // be applied to the colour channels as well — that would scale the lamp twice.
-          v = (val(role) ?? ROLE_DEFAULTS[role] ?? 0) * (hasDimmerCh ? 1 : lvl * dim);
+          // Identify forces white: a par sitting on deep blue at zero would otherwise
+          // flash its dimmer against a colour that emits almost nothing, which is not a
+          // lamp you can find. UV and lime stay out of it — they are not white light.
+          const held = (role === 'uv' || role === 'lime') ? 0 : 255;
+          const base = flash != null ? held * flash : (val(role) ?? ROLE_DEFAULTS[role] ?? 0);
+          v = base * (hasDimmerCh ? 1 : lvl * dim);
         } else {
           v = val(role) ?? ROLE_DEFAULTS[role] ?? 0;   // control and fine pass through
         }

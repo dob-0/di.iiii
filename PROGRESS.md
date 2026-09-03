@@ -5,6 +5,211 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-03 — build zones: a room that arranges itself
+
+The owner, after the Open Jam room came back from one night with thirty phones in
+it: *"some logic where someone will add something and it will not mess again and
+it will be arranged … like in games, where you can build and where you can't."*
+Restated and approved with his two answers: a **platform feature with a per-room
+switch**, and **the server places it** rather than the editor snapping.
+
+- `worldState.placement` turns a room's build zones on. Absent means free space,
+  the historical behaviour, and switching it off leaves every photo where it
+  hangs — a switch, never a migration.
+- The slots are a **formula, not a stored list**: `slotAt(layout, i)` deals i
+  round-robin across back wall and two wings, rows alternating, columns spreading
+  outward from the centre. Slot 200 exists as surely as slot 1, so the wall grows
+  outward and a jam never runs out. Occupancy is read back from where entities
+  actually stand, so it is self-healing — delete a photo and its slot is free.
+- Every incoming op batch passes through `placeOps` in `projectRoutes` BEFORE it
+  is versioned, so the rewritten ops are what enter the log and reach every peer.
+  That is what makes it a rule rather than a suggestion: a phone, a script and a
+  signed-in author all land on the same hanging line.
+- A drag goes to the NEAREST free slot. The hand still chooses where on the wall,
+  just not "nowhere".
+- `components.placement.pinned` opts a thing out — the QR on its lectern is
+  furniture, not an exhibit for the wall to swallow.
+- Uploads now record the picture's proportions (EXIF orientation applied), which
+  is what lets a 3.3:1 banner be scaled into its slot instead of eating its
+  neighbours. Assets uploaded before this keep the row height.
+- `shared/placement.cjs` and `src/shared/placement.js` are hand-kept twins, server
+  and editor, with a test that fails if they ever disagree — the same convention
+  the project schema's twins use.
+
+Checked through the wire, not only in units: a contract test posts a photo asking
+for the origin and asserts it does not get one there.
+
+## 2026-09-03 — the Open Jam room, and the rule that keeps a room one
+
+The owner, looking at the room thirty phones had edited in one night: *"fix the
+open jam make it stylish it looks so poor and something there are overlap"*, and
+then the real ask — *"some logic where someone will add something and it will not
+mess again and it will be arranged … like in games, where you can build and where
+you can't"*.
+
+- **"Poor" was weight, not taste.** The fourteen photos were phone originals,
+  18.5 MB for one wall, up to 2.7 MB each. On staging a visitor saw ONE photo
+  while the rest crawled in, and read that as a broken room. `shrink-photos.mjs`
+  makes 1280px copies (3.0 MB in all) and swaps them through the op log.
+- **The trap under that:** the visitor page builds its image list from the
+  DOCUMENT's own asset table (`buildAssetMap` reads `doc.assets`), so a file that
+  is uploaded but not listed there renders as nothing at all. Every upload needs
+  an `upsertAsset` op beside the `updateComponent`; the stale record goes with
+  `deleteAsset`. Two rounds of "the photos are on the server and the wall is
+  empty" came from exactly this.
+- **"Overlap" was eye height.** The four steps and the QR stood in front of the
+  walls, so they read straight through the photos behind them. There is no clear
+  band up there — a portrait phone photo hangs from y 0.2 to 3.2. They lie on the
+  floor now as a lectern, which is the only empty part of the entry frame.
+- **Numbers measured rather than guessed**, after two wrong guesses cost a round
+  each: an image plane is built **3 units TALL** and 3·aspect wide
+  (`ImageObject`), then multiplied by the transform scale — so a uniform scale
+  already gives an even hanging line and only a banner needs its width capped.
+  A box's position is its **base**, not its centre (`BoxObject` renders at
+  `position-y = size[1]/2`).
+- **The phone frame is the entry camera's fov, not the layout.** One row of a
+  wide wall shrank to a band across the middle of a portrait phone. Two rows and
+  a tighter shot (fov 58 → 44, camera pulled in) let a phone see the back wall.
+  The aspect fit gives a phone what a SQUARE viewport would see, so a subject
+  wider than it is tall must be composed with that in mind.
+- **Four grounds** in `compose-open-jam.mjs --style=`: `night`, `paper`,
+  `blueprint`, `blue`. The owner picked *"paper + blue )) mix it"* — `blueprint`
+  is that mix, and it is live on all three tiers.
+- **Build zones** (#329) answer the real ask, and the room turns them on. The
+  composer now places photos with `slotAt()` from `shared/placement.cjs` — the
+  same module the server uses — so switching the rule on moves nothing and the
+  next photo lands in the next free slot. The QR is `placement.pinned`: it is
+  furniture on its lectern, not an exhibit for the wall to swallow.
+- **The QR pointed at the wrong door.** It encoded `/open_jam`, the full Studio
+  editor, which on the phone that scans it is six controls and no way through —
+  the exact failure `/open_jam/scene` (JamSurface) was written to fix. The code
+  was made before that surface existed. `set-jam-qr.mjs` rewrites it.
+
+Prod writes are refused for a session, so the owner ran the two prod lines from
+his own terminal; staging and local went through from here. Walked on all three
+as a plain visitor, desktop and phone.
+
+### The path, later the same night
+
+The other half of the ask: *"a landing inside where people after scanning the QR
+start a path, where staged things teach and help you create, and the final point
+is seeing all the other spaces — a circle of working, all in eyes."* He picked
+direction A from three sketches: the landing is not a page in front of the room,
+it IS the room.
+
+- Three stations lie on the floor between the entry and the wall, each one
+  sentence at the moment it is true. They lie flat like the lectern for the same
+  reason: text at eye height in front of the walls reads through the photographs.
+- The door out stands BEHIND the visitor, facing back in. A door between them and
+  the wall reads as a picture frame with somebody's cat in it, and one at the side
+  crowds the arrival — but the moment you want the way on is the moment you turn
+  round, and then it is the only thing there. Square-cornered frame (#336), the
+  room's own blue.
+- It names the **space**, not the project: `portalHref` builds `/main/<project>`
+  from a projectId and plain `/main` without one, and the front room is being
+  rebuilt in another session — a door naming today's project id would break the
+  day that lands.
+- Everything the path is made of is `placement.pinned`. It is the building, not
+  the exhibition, and the build zones must never hang it.
+- The walkable floor now stops 2.5 units short of the back wall. At one unit a
+  walker's nose is pressed against somebody's photograph and the room disappears —
+  seen in a scripted walk, not guessed.
+
+**How to drive a walk in a test:** do NOT click to take pointer lock. A locked
+walker reads `movementX`, which a driven browser cannot fake, and every frame
+comes back looking at the sky. Unlocked drag-look reads clientX/clientY instead
+("the visible cursor's clientX/clientY is the one delta source that cannot lie",
+LiveProjectScene), so drive the whole journey by dragging. When a turn still will
+not verify, aim the entry camera at the thing on LOCAL, look, and put the camera
+back — that is how the door was confirmed.
+
+# feat/lighting-spatial-waves — a look can fan across the room (2026-09-03)
+
+## What changed
+
+The desk could already stack looks on layers, but a wave only ever fanned by
+selection index — patch order. The old `fx.js` effects engine had known how to
+read the stage arrangement for years (x/x-/y/y-/radial/radial-); that fan is now
+in the Look/Layer content model, where it can be layered, coloured and masked
+instead of being the one global thing running on the whole rig. `angle` was
+added alongside: phase walking round the room's centre, which is a radar sweep.
+
+- `looks.js` — `SPATIAL`, a `spatial` field on a look (default `patch`, so every
+  existing look behaves exactly as before), `spatialFrac()`, and `stepPosition()`
+  taking the fixture so it can use geometry instead of index.
+- Three one-press starters — **Line sweep** (x), **Radar** (angle), **Grid** (two
+  orthogonal waves stacked HTP, different measures so the crossing point moves) —
+  and a **Follow** picker in the step editor for any look.
+- The arrange stage's world bound went from -1..2 to ±1000, min zoom 0.25 → 0.01,
+  and the grid backdrop moved off the transformed inner layer onto the outer pane
+  (JS-driven `background-position`/`-size`) so it tiles instead of running out at
+  the old margin. A truss run or an off-stage followspot has somewhere to sit.
+- Regression tests: patch-vs-spatial traces differ, a far-apart pair on x cannot
+  share a phase, opposite sides of centre differ under `angle`, and an unknown
+  spatial value falls back to patch rather than throwing.
+
+## Verified
+
+Ran a scratch desk on :8734 with 4 fixtures, fired each starter in a real
+headless browser, watched per-fixture brightness genuinely differ as Radar
+rotated, changed a look's Follow value from the UI and confirmed the round trip
+through the server. Panned the stage a long way — backdrop still there, no dead
+zone. Both lighting suites and ESLint clean. Landed as #350, pulled into the
+5173 dev stack and confirmed live there.
+
+## Not done, on purpose
+
+Video/image upload and pixel-mapped media playback (the Resolume media-engine
+half of the ask) is a different output model — RGB pixel buffers, not per-fixture
+DMX roles — too big to build and verify honestly in the time this session had.
+It is its own lane, not a leftover of this one.
+
+---
+## 2026-09-03 — a short door onto the map lane
+
+The owner: *"i want short link or it would better map.di-studio.xyz and
+light.di-studio.xyz, desk.di-studio.xyz audit that all and fix all link plz"*,
+then, on what "desk" meant and why: *"give all to use … keep our data … we have
+public and private info so keep how needed what needed … what we create as tool
+it need to be on hand."*
+
+Three different answers, because the three tools are not in the same state:
+
+- **`map.di-studio.xyz` — built here.** The map lane is already hosted on prod
+  and already sits behind `ProtectedSurface` (per-space sign-in), so a second
+  hostname adds a name, not a hole. `Caddyfile` gains a `{$MAP_DOMAIN}` block
+  reverse-proxying to the SAME `client:8080` as `{$SITE_DOMAIN}` — not a second
+  app, the identical one under a shorter name. `docker-compose.yml` wires the
+  var with the same inert-until-set default pattern `STAGING_DOMAIN` uses.
+  Two things still need the owner's hand: the DNS record (no registrar access
+  from this machine) and setting `MAP_DOMAIN` in prod's `.env`.
+- **`light.di-studio.xyz` — not a link problem.** The lighting desk has no
+  hosted implementation at all; a hosted di-studio.xyz says so rather than
+  going quiet, by design (`docs/architecture/LIGHTING_DESK_DESIGN.md`, real
+  ArtNet/DMX hardware access). A subdomain would proxy to the same "no desk
+  here" page. Making it real is a tunnel-a-machine-with-hardware-access
+  project, and a lighting rig facing the public internet is its own decision,
+  not a DNS edit.
+- **`desk.di-studio.xyz` — asked and answered "I meant something else."** The
+  literal reading (di.desk, the coordination workspace this session runs
+  inside) is local-only with zero auth by deliberate design — every framed
+  tier and every agent's chat, unguarded. Asked the owner directly rather than
+  guess; he confirmed that is not what he meant, without saying what he did.
+  Left open, not built.
+
+**One real limitation of `map.di-studio.xyz`, written down rather than found
+later:** the session cookie is host-only (no `Domain` attribute), so signing in
+on `di-studio.xyz` does not carry over to `map.di-studio.xyz` — separate
+sign-ins per hostname. That is consistent with "public and private stay how
+they are" (nothing shared that shouldn't be), but it is not "one session
+everywhere," and making it that would mean a shared-domain cookie readable by
+every subdomain added later — a real tradeoff, not made here.
+
+Not started this session: the "audit all links, audit UX/UI, make it simple"
+half of the ask — the machine this session runs on goes offline within the
+hour (unrelated shutdown notice), so the infra half was finished and the audit
+was left for whichever session picks this up next.
+
 # feat/network-all-of-us
 
 The network: a page listing everyone who makes di.iiii, and a room per person.

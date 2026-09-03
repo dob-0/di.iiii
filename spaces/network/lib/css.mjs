@@ -7,8 +7,9 @@
 // and the seam was the whole problem.
 //
 // Cyan: the brand value #4DF9FF is the light-on-dark form and disappears on
-// paper, so --accent carries it at a weight that holds against #f7f7f5. The
-// bright form stays where it belongs, on the dark constellation page.
+// paper, so --accent carries it at a weight that holds against #f7f7f5.
+// Nothing in this space uses the bright form any more — the page that did
+// was the dark half of a design the paper one replaced.
 export const CSS = `
 :root{
   --paper:#f7f7f5; --paper-2:#efefec;

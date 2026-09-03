@@ -118,6 +118,12 @@ function createDesk(opts = {}) {
       value: { level: 0, low: 0, mid: 0, high: 0, beatAt: 0, bpm: null, lastAt: 0 },
       enumerable: false, writable: true, configurable: true,
     });
+    // Identify is the same shape of thing: fixtureId -> the millisecond it stops
+    // flashing. A saved show that came back with lamps flashing would be a haunting.
+    delete s.identify;
+    Object.defineProperty(s, 'identify', {
+      value: {}, enumerable: false, writable: true, configurable: true,
+    });
     return s;
   }
 
@@ -639,6 +645,9 @@ function createDesk(opts = {}) {
       looks: state.looks.length,
       layers: state.layers.map((l) => ({ id: l.id, name: l.name, on: l.on, level: l.level, lookId: l.lookId })),
       universes: engine.universes(),
+      // Which fixtures are flashing to be found, right now. The page paints them so the
+      // operator can tell the desk is doing what they asked while they look at the rig.
+      identifying: Object.entries(state.identify || {}).filter(([, t]) => t > Date.now()).map(([id]) => id),
       output: {
         driver: state.output.driver,
         enabled: !!state.output.enabled,
@@ -715,6 +724,10 @@ function createDesk(opts = {}) {
         bpm: state.audio.bpm,
       },
       status: {
+        // Which fixtures are flashing to be found. Live-only, like the audio levels
+        // above it — the page paints the row so the desk visibly agrees with what the
+        // operator asked for while they are turned round looking at the rig.
+        identifying: Object.entries(state.identify || {}).filter(([, t]) => t > Date.now()).map(([id]) => id),
         nodes: nodeList(),
         interfaces: localAddresses(),
         broadcast: broadcastAddresses(),
@@ -1186,6 +1199,26 @@ function createDesk(opts = {}) {
         f.y = Math.max(-WORLD, Math.min(WORLD, +m.y));
       }
       save(); json(res, { ok: true });
+    },
+
+    // IDENTIFY — flash these fixtures white so they can be found in the room. Takes
+    // {ids:[...], seconds} or {off:true}. It is not saved and it changes no value: the
+    // engine computes the flash while the timer runs and the rig is exactly as it was
+    // afterwards, which is what lets it be used in the middle of a running look.
+    'POST /api/fixtures/identify': (req, res, body) => {
+      if (body.off) { state.identify = {}; return json(res, { ok: true, identifying: [] }); }
+      const ids = (Array.isArray(body.ids) ? body.ids : [])
+        .filter((id) => state.fixtures.some((f) => f.id === id));
+      if (!ids.length) return json(res, { error: 'select a fixture to find' }, 400);
+      const seconds = Math.max(1, Math.min(120, +body.seconds || 10));
+      const until = Date.now() + seconds * 1000;
+      const next = {};
+      // Expired entries are dropped rather than accumulating: the map is only ever as
+      // big as what is flashing right now.
+      for (const [id, t] of Object.entries(state.identify || {})) if (t > Date.now()) next[id] = t;
+      for (const id of ids) next[id] = until;
+      state.identify = next;
+      json(res, { ok: true, identifying: Object.keys(next), until });
     },
 
     'POST /api/fixtures/limits': (req, res, body) => {
