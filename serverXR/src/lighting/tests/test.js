@@ -672,6 +672,56 @@ check('a look with one step is a scene, and holds still', () => {
   assert.deepStrictEqual(at(99999), { r: 10, g: 20 }, 'one step never moves, whatever the clock says');
 });
 
+// ---- looks: spatial fan ------------------------------------------------------
+// A look's phase spread can read the stage arrangement instead of selection order —
+// the same promise fx.js's spatial fan makes for the old effects engine, brought into
+// looks so a wave can be layered, coloured and masked instead of being the one thing
+// running on the whole rig.
+
+check('a look with spatial patch (the default) fans by index, unaffected by position', () => {
+  const fixtures = rig4();
+  fixtures[0].x = 1; fixtures[0].y = 1;   // off its patch-order spot, must not matter
+  const looks = sanitizeLooks([{ id: 'w', measure: 1, bpm: 120, phase: 360,
+    steps: [{ values: { '*': { r: 0 } }, transition: 1 }, { values: { '*': { r: 255 } }, transition: 1 }] }]);
+  const same = sanitizeLooks([{ id: 'w', measure: 1, bpm: 120, phase: 360, spatial: 'x',
+    steps: [{ values: { '*': { r: 0 } }, transition: 1 }, { values: { '*': { r: 255 } }, transition: 1 }] }]);
+  const patchTrace = []; const spatialTrace = [];
+  for (let t = 0; t < 500; t += 30) {
+    patchTrace.push(evalLook(looks[0], fixtures, t, { looks: lookMap(looks) }).get('a').r);
+    spatialTrace.push(evalLook(same[0], fixtures, t, { looks: lookMap(same) }).get('a').r);
+  }
+  assert.notDeepStrictEqual(patchTrace, spatialTrace,
+    'patch order ignores x — spatial x reads it, so the two traces must differ somewhere');
+});
+
+check('spatial x makes a wave that a fixture drag can move — position, not patch index', () => {
+  const fixtures = rig4();
+  fixtures[0].x = -0.9; fixtures[1].x = 1.9;   // far left, far right — same index gap as any pair
+  const looks = sanitizeLooks([{ id: 'w', measure: 1, bpm: 60, phase: 360, spatial: 'x',
+    steps: [{ values: { '*': { r: 0 } }, transition: 1 }, { values: { '*': { r: 255 } }, transition: 1 }] }]);
+  const at = (id, t) => evalLook(looks[0], fixtures, t, { looks: lookMap(looks) }).get(id).r;
+  const leftTrace = []; const rightTrace = [];
+  for (let t = 0; t < 2000; t += 40) { leftTrace.push(at('a', t)); rightTrace.push(at('b', t)); }
+  assert.notDeepStrictEqual(leftTrace, rightTrace, 'two fixtures far apart on x must not share one phase');
+});
+
+check('spatial angle turns a wave into a beam rotating round the centre — a radar sweep', () => {
+  const north = makeFixture({ id: 'n', profile: 'drgb', address: 1, values: { dimmer: 255 } });
+  north.x = 0.5; north.y = 0;
+  const south = makeFixture({ id: 's', profile: 'drgb', address: 5, values: { dimmer: 255 } });
+  south.x = 0.5; south.y = 1;
+  const looks = sanitizeLooks([{ id: 'w', measure: 1, bpm: 60, phase: 360, spatial: 'angle',
+    steps: [{ values: { '*': { r: 0 } }, transition: 1 }, { values: { '*': { r: 255 } }, transition: 1 }] }]);
+  const at = (id, t) => evalLook(looks[0], [north, south], t, { looks: lookMap(looks) }).get(id).r;
+  assert.notStrictEqual(at('n', 0), at('s', 0), 'opposite sides of the centre are at different points in the sweep');
+});
+
+check('an unknown spatial value falls back to patch fan rather than throwing', () => {
+  const looks = sanitizeLooks([{ id: 'w', spatial: 'diagonal',
+    steps: [{ values: { '*': { r: 0 } } }] }]);
+  assert.strictEqual(looks[0].spatial, 'patch');
+});
+
 check('two steps with no transition snap — that is a chase', () => {
   const looks = sanitizeLooks([{ id: 'c', measure: 1, bpm: 120,
     steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
