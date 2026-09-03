@@ -159,6 +159,10 @@ async function pullState() {
       if (S.lfos) next.lfos = S.lfos;
       if (S.audioCfg) next.audioCfg = S.audioCfg;
       if (S.sets) next.sets = S.sets;   // the set builder edits optimistically too
+      // Layer faders are dragged, and the drag writes S.layers optimistically before the
+      // throttled POST lands. Without this a poll arriving mid-gesture hands back the
+      // desk's pre-drag level and the fader jumps out from under the finger.
+      if (S.layers) next.layers = S.layers;
     }
     S = next;
     // Selection is pruned against what actually exists. With the desk open on two clients
@@ -1819,11 +1823,19 @@ function popScene() { return (S && S.scenes.find((s) => s.id === bindSceneId)) |
 
 // The destructive rows ask twice: the first press arms ("Sure?…"), the second fires.
 // Anything else — a mode switch, closing, three seconds of nothing — disarms.
+// Buttons that armed themselves, and the words they had before. The two popover rows
+// below are reset by name because opening the menu re-labels them whether or not they
+// were armed; everything else — the scene detail pane, the look library — is restored
+// from here. Without this, arming a button outside the popover left it reading "Sure?"
+// for ever, because nothing knew what it used to say.
+const armedBtns = new Map();
 function disarmConfirms() {
   clearTimeout(armTimer); armTimer = null;
   const rs = $('#miRestage'), del = $('#miDelete');
   rs.classList.remove('arm'); rs.textContent = 'Overwrite with current look';
   del.classList.remove('arm'); del.textContent = 'Delete scene';
+  for (const [btn, label] of armedBtns) { btn.classList.remove('arm'); btn.textContent = label; }
+  armedBtns.clear();
 }
 let armedAt = 0;                         // when "Sure?…" was armed
 function armThen(btn, warn, fn) {
@@ -1835,6 +1847,7 @@ function armThen(btn, warn, fn) {
     disarmConfirms(); fn(); return;
   }
   disarmConfirms();
+  armedBtns.set(btn, btn.textContent);
   btn.classList.add('arm'); btn.textContent = warn;
   armedAt = Date.now();
   armTimer = setTimeout(disarmConfirms, 3000);
@@ -2846,6 +2859,597 @@ function buildSerial() {
     + (ser.dropped ? ` · ${ser.dropped} skipped, the link cannot keep up` : '') + '</span>';
 }
 
+/* =============== the stack: layers, looks, steps =============== */
+/* A look is a list of steps; a layer is a look under a finger. Scene, palette, chase and
+   wave stopped being four objects on the server, so they are one editor here: the step
+   list IS the difference between them, and the words under it say which one you have
+   built. The layer stack and the library share a column because a fader and the thing it
+   is playing are one thought — this desk already has Scenes and Chase on opposite sides
+   of the page, and that split is exactly why nobody can tell what the chase is playing. */
+
+// The mask vocabulary. Fetched from the server once on boot so this file cannot drift
+// from looks.js; the literal is only the shape to render before the first answer lands.
+let LOOK_KINDS = ['all', 'intensity', 'colour', 'position', 'beam'];
+const KIND_LABEL = {
+  all: 'everything', intensity: 'intensity', colour: 'colour',
+  position: 'position', beam: 'beam',
+};
+const MERGE_LABEL = {
+  htp: 'HTP — adds light',
+  ltp: 'LTP — takes over',
+};
+
+let selLayer = null;        // the layer a look click assigns to, and whose menu is open
+let selLook = null;         // the look shown in the step editor
+const layerOpen = new Set();  // layer ids whose mask/merge/rate row is unfolded
+let renameLook = null;      // look id whose inline rename field is showing
+
+const looksOf = () => (Array.isArray(S && S.looks) ? S.looks : []);
+const layersOf = () => (Array.isArray(S && S.layers) ? S.layers : []);
+const lookById = (id) => looksOf().find((l) => l.id === id) || null;
+const layerById = (id) => layersOf().find((l) => l.id === id) || null;
+const newId = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+// The same mask rule as looks.js kindAllows(), read through the server's roleKinds so it
+// cannot fall behind the engine — the identical reason kindOf() exists.
+function lookAllows(kind, role) {
+  if (!kind || kind === 'all') return true;
+  const k = kindOf(role);
+  if (kind === 'intensity') return k === 'level';
+  if (kind === 'colour') return k === 'emitter';
+  if (kind === 'position') return k === 'position' || role === 'panFine' || role === 'tiltFine';
+  if (kind === 'beam') return k === 'control' || k === 'fine';
+  return true;
+}
+
+// A layer is contributing when it is on, points at a look that exists, and is off zero.
+// This is the whole reason the pane exists: a stack you cannot read is a stack you are
+// afraid of, and "which of these is actually in the room" is the only live question.
+function layerLive(l) {
+  return !!(l && l.on && l.lookId && l.level > 0 && lookById(l.lookId));
+}
+
+// Dragging a fader posts api/layer and nothing else. Same leading-edge shape as
+// queueFixture and queueRaw: the FIRST move goes out at once so the rig answers as the
+// finger starts, and only the rest of the burst is coalesced.
+const layerPending = new Map();
+let layerTimer = null;
+let lastLayerFlush = 0;
+function queueLayer(id, patch) {
+  const cur = layerPending.get(id) || { id };
+  Object.assign(cur, patch);
+  layerPending.set(id, cur);
+  touchedAt = Date.now();
+  const flushLayers = () => {
+    layerTimer = null;
+    lastLayerFlush = Date.now();
+    const jobs = [...layerPending.values()];
+    layerPending.clear();
+    jobs.forEach((j) => post('api/layer', j));
+  };
+  if (!layerTimer) {
+    if (Date.now() - lastLayerFlush > 60) flushLayers();
+    else layerTimer = setTimeout(flushLayers, 25);
+  }
+}
+
+// Write one look back. The library route is replace-whole; this one is add-or-replace,
+// because a person editing one look must not have to send the other five hundred.
+async function putLook(look, note) {
+  const r = await post('api/looks/add', { look });
+  if (r && r.error) { say(r.error, true); return null; }
+  const at = looksOf().findIndex((l) => l.id === look.id);
+  if (at >= 0) S.looks[at] = r.look; else if (S.looks) S.looks.push(r.look);
+  if (note) say(note);
+  buildLooks(); buildSteps(); buildLayers();
+  return r.look;
+}
+
+/* ---- the layer stack ---- */
+
+// The count in the pane head. Painted from the drag as well as from the poll: a fader
+// that has visibly reached the rig while the head still reads "0 contributing" is the
+// status line contradicting the room, which is the one thing this pane exists to stop.
+function paintLayerState() {
+  const layers = layersOf();
+  $('#layerState').textContent = layers.length
+    ? `${layers.filter(layerLive).length} contributing · ${layers.length}/64`
+    : '';
+}
+
+function buildLayers() {
+  const box = $('#layerList');
+  const layers = layersOf();
+  const looks = looksOf();
+  $('#layerAdd').disabled = layers.length >= 64;
+  paintLayerState();
+
+  // Top of the stack at the top of the list: priority is the render order, and the pane
+  // must read the way the light does. Ties keep the order the operator put them in.
+  const shown = layers.map((l, i) => ({ l, i }))
+    .sort((a, b) => (b.l.priority - a.l.priority) || (b.i - a.i))
+    .map((x) => x.l);
+
+  // Structure in the signature, dragged values out of it — a level or a name change must
+  // never rebuild these rows, because a rebuild under a finger kills the drag.
+  const sig = shown.map((l) => [l.id, l.on, l.lookId, l.mask, l.merge, l.rate, l.priority].join('~')).join('|')
+    + '#' + looks.map((l) => l.id + ':' + l.name).join(',')
+    + '#' + selLayer + '#' + [...layerOpen].sort().join(',');
+  if (box.dataset.sig !== sig) {
+    box.dataset.sig = sig;
+    box.innerHTML = shown.map((l) => {
+      const opts = ['<option value="">— empty —</option>'].concat(looks.map((k) =>
+        `<option value="${esc(k.id)}"${k.id === l.lookId ? ' selected' : ''}>${esc(k.name)}</option>`)).join('');
+      const open = layerOpen.has(l.id);
+      return `<div class="layerrow${layerLive(l) ? '' : ' idle'}${l.id === selLayer ? ' is-sel' : ''}" data-id="${esc(l.id)}">
+        <div class="lay-top">
+          <button class="sq lay-on${l.on ? ' on' : ''}" title="Take this layer out of the stack without losing its fader">${l.on ? 'On' : 'Off'}</button>
+          <input class="lay-name" type="text" maxlength="60" value="${esc(l.name)}" title="Name this layer">
+          <span class="lay-live" title="lit when this layer is actually reaching the rig"></span>
+          <button class="sq lay-more" title="Mask, merge, rate and remove">⋯</button>
+        </div>
+        <select class="lay-look" title="Which look this layer plays">${opts}</select>
+        <label class="lfoslider"><span>Level</span><input class="lay-level" type="range" min="0" max="100" value="${Math.round(l.level * 100)}"><output>${Math.round(l.level * 100)}%</output></label>
+        <div class="lay-adv"${open ? '' : ' hidden'}>
+          <label title="Which attributes this layer is allowed to set, whatever its look holds">Mask
+            <select class="lay-mask">${LOOK_KINDS.map((k) =>
+              `<option value="${k}"${k === l.mask ? ' selected' : ''}>${KIND_LABEL[k] || k}</option>`).join('')}</select></label>
+          <label title="HTP only ever adds light — a dimmer effect that takes light away needs LTP">Merge
+            <select class="lay-merge">${Object.keys(MERGE_LABEL).map((m) =>
+              `<option value="${m}"${m === l.merge ? ' selected' : ''}>${MERGE_LABEL[m]}</option>`).join('')}</select></label>
+          <label title="Speed against the desk clock — 0.5 runs this layer at half time">Rate
+            <input class="lay-rate" type="number" min="0.01" max="64" step="0.25" value="${l.rate}"></label>
+          <label title="Where this layer sits in the stack — higher wins">Priority
+            <input class="lay-prio" type="number" min="0" max="999" step="1" value="${l.priority}"></label>
+          <button class="sq danger lay-del" title="Remove this layer from the stack">Remove layer</button>
+        </div>
+      </div>`;
+    }).join('') || '<p class="fxhint muted">No layers. Press + Layer, or use a starter below — a starter builds the look and the layer together.</p>';
+
+    $$('.layerrow', box).forEach((row) => {
+      // Resolve by id at EVENT time: the poll swaps S.layers for fresh objects without a
+      // rebuild whenever nothing structural moved, and a listener holding the old object
+      // would edit a copy the next POST never sends.
+      const id = row.dataset.id;
+      const at = () => layerById(id);
+      row.addEventListener('pointerdown', () => { selLayer = id; buildLayers(); buildLooks(); }, true);
+      row.querySelector('.lay-on').addEventListener('click', () => {
+        const l = at(); if (!l) return;
+        l.on = !l.on; queueLayer(id, { on: l.on }); buildLayers();
+      });
+      row.querySelector('.lay-more').addEventListener('click', () => {
+        layerOpen.has(id) ? layerOpen.delete(id) : layerOpen.add(id);
+        buildLayers();
+      });
+      row.querySelector('.lay-name').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.name = e.target.value.trim().slice(0, 60) || l.name;
+        e.target.value = l.name;
+        queueLayer(id, { name: l.name });
+      });
+      row.querySelector('.lay-look').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.lookId = e.target.value || null;
+        queueLayer(id, { lookId: l.lookId });
+        buildLayers(); buildSteps();
+      });
+      const lev = row.querySelector('.lay-level');
+      lev.addEventListener('input', () => {
+        const l = at(); if (!l) return;
+        l.level = +lev.value / 100;
+        lev.closest('.lfoslider').querySelector('output').textContent = Math.round(l.level * 100) + '%';
+        row.classList.toggle('idle', !layerLive(l));
+        row.querySelector('.lay-live').classList.toggle('on', layerLive(l));
+        paintLayerState();
+        queueLayer(id, { level: l.level });
+      });
+      row.querySelector('.lay-mask').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.mask = e.target.value; queueLayer(id, { mask: l.mask }); buildLayers();
+      });
+      row.querySelector('.lay-merge').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.merge = e.target.value; queueLayer(id, { merge: l.merge }); buildLayers();
+      });
+      row.querySelector('.lay-rate').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.rate = clamp(parseFloat(e.target.value) || 1, 0.01, 64);
+        e.target.value = l.rate;
+        queueLayer(id, { rate: l.rate }); buildLayers();
+      });
+      row.querySelector('.lay-prio').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.priority = clamp(Math.round(+e.target.value) || 0, 0, 999);
+        e.target.value = l.priority;
+        queueLayer(id, { priority: l.priority }); buildLayers();
+      });
+      row.querySelector('.lay-del').addEventListener('click', (e) => armThen(e.currentTarget, 'Sure? Remove', async () => {
+        const r = await post('api/layers/remove', { id });
+        if (r && r.error) return say(r.error, true);
+        if (selLayer === id) selLayer = null;
+        layerOpen.delete(id);
+        S.layers = layersOf().filter((l) => l.id !== id);
+        buildLayers();
+      }));
+    });
+  } else {
+    // Values from the poll without a rebuild — never under a hand mid-drag.
+    $$('.layerrow', box).forEach((row) => {
+      const l = layerById(row.dataset.id);
+      if (!l) return;
+      const lev = row.querySelector('.lay-level');
+      const name = row.querySelector('.lay-name');
+      if (document.activeElement !== lev && Math.round(l.level * 100) !== +lev.value) {
+        lev.value = Math.round(l.level * 100);
+        lev.closest('.lfoslider').querySelector('output').textContent = lev.value + '%';
+      }
+      if (document.activeElement !== name && name.value !== l.name) name.value = l.name;
+      row.classList.toggle('idle', !layerLive(l));
+      row.querySelector('.lay-live').classList.toggle('on', layerLive(l));
+    });
+  }
+}
+
+$('#layerAdd').addEventListener('click', async () => {
+  if (!S) return;
+  const r = await post('api/layers/add', { name: `Layer ${layersOf().length + 1}` });
+  if (r && r.error) return say(r.error, true);
+  if (S.layers) S.layers.push(r.layer);
+  selLayer = r.layer.id;
+  buildLayers(); buildLooks();
+  say('layer added at the top of the stack, fader at 0 — nothing changed in the room');
+});
+
+/* ---- the look library ---- */
+
+function buildLooks() {
+  const box = $('#lookList');
+  const looks = looksOf();
+  const used = new Set(layersOf().map((l) => l.lookId).filter(Boolean));
+  $('#lookState').textContent = looks.length ? `${looks.length} look${looks.length === 1 ? '' : 's'}` : '';
+
+  const sig = looks.map((l) => [l.id, l.name, l.kind, l.steps.length, used.has(l.id)].join('~')).join('|')
+    + '#' + selLook + '#' + renameLook + '#' + selLayer;
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+
+  box.innerHTML = looks.map((l) => {
+    const n = l.steps.length;
+    const words = `${KIND_LABEL[l.kind] || l.kind} · ${n} step${n === 1 ? '' : 's'}${used.has(l.id) ? ' · on a layer' : ''}`;
+    return `<div class="lookrow${l.id === selLook ? ' is-sel' : ''}" data-id="${esc(l.id)}">
+      ${l.id === renameLook
+        ? `<input class="lk-name" type="text" maxlength="60" value="${esc(l.name)}" title="Enter to rename, Escape to leave it">`
+        : `<button class="lk-pick" title="Open in the step editor${selLayer ? ' and put it on the selected layer' : ' — select a layer first to assign it'}">
+             <b>${esc(l.name)}</b><span class="muted">${words}</span>
+           </button>
+           <button class="sq lk-ren" title="Rename">✎</button>
+           <button class="sq danger lk-del" title="Delete this look">✕</button>`}
+    </div>`;
+  }).join('') || '<p class="fxhint muted">No looks yet. Record the stage, or press a starter above.</p>';
+
+  $$('.lookrow', box).forEach((row) => {
+    const id = row.dataset.id;
+    const pick = row.querySelector('.lk-pick');
+    if (pick) pick.addEventListener('click', async () => {
+      selLook = id;
+      // Clicking a look while a layer is selected is the assignment gesture — one press,
+      // no dialog, the way Resolume drops a clip into a layer slot.
+      const layer = layerById(selLayer);
+      if (layer) {
+        layer.lookId = id;
+        queueLayer(layer.id, { lookId: id });
+        say(`"${lookById(id).name}" is on "${layer.name}"${layer.level > 0 && layer.on ? '' : ' — its fader is still down'}`);
+      }
+      buildLooks(); buildSteps(); buildLayers();
+    });
+    const ren = row.querySelector('.lk-ren');
+    if (ren) ren.addEventListener('click', () => { renameLook = id; buildLooks(); });
+    const del = row.querySelector('.lk-del');
+    if (del) del.addEventListener('click', (e) => armThen(e.currentTarget, 'Sure?', async () => {
+      const r = await post('api/looks/remove', { id });
+      if (r && r.error) return say(r.error, true);
+      S.looks = looksOf().filter((l) => l.id !== id);
+      for (const l of layersOf()) if (l.lookId === id) l.lookId = null;
+      if (selLook === id) selLook = null;
+      // The server empties any layer that pointed here rather than deleting it: the
+      // operator put that fader in the stack, and it keeps its place.
+      say(r.emptied ? `look deleted — ${r.emptied} layer${r.emptied === 1 ? '' : 's'} emptied, not removed` : 'look deleted');
+      buildLooks(); buildSteps(); buildLayers();
+    }));
+    const field = row.querySelector('.lk-name');
+    if (field) {
+      field.focus(); field.select();
+      const commit = async () => {
+        const look = lookById(id);
+        renameLook = null;
+        if (!look) return buildLooks();
+        const name = field.value.trim().slice(0, 60);
+        if (!name || name === look.name) return buildLooks();
+        await putLook(Object.assign({}, look, { name }));
+      };
+      field.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        if (e.key === 'Escape') { e.preventDefault(); renameLook = null; buildLooks(); }
+      });
+      field.addEventListener('blur', commit);
+    }
+  });
+}
+
+$('#lookRecord').addEventListener('click', async () => {
+  if (!S) return;
+  if (!S.fixtures.length) return say('nothing patched to record', true);
+  const kind = $('#lookKind').value || 'all';
+  const chosen = selectedFixtures();
+  const r = await post('api/looks/capture', {
+    name: $('#lookName').value.trim() || undefined,
+    kind,
+    // Record the selection if there is one, the whole rig if there is not — the same
+    // rule every other verb on this desk follows.
+    fixtures: chosen.length ? chosen.map((f) => f.id) : undefined,
+  });
+  if (r && r.error) return say(r.error, true);
+  $('#lookName').value = '';
+  if (S.looks) S.looks.push(r.look);
+  selLook = r.look.id;
+  buildLooks(); buildSteps();
+  say(`recorded "${r.look.name}" — ${KIND_LABEL[kind]} of ${chosen.length ? chosen.length + ' selected' : 'every'} fixture${!chosen.length || chosen.length > 1 ? 's' : ''}`);
+});
+
+/* ---- the step editor ---- */
+
+// What this look actually is, in words. One step is a scene; two that snap are a chase;
+// two that crossfade and are spread across the rig are a wave. That distinction is the
+// whole content model, and it is invisible in a list of numbers.
+function lookInWords(look) {
+  const n = look.steps.length;
+  const kind = look.kind === 'all' ? '' : ` ${KIND_LABEL[look.kind]}`;
+  if (n === 1) return `One step — a${kind || ' scene'}${kind ? ' palette' : ''}, held still. Add a second step to make it move.`;
+  const moving = look.steps.some((s) => s.transition > 0.02);
+  const spread = Math.abs(look.phase) >= 1;
+  const shape = moving
+    ? (spread ? 'a wave travelling across the rig' : 'a pulse, the whole rig breathing together')
+    : (spread ? 'a chase walking round the rig' : 'a flash, every fixture snapping together');
+  const bpm = look.bpm || (S && S.fx ? S.fx.bpm : 120);
+  return `${n} steps, ${moving ? 'crossfading' : 'snapping'}, ${spread ? 'spread across the rig' : 'in unison'} — ${shape}. `
+    + `One loop every ${look.measure} beat${look.measure === 1 ? '' : 's'} at ${bpm} BPM${look.bpm ? ' (its own tempo)' : ' (the desk clock)'}.`;
+}
+
+// The stage as it stands, as one step, through this look's mask. Recorded per fixture:
+// a snapshot is a per-fixture thing, and '*' is reserved for the values that walk.
+function stageStep(look) {
+  const ids = look.fixtures.length ? look.fixtures : S.fixtures.map((f) => f.id);
+  const values = {};
+  for (const id of ids) {
+    const f = S.fixtures.find((x) => x.id === id);
+    if (!f) continue;
+    const cell = {};
+    for (const [role, v] of Object.entries(f.values || {})) if (lookAllows(look.kind, role)) cell[role] = v;
+    if (Object.keys(cell).length) values[id] = cell;
+  }
+  return { values, width: 1, transition: look.steps.length ? look.steps[look.steps.length - 1].transition : 0 };
+}
+
+function buildSteps() {
+  const box = $('#stepBox');
+  const look = lookById(selLook);
+  $('#stepTitle').textContent = look ? look.name : 'No look selected';
+  if (!look) {
+    box.dataset.sig = 'none';
+    box.innerHTML = '<p class="fxhint muted">Pick a look above to see its steps. One step is a scene; two are a chase or a wave, depending on transition and phase.</p>';
+    return;
+  }
+  const sig = look.id + '#' + JSON.stringify(look.steps.map((s) => s.transition))
+    + '#' + look.phase + '#' + look.measure + '#' + look.bpm + '#' + look.steps.length;
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+
+  box.innerHTML = `
+    <p class="stepwords muted">${esc(lookInWords(look))}</p>
+    ${look.steps.map((s, i) => `<div class="steprow" data-i="${i}">
+      <b>${i + 1}</b>
+      <input class="st-trans" type="range" min="0" max="1" step="0.05" value="${s.transition}" title="0 snaps to the next step — that is a chase. 1 never stops moving — that is a wave.">
+      <output>${s.transition <= 0.02 ? 'snap' : s.transition >= 0.98 ? 'smooth' : Math.round(s.transition * 100) + '%'}</output>
+      <button class="sq danger st-del" title="Delete this step"${look.steps.length < 2 ? ' disabled' : ''}>✕</button>
+    </div>`).join('')}
+    <div class="inline"><button class="sq" id="stepAdd" title="Record the stage as it stands as one more step">+ Step from stage</button></div>
+    <div class="stepnums">
+      <label title="Degrees of offset spread across the selection. 0 is the whole rig in unison; 360 walks one full cycle round it.">Phase
+        <input class="st-phase" type="number" min="-3600" max="3600" step="45" value="${look.phase}"></label>
+      <label title="Beats for one full loop of this look, against the desk's BPM">Measure
+        <input class="st-measure" type="number" min="0.25" max="64" step="0.25" value="${look.measure}"></label>
+      <label title="Leave empty to follow the desk clock at the top of the page">BPM
+        <input class="st-bpm" type="number" min="1" max="600" step="1" value="${look.bpm == null ? '' : look.bpm}" placeholder="clock"></label>
+    </div>`;
+
+  const edit = (patch) => putLook(Object.assign({}, lookById(selLook), patch));
+
+  $$('.steprow', box).forEach((row) => {
+    const i = +row.dataset.i;
+    row.querySelector('.st-trans').addEventListener('change', (e) => {
+      const l = lookById(selLook); if (!l || !l.steps[i]) return;
+      const steps = l.steps.map((s, n) => (n === i ? Object.assign({}, s, { transition: +e.target.value }) : s));
+      edit({ steps });
+    });
+    row.querySelector('.st-del').addEventListener('click', () => {
+      const l = lookById(selLook); if (!l || l.steps.length < 2) return;
+      edit({ steps: l.steps.filter((s, n) => n !== i) });
+    });
+  });
+  $('#stepAdd').addEventListener('click', () => {
+    const l = lookById(selLook); if (!l) return;
+    if (!S.fixtures.length) return say('nothing patched to record', true);
+    if (l.steps.length >= 64) return say('that is as many steps as a look holds', true);
+    edit({ steps: l.steps.concat([stageStep(l)]) });
+  });
+  box.querySelector('.st-phase').addEventListener('change', (e) => edit({ phase: clamp(+e.target.value || 0, -3600, 3600) }));
+  box.querySelector('.st-measure').addEventListener('change', (e) => edit({ measure: clamp(parseFloat(e.target.value) || 1, 0.25, 64) }));
+  box.querySelector('.st-bpm').addEventListener('change', (e) => {
+    const v = e.target.value.trim();
+    edit({ bpm: v === '' ? null : clamp(parseFloat(v) || 120, 1, 600) });
+  });
+}
+
+/* ---- one-press starters ---- */
+/* Each builds a look out of whatever is patched, puts it on a new layer, and BRINGS IT
+   UP. A layer added with + Layer arrives at 0 on purpose — nothing an operator adds
+   mid-show may change the room before they touch its fader — but a starter is not that:
+   it is a button labelled "Colour chase" pressed by someone who wants a colour chase,
+   and one that changes nothing reads as broken. The fader is right there, and so is
+   Blackout. */
+
+// Emitter roles the rig actually has. A colour step that names channels nobody owns is a
+// look that does nothing and says nothing about why.
+function rigRoles(pred) {
+  const out = new Set();
+  for (const f of (S ? S.fixtures : [])) {
+    for (const role of Object.keys(f.values || {})) if (pred(role)) out.add(role);
+  }
+  return [...out];
+}
+
+// One colour, as a full emitter cell: every other emitter in the rig is written to 0, or
+// a rig with amber and white in it turns everything into pale mud.
+function colourCell(r, g, b) {
+  const cell = {};
+  for (const role of rigRoles((x) => kindOf(x) === 'emitter')) cell[role] = 0;
+  const rgb = { r, g, b };
+  for (const k of Object.keys(rgb)) if (k in cell) cell[k] = rgb[k];
+  return cell;
+}
+
+async function startLook(look, layer, note) {
+  const made = await post('api/looks/add', { look });
+  if (made && made.error) return say(made.error, true);
+  if (S.looks) S.looks.push(made.look);
+  const r = await post('api/layers/add', Object.assign({ lookId: made.look.id }, layer));
+  if (r && r.error) return say(r.error, true);
+  if (S.layers) S.layers.push(r.layer);
+  // A starter's rate is not in the add route's vocabulary, so it is set the same way a
+  // fader move is — one small request against the layer that was just made.
+  // Up, over a second rather than in one jump: the room is told what is happening
+  // instead of being hit with it, and there is a beat in which to pull the fader back.
+  const patch = { level: 1 };
+  if (layer.rate) patch.rate = layer.rate;
+  await post('api/layer', Object.assign({ id: r.layer.id }, patch));
+  r.layer.level = 1;
+  if (layer.rate) r.layer.rate = layer.rate;
+  selLayer = r.layer.id;
+  selLook = made.look.id;
+  buildLayers(); buildLooks(); buildSteps();
+  say(note);
+}
+
+$('#stColour').addEventListener('click', () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => kindOf(x) === 'emitter').length) return say('nothing in the rig has a colour channel', true);
+  // Magenta against cyan: both saturated, both read at a distance on a dark rig, and
+  // they are far enough apart in hue that the walk round the rig is unmistakable.
+  startLook({
+    id: newId('lk'), name: 'Colour chase', kind: 'colour', measure: 2, phase: 360,
+    fixtures: S.fixtures.map((f) => f.id),
+    steps: [
+      { values: { '*': colourCell(255, 20, 110) }, width: 1, transition: 0 },
+      { values: { '*': colourCell(0, 190, 255) }, width: 1, transition: 0 },
+    ],
+  }, { name: 'Colour chase', mask: 'colour', merge: 'htp' },
+  'colour chase running — its fader is at the top of the stack');
+});
+
+$('#stSweep').addEventListener('click', () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => x === 'dimmer').length) return say('nothing in the rig has a dimmer channel', true);
+  // LTP, not HTP: a brightness wave has to be able to take light away, and HTP against
+  // the fixtures' own values would only ever add — the trough would simply not happen.
+  startLook({
+    id: newId('lk'), name: 'Sweep', kind: 'intensity', measure: 4, phase: 360,
+    fixtures: S.fixtures.map((f) => f.id),
+    steps: [
+      { values: { '*': { dimmer: 255 } }, width: 1, transition: 1 },
+      { values: { '*': { dimmer: 0 } }, width: 1, transition: 1 },
+    ],
+  }, { name: 'Sweep', mask: 'intensity', merge: 'ltp' },
+  'sweep running, on LTP so its trough is real — its fader is at the top of the stack');
+});
+
+$('#stStrobe').addEventListener('click', () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => x === 'dimmer').length) return say('nothing in the rig has a dimmer channel', true);
+  startLook({
+    id: newId('lk'), name: 'Strobe', kind: 'intensity', measure: 0.5, phase: 0,
+    fixtures: S.fixtures.map((f) => f.id),
+    steps: [
+      { values: { '*': { dimmer: 255 } }, width: 1, transition: 0 },
+      { values: { '*': { dimmer: 0 } }, width: 1, transition: 0 },
+    ],
+  }, { name: 'Strobe', mask: 'intensity', merge: 'ltp' },
+  'strobe running — its fader is at the top of the stack');
+});
+
+// The mask vocabulary comes from the server, so this page cannot offer a lane looks.js
+// would refuse. Until it answers, the select renders from the literal above.
+function fillLookKinds() {
+  const sel2 = $('#lookKind');
+  sel2.innerHTML = LOOK_KINDS.map((k) =>
+    `<option value="${k}">${KIND_LABEL[k] || k}</option>`).join('');
+}
+fillLookKinds();
+fetch('api/looks').then((r) => r.json()).then((d) => {
+  if (!d || !Array.isArray(d.kinds) || !d.kinds.length) return;
+  LOOK_KINDS = d.kinds;
+  fillLookKinds();
+}).catch(() => { /* the state poll reports a desk that is not answering */ });
+
+/* ---- the phone's layer faders ---- */
+// Fifth tab on the live strip rather than a corner of Master: a layer fader is the
+// control you reach for most during a song, and burying it under three other things
+// would put the stack one gesture further away than the master it sits above.
+function buildTouchLayers() {
+  const box = $('#tLayerList');
+  const layers = layersOf();
+  const shown = layers.map((l, i) => ({ l, i }))
+    .sort((a, b) => (b.l.priority - a.l.priority) || (b.i - a.i))
+    .map((x) => x.l);
+  const sig = shown.map((l) => [l.id, l.name, l.on, l.lookId].join('~')).join('|');
+  if (box.dataset.sig !== sig) {
+    box.dataset.sig = sig;
+    box.innerHTML = shown.map((l) => {
+      const look = lookById(l.lookId);
+      return `<div class="tlay${layerLive(l) ? '' : ' idle'}" data-id="${esc(l.id)}">
+        <button class="ls-big tl-on${l.on ? ' on' : ''}" title="Take this layer out of the stack">${l.on ? 'On' : 'Off'}</button>
+        <label class="ls-fader"><span>${esc(l.name)}${look ? '' : ' · empty'}</span><input class="tl-level" type="range" min="0" max="100" value="${Math.round(l.level * 100)}"><output>${Math.round(l.level * 100)}%</output></label>
+      </div>`;
+    }).join('') || '<p class="ls-note muted">No layers yet — build one on the Control page, then it appears here.</p>';
+
+    $$('.tlay', box).forEach((row) => {
+      const id = row.dataset.id;
+      row.querySelector('.tl-on').addEventListener('click', () => {
+        const l = layerById(id); if (!l) return;
+        l.on = !l.on; queueLayer(id, { on: l.on }); buildTouchLayers();
+      });
+      const lev = row.querySelector('.tl-level');
+      lev.addEventListener('input', () => {
+        const l = layerById(id); if (!l) return;
+        l.level = +lev.value / 100;
+        row.querySelector('output').textContent = Math.round(l.level * 100) + '%';
+        row.classList.toggle('idle', !layerLive(l));
+        queueLayer(id, { level: l.level });
+      });
+    });
+  } else {
+    $$('.tlay', box).forEach((row) => {
+      const l = layerById(row.dataset.id);
+      if (!l) return;
+      const lev = row.querySelector('.tl-level');
+      if (document.activeElement !== lev && Math.round(l.level * 100) !== +lev.value) {
+        lev.value = Math.round(l.level * 100);
+        row.querySelector('output').textContent = lev.value + '%';
+      }
+      row.classList.toggle('idle', !layerLive(l));
+    });
+  }
+}
+
 /* =============== render =============== */
 
 // One broken panel must never blank the panels built after it: each build runs inside its
@@ -2939,6 +3543,9 @@ function renderAll(busy) {
     safeBuild('buildOutput', buildOutput);
     safeBuild('buildFx', buildFx);
     safeBuild('buildLfos', buildLfos);
+    safeBuild('buildLayers', buildLayers);
+    safeBuild('buildLooks', buildLooks);
+    safeBuild('buildSteps', buildSteps);
     safeBuild('buildAudio', buildAudio);
     safeBuild('buildAttr', buildAttr);
     if (document.activeElement !== $('#master')) $('#master').value = S.master;
@@ -4060,6 +4667,7 @@ const SPLIT_DEFS = {
   'setup-lim':  { axis: 'x', varName: '--sp-2', pane: 'next', flexSel: '.stagepane', min: 280, max: 780 },
   'setup-rows': { axis: 'y', min: 22, max: 78 },
   'ctl-bank':   { axis: 'x', varName: '--sp-1', pane: 'prev', flexSel: '.scenearea', min: 180, max: 560 },
+  'ctl-stack':  { axis: 'x', varName: '--sp-3', pane: 'next', flexSel: '.scenearea', min: 230, max: 560 },
   'ctl-rail':   { axis: 'x', varName: '--sp-2', pane: 'next', flexSel: '.scenearea', min: 220, max: 560 },
   'ctl-sel':    { axis: 'x', varName: '--sp-1', pane: 'next', flexSel: '.stagepane', min: 110, max: 420 },
   'ctl-attr':   { axis: 'x', varName: '--sp-2', pane: 'next', flexSel: '.stagepane', min: 320, max: 960 },
@@ -4423,6 +5031,8 @@ function buildTouchStrip() {
     if (document.activeElement !== $('#tAudAmount')) $('#tAudAmount').value = cfg.amount ?? 255;
   }
   $('#tAudAmountOut').textContent = Math.round(+$('#tAudAmount').value / 255 * 100) + '%';
+
+  buildTouchLayers();
 
   // master tab switches — disabled when there is nothing to stop
   $('#tChaseStop').disabled = !S.chase.enabled;
