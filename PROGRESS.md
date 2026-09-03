@@ -5,6 +5,40 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-03 — the lighting desk answers to the field: looks, layers, fan, a fixture library, sACN
+
+Owner: *"look to all light control apps … analyse why what is good … make best light
+controller that even can happen in world."* Four parallel audits — the consoles
+(grandMA3, Eos, MagicQ, Titan, Hog, ONYX), the club and VJ tools (Resolume, Daslight,
+MADRIX, Arkaos, TouchDesigner), the open-source and protocol layer, and an inventory of
+our own desk — are distilled in `docs/architecture/LIGHTING_DESK_DESIGN.md`.
+
+The finding: every serious desk is one machine, and its four load-bearing ideas are
+reference-not-value, tracking, selection order as data, and phase as an ordinary
+attribute. We had none of them. What shipped the same day (#328, #331):
+
+- **Looks and layers** (`looks.js`). One content object: a look is a list of steps. One
+  step is a scene or a palette; two that snap are a chase; two that ease and are spread
+  by phase are a wave. A layer is that look under a finger — level, merge, priority,
+  mask, rate — composited over the fixtures' own values, so an effect can ride on top of
+  a running look. An empty stack renders exactly as before, which is what let it land.
+- **Fan** (`fan.js`), seven Eos styles, seeded random, reading selection order.
+- **The fixture library** (`library.js`): Open Fixture Library by name, cached beside the
+  show, carrying each channel's resting value — the line that stops an imported head
+  coming up dark with a shut shutter.
+- **sACN** (`sacn.js`): multicast groups and a priority number, verified on the wire.
+- **Palettes**: a look can follow another look, and the interface says so in words.
+- The interface for all of it, seen at 1280×800 and 390×844, plus a Layers tab on the
+  phone strip; the desk clock now drives looks, so Tap retimes everything running.
+
+Also #326: a hosted tier serves its own index.html for an unknown address, so the DMX Out
+panel and the map toolbar were believing a 200 that was a web page. Both now require a
+JSON content type; an HTML 200 reads as "no desk here", which is the truth.
+
+Not built, in the design's order: cue lists with tracking, the drawn operator surface,
+a clock with visible phase and nudge, timecode/Link/OSC-in, and the end state only this
+repo can reach — one cue moving the lights, the projection and the room together.
+
 ## 2026-09-03 — the lighting desk moves in: /light, DMX Out on the desk, map cues with light, MIDI in the suite
 
 The club's Art-Net desk (a zero-dependency Node.js DMX desk that arrived as three Telegram

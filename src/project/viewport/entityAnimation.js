@@ -19,6 +19,15 @@ export function resolveAnimation(entity) {
     const name = entity?.name || ''
     if (/ground|floor|gate|threshold|entrance/i.test(name)) return { mode: 'static', speed: 1, amplitude: 1 }
     if (/\bfly\b/i.test(name)) return { mode: 'orbit', speed: 1, amplitude: 1 }
+    // Text is often authored standing up (e.g. rotation.x = PI/2 to face +z).
+    // 'float'/'sway' add their spin on top of THAT base rotation as a fresh
+    // Euler set each frame, not a rotation around the object's own facing --
+    // with a non-zero base X, a Y "spin" doesn't swing the plane like a sign,
+    // it tumbles it through off-axis orientations that read as rotated ~90°
+    // from the camera (letters running vertically instead of horizontally).
+    // 'bob' keeps the same gentle life (vertical float) without ever touching
+    // rotation, so authored orientation -- and legibility -- never drifts.
+    if (entity?.type === 'text') return { mode: 'bob', speed: 1, amplitude: 1 }
     const isFlat = entity?.type === 'image' || entity?.type === 'video'
     return { mode: isFlat ? 'sway' : 'float', speed: 1, amplitude: 1 }
 }
