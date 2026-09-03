@@ -124,8 +124,29 @@ describe('arrival frame ↔ walk mode world parity', () => {
         // Both are gated on the published-viewer context: an editor whose
         // objects drift under the gizmo cannot be used to place anything.
         expect(studioSrc).toMatch(/if \(playLive && prox\) applyProximity\(/)
-        expect(studioSrc).toMatch(/if \(playLive\) \{[\s\S]{0,240}applyAnimation\(/)
+        expect(studioSrc).toMatch(/if \(playLive && anim\) \{[\s\S]{0,240}applyAnimation\(/)
         expect(studioSrc).toMatch(/const playLive = useContext\(LiveTimelineContext\)/)
+    })
+
+    // The ONE place the two surfaces are meant to disagree, and it is load-bearing.
+    // `resolveAnimation`'s fallback floats models, sways flat media and orbits
+    // anything named "fly" when no animation component exists. Walk mode has
+    // always done that and keeps doing it. The arrival frame must not: it would
+    // set WCC's sculpture, the Dilijan camp room and every other already-published
+    // room drifting on the first frame a stranger sees, with no author having
+    // asked. Arrival shows authored motion or none.
+    it('the arrival frame resolves authored motion only, never the fallback', () => {
+        // A CALL, not the word: the prose above the hook names the resolver it
+        // deliberately does not use, and a comment is not a code path.
+        expect(studioSrc, 'StudioViewport reaches the name/type animation fallback')
+            .not.toMatch(/resolveAnimation\(/)
+        expect(studioSrc, 'StudioViewport still imports the fallback resolver')
+            .not.toMatch(/import \{[^}]*\bresolveAnimation\b[^}]*\} from/)
+        expect(studioSrc, 'StudioViewport does not use the authored-only resolver')
+            .toMatch(/authoredAnimation\(entity\)/)
+        // Walk keeps the fallback exactly as it was.
+        expect(fullLiveSrc, 'LiveProjectScene lost the imported-scene animation fallback')
+            .toMatch(/resolveAnimation\(entity\)/)
     })
 
     it('both surfaces take the idle phase offset from one shared seed', () => {

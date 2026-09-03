@@ -11,7 +11,7 @@ import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.js
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransform.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../../project/viewport/timelinePlayback.js'
-import { animationSeed, applyAnimation, resolveAnimation } from '../../project/viewport/entityAnimation.js'
+import { animationSeed, applyAnimation, authoredAnimation } from '../../project/viewport/entityAnimation.js'
 import { applyProximity, resolveProximity } from '../../project/viewport/entityProximity.js'
 import {
     advanceTimelinePreview,
@@ -58,18 +58,23 @@ const LiveTimelineContext = createContext(false)
 // authored pose (and touched material opacities) the moment it stops. In a
 // published viewer there is no scrubber, so the render clock drives it instead.
 //
-// Idle motion (`components.animation`) and proximity dimming
+// Authored motion (`components.animation`) and proximity dimming
 // (`components.proximity`) ride along, but ONLY in a published viewer
 // (LiveTimelineContext, i.e. the `playTimelines` surface). Walk mode has always
 // applied both, so a visitor's arrival frame was a still life of the room they
 // were about to see moving; the editor must stay still, because objects that
 // drift under the gizmo cannot be placed.
+//
+// `authoredAnimation`, NOT `resolveAnimation`: the arrival frame shows motion
+// someone chose, never the imported-scene fallback that floats models and sways
+// images when no animation component exists. Walk keeps that fallback — see the
+// note on `authoredAnimation` for why the first frame is not the place for it.
 function useEntityPose(entity, groupRef, isDraggingRef = null) {
     const playLive = useContext(LiveTimelineContext)
     const wasPosed = useRef(false)
     const opacityBackup = useRef(null)
     const timeline = entity.components?.timeline
-    const anim = useMemo(() => resolveAnimation(entity), [entity])
+    const anim = useMemo(() => authoredAnimation(entity), [entity])
     const prox = useMemo(() => resolveProximity(entity), [entity])
     const seed = useMemo(() => animationSeed(entity.id), [entity.id])
     const proxPoint = useRef(new THREE.Vector3())
@@ -104,8 +109,8 @@ function useEntityPose(entity, groupRef, isDraggingRef = null) {
             wasPosed.current = true
             return
         }
-        // Authored keyframes replace idle motion, exactly as in walk mode.
-        if (playLive) {
+        // Authored keyframes replace authored motion, exactly as in walk mode.
+        if (playLive && anim) {
             const t = entity.components?.transform || {}
             applyAnimation(
                 group,

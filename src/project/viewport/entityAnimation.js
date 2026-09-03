@@ -16,6 +16,22 @@ export function animationSeed(entityId) {
     return (hash / 1000) * Math.PI * 2
 }
 
+// The AUTHORED animation only, or null — no fallback, ever.
+//
+// The arrival view (StudioViewport in orbit) uses this rather than
+// `resolveAnimation` below. The fallback exists so that scenes imported before
+// animation was data keep the drift they were built with, and it has run in
+// walk mode for as long as walk mode has existed. Reaching it from the arrival
+// frame would be a different thing entirely: it would set WCC's sculpture, the
+// Dilijan camp room and every other live room drifting on the first frame a
+// stranger sees, without any of their authors having asked for motion. So
+// arrival shows motion someone chose, and nothing else.
+export function authoredAnimation(entity) {
+    const anim = entity?.components?.animation
+    if (!anim?.mode || anim.mode === 'static') return null
+    return { mode: anim.mode, speed: anim.speed ?? 1, amplitude: anim.amplitude ?? 1 }
+}
+
 export function resolveAnimation(entity) {
     const anim = entity?.components?.animation
     if (anim?.mode) {

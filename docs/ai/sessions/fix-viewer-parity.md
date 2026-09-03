@@ -13,14 +13,22 @@
   camera standing inside the room at eye height; an orbit camera framing a large
   scene from 40m outside would wash the whole arrival to the fog colour, so
   rooms that never authored a fog are untouched.
-- **Motion on arrival.** `useTimelinePreviewPose` became `useEntityPose` and now
-  also applies `components.animation` and `components.proximity`, in walk's
-  order (dimming first, authored keyframes beating idle motion). Gated on the
-  existing `LiveTimelineContext` (`playTimelines`), which only
-  `PublicProjectSceneSurface` sets — the Studio editor and the low-power space
-  card previews stay still, because objects that drift under the gizmo cannot be
-  placed. The phase seed moved to `animationSeed()` in `entityAnimation.js` and
-  is shared, so the Walk click no longer restarts every object's motion.
+- **Motion on arrival — AUTHORED motion only.** `useTimelinePreviewPose` became
+  `useEntityPose` and now also applies `components.animation` and
+  `components.proximity`, in walk's order (dimming first, authored keyframes
+  beating idle motion). Two gates:
+  - the existing `LiveTimelineContext` (`playTimelines`), which only
+    `PublicProjectSceneSurface` sets — the Studio editor and the low-power space
+    card previews stay still, because objects that drift under the gizmo cannot
+    be placed;
+  - a new `authoredAnimation()` resolver instead of `resolveAnimation()`. The
+    latter's fallback (models float, flat media sways, anything named "fly"
+    orbits) has run in walk forever and is untouched there, but reaching it from
+    the arrival frame would set WCC's sculpture, the Dilijan camp room and every
+    other already-published room drifting on the first frame a stranger sees,
+    with no author having asked. Arrival shows motion someone chose, or none.
+  The phase seed moved to `animationSeed()` in `entityAnimation.js` and is
+  shared, so an authored spin does not jump when the visitor clicks Walk.
 - **The floor survives the click.** Walk mode's `<Grid>` read nothing from the
   document — `args=[80,80] cellColor="#2a3038" sectionColor="#3c4654"
   fadeDistance={40}` — so every walkable room had the same slate lattice.
@@ -50,8 +58,12 @@
   (origin/dev) and after:
   - orbit before: posts white to the horizon, black grid cells, and **0 pixels
     changed** between two frames a second apart. After: posts fading orange,
-    magenta cells, 16,576 pixels changed — bounded to the spinning bar while the
+    magenta cells, 13,684 pixels changed — bounded to the spinning bar while the
     static posts held still.
+  - the asymmetry, on a second room holding one box with NO animation component:
+    orbit **0 changed pixels** across the whole frame, walk **3,799** on the bar
+    itself (cropped, so the ambient particles are not doing the arguing). The
+    fallback still drifts it in walk and never touches the arrival frame.
   - walk before: dim slate floor at exposure 1. After: the authored magenta and
     yellow floor, visibly brighter. Re-authoring the document to
     `toneMappingExposure: 0.25` and re-shooting walk darkened the whole frame —
