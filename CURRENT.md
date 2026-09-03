@@ -15,6 +15,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 - build zones: a room that arranges itself
 - the Open Jam room, and the rule that keeps a room one
+- `/network` is one paper world end to end: the constellation is generated from `people.json` like the rooms, and the third index — a second catalogue of the same 52, still printing Gevorg's old name — is gone
 
 Full detail: `PROGRESS.md`.
 
