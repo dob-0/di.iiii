@@ -38,6 +38,9 @@ function createDesk(opts = {}) {
   const outputEnabledDefault = opts.outputEnabledDefault !== false;
   const lanAllowed = opts.lanAllowed !== false;
   const log = opts.log || console.log;
+  // True when this desk found no show to load. It stays true only until the first write,
+  // and it is what stops an empty desk from silently replacing a real one.
+  let bootedWithNothing = false;
 
   const DEFAULT_STATE = {
     master: 255,
@@ -230,6 +233,9 @@ function createDesk(opts = {}) {
       s.blackout = !!disk.blackout;
       return s;
     } catch (e) {
+      // Nothing was loaded. Remembered, because an empty desk that then SAVES would
+      // write its emptiness over whatever appears at that path afterwards.
+      bootedWithNothing = true;
       if (fs.existsSync(SHOW)) {
         const aside = SHOW.replace(/.json$/, '-broken-' + Date.now() + '.json');
         try { fs.copyFileSync(SHOW, aside); } catch (e2) {}
@@ -298,11 +304,31 @@ function createDesk(opts = {}) {
     if (!dirty) return;
     dirty = false;
     fs.mkdirSync(DATA, { recursive: true });
+    // A show that appeared after we booted with nothing belongs to somebody else — a
+    // second desk on the same folder, a file restored by hand between the boot and now.
+    // It is preserved and named rather than overwritten, and said out loud. An empty
+    // desk quietly replacing a real one is the worst thing this file could do.
+    if (bootedWithNothing && fs.existsSync(SHOW)) {
+      const aside = SHOW.replace(/\.json$/, '-found-' + Date.now() + '.json');
+      try {
+        fs.copyFileSync(SHOW, aside);
+        log('A show appeared at ' + SHOW + ' after this desk started empty.');
+        log('It has NOT been overwritten blindly — it is kept at ' + aside);
+      } catch (e) { /* if it cannot be preserved, the write below is still refused */ }
+    }
+    bootedWithNothing = false;
     const tmp = SHOW + '.tmp';
     // Compact, not pretty-printed: at 500+ scenes the indented form cost ~29ms to
     // stringify, over the 25ms frame budget at 40Hz. Compact is ~9ms and a third the size.
     fs.writeFileSync(tmp, JSON.stringify(state));
-    try { fs.renameSync(SHOW, SHOW_PREV); } catch (e) { /* first save ever */ }
+    // The previous copy is COPIED aside, never renamed. Renaming the live file away
+    // first left a window — microseconds, but real — in which show.json did not exist at
+    // all, and a second desk booting into that window found no show, started empty, and
+    // saved its emptiness over the top. That is not hypothetical: it happened on the dev
+    // stack when a restart overlapped a save, and only show.prev.json still held the rig.
+    // A rename onto the live path is atomic, so show.json now goes straight from the old
+    // contents to the new and is never absent.
+    try { fs.copyFileSync(SHOW, SHOW_PREV); } catch (e) { /* first save ever */ }
     fs.renameSync(tmp, SHOW);
   }
   // The layer an outside caller's cue drives, unless it names another.
