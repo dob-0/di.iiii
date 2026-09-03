@@ -5,12 +5,20 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderRoom } from './room-template.mjs'
+import { renderIndex } from './index-template.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const REL = path.relative(process.cwd(), HERE).split(path.sep).join('/') || '.'
 const { people } = JSON.parse(fs.readFileSync(path.join(HERE, 'people.json'), 'utf8'))
 
 fs.mkdirSync(path.join(HERE, 'pages'), { recursive: true })
+
+// The index is generated from the same roster as the rooms and shares their
+// stylesheet and field. It used to be a hand-kept file, which is how it came
+// to carry a second design — and counts in its opening sentence that no
+// longer matched the roster underneath it.
+fs.writeFileSync(path.join(HERE, 'code/index.html'), renderIndex(people))
+
 const written = []
 for (const p of people) {
   fs.writeFileSync(path.join(HERE, `pages/${p.slug}.html`), renderRoom(p, people))

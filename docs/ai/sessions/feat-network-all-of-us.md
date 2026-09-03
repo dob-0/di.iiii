@@ -1,68 +1,59 @@
-## 2026-09-03 — the network is all 52 of us, and two silent bugs came out with it
+# feat/network-all-of-us
 
-`/network` was a cream roster of pills naming 55 people, 8 of whom had a room. It is now the
-full catalogue with a room for every person, plus the two other readings of the same data as
-their own pages. Three directions were built and rendered before anything was chosen
-(`network-directions/`); the owner picked B, then "b, but also elements from a", and the built
-page is B's catalogue leading at two-thirds with A's field as a supporting margin.
+The network: a page listing everyone who makes di.iiii, and a room per person.
 
-### What shipped
+## What it is
 
-- **`/network`** — every name on a numbered line; hovering one lights their node in the field
-  beside it and shows their work as doors. **A line between two people means they made
-  something here together, and only two works have** — measured, not decorated: `br_id_ge`
-  (Gevorg, Emilya, Syuzi) and `azd` (Emilya, Syuzi, Yeva, Greta, Shahane). Six people, two
-  clusters, forty-six single points. That is the truth about the studio and a better picture
-  than a faked web.
-- **`/network/<slug>`** — 52 rooms from one template. A person with work gets their doors; a
-  person without gets *"Nothing stands here yet — this room is theirs to fill"* and their
-  neighbours glowing beside them. 44 of 52 are in that state, so it is the common case, not
-  the edge case.
-- **`/network/constellation`** and **`/network/the-index`** — the field alone and the
-  catalogue alone, as their own projects.
-- **three.js vendored once** at `public/vendor/`, the way `draco/` and `fonts/` already are.
-  Each room is 23 KB instead of 775 KB; the roster 49 KB instead of 801 KB. 733 KB in the repo
-  instead of 40 MB.
+`spaces/network/` holds 52 people in `people.json` and generates, from that one
+file, the index at `/network` and 52 rooms at `/network/<slug>`. `build.mjs`
+writes `code/index.html` (via `index-template.mjs`) and `pages/<slug>.html` plus
+one `di-space.<slug>.json` each (via `room-template.mjs`). Both templates share
+`lib/css.mjs` and `lib/field.client.js`. Nothing in the space is hand-kept; a
+test re-renders every page and compares bytes.
 
-### The two bugs, both silent, both older than this work
+## The rebuild
 
-**A code page has no origin.** It renders in a sandboxed srcdoc iframe with no
-`allow-same-origin`, so its origin is the literal string `null`. A webfont fetch and an
-ES-module import are both CORS-mode requests, and a null origin fails them unless the response
-allows it:
+The first version was built as "b, with elements of a" and delivered that as
+adjacency: a white roster column beside a black star panel, sharing a hard
+edge. On a phone it stacked into a black block over a white page. The owner
+saw it on staging and said so.
 
-    Access to script at '/vendor/three.module.min.js' from origin 'null' — blocked
-    Access to font   at '/fonts/inter-regular.woff'   from origin 'null' — blocked
+What it is now: one sheet of paper. The field is drawn into that paper on a
+transparent 2D canvas, masked with a gradient so it dissolves into the right
+margin — no second background anywhere, so there is no edge to see. Hovering a
+name lights that person's point; a room opens with its person already lit and
+lines out to whoever they made something with, which is the same list the page
+prints underneath. The dark, turnable version of the field stays as its own
+page at `/network/constellation`, where it is the subject rather than a panel.
 
-The font half **has been true since code pages existed** — every page asking for the house
-face has quietly been getting a system fallback. Nothing failed loudly enough to look. The
-script half blanked every field on `/network`. Neither is visible to `curl`, which asks with an
-ordinary origin and is answered perfectly; **you have to ask the way the frame asks.** Fixed in
-`nginx.conf` and BOTH `express.static` mounts (so offline `di` installs match the tiers), scoped
-to those two directories, guarded by `src/codePageCors.test.js`.
+Four defects behind it are in `docs/ai/known-fixes.md`: the seam, the AA
+failures, 229 KB of three.js for 52 dots, and a room's own person rendering
+inside the masked half.
 
-**Order is code, then data.** The pages were pushed to staging before the branch deployed, so
-`/vendor/…` answered **200 with the app's fallback HTML** and every field went black. A status
-code lied and I believed it. `space-sync` runs *after* the tier has the code.
+## Decisions worth keeping
 
-### Also true, and easy to get wrong
+- **No per-row numbers.** A numbered list of named artists reads as a ranking
+  of them. Sections carry the structure and their own counts; inside a section
+  the order is alphabetical, which says plainly that it is not a ranking. Team
+  keeps its declared order — it is a masthead.
+- **The list drives the field, never the reverse.** The canvas is
+  `pointer-events: none`. It cannot steal a scroll or a tap, and the roster is
+  the only interface on the page.
+- **Every number in the copy is generated.** "Fifty-two people make di.iiii —
+  five run it, forty-seven make with it" comes from `people.json`. The hand-
+  typed version had already drifted.
+- **Two accent tokens.** `--accent` (#0097a3) draws marks; `--accent-ink`
+  (#00757f) carries text. The brand cyan #4DF9FF is the light-on-dark form and
+  fails as type on paper.
+- **On a phone the diagram's lines are dropped** — there is no margin to draw
+  them in, so they would cross the names. Only the dust of the points remains.
 
-- The sourced inventory cites its sources per field on purpose, and the generator must strip
-  those citations: two artists' credits shipped carrying *"(per di-contacts core file; not yet
-  in people.json)"* and a whole spelling argument about Kai/Kay Khachatryan. Fixed; the lines
-  end where the credit ends.
-- **No portraits of anyone exist on this machine** — the deck's photos were stripped in August.
-  Faces are not on the table without new photographs.
-- A di.iiii code page **cannot embed another page of the site**: `X-Frame-Options: SAMEORIGIN`
-  meets the sandbox's null origin. Work previews are captured images, not live frames.
+## Open
 
-### Open
-
-- **Prod has 9 of the 55 network projects.** They belong there, but the order is: promote
-  dev→main, let prod deploy `public/vendor/` and the CORS rule, THEN `space-sync --all --tier
-  prod`. Pushing the data first repeats the black-field failure on the live site.
-- `di-funding` carries an uncommitted-to-remote branch `fix/one-copy-of-the-page` (the
-  publisher was storing the page twice). Local and staging are single now; prod still holds it
-  in the legacy `codeHtml` field and renders fine.
-- The 23 debris projects in `open` are still local-only, still the owner's to delete. The three
-  `look-*` projects are another session's live experiment, deliberately not swept.
+- `/network/the-index` still holds the earlier stand-alone roster page, now
+  superseded by the index itself. It is unlinked but reachable. Retire it or
+  fold it in.
+- Prod holds 9 of the 55 network projects. Promoting needs the code first, then
+  `space-sync --all --tier prod`, then the owner's word.
+- No portraits exist for anyone on this machine. One image per row is the thing
+  that would turn a directory into a portrait, and it is the same data.

@@ -6,186 +6,200 @@
 <title>Arsen Miqayelyan — di.iiii network</title>
 <style>
 :root{
-  --paper:#f7f7f5; --ink:#111214; --ink-2:#54585c; --ink-3:#8a8e92; --rule:#dcdcd8;
-  --cyan:#4DF9FF; --cyan-bright:#00E5FF; --cyan-dim:rgba(77,249,255,.10); --cyan-border:rgba(77,249,255,.30);
-  --field-bg:#04060a; --field-line:rgba(77,249,255,.14);
+  --paper:#f7f7f5; --paper-2:#efefec;
+  --ink:#111214; --ink-2:#55595e; --ink-3:#63686d; --rule:#dededa;
+  /* --accent marks (dots, rules, the lit star); --accent-ink is the one
+     that carries text — #0097a3 is 3.29:1 on paper and fails as type. */
+  --accent:#0097a3; --accent-ink:#00757f;
+  --accent-soft:rgba(0,151,163,.07); --accent-rule:rgba(0,151,163,.35);
   --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
   --sans:'Inter',-apple-system,'Segoe UI',sans-serif;
+  --col:1180px; --pad:56px;
 }
 @font-face{
   font-family:'Inter'; src:url('/fonts/inter-regular.woff') format('woff'); font-weight:400 800; font-style:normal; font-display:swap;
 }
 *{box-sizing:border-box; border-radius:0 !important;}
-html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--sans);}
-body{-webkit-font-smoothing:antialiased;}
+html{background:var(--paper);}
+body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;}
 a{color:inherit;}
-.mono{font-family:var(--mono);}
-.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);}
-.eyebrow .dot{color:var(--cyan);}
-:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
 
-/* ---------- index page ---------- */
-.wrap{display:flex;min-height:100vh;align-items:stretch;}
-.indexPane{width:66%;padding:48px 40px 96px 48px;max-width:920px;}
-.indexPane h1{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-0.02em;margin:10px 0 16px 0;line-height:1;}
-.indexPane .dek{font-size:16px;color:var(--ink-2);max-width:52ch;line-height:1.5;margin:0 0 32px 0;}
-.hr{border:none;border-top:1px solid var(--rule);margin:0 0 0 0;}
+/* ---------- the ground ----------
+   Fixed behind everything, masked to the right so it has no edge anywhere.
+   Non-interactive by design: the list is the instrument, this is the room
+   tone. The field you can grab and turn lives at /network/constellation. */
+.ground{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.ground canvas{display:block;width:100%;height:100%;
+  -webkit-mask-image:linear-gradient(to right,transparent 0%,transparent 48%,rgba(0,0,0,.45) 66%,#000 88%);
+  mask-image:linear-gradient(to right,transparent 0%,transparent 48%,rgba(0,0,0,.45) 66%,#000 88%);}
+.sheet{position:relative;z-index:1;}
 
-.group-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);
-  display:flex;align-items:center;gap:12px;margin:30px 0 4px 0;}
-.group-label::after{content:'';flex:1;height:1px;background:var(--rule);}
-.group-label:first-of-type{margin-top:22px;}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);}
+.eyebrow .dot{color:var(--accent);}
 
-ol.catalogue{list-style:none;margin:0;padding:0;counter-reset:none;}
-ol.catalogue li{border-top:1px solid var(--rule);}
-ol.catalogue li:last-child{border-bottom:1px solid var(--rule);}
-ol.catalogue a.row{
-  display:flex;align-items:baseline;gap:16px;text-decoration:none;color:inherit;
-  padding:11px 4px;transition:background .12s ease,padding-left .12s ease;
-}
-ol.catalogue a.row:hover, ol.catalogue a.row:focus-visible, ol.catalogue a.row.is-active{
-  background:var(--cyan-dim);padding-left:12px;outline:none;
-}
-ol.catalogue a.row .n{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;width:2.6em;flex:none;}
-ol.catalogue a.row .name{font-weight:600;font-size:16.5px;flex:1;}
-ol.catalogue a.row.is-active .name, ol.catalogue a.row:hover .name, ol.catalogue a.row:focus-visible .name{color:var(--ink);}
-ol.catalogue a.row .dot{width:6px;height:6px;background:var(--cyan);flex:none;opacity:0;transition:opacity .12s ease;}
-ol.catalogue a.row.is-active .dot, ol.catalogue a.row:hover .dot, ol.catalogue a.row:focus-visible .dot{opacity:1;}
-ol.catalogue a.row .role{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);text-align:right;flex:none;max-width:34%;}
+/* ---------- index ---------- */
+.indexPane{max-width:var(--col);padding:44px var(--pad) 26px var(--pad);}
+.masthead{max-width:60ch;}
+.indexPane h1{font-size:clamp(26px,2.6vw,34px);font-weight:700;letter-spacing:-0.02em;line-height:1.05;margin:14px 0 14px 0;}
+.indexPane h1 .dot{color:var(--accent);}
+.indexPane .dek{font-size:15.5px;color:var(--ink-2);line-height:1.6;margin:0;}
+.howto{font-family:var(--mono);font-size:12px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin:0;}
 
-/* the margin: B's work preview stacked over A's field, doing both jobs at
-   once. ~third of the width — a supporting rail, not a co-equal half. */
-.fieldPane{width:34%;position:sticky;top:0;height:100vh;background:var(--field-bg);
-  display:flex;flex-direction:column;color:#eef2f8;}
+.roster{max-width:var(--col);padding:0 var(--pad) 8px var(--pad);}
 
-.railTop{flex:0 0 auto;min-height:200px;padding:22px 22px 18px 22px;position:relative;
-  border-bottom:1px solid rgba(77,249,255,.14);}
-.railHint{font-family:var(--mono);font-size:11px;letter-spacing:.04em;line-height:1.6;color:rgba(255,255,255,.4);
-  opacity:1;transition:opacity .18s ease;}
-.railHint.hide{opacity:0;}
-.nodeCard{opacity:0;transition:opacity .18s ease;pointer-events:none;}
-.nodeCard.show{opacity:1;}
-.nodeCard .nc-eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:4px;}
-.nodeCard .nc-name{font-size:21px;font-weight:700;letter-spacing:-0.01em;margin-bottom:12px;}
-.nodeCard .nc-doors{display:flex;flex-wrap:wrap;gap:7px;}
-.nc-door{width:68px;height:68px;border:1px solid rgba(77,249,255,.32);display:flex;align-items:center;justify-content:center;
-  padding:5px;text-align:center;background:rgba(6,10,18,.7);}
-.nc-door .t{font-size:9px;line-height:1.22;color:rgba(255,255,255,.8);font-weight:600;}
+/* Section labels are the strongest horizontal marks in the list — they are
+   the structure, and they used to be smaller than the ornament beside them. */
+.group{display:flex;align-items:baseline;gap:14px;margin:38px 0 0 0;
+  border-bottom:1.5px solid var(--ink);padding-bottom:7px;}
+.group .g-name{font-size:15px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;}
+.group .g-rule{flex:1;}
+.group .g-count{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;}
+.group:first-of-type{margin-top:18px;}
 
-.railField{flex:1 1 auto;position:relative;min-height:140px;}
-.railField canvas{display:block;width:100%;height:100%;}
-.railCaption{position:absolute;left:18px;right:18px;bottom:14px;font-family:var(--mono);font-size:9.5px;
-  line-height:1.5;letter-spacing:.02em;color:rgba(255,255,255,.3);pointer-events:none;}
+ul.catalogue{list-style:none;margin:0;padding:0;}
+ul.catalogue li+li{border-top:1px solid var(--rule);}
+a.row{display:grid;grid-template-columns:minmax(200px,23ch) 1fr;align-items:baseline;column-gap:30px;
+  text-decoration:none;color:inherit;padding:11px 10px 11px 14px;position:relative;
+  transition:background .14s ease;}
+a.row::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:5px;height:5px;background:var(--accent);opacity:0;transition:opacity .14s ease;}
+a.row:hover,a.row:focus-visible,a.row.is-active{background:var(--accent-soft);outline:none;}
+a.row:hover::before,a.row:focus-visible::before,a.row.is-active::before{opacity:1;}
+a.row .name{font-size:19px;font-weight:600;letter-spacing:-0.012em;line-height:1.25;}
+/* the role belongs next to the name, not across an empty gutter */
+a.row .role{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);line-height:1.45;}
+a.row .made{display:block;font-family:var(--mono);font-size:12px;color:var(--accent-ink);
+  margin-top:3px;letter-spacing:.01em;}
+a.row .made .arrow{opacity:.6;}
 
-/* ---------- room page ---------- */
-.room-header{position:fixed;top:0;left:0;right:0;z-index:20;padding:24px 32px 0 32px;display:flex;justify-content:space-between;gap:16px;}
-.back{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);
+.indexFoot{max-width:var(--col);padding:34px var(--pad) 72px var(--pad);}
+.indexFoot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0 0 12px 0;
+  padding-top:20px;border-top:1px solid var(--rule);}
+.indexFoot p+p{padding-top:0;border-top:none;}
+.indexFoot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+.indexFoot a:hover,.indexFoot a:focus-visible{border-bottom-color:var(--accent);}
+
+/* ---------- room ---------- */
+.room-header{padding:26px var(--pad) 0 var(--pad);max-width:var(--col);
+  display:flex;justify-content:space-between;gap:16px;align-items:baseline;}
+.back{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);
   text-decoration:none;display:inline-flex;align-items:center;gap:8px;}
-.back:hover, .back:focus-visible{color:var(--ink);}
-.room-body{display:flex;flex-wrap:wrap;min-height:100vh;}
-.room-stage{flex:1 1 480px;min-width:0;padding:104px 40px 64px 48px;max-width:760px;}
-.room-stage .role{font-size:16px;color:var(--ink-2);margin:0 0 4px 0;}
-.room-stage .city{font-size:13px;color:var(--ink-3);margin:0 0 32px 0;font-family:var(--mono);}
-.room-stage h1{font-size:clamp(44px,7vw,92px);font-weight:800;line-height:0.96;letter-spacing:-0.02em;margin:8px 0 6px 0;}
-.room-stage .bio{font-size:15.5px;line-height:1.65;color:var(--ink-2);max-width:60ch;margin:0 0 40px 0;padding-top:20px;border-top:1px solid var(--rule);}
-.section-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0 0 14px 0;}
-.doors{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:36px;}
-.door{background:var(--paper);aspect-ratio:1/1;padding:16px;text-decoration:none;display:flex;flex-direction:column;justify-content:flex-end;position:relative;transition:background .12s ease;}
-.door:hover, .door:focus-visible{background:var(--cyan-dim);outline:none;}
-.door .t{font-size:15px;font-weight:700;line-height:1.2;}
-.door .l{font-size:11px;color:var(--ink-2);margin-top:4px;font-family:var(--mono);}
-.door::after{content:'→';position:absolute;right:14px;top:14px;color:var(--cyan);opacity:0;transition:opacity .12s ease,transform .12s ease;}
-.door:hover::after, .door:focus-visible::after{opacity:1;transform:translateX(2px);}
-.door--unlinked{background:transparent;border:1px dashed var(--rule);cursor:default;}
+.back:hover,.back:focus-visible{color:var(--accent-ink);}
+
+.room-stage{max-width:var(--col);padding:56px var(--pad) 0 var(--pad);}
+.room-stage h1{font-size:clamp(38px,5.2vw,64px);font-weight:700;line-height:1.0;letter-spacing:-0.028em;margin:0 0 10px 0;}
+.room-stage .role{font-size:17px;color:var(--ink-2);margin:0;max-width:46ch;}
+.room-stage .city{font-size:12.5px;color:var(--ink-3);margin:6px 0 0 0;font-family:var(--mono);letter-spacing:.04em;}
+.room-stage .bio{font-size:16px;line-height:1.7;color:var(--ink-2);max-width:58ch;
+  margin:30px 0 0 0;padding-top:26px;border-top:1px solid var(--rule);}
+
+.section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
+  margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--rule);}
+
+/* flex, not grid: an auto-fill grid left a phantom empty cell showing the
+   container's own colour whenever the row was not full. */
+.doors{display:flex;flex-wrap:wrap;gap:14px;margin:0;}
+.door{flex:0 1 260px;min-height:132px;border:1px solid var(--rule);background:var(--paper);
+  padding:16px 16px 14px 16px;text-decoration:none;display:flex;flex-direction:column;
+  justify-content:flex-end;position:relative;transition:border-color .14s ease,background .14s ease;}
+.door:hover,.door:focus-visible{background:var(--accent-soft);border-color:var(--accent-rule);outline:none;}
+.door .t{font-size:17px;font-weight:600;line-height:1.2;}
+.door .l{font-size:12px;color:var(--ink-2);margin-top:5px;font-family:var(--mono);line-height:1.45;}
+.door::after{content:'→';position:absolute;right:14px;top:12px;color:var(--accent);opacity:0;
+  transition:opacity .14s ease,transform .14s ease;}
+.door:hover::after,.door:focus-visible::after{opacity:1;transform:translateX(2px);}
+.door--unlinked{border-style:dashed;background:transparent;cursor:default;}
+.door--unlinked .t{color:var(--ink-2);font-weight:500;}
 .door--unlinked .l{color:var(--ink-3);}
-.empty-note{color:var(--ink-2);font-size:14.5px;max-width:52ch;line-height:1.6;margin:0 0 36px 0;}
-.elsewhere{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
-.plate{border:1px solid var(--rule);padding:8px 14px;font-size:12.5px;text-decoration:none;color:var(--ink-2);font-family:var(--mono);}
-.plate:hover, .plate:focus-visible{color:var(--ink);border-color:var(--cyan);}
-.room-field{flex:1 1 380px;min-width:320px;position:relative;background:var(--field-bg);min-height:100vh;}
-.room-field canvas{display:block;width:100%;height:100%;}
-.room-foot{font-family:var(--mono);font-size:11px;color:var(--ink-3);padding:0 48px 48px 48px;max-width:60ch;line-height:1.6;}
+.empty-note{color:var(--ink-2);font-size:15.5px;max-width:48ch;line-height:1.65;margin:0;}
+.elsewhere{display:flex;gap:10px;flex-wrap:wrap;}
+.plate{border:1px solid var(--rule);padding:9px 15px;font-size:12.5px;text-decoration:none;
+  color:var(--ink-2);font-family:var(--mono);transition:border-color .14s ease,color .14s ease;}
+.plate:hover,.plate:focus-visible{color:var(--accent-ink);border-color:var(--accent-rule);}
 
-@media (max-width:900px){
-  .wrap{flex-direction:column;}
-  .indexPane{width:100%;max-width:none;padding:24px 20px 64px 20px;order:2;}
-  /* B leads on phone too: the band is short, and collapses the stacked
-     rail into one overlay — preview text sits over the field, not above it. */
-  .fieldPane{position:sticky;top:0;width:100%;height:min(26vw,130px);min-height:104px;z-index:5;order:1;
-    display:block;}
-  .railTop{position:absolute;inset:0;z-index:2;min-height:0;padding:10px 14px;border-bottom:none;pointer-events:none;}
-  .railField{position:absolute;inset:0;z-index:1;}
-  .railCaption{display:none;}
-  .nodeCard .nc-eyebrow{font-size:9.5px;}
-  .nodeCard .nc-name{font-size:15px;margin-bottom:6px;}
-  .nodeCard .nc-doors{gap:5px;}
-  .nc-door{width:44px;height:44px;}
-  .nc-door .t{font-size:7.5px;}
-  .railHint{font-size:9.5px;}
-  ol.catalogue a.row .role{max-width:40%;}
+.neighbours{display:flex;flex-wrap:wrap;gap:0 22px;max-width:64ch;}
+.neighbours a{font-size:14.5px;color:var(--ink-2);text-decoration:none;padding:5px 0;
+  border-bottom:1px solid transparent;}
+.neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
 
-  .room-body{flex-direction:column-reverse;min-height:0;}
-  .room-field{width:100%;height:min(50vw,260px);min-height:200px;flex:none;}
-  .room-stage{max-width:none;padding:24px 20px 48px 20px;flex:none;}
-  .room-header{padding:16px 20px 0 20px;}
-  .room-foot{padding:0 20px 40px 20px;}
-  .doors{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
+.room-foot{max-width:var(--col);padding:44px var(--pad) 72px var(--pad);}
+.room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
+  padding-top:20px;border-top:1px solid var(--rule);}
+.room-foot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+
+@media (max-width:1000px){
+  :root{--pad:26px;}
+  /* the roster starts at the top of a phone — no band above it. There is no
+     margin to hold the drawing at this width, so it thins to a whisper
+     across the whole sheet rather than sitting behind the names as smudges. */
+  .ground{opacity:.2;}
+  .ground canvas{-webkit-mask-image:none;mask-image:none;}
+  a.row{grid-template-columns:1fr;row-gap:3px;padding:14px 10px 15px 14px;}
+  a.row .name{font-size:19px;}
+  .indexPane{padding-top:30px;padding-bottom:28px;}
+  .indexPane h1{font-size:27px;}
+  .room-stage{padding-top:34px;}
+  .door{flex:1 1 100%;min-height:112px;}
+  .group{margin-top:34px;}
 }
 
 @media (prefers-reduced-motion:reduce){
-  .door, .back, ol.catalogue a.row{transition:none;}
+  .door,.back,a.row,.plate,.neighbours a{transition:none;}
 }
 </style>
 </head>
 <body>
+<div class="ground"><canvas id="field" aria-hidden="true"></canvas></div>
+<div class="sheet">
 <header class="room-header">
   <a class="back" href="/network" target="_top"><span aria-hidden="true">←</span> the index</a>
   <div class="eyebrow">di<span class="dot">.</span>iiii · network · performers</div>
 </header>
-<div class="room-body">
-  <main class="room-stage">
-    <h1>Arsen Miqayelyan</h1>
-    <p class="role">performer</p>
-    
-    
-    <div class="section-label">on di.iiii</div>
-    <p class="empty-note">Nothing stands here yet — this room is theirs to fill.</p>
-    <div class="section-label">elsewhere</div><div class="elsewhere"><a class="plate" href="https://www.instagram.com/arsentrampmiqayelyan/" target="_blank" rel="noopener">Instagram</a></div>
-  </main>
-  <div class="room-field"><canvas id="field" aria-hidden="true"></canvas></div>
+<main class="room-stage">
+  <h1>Arsen Miqayelyan</h1>
+  <p class="role">performer</p>
+  
+  
+  <div class="section-label">on di.iiii</div>
+  <p class="empty-note">Nothing stands here yet — this room is theirs to fill.</p>
+  <div class="section-label">elsewhere</div><div class="elsewhere"><a class="plate" href="https://www.instagram.com/arsentrampmiqayelyan/" target="_blank" rel="noopener">Instagram</a></div>
+  <div class="section-label">also in performers</div>
+    <nav class="neighbours"><a href="/network/ani-khachikyan" target="_top">Ani Khachikyan</a><a href="/network/gnun-martirosyan" target="_top">Gnun Martirosyan</a><a href="/network/meline-arshakyan" target="_top">Meline Arshakyan</a><a href="/network/alexandra-martini" target="_top">Alexandra Martini</a></nav>
+</main>
+<footer class="room-foot">
+  <p>A room in the <a href="/network" target="_top">network</a> — one for each person who makes di.iiii. It is theirs to fill.</p>
+</footer>
 </div>
-<p class="room-foot">A room in the <a href="/network" target="_top">network</a> — one per person who makes di.iiii. It is theirs to fill.</p>
-<script type="module">
-import * as THREE from "/vendor/three.module.min.js";
-// The living field. Pooled geometry (two Points draw calls + one LineSegments
-// draw call, regardless of node count), no post-processing bloom — glow comes
-// from a soft radial-gradient point-sprite texture, same technique as both
-// parent mocks. Shared by index.html (52 nodes) and every room page (person +
-// neighbors, typically 1-11 nodes). Requires THREE in scope (module import).
+<script>
+// The ground: the network drawn into the paper, not onto a panel.
+//
+// Plain 2D canvas. It used to be three.js, which cost 229 KB over the wire to
+// draw fifty-two dots and eight lines — the whole scene is points and
+// straight segments, so the projection is six lines of arithmetic and the
+// dependency bought nothing. three stays where it earns its weight, on the
+// constellation page.
+//
+// The canvas is transparent: the page's own background is the only one, and
+// this only adds marks to it. Painting the paper twice is what produced a
+// visible seam down the page.
+//
+// It is deliberately not interactive. The roster drives it (setFocus); it
+// never steals a scroll or a tap.
 
-function mixGlowTexture(hex) {
-  const c = document.createElement('canvas'); c.width = c.height = 64;
-  const ctx = c.getContext('2d');
-  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  g.addColorStop(0, hex + 'ff');
-  g.addColorStop(0.35, hex + 'a0');
-  g.addColorStop(1, hex + '00');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
-  const t = new THREE.CanvasTexture(c);
-  t.needsUpdate = true;
-  return t;
-}
+const GRAPHITE = '43,48,54';
+const ACCENT = '0,151,163';
+const FOV_F = 1.302; // (h/2) / tan(21deg), the same 42-degree lens the rooms had
 
-// Layout: a compact, roughly-spherical cloud (Fibonacci-sphere spacing) —
-// isotropic, so it fills the margin's frame from any camera angle instead of
-// spreading into a wide horizontal arc that leaves the panel's sides empty.
-// Team sits as a tight inner ball; network as a slightly larger outer shell.
-// Room mode packs the focus node near center-front with neighbors around it.
+// Fibonacci-sphere spacing: isotropic, so it reads the same from any angle as
+// the view drifts. Team as a tight inner ball, everyone else on a wider shell
+// at a decorrelated phase so the two do not stripe together.
 function mixLayoutIndex(nodes) {
   const team = nodes.filter((n) => n.team);
   const rest = nodes.filter((n) => !n.team);
   const golden = Math.PI * (3 - Math.sqrt(5));
-
   function sphere(list, R, angleScale, yScale) {
     list.forEach((n, i) => {
       const y = list.length > 1 ? 1 - (i / (list.length - 1)) * 2 : 0;
@@ -194,260 +208,179 @@ function mixLayoutIndex(nodes) {
       n.pos = [Math.cos(theta) * r * R, y * R * yScale, Math.sin(theta) * r * R];
     });
   }
-  sphere(team, 0.78, 1, 1);
-  sphere(rest, 1.85, 1.6, 0.92); // 1.6x angle decorrelates network ring phase from team's
+  sphere(team, 0.85, 1, 1);
+  sphere(rest, 2.0, 1.6, 0.92);
 }
 
 function mixLayoutRoom(nodes, focusSlug) {
   const focus = nodes.find((n) => n.slug === focusSlug) || nodes[0];
-  focus.pos = [0, 0.3, -3.2];
+  focus.pos = [0, 0.1, 0];
   const others = nodes.filter((n) => n !== focus);
   others.forEach((n, i) => {
     const a = (i / Math.max(1, others.length)) * Math.PI * 2;
-    const r = 2.3 + (i % 3) * 0.5;
-    n.pos = [Math.sin(a) * r, 0.1 + Math.cos(i * 1.3) * 0.9, -3.2 + Math.cos(a) * r * 0.6];
+    const r = 1.5 + (i % 3) * 0.42;
+    n.pos = [Math.sin(a) * r, Math.cos(i * 1.3) * 0.85, Math.cos(a) * r * 0.75];
   });
 }
 
 // nodes: [{slug,name,team,section}], mode: 'index' | 'room', focusSlug: string|null
 function createField(canvas, nodes, mode, focusSlug, edges) {
   edges = edges || [];
+  const ctx = canvas.getContext('2d');
   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   if (mode === 'index') mixLayoutIndex(nodes);
   else mixLayoutRoom(nodes, focusSlug);
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x04060a);
-  if (mode !== 'index') scene.fog = new THREE.FogExp2(0x04060a, 0.09);
-
-  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-  resize();
-
-  // room mode only: grid floor + starfield, the full scene A's rooms use.
-  // index/rail mode is an instrument in the margin, not a scene — no floor,
-  // no stars, nothing to compete with the catalogue or the focus dot.
-  if (mode !== 'index') {
-    const grid = new THREE.GridHelper(50, 50, 0x123044, 0x0a1826);
-    grid.position.y = -2.6;
-    grid.material.transparent = true; grid.material.opacity = 0.45;
-    scene.add(grid);
-
-    const SN = 220;
-    const g = new THREE.BufferGeometry();
-    const pos = new Float32Array(SN * 3);
-    for (let i = 0; i < SN; i++) {
-      const r = 16 + Math.random() * 36;
-      const th = Math.random() * Math.PI * 2;
-      const ph = Math.acos(Math.random() * 2 - 1);
-      pos[i * 3] = r * Math.sin(ph) * Math.cos(th);
-      pos[i * 3 + 1] = Math.abs(r * Math.cos(ph)) * 0.5 - 3.5;
-      pos[i * 3 + 2] = r * Math.sin(ph) * Math.sin(th);
-    }
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const m = new THREE.PointsMaterial({ color: 0x33445c, size: 0.04, transparent: true, opacity: 0.5 });
-    scene.add(new THREE.Points(g, m));
-  }
-
-  // core points, one draw call, pooled
-  const N = nodes.length;
-  const posArr = new Float32Array(N * 3);
-  const colArr = new Float32Array(N * 3);
-  const baseColorTeam = new THREE.Color(0xf1f5fb);
-  const baseColorNet = new THREE.Color(0x8fa2ba);
-  const activeColor = new THREE.Color(0x9ff4ff);
-  nodes.forEach((n, i) => {
-    posArr[i * 3] = n.pos[0]; posArr[i * 3 + 1] = n.pos[1]; posArr[i * 3 + 2] = n.pos[2];
-    const c = n.team ? baseColorTeam : baseColorNet;
-    colArr[i * 3] = c.r; colArr[i * 3 + 1] = c.g; colArr[i * 3 + 2] = c.b;
-  });
-  const coreGeo = new THREE.BufferGeometry();
-  coreGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
-  coreGeo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
-  const coreMat = new THREE.PointsMaterial({
-    size: mode === 'index' ? 0.12 : 0.22, vertexColors: true, sizeAttenuation: true,
-    map: mixGlowTexture('#dfe8f5'), transparent: true, depthWrite: false, opacity: mode === 'index' ? 0.75 : 0.95,
-  });
-  const core = new THREE.Points(coreGeo, coreMat);
-  scene.add(core);
-
-  // glow halo, second pooled draw call, larger + dimmer
-  const haloGeo = coreGeo.clone();
-  const haloMat = new THREE.PointsMaterial({
-    size: mode === 'index' ? 0.5 : 1.1, vertexColors: true, sizeAttenuation: true,
-    map: mixGlowTexture('#dfe8f5'), transparent: true, depthWrite: false, opacity: mode === 'index' ? 0.14 : 0.28, blending: THREE.AdditiveBlending,
-  });
-  const halo = new THREE.Points(haloGeo, haloMat);
-  scene.add(halo);
-
-  // shared-work edges — the ONLY thing this field draws that the catalogue
-  // can't say: two names that made something together. Per-vertex color so
-  // an edge can light up (still not cyan — that stays the focus dot's alone)
-  // when the focused node is one of its two ends, and stay quiet otherwise.
-  let edgeGeo = null, edgeColArr = null;
-  const edgeDim = new THREE.Color(mode === 'index' ? 0x24313e : 0x2c5568);
-  const edgeLit = new THREE.Color(0xcfe3ee);
-  if (edges.length) {
-    const ePos = new Float32Array(edges.length * 6);
-    edgeColArr = new Float32Array(edges.length * 6);
-    edges.forEach(([ai, bi], i) => {
-      ePos[i * 6] = nodes[ai].pos[0]; ePos[i * 6 + 1] = nodes[ai].pos[1]; ePos[i * 6 + 2] = nodes[ai].pos[2];
-      ePos[i * 6 + 3] = nodes[bi].pos[0]; ePos[i * 6 + 4] = nodes[bi].pos[1]; ePos[i * 6 + 5] = nodes[bi].pos[2];
-      for (let k = 0; k < 2; k++) { edgeColArr[i * 6 + k * 3] = edgeDim.r; edgeColArr[i * 6 + k * 3 + 1] = edgeDim.g; edgeColArr[i * 6 + k * 3 + 2] = edgeDim.b; }
-    });
-    edgeGeo = new THREE.BufferGeometry();
-    edgeGeo.setAttribute('position', new THREE.BufferAttribute(ePos, 3));
-    edgeGeo.setAttribute('color', new THREE.BufferAttribute(edgeColArr, 3));
-    const eMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: mode === 'index' ? 0.55 : 0.45 });
-    const edgeLines = new THREE.LineSegments(edgeGeo, eMat);
-    scene.add(edgeLines);
-  }
-
-  // ---- camera behaviour ----
-  let az = 0, pol = 0.24, curAz = 0, curPol = 0.24;
-  let dragging = false, lastX = 0, lastY = 0, dragged = false;
-  const camTarget = new THREE.Vector3(0, 0, 0);
-  const curTarget = new THREE.Vector3(0, 0, 0);
-  // Room mode always opens on its person already lit — nothing calls
-  // setFocus() for that first frame, so the initial index has to be resolved
-  // here, not left at -1 waiting for a hover event that will never come.
+  const DIST = mode === 'index' ? 6.6 : 5.9;
+  const SPREAD = mode === 'index' ? 2.1 : 2.0; // half-depth of the cloud, for the near/far ramp
+  let W = 0, H = 0, dpr = 1;
   let focusIndex = focusSlug ? nodes.findIndex((n) => n.slug === focusSlug) : -1;
-
-  if (mode === 'index') {
-    camera.position.set(0, 0.3, 6.4);
-  } else {
-    camera.position.set(0, 1.6, 3.4);
-  }
-
-  canvas.addEventListener('pointerdown', (e) => { dragging = true; dragged = false; lastX = e.clientX; lastY = e.clientY; });
-  window.addEventListener('pointerup', () => { dragging = false; });
-  window.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    const dx = e.clientX - lastX, dy = e.clientY - lastY;
-    if (Math.abs(dx) + Math.abs(dy) > 3) dragged = true;
-    lastX = e.clientX; lastY = e.clientY;
-    az -= dx * 0.003;
-    pol = Math.max(-0.45, Math.min(0.6, pol - dy * 0.002));
-  });
-
-  const raycaster = new THREE.Raycaster();
-  raycaster.params.Points = { threshold: mode === 'index' ? 0.35 : 0.45 };
-  const pointerNDC = new THREE.Vector2(-9, -9);
-  let hoverCb = null, clickCb = null;
-  canvas.addEventListener('pointermove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    pointerNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    pointerNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-  });
-  canvas.addEventListener('pointerleave', () => { pointerNDC.set(-9, -9); if (hoverCb) hoverCb(null); });
-  canvas.addEventListener('click', () => {
-    if (dragged) return;
-    raycaster.setFromCamera(pointerNDC, camera);
-    const hit = raycaster.intersectObject(core);
-    if (hit.length && clickCb) clickCb(nodes[hit[0].index].slug);
-  });
+  const target = [0, 0, 0];
+  const cur = [0, 0, 0];
+  const seen = nodes.map(() => ({ x: 0, y: 0, s: 0, a: 0 }));
 
   function resize() {
-    const w = canvas.clientWidth || canvas.parentElement.clientWidth || 1;
-    const h = canvas.clientHeight || canvas.parentElement.clientHeight || 1;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / Math.max(1, h);
-    camera.updateProjectionMatrix();
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.clientWidth || canvas.parentElement.clientWidth || 1;
+    H = canvas.clientHeight || canvas.parentElement.clientHeight || 1;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   window.addEventListener('resize', resize);
+  resize();
 
-  function applyFocusState() {
-    for (let i = 0; i < N; i++) {
-      const isFocus = i === focusIndex;
-      const c = isFocus ? activeColor : (nodes[i].team ? baseColorTeam : baseColorNet);
-      colArr[i * 3] = c.r; colArr[i * 3 + 1] = c.g; colArr[i * 3 + 2] = c.b;
-    }
-    coreGeo.attributes.color.needsUpdate = true;
-    haloGeo.attributes.color.needsUpdate = true;
+  // one stamp per colour, drawn scaled — building a radial gradient per point
+  // per frame is the only thing here that would cost anything.
+  function stamp(rgb, softness) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const cc = c.getContext('2d');
+    const g = cc.createRadialGradient(64, 64, 0, 64, 64, 64);
+    g.addColorStop(0, 'rgba(' + rgb + ',1)');
+    g.addColorStop(softness, 'rgba(' + rgb + ',.5)');
+    g.addColorStop(1, 'rgba(' + rgb + ',0)');
+    cc.fillStyle = g; cc.fillRect(0, 0, 128, 128);
+    return c;
+  }
+  const dotHalo = stamp(GRAPHITE, 0.28);
+  const dotMark = stamp(ACCENT, 0.3);
 
-    if (edgeGeo) {
-      edges.forEach(([ai, bi], i) => {
-        const lit = focusIndex >= 0 && (ai === focusIndex || bi === focusIndex);
-        const c = lit ? edgeLit : edgeDim;
-        for (let k = 0; k < 2; k++) { edgeColArr[i * 6 + k * 3] = c.r; edgeColArr[i * 6 + k * 3 + 1] = c.g; edgeColArr[i * 6 + k * 3 + 2] = c.b; }
-      });
-      edgeGeo.attributes.color.needsUpdate = true;
-    }
+  // the core is a hard little disc, not a gradient: a soft point at this size
+  // reads as a smudge on the paper, and the whole page is meant to look drawn.
+  function disc(x, y, r, rgb, alpha) {
+    if (alpha <= 0.01) return;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgb(' + rgb + ')';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
   }
 
-  let lastHoverIdx = -2;
-  function raycastHover() {
-    if (dragging || !hoverCb) return;
-    raycaster.setFromCamera(pointerNDC, camera);
-    const hit = raycaster.intersectObject(core);
-    const idx = hit.length ? hit[0].index : -1;
-    if (idx !== lastHoverIdx) {
-      lastHoverIdx = idx;
-      hoverCb(idx >= 0 ? nodes[idx].slug : null);
-    }
+  function blob(img, x, y, r, alpha) {
+    if (alpha <= 0.004 || r <= 0.2) return;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
   }
 
-  let t0 = performance.now();
-  function render() {
-    const t = (performance.now() - t0) * 0.00006;
+  function draw(t) {
+    const a = reduced ? 0.6 : t * 0.2;
+    const pol = 0.2 + (reduced ? 0 : Math.sin(t * 0.5) * 0.12);
+    for (let i = 0; i < 3; i++) cur[i] += (target[i] - cur[i]) * (reduced ? 1 : 0.05);
 
-    if (!reduced) {
-      curAz += (az - curAz) * 0.07;
-      curPol += (pol - curPol) * 0.07;
-      curTarget.lerp(camTarget, 0.06);
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const cp = Math.cos(pol), sp = Math.sin(pol);
+    const f = FOV_F * H;
+    // The mask hides the left half of the canvas, so a cloud centred on the
+    // viewport centres itself in the part nobody sees — in a room that hid
+    // the focused person entirely. Compose into the margin instead. On a
+    // phone there is no mask and no margin, so it re-centres.
+    const cx = W > 620 ? W * 0.74 : W / 2;
+    const cy = H / 2;
+
+    for (let i = 0; i < nodes.length; i++) {
+      const p = nodes[i].pos;
+      // into view space: yaw, then pitch, then push away by DIST
+      const dx = p[0] - cur[0], dy = p[1] - cur[1], dz = p[2] - cur[2];
+      const x = dx * ca - dz * sa;
+      const z = dx * sa + dz * ca;
+      const y2 = dy * cp - z * sp;
+      const z2 = dy * sp + z * cp;
+      const d = DIST - z2;
+      const s = seen[i];
+      if (d < 0.35) { s.a = 0; continue; }
+      s.x = cx + (x * f) / d;
+      s.y = cy - (y2 * f) / d;
+      s.s = f / d;
+      // depth reads as distance the way fog did: nearer is darker. The ramp
+      // is fitted to the cloud's actual depth — a curve keyed off DIST alone
+      // put every point at the flat end of it and the whole drawing vanished.
+      s.a = Math.max(0.22, Math.min(1, 1 - ((d - (DIST - SPREAD)) / (2 * SPREAD)) * 0.72));
+    }
+
+    ctx.clearRect(0, 0, W, H);
+
+    // A phone has no margin to draw a diagram in, so the lines would cross
+    // the names rather than sit beside them. There, only the dust of the
+    // points remains.
+    if (edges.length && W > 620) {
+      ctx.lineWidth = 1;
+      for (const pair of edges) {
+        const A = seen[pair[0]], B = seen[pair[1]];
+        if (!A.a || !B.a) continue;
+        const lit = focusIndex === pair[0] || focusIndex === pair[1];
+        const al = Math.min(A.a, B.a) * (lit ? 0.95 : 0.5);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = 'rgba(' + (lit ? ACCENT : GRAPHITE) + ',' + al.toFixed(3) + ')';
+        ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+      }
+    }
+
+    const coreR = mode === 'index' ? 0.016 : 0.019;
+    const haloR = mode === 'index' ? 0.16 : 0.2;
+    for (let i = 0; i < nodes.length; i++) {
+      const s = seen[i];
+      if (!s.a) continue;
+      const heavy = nodes[i].team ? 1 : 0.7;
+      blob(dotHalo, s.x, s.y, s.s * haloR, s.a * 0.14 * heavy);
+      disc(s.x, s.y, Math.max(1.3, s.s * coreR), GRAPHITE, s.a * 0.9 * heavy);
+    }
+
+    if (focusIndex >= 0) {
+      const s = seen[focusIndex];
+      if (s.a) {
+        blob(dotMark, s.x, s.y, s.s * (mode === 'index' ? 0.16 : 0.2), 0.42);
+        disc(s.x, s.y, Math.max(2, s.s * (mode === 'index' ? 0.018 : 0.022)), ACCENT, 1);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  const t0 = performance.now();
+  function frame() {
+    draw((performance.now() - t0) * 0.00006);
+    if (!reduced) requestAnimationFrame(frame);
+  }
+
+  function aim() {
+    if (focusIndex >= 0) {
+      const p = nodes[focusIndex].pos;
+      target[0] = p[0] * 0.45; target[1] = p[1] * 0.45; target[2] = p[2] * 0.45;
     } else {
-      curAz = az; curPol = pol; curTarget.copy(camTarget);
+      target[0] = target[1] = target[2] = 0;
     }
-
-    if (mode === 'index') {
-      // Slow, small idle drift — an instrument, not a scene: it should
-      // never be the thing drawing the eye. Easing toward a focused node
-      // pulls the camera slightly forward, not into a dramatic dolly.
-      const autorot = reduced ? 0 : t * 0.22;
-      const r = 6.4 - (focusIndex >= 0 ? 1.1 : 0);
-      const a = curAz + autorot;
-      camera.position.set(
-        curTarget.x + Math.sin(a) * r * Math.cos(curPol),
-        0.3 + Math.sin(curPol) * 1.6,
-        curTarget.z + Math.cos(a) * r * Math.cos(curPol),
-      );
-      camera.lookAt(curTarget);
-    } else {
-      const sway = reduced ? 0 : Math.sin(t * 1.4) * 0.35;
-      camera.position.x = sway;
-      camera.lookAt(0, 0.25, -3.2);
-    }
-
-    raycastHover();
-    renderer.render(scene, camera);
-    if (!reduced || mode === 'room') requestAnimationFrame(render);
   }
-  if (focusIndex >= 0) {
-    applyFocusState();
-    if (mode === 'index') camTarget.set(nodes[focusIndex].pos[0], nodes[focusIndex].pos[1], nodes[focusIndex].pos[2]);
-    curTarget.copy(camTarget);
-  }
-  render();
-  if (reduced) { renderer.render(scene, camera); }
+  aim();
+  cur[0] = target[0]; cur[1] = target[1]; cur[2] = target[2];
+  frame();
 
   return {
     resize,
-    onHover(cb) { hoverCb = cb; },
-    onClick(cb) { clickCb = cb; },
     setFocus(slug) {
-      focusIndex = slug ? nodes.findIndex((n) => n.slug === slug) : -1;
-      if (mode === 'index' && focusIndex >= 0) camTarget.set(nodes[focusIndex].pos[0], nodes[focusIndex].pos[1], nodes[focusIndex].pos[2]);
-      else if (mode === 'index') camTarget.set(0, 0, 0);
-      applyFocusState();
-      if (reduced) renderer.render(scene, camera);
-    },
-    project(slug) {
-      const n = nodes.find((nn) => nn.slug === slug);
-      if (!n) return null;
-      const v = new THREE.Vector3(n.pos[0], n.pos[1], n.pos[2]).project(camera);
-      return { x: (v.x * 0.5 + 0.5), y: (-v.y * 0.5 + 0.5) };
+      const next = slug ? nodes.findIndex((n) => n.slug === slug) : -1;
+      if (next === focusIndex) return;
+      focusIndex = next;
+      aim();
+      if (reduced) draw(0);
     },
   };
 }
