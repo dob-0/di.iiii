@@ -191,16 +191,17 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .stage-tools .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
 .stage-tools input[type=range] { width: 90px; }
 
-.stage { flex: 1; position: relative; overflow: hidden; cursor: crosshair; background: var(--stagebg); }
-/* The grid lives on the inner layer so it pans and zooms WITH the fixtures — painted on
-   the outer pane it sat still while the world moved, and the fixtures appeared to swim.
-   The inner layer is oversized to the full -1..2 world; the visible rect is one ninth. */
-.stage-inner::before {
-  content: ''; position: absolute; left: -100%; top: -100%; width: 300%; height: 300%;
-  background:
+/* The grid used to live on the inner (transformed) layer, sized to the old -1..2 world —
+   pan or zoom far enough past that and the backdrop ran out, so the "room" read as a
+   bounded canvas rather than a stage you can arrange a whole rig across. It lives on the
+   OUTER pane instead now: background-position/-size (set in placeStages, JS) track pan
+   and zoom directly, which tiles for real — there is no edge to run out of. */
+.stage {
+  flex: 1; position: relative; overflow: hidden; cursor: crosshair;
+  background-color: var(--stagebg);
+  background-image:
     repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 40px),
     repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 40px);
-  pointer-events: none;
 }
 /* the visible rect at zoom 1 — the 'home' screen the Fit button frames back to */
 .stage-inner::after {
