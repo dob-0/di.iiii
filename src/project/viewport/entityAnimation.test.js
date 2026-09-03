@@ -32,6 +32,20 @@ describe('resolveAnimation', () => {
         expect(resolveAnimation(entity({ parentId: 'tv-1' })).mode).toBe('static')
         expect(resolveAnimation(entity({ type: 'video', parentId: 'tv-1' })).mode).toBe('static')
     })
+
+    // Regression guard: text is often authored standing up (e.g. rotation.x =
+    // PI/2 to face +z, as on the jam surface). 'float' used to be the fallback
+    // for anything that wasn't image/video, which set rotation.y = baseRot[1]
+    // + spin every frame -- a fresh Euler set on top of a non-zero base X, not
+    // a rotation around the plane's own facing. That tumbled the text through
+    // off-axis orientations that read as rotated ~90° from the camera (letters
+    // vertical instead of horizontal) on the jam surface's walk-mode viewer,
+    // while the published page's default orbit view (no idle motion at all)
+    // stayed correct -- so the same document looked broken only in walk mode.
+    it('keeps text still (bob only, never spin) regardless of billboard', () => {
+        expect(resolveAnimation(entity({ type: 'text' })).mode).toBe('bob')
+        expect(resolveAnimation(entity({ type: 'text', components: { text: { billboard: true } } })).mode).toBe('bob')
+    })
 })
 
 describe('applyAnimation', () => {
@@ -53,5 +67,12 @@ describe('applyAnimation', () => {
         applyAnimation(a, { mode: 'float' }, [0, 0, 0], [0, 0, 0], 1)
         applyAnimation(b, { mode: 'float' }, [0, 0, 0], [0, 0, 0], 5)
         expect(b.rotation.y).toBeGreaterThan(a.rotation.y)
+    })
+
+    it('bob never rotates a standing (non-zero base X) plane as time advances', () => {
+        const baseRot = [Math.PI / 2, 0, 0]
+        const g = group()
+        applyAnimation(g, { mode: 'bob' }, [0, 0, 0], baseRot, 42)
+        expect([g.rotation.x, g.rotation.y, g.rotation.z]).toEqual(baseRot)
     })
 })
