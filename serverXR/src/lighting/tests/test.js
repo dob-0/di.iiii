@@ -639,6 +639,161 @@ check('two scenes captured in one millisecond have different ids', () => {
   assert.notStrictEqual(a.id, b.id);
 });
 
+// ---- looks and layers -------------------------------------------------------
+// A look is a list of steps. One step is a scene or a palette; two or more are the
+// thing every other desk keeps as a separate chase and a separate effects engine.
+
+const { sanitizeLooks, sanitizeLayers, evalLook, layerValues } = require('../looks');
+
+const rig4 = () => ['a', 'b', 'c', 'd'].map((id, i) => makeFixture({
+  id, profile: 'drgb', address: 1 + i * 4, values: { dimmer: 255, r: 100, g: 100, b: 100 },
+}));
+const lookMap = (looks) => new Map(looks.map((l) => [l.id, l]));
+
+check('a look with one step is a scene, and holds still', () => {
+  const looks = sanitizeLooks([{ id: 'a', steps: [{ values: { '*': { r: 10, g: 20 } } }] }]);
+  const at = (t) => evalLook(looks[0], rig4(), t, { looks: lookMap(looks) }).get('a');
+  assert.deepStrictEqual(at(0), { r: 10, g: 20 });
+  assert.deepStrictEqual(at(99999), { r: 10, g: 20 }, 'one step never moves, whatever the clock says');
+});
+
+check('two steps with no transition snap — that is a chase', () => {
+  const looks = sanitizeLooks([{ id: 'c', measure: 1, bpm: 120,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  const at = (t) => evalLook(looks[0], rig4(), t, { looks: lookMap(looks) }).get('a').r;
+  // 120 bpm, one beat to the measure: 500ms a loop, 250ms a step.
+  assert.strictEqual(at(0), 0);
+  assert.strictEqual(at(240), 0, 'it holds, right up to the boundary');
+  assert.strictEqual(at(260), 255, 'and then it is simply the next step');
+});
+
+check('a transition makes the same two steps a wave', () => {
+  const looks = sanitizeLooks([{ id: 'w', measure: 1, bpm: 120,
+    steps: [{ values: { '*': { r: 0 } }, transition: 1 }, { values: { '*': { r: 255 } }, transition: 1 }] }]);
+  const at = (t) => evalLook(looks[0], rig4(), t, { looks: lookMap(looks) }).get('a').r;
+  assert.strictEqual(at(0), 0);
+  const mid = at(125);
+  assert.ok(mid > 20 && mid < 235, 'halfway through the step it is halfway to the next, not at either end: ' + mid);
+  assert.strictEqual(at(249), 255, 'and it arrives');
+});
+
+check('phase spreads a look across the selection in its stored order', () => {
+  const looks = sanitizeLooks([{ id: 'p', measure: 1, bpm: 120, phase: 360,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  const now = evalLook(looks[0], rig4(), 0, { looks: lookMap(looks) });
+  assert.deepStrictEqual(['a', 'b', 'c', 'd'].map((id) => now.get(id).r), [0, 0, 255, 255],
+    'a full 360 across four fixtures puts half the rig on the other step');
+  const unison = sanitizeLooks([{ ...looks[0], phase: 0 }]);
+  const flat = evalLook(unison[0], rig4(), 0, { looks: lookMap(unison) });
+  assert.deepStrictEqual(['a', 'b', 'c', 'd'].map((id) => flat.get(id).r), [0, 0, 0, 0],
+    'and no phase is the whole rig in unison');
+});
+
+check('a look can name only some fixtures, and that order is the one phase reads', () => {
+  const looks = sanitizeLooks([{ id: 'sel', fixtures: ['d', 'a'], measure: 1, bpm: 120, phase: 360,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  const out = evalLook(looks[0], rig4(), 0, { looks: lookMap(looks) });
+  assert.deepStrictEqual([...out.keys()].sort(), ['a', 'd'], 'nothing else is touched');
+  assert.strictEqual(out.get('d').r, 0, 'first in the list is first in the phase');
+  assert.strictEqual(out.get('a').r, 255);
+});
+
+check('a value can point at another look — that is a palette', () => {
+  const looks = sanitizeLooks([
+    { id: 'house-red', kind: 'colour', steps: [{ values: { '*': { r: 200, g: 10, b: 0 } } }] },
+    { id: 'uses-it', steps: [{ values: { '*': { r: { ref: 'house-red' }, dimmer: 255 } } }] },
+  ]);
+  const out = evalLook(looks[1], rig4(), 0, { looks: lookMap(looks) });
+  assert.deepStrictEqual(out.get('a'), { r: 200, dimmer: 255 });
+  // Re-point the palette and every look that named it is right, without re-recording.
+  const moved = sanitizeLooks([{ ...looks[0], steps: [{ values: { '*': { r: 40, g: 10, b: 0 } } }] }, looks[1]]);
+  assert.strictEqual(evalLook(moved[1], rig4(), 0, { looks: lookMap(moved) }).get('a').r, 40);
+});
+
+check('a palette that names itself costs a lookup, not a frame', () => {
+  const looks = sanitizeLooks([{ id: 'loop', steps: [{ values: { '*': { r: { ref: 'loop' } } } }] }]);
+  const out = evalLook(looks[0], rig4(), 0, { looks: lookMap(looks) });
+  assert.deepStrictEqual(out.get('a'), undefined, 'it resolves to nothing rather than hanging');
+});
+
+check('a kind keeps a colour palette off the heads', () => {
+  const looks = sanitizeLooks([{ id: 'k', kind: 'colour',
+    steps: [{ values: { '*': { r: 200, pan: 10, dimmer: 255 } } }] }]);
+  assert.deepStrictEqual(evalLook(looks[0], rig4(), 0, { looks: lookMap(looks) }).get('a'), { r: 200 });
+});
+
+check('an empty stack renders exactly as no stack at all', () => {
+  const fixtures = rig4();
+  assert.strictEqual(layerValues({ looks: [], layers: [] }, fixtures, 0), null);
+  assert.strictEqual(layerValues({}, fixtures, 0), null);
+  const looks = sanitizeLooks([{ id: 'x', steps: [{ values: { '*': { r: 1 } } }] }]);
+  const off = sanitizeLayers([{ id: 'l', lookId: 'x', on: false }]);
+  assert.strictEqual(layerValues({ looks, layers: off }, fixtures, 0), null, 'a layer switched off is not a layer');
+});
+
+check('a layer fader crossfades from what is underneath it', () => {
+  const fixtures = rig4();                       // r is 100 on every fixture
+  const looks = sanitizeLooks([{ id: 'red', kind: 'colour', steps: [{ values: { '*': { r: 200 } } }] }]);
+  const at = (level) => layerValues({ looks, layers: sanitizeLayers([{ id: 'l', lookId: 'red', level }]) }, fixtures, 0).get('a').r;
+  assert.strictEqual(at(1), 200, 'all the way up is the layer');
+  assert.strictEqual(at(0.5), 150, 'half way is half way');
+});
+
+check('intensity is HTP against what is under it, so a submaster only ever adds', () => {
+  const fixtures = rig4();                       // dimmer is 255
+  const looks = sanitizeLooks([{ id: 'half', steps: [{ values: { '*': { dimmer: 100 } } }] }]);
+  const htp = layerValues({ looks, layers: sanitizeLayers([{ id: 'l', lookId: 'half', merge: 'htp' }]) }, fixtures, 0);
+  assert.strictEqual(htp.get('a').dimmer, 255, 'a dimmer layer below the base cannot pull the rig down');
+  const ltp = layerValues({ looks, layers: sanitizeLayers([{ id: 'l', lookId: 'half', merge: 'ltp' }]) }, fixtures, 0);
+  assert.strictEqual(ltp.get('a').dimmer, 100, 'and ltp is how you say you meant it');
+});
+
+check('priority decides who has the last word', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([
+    { id: 'blue', kind: 'colour', steps: [{ values: { '*': { b: 255 } } }] },
+    { id: 'green', kind: 'colour', steps: [{ values: { '*': { b: 20 } } }] },
+  ]);
+  const stack = sanitizeLayers([
+    { id: 'top', lookId: 'green', priority: 9 },
+    { id: 'bottom', lookId: 'blue', priority: 1 },
+  ]);
+  assert.strictEqual(layerValues({ looks, layers: stack }, fixtures, 0).get('a').b, 20);
+});
+
+check('a mask keeps a layer inside its own lane', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([{ id: 'lot', steps: [{ values: { '*': { r: 200, pan: 30, dimmer: 10 } } }] }]);
+  const only = layerValues({ looks, layers: sanitizeLayers([{ id: 'l', lookId: 'lot', mask: 'position' }]) }, fixtures, 0);
+  assert.deepStrictEqual(Object.keys(only.get('a')), ['pan']);
+});
+
+check('the stack lands on the wire, over the fixtures own values', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([{ id: 'chase', kind: 'colour', measure: 1, bpm: 120, phase: 360,
+    steps: [{ values: { '*': { r: 255, b: 0 } } }, { values: { '*': { r: 0, b: 255 } } }] }]);
+  const state = { ...baseState(fixtures), looks, layers: sanitizeLayers([{ id: 'l', lookId: 'chase' }]) };
+  const e = new Engine(state);
+  const red = (buf, i) => buf[i * 4 + 1];
+  const buf = e.render(state, 0).get(0);
+  assert.deepStrictEqual([0, 1, 2, 3].map((i) => red(buf, i)), [255, 255, 0, 0],
+    'the chase is on the rig, and it is walking');
+  const later = e.render(state, 260).get(0);
+  assert.strictEqual(red(later, 0), 0, 'and it moves on');
+});
+
+check('a layer never escapes the master or the blackout', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([{ id: 'full', steps: [{ values: { '*': { dimmer: 255 } } }] }]);
+  const state = { ...baseState(fixtures), looks, layers: sanitizeLayers([{ id: 'l', lookId: 'full' }]) };
+  const e = new Engine(state);
+  assert.strictEqual(e.render(state, 0).get(0)[0], 255);
+  state.master = 128;
+  assert.ok(Math.abs(e.render(state, 0).get(0)[0] - 128) <= 1, 'the grand fader still rules it');
+  state.blackout = true;
+  assert.strictEqual(e.render(state, 0).get(0)[0], 0, 'and the panic button still kills it');
+});
+
 // ---- FX engine --------------------------------------------------------------
 // Nothing in fx.js reads the clock, so every one of these asserts an exact millisecond
 // rather than watching the rig for a while and believing what it saw.

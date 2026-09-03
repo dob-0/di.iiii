@@ -1138,6 +1138,62 @@ check('the show file on disk is always a complete show', async () => {
   JSON.parse(fs.readFileSync(path.join(dir, 'show.prev.json'), 'utf8'));
 });
 
+// ---- looks and layers over the wire -----------------------------------------
+
+check('a look library round-trips, and a bad one is refused whole', async () => {
+  const { body } = await POST('/api/looks', { looks: [
+    { id: 'red', name: 'House red', kind: 'colour', steps: [{ values: { '*': { r: 220, g: 10, b: 0 } } }] },
+    { id: 'nosteps', name: 'empty' },
+  ] });
+  assert.strictEqual(body.count, 1, 'a look with no steps is not a look');
+  const { body: read } = await GET('/api/looks');
+  assert.strictEqual(read.looks[0].name, 'House red');
+  assert.ok(read.kinds.includes('colour'), 'the page is told what kinds exist rather than keeping its own list');
+  const bad = await POST('/api/looks', { looks: 'nope' });
+  assert.strictEqual(bad.status, 400);
+});
+
+check('a layer drives the wire, and its fader is one small request', async () => {
+  const f = await patch('drgb', { address: 400 });
+  await POST('/api/fixture', { id: f.id, values: { dimmer: 255, r: 0, g: 0, b: 0 } });
+  await POST('/api/looks', { looks: [
+    { id: 'blue', kind: 'colour', steps: [{ values: { [f.id]: { b: 255 } } }] },
+  ] });
+  await POST('/api/layers', { layers: [{ id: 'lay1', name: 'Blue', lookId: 'blue', level: 1 }] });
+  await settle();
+  assert.strictEqual(await wire(0, 403), 255, 'the layer is on the rig');
+  const { body } = await POST('/api/layer', { id: 'lay1', level: 0 });
+  assert.strictEqual(body.layer.level, 0);
+  await settle();
+  assert.strictEqual(await wire(0, 403), 0, 'and the fader took it away');
+  const missing = await POST('/api/layer', { id: 'nope', level: 1 });
+  assert.strictEqual(missing.status, 404);
+  await POST('/api/layers', { layers: [] });
+  await POST('/api/looks', { looks: [] });
+  await POST('/api/fixtures/remove', { id: f.id });
+});
+
+check('the summary says what the stack is doing', async () => {
+  await POST('/api/looks', { looks: [{ id: 'l1', steps: [{ values: { '*': { dimmer: 10 } } }] }] });
+  await POST('/api/layers', { layers: [{ id: 'a', name: 'Wash', lookId: 'l1', level: 0.5 }] });
+  const { body } = await GET('/api/summary');
+  assert.strictEqual(body.looks, 1);
+  assert.deepStrictEqual(body.layers, [{ id: 'a', name: 'Wash', on: true, level: 0.5, lookId: 'l1' }]);
+  await POST('/api/layers', { layers: [] });
+  await POST('/api/looks', { looks: [] });
+});
+
+check('looks and layers survive a reload of the show file', async () => {
+  await POST('/api/looks', { looks: [{ id: 'keep', name: 'Keep', steps: [{ values: { '*': { r: 5 } } }] }] });
+  await POST('/api/layers', { layers: [{ id: 'keeplay', lookId: 'keep', level: 0.25 }] });
+  await sleep(600);
+  const disk = JSON.parse(fs.readFileSync(path.join(process.env.DATA_DIR, 'show.json'), 'utf8'));
+  assert.strictEqual(disk.looks[0].name, 'Keep');
+  assert.strictEqual(disk.layers[0].level, 0.25);
+  await POST('/api/layers', { layers: [] });
+  await POST('/api/looks', { looks: [] });
+});
+
 // ---- harness ----------------------------------------------------------------
 
 async function main() {

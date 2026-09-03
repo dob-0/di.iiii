@@ -13,6 +13,7 @@ const {
 } = require('./engine');
 const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive } = require('./fx');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
+const { sanitizeLooks, sanitizeLayers, KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES } = require('./looks');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
 // output loop, the HTTP routes and the interface files — and hands back `handle`, which
@@ -40,6 +41,10 @@ function createDesk(opts = {}) {
     activeScene: null,
     chase: { enabled: false, sceneIds: [], holdMs: 2000, fadeMs: 800 },
     midi: { maps: [] },
+    // The content model: looks are lists of steps, layers are looks under a finger.
+    // Both empty means the desk renders exactly as it did before they existed.
+    looks: [],
+    layers: [],
     // driver picks which wire the frames leave on: 'artnet' over UDP, or 'enttec' for a
     // DMX USB PRO on a serial port. They are mutually exclusive because the widget owns
     // its port outright and Art-Net gear does not exist on the same cable.
@@ -189,6 +194,8 @@ function createDesk(opts = {}) {
       s.audioCfg = sanitizeAudioCfg({ ...DEFAULT_STATE.audioCfg, ...(disk.audioCfg || {}) });
       s.sets = sanitizeSets(disk.sets);
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
+      s.looks = sanitizeLooks(disk.looks) || [];
+      s.layers = sanitizeLayers(disk.layers) || [];
 
       // Custom profiles MUST be registered before the fixtures are built. makeFixture falls
       // back to `rgb` for a profile it does not know, so loading them in the other order
@@ -545,6 +552,8 @@ function createDesk(opts = {}) {
       chase: { enabled: !!state.chase.enabled, index: engine.chase.index, count: state.chase.sceneIds.length },
       fixtures: state.fixtures.length,
       scenes: state.scenes.length,
+      looks: state.looks.length,
+      layers: state.layers.map((l) => ({ id: l.id, name: l.name, on: l.on, level: l.level, lookId: l.lookId })),
       universes: engine.universes(),
       output: {
         driver: state.output.driver,
@@ -656,6 +665,44 @@ function createDesk(opts = {}) {
         const live = s.fixtures.filter((sf) => patched.has(sf.id)).length;
         return { id: s.id, name: s.name, fadeMs: s.fadeMs, live, missing: s.fixtures.length - live };
       }) });
+    },
+
+    // The content library. A look is a list of steps: one step is a scene or a palette,
+    // two or more are a chase or a wave, and a value may point at another look.
+    'GET /api/looks': (req, res) => json(res, { looks: state.looks, kinds: LOOK_KINDS, scopes: LOOK_SCOPES }, 200, req),
+    'POST /api/looks': (req, res, body) => {
+      const looks = sanitizeLooks(body.looks);
+      if (!looks) return json(res, { error: 'looks must be a list, each with an id and at least one step' }, 400);
+      state.looks = looks;
+      // No pushFrame: replacing the library is a data change. A layer pointing at a look
+      // that just vanished simply stops contributing on the next tick, which is the
+      // honest behaviour — nothing snaps and nothing is quietly held.
+      save(); json(res, { ok: true, count: looks.length });
+    },
+
+    // The stack. Bottom to top by priority; each layer contributes what its mask allows.
+    'GET /api/layers': (req, res) => json(res, { layers: state.layers, merges: LAYER_MERGES }, 200, req),
+    'POST /api/layers': (req, res, body) => {
+      const layers = sanitizeLayers(body.layers);
+      if (!layers) return json(res, { error: 'layers must be a list, each with an id' }, 400);
+      state.layers = layers;
+      save(); pushFrame(); json(res, { ok: true, layers: state.layers });
+    },
+    // One layer, by id — the fader move. Kept apart from the replace-whole route because
+    // a fader is dragged: it must not carry the rest of the stack up the wire on every
+    // frame, and two people on two phones must not overwrite each other's layers.
+    'POST /api/layer': (req, res, body) => {
+      const layer = state.layers.find((l) => l.id === body.id);
+      if (!layer) return json(res, { error: 'no such layer' }, 404);
+      if (body.level != null && Number.isFinite(+body.level)) layer.level = Math.max(0, Math.min(1, +body.level));
+      if (body.on != null) layer.on = !!body.on;
+      if (body.lookId !== undefined) layer.lookId = typeof body.lookId === 'string' && body.lookId ? body.lookId.slice(0, 40) : null;
+      if (body.rate != null && Number.isFinite(+body.rate)) layer.rate = Math.max(0.01, Math.min(64, +body.rate));
+      if (body.name != null) layer.name = String(body.name).slice(0, 60);
+      if (LAYER_MERGES.includes(body.merge)) layer.merge = body.merge;
+      if (LOOK_KINDS.includes(body.mask)) layer.mask = body.mask;
+      if (body.priority != null && Number.isFinite(+body.priority)) layer.priority = Math.max(0, Math.min(999, Math.round(+body.priority)));
+      save(); pushFrame(); json(res, { ok: true, layer });
     },
 
     // MIDI mappings live with the show, not in one browser's storage: every surface on
