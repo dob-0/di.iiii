@@ -52,8 +52,15 @@ inside the masked half.
   the page carries more kinds of mark than kinds of fact, the surplus reads as
   dirt — and on paper dirt shows immediately. A soft halo under every dot and
   a Fibonacci sphere that meant nothing both failed that count and are gone.
-- **On a phone the diagram's lines are dropped** — there is no margin to draw
-  them in, so they would cross the names. Only the dust of the points remains.
+- **A mark has to hold still relative to what it is about.** The drawing was
+  a fixed canvas behind a scrolling list, so the same lines hung in the same
+  place while different names passed behind them, and no line could be traced
+  to its two names. It is anchored now: a dot sits on its own row and scrolls
+  with it, and a bracket gathers everyone who made one work and carries that
+  work's name. Rooms dropped their field for the same reason — unlabelled
+  dots beside a list of names cannot be traced to it.
+- **The drawing hides itself when there is no margin to hold it** — below that width a bracket would be clipped by the window edge, and a clipped bracket stops meaning anything.
+- **On a phone the index draws nothing**.
 
 ## Open
 
