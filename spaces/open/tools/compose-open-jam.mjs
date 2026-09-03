@@ -8,6 +8,7 @@ const style = (args.find((a) => a.startsWith('--style=')) || '--style=night').sl
 const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 const get = async (p) => { const r = await fetch(base + p, { headers: H }); if (!r.ok) throw new Error(`${r.status} ${p}`); return r.json() }
 const PI = Math.PI
+import { slotAt } from '../../../shared/placement.cjs'
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -106,26 +107,24 @@ if (layout === 'wall') {
     dims.set(e.id, { width, height })
   }
   const scaleOf = (e) => { const d = dims.get(e.id); return d ? Math.min(BASE, MAX_W / (3 * (d.width / d.height))) : BASE }
-  const panels = [[], [], []]
-  photos.forEach((e, i) => panels[i % 3].push(e))     // deal round-robin so each wall gets a mix
-  const hang = (list, place) => {
-    const perRow = Math.ceil(list.length / 2)
-    list.forEach((e, i) => {
-      const row = Math.floor(i / perRow), j = i % perRow
-      const count = Math.min(perRow, list.length - row * perRow)
-      place(e, (j - (count - 1) / 2) * GAP, ROWS[1 - row], scaleOf(e))
-    })
-  }
-  hang(panels[0], (e, off, y, s) => tf(e, [off, y, BACK_Z], STAND, s))              // back wall
-  hang(panels[1], (e, off, y, s) => tf(e, [-WING_X, y, WING_Z + off], FACE_PX, s)) // left wing
-  hang(panels[2], (e, off, y, s) => tf(e, [WING_X, y, WING_Z + off], FACE_NX, s))  // right wing
+  // The SERVER decides where a photo hangs from now on (shared/placement.cjs).
+  // This script hangs the ones already in the room on exactly those slots — same
+  // module, same numbers — so turning the rule on moves nothing, and a photo
+  // added a minute later lands in the next free slot rather than on top of one.
+  const LAYOUT = { rows: ROWS, gap: GAP, slotHeight: ROW_H, maxWidth: MAX_W, back: { z: BACK_Z }, wings: { x: WING_X, z: WING_Z } }
+  photos.forEach((e, i) => {
+    const slot = slotAt(LAYOUT, i)
+    tf(e, slot.position, slot.rotation, scaleOf(e))
+  })
   // The front desk is a LECTERN on the floor, tilted up towards the entry camera.
   // Standing it upright at eye height put it over the photo line — a portrait phone
   // photo on the wall hangs from y 0.2 to 3.2, so there is no clear band up there.
   // The floor in front of the walls is the only empty part of the entry frame.
   // the scan caption goes in FRONT of the code: behind it, the code's own plane hides it
   const LECTERN = [1.02, 0, 0]  // stood up, then leaned back ~30° to face the camera
-  if (qr) tf(qr, [-2.2, 0.3, 0.8], LECTERN, 0.34)
+  // pinned: the code is furniture on its lectern, not an exhibit — without this
+  // the wall would swallow it the moment the build zones came on
+  if (qr) { tf(qr, [-2.2, 0.3, 0.8], LECTERN, 0.34); ops.push({ type: 'updateComponent', payload: { entityId: qr.id, component: 'placement', patch: { pinned: true } } }) }
   if (texts.scan) { tf(texts.scan, [-2.2, 0.12, 1.7], LECTERN, 0.07); txt(texts.scan, { value: COPY.scan, billboard: false, align: 'center', fontFamily: 'JetBrains Mono, monospace', fontWeight: '600' }); paint(texts.scan, ST.colors.scan) }
   if (texts.howto) { tf(texts.howto, [1.7, 0.55, 1.0], LECTERN, 0.062); txt(texts.howto, { value: COPY.howto, billboard: false, align: 'left', fontFamily: 'Inter, sans-serif', fontWeight: '500' }); paint(texts.howto, ST.colors.howto) }
   if (texts.headline) { tf(texts.headline, [0, 5.3, BACK_Z], STAND, 0.26); txt(texts.headline, { value: COPY.headline, billboard: false, align: 'center', fontFamily: 'Inter, sans-serif', fontWeight: '700' }); paint(texts.headline, ST.colors.headline) }
@@ -135,6 +134,17 @@ if (layout === 'wall') {
   // the floor plan keeps them inside the three walls
   world = {
     backgroundColor: ST.background,
+    // Build zones ON: from here the room arranges itself. Anything hangable that
+    // arrives — a phone's photo dropped at the origin, an import, a drag into the
+    // void — is put in the next free slot by the SERVER (shared/placement.cjs),
+    // and the wall grows outward rather than running out. These numbers are the
+    // same ones this script hangs the existing photos on, so nothing jumps when
+    // the rule comes on.
+    placement: {
+      enabled: true,
+      types: ['image', 'video'],
+      layout: { rows: ROWS, gap: GAP, slotHeight: ROW_H, maxWidth: MAX_W, back: { z: BACK_Z }, wings: { x: WING_X, z: WING_Z } },
+    },
     fog: ST.fog,
     gridVisible: !!ST.grid,
     ...(ST.grid ? { gridCellColor: ST.grid.cell, gridSectionColor: ST.grid.section, gridCellSize: 1, gridSectionSize: 5, gridFadeDistance: 40 } : {}),
