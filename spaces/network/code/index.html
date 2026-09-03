@@ -139,6 +139,10 @@ a.row .made .arrow{opacity:.6;}
   padding-top:20px;border-top:1px solid var(--rule);}
 .room-foot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
 
+/* Between these widths the list gives up a little of its own width so the
+   margin still exists — better than the drawing disappearing at 1280. */
+@media (max-width:1400px){ :root{--col:1040px;} }
+
 @media (max-width:1000px){
   :root{--pad:26px;}
   /* the roster starts at the top of a phone — no band above it. There is no
@@ -287,7 +291,6 @@ function createRosterField(svg, roster, works) {
   const GAP = 20;      // from a row's right edge to its dot
   const FIRST = 34;    // from the dots to the first bracket's spine
   const STEP = 40;     // between spines
-  const LABEL = 104;   // room a work's name needs beside the outermost spine
   let rows = [];
   let nodes = new Map();   // slug -> circle
   let ties = [];           // {slugs:Set, parts:[element]}
@@ -308,10 +311,9 @@ function createRosterField(svg, roster, works) {
     const box = roster.getBoundingClientRect();
     let rowRight = 0;
     for (const row of rows) rowRight = Math.max(rowRight, row.getBoundingClientRect().right);
-    // No margin, no drawing: the brackets sit outside the list, and a bracket
-    // clipped by the window edge is a mark that stops meaning anything.
-    const need = GAP + FIRST + Math.max(0, works.length - 1) * STEP + 14 + LABEL;
-    if (window.innerWidth - rowRight < need) { svg.style.display = 'none'; return; }
+    // A coarse gate first, so a phone does not build fifty-two nodes to throw
+    // them away; the exact check is at the end, once the marks can be measured.
+    if (window.innerWidth - rowRight < GAP + FIRST + 40) { svg.style.display = 'none'; return; }
     svg.style.display = '';
     svg.setAttribute('width', box.width);
     svg.setAttribute('height', box.height);
@@ -357,6 +359,15 @@ function createRosterField(svg, roster, works) {
       gDot.append(c);
       nodes.set(row.dataset.slug, c);
     }
+
+    // No margin, no drawing — measured, not estimated. A bracket or a label
+    // clipped by the window edge is a mark that stops meaning anything, and
+    // the width a label needs depends on the work's name, not on a constant.
+    let right = 0;
+    for (const el of svg.querySelectorAll('path,circle,text')) {
+      right = Math.max(right, el.getBoundingClientRect().right);
+    }
+    if (right > window.innerWidth - 8) { svg.style.display = 'none'; }
   }
 
   function light(slug) {

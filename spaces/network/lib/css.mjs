@@ -144,6 +144,10 @@ a.row .made .arrow{opacity:.6;}
   padding-top:20px;border-top:1px solid var(--rule);}
 .room-foot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
 
+/* Between these widths the list gives up a little of its own width so the
+   margin still exists — better than the drawing disappearing at 1280. */
+@media (max-width:1400px){ :root{--col:1040px;} }
+
 @media (max-width:1000px){
   :root{--pad:26px;}
   /* the roster starts at the top of a phone — no band above it. There is no
