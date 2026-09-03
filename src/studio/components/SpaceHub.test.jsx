@@ -79,6 +79,7 @@ describe('SpaceHub', () => {
         uploadServerAsset.mockReset()
         purgeStaleSandboxes.mockReset()
         sandboxSummary = null
+        localStorage.clear()
         authState = {
             authenticated: true,
             type: 'session',
@@ -317,6 +318,81 @@ describe('SpaceHub', () => {
         fireEvent.click(screen.getByText('open'))
         expect(navigateToStudioPath).toHaveBeenCalledWith('/open/studio')
         expect(mockAppNavigate).not.toHaveBeenCalled()
+    })
+
+    it('collapses everything a guest does not own into one row by default, opens on click and remembers the choice', async () => {
+        authState = {
+            ...authState,
+            type: 'guest',
+            canCreateSpace: false,
+            openSpaceId: 'open',
+            sandboxSpaceId: 'sandbox-me'
+        }
+        listServerSpaces.mockResolvedValue([
+            { id: 'open', label: 'Open Space', kind: 'global', isPublic: true, isOwner: false },
+            { id: 'sandbox-me', label: 'Sandbox', kind: 'sandbox', isOwner: false },
+            { id: 'net', label: 'Network', isOwner: false, isPublic: true },
+            { id: 'azd', label: 'AZD', isOwner: false, isPublic: true }
+        ])
+
+        const { unmount } = render(<SpaceHub />)
+
+        await screen.findByText('open')
+        // Closed by default: the two things a guest can use are on screen, the
+        // rest of the directory is one line, and the line names what it hides.
+        const toggle = screen.getByRole('button', { name: /2 other spaces/ })
+        expect(toggle).toHaveAttribute('aria-expanded', 'false')
+        expect(screen.queryByText('net')).toBeNull()
+        expect(screen.queryByText('azd')).toBeNull()
+
+        fireEvent.click(toggle)
+
+        await screen.findByText('net')
+        expect(screen.getByText('azd')).toBeTruthy()
+        expect(screen.getByRole('button', { name: 'Hide' })).toHaveAttribute('aria-expanded', 'true')
+
+        unmount()
+
+        // A fresh mount (same browser/localStorage) restores the open choice.
+        render(<SpaceHub />)
+        await screen.findByText('net')
+        expect(screen.getByRole('button', { name: 'Hide' })).toHaveAttribute('aria-expanded', 'true')
+    })
+
+    it('never collapses a signed-in account\'s own spaces', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'mine', label: 'Mine', isOwner: true },
+            { id: 'mine-2', label: 'Mine Two', isOwner: true }
+        ])
+
+        render(<SpaceHub />)
+
+        await screen.findByText('mine')
+        expect(screen.getByText('mine-2')).toBeTruthy()
+        expect(screen.queryByRole('button', { name: /other space/ })).toBeNull()
+    })
+
+    it('makes at most one card live at a time, releasing the previous one', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'one', label: 'One', isOwner: true, isPublic: true },
+            { id: 'two', label: 'Two', isOwner: true, isPublic: true }
+        ])
+
+        render(<SpaceHub />)
+
+        await screen.findByText('one')
+        const previewFor = (id) => screen.getByText(id).closest('.ssh-space-card').querySelector('.ssh-card-preview')
+        const liveFrameFor = (id) => previewFor(id).querySelector('.ssh-card-live-frame')
+
+        expect(liveFrameFor('one')).toBeNull()
+        fireEvent.click(previewFor('one'))
+        expect(liveFrameFor('one')).not.toBeNull()
+        expect(liveFrameFor('two')).toBeNull()
+
+        // Clicking a second picture releases the first — never two live rooms.
+        fireEvent.click(previewFor('two'))
+        expect(liveFrameFor('one')).toBeNull()
+        expect(liveFrameFor('two')).not.toBeNull()
     })
 
     it('shows admins a collapsed sandbox row with an expired sweep instead of sandbox cards', async () => {

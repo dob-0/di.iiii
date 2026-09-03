@@ -165,6 +165,55 @@
     margin-top: 4px;
 }
 
+/* Collapsed row hiding everything a guest doesn't own/edit — a real button
+   (not a link) so it is a natural tab stop with a visible focus ring, and
+   tall enough for a thumb on a phone. */
+.ssh-rest-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--di-cyan-border, rgba(77,249,255,0.12));
+    color: var(--di-text-muted, rgba(200,230,240,0.6));
+    padding: 8px 14px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: border-color 0.1s, color 0.1s, background 0.1s;
+}
+
+.ssh-rest-toggle:hover {
+    border-color: rgba(77,249,255,0.3);
+    color: var(--di-text, #e8f4f8);
+    background: rgba(77,249,255,0.04);
+}
+
+.ssh-rest-toggle:focus-visible {
+    outline: 2px solid rgba(77,249,255,0.5);
+    outline-offset: 2px;
+}
+
+.ssh-rest-toggle--open {
+    margin-bottom: 10px;
+    font-size: 0.75rem;
+    min-height: 32px;
+    padding: 4px 10px;
+}
+
+.ssh-rest-toggle-chevron {
+    font-size: 0.7em;
+}
+
+.ssh-space-tagline {
+    margin: 2px 0 0;
+    font-size: 0.85rem;
+    color: var(--di-text-muted, rgba(200,230,240,0.6));
+}
+
 .ssh-guest-banner {
     font-size: 0.82rem;
     color: var(--di-text-muted, rgba(200,230,240,0.55));
@@ -189,6 +238,17 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 12px;
+}
+
+/* The two shelves a guest actually uses (Open Space, sandbox) get more room
+   than a generic grid card — this is the first screen, not the directory.
+   Comes after .ssh-spaces-grid on purpose: same specificity, later wins. */
+.ssh-featured-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 480px));
+}
+
+.ssh-featured-grid .ssh-space-card {
+    padding: 20px 22px;
 }
 
 .ssh-space-card {
@@ -284,6 +344,101 @@
     border: 0;
     /* thumbnail only — the card itself is the click target */
     pointer-events: none;
+}
+
+/* A public space's picture doubles as a button: click it and the thumbnail
+   is replaced by the live, interactive room (SpaceCardLive) instead of
+   navigating away. */
+.ssh-card-preview[role="button"] {
+    cursor: pointer;
+}
+
+.ssh-card-preview[role="button"]:hover {
+    border-color: rgba(77,249,255,0.35);
+}
+
+.ssh-card-preview[role="button"]:focus-visible {
+    outline: 2px solid rgba(77,249,255,0.6);
+    outline-offset: 2px;
+}
+
+/* The live card: the iframe is real (no ?preview=1), so it takes real
+   pointer events -- this is the one exception to the thumbnail's
+   pointer-events:none above. */
+.ssh-card-preview--live {
+    cursor: default;
+}
+
+/* SpaceCardPreview's own root -- fills the .ssh-card-preview box its caller
+   already drew (border/aspect-ratio/background), rather than drawing a
+   second, nested one. */
+.ssh-card-preview-fill {
+    position: absolute;
+    inset: 0;
+}
+
+.ssh-card-live-frame {
+    position: absolute;
+    inset: 0;
+}
+
+.ssh-card-live-frame iframe {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    border: 0;
+    pointer-events: auto;
+}
+
+.ssh-card-live-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 8px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0));
+    pointer-events: none;
+}
+
+.ssh-card-live-bar > * {
+    pointer-events: auto;
+}
+
+.ssh-card-live-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ssh-card-live-open {
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-family: inherit;
+    color: var(--di-cyan, #4fd6ff);
+    text-decoration: none;
+    padding: 2px 6px;
+    border: 1px solid rgba(77,249,255,0.3);
+    border-radius: 2px;
+    background: rgba(0,0,0,0.4);
+}
+
+.ssh-card-live-open:hover {
+    border-color: rgba(77,249,255,0.6);
+    color: #fff;
+}
+
+.ssh-card-live-open:focus-visible {
+    outline: 2px solid rgba(77,249,255,0.6);
+    outline-offset: 2px;
 }
 
 .ssh-space-label {

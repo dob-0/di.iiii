@@ -99,8 +99,12 @@ function SpaceCardPreview({ spaceId, label }) {
         return () => clearTimeout(timer)
     }, [booted])
 
+    // Fills its parent .ssh-card-preview rather than carrying that class
+    // itself: SpaceHub now wraps this in a clickable .ssh-card-preview (the
+    // picture is the "make it live" button), and two nested boxes of the
+    // same class doubled the border/aspect-ratio frame.
     return (
-        <div ref={hostRef} className="ssh-card-preview" aria-hidden="true">
+        <div ref={hostRef} className="ssh-card-preview-fill" aria-hidden="true">
             {visible && booted ? (
                 <iframe
                     src={`${buildAppSpacePath(spaceId)}?preview=1`}
@@ -118,6 +122,74 @@ function SpaceCardPreview({ spaceId, label }) {
         </div>
     )
 }
+
+// The single "live" card: a visitor clicked a picture to make this space
+// interactive in place, so unlike SpaceCardPreview it is not gated behind
+// requestPreviewBoot -- SpaceHub only ever holds one of these at a time, so
+// there is no boot storm to queue. It loads the real live route with no
+// ?preview=1, which is what tells PublicProjectSceneSurface to enable
+// navigation and play authored timelines instead of sitting frozen -- the
+// same flag the static thumbnail deliberately leaves off. Releases itself
+// (calls onRelease) the moment it scrolls out of view: a WebGL scene left
+// running off-screen is exactly the laptop-killer this feature exists to avoid.
+function SpaceCardLive({ spaceId, label, onRelease }) {
+    const hostRef = useRef(null)
+    const [scale, setScale] = useState(0)
+
+    useEffect(() => {
+        const node = hostRef.current
+        if (!node) return undefined
+        const measure = () => setScale(node.clientWidth / PREVIEW_VIEWPORT_WIDTH)
+        measure()
+        if (typeof ResizeObserver !== 'function') return undefined
+        const observer = new ResizeObserver(measure)
+        observer.observe(node)
+        return () => observer.disconnect()
+    }, [])
+
+    useEffect(() => {
+        const node = hostRef.current
+        if (!node || typeof IntersectionObserver !== 'function') return undefined
+        const observer = new IntersectionObserver(
+            (entries) => { if (entries.some((entry) => !entry.isIntersecting)) onRelease() },
+            { threshold: 0 }
+        )
+        observer.observe(node)
+        return () => observer.disconnect()
+    }, [onRelease])
+
+    return (
+        <div ref={hostRef} className="ssh-card-live-frame">
+            <iframe
+                src={buildAppSpacePath(spaceId)}
+                title={`${label} — live`}
+                style={{
+                    width: `${PREVIEW_VIEWPORT_WIDTH}px`,
+                    height: `${PREVIEW_VIEWPORT_HEIGHT}px`,
+                    transform: `scale(${scale})`
+                }}
+            />
+            <div className="ssh-card-live-bar" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                <span className="ssh-card-live-label">{label}</span>
+                <a
+                    className="ssh-card-live-open"
+                    href={buildAppSpacePath(spaceId)}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={e => e.stopPropagation()}
+                >
+                    Open ↗
+                </a>
+            </div>
+        </div>
+    )
+}
+
+// localStorage key remembering whether a guest chose to open the "other
+// spaces" shelf -- the shelf they don't own or edit, which is closed by
+// default so the two things a guest can actually use (Open Space, their
+// sandbox) own the first screen instead of a wall of read-only cards.
+const REST_SHELF_STORAGE_KEY = 'di_spaces_rest_open'
 
 export default function SpaceHub() {
     const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit, spaces: sessionScopes, openSpaceId, sandboxSpaceId } = useAuthSession()
@@ -146,6 +218,27 @@ export default function SpaceHub() {
     const selectView = useCallback((mode) => {
         setViewMode(mode)
         try { localStorage.setItem('di_spaces_view', mode) } catch { /* private mode */ }
+    }, [])
+
+    // The one card currently running interactive in place, or null. At most
+    // one at a time -- clicking a different picture reassigns this, which
+    // unmounts the previous SpaceCardLive and frees its WebGL context.
+    const [liveSpaceId, setLiveSpaceId] = useState(null)
+    const releaseLive = useCallback((spaceId) => {
+        setLiveSpaceId(current => (current === spaceId ? null : current))
+    }, [])
+
+    // Restored per browser (see REST_SHELF_STORAGE_KEY). Only guests ever see
+    // the collapsed state -- an account keeps its own spaces expanded, as before.
+    const [restShelfOpen, setRestShelfOpen] = useState(() => {
+        try { return localStorage.getItem(REST_SHELF_STORAGE_KEY) === '1' } catch { return false }
+    })
+    const toggleRestShelf = useCallback(() => {
+        setRestShelfOpen(prev => {
+            const next = !prev
+            try { localStorage.setItem(REST_SHELF_STORAGE_KEY, next ? '1' : '0') } catch { /* private mode */ }
+            return next
+        })
     }, [])
 
     const isGuest = type === 'guest'
@@ -596,13 +689,55 @@ export default function SpaceHub() {
                     />
                 )}
 
-                {viewMode === 'grid' && shelves.map(({ key, label, hint, items }) => (
+                {viewMode === 'grid' && shelves.map(({ key, label, hint, items }) => {
+                    // "Live spaces" is everything the visitor didn't come here
+                    // for and (if a guest) usually can't edit. Collapse it to
+                    // one line by default so the Open Space and the sandbox —
+                    // the two things a guest can actually use — own the first
+                    // screen; an account keeps seeing its own spaces expanded,
+                    // exactly as before.
+                    const isRestShelf = key === 'spaces'
+                    // Only collapse when there's something to lead with instead —
+                    // a guest with neither an Open Space nor a sandbox (an old
+                    // invite-scoped session, say) has nothing else on the page,
+                    // and hiding their only card behind a toggle would strand them.
+                    const collapsible = isGuest && isRestShelf && Boolean(openSpaceCard || sandboxCard)
+                    const featured = key === 'open' || key === 'sandbox'
+
+                    if (collapsible && !restShelfOpen) {
+                        return (
+                            <section key={key} className="ssh-shelf">
+                                <button
+                                    type="button"
+                                    className="ssh-rest-toggle"
+                                    aria-expanded={false}
+                                    onClick={toggleRestShelf}
+                                >
+                                    <span className="ssh-rest-toggle-chevron" aria-hidden="true">▸</span>
+                                    {items.length} other space{items.length === 1 ? '' : 's'}
+                                </button>
+                            </section>
+                        )
+                    }
+
+                    return (
                     <section key={key} className="ssh-shelf">
                         <p className="ssh-shelf-label">
                             {label}
                             {hint ? <span className="ssh-shelf-hint"> — {hint}</span> : null}
                         </p>
-                        <div className="ssh-spaces-grid">
+                        {collapsible && (
+                            <button
+                                type="button"
+                                className="ssh-rest-toggle ssh-rest-toggle--open"
+                                aria-expanded={true}
+                                onClick={toggleRestShelf}
+                            >
+                                <span className="ssh-rest-toggle-chevron" aria-hidden="true">▾</span>
+                                Hide
+                            </button>
+                        )}
+                        <div className={`ssh-spaces-grid${featured ? ' ssh-featured-grid' : ''}`}>
                         {items.map((space) => {
                             const isMain = space.id === defaultSpaceId
                             const isLinking = linker?.spaceId === space.id
@@ -625,15 +760,8 @@ export default function SpaceHub() {
                                         {space.isPublic && <span className="ssh-badge-live">Live</span>}
                                         {space.isPublic && !canEnter(space) && <span className="ssh-badge-viewonly">View live</span>}
                                     </div>
-                                    {space.previewImageAssetId ? (
-                                        <div className="ssh-card-preview" aria-hidden="true">
-                                            <img
-                                                src={getServerSpaceAssetUrl(space.id, space.previewImageAssetId, { width: 480 })}
-                                                alt=""
-                                                loading="lazy"
-                                            />
-                                        </div>
-                                    ) : space.isPublic ? (
+                                    {(() => {
+                                        const isLive = liveSpaceId === space.id
                                         // isPublic alone, NOT isPublic && publishedProjectId.
                                         // SpaceCardPreview embeds the SPACE's own live route
                                         // (`buildAppSpacePath(spaceId)?preview=1`) — it never
@@ -644,9 +772,42 @@ export default function SpaceHub() {
                                         // it is the communal scene itself, and /open renders it
                                         // fine. Every other public space happened to have one,
                                         // so the gate looked correct for two years of cards.
-                                        <SpaceCardPreview spaceId={space.id} label={space.label || space.id} />
-                                    ) : null}
+                                        // isPublic is also what makes a picture clickable: only a
+                                        // public space has a live route worth making interactive.
+                                        const canGoLive = space.isPublic
+                                        if (!isLive && !canGoLive && !space.previewImageAssetId) return null
+                                        return (
+                                            <div
+                                                className={`ssh-card-preview${isLive ? ' ssh-card-preview--live' : ''}`}
+                                                aria-hidden={!isLive && !canGoLive ? 'true' : undefined}
+                                                role={!isLive && canGoLive ? 'button' : undefined}
+                                                tabIndex={!isLive && canGoLive ? 0 : undefined}
+                                                aria-label={!isLive && canGoLive ? `Make ${space.label || space.id} interactive` : undefined}
+                                                onClick={!isLive && canGoLive ? (e) => { e.stopPropagation(); setLiveSpaceId(space.id) } : undefined}
+                                                onKeyDown={!isLive && canGoLive ? (e) => { if (e.key === 'Enter') { e.stopPropagation(); setLiveSpaceId(space.id) } } : undefined}
+                                            >
+                                                {isLive ? (
+                                                    <SpaceCardLive
+                                                        spaceId={space.id}
+                                                        label={space.label || space.id}
+                                                        onRelease={() => releaseLive(space.id)}
+                                                    />
+                                                ) : space.previewImageAssetId ? (
+                                                    <img
+                                                        src={getServerSpaceAssetUrl(space.id, space.previewImageAssetId, { width: 480 })}
+                                                        alt=""
+                                                        loading="lazy"
+                                                    />
+                                                ) : (
+                                                    <SpaceCardPreview spaceId={space.id} label={space.label || space.id} />
+                                                )}
+                                            </div>
+                                        )
+                                    })()}
                                     <p className="ssh-space-label">{space.label || space.id}</p>
+                                    {featured && hint && (
+                                        <p className="ssh-space-tagline">{hint}</p>
+                                    )}
                                     {linkedTitle && (
                                         <p className="ssh-space-project">Project: {linkedTitle}</p>
                                     )}
@@ -845,7 +1006,8 @@ export default function SpaceHub() {
                         })}
                         </div>
                     </section>
-                ))}
+                    )
+                })}
 
                 {isAdmin && sandboxSummary && sandboxSummary.total > 0 && (
                     <div className="ssh-sandbox-row">
