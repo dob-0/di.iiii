@@ -13,10 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the lighting desk grew a content model after a field audit (looks/layers, fan, fixture-library import, sACN, palettes), a cue can now fire a look, and the show-portability plan is written and answered — `docs/architecture/LIGHTING_DESK_DESIGN.md` + `LIGHTING_SHOW_PORTABILITY.md`
-- a door can be a square-cornered frame, not only a glowing ring
-- Raw panel window polish: resize, wheel policy, canvas scale, bottom reserve
-- the arrival frame and walk mode stop disagreeing (fog, motion, grid, render settings)
+- a short door onto the map lane
 
 Full detail: `PROGRESS.md`.
 
