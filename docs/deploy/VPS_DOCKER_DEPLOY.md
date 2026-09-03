@@ -96,6 +96,29 @@ term expires. Do not delete it as part of adopting this path.
 4. Configure the GitHub secrets/variables below, then push to `dev` or run
    the workflow manually.
 
+### A short domain for one lane — `MAP_DOMAIN`
+
+Not a second deployment: `map.your-domain` reverse-proxies to the SAME
+production client as `SITE_DOMAIN`, so every path resolves identically —
+`map.your-domain/{space}/map/{project}` is the same app, same document, same
+ProtectedSurface per-space sign-in as `your-domain/{space}/map/{project}`.
+The whole point is a shorter, memorable name for the map lane, not a
+different surface with different rules.
+
+Setup: point a DNS record at the same host, set `MAP_DOMAIN` in production's
+`.env`, restart `caddy` (`docker compose --profile https up -d caddy`).
+Nothing else to configure — no port, no bind address, no separate compose
+project, because it is not a separate app.
+
+**One real gap, not a bug to fix quietly:** the session cookie carries no
+`Domain` attribute, so it is host-only. Signing in on `your-domain` does not
+carry over to `map.your-domain` — a visitor signs in once per hostname. Fine
+for "here is a short link to hand someone for mapping," wrong if the intent
+is "one session across every subdomain" — that needs a shared-domain cookie
+(`Domain=.your-domain`) and CORS credentialed-origin changes neither made
+here nor free of their own tradeoffs (a shared-domain cookie is readable by
+every subdomain, including ones added later).
+
 ## What It Does
 
 1. Builds `ghcr.io/<owner>/dii-server` (from `serverXR/Dockerfile`) and
