@@ -1102,6 +1102,33 @@ function createDesk(opts = {}) {
       const width = PROFILES[profile].channels.length;
       const universe = Math.max(0, body.universe | 0);
       let addr = body.address ? Math.max(1, Math.min(512, body.address | 0)) : engine.nextFreeAddress(universe, width);
+      // An address typed from a channel plot must be checked the way a dragged one is.
+      // Patching ON TOP of a patched fixture used to succeed silently: both kept receiving
+      // DMX every frame, the patch grid drew only the newer one, and the older fixture
+      // simply disappeared from the desk while still lighting the room. Deliberate stacking
+      // is legitimate — it mirrors two units — so `force: true` still allows it, exactly as
+      // the readdress route does. This is only the accident that could not be seen.
+      if (body.address && !body.force) {
+        const occupied = new Map();
+        for (const f of state.fixtures) {
+          if (f.universe !== universe) continue;
+          const w = (PROFILES[f.profile] || PROFILES.rgb).channels.length;
+          for (let c = f.address; c < f.address + w && c <= 512; c++) occupied.set(c, f);
+        }
+        for (let i = 0; i < count; i++) {
+          const start = addr + i * width;
+          if (start + width - 1 > 512) break;
+          for (let c = start; c < start + width; c++) {
+            const hit = occupied.get(c);
+            if (hit) {
+              return json(res, {
+                error: `channel ${c} is taken by ${hit.index}.${hit.profile} — patch somewhere else, or send force to stack them deliberately`,
+                conflict: { channel: c, universe, by: { id: hit.id, index: hit.index, profile: hit.profile } },
+              }, 409);
+            }
+          }
+        }
+      }
       let index = body.index != null ? Math.max(1, body.index | 0) : engine.nextIndex();
       const row = state.fixtures.length;
       const added = [];
