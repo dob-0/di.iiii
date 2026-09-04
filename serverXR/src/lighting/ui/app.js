@@ -36,6 +36,29 @@ let structSig = '';
 let attrSig = '';
 let dragProfile = null;        // profile being dragged out of the library
 let dragMove = null;           // patched fixture(s) being dragged to a new address
+// A finger is down on the stage. pullState must not replace S.fixtures while a drag is
+// in flight: the drag writes x/y optimistically, and a poll landing mid-gesture — or in
+// the gap before pointerup — hands back the pre-drag positions, so the drop then SAVES
+// the fixture back where it started. That is the "I have to place it several times" bug.
+let stageDragging = false;
+// Marquee selection repaints on every pointermove, and paintSelection() rebuilds the whole
+// attribute editor — innerHTML plus a dozen listeners — each time. During the drag only the
+// highlight needs to move; the editor is rebuilt once, on release.
+let deferAttr = false;
+
+// id -> fixture. The place and paint loops walked the DOM and matched each node with
+// S.fixtures.find(), a linear scan per node, on every pointermove of every drag. Rebuilt
+// only when the fixtures array is actually replaced (or grows/shrinks in place), so a drag
+// mutating f.x on the existing objects never invalidates it.
+let fxIdxArr = null;
+let fxIdx = new Map();
+function fxById(id) {
+  if (fxIdxArr !== S.fixtures || fxIdx.size !== S.fixtures.length) {
+    fxIdxArr = S.fixtures;
+    fxIdx = new Map(S.fixtures.map((f) => [f.id, f]));
+  }
+  return fxIdx.get(id);
+}
 
 const ROLE_LABEL = {
   dimmer: 'Dimmer', dimmerFine: 'Dim fine',
@@ -47,6 +70,14 @@ const ROLE_LABEL = {
   macro: 'Macro', speed: 'P/T speed', auto: 'Auto', sound: 'Sound', control: 'Control',
   color: 'Color wheel',
 };
+// A custom profile may name its own channels. A laser's chart is Pattern, Size X, Scan
+// speed — not aux1..aux7 — and a fader called "Aux 5" tells an operator nothing at all.
+// The profile's own name wins; the generic table is the fallback, so nothing that has no
+// custom name changes.
+function roleLabel(role, profileName) {
+  const p = profileName && S && S.profiles && S.profiles[profileName];
+  return (p && p.labels && p.labels[role]) || ROLE_LABEL[role] || role;
+}
 const ROLE_COLOR = {
   dimmer: '#d8dadb', dimmerFine: '#6f7478',
   r: '#e2564a', g: '#4ec95f', b: '#4a7ce2', w: '#ffffff', a: '#f0a94f', y: '#e3d34a',
@@ -155,7 +186,9 @@ async function pullState() {
     const next = await (await fetch('api/state')).json();
     if (pollFails >= 2) say('back in touch with the desk');
     pollFails = 0;
-    const busy = !!S && Date.now() - touchedAt < 700;
+    // stageDragging has no timeout on purpose: a careful placement takes longer than
+    // the 700ms window, and the guard must last exactly as long as the finger is down.
+    const busy = !!S && (stageDragging || Date.now() - touchedAt < 700);
     const first = !S;
     if (busy) {
       next.fixtures = S.fixtures; next.master = S.master; next.raw = S.raw;
@@ -289,7 +322,7 @@ function applyColor(hexColor) {
 // the attribute editor uses, so there is no second name mapping to drift out of step.
 function decodeProfile(name) {
   const ch = (S.profiles[name] || {}).channels || [];
-  return ch.map((r) => ROLE_LABEL[r] || r).join(' · ');
+  return ch.map((r) => roleLabel(r, name)).join(' · ');
 }
 
 /* =============== fixture builder =============== */
@@ -980,7 +1013,13 @@ function stageMap(W, H) {
 
 function placeStages() {
   if (!S) return;   // the resize observer can fire before the first state arrives
-  for (const inner of $$('.stage-inner')) {
+  const panes = $$('.stage-inner');
+  // READ PHASE. clientWidth/clientHeight were being read after the style writes below had
+  // already dirtied layout, which forces a synchronous whole-document reflow — once per
+  // pane, on every pointermove of a pan or a fixture drag. Measure everything first, then
+  // write, and the reflow happens once at the end of the frame like any other style change.
+  const sizes = panes.map((inner) => ({ W: inner.clientWidth || 0, H: inner.clientHeight || 0 }));
+  panes.forEach((inner, paneIdx) => {
     inner.style.transform = `translate(${view.x}px, ${view.y}px) scale(${zoom})`;
     // The backdrop grid lives on the outer, untransformed pane (see style.css) so it can
     // tile forever — position and size just track the same pan/zoom the fixtures use, 40
@@ -994,12 +1033,12 @@ function placeStages() {
     // zoom), so whether two labels collide depends only on the container size — a narrow
     // window overlaps them at every zoom. Hide the ones that would land on a neighbour's
     // label, and all of them when the view is too small or zoomed-out to read the text.
-    const W = inner.clientWidth || 0, H = inner.clientHeight || 0;
+    const { W, H } = sizes[paneIdx];
     const { sc, ox, oy } = stageMap(W, H);
     const tiny = zoom < 0.5 || W < 360;
     const shown = [];                    // fixtures whose labels stay visible
     for (const node of $$('.fx-node', inner)) {
-      const f = S.fixtures.find((x) => x.id === node.dataset.id);
+      const f = fxById(node.dataset.id);
       if (!f) continue;
       node.style.left = (ox + f.x * sc) + 'px';
       node.style.top = (oy + f.y * sc) + 'px';
@@ -1014,13 +1053,13 @@ function placeStages() {
       }
       label.style.display = hide ? 'none' : '';
     }
-  }
+  });
 }
 
 function paintStage() {
   if (!S) return;
   for (const node of $$('.fx-node')) {
-    const f = S.fixtures.find((x) => x.id === node.dataset.id);
+    const f = fxById(node.dataset.id);
     if (!f) continue;
     const c = liveColor(f);
     const R = Math.round(c.r), G = Math.round(c.g), B = Math.round(c.b);
@@ -1063,6 +1102,7 @@ function wireStage(stage) {
     // which drew a grab cursor and grabbed nothing.
     if (e.button === 1 || spaceHeld) {
       drag = { mode: 'pan', pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y };
+      stageDragging = true;
       stage.classList.add('panning');
       stage.setPointerCapture(e.pointerId);
       return;
@@ -1073,10 +1113,13 @@ function wireStage(stage) {
       const id = node.dataset.id;
       if (!sel.has(id)) { if (!e.shiftKey) sel.clear(); sel.add(id); paintSelection(); }
       drag = { mode: 'move', pointerId: e.pointerId, start: xy(e), origin: new Map([...sel].map((i) => { const f = S.fixtures.find((x) => x.id === i); return [i, { x: f.x, y: f.y }]; })) };
+      stageDragging = true;
       stage.setPointerCapture(e.pointerId);
       return;
     }
     drag = { mode: 'marquee', pointerId: e.pointerId, sx: e.clientX, sy: e.clientY };
+    stageDragging = true;
+    deferAttr = true;
     if (!e.shiftKey) { sel.clear(); paintSelection(); }
     stage.setPointerCapture(e.pointerId);
   });
@@ -1093,7 +1136,7 @@ function wireStage(stage) {
       const p = xy(e);
       const dx = p.x - drag.start.x, dy = p.y - drag.start.y;
       for (const [id, o] of drag.origin) {
-        const f = S.fixtures.find((x) => x.id === id);
+        const f = fxById(id);
         if (!f) continue;
         f.x = clamp(o.x + dx, -WORLD, WORLD); f.y = clamp(o.y + dy, -WORLD, WORLD);
         if (snap) { f.x = Math.round(f.x * 40) / 40; f.y = Math.round(f.y * 24) / 24; }
@@ -1120,14 +1163,30 @@ function wireStage(stage) {
     // A stray second finger lifting must not end the real drag mid-gesture.
     if (!drag || (e && e.pointerId != null && e.pointerId !== drag.pointerId)) return;
     if (drag && drag.mode === 'move') {
-      post('api/fixtures/move', { moves: [...sel].map((id) => { const f = S.fixtures.find((x) => x.id === id); return { id, x: f.x, y: f.y }; }) });
+      // Read back the ids the gesture actually started on. `sel` can be repainted by
+      // anything between pointerdown and pointerup; drag.origin is the gesture's own
+      // record of what it picked up, so the save can never write a fixture nobody moved.
+      const moves = [];
+      for (const id of drag.origin.keys()) {
+        const f = fxById(id);
+        if (f) moves.push({ id, x: f.x, y: f.y });
+      }
+      if (moves.length) post('api/fixtures/move', { moves });
     }
     stage.querySelector('.marquee').hidden = true;
     stage.classList.remove('panning');
     drag = null;
+    // Lowered LAST: post() above stamps touchedAt, so the 700ms window takes over from
+    // here and covers the poll that is already in flight with the pre-drag positions.
+    stageDragging = false;
+    if (deferAttr) { deferAttr = false; buildAttr(); }
   };
   stage.addEventListener('pointerup', end);
   stage.addEventListener('pointercancel', end);
+  // A stuck stageDragging would freeze fixture updates for the rest of the session. If the
+  // capture is lost without a cancel — a browser quirk, a device unplugged mid-drag — this
+  // is the event that still fires, so the flag can never latch on.
+  stage.addEventListener('lostpointercapture', end);
 
   stage.addEventListener('wheel', (e) => {
     e.preventDefault();
@@ -1261,7 +1320,9 @@ function paintSelection() {
   $$('#patchGrid .gc.used').forEach((c) => c.classList.toggle('sel', sel.has(c.dataset.id)));
   paintSelList();
   syncLimitPanel();
-  buildAttr();
+  // Skipped only while a marquee is being dragged — see deferAttr. The editor is rebuilt
+  // once on release, so the selection it describes is always the finished one.
+  if (!deferAttr) buildAttr();
 }
 
 function paintSelList() {
@@ -1316,7 +1377,7 @@ function paintSelList() {
     }
     const finding = new Set((S.status && S.status.identifying) || []);
     for (const row of $$('.selrow', list)) {
-      const f = S.fixtures.find((x) => x.id === row.dataset.id);
+      const f = fxById(row.dataset.id);
       if (!f) continue;
       row.classList.toggle('finding', finding.has(f.id));
       row.querySelector('i').style.background = cssRgb(liveColor(f));
@@ -1328,9 +1389,9 @@ function paintSelList() {
 
 /* =============== attribute editor (CONTROL) =============== */
 
-function fader(role, value) {
+function fader(role, value, profileName) {
   return `<div class="fader" data-role="${esc(role)}">
-    <div class="fh"><i style="background:${ROLE_COLOR[role] || '#6f7478'}"></i>${esc(ROLE_LABEL[role] || role)}</div>
+    <div class="fh"><i style="background:${ROLE_COLOR[role] || '#6f7478'}"></i>${esc(roleLabel(role, profileName))}</div>
     <div class="chip" style="background:${ROLE_COLOR[role] || '#6f7478'}"></div>
     <div class="fv">0%</div>
     <div class="vwrap"><input type="range" min="0" max="255" value="${value}"></div>
@@ -1402,7 +1463,12 @@ function buildAttr() {
   if (attrTab === 'Position') {
     html += `<div class="xypad" id="xypad"><div class="dot" style="left:50%;top:50%"></div></div>`;
   }
-  html += `<div class="faders">${active.map((r) => fader(r, holderOf(r).values[r] ?? 0)).join('')}</div>`;
+  html += `<div class="faders">${active.map((r) => {
+    // the holder is the fixture the value is READ from, so its profile is the one whose
+    // channel names apply — a laser's "Size X" must not be labelled by the wash next to it
+    const h = holderOf(r);
+    return fader(r, h.values[r] ?? 0, h.profile);
+  }).join('')}</div>`;
   $('#attrPanels').innerHTML = `<div class="apanel">${html}</div>`;
 
   // faders
@@ -1552,15 +1618,35 @@ function buildFaders() {
   $('#fUniverse').value = fUni;
 
   const wrap = $('#faderBank');
-  // Nothing here depends on the patch — this is a plain manual desk, one fader per
-  // channel. It rebuilds only when the universe changes, not when fixtures move.
-  const sig = String(fUni);
+  // Each fader is named from the patch. A bank of 512 bare numbers means holding a laser
+  // by counting channels in your head — ch37 is "Laser · Intensity", and being told so is
+  // the difference between a manual hold and a guess. So this DOES depend on the patch
+  // now, and the signature has to carry it or a re-address would leave stale names.
+  const owner = new Map();
+  for (const f of S.fixtures) {
+    if (f.universe !== fUni) continue;
+    const chans = (S.profiles[f.profile] || {}).channels || [];
+    chans.forEach((role, i) => {
+      const c = f.address + i;
+      if (c >= 1 && c <= 512) owner.set(c, { name: f.name, role, profile: f.profile });
+    });
+  }
+  const sig = fUni + '#' + S.fixtures
+    .map((f) => `${f.id}${f.universe}${f.address}${f.profile}${f.name}`).join('|');
   if (wrap.dataset.sig !== sig) {
     wrap.dataset.sig = sig;
     let html = '';
     for (let ch = 1; ch <= 512; ch++) {
-      html += `<div class="mf" data-ch="${ch}" id="mf${ch}">
+      const o = owner.get(ch);
+      // Two lines, fixture then channel: at this width the full "Laser · Intensity" would
+      // ellipsis away exactly the half that identifies the channel.
+      const who = o ? esc(o.name) : '';
+      const what = o ? esc(roleLabel(o.role, o.profile)) : '';
+      const tip = o ? `${o.name} · ${roleLabel(o.role, o.profile)} (channel ${ch})` : `channel ${ch} — not patched`;
+      html += `<div class="mf${o ? '' : ' unpatched'}" data-ch="${ch}" id="mf${ch}" title="${tip}">
         <div class="mf-ch">${String(ch).padStart(3, '0')}</div>
+        <div class="mf-who">${who}</div>
+        <div class="mf-role">${what}</div>
         <div class="vwrap"><input type="range" min="0" max="255" value="0"></div>
         <input class="mf-num" type="number" min="0" max="255" value="0" title="Type a level, 0–255">
         <div class="mf-wire" title="what is on the wire after the master"></div>
