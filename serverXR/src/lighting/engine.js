@@ -111,7 +111,7 @@ function findProfile(name) {
 }
 
 // Returns the registered name, or throws with a message meant to be shown to a person.
-function addProfile(name, channels, { cat = '_CUSTOM', replace = false, defaults = null } = {}) {
+function addProfile(name, channels, { cat = '_CUSTOM', replace = false, defaults = null, labels = null } = {}) {
   const problem = validateProfile(name, channels);
   if (problem) throw new Error(`a fixture needs ${problem}`);
   const clean = name.trim();
@@ -128,10 +128,22 @@ function addProfile(name, channels, { cat = '_CUSTOM', replace = false, defaults
   for (const [role, v] of Object.entries(defaults || {})) {
     if (roles.has(role) && Number.isFinite(+v)) defs[role] = Math.max(0, Math.min(255, +v | 0));
   }
+  // Per-channel display names, so a fixture built from its manual reads like the manual.
+  // Without these a laser's chart arrives as aux1..aux12 — the roles carry the right
+  // VALUES but tell the operator nothing, and "Aux 5" is not a thing on any chart.
+  // Same alphabet rule as everything else that reaches the markup, and only for roles
+  // this profile actually has.
+  const labs = {};
+  for (const [role, text] of Object.entries(labels || {})) {
+    if (!roles.has(role) || typeof text !== 'string') continue;
+    const t = text.trim().slice(0, 24);
+    if (t) labs[role] = t;
+  }
   PROFILES[key] = {
     cat, channels: channels.map((r) => String(r).trim()),
     label: labelFor(key, channels), custom: true,
     defaults: Object.keys(defs).length ? defs : undefined,
+    labels: Object.keys(labs).length ? labs : undefined,
   };
   return key;
 }
@@ -147,7 +159,7 @@ function removeProfile(name) {
 function customProfiles() {
   return Object.entries(PROFILES)
     .filter(([, p]) => p.custom)
-    .map(([name, p]) => ({ name, channels: p.channels, cat: p.cat, defaults: p.defaults }));
+    .map(([name, p]) => ({ name, channels: p.channels, cat: p.cat, defaults: p.defaults, labels: p.labels }));
 }
 
 const {

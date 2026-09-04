@@ -4,7 +4,7 @@
 
 const assert = require('assert');
 const { buildDmx, buildPoll } = require('../artnet');
-const { Engine, makeFixture, addProfile, removeProfile } = require('../engine');
+const { Engine, makeFixture, addProfile, removeProfile, customProfiles, PROFILES } = require('../engine');
 const { Enttec, frame, listPorts, describePort, PORT_NAME } = require('../enttec');
 const { FX_MODES, fxOrder, fxLevel, fxActive, fxPhase } = require('../fx');
 
@@ -1234,6 +1234,46 @@ check('an explicit value still beats the profile default', () => {
   const f = makeFixture({ profile: 'Shutter test', address: 1, values: { strobe: 0 } });
   assert.strictEqual(f.values.strobe, 0, 'a saved show reloads exactly as it was saved');
   removeProfile('Shutter test');
+});
+
+// ---- per-channel names ------------------------------------------------------
+// A fixture built from its manual must read like its manual. Without these a laser's
+// 18-channel chart arrives as aux1..aux12: the values are right and the operator is told
+// nothing, and "Aux 5" appears on no chart ever printed.
+
+check('a profile can name its own channels', () => {
+  addProfile('Laser test', ['dimmer', 'gobo', 'aux1'], {
+    labels: { gobo: 'Pattern', aux1: 'Size X' }, replace: true,
+  });
+  const p = PROFILES['Laser test'];
+  assert.strictEqual(p.labels.gobo, 'Pattern');
+  assert.strictEqual(p.labels.aux1, 'Size X');
+  assert.ok(!('dimmer' in p.labels), 'a channel left unnamed keeps the generic name');
+});
+
+check('a channel name cannot be invented for a channel the fixture does not have', () => {
+  addProfile('Laser test', ['dimmer', 'gobo'], {
+    labels: { gobo: 'Pattern', tilt: 'Nonsense' }, replace: true,
+  });
+  assert.strictEqual(PROFILES['Laser test'].labels.gobo, 'Pattern');
+  assert.ok(!('tilt' in PROFILES['Laser test'].labels), 'dropped, like an invented default');
+});
+
+check('channel names survive the round trip through the show file', () => {
+  addProfile('Laser test', ['dimmer', 'gobo'], { labels: { gobo: 'Pattern' }, replace: true });
+  // customProfiles() is exactly what is written to show.json and read back on load.
+  const onDisk = customProfiles().find((p) => p.name === 'Laser test');
+  assert.deepStrictEqual(onDisk.labels, { gobo: 'Pattern' }, 'names are persisted, not lost on save');
+  removeProfile('Laser test');
+  addProfile(onDisk.name, onDisk.channels, { cat: onDisk.cat, defaults: onDisk.defaults, labels: onDisk.labels });
+  assert.strictEqual(PROFILES['Laser test'].labels.gobo, 'Pattern', 'and restored on load');
+  removeProfile('Laser test');
+});
+
+check('an empty or blank channel name is dropped rather than stored', () => {
+  addProfile('Laser test', ['dimmer', 'gobo'], { labels: { gobo: '   ' }, replace: true });
+  assert.ok(!PROFILES['Laser test'].labels, 'nothing worth storing means no labels object at all');
+  removeProfile('Laser test');
 });
 
 // ---- spatial FX -------------------------------------------------------------

@@ -242,7 +242,7 @@ function createDesk(opts = {}) {
       // would silently turn every custom fixture into a 3-channel RGB one — the patch would
       // come back from disk quietly wrong, which is the worst way to lose a rig.
       for (const p of disk.customProfiles || []) {
-        try { addProfile(p.name, p.channels, { cat: p.cat, replace: true, defaults: p.defaults }); }
+        try { addProfile(p.name, p.channels, { cat: p.cat, replace: true, defaults: p.defaults, labels: p.labels }); }
         catch (e) { log('  skipped custom fixture "' + p.name + '": ' + e.message); }
       }
       s.customProfiles = customProfiles();
@@ -807,7 +807,7 @@ function createDesk(opts = {}) {
       // cannot be, so the library can hide those controls rather than offering them and
       // then refusing.
       profiles: Object.fromEntries(Object.entries(PROFILES).map(([k, v]) =>
-        [k, { label: v.label, channels: v.channels, cat: v.cat, custom: !!v.custom }])),
+        [k, { label: v.label, channels: v.channels, cat: v.cat, custom: !!v.custom, labels: v.labels }])),
       // What each channel role IS, so the interface can ask rather than keep its own copy.
       roleKinds: roleKinds(),
       // Profiles patched on fixtures whose channels are ALL generic (c1, c2, ...): pure
@@ -1181,7 +1181,7 @@ function createDesk(opts = {}) {
 
       let name;
       try {
-        name = addProfile(body.name, body.channels, { cat: body.cat, replace: !!body.replace, defaults: body.defaults });
+        name = addProfile(body.name, body.channels, { cat: body.cat, replace: !!body.replace, defaults: body.defaults, labels: body.labels });
       } catch (e) {
         return json(res, { error: e.message }, 400);
       }

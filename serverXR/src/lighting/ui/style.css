@@ -583,6 +583,18 @@ input.pinned { border-color: var(--accent); }
 }
 .mf.over .mf-num { border-color: var(--accent); }
 .mf-num::-webkit-inner-spin-button, .mf-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+/* Who owns this channel, and which of its channels this is. Fixed heights so an unpatched
+   gap does not shorten its cell and stagger the whole bank; clipped rather than wrapped so
+   a long fixture name cannot push the faders out of alignment. */
+.mf-who, .mf-role {
+  font-size: 10px; line-height: 12px; height: 12px; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;
+}
+.mf-who { color: var(--text); }
+.mf-role { color: var(--muted); }
+.mf.over .mf-who { color: var(--accent); }
+/* An unpatched channel still holds and still transmits — dimmed, never hidden. */
+.mf.unpatched .mf-ch { opacity: 0.55; }
 .mf-wire { font-family: var(--mono); font-size: 10px; color: var(--muted); height: 12px; }
 .mf-rel {
   background: none; border: 1px solid transparent; border-radius: 0;
