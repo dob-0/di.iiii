@@ -4141,6 +4141,30 @@ function buildMidiTargets() {
       (u) => midiSend('api/fixture', { id: f.id, values: { dimmer: Math.round(u * 255) } }, 'api/fixture:' + f.id));
   }
 
+  // Every fixture used to offer exactly one target: its dimmer. On a laser that is the least
+  // interesting channel it has — pattern, rotation, size and colour are the performance, and
+  // none of them could reach a knob at all. So any fixture carrying channels a colour par does
+  // not have gets a row per channel.
+  //
+  // Deliberately not every fixture: eight RGB pars would add twenty-four rows of r/g/b nobody
+  // maps, and a mapping table you have to scroll past is how the one row you wanted gets lost.
+  // The test is whether the profile has a channel that is neither the level nor an emitter —
+  // that is exactly the set of fixtures whose channels DO something a colour picker cannot.
+  const plain = new Set(['dimmer', 'r', 'g', 'b', 'w', 'a', 'y', 'uv', 'lime', 'warm', 'cool']);
+  for (const f of fixtures) {
+    const chans = chansOf(f);
+    if (!chans.some((role) => !plain.has(role))) continue;
+    for (const role of chans) {
+      // The dimmer already has its own row above; a second one would bind two controls to
+      // one value and they would fight.
+      if (role === 'dimmer') continue;
+      cc(`ch:${f.id}:${role}`, `${f.name}  ${roleLabel(role, f.profile)}`,
+        () => (f.values && f.values[role] != null ? f.values[role] : 0) / 255,
+        (u) => midiSend('api/fixture', { id: f.id, values: { [role]: Math.round(u * 255) } },
+          `api/fixture:${f.id}:${role}`));
+    }
+  }
+
   T.push({ group: 'Pads & buttons' });
 
   pad('blackout', 'Blackout  (toggle)', () => {
@@ -4163,6 +4187,83 @@ function buildMidiTargets() {
   for (let i = 0; i < 16; i++) pad('scene:' + i, 'Scene pad ' + (i + 1), () => midiRecallPad(i));
 
   midiTargets = T;
+}
+
+// ---- device presets ---------------------------------------------------------
+// The wizard maps whatever you wiggle, in the order you wiggle it. That is the right
+// answer for an unknown controller and the wrong one for a controller whose layout is
+// fixed and known: on a K2 the four faders are always CC16-19, and having to sweep them
+// in the correct order to get the obvious assignment is a chore, not a feature.
+//
+// A preset is therefore a plain list of [control -> target key]. Matched on the port
+// NAME, because that is the only thing a browser can tell us about the hardware.
+//
+// The XONE:K2 map below is not from a manual — it was read off this rig's own device
+// with aseqdump: channel 1, knobs on CC 4-15 in three rows of four, faders on CC 16-19
+// (all four confirmed swept end to end), encoders from CC 20, switches on notes 12-42.
+const MIDI_PRESETS = [{
+  match: /xone:?\s*k2/i,
+  name: 'Allen & Heath XONE:K2',
+  // ch is 1-based here, the way the device reports it and the mapping table shows it.
+  build: () => {
+    const out = [];
+    const cc = (num, key) => out.push({ key, type: 'cc', ch: 1, num });
+    const note = (num, key) => out.push({ key, type: 'note', ch: 1, num });
+
+    // The four faders are the four things you hold during a set.
+    cc(16, 'master');
+    cc(17, 'alldim');
+    cc(18, 'fxdepth');
+    cc(19, 'fxbpm');           // speed, under the right hand
+
+    // Bottom knob row: how the chase moves.
+    cc(12, 'hold');
+    cc(13, 'fade');
+
+    // The rest of the knobs go to the fixture channels that are actually worth a knob —
+    // a laser's pattern and rotation, not eight identical par dimmers. Whatever the rig
+    // has, in the order the target list already offers it; a smaller rig simply uses fewer.
+    const knobs = [14, 15, 8, 9, 10, 11, 4, 5, 6, 7];
+    const wanted = midiTargets
+      .filter((t) => t.key && t.kind === 'cc' && t.key.startsWith('ch:'))
+      .map((t) => t.key);
+    knobs.forEach((n, i) => { if (wanted[i]) cc(n, wanted[i]); });
+
+    // Switches: the three you reach for without looking, then scene pads.
+    note(12, 'blackout');
+    note(16, 'chaseon');
+    note(20, 'fxon');
+    [24, 25, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
+      .forEach((n, i) => note(n, 'scene:' + i));
+    return out;
+  },
+}];
+
+function midiPresetFor(portName) {
+  return MIDI_PRESETS.find((p) => p.match.test(String(portName || ''))) || null;
+}
+
+function midiApplyPreset() {
+  // The open input if there is one, otherwise whatever the picker is showing — so the
+  // preset can be applied from the name alone, before MIDI access has been granted.
+  const sel = $('#miInputs');
+  const port = (midiInput && midiInput.name)
+    || (sel && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '');
+  const preset = midiPresetFor(port);
+  if (!preset) {
+    midiFlash(`no preset for "${port || 'this device'}" — use the wizard`);
+    return;
+  }
+  buildMidiTargets();                       // 'ch:' targets depend on the current patch
+  const known = new Set(midiTargets.filter((t) => t.key).map((t) => t.key));
+  let n = 0;
+  for (const b of preset.build()) {
+    if (!known.has(b.key)) continue;        // a rig with no laser has no laser channels
+    midiAssign(b.key, b.type, b.ch, b.num);
+    n++;
+  }
+  midiDraw(); midiDrawSceneGrid();
+  midiFlash(`${preset.name}: ${n} controls mapped`);
 }
 
 function midiStepFx(dir) {
@@ -4507,6 +4608,7 @@ $('#miWizard').addEventListener('click', () => {
     : 'wizard stopped');
 });
 $('#miByNum').addEventListener('click', midiMapByNumber);
+$('#miPreset').addEventListener('click', midiApplyPreset);
 $('#miClearMap').addEventListener('click', () => {
   if (!confirm('Clear the whole MIDI map? Every surface on this desk loses it.')) return;
   midiMap = {};
@@ -5410,6 +5512,59 @@ function goSetStep(i) {
 
 $('#setNext').addEventListener('click', () => goSetStep(liveSet.pos + 1));
 $('#setPrev').addEventListener('click', () => goSetStep(liveSet.pos - 1));
+
+// A set could only ever be stepped by hand. Playing one is the same list handed to the
+// chase, which is the thing that already knows how to advance on a clock — so "Play" is
+// load-and-arm rather than a second player that could drift out of step with the first.
+// Pressing it while that same set is running stops it, so the button is its own undo.
+$('#setPlay').addEventListener('click', () => {
+  const st = currentSet();
+  if (!st || !st.sceneIds.length) return say('pick a set with some scenes in it first', true);
+  const same = S.chase.enabled
+    && S.chase.sceneIds.length === st.sceneIds.length
+    && S.chase.sceneIds.every((id, i) => id === st.sceneIds[i]);
+  if (same) {
+    post('api/chase', { enabled: false }).then(pullState);
+    say(`stopped "${st.name}"`);
+    return;
+  }
+  // Dead ids are dropped by the server, so a set pointing at a deleted scene still plays
+  // the rest of itself instead of refusing outright.
+  post('api/chase', {
+    sceneIds: st.sceneIds,
+    holdMs: +$('#setHold').value,
+    fadeMs: +$('#setFade').value,
+    enabled: true,
+  }).then(pullState);
+  say(`playing "${st.name}" — ${st.sceneIds.length} scenes`);
+});
+
+const setTimingOut = () => {
+  $('#setHoldOut').textContent = (+$('#setHold').value / 1000).toFixed(2).replace(/0$/, '') + 's';
+  $('#setFadeOut').textContent = (+$('#setFade').value / 1000).toFixed(2).replace(/0$/, '') + 's';
+};
+for (const id of ['#setHold', '#setFade']) {
+  $(id).addEventListener('input', () => {
+    setTimingOut();
+    // Live, so the timing can be dialled in while the set is already running.
+    if (S && S.chase.enabled) post('api/chase', { holdMs: +$('#setHold').value, fadeMs: +$('#setFade').value });
+  });
+}
+setTimingOut();
+
+// ---- speed: one tempo, under a finger --------------------------------------
+// Deliberately writes the ONE bpm every effect and every LFO already reads, rather than
+// introducing a second clock. recallScene keeps the live bpm, so changing scenes never
+// changes the speed and this fader stays the room's tempo across the whole set.
+function setTempo(bpm) {
+  const v = Math.max(20, Math.min(300, Math.round(bpm)));
+  $('#tSpeed').value = v;
+  $('#tSpeedOut').textContent = v;
+  post('api/fx', { bpm: v });
+}
+$('#tSpeed').addEventListener('input', () => setTempo(+$('#tSpeed').value));
+$('#tHalf').addEventListener('click', () => setTempo((S && S.fx.bpm ? S.fx.bpm : 120) / 2));
+$('#tDouble').addEventListener('click', () => setTempo((S && S.fx.bpm ? S.fx.bpm : 120) * 2));
 $('#setNow').addEventListener('click', () => {
   spOpen = !spOpen;
   if (!spOpen) spEdit = false;
@@ -5554,6 +5709,21 @@ function buildTouchStrip() {
   if (document.activeElement !== $('#tFxDepth')) $('#tFxDepth').value = S.fx.depth;
   $('#tFxDepthOut').textContent = Math.round(S.fx.depth / 255 * 100) + '%';
   $('#tBpm').textContent = S.fx.bpm;
+  // The speed fader follows the tempo whoever set it — TAP, a MIDI knob, another browser —
+  // but never while it is the thing under the finger, or it fights the drag.
+  if (document.activeElement !== $('#tSpeed')) {
+    $('#tSpeed').value = S.fx.bpm;
+    $('#tSpeedOut').textContent = S.fx.bpm;
+  }
+  // Play doubles as Stop, so it has to say which it currently is.
+  const st = currentSet();
+  const running = !!(st && S.chase.enabled && S.chase.sceneIds.length === st.sceneIds.length
+    && S.chase.sceneIds.every((id, i) => id === st.sceneIds[i]));
+  $('#setPlay').textContent = running ? '■ Stop' : '▶ Play';
+  $('#setPlay').classList.toggle('on', running);
+  if (document.activeElement !== $('#setHold')) $('#setHold').value = S.chase.holdMs;
+  if (document.activeElement !== $('#setFade')) $('#setFade').value = S.chase.fadeMs;
+  setTimingOut();
 
   // audio — mirrors buildAudio's guards: no config yet renders disabled, not broken
   const cfg = S.audioCfg;

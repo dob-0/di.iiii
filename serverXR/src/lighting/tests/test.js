@@ -680,7 +680,11 @@ check('a look with one step is a scene, and holds still', () => {
 
 check('a look with spatial patch (the default) fans by index, unaffected by position', () => {
   const fixtures = rig4();
-  fixtures[0].x = 1; fixtures[0].y = 1;   // off its patch-order spot, must not matter
+  // Off its patch-order spot, and deliberately NOT at x=1: with a 360° spread the far edge
+  // of the room is one whole cycle from the near edge, so x=1 and x=0 are the same phase.
+  // That is correct for a wrapping wave, and it makes x=1 useless for telling the two fans
+  // apart. Three-quarters across is off both the patch spot and the wrap point.
+  fixtures[0].x = 0.75; fixtures[0].y = 1;
   const looks = sanitizeLooks([{ id: 'w', measure: 1, bpm: 120, phase: 360,
     steps: [{ values: { '*': { r: 0 } }, transition: 1 }, { values: { '*': { r: 255 } }, transition: 1 }] }]);
   const same = sanitizeLooks([{ id: 'w', measure: 1, bpm: 120, phase: 360, spatial: 'x',
@@ -696,7 +700,11 @@ check('a look with spatial patch (the default) fans by index, unaffected by posi
 
 check('spatial x makes a wave that a fixture drag can move — position, not patch index', () => {
   const fixtures = rig4();
-  fixtures[0].x = -0.9; fixtures[1].x = 1.9;   // far left, far right — same index gap as any pair
+  // Far left and far right OF THE ROOM. These used to sit outside it, at -0.9 and 1.9, which
+  // only read as two different phases because the old normalisation squeezed the -1..2 clamp
+  // range into the sweep. Clamped to the room they would be 0 and 1 — one full cycle apart,
+  // and therefore in phase — so the pair has to straddle the room, not its corners.
+  fixtures[0].x = 0.1; fixtures[1].x = 0.6;
   const looks = sanitizeLooks([{ id: 'w', measure: 1, bpm: 60, phase: 360, spatial: 'x',
     steps: [{ values: { '*': { r: 0 } }, transition: 1 }, { values: { '*': { r: 255 } }, transition: 1 }] }]);
   const at = (id, t) => evalLook(looks[0], fixtures, t, { looks: lookMap(looks) }).get(id).r;
@@ -1338,6 +1346,167 @@ check('an unknown follow value falls back to patch order rather than throwing', 
   const f = makeFixture({ profile: 'dimmer', address: 1 });
   const v = fxLevel({ mode: 'chase', bpm: 120, depth: 255, enabled: true, spatial: 'nonsense' }, f, 0, 4, 500);
   assert.ok(v >= 0 && v <= 255);
+});
+
+// ---- FX on a real rig -------------------------------------------------------
+// Everything below is asserted against the rig in the fault report — eight RGB pars in a
+// bar across the front, three channels apart — sampled on the 25ms grid the output loop
+// actually pushes on. "Effects work so-so" turned out to be five separate arithmetic
+// faults, and each check here is one of them, with the number it used to give.
+
+// A rig hung where a real rig hangs: inside the 0..1 room square the stage view draws,
+// filling half of it, not spread across the margin around it.
+const parBar = () => [...Array(8)].map((_, i) => makeFixture({
+  profile: 'rgb', address: 2 + i * 3, universe: 0,
+  x: +(0.34 + i * 0.07).toFixed(4), y: 0.15,
+}));
+
+// Levels for the whole rig at one instant, in patch order.
+function rigAt(fx, fixtures, t) {
+  const order = fxOrder(fixtures);
+  return fixtures.map((f) => fxLevel(fx, f, order.get(f.id), fixtures.length, t));
+}
+
+// The brightest each fixture ever gets — on ONE 25 Hz-spaced grid at a time, which is what
+// the output loop is: 40 pushes a second and nothing in between. Sampling several offsets
+// and taking the union would quietly interpolate a rig the loop cannot actually see, so
+// every grid is scored on its own and the worst one is the answer. The offsets exist
+// because `now` is Date.now() and never lands on a round 25ms.
+function worstPeaks(fx, fixtures, ms) {
+  let worst = null;
+  for (const off of [0, 7, 13, 19]) {
+    const peak = fixtures.map(() => 0);
+    for (let t = off; t < ms + off; t += 25) {
+      rigAt(fx, fixtures, t).forEach((v, k) => { if (v > peak[k]) peak[k] = v; });
+    }
+    if (!worst || Math.min(...peak) < Math.min(...worst)) worst = peak;
+  }
+  return worst;
+}
+
+// How often every single fixture is at zero at once.
+function darkFrames(fx, fixtures, ms) {
+  let dark = 0, total = 0;
+  for (let t = 0; t < ms; t += 25) { total++; if (rigAt(fx, fixtures, t).every((v) => v === 0)) dark++; }
+  return { dark, total };
+}
+
+check('a spatial sweep spans the room, not the margin around it', () => {
+  // The room is the 0..1 square the stage view draws and `arrange` lays fixtures into.
+  // Normalising (x + 1) / 3 mapped that square onto the middle THIRD of the effect, so a
+  // rig hung across the room only ever reached phases 0.33..0.67 and every lane-based
+  // mode collapsed into the handful of lanes in between.
+  const at = (x) => { const f = makeFixture({ profile: 'dimmer', address: 1 }); f.x = x; f.y = 0.5; return f; };
+  assert.strictEqual(fxPhase({ spatial: 'x' }, at(0), 0, 2), 0, 'the left wall starts the sweep');
+  assert.strictEqual(fxPhase({ spatial: 'x' }, at(1), 1, 2), 1, 'the right wall ends it');
+  // The bar in the report runs 0.34 to 0.83 — half the room, so half the sweep. It used
+  // to get 0.163 of it.
+  const spread = fxPhase({ spatial: 'x' }, at(0.83), 1, 2) - fxPhase({ spatial: 'x' }, at(0.34), 0, 2);
+  assert.ok(spread > 0.45, `half a room of rig must be half a sweep, got ${spread.toFixed(3)}`);
+});
+
+check('radial reaches 1 at the corner of the room, not a third of the way out', () => {
+  const at = (x, y) => { const f = makeFixture({ profile: 'dimmer', address: 1 }); f.x = x; f.y = y; return f; };
+  assert.strictEqual(fxPhase({ spatial: 'radial' }, at(0.5, 0.5), 0, 2), 0, 'the middle of the room is the middle of the ring');
+  assert.ok(Math.abs(fxPhase({ spatial: 'radial' }, at(1, 1), 1, 2) - 1) < 1e-9,
+    'the corner of the room is the outside of it, got ' + fxPhase({ spatial: 'radial' }, at(1, 1), 1, 2));
+  // Halfway along a wall is 0.707 of the way out. Dividing by 0.5 instead of the corner
+  // distance saturated everything past the inscribed circle, so all four corners of a
+  // grid rig read as one ring.
+  const wall = fxPhase({ spatial: 'radial' }, at(1, 0.5), 1, 2);
+  assert.ok(wall > 0.7 && wall < 0.72, `the middle of a wall sits at ${wall.toFixed(3)}`);
+});
+
+check('bars alternates along the rig instead of splitting it in two', () => {
+  // 16 fixed lanes put a rig of 8 in lanes 0,2,4,6,9,11,13,15 — four even then four odd —
+  // so "bars" was the left half of the bar flashing at the right half, one edge in seven.
+  const fixtures = parBar();
+  const fx = { mode: 'bars', bpm: 120, depth: 255, enabled: true, spatial: 'patch' };
+  const lv = rigAt(fx, fixtures, 0);
+  for (let i = 1; i < lv.length; i++) {
+    assert.notStrictEqual(lv[i], lv[i - 1], `fixtures ${i - 1} and ${i} share a bar: ${lv.join(',')}`);
+  }
+  // And the whole comb inverts on the flip rather than one half of the rig staying put.
+  assert.deepStrictEqual(rigAt(fx, fixtures, 250), lv.map((v) => (v === 255 ? 18 : 255)),
+    'every bar swaps when the flip comes round');
+});
+
+check('a spatial chase keeps something lit on a rig that fills half the room', () => {
+  // With the rig squeezed into phases 0.447..0.610 all eight pars sat in three of the
+  // eight chase lanes, and the head spent the rest of every cycle out where there was
+  // nothing hung: the whole rig at DMX zero on 38% of frames.
+  const fixtures = parBar();
+  const fx = { mode: 'chase', bpm: 120, depth: 255, enabled: true, spatial: 'x' };
+  const { dark, total } = darkFrames(fx, fixtures, 4000);
+  assert.strictEqual(dark, 0, `the whole rig went to zero on ${dark} of ${total} frames`);
+});
+
+check('radar reaches every fixture at every tempo, not just the ones a frame lands on', () => {
+  // The beam was a fixed 0.28 rad, so its dwell shrank with the tempo: 17ms at 300 bpm,
+  // less than one 25ms frame, and the sweep stepped clean over fixtures between two
+  // pushes. Three of these eight never lit at all at 300 bpm; at 120 the dimmest reached
+  // 125 and at 200 it reached 25.
+  const fixtures = parBar();
+  for (const bpm of [60, 120, 200, 300]) {
+    const fx = { mode: 'radar', bpm, depth: 255, enabled: true, spatial: 'patch' };
+    const peak = worstPeaks(fx, fixtures, (60000 / bpm) * 8);
+    assert.ok(Math.min(...peak) >= 170,
+      `at ${bpm} bpm the dimmest fixture only ever reached ${Math.min(...peak)}: ${peak.join(',')}`);
+  }
+});
+
+check('radar sweeps a rig hung in a row instead of blinking at it', () => {
+  // Eight pars in a bar all sit within 1.19 rad of each other seen from the middle of the
+  // room — 18.9% of the turn — so a beam with no persistence left the entire rig at zero
+  // for 70% of every beat, at every tempo. That is the "radar doesn't work" in the report.
+  const fixtures = parBar();
+  const fx = { mode: 'radar', bpm: 120, depth: 255, enabled: true, spatial: 'patch' };
+  const { dark, total } = darkFrames(fx, fixtures, 4000);
+  assert.ok(dark / total < 0.4, `the whole rig was dark on ${dark} of ${total} frames`);
+});
+
+check('the direction switch turns radar the other way round', () => {
+  // radar reads x/y for its geometry rather than the spatial fan — but it ignored the
+  // fan's DIRECTION as well, so flipping to a reversed sweep changed nothing whatsoever.
+  const f = makeFixture({ profile: 'dimmer', address: 1 });
+  f.x = 0.9; f.y = 0.5;
+  const fwd = { mode: 'radar', bpm: 60, depth: 255, enabled: true, spatial: 'radial' };
+  const rev = { ...fwd, spatial: 'radial-' };
+  let differed = false;
+  for (let t = 0; t < 1000 && !differed; t += 25) {
+    if (fxLevel(fwd, f, 0, 1, t) !== fxLevel(rev, f, 0, 1, t)) differed = true;
+  }
+  assert.ok(differed, 'reversing the sweep must change what a fixture sees');
+});
+
+check('blocks keeps its groups when the fan is spatial', () => {
+  // The group index went phase -> fixture index -> fxLane, and the round trip collapsed:
+  // on the 24-fixture rig with a left-right fan every fixture came back in group 2, so
+  // "blocks" was the whole rig flashing in unison on 100% of frames.
+  const fixtures = [...parBar(), ...[...Array(16)].map((_, i) => makeFixture({
+    profile: 'rgb', address: 1 + i * 3, universe: 1,
+    x: +(0.40 + (i % 4) * 0.16).toFixed(4), y: +(0.35 + Math.floor(i / 4) * 0.16).toFixed(4),
+  }))];
+  const fx = { mode: 'blocks', bpm: 120, depth: 255, enabled: true, spatial: 'x' };
+  let split = 0, total = 0;
+  for (let t = 0; t < 4000; t += 25) {
+    total++;
+    if (new Set(rigAt(fx, fixtures, t)).size > 1) split++;
+  }
+  assert.ok(split > total * 0.5, `the rig was in unison on ${total - split} of ${total} frames`);
+});
+
+check("pingpong's head lands on every fixture, at every tempo", () => {
+  // 16 lanes over a rig of 8 left every other lane EMPTY, so half the time the head was
+  // standing between two lamps; and a bounce needs 32 lane-steps a period, more than a
+  // 600ms period has frames, so at 200 bpm the head never reached lanes 2 or 7 and
+  // whatever sat there peaked at 190 instead of 255.
+  const fixtures = parBar();
+  for (const bpm of [60, 120, 200, 300]) {
+    const fx = { mode: 'pingpong', bpm, depth: 255, enabled: true, spatial: 'patch' };
+    const peak = worstPeaks(fx, fixtures, (60000 / bpm) * 16);
+    assert.ok(peak.every((v) => v === 255), `at ${bpm} bpm the head missed a fixture: ${peak.join(',')}`);
+  }
 });
 
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');

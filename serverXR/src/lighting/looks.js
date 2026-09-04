@@ -188,15 +188,21 @@ function spatialFrac(spatial, fixture) {
   const rev = spatial.endsWith('-');
   const axis = rev ? spatial.slice(0, -1) : spatial;
   const flip = (p) => (rev ? 1 - p : p);
-  const nx = clamp01((num(fixture.x, 0) + 1) / 3);
-  const ny = clamp01((num(fixture.y, 0) + 1) / 3);
+  // The ROOM is 0..1 — that is the square the stage view draws and the only part of the
+  // world a rig is ever laid out in. Normalising the -1..2 clamp range instead squeezed a
+  // real rig into a slice of the sweep: on this desk's own 26-fixture rig, an 'x' fan
+  // spanned 0.28..0.75, so half of every travelling look happened where no light is.
+  // fx.js carried the identical bug; this is the same fix, kept in step with it.
+  const nx = clamp01(num(fixture.x, 0));
+  const ny = clamp01(num(fixture.y, 0));
   if (axis === 'x') return flip(nx);
   if (axis === 'y') return flip(ny);
   const dx = nx - 0.5, dy = ny - 0.5;
-  // radial: 0 at the centre of the home rectangle, 1 at the corners of the full world —
-  // an expanding ring. angle: which way round the centre a fixture sits — a beam
-  // rotating past it reads as a radar sweep once phase and the clock are moving it.
-  if (axis === 'radial') return flip(Math.min(1, Math.sqrt(dx * dx + dy * dy) / 0.5));
+  // radial: 0 at the centre of the room, 1 at its corners — an expanding ring. angle:
+  // which way round the centre a fixture sits — a beam rotating past it reads as a radar
+  // sweep once phase and the clock are moving it. SQRT1_2 is the centre-to-corner
+  // distance, so a corner reads 1.0 rather than saturating early.
+  if (axis === 'radial') return flip(Math.min(1, Math.sqrt(dx * dx + dy * dy) / Math.SQRT1_2));
   if (axis === 'angle') return flip((((Math.atan2(dy, dx) / TAU) % 1) + 1) % 1);
   return null;
 }

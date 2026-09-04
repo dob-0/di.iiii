@@ -526,6 +526,12 @@
           <div class="ls-pads" id="tFxPads"></div>
           <div class="ls-row">
             <label class="ls-fader"><span>Depth</span><input type="range" id="tFxDepth" min="0" max="255" value="255"><output id="tFxDepthOut">100%</output></label>
+            <!-- Speed is the tempo under a finger. Everything in the rig runs off one BPM —
+                 every FX mode and every LFO — so this fader IS the speed of the room, and
+                 halve/double are here because that is the move you make on a drop. -->
+            <label class="ls-fader"><span>Speed</span><input type="range" id="tSpeed" min="20" max="300" value="120"><output id="tSpeedOut">120</output></label>
+            <button class="ls-big" id="tHalf" title="Half tempo">÷2</button>
+            <button class="ls-big" id="tDouble" title="Double tempo">×2</button>
             <div class="ls-bpm"><b id="tBpm">120</b><span>BPM</span></div>
             <button class="ls-big" id="tTap">TAP</button>
             <button class="ls-big danger" id="tFxOff">FX off</button>
@@ -558,7 +564,12 @@
             </button>
             <div class="sp-nav">
               <button class="ls-big" id="setPrev">‹ Prev</button>
+              <button class="ls-big" id="setPlay" title="Run this set on its own: load it into the chase and start it">▶ Play</button>
               <button class="ls-big accent" id="setNext">Next ›</button>
+            </div>
+            <div class="sp-nav sp-timing">
+              <label class="ls-fader"><span>Hold</span><input type="range" id="setHold" min="100" max="8000" step="50" value="1200"><output id="setHoldOut">1.2s</output></label>
+              <label class="ls-fader"><span>Fade</span><input type="range" id="setFade" min="0" max="4000" step="50" value="200"><output id="setFadeOut">0.2s</output></label>
             </div>
           </div>
           <div class="sp-listwrap" id="setListWrap" hidden>
@@ -681,6 +692,7 @@
             </p>
             <div class="inline">
               <button class="sq accent" id="miWizard">Start wizard</button>
+              <button class="sq" id="miPreset" title="Map this controller by its known layout, without wiggling anything">Map my controller</button>
               <button class="sq" id="miByNum">Map by number</button>
               <button class="sq danger" id="miClearMap">Clear map</button>
             </div>

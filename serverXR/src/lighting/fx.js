@@ -101,6 +101,23 @@ function fxLane(i, n, lanes) {
   return Math.max(0, Math.min(lanes - 1, Math.floor((i * lanes) / n)));
 }
 
+// How many bands a mode cuts the rig into when a band is meant to be about one fixture
+// wide — bars, and anything else whose whole reading is "this one, not that one". A fixed
+// count is wrong at both ends: 16 lanes over 8 pars puts every par in its own lane with an
+// EMPTY lane between each pair, and 16 lanes over 200 pixels is a comb nobody can see.
+function fxLanes(n, cap) {
+  return Math.max(2, Math.min(cap, Math.floor(n) || 2));
+}
+
+// Which of `lanes` positions along the rig a fixture stands on. Rounding, not flooring:
+// phase 0 must land on the first lane and phase 1 on the last, so the ends of the rig are
+// the ends of the effect. Flooring gives the last fixture a lane of its own and squeezes
+// everything else down — that is how bars ended up splitting a rig of 8 into two halves
+// (lanes 0,2,4,6,9,11,13,15: four even then four odd) instead of alternating.
+function fxSlot(phase, lanes) {
+  return Math.max(0, Math.min(lanes - 1, Math.round(phase * (lanes - 1))));
+}
+
 // Effects step along the rig in patch order — universe, then address — because that is the
 // order the fixtures are numbered on the desk and, on nearly every rig, the order they are
 // hung in. Stage position is deliberately not used for the ordering: dragging a fixture on
@@ -133,14 +150,25 @@ function fxPhase(fx, fixture, i, n) {
   const mode = rev ? raw.slice(0, -1) : raw;
   const flip = (p) => (rev ? 1 - p : p);
   if (mode === 'patch' || !fixture) return flip(n <= 1 ? 0 : i / (n - 1));
-  // World is -1..2; normalise whatever range is in use back to 0..1 per axis.
-  const nx = ((+fixture.x || 0) + 1) / 3, ny = ((+fixture.y || 0) + 1) / 3;
-  if (mode === 'x') return flip(Math.max(0, Math.min(1, nx)));
-  if (mode === 'y') return flip(Math.max(0, Math.min(1, ny)));
-  // radial: 0 at the centre of the home rect, growing outward — it reaches 1 at the
-  // corners of the full -1..2 world, so fixtures inside the home rect sit in the inner half.
+  // The ROOM is 0..1 — the square the stage view draws, the square `arrange` lays a grid
+  // or a circle into, the square a fixture is dropped onto. That square is the effect.
+  //
+  // This used to normalise (x + 1) / 3, mapping the old -1..2 margin onto the phase, and
+  // it was the single worst thing in this file: a real rig lives inside the room, so an
+  // 8-par bar hung across x 0.34..0.83 came out at phase 0.447..0.610 — SIXTEEN per cent
+  // of the effect. Every mode that reads a lane then collapsed. Measured on that bar at
+  // spatial 'x': chase left the whole rig at zero on 38% of frames, comet on 63%, and
+  // bars put all eight pars in three lanes. A fixture dragged out past the wall clamps to
+  // it, the way a lamp hung past the end of the truss is still the end of the sweep.
+  const nx = Math.max(0, Math.min(1, +fixture.x || 0)), ny = Math.max(0, Math.min(1, +fixture.y || 0));
+  if (mode === 'x') return flip(nx);
+  if (mode === 'y') return flip(ny);
+  // radial: 0 in the middle of the room, 1 at its corners — divided by the corner
+  // distance, not by 0.5, or everything outside the inscribed circle saturates at 1 and
+  // the four corners of a grid rig all read as the same ring.
   const dx = nx - 0.5, dy = ny - 0.5;
-  return flip(Math.max(0, Math.min(1, Math.sqrt(dx * dx + dy * dy) / 0.5)));
+  // Math.SQRT1_2 is sqrt(0.5² + 0.5²): the distance from the middle of the room to a corner.
+  return flip(Math.min(1, Math.sqrt(dx * dx + dy * dy) / Math.SQRT1_2));
 }
 
 function fxLevel(fx, fixture, i, n, now) {
@@ -197,8 +225,14 @@ function fxLevel(fx, fixture, i, n, now) {
       return fxApplyDepth(tailLevel((lane + lanes - active) % lanes), depth);
     }
     case 'bars': {
-      const lanes = 16;
-      const lane = Math.min(lanes - 1, Math.floor(fxPhase(fx, fixture, i, n) * lanes));
+      // A bar is one fixture wide on a rig small enough for that to read, and grows on a
+      // rig big enough that single-fixture stripes would just shimmer. The old fixed 16
+      // was the bug: on a rig of 8 the lanes came out 0,2,4,6,9,11,13,15, so fixtures
+      // 0-3 were all even and 4-7 all odd and "bars" was the left half and the right half
+      // flashing at each other. On 24 it was worse — lanes 0,0,1,2,2,3,4,4,5,… clump in
+      // twos and threes, so the stripes came out different widths every time.
+      const lanes = fxLanes(n, 32);
+      const lane = fxSlot(fxPhase(fx, fixture, i, n), lanes);
       const flip = Math.floor(tq / Math.max(FRAME_MS, Math.floor(beatMs / 2))) & 1;
       // The off half sits at 18 rather than 0 so the rig stays legible between flips —
       // a hard alternation to black reads as half the lights having failed.
@@ -214,19 +248,38 @@ function fxLevel(fx, fixture, i, n, now) {
     case 'radar': {
       // The one mode that cares where the fixture actually is. The firmware had 0..255
       // stage coordinates and this desk has 0..1, but the beam only asks for the angle
-      // from the middle of the stage and an angle does not care about the scale.
+      // from the middle of the stage and an angle does not care about the scale — so this
+      // one reads x/y raw, unclamped: a fixture hung right out past the wall still has an
+      // honest direction from the middle of the room.
       const dx = (fixture && fixture.x != null ? +fixture.x : 0.5) - 0.5;
       const dy = (fixture && fixture.y != null ? +fixture.y : 0.5) - 0.5;
-      let ang = Math.atan2(dy, dx);
-      if (ang < 0) ang += TAU;
-      const sweep = ((t % beatMs) / beatMs) * TAU;
-      let diff = Math.abs(ang - sweep);
-      if (diff > Math.PI) diff = TAU - diff;
-      // 0.28 rad of beam either side of the line, about 16°. Tuned by eye and it is a
-      // trade: narrower and the sweep flickers between fixtures at frame rate, wider and
-      // it stops reading as a beam and becomes a wash going round.
-      const level = 1 - Math.min(1, diff / 0.28);
-      return fxApplyDepth(Math.min(255, Math.floor(level * 255)), depth);
+      // Everything below is in TURNS, not radians: one turn is one beat, so a width in
+      // turns is a width in time and stays the same fraction of a beat at any bpm.
+      const ang = (((Math.atan2(dy, dx) / TAU) % 1) + 1) % 1;
+      const sweep = (t % beatMs) / beatMs;
+      // The direction switch reaches radar too. It is the only mode that ignores `spatial`
+      // for its geometry, but ignoring the DIRECTION as well made the reverse settings a
+      // lie: the operator flips to 'radial-' and the beam keeps turning the same way.
+      const rev = String(fx.spatial || '').endsWith('-');
+      // How long since the beam last crossed this fixture, 0..1 turns.
+      const since = (((rev ? ang - sweep : sweep - ang) % 1) + 1) % 1;
+      // The beam is never narrower than three frames of the 40 Hz loop. The old width was
+      // an absolute 0.28 rad — 4.5% of a turn either side — so its dwell shrank with the
+      // tempo: 17ms at 300 bpm, under one 25ms frame, and the sweep stepped clean over
+      // fixtures between two pushes. Measured on the 8-par bar at 300 bpm, three of the
+      // eight NEVER lit (peak 0) and the rest peaked anywhere from 25 to 228 depending on
+      // where a frame happened to fall. With the floor, the nearest frame is always
+      // within a third of the half-width of the centre, so every fixture reaches 170+.
+      const half = Math.max(0.06, (FRAME_MS * 1.5) / beatMs);
+      const head = 1 - Math.min(1, Math.min(since, 1 - since) / half);
+      // Phosphor. A radar screen holds the trace after the beam has gone, and here it is
+      // the difference between an effect and a stutter: fixtures hung in a ROW all sit in
+      // a narrow arc seen from the middle of the room — the 8-par bar spans 1.19 rad,
+      // 18.9% of the turn — so a bare beam left the entire rig at DMX 0 for 70-75% of
+      // every beat, whatever the tempo. The decay carries the sweep across the gap: same
+      // rig, dark 28% of the time, and it reads as something crossing the room.
+      const tail = since < 0.45 ? 0.72 * (1 - since / 0.45) : 0;
+      return fxApplyDepth(Math.min(255, Math.round(Math.max(head, tail) * 255)), depth);
     }
     case 'pump': {
       // The techno pump: full hit on the beat, quadratic decay to black before the next.
@@ -246,8 +299,14 @@ function fxLevel(fx, fixture, i, n, now) {
     case 'pingpong': {
       // A comet head that bounces end to end instead of wrapping — triangle position over
       // two beats, same tail curve as chase so the head stays a head.
-      const lanes = 16;
-      const lane = Math.min(lanes - 1, Math.floor(fxPhase(fx, fixture, i, n) * lanes));
+      // The lane count follows the rig for the same reason bars' does: a fixed 16 over a
+      // rig of 8 put the fixtures in lanes 0,2,4,6,9,11,13,15 and left the other eight
+      // EMPTY, so on half of every frame the head was standing between two lamps and the
+      // bounce stuttered. Worse at tempo — 16 lanes need 32 lane-steps per bounce and a
+      // 600ms period only has 24 frames to make them in, so at 200 bpm the head never
+      // landed on lanes 2 or 7 at all and the fixture sitting there peaked at 190, never 255.
+      const lanes = fxLanes(n, 16);
+      const lane = fxSlot(fxPhase(fx, fixture, i, n), lanes);
       const period = beatMs * 2;
       const p = (tq % period) / period;
       const head = Math.round((p < 0.5 ? p * 2 : (1 - p) * 2) * (lanes - 1));
@@ -257,7 +316,12 @@ function fxLevel(fx, fixture, i, n, now) {
       // Five blocks of the rig flip on and off each beat, half of them lit at a time on
       // average. Chunky where sparkle is fine-grained; reads as architecture, not noise.
       const groups = 5;
-      const g = fxLane(Math.floor(fxPhase(fx, fixture, i, n) * (n - 1 || 1)), n, groups);
+      // Straight from the phase. It used to go phase -> a fixture index -> fxLane, and the
+      // round trip through the index quietly threw groups away whenever the phase was not
+      // the patch fan: on the 24-fixture rig with spatial 'x' every fixture came back as
+      // group 2 — ONE group, so "blocks" was the whole rig flashing in unison on 100% of
+      // frames. Direct, it lands in four.
+      const g = Math.max(0, Math.min(groups - 1, Math.floor(fxPhase(fx, fixture, i, n) * groups)));
       const slot = Math.floor(tq / Math.max(FRAME_MS * 2, beatMs));
       const on = (fxHash((((g + 1) << 20) ^ slot) >>> 0) & 3) < 2;
       return fxApplyDepth(on ? 255 : 24, depth);
@@ -270,5 +334,5 @@ function fxLevel(fx, fixture, i, n, now) {
 module.exports = {
   FX_MODES, FX_SPATIAL, DEFAULT_FX, FRAME_MS,
   fxActive, fxOrder, fxLevel, fxPhase, sanitizeFxPatch,
-  fxApplyDepth, fxLane, fxHash, tailLevel, tri8,
+  fxApplyDepth, fxLane, fxLanes, fxSlot, fxHash, tailLevel, tri8,
 };

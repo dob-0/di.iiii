@@ -1111,6 +1111,19 @@ body.space .stage { cursor: grab; }
 .ls-fader input[type=range]::-moz-range-thumb { width: 30px; height: 34px; background: var(--text); border: 1px solid var(--bg); border-radius: 0; }
 .ls-fader output { font-family: var(--mono); min-width: 46px; text-align: right; color: var(--text); font-size: 14px; }
 
+/* The set's hold/fade sit under Prev·Play·Next rather than beside them: at booth width the
+   three big buttons already fill the row, and a fader squeezed in with them is untouchable.
+   The strip's body is a fixed 212px and it clips, so this row has to be SHORT — it buys its
+   height from the now-playing panel above, which is why that keeps min-height 0 and its own
+   ellipsis. Without the explicit height the row pushed the set name clean out of the panel. */
+.sp-timing { gap: 16px; flex: none; height: 30px; align-items: center; }
+.sp-timing .ls-fader { min-width: 120px; font-size: 11px; }
+.sp-timing .ls-fader input[type=range] { height: 26px; }
+.sp-timing .ls-fader output { min-width: 40px; font-size: 12px; }
+/* Three big buttons instead of two: keep them reachable rather than letting Play squeeze
+   Prev and Next into slivers. */
+.sp-nav .ls-big { min-width: 0; }
+
 .ls-big {
   min-height: 48px; min-width: 84px; padding: 6px 12px;
   background: var(--pane2); border: 1px solid var(--line); border-radius: 0;
