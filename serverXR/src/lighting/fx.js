@@ -22,7 +22,37 @@ const FRAME_MS = 25;
 // `exclude` is a list of profile NAMES the effects never touch: the render path gives any
 // fixture patched on one of them a flat 255 multiplier, so a hazer on a dimmer channel or
 // a wash that must hold a look can sit out an effect without being unpatched.
-const DEFAULT_FX = { mode: 'none', bpm: 120, depth: 255, enabled: false, spatial: 'patch', exclude: [] };
+//
+// `epoch` is WHERE the beat is, as opposed to bpm, which is only how fast it goes. Tap
+// set the rate and nothing ever said which moment was a downbeat, so every effect and
+// every wave ran on a grid anchored at 1970 — correct tempo, arbitrary phase, and a chase
+// that "syncs" to the music by coincidence roughly never. 0 keeps the old anchor exactly,
+// so a show file from before this existed renders frame for frame as it did.
+const DEFAULT_FX = { mode: 'none', bpm: 120, depth: 255, enabled: false, spatial: 'patch', exclude: [], epoch: 0 };
+// Four beats to the bar. Not configurable yet, and named rather than left as a 4 in three
+// files: when a 3/4 show turns up, this is the one line that has to learn about it.
+const BEATS_PER_BAR = 4;
+
+// Where `now` sits on the tempo grid. One answer, shared by quantised firing, the chase
+// and anything else that has to land ON the music rather than near it.
+function beatGrid(fx, now) {
+  const bpm = Math.max(20, Math.min(300, (fx && fx.bpm | 0) || 120));
+  const beatMs = 60000 / bpm;
+  const epoch = fx && Number.isFinite(+fx.epoch) ? +fx.epoch : 0;
+  const since = now - epoch;
+  const beats = since / beatMs;
+  const intoBeat = ((beats % 1) + 1) % 1;
+  const intoBar = ((beats % BEATS_PER_BAR) + BEATS_PER_BAR) % BEATS_PER_BAR;
+  return {
+    bpm, beatMs, epoch,
+    beat: Math.floor(beats),
+    intoBeat,
+    // How long until the next one lands. Exactly on a boundary counts as "now", not as a
+    // whole beat away — a press that arrives on the beat must not wait for the next.
+    nextBeatMs: intoBeat === 0 ? 0 : (1 - intoBeat) * beatMs,
+    nextBarMs: intoBar === 0 ? 0 : (BEATS_PER_BAR - intoBar) * beatMs,
+  };
+}
 // 'x' sweeps left to right across the stage arrangement, 'x-' right to left; same pair
 // for y and for radial (out from the middle / in toward it). Both directions exist
 // because every desk-grade FX engine has a direction switch, and because her chain zig-
@@ -44,6 +74,8 @@ function sanitizeFxPatch(current, patch) {
     depth: p.depth != null ? Math.max(0, Math.min(255, p.depth | 0)) : cur.depth,
     enabled: p.enabled != null ? !!p.enabled : !!cur.enabled,
     spatial: FX_SPATIAL.includes(p.spatial) ? p.spatial : (cur.spatial || 'patch'),
+    // A tap says "this instant is a beat". Anything else leaves the anchor where it was.
+    epoch: p.epoch != null && Number.isFinite(+p.epoch) ? Math.max(0, +p.epoch) : (+cur.epoch || 0),
     // Replaced whole, never merged: the list IS the setting.
     exclude: Array.isArray(p.exclude)
       ? p.exclude.filter((s) => typeof s === 'string' && s).slice(0, 20).map((s) => s.slice(0, 40))
@@ -269,6 +301,6 @@ function fxLevel(fx, fixture, i, n, now) {
 
 module.exports = {
   FX_MODES, FX_SPATIAL, DEFAULT_FX, FRAME_MS,
-  fxActive, fxOrder, fxLevel, fxPhase, sanitizeFxPatch,
+  fxActive, fxOrder, fxLevel, fxPhase, sanitizeFxPatch, beatGrid, BEATS_PER_BAR,
   fxApplyDepth, fxLane, fxHash, tailLevel, tri8,
 };

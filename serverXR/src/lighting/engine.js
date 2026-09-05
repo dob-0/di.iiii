@@ -1,7 +1,7 @@
 'use strict';
 // Fixture library, DMX rendering, fades and chase playback.
 
-const { fxActive, fxOrder, fxLevel } = require('./fx');
+const { fxActive, fxOrder, fxLevel, beatGrid } = require('./fx');
 const { lfoApply, isGenericChannels } = require('./lfo');
 const { layerValues } = require('./looks');
 
@@ -283,7 +283,7 @@ class Engine {
     // tell this file is here, which is the property that let it land on a live rig.
     // The tempo the operator tapped drives the stack too, not only the FX engine —
     // one clock, so Tap retimes every running look at the same moment.
-    const stack = layerValues(state, state.fixtures, now, state.fx && state.fx.bpm);
+    const stack = layerValues(state, state.fixtures, now, state.fx && state.fx.bpm, state.fx && state.fx.epoch);
     const audioOn = this.audioActive(state, now);
     if (audioOn) this.audioTick(state, now);
     // IDENTIFY — "which lamp in this room is fixture 7?". It beats the stack, the LFOs
@@ -595,7 +595,19 @@ class Engine {
     this.chase.index = (this.chase.index + 1) % c.sceneIds.length;
     const scene = this.state.scenes.find((s) => s.id === c.sceneIds[this.chase.index]);
     if (scene) this.recallScene(scene, c.fadeMs);
-    this.chase.nextAt = now + Math.max(50, c.holdMs);
+    // On the music, or on a wall clock. `sync: 'beat'` steps every `c.beats` beats of the
+    // desk's tempo grid and lands on the grid rather than a hold time after the last step,
+    // so a chase cannot drift out of the track over a five-minute record the way a
+    // millisecond hold always eventually does. 'clock' is the old behaviour, unchanged.
+    if (c.sync === 'beat') {
+      const g = beatGrid(this.state.fx, now);
+      const every = Math.max(1, c.beats || 1) * g.beatMs;
+      const since = now - g.epoch;
+      // The next multiple of `every` after now — the boundary, not now plus a duration.
+      this.chase.nextAt = g.epoch + (Math.floor(since / every) + 1) * every;
+    } else {
+      this.chase.nextAt = now + Math.max(50, c.holdMs);
+    }
   }
 }
 
