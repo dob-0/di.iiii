@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import * as THREE from 'three'
@@ -7,6 +7,11 @@ import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { useKeyboardPageScroll } from '../../hooks/useKeyboardPageScroll.js'
 import { landingContent } from './content.js'
 import './landing.css'
+
+/* Lazy: the field is the only thing on this page that needs react-three-fiber, and
+   mobile and reduced-motion visitors never render it. A static import would put
+   R3F in the landing's first chunk for everyone. */
+const ProcessField = lazy(() => import('./ProcessField.jsx'))
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -53,6 +58,46 @@ const circleItems = [
 ]
 
 const ambientDotItems = Array.from({ length: 26 }, (_, index) => index)
+
+/* The About panel's dots RAIN DOWN and pile up at the bottom of the prose, rather
+   than the two that used to jitter in place and return to where they started.
+   Generated once at module level, from a fixed seed: the arrangement has to be the
+   same on every render or the pile reshuffles itself mid-fall on any re-render.
+
+   Sizes are weighted small — a handful of big ones read as the landing's circles,
+   the rest as the ambient specks, and an even spread of sizes reads as neither. */
+const aboutDots = (() => {
+    let seed = 0x1c3d
+    const random = () => {
+        seed = (seed * 1664525 + 1013904223) >>> 0
+        return seed / 0x100000000
+    }
+    return Array.from({ length: 48 }, () => {
+        const big = random() < 0.16
+        /* Each dot is offset by a random slice of its OWN cycle, not a shared
+           window — that is what keeps the shower evenly populated instead of
+           pulsing in waves. */
+        const duration = 9 + random() * 9
+        return {
+            size: big ? 26 + random() * 30 : 5 + random() * 12,
+            /* Kept off the extreme edges: a dot centred at 99% is half-clipped by the
+               container's overflow and reads as a bug rather than a dot. */
+            x: 2 + random() * 94,
+            /* Where it comes to rest. A spread of a few hundred px is what makes it a
+               heap instead of a line, and the big ones settle lowest. */
+            rest: (big ? 0 : 10) + random() * (big ? 90 : 260),
+            drift: (random() - 0.5) * 260,
+            /* Enters ABOVE the top of the stage — the panel is a bit under two
+               screens tall and the dot rests at the foot of it, so anything under
+               ~195vh of travel starts partway down and never crosses the first
+               screen at all. Every dot falls the whole page; the phase offsets, not
+               the start heights, are what keep dots at every height at once. */
+            start: 200 + random() * 45,
+            duration,
+            delay: random() * duration
+        }
+    })
+})()
 const processImages = Array.from({ length: 30 }, (_, index) => ({
     src: `/wcc/process/process-${String(index + 1).padStart(2, '0')}.jpeg`,
     alt: `WCC process documentation photo ${index + 1}`,
@@ -376,14 +421,42 @@ function ArtistWorks({ lang = 'en' }) {
 
 function AboutProject({ lang = 'en' }) {
     const [processColor, setProcessColor] = useState(false)
+    const { viewportMode, prefersReducedMotion } = useViewportMode()
     const isHy = lang === 'hy'
 
+    /* The scatter field is the desktop presentation of the same thirty photos.
+       Mobile keeps the masonry because a drifting canvas is unusable on a touch
+       screen with no cursor to shove with, and reduced-motion keeps it because the
+       drift is the whole point of the field. */
+    const asField = viewportMode === 'desktop' && !prefersReducedMotion
+
     return (
-        <div className={`wcc-text-columns wcc-text-columns--about${isHy ? ' is-hy' : ''}`}>
+        /* The gallery is a SIBLING of the prose, not a cell in it. The columns cap
+           at 1120px because that is a readable measure for a paragraph; the photos
+           want the whole panel, which at 1920 is 628px more. Nested, the field
+           inherited the text's cap and left a third of the screen empty. */
+        /* The dots are hung on a stage that wraps the WHOLE panel, not on the prose
+           block. Inside the prose they fell 950px and piled up below the fold, where
+           nobody saw either half of it. */
+        <div className="wcc-about-stage">
             <div className="wcc-about-running-dots" aria-hidden="true">
-                <span />
-                <span />
+                {aboutDots.map((dot, index) => (
+                    <span
+                        key={index}
+                        style={{
+                            '--about-dot-size': `${dot.size.toFixed(1)}px`,
+                            '--about-dot-x': `${dot.x.toFixed(2)}%`,
+                            '--about-dot-rest': `${dot.rest.toFixed(1)}px`,
+                            '--about-dot-drift': `${dot.drift.toFixed(1)}px`,
+                            '--about-dot-start': `${dot.start.toFixed(1)}vh`,
+                            '--about-dot-delay': `${dot.delay.toFixed(2)}s`,
+                            '--about-dot-duration': `${dot.duration.toFixed(2)}s`
+                        }}
+                    />
+                ))}
             </div>
+
+        <div className={`wcc-text-columns wcc-text-columns--about${isHy ? ' is-hy' : ''}`}>
             {isHy ? (
                 landingContent.aboutParagraphsHy.filter((p) => p.type !== 'highlight').map((para, index) => {
                     if (para.type === 'session') {
@@ -451,20 +524,30 @@ function AboutProject({ lang = 'en' }) {
                     beyond the duration of the project.
                 </p>
             )}
-            <div className={`wcc-process-gallery ${processColor ? 'is-color' : ''}`}>
-                <div className="wcc-process-gallery__grid">
-                    {processImages.map((image, index) => (
-                        <button
-                            className={`wcc-process-photo${image.rotatePortrait ? ' is-rotated-portrait' : ''}`}
-                            key={image.src}
-                            type="button"
-                            onClick={() => setProcessColor(true)}
-                            aria-label={`Reveal process image ${index + 1} in color`}
-                        >
-                            <img src={image.src} alt={image.alt} loading="lazy" />
-                        </button>
-                    ))}
-                </div>
+        </div>
+
+            <div
+                className={`wcc-process-gallery ${processColor ? 'is-color' : ''}${asField ? ' wcc-process-gallery--field' : ''}`}
+            >
+                {asField ? (
+                    <Suspense fallback={<div className="wcc-process-field" aria-hidden="true" />}>
+                        <ProcessField images={processImages} />
+                    </Suspense>
+                ) : (
+                    <div className="wcc-process-gallery__grid">
+                        {processImages.map((image, index) => (
+                            <button
+                                className={`wcc-process-photo${image.rotatePortrait ? ' is-rotated-portrait' : ''}`}
+                                key={image.src}
+                                type="button"
+                                onClick={() => setProcessColor(true)}
+                                aria-label={`Reveal process image ${index + 1} in color`}
+                            >
+                                <img src={image.src} alt={image.alt} loading="lazy" />
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
             <SupportedBy lang={lang} inAbout />
         </div>
