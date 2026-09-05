@@ -186,4 +186,29 @@ describe('LandingPage local-install copy', () => {
         expect(await screen.findByText(/Sign in to keep it/)).toBeInTheDocument()
         expect(screen.queryByText('Your machine, your spaces')).not.toBeInTheDocument()
     })
+
+    // The featured-space buttons are hardcoded, so they drift from the space
+    // rows in silence. Two ways that has already bitten: a label that no longer
+    // matches the space's own name (`beyond_form` while the DB said "Beyond
+    // Form"), and a dated claim that nothing expires — the br_id_ge button
+    // advertised "live at Notations #2" for a month after the show closed on
+    // 2026-08-02. A door may name a work; it may not date it.
+    it('names featured spaces without dating them', async () => {
+        serverConfigState.current = { local: false, requireAuth: true }
+        render(<LandingPage />)
+        await screen.findByText(/Sign in to keep it/)
+
+        for (const [className, label] of [
+            ['landing-cta-wcc', 'WCC Exhibition'],
+            ['landing-cta-br-id-ge', 'br_id_ge'],
+            ['landing-cta-beyond-form', 'Beyond Form'],
+            ['landing-cta-algo-vrithm', 'algovrithm']
+        ]) {
+            const button = document.querySelector(`.${className}`)
+            expect(button, `no featured button for ${className}`).toBeTruthy()
+            expect(button.textContent).toContain(label)
+            // No "live at", no show number, no date.
+            expect(button.textContent).not.toMatch(/\blive at\b|#\d|\b20\d\d\b/i)
+        }
+    })
 })

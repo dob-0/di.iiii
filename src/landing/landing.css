@@ -18,15 +18,17 @@
 }
 
 /* ─── ACCESSIBILITY: FOCUS + TAP TARGETS ──────────────────────
-   None of this page's own rules set a focus style, so a keyboard visitor got
-   whatever the browser default happened to be — invisible in some Chromium
-   builds once `outline` is touched anywhere upstream. One rule, every real
-   control on the page (links and buttons are the only interactive elements
-   here). */
+   Nothing on this page had a focus ring anyone could see. Plain links fell
+   back to the UA's `outline: auto 1px rgb(16,16,16)` — a near-black hairline
+   on a near-black page — and every MUI button (the door itself, and all four
+   spaces) carries `outline: 0` outright, so the five controls that matter
+   most showed a keyboard visitor nothing at all. Measured by tabbing the
+   live page and reading `getComputedStyle().outlineStyle`, not inferred. */
 .lp-root a:focus-visible,
-.lp-root button:focus-visible {
-    outline: 2px solid var(--di-cyan);
-    outline-offset: 2px;
+.lp-root button:focus-visible,
+.lp-root .MuiButtonBase-root:focus-visible {
+    outline: 2px solid var(--di-cyan) !important;
+    outline-offset: 3px;
 }
 
 /* ─── BUTTONS ─────────────────────────────────────────────── */
@@ -57,6 +59,10 @@
     box-shadow: none !important;
 }
 
+/* A button reads as a button. At --di-text-muted on a 0.3-alpha cyan hairline
+   the section CTAs ("Open the Wiki →", "Look around") were quieter than the
+   plain "Read →" links in the cards above them, which inverted the order of the
+   page: the thing you are meant to press was the faintest thing on the screen. */
 .landing-cta-ghost,
 .lp-btn-ghost {
     display: inline-flex !important;
@@ -64,7 +70,7 @@
     justify-content: center !important;
     min-height: 44px;
     background: transparent !important;
-    color: var(--di-text-muted) !important;
+    color: rgba(255, 255, 255, 0.82) !important;
     font-weight: 500 !important;
     font-size: 0.9rem !important;
     padding: 10px 24px !important;
@@ -201,9 +207,13 @@
     gap: 28px;
 }
 
+/* The page's third tier — the ways back for someone who already has work here.
+   They were the same 0.5 white as a footer credit while the one lit control sat
+   beside them, which is most of why the top bar read as a scatter of grey with
+   a single bright thing in it. Legible, still plainly below the door. */
 .lp-nav-link {
     font-size: 0.82rem;
-    color: var(--di-text-muted);
+    color: rgba(255, 255, 255, 0.72);
     text-decoration: none;
     letter-spacing: 0.01em;
     transition: color 0.15s;
@@ -285,31 +295,55 @@ body.is-landing .account-btn-wrapper {
     padding: 48px 24px 40px;
     border-bottom: 1px solid var(--di-cyan-border);
     background: #000;
+
+    /* The two numbers that decide whether the hero copy is readable, kept as
+       tokens because `src/styles/contrast.test.js` reads them and computes the
+       ratio the visitor actually gets.
+
+       The old flat 0.34 scrim was tuned against a dark tilted backdrop. The
+       hero now stands in the `main` room at its composed entry shot, and the
+       brightest thing the copy crosses is a door ring — measured off a real
+       1440x900 screenshot at rgb(144,153,153), over which even PURE white sits
+       at 2.9:1. No flat scrim fixes that: dark enough for the ring is dark
+       enough to put the room out. So the darkening is local — a veil over the
+       reading column, while the outer thirds keep the room's own light and the
+       rings stay vivid where nothing is written across them. */
+    --lp-hero-veil: 0.62;
+    --lp-hero-wash: 0.1;
 }
 
-/* Scrim behind the hero text so the wordmark/subtitle/buttons read over the
-   bright 3D room, fading to fully opaque black by the very bottom edge. This
-   IS a gradient, deliberately, against the brand kit's usual "no gradient as
-   decoration" — it is not decoration, it is the seam fix: a flat wash left
-   the room's own blue cut off on a hard horizontal line exactly where the
-   hero met the next (solid black) section, at every width. Fading the last
-   ~40% of the hero to solid black means the section below never has an edge
-   to meet — the ground the room stands on is the same ground the page is
-   printed on, always, and the seam is gone at any viewport height. Sits
-   above the fixed GL background (z 0) and below the hero content (z 2). */
+/* Two jobs, one layer. The radial ellipse is the reading veil: the copy
+   column crosses a bright composed entry shot whose peak (a door ring,
+   measured at rgb(144,153,153)) leaves even pure white at 2.9:1 — no flat
+   scrim fixes that without putting the room out, so the darkening is local
+   and the outer thirds keep the room's own light. The linear layer under it
+   is the seam fix: a flat wash left the room's own blue cut off on a hard
+   horizontal line exactly where the hero met the next (solid black) section,
+   at every width, so it fades to fully opaque black by the very bottom edge
+   — the ground the room stands on becomes the ground the page is printed on,
+   and the seam is gone at any viewport height. Sits above the fixed GL
+   background (z 0) and below the hero content (z 2). */
 .lp-hero::after {
     content: '';
     position: absolute;
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: linear-gradient(
-        to bottom,
-        rgba(0, 0, 0, 0.06) 0%,
-        rgba(0, 0, 0, 0.3) 32%,
-        rgba(0, 0, 0, 0.55) 58%,
-        rgba(0, 0, 0, 1) 100%
-    );
+    background:
+        radial-gradient(
+            ellipse 44rem 30rem at 50% 50%,
+            rgba(0, 0, 0, var(--lp-hero-veil)) 0%,
+            rgba(0, 0, 0, 0.46) 48%,
+            rgba(0, 0, 0, 0.14) 78%,
+            rgba(0, 0, 0, 0) 100%
+        ),
+        linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 0.06) 0%,
+            rgba(0, 0, 0, var(--lp-hero-wash)) 34%,
+            rgba(0, 0, 0, 0.55) 82%,
+            rgba(0, 0, 0, 1) 100%
+        );
 }
 
 .lp-hero-inner {
@@ -407,9 +441,14 @@ body.is-landing .account-btn-wrapper {
     color: var(--di-cyan);
 }
 
+/* Tier 2 of the page, and it was being read as tier 5. These two lines ARE the
+   product — "make a space, hand out the address" — and they were set in the
+   same 0.5 white as a footer credit, over a room bright enough to swallow it.
+   Body copy that carries the pitch is body copy: it gets the page's own text
+   colour, and the veil above gives it a ground to sit on. */
 .lp-tagline {
     font-size: clamp(0.95rem, 2vw, 1.1rem) !important;
-    color: var(--di-text-muted) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
     line-height: 1.65 !important;
     max-width: 440px;
     margin: 0 0 40px !important;
@@ -420,9 +459,11 @@ body.is-landing .account-btn-wrapper {
    tagline would be a fourth thing competing with them. */
 .lp-cta-sub {
     font-size: 0.82rem !important;
-    /* NOT --di-text-muted (0.4 alpha): 0.4 white on the hero's near-black
-       is under 3:1 at 13px. Quieter than the tagline, still readable. */
-    color: rgba(255, 255, 255, 0.55) !important;
+    /* NOT --di-text-muted: this line carries the second real destination.
+       0.55 cleared the floor over the near-black this page used to have; over
+       the room it measured 5.1:1 on the average backdrop and far less where a
+       door ring passes behind it. Quieter than the tagline, still readable. */
+    color: rgba(255, 255, 255, 0.72) !important;
     line-height: 1.9 !important;
     max-width: 400px;
     margin: 0 0 20px !important;
@@ -453,6 +494,26 @@ body.is-landing .account-btn-wrapper {
 .lp-cta-sub a:hover {
     color: var(--di-cyan);
     border-bottom-color: var(--di-cyan);
+}
+
+/* ─── WRAPPING ROWS ───────────────────────────────────────────
+   MUI's `spacing` prop is margin-left on every sibling and nothing else. A row
+   that wraps therefore gets ZERO vertical separation, and every line after the
+   first is shoved right by that same margin, so a centred row stops being
+   centred. At 390px the four space buttons stacked with their borders butting
+   into one another and each line landing at a different indent — live on
+   production since the row shipped. Real flex gap, and the margins off. */
+.lp-hero-cta-row {
+    gap: 16px;
+}
+
+.lp-hero-space-row {
+    gap: 12px;
+}
+
+.lp-hero-cta-row > *,
+.lp-hero-space-row > * {
+    margin-left: 0 !important;
 }
 
 /* ─── ROOM TAGS ───────────────────────────────────────────────
@@ -507,8 +568,10 @@ body.is-landing .account-btn-wrapper {
 }
 
 /* ─── SCROLL HINT ─────────────────────────────────────────── */
+/* The only wayfinding to the seven sections below the fold, and at 0.5 opacity
+   on 0.5 white it was a 1.6:1 chevron nobody could see over the room. */
 .lp-scroll-hint {
-    color: var(--di-text-muted);
+    color: var(--di-text);
     animation: lp-bounce 2s ease-in-out infinite;
     text-decoration: none;
     display: flex;

@@ -37,7 +37,7 @@ describe('NodeAnatomyPanel', () => {
             createNode('universe.space'),
             createNode('source.webcam'),
             createNode('view.text'),
-            createNode('math.add')
+            createNode('math.op')
         ]
         for (const node of cases) {
             const { container } = sheetFor(node, [node])

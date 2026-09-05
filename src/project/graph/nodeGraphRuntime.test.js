@@ -107,7 +107,7 @@ describe('nodeGraphRuntime', () => {
     it('evaluates math nodes through chained edges', () => {
         const a = createNode('value.number', { id: 'a', values: { value: 2 } })
         const b = createNode('value.number', { id: 'b', values: { value: 3 } })
-        const add = createNode('math.add', { id: 'add' })
+        const add = createNode('math.op', { id: 'add' })
         const context = createNodeGraphContext({
             nodes: [a, b, add],
             edges: [
@@ -122,10 +122,10 @@ describe('nodeGraphRuntime', () => {
     it('evaluates subtract/divide/mod/power operators', () => {
         const a = createNode('value.number', { id: 'a', values: { value: 9 } })
         const b = createNode('value.number', { id: 'b', values: { value: 4 } })
-        const subtract = createNode('math.subtract', { id: 'subtract' })
-        const divide = createNode('math.divide', { id: 'divide' })
-        const mod = createNode('math.mod', { id: 'mod' })
-        const pow = createNode('math.pow', { id: 'pow' })
+        const subtract = createNode('math.op', { id: 'subtract', values: { operation: 'subtract' } })
+        const divide = createNode('math.op', { id: 'divide', values: { operation: 'divide' } })
+        const mod = createNode('math.op', { id: 'mod', values: { operation: 'modulo' } })
+        const pow = createNode('math.op', { id: 'pow', values: { operation: 'power' } })
         const context = createNodeGraphContext({
             nodes: [a, b, subtract, divide, mod, pow],
             edges: [
@@ -149,7 +149,7 @@ describe('nodeGraphRuntime', () => {
     it('evaluates multiply', () => {
         const a = createNode('value.number', { id: 'a', values: { value: 6 } })
         const b = createNode('value.number', { id: 'b', values: { value: 7 } })
-        const multiply = createNode('math.multiply', { id: 'multiply' })
+        const multiply = createNode('math.op', { id: 'multiply', values: { operation: 'multiply' } })
         const context = createNodeGraphContext({
             nodes: [a, b, multiply],
             edges: [
@@ -219,8 +219,8 @@ describe('nodeGraphRuntime', () => {
     it('returns zero for divide/mod by zero', () => {
         const a = createNode('value.number', { id: 'a', values: { value: 10 } })
         const zero = createNode('value.number', { id: 'zero', values: { value: 0 } })
-        const divide = createNode('math.divide', { id: 'divide' })
-        const mod = createNode('math.mod', { id: 'mod' })
+        const divide = createNode('math.op', { id: 'divide', values: { operation: 'divide' } })
+        const mod = createNode('math.op', { id: 'mod', values: { operation: 'modulo' } })
         const context = createNodeGraphContext({
             nodes: [a, zero, divide, mod],
             edges: [
@@ -249,18 +249,19 @@ describe('nodeGraphRuntime', () => {
     // Regression test for audit finding #23: a shared upstream node (here,
     // `sin` feeding both `left` and `right`) was recomputed once per
     // consumer within a single evaluation pass instead of once per pass.
-    // Spying on Math.sin (the only thing `math.sin` calls) makes the
+    // Spying on Math.sin (the only thing a Math node in its Sin operation
+    // calls) makes the
     // recomputation directly observable without inspecting internals.
     it('memoizes a shared upstream node within one evaluation pass', () => {
         const sinSpy = vi.spyOn(Math, 'sin')
         const angle = createNode('value.number', { id: 'angle', values: { value: 1 } })
-        const sin = createNode('math.sin', { id: 'sin' })
-        const left = createNode('math.add', { id: 'left' })
-        const right = createNode('math.add', { id: 'right' })
+        const sin = createNode('math.op', { id: 'sin', values: { operation: 'sin' } })
+        const left = createNode('math.op', { id: 'left' })
+        const right = createNode('math.op', { id: 'right' })
         const context = createNodeGraphContext({
             nodes: [angle, sin, left, right],
             edges: [
-                createEdge('angle', 'out', 'sin', 'in'),
+                createEdge('angle', 'out', 'sin', 'a'),
                 createEdge('sin', 'out', 'left', 'a'),
                 createEdge('sin', 'out', 'right', 'a')
             ]
@@ -332,7 +333,7 @@ describe('time node', () => {
 
     it('drives a downstream math node — the point of having a clock', () => {
         const time = { id: 't', typeId: 'time', values: { bpm: 60 } }
-        const add = { id: 'a', typeId: 'math.add', values: { b: 10 } }
+        const add = { id: 'a', typeId: 'math.op', values: { b: 10 } }
         const edge = { fromNodeId: 't', fromPort: 'elapsed', toNodeId: 'a', toPort: 'a' }
         const ctx = createNodeGraphContext({ nodes: [time, add], edges: [edge] }, { now: 3000 })
         expect(evaluateNodeOutput(add, 'out', ctx)).toBe(13)

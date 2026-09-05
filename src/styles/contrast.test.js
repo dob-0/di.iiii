@@ -26,6 +26,15 @@ const WHITE = [255, 255, 255]
 const CYAN = [77, 249, 255]
 const AA_BODY = 4.5
 
+// The hero does not stand on the theme's black any more. Since the landing was
+// put inside the `main` room (2026-09-01) the copy is written across the room's
+// composed entry shot, and the brightest thing it crosses is a door ring —
+// sampled off a real 1440x900 screenshot of the resting page with the copy
+// hidden, at the pixels the tagline occupies. Everything above is measured
+// against the ground the page declares; this is measured against the ground the
+// visitor actually gets.
+const HERO_ROOM_PEAK = [144, 153, 153]
+
 describe('dark theme text contrast', () => {
     // 2026-08-23: --di-text-muted was rgba(255,255,255,0.4) = 3.66:1. That is
     // below the floor for body text, and it was carrying 54 text nodes on the
@@ -80,5 +89,53 @@ describe('dark theme text contrast', () => {
             if (ratio(over(value, BLACK), BLACK) < AA_BODY) offenders.push(decl)
         }
         expect(offenders).toEqual([])
+    })
+})
+
+// 2026-09-01. The guard above asks "is this white bright enough for black?" —
+// and for the hero the answer stopped mattering the day the page was moved
+// inside the room. `.lp-hero::after` was a flat 0.34 scrim tuned against a dark
+// tilted backdrop; over the bright composed entry shot the tagline measured
+// 5.1:1 on the average backdrop and about 1.3:1 where a door ring passed behind
+// it. Nothing failed. A screenshot and a person's eyes were the only things
+// that could tell.
+//
+// So the scrim is a number the stylesheet declares (`--lp-hero-veil` over the
+// reading column, `--lp-hero-wash` through the middle band) and this composites
+// the two, puts the result over the measured ring, and asks the same AA
+// question of the copy that sits there. Weaken the veil or dim the copy and
+// this goes red — watched failing at veil 0.34, which is what shipped.
+describe('the hero copy, over the room it now stands in', () => {
+    const landing = read('../landing/landing.css')
+    const token = (name) => {
+        const found = landing.match(new RegExp(`${name}:\\s*([\\d.]+)\\s*;`))
+        expect(found, `${name} must stay declared in landing.css`).toBeTruthy()
+        return Number(found[1])
+    }
+    const rule = (selector) => {
+        const block = landing.match(new RegExp(`\\n${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`))
+        expect(block, `${selector} must stay in landing.css`).toBeTruthy()
+        return block[1]
+    }
+    const textColour = (selector) => {
+        const decl = rule(selector).match(/color:\s*(rgba?\([^)]*\))/)
+        expect(decl, `${selector} must declare an rgba colour`).toBeTruthy()
+        return rgbaValues(decl[1])
+    }
+
+    // Two black layers, so they multiply rather than add.
+    const scrimmed = () => {
+        const veil = token('--lp-hero-veil')
+        const wash = token('--lp-hero-wash')
+        const remaining = (1 - veil) * (1 - wash)
+        return HERO_ROOM_PEAK.map((c) => c * remaining)
+    }
+
+    it.each([
+        ['.lp-tagline', 'the two lines that are the whole pitch'],
+        ['.lp-cta-sub', 'the line carrying the second destination']
+    ])('%s clears AA over the brightest thing behind it — %s', (selector) => {
+        const ground = scrimmed()
+        expect(ratio(over(textColour(selector), ground), ground)).toBeGreaterThanOrEqual(AA_BODY)
     })
 })
