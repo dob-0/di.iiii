@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
+import { telegramSignInUrl } from '../../utils/telegramSignIn.js'
 import {
     fetchServerSpacesIndex,
     createServerSpace,
@@ -645,7 +646,15 @@ export default function SpaceHub() {
                                 {providers.google && (
                                     <a className="ssh-btn-signin" href={getOAuthUrl('google')}>Continue with Google</a>
                                 )}
-                                {!providers.github && !providers.google && (
+                                {telegramSignInUrl(providers) && (
+                                    <a
+                                        className="ssh-btn-signin"
+                                        href={telegramSignInUrl(providers)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >Continue with Telegram</a>
+                                )}
+                                {!providers.github && !providers.google && !telegramSignInUrl(providers) && (
                                     <span className="ssh-quota-full">No sign-in providers configured.</span>
                                 )}
                             </div>
