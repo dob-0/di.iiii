@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the Telegram secret reaches the container
+- a PDF import renders every page and then throws; now it returns them
 
 Full detail: `PROGRESS.md`.
 
