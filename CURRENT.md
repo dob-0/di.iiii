@@ -13,7 +13,10 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- thirteen math nodes become one, with a menu
+- Continue with Telegram, on every card that already offers GitHub
+- the 2D landing, measured against the room it now stands in
+- the front door stopped advertising a closed show
+- the landing's two parked PRs and the Telegram button land together
 
 Full detail: `PROGRESS.md`.
 
