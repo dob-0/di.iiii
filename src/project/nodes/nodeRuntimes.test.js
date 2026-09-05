@@ -74,35 +74,39 @@ describe('logic.compare', () => {
     })
 })
 
-describe('logic.gate', () => {
+describe('logic.route — Gate', () => {
     it('open passes the value; closed carries NOTHING, not zero', () => {
         const open = {
-            nodes: [node('v', 'value.number', { value: 7 }), node('g', 'logic.gate')],
-            edges: [edge('v', 'out', 'g', 'value')]
+            nodes: [node('v', 'value.number', { value: 7 }), node('g', 'logic.route')],
+            edges: [edge('v', 'out', 'g', 'a')]
         }
         expect(evalPort(open, 'g', 'out')).toBe(7)
 
         const closed = {
-            nodes: [node('v', 'value.number', { value: 7 }), node('b', 'value.boolean', { value: false }), node('g', 'logic.gate')],
-            edges: [edge('v', 'out', 'g', 'value'), edge('b', 'out', 'g', 'open')]
+            nodes: [node('v', 'value.number', { value: 7 }), node('b', 'value.boolean', { value: false }), node('g', 'logic.route')],
+            edges: [edge('v', 'out', 'g', 'a'), edge('b', 'out', 'g', 'pick')]
         }
         expect(evalPort(closed, 'g', 'out')).toBeUndefined()
     })
 
+    // The one behaviour the merge could most easily have lost: Route's Gate
+    // operation gives Value NO default, while its Switch operation gives A a
+    // default of 0. A single static port default would have turned every
+    // closed gate in every saved project into a zero.
     it('bare, it is honestly dead — the pass-through contract', () => {
-        const doc = { nodes: [node('g', 'logic.gate')], edges: [] }
+        const doc = { nodes: [node('g', 'logic.route')], edges: [] }
         expect(evalPort(doc, 'g', 'out')).toBeUndefined()
     })
 })
 
-describe('logic.switch', () => {
+describe('logic.route — Switch', () => {
     it('pick off speaks A, pick on speaks B — any type passes through', () => {
         const doc = {
             nodes: [
                 node('ca', 'value.color', { value: '#ff0000' }),
                 node('cb', 'value.color', { value: '#0000ff' }),
                 node('p', 'value.boolean', { value: true }),
-                node('s', 'logic.switch')
+                node('s', 'logic.route', { operation: 'switch' })
             ],
             edges: [edge('ca', 'out', 's', 'a'), edge('cb', 'out', 's', 'b'), edge('p', 'out', 's', 'pick')]
         }
@@ -113,8 +117,76 @@ describe('logic.switch', () => {
     })
 
     it('bare, it speaks its A default', () => {
-        const doc = { nodes: [node('s', 'logic.switch')], edges: [] }
+        const doc = { nodes: [node('s', 'logic.route', { operation: 'switch' })], edges: [] }
         expect(evalPort(doc, 's', 'out')).toBe(0)
+    })
+})
+
+// The merged math operator, operation by operation, against exactly the
+// numbers the eight retired types answered.
+describe('math.op', () => {
+    const two = (operation, a, b) => {
+        const doc = {
+            nodes: [
+                node('x', 'value.number', { value: a }),
+                node('y', 'value.number', { value: b }),
+                node('m', 'math.op', { operation })
+            ],
+            edges: [edge('x', 'out', 'm', 'a'), edge('y', 'out', 'm', 'b')]
+        }
+        return evalPort(doc, 'm', 'out')
+    }
+    const one = (operation, a) => {
+        const doc = {
+            nodes: [node('x', 'value.number', { value: a }), node('m', 'math.op', { operation })],
+            edges: [edge('x', 'out', 'm', 'a')]
+        }
+        return evalPort(doc, 'm', 'out')
+    }
+
+    it('answers each of its eight operations', () => {
+        expect(two('add', 2, 3)).toBe(5)
+        expect(two('subtract', 2, 3)).toBe(-1)
+        expect(two('multiply', 6, 7)).toBe(42)
+        expect(two('divide', 9, 4)).toBe(2.25)
+        expect(two('modulo', 9, 4)).toBe(1)
+        expect(two('power', 3, 8)).toBe(6561)
+        expect(one('sin', 0)).toBe(0)
+        expect(one('absolute', -3.5)).toBe(3.5)
+    })
+
+    it('keeps the Divide and Modulo zero guards — 0, never Infinity or NaN', () => {
+        expect(two('divide', 5, 0)).toBe(0)
+        expect(two('modulo', 5, 0)).toBe(0)
+    })
+
+    // Each retired type had its OWN port defaults, and the merged operator
+    // carries them per-operation rather than picking one set for all eight:
+    // a bare Add answered 0 and a bare Multiply answered 1 before the merge,
+    // and both still do.
+    it('a bare node answers what the retired type answered', () => {
+        const bare = (operation) => evalPort(
+            { nodes: [node('m', 'math.op', { operation })], edges: [] }, 'm', 'out'
+        )
+        expect(bare('add')).toBe(0)
+        expect(bare('subtract')).toBe(0)
+        expect(bare('multiply')).toBe(1)
+        expect(bare('divide')).toBe(0)
+        expect(bare('modulo')).toBe(0)
+        expect(bare('power')).toBe(1)
+        expect(bare('sin')).toBe(0)
+        expect(bare('absolute')).toBe(0)
+    })
+
+    // The fallback string lives in the runtime, the default lives in the
+    // registry; nothing but this holds them together.
+    it('an unset operation is the one the registry declares', () => {
+        const doc = { nodes: [{ id: 'm', typeId: 'math.op', label: 'Math', values: {} }], edges: [] }
+        expect(getNodeType('math.op').defaultValues.operation).toBe('add')
+        expect(evalPort(doc, 'm', 'out')).toBe(0)
+        const route = { nodes: [{ id: 'r', typeId: 'logic.route', label: 'Route', values: {} }], edges: [] }
+        expect(getNodeType('logic.route').defaultValues.operation).toBe('gate')
+        expect(evalPort(route, 'r', 'out')).toBeUndefined()
     })
 })
 
@@ -295,7 +367,7 @@ describe('the numbers wave (TD audit)', () => {
         expect(evalPort(doc(false, false), 'l', 'neither')).toBe(true)
     })
 
-    it('Extremes, Absolute and Round answer bare and wired alike', () => {
+    it('Extremes and Round answer bare and wired alike', () => {
         const single = (typeId, port, v) => {
             const doc = {
                 nodes: [node('n', 'value.number', { value: v }), node('t', typeId)],
@@ -303,7 +375,6 @@ describe('the numbers wave (TD audit)', () => {
             }
             return evalPort(doc, 't', port)
         }
-        expect(single('math.abs', 'out', -3.5)).toBe(3.5)
         expect(single('math.round', 'nearest' in {} ? 'nearest' : 'round', 2.6)).toBe(3)
         expect(single('math.round', 'floor', 2.6)).toBe(2)
         expect(single('math.round', 'ceiling', 2.1)).toBe(3)

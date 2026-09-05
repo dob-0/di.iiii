@@ -93,14 +93,26 @@ the only lane exercising this code path.
 keyed `${nodeId}:out:${portId}`, added 2026-07-17 — see known-fixes.md #23)
 to avoid recomputing a shared upstream node once per downstream consumer.
 
-**Only two node families actually compute anything:** `value.*` (returns its
-stored value) and `math.add/subtract/multiply/divide/mod/pow/sin/mix/clamp`.
-Every other registered type — `source.*`, `device.*`, `stream.*`, most of
-`universe.*` — falls through to a static passthrough (`node.values?.[portId]`)
-with no real runtime behavior. This includes `time`, which advertises
-`elapsed/sin/cos/beat` outputs but has no clock/frame driver anywhere in the
-runtime — a `time` node is inert today. Treat any of those types as
-authoring/metadata declarations, not live computation, until this changes.
+Compute is **looked up before it is switched on**: `computeNodeOutput` consults
+`NODE_RUNTIMES` (`src/project/nodes/index.js`) first, and only then its own
+type switch. A type lives in exactly one of the two —
+`src/project/nodes/nodeRuntimes.test.js` holds that in both directions — and a
+type in neither falls through to a static passthrough
+(`node.values?.[portId]`). Every new operator lands in the map, in a folder of
+its own at `src/project/nodes/<typeId>/runtime.js`, so neither dispatcher
+grows. (This paragraph used to say only `value.*` and nine `math.*` types
+computed anything, and that `time` was inert. Both stopped being true during
+2026-07/08 and the sentence did not; it is now measured rather than
+remembered — `virtual:node-anatomy`, built by `scripts/node-anatomy-lib.mjs`,
+reports where each type's compute actually lives.)
+
+Two of those entries are **operator families** (2026-09-01): `math.op` and
+`logic.route` each carry an operation menu in `values.operation` rather than
+being one type per operation, and their port labels and defaults follow the
+chosen operation through `getNodeInputs`. The ten type ids they replaced
+(`math.add/subtract/multiply/divide/mod/pow/sin/abs`, `logic.gate/switch`) are
+normalized forward in `src/shared/projectSchema.js` and its `.cjs` mirror, so
+no other file may know them.
 
 Cycle protection is a `stack` Set of `id:in/out:port` keys threaded through
 recursive calls; re-entry returns the node's stored/default value rather

@@ -186,12 +186,12 @@ describe('all-nodes example graph', () => {
             },
             // Feeding the value is enough — Open defaults true, so the wired
             // gate speaks; the bare-dead half is proven by the main sweep.
-            'logic.gate.out': () => {
-                const gate = createNode('logic.gate', { id: 'proof-gate' })
+            'logic.route.out': () => {
+                const gate = createNode('logic.route', { id: 'proof-gate' })
                 const number = createNode('value.number', { id: 'proof-gate-number', values: { value: 7 } })
                 const context = createNodeGraphContext({
                     nodes: [gate, number],
-                    edges: [createEdge('proof-gate-number', 'out', 'proof-gate', 'value')]
+                    edges: [createEdge('proof-gate-number', 'out', 'proof-gate', 'a')]
                 })
                 return { node: gate, context }
             }

@@ -5,6 +5,396 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-06 — Continue with Telegram, on every card that already offers GitHub
+
+- The server half (#282) has been live since 2026-09-05 with nothing to press. This
+  is the door: `providers.telegram` plus `providers.telegramBot` renders a
+  "Continue with Telegram" button next to the two that were already there.
+- It is a link, not an OAuth start. Telegram is not an OAuth client here — the bot
+  is the only party that can assert a Telegram id, so the button opens
+  `https://t.me/<bot>?start=login`, di.bo mints the single-use link and the person
+  taps it out of the chat. One helper, `src/utils/telegramSignIn.js`, builds that
+  URL and is the only place the shape is written down.
+- Four surfaces render provider buttons, not one: `AuthGate.jsx` (the sign-in card
+  and the out-of-scope card, both through `ProviderSignInButtons`),
+  `AccountButton.jsx` (the guest popover), `SpaceHub.jsx` (Spaces page) and
+  `StudioShellPanels.jsx` (the guest Share window). All four got it, each in its own
+  existing markup and styling — nothing restyled.
+- `telegram: true` with no `telegramBot` shows NO button. The server only carries
+  the username when `TELEGRAM_BOT_USERNAME` is set, and a button with no bot to
+  open is a dead end; a test holds that case.
+- Every "No sign-in providers configured." fallback now counts Telegram, so a tier
+  with only Telegram configured does not claim it has nothing.
+- Wiki: `guest-and-sandbox-modes` gains the sentence — what the button does, that
+  the link is single-use and ten minutes, and that guest work comes along.
+- Not done here, on purpose: the bot's `/login` command lives in the di-bo repo and
+  ships as its own PR. Until both are deployed AND `TELEGRAM_LOGIN_SECRET` /
+  `TELEGRAM_BOT_USERNAME` are set on the tier, `providers.telegram` is false and
+  this change renders nothing at all.
+- Seen, not assumed: the sign-in card screenshotted at 1440x900 DPR2 and 390x844
+  DPR3 against a stubbed providers response — the Telegram button sits third, same
+  outline, same left-aligned icon and label, same width.
+
+## 2026-09-01 — the 2D landing, measured against the room it now stands in
+
+Branch off `feat/landing-in-3d`, not `dev`: this is the 2D pass that branch left open.
+
+- **The order the page now has, and why.** The owner's read was "only Step inside is
+  highlighted… there are some mess", and the audit agreed for a reason he could see but
+  not name: the page had SHOUT (the wordmark, the door, four heavy space chips) and
+  WHISPER (everything else) and nothing between them. Five tiers now: (1) the wordmark
+  and the one lit door; (2) the tagline, which is the whole pitch and was set in footer
+  grey; (3) **the four public spaces, named as a group** — the visit is the product, so a
+  stranger's fastest route to understanding is to go and look at one; (4) the ways back —
+  Spaces / Wiki / GitHub / Open Studio, legible rather than faint; (5) the scroll hint.
+  The one door stays one door: the 2026-08-18 pass that reduced three peer buttons to one
+  is not reopened, because two of those three led somewhere worse.
+- **The contrast was not a scrim that needed nudging.** Sampled off a real screenshot with
+  the copy hidden: the average backdrop under the tagline is rgb(28,32,121), but the peak
+  is a pale door ring at **rgb(144,153,153)**, over which even pure white is 2.9:1. The
+  shipped copy measured **2.78:1** there. A flat scrim cannot fix that — dark enough for
+  the ring puts the room out. So the darkening is local: a radial reading veil over the
+  copy column (`--lp-hero-veil`), a much lighter vertical wash (`--lp-hero-wash`), and the
+  outer thirds keep the room's own light. Both are custom properties because
+  `src/styles/contrast.test.js` now reads them, composites them over the measured ring,
+  and asks the AA question where the visitor actually stands — the old guard measured
+  against the theme's black, which the hero stopped standing on the day #283 landed.
+- **The 390px pile-up was MUI, not wrapping.** `<Stack spacing={n}>` compiles to
+  `margin-left` and nothing else, so a wrapping row gets zero vertical separation AND
+  every line after the first pushed right by the same margin — a row set to justify centre
+  that is not centred. Real flex `gap`, margins off. Latent in every wrapping MUI Stack
+  in this codebase.
+- **Two things nobody had looked for.** Tabbing the live page: no visible focus ring
+  anywhere, and *nothing at all* on the door and the four spaces, because MUI ButtonBase
+  sets `outline: 0`. And tabbing during a 6-second flight: **nine invisible tab stops**
+  inside the CSS3D clones — `.lp-in-space *{pointer-events:none}` speaks only to the
+  mouse. The clones are `aria-hidden` + `inert` now, with an explicit `tabIndex = -1`
+  sweep because `inert` does not exist in jsdom or before Chromium 102.
+- **One copy fix.** `br_id_ge · live at Notations #2` — the show closed 2026-08-02 and the
+  front door had been announcing it as live for a month, on prod. It says `br_id_ge` now,
+  like the other three. The owner can overrule this in one line.
+- **The four chips are one set with four identities**, not four stickers: one shape, one
+  border weight, one type colour, and each space's own colour as the mark in front of its
+  name. That is also the only version of the row that survives becoming a grid of every
+  public space. They stay four separate `<a>` elements with their stable class hooks and
+  unchanged boxes — the mark is a `::before` — because the spaces unfold will measure each
+  one with `getBoundingClientRect()` and lift it the way `enterFlight.js` lifts the hero.
+  `lp-nav-spaces` added to the nav link for the same reason.
+- **HARD 1 honoured**: `.lp-space-row-label` added to `LIFTABLE` at depth −30, beside the
+  row it names. Nine layers lift now (was eight), verified on a live `?flight=6000`.
+- Guards, each watched failing first: two in `contrast.test.js` (2.78:1 and 3.99:1 at the
+  shipped values), four in the new `heroRows.test.js`, one in `pageInSpace.test.js`.
+- **Verified by looking**, 1440×900 DPR2 and 390×844 DPR3: resting page top to bottom,
+  the flight at 600ms and 1800ms, the focus ring on the door and on a space chip, and the
+  tab order and mid-flight focus read out of the live DOM rather than assumed.
+
+### Left open
+
+- MUI's TouchRipple draws a grey blob inside a focused space chip. It is MUI's own focus
+  feedback and was simply invisible under the old solid fill. Untouched.
+- `.lp-eyebrow` and `.lp-enter-note` are still whispers by design; both clear AA.
+- The spaces unfold itself is deliberately not built here.
+
+## 2026-09-01 — the front door stopped advertising a closed show
+
+Two strings and one dead path, all found by a four-agent naming audit and each
+verified by hand before it was touched.
+
+- **The landing advertised `br_id_ge · live at Notations #2` for a month** — the show
+  closed 2026-08-02. `FEATURED_SPACES` hardcodes the four featured labels rather than
+  reading the space rows, so a dated claim written into a constant has nothing to
+  expire it. Claim removed.
+- **The same list called Beyond Form `beyond_form`**, an underscore form that appears
+  on no other surface — its DB label, its card and its own page all read "Beyond Form".
+  Aligned, and the four labels checked against prod.
+- Guard: `LandingPage.test.jsx` "names featured spaces without dating them" pins each
+  button's label and rejects `live at` / `#<digit>` / a bare year. Watched failing
+  against the stale string first. The four `className`s are NOT derivable from the ids
+  (`algovrithm` → `landing-cta-algo-vrithm`) — that cost the first version of the test.
+- **`docs:wiki:check`'s freshness clock watched `src/beta`**, deleted 2026-08-06.
+  Removed. The widening it also wants — `src/raw`, `src/make`, `src/map`, `src/wiki`,
+  `src/components` are all unwatched — is deliberately left out: turning it on would
+  start failing other agents' in-flight branches mid-session. It wants a quiet tree.
+
+Not done here, and waiting on the owner rather than on work: whether `di.i` still
+signs (`NAMING.md` says it does, `vocabulary.md` calls it retired and a regex enforces
+that); whether the three-space limit is a commons fact or a funnel; whether the
+position names Armenia. The audit's full findings live in the session transcript.
+
+Done on the data side the same day, outside this branch: the four renames owed on prod
+since 2026-08-23 (`di.ii` → Works, `platform-recordar` → RecordAR, `wcc` → WCC
+Exhibition, `di.i: open_space` → Everything made here) and owners for the five
+ownerless prod spaces. Both were API writes, not code.
+
+## 2026-09-06 — the landing's two parked PRs and the Telegram button land together
+
+- #281 and #289 had conflicted with the reworked front door since 2026-09-01. Rebased by
+  an agent, then read: the bare labels (`br_id_ge`, `Beyond Form`) win; dev's three routes
+  and its uniform ghost chips stay; from #289 only the measured fixes survive — the radial
+  reading veil over the copy column, the real flex gap, the focus ring that covers MUI
+  buttons, the brighter CTA sub-line. #289's CSS3D-clone inert sweep died with the clones
+  (dev draws the page pieces as meshes now). Its per-space colour marks were dropped in
+  favour of dev's newer chip design.
+- #370 puts "Continue with Telegram" wherever GitHub and Google are offered, wired to
+  `https://t.me/<bot>?start=login`; the bot half is merged in di-bo (undeployed).
+- Batched for the same reason as yesterday's five: each would have gone BEHIND as the
+  previous landed.
+
+## 2026-09-01 — thirteen math nodes become one, with a menu
+
+- **The palette's math section went from 13 entries to 6, and logic from 5 to 4, by merging
+  the families for real rather than folding them.** `math.op` (label **Math**) carries eight
+  operations — Add, Subtract, Multiply, Divide, Modulo, Power, Sin, Absolute — and
+  `logic.route` (label **Route**) carries two, Gate and Switch. The operation is a parameter
+  on the node (`values.operation`), chosen from a select at the top of the inspector sheet,
+  above the ports it decides the meaning of. Ten type ids are gone from the registry:
+  `math.add/subtract/multiply/divide/mod/pow/sin/abs`, `logic.gate/switch`.
+- **The face is the operation, not the family.** `createNode('math.op')` is born labelled
+  "Add"; changing the menu renames the card, so a canvas still reads at a glance instead of
+  filling up with cards that all say "Math". A name a person typed themselves is never
+  overwritten — `operationLabelPatch` in `nodeRegistry.js` only renames a label that is still
+  one of the type's own auto labels, and `RawEditor`'s inspector handler is its one caller.
+- **Ports are static; labels and defaults are not.** `getNodeInputs(node)` answers the chosen
+  operation's port array — same ids always, so a wire lands in the same place whatever the
+  menu says, but Power reads Base/Exponent, Sin's second port reads Unused, and a bare
+  Multiply still answers 1 while a bare Add still answers 0. That last part is the whole
+  reason the defaults are per-operation: the eight retired types did not share one set, and a
+  single static default would have silently changed the answer of every unwired Multiply,
+  Divide, Modulo and Power in every saved project.
+- Dynamic port SETS were considered and rejected. `RawGraphSurface.jsx`'s `inputPortCenter`
+  parks a wire whose port it cannot find on the card's top-left corner (`idx < 0`), so hiding
+  B on a unary operation would have made exactly the invisible wire a merge must not create.
+  Two ports is few enough to keep and label honestly.
+
+### What stayed out, and why — the two rules
+
+1. **A type with more than one output is already a family.** Extremes answers Least and
+   Greatest at once, Round answers three, Compare three, Logic four. One operation can only
+   answer one question, so folding them in would have silently dropped a wire the day someone
+   had two outputs of one node fed. This codebase chose wire-first families where TD chose a
+   menu (the 2026-08-20 "wire the question you mean" comments) — those are not
+   one-operation nodes and the owner's complaint does not describe them.
+2. **A type whose inputs differ in shape stays out.** Mix takes three ports of type `any`,
+   Clamp three, Range five. Forcing them in puts ports on the card that most operations
+   ignore. Toggle is out for a third reason: it is a latch with memory between passes, not an
+   operation on the values in front of it.
+
+### The migration — real, not a shim
+
+`src/shared/projectSchema.js` and its hand-mirror `shared/projectSchema.cjs` normalize the
+old type ids FORWARD at `normalizeProjectNode`, the one funnel every load, every op and the
+server's replay pass through. Three moving parts: the type id, the `values` rename (`in`→`a`
+for Sin/Absolute, `value`→`a` and `open`→`pick` for Gate), and the wire re-aimed onto the
+port that now carries the same value (`migrateEdgeToPort`, applied in `normalizeEdgesList`
+and in the `createEdge`/`updateEdge` ops so a stored op log replayed from the beginning
+migrates too). Nothing outside those two files knows a retired id.
+
+Proof: `src/project/graph/operatorFamilyMigration.test.js` — 10 cases that load documents
+full of old types and assert the graph computes the same values (13, 5, 2.25, 1, 6561; a bare
+Multiply of 1; a closed Gate of nothing rather than zero), that every wire keeps its id and
+endpoints, that a typed name survives, that an op log replay migrates, and that normalizing
+twice is a fixed point. **Watched failing** — 6 of the 10 go red with the type migration
+disabled, and the per-operation-defaults cases go red with `getNodeInputs` returning the
+static array. `serverXR/src/schemaSync.test.js` gained a legacy fixture plus a direct
+assertion on the CJS side; **watched failing** with the mirror's migration disabled (3 red).
+
+### The silent steps, worked by hand
+
+Of the five the workshop map names, three did not apply (these types are `render: 'hidden'`:
+no viewport case, no window routing, not active markers, not the room-summon exception). The
+ones that did, none of which fail loudly on their own:
+
+- the compute case — ten colocated runtime folders deleted, two written, and
+  `src/project/nodes/index.js`'s imports and `NODE_RUNTIMES` map edited by hand.
+- `FAMILY_BY_TYPE` — enforced in both directions by `nodeRegistry.test.js`, so this one is
+  loud; noted because it is the one that catches you.
+- `allNodesExample.js` — 10 `add(...)` lines and 4 `wire(...)` port ids, plus the
+  `PASS_THROUGH_PORTS` entry that moved from `logic.gate.out` to `logic.route.out`.
+- `src/project/nodes/math.op/runtime.js` uses a lookup, not a `switch`: the node-anatomy
+  extractor reads a switch label in a runtime file as a TYPE id, so eight operation labels
+  made the anatomy sheet claim this file held eight other types' code. Caught by
+  `scripts/nodeAnatomy.test.js`, which is worth knowing before the next merge.
+
+### Left for vector and colour — the recipe, not the work
+
+Not started, deliberately, and the recipe is shorter than it looks — I ran the two rules over
+all eleven types (8 `vector.*`, 3 `colour.*`) rather than assuming they would behave like
+math.
+
+Rule 1 (more than one output = already a family) removes five outright: `vector.split`
+(x/y/z), `colour.split` (five channels), `vector.distance` (Distance **and** Length) and
+`vector.dot` (Dot **and** Angle). Rule 2 (different input shape) removes `vector.combine`
+(three numbers → vec3), `colour.combine` (three numbers → colour), `colour.ramp` (a position
+and three colours) and `vector.rotation` (vector, axis, angle).
+
+What is left is exactly three, and they do fit one card:
+
+| type | inputs | output |
+| --- | --- | --- |
+| `vector.cross` | `a`, `b` (vec3) | `out` (vec3) |
+| `vector.aim` | `from`, `to` (vec3) | `out` (vec3) |
+| `vector.direction` | `vector` (vec3) | `out` (vec3) |
+
+So the recipe is a `vector.op` — **Vector** — with three operations, Cross / Aim / Direction,
+ports `a` and `b`, Direction leaving `b` Unused exactly as Sin does. The port renames the
+migration needs are `from`→`a`, `to`→`b` on Aim and `vector`→`a` on Direction — the same
+shape of rename Gate needed, and the same `LEGACY_OPERATOR_PORTS` mechanism handles it
+unchanged. Every default is `[0,0,0]`, so unlike math there is no per-operation default to
+preserve.
+
+The one thing to settle before building it is whether Cross and Aim belong on one card at
+all: both answer a `vec3`, but Aim's is a *rotation* and Cross's is a *direction*, and this
+codebase has been careful that a port's meaning is readable from the card. My judgement is
+that they do (the family is "two vectors in, one vector out"), but it is a product call, not
+an engineering one, and it is worth one sentence from the owner. **Colour has no merge at
+all** — its three types share nothing.
+
+Net: 11 types → 9, against math's 18 → 10. That is why this branch spent its time on math
+and logic properly instead of taking four families half-way.
+
+Also left open: whether Clamp and Range should later become a `math.fit` with Limit/Remap
+operations. They are the same idea (fit a number to a span) with incompatible port names, so
+it needs a port design, not just a menu.
+
+## 2026-08-25 — dead CSS removed, 205 lines verified selector by selector
+
+The suite audit flagged ~1,050 dead lines. I deleted only what I verified
+myself, selector by selector:
+
+- `src/styles/layout-stack.css` — the whole file. All three selectors
+  (`.panel-container`, `.panel-dock-left`, `.panel-dock-bottom`) have zero
+  references in any jsx/js. Its `@import` is gone from `src/style.css`.
+- The seven `--mobile-shell-*` tokens — zero `var()` reads repo-wide.
+- The `.toolbar-*` family in `controls.css` — 14 selectors plus their
+  pseudo-state, compound and media-query rules, and `.editor-toolbar-primary`.
+  Every one checked individually: zero references.
+
+Verified after: build clean, brace balance holds (controls 37/37,
+mobile-shell 10/10), style guard tests pass, and landing/wiki/privacy render
+identically with no CSS console errors.
+
+The rest of the audit's dead list is left alone — it over-counts where BEM
+modifiers are template-composed, and I only remove what I can prove.
+
+## 2026-09-03 — four rules, each one paid for tonight
+
+The owner, after a page opened as a broken link in front of him: *"write rules to
+no mistake everytime."* Four went into `docs/ai/golden_rules.md`, each from a
+mistake made in this session rather than a good idea about mistakes:
+
+- **A 200 from this site is not proof a page is public.** A link audit across
+  three tiers reported 47 of 47 spaces open to strangers, including five the API
+  correctly refuses with 401. The client is a single-page app — the server hands
+  back the same `index.html` for every path, so the page always answers 200 and
+  the sign-in wall appears only after the client boots. Probe the API.
+- **A blank screenshot right after a merge is a deploy, not a defect.** Staging
+  came back fully white seconds after four PRs landed; health reported 58 seconds
+  of uptime. Check uptime before filing a regression.
+- **Measure the scene's own units before placing anything in it.** The image
+  plane's height was guessed twice (as `2·(h/w)·scale`, then `2·scale`) before
+  anyone read `ImageObject` and found `[aspect*3, 3]`. Each guess cost a full
+  apply-and-look round. A box's position is its base, not its centre.
+- **A driven browser cannot take pointer lock.** Six scripted turns to photograph
+  a door produced six identical empty frames, indistinguishable from "the door
+  does not render". Drag-look reads clientX/clientY and works.
+
+A fifth rule went to the owner's own machine notes rather than here, because it
+is about this desktop and not this repo: the flatpak Chromium has a private
+`/tmp`, so a `file:///tmp/...` page handed to it fails with ERR_FILE_NOT_FOUND —
+serve it on localhost instead.
+
+## 2026-09-01 — a room that can be read, not only looked at
+
+- **Every published room now carries a text layer** (`RoomTextLayer`): its name as an
+  `h1`, its 3D text lines as paragraphs, and each door as a real anchor. Visually hidden
+  with the clip-rect idiom, NOT `display:none` — the point is to stay in the
+  accessibility tree and the DOM. A focused door link becomes visible, which is also the
+  only way to leave a room without a mouse. It reads the same document the scene draws
+  from, so it can never tell a different story than the room.
+- **Why now:** `/` became the room itself. Before that, a crawler or screen reader met an
+  HTML landing page; after it, an empty `<div id="root">` with only the head's title.
+  `src/index.html` also gained a `<noscript>` floor for readers that never run the app.
+- **A guard earned its keep.** Importing `portalHref` from `PortalObject.jsx` pulled
+  three.js into the published page's static import graph and
+  `publicViewerCodeModeGraph.test.js` failed the build. The helper now lives in its own
+  leaf module, `src/project/viewport/portalHref.js`, re-exported from PortalObject so no
+  caller changed.
+- **The nearest door is wayfinding, not a name.** Glued to the title with a bare
+  separator it read as one compound title — the home room announced itself as
+  "EVERYTHING MADE HERE · WCC EXHIBITION". It has its own dimmed span now.
+- Still owed, and data not code: the local tier's home project is titled `di.i:
+  open_space`, a retired spelling that is now the `h1` a search engine reads. Staging
+  already carries a real title. The owner picks the word.
+
+## 2026-09-01 — sign in with Telegram, the server half
+
+The people who most need an account here cannot hold a Google one. At the Dilijan
+camp that meant one login shared across six laptops, one invite token across five
+children, and afterwards no way to say who had made what — the showcase wall had
+five screens and the record could not attribute four of them. This is the fix for
+the next workshop, and for any collaborator who should not have to make an account
+somewhere else to open their own work.
+
+Telegram has already proven who someone is by delivering a message to them. This
+turns that proof into a session here, through the same door GitHub and Google use.
+
+**The shape.** Two halves. di.bo mints (`POST /api/auth/telegram/login-link`,
+bot-only, presenting `TELEGRAM_LOGIN_SECRET`); the person opens the link
+(`GET /api/auth/telegram/callback?token=`) and lands signed in. After that it is
+identical to the OAuth providers — same `upsertUser`, same session, same
+sandbox hand-off — so **a guest who has already been building keeps their work
+when they sign in**, which is the difference between this and a fresh account.
+
+**What it deliberately refuses:**
+- The link is **single-use and lives 10 minutes**, because it rides a chat message
+  and a chat message is forwardable, screenshot-able and backed up to somebody
+  else's cloud. `consumed_at` is set *before* the session is issued, so a failure
+  costs a new link rather than handing a retry to whoever forwarded it.
+- Only the SHA-256 of the secret is stored. A stolen database mints nothing.
+- A wrong secret against a real id does **not** spend the token — otherwise
+  guessing an id would let anyone lock the real person out.
+- The mint endpoint takes `telegramId` numeric-only, and an avatar URL only from
+  Telegram's own CDN.
+- **A minted link can never carry a role.** `role`/`isUnrestricted` in the mint
+  body are ignored; a bot compromise costs accounts, not the platform. Guarded.
+- `TELEGRAM_LOGIN_SECRET` is its own secret, deliberately **not** the admin API
+  token, so a compromised bot cannot also write spaces.
+
+**A real bug the tests caught before it shipped:** with `OAUTH_CALLBACK_BASE_URL`
+unset the minted URL came out *relative* — useless the moment it reaches a chat.
+Deriving the origin from the request would have meant trusting a Host header to
+say where people sign in, so the endpoint now refuses with a 503 that names the
+missing variable instead.
+
+**Config (all three, or the provider stays off):**
+`TELEGRAM_LOGIN_SECRET` (shared with di.bo), `TELEGRAM_BOT_USERNAME` (advertised
+so a client can name the bot), `OAUTH_CALLBACK_BASE_URL` (already required by the
+OAuth providers). Unset secret = provider absent from `/api/auth/providers` and
+the routes not registered at all.
+
+**Not in this branch, on purpose:** the di.bo side that calls the mint endpoint,
+and the client button. This half is what both of those need, and it is testable
+on its own; shipping it first keeps the auth change reviewable by itself.
+
+Tests: `serverXR/src/telegramLoginStore.test.js` (11) and a `sign in with
+Telegram` block in `httpContracts.test.js` (7) covering the disabled case, the
+bot secret, id validation, the one-real-sign-in path, role refusal, and forged
+links. Full server contracts 114/114, lint clean.
+
+## 2026-09-05 — five green PRs landed as one batch, so no landing invalidates the next
+
+- Branch protection wants every PR up to date with dev, so five green PRs landed one by
+  one would each go BEHIND as the previous one merged. Merged them into one branch off
+  dev instead: the verification rules (#364), the lighting tempo grid (#363), the dead
+  CSS removal (#274), the room text layer (#285) and the Telegram server half (#282).
+  No two touch the same file.
+- The dead-CSS note carried a `#` heading instead of `##`, so `land` would have dropped
+  its title from CURRENT.md; fixed in place.
+- Left for the owner, deliberately: #290 (operator families) rewrites saved documents
+  on load and asks for a deliberate yes; #318, #289, #281 conflict on `known-fixes.md`
+  and the landing and want a rebase against the reworked front door; #170 is a
+  dependency decision.
+
 ## 2026-09-03 — the third route stops being grey on grey
 
 - "Open Jam" sat in the landing's hero between two legible buttons and could not be

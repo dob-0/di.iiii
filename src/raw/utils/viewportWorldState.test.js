@@ -5,7 +5,7 @@ import { getRawWorldBackgroundColor, pickActiveTypeNode, resolveSceneLighting, r
 
 describe('resolveScopeWorldNode', () => {
     const nodes = [
-        { id: 'root-child', typeId: 'math.add', parentId: null, values: {} },
+        { id: 'root-child', typeId: 'math.op', parentId: null, values: {} },
         { id: 'world-1', typeId: 'universe.world', parentId: null, values: {} },
         { id: 'world-2', typeId: 'universe.world', parentId: null, values: {} },
         { id: 'inner-sphere', typeId: 'geometry.sphere', parentId: 'world-1', values: {} }
@@ -51,8 +51,8 @@ describe('resolveScopeWorldNode', () => {
 
     it('returns null when no ancestor has a world at all', () => {
         const worldless = [
-            { id: 'a', typeId: 'math.add', parentId: null, values: {} },
-            { id: 'b', typeId: 'math.add', parentId: 'a', values: {} }
+            { id: 'a', typeId: 'math.op', parentId: null, values: {} },
+            { id: 'b', typeId: 'math.op', parentId: 'a', values: {} }
         ]
         expect(resolveScopeWorldNode(worldless, 'b', {})).toBeNull()
     })
@@ -60,8 +60,8 @@ describe('resolveScopeWorldNode', () => {
     // A damaged document must not hang the viewport.
     it('survives a parentId cycle', () => {
         const cyclic = [
-            { id: 'x', typeId: 'math.add', parentId: 'y', values: {} },
-            { id: 'y', typeId: 'math.add', parentId: 'x', values: {} }
+            { id: 'x', typeId: 'math.op', parentId: 'y', values: {} },
+            { id: 'y', typeId: 'math.op', parentId: 'x', values: {} }
         ]
         expect(resolveScopeWorldNode(cyclic, 'x', {})).toBeNull()
     })

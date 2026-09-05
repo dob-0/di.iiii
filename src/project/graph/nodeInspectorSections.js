@@ -1,4 +1,4 @@
-import { PORT_TYPES, getNodeType } from '../nodeRegistry.js'
+import { PORT_TYPES, getNodeOperation, getNodeOperations, getNodeType } from '../nodeRegistry.js'
 
 const portToInspectorField = (port, node = null) => {
     const label = port.label || port.id
@@ -114,8 +114,33 @@ export const deriveNodeInspectorSections = (node) => {
     // the inspector at all, unlike port-backed fields. configInputs
     // declares them in the same {id, type, label} shape as a port; they
     // read/write node.values[id] through the exact same path mechanism.
-    const fields = [...(type.inputs || []), ...(type.configInputs || [])]
-        .map((port) => portToInspectorField(port, node))
+    // An operator family's operation is the first thing on the sheet, above
+    // the ports — it decides what the ports mean, so reading it after them
+    // would be reading the answer before the question. It is a parameter, not
+    // a port: nothing can wire an operation, because a card whose identity
+    // changed on a live wire could not be read off the canvas.
+    const operations = getNodeOperations(typeId)
+    const operationField = operations
+        ? [{
+            label: 'Operation',
+            path: ['operation'],
+            type: 'select',
+            portType: 'string',
+            options: operations.map(({ value, label }) => ({ value, label }))
+        }]
+        : []
+
+    // The PORTS the operation actually presents, not the type's static shape:
+    // Sin's second port is labelled Unused, Multiply's default is 1 and Add's
+    // is 0. A port the operation does not read is dropped from the sheet — it
+    // stays ON THE CARD, so a wire into it is never hidden, but offering an
+    // editable box for a number nothing will read is the kind of dishonest
+    // surface the 2026-08-18 node truth audit went looking for.
+    // Doorway-promoted sockets are deliberately not here either: the sheet
+    // edits a node's own values, and a promoted socket belongs to its door.
+    const declaredInputs = (getNodeOperation(node)?.inputs || type.inputs || []).filter((port) => !port.unused)
+    const fields = [...operationField, ...declaredInputs, ...(type.configInputs || [])]
+        .map((port) => (port.path ? port : portToInspectorField(port, node)))
         .filter(Boolean)
 
     // For value/source nodes with no inputs but an editable `value` field
@@ -129,7 +154,12 @@ export const deriveNodeInspectorSections = (node) => {
         fields.push({ label: type.label || 'Value', path: ['value'], type: fieldType, portType: outType || 'any' })
     }
 
-    const sections = fields.length ? [{ id: 'values', label: 'Ports', fields }] : []
+    // An operator family's sheet does not hold ports alone — the operation is
+    // the first thing in it and is not a port, and `port` has exactly one
+    // meaning here (docs/ai/vocabulary.md): where a wire attaches.
+    const sections = fields.length
+        ? [{ id: 'values', label: operations ? 'Operation and ports' : 'Ports', fields }]
+        : []
     // Only when there IS stored code. The section used to ship on every node —
     // a dead "Code — stored, not run" textarea under every Cube and Sphere,
     // which the UX audit named the one systemic clutter generator ("useless

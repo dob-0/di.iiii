@@ -85,7 +85,8 @@ export const WIKI_ARTICLES = [
                 '/main \u2014 the old address of that same room. It still resolves and always will, and it still opens the room; the name just never reaches the address bar.'
             ] },
             'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. The destination is never different, only the journey.',
-            'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.'
+            'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.',
+            'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.'
         ],
         tags: ['landing', 'basics', 'navigation', 'room', 'walk'],
         updated: '2026-09-01'
@@ -119,18 +120,20 @@ export const WIKI_ARTICLES = [
             'The Spaces page (/studio) shows exactly these shelves: Open Space · Your sandbox · Your spaces — so the answer to “where am I, what’s mine” is always the page itself. Admins additionally see guest sandboxes collapsed into one row with a count and a “Sweep expired” action.',
             'As a guest, everything past the Open Space and your sandbox collapses into one row — “N other spaces” — since those two are the only ones you can actually use; click it to see the rest, and the choice is remembered on this device. Signed in, your own spaces are never collapsed. Click any public space’s picture to make it interactive right there in its card — walk around, look, without leaving the page — a plain “Open ↗” stays visible if you want the full page; click another picture (or scroll the live one away) and it hands the room back for that one.',
             'A sandbox only comes into existence when you actually enter it — just viewing a published space never creates one. Guest sandboxes are cleaned up after about a week of inactivity. Account sandboxes are yours for good: one untouched for about six months is folded down to a snapshot to keep the system lean, and your next visit restores it exactly as you left it. A sandbox holding Studio projects is never archived.',
-            'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.',
+            'Guests cannot create their own named spaces — sign in with GitHub, Google or Telegram to get spaces that are yours and stay.',
+            'Telegram is the third way in, for anyone who holds no GitHub or Google account: “Continue with Telegram” opens the di.iiii bot, you say /login to it, and the bot sends back a single-use link that expires in ten minutes — tapping it signs you in here, with everything you built as a guest carried onto the new account like any other sign-in.',
             'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google) — everything comes with you: your whole sandbox, its projects and its files, moves onto your account automatically — or Export the project as a file you can import into any space later. The sign-in confirmation says when your sandbox came along. Existing account work is never overwritten by a later guest session.',
             'For a live jam — an event, a workshop, a projected wall — share the short link di-studio.xyz/open_jam (or turn it into a QR code). It opens the shared Open Jam directly, and a one-line welcome shows first-timers how to add their visual. Anyone who scans can drop in an image, video or 3D model on the spot, no account needed.',
             'There are two ways in, and they are the same jam. di-studio.xyz/open_jam/scene puts you inside the scene — you stand in it, walk around, and add things where you are looking; it is the one to put on a flyer or a QR code for a phone. See "Standing in the jam" for what it does.',
             'The Open Jam opens in a simple mode: one Create window with file upload and a few basic shapes — the full editor’s other windows and import options stay out of the way. Tapping an object opens a small Edit window (change your text, pick a colour, or remove it). Anyone who wants the complete toolset can press “⚒ All tools” in the toolbar (and “◱ Simple” switches back); the choice is remembered on that device.',
             'For admins: Ops Graph → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
+            'A room carries its own text for anything that reads instead of looking. A space drawn on a canvas used to be an empty page to a screen reader, a search engine, or a browser whose 3D failed; every published room now also carries its name, its lines and its doors as ordinary links, out of sight but reachable — tab through a room and each door becomes a visible link you can follow without a mouse.',
             'The front door IS the room. Opening di-studio.xyz no longer shows a page about the space with the space drawn behind it — it opens the space: the name and the one line stand inside it as things you can walk past, and the doors to the works are the real links. The room has one address and it is the bare domain: an old /main link still resolves, it just heals to / so you are never shown a room called “main”. The addresses inside that space — /main/studio, /main/raw, a project deep-link — keep their names. The old landing page is moved rather than deleted: it is at /?tour=1.',
             'The landing page has one door. It used to offer three side by side — “Step inside”, “Open Studio” and “Enter Space” — which asked a first-time visitor to choose between them before they knew what any of them were. Studio is not a rival to the door now: step inside, and Studio is there to walk into. The quiet “Already have spaces? Open Studio →” line under the button is the return path for people who already have work of their own.',
             'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page. Where no Main space is set at all, the landing offers “Look around” instead — a decorative walkable preview of its own hero, not a real space.'
         ],
-        tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr'],
-        updated: '2026-09-03'
+        tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr', 'telegram', 'sign in'],
+        updated: '2026-09-06'
     },
     {
         id: 'jam-surface',
@@ -1072,6 +1075,23 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'nodes', 'keeper', 'agent', 'llm', 'local', 'offline', 'ollama'],
         updated: '2026-08-19'
+    },
+    {
+        id: 'math-and-route-nodes',
+        category: 'Editing',
+        title: 'Math and Route: one card, a menu of operations',
+        summary: 'Arithmetic is one node with an Operation menu, not eight nodes — and Gate and Switch are one node called Route.',
+        body: [
+            'Add a Math node from the palette and it arrives as Add. Open the inspector and the first thing on the sheet is Operation: Add, Subtract, Multiply, Divide, Modulo, Power, Sin, Absolute. Pick one and the card renames itself to match, so the canvas still reads at a glance — a graph of cards all saying "Math" would tell you nothing.',
+            'The two ports never move. Whatever operation you choose, the wires stay where you put them: A and B on the left, Result on the right. Sin and Absolute read only A, and say so by labelling the other port Unused rather than hiding it — a port that disappears takes your wire somewhere you cannot see it.',
+            'The operation also decides what an unwired port is worth. A bare Multiply is 1 and a bare Add is 0, the same as they always were, because each operation carries its own defaults.',
+            'Route is the same idea for the two nodes that choose which value speaks. In its Gate operation, Value passes through while Open is true and carries nothing at all when it is false — a closed gate is an unplugged wire, not a zero, so whatever is downstream falls back to its own value. In its Switch operation, Pick chooses between A and B, and any kind of value passes: colours and vectors as readily as numbers.',
+            'If you rename a card yourself, that name is yours — changing the operation will not overwrite it.',
+            'Some neighbours deliberately stayed as their own cards. Compare, Logic, Extremes and Round each answer several questions at once through several outputs, so they are already families; an operation menu could only ever answer one of them at a time. Mix, Clamp and Range take a different set of inputs, and folding them in would put ports on the card that most operations ignore.',
+            'Projects made before this change open exactly as they were. An old Add node becomes a Math node set to Add, with its wires attached to the same values, and the numbers it feeds downstream do not move.'
+        ],
+        tags: ['raw', 'nodes', 'math', 'logic', 'operator', 'gate', 'switch', 'add', 'multiply', 'numbers'],
+        updated: '2026-09-01'
     },
     {
         id: 'midi-in-node',

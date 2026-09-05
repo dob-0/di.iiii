@@ -1824,9 +1824,16 @@ const sceneGroupOf = (name) => (name.startsWith('Laser') ? 'Laser'
 
 // Recall that reports failure. A recall whose POST died used to look exactly like a
 // recall that worked — same round-trip honesty rule as the blackout button.
+// What every press on this page is quantised to. One control, at the top, because it is
+// a property of the night rather than of a button: an operator who has decided to run on
+// the bar has decided it for everything they are about to press.
+let snapTo = 'off';
 function recallScene(id) {
-  return post('api/scenes/recall', { id }).then((r) => {
+  return post('api/scenes/recall', { id, quantize: snapTo }).then((r) => {
     if (r && r.error) say(`scene did not fire — ${r.error}`, true);
+    // A press that is waiting has to LOOK like it is waiting, or the desk reads as having
+    // ignored it and gets pressed again — which is how two scenes land on one beat.
+    if (r && r.inMs) say(`on the ${r.quantized} — ${(r.inMs / 1000).toFixed(1)}s`);
     return pullState();
   });
 }
@@ -5036,11 +5043,21 @@ $('#identify').addEventListener('click', async () => {
     : `<span class="warn">Port opens, but this is not an ENTTEC widget</span> <span class="muted">· ${esc(name)}${r.serial ? ' · serial ' + esc(r.serial) : ''} · ${at}</span>`;
 });
 
+$('#snap').addEventListener('change', (e) => {
+  snapTo = e.target.value;
+  say(snapTo === 'off' ? 'presses land immediately' : `presses land on the next ${snapTo}`);
+});
+
 // tap tempo
 let taps = [];
 $('#tapBtn').addEventListener('click', () => {
   const now = Date.now();
   taps = taps.filter((t) => now - t < 3000); taps.push(now);
+  // A tap says two things and the desk only ever heard one of them: how fast, and WHERE.
+  // The anchor goes with every tap, so the beat grid starts under the finger — that is
+  // what makes a wave begin on the downbeat and a quantised press land in the track
+  // rather than at the right speed in the wrong place.
+  post('api/fx', { epoch: now });
   if (taps.length > 1) {
     $('#bpm').value = Math.round(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
     $('#bpm').dispatchEvent(new Event('change'));

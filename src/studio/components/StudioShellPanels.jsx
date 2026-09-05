@@ -51,6 +51,7 @@ import {
 import { useDriveImport } from '../../hooks/useDriveImport.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
+import { telegramSignInUrl } from '../../utils/telegramSignIn.js'
 import { listCommonsAssets } from '../../services/serverSpaces.js'
 import { formatAssetSize } from '../utils/assetOptimization.js'
 import { ASSET_ACCEPT, ASSET_FORMAT_HINT, canPlaceInScene } from '../utils/assetFormats.js'
@@ -1706,6 +1707,17 @@ export function PublishPanel({
                                 onClick={() => { window.location.href = getOAuthUrl('google') }}
                             >
                                 Continue with Google
+                            </Button>
+                        ) : null}
+                        {telegramSignInUrl(providers) ? (
+                            <Button
+                                variant={providers?.github || providers?.google ? 'outlined' : 'contained'}
+                                component="a"
+                                href={telegramSignInUrl(providers)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                Continue with Telegram
                             </Button>
                         ) : null}
                     </Stack>

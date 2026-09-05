@@ -44,7 +44,7 @@ const geometryAtZoom = (nodes, edges, zoom) => {
 describe('graph geometry is invariant across detail tiers', () => {
     const colorNode = makeNode('value.color', { id: 'color-1', graphX: 0, graphY: 0 })
     const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320, graphY: 40 })
-    const sinNode = makeNode('math.sin', { id: 'sin-1', graphX: 660, graphY: 200 })
+    const sinNode = makeNode('math.op', { id: 'sin-1', graphX: 660, graphY: 200, values: { operation: 'sin' } })
     const nodes = [colorNode, cubeNode, sinNode]
     const edges = [
         { id: 'e1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'cube-1', toPort: 'color' }

@@ -103,6 +103,34 @@ describe('normalizeProjectDocument', () => {
     expect(typeof doc.windowLayout).toBe('object')
   })
 
+  // The mirror's own half of the operator-family merge, asserted on this side
+  // rather than only through ESM/CJS equality — so a day when BOTH mirrors
+  // lose the migration still goes red here.
+  it('normalizes the retired operator types forward, wires and values with them', () => {
+    const doc = normalizeProjectDocument({
+      nodes: [
+        { id: 'k', typeId: 'value.number', values: { value: 2 } },
+        { id: 'm', typeId: 'math.multiply', label: 'Multiply', values: {} },
+        { id: 's', typeId: 'math.sin', label: 'Sin', values: { in: 0.25 } },
+        { id: 'g', typeId: 'logic.gate', label: 'Gate', values: { open: false } }
+      ],
+      edges: [
+        { id: 'e1', fromNodeId: 'k', fromPort: 'out', toNodeId: 's', toPort: 'in' },
+        { id: 'e2', fromNodeId: 'k', fromPort: 'out', toNodeId: 'g', toPort: 'value' }
+      ]
+    })
+    const byId = Object.fromEntries(doc.nodes.map((node) => [node.id, node]))
+    expect(byId.m.typeId).toBe('math.op')
+    expect(byId.m.values.operation).toBe('multiply')
+    expect(byId.s.values).toEqual({ operation: 'sin', a: 0.25 })
+    expect(byId.g.typeId).toBe('logic.route')
+    expect(byId.g.values).toEqual({ operation: 'gate', pick: false })
+    expect(doc.edges.find((edge) => edge.id === 'e1').toPort).toBe('a')
+    expect(doc.edges.find((edge) => edge.id === 'e2').toPort).toBe('a')
+    // The wire is re-aimed, never dropped.
+    expect(doc.edges).toHaveLength(2)
+  })
+
   it('drops legacy root node types', () => {
     const doc = normalizeProjectDocument({
       nodes: [{ id: 'root-node', typeId: 'core.project', label: 'root', values: {} }]
@@ -352,6 +380,28 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'n1', typeId: 'some.type', values: { x: 2 } }
       ],
       edges: [{ id: 'edge1', fromNodeId: 'n1', fromPort: 'out', toNodeId: 'ghost', toPort: 'in' }]
+    },
+    // The operator-family merge (2026-09-01). The server rebuilds every
+    // document through the CJS mirror, so a migration that lives only on the
+    // ESM side would be undone on the next sync — the client would show a
+    // Math node and the server would keep insisting it is a math.add. Covers
+    // all three moving parts: the type id, the values rename, and the wire
+    // re-aimed onto the port that now carries the same value.
+    {
+        nodes: [
+            { id: 'k', typeId: 'value.number', values: { value: 2 } },
+            { id: 'add', typeId: 'math.add', label: 'Add', values: {} },
+            { id: 'mul', typeId: 'math.multiply', label: 'Multiply', values: { a: 3 } },
+            { id: 'sin', typeId: 'math.sin', label: 'Sin', values: { in: 0.5 } },
+            { id: 'gate', typeId: 'logic.gate', label: 'Gate', values: { open: false } },
+            { id: 'sw', typeId: 'logic.switch', label: 'Switch', values: {} }
+        ],
+        edges: [
+            { id: 'w1', fromNodeId: 'k', fromPort: 'out', toNodeId: 'add', toPort: 'a' },
+            { id: 'w2', fromNodeId: 'k', fromPort: 'out', toNodeId: 'sin', toPort: 'in' },
+            { id: 'w3', fromNodeId: 'k', fromPort: 'out', toNodeId: 'gate', toPort: 'value' },
+            { id: 'w4', fromNodeId: 'k', fromPort: 'out', toNodeId: 'gate', toPort: 'open' }
+        ]
     },
     // Portal label styling and text reveal: both were added to the ESM source
     // and the mirror by hand, and neither was covered by any fixture, so the
