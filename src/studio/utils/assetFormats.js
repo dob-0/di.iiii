@@ -43,7 +43,12 @@ export async function pdfToImageFiles(file, { maxPages = 6, scale = 2 } = {}) {
         import.meta.url
     ).toString()
     const data = await file.arrayBuffer()
-    const doc = await pdfjs.getDocument({ data }).promise
+    // Keep the loading task: since pdfjs 5 the document proxy has no destroy()
+    // of its own, and calling one there threw AFTER every page had rendered,
+    // so the import failed with the pages already in hand (found 2026-09-06
+    // by rendering a real PDF in a headless build; identical on 6.2 and 6.3).
+    const loadingTask = pdfjs.getDocument({ data })
+    const doc = await loadingTask.promise
     const baseName = String(file.name || 'document').replace(/\.pdf$/i, '')
     const pages = Math.min(doc.numPages, maxPages)
     const files = []
@@ -59,6 +64,10 @@ export async function pdfToImageFiles(file, { maxPages = 6, scale = 2 } = {}) {
         const suffix = doc.numPages > 1 ? `-p${i}` : ''
         files.push(new File([blob], `${baseName}${suffix}.png`, { type: 'image/png' }))
     }
-    await doc.destroy()
+    try {
+        await loadingTask.destroy()
+    } catch {
+        // cleanup is best-effort: the pages are already files
+    }
     return files
 }
