@@ -257,6 +257,20 @@ describe('SpaceHub', () => {
         expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
     })
 
+    it('falls back to the live preview when a cover image is gone instead of a torn picture', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'gallery', label: 'Gallery', isOwner: true, isPublic: true, previewImageAssetId: 'missing' }
+        ])
+
+        render(<SpaceHub />)
+
+        await screen.findByText('gallery')
+        const card = () => screen.getByText('gallery').closest('.ssh-space-card')
+        fireEvent.error(card().querySelector('.ssh-card-preview img'))
+        await waitFor(() => expect(card().querySelector('.ssh-card-preview img')).toBeNull())
+        expect(card().querySelector('.ssh-card-preview')).not.toBeNull()
+    })
+
     it('uploads a preview image from the card Preview manager and links it to the space', async () => {
         listServerSpaces.mockResolvedValue([
             { id: 'mine', label: 'Mine', isOwner: true, isPublic: true, publishedProjectId: 'p1' }
@@ -291,18 +305,18 @@ describe('SpaceHub', () => {
         expect(cardActionsFor('anyones')).not.toContain('Set main')
     })
 
-    it('shows guests a sandbox banner and no management or create controls', async () => {
+    it('shows guests a one-line banner and no management or create controls', async () => {
         authState = { ...authState, type: 'guest', canCreateSpace: false, ownedSpaceCount: 0 }
         listServerSpaces.mockResolvedValue([
-            { id: 'sandbox-abc', label: 'Guest Sandbox', kind: 'sandbox', isOwner: false }
+            { id: 'sandbox-abc', label: 'Guest Sandbox', kind: 'sandbox', isOwner: false },
+            { id: 'wcc', label: 'WCC Exhibition', isOwner: false, isPublic: true, publishedProjectId: 'p1' }
         ])
 
         render(<SpaceHub />)
 
-        // Sandbox cards hide their noisy generated id behind a plain label.
-        await screen.findByText('Guest Sandbox')
-        expect(screen.getByText(/Open Space, or use your private sandbox/i)).toBeTruthy()
-        expect(cardActionsFor('Guest Sandbox')).toEqual([])
+        await screen.findByText('wcc')
+        expect(screen.getByText(/step into any space here/i)).toBeTruthy()
+        expect(cardActionsFor('wcc')).toEqual(['Copy'])
         expect(screen.getByRole('button', { name: 'Sign in to create' })).toBeTruthy()
         expect(screen.queryByText(/Space limit reached/)).toBeNull()
     })
@@ -347,7 +361,15 @@ describe('SpaceHub', () => {
         expect(mockAppNavigate).not.toHaveBeenCalled()
     })
 
-    it('collapses everything a guest does not own into one row by default, opens on click and remembers the choice', async () => {
+    const visitorSpaces = () => [
+        { id: 'open', label: 'Open Space', kind: 'global', isPublic: true, isOwner: false, publishedProjectId: 'open-jam' },
+        { id: 'sandbox-me', label: 'Sandbox', kind: 'sandbox', isOwner: false },
+        { id: 'bare', label: 'Bare', isOwner: false, isPublic: true },
+        { id: 'net', label: 'Network', isOwner: false, isPublic: true, publishedProjectId: 'network' },
+        { id: 'azd', label: 'AZD', isOwner: false, isPublic: true, publishedProjectId: 'azd' }
+    ]
+
+    const asGuest = () => {
         authState = {
             ...authState,
             type: 'guest',
@@ -355,35 +377,57 @@ describe('SpaceHub', () => {
             openSpaceId: 'open',
             sandboxSpaceId: 'sandbox-me'
         }
-        listServerSpaces.mockResolvedValue([
-            { id: 'open', label: 'Open Space', kind: 'global', isPublic: true, isOwner: false },
-            { id: 'sandbox-me', label: 'Sandbox', kind: 'sandbox', isOwner: false },
-            { id: 'net', label: 'Network', isOwner: false, isPublic: true },
-            { id: 'azd', label: 'AZD', isOwner: false, isPublic: true }
-        ])
+    }
 
-        const { unmount } = render(<SpaceHub />)
+    it('shows a visitor every public space at once, with no collapse to click through', async () => {
+        asGuest()
+        listServerSpaces.mockResolvedValue(visitorSpaces())
+
+        render(<SpaceHub />)
+
+        // Every listed space is on the page, Open Space among them — the page
+        // is the spaces, not one card plus a folded shelf.
+        await screen.findByText('open')
+        for (const id of ['bare', 'net', 'azd']) {
+            expect(screen.getByText(id)).toBeTruthy()
+        }
+        expect(screen.queryByRole('button', { name: /other space/ })).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Hide' })).toBeNull()
+        // One grid, one title — no shelf headings above a visitor's cards.
+        expect(document.querySelectorAll('.ssh-shelf-label').length).toBe(0)
+        // The Open Space still says what it is, and keeps its Live badge.
+        expect(screen.getByText('everyone builds here, together')).toBeTruthy()
+        expect(screen.getAllByText('Live').length).toBe(4)
+        // ...but not a second badge on every card saying the same thing.
+        expect(screen.queryByText('View live')).toBeNull()
+    })
+
+    it('leads a visitor with the spaces that have something to show', async () => {
+        asGuest()
+        listServerSpaces.mockResolvedValue(visitorSpaces())
+
+        render(<SpaceHub />)
 
         await screen.findByText('open')
-        // Closed by default: the two things a guest can use are on screen, the
-        // rest of the directory is one line, and the line names what it hides.
-        const toggle = screen.getByRole('button', { name: /2 other spaces/ })
-        expect(toggle).toHaveAttribute('aria-expanded', 'false')
-        expect(screen.queryByText('net')).toBeNull()
-        expect(screen.queryByText('azd')).toBeNull()
+        const ids = [...document.querySelectorAll('.ssh-space-id')].map((el) => el.textContent)
+        expect(ids).toEqual(['open', 'net', 'azd', 'bare'])
+    })
 
-        fireEvent.click(toggle)
+    it('gives a visitor the sandbox as one secondary line, not a hero card', async () => {
+        const { navigateToStudioPath } = await import('../utils/studioRouting.js')
+        asGuest()
+        listServerSpaces.mockResolvedValue(visitorSpaces())
 
-        await screen.findByText('net')
-        expect(screen.getByText('azd')).toBeTruthy()
-        expect(screen.getByRole('button', { name: 'Hide' })).toHaveAttribute('aria-expanded', 'true')
-
-        unmount()
-
-        // A fresh mount (same browser/localStorage) restores the open choice.
         render(<SpaceHub />)
-        await screen.findByText('net')
-        expect(screen.getByRole('button', { name: 'Hide' })).toHaveAttribute('aria-expanded', 'true')
+
+        await screen.findByText('open')
+        // Not a card in the grid, and no "nothing in it yet" empty frame.
+        expect(screen.queryByText('Sandbox')).toBeNull()
+        expect(screen.queryByText(/nothing in it yet/i)).toBeNull()
+        // Still reachable in one click.
+        const link = screen.getByRole('button', { name: 'Your private sandbox' })
+        fireEvent.click(link)
+        expect(navigateToStudioPath).toHaveBeenCalledWith('/sandbox-me/studio')
     })
 
     it('never collapses a signed-in account\'s own spaces', async () => {
@@ -486,24 +530,15 @@ describe('SpaceHub', () => {
         expect(mediaBlock).toMatch(/\.ssh-shelf--spaces\s*\{\s*grid-column:\s*1\s*\/\s*-1;\s*grid-row:\s*2;\s*\}/)
     })
 
-    it('the Grid fold never reaches Map — Map is always given every space, unfiltered', async () => {
-        authState = { ...authState, type: 'guest', canCreateSpace: false, openSpaceId: 'open', sandboxSpaceId: 'sandbox-me' }
-        listServerSpaces.mockResolvedValue([
-            { id: 'open', label: 'Open Space', kind: 'global', isPublic: true, isOwner: false },
-            { id: 'sandbox-me', label: 'Sandbox', kind: 'sandbox', isOwner: false },
-            { id: 'net', label: 'Network', isOwner: false, isPublic: true },
-            { id: 'azd', label: 'AZD', isOwner: false, isPublic: true }
-        ])
+    it('the Grid/Map toggle still works — Map is given every space, the sandbox included', async () => {
+        asGuest()
+        listServerSpaces.mockResolvedValue(visitorSpaces())
 
         render(<SpaceHub />)
         await screen.findByText('open')
 
-        // Grid: the rest shelf is folded for a guest by default.
-        expect(screen.getByRole('button', { name: /2 other spaces/ })).toHaveAttribute('aria-expanded', 'false')
-        expect(screen.queryByText('net')).toBeNull()
-
-        // Map is handed the full, unfiltered spaces list regardless — the same
-        // list SpaceHub loaded, not something derived from the fold state.
+        // Map is handed the full spaces list — the same list SpaceHub loaded,
+        // not the visitor grid's list (which leaves the sandbox out).
         fireEvent.click(screen.getByRole('button', { name: 'Map' }))
         const constellation = await screen.findByTestId('mock-constellation')
         expect(constellation.textContent).toContain('open')
