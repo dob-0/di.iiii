@@ -1,4 +1,4 @@
-# Dead CSS removed (2026-08-25)
+## 2026-08-25 — dead CSS removed, 205 lines verified selector by selector
 
 The suite audit flagged ~1,050 dead lines. I deleted only what I verified
 myself, selector by selector:
