@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-polina-vever",
+  "slug": "polina-vever",
+  "label": "Polina Vever",
+  "mode": "code",
+  "entry": "spaces/network/pages/polina-vever.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

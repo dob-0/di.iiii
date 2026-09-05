@@ -19,3 +19,14 @@
 	header Strict-Transport-Security "max-age=31536000"
 	reverse_proxy host.docker.internal:{$STAGING_PORT:8081}
 }
+
+# map.di-studio.xyz — a memorable door onto the map lane, not a second app.
+# It reverse-proxies to the SAME prod client as {$SITE_DOMAIN} above, so
+# every path, asset and API call resolves exactly as it does there — the
+# map lane already sits behind ProtectedSurface (per-space sign-in), so this
+# adds a name, not a hole in the wall. Inert until MAP_DOMAIN is set in .env
+# and its DNS record exists, same as STAGING_DOMAIN above.
+{$MAP_DOMAIN} {
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy client:8080
+}

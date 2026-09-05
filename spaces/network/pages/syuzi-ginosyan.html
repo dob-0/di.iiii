@@ -3,62 +3,214 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Syuzi Ginosyan — di.iiii</title>
+<title>Syuzi Ginosyan — di.iiii network</title>
 <style>
-  :root { --paper: #f5f5f3; --ink: #17191a; --ink-2: #4f5356; --ink-3: #868a8d; --rule: #d6d8d5; --mark: #b23a2c; }
-  @media (prefers-color-scheme: dark) { :root { --paper: #141615; --ink: #ebece9; --ink-2: #b4b8b5; --ink-3: #7d8280; --rule: #30342f; --mark: #e26a58; } }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--paper); color: var(--ink); }
-  body { font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-  .page { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
-  .eyebrow, .role, h2, footer, .works .line { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); display: flex; gap: 14px; flex-wrap: wrap; }
-  .eyebrow a { color: inherit; text-decoration: none; }
-  .eyebrow a:hover, .eyebrow a:focus-visible { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-  header { padding-bottom: 22px; border-bottom: 1px solid var(--rule); }
-  h1 { font-size: clamp(34px, 7vw, 56px); line-height: 1; letter-spacing: -0.02em; font-weight: 600; margin: 8px 0 12px; text-wrap: balance; }
-  .role { display: block; font-size: 13px; color: var(--ink-2); letter-spacing: .02em; }
-  .mark .role { color: var(--mark); }
-  section { padding: 22px 0 6px; }
-  section + section { border-top: 1px solid var(--rule); }
-  h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; margin: 0 0 12px; }
-  .works { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 22px; margin: 0; padding: 0; list-style: none; }
-  .works a { display: block; border-top: 2px solid var(--ink); padding-top: 10px; color: inherit; text-decoration: none; }
-  .works a:hover .title, .works a:focus-visible .title { text-decoration: underline; text-underline-offset: 3px; }
-  .works .title { font-weight: 600; font-size: 17px; line-height: 1.25; display: block; }
-  .works .line { display: block; font-size: 12px; color: var(--ink-2); margin-top: 4px; letter-spacing: .02em; }
-  .people { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0; padding: 0; list-style: none; }
-  .people a { display: inline-block; border: 1px solid var(--rule); border-radius: 999px; padding: 6px 13px; font-size: 14.5px; line-height: 1.2; color: inherit; text-decoration: none; }
-  .people a:hover, .people a:focus-visible { border-color: var(--ink); }
-  .empty { color: var(--ink-2); margin: 0; max-width: 58ch; }
-  footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); line-height: 1.6; }
-  footer a { color: inherit; }
-  a:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+:root{
+  --paper:#f7f7f5; --paper-2:#efefec;
+  --ink:#111214; --ink-2:#55595e; --ink-3:#63686d; --rule:#dededa;
+  /* --accent marks (dots, rules, the lit star); --accent-ink is the one
+     that carries text — #0097a3 is 3.29:1 on paper and fails as type. */
+  --accent:#0097a3; --accent-ink:#00757f;
+  --accent-soft:rgba(0,151,163,.07); --accent-rule:rgba(0,151,163,.35);
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --sans:'Inter',-apple-system,'Segoe UI',sans-serif;
+  --col:1180px; --room:860px; --pad:56px;
+}
+@font-face{
+  font-family:'Inter'; src:url('/fonts/inter-regular.woff') format('woff'); font-weight:400 800; font-style:normal; font-display:swap;
+}
+*{box-sizing:border-box; border-radius:0 !important;}
+html{background:var(--paper);}
+body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;}
+a{color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+
+.sheet{position:relative;}
+
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);}
+.eyebrow .dot{color:var(--accent);}
+
+/* ---------- index ---------- */
+.indexPane{max-width:var(--col);padding:30px var(--pad) 26px var(--pad);}
+.masthead{max-width:60ch;}
+.indexPane h1{font-size:clamp(26px,2.6vw,34px);font-weight:700;letter-spacing:-0.02em;line-height:1.05;margin:14px 0 14px 0;}
+.indexPane h1 .dot{color:var(--accent);}
+.indexPane .dek{font-size:15.5px;color:var(--ink-2);line-height:1.6;margin:0;}
+.howto{font-family:var(--mono);font-size:12px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin:0;}
+
+.roster{max-width:var(--col);padding:0 var(--pad) 8px var(--pad);position:relative;}
+
+/* ---------- the ties ----------
+   One dot per person, pinned to the right edge of that person's own row and
+   scrolling with it; one arc per shared work, running between the two rows
+   that made it. Every mark can be followed to the names it is about. */
+.tie{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:0;}
+.tie-dot{fill:var(--ink-3);opacity:.5;transition:fill .14s ease,opacity .14s ease,r .14s ease;}
+.tie-dot.is-lit{fill:var(--accent);opacity:1;r:5;}
+.tie-arc{fill:none;stroke:var(--rule);stroke-width:1;transition:stroke .14s ease,stroke-width .14s ease;}
+.tie-arc.is-lit{stroke:var(--accent);stroke-width:1.4;}
+.tie-label{font-family:var(--mono);font-size:12px;fill:var(--ink-3);
+  transition:fill .14s ease;}
+.tie-label.is-lit{fill:var(--accent-ink);}
+.roster .group, .roster ul.catalogue, .roster .howto{position:relative;z-index:1;}
+
+/* Section labels are the strongest horizontal marks in the list — they are
+   the structure, and they used to be smaller than the ornament beside them. */
+.group{display:flex;align-items:baseline;gap:14px;margin:38px 0 0 0;
+  border-bottom:1.5px solid var(--ink);padding-bottom:7px;}
+.group .g-name{font-size:15px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;}
+.group .g-rule{flex:1;}
+.group .g-count{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;}
+.group:first-of-type{margin-top:18px;}
+
+ul.catalogue{list-style:none;margin:0;padding:0;}
+ul.catalogue li+li{border-top:1px solid var(--rule);}
+a.row{display:grid;grid-template-columns:minmax(200px,23ch) 1fr;align-items:baseline;column-gap:30px;
+  text-decoration:none;color:inherit;padding:11px 10px 11px 14px;position:relative;
+  transition:background .14s ease;}
+a.row::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:5px;height:5px;background:var(--accent);opacity:0;transition:opacity .14s ease;}
+a.row:hover,a.row:focus-visible,a.row.is-active{background:var(--accent-soft);outline:none;}
+a.row:hover::before,a.row:focus-visible::before,a.row.is-active::before{opacity:1;}
+a.row .name{font-size:19px;font-weight:600;letter-spacing:-0.012em;line-height:1.25;}
+/* the role belongs next to the name, not across an empty gutter */
+a.row .role{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);line-height:1.45;}
+a.row .made{display:block;font-family:var(--mono);font-size:12px;color:var(--accent-ink);
+  margin-top:3px;letter-spacing:.01em;}
+a.row .made .arrow{opacity:.6;}
+
+.indexFoot{max-width:var(--col);padding:34px var(--pad) 72px var(--pad);}
+.indexFoot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0 0 12px 0;
+  padding-top:20px;border-top:1px solid var(--rule);}
+.indexFoot p+p{padding-top:0;border-top:none;}
+.indexFoot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+.indexFoot a:hover,.indexFoot a:focus-visible{border-bottom-color:var(--accent);}
+
+/* ---------- both page types ---------- */
+/* Same header at every depth, because people arrive on foot as well as by
+   link: a door out of the network, then a door out of a person's room. */
+.pagehead{padding:26px var(--pad) 0 var(--pad);max-width:var(--col);
+  display:flex;justify-content:space-between;gap:16px;align-items:baseline;}
+.pagehead--room{max-width:var(--room);}
+.back{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);
+  text-decoration:none;display:inline-flex;align-items:center;gap:8px;}
+.back:hover,.back:focus-visible{color:var(--accent-ink);}
+
+.room-stage{max-width:var(--room);padding:46px var(--pad) 0 var(--pad);}
+.room-stage h1{font-size:clamp(38px,5.2vw,64px);font-weight:700;line-height:1.0;letter-spacing:-0.028em;margin:0 0 10px 0;}
+.room-stage .role{font-size:17px;color:var(--ink-2);margin:0;max-width:46ch;}
+.room-stage .city{font-size:12.5px;color:var(--ink-3);margin:6px 0 0 0;font-family:var(--mono);letter-spacing:.04em;}
+.room-stage .bio{font-size:16px;line-height:1.7;color:var(--ink-2);max-width:58ch;
+  margin:30px 0 0 0;padding-top:26px;border-top:1px solid var(--rule);}
+
+/* ---------- the journey (a CV cut into segments, not handed over flat) ---------- */
+.focus-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px 0;}
+.chip{border:1px solid var(--rule);padding:6px 12px;font-size:12px;font-family:var(--mono);
+  color:var(--ink-2);letter-spacing:.02em;}
+.timeline{margin:0;}
+.timeline details{border-top:1px solid var(--rule);}
+.timeline details:last-child{border-bottom:1px solid var(--rule);}
+.timeline summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:16px;
+  padding:14px 2px;font-family:var(--mono);}
+.timeline summary::-webkit-details-marker{display:none;}
+.timeline summary .yr{font-size:14px;font-weight:700;color:var(--ink);min-width:4.5ch;}
+.timeline summary .ct{font-size:12px;color:var(--ink-3);flex:1;text-align:right;}
+.timeline summary::after{content:'+';color:var(--accent-ink);margin-left:2px;font-size:14px;}
+.timeline details[open] summary::after{content:'−';}
+.timeline .yr-items{padding:0 2px 18px 2px;display:flex;flex-direction:column;gap:12px;}
+.ti{font-size:14.5px;line-height:1.5;color:var(--ink-2);}
+.ti .ti-t{font-weight:600;color:var(--ink);}
+.ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
+.ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
+.cv-link{margin:20px 0 0 0;}
+
+.section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
+  margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--rule);}
+
+/* flex, not grid: an auto-fill grid left a phantom empty cell showing the
+   container's own colour whenever the row was not full. */
+.doors{display:flex;flex-wrap:wrap;gap:14px;margin:0;}
+.door{flex:0 1 260px;min-height:132px;border:1px solid var(--rule);background:var(--paper);
+  padding:16px 16px 14px 16px;text-decoration:none;display:flex;flex-direction:column;
+  justify-content:flex-end;position:relative;transition:border-color .14s ease,background .14s ease;}
+.door:hover,.door:focus-visible{background:var(--accent-soft);border-color:var(--accent-rule);outline:none;}
+.door .t{font-size:17px;font-weight:600;line-height:1.2;}
+.door .l{font-size:12px;color:var(--ink-2);margin-top:5px;font-family:var(--mono);line-height:1.45;}
+.door::after{content:'→';position:absolute;right:14px;top:12px;color:var(--accent);opacity:0;
+  transition:opacity .14s ease,transform .14s ease;}
+.door:hover::after,.door:focus-visible::after{opacity:1;transform:translateX(2px);}
+.door--unlinked{border-style:dashed;background:transparent;cursor:default;}
+.door--unlinked .t{color:var(--ink-2);font-weight:500;}
+.door--unlinked .l{color:var(--ink-3);}
+.empty-note{color:var(--ink-2);font-size:15.5px;max-width:48ch;line-height:1.65;margin:0;}
+.elsewhere{display:flex;gap:10px;flex-wrap:wrap;}
+.plate{border:1px solid var(--rule);padding:9px 15px;font-size:12.5px;text-decoration:none;
+  color:var(--ink-2);font-family:var(--mono);transition:border-color .14s ease,color .14s ease;}
+.plate:hover,.plate:focus-visible{color:var(--accent-ink);border-color:var(--accent-rule);}
+
+.neighbours{display:flex;flex-wrap:wrap;gap:0 22px;max-width:64ch;}
+.neighbours a{font-size:14.5px;color:var(--ink-2);text-decoration:none;padding:5px 0;
+  border-bottom:1px solid transparent;}
+.neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
+
+.room-foot{max-width:var(--room);padding:44px var(--pad) 72px var(--pad);}
+.room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
+  padding-top:20px;border-top:1px solid var(--rule);}
+.room-foot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+
+/* Between these widths the list gives up a little of its own width so the
+   margin still exists — better than the drawing disappearing at 1280. */
+@media (max-width:1400px){ :root{--col:1040px;} }
+
+@media (max-width:1000px){
+  :root{--pad:26px;}
+  /* the roster starts at the top of a phone — no band above it. There is no
+     margin to hold the drawing at this width, so it thins to a whisper
+     across the whole sheet rather than sitting behind the names as smudges. */
+  .ground{opacity:.2;}
+  .ground canvas{-webkit-mask-image:none;mask-image:none;}
+  /* the two halves of the room header do not fit one line on a phone;
+     side by side they each wrapped mid-phrase. */
+  .pagehead{flex-direction:column;gap:9px;}
+  /* the section eyebrow is 39 characters and overruns 390px by a hair */
+  .pagehead .eyebrow{letter-spacing:.08em;}
+  a.row{grid-template-columns:1fr;row-gap:3px;padding:14px 10px 15px 14px;}
+  a.row .name{font-size:19px;}
+  .indexPane{padding-top:30px;padding-bottom:28px;}
+  .indexPane h1{font-size:27px;}
+  .room-stage{padding-top:34px;}
+  .door{flex:1 1 100%;min-height:112px;}
+  .group{margin-top:34px;}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .door,.back,a.row,.plate,.neighbours a{transition:none;}
+}
 </style>
 </head>
 <body>
-<div class="page mark">
-<header>
-  <div class="eyebrow"><a href="/network" target="_top">← everyone</a><span>di.iiii · network</span></div>
-  <h1>Syuzi Ginosyan</h1>
-  <span class="role">curator · team</span>
+<div class="sheet">
+<header class="pagehead pagehead--room">
+  <a class="back" href="/network" target="_top"><span aria-hidden="true">←</span> the network</a>
+  <div class="eyebrow">di<span class="dot">.</span>iiii · network · team</div>
 </header>
-
-<section>
-  <h2>on di.iiii</h2>
-  <ul class="works">
-    <li><a href="/azd" target="_top"><span class="title">ազդ | azd</span><span class="line">bond (կապ)</span></a></li>
-    <li><a href="/br_id_ge" target="_top"><span class="title">br_id_ge</span><span class="line">Notations #2 — team</span></a></li>
-  </ul>
-</section>
-<section>
-  <h2>elsewhere</h2>
-  <ul class="people">
-    <li><a href="https://www.instagram.com/ginosyansuzy/" target="_blank" rel="noopener">Instagram</a></li>
-  </ul>
-</section>
-
-<footer>A room in the <a href="/network" target="_top">network</a> — one per person who makes di.iiii. It is theirs to fill.</footer>
+<main class="room-stage">
+  <h1>Syuzi Ginosyan</h1>
+  <p class="role">curator</p>
+  <p class="city">Gyumri</p>
+  <p class="bio">Curator based in Gyumri — MA in Art History and Theory. Co-founder of G.URBAN; curator for Gyumri Art Week; residencies and collaborations across Armenia and Germany.</p>
+  <div class="section-label">the journey</div><div class="focus-chips"><span class="chip">curation</span><span class="chip">art management</span><span class="chip">coordination</span><span class="chip">project direction</span><span class="chip">performing</span><span class="chip">Ableton</span><span class="chip">Logic Pro</span></div><div class="timeline"><details open><summary><span class="yr">2026</span><span class="ct">2 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">WCC: Women Creating Change</span> <span class="ti-r">curator</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">azd</span> <span class="ti-r">curator and artist</span><span class="ti-p">Gyumri, Armenia</span></div></div></details><details><summary><span class="yr">2025</span><span class="ct">1 credit</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">RecordAR: Analog and Digital Identities</span> <span class="ti-r">curator and coordinator</span><span class="ti-p">Munich, Germany</span></div></div></details><details><summary><span class="yr">2024</span><span class="ct">1 credit</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Generator</span> <span class="ti-r">project manager, curator</span><span class="ti-p">Munich, Germany / Barcelona, Spain</span></div></div></details><details><summary><span class="yr">2023</span><span class="ct">4 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Spielart Festival — bisetka: talk_place</span> <span class="ti-r">curator and performer</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">SUPERBOOKS4 — “Ground” book</span> <span class="ti-r">author, main coordinator</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">Pact Zollverein Residency</span> <span class="ti-r">artist</span><span class="ti-p">Essen, Germany</span></div><div class="ti"><span class="ti-t">HochX Residency</span> <span class="ti-r">artist</span><span class="ti-p">Munich, Germany</span></div></div></details><details><summary><span class="yr">2022</span><span class="ct">2 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">MARDS residency</span> <span class="ti-r">curator and coordinator</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">di. studio</span> <span class="ti-r">curator</span><span class="ti-p">Gyumri, Armenia</span></div></div></details><details><summary><span class="yr">2015 – 2021</span><span class="ct">3 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Ground art festival</span> <span class="ti-r">organizer and curator</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">With a Word</span> <span class="ti-r">curator and artist</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">Anonymous</span> <span class="ti-r">curator</span><span class="ti-p">Loft Gyumri</span></div></div></details></div><p class="cv-link"><a class="plate" href="https://drive.google.com/file/d/1sg6ytFluP_37HQHKvO1Ski4y7FjDn4gk/view" target="_blank" rel="noopener">the full CV — PDF</a></p>
+  <div class="section-label">on di.iiii</div>
+  <div class="doors"><a class="door" href="/azd" target="_top"><span class="t">ազդ | azd</span><span class="l">bond (կապ)</span></a><div class="door door--unlinked"><span class="t">Tread from Wool</span><span class="l">Notations #2, KARATAV room, State Philharmonia of Armenia, 1-2 Aug 2026 · no link yet</span></div><a class="door" href="/br_id_ge" target="_top"><span class="t">br_id_ge</span><span class="l">Notations #2 — team</span></a></div>
+  <div class="section-label">elsewhere</div><div class="elsewhere"><a class="plate" href="https://www.instagram.com/ginosyansuzy/" target="_blank" rel="noopener">Instagram</a><a class="plate" href="https://github.com/ginsyuz" target="_blank" rel="noopener">GitHub</a></div>
+  <div class="section-label">made things with</div>
+    <nav class="neighbours"><a href="/network/gevorg-grigoryan" target="_top">Gevorg Aram Grigoryan</a><a href="/network/emilya-nikoghosyan" target="_top">Emilya Nikoghosyan</a><a href="/network/yeva-abgaryan" target="_top">Yeva Abgaryan</a><a href="/network/greta-grigoryan" target="_top">Greta Grigoryan</a><a href="/network/shahane-harutyunyan" target="_top">Shahane Harutyunyan</a></nav>
+</main>
+<footer class="room-foot">
+  <p>A room in the <a href="/network" target="_top">network</a> — one for each person who makes di.iiii. It is theirs to fill.</p>
+</footer>
 </div>
 </body>
 </html>

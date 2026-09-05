@@ -1,4 +1,5 @@
 
+import { normalizePlacement } from './placement.js'
 export const PROJECT_DOCUMENT_VERSION = 4
 export const ENTITY_TYPES = [
     'box',
@@ -115,6 +116,11 @@ export const defaultWorldState = {
     // plus a 22m margin). An array of {minX,maxX,minZ,maxZ} rectangles declares
     // the walkable floor plan, and the walker cannot leave their union.
     walkableAreas: null,
+    // null = free space, the historical behaviour. An object turns the room's
+    // build zones ON: everything hangable that arrives is put in a numbered slot
+    // by the server, so the room stays arranged no matter who edits it or how.
+    // See src/shared/placement.js; switching it off leaves every photo where it is.
+    placement: null,
     gridVisible: true,
     gridSize: 24,
     gridCellSize: 0.75,
@@ -230,6 +236,14 @@ export const defaultMappingCue = {
     // Seconds to hold before an auto-advancing show moves on. 0 = wait for a
     // person.
     hold: 0,
+    // OPTIONAL: the id of a scene on the lighting desk (serverXR/src/lighting,
+    // served at /light on a LOCAL di.iiii) to recall when this cue fires. The
+    // wall and the light in front of it are one show, so a cue can change
+    // both. The ID is stored, never the name — a renamed scene must stay the
+    // same scene. Absent unless set, so documents written before cues could
+    // carry light are byte-identical after a round-trip.
+    lightScene: '',
+    lightLook: '',
     // Per-surface state, keyed by surface id: { enabled, opacity, source }.
     // GEOMETRY IS DELIBERATELY NOT IN A CUE. Corners and masks are the wall;
     // cues are the show. A cue that could move an alignment is a cue that can
@@ -455,6 +469,14 @@ export const normalizeWindowLayout = (layout = {}) => {
 // renderer fetches whatever it is given and a document is untrusted input.
 const LABEL_FONT_NAMES = ['default', 'helvetica']
 
+// What shape a gateway portal draws. 'gateway' is the glowing ring every
+// portal has drawn since the type existed. 'frame' is a square-cornered
+// threshold — four thin bars, flat fill, no halo — the only door shape the
+// brand's geometry rule allows (square corners only; never shadow, glow or
+// bevel), which the ring made it impossible to build. Opt-in: anything
+// authored without this field keeps the ring.
+const PORTAL_STYLES = ['gateway', 'frame']
+
 const TEXT_REVEAL_MODES = ['none', 'typewriter']
 
 // A text entity's optional reveal. Absent (or 'none') means the text draws in
@@ -595,7 +617,10 @@ export const normalizeEntity = (entity = {}) => {
             // authored before these existed is untouched.
             labelColor: ensureString(refSource.labelColor, refDefault.labelColor || '#ffffff'),
             labelPlate: ensureBoolean(refSource.labelPlate, refDefault.labelPlate ?? true),
-            labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default'
+            labelFont: LABEL_FONT_NAMES.includes(refSource.labelFont) ? refSource.labelFont : 'default',
+            // Door shape. 'gateway' reproduces the ring exactly, so an
+            // unknown or absent value leaves an existing portal untouched.
+            style: PORTAL_STYLES.includes(refSource.style) ? refSource.style : 'gateway'
         }
     }
     if (sourceComponents.runtime || defaultComponents.runtime) {
@@ -676,6 +701,7 @@ const normalizeWorldState = (world = {}) => {
             altY: ensureNumber(source.spawn.altY, 1.6)
         } : null,
         walkableAreas: normalizeWalkableAreas(source.walkableAreas),
+        placement: normalizePlacement(source.placement),
         // Walk-mode atmosphere: null keeps the built-in close fog (8..50m); an
         // authored object opens the distance for VAST scenes — the walker's
         // camera far plane follows it (LiveProjectScene), so a 150m composition
@@ -897,12 +923,22 @@ export const normalizeMappingCue = (cue = {}) => {
         if (Object.keys(patch).length) surfaces[id] = patch
     })
     const key = ensureString(source.key, '')
+    // Emitted only when it holds something: a cue that never named a lighting
+    // scene comes back exactly as it went in, so this field's arrival cannot
+    // rewrite every mapping that already exists.
+    const lightScene = ensureString(source.lightScene, '')
+    // A look and a scene are both ids, and nothing about an id says which it is, so the
+    // cue keeps them apart. A look wins when both are set: the desk is built on looks
+    // now, and a cue that has been re-pointed at one has said what it means.
+    const lightLook = ensureString(source.lightLook, '')
     return {
         id: ensureString(source.id, ''),
         name: ensureString(source.name, ''),
         key: /^[1-9]$/.test(key) ? key : '',
         fade: Math.max(0, ensureNumber(source.fade, defaultMappingCue.fade)),
         hold: Math.max(0, ensureNumber(source.hold, defaultMappingCue.hold)),
+        ...(lightLook ? { lightLook } : {}),
+        ...(lightScene ? { lightScene } : {}),
         surfaces
     }
 }

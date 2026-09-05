@@ -1,0 +1,5641 @@
+'use strict';
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// Names are typed by a person and land in innerHTML. Without this, a fixture called
+// "Back <left>" simply loses its label everywhere, silently.
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+let S = null;                  // last full state from the server
+let DMX = {};                  // live buffers, polled fast
+let sel = new Set();           // selected fixture ids, shared by every view
+let page = 'setup';
+let libProfile = 'rgb';
+let gridUni = 0;
+let activeGroup = 'all';
+let activeScene = null;        // scene shown in the CONTROL detail pane
+let sceneFilter = '';          // live filter over the scene bank — the library runs to hundreds
+let sceneKind = 'all';         // 'all' | 'anim' | 'static' — hide one kind wholesale
+let tool = 'select';
+let snap = false;
+let zoom = 1;
+// The stage viewport: pan in screen pixels, zoom 0.01-4 — wide enough to fit a rig
+// spread across the whole WORLD bound, not just the old fixed room. Shared by the Setup
+// and Control stages the way `zoom` always was, so the two views stay the same picture.
+const view = { x: 0, y: 0 };
+// Matches desk.js's WORLD — how far a fixture can be dragged from the room. Wide enough
+// that arranging a real rig never hits an edge; the server clamps to the same bound
+// regardless of what this page sends, so this is a UX courtesy, not the actual limit.
+const WORLD = 1000;
+let spaceHeld = false;   // Space + drag pans, like every canvas tool she uses
+let autoWhite = false;
+let attrTab = 'Color';
+let touchedAt = 0;
+let structSig = '';
+let attrSig = '';
+let dragProfile = null;        // profile being dragged out of the library
+let dragMove = null;           // patched fixture(s) being dragged to a new address
+// A finger is down on the stage. pullState must not replace S.fixtures while a drag is
+// in flight: the drag writes x/y optimistically, and a poll landing mid-gesture — or in
+// the gap before pointerup — hands back the pre-drag positions, so the drop then SAVES
+// the fixture back where it started. That is the "I have to place it several times" bug.
+let stageDragging = false;
+// Marquee selection repaints on every pointermove, and paintSelection() rebuilds the whole
+// attribute editor — innerHTML plus a dozen listeners — each time. During the drag only the
+// highlight needs to move; the editor is rebuilt once, on release.
+let deferAttr = false;
+
+// id -> fixture. The place and paint loops walked the DOM and matched each node with
+// S.fixtures.find(), a linear scan per node, on every pointermove of every drag. Rebuilt
+// only when the fixtures array is actually replaced (or grows/shrinks in place), so a drag
+// mutating f.x on the existing objects never invalidates it.
+let fxIdxArr = null;
+let fxIdx = new Map();
+function fxById(id) {
+  if (fxIdxArr !== S.fixtures || fxIdx.size !== S.fixtures.length) {
+    fxIdxArr = S.fixtures;
+    fxIdx = new Map(S.fixtures.map((f) => [f.id, f]));
+  }
+  return fxIdx.get(id);
+}
+
+const ROLE_LABEL = {
+  dimmer: 'Dimmer', dimmerFine: 'Dim fine',
+  r: 'Red', g: 'Green', b: 'Blue', w: 'White', a: 'Amber', y: 'Yellow',
+  uv: 'UV', lime: 'Lime', warm: 'Warm', cool: 'Cool',
+  pan: 'Pan', tilt: 'Tilt', panFine: 'Pan fine', tiltFine: 'Tilt fine',
+  strobe: 'Strobe', zoom: 'Zoom', focus: 'Focus', iris: 'Iris', frost: 'Frost', prism: 'Prism',
+  gobo: 'Gobo', gobo2: 'Gobo 2', rotation: 'Rotate',
+  macro: 'Macro', speed: 'P/T speed', auto: 'Auto', sound: 'Sound', control: 'Control',
+  color: 'Color wheel',
+};
+// A custom profile may name its own channels. A laser's chart is Pattern, Size X, Scan
+// speed — not aux1..aux7 — and a fader called "Aux 5" tells an operator nothing at all.
+// The profile's own name wins; the generic table is the fallback, so nothing that has no
+// custom name changes.
+function roleLabel(role, profileName) {
+  const p = profileName && S && S.profiles && S.profiles[profileName];
+  return (p && p.labels && p.labels[role]) || ROLE_LABEL[role] || role;
+}
+const ROLE_COLOR = {
+  dimmer: '#d8dadb', dimmerFine: '#6f7478',
+  r: '#e2564a', g: '#4ec95f', b: '#4a7ce2', w: '#ffffff', a: '#f0a94f', y: '#e3d34a',
+  uv: '#8a4ae2', lime: '#b6e34a', warm: '#ffd0a0', cool: '#cfe4ff',
+  pan: '#9aa0a4', tilt: '#9aa0a4', panFine: '#6f7478', tiltFine: '#6f7478',
+  strobe: '#a98ae0', zoom: '#7fb3c8', focus: '#7fb3c8', iris: '#7fb3c8', frost: '#7fb3c8', prism: '#7fb3c8',
+  gobo: '#c8a87f', gobo2: '#c8a87f', rotation: '#c8a87f',
+};
+// The library's internal category keys are not display text. They were being rendered
+// verbatim — block capitals with a leading underscore — in the first pane you look at.
+const CAT_LABEL = { _GENERIC: 'Generic', _MOVING: 'Moving heads', _CUSTOM: 'Your fixtures' };
+const HUES = ['#ff0000', '#ff7700', '#ffee00', '#00ff00', '#00ffcc', '#0044ff', '#8800ff', '#ff00aa', '#ffffff', '#000000'];
+
+// Which attribute tab each role belongs to. Anything not claimed here — including roles
+// added later, or a profile with a channel name nobody has seen — is placed by its kind,
+// so a new channel can never silently vanish from the editor.
+const TABS = [
+  ['Dimmer', ['dimmer', 'dimmerFine']],
+  ['Color', ['r', 'g', 'b', 'w', 'a', 'y', 'uv', 'lime', 'warm', 'cool']],
+  ['Position', ['pan', 'tilt', 'panFine', 'tiltFine']],
+  // `color` here is the colour WHEEL (slots), not RGB - on wheel fixtures like the
+  // beams it was landing in "Other" where nobody looks for it. Same for speed.
+  ['Beam', ['strobe', 'color', 'speed', 'zoom', 'focus', 'iris', 'frost', 'prism']],
+  ['Gobo', ['gobo', 'gobo2', 'rotation']],
+];
+// Which roles emit light, which carry the level, which are position — comes from the
+// server (`roleKinds`), generated by the same code that decides the actual DMX, so this
+// UI cannot fall behind the engine. Never hardcode a second copy here.
+const kindOf = (role) => {
+  const kinds = (S && S.roleKinds) || {};
+  for (const [kind, roles] of Object.entries(kinds)) if (roles.includes(role)) return kind;
+  return 'control';                      // matches engine.roleKind() for unknown roles
+};
+// r/g/b/warm/cool set the base colour; every other emitter adds on top of it.
+const BASE_ROLES = new Set(['r', 'g', 'b', 'warm', 'cool']);
+// What each secondary emitter adds to the colour the eye sees. Purely a rendering
+// choice, so it lives here — but an emitter with no entry still lights the icon.
+const EMITTER_MIX = {
+  w: [0.92, 0.92, 0.92], a: [0.95, 0.62, 0.10], y: [0.85, 0.85, 0.00],
+  uv: [0.42, 0.00, 0.86], lime: [0.72, 1.00, 0.24],
+};
+function emitterMix(role) {
+  if (EMITTER_MIX[role]) return EMITTER_MIX[role];
+  const hex = ROLE_COLOR[role];
+  if (hex) { const c = parseHex(hex); return [c.r / 255, c.g / 255, c.b / 255]; }
+  return [0.8, 0.8, 0.8];                // unknown emitter: dim white, so it still shows
+}
+
+/* =============== transport =============== */
+
+async function post(url, body) {
+  touchedAt = Date.now();
+  try {
+    const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
+    return await r.json();
+  } catch (e) { return { error: String(e) }; }
+}
+
+const pending = new Map();
+let flushTimer = null;
+let lastFlush = 0;
+function flushFixtures() {
+  flushTimer = null;
+  lastFlush = Date.now();
+  const jobs = [...pending.values()]; pending.clear();
+  jobs.forEach((j) => post('api/fixture', j));
+}
+function queueFixture(id, patch) {
+  const cur = pending.get(id) || { id, values: {} };
+  if (patch.values) Object.assign(cur.values, patch.values);
+  if (patch.on != null) cur.on = patch.on;
+  pending.set(id, cur);
+  touchedAt = Date.now();
+  // Leading edge first: the FIRST movement of a burst goes out immediately, so the rig
+  // answers the moment the fader starts moving. The trailing timer only coalesces the
+  // rest of the drag — the debounce used to sit in front of every gesture, which is
+  // 40ms of lag paid before anything else even starts.
+  if (!flushTimer) {
+    if (Date.now() - lastFlush > 60) flushFixtures();
+    else flushTimer = setTimeout(flushFixtures, 25);
+  }
+}
+
+// One place to say something to the person, whichever page they are on. Refusals used to
+// be written into #patchHint, which lives in the Setup library pane — so pressing a button
+// on Control and being refused printed the reason on a page she was not looking at.
+let sayTimer = null;
+let menuOpen = false;
+function say(text, bad) {
+  menuOpen = false;   // a message outranks the status readout
+  const s = $('#statusStrip');
+  s.hidden = false;
+  s.textContent = text;
+  s.classList.toggle('bad', !!bad);
+  clearTimeout(sayTimer);
+  // Long enough to read, short enough not to become wallpaper. A message that never
+  // expires is one you stop seeing, which is how the offline banner went wrong.
+  sayTimer = setTimeout(() => { s.hidden = true; s.classList.remove('bad'); }, bad ? 9000 : 4000);
+}
+
+// A single dropped fetch — a lid closing, a wifi blip — is not an offline server, and a
+// banner that latches on forever trains you to ignore the banner.
+let pollFails = 0;
+async function pullState() {
+  try {
+    const next = await (await fetch('api/state')).json();
+    if (pollFails >= 2) say('back in touch with the desk');
+    pollFails = 0;
+    // stageDragging has no timeout on purpose: a careful placement takes longer than
+    // the 700ms window, and the guard must last exactly as long as the finger is down.
+    const busy = !!S && (stageDragging || Date.now() - touchedAt < 700);
+    const first = !S;
+    if (busy) {
+      next.fixtures = S.fixtures; next.master = S.master; next.raw = S.raw;
+      // The LFO and audio panels edit these optimistically the same way the faders do —
+      // without this a poll landing mid-drag snaps a slider back to its pre-edit value.
+      if (S.lfos) next.lfos = S.lfos;
+      if (S.audioCfg) next.audioCfg = S.audioCfg;
+      if (S.sets) next.sets = S.sets;   // the set builder edits optimistically too
+      // Layer faders are dragged, and the drag writes S.layers optimistically before the
+      // throttled POST lands. Without this a poll arriving mid-gesture hands back the
+      // desk's pre-drag level and the fader jumps out from under the finger.
+      if (S.layers) next.layers = S.layers;
+    }
+    S = next;
+    // Selection is pruned against what actually exists. With the desk open on two clients
+    // (laptop + phone), an unpatch on one left ghost ids selected on the other — actions
+    // stayed correct because selectedFixtures() filters, but the header counted fixtures
+    // that were not there, which is a status line lying.
+    if (!busy && sel.size) {
+      const alive = new Set(S.fixtures.map((f) => f.id));
+      for (const id of [...sel]) if (!alive.has(id)) sel.delete(id);
+    }
+    // start with everything selected, so the faders do something the moment you open it
+    if (first && !sel.size) S.fixtures.forEach((f) => sel.add(f.id));
+    DMX = next.dmx || DMX;
+    renderAll(busy);
+  } catch (e) {
+    // Latch only after it has really gone, and then keep saying it until it comes back:
+    // this one does NOT expire, because a desk that is not answering is not a passing note.
+    if (++pollFails >= 2) {
+      clearTimeout(sayTimer);
+      const s = $('#statusStrip');
+      s.hidden = false;
+      s.classList.add('bad');
+      s.textContent = 'server offline — is node server.js still running? The rig is holding its last frame.';
+    }
+  }
+}
+
+async function pullDmx() {
+  if (document.hidden || !S) return;
+  try {
+    DMX = (await (await fetch('api/dmx')).json()).dmx;
+    paintStage();
+    paintSelList();
+    syncAttr();
+    if (page === 'fader') syncFaders();
+  } catch (e) { /* the slow poll reports it */ }
+}
+
+/* =============== colour =============== */
+
+const hx = (n) => clamp(Math.round(n), 0, 255).toString(16).padStart(2, '0');
+const parseHex = (h) => ({ r: parseInt(h.slice(1, 3), 16), g: parseInt(h.slice(3, 5), 16), b: parseInt(h.slice(5, 7), 16) });
+const cssRgb = (c) => `rgb(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)})`;
+
+// What a fixture is ACTUALLY emitting, read back out of the live DMX buffers.
+// This is the light imitation: whatever is on the wire is what you see.
+function liveColor(f) {
+  const chans = (S.profiles[f.profile] || {}).channels || [];
+  const buf = DMX[f.universe] || [];
+  const v = {};
+  chans.forEach((role, i) => { v[role] = buf[f.address - 1 + i] || 0; });
+
+  let r = 0, g = 0, b = 0;
+  if (chans.includes('r')) { r = v.r; g = v.g; b = v.b; }
+  else if (chans.includes('warm')) {
+    const w = v.warm / 255, c = v.cool / 255;
+    r = 255 * (w + c * 0.78); g = 255 * (w * 0.80 + c * 0.90); b = 255 * (w * 0.52 + c);
+  } else { r = g = b = 255; }
+
+  const emitters = (S.roleKinds && S.roleKinds.emitter) || Object.keys(EMITTER_MIX);
+  for (const role of emitters) {
+    if (BASE_ROLES.has(role)) continue;         // already in the base colour above
+    const lvl = v[role] || 0;
+    if (!lvl) continue;
+    const mix = emitterMix(role);
+    r += lvl * mix[0]; g += lvl * mix[1]; b += lvl * mix[2];
+  }
+  r = clamp(r, 0, 255); g = clamp(g, 0, 255); b = clamp(b, 0, 255);
+
+  const dim = chans.includes('dimmer') ? (v.dimmer || 0) / 255 : 1;
+  const level = Math.max(r, g, b) / 255 * dim;
+  return { r: r * dim, g: g * dim, b: b * dim, level };
+}
+
+function profileOf(f) { return S.profiles[f.profile] || { channels: [] }; }
+function selectedFixtures() { return S.fixtures.filter((f) => sel.has(f.id)); }
+
+// Roles present across the selection, in profile order.
+function selectedRoles() {
+  const out = [];
+  for (const f of selectedFixtures()) {
+    const ch = profileOf(f).channels;
+    for (const r of (ch.includes('dimmer') ? ch : ['dimmer', ...ch])) if (!out.includes(r)) out.push(r);
+  }
+  return out;
+}
+
+function setRole(role, value) {
+  for (const f of selectedFixtures()) {
+    const ch = profileOf(f).channels;
+    if (role !== 'dimmer' && !ch.includes(role)) continue;
+    f.values[role] = value;
+    queueFixture(f.id, { values: { [role]: value }, on: true });
+  }
+}
+
+// Set colour on the selection. With auto-white on, fixtures that have a white channel
+// get the common part of the colour moved onto it — the usual RGBW conversion.
+function applyColor(hexColor) {
+  const c = parseHex(hexColor);
+  for (const f of selectedFixtures()) {
+    const ch = profileOf(f).channels;
+    if (!ch.includes('r')) continue;
+    const v = { ...c };
+    if (autoWhite && ch.includes('w')) {
+      const w = Math.min(c.r, c.g, c.b);
+      Object.assign(v, { r: c.r - w, g: c.g - w, b: c.b - w, w });
+    }
+    Object.assign(f.values, v);
+    queueFixture(f.id, { values: v, on: true });
+  }
+  syncAttr(true);
+}
+
+/* =============== library =============== */
+
+// "rgbl" tells you nothing unless you already know the convention, and the library is the
+// first thing you touch. Decode it from the profile's own channel list — same ROLE_LABEL
+// the attribute editor uses, so there is no second name mapping to drift out of step.
+function decodeProfile(name) {
+  const ch = (S.profiles[name] || {}).channels || [];
+  return ch.map((r) => roleLabel(r, name)).join(' · ');
+}
+
+/* =============== fixture builder =============== */
+
+// Channels offered as one-click chips. Anything not here can still be typed — an unknown
+// role becomes a plain pass-through fader, so "haze" works without us knowing what it is.
+const BUILDER_ROLES = [
+  'dimmer', 'r', 'g', 'b', 'w', 'a', 'y', 'uv', 'lime', 'warm', 'cool',
+  'pan', 'tilt', 'panFine', 'tiltFine', 'dimmerFine',
+  'strobe', 'zoom', 'focus', 'iris', 'frost', 'prism',
+  'gobo', 'gobo2', 'rotation', 'macro', 'speed', 'sound', 'control',
+];
+
+let bChans = [];            // channels being composed, in order
+let bEditing = null;        // name of the custom profile being edited, or null
+let libMulti = new Set();   // ctrl-clicked profiles waiting to be combined
+
+function openBuilder(channels, editing) {
+  bChans = [...channels];
+  bEditing = editing || null;
+  $('#builderTitle').textContent = bEditing ? `Edit ${bEditing}` : 'New fixture';
+  $('#builderName').value = bEditing || '';
+  $('#builderDelete').hidden = !bEditing;
+  $('#builderErr').textContent = '';
+  $('#builder').hidden = false;
+  renderBuilder();
+  $('#builderName').focus();
+}
+
+function closeBuilder() {
+  $('#builder').hidden = true;
+  bChans = []; bEditing = null;
+}
+
+function renderBuilder() {
+  const list = $('#builderChans');
+  list.innerHTML = bChans.length
+    ? bChans.map((role, i) => `<div class="bchan">
+        <span class="bnum">${i + 1}</span>
+        <i class="bdot" style="background:${ROLE_COLOR[role] || '#6f7478'}"></i>
+        <span class="bname">${esc(ROLE_LABEL[role] || role)}</span>
+        <span class="brole">${esc(role)}</span>
+        <button class="bmv" data-up="${i}" title="Move earlier"${i === 0 ? ' disabled' : ''}>↑</button>
+        <button class="bmv" data-dn="${i}" title="Move later"${i === bChans.length - 1 ? ' disabled' : ''}>↓</button>
+        <button class="bmv" data-rm="${i}" title="Remove">✕</button>
+      </div>`).join('')
+    : '<p class="muted" style="padding:6px 2px">No channels yet — add some below.</p>';
+
+  $$('.bmv', list).forEach((b) => b.addEventListener('click', () => {
+    const { up, dn, rm } = b.dataset;
+    if (up != null) { const i = +up; [bChans[i - 1], bChans[i]] = [bChans[i], bChans[i - 1]]; }
+    else if (dn != null) { const i = +dn; [bChans[i + 1], bChans[i]] = [bChans[i], bChans[i + 1]]; }
+    else bChans.splice(+rm, 1);
+    renderBuilder();
+  }));
+
+  if (!$('#builderChips').children.length) {
+    $('#builderChips').innerHTML = BUILDER_ROLES.map((r) =>
+      `<button class="chip" data-r="${r}" title="${r}"><i style="background:${ROLE_COLOR[r] || '#6f7478'}"></i>${ROLE_LABEL[r] || r}</button>`).join('');
+    $$('#builderChips .chip').forEach((b) => b.addEventListener('click', () => {
+      bChans.push(b.dataset.r); renderBuilder();
+    }));
+  }
+  $('#builderTitle').dataset.count = bChans.length;
+  $('#builderSave').textContent = bChans.length
+    ? `Save fixture (${bChans.length} channel${bChans.length === 1 ? '' : 's'})` : 'Save fixture';
+}
+
+async function saveBuilder() {
+  const name = $('#builderName').value.trim();
+  const err = $('#builderErr');
+  if (!name) { err.textContent = 'Give the fixture a name.'; $('#builderName').focus(); return; }
+  if (!bChans.length) { err.textContent = 'Add at least one channel.'; return; }
+  const r = await post('api/profiles/add', { name, channels: bChans, replace: !!bEditing });
+  if (r.error) { err.textContent = r.error; return; }
+  libProfile = r.name;
+  libMulti.clear();
+  closeBuilder();
+  await pullState();
+  buildTree(); syncLibForm();
+}
+
+async function deleteBuilder() {
+  const r = await post('api/profiles/remove', { name: bEditing });
+  if (r.error) {
+    // name the fixtures still using it rather than just refusing
+    const who = (r.inUse || []).map((f) => `${f.index}.${f.name} @${f.address}`).join(', ');
+    $('#builderErr').textContent = r.error + (who ? ` — ${who}` : '');
+    return;
+  }
+  if (libProfile === bEditing) libProfile = 'rgb';
+  closeBuilder();
+  await pullState();
+  buildTree(); syncLibForm();
+}
+
+function paintComboBar() {
+  const bar = $('#comboBar');
+  bar.hidden = libMulti.size === 0;
+  if (!libMulti.size) return;
+  const chans = [...libMulti].reduce((n, p) => n + ((S.profiles[p] || { channels: [] }).channels.length), 0);
+  bar.innerHTML = `<span>${[...libMulti].join(' + ')} — ${chans} channels</span>
+    <button class="sq accent" id="comboGo">Combine</button>
+    <button class="sq" id="comboClear">Clear</button>`;
+  $('#comboGo').addEventListener('click', () => {
+    const channels = [...libMulti].flatMap((p) => (S.profiles[p] || { channels: [] }).channels);
+    openBuilder(channels, null);
+  });
+  $('#comboClear').addEventListener('click', () => { libMulti.clear(); buildTree(); });
+}
+
+function buildTree() {
+  const q = $('#libSearch').value.trim().toLowerCase();
+  const tree = $('#libTree');
+  const row = (n, note) => `<div class="item${n === libProfile ? ' sel' : ''}${libMulti.has(n) ? ' multi' : ''}" data-p="${esc(n)}" title="${esc(decodeProfile(n))}">${esc(n)}${
+    (S.profiles[n] || {}).custom ? '<b class="edit" data-edit="' + n + '" title="Edit this fixture">✎</b>' : ''}${
+    note ? `<i>${note}</i>` : ''}</div>`;
+
+  if (!q) {
+    const cats = {};
+    for (const [name, p] of Object.entries(S.profiles)) (cats[p.cat] = cats[p.cat] || []).push(name);
+    tree.innerHTML = Object.entries(cats).map(([cat, names]) =>
+      `<div class="cat">▾ ${CAT_LABEL[cat] || cat}</div>` + names.map((n) => row(n)).join('')).join('');
+  } else {
+    // Ranked, flat: what you typed should be at the top, not buried in declaration order.
+    // Channel names count too — the decode line shows "Lime", so typing "lime" has to find
+    // it, or we have shown a vocabulary that does not work.
+    const hits = [];
+    for (const name of Object.keys(S.profiles)) {
+      const decode = decodeProfile(name).toLowerCase();
+      const rank = name === q ? 0 : name.startsWith(q) ? 1 : name.includes(q) ? 2 : decode.includes(q) ? 3 : -1;
+      if (rank < 0) continue;
+      hits.push({ name, rank });
+    }
+    hits.sort((a, b) => a.rank - b.rank || a.name.length - b.name.length || a.name.localeCompare(b.name));
+    tree.innerHTML = hits.map((h) =>
+      // say why a channel-only match is in the list, so it does not look like a stray result
+      row(h.name, h.rank === 3 ? decodeProfile(h.name) : '')).join('')
+      || `<div class="cat">nothing matches "${q}"</div>`;
+  }
+  paintComboBar();
+  $$('.item', tree).forEach((el) => {
+    el.addEventListener('click', (e) => {
+      if (e.target.dataset.edit) {                     // ✎ on a custom profile
+        const n = e.target.dataset.edit;
+        openBuilder(S.profiles[n].channels, n);
+        return;
+      }
+      // ctrl/cmd-click gathers profiles to be combined into one fixture
+      if (e.ctrlKey || e.metaKey) {
+        libMulti.has(el.dataset.p) ? libMulti.delete(el.dataset.p) : libMulti.add(el.dataset.p);
+      } else {
+        libMulti.clear();
+        libProfile = el.dataset.p;
+      }
+      buildTree(); syncLibForm();
+    });
+    // drag a profile straight onto a patch cell or onto the stage
+    el.draggable = true;
+    el.addEventListener('dragstart', (e) => {
+      dragProfile = el.dataset.p;
+      libProfile = el.dataset.p;
+      // Deliberately NOT buildTree() here. It reassigns tree.innerHTML, which destroys
+      // this very element in the middle of its own dragstart — and a drag whose source
+      // node leaves the DOM is cancelled before it starts, so the profile never lifts and
+      // no drop ever fires. Move the highlight by hand instead of rebuilding the list.
+      $$('.item', tree).forEach((i) => i.classList.toggle('sel', i === el));
+      syncLibForm();
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', el.dataset.p);
+      markFreeRun();
+    });
+    el.addEventListener('dragend', () => { dragProfile = null; clearDropHints(); });
+  });
+}
+
+/* =============== the Open Fixture Library browser =============== */
+// The desk's own profiles are deliberately generic — dimmer, drgb, a moving head with
+// the channels most of them have. A real rig is not generic: it is a Chauvet this and a
+// Martin that, each with its own chart, its own resting values and three modes to pick
+// between. The server has been able to fetch and convert those since the library lane
+// landed; this is the interface that was missing, so it was an API nobody could reach.
+
+let oflMakers = null;      // [{key, name, fixtures}] — fetched once, cached here
+let oflMaker = null;       // the manufacturer whose fixtures are listed
+let oflFixture = null;     // the fixture whose modes are showing
+
+const oflSay = (text, bad) => {
+  const el = $('#oflMsg');
+  el.textContent = text || '';
+  el.hidden = !text;
+  el.className = 'oflmsg ' + (bad ? 'bad' : 'muted');
+};
+
+async function oflLoad() {
+  if (oflMakers) return oflMakers;
+  oflSay('Loading the library…');
+  try {
+    const r = await fetch('api/library').then((x) => x.json());
+    oflMakers = Array.isArray(r.manufacturers) ? r.manufacturers : [];
+    // `from` says whether this came off the network or off the disk cache. Worth saying:
+    // at the venue, on no wifi, a cached library still works and an empty one is not a bug.
+    if (r.warning) oflSay(r.warning, true); else oflSay('');
+    return oflMakers;
+  } catch (e) {
+    oflMakers = null;
+    oflSay('The fixture library needs the internet the first time. Once fetched it is cached on this machine.', true);
+    return [];
+  }
+}
+
+// Manufacturers, or — once one is chosen — its fixtures. Typing filters whichever list
+// is showing, and a query long enough to mean something searches every manufacturer's
+// name too, so "mac 250" finds Martin without knowing it is Martin's.
+function oflRender() {
+  const list = $('#oflList');
+  const q = $('#oflSearch').value.trim().toLowerCase();
+  if (oflMaker) {
+    const fixtures = (oflMaker.fixtures || []).filter((f) => !q || f.name.toLowerCase().includes(q));
+    list.innerHTML = `<div class="cat oflback" data-back="1">◂ ${esc(oflMaker.name)} · ${oflMaker.fixtures.length} fixtures</div>`
+      + (fixtures.map((f) => `<div class="item" data-fx="${esc(f.key)}">${esc(f.name)}<i>${esc((f.categories || []).join(' · '))}</i></div>`).join('')
+        || `<div class="cat">nothing here matches "${esc(q)}"</div>`);
+    return;
+  }
+  // Not loaded yet is not the same answer as nothing matched. The first fetch pulls the
+  // whole index over the network, and telling someone their make does not exist while it
+  // is still arriving is the kind of lie that sends them off to look for another desk.
+  if (!oflMakers) { list.innerHTML = '<div class="cat">the library is still arriving…</div>'; return; }
+  const makers = oflMakers.filter((m) => !q || m.name.toLowerCase().includes(q));
+  list.innerHTML = makers.map((m) =>
+    `<div class="item" data-mk="${esc(m.key)}">${esc(m.name)}<i>${m.fixtures}</i></div>`).join('')
+    || `<div class="cat">no manufacturer matches "${esc(q)}"</div>`;
+}
+
+// What a fixture would become BEFORE anyone commits to it: every mode, its width, and
+// the roles it maps onto. A patch is tedious to undo; looking first costs one request.
+async function oflShowFixture(key) {
+  oflSay('Reading the chart…');
+  try {
+    const r = await fetch(`api/library/fixture?manufacturer=${encodeURIComponent(oflMaker.key)}&key=${encodeURIComponent(key)}`)
+      .then((x) => x.json());
+    oflFixture = { key, name: r.name, modes: r.modes || [] };
+    oflSay('');
+    const box = $('#oflModes');
+    box.hidden = false;
+    // How many of them are hanging, right here on the mode row. You look a fixture up
+    // BECAUSE there are some in the room — asking "how many" at the moment you pick the
+    // mode is one gesture; importing a profile and then hunting for it in the tree to
+    // patch it is three, in a dark room, before doors.
+    box.innerHTML = `<div class="cat">${esc(r.name)} — pick a mode, say how many are hanging</div>`
+      + oflFixture.modes.map((m) => `<div class="oflmode">
+          <div class="txt"><b>${esc(m.name)}</b><span class="muted">${m.channels} channels · ${esc((m.roles || []).join(' '))}</span></div>
+          <label class="oflcount" title="How many of these are hanging. They are patched in a row from the first free address; 0 imports the profile without hanging any.">×
+            <input type="number" class="ofl-n" min="0" max="128" value="1"></label>
+          <button class="sq small" data-mode="${m.index}">Patch</button>
+        </div>`).join('');
+    $$('[data-mode]', box).forEach((b) => b.addEventListener('click', () => {
+      const n = Math.max(0, Math.min(128, Math.round(+b.closest('.oflmode').querySelector('.ofl-n').value || 0)));
+      oflImport(+b.dataset.mode, n);
+    }));
+  } catch (e) {
+    oflSay('Could not read that fixture — try another, or check the connection.', true);
+  }
+}
+
+// Import the chart AND hang `count` of them, in one press. They land in a row from the
+// first free address in the universe the patch form is pointed at — which is what the
+// rig itself looks like, because whoever addressed it counted up in steps of the mode's
+// width. count 0 imports the profile alone, for the fixture you are only looking up.
+async function oflImport(mode, count = 1) {
+  oflSay(count ? 'Importing and patching…' : 'Importing…');
+  const r = await post('api/library/import', { manufacturer: oflMaker.key, key: oflFixture.key, mode });
+  if (!r || r.error) return oflSay((r && r.error) || 'the import was refused', true);
+  await pullState();
+  libProfile = r.name;
+  if (!count) {
+    buildTree(); syncLibForm(); oflSay('');
+    say(`${r.name} is in your library — drag it onto the patch or the stage to hang one`);
+    $('#oflPane').hidden = true;
+    return;
+  }
+  const universe = +$('#pUniverse').value || 0;
+  const added = await post('api/fixtures/add', { profile: r.name, name: r.name, universe, count });
+  buildTree(); syncLibForm();
+  const n = (added && added.added || []).length;
+  oflSay('');
+  $('#oflPane').hidden = true;
+  if (!n) return say(`${r.name} is in your library, but universe ${universe + 1} has no room for it`, true);
+  // Say WHERE they landed. Half of patching at a venue is checking the desk agrees with
+  // the numbers on the back of the fixtures, and a range is what you check against.
+  const first = added.added[0].address;
+  const last = added.added[n - 1].address + (S.profiles[r.name] || { channels: [] }).channels.length - 1;
+  say(`${n} × ${r.name} hung at ${first}–${last} on universe ${universe + 1} — check that against the fixtures' own displays`);
+}
+
+$('#oflOpen').addEventListener('click', async () => {
+  const pane = $('#oflPane');
+  pane.hidden = !pane.hidden;
+  if (pane.hidden) return;
+  oflMaker = null; oflFixture = null;
+  $('#oflModes').hidden = true;
+  await oflLoad();
+  oflRender();
+  $('#oflSearch').focus();
+});
+$('#oflClose').addEventListener('click', () => { $('#oflPane').hidden = true; });
+$('#oflSearch').addEventListener('input', oflRender);
+$('#oflList').addEventListener('click', async (e) => {
+  const back = e.target.closest('.oflback');
+  if (back) { oflMaker = null; oflFixture = null; $('#oflModes').hidden = true; $('#oflSearch').value = ''; oflRender(); return; }
+  const item = e.target.closest('.item');
+  if (!item) return;
+  if (item.dataset.mk) {
+    oflSay('Reading that manufacturer…');
+    try {
+      const r = await fetch('api/library/manufacturer?key=' + encodeURIComponent(item.dataset.mk)).then((x) => x.json());
+      oflMaker = { key: r.key, name: r.name, fixtures: r.fixtures || [] };
+      $('#oflSearch').value = '';
+      $('#oflModes').hidden = true;
+      oflSay('');
+      oflRender();
+    } catch (err) { oflSay('Could not read that manufacturer.', true); }
+    return;
+  }
+  if (item.dataset.fx) oflShowFixture(item.dataset.fx);
+});
+
+// Fields the user set on purpose. The state poll runs every 1.5s and used to "helpfully"
+// overwrite these, guarded only by focus — so clicking a grid cell to aim at channel 12
+// held for about a second and then silently snapped back to the auto-advanced value.
+// Anything in this form that a poll writes needs to check here first.
+const pinnedFields = new Set();
+const pin = (id) => { pinnedFields.add(id); $('#' + id).classList.add('pinned'); };
+const unpin = (...ids) => ids.forEach((id) => {
+  pinnedFields.delete(id);
+  const el = $('#' + id);
+  if (el) el.classList.remove('pinned');
+});
+const isPinned = (id) => pinnedFields.has(id) || document.activeElement === $('#' + id);
+
+function syncLibForm() {
+  const p = S.profiles[libProfile];
+  if (!p) return;
+  $('#libSel').innerHTML = `${p.label}<i></i>`;
+  $('#libSel').querySelector('i').textContent = decodeProfile(libProfile);
+  fillUniverse($('#pUniverse'), [...new Set([...S.status.universes, gridUni, 0])].sort((a, b) => a - b), true);
+  if (!isPinned('pIndex')) $('#pIndex').value = nextIndex();
+  suggestAddress();
+}
+
+function fillUniverse(el, unis, withNew) {
+  const want = unis.join(',') + (withNew ? '+n' : '');
+  if (el.dataset.list === want) return;
+  el.dataset.list = want;
+  const keep = el.value;
+  el.innerHTML = unis.map((u) => `<option value="${u}">Universe ${u + 1}</option>`).join('')
+    // Only where it works. The patch form can start a new universe; the grid and fader
+    // selects are views of what exists, and a menu item that snaps back reads as broken.
+    + (withNew ? '<option value="new">+ new universe…</option>' : '');
+  if (keep) el.value = keep;
+}
+
+function nextIndex() { return S.fixtures.reduce((m, f) => Math.max(m, f.index || 0), 0) + 1; }
+
+function occupancy(universe) {
+  const used = new Array(513).fill(null);
+  for (const f of S.fixtures) {
+    if (f.universe !== universe) continue;
+    const w = profileOf(f).channels.length;
+    for (let c = f.address; c < f.address + w && c <= 512; c++) used[c] = f;
+  }
+  return used;
+}
+
+function profileWidth(p) { return ((S.profiles[p] || {}).channels || []).length; }
+
+// Can `width` channels be patched starting at `start`? If not, say what is in the way.
+function freeRunAt(universe, start, width) {
+  const used = occupancy(universe);
+  if (!start || start + width - 1 > 512) return { ok: false, free: Math.max(0, 513 - start) };
+  let free = 0;
+  for (let c = start; c < start + width; c++) {
+    if (used[c]) return { ok: false, blocker: used[c], at: c, free };
+    free++;
+  }
+  return { ok: true };
+}
+
+function firstFreeRun(universe, width) {
+  const used = occupancy(universe);
+  for (let a = 1; a + width - 1 <= 512; a++) {
+    let ok = true;
+    for (let c = a; c < a + width; c++) if (used[c]) { ok = false; break; }
+    if (ok) return a;
+  }
+  return null;
+}
+
+// ---- dragging an already-patched fixture to a new address ----------------------
+function startFixtureDrag(e, f, segmentCh) {
+  // Moves the fixture you grabbed. Shift brings the rest of the selection with it —
+  // deliberately explicit, because everything is selected by default, and "grab one, move
+  // the whole rig" is not what anyone means by dragging a fixture.
+  const multi = e.shiftKey && sel.has(f.id) && sel.size > 1;
+  const ids = multi
+    ? [...sel].filter((id) => { const g = S.fixtures.find((x) => x.id === id); return g && g.universe === gridUni; })
+    : [f.id];
+  if (!multi) { sel.clear(); sel.add(f.id); paintSelection(); }
+  const deltas = new Map(ids.map((id) => [id, S.fixtures.find((x) => x.id === id).address - f.address]));
+  dragMove = { ids, grabOffset: segmentCh - f.address, deltas };
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', 'fixture:' + f.id);
+  gridMsg(ids.length > 1
+    ? `moving ${ids.length} fixtures — drop on the new start address`
+    : `moving ${f.index}.${f.profile} — drop on the new start address`, 'good');
+}
+
+// Where would the dragged fixtures land if dropped on `cellCh`, and is that legal?
+// Mirrors the server's rule that a fixture never blocks itself, so nudging by one works.
+function moveTargets(cellCh) {
+  if (!dragMove) return null;
+  const anchor = cellCh - dragMove.grabOffset;
+  const targets = [];
+  for (const id of dragMove.ids) {
+    const f = S.fixtures.find((x) => x.id === id);
+    if (!f) continue;
+    const address = anchor + dragMove.deltas.get(id);
+    const width = profileWidth(f.profile);
+    if (address < 1) return { ok: false, msg: `${f.index}.${f.profile} would start before channel 1` };
+    if (address + width - 1 > 512) {
+      return { ok: false, msg: `${f.index}.${f.profile} needs ${width} channels and runs off the end at ${address}` };
+    }
+    targets.push({ id, address, width, f });
+  }
+  const moving = new Set(dragMove.ids);
+  const used = new Array(513).fill(null);
+  for (const g of S.fixtures) {
+    if (g.universe !== gridUni || moving.has(g.id)) continue;
+    const w = profileWidth(g.profile);
+    for (let c = g.address; c < g.address + w && c <= 512; c++) used[c] = g;
+  }
+  for (const t of targets) {
+    for (let c = t.address; c < t.address + t.width; c++) {
+      if (used[c]) return { ok: false, msg: `channel ${c} is taken by ${used[c].index}.${used[c].profile}` };
+    }
+  }
+  return { ok: true, targets };
+}
+
+// Drag feedback goes beside the grid. It used to land only in the library pane's hint
+// line on the far side of the window, so a refused drop read as nothing happening.
+function gridMsg(text, kind) {
+  const el = $('#gridMsg');
+  if (el) { el.textContent = text ? '· ' + text : ''; el.className = kind || ''; }
+  $('#patchHint').textContent = text || '';
+}
+
+function clearDropHints() {
+  gridMsg('');
+  $$('#patchGrid .gc').forEach((c) => c.classList.remove('drop', 'blocked', 'freehint'));
+}
+
+// Called as a drag leaves the library: show where this profile *can* go, before the user
+// goes hunting. On a busy universe the only legal targets are usually off the top.
+function markFreeRun() {
+  const grid = $('#patchGrid');
+  if (!grid || !dragProfile) return;
+  clearDropHints();
+  const width = profileWidth(dragProfile);
+  const start = firstFreeRun(gridUni, width);
+  if (start == null) {
+    gridMsg(`universe ${gridUni + 1} has no room for ${dragProfile} (${width} channels)`, 'bad');
+    return;
+  }
+  for (let c = start; c < start + width; c++) {
+    const el = grid.querySelector(`.gc[data-ch="${c}"]`);
+    if (el) el.classList.add('freehint');
+  }
+  gridMsg(`${dragProfile} needs ${width} channel${width === 1 ? '' : 's'} — first free run is at ${start}`, 'good');
+}
+
+function suggestAddress() {
+  if (isPinned('pAddress')) return;
+  const u = +$('#pUniverse').value || 0;
+  const w = S.profiles[libProfile].channels.length;
+  const used = occupancy(u);
+  for (let a = 1; a + w - 1 <= 512; a++) {
+    let free = true;
+    for (let c = a; c < a + w; c++) if (used[c]) { free = false; break; }
+    if (free) { $('#pAddress').value = a; return; }
+  }
+}
+
+/* =============== patch grid =============== */
+
+function buildGrid() {
+  fillUniverse($('#gridUniverse'), [...new Set([...S.status.universes, gridUni, 0])].sort((a, b) => a - b));
+  $('#gridUniverse').value = gridUni;
+
+  const used = occupancy(gridUni);
+  const frag = document.createDocumentFragment();
+  for (let row = 0; row < 16; row++) {
+    let c = 1;
+    while (c <= 32) {
+      const ch = row * 32 + c;
+      const f = used[ch];
+      const cell = document.createElement('div');
+      if (!f) {
+        cell.className = 'gc'; cell.textContent = ch; cell.dataset.ch = ch;
+        frag.appendChild(cell); c++; continue;
+      }
+      let span = 0;
+      while (c + span <= 32 && used[row * 32 + c + span] === f) span++;
+      cell.className = 'gc used' + (sel.has(f.id) ? ' sel' : '') + (f.address === ch ? '' : ' cont');
+      cell.style.gridColumn = `span ${span}`;
+      cell.dataset.id = f.id;
+      cell.dataset.ch = ch;
+      cell.innerHTML = `<span>${ch}</span><b>${f.index}.${f.profile}</b>`;
+      cell.draggable = true;
+      cell.addEventListener('dragstart', (ev) => startFixtureDrag(ev, f, ch));
+      cell.addEventListener('dragend', () => { dragMove = null; clearDropHints(); });
+      frag.appendChild(cell); c += span;
+    }
+  }
+  const grid = $('#patchGrid');
+  grid.innerHTML = ''; grid.appendChild(frag);
+
+  const count = S.fixtures.filter((f) => f.universe === gridUni).length;
+  $('#patchInfo').textContent = `${count} fixture${count === 1 ? '' : 's'} · ${used.filter(Boolean).length}/512 channels`;
+
+  grid.ondragover = (e) => {
+    const cell = e.target.closest('.gc');
+    if (!cell) return;
+    $$('.gc.drop, .gc.blocked', grid).forEach((c) => c.classList.remove('drop', 'blocked'));
+
+    // moving a patched fixture rather than patching a new one
+    if (dragMove) {
+      const r = moveTargets(+cell.dataset.ch);
+      if (!r.ok) {
+        e.dataTransfer.dropEffect = 'none';
+        cell.classList.add('blocked');
+        gridMsg(r.msg, 'bad');
+        return;
+      }
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      for (const t of r.targets) {
+        for (let c = t.address; c < t.address + t.width; c++) {
+          const el = grid.querySelector(`.gc[data-ch="${c}"]`);
+          if (el) el.classList.add('drop');
+        }
+      }
+      const first = r.targets[0];
+      gridMsg(r.targets.length > 1
+        ? `move ${r.targets.length} fixtures, first to ${first.address}`
+        : `move ${first.f.index}.${first.f.profile} to ${first.address}${first.width > 1 ? '–' + (first.address + first.width - 1) : ''}`, 'good');
+      return;
+    }
+
+    if (!dragProfile) return;
+    const width = profileWidth(dragProfile);
+    const start = +cell.dataset.ch;
+    const run = freeRunAt(gridUni, start, width);
+
+    if (!run.ok) {
+      // Refuse, but say why — a cell that silently does nothing looks like a broken app.
+      e.dataTransfer.dropEffect = 'none';
+      cell.classList.add('blocked');
+      gridMsg(run.blocker
+        ? `channel ${run.at} is taken by ${run.blocker.index}.${run.blocker.profile}`
+        : `${dragProfile} needs ${width} free channels — only ${run.free} free from ${start}`, 'bad');
+      return;
+    }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    for (let c = start; c < start + width; c++) {
+      const el = grid.querySelector(`.gc[data-ch="${c}"]`);
+      if (el) el.classList.add('drop');
+    }
+    gridMsg(`drop to patch ${dragProfile} at ${start}${width > 1 ? '–' + (start + width - 1) : ''}`, 'good');
+  };
+
+  grid.ondragleave = (e) => {
+    if (e.target.closest('.gc')) return;                 // still inside the grid
+    $$('.gc.drop, .gc.blocked', grid).forEach((c) => c.classList.remove('drop', 'blocked'));
+  };
+
+  grid.ondrop = async (e) => {
+    const cell = e.target.closest('.gc');
+
+    if (dragMove) {
+      const r = moveTargets(cell ? +cell.dataset.ch : 0);
+      clearDropHints();
+      // Say why nothing happened. The hint that was on screen a moment ago is gone now,
+      // and a drop that silently does nothing is indistinguishable from a dead drag.
+      if (!cell) { gridMsg('dropped outside the grid — nothing moved', 'bad'); return; }
+      if (!r.ok) { gridMsg(r.msg || 'there is not room at that address', 'bad'); return; }
+      e.preventDefault();
+      const moves = r.targets.map((t) => ({ id: t.id, universe: gridUni, address: t.address }));
+      dragMove = null;
+      // readdress is the guarded path — /api/fixture would let a drag create an overlap
+      const res = await post('api/fixtures/readdress', { moves });
+      if (res.error) gridMsg(res.error, 'bad');
+      else gridMsg(`moved ${res.moved.length} fixture${res.moved.length === 1 ? '' : 's'}`, 'good');
+      structSig = '';
+      pullState();
+      return;
+    }
+
+    const profile = dragProfile || e.dataTransfer.getData('text/plain');
+    clearDropHints();
+    if (!cell || !profile || profile.startsWith('fixture:')) {
+      if (profile && !cell) gridMsg('dropped outside the grid — nothing patched', 'bad');
+      return;
+    }
+    const start = +cell.dataset.ch;
+    const room = freeRunAt(gridUni, start, profileWidth(profile));
+    if (!room.ok) {
+      // freeRunAt reports blocker/free, not a prose `why` — say the same thing the
+      // dragover hint said a moment ago, instead of always falling back to the generic line.
+      gridMsg(room.blocker
+        ? `channel ${room.at} is taken by ${room.blocker.index}.${room.blocker.profile}`
+        : `no room for ${profile} at channel ${start}`, 'bad');
+      return;
+    }
+    e.preventDefault();
+    patchProfile(profile, { universe: gridUni, address: start });
+  };
+
+  grid.onclick = (e) => {
+    const cell = e.target.closest('.gc');
+    if (!cell) return;
+    if (cell.dataset.id) {
+      if (!e.shiftKey) sel.clear();
+      sel.has(cell.dataset.id) ? sel.delete(cell.dataset.id) : sel.add(cell.dataset.id);
+      paintSelection();
+    } else if (cell.dataset.ch) {
+      $('#pAddress').value = cell.dataset.ch;
+      pin('pAddress');                     // she aimed at this address; stop auto-advancing over it
+      $('#pUniverse').value = gridUni;
+    }
+  };
+}
+
+/* =============== groups =============== */
+
+function buildGroups() {
+  for (const tabs of $$('.grouptabs')) {
+    tabs.innerHTML = `<button class="gtab${activeGroup === 'all' ? ' is-active' : ''}" data-g="all">All</button>`
+      + S.groups.map((g) => `<button class="gtab${activeGroup === g.id ? ' is-active' : ''}" data-g="${g.id}">${esc(g.name)}<span class="x" data-del="${g.id}">✕</span></button>`).join('');
+    $$('.gtab', tabs).forEach((b) => b.addEventListener('click', (e) => {
+      if (e.target.dataset.del) { post('api/groups/remove', { id: e.target.dataset.del }).then(pullState); return; }
+      activeGroup = b.dataset.g;
+      sel.clear();
+      if (activeGroup === 'all') S.fixtures.forEach((f) => sel.add(f.id));
+      else (S.groups.find((g) => g.id === activeGroup) || { ids: [] }).ids.forEach((id) => sel.add(id));
+      buildGroups(); paintSelection();
+    }));
+  }
+}
+
+/* =============== stage (shared by SETUP and CONTROL) =============== */
+
+function buildStages() {
+  for (const inner of $$('.stage-inner')) {
+    inner.innerHTML = '';
+    for (const f of S.fixtures) {
+      const node = document.createElement('div');
+      node.className = 'fx-node';
+      node.dataset.id = f.id;
+      node.innerHTML = `<div class="fx-body">${f.index}</div><div class="fx-label">${esc(f.name)}</div>`;
+      inner.appendChild(node);
+    }
+  }
+  $$('.stage-empty').forEach((p) => { p.hidden = S.fixtures.length > 0; });
+  placeStages();
+  paintStage();
+}
+
+// One UNIFORM scale for both axes, letterboxed to the pane and inset so a tile at the
+// world edge (x or y = 0/1) sits fully inside at the default view. The old mapping was
+// x×width, y×height — two different scales — so a circle of washes rendered as a
+// squashed ellipse piling up at 3 and 9 o'clock, and corner beams clipped half off.
+function stageMap(W, H) {
+  const sc = Math.max(1, Math.min(W, H) - 48);
+  return { sc, ox: (W - sc) / 2, oy: (H - sc) / 2 };
+}
+
+function placeStages() {
+  if (!S) return;   // the resize observer can fire before the first state arrives
+  const panes = $$('.stage-inner');
+  // READ PHASE. clientWidth/clientHeight were being read after the style writes below had
+  // already dirtied layout, which forces a synchronous whole-document reflow — once per
+  // pane, on every pointermove of a pan or a fixture drag. Measure everything first, then
+  // write, and the reflow happens once at the end of the frame like any other style change.
+  const sizes = panes.map((inner) => ({ W: inner.clientWidth || 0, H: inner.clientHeight || 0 }));
+  panes.forEach((inner, paneIdx) => {
+    inner.style.transform = `translate(${view.x}px, ${view.y}px) scale(${zoom})`;
+    // The backdrop grid lives on the outer, untransformed pane (see style.css) so it can
+    // tile forever — position and size just track the same pan/zoom the fixtures use, 40
+    // world-px apart at zoom 1, same as the grid dragging snaps fixtures to.
+    const outer = inner.closest('.stage');
+    if (outer) {
+      outer.style.backgroundPosition = `${view.x}px ${view.y}px`;
+      outer.style.backgroundSize = `${40 * zoom}px ${40 * zoom}px`;
+    }
+    // Label crowding: labels scale with the zoom, and positions scale with (scale ×
+    // zoom), so whether two labels collide depends only on the container size — a narrow
+    // window overlaps them at every zoom. Hide the ones that would land on a neighbour's
+    // label, and all of them when the view is too small or zoomed-out to read the text.
+    const { W, H } = sizes[paneIdx];
+    const { sc, ox, oy } = stageMap(W, H);
+    const tiny = zoom < 0.5 || W < 360;
+    const shown = [];                    // fixtures whose labels stay visible
+    for (const node of $$('.fx-node', inner)) {
+      const f = fxById(node.dataset.id);
+      if (!f) continue;
+      node.style.left = (ox + f.x * sc) + 'px';
+      node.style.top = (oy + f.y * sc) + 'px';
+      const label = node.querySelector('.fx-label');
+      if (!label) continue;
+      let hide = tiny || !W;
+      if (!hide) {
+        for (const g of shown) {
+          if (Math.abs(f.x - g.x) * sc < 46 && Math.abs(f.y - g.y) * sc < 26) { hide = true; break; }
+        }
+        if (!hide) shown.push(f);
+      }
+      label.style.display = hide ? 'none' : '';
+    }
+  });
+}
+
+function paintStage() {
+  if (!S) return;
+  for (const node of $$('.fx-node')) {
+    const f = fxById(node.dataset.id);
+    if (!f) continue;
+    const c = liveColor(f);
+    const R = Math.round(c.r), G = Math.round(c.g), B = Math.round(c.b);
+    const body = node.querySelector('.fx-body');
+    body.style.background = c.level < 0.03 ? '#1d1d20' : `rgb(${R},${G},${B})`;
+    body.style.color = (R * 0.299 + G * 0.587 + B * 0.114) > 140 ? '#0c0c0d' : '#d8dadb';
+    // Lit-state that survives colourless fixtures: a beam or laser body barely changes
+    // colour between dark and full, so the LEVEL paints a glow — lit reads lit.
+    body.style.boxShadow = c.level > 0.05
+      ? `0 0 ${Math.round(4 + c.level * 18)}px rgba(${R},${G},${B},0.8)`
+      : 'none';
+  }
+}
+
+function wireStage(stage) {
+  let drag = null;
+  // Without this, a finger-drag on a touch screen scrolls the page instead of moving the
+  // fixture — pointer events fire, but the browser's own pan gesture wins. Inline because
+  // the stylesheet is owned elsewhere right now.
+  stage.style.touchAction = 'none';
+  const xy = (e) => {
+    // Inverse of placeStages' mapping — same stageMap, so a drop lands under the cursor.
+    const r = stage.getBoundingClientRect();
+    const { sc, ox, oy } = stageMap(r.width, r.height);
+    return {
+      x: clamp(((e.clientX - r.left - view.x) / zoom - ox) / sc, -WORLD, WORLD),
+      y: clamp(((e.clientY - r.top - view.y) / zoom - oy) / sc, -WORLD, WORLD),
+    };
+  };
+
+  stage.addEventListener('pointerdown', (e) => {
+    // One drag at a time: a second finger landing mid-drag used to replace the drag state
+    // and re-capture, so the first finger's gesture ended somewhere it never was.
+    if (drag) return;
+    // preventDefault stops the browser starting a text selection from the drag — the
+    // fixture labels are text, and a marquee across them was leaving half the stage's
+    // captions highlighted blue.
+    e.preventDefault();
+    // Middle button or Space + drag pans the view. This replaces the old Hand tool,
+    // which drew a grab cursor and grabbed nothing.
+    if (e.button === 1 || spaceHeld) {
+      drag = { mode: 'pan', pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y };
+      stageDragging = true;
+      stage.classList.add('panning');
+      stage.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (e.button !== 0) return;
+    const node = e.target.closest('.fx-node');
+    if (node) {
+      const id = node.dataset.id;
+      if (!sel.has(id)) { if (!e.shiftKey) sel.clear(); sel.add(id); paintSelection(); }
+      drag = { mode: 'move', pointerId: e.pointerId, start: xy(e), origin: new Map([...sel].map((i) => { const f = S.fixtures.find((x) => x.id === i); return [i, { x: f.x, y: f.y }]; })) };
+      stageDragging = true;
+      stage.setPointerCapture(e.pointerId);
+      return;
+    }
+    drag = { mode: 'marquee', pointerId: e.pointerId, sx: e.clientX, sy: e.clientY };
+    stageDragging = true;
+    deferAttr = true;
+    if (!e.shiftKey) { sel.clear(); paintSelection(); }
+    stage.setPointerCapture(e.pointerId);
+  });
+
+  stage.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    if (drag.mode === 'pan') {
+      view.x = drag.ox + (e.clientX - drag.sx);
+      view.y = drag.oy + (e.clientY - drag.sy);
+      placeStages();
+      return;
+    }
+    if (drag.mode === 'move') {
+      const p = xy(e);
+      const dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+      for (const [id, o] of drag.origin) {
+        const f = fxById(id);
+        if (!f) continue;
+        f.x = clamp(o.x + dx, -WORLD, WORLD); f.y = clamp(o.y + dy, -WORLD, WORLD);
+        if (snap) { f.x = Math.round(f.x * 40) / 40; f.y = Math.round(f.y * 24) / 24; }
+      }
+      placeStages();
+    } else {
+      const r = stage.getBoundingClientRect();
+      const m = stage.querySelector('.marquee');
+      m.hidden = false;
+      const x1 = Math.min(drag.sx, e.clientX) - r.left, x2 = Math.max(drag.sx, e.clientX) - r.left;
+      const y1 = Math.min(drag.sy, e.clientY) - r.top, y2 = Math.max(drag.sy, e.clientY) - r.top;
+      Object.assign(m.style, { left: x1 + 'px', top: y1 + 'px', width: (x2 - x1) + 'px', height: (y2 - y1) + 'px' });
+      sel.clear();
+      for (const node of $$('.fx-node', stage)) {
+        const b = node.getBoundingClientRect();
+        const cx = b.left + b.width / 2 - r.left, cy = b.top + b.height / 2 - r.top;
+        if (cx >= x1 && cx <= x2 && cy >= y1 && cy <= y2) sel.add(node.dataset.id);
+      }
+      paintSelection();
+    }
+  });
+
+  const end = (e) => {
+    // A stray second finger lifting must not end the real drag mid-gesture.
+    if (!drag || (e && e.pointerId != null && e.pointerId !== drag.pointerId)) return;
+    if (drag && drag.mode === 'move') {
+      // Read back the ids the gesture actually started on. `sel` can be repainted by
+      // anything between pointerdown and pointerup; drag.origin is the gesture's own
+      // record of what it picked up, so the save can never write a fixture nobody moved.
+      const moves = [];
+      for (const id of drag.origin.keys()) {
+        const f = fxById(id);
+        if (f) moves.push({ id, x: f.x, y: f.y });
+      }
+      if (moves.length) post('api/fixtures/move', { moves });
+    }
+    stage.querySelector('.marquee').hidden = true;
+    stage.classList.remove('panning');
+    drag = null;
+    // Lowered LAST: post() above stamps touchedAt, so the 700ms window takes over from
+    // here and covers the poll that is already in flight with the pre-drag positions.
+    stageDragging = false;
+    if (deferAttr) { deferAttr = false; buildAttr(); }
+  };
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+  // A stuck stageDragging would freeze fixture updates for the rest of the session. If the
+  // capture is lost without a cancel — a browser quirk, a device unplugged mid-drag — this
+  // is the event that still fires, so the flag can never latch on.
+  stage.addEventListener('lostpointercapture', end);
+
+  stage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    zoomAt(stage, e.clientX, e.clientY, zoom * factor);
+  }, { passive: false });
+
+  // drop a library profile onto the stage: patches it and drops it where you let go
+  stage.addEventListener('dragover', (e) => {
+    if (!dragProfile) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    stage.classList.add('dropping');
+  });
+  stage.addEventListener('dragleave', () => stage.classList.remove('dropping'));
+  stage.addEventListener('drop', (e) => {
+    stage.classList.remove('dropping');
+    const profile = dragProfile || e.dataTransfer.getData('text/plain');
+    if (!profile) return;
+    e.preventDefault();
+    const p = xy(e);
+    patchProfile(profile, { universe: gridUni, x: p.x, y: p.y });
+  });
+}
+
+// Patch a profile and, when it was dropped somewhere, place it there.
+async function patchProfile(profile, { universe, address, x, y, count = 1 }) {
+  const r = await post('api/fixtures/add', { profile, name: profile, universe, address, count });
+  const added = r.added || [];
+  $('#patchHint').textContent = added.length
+    ? `patched ${added.length} × ${profile} at ${added[0].address}`
+    : `no room for ${profile} there`;
+  if (added.length && x != null) {
+    await post('api/fixtures/move', { moves: added.map((f, i) => ({ id: f.id, x: clamp(x + i * 0.07, -WORLD, WORLD), y })) });
+  }
+  if (added.length) {
+    unpin('pAddress', 'pIndex');
+    sel = new Set(added.map((f) => f.id));
+    gridUni = universe;
+  }
+  structSig = '';
+  pullState();
+}
+
+// Unpatch whatever is selected. Removing several at once is worth a confirmation —
+// with everything selected by default, a stray Delete would otherwise take the whole rig.
+async function unpatchSelection() {
+  const ids = [...sel];
+  if (!ids.length) { $('#patchHint').textContent = 'nothing selected'; return; }
+  if (ids.length > 1 && !confirm(`Unpatch ${ids.length} fixtures? This cannot be undone.`)) return;
+  // one request, not one per fixture — a burst of them races the server's debounced save
+  const r = await post('api/fixtures/remove', { ids });
+  const removed = r.removed != null ? r.removed : ids.length;
+  let msg = `unpatched ${removed} fixture${removed === 1 ? '' : 's'}`;
+
+  // A group whose last member just went is deleted server-side. Drop its tab now rather
+  // than leaving a dead tab on screen until the next poll catches up.
+  const gone = r.groupsRemoved || [];
+  if (gone.length) {
+    S.groups = S.groups.filter((g) => !gone.includes(g.id));
+    if (gone.includes(activeGroup)) activeGroup = 'all';
+    buildGroups();
+    msg += `, ${gone.length} empty group${gone.length === 1 ? '' : 's'} removed`;
+  }
+  $('#patchHint').textContent = msg;
+  sel.clear(); structSig = ''; pullState();
+}
+
+// Where should n fixtures go, arranged as `kind`, inside the box {x0,y0,x1,y1}?
+// Pure and self-contained, so the maths can be lifted out and tested without a browser.
+// The box is the selection's own bounding box: arranging organises the fixtures where
+// they already sit, instead of teleporting them back to the home screen.
+function arrangePositions(kind, n, box) {
+  let { x0, y0, x1, y1 } = box;
+  // An axis with no extent cannot hold an arrangement — row-arranging a perfect column
+  // would pile every fixture onto one point. Give a flat axis some room, centred where
+  // the fixtures already are, nudged to stay inside the -1..2 world.
+  if (x1 - x0 < 0.05) { const cx = Math.min(1.75, Math.max(-0.75, (x0 + x1) / 2)); x0 = cx - 0.25; x1 = cx + 0.25; }
+  if (y1 - y0 < 0.05) { const cy = Math.min(1.825, Math.max(-0.825, (y0 + y1) / 2)); y0 = cy - 0.175; y1 = cy + 0.175; }
+  const w = x1 - x0, h = y1 - y0, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const pts = [];
+  if (kind === 'row') {
+    for (let i = 0; i < n; i++) pts.push({ x: x0 + (i / (n - 1)) * w, y: cy });
+  } else if (kind === 'column') {
+    for (let i = 0; i < n; i++) pts.push({ x: cx, y: y0 + (i / (n - 1)) * h });
+  } else if (kind === 'grid') {
+    // As many columns as keeps the cells roughly square in the box's aspect: a wide
+    // selection becomes a wide grid, a tall one a tall grid.
+    const cols = Math.max(1, Math.min(n, Math.round(Math.sqrt(n * w / h))));
+    const rows = Math.ceil(n / cols);
+    for (let i = 0; i < n; i++) {
+      const r = Math.floor(i / cols), c = i % cols;
+      const inRow = r === rows - 1 ? n - (rows - 1) * cols : cols;
+      const cc = c + (cols - inRow) / 2;   // a partial last row sits centred, same spacing
+      pts.push({
+        x: cols === 1 ? cx : x0 + (cc / (cols - 1)) * w,
+        y: rows === 1 ? cy : y0 + (r / (rows - 1)) * h,
+      });
+    }
+  } else {                                 // circle: the ellipse inscribed in the box
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+      pts.push({ x: cx + Math.cos(a) * (w / 2), y: cy + Math.sin(a) * (h / 2) });
+    }
+  }
+  return pts;
+}
+
+function arrange(kind) {
+  // Index order, not click order, so 1..n reads along the arrangement.
+  const fs = S.fixtures.filter((f) => sel.has(f.id)).sort((a, b) => a.index - b.index);
+  if (!fs.length) { say('select some fixtures first, then arrange them'); return; }
+  if (fs.length === 1) { say('one fixture selected — nothing to arrange'); return; }
+  const xs = fs.map((f) => f.x), ys = fs.map((f) => f.y);
+  const pts = arrangePositions(kind, fs.length, {
+    x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys),
+  });
+  fs.forEach((f, i) => {
+    f.x = clamp(pts[i].x, -WORLD, WORLD); f.y = clamp(pts[i].y, -WORLD, WORLD);
+    if (snap) { f.x = Math.round(f.x * 40) / 40; f.y = Math.round(f.y * 24) / 24; }   // same grid as dragging
+  });
+  placeStages();
+  post('api/fixtures/move', { moves: fs.map((f) => ({ id: f.id, x: f.x, y: f.y })) });
+  say(`arranged ${fs.length} fixtures in a ${kind}`);
+}
+
+/* =============== selection =============== */
+
+function paintSelection() {
+  $$('.fx-node').forEach((n) => n.classList.toggle('sel', sel.has(n.dataset.id)));
+  $$('#patchGrid .gc.used').forEach((c) => c.classList.toggle('sel', sel.has(c.dataset.id)));
+  paintSelList();
+  syncLimitPanel();
+  // Skipped only while a marquee is being dragged — see deferAttr. The editor is rebuilt
+  // once on release, so the selection it describes is always the finished one.
+  if (!deferAttr) buildAttr();
+}
+
+function paintSelList() {
+  if (!S) return;
+  const ids = [...sel];
+  for (const list of $$('.sellist')) {
+    if (list.dataset.ids !== ids.join(',')) {
+      list.dataset.ids = ids.join(',');
+      list.innerHTML = ids.map((id) => {
+        const f = S.fixtures.find((x) => x.id === id);
+        // the name is editable here — it is the only place in the UI that can set it,
+        // and a rig of eight identical pars is unusable if they are all called "rgb"
+        return f ? `<div class="selrow" data-id="${f.id}"><i></i><span class="n">${f.index}</span>
+          <input class="selname" maxlength="40" title="Rename this fixture">
+          <button class="findbtn" title="Flash this one white for ten seconds so you can see which lamp it is in the room. Nothing is changed — whatever is running comes straight back.">Find</button></div>` : '';
+      }).join('') || '<div class="selrow muted" style="cursor:default"><span>nothing selected</span></div>';
+      for (const row of $$('.selrow', list)) {
+        const input = row.querySelector('.selname');
+        if (!input) continue;
+        const id = row.dataset.id;
+        const commit = () => {
+          const name = input.value.trim().slice(0, 40);
+          const f = S.fixtures.find((x) => x.id === id);
+          if (!f || !name || name === f.name) { if (f) input.value = f.name; return; }
+          f.name = name;                       // optimistic: the stage label updates at once
+          post('api/fixture', { id, name });
+          placeStages(); buildStages();
+        };
+        input.addEventListener('change', commit);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+        // The row is a click target — the README says so and the cursor says so. Click
+        // selects just this fixture (ctrl adds to the selection); the rename field keeps
+        // working because a click inside it stays a rename, not a reselect.
+        // Find: the answer to "which of these eight identical pars is number 5?" — the
+        // one question every patch at a venue turns on, and the one the desk could not
+        // answer at all. It does not select, it does not change a value, and it does not
+        // care what is running: the lamp flashes white for ten seconds and stops.
+        row.querySelector('.findbtn').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const r = await post('api/fixtures/identify', { ids: [id], seconds: 10 });
+          if (r && r.error) return say(r.error, true);
+          const f = S.fixtures.find((x) => x.id === id);
+          say(`${f ? f.name : 'it'} is flashing for ten seconds — go and look at the rig`);
+        });
+        row.addEventListener('click', (e) => {
+          if (e.target === input || e.target.closest('.findbtn')) return;
+          if (!e.ctrlKey && !e.metaKey) sel.clear();
+          sel.add(id);
+          paintSelection();
+        });
+      }
+    }
+    const finding = new Set((S.status && S.status.identifying) || []);
+    for (const row of $$('.selrow', list)) {
+      const f = fxById(row.dataset.id);
+      if (!f) continue;
+      row.classList.toggle('finding', finding.has(f.id));
+      row.querySelector('i').style.background = cssRgb(liveColor(f));
+      const input = row.querySelector('.selname');
+      if (input && document.activeElement !== input && input.value !== f.name) input.value = f.name;
+    }
+  }
+}
+
+/* =============== attribute editor (CONTROL) =============== */
+
+function fader(role, value, profileName) {
+  return `<div class="fader" data-role="${esc(role)}">
+    <div class="fh"><i style="background:${ROLE_COLOR[role] || '#6f7478'}"></i>${esc(roleLabel(role, profileName))}</div>
+    <div class="chip" style="background:${ROLE_COLOR[role] || '#6f7478'}"></div>
+    <div class="fv">0%</div>
+    <div class="vwrap"><input type="range" min="0" max="255" value="${value}"></div>
+    <div class="quick"><button data-set="0">0</button><button data-set="128">50</button><button data-set="255">FL</button></div>
+  </div>`;
+}
+
+function buildAttr() {
+  if (!S) return;
+  const roles = selectedRoles();
+  // Route every role to a tab. Known ones go where TABS says; anything else is placed by
+  // its server-published kind, so a new emitter lands in COLOR rather than in the junk
+  // drawer, and only genuinely miscellaneous channels end up in OTHER.
+  const byTab = new Map();
+  for (const role of roles) {
+    const known = TABS.find(([, rs]) => rs.includes(role));
+    const kind = known ? null : kindOf(role);
+    // `speed` is generic — on a par it sets the strobe rate, on a head it can mean pan/tilt
+    // speed. Put it with the strobe when there is one, so a dimmer/strobe/speed par keeps
+    // its pair together; otherwise leave it in Other rather than misfiling it under Beam.
+    const name = role === 'speed' && roles.includes('strobe') ? 'Beam'
+      : known ? known[0]
+      : kind === 'emitter' ? 'Color'
+      : kind === 'level' ? 'Dimmer'
+      : kind === 'position' ? 'Position' : 'Other';
+    if (!byTab.has(name)) byTab.set(name, []);
+    byTab.get(name).push(role);
+  }
+  const tabs = [...TABS.map(([n]) => n), 'Other'].filter((n) => byTab.has(n)).map((n) => [n, byTab.get(n)]);
+  const sig = attrTab + '|' + roles.join(',') + '|' + sel.size;
+  if (sig === attrSig) return;
+  attrSig = sig;
+
+  $('#attrWho').textContent = sel.size
+    ? `${sel.size} fixture${sel.size === 1 ? '' : 's'} — ${[...new Set(selectedFixtures().map((f) => f.profile))].join(', ')}`
+    : 'nothing selected';
+
+  if (!tabs.length) {
+    $('#attrTabs').innerHTML = '';
+    $('#attrPanels').innerHTML = '<p class="muted">Select fixtures on the stage below, in the list, or with a group tab.</p>';
+    return;
+  }
+  if (!tabs.some(([n]) => n === attrTab)) attrTab = tabs[0][0];
+
+  $('#attrTabs').innerHTML = tabs.map(([n]) =>
+    `<button class="atab${n === attrTab ? ' is-active' : ''}" data-tab="${n}"><i></i>${n}</button>`).join('');
+  $$('#attrTabs .atab').forEach((b) => b.addEventListener('click', () => {
+    attrTab = b.dataset.tab; attrSig = ''; buildAttr();
+  }));
+
+  const active = tabs.find(([n]) => n === attrTab)[1];
+  // Read each value from a fixture that actually HAS the role. With everything selected,
+  // fixture one is a wash — so the pan/tilt pad recentred to 50/50 and the position faders
+  // read 0 while the beams were really at 64/191. The editor was describing a position no
+  // fixture in the selection was at.
+  const fixtures = selectedFixtures();
+  const first = fixtures[0] || { values: {} };
+  const holderOf = (role) => fixtures.find((f) => profileOf(f).channels.includes(role)) || first;
+  let html = '';
+
+  if (attrTab === 'Color') {
+    html += `<div class="picker">
+      <div class="sqpick" id="sqpick"><div class="dot" style="left:50%;top:0"></div></div>
+      <div class="hues">${HUES.map((h) => `<button data-hex="${h}" style="background:${h}"></button>`).join('')}</div>
+      <label class="pickfoot"><input type="checkbox" id="autoWhite"${autoWhite ? ' checked' : ''}> Auto white
+        <span class="muted">move shared colour onto the W channel</span></label>
+    </div>`;
+  }
+  if (attrTab === 'Position') {
+    html += `<div class="xypad" id="xypad"><div class="dot" style="left:50%;top:50%"></div></div>`;
+  }
+  html += `<div class="faders">${active.map((r) => {
+    // the holder is the fixture the value is READ from, so its profile is the one whose
+    // channel names apply — a laser's "Size X" must not be labelled by the wash next to it
+    const h = holderOf(r);
+    return fader(r, h.values[r] ?? 0, h.profile);
+  }).join('')}</div>`;
+  $('#attrPanels').innerHTML = `<div class="apanel">${html}</div>`;
+
+  // faders
+  $$('#attrPanels .fader').forEach((el) => {
+    const role = el.dataset.role;
+    const input = el.querySelector('input');
+    input.addEventListener('input', () => { setRole(role, +input.value); syncAttr(true); });
+    $$('.quick button', el).forEach((b) => b.addEventListener('click', () => {
+      input.value = b.dataset.set; setRole(role, +b.dataset.set); syncAttr(true);
+    }));
+  });
+
+  const sq = $('#sqpick');
+  if (sq) {
+    sq.style.touchAction = 'none';   // a finger on the picker must drag colour, not scroll
+    const pick = (e) => {
+      const r = sq.getBoundingClientRect();
+      const x = clamp((e.clientX - r.left) / r.width, 0, 1);
+      const y = clamp((e.clientY - r.top) / r.height, 0, 1);
+      const [hr, hg, hb] = hueRgb(x * 360);
+      const mix = (c) => Math.round(c + (255 - c) * y);   // fade to white downwards
+      applyColor('#' + hx(mix(hr)) + hx(mix(hg)) + hx(mix(hb)));
+      sq.querySelector('.dot').style.left = (x * 100) + '%';
+      sq.querySelector('.dot').style.top = (y * 100) + '%';
+    };
+    let down = false;
+    sq.addEventListener('pointerdown', (e) => { down = true; sq.setPointerCapture(e.pointerId); pick(e); });
+    sq.addEventListener('pointermove', (e) => down && pick(e));
+    sq.addEventListener('pointerup', () => { down = false; });
+    $$('.hues button').forEach((b) => b.addEventListener('click', () => applyColor(b.dataset.hex)));
+    $('#autoWhite').addEventListener('change', (e) => { autoWhite = e.target.checked; });
+  }
+
+  const pad = $('#xypad');
+  if (pad) {
+    pad.style.touchAction = 'none';   // same: pan/tilt by finger, not page scroll
+    const move = (e) => {
+      const r = pad.getBoundingClientRect();
+      const x = clamp((e.clientX - r.left) / r.width, 0, 1);
+      const y = clamp((e.clientY - r.top) / r.height, 0, 1);
+      setRole('pan', Math.round(x * 255));
+      setRole('tilt', Math.round(y * 255));
+      syncAttr(true);
+    };
+    let down = false;
+    pad.addEventListener('pointerdown', (e) => { down = true; pad.setPointerCapture(e.pointerId); move(e); });
+    pad.addEventListener('pointermove', (e) => down && move(e));
+    pad.addEventListener('pointerup', () => { down = false; });
+  }
+  syncAttr(true);
+}
+
+function hueRgb(h) {
+  const c = 1, x = 1 - Math.abs(((h / 60) % 2) - 1);
+  const t = [[c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x]][Math.floor(h / 60) % 6];
+  return t.map((v) => Math.round(v * 255));
+}
+
+function syncAttr(force) {
+  if (!S || !sel.size) return;
+  const fixtures = selectedFixtures();
+  const first = fixtures[0];
+  if (!first) return;
+  for (const el of $$('#attrPanels .fader')) {
+    const role = el.dataset.role;
+    const input = el.querySelector('input');
+    // From a fixture that has the role — the first fixture may be a wash while the role
+    // being read is the beams' tilt. See buildAttr's holderOf for the failure this caused.
+    const holder = fixtures.find((f) => profileOf(f).channels.includes(role)) || first;
+    const v = holder.values[role] ?? 0;
+    if (document.activeElement !== input && (force || +input.value !== v)) input.value = v;
+    el.querySelector('.fv').textContent = (v / 255 * 100).toFixed(1) + '%';
+    if (role === 'dimmer') el.querySelector('.chip').style.background = cssRgb(liveColor(first));
+    else {
+      const base = ROLE_COLOR[role] || '#6f7478';
+      el.querySelector('.chip').style.opacity = 0.25 + (v / 255) * 0.75;
+      el.querySelector('.chip').style.background = base;
+    }
+  }
+  const pad = $('#xypad');
+  if (pad) {
+    const mover = fixtures.find((f) => profileOf(f).channels.includes('pan')) || first;
+    pad.querySelector('.dot').style.left = ((mover.values.pan ?? 128) / 255 * 100) + '%';
+    pad.querySelector('.dot').style.top = ((mover.values.tilt ?? 128) / 255 * 100) + '%';
+  }
+}
+
+/* =============== fader page =============== */
+
+let fUni = 0;
+let faderCells = [];             // cached per-fader refs; 512 querySelectors at 10Hz is waste
+
+// Channel writes are batched: dragging a fader fires input events far faster than the
+// server's debounced save, and one request per event would race it.
+const rawPending = new Map();
+let rawTimer = null;
+let lastRawFlush = 0;
+function queueRaw(universe, channel, value) {
+  const key = `${universe}:${channel}`;
+  rawPending.set(key, { universe, channel, value });
+  if (value == null) delete S.raw[key]; else S.raw[key] = value;
+  touchedAt = Date.now();
+  // Same leading-edge shape as queueFixture, same reason.
+  const flushRaw = () => {
+    rawTimer = null;
+    lastRawFlush = Date.now();
+    const channels = [...rawPending.values()];
+    rawPending.clear();
+    post('api/raw', { channels });
+  };
+  if (!rawTimer) {
+    if (Date.now() - lastRawFlush > 60) flushRaw();
+    else rawTimer = setTimeout(flushRaw, 25);
+  }
+}
+
+// Setting every channel at once is literal: it includes pan, tilt, shutter and macro,
+// which is what a preset desk does. On a patched rig that is violent — heads swing to one
+// extreme — so it names exactly what it will drive and asks first. With nothing patched
+// there is nothing to warn about, and it just fires.
+async function setAllFaders(value) {
+  const risky = S.fixtures.filter((f) => f.universe === fUni
+    && profileOf(f).channels.some((r) => ['position', 'control', 'fine'].includes(kindOf(r))));
+  if (risky.length) {
+    const names = risky.slice(0, 4).map((f) => `${f.index}.${f.profile}`).join(', ');
+    const more = risky.length > 4 ? ', …' : '';
+    const okGo = confirm(
+      `Set every channel in universe ${fUni + 1} to ${value}?\n\n`
+      + `This also drives pan, tilt and control channels on ${risky.length} fixture`
+      + `${risky.length === 1 ? '' : 's'} (${names}${more}). Moving heads will swing hard to one extreme.`);
+    if (!okGo) return;
+  }
+  const channels = [];
+  for (let ch = 1; ch <= 512; ch++) {
+    channels.push({ universe: fUni, channel: ch, value });
+    S.raw[`${fUni}:${ch}`] = value;
+  }
+  syncFaders();
+  await post('api/raw', { channels });
+  pullState();
+}
+
+// All 512 channels, always — a fader exists whether or not anything is patched on it.
+// The page scrolls; the patch only decides what each fader is *labelled*.
+function buildFaders() {
+  fillUniverse($('#fUniverse'), [...new Set([...S.status.universes, fUni, 0])].sort((a, b) => a - b));
+  $('#fUniverse').value = fUni;
+
+  const wrap = $('#faderBank');
+  // Each fader is named from the patch. A bank of 512 bare numbers means holding a laser
+  // by counting channels in your head — ch37 is "Laser · Intensity", and being told so is
+  // the difference between a manual hold and a guess. So this DOES depend on the patch
+  // now, and the signature has to carry it or a re-address would leave stale names.
+  const owner = new Map();
+  for (const f of S.fixtures) {
+    if (f.universe !== fUni) continue;
+    const chans = (S.profiles[f.profile] || {}).channels || [];
+    chans.forEach((role, i) => {
+      const c = f.address + i;
+      if (c >= 1 && c <= 512) owner.set(c, { name: f.name, role, profile: f.profile });
+    });
+  }
+  const sig = fUni + '#' + S.fixtures
+    .map((f) => `${f.id}${f.universe}${f.address}${f.profile}${f.name}`).join('|');
+  if (wrap.dataset.sig !== sig) {
+    wrap.dataset.sig = sig;
+    let html = '';
+    for (let ch = 1; ch <= 512; ch++) {
+      const o = owner.get(ch);
+      // Two lines, fixture then channel: at this width the full "Laser · Intensity" would
+      // ellipsis away exactly the half that identifies the channel.
+      const who = o ? esc(o.name) : '';
+      const what = o ? esc(roleLabel(o.role, o.profile)) : '';
+      const tip = o ? `${o.name} · ${roleLabel(o.role, o.profile)} (channel ${ch})` : `channel ${ch} — not patched`;
+      html += `<div class="mf${o ? '' : ' unpatched'}" data-ch="${ch}" id="mf${ch}" title="${tip}">
+        <div class="mf-ch">${String(ch).padStart(3, '0')}</div>
+        <div class="mf-who">${who}</div>
+        <div class="mf-role">${what}</div>
+        <div class="vwrap"><input type="range" min="0" max="255" value="0"></div>
+        <input class="mf-num" type="number" min="0" max="255" value="0" title="Type a level, 0–255">
+        <div class="mf-wire" title="what is on the wire after the master"></div>
+        <button class="mf-rel" title="Release this channel back to the fixtures">↺</button>
+      </div>`;
+    }
+    wrap.innerHTML = html;
+    faderCells = $$('.mf', wrap).map((el) => {
+      const ch = +el.dataset.ch;
+      const input = el.querySelector('input[type=range]');
+      const num = el.querySelector('.mf-num');
+      const wireEl = el.querySelector('.mf-wire');
+      // What the fader SHOWS while following is the post-master wire value; what a hold
+      // STORES is pre-master. Handing the shown number straight to the hold made the
+      // light drop the moment you touched a fader with the master below full — grab a
+      // channel reading 128 at master 50% and the wire fell to 65. Seed the takeover by
+      // undoing the master, so the light stays where it was and the fader takes over
+      // from there.
+      const preMaster = (v) => {
+        const wasHeld = S.raw[`${fUni}:${ch}`] != null;
+        if (wasHeld) return v;
+        const m = (S.master == null ? 255 : S.master) / 255;
+        return m > 0 ? clamp(Math.round(v / m), 0, 255) : v;
+      };
+      input.addEventListener('input', () => { queueRaw(fUni, ch, preMaster(+input.value)); syncFaders(); });
+      // typing a level is the same act as moving the fader — both hold the channel
+      const typed = () => {
+        const v = clamp(Math.round(+num.value || 0), 0, 255);
+        num.value = v;
+        queueRaw(fUni, ch, v);
+        syncFaders();
+      };
+      num.addEventListener('change', typed);
+      num.addEventListener('keydown', (e) => { if (e.key === 'Enter') { typed(); num.blur(); } });
+      el.querySelector('.mf-rel').addEventListener('click', () => { queueRaw(fUni, ch, null); syncFaders(); });
+      return { el, ch, input, num, wireEl, shown: -1, shownWire: -1, held: false };
+    });
+  }
+  syncFaders();
+}
+
+function syncFaders() {
+  if (!S || !faderCells.length) return;
+  const buf = DMX[fUni] || [];
+  for (const c of faderCells) {
+    const held = S.raw[`${fUni}:${c.ch}`];
+    const wire = buf[c.ch - 1] || 0;
+    const isHeld = held != null;
+    if (isHeld !== c.held) { c.el.classList.toggle('over', isHeld); c.held = isHeld; }
+    // an untouched fader follows what the fixtures are doing; grab it and it takes over
+    const want = isHeld ? held : wire;
+    if (document.activeElement !== c.input && +c.input.value !== want) c.input.value = want;
+    if (document.activeElement !== c.num && +c.num.value !== want) c.num.value = want;
+    // only show the wire value when the master has pulled it away from the fader
+    const wireText = wire === want ? '' : String(wire);
+    if (wireText !== c.shownWire) { c.wireEl.textContent = wireText; c.shownWire = wireText; }
+  }
+  const total = Object.keys(S.raw).filter((k) => k.startsWith(fUni + ':')).length;
+  $('#fOverCount').textContent = total
+    ? `${total} channel${total === 1 ? '' : 's'} held`
+    : 'nothing held — every fader is following the fixtures';
+  if (document.activeElement !== $('#fMaster')) $('#fMaster').value = S.master;
+  $('#fMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
+  $('#fBlackout').classList.toggle('on', S.blackout);
+}
+
+/* =============== limits panel (SETUP) =============== */
+
+let dimLimits = { min: 0, max: 255 };
+
+function syncLimitPanel() {
+  const f = selectedFixtures()[0];
+  const l = f ? f.limits : { dimMin: 0, dimMax: 255, panMin: 0, panMax: 255, tiltMin: 0, tiltMax: 255 };
+  dimLimits = { min: l.dimMin, max: l.dimMax };
+  drawDimSlider();
+  if (document.activeElement.tagName !== 'INPUT') {
+    $('#panMin').value = l.panMin; $('#panMax').value = l.panMax;
+    $('#tiltMin').value = l.tiltMin; $('#tiltMax').value = l.tiltMax;
+    $('#invPan').checked = !!l.invertPan; $('#invTilt').checked = !!l.invertTilt; $('#swapPT').checked = !!l.swapPT;
+  }
+  drawMoveBoxes();
+}
+
+function drawDimSlider() {
+  const pct = (v) => (v / 255) * 100;
+  $('#dimMaxVal').textContent = pct(dimLimits.max).toFixed(1) + '%';
+  $('#dimMinVal').textContent = pct(dimLimits.min).toFixed(1) + '%';
+  $('#dimMaxH').style.top = (100 - pct(dimLimits.max)) + '%';
+  $('#dimMinH').style.top = (100 - pct(dimLimits.min)) + '%';
+  $('#dimFill').style.top = (100 - pct(dimLimits.max)) + '%';
+  $('#dimFill').style.height = (pct(dimLimits.max) - pct(dimLimits.min)) + '%';
+}
+
+function drawMoveBoxes() {
+  const set = (box, min, max) => {
+    const el = $(box).querySelector('i');
+    el.style.top = (min / 255 * 100) + '%';
+    el.style.height = ((max - min) / 255 * 100) + '%';
+  };
+  set('#panBox', +$('#panMin').value, +$('#panMax').value);
+  set('#tiltBox', +$('#tiltMin').value, +$('#tiltMax').value);
+}
+
+function sendLimits(limits) {
+  if (!sel.size) return;
+  post('api/fixtures/limits', { ids: [...sel], limits });
+  for (const f of selectedFixtures()) Object.assign(f.limits, limits);
+}
+
+function wireLimits() {
+  const track = $('#dimTrack');
+  track.style.touchAction = 'none';   // dragging the limit handles must not scroll the pane
+  let dragging = null;
+  const grab = (which) => (e) => { dragging = which; e.preventDefault(); track.setPointerCapture(e.pointerId); };
+  $('#dimMaxH').addEventListener('pointerdown', grab('max'));
+  $('#dimMinH').addEventListener('pointerdown', grab('min'));
+  track.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const r = track.getBoundingClientRect();
+    const v = Math.round(clamp(1 - (e.clientY - r.top) / r.height, 0, 1) * 255);
+    if (dragging === 'max') dimLimits.max = Math.max(v, dimLimits.min);
+    else dimLimits.min = Math.min(v, dimLimits.max);
+    drawDimSlider();
+    sendLimits({ dimMin: dimLimits.min, dimMax: dimLimits.max });
+  });
+  const stop = () => { dragging = null; };
+  track.addEventListener('pointerup', stop);
+  track.addEventListener('pointercancel', stop);
+
+  ['panMin', 'panMax', 'tiltMin', 'tiltMax'].forEach((k) => $('#' + k).addEventListener('input', () => {
+    drawMoveBoxes(); sendLimits({ [k]: +$('#' + k).value });
+  }));
+  [['invPan', 'invertPan'], ['invTilt', 'invertTilt'], ['swapPT', 'swapPT']].forEach(([el, key]) =>
+    $('#' + el).addEventListener('change', () => sendLimits({ [key]: $('#' + el).checked })));
+}
+
+/* =============== scenes =============== */
+
+// Scenes keep their entries for unpatched fixtures — recall skips them, and pruning would
+// quietly rewrite a saved look. The preview shows only what will actually light up.
+function sceneLive(sc) {
+  return sc.fixtures.filter((sf) => S.fixtures.some((f) => f.id === sf.id));
+}
+
+// How much of a scene still exists. A scene whose fixtures have all been unpatched fires
+// silently and does nothing — the pad has to say so rather than looking live.
+function sceneHealth(sc) {
+  const live = sc.live != null ? sc.live : sceneLive(sc).length;
+  const missing = sc.missing != null ? sc.missing : sc.fixtures.length - live;
+  return { live, missing, dead: live === 0 && missing > 0 };
+}
+
+// The scene list the eye is actually looking at: the bank filter applied. One state,
+// shared by the Control bank, the Touch grid, the 1-9 digit row and Go/next/prev — a
+// digit must fire the Nth VISIBLE row, not the Nth row of a list that is not on screen.
+function visibleScenes() {
+  const q = sceneFilter.trim().toLowerCase();
+  let list = S.scenes;
+  // Kind toggle: hide statics or animations wholesale. Unmarked scenes (the operator's
+  // own saves) only show on All — a "just animations" view full of hand saves isn't one.
+  if (sceneKind === 'anim') list = list.filter((sc) => sc.name.includes('›'));
+  else if (sceneKind === 'static') list = list.filter((sc) => sc.name.includes('·'));
+  return q ? list.filter((sc) => sc.name.toLowerCase().includes(q)) : list;
+}
+
+// Group headers, read straight off the naming convention — "Laser …" prefix, "›" marks
+// an animation, "·" a static look, and the unmarked hero scenes lead the list. No new
+// state: a header row is emitted whenever the group changes while iterating, so a
+// group the filter has emptied never shows its header. Shared by the bank and the
+// Touch grid, so the two views name the sections the same way.
+const sceneGroupOf = (name) => (name.startsWith('Laser') ? 'Laser'
+  : name.includes('›') ? 'Animations'
+  : name.includes('·') ? 'Static looks'
+  : 'Favorites');
+
+// Recall that reports failure. A recall whose POST died used to look exactly like a
+// recall that worked — same round-trip honesty rule as the blackout button.
+function recallScene(id) {
+  return post('api/scenes/recall', { id }).then((r) => {
+    if (r && r.error) say(`scene did not fire — ${r.error}`, true);
+    return pullState();
+  });
+}
+
+function sceneStrip(sc, n = 14) {
+  return sceneLive(sc).slice(0, n).map((sf) => {
+    const v = sf.values || {};
+    const d = (sf.on === false ? 0 : (v.dimmer ?? 255)) / 255;
+    return `<i style="background:rgb(${Math.round((v.r ?? 255) * d)},${Math.round((v.g ?? 255) * d)},${Math.round((v.b ?? 255) * d)})"></i>`;
+  }).join('') || '<i style="background:#444"></i>';
+}
+
+function buildBank() {
+  // The library runs to hundreds of scenes, so: filter by substring, one delegated click
+  // listener on the list (wired once, below) instead of one per row, and the scroll
+  // position survives the rebuild — the poll must not yank the list out from under a
+  // browse mid-set.
+  const list = $('#bankList');
+  const q = sceneFilter.trim().toLowerCase();
+  const scenes = visibleScenes();
+  // Reverse hotkey map once per rebuild, not a scan per row — this runs over 500 tiles.
+  const keyOf = {};
+  for (const k of Object.keys(sceneHotkeys)) keyOf[sceneHotkeys[k]] = k;
+  // Structure only — active/sel are classes, toggled below, so a recall never rebuilds
+  // 500 rows of innerHTML just to move the highlight one row.
+  const sig = scenes.map((sc) => sc.id + sc.name + sc.fadeMs + sceneHealth(sc).missing + sceneHealth(sc).dead).join('|')
+    + '#' + q
+    + '#' + Object.entries(sceneHotkeys).map(([k, n]) => k + n).join(',');
+  if (list.dataset.sig !== sig) {
+  list.dataset.sig = sig;
+  const keepScroll = list.scrollTop;
+  // Group headers come from sceneGroupOf (shared with the Touch grid); the sig above
+  // (names + filter) already covers any change to the grouping. Headers are not
+  // .bankrow, so the delegated click, the long-press and the hotkeys all skip them
+  // by construction.
+  let lastGroup = null;
+  let html = '';
+  for (const sc of scenes) {
+    const g = sceneGroupOf(sc.name);
+    if (g !== lastGroup) { lastGroup = g; html += `<div class="bankhead">${esc(g)}</div>`; }
+    const h = sceneHealth(sc);
+    const note = h.dead ? ' · nothing patched' : h.missing ? ` · ${h.missing} missing` : '';
+    const hk = keyOf[sc.name];
+    html += `<div class="bankrow${h.dead ? ' dead' : ''}" data-id="${sc.id}">
+       <div class="txt"><span class="nm">${esc(sc.name)}</span><span class="sub">Fade ${(sc.fadeMs / 1000).toFixed(1)}s${note}</span></div>
+       ${hk ? `<i class="hk" title="press ${esc(hotkeyLabel(hk))} to fire this scene">${esc(hotkeyLabel(hk))}</i>` : ''}
+       <div class="bar"></div></div>`;
+  }
+  list.innerHTML = html || (q
+    ? `<p class="muted" style="padding:10px">no scene matches "${esc(q)}"</p>`
+    : '<p class="muted" style="padding:10px">No scenes yet — set a look and press +</p>');
+  list.scrollTop = keepScroll;
+  delete list.dataset.active; delete list.dataset.selid;   // force the class pass below
+  }
+  // Highlight moves are class toggles, not rebuilds.
+  const act = String(S.activeScene ?? ''), selId = String(activeScene ?? '');
+  if (list.dataset.active !== act || list.dataset.selid !== selId) {
+    list.dataset.active = act; list.dataset.selid = selId;
+    for (const r of $$('.bankrow', list)) {
+      r.classList.toggle('active', r.dataset.id === act);
+      r.classList.toggle('sel', r.dataset.id === selId);
+    }
+    revealActiveRow(act);
+  }
+  buildSceneDetail();
+}
+
+// A recall (hotkey, chase, Go, another client) must land the eye on the row that fired:
+// scroll the active row into the bank's viewport when it is outside it — but never while
+// the operator is mid-browse, or the list is yanked out from under the finger.
+let bankUserScrollAt = 0;
+$('#bankList').addEventListener('wheel', () => { bankUserScrollAt = Date.now(); }, { passive: true });
+$('#bankList').addEventListener('touchmove', () => { bankUserScrollAt = Date.now(); }, { passive: true });
+function revealActiveRow(act) {
+  if (!act || Date.now() - bankUserScrollAt < 1500) return;
+  const list = $('#bankList');
+  const row = list.querySelector('.bankrow.active');
+  if (!row) return;
+  const lr = list.getBoundingClientRect(), rr = row.getBoundingClientRect();
+  if (rr.top < lr.top || rr.bottom > lr.bottom) row.scrollIntoView({ block: 'nearest' });
+}
+
+// One click listener for the whole bank — 500 rows rebuilt every poll must not mean 500
+// listeners rebuilt every poll.
+$('#bankList').addEventListener('click', (e) => {
+  // The lift at the end of a long-press (key binding, below) is not a recall.
+  if (suppressBankClick) { suppressBankClick = false; return; }
+  const r = e.target.closest('.bankrow');
+  if (!r || !r.dataset.id) return;
+  activeScene = r.dataset.id;
+  recallScene(r.dataset.id);
+});
+// One filter state for the Control bank AND the Touch grid — typing in either box
+// filters both, and clearing one clears both.
+function setSceneFilter(v) {
+  sceneFilter = v;
+  for (const el of [$('#sceneFilter'), $('#tSceneFilter')]) {
+    if (el && el.value !== v && document.activeElement !== el) el.value = v;
+  }
+  if (S) { buildBank(); buildTouch(); }
+}
+$('#sceneFilter').addEventListener('input', () => setSceneFilter($('#sceneFilter').value));
+$('#sceneFilterClear').addEventListener('click', () => setSceneFilter(''));
+$('#tSceneFilter').addEventListener('input', () => setSceneFilter($('#tSceneFilter').value));
+$('#tSceneFilterClear').addEventListener('click', () => setSceneFilter(''));
+
+// Kind toggle (All / › animations / · statics) — one state, mirrored on both pages,
+// same rule as the text filter. The digit hotkeys and Go follow visibleScenes(), so
+// hiding a kind also takes it out of their reach — that is the point.
+function setSceneKind(v) {
+  sceneKind = v;
+  for (const b of $$('.kindbtn')) b.classList.toggle('is-active', b.dataset.kind === v);
+  if (S) { buildBank(); buildTouch(); }
+}
+$$('.kindbtn').forEach((b) => b.addEventListener('click', () => setSceneKind(b.dataset.kind)));
+
+function buildSceneDetail() {
+  const sc = S.scenes.find((s) => s.id === (activeScene || S.activeScene));
+  $('#sceneTitle').textContent = sc ? sc.name : 'No scene selected';
+  if (!sc) {
+    $('#sceneDetail').dataset.sig = 'empty';
+    $('#sceneDetail').innerHTML = '<p class="sd-empty">Pick a scene on the left, or set a look on the stage and press + to save one.</p>';
+    return;
+  }
+  const health = sceneHealth(sc);
+  // Guarded like the rest. This pane holds a number field and a checkbox, and rebuilding it
+  // on every poll took the focus out of the fade field mid-keystroke and swapped the chase
+  // checkbox out from under a click — the exact 'a poll overwriting a value she chose' bug
+  // this project has shipped before.
+  const sig = sc.id + sc.name + sc.fadeMs + health.dead + health.missing + health.live
+    + S.chase.sceneIds.includes(sc.id) + '#' + Object.keys(sc.raw || {}).length;
+  if ($('#sceneDetail').dataset.sig === sig) return;
+  $('#sceneDetail').dataset.sig = sig;
+  $('#sceneDetail').innerHTML = `${health.dead
+      ? `<div class="deadwarn">None of this scene's ${health.missing} fixtures are patched any more, so firing it does nothing.
+         Re-patch them, overwrite the scene with a current look, or delete it.</div>`
+      : health.missing
+        ? `<div class="deadwarn soft">${health.missing} of this scene's fixtures are no longer patched — the rest will still fire.</div>`
+        : ''}
+    <div class="strip">${sceneStrip(sc, 40)}</div>
+    <div class="sd-row">
+      <button class="sq accent" id="sdGo">Go</button>
+      <button class="sq" id="sdRestage">↻ Overwrite with current look</button>
+      <button class="sq danger" id="sdDel">✕ Delete</button>
+    </div>
+    <div class="sd-row">
+      <label class="muted">Fade <input type="number" id="sdFade" min="0" step="0.1" style="width:70px" value="${(sc.fadeMs / 1000).toFixed(1)}">s</label>
+      <label class="muted"><input type="checkbox" id="sdChase"${S.chase.sceneIds.includes(sc.id) ? ' checked' : ''}> include in chase</label>
+      <span class="muted">${sceneHealth(sc).live} fixtures${sceneHealth(sc).missing
+        ? ` · ${sceneHealth(sc).missing} stored for fixtures no longer patched` : ''}${Object.keys(sc.raw || {}).length
+        ? ` · pins ${Object.keys(sc.raw).length} manual channel${Object.keys(sc.raw).length === 1 ? '' : 's'} on recall`
+        : ''}</span>
+    </div>`;
+  $('#sdGo').addEventListener('click', () => post('api/scenes/recall', { id: sc.id }).then(pullState));
+  // Both of these destroy a saved look with one click and no undo, and they sit in the
+  // same row, at the same size, as the button that fires it. Unpatching more than one
+  // fixture already asks first; losing a scene at a show should cost at least as much.
+  // The same two-step arm the right-click popover uses — press once to arm, again to
+  // fire, and it stands down by itself. A native confirm() froze the poll, the stage
+  // repaint and the panic key until someone found the dialog.
+  $('#sdRestage').addEventListener('click', (e) => armThen(e.currentTarget, 'Sure? Overwrite', () => {
+    post('api/scenes/update', { id: sc.id, restage: true }).then(pullState);
+  }));
+  $('#sdDel').addEventListener('click', (e) => armThen(e.currentTarget, 'Sure? Delete', () => {
+    activeScene = null;
+    post('api/scenes/remove', { id: sc.id }).then(pullState);
+  }));
+  $('#sdFade').addEventListener('change', (e) => post('api/scenes/update', { id: sc.id, fadeMs: Math.round(+e.target.value * 1000) }).then(pullState));
+  $('#sdChase').addEventListener('change', (e) => {
+    const ids = new Set(S.chase.sceneIds);
+    e.target.checked ? ids.add(sc.id) : ids.delete(sc.id);
+    post('api/chase', { sceneIds: [...ids] }).then(pullState);
+  });
+}
+
+function buildTouch() {
+  const wrap = $('#touchGrid');
+  const q = sceneFilter.trim().toLowerCase();
+  const scenes = visibleScenes();
+  // Structure only, like the bank: the active tile is a class toggle below, so a recall
+  // never rebuilds a few hundred tiles of innerHTML — which also ate the tap that was
+  // mid-flight when the poll landed.
+  const sig = scenes.map((sc) => sc.id + sc.name + sceneHealth(sc).dead + sceneHealth(sc).missing).join('|') + '#' + q;
+  if (wrap.dataset.sig !== sig) {
+  wrap.dataset.sig = sig;
+  // Same group headers as the bank. Headers are not .tbtn, so the delegated click and
+  // the long-press skip them by construction.
+  let lastGroup = null;
+  let html = '';
+  for (const sc of scenes) {
+    const g = sceneGroupOf(sc.name);
+    if (g !== lastGroup) { lastGroup = g; html += `<div class="bankhead">${esc(g)}</div>`; }
+    const h = sceneHealth(sc);
+    html += `<button class="tbtn${h.dead ? ' dead' : ''}" data-id="${sc.id}">
+       <div class="strip">${sceneStrip(sc)}</div><span>${esc(sc.name)}</span>
+       ${h.dead ? '<i class="tnote">nothing patched</i>' : h.missing ? `<i class="tnote">${h.missing} missing</i>` : ''}</button>`;
+  }
+  wrap.innerHTML = html || (q
+    ? `<p class="muted">no scene matches "${esc(q)}"</p>`
+    : '<p class="muted">Save some scenes on the Control page.</p>');
+  delete wrap.dataset.active;   // force the class pass below
+  }
+  const act = String(S.activeScene ?? '');
+  if (wrap.dataset.active !== act) {
+    wrap.dataset.active = act;
+    for (const b of $$('.tbtn', wrap)) b.classList.toggle('active', b.dataset.id === act);
+  }
+  const tf = $('#tSceneFilter');
+  if (tf && document.activeElement !== tf && tf.value !== sceneFilter) tf.value = sceneFilter;
+  if (document.activeElement !== $('#tMaster')) $('#tMaster').value = S.master;
+  $('#tMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
+  $('#tBlackout').classList.toggle('on', S.blackout);
+  buildTouchStrip();
+}
+
+// One delegated recall for the whole grid, mirroring #bankList — the capture-phase
+// long-press suppressor (further down) still eats the lift after a long-press.
+$('#touchGrid').addEventListener('click', (e) => {
+  const b = e.target.closest('.tbtn');
+  if (!b || !b.dataset.id) return;
+  recallScene(b.dataset.id);
+});
+
+/* =============== scene keyboard macros =============== */
+
+// Right-click (or long-press) a scene tile, press a key, and that key fires the scene.
+// Bindings live in THIS browser (localStorage) and point at scene NAMES, not ids — the
+// library is about to be regenerated and every id will change; names persist. Resolution
+// back to an id happens at recall time, against whatever S.scenes says right now.
+
+const HOTKEY_STORE = 'sceneHotkeys';
+let sceneHotkeys = {};                   // { key: sceneName }
+try {
+  const raw = JSON.parse(localStorage.getItem(HOTKEY_STORE));
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) sceneHotkeys = raw;
+} catch (e) { /* private mode or corrupt store: start empty */ }
+function saveHotkeys() {
+  try { localStorage.setItem(HOTKEY_STORE, JSON.stringify(sceneHotkeys)); }
+  catch (e) { /* private mode: the bindings last the session and no longer */ }
+}
+const hotkeyOf = (name) => Object.keys(sceneHotkeys).find((k) => sceneHotkeys[k] === name);
+const hotkeyLabel = (k) => String(k).toUpperCase();
+
+// The popover has grown from "press a key" into a small scene context menu: bind or
+// remove a key, rename, set the fade, overwrite with the live look, delete. The key
+// bindings stay per-browser; everything else edits the scene on the server by id.
+let bindTarget = null;                   // scene NAME while the popover is open (null = closed)
+let bindSceneId = null;                  // scene id, for the editing actions
+let popMode = 'menu';                    // 'menu' | 'capture' | 'rename' | 'fade'
+let popAt = { x: 8, y: 8 };              // where it opened — to re-clamp when it changes size
+let popOpenedAt = 0;                     // armed by the LONG-PRESS openers only: the lift
+                                         // must not click a menu row; a desktop right-click
+                                         // has no synthetic click, so it stays 0 there
+let armTimer = null;                     // two-step confirm timeout
+let suppressBankClick = false;           // the lift after a long-press must not recall
+
+function popScene() { return (S && S.scenes.find((s) => s.id === bindSceneId)) || null; }
+
+// The destructive rows ask twice: the first press arms ("Sure?…"), the second fires.
+// Anything else — a mode switch, closing, three seconds of nothing — disarms.
+// Buttons that armed themselves, and the words they had before. The two popover rows
+// below are reset by name because opening the menu re-labels them whether or not they
+// were armed; everything else — the scene detail pane, the look library — is restored
+// from here. Without this, arming a button outside the popover left it reading "Sure?"
+// for ever, because nothing knew what it used to say.
+const armedBtns = new Map();
+function disarmConfirms() {
+  clearTimeout(armTimer); armTimer = null;
+  const rs = $('#miRestage'), del = $('#miDelete');
+  rs.classList.remove('arm'); rs.textContent = 'Overwrite with current look';
+  del.classList.remove('arm'); del.textContent = 'Delete scene';
+  for (const [btn, label] of armedBtns) { btn.classList.remove('arm'); btn.textContent = label; }
+  armedBtns.clear();
+}
+let armedAt = 0;                         // when "Sure?…" was armed
+function armThen(btn, warn, fn) {
+  if (btn.classList.contains('arm')) {
+    // The press that armed it can double-fire (a double-tap, a bouncing touch): the
+    // confirming press only counts once the warning has had a beat on screen — the
+    // same 350ms guard the long-press popover uses.
+    if (Date.now() - armedAt < 350) return;
+    disarmConfirms(); fn(); return;
+  }
+  disarmConfirms();
+  armedBtns.set(btn, btn.textContent);
+  btn.classList.add('arm'); btn.textContent = warn;
+  armedAt = Date.now();
+  armTimer = setTimeout(disarmConfirms, 3000);
+}
+
+function setPopMode(mode) {
+  popMode = mode;
+  $('#popMenu').hidden = mode !== 'menu';
+  $('#bindHint').hidden = mode !== 'capture';
+  $('#popEdit').hidden = mode !== 'rename' && mode !== 'fade';
+  $('#popText').hidden = mode !== 'rename';
+  $('#popNumWrap').hidden = mode !== 'fade';
+  disarmConfirms();
+}
+
+function placeBindPop(x, y) {
+  // measure after unhiding, then clamp so it never opens (or grows) half off-screen
+  const pop = $('#bindPop');
+  const r = pop.getBoundingClientRect();
+  pop.style.left = clamp(x, 8, Math.max(8, window.innerWidth - r.width - 8)) + 'px';
+  pop.style.top = clamp(y, 8, Math.max(8, window.innerHeight - r.height - 8)) + 'px';
+}
+
+function openBindPop(name, x, y, id) {
+  bindTarget = name;
+  const sc = S && S.scenes.find((s) => (id != null ? s.id === id : s.name === name));
+  bindSceneId = sc ? sc.id : (id != null ? id : null);
+  $('#bindName').textContent = name;
+  const cur = hotkeyOf(name);
+  $('#bindRemove').hidden = !cur;
+  if (cur) $('#bindRemove').textContent = `Remove key (${hotkeyLabel(cur)})`;
+  const mb = bindSceneId != null && midiBindOf(bindSceneId);
+  $('#miMidiRemove').hidden = !mb;
+  if (mb) $('#miMidiRemove').textContent = `Remove MIDI pad (${mb.num})`;
+  setPopMode('menu');
+  $('#bindPop').hidden = false;
+  popAt = { x, y };
+  placeBindPop(x, y);
+  const first = $('#popMenu .popitem:not([hidden])');
+  if (first) first.focus();
+}
+function closeBindPop() {
+  bindTarget = null; bindSceneId = null;
+  disarmConfirms();
+  $('#bindPop').hidden = true;
+}
+
+// A long-press opens the menu under the finger, and the lift then dispatches a click at
+// whatever landed there. Swallow clicks for a beat so releasing cannot pick a row.
+$('#bindPop').addEventListener('click', (e) => {
+  if (Date.now() - popOpenedAt < 350) { e.preventDefault(); e.stopPropagation(); }
+}, true);
+
+function bindKey(key, name) {
+  const prev = sceneHotkeys[key];
+  // one key per scene: a new binding replaces the scene's old key, and steals the key
+  // from whichever scene held it before
+  for (const k of Object.keys(sceneHotkeys)) if (sceneHotkeys[k] === name) delete sceneHotkeys[k];
+  sceneHotkeys[key] = name;
+  saveHotkeys();
+  say(prev && prev !== name
+    ? `${hotkeyLabel(key)} now fires "${name}" — taken from "${prev}"`
+    : `${hotkeyLabel(key)} now fires "${name}"`);
+  if (S) buildBank();
+}
+
+// Capture phase, so while the popover is up this wins over the app's own keydown
+// handler further down. Esc always closes; in capture mode every key is swallowed and
+// considered for binding; in menu and edit modes keys pass through so the rename and
+// fade inputs can be typed in — the global shortcut handler checks bindTarget itself
+// and stands down while the popover is open.
+document.addEventListener('keydown', (e) => {
+  if (bindTarget == null) return;
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeBindPop(); return; }
+  if (popMode !== 'capture') return;
+  e.preventDefault(); e.stopPropagation();
+  if (e.ctrlKey || e.altKey || e.metaKey) return;          // browser shortcuts stay browser shortcuts
+  const key = e.key.toLowerCase();
+  // modifier-only presses keep the popover waiting; letters, digits, punctuation and
+  // F-keys bind. Space stays the stage pan modifier and B stays the panic key.
+  if (['shift', 'control', 'alt', 'meta', 'capslock', ' ', 'tab', 'enter'].includes(key)) return;
+  if (!(key.length === 1 || /^f\d{1,2}$/.test(key))) return;
+  // The panic key stays the panic key even here: close the popover and fire it.
+  if (key === 'b') { closeBindPop(); toggleBlackout(); say('B is the blackout key everywhere — blackout toggled; pick another key to bind'); return; }
+  bindKey(key, bindTarget);
+  closeBindPop();
+}, true);
+
+$('#bindRemove').addEventListener('click', () => {
+  const k = hotkeyOf(bindTarget);
+  if (k) { delete sceneHotkeys[k]; saveHotkeys(); say(`removed ${hotkeyLabel(k)} from "${bindTarget}"`); }
+  closeBindPop();
+  if (S) buildBank();
+});
+// A press anywhere outside the popover dismisses it — and the click that press turns
+// into must NOT recall the scene under the finger, so both grids' suppressors arm
+// BEFORE the close. (The bank's pointerdown handler has already run — bubbling reaches
+// document last — so its stale-flag reset cannot undo this.)
+document.addEventListener('pointerdown', (e) => {
+  if (bindTarget == null || e.target.closest('#bindPop')) return;
+  suppressBankClick = true;
+  touchSuppressUntil = Date.now() + 350;
+  closeBindPop();
+});
+
+// ---- the menu rows ----
+$('#miBind').addEventListener('click', () => {
+  $('#bindHint').textContent = 'Press a key to bind — Esc to cancel';   // midicap may have changed it
+  setPopMode('capture'); placeBindPop(popAt.x, popAt.y);
+});
+
+// ---- the MIDI map, shared by the scene menu and the MIDI page ---------------------
+// One map, two ways in: the "bind a pad" row of this scene menu, and the full control
+// surface on the MIDI page. It is stored WITH THE SHOW over api/midi, not in one
+// browser's localStorage, so the laptop at the desk and the phone in the room get the
+// same controller layout.
+//
+// In memory:  targetKey -> {type:'cc'|'note'|'bend', ch, num}
+// On the wire the server takes flat rows only, so it travels as
+//             [{key, type, ch, num}, ...]
+// Target keys: 'master', 'fxdepth', 'fix:<id>', 'scene:<0-15>', 'recall:<sceneId>'.
+const MIDI_STORE = 'artnet.midi.map.v1';   // the old per-browser map — read once, to offer an import
+const MIDI_TYPES = ['cc', 'note', 'bend'];
+let midiMap = {};
+let midiSaveTimer = null;
+
+const midiToWire = () => Object.entries(midiMap).slice(0, 400)
+  .map(([key, b]) => ({ key: String(key).slice(0, 120), type: b.type, ch: b.ch, num: b.num }));
+function midiFromWire(maps) {
+  const out = {};
+  for (const m of (maps || [])) {
+    if (!m || typeof m.key !== 'string' || !MIDI_TYPES.includes(m.type)) continue;
+    if (!Number.isFinite(+m.ch) || !Number.isFinite(+m.num)) continue;
+    out[m.key] = { type: m.type, ch: +m.ch, num: +m.num };
+  }
+  return out;
+}
+
+// Debounced: turning a knob during "learn" rewrites the map on every message, and the
+// desk writes show.json on every POST. 400ms is under the time it takes to reach for
+// the next control and far above the rate a wizard pass generates.
+function saveMidiMap() {
+  midiSayState('saving…');
+  clearTimeout(midiSaveTimer);
+  midiSaveTimer = setTimeout(() => {
+    midiSaveTimer = null;
+    post('api/midi', { midi: { maps: midiToWire() } }).then((r) => {
+      if (r && r.error) { midiSayState('NOT saved — ' + r.error, true); say('MIDI map did not save — ' + r.error, true); }
+      else midiSayState('saved with the show');
+    });
+  }, 400);
+}
+
+async function loadMidiMap() {
+  try {
+    const r = await (await fetch('api/midi')).json();
+    midiMap = midiFromWire(r.midi && r.midi.maps);
+    midiSayState(Object.keys(midiMap).length ? 'loaded from the show' : 'empty');
+    midiOfferImport();
+  } catch (e) { midiSayState('cannot reach the desk', true); }
+}
+
+// The old midi.html kept its map here. Never imported behind the operator's back — a
+// stale browser map silently replacing the show's would be a rig moving for no reason.
+function midiLocalLegacy() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(MIDI_STORE));
+    return (raw && typeof raw === 'object' && Object.keys(raw).length) ? raw : null;
+  } catch (e) { return null; }
+}
+function midiOfferImport() {
+  const btn = $('#miImport');
+  const old = midiLocalLegacy();
+  const show = !!old && !Object.keys(midiMap).length;
+  btn.hidden = !show;
+  if (show) btn.textContent = `Import ${Object.keys(old).length} mappings from this browser`;
+}
+
+const midiBindOf = (id) => midiMap['recall:' + id];
+let midiReady = false;
+
+function initMidi() {
+  if (midiReady || !navigator.requestMIDIAccess) return;
+  // One access object and ONE handler per input for the whole app: `onmidimessage` is a
+  // single property, so a second listener installed by the MIDI page would silently
+  // unhook the scene menu's pads (and the other way round).
+  navigator.requestMIDIAccess({ sysex: false }).then((access) => {
+    midiReady = true;
+    midiAccess = access;
+    access.onstatechange = () => { midiListInputs(); };
+    midiListInputs();
+    midiPill('#miMidiStat', 'MIDI <b>ready</b>', 'good');
+  }).catch((e) => {
+    midiPill('#miMidiStat', 'MIDI <b>blocked</b>', 'bad');
+    midiExplain('<b class="bad">Access refused:</b> ' + esc(e.message) + '<br>'
+      + 'Allow MIDI for this site, and make sure the address is <code>localhost</code>.');
+  });
+}
+
+// The single dispatcher. Scene recalls bound from the scene menu fire whenever a pad is
+// pressed — that is what that menu promises, and a discrete press is a deliberate act.
+// Everything else (faders, knobs, the desk-function pads) stays behind the ARM gate on
+// the MIDI page, because a physical fader's resting position is not a decision.
+function onMidiMessage(e) {
+  const [a, b, c] = e.data;
+  midiPageMessage(e);
+  if ((a & 0xf0) !== 0x90 || c === 0) return;            // note-on only, below here
+  const ch = (a & 0x0f) + 1;
+  if (popMode === 'midicap' && bindSceneId != null) {
+    // steal the pad from whatever held it, one pad per scene
+    for (const k of Object.keys(midiMap)) {
+      const m = midiMap[k];
+      if (m && m.type === 'note' && m.ch === ch && m.num === b) delete midiMap[k];
+    }
+    for (const k of Object.keys(midiMap)) if (k === 'recall:' + bindSceneId) delete midiMap[k];
+    midiMap['recall:' + bindSceneId] = { type: 'note', ch, num: b };
+    saveMidiMap();
+    if (page === 'midi') midiDraw();
+    say(`pad ${b} now fires "${bindTarget}"`);
+    closeBindPop();
+    return;
+  }
+  if (midiLearnRow || midiSceneLearn || midiWizardOn) return;   // the page is mapping, not playing
+  for (const k of Object.keys(midiMap)) {
+    const m = midiMap[k];
+    if (m && m.type === 'note' && m.ch === ch && m.num === b && k.startsWith('recall:')) {
+      const id = k.slice(7);
+      if (S && S.scenes.some((s) => s.id === id)) recallScene(id);
+    }
+  }
+}
+
+$('#miMidi').addEventListener('click', () => {
+  initMidi();
+  popMode = 'midicap';
+  $('#popMenu').hidden = true;
+  $('#bindHint').hidden = false;
+  $('#bindHint').textContent = 'Press a pad on the controller — Esc to cancel';
+  placeBindPop(popAt.x, popAt.y);
+});
+$('#miMidiRemove').addEventListener('click', () => {
+  delete midiMap['recall:' + bindSceneId];
+  saveMidiMap();
+  say('MIDI pad removed from "' + bindTarget + '"');
+  closeBindPop();
+});
+initMidi();
+// The map is read at boot, not when the MIDI page is first opened: pads bound from the
+// scene menu have to work on a surface that never visits it.
+loadMidiMap();
+$('#miRename').addEventListener('click', () => {
+  setPopMode('rename');
+  const t = $('#popText');
+  t.value = bindTarget || '';
+  placeBindPop(popAt.x, popAt.y);
+  t.focus(); t.select();
+});
+$('#miFade').addEventListener('click', () => {
+  setPopMode('fade');
+  const sc = popScene();
+  const n = $('#popNum');
+  n.value = sc ? sc.fadeMs : 0;
+  placeBindPop(popAt.x, popAt.y);
+  n.focus(); n.select();
+});
+
+function commitPopEdit() {
+  const sc = popScene();
+  if (!sc) { closeBindPop(); return; }
+  // Every branch here says success only AFTER the server said yes — a toast on a POST
+  // that died is the desk lying. Same round-trip rule as the blackout button.
+  if (popMode === 'rename') {
+    const name = $('#popText').value.trim().slice(0, 60);
+    if (!name || name === sc.name) { closeBindPop(); return; }
+    const oldName = sc.name;
+    post('api/scenes/update', { id: sc.id, name }).then((r) => {
+      if (r && r.error) { say(`rename did not reach the desk — ${r.error}`, true); pullState(); return; }
+      // Hotkeys are stored by scene NAME — the binding must follow the scene through a
+      // rename, or the key would keep firing at a name that no longer exists. Moved
+      // only once the server accepted, so a refused rename keeps the key working.
+      const k = hotkeyOf(oldName);
+      if (k) { sceneHotkeys[k] = name; saveHotkeys(); }
+      say(`renamed "${oldName}" to "${name}"`);
+      pullState();
+    });
+  } else if (popMode === 'fade') {
+    const ms = Math.max(0, Math.round(+$('#popNum').value || 0));
+    const who = sc.name;
+    post('api/scenes/update', { id: sc.id, fadeMs: ms }).then((r) => {
+      if (r && r.error) say(`fade change did not reach the desk — ${r.error}`, true);
+      else say(`"${who}" now fades over ${(ms / 1000).toFixed(1)}s`);
+      pullState();
+    });
+  }
+  closeBindPop();
+}
+$('#popOk').addEventListener('click', commitPopEdit);
+$('#popText').addEventListener('keydown', (e) => { if (e.key === 'Enter') commitPopEdit(); });
+$('#popNum').addEventListener('keydown', (e) => { if (e.key === 'Enter') commitPopEdit(); });
+
+$('#miRestage').addEventListener('click', () => armThen($('#miRestage'), 'Sure? This replaces the scene', () => {
+  const sc = popScene();
+  if (!sc) { closeBindPop(); return; }
+  const who = sc.name;
+  post('api/scenes/update', { id: sc.id, restage: true }).then((r) => {
+    if (r && r.error) say(`overwrite did not reach the desk — ${r.error}`, true);
+    else say(`"${who}" overwritten with the current look`);
+    pullState();
+  });
+  closeBindPop();
+}));
+$('#miDelete').addEventListener('click', () => armThen($('#miDelete'), 'Sure? Delete this scene', () => {
+  const sc = popScene();
+  if (!sc) { closeBindPop(); return; }
+  const who = sc.name, id = sc.id;
+  post('api/scenes/remove', { id }).then((r) => {
+    if (r && r.error) { say(`delete did not reach the desk — ${r.error}`, true); pullState(); return; }
+    // Only after the server let go of it: the key must not point at a ghost — and a
+    // refused delete must not cost the binding.
+    const k = hotkeyOf(who);
+    if (k) { delete sceneHotkeys[k]; saveHotkeys(); }
+    if (activeScene === id) activeScene = null;
+    say(`deleted "${who}"`);
+    pullState();
+  });
+  closeBindPop();
+}));
+
+// Bindings point at names; the id is looked up at the moment the key lands.
+function recallByName(name) {
+  const sc = S && S.scenes.find((s) => s.name === name);
+  if (!sc) { say(`no scene named "${name}" any more — that key has nothing to fire`); return; }
+  activeScene = sc.id;
+  recallScene(sc.id);
+}
+
+$('#bankList').addEventListener('contextmenu', (e) => {
+  const r = e.target.closest('.bankrow');
+  if (!r || !r.dataset.id || !S) return;
+  e.preventDefault();
+  const sc = S.scenes.find((s) => s.id === r.dataset.id);
+  if (sc) openBindPop(sc.name, e.clientX, e.clientY, sc.id);
+});
+
+// Long-press is the finger's right-click. Movement (a scroll) or an early lift (a tap)
+// cancels it; the mouse is excluded because it has a real right button.
+let bankPressTimer = null;
+let bankPressAt = null;
+const cancelBankPress = () => { clearTimeout(bankPressTimer); bankPressTimer = null; bankPressAt = null; };
+$('#bankList').addEventListener('pointerdown', (e) => {
+  // A stale suppress flag — the lift-click after a long-press usually lands on the
+  // popover, not the list, so the flag was never consumed — must not eat this press.
+  suppressBankClick = false;
+  if (e.pointerType === 'mouse' || e.button !== 0) return;
+  const r = e.target.closest('.bankrow');
+  if (!r || !r.dataset.id) return;
+  const id = r.dataset.id, x = e.clientX, y = e.clientY;
+  cancelBankPress();
+  bankPressAt = { x, y };
+  bankPressTimer = setTimeout(() => {
+    bankPressTimer = null;
+    const sc = S && S.scenes.find((s) => s.id === id);
+    if (!sc) return;
+    suppressBankClick = true;
+    popOpenedAt = Date.now();
+    openBindPop(sc.name, x, y, sc.id);
+  }, 600);
+});
+$('#bankList').addEventListener('pointermove', (e) => {
+  if (bankPressAt && Math.abs(e.clientX - bankPressAt.x) + Math.abs(e.clientY - bankPressAt.y) > 8) cancelBankPress();
+});
+$('#bankList').addEventListener('pointerup', cancelBankPress);
+$('#bankList').addEventListener('pointercancel', cancelBankPress);
+$('#bankList').addEventListener('scroll', cancelBankPress);
+
+// The Touch page's big tiles get the same context menu — right-click or the same 600ms
+// long-press. The tiles carry their own click listeners (rebuilt with the grid), so the
+// lift after a long-press is swallowed by a capture-phase guard on the grid instead of
+// a flag inside a delegated handler. The guard self-expires: if the lift-click lands on
+// the popover rather than the grid, nothing is left armed to eat the next tap.
+let touchSuppressUntil = 0;
+$('#touchGrid').addEventListener('click', (e) => {
+  if (Date.now() < touchSuppressUntil) {
+    touchSuppressUntil = 0;
+    e.preventDefault(); e.stopPropagation();
+  }
+}, true);
+$('#touchGrid').addEventListener('contextmenu', (e) => {
+  const b = e.target.closest('.tbtn');
+  if (!b || !b.dataset.id || !S) return;
+  e.preventDefault();
+  const sc = S.scenes.find((s) => s.id === b.dataset.id);
+  if (sc) openBindPop(sc.name, e.clientX, e.clientY, sc.id);
+});
+let touchPressTimer = null;
+let touchPressAt = null;
+const cancelTouchPress = () => { clearTimeout(touchPressTimer); touchPressTimer = null; touchPressAt = null; };
+$('#touchGrid').addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' || e.button !== 0) return;
+  const b = e.target.closest('.tbtn');
+  if (!b || !b.dataset.id) return;
+  const id = b.dataset.id, x = e.clientX, y = e.clientY;
+  cancelTouchPress();
+  touchPressAt = { x, y };
+  touchPressTimer = setTimeout(() => {
+    touchPressTimer = null;
+    const sc = S && S.scenes.find((s) => s.id === id);
+    if (!sc) return;
+    touchSuppressUntil = Date.now() + 700;
+    popOpenedAt = Date.now();
+    openBindPop(sc.name, x, y, sc.id);
+  }, 600);
+});
+$('#touchGrid').addEventListener('pointermove', (e) => {
+  if (touchPressAt && Math.abs(e.clientX - touchPressAt.x) + Math.abs(e.clientY - touchPressAt.y) > 8) cancelTouchPress();
+});
+$('#touchGrid').addEventListener('pointerup', cancelTouchPress);
+$('#touchGrid').addEventListener('pointercancel', cancelTouchPress);
+$('#touchGrid').addEventListener('scroll', cancelTouchPress);
+
+/* =============== FX =============== */
+
+// The mode list comes from the server (`fxModes`), generated by the same file that does
+// the maths — so an effect added to fx.js turns up here without anyone having to remember
+// this page exists. "none" is the off pad; the rest are named after themselves.
+const fxLabel = (m) => (m === 'none' ? 'Off' : m[0].toUpperCase() + m.slice(1));
+const fxRunning = () => !!(S && S.fx && S.fx.enabled && S.fx.mode && S.fx.mode !== 'none');
+
+// One line of plain English for what the engine is doing, used in the FX panel and, in
+// short form, in the pill at the top of every page.
+function fxSummary() {
+  if (!fxRunning()) return 'Off';
+  return `${fxLabel(S.fx.mode)} · ${S.fx.bpm} BPM · ${Math.round(S.fx.depth / 255 * 100)}% depth`;
+}
+
+function buildFx() {
+  const modes = (S && S.fxModes) || ['none'];
+  const pads = $('#fxPads');
+  const sig = modes.join(',');
+  if (pads.dataset.sig !== sig) {
+    pads.dataset.sig = sig;
+    pads.innerHTML = modes.map((m) =>
+      `<button class="fxpad${m === 'none' ? ' off' : ''}" data-fx="${m}">${fxLabel(m)}</button>`).join('');
+    $$('.fxpad', pads).forEach((b) => b.addEventListener('click', () => {
+      // Pressing the pad that is already lit turns the engine off, so a mode pad is its
+      // own escape hatch — you never have to find the Off pad to stop what you started.
+      const same = fxRunning() && S.fx.mode === b.dataset.fx;
+      post('api/fx', same ? { mode: 'none' } : { mode: b.dataset.fx }).then(pullState);
+    }));
+  }
+  // Follow: what drives the effect across the rig — the patch order, or the stage
+  // arrangement (left-right, top-bottom, out from the middle). Built from the server's
+  // list the same way the pads are.
+  const spat = $('#fxSpatial');
+  const spatial = (S && S.fxSpatial) || ['patch'];
+  const SPATIAL_LABEL = { patch: 'Patch order', 'x': 'Left → right', 'x-': 'Right → left', 'y': 'Top → bottom', 'y-': 'Bottom → top', radial: 'From centre', 'radial-': 'To centre' };
+  if (spat.dataset.sig !== spatial.join(',')) {
+    spat.dataset.sig = spatial.join(',');
+    spat.innerHTML = '<span class="muted">Follow</span>' + spatial.map((m) =>
+      `<button class="sq fxspat" data-spat="${m}">${SPATIAL_LABEL[m] || m}</button>`).join('');
+    $$('.fxspat', spat).forEach((b) => b.addEventListener('click', () =>
+      post('api/fx', { spatial: b.dataset.spat }).then(pullState)));
+  }
+  $$('.fxspat', spat).forEach((b) => b.classList.toggle('is-active', b.dataset.spat === (S.fx.spatial || 'patch')));
+  // FX skips: whole profiles the engine leaves alone — lasers keep lasing while the
+  // washes chase. Chips are membership of fx.exclude; lit red = skipped.
+  const exBox = $('#fxExclude');
+  const exProfiles = [...new Set(S.fixtures.map((f) => f.profile))];
+  const exclude = (S.fx && S.fx.exclude) || [];
+  const exSig = exProfiles.join(',') + '#' + exclude.join(',');
+  if (exBox.dataset.sig !== exSig) {
+    exBox.dataset.sig = exSig;
+    exBox.innerHTML = exProfiles.length
+      ? '<span class="muted">FX skips:</span>' + exProfiles.map((p) =>
+        `<button class="sq exchip skip${exclude.includes(p) ? ' is-active' : ''}" data-p="${esc(p)}"
+          title="Skip every ${esc(p)} fixture when an effect runs">${esc(p)}</button>`).join('')
+      : '';
+    $$('.exchip', exBox).forEach((b) => b.addEventListener('click', () => {
+      const ex = new Set((S.fx && S.fx.exclude) || []);
+      ex.has(b.dataset.p) ? ex.delete(b.dataset.p) : ex.add(b.dataset.p);
+      post('api/fx', { exclude: [...ex] }).then(pullState);
+    }));
+  }
+  const live = fxRunning() ? S.fx.mode : 'none';
+  $$('.fxpad', pads).forEach((b) => b.classList.toggle('is-active', b.dataset.fx === live));
+  $('#fxState').textContent = fxSummary();
+  $('#fxState').classList.toggle('running', fxRunning());
+  if (document.activeElement !== $('#fxDepth')) $('#fxDepth').value = S.fx.depth;
+  $('#fxDepthOut').textContent = Math.round(S.fx.depth / 255 * 100) + '%';
+  // Depth 0 is a working effect that cannot be seen. Say so rather than letting the pads
+  // look lit while the rig sits perfectly still.
+  $('#fxDepthOut').classList.toggle('bad', fxRunning() && S.fx.depth === 0);
+}
+
+/* =============== LFOs =============== */
+
+// This panel drives the NEW engine api: any change POSTs /api/lfos with the ENTIRE list
+// (full replace, max 16). Until the server ships it, state.lfos is undefined and the
+// panel says so instead of throwing — same rule as every panel that can outrun its backend.
+
+const LFO_WAVES = ['sine', 'tri', 'saw', 'square', 'random'];
+const LFO_BEATS = [0.25, 0.5, 1, 2, 4, 8, 16, 32];
+
+function rigProfiles() { return [...new Set(S.fixtures.map((f) => f.profile))]; }
+
+// Channels an LFO can ride: what the patched profiles actually have, dimmer always
+// offered first — the same rule selectedRoles() uses for the attribute editor.
+function lfoChannels() {
+  const out = ['dimmer'];
+  for (const p of rigProfiles()) {
+    for (const r of ((S.profiles[p] || {}).channels || [])) if (!out.includes(r)) out.push(r);
+  }
+  return out;
+}
+
+let lfoTimer = null;
+function postLfos(immediate) {
+  clearTimeout(lfoTimer);
+  const send = () => { lfoTimer = null; post('api/lfos', { lfos: S.lfos || [] }); };
+  // Sliders stream through the 150ms debounce; buttons and selects go at once. No
+  // pullState chained here — the 1.5s poll confirms, and an immediate re-read would
+  // race the very slider drag being debounced.
+  if (immediate) send(); else lfoTimer = setTimeout(send, 150);
+}
+
+function buildLfos() {
+  const box = $('#lfoList');
+  const lfos = Array.isArray(S.lfos) ? S.lfos : null;
+  $('#lfoAdd').disabled = !lfos || lfos.length >= 16;
+  $('#lfoAllOff').disabled = !lfos || !lfos.some((l) => l.enabled);
+  $('#lfoState').textContent = !lfos ? 'not on this server yet'
+    : lfos.length ? `${lfos.filter((l) => l.enabled).length} on · ${lfos.length}/16` : '';
+  if (!lfos) {
+    if (box.dataset.sig !== 'off') {
+      box.dataset.sig = 'off';
+      box.innerHTML = '<p class="fxhint muted">The desk is not publishing LFOs yet — restart the server on the new engine and this panel wakes up.</p>';
+    }
+    return;
+  }
+  const profiles = rigProfiles();
+  // Structure in the sig, values out of it: a wave or target change rebuilds, but a
+  // depth/spread drag only re-syncs — a rebuild under a finger kills the drag.
+  const sig = lfos.map((l) => [l.id, l.enabled, l.wave, l.channel, l.beats, l.bipolar,
+    ((l.targets || {}).profiles || []).join(',')].join('~')).join('|') + '#' + profiles.join(',');
+  if (box.dataset.sig !== sig) {
+    box.dataset.sig = sig;
+    const chans = lfoChannels();
+    box.innerHTML = lfos.map((l, i) => {
+      const tp = (l.targets || {}).profiles || [];
+      const beats = LFO_BEATS.includes(l.beats) ? LFO_BEATS : [...LFO_BEATS, l.beats].sort((a, b) => a - b);
+      const chanList = chans.includes(l.channel) ? chans : [...chans, l.channel];
+      return `<div class="lforow${l.enabled ? '' : ' idle'}" data-i="${i}">
+        <div class="lfo-top">
+          <button class="sq lfo-en${l.enabled ? ' on' : ''}" title="Toggle this LFO">${l.enabled ? 'On' : 'Off'}</button>
+          <input class="lfo-name" type="text" maxlength="24" value="${esc(l.name || '')}" title="Name">
+          <button class="sq danger lfo-del" title="Delete this LFO">✕</button>
+        </div>
+        <div class="lfo-row2">
+          <select class="lfo-wave" title="Waveform">${LFO_WAVES.map((w) =>
+            `<option value="${w}"${w === l.wave ? ' selected' : ''}>${w}</option>`).join('')}</select>
+          <select class="lfo-chan" title="Channel it rides">${chanList.map((c) =>
+            `<option value="${esc(c)}"${c === l.channel ? ' selected' : ''}>${ROLE_LABEL[c] || c}</option>`).join('')}</select>
+          <select class="lfo-beats" title="Cycle length, in beats of the BPM at the top">${beats.map((b) =>
+            `<option value="${b}"${b === l.beats ? ' selected' : ''}>${b}b</option>`).join('')}</select>
+        </div>
+        <label class="lfoslider"><span>Depth</span><input class="lfo-depth" type="range" min="0" max="255" value="${l.depth ?? 128}"><output>${Math.round((l.depth ?? 128) / 255 * 100)}%</output></label>
+        <label class="lfoslider"><span>Spread</span><input class="lfo-spread" type="range" min="0" max="1" step="0.01" value="${l.spread ?? 0.5}"><output>${Math.round((l.spread ?? 0.5) * 100)}%</output></label>
+        <label class="lfo-bi" title="Bipolar swings both sides of the current value — pan/tilt sway. Unipolar only lifts from it — dimmer waves."><input type="checkbox" class="lfo-bipolar"${l.bipolar ? ' checked' : ''}> bipolar</label>
+        <div class="lfo-targets">${profiles.map((p) =>
+          `<button class="sq exchip lfo-prof${tp.includes(p) ? ' is-active' : ''}" data-p="${esc(p)}" title="Toggle whether this LFO drives ${esc(p)} fixtures">${esc(p)}</button>`).join('')
+          || '<span class="muted">nothing patched yet</span>'}</div>
+      </div>`;
+    }).join('') || '<p class="fxhint muted">No LFOs — press + Add LFO below.</p>';
+
+    $$('.lforow', box).forEach((row) => {
+      // Resolve the LFO at EVENT time, not build time: the poll swaps S.lfos for fresh
+      // objects without a rebuild when nothing changed, and a listener holding the old
+      // array would mutate a copy the next POST never sends. The index stays valid
+      // because any change of order or length changes the sig and rebuilds these rows.
+      const at = () => (Array.isArray(S.lfos) ? S.lfos[+row.dataset.i] : null);
+      row.querySelector('.lfo-en').addEventListener('click', () => {
+        const l = at(); if (!l) return;
+        l.enabled = !l.enabled; postLfos(true); buildLfos();
+      });
+      row.querySelector('.lfo-del').addEventListener('click', () => {
+        if (!Array.isArray(S.lfos)) return;
+        S.lfos.splice(+row.dataset.i, 1); postLfos(true); buildLfos();
+      });
+      row.querySelector('.lfo-name').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.name = e.target.value.trim().slice(0, 24) || l.name;
+        e.target.value = l.name;
+        postLfos(true);
+      });
+      row.querySelector('.lfo-wave').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.wave = e.target.value; postLfos(true); buildLfos();
+      });
+      row.querySelector('.lfo-chan').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.channel = e.target.value; postLfos(true); buildLfos();
+      });
+      row.querySelector('.lfo-beats').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.beats = clamp(parseFloat(e.target.value) || 4, 0.25, 64);
+        postLfos(true); buildLfos();
+      });
+      row.querySelector('.lfo-bipolar').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.bipolar = e.target.checked; postLfos(true); buildLfos();
+      });
+      const depth = row.querySelector('.lfo-depth');
+      depth.addEventListener('input', () => {
+        const l = at(); if (!l) return;
+        l.depth = +depth.value;
+        depth.closest('.lfoslider').querySelector('output').textContent = Math.round(l.depth / 255 * 100) + '%';
+        postLfos();
+      });
+      const spread = row.querySelector('.lfo-spread');
+      spread.addEventListener('input', () => {
+        const l = at(); if (!l) return;
+        l.spread = +spread.value;
+        spread.closest('.lfoslider').querySelector('output').textContent = Math.round(l.spread * 100) + '%';
+        postLfos();
+      });
+      $$('.lfo-prof', row).forEach((b) => b.addEventListener('click', () => {
+        const l = at(); if (!l) return;
+        l.targets = l.targets || { profiles: [], ids: [] };
+        const tp = new Set(l.targets.profiles || []);
+        tp.has(b.dataset.p) ? tp.delete(b.dataset.p) : tp.add(b.dataset.p);
+        l.targets.profiles = [...tp];
+        postLfos(true); buildLfos();
+      }));
+    });
+  } else {
+    // Sync values from the poll without rebuilding — never under a hand mid-drag.
+    $$('.lforow', box).forEach((row) => {
+      const l = lfos[+row.dataset.i];
+      if (!l) return;
+      const depth = row.querySelector('.lfo-depth'), spread = row.querySelector('.lfo-spread'), name = row.querySelector('.lfo-name');
+      if (document.activeElement !== depth && +depth.value !== l.depth) {
+        depth.value = l.depth;
+        depth.closest('.lfoslider').querySelector('output').textContent = Math.round(l.depth / 255 * 100) + '%';
+      }
+      if (document.activeElement !== spread && Math.abs(+spread.value - l.spread) > 0.005) {
+        spread.value = l.spread;
+        spread.closest('.lfoslider').querySelector('output').textContent = Math.round(l.spread * 100) + '%';
+      }
+      if (document.activeElement !== name && name.value !== (l.name || '')) name.value = l.name || '';
+    });
+  }
+}
+
+$('#lfoAdd').addEventListener('click', () => {
+  if (!S || !Array.isArray(S.lfos) || S.lfos.length >= 16) return;
+  // The defaults are a look that reads immediately: a slow dimmer wave across the whole
+  // rig, half depth, offset half a cycle across the fixtures. Beams wanting pan/tilt
+  // sway switch the channel and tick bipolar.
+  S.lfos.push({
+    id: 'lfo-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    name: 'LFO ' + (S.lfos.length + 1),
+    enabled: true, wave: 'sine', channel: 'dimmer', beats: 4,
+    depth: 128, spread: 0.5, bipolar: false,
+    targets: { profiles: rigProfiles(), ids: [] },
+  });
+  postLfos(true);
+  buildLfos();
+});
+
+// The kill switch: every LFO off in one press, one full-list POST — the per-row toggles
+// stay for surgery, this is for "the rig is swaying and the song is over". Shared by
+// the rail header button and the Touch strip's Master tab.
+function allLfosOff() {
+  if (!S || !Array.isArray(S.lfos)) return;
+  let n = 0;
+  for (const l of S.lfos) if (l.enabled) { l.enabled = false; n++; }
+  if (!n) return;
+  postLfos(true);
+  buildLfos();
+  say(`all LFOs off — ${n} stopped`);
+}
+$('#lfoAllOff').addEventListener('click', (e) => {
+  e.stopPropagation();   // the rail header folds on click; the kill button must not fold it
+  allLfosOff();
+});
+
+/* =============== audio-reactive =============== */
+
+// The microphone lives in THIS browser: getUserMedia + an AnalyserNode, levels computed
+// ~20×/s and streamed to the desk as POST /api/audio. The meters are painted straight
+// from the analyser — the state poll is far too slow to draw music.
+
+const mic = {
+  stream: null, ctx: null, analyser: null, timer: null, freq: null,
+  lowHist: [], lastBeat: 0, beatGaps: [], bpm: 120, beatFlash: 0,
+};
+
+// Fire-and-forget: no await, and deliberately NOT post() — post() stamps touchedAt, and
+// at 20Hz the state poll would consider the UI permanently busy and stop applying the
+// server's answers to anything.
+function firePost(url, body) {
+  try {
+    fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
+  } catch (e) { /* a dropped level packet costs nothing */ }
+}
+
+async function startMic() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    say('this browser will not open a mic here — the mic needs localhost or HTTPS, so a phone on http://LAN-IP is refused', true);
+    return;
+  }
+  try {
+    mic.stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    });
+  } catch (e) {
+    const insecure = location.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(location.hostname);
+    say(insecure
+      ? 'mic refused — browsers only allow it on localhost or HTTPS, not on http://' + location.hostname + '. Enable it on the machine running the desk instead.'
+      : 'mic refused — allow microphone access for this page in the browser and press the button again', true);
+    return;
+  }
+  mic.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (mic.ctx.state === 'suspended') mic.ctx.resume();
+  mic.analyser = mic.ctx.createAnalyser();
+  mic.analyser.fftSize = 1024;
+  mic.analyser.smoothingTimeConstant = 0.5;
+  mic.ctx.createMediaStreamSource(mic.stream).connect(mic.analyser);
+  mic.freq = new Uint8Array(mic.analyser.frequencyBinCount);
+  mic.timer = setInterval(micTick, 50);              // ~20Hz, matching the POST rate
+  $('#micBtn').textContent = 'Mic off';
+  $('#micBtn').classList.add('accent');
+}
+
+function stopMic() {
+  clearInterval(mic.timer); mic.timer = null;
+  if (mic.stream) mic.stream.getTracks().forEach((t) => t.stop());
+  if (mic.ctx) { try { mic.ctx.close(); } catch (e) { /* already closed */ } }
+  mic.stream = null; mic.ctx = null; mic.analyser = null;
+  mic.lowHist = []; mic.beatGaps = []; mic.lastBeat = 0; mic.beatFlash = 0;
+  $('#micBtn').textContent = 'Enable mic';
+  $('#micBtn').classList.remove('accent');
+  $('#beatBpm').textContent = '';
+  paintAudioMeters(0, 0, 0, 0);
+}
+
+function micTick() {
+  if (!mic.analyser) return;
+  mic.analyser.getByteFrequencyData(mic.freq);
+  const hz = mic.ctx.sampleRate / 2 / mic.freq.length;   // Hz per bin
+  let sum = 0, low = 0, mid = 0, high = 0, nl = 0, nm = 0, nh = 0;
+  for (let i = 0; i < mic.freq.length; i++) {
+    const v = mic.freq[i] / 255, f = (i + 0.5) * hz;
+    sum += v;
+    if (f < 150) { low += v; nl++; }
+    else if (f <= 2000) { mid += v; nm++; }
+    else { high += v; nh++; }
+  }
+  const level = sum / mic.freq.length;
+  low = nl ? low / nl : 0; mid = nm ? mid / nm : 0; high = nh ? high / nh : 0;
+
+  // Beat: low-band energy clear of its own rolling average (~2s of history), with a
+  // 240ms refractory so one kick cannot count twice.
+  mic.lowHist.push(low);
+  if (mic.lowHist.length > 40) mic.lowHist.shift();
+  const avg = mic.lowHist.reduce((s, v) => s + v, 0) / mic.lowHist.length;
+  const now = Date.now();
+  let beat = false;
+  if (low > avg * 1.35 && low > 0.05 && now - mic.lastBeat > 240) {
+    beat = true;
+    const gap = now - mic.lastBeat;
+    if (mic.lastBeat && gap < 2000) {                  // a gap after silence is not a tempo
+      mic.beatGaps.push(gap);
+      if (mic.beatGaps.length > 8) mic.beatGaps.shift();
+      const sorted = [...mic.beatGaps].sort((a, b) => a - b);
+      mic.bpm = clamp(Math.round(60000 / sorted[Math.floor(sorted.length / 2)]), 60, 200);
+    }
+    mic.lastBeat = now;
+    mic.beatFlash = now;
+  }
+  firePost('api/audio', { level, low, mid, high, beat, bpm: mic.bpm });
+  paintAudioMeters(level, low, mid, high);
+}
+
+function paintAudioMeters(level, low, mid, high) {
+  const set = (id, v) => {
+    const el = $('#' + id + ' i');
+    if (el) el.style.width = Math.round(clamp(v, 0, 1) * 100) + '%';
+  };
+  set('amLevel', level); set('amLow', low); set('amMid', mid); set('amHigh', high);
+  set('tAmLevel', level);   // the Touch strip's meter follows the same analyser tick
+  const dot = $('#beatDot');
+  if (dot) dot.classList.toggle('hit', Date.now() - mic.beatFlash < 140);
+  const tdot = $('#tBeatDot');
+  if (tdot) tdot.classList.toggle('hit', Date.now() - mic.beatFlash < 140);
+  if (mic.timer && mic.beatGaps.length) $('#beatBpm').textContent = '~' + mic.bpm + ' BPM heard';
+}
+
+// The mapping half talks to the server: how the levels drive the rig.
+let audCfgTimer = null;
+function postAudioCfg(patch, debounce) {
+  const cur = S.audioCfg || { enabled: false, mode: 'level', amount: 255, release: 300 };
+  // useBeats defaults TRUE when the field is missing (the backend may predate it) —
+  // `!== false` keeps that default while still carrying an explicit false forward, so a
+  // patch to any other field never silently flips the beat source back on.
+  S.audioCfg = {
+    enabled: cur.enabled, mode: cur.mode, amount: cur.amount, release: cur.release,
+    useBeats: cur.useBeats !== false, ...patch,
+  };
+  clearTimeout(audCfgTimer);
+  const send = () => { audCfgTimer = null; post('api/audiocfg', S.audioCfg); };
+  if (debounce) audCfgTimer = setTimeout(send, 150); else send();
+}
+
+function buildAudio() {
+  const cfg = S.audioCfg;
+  // No config in the state yet: the panel renders disabled instead of throwing. The mic
+  // button stays live — capture is purely client-side and harmless to start early.
+  ['audEnable', 'audMode', 'audAmount', 'audRelease', 'audUseBeats'].forEach((id) => { $('#' + id).disabled = !cfg; });
+  if (cfg) {
+    if (document.activeElement !== $('#audEnable')) $('#audEnable').checked = !!cfg.enabled;
+    if (document.activeElement !== $('#audMode')) $('#audMode').value = cfg.mode || 'level';
+    if (document.activeElement !== $('#audAmount')) $('#audAmount').value = cfg.amount ?? 255;
+    if (document.activeElement !== $('#audRelease')) $('#audRelease').value = cfg.release ?? 300;
+    // Missing on an older backend = ON, the engine's default — the checkbox must not
+    // claim OFF for a server that has never heard of the field.
+    if (document.activeElement !== $('#audUseBeats')) $('#audUseBeats').checked = cfg.useBeats !== false;
+  }
+  const useBeats = !cfg || cfg.useBeats !== false;
+  $('#audUseBeatsHint').textContent = useBeats
+    ? 'ON — beat-pump follows beats the mic hears'
+    : 'OFF — beat-pump runs on the steady BPM clock';
+  $('#audAmountOut').textContent = Math.round(+$('#audAmount').value / 255 * 100) + '%';
+  $('#audReleaseOut').textContent = $('#audRelease').value + 'ms';
+  // "Reacting" with nothing arriving is a rig that sits still for no visible reason —
+  // the exact silent-failure shape this app keeps having to name out loud.
+  const fresh = !!(S.audio && S.audio.fresh);
+  $('#audioNoSig').hidden = !(cfg && cfg.enabled && !fresh);
+  $('#audioState').textContent = !cfg ? 'not on this server yet'
+    : cfg.enabled ? (fresh ? 'reacting' : 'no signal')
+    : mic.timer ? 'mic live, not reacting' : 'off';
+  $('#audioState').classList.toggle('running', !!(cfg && cfg.enabled && fresh));
+}
+
+$('#micBtn').addEventListener('click', () => { mic.timer ? stopMic() : startMic(); });
+$('#audEnable').addEventListener('change', (e) => { if (S) postAudioCfg({ enabled: e.target.checked }); });
+$('#audUseBeats').addEventListener('change', (e) => { if (S) postAudioCfg({ useBeats: e.target.checked }); });
+$('#audMode').addEventListener('change', (e) => { if (S) postAudioCfg({ mode: e.target.value }); });
+$('#audAmount').addEventListener('input', (e) => {
+  $('#audAmountOut').textContent = Math.round(+e.target.value / 255 * 100) + '%';
+  if (S) postAudioCfg({ amount: +e.target.value }, true);
+});
+$('#audRelease').addEventListener('input', (e) => {
+  $('#audReleaseOut').textContent = e.target.value + 'ms';
+  if (S) postAudioCfg({ release: +e.target.value }, true);
+});
+
+function buildOutput() {
+  const n = S.status.nodes.length;
+  const serial = S.output.driver === 'enttec';
+  const ser = S.status.serial;
+  // Unicast with no valid target falls back to broadcast on the wire (targetsFor() in
+  // server.js), so saying plain "unicast" here would describe a mode the packets are not
+  // actually using — a typo'd address quietly turned the desk into a broadcaster while
+  // both status lines kept claiming unicast.
+  const unicastEmpty = S.output.mode === 'unicast' && !S.output.targets.length;
+  const on = !!S.output.enabled;
+  // The switch says which state it is IN, not which state pressing it would reach: an
+  // operator glancing at this in the dark is asking "is the rig live?", not "what will
+  // this button do?". The line beside it says the consequence in words.
+  const btn = $('#outEnable');
+  btn.textContent = on ? 'Output is ON' : 'Output is OFF';
+  btn.classList.toggle('on', on);
+  $('#outEnableWhat').textContent = on
+    ? 'frames are leaving this machine'
+    : 'nothing leaves this machine — the desk runs, the rig stays dark';
+  $('#outSummary').textContent = (on ? '' : 'OFF · ') + (serial
+    ? `${S.output.serialPort}${ser && ser.connected ? '' : ' — not open'}`
+    : unicastEmpty ? 'unicast with no target — sending broadcast'
+    : `${S.output.mode}${S.output.mode === 'unicast' ? ' → ' + S.output.targets.join(', ') : ''} · ${n} node${n === 1 ? '' : 's'}`);
+  // Which pane is showing must ALWAYS follow the server, guard or no guard. This used to
+  // sit below the focus check, and because clicking a driver radio leaves that radio
+  // focused, every later poll bailed out before the swap: the show moved onto the serial
+  // port and the panel carried on showing Broadcast/Unicast until you clicked elsewhere.
+  // The most consequential switch in the app read as broken at the moment of use.
+  $$('input[name=driver]').forEach((r) => { r.checked = r.value === (S.output.driver || 'artnet'); });
+  $('#artnetOut').hidden = serial;
+  $('#serialOut').hidden = !serial;
+  buildSerial();
+  // The guard is only here to stop a poll overwriting an address mid-type, so it protects
+  // the text fields and nothing else.
+  const typing = document.activeElement && document.activeElement.matches
+    && document.activeElement.matches('input[type=text], input[type=number]');
+  if (typing && document.activeElement.closest('.outbox')) return;
+  $$('input[name=mode]').forEach((r) => { r.checked = r.value === S.output.mode; });
+  $('#targets').value = S.output.targets.join(', ');
+  $('#refreshHz').value = S.output.refreshHz || 40;
+  const nodes = S.status.nodes;
+  const sending = new Set(S.output.mode === 'unicast' ? S.output.targets : []);
+  // Rebuilt only when something about the list changed. Every poll used to replace the
+  // rows, so a "Send here" pressed across a poll boundary landed on a button that no
+  // longer existed. The age text is quantised to what is shown, not the millisecond.
+  const ageText = (n) => n.ageMs == null ? 'never' : n.ageMs < 1500 ? 'now' : n.ageMs < 60000 ? Math.round(n.ageMs / 1000) : 'm' + Math.round(n.ageMs / 60000);
+  const nodeSig = nodes.map((n) => [n.ip, n.name, n.shortName, n.manual, sending.has(n.ip), n.ageMs != null && n.ageMs > 20000, ageText(n)].join('|')).join(';');
+  const ifaceSig = S.status.interfaces.map((i) => i.iface + i.address + i.netmask).join() + S.status.broadcast.join();
+  if ($('#ifaces').dataset.sig !== ifaceSig) {
+    $('#ifaces').dataset.sig = ifaceSig;
+    $('#ifaces').innerHTML = S.status.interfaces.map((i) => `${i.iface} — ${i.address}/${i.netmask}`).join('<br>')
+      + '<br>broadcast: ' + S.status.broadcast.join(', ');
+  }
+  $('#err').textContent = S.status.lastError
+    ? (S.output.driver === 'enttec' ? '' : 'socket: ') + S.status.lastError
+    : '';
+  buildPhone();
+  if ($('#nodes').dataset.sig === nodeSig) return;
+  $('#nodes').dataset.sig = nodeSig;
+  $('#nodes').innerHTML = nodes.length
+    ? nodes.map((n) => {
+      // A node that answered an hour ago and has since been unplugged is worse than an
+      // empty list, so say how long ago it last spoke. A hand-added device has nothing to
+      // be stale about until it answers: it is in the list because the address was typed,
+      // and "no reply yet" is a normal resting state for gear that never speaks at all.
+      const age = n.ageMs || 0;
+      const heard = n.ageMs != null;
+      const stale = heard && age > 20000;
+      const ago = age < 1500 ? 'just now' : age < 60000 ? Math.round(age / 1000) + 's ago' : Math.round(age / 60000) + 'm ago';
+      const when = !heard ? 'added by hand — no reply yet' : stale ? 'last seen ' + ago : ago;
+      const live = sending.has(n.ip);
+      return `<div class="node${stale ? ' stale' : ''}"><span class="ip">${n.ip}</span>
+        <span>${n.name || n.shortName || '—'}</span>
+        <span class="muted">${live ? 'sending · ' : ''}${when}</span>
+        <button class="sq use" data-ip="${n.ip}">${live ? 'Sending' : 'Send here'}</button>
+        ${n.manual ? `<button class="sq drop" data-ip="${n.ip}" title="remove this device">✕</button>` : ''}</div>`;
+    }).join('')
+    : `<div class="node muted">No device yet. Nothing has answered an ArtPoll — many nodes never
+       reply, and Art-Net gear often ships on a 2.x.x.x address the broadcast cannot reach.
+       Type the address printed on the device above and press Add: the show goes straight to it,
+       no discovery needed.</div>`;
+  // $$ (querySelectorAll), NOT $ — $ returns one element/null, and .forEach on that threw
+  // a TypeError that killed every panel built after buildOutput in renderAll's chain.
+  $$('#nodes .use').forEach((b) => b.addEventListener('click', () =>
+    post('api/output', { mode: 'unicast', targets: [b.dataset.ip] }).then(pullState)));
+  $$('#nodes .drop').forEach((b) => b.addEventListener('click', () =>
+    post('api/nodes/remove', { address: b.dataset.ip }).then(pullState)));
+}
+
+// The desk's address for a phone, computed live from the server's interface list — a
+// hotspot deals the laptop a fresh IP, so a printed URL goes stale the moment the network
+// changes. The QR is the point: nobody types an IP on a phone in the dark. It is a fixed
+// version-3 code that self-checks its geometry and refuses to render rather than show a
+// square no camera reads; past its 42-byte capacity the URL simply shows as text.
+function buildPhone() {
+  const box = $('#phoneList');
+  const port = location.port || 80;
+  // Wherever this desk is mounted — '/' alone, '/light/' inside di.iiii.
+  const base = location.pathname.replace(/[^/]*$/, '');
+  const ifs = (S.status.interfaces || []).filter((i) => i.address && i.address !== '127.0.0.1');
+  const sig = ifs.map((i) => i.address).join(',') + ':' + port;
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  if (!ifs.length) {
+    box.innerHTML = '<span class="muted">No network — join a wifi or a hotspot and this fills in.</span>';
+    $('#phoneQr').innerHTML = '';
+    return;
+  }
+  box.innerHTML = ifs.map((i) =>
+    `<div>http://${i.address}:${port}${base}#touch <span class="muted">· ${esc(i.iface)}</span></div>`).join('')
+    + '<div class="muted">Same wifi or hotspot as this machine, then scan:</div>';
+  const url = `http://${ifs[0].address}:${port}${base}#touch`;
+  try {
+    const svg = window.qrSvg && window.qrSvg(url, 148);
+    $('#phoneQr').innerHTML = svg || '';
+  } catch (e) {
+    // A broken QR renders as nothing, with the URL text above still doing the job.
+    $('#phoneQr').innerHTML = '';
+  }
+}
+
+// The serial widget gives no reply to read, so everything shown here is inferred: whether
+// the port opened, and whether frames are still leaving it. A count that has stopped
+// moving is the only symptom a stalled USB link has, so it is shown rather than hidden.
+function buildSerial() {
+  const ports = S.status.serialPorts || [];
+  const sel = $('#serialPort');
+  const want = S.output.serialPort;
+  const list = ports.includes(want) ? ports : [want, ...ports];
+  const sig = list.join(',') + '|' + want;
+  if (sel.dataset.sig !== sig) {
+    sel.dataset.sig = sig;
+    sel.innerHTML = list.map((p) =>
+      `<option value="${p}"${p === want ? ' selected' : ''}>${p}${ports.includes(p) ? '' : ' — not present'}</option>`).join('')
+      || '<option>no serial ports found</option>';
+  }
+  const ser = S.status.serial;
+  const box = $('#serialStat');
+  if (!ser) { box.innerHTML = '<span class="muted">Not selected.</span>'; return; }
+  // A patch this widget physically cannot carry. Said first, and said whatever else is
+  // going on, because the symptom is fixtures that are simply dark for no visible reason.
+  const unreachable = (ser.unreachable || []).length
+    ? `<div class="bad">Universe ${ser.unreachable.map((u) => u + 1).join(', ')} ${ser.unreachable.length === 1 ? 'is' : 'are'} patched but cannot leave this widget — it has one DMX output, universe 1. Those fixtures will not light.</div>`
+    : '';
+  if (!ser.connected) {
+    box.innerHTML = unreachable + `<span class="bad">Port not open.</span> <span class="muted">${ser.lastError || ''}</span>`;
+    return;
+  }
+  const age = ser.ageMs;
+  const idle = age == null || age > 3000;
+  // The port can be open and transmitting at a speed nobody chose. That is not an error,
+  // but it is the one thing that would make a working desk feel sluggish for no reason
+  // visible anywhere else, so it gets said out loud rather than hidden behind a baud number.
+  if (ser.baudUnset) {
+    box.innerHTML = unreachable + `<span class="warn">Open, speed not set</span> <span class="muted">${ser.lastError || ''}</span>`;
+    return;
+  }
+  box.innerHTML = unreachable + `<span class="${idle ? 'muted' : 'good'}">Open at ${ser.baud} baud</span>
+    <span class="muted">· ${ser.packetsSent} frame${ser.packetsSent === 1 ? '' : 's'} sent`
+    + (age == null ? ' · nothing sent yet' : ` · last ${age < 1200 ? 'just now' : Math.round(age / 1000) + 's ago'}`)
+    + (ser.writeAvgMs != null ? ` · writes ${ser.writeAvgMs}ms` : '')
+    + (ser.dropped ? ` · ${ser.dropped} skipped, the link cannot keep up` : '') + '</span>';
+}
+
+/* =============== the stack: layers, looks, steps =============== */
+/* A look is a list of steps; a layer is a look under a finger. Scene, palette, chase and
+   wave stopped being four objects on the server, so they are one editor here: the step
+   list IS the difference between them, and the words under it say which one you have
+   built. The layer stack and the library share a column because a fader and the thing it
+   is playing are one thought — this desk already has Scenes and Chase on opposite sides
+   of the page, and that split is exactly why nobody can tell what the chase is playing. */
+
+// The mask vocabulary. Fetched from the server once on boot so this file cannot drift
+// from looks.js; the literal is only the shape to render before the first answer lands.
+let LOOK_KINDS = ['all', 'intensity', 'colour', 'position', 'beam'];
+const KIND_LABEL = {
+  all: 'everything', intensity: 'intensity', colour: 'colour',
+  position: 'position', beam: 'beam',
+};
+// What the phase spread reads. Patch is the desk's old behaviour; the rest turn a wave
+// into a shape in the room, the way the stage view already lets the old FX engine's
+// chase and radar modes work — brought into looks so it can be layered and coloured.
+let LOOK_SPATIAL = ['patch', 'x', 'x-', 'y', 'y-', 'radial', 'radial-', 'angle', 'angle-'];
+const SPATIAL_LABEL = {
+  patch: 'patch order', x: 'left → right', 'x-': 'right → left',
+  y: 'front → back', 'y-': 'back → front',
+  radial: 'centre → out', 'radial-': 'out → centre',
+  angle: 'round, clockwise', 'angle-': 'round, anti-clockwise',
+};
+const MERGE_LABEL = {
+  htp: 'HTP — adds light',
+  ltp: 'LTP — takes over',
+};
+
+let selLayer = null;        // the layer a look click assigns to, and whose menu is open
+let selLook = null;         // the look shown in the step editor
+const layerOpen = new Set();  // layer ids whose mask/merge/rate row is unfolded
+let renameLook = null;      // look id whose inline rename field is showing
+
+const looksOf = () => (Array.isArray(S && S.looks) ? S.looks : []);
+const layersOf = () => (Array.isArray(S && S.layers) ? S.layers : []);
+const lookById = (id) => looksOf().find((l) => l.id === id) || null;
+const layerById = (id) => layersOf().find((l) => l.id === id) || null;
+const newId = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+// The same mask rule as looks.js kindAllows(), read through the server's roleKinds so it
+// cannot fall behind the engine — the identical reason kindOf() exists.
+function lookAllows(kind, role) {
+  if (!kind || kind === 'all') return true;
+  const k = kindOf(role);
+  if (kind === 'intensity') return k === 'level';
+  if (kind === 'colour') return k === 'emitter';
+  if (kind === 'position') return k === 'position' || role === 'panFine' || role === 'tiltFine';
+  if (kind === 'beam') return k === 'control' || k === 'fine';
+  return true;
+}
+
+// A layer is contributing when it is on, points at a look that exists, and is off zero.
+// This is the whole reason the pane exists: a stack you cannot read is a stack you are
+// afraid of, and "which of these is actually in the room" is the only live question.
+function layerLive(l) {
+  return !!(l && l.on && l.lookId && l.level > 0 && lookById(l.lookId));
+}
+
+// Dragging a fader posts api/layer and nothing else. Same leading-edge shape as
+// queueFixture and queueRaw: the FIRST move goes out at once so the rig answers as the
+// finger starts, and only the rest of the burst is coalesced.
+const layerPending = new Map();
+let layerTimer = null;
+let lastLayerFlush = 0;
+function queueLayer(id, patch) {
+  const cur = layerPending.get(id) || { id };
+  Object.assign(cur, patch);
+  layerPending.set(id, cur);
+  touchedAt = Date.now();
+  const flushLayers = () => {
+    layerTimer = null;
+    lastLayerFlush = Date.now();
+    const jobs = [...layerPending.values()];
+    layerPending.clear();
+    jobs.forEach((j) => post('api/layer', j));
+  };
+  if (!layerTimer) {
+    if (Date.now() - lastLayerFlush > 60) flushLayers();
+    else layerTimer = setTimeout(flushLayers, 25);
+  }
+}
+
+// Write one look back. The library route is replace-whole; this one is add-or-replace,
+// because a person editing one look must not have to send the other five hundred.
+async function putLook(look, note) {
+  const r = await post('api/looks/add', { look });
+  if (r && r.error) { say(r.error, true); return null; }
+  const at = looksOf().findIndex((l) => l.id === look.id);
+  if (at >= 0) S.looks[at] = r.look; else if (S.looks) S.looks.push(r.look);
+  if (note) say(note);
+  buildLooks(); buildSteps(); buildLayers();
+  return r.look;
+}
+
+/* ---- the layer stack ---- */
+
+// The count in the pane head. Painted from the drag as well as from the poll: a fader
+// that has visibly reached the rig while the head still reads "0 contributing" is the
+// status line contradicting the room, which is the one thing this pane exists to stop.
+function paintLayerState() {
+  const layers = layersOf();
+  $('#layerState').textContent = layers.length
+    ? `${layers.filter(layerLive).length} contributing · ${layers.length}/64`
+    : '';
+}
+
+function buildLayers() {
+  const box = $('#layerList');
+  const layers = layersOf();
+  const looks = looksOf();
+  $('#layerAdd').disabled = layers.length >= 64;
+  paintLayerState();
+
+  // Top of the stack at the top of the list: priority is the render order, and the pane
+  // must read the way the light does. Ties keep the order the operator put them in.
+  const shown = layers.map((l, i) => ({ l, i }))
+    .sort((a, b) => (b.l.priority - a.l.priority) || (b.i - a.i))
+    .map((x) => x.l);
+
+  // Structure in the signature, dragged values out of it — a level or a name change must
+  // never rebuild these rows, because a rebuild under a finger kills the drag.
+  const sig = shown.map((l) => [l.id, l.on, l.lookId, l.mask, l.merge, l.rate, l.priority].join('~')).join('|')
+    + '#' + looks.map((l) => l.id + ':' + l.name).join(',')
+    + '#' + selLayer + '#' + [...layerOpen].sort().join(',');
+  if (box.dataset.sig !== sig) {
+    box.dataset.sig = sig;
+    box.innerHTML = shown.map((l) => {
+      const opts = ['<option value="">— empty —</option>'].concat(looks.map((k) =>
+        `<option value="${esc(k.id)}"${k.id === l.lookId ? ' selected' : ''}>${esc(k.name)}</option>`)).join('');
+      const open = layerOpen.has(l.id);
+      return `<div class="layerrow${layerLive(l) ? '' : ' idle'}${l.id === selLayer ? ' is-sel' : ''}" data-id="${esc(l.id)}">
+        <div class="lay-top">
+          <button class="sq lay-on${l.on ? ' on' : ''}" title="Take this layer out of the stack without losing its fader">${l.on ? 'On' : 'Off'}</button>
+          <input class="lay-name" type="text" maxlength="60" value="${esc(l.name)}" title="Name this layer">
+          <span class="lay-live" title="lit when this layer is actually reaching the rig"></span>
+          <button class="sq lay-more" title="Mask, merge, rate and remove">⋯</button>
+        </div>
+        <select class="lay-look" title="Which look this layer plays">${opts}</select>
+        <label class="lfoslider"><span>Level</span><input class="lay-level" type="range" min="0" max="100" value="${Math.round(l.level * 100)}"><output>${Math.round(l.level * 100)}%</output></label>
+        <div class="lay-adv"${open ? '' : ' hidden'}>
+          <label title="Which attributes this layer is allowed to set, whatever its look holds">Mask
+            <select class="lay-mask">${LOOK_KINDS.map((k) =>
+              `<option value="${k}"${k === l.mask ? ' selected' : ''}>${KIND_LABEL[k] || k}</option>`).join('')}</select></label>
+          <label title="HTP only ever adds light — a dimmer effect that takes light away needs LTP">Merge
+            <select class="lay-merge">${Object.keys(MERGE_LABEL).map((m) =>
+              `<option value="${m}"${m === l.merge ? ' selected' : ''}>${MERGE_LABEL[m]}</option>`).join('')}</select></label>
+          <label title="Speed against the desk clock — 0.5 runs this layer at half time">Rate
+            <input class="lay-rate" type="number" min="0.01" max="64" step="0.25" value="${l.rate}"></label>
+          <label title="Where this layer sits in the stack — higher wins">Priority
+            <input class="lay-prio" type="number" min="0" max="999" step="1" value="${l.priority}"></label>
+          <button class="sq danger lay-del" title="Remove this layer from the stack">Remove layer</button>
+        </div>
+      </div>`;
+    }).join('') || '<p class="fxhint muted">No layers. Press + Layer, or use a starter below — a starter builds the look and the layer together.</p>';
+
+    $$('.layerrow', box).forEach((row) => {
+      // Resolve by id at EVENT time: the poll swaps S.layers for fresh objects without a
+      // rebuild whenever nothing structural moved, and a listener holding the old object
+      // would edit a copy the next POST never sends.
+      const id = row.dataset.id;
+      const at = () => layerById(id);
+      row.addEventListener('pointerdown', () => { selLayer = id; buildLayers(); buildLooks(); }, true);
+      row.querySelector('.lay-on').addEventListener('click', () => {
+        const l = at(); if (!l) return;
+        l.on = !l.on; queueLayer(id, { on: l.on }); buildLayers();
+      });
+      row.querySelector('.lay-more').addEventListener('click', () => {
+        layerOpen.has(id) ? layerOpen.delete(id) : layerOpen.add(id);
+        buildLayers();
+      });
+      row.querySelector('.lay-name').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.name = e.target.value.trim().slice(0, 60) || l.name;
+        e.target.value = l.name;
+        queueLayer(id, { name: l.name });
+      });
+      row.querySelector('.lay-look').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.lookId = e.target.value || null;
+        queueLayer(id, { lookId: l.lookId });
+        buildLayers(); buildSteps();
+      });
+      const lev = row.querySelector('.lay-level');
+      lev.addEventListener('input', () => {
+        const l = at(); if (!l) return;
+        l.level = +lev.value / 100;
+        lev.closest('.lfoslider').querySelector('output').textContent = Math.round(l.level * 100) + '%';
+        row.classList.toggle('idle', !layerLive(l));
+        row.querySelector('.lay-live').classList.toggle('on', layerLive(l));
+        paintLayerState();
+        queueLayer(id, { level: l.level });
+      });
+      row.querySelector('.lay-mask').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.mask = e.target.value; queueLayer(id, { mask: l.mask }); buildLayers();
+      });
+      row.querySelector('.lay-merge').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.merge = e.target.value; queueLayer(id, { merge: l.merge }); buildLayers();
+      });
+      row.querySelector('.lay-rate').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.rate = clamp(parseFloat(e.target.value) || 1, 0.01, 64);
+        e.target.value = l.rate;
+        queueLayer(id, { rate: l.rate }); buildLayers();
+      });
+      row.querySelector('.lay-prio').addEventListener('change', (e) => {
+        const l = at(); if (!l) return;
+        l.priority = clamp(Math.round(+e.target.value) || 0, 0, 999);
+        e.target.value = l.priority;
+        queueLayer(id, { priority: l.priority }); buildLayers();
+      });
+      row.querySelector('.lay-del').addEventListener('click', (e) => armThen(e.currentTarget, 'Sure? Remove', async () => {
+        const r = await post('api/layers/remove', { id });
+        if (r && r.error) return say(r.error, true);
+        if (selLayer === id) selLayer = null;
+        layerOpen.delete(id);
+        S.layers = layersOf().filter((l) => l.id !== id);
+        buildLayers();
+      }));
+    });
+  } else {
+    // Values from the poll without a rebuild — never under a hand mid-drag.
+    $$('.layerrow', box).forEach((row) => {
+      const l = layerById(row.dataset.id);
+      if (!l) return;
+      const lev = row.querySelector('.lay-level');
+      const name = row.querySelector('.lay-name');
+      if (document.activeElement !== lev && Math.round(l.level * 100) !== +lev.value) {
+        lev.value = Math.round(l.level * 100);
+        lev.closest('.lfoslider').querySelector('output').textContent = lev.value + '%';
+      }
+      if (document.activeElement !== name && name.value !== l.name) name.value = l.name;
+      row.classList.toggle('idle', !layerLive(l));
+      row.querySelector('.lay-live').classList.toggle('on', layerLive(l));
+    });
+  }
+}
+
+$('#layerAdd').addEventListener('click', async () => {
+  if (!S) return;
+  const r = await post('api/layers/add', { name: `Layer ${layersOf().length + 1}` });
+  if (r && r.error) return say(r.error, true);
+  if (S.layers) S.layers.push(r.layer);
+  selLayer = r.layer.id;
+  buildLayers(); buildLooks();
+  say('layer added at the top of the stack, fader at 0 — nothing changed in the room');
+});
+
+/* ---- the look library ---- */
+
+function buildLooks() {
+  const box = $('#lookList');
+  const looks = looksOf();
+  const used = new Set(layersOf().map((l) => l.lookId).filter(Boolean));
+  $('#lookState').textContent = looks.length ? `${looks.length} look${looks.length === 1 ? '' : 's'}` : '';
+
+  const sig = looks.map((l) => [l.id, l.name, l.kind, l.steps.length, used.has(l.id)].join('~')).join('|')
+    + '#' + selLook + '#' + renameLook + '#' + selLayer;
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+
+  box.innerHTML = looks.map((l) => {
+    const n = l.steps.length;
+    const words = `${KIND_LABEL[l.kind] || l.kind} · ${n} step${n === 1 ? '' : 's'}${used.has(l.id) ? ' · on a layer' : ''}`;
+    return `<div class="lookrow${l.id === selLook ? ' is-sel' : ''}" data-id="${esc(l.id)}">
+      ${l.id === renameLook
+        ? `<input class="lk-name" type="text" maxlength="60" value="${esc(l.name)}" title="Enter to rename, Escape to leave it">`
+        : `<button class="lk-pick" title="Open in the step editor${selLayer ? ' and put it on the selected layer' : ' — select a layer first to assign it'}">
+             <b>${esc(l.name)}</b><span class="muted">${words}</span>
+           </button>
+           <button class="sq lk-ren" title="Rename">✎</button>
+           <button class="sq danger lk-del" title="Delete this look">✕</button>`}
+    </div>`;
+  }).join('') || '<p class="fxhint muted">No looks yet. Record the stage, or press a starter above.</p>';
+
+  $$('.lookrow', box).forEach((row) => {
+    const id = row.dataset.id;
+    const pick = row.querySelector('.lk-pick');
+    if (pick) pick.addEventListener('click', async () => {
+      selLook = id;
+      // Clicking a look while a layer is selected is the assignment gesture — one press,
+      // no dialog, the way Resolume drops a clip into a layer slot.
+      const layer = layerById(selLayer);
+      if (layer) {
+        layer.lookId = id;
+        queueLayer(layer.id, { lookId: id });
+        say(`"${lookById(id).name}" is on "${layer.name}"${layer.level > 0 && layer.on ? '' : ' — its fader is still down'}`);
+      }
+      buildLooks(); buildSteps(); buildLayers();
+    });
+    const ren = row.querySelector('.lk-ren');
+    if (ren) ren.addEventListener('click', () => { renameLook = id; buildLooks(); });
+    const del = row.querySelector('.lk-del');
+    if (del) del.addEventListener('click', (e) => armThen(e.currentTarget, 'Sure?', async () => {
+      const r = await post('api/looks/remove', { id });
+      if (r && r.error) return say(r.error, true);
+      S.looks = looksOf().filter((l) => l.id !== id);
+      for (const l of layersOf()) if (l.lookId === id) l.lookId = null;
+      if (selLook === id) selLook = null;
+      // The server empties any layer that pointed here rather than deleting it: the
+      // operator put that fader in the stack, and it keeps its place.
+      say(r.emptied ? `look deleted — ${r.emptied} layer${r.emptied === 1 ? '' : 's'} emptied, not removed` : 'look deleted');
+      buildLooks(); buildSteps(); buildLayers();
+    }));
+    const field = row.querySelector('.lk-name');
+    if (field) {
+      field.focus(); field.select();
+      const commit = async () => {
+        const look = lookById(id);
+        renameLook = null;
+        if (!look) return buildLooks();
+        const name = field.value.trim().slice(0, 60);
+        if (!name || name === look.name) return buildLooks();
+        await putLook(Object.assign({}, look, { name }));
+      };
+      field.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        if (e.key === 'Escape') { e.preventDefault(); renameLook = null; buildLooks(); }
+      });
+      field.addEventListener('blur', commit);
+    }
+  });
+}
+
+$('#lookRecord').addEventListener('click', async () => {
+  if (!S) return;
+  if (!S.fixtures.length) return say('nothing patched to record', true);
+  const kind = $('#lookKind').value || 'all';
+  const chosen = selectedFixtures();
+  const r = await post('api/looks/capture', {
+    name: $('#lookName').value.trim() || undefined,
+    kind,
+    // Record the selection if there is one, the whole rig if there is not — the same
+    // rule every other verb on this desk follows.
+    fixtures: chosen.length ? chosen.map((f) => f.id) : undefined,
+  });
+  if (r && r.error) return say(r.error, true);
+  $('#lookName').value = '';
+  if (S.looks) S.looks.push(r.look);
+  selLook = r.look.id;
+  buildLooks(); buildSteps();
+  say(`recorded "${r.look.name}" — ${KIND_LABEL[kind]} of ${chosen.length ? chosen.length + ' selected' : 'every'} fixture${!chosen.length || chosen.length > 1 ? 's' : ''}`);
+});
+
+/* ---- the step editor ---- */
+
+// What this look actually is, in words. One step is a scene; two that snap are a chase;
+// two that crossfade and are spread across the rig are a wave. That distinction is the
+// whole content model, and it is invisible in a list of numbers.
+// Every attribute in this look that points at a palette rather than holding a number,
+// as paletteId -> how many cells name it.
+function lookRefs(look) {
+  const refs = new Map();
+  for (const step of look.steps) {
+    for (const cell of Object.values(step.values || {})) {
+      for (const v of Object.values(cell)) {
+        if (v && typeof v === 'object' && v.ref) refs.set(v.ref, (refs.get(v.ref) || 0) + 1);
+      }
+    }
+  }
+  return refs;
+}
+
+function lookInWords(look) {
+  const n = look.steps.length;
+  const kind = look.kind === 'all' ? '' : ` ${KIND_LABEL[look.kind]}`;
+  if (n === 1) return `One step — a${kind || ' scene'}${kind ? ' palette' : ''}, held still. Add a second step to make it move.`;
+  const moving = look.steps.some((s) => s.transition > 0.02);
+  const spread = Math.abs(look.phase) >= 1;
+  const shape = moving
+    ? (spread ? 'a wave travelling across the rig' : 'a pulse, the whole rig breathing together')
+    : (spread ? 'a chase walking round the rig' : 'a flash, every fixture snapping together');
+  const bpm = look.bpm || (S && S.fx ? S.fx.bpm : 120);
+  return `${n} steps, ${moving ? 'crossfading' : 'snapping'}, ${spread ? 'spread across the rig' : 'in unison'} — ${shape}. `
+    + `One loop every ${look.measure} beat${look.measure === 1 ? '' : 's'} at ${bpm} BPM${look.bpm ? ' (its own tempo)' : ' (the desk clock)'}.`;
+}
+
+// Reference state has to be visible at all times. The one thing every desk in the field
+// gets support tickets about is an operator who cannot tell whether an edit will change
+// two hundred looks or quietly orphan one, so this says it in words, on the look.
+function refsInWords(look) {
+  const refs = lookRefs(look);
+  if (!refs.size) return '';
+  const names = [...refs.keys()].map((id) => {
+    const p = lookById(id);
+    return p ? p.name : 'a palette that is gone';
+  });
+  return `Follows ${names.join(' and ')} — change ${refs.size === 1 ? 'it' : 'them'} and this look changes with ${refs.size === 1 ? 'it' : 'them'}.`;
+}
+
+// The stage as it stands, as one step, through this look's mask. Recorded per fixture:
+// a snapshot is a per-fixture thing, and '*' is reserved for the values that walk.
+function stageStep(look) {
+  const ids = look.fixtures.length ? look.fixtures : S.fixtures.map((f) => f.id);
+  const values = {};
+  for (const id of ids) {
+    const f = S.fixtures.find((x) => x.id === id);
+    if (!f) continue;
+    const cell = {};
+    for (const [role, v] of Object.entries(f.values || {})) if (lookAllows(look.kind, role)) cell[role] = v;
+    if (Object.keys(cell).length) values[id] = cell;
+  }
+  return { values, width: 1, transition: look.steps.length ? look.steps[look.steps.length - 1].transition : 0 };
+}
+
+function buildSteps() {
+  const box = $('#stepBox');
+  const look = lookById(selLook);
+  $('#stepTitle').textContent = look ? look.name : 'No look selected';
+  if (!look) {
+    box.dataset.sig = 'none';
+    box.innerHTML = '<p class="fxhint muted">Pick a look above to see its steps. One step is a scene; two are a chase or a wave, depending on transition and phase.</p>';
+    return;
+  }
+  const sig = look.id + '#' + JSON.stringify(look.steps.map((s) => s.transition))
+    + '#' + look.phase + '#' + look.measure + '#' + look.bpm + '#' + look.spatial + '#' + look.steps.length
+    + '#' + [...lookRefs(look).keys()].join(',')
+    + '#' + (S.looks || []).filter((l) => l.steps.length === 1 && l.kind !== 'all').map((l) => l.id + l.name).join();
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+
+  // Every one-step look narrower than "everything" is a palette: a colour, a position,
+  // a beam. That is the whole definition, so the picker simply lists them.
+  const palettes = (S.looks || []).filter((l) => l.id !== look.id && l.steps.length === 1 && l.kind !== 'all');
+  const refWords = refsInWords(look);
+  box.innerHTML = `
+    <p class="stepwords muted">${esc(lookInWords(look))}</p>
+    ${refWords ? `<p class="stepwords good">${esc(refWords)}</p>` : ''}
+    ${look.steps.map((s, i) => `<div class="steprow" data-i="${i}">
+      <b>${i + 1}</b>
+      <input class="st-trans" type="range" min="0" max="1" step="0.05" value="${s.transition}" title="0 snaps to the next step — that is a chase. 1 never stops moving — that is a wave.">
+      <output>${s.transition <= 0.02 ? 'snap' : s.transition >= 0.98 ? 'smooth' : Math.round(s.transition * 100) + '%'}</output>
+      <button class="sq danger st-del" title="Delete this step"${look.steps.length < 2 ? ' disabled' : ''}>✕</button>
+    </div>`).join('')}
+    <div class="inline"><button class="sq" id="stepAdd" title="Record the stage as it stands as one more step">+ Step from stage</button></div>
+    <div class="inline" title="Point this look's values at a palette instead of holding numbers. Re-record the palette later and every look that follows it is right, without touching them.">
+      <select id="stepRefPick">
+        <option value="">follow a palette&hellip;</option>
+        ${palettes.map((p) => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(KIND_LABEL[p.kind] || p.kind)}</option>`).join('')}
+      </select>
+      <button class="sq" id="stepRef"${palettes.length ? '' : ' disabled'}>Follow</button>
+      ${refWords ? '<button class="sq" id="stepUnref" title="Copy the palette\'s numbers in and stop following it">Stop following</button>' : ''}
+    </div>
+    <div class="stepnums">
+      <label title="Degrees of offset spread across the selection. 0 is the whole rig in unison; 360 walks one full cycle round it.">Phase
+        <input class="st-phase" type="number" min="-3600" max="3600" step="45" value="${look.phase}"></label>
+      <label title="Beats for one full loop of this look, against the desk's BPM">Measure
+        <input class="st-measure" type="number" min="0.25" max="64" step="0.25" value="${look.measure}"></label>
+      <label title="Leave empty to follow the desk clock at the top of the page">BPM
+        <input class="st-bpm" type="number" min="1" max="600" step="1" value="${look.bpm == null ? '' : look.bpm}" placeholder="clock"></label>
+      <label title="What the phase spread reads. Patch order is the desk's old behaviour; the rest read where fixtures actually sit on the stage — a wave becomes a line crossing the room, a ring, or a beam turning round it. Drag a fixture on the stage and any of these moves with it.">Follow
+        <select class="st-spatial">${LOOK_SPATIAL.map((s) =>
+          `<option value="${s}"${s === (look.spatial || 'patch') ? ' selected' : ''}>${esc(SPATIAL_LABEL[s] || s)}</option>`).join('')}</select></label>
+    </div>`;
+
+  const edit = (patch) => putLook(Object.assign({}, lookById(selLook), patch));
+
+  $$('.steprow', box).forEach((row) => {
+    const i = +row.dataset.i;
+    row.querySelector('.st-trans').addEventListener('change', (e) => {
+      const l = lookById(selLook); if (!l || !l.steps[i]) return;
+      const steps = l.steps.map((s, n) => (n === i ? Object.assign({}, s, { transition: +e.target.value }) : s));
+      edit({ steps });
+    });
+    row.querySelector('.st-del').addEventListener('click', () => {
+      const l = lookById(selLook); if (!l || l.steps.length < 2) return;
+      edit({ steps: l.steps.filter((s, n) => n !== i) });
+    });
+  });
+  $('#stepAdd').addEventListener('click', () => {
+    const l = lookById(selLook); if (!l) return;
+    if (!S.fixtures.length) return say('nothing patched to record', true);
+    if (l.steps.length >= 64) return say('that is as many steps as a look holds', true);
+    edit({ steps: l.steps.concat([stageStep(l)]) });
+  });
+  // Follow: every role this palette carries stops being a number in this look and
+  // becomes a pointer at it. The values on the wire do not change — the look is simply
+  // saying WHERE they came from, which is what makes re-pointing the palette work.
+  $('#stepRef').addEventListener('click', () => {
+    const l = lookById(selLook);
+    const palette = lookById($('#stepRefPick').value);
+    if (!l || !palette) return say('pick a palette first', true);
+    const carried = new Set();
+    for (const cell of Object.values(palette.steps[0].values || {})) for (const role of Object.keys(cell)) carried.add(role);
+    if (!carried.size) return say('that palette holds nothing', true);
+    let touched = 0;
+    const steps = l.steps.map((step) => {
+      const values = {};
+      for (const [fixtureId, cell] of Object.entries(step.values || {})) {
+        const next = {};
+        for (const [role, v] of Object.entries(cell)) {
+          if (carried.has(role)) { next[role] = { ref: palette.id }; touched++; } else next[role] = v;
+        }
+        values[fixtureId] = next;
+      }
+      return Object.assign({}, step, { values });
+    });
+    if (!touched) return say(`nothing in this look uses what ${palette.name} holds`, true);
+    putLook(Object.assign({}, l, { steps }), `${l.name} follows ${palette.name} now`);
+  });
+  const unref = $('#stepUnref');
+  if (unref) unref.addEventListener('click', () => {
+    const l = lookById(selLook);
+    if (!l) return;
+    // Breaking the link copies the numbers in rather than emptying the look: the same
+    // rule the desk uses when a palette is deleted. Nothing silently goes dark.
+    let kept = 0;
+    const steps = l.steps.map((step) => {
+      const values = {};
+      for (const [fixtureId, cell] of Object.entries(step.values || {})) {
+        const next = {};
+        for (const [role, v] of Object.entries(cell)) {
+          if (v && typeof v === 'object' && v.ref) {
+            const p = lookById(v.ref);
+            const src = p && p.steps[0] ? (p.steps[0].values[fixtureId] || p.steps[0].values['*']) : null;
+            if (src && src[role] != null) { next[role] = src[role]; kept++; continue; }
+            continue;
+          }
+          next[role] = v;
+        }
+        if (Object.keys(next).length) values[fixtureId] = next;
+      }
+      return Object.assign({}, step, { values });
+    });
+    putLook(Object.assign({}, l, { steps }), `${l.name} holds its own numbers again (${kept} kept)`);
+  });
+  box.querySelector('.st-phase').addEventListener('change', (e) => edit({ phase: clamp(+e.target.value || 0, -3600, 3600) }));
+  box.querySelector('.st-measure').addEventListener('change', (e) => edit({ measure: clamp(parseFloat(e.target.value) || 1, 0.25, 64) }));
+  box.querySelector('.st-bpm').addEventListener('change', (e) => {
+    const v = e.target.value.trim();
+    edit({ bpm: v === '' ? null : clamp(parseFloat(v) || 120, 1, 600) });
+  });
+  box.querySelector('.st-spatial').addEventListener('change', (e) => edit({ spatial: e.target.value }));
+}
+
+/* ---- one-press starters ---- */
+/* Each builds a look out of whatever is patched, puts it on a new layer, and BRINGS IT
+   UP. A layer added with + Layer arrives at 0 on purpose — nothing an operator adds
+   mid-show may change the room before they touch its fader — but a starter is not that:
+   it is a button labelled "Colour chase" pressed by someone who wants a colour chase,
+   and one that changes nothing reads as broken. The fader is right there, and so is
+   Blackout. */
+
+// Emitter roles the rig actually has. A colour step that names channels nobody owns is a
+// look that does nothing and says nothing about why.
+function rigRoles(pred) {
+  const out = new Set();
+  for (const f of (S ? S.fixtures : [])) {
+    for (const role of Object.keys(f.values || {})) if (pred(role)) out.add(role);
+  }
+  return [...out];
+}
+
+// One colour, as a full emitter cell: every other emitter in the rig is written to 0, or
+// a rig with amber and white in it turns everything into pale mud.
+function colourCell(r, g, b) {
+  const cell = {};
+  for (const role of rigRoles((x) => kindOf(x) === 'emitter')) cell[role] = 0;
+  const rgb = { r, g, b };
+  for (const k of Object.keys(rgb)) if (k in cell) cell[k] = rgb[k];
+  return cell;
+}
+
+async function startLook(look, layer, note) {
+  const made = await post('api/looks/add', { look });
+  if (made && made.error) return say(made.error, true);
+  if (S.looks) S.looks.push(made.look);
+  const r = await post('api/layers/add', Object.assign({ lookId: made.look.id }, layer));
+  if (r && r.error) return say(r.error, true);
+  if (S.layers) S.layers.push(r.layer);
+  // A starter's rate is not in the add route's vocabulary, so it is set the same way a
+  // fader move is — one small request against the layer that was just made.
+  // Up, over a second rather than in one jump: the room is told what is happening
+  // instead of being hit with it, and there is a beat in which to pull the fader back.
+  const patch = { level: 1 };
+  if (layer.rate) patch.rate = layer.rate;
+  await post('api/layer', Object.assign({ id: r.layer.id }, patch));
+  r.layer.level = 1;
+  if (layer.rate) r.layer.rate = layer.rate;
+  selLayer = r.layer.id;
+  selLook = made.look.id;
+  buildLayers(); buildLooks(); buildSteps();
+  say(note);
+}
+
+$('#stColour').addEventListener('click', () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => kindOf(x) === 'emitter').length) return say('nothing in the rig has a colour channel', true);
+  // Magenta against cyan: both saturated, both read at a distance on a dark rig, and
+  // they are far enough apart in hue that the walk round the rig is unmistakable.
+  startLook({
+    id: newId('lk'), name: 'Colour chase', kind: 'colour', measure: 2, phase: 360,
+    fixtures: S.fixtures.map((f) => f.id),
+    steps: [
+      { values: { '*': colourCell(255, 20, 110) }, width: 1, transition: 0 },
+      { values: { '*': colourCell(0, 190, 255) }, width: 1, transition: 0 },
+    ],
+  }, { name: 'Colour chase', mask: 'colour', merge: 'htp' },
+  'colour chase running — its fader is at the top of the stack');
+});
+
+$('#stSweep').addEventListener('click', () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => x === 'dimmer').length) return say('nothing in the rig has a dimmer channel', true);
+  // LTP, not HTP: a brightness wave has to be able to take light away, and HTP against
+  // the fixtures' own values would only ever add — the trough would simply not happen.
+  startLook({
+    id: newId('lk'), name: 'Sweep', kind: 'intensity', measure: 4, phase: 360,
+    fixtures: S.fixtures.map((f) => f.id),
+    steps: [
+      { values: { '*': { dimmer: 255 } }, width: 1, transition: 1 },
+      { values: { '*': { dimmer: 0 } }, width: 1, transition: 1 },
+    ],
+  }, { name: 'Sweep', mask: 'intensity', merge: 'ltp' },
+  'sweep running, on LTP so its trough is real — its fader is at the top of the stack');
+});
+
+$('#stStrobe').addEventListener('click', () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => x === 'dimmer').length) return say('nothing in the rig has a dimmer channel', true);
+  startLook({
+    id: newId('lk'), name: 'Strobe', kind: 'intensity', measure: 0.5, phase: 0,
+    fixtures: S.fixtures.map((f) => f.id),
+    steps: [
+      { values: { '*': { dimmer: 255 } }, width: 1, transition: 0 },
+      { values: { '*': { dimmer: 0 } }, width: 1, transition: 0 },
+    ],
+  }, { name: 'Strobe', mask: 'intensity', merge: 'ltp' },
+  'strobe running — its fader is at the top of the stack');
+});
+
+$('#stLine').addEventListener('click', () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => x === 'dimmer').length) return say('nothing in the rig has a dimmer channel', true);
+  // spatial 'x' + phase reads stage x instead of patch order — a line, not a chase that
+  // happens to look like one from wherever the fixtures were plugged in.
+  startLook({
+    id: newId('lk'), name: 'Line sweep', kind: 'intensity', measure: 4, phase: 360, spatial: 'x',
+    fixtures: S.fixtures.map((f) => f.id),
+    steps: [
+      { values: { '*': { dimmer: 0 } }, width: 1, transition: 1 },
+      { values: { '*': { dimmer: 255 } }, width: 1, transition: 1 },
+    ],
+  }, { name: 'Line sweep', mask: 'intensity', merge: 'ltp' },
+  'line sweep running, crossing the room left to right — drag a fixture on the stage and watch it move inside the line');
+});
+
+$('#stRadar').addEventListener('click', () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => x === 'dimmer').length) return say('nothing in the rig has a dimmer channel', true);
+  // spatial 'angle' walks the phase round the centre of the room instead of across an
+  // axis — the wave the two-step model was always able to make, read as a rotation.
+  startLook({
+    id: newId('lk'), name: 'Radar', kind: 'intensity', measure: 6, phase: 360, spatial: 'angle',
+    fixtures: S.fixtures.map((f) => f.id),
+    steps: [
+      { values: { '*': { dimmer: 0 } }, width: 3, transition: 1 },
+      { values: { '*': { dimmer: 255 } }, width: 1, transition: 0.3 },
+    ],
+  }, { name: 'Radar', mask: 'intensity', merge: 'ltp' },
+  'radar running — a beam turning round the room; move a fixture on the stage to put it in the beam\'s path');
+});
+
+$('#stGrid').addEventListener('click', async () => {
+  if (!S || !S.fixtures.length) return say('patch some fixtures first', true);
+  if (!rigRoles((x) => x === 'dimmer').length) return say('nothing in the rig has a dimmer channel', true);
+  // Two waves at right angles, both HTP so where they cross reads brighter — a grid
+  // of light moving through the room out of two looks the desk already knows how to
+  // run, stacked instead of a third thing built to do both at once.
+  const ids = S.fixtures.map((f) => f.id);
+  await startLook({
+    id: newId('lk'), name: 'Grid — rows', kind: 'intensity', measure: 5, phase: 360, spatial: 'x',
+    fixtures: ids,
+    steps: [{ values: { '*': { dimmer: 40 } }, width: 1, transition: 1 }, { values: { '*': { dimmer: 255 } }, width: 1, transition: 1 }],
+  }, { name: 'Grid — rows', mask: 'intensity', merge: 'htp' }, 'grid rows running');
+  await startLook({
+    id: newId('lk'), name: 'Grid — columns', kind: 'intensity', measure: 7, phase: 360, spatial: 'y',
+    fixtures: ids,
+    steps: [{ values: { '*': { dimmer: 40 } }, width: 1, transition: 1 }, { values: { '*': { dimmer: 255 } }, width: 1, transition: 1 }],
+  }, { name: 'Grid — columns', mask: 'intensity', merge: 'htp' }, 'grid running — two waves crossing the room; different measures so the crossing point keeps moving');
+});
+
+// The mask vocabulary comes from the server, so this page cannot offer a lane looks.js
+// would refuse. Until it answers, the select renders from the literal above.
+function fillLookKinds() {
+  const sel2 = $('#lookKind');
+  sel2.innerHTML = LOOK_KINDS.map((k) =>
+    `<option value="${k}">${KIND_LABEL[k] || k}</option>`).join('');
+}
+fillLookKinds();
+fetch('api/looks').then((r) => r.json()).then((d) => {
+  if (!d) return;
+  if (Array.isArray(d.kinds) && d.kinds.length) { LOOK_KINDS = d.kinds; fillLookKinds(); }
+  if (Array.isArray(d.spatial) && d.spatial.length) LOOK_SPATIAL = d.spatial;
+}).catch(() => { /* the state poll reports a desk that is not answering */ });
+
+/* ---- the phone's layer faders ---- */
+// Fifth tab on the live strip rather than a corner of Master: a layer fader is the
+// control you reach for most during a song, and burying it under three other things
+// would put the stack one gesture further away than the master it sits above.
+function buildTouchLayers() {
+  const box = $('#tLayerList');
+  const layers = layersOf();
+  const shown = layers.map((l, i) => ({ l, i }))
+    .sort((a, b) => (b.l.priority - a.l.priority) || (b.i - a.i))
+    .map((x) => x.l);
+  const sig = shown.map((l) => [l.id, l.name, l.on, l.lookId].join('~')).join('|');
+  if (box.dataset.sig !== sig) {
+    box.dataset.sig = sig;
+    box.innerHTML = shown.map((l) => {
+      const look = lookById(l.lookId);
+      return `<div class="tlay${layerLive(l) ? '' : ' idle'}" data-id="${esc(l.id)}">
+        <button class="ls-big tl-on${l.on ? ' on' : ''}" title="Take this layer out of the stack">${l.on ? 'On' : 'Off'}</button>
+        <label class="ls-fader"><span>${esc(l.name)}${look ? '' : ' · empty'}</span><input class="tl-level" type="range" min="0" max="100" value="${Math.round(l.level * 100)}"><output>${Math.round(l.level * 100)}%</output></label>
+      </div>`;
+    }).join('') || '<p class="ls-note muted">No layers yet — build one on the Control page, then it appears here.</p>';
+
+    $$('.tlay', box).forEach((row) => {
+      const id = row.dataset.id;
+      row.querySelector('.tl-on').addEventListener('click', () => {
+        const l = layerById(id); if (!l) return;
+        l.on = !l.on; queueLayer(id, { on: l.on }); buildTouchLayers();
+      });
+      const lev = row.querySelector('.tl-level');
+      lev.addEventListener('input', () => {
+        const l = layerById(id); if (!l) return;
+        l.level = +lev.value / 100;
+        row.querySelector('output').textContent = Math.round(l.level * 100) + '%';
+        row.classList.toggle('idle', !layerLive(l));
+        queueLayer(id, { level: l.level });
+      });
+    });
+  } else {
+    $$('.tlay', box).forEach((row) => {
+      const l = layerById(row.dataset.id);
+      if (!l) return;
+      const lev = row.querySelector('.tl-level');
+      if (document.activeElement !== lev && Math.round(l.level * 100) !== +lev.value) {
+        lev.value = Math.round(l.level * 100);
+        row.querySelector('output').textContent = lev.value + '%';
+      }
+      row.classList.toggle('idle', !layerLive(l));
+    });
+  }
+}
+
+/* =============== render =============== */
+
+// One broken panel must never blank the panels built after it: each build runs inside its
+// own guard, and a failure is named in the console ONCE instead of being rethrown into
+// pullState's catch — where it used to masquerade as "server offline" and silently kill
+// the rest of renderAll's chain every poll.
+const buildFailures = new Set();
+function safeBuild(name, fn) {
+  try { fn(); }
+  catch (e) {
+    if (!buildFailures.has(name)) {
+      buildFailures.add(name);
+      console.error(`${name}() threw — that panel is stale, the rest still render:`, e);
+    }
+  }
+}
+
+function renderAll(busy) {
+  const st = S.status;
+  const wire = S.output.driver === 'enttec'
+    ? `${S.output.serialPort}${st.serial && st.serial.connected ? '' : ' not open'}`
+    : `${S.output.mode} · ${st.nodes.length} node${st.nodes.length === 1 ? '' : 's'}`;
+  $('#showName').textContent = `— ${S.fixtures.length} fixtures · ${st.universes.length} universe${st.universes.length === 1 ? '' : 's'} · ${wire}`;
+
+  // A channel held on the Fader page overrides the fixtures everywhere, so a scene or a
+  // colour fader can appear to do nothing. Say so on every page, not just the one that
+  // did it — this is the whole class of bug that keeps biting: right answer, no signal.
+  const heldCount = Object.keys(S.raw).length;
+  const pill = $('#heldPill');
+  pill.hidden = heldCount === 0;
+  if (heldCount) {
+    // Name the universes: the pill's click lands on the Fader page, and a page showing
+    // universe 1 while the holds live on universe 2 reads "nothing held" — the pill and
+    // the page it points at flatly contradicting each other.
+    const unis = [...new Set(Object.keys(S.raw).map((k) => +k.split(':')[0]))].sort((a, b) => a - b);
+    pill.dataset.uni = unis[0];
+    const where = unis.length === 1 ? ` on universe ${unis[0] + 1}` : ` on universes ${unis.map((u) => u + 1).join(', ')}`;
+    pill.textContent = `${heldCount} channel${heldCount === 1 ? '' : 's'} held${where} — fixtures overridden`;
+  }
+
+  // Same reasoning as the held-channel pill above. An effect modulates every fixture from
+  // the Control page, so from the Setup or Fader page a rig that is strobing or chasing
+  // has no visible cause at all — the faders read steady and the stage view moves anyway.
+  const fxPill = $('#fxPill');
+  fxPill.hidden = !fxRunning();
+  if (!fxPill.hidden) fxPill.textContent = `FX: ${fxSummary()}`;
+
+  // Same again for LFOs: a wave riding a channel is set up on the Control rail and then
+  // invisible from every other page — a rig that sways with no visible cause. Any
+  // enabled LFO gets named in the top bar, on every page.
+  const lfoPill = $('#lfoPill');
+  const lfoOn = Array.isArray(S.lfos) ? S.lfos.filter((l) => l.enabled).length : 0;
+  lfoPill.hidden = !lfoOn;
+  if (lfoOn) lfoPill.textContent = `LFO: ${lfoOn} riding`;
+
+  // Blackout is now in the top bar too, so it is reachable and visible from every page —
+  // including Setup, which had no blackout control and no way to tell the rig was in one.
+  $('#topBlackout').classList.toggle('on', S.blackout);
+
+  // Output liveness, always on screen. A rig whose frames have stopped arriving falls back
+  // to its built-in auto programs and runs a show nobody asked for, and until now the only
+  // symptom was a frame total two clicks deep inside a collapsed panel. A rate that has
+  // gone quiet is the signal, so this shows a rate and turns red when it stalls.
+  const wp = $('#wirePill');
+  if (!S.output.enabled) {
+    // The loudest thing this pill can say. A desk that is patched, cued and running
+    // while the wire switch is off looks completely healthy from every other reading on
+    // the page — and inside di.iiii that is the state it starts in.
+    wp.hidden = false;
+    wp.classList.add('stale');
+    wp.textContent = 'output off';
+    wp.title = 'Nothing is leaving this machine. Open Output and switch it on.';
+  } else if (S.output.driver === 'enttec' && st.serial) {
+    const s = st.serial;
+    const stalled = !s.connected || s.ageMs == null || s.ageMs > 2000;
+    wp.hidden = false;
+    wp.classList.toggle('stale', stalled);
+    wp.textContent = !s.connected ? `${s.port} not open`
+      : stalled ? `${s.port} stalled ${Math.round((s.ageMs || 0) / 1000)}s`
+      : `${s.port} live`;
+    wp.title = s.lastError || `${s.packetsSent.toLocaleString()} frames sent`;
+  } else {
+    // Art-Net and sACN had no liveness reading at all — the only confirmation frames
+    // were going out was the rig itself, and a house node that ignores ArtPoll (most of
+    // them) left even the node count at zero. The frame counter is the honest signal.
+    const sent = st.packetsSent || 0;
+    wp.hidden = false;
+    wp.classList.toggle('stale', !sent);
+    wp.textContent = sent ? `${S.output.driver === 'sacn' ? 'sACN' : 'Art-Net'} · ${sent.toLocaleString()} frames`
+      : `${S.output.driver === 'sacn' ? 'sACN' : 'Art-Net'} · nothing sent yet`;
+    wp.title = st.lastError || (sent ? 'frames are leaving this machine' : 'patch a fixture — an empty rig has no universe to send');
+  }
+
+  const nextSig = S.fixtures.map((f) => `${f.id}${f.profile}${f.name}${f.universe}${f.address}${f.index}`).join('|')
+    + '#' + S.groups.map((g) => g.id + g.name).join('|');
+  const structural = nextSig !== structSig;
+  if (structural) { structSig = nextSig; safeBuild('buildStages', buildStages); safeBuild('buildGroups', buildGroups); attrSig = ''; }
+
+  if (page === 'setup') {
+    if (structural || !$('#libTree').children.length) { safeBuild('buildTree', buildTree); safeBuild('buildGrid', buildGrid); }
+    syncLibForm();
+  }
+  if (document.activeElement !== $('#bpm')) $('#bpm').value = S.fx.bpm;
+
+  if (page === 'control') {
+    safeBuild('buildBank', buildBank);
+    safeBuild('buildOutput', buildOutput);
+    safeBuild('buildSends', buildSends);
+    safeBuild('buildFx', buildFx);
+    safeBuild('buildLfos', buildLfos);
+    safeBuild('buildLayers', buildLayers);
+    safeBuild('buildLooks', buildLooks);
+    safeBuild('buildSteps', buildSteps);
+    safeBuild('buildAudio', buildAudio);
+    safeBuild('buildAttr', buildAttr);
+    if (document.activeElement !== $('#master')) $('#master').value = S.master;
+    $('#masterOut').textContent = Math.round(S.master / 255 * 100) + '%';
+    $('#blackout').classList.toggle('on', S.blackout);
+    if (document.activeElement !== $('#chaseHold')) $('#chaseHold').value = (S.chase.holdMs / 1000).toFixed(1);
+    if (document.activeElement !== $('#chaseFade')) $('#chaseFade').value = (S.chase.fadeMs / 1000).toFixed(1);
+    $('#chaseToggle').textContent = S.chase.enabled ? 'Stop' : 'Start';
+    $('#chaseCount').textContent = `${S.chase.sceneIds.length} scene${S.chase.sceneIds.length === 1 ? '' : 's'}`;
+  }
+  if (page === 'touch') safeBuild('buildTouch', buildTouch);
+  if (page === 'fader') safeBuild('buildFaders', buildFaders);
+
+  if (menuOpen) $('#statusStrip').textContent = menuText();
+
+  paintStage();
+  paintSelection();
+  if (!busy) syncAttr();
+  if (page === 'midi') safeBuild('buildMidi', buildMidi);
+}
+
+/* =============== MIDI page =============== */
+/* The control surface. It drives the desk through exactly the HTTP routes every other
+   page uses — it cannot stop or slow the DMX loop. Three things stand between a knob
+   and the rig:
+     - the ARM gate: midiSend() drops everything while it reads "safe";
+     - soft takeover: a fader is ignored until it crosses the value the desk already
+       holds, so arming never jumps the room;
+     - a coalescing queue: merged by route, one request in flight, 25/s ceiling. */
+
+let midiAccess = null;
+let midiInput = null;
+let midiArmed = false;
+let midiMsgCount = 0;
+let midiLearnRow = null;         // target key waiting for a control
+let midiWizardOn = false;
+let midiSceneLearn = null;       // scene id waiting for a pad
+let midiBank = 0;
+let midiTargets = [];
+let midiSig = '';
+const midiPickup = {};           // target key -> true while waiting to be caught
+const midiLastVal = {};          // target key -> last incoming 0..1
+const midiSeenCC = new Set();
+const midiSeenNote = new Set();
+
+// A mirror of the values this page drives. Soft takeover needs something to compare a
+// fader against, and re-reading a 500-scene state blob per message is not that. While
+// disarmed it is refreshed from the desk; while armed this page is the one moving them.
+const midiLive = { master: 255, blackout: false, fxDepth: 255, fxBpm: 120, fxMode: null,
+  fxOn: false, holdMs: 2000, fadeMs: 800, chase: false, allDim: 255 };
+
+/* ---- the send queue ---- */
+const midiPending = new Map();
+let midiFlushing = false;
+let midiFlushTimer = null;
+
+function midiSend(route, body, key) {
+  if (!midiArmed) return;
+  const k = key || route;
+  const cur = midiPending.get(k);
+  if (cur) Object.assign(cur.body, body);
+  else midiPending.set(k, { route, body: Object.assign({}, body) });
+  if (!midiFlushTimer && !midiFlushing) midiFlushTimer = setTimeout(midiFlush, 40);
+}
+
+async function midiFlush() {
+  midiFlushTimer = null;
+  if (midiFlushing) return;
+  midiFlushing = true;
+  try {
+    while (midiPending.size) {
+      const [k, item] = midiPending.entries().next().value;
+      midiPending.delete(k);
+      // Tell the slow poll this page is mid-gesture, exactly as a finger on a fader
+      // does — without it a poll landing between messages snaps the value back.
+      touchedAt = Date.now();
+      try {
+        await fetch(item.route, {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(item.body),
+        });
+      } catch (e) {
+        // The pill is the poll's, and the poll would paint over a flag set here within a
+        // second and a half. A send that died says so where messages go on every page.
+        say('a MIDI move did not reach the desk', true);
+      }
+      await new Promise((r) => setTimeout(r, 40));   // 25/s ceiling
+    }
+  } finally { midiFlushing = false; }
+}
+
+/* ---- what a control can be pointed at ---- */
+// Rebuilt whenever the rig changes. Continuous targets expose read() so soft takeover
+// knows where the desk currently is; both read() and apply() speak 0..1.
+function buildMidiTargets() {
+  const T = [];
+  const cc = (key, label, read, apply) => T.push({ key, label, kind: 'cc', read, apply });
+  const pad = (key, label, apply) => T.push({ key, label, kind: 'note', apply });
+  const fixtures = (S && S.fixtures) || [];
+  const chansOf = (f) => ((S.profiles[f.profile] || {}).channels || []);
+
+  T.push({ group: 'Faders & knobs' });
+
+  cc('master', 'Master', () => midiLive.master / 255,
+    (u) => { midiLive.master = Math.round(u * 255); midiSend('api/master', { master: midiLive.master }); });
+
+  cc('alldim', 'All fixtures dimmer', () => midiLive.allDim / 255,
+    (u) => { midiLive.allDim = Math.round(u * 255); midiSend('api/fixtures/all', { values: { dimmer: midiLive.allDim } }); });
+
+  cc('fxdepth', 'FX depth', () => midiLive.fxDepth / 255,
+    (u) => { midiLive.fxDepth = Math.round(u * 255); midiSend('api/fx', { depth: midiLive.fxDepth }); });
+
+  cc('fxbpm', 'FX tempo  20–300', () => (midiLive.fxBpm - 20) / 280,
+    (u) => { midiLive.fxBpm = Math.round(20 + u * 280); midiSend('api/fx', { bpm: midiLive.fxBpm }); });
+
+  cc('hold', 'Chase hold  50–2000ms', () => (midiLive.holdMs - 50) / 1950,
+    (u) => { midiLive.holdMs = Math.round(50 + u * 1950); midiSend('api/chase', { holdMs: midiLive.holdMs }); });
+
+  cc('fade', 'Chase fade  0–2000ms', () => midiLive.fadeMs / 2000,
+    (u) => { midiLive.fadeMs = Math.round(u * 2000); midiSend('api/chase', { fadeMs: midiLive.fadeMs }); });
+
+  // Two group knobs read far better on a small controller than fifteen per-fixture ones.
+  // The old page split them by the profile NAMES "Wash 8ch"/"Beam 16ch", which do not
+  // exist on this desk — so membership is read off the channel roles instead, which is
+  // what actually decides whether a fixture can move.
+  const movers = fixtures.filter((f) => chansOf(f).includes('pan') || chansOf(f).includes('tilt'));
+  const statics = fixtures.filter((f) => !chansOf(f).includes('pan') && !chansOf(f).includes('tilt'));
+  const spread = (list, values) => (u) => {
+    const v = Math.round(u * 255);
+    for (const f of list) midiSend('api/fixture', { id: f.id, values: values(v) }, 'api/fixture:' + f.id);
+  };
+  if (statics.length) {
+    cc('washdim', `Static fixtures dimmer  (${statics.length})`, () => 1, spread(statics, (v) => ({ dimmer: v })));
+  }
+  if (movers.length) {
+    cc('beamdim', `Movers dimmer  (${movers.length})`, () => 1, spread(movers, (v) => ({ dimmer: v })));
+    cc('beampan', 'Movers pan', () => 0.5, spread(movers, (v) => ({ pan: v })));
+    cc('beamtilt', 'Movers tilt', () => 0.5, spread(movers, (v) => ({ tilt: v })));
+  }
+
+  // Then every fixture on its own, for whatever faders are left over.
+  for (const f of fixtures) {
+    cc('fix:' + f.id, f.name + '  dimmer', () => 1,
+      (u) => midiSend('api/fixture', { id: f.id, values: { dimmer: Math.round(u * 255) } }, 'api/fixture:' + f.id));
+  }
+
+  T.push({ group: 'Pads & buttons' });
+
+  pad('blackout', 'Blackout  (toggle)', () => {
+    midiLive.blackout = !midiLive.blackout;
+    midiSend('api/master', { blackout: midiLive.blackout });
+  });
+  pad('chaseon', 'Chase run / stop', () => {
+    midiLive.chase = !midiLive.chase;
+    midiSend('api/chase', { enabled: midiLive.chase });
+  });
+  pad('fxon', 'FX on / off', () => {
+    midiLive.fxOn = !midiLive.fxOn;
+    midiSend('api/fx', { enabled: midiLive.fxOn });
+  });
+  pad('fxnext', 'FX mode  next', () => midiStepFx(1));
+  pad('fxprev', 'FX mode  prev', () => midiStepFx(-1));
+  pad('bankup', 'Scene bank  +', () => midiSetBank(midiBank + 1));
+  pad('bankdn', 'Scene bank  −', () => midiSetBank(midiBank - 1));
+
+  for (let i = 0; i < 16; i++) pad('scene:' + i, 'Scene pad ' + (i + 1), () => midiRecallPad(i));
+
+  midiTargets = T;
+}
+
+function midiStepFx(dir) {
+  const modes = (S && S.fxModes) || [];
+  if (!modes.length) return;
+  let i = modes.indexOf(midiLive.fxMode);
+  if (i < 0) i = 0;
+  midiLive.fxMode = modes[(i + dir + modes.length) % modes.length];
+  midiSend('api/fx', { mode: midiLive.fxMode });
+  midiFlash('FX mode → ' + midiLive.fxMode);
+}
+
+function midiRecallPad(i) {
+  if (!S) return;
+  const sc = S.scenes[midiBank * 16 + i];
+  if (!sc) { midiFlash(`pad ${i + 1}: no scene in this bank`); return; }
+  midiSend('api/scenes/recall', { id: sc.id }, 'recall');
+  midiFlash('recall → ' + sc.name);
+}
+
+function midiSetBank(n) {
+  if (!S) return;
+  midiBank = clamp(n, 0, Math.max(0, Math.ceil(S.scenes.length / 16) - 1));
+  midiDrawBank();
+}
+
+/* ---- incoming ---- */
+const midiKeyFor = (type, ch, num) => Object.keys(midiMap).find((k) => {
+  const b = midiMap[k];
+  return b && b.type === type && b.ch === ch && b.num === num;
+}) || null;
+
+function midiPageMessage(e) {
+  const [a, b, c] = e.data;
+  const type = a & 0xf0, ch = (a & 0x0f) + 1;
+  midiMsgCount++;
+  midiPill('#miMsgStat', `msgs <b>${midiMsgCount}</b>`);
+
+  if (type === 0xb0) {                                    // control change
+    midiSeenCC.add(ch + ':' + b);
+    midiMonitor('cc', `ch${mpad(ch, 2)}  CC ${mpad(b, 3)}   ${mpad(c, 3)}${midiBar(c / 127)}`);
+    // Clamped: a controller sending a byte above 127 is out of spec, and without this it
+    // drives a target past full and reads "157%" in the value column.
+    midiHandle('cc', ch, b, clamp(c / 127, 0, 1));
+  } else if (type === 0x90 && c > 0) {                    // note on
+    midiSeenNote.add(ch + ':' + b);
+    midiMonitor('note', `ch${mpad(ch, 2)}  NOTE ${mpad(b, 3)} on  vel ${mpad(c, 3)}`);
+    midiHandle('note', ch, b, 1);
+  } else if (type === 0x80 || (type === 0x90 && c === 0)) {
+    midiMonitor('other', `ch${mpad(ch, 2)}  NOTE ${mpad(b, 3)} off`);
+  } else if (type === 0xe0) {                             // pitch bend — some faders use it
+    const v = ((c << 7) | b) / 16383;
+    midiMonitor('cc', `ch${mpad(ch, 2)}  BEND      ${Math.round(v * 127)}${midiBar(v)}`);
+    midiHandle('bend', ch, 0, v);
+  } else {
+    midiMonitor('other', `ch${mpad(ch, 2)}  0x${a.toString(16)} ${b} ${c}`);
+  }
+  $('#miSeen').textContent = `seen: ${midiSeenCC.size} controls, ${midiSeenNote.size} pads`;
+}
+
+function midiHandle(type, ch, num, unit) {
+  // A scene armed on the grid takes the next PAD, whatever it was bound to before.
+  if (midiSceneLearn) {
+    if (type !== 'note') { midiSceneMsg('that was a fader — press a pad for a scene'); return; }
+    midiAssign('recall:' + midiSceneLearn, type, ch, num);
+    const sc = S && S.scenes.find((s) => s.id === midiSceneLearn);
+    midiSceneMsg(`bound "${sc ? sc.name : midiSceneLearn}" ← ch${ch} note ${num}`);
+    midiSceneLearn = null; midiDraw(); midiDrawSceneGrid();
+    return;
+  }
+  if (midiLearnRow) { midiAssign(midiLearnRow, type, ch, num); midiLearnRow = null; midiDraw(); return; }
+  if (midiWizardOn && !midiKeyFor(type, ch, num)) { midiWizardAssign(type, ch, num); return; }
+
+  const key = midiKeyFor(type, ch, num);
+  if (!key) return;
+  if (key.startsWith('recall:')) return;   // handled by the shared dispatcher, ungated
+  const t = midiTargets.find((x) => x.key === key);
+  if (!t) return;
+
+  if (t.kind === 'note') { if (type !== 'note') return; t.apply(); midiHit(key); return; }
+  if (type === 'note') return;
+
+  // soft takeover: ignore until the physical control crosses the desk's value
+  if (midiPickup[key]) {
+    const target = t.read ? t.read() : 0;
+    const prev = midiLastVal[key];
+    midiLastVal[key] = unit;
+    const crossed = prev != null
+      && ((prev <= target && unit >= target) || (prev >= target && unit <= target));
+    if (!crossed && Math.abs(unit - target) > 0.02) { if (page === 'midi') midiDraw(); return; }
+    // Caught. Redraw so the row stops reading "catch →" — a control that is live and
+    // still says it is waiting is the same lie the pickup marker exists to prevent.
+    midiPickup[key] = false;
+    if (page === 'midi') midiDraw();
+  }
+  midiLastVal[key] = unit;
+  t.apply(unit);
+  midiHit(key);
+}
+
+function midiAssign(key, type, ch, num) {
+  // one control drives one target — take it off whatever had it
+  for (const k of Object.keys(midiMap)) {
+    const b = midiMap[k];
+    if (b && b.type === type && b.ch === ch && b.num === num) delete midiMap[k];
+  }
+  midiMap[key] = { type, ch, num };
+  midiPickup[key] = true;
+  delete midiLastVal[key];
+  saveMidiMap();
+}
+
+function midiWizardAssign(type, ch, num) {
+  const want = (type === 'note') ? 'note' : 'cc';
+  const next = midiTargets.find((t) => t.key && t.kind === want && !midiMap[t.key]);
+  if (!next) { midiFlash(`every ${want} target is already mapped`); return; }
+  midiAssign(next.key, type, ch, num);
+  midiFlash(`bound ${next.label}  ←  ${midiDescribe(midiMap[next.key])}`);
+  midiDraw();
+}
+
+function midiMapByNumber() {
+  const cmp = (a, b) => (a[0] - b[0]) || (a[1] - b[1]);
+  const ccs = [...midiSeenCC].map((s) => s.split(':').map(Number)).sort(cmp);
+  const nts = [...midiSeenNote].map((s) => s.split(':').map(Number)).sort(cmp);
+  if (!ccs.length && !nts.length) { midiFlash('nothing seen yet — move a fader and press a pad first'); return; }
+  let n = 0;
+  for (const t of midiTargets) {
+    if (!t.key) continue;
+    if (t.kind === 'cc' && ccs.length) { const c = ccs.shift(); midiAssign(t.key, 'cc', c[0], c[1]); n++; }
+    else if (t.kind === 'note' && nts.length) { const c = nts.shift(); midiAssign(t.key, 'note', c[0], c[1]); n++; }
+  }
+  midiDraw();
+  midiFlash(`mapped ${n} controls by number`);
+}
+
+/* ---- drawing ---- */
+function buildMidi() {
+  // While disarmed the desk is the authority on where everything sits, so takeover has
+  // a true reference the moment you arm.
+  if (!midiArmed && S) {
+    midiLive.master = S.master; midiLive.blackout = !!S.blackout;
+    midiLive.fxDepth = S.fx.depth; midiLive.fxBpm = S.fx.bpm;
+    midiLive.fxMode = S.fx.mode; midiLive.fxOn = !!S.fx.enabled;
+    midiLive.holdMs = S.chase.holdMs; midiLive.fadeMs = S.chase.fadeMs;
+    midiLive.chase = !!S.chase.enabled;
+  }
+  // While armed this page is the one moving the master, and the slow poll deliberately
+  // holds S.master back mid-gesture — so read the mirror, or the pill reports a value the
+  // rig left several seconds ago.
+  // The desk readout is the app's own poll, not a second one of this page's: a "—" on a
+  // page that is plainly talking to the desk is a dead instrument.
+  midiPill('#miDeskStat', `desk <b>${pollFails ? 'error' : 'ok'}</b>`, pollFails ? 'bad' : 'good');
+  const mv = midiArmed ? midiLive.master : (S ? S.master : null);
+  const black = midiArmed ? midiLive.blackout : (S && S.blackout);
+  midiPill('#miMasterStat', `master <b>${mv == null ? '—' : mv}</b>${black ? ' · BLACK' : ''}`, black ? 'bad' : '');
+  const sig = (S ? S.fixtures.map((f) => f.id + f.name + f.profile).join('|') + '#' + S.scenes.length : '');
+  if (sig !== midiSig) { midiSig = sig; buildMidiTargets(); midiDraw(); midiDrawBank(); }
+}
+
+function midiDraw() {
+  const body = $('#miMapBody');
+  if (!body) return;
+  let html = '', n = 0;
+  for (const t of midiTargets) {
+    if (t.group) { html += `<tr class="migrp"><td colspan="4">${esc(t.group)}</td></tr>`; continue; }
+    const b = midiMap[t.key];
+    if (b) n++;
+    const bind = b
+      ? (midiPickup[t.key]
+        ? `<span class="mibind pickup">catch → ${midiPct(t)}</span>`
+        : `<span class="mibind">${midiDescribe(b)}</span>`)
+      : '<span class="mibind none">—</span>';
+    html += `<tr data-key="${esc(t.key)}"${midiLearnRow === t.key ? ' class="learning"' : ''}>
+      <td class="mitgt">${esc(t.label)}</td>
+      <td>${bind}</td>
+      <td class="mival">${b ? midiValText(t) : ''}</td>
+      <td class="miact"><button class="sq small" data-learn="${esc(t.key)}">${midiLearnRow === t.key ? 'move it…' : 'learn'}</button>${b ? ` <button class="sq small danger" data-clear="${esc(t.key)}" title="Unbind">✕</button>` : ''}</td>
+    </tr>`;
+  }
+  // Direct scene binds live outside the target table — they are made by tapping a scene.
+  const direct = Object.keys(midiMap).filter((k) => k.startsWith('recall:'));
+  if (direct.length) {
+    html += '<tr class="migrp"><td colspan="4">Scenes — direct binds</td></tr>';
+    for (const k of direct) {
+      n++;
+      const sc = S && S.scenes.find((s) => s.id === k.slice(7));
+      html += `<tr>
+        <td class="mitgt${sc ? '' : ' missing'}">${esc(sc ? sc.name : k.slice(7))}</td>
+        <td><span class="mibind">${midiDescribe(midiMap[k])}</span></td>
+        <td class="mival"></td>
+        <td class="miact"><button class="sq small danger" data-clear="${esc(k)}" title="Unbind">✕</button></td>
+      </tr>`;
+    }
+  }
+  body.innerHTML = html;
+  $('#miMapCount').textContent = n ? `${n} bound` : 'nothing bound';
+}
+
+function midiDescribe(b) {
+  if (b.type === 'note') return `ch${b.ch}  note ${b.num}`;
+  if (b.type === 'bend') return `ch${b.ch}  bend`;
+  return `ch${b.ch}  CC ${b.num}`;
+}
+const midiPct = (t) => (t.read ? Math.round(t.read() * 100) + '%' : '—');
+function midiValText(t) {
+  if (t.kind === 'note') return '';
+  const v = midiLastVal[t.key];
+  return v == null ? '—' : Math.round(v * 100) + '%';
+}
+
+function midiHit(key) {
+  if (page !== 'midi') return;
+  const tr = $(`tr[data-key="${CSS.escape(key)}"]`);
+  if (!tr) return;
+  tr.classList.add('hit');
+  clearTimeout(tr._t);
+  tr._t = setTimeout(() => tr.classList.remove('hit'), 160);
+  const t = midiTargets.find((x) => x.key === key);
+  if (tr.children[2] && t) tr.children[2].textContent = midiValText(t);
+}
+
+function midiDrawBank() {
+  if (!S) return;
+  const max = Math.max(1, Math.ceil(S.scenes.length / 16));
+  $('#miBankLabel').textContent = `pad bank ${midiBank + 1}/${max} · ${S.scenes.length} scenes`;
+  midiDrawSceneGrid();
+}
+
+function midiDrawSceneGrid() {
+  if (!S) return;
+  const q = ($('#miSceneFilter').value || '').toLowerCase();
+  const chips = S.scenes.filter((s) => !q || s.name.toLowerCase().includes(q)).map((s) => {
+    const b = midiMap['recall:' + s.id];
+    const cls = midiSceneLearn === s.id ? ' learning' : b ? ' bound' : '';
+    return `<button class="michip${cls}" data-scene="${esc(s.id)}" title="${b ? midiDescribe(b) + ' — tap to clear' : 'tap, then press a pad on the controller'}">${esc(s.name)}${b ? ` <i>${b.num}</i>` : ''}</button>`;
+  }).join('');
+  $('#miSceneGrid').innerHTML = chips || '<span class="empty">no scene matches</span>';
+}
+
+/* ---- monitor and status ---- */
+function midiMonitor(cls, text) {
+  if (page !== 'midi') return;   // the log is only ever read here; keep the show cheap
+  const m = $('#miMon');
+  const first = m.firstChild;
+  if (first && first.className === 'empty') m.innerHTML = '';
+  const d = document.createElement('div');
+  d.className = cls; d.textContent = text;
+  m.appendChild(d);
+  while (m.children.length > 220) m.removeChild(m.firstChild);
+  m.scrollTop = m.scrollHeight;
+}
+const mpad = (n, w) => String(n).padStart(w, ' ');
+const midiBar = (u) => '  ' + '█'.repeat(Math.round(clamp(u, 0, 1) * 20)).padEnd(20, '·');
+const midiFlash = (m) => { $('#miWizNote').textContent = m; };
+const midiSceneMsg = (m) => { $('#miSceneMsg').textContent = m; };
+function midiPill(sel, html, cls) {
+  const e = $(sel);
+  if (!e) return;
+  e.innerHTML = html;
+  e.className = 'mipill' + (cls ? ' ' + cls : '');
+}
+const midiSayState = (t, bad) => {
+  const e = $('#miSaveStat');
+  e.textContent = 'map: ' + t;
+  e.classList.toggle('bad', !!bad);
+};
+const midiExplain = (html) => { $('#miCheckNote').innerHTML = html; };
+
+/* ---- devices ---- */
+function midiListInputs() {
+  if (!midiAccess) return;
+  const sel = $('#miInputs');
+  const prev = sel.value;
+  const ins = [...midiAccess.inputs.values()];
+  if (!ins.length) {
+    sel.innerHTML = '<option value="">— no MIDI inputs found —</option>';
+    midiPill('#miMidiStat', 'MIDI <b>no devices</b>', 'bad');
+    return;
+  }
+  sel.innerHTML = ins.map((i) =>
+    `<option value="${esc(i.id)}">${esc(i.name + (i.manufacturer ? '  ·  ' + i.manufacturer : ''))}</option>`).join('');
+  // Prefer a real device over a loopback/"through" port, which never sends anything.
+  const pick = ins.find((i) => i.id === prev)
+    || ins.find((i) => !/through|loopmidi/i.test(i.name)) || ins[0];
+  sel.value = pick.id;
+  midiBindInput(pick.id);
+  midiPill('#miMidiStat', `MIDI <b>${ins.length} in</b>`, 'good');
+}
+
+function midiBindInput(id) {
+  if (!midiAccess) return;
+  for (const i of midiAccess.inputs.values()) i.onmidimessage = null;
+  midiInput = midiAccess.inputs.get(id) || null;
+  if (midiInput) midiInput.onmidimessage = onMidiMessage;
+}
+
+function midiEnable() {
+  if (!navigator.requestMIDIAccess) {
+    midiPill('#miMidiStat', 'MIDI <b>unsupported</b>', 'bad');
+    // The single most common reason this page looks broken, said plainly.
+    midiExplain('<b class="bad">This browser has no Web MIDI here.</b> Use Chrome or Edge, '
+      + 'and open the desk at <code>localhost</code> or over <code>https</code> — on a plain '
+      + 'LAN address the browser refuses Web MIDI outright and the device list stays empty.');
+    return;
+  }
+  initMidi();
+  $('#miEnable').disabled = true;
+  $('#miEnable').textContent = 'MIDI enabled';
+}
+
+/* ---- wiring ---- */
+$('#miEnable').addEventListener('click', midiEnable);
+$('#miRescan').addEventListener('click', midiListInputs);
+$('#miInputs').addEventListener('change', (e) => midiBindInput(e.target.value));
+$('#miClearMon').addEventListener('click', () => { $('#miMon').innerHTML = '<div class="empty">cleared</div>'; });
+
+$('#miArm').addEventListener('click', () => {
+  midiArmed = !midiArmed;
+  const b = $('#miArm');
+  b.className = 'miarm ' + (midiArmed ? 'live' : 'safe');
+  b.textContent = midiArmed ? 'ARMED — sending to rig' : 'Safe — not sending';
+  if (midiArmed) {
+    // Every fader must be caught again, so arming can never jump the rig.
+    for (const k of Object.keys(midiMap)) if (midiMap[k].type !== 'note') midiPickup[k] = true;
+    midiDraw();
+    say('MIDI armed — the controller is driving the rig');
+  } else {
+    midiPending.clear();
+    say('MIDI safe — the controller is not sending');
+  }
+});
+
+$('#miWizard').addEventListener('click', () => {
+  midiWizardOn = !midiWizardOn;
+  const b = $('#miWizard');
+  b.textContent = midiWizardOn ? 'Stop wizard' : 'Start wizard';
+  b.classList.toggle('accent', !midiWizardOn);
+  b.classList.toggle('danger', midiWizardOn);
+  midiFlash(midiWizardOn
+    ? 'wizard running — move one fader / press one pad at a time'
+    : 'wizard stopped');
+});
+$('#miByNum').addEventListener('click', midiMapByNumber);
+$('#miClearMap').addEventListener('click', () => {
+  if (!confirm('Clear the whole MIDI map? Every surface on this desk loses it.')) return;
+  midiMap = {};
+  for (const k of Object.keys(midiPickup)) delete midiPickup[k];
+  for (const k of Object.keys(midiLastVal)) delete midiLastVal[k];
+  saveMidiMap(); midiDraw(); midiDrawSceneGrid(); midiFlash('map cleared');
+});
+
+$('#miImport').addEventListener('click', () => {
+  const old = midiLocalLegacy();
+  if (!old) return;
+  for (const [k, b] of Object.entries(old)) {
+    if (b && MIDI_TYPES.includes(b.type)) midiMap[k] = { type: b.type, ch: +b.ch, num: +b.num };
+  }
+  saveMidiMap(); midiDraw(); midiDrawSceneGrid();
+  $('#miImport').hidden = true;
+  say(`imported ${Object.keys(old).length} mappings into the show`);
+});
+
+$('#miMapBody').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const l = btn.dataset.learn, c = btn.dataset.clear;
+  if (l) { midiLearnRow = (midiLearnRow === l) ? null : l; midiDraw(); }
+  if (c) {
+    delete midiMap[c]; delete midiPickup[c]; delete midiLastVal[c];
+    saveMidiMap(); midiDraw(); midiDrawSceneGrid();
+  }
+});
+
+// Tap a scene to arm it for the next pad; tap a bound one to let it go. The old page
+// used right-click, which a phone at the desk cannot do at all.
+$('#miSceneGrid').addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-scene]');
+  if (!chip) return;
+  const id = chip.dataset.scene;
+  if (midiMap['recall:' + id]) {
+    delete midiMap['recall:' + id];
+    saveMidiMap(); midiSceneMsg('bind cleared'); midiDrawSceneGrid(); midiDraw();
+    return;
+  }
+  midiSceneLearn = (midiSceneLearn === id) ? null : id;
+  const sc = S && S.scenes.find((s) => s.id === id);
+  midiSceneMsg(midiSceneLearn ? `press a pad for "${sc ? sc.name : id}"…` : '');
+  midiDrawSceneGrid();
+});
+$('#miSceneFilter').addEventListener('input', midiDrawSceneGrid);
+$('#miSceneFilterClear').addEventListener('click', () => { $('#miSceneFilter').value = ''; midiDrawSceneGrid(); });
+
+/* =============== wiring =============== */
+
+function showPage(name) {
+  page = ['setup', 'control', 'touch', 'fader', 'midi'].includes(name) ? name : 'setup';
+  $$('.page-tab').forEach((x) => x.classList.toggle('is-active', x.dataset.page === page));
+  $$('.page').forEach((p) => p.classList.toggle('is-active', p.dataset.page === page));
+  structSig = ''; attrSig = '';
+  // Opening MIDI re-reads the show's map, so a layout mapped on the laptop is already
+  // there on the phone. Skipped mid-edit: a pending save is newer than the server.
+  if (page === 'midi' && !midiSaveTimer) loadMidiMap();
+  if (S) renderAll(false);
+}
+$$('.page-tab').forEach((t) => t.addEventListener('click', () => {
+  location.hash = t.dataset.page;      // #touch on a phone opens straight into the pads
+  showPage(t.dataset.page);
+}));
+$('#heldPill').addEventListener('click', () => {
+  const u = +($('#heldPill').dataset.uni || 0);
+  if (!Number.isNaN(u)) fUni = u;   // land on a universe that actually holds something
+  location.hash = 'fader'; showPage('fader'); buildFaders();
+});
+$('#fxPill').addEventListener('click', () => { location.hash = 'control'; showPage('control'); });
+$('#lfoPill').addEventListener('click', () => { location.hash = 'control'; showPage('control'); });
+window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
+
+menuOpen = false;
+// Live, and honest about which wire the show is on. A frozen frame total is
+// indistinguishable from a stalled link, which is the one thing it exists to show.
+function menuText() {
+  const st = S.status;
+  const wire = S.output.driver === 'enttec'
+    ? `${S.output.serialPort} · ${st.serial && st.serial.connected ? st.serial.baud + ' baud' : 'not open'}`
+    : `${S.output.mode} → ${(S.output.mode === 'unicast' ? S.output.targets : st.broadcast).join(', ')}`;
+  return `${st.packetsSent.toLocaleString()} frames sent · universes ${st.universes.map((u) => u + 1).join(', ')} · ${wire} · show saved to data/show.json`;
+}
+$('#menuBtn').addEventListener('click', () => {
+  const s = $('#statusStrip');
+  menuOpen = s.hidden;
+  s.hidden = !s.hidden;
+  s.classList.remove('bad');
+  if (menuOpen && S) s.textContent = menuText();
+});
+
+// library / patch
+$('#pAddress').addEventListener('input', () => pin('pAddress'));
+$('#pIndex').addEventListener('input', () => pin('pIndex'));
+$('#newProfile').addEventListener('click', () => openBuilder([], null));
+$('#builderClose').addEventListener('click', closeBuilder);
+$('#builderCancel').addEventListener('click', closeBuilder);
+$('#builderSave').addEventListener('click', saveBuilder);
+$('#builderDelete').addEventListener('click', deleteBuilder);
+$('#builderAddCustom').addEventListener('click', () => {
+  const box = $('#builderCustom');
+  const role = box.value.trim().replace(/[^A-Za-z0-9]/g, '');
+  if (!role) { box.focus(); return; }
+  bChans.push(role); box.value = ''; renderBuilder();
+});
+$('#builderCustom').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#builderAddCustom').click(); });
+$('#builder').addEventListener('click', (e) => { if (e.target.id === 'builder') closeBuilder(); });
+$('#libSearch').addEventListener('input', buildTree);
+$('#libClear').addEventListener('click', () => { $('#libSearch').value = ''; buildTree(); });
+$('#pUniverse').addEventListener('change', () => {
+  if ($('#pUniverse').value === 'new') {
+    const u = Math.max(...S.status.universes) + 1;
+    $('#pUniverse').dataset.list = '';
+    fillUniverse($('#pUniverse'), [...S.status.universes, u], true);
+    $('#pUniverse').value = u;
+  }
+  unpin('pAddress');
+  suggestAddress();
+});
+$('#patchBtn').addEventListener('click', async () => {
+  const u = +$('#pUniverse').value || 0;
+  const r = await post('api/fixtures/add', {
+    profile: libProfile, name: libProfile, universe: u,
+    address: +$('#pAddress').value, count: +$('#pCount').value, index: +$('#pIndex').value,
+  });
+  const n = (r.added || []).length;
+  const want = +$('#pCount').value || 1;
+  $('#patchHint').textContent = !n ? 'no room at that address'
+    : n < want ? `patched ${n} of ${want} — no room for the other ${want - n}`
+    : `patched ${n} × ${libProfile}`;
+  if (n) {
+    gridUni = u;
+    sel = new Set(r.added.map((f) => f.id));
+    const last = r.added[n - 1];
+    unpin('pAddress', 'pIndex');
+    $('#pAddress').value = last.address + S.profiles[last.profile].channels.length;
+    $('#pIndex').value = last.index + 1;
+    // Held: the poll that follows re-suggests the first free run, which after a patch
+    // into a gap is BEHIND what was just placed. It unpins again on the next patch.
+    pin('pAddress');
+  }
+  structSig = ''; pullState();
+});
+$('#unpatchBtn').addEventListener('click', unpatchSelection);
+$('#gridUniverse').addEventListener('change', (e) => {
+  if (e.target.value === 'new') { e.target.value = gridUni; return; }
+  gridUni = +e.target.value; buildGrid();
+});
+$('#uniPrev').addEventListener('click', () => { gridUni = Math.max(0, gridUni - 1); buildGrid(); });
+$('#uniNext').addEventListener('click', () => { gridUni = Math.min(32767, gridUni + 1); buildGrid(); });
+
+$$('.addGroupBtn').forEach((b) => b.addEventListener('click', () => {
+  if (!sel.size) { say('select some fixtures first, then press + to make a group'); return; }
+  post('api/groups/add', { name: `${S.groups.length + 1} - ${selectedFixtures()[0].profile}`, ids: [...sel] }).then(pullState);
+}));
+
+// stage toolbars (both pages)
+$$('.tool[data-tool]').forEach((b) => b.addEventListener('click', () => {
+  tool = b.dataset.tool;
+  $$('.tool[data-tool]').forEach((x) => x.classList.toggle('is-active', x.dataset.tool === tool));
+  $$('.stage').forEach((s) => s.classList.toggle('hand', tool === 'hand'));
+}));
+$$('.snapBtn').forEach((b) => b.addEventListener('click', () => {
+  snap = !snap; $$('.snapBtn').forEach((x) => x.classList.toggle('is-active', snap));
+}));
+$$('.rowBtn').forEach((b) => b.addEventListener('click', () => arrange('row')));
+$$('.colBtn').forEach((b) => b.addEventListener('click', () => arrange('column')));
+$$('.gridBtn').forEach((b) => b.addEventListener('click', () => arrange('grid')));
+$$('.circleBtn').forEach((b) => b.addEventListener('click', () => arrange('circle')));
+// Change the zoom while keeping one screen point fixed — the cursor for the wheel, the
+// viewport centre for the buttons. Without this, zooming in walks the rig off-screen.
+function zoomAt(stage, cx, cy, nz) {
+  nz = clamp(nz, 0.01, 4);
+  const r = stage.getBoundingClientRect();
+  const mx = cx - r.left, my = cy - r.top;
+  view.x = mx - (mx - view.x) * (nz / zoom);
+  view.y = my - (my - view.y) * (nz / zoom);
+  zoom = nz;
+  $$('.zoom').forEach((o) => { o.value = Math.round(zoom * 100); });
+  placeStages();
+}
+const stageFor = (el) => el.closest('.stagepane').querySelector('.stage');
+// Frame every fixture with some margin. This is also the rescue: whatever the pan and
+// zoom have done, one press brings the whole rig back on screen.
+function fitStage(stage) {
+  const r = stage.getBoundingClientRect();
+  if (!S || !S.fixtures.length) { zoom = 1; view.x = 0; view.y = 0; placeStages(); return; }
+  const xs = S.fixtures.map((f) => f.x), ys = S.fixtures.map((f) => f.y);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const { sc, ox, oy } = stageMap(r.width, r.height);
+  const bw = Math.max(0.08, x1 - x0) * sc, bh = Math.max(0.08, y1 - y0) * sc;
+  zoom = clamp(Math.min(r.width * 0.8 / bw, r.height * 0.8 / bh, 4), 0.01, 4);
+  view.x = r.width / 2 - (ox + (x0 + x1) / 2 * sc) * zoom;
+  view.y = r.height / 2 - (oy + (y0 + y1) / 2 * sc) * zoom;
+  $$('.zoom').forEach((o) => { o.value = Math.round(zoom * 100); });
+  placeStages();
+}
+$$('.fitBtn').forEach((b) => b.addEventListener('click', () => fitStage(stageFor(b))));
+$$('.zoom').forEach((z) => z.addEventListener('input', () => {
+  const stage = stageFor(z);
+  const r = stage.getBoundingClientRect();
+  zoomAt(stage, r.left + r.width / 2, r.top + r.height / 2, +z.value / 100);
+}));
+$$('.zoomIn').forEach((b) => b.addEventListener('click', () => {
+  const stage = stageFor(b); const r = stage.getBoundingClientRect();
+  zoomAt(stage, r.left + r.width / 2, r.top + r.height / 2, zoom * 1.25);
+}));
+$$('.zoomOut').forEach((b) => b.addEventListener('click', () => {
+  const stage = stageFor(b); const r = stage.getBoundingClientRect();
+  zoomAt(stage, r.left + r.width / 2, r.top + r.height / 2, zoom / 1.25);
+}));
+
+// attribute editor buttons
+// 'All' REPLACES the selection rather than adding to it — adding kept ghost ids from
+// fixtures another client had unpatched, and the count in the header included them.
+$('#attrAll').addEventListener('click', () => { sel = new Set(S.fixtures.map((f) => f.id)); paintSelection(); });
+$('#attrNone').addEventListener('click', () => { sel.clear(); paintSelection(); });
+$('#attrOn').addEventListener('click', () => { setRole('dimmer', 255); syncAttr(true); });
+$('#attrOff').addEventListener('click', () => {
+  for (const f of selectedFixtures()) { f.on = false; queueFixture(f.id, { on: false }); }
+  syncAttr(true); paintSelection();   // the faders must not keep reading full for a fixture that is off
+});
+
+// master / blackout
+$('#master').addEventListener('input', (e) => {
+  S.master = +e.target.value;
+  $('#masterOut').textContent = Math.round(S.master / 255 * 100) + '%';
+  post('api/master', { master: S.master });
+});
+$('#tMaster').addEventListener('input', (e) => {
+  S.master = +e.target.value;
+  $('#tMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
+  post('api/master', { master: S.master });
+});
+// The panic button is the one control that must never claim to have worked. Everything
+// else here is optimistic on purpose — it feels better and a failed poll corrects it a
+// second later — but a Blackout that goes red on a request that never arrived is the desk
+// telling her the rig is dark while it is at full. So this one waits for the answer and
+// puts itself back if it did not get one.
+let blackoutPending = false;
+const toggleBlackout = async () => {
+  if (blackoutPending) return;   // two fast presses computed the same `want` and sent it twice
+  blackoutPending = true;
+  const want = !S.blackout;
+  const pills = ['#blackout', '#tBlackout', '#fBlackout', '#topBlackout'];
+  pills.forEach((s) => { const el = $(s); if (el) { el.classList.toggle('on', want); el.classList.add('pending'); } });
+  const r = await post('api/master', { blackout: want });
+  blackoutPending = false;
+  pills.forEach((s) => { const el = $(s); if (el) el.classList.remove('pending'); });
+  if (r && r.error) {
+    // Put the button back where it was and say so where she is looking, on any page.
+    pills.forEach((s) => { const el = $(s); if (el) el.classList.toggle('on', S.blackout); });
+    say(`blackout did not reach the desk — ${r.error}`, true);
+    return;
+  }
+  S.blackout = want;
+  pills.forEach((s) => { const el = $(s); if (el) el.classList.toggle('on', S.blackout); });
+};
+$('#blackout').addEventListener('click', toggleBlackout);
+$('#topBlackout').addEventListener('click', toggleBlackout);
+$('#wirePill').addEventListener('click', () => {
+  // Straight to the panel that explains it, with the panel actually open.
+  location.hash = 'control'; showPage('control');
+  const d = document.querySelector('.outdetails'); if (d) d.open = true;
+});
+$('#tBlackout').addEventListener('click', toggleBlackout);
+
+// scenes / chase
+$('#saveScene').addEventListener('click', () => {
+  post('api/scenes/save', { name: $('#sceneName').value.trim() }).then((r) => {
+    $('#sceneName').value = '';
+    if (r.scene) activeScene = r.scene.id;
+    pullState();
+  });
+});
+const stepScene = (dir) => {
+  // Steps walk the FILTERED list when the filter is active — Go/next/prev move through
+  // what is on screen, same as the digit keys. Unfiltered, this is the whole library.
+  const scenes = visibleScenes();
+  if (!scenes.length) return;
+  const i = scenes.findIndex((s) => s.id === (activeScene || S.activeScene));
+  // The active scene can be outside the filtered list; next is then the first row and
+  // previous the last, not the second-to-last.
+  const j = i < 0 ? (dir > 0 ? 0 : scenes.length - 1) : (i + dir + scenes.length) % scenes.length;
+  const next = scenes[j] || scenes[0];
+  activeScene = next.id;
+  recallScene(next.id);
+};
+$('#sceneNext').addEventListener('click', () => stepScene(1));
+$('#scenePrev').addEventListener('click', () => stepScene(-1));
+$('#goBtn').addEventListener('click', () => stepScene(1));
+$('#fUniverse').addEventListener('change', (e) => {
+  if (e.target.value === 'new') { e.target.value = fUni; return; }
+  fUni = +e.target.value; buildFaders();
+});
+$('#fJump').addEventListener('change', (e) => {
+  const ch = clamp(+e.target.value | 0, 1, 512);
+  const el = $('#mf' + ch);
+  if (el) { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 900); }
+});
+$('#fReleaseAll').addEventListener('click', () => {
+  // scoped to the universe on screen — silently wiping holds on universes she cannot see
+  // would be a nasty surprise on a big rig
+  for (const k of Object.keys(S.raw)) if (k.startsWith(fUni + ':')) delete S.raw[k];
+  syncFaders();
+  post('api/raw', { clear: true, universe: fUni }).then(pullState);
+});
+$('#fAllZero').addEventListener('click', () => setAllFaders(0));
+// Every channel in the universe to full is a whiteout with no undo, and on a universe of
+// plain washes the existing confirm does not fire at all — it only asks when the universe
+// holds position or control channels. Ask every time.
+$('#fAllFull').addEventListener('click', () => {
+  if (!confirm('Hold every channel in this universe at full? That is a whiteout, and there is no undo.')) return;
+  setAllFaders(255);
+});
+
+// Set all to a typed level. Same guard as the two presets — it is the same act.
+function setAllTyped() {
+  const box = $('#fSetAllVal');
+  if (box.value.trim() === '') {
+    // Not #fOverCount — syncFaders owns that text and rewrites it 10x a second, so a
+    // message there is erased before it can be read. Mark the field itself instead.
+    box.classList.add('bad');
+    setTimeout(() => box.classList.remove('bad'), 1200);
+    box.focus();
+    return;
+  }
+  const v = clamp(Math.round(+box.value || 0), 0, 255);
+  box.value = v;
+  setAllFaders(v);
+}
+// Save from any page, including the Fader page — a scene stores the held channels as well
+// as the fixture values, so a manual look saves exactly as it sounds.
+$('#saveNow').addEventListener('click', async () => {
+  const btn = $('#saveNow');
+  const typed = $('#sceneName').value.trim();
+  const r = await post('api/scenes/save', { name: typed });
+  if (r.scene) {
+    $('#sceneName').value = '';
+    activeScene = r.scene.id;
+    // confirm on the button itself; nothing else rewrites it
+    btn.textContent = 'Saved · ' + r.scene.name;
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'Save scene'; btn.classList.remove('ok'); }, 1600);
+  }
+  pullState();
+});
+
+$('#fSetAll').addEventListener('click', setAllTyped);
+$('#fSetAllVal').addEventListener('keydown', (e) => { if (e.key === 'Enter') setAllTyped(); });
+$('#fMaster').addEventListener('input', (e) => {
+  S.master = +e.target.value; syncFaders(); post('api/master', { master: S.master });
+});
+$('#fBlackout').addEventListener('click', () => toggleBlackout());
+$('#chasePause').addEventListener('click', () => post('api/chase', { enabled: false }).then(pullState));
+$('#chaseToggle').addEventListener('click', () => post('api/chase', { enabled: !S.chase.enabled }).then(pullState));
+$('#chaseHold').addEventListener('change', (e) => post('api/chase', { holdMs: Math.round(+e.target.value * 1000) }));
+$('#chaseFade').addEventListener('change', (e) => post('api/chase', { fadeMs: Math.round(+e.target.value * 1000) }));
+
+// output
+$('#discover').addEventListener('click', async () => {
+  const address = $('#pollAddress').value.trim();
+  $('#pollResult').textContent = 'polling…';
+  const r = await post('api/discover', address ? { address } : {});
+  $('#pollResult').textContent = r.polled ? 'polled ' + r.polled.join(', ') : (r.error || '');
+  // the node burst is spread over ~520ms, so give it time before reading replies back
+  setTimeout(async () => {
+    await pullState();   // the verdict must come from the state AFTER the poll
+    if (!S.status.nodes.length) $('#pollResult').textContent += ' — no reply';
+    // A scan result describes one moment. Left on screen it describes an hour ago.
+    setTimeout(() => { if ($('#pollResult').textContent) $('#pollResult').textContent = ''; }, 15000);
+  }, 1400);
+});
+$('#pollAddress').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#discover').click(); });
+
+// Add a device by address. This is the path that works with no internet and no discovery:
+// the address is on the back of the box, and typing it is enough to put the show on it.
+async function addNodeByIp() {
+  const address = $('#addNodeIp').value.trim();
+  const name = $('#addNodeName').value.trim();
+  if (!address) return say('type the device IP first — the four numbers printed on it', true);
+  const r = await post('api/nodes/add', { address, name });
+  if (r && r.error) return say(r.error, true);
+  $('#addNodeIp').value = ''; $('#addNodeName').value = '';
+  await pullState();
+  say(`sending to ${address}${name ? ' — ' + name : ''}`);
+}
+$('#addNode').addEventListener('click', addNodeByIp);
+[$('#addNodeIp'), $('#addNodeName')].forEach((el) =>
+  el.addEventListener('keydown', (e) => { if (e.key === 'Enter') addNodeByIp(); }));
+$('#saveOutput').addEventListener('click', () => {
+  const entries = $('#targets').value.split(',').map((s) => s.trim()).filter(Boolean);
+  // The server silently drops anything that is not an address, and unicast with nothing
+  // left falls back to broadcast — so a typo has to be named here, before it becomes an
+  // invisible mode change on the wire.
+  const bad = entries.filter((t) => !/^\d+\.\d+\.\d+\.\d+$/.test(t));
+  if (bad.length) say(`${bad.join(', ')} ${bad.length === 1 ? 'is' : 'are'} not an IP address — fix it and apply again`, true);
+  post('api/output', {
+    mode: ($$('input[name=mode]').find((r) => r.checked) || {}).value || 'broadcast',
+    targets: entries,
+  }).then(pullState);
+});
+
+/* ---- more than one device at once ---- */
+// A universe list typed as "2" or "2,3" or "2 3". Empty means every universe the desk
+// has, which is right for a node mirroring the whole rig and wrong for a widget.
+function parseUniverses(text) {
+  return [...new Set(String(text || '').split(/[^0-9]+/).filter(Boolean).map((n) => Math.max(0, Math.min(32767, +n))))]
+    .sort((a, b) => a - b);
+}
+
+function buildSends() {
+  const list = (S.status && S.status.extra) || [];
+  const box = $('#sendList');
+  $('#sendsWhat').textContent = list.length
+    ? `${list.length} beside the main output`
+    : 'the main output is the only one';
+  const sig = JSON.stringify(list);
+  if (box.dataset.sig !== sig) {
+    box.dataset.sig = sig;
+    box.innerHTML = list.map((s) => {
+      const where = s.driver === 'enttec' ? s.serialPort : (s.targets.join(', ') || 'nowhere');
+      const unis = s.universes.length ? `universe ${s.universes.map((u) => u + 1).join(', ')}` : 'every universe';
+      const state = !s.enabled ? 'off'
+        : s.connected ? (s.packetsSent ? `${s.packetsSent.toLocaleString()} frames` : 'open')
+        : (s.lastError || 'not open');
+      return `<div class="sendrow${s.enabled && s.connected ? '' : ' dead'}" data-id="${esc(s.id)}">
+        <b>${esc(s.driver === 'enttec' ? 'USB PRO' : s.driver === 'sacn' ? 'sACN' : 'Art-Net')}</b>
+        <span>${esc(where)}</span>
+        <span class="muted">${esc(unis)}</span>
+        <span class="muted st">${esc(state)}</span>
+        <button class="sq small snd-on">${s.enabled ? 'On' : 'Off'}</button>
+        <button class="sq small danger snd-x" title="Stop sending to this device and forget it">✕</button>
+      </div>`;
+    }).join('') || '';
+    $$('.sendrow', box).forEach((row) => {
+      const id = row.dataset.id;
+      row.querySelector('.snd-on').addEventListener('click', async () => {
+        const s = ((S.status && S.status.extra) || []).find((x) => x.id === id);
+        const r = await post('api/output/send', { id, enabled: !(s && s.enabled) });
+        await pullState();
+        if (r && r.error) say(r.error, true);
+      });
+      row.querySelector('.snd-x').addEventListener('click', async () => {
+        await post('api/output/send/remove', { id });
+        await pullState();
+        say('that device is no longer being sent to');
+      });
+    });
+  }
+}
+
+$('#sendAdd').addEventListener('click', async () => {
+  const driver = $('#sendDriver').value;
+  const where = $('#sendWhere').value.trim();
+  const universes = parseUniverses($('#sendUni').value);
+  if (driver === 'enttec' && !where) return say('name the serial port the second widget is on', true);
+  if (driver !== 'enttec' && !where) return say('give the device an IP address', true);
+  // A widget is one DMX line. Adding one without saying which universe would leave it
+  // silently carrying universe 1 while the operator believes it is carrying the other.
+  if (driver === 'enttec' && !universes.length) return say('say which universe this widget carries — it can only carry one', true);
+  const body = { driver, universes };
+  if (driver === 'enttec') body.serialPort = where; else body.targets = where.split(/[ ,]+/).filter(Boolean);
+  const r = await post('api/output/send', body);
+  if (r && r.error) return say(r.error, true);
+  $('#sendWhere').value = ''; $('#sendUni').value = '';
+  await pullState();
+  say(`sending ${universes.length ? 'universe ' + universes.map((u) => u + 1).join(', ') : 'every universe'} to ${where} as well`);
+});
+
+// The wire switch. Turning output ON is the one action in this panel that can change a
+// room, so it is confirmed the first time it is pressed in a session — but only the
+// first: an operator who has decided to go live should not be asked again all night.
+let outArmed = false;
+$('#outEnable').addEventListener('click', async () => {
+  const on = !!(S && S.output.enabled);
+  if (!on && !outArmed) {
+    outArmed = true;
+    $('#outEnable').textContent = 'Press again to go live';
+    $('#outEnableWhat').textContent = 'this will start sending DMX to whatever is listening';
+    setTimeout(() => { outArmed = false; buildOutput(); }, 4000);
+    return;
+  }
+  outArmed = false;
+  const res = await post('api/output', { enabled: !on });
+  await pullState();
+  if (res && res.error) return say(res.error, true);
+  say(!on ? 'output ON — the rig is live' : 'output OFF — nothing is leaving this machine');
+});
+
+// Switching driver takes effect immediately rather than behind an Apply button: it is a
+// choice about which cable the show is on, and having to press a second thing to make it
+// real is exactly how the desk ends up transmitting somewhere she is not looking.
+$$('input[name=driver]').forEach((r) => r.addEventListener('change', async () => {
+  const res = await post('api/output', { driver: r.value, serialPort: $('#serialPort').value });
+  await pullState();
+  if (res && res.error) say(res.error, true);   // #serialStat is rebuilt by the poll and would eat this
+}));
+// The README's remedy for "n skipped, the link cannot keep up" is to lower this. It had
+// no control anywhere in the interface. Restarting the send loop is a frame or two of
+// gap on the wire, which is why it commits on change, not on every keystroke.
+$('#refreshHz').addEventListener('change', async () => {
+  const hz = Math.max(1, Math.min(44, Math.round(+$('#refreshHz').value) || 40));
+  $('#refreshHz').value = hz;
+  const res = await post('api/output', { refreshHz: hz });
+  await pullState();
+  if (res && res.error) say(res.error, true);
+});
+$('#serialPort').addEventListener('change', async () => {
+  const res = await post('api/output', { serialPort: $('#serialPort').value });
+  await pullState();
+  if (res && res.error) say(res.error, true);   // #serialStat is rebuilt by the poll and would eat this
+});
+// Identify answers into its own line, not #serialStat: the poll rebuilds the status line
+// every 1.5s, so an answer written there was erased while she was still reading it — the
+// diagnostic the README sends you to was transient by accident.
+$('#identify').addEventListener('click', async () => {
+  const line = $('#identifyLine');
+  line.innerHTML = '<span class="muted">checking…</span>';
+  const r = await post('api/serial/identify', { port: $('#serialPort').value });
+  const at = new Date().toLocaleTimeString();
+  if (!r.ok) { line.innerHTML = `<span class="bad">${esc(r.error || 'no widget on that port')}</span> <span class="muted">· ${at}</span>`; return; }
+  const name = (r.device && r.device.device) || 'serial port';
+  line.innerHTML = r.looksLikeEnttec
+    ? `<span class="good">ENTTEC widget found</span> <span class="muted">· ${esc(name)} · serial ${esc(r.serial)} · ${r.baud} baud · ${at}</span>`
+    : `<span class="warn">Port opens, but this is not an ENTTEC widget</span> <span class="muted">· ${esc(name)}${r.serial ? ' · serial ' + esc(r.serial) : ''} · ${at}</span>`;
+});
+
+// tap tempo
+let taps = [];
+$('#tapBtn').addEventListener('click', () => {
+  const now = Date.now();
+  taps = taps.filter((t) => now - t < 3000); taps.push(now);
+  if (taps.length > 1) {
+    $('#bpm').value = Math.round(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
+    $('#bpm').dispatchEvent(new Event('change'));
+  }
+});
+// One tempo for the desk. The chase and the effects both run off this field, so tapping a
+// tempo moves everything that is beat-driven rather than leaving the two silently at
+// different speeds — which looks like an effect that "will not sync" and has no visible cause.
+$('#bpm').addEventListener('change', () => {
+  const bpm = clamp(+$('#bpm').value, 20, 300);
+  post('api/chase', { holdMs: Math.round(60000 / bpm) });
+  post('api/fx', { bpm }).then(pullState);
+});
+
+$('#fxDepth').addEventListener('input', () => {
+  $('#fxDepthOut').textContent = Math.round(+$('#fxDepth').value / 255 * 100) + '%';
+});
+// Debounced at 40ms, the same as the fixture and raw-channel queues, so a drag is a
+// stream of small moves rather than one jump at the end.
+let fxDepthTimer = null;
+$('#fxDepth').addEventListener('input', () => {
+  clearTimeout(fxDepthTimer);
+  fxDepthTimer = setTimeout(() => post('api/fx', { depth: +$('#fxDepth').value }), 40);
+});
+$('#fxDepth').addEventListener('change', () => post('api/fx', { depth: +$('#fxDepth').value }).then(pullState));
+setInterval(() => {
+  const bpm = clamp(+$('#bpm').value || 120, 20, 300);
+  const bar = $('#bpmBar');
+  bar.style.transition = 'none'; bar.style.width = '100%';
+  requestAnimationFrame(() => { bar.style.transition = `width ${60 / bpm}s linear`; bar.style.width = '0%'; });
+}, 500);
+
+// Is this element one you TYPE prose or numbers into? Only those may keep the letter B
+// from the panic key — a focused fader, checkbox, radio, button or select is not typing.
+const isTypingTarget = (el) => !!el && (el.tagName === 'TEXTAREA' || el.isContentEditable
+  || (el.tagName === 'INPUT' && !/^(range|checkbox|radio|button|submit|reset|color)$/i.test(el.type || 'text')));
+
+// A clicked button keeps keyboard focus, and the next key pressed reached the scene
+// shortcuts: Chase Start, then a digit meant for the BPM box, and a scene fired on the
+// rig. A pointer click hands focus back; keyboard users (focus-visible) keep theirs.
+document.addEventListener('click', (e) => {
+  const b = e.target && e.target.closest && e.target.closest('button');
+  if (b && !b.matches(':focus-visible')) b.blur();
+});
+
+document.addEventListener('keydown', (e) => {
+  // PANIC FIRST. B must fire before every guard below: the old order ate it whenever
+  // focus lingered on any input — including the fader that was just dragged — and while
+  // the scene popover was open. Only real typing keeps the letter; the popover's
+  // capture-mode handler swallows keys before this and fires the blackout itself.
+  if ((e.key === 'b' || e.key === 'B') && !e.ctrlKey && !e.altKey && !e.metaKey && !isTypingTarget(e.target)) {
+    e.preventDefault();
+    if (bindTarget != null) closeBindPop();   // the menu yields to the panic key
+    toggleBlackout();
+    return;
+  }
+  // While the scene popover is open, its capture-phase handler owns Esc and (in bind
+  // mode) every key; in menu/rename/fade mode keys still bubble here, and a key pressed
+  // with focus on a menu row must not fire a shortcut — so stand down entirely.
+  if (bindTarget != null) return;
+  if (/input|select|textarea/i.test(e.target.tagName)) return;
+  if (e.key === ' ') { spaceHeld = true; e.preventDefault(); document.body.classList.add('space'); }
+  if (e.key === 'Escape') { if (!$('#builder').hidden) { closeBuilder(); return; } sel.clear(); paintSelection(); }
+  // Delete only, only on Setup, and never while the fixture builder is open. Backspace is
+  // removed outright: it is what people press to go back, and it was silently unpatching.
+  if (e.key === 'Delete' && page === 'setup' && $('#builder').hidden) { e.preventDefault(); unpatchSelection(); }
+  // Custom scene keys, bound via the tile's right-click menu. They outrank the built-in
+  // 1-9 row (return, below) but never the panic keys above, and a chord with
+  // ctrl/alt/meta is left to the browser. The popover-open case never reaches here — the
+  // bindTarget guard at the top stood the whole handler down.
+  if (!e.ctrlKey && !e.altKey && !e.metaKey && sceneHotkeys[e.key.toLowerCase()] != null && S) {
+    e.preventDefault();
+    recallByName(sceneHotkeys[e.key.toLowerCase()]);
+    return;
+  }
+  // With the filter active, 1-9 fire the Nth VISIBLE row — the row the eye is counting —
+  // not the Nth row of the unfiltered library. Unfiltered, nothing changes.
+  if (/^[1-9]$/.test(e.key) && S) {
+    const sc = visibleScenes()[+e.key - 1];
+    if (sc) { activeScene = sc.id; recallScene(sc.id); }
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === ' ') { spaceHeld = false; document.body.classList.remove('space'); }
+});
+
+// A range input keeps focus after a drag, and focus guards then treat the next keypress
+// as "typing" — a fader you touched a minute ago must not eat the digit row or make
+// Space scroll. Let go the moment the drag commits.
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t && t.matches && t.matches('input[type=range]')) t.blur();
+});
+// Losing focus with Space down (alt-tab) would leave pan mode stuck on.
+window.addEventListener('blur', () => { spaceHeld = false; document.body.classList.remove('space'); });
+
+$$('.stage').forEach(wireStage);
+
+// ---- resize handling -----------------------------------------------------------
+// Fixture positions are percentages of .stage-inner, which tracks the stage box, so they
+// re-derive from the CURRENT container size by themselves. What did NOT survive a resize
+// was the pan: view.x/y are screen pixels chosen against the old box, so shrinking the
+// window slid the framed rig off-centre or clean off-screen. Rescale the pan by the same
+// ratio the box changed by — the view keeps framing exactly what it framed — and re-place
+// so the label-crowding pass reruns against the new width.
+const stageSizes = new WeakMap();
+function handleStageResize() {
+  let rescaled = false;
+  for (const stage of $$('.stage')) {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    const prev = stageSizes.get(stage);
+    stageSizes.set(stage, { w, h });
+    // Only a stage that is actually on screen may steer the shared view — the hidden
+    // page's stage reads 0×0, and 0-ratio maths would wipe the pan.
+    if (!prev || !prev.w || !prev.h || !w || !h || rescaled) continue;
+    if (prev.w === w && prev.h === h) continue;
+    view.x *= w / prev.w;
+    view.y *= h / prev.h;
+    rescaled = true;   // one visible stage drives; never apply the ratio twice
+  }
+  placeStages();
+}
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(handleStageResize);
+  $$('.stage').forEach((s) => ro.observe(s));
+}
+// Debounced fallback so a browser without ResizeObserver still recovers on resize.
+let stageResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(stageResizeTimer);
+  stageResizeTimer = setTimeout(handleStageResize, 120);
+});
+
+/* =============== resizable pane splits =============== */
+
+// Each .splitter bar drags one knob: a --sp-* grid-column var on its parent section
+// (vertical bars) or the section's --sp-h height (horizontal bars, % of the page so a
+// window resize keeps the proportion). Sizes persist per bar id; double-click clears
+// the inline value so the stylesheet default — including its responsive media-query
+// overrides — takes over again. Below 1100px the bars are display:none and the stacked
+// responsive layout wins outright.
+const SPLIT_STORE = 'paneSplits';
+let paneSplits = {};
+try {
+  const raw = JSON.parse(localStorage.getItem(SPLIT_STORE));
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) paneSplits = raw;
+} catch (e) { /* private mode or corrupt store: stylesheet defaults */ }
+function savePaneSplits() {
+  try { localStorage.setItem(SPLIT_STORE, JSON.stringify(paneSplits)); }
+  catch (e) { /* private mode: sizes last the session and no longer */ }
+}
+
+// pane: which neighbour of the bar the var sizes (the fixed grid column); flexSel: the
+// 1fr pane in the same section, which must keep working room no matter what; rows have
+// neither — they drag the section's height between min/max % of the page.
+const SPLIT_DEFS = {
+  'setup-lib':  { axis: 'x', varName: '--sp-1', pane: 'prev', flexSel: '.patch',     min: 240, max: 680 },
+  'setup-sel':  { axis: 'x', varName: '--sp-1', pane: 'next', flexSel: '.stagepane', min: 110, max: 420 },
+  'setup-lim':  { axis: 'x', varName: '--sp-2', pane: 'next', flexSel: '.stagepane', min: 280, max: 780 },
+  'setup-rows': { axis: 'y', min: 22, max: 78 },
+  'ctl-bank':   { axis: 'x', varName: '--sp-1', pane: 'prev', flexSel: '.scenearea', min: 180, max: 560 },
+  'ctl-stack':  { axis: 'x', varName: '--sp-3', pane: 'next', flexSel: '.scenearea', min: 230, max: 560 },
+  'ctl-rail':   { axis: 'x', varName: '--sp-2', pane: 'next', flexSel: '.scenearea', min: 220, max: 560 },
+  'ctl-sel':    { axis: 'x', varName: '--sp-1', pane: 'next', flexSel: '.stagepane', min: 110, max: 420 },
+  'ctl-attr':   { axis: 'x', varName: '--sp-2', pane: 'next', flexSel: '.stagepane', min: 320, max: 960 },
+  'ctl-rows':   { axis: 'y', min: 22, max: 78 },
+};
+
+function wireSplitters() {
+  $$('.splitter').forEach((bar) => {
+    const def = SPLIT_DEFS[bar.dataset.split];
+    if (!def) return;
+    const isRow = def.axis === 'y';
+    // a row bar sits between its section and the groups strip; a column bar lives
+    // inside the grid it resizes
+    const section = isRow ? bar.previousElementSibling : bar.parentElement;
+    const apply = (v) => {
+      if (isRow) section.style.setProperty('--sp-h', v + '%');
+      else section.style.setProperty(def.varName, Math.round(v) + 'px');
+    };
+    // restore a saved size — clamped, in case it was written on a bigger screen
+    const saved = paneSplits[bar.dataset.split];
+    if (typeof saved === 'number' && isFinite(saved)) apply(clamp(saved, def.min, def.max));
+
+    let drag = null;
+    bar.addEventListener('pointerdown', (e) => {
+      if (!e.isPrimary) return;
+      e.preventDefault();
+      const paneEl = def.pane === 'prev' ? bar.previousElementSibling
+        : def.pane === 'next' ? bar.nextElementSibling : null;
+      const flexEl = def.flexSel ? $(def.flexSel, section) : null;
+      drag = {
+        x: e.clientX, y: e.clientY,
+        startW: paneEl ? paneEl.getBoundingClientRect().width : 0,
+        startH: isRow ? section.getBoundingClientRect().height : 0,
+        pageH: isRow ? Math.max(1, bar.parentElement.getBoundingClientRect().height) : 1,
+        flexW: flexEl ? flexEl.getBoundingClientRect().width : 0,
+        sign: def.pane === 'prev' ? 1 : -1,   // a pane right of the bar grows by dragging LEFT
+      };
+      bar.classList.add('dragging');
+      bar.setPointerCapture(e.pointerId);
+    });
+    bar.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      let v;
+      if (isRow) {
+        const h = drag.startH + (e.clientY - drag.y);
+        v = Math.round(clamp(h / drag.pageH * 100, def.min, def.max) * 10) / 10;
+      } else {
+        const dx = (e.clientX - drag.x) * drag.sign;
+        // the 1fr pane keeps at least 240px — a splitter must never crush the stage
+        const roomMax = drag.startW + Math.max(0, drag.flexW - 240);
+        v = Math.round(clamp(drag.startW + dx, def.min, Math.min(def.max, roomMax)));
+      }
+      paneSplits[bar.dataset.split] = v;
+      apply(v);
+    });
+    const drop = () => {
+      if (!drag) return;
+      drag = null;
+      bar.classList.remove('dragging');
+      savePaneSplits();
+      handleStageResize();   // belt and braces — the .stage ResizeObserver also fires
+    };
+    bar.addEventListener('pointerup', drop);
+    bar.addEventListener('pointercancel', drop);
+    bar.addEventListener('dblclick', () => {
+      delete paneSplits[bar.dataset.split];
+      savePaneSplits();
+      if (isRow) section.style.removeProperty('--sp-h');
+      else section.style.removeProperty(def.varName);
+      handleStageResize();
+    });
+  });
+}
+wireSplitters();
+
+/* =============== right rail: foldable sections =============== */
+
+// The rail stacks Master + FX + LFO + Audio + Output and scrolls; folding a section
+// keeps the rest reachable on a short window. A fold is a browser preference, like the
+// hotkeys — it lives in localStorage, not on the server. The Output block is a native
+// <details> and folds itself.
+const FOLD_STORE = 'railFold';
+let railFold = {};
+try {
+  const raw = JSON.parse(localStorage.getItem(FOLD_STORE));
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) railFold = raw;
+} catch (e) { /* private mode or corrupt store: everything open */ }
+$$('.railpane > .pane-head').forEach((head) => {
+  const h2 = $('h2', head);
+  if (!h2) return;
+  const key = h2.textContent.trim();
+  head.classList.add('foldable');
+  head.title = 'Click to fold this section';
+  const setFold = (fold) => {
+    head.classList.toggle('folded', fold);
+    // the body is every sibling up to the next section head (or the Output <details>)
+    for (let el = head.nextElementSibling;
+      el && !el.classList.contains('pane-head') && el.tagName !== 'DETAILS';
+      el = el.nextElementSibling) el.classList.toggle('railfold', fold);
+  };
+  if (railFold[key]) setFold(true);
+  head.addEventListener('click', () => {
+    const fold = !head.classList.contains('folded');
+    railFold[key] = fold;
+    try { localStorage.setItem(FOLD_STORE, JSON.stringify(railFold)); } catch (e) {}
+    setFold(fold);
+  });
+});
+
+/* =============== TOUCH live strip =============== */
+
+// The thumb-edge control strip on the Touch page: FX / Audio / Set / Master in four
+// tabs, so a whole set runs from one page one-handed. Tab choice and fold state are
+// browser preferences (localStorage), like the hotkeys and the pane splits.
+
+let lsTab = 'fx';
+let lsFolded = false;
+try {
+  const raw = JSON.parse(localStorage.getItem('touchStrip'));
+  if (raw && typeof raw === 'object') { lsTab = raw.tab || 'fx'; lsFolded = !!raw.fold; }
+} catch (e) { /* private mode or corrupt store: defaults */ }
+function saveStripPrefs() {
+  try { localStorage.setItem('touchStrip', JSON.stringify({ tab: lsTab, fold: lsFolded })); } catch (e) {}
+}
+function applyStrip() {
+  $('#liveStrip').classList.toggle('folded', lsFolded);
+  $('#lsFold').textContent = lsFolded ? '▴' : '▾';
+  $('#lsFold').title = lsFolded ? 'Open the strip' : 'Collapse the strip';
+  $$('.ls-tab').forEach((b) => b.classList.toggle('is-active', b.dataset.ls === lsTab));
+  $$('.ls-panel').forEach((p) => p.classList.toggle('is-active', p.dataset.ls === lsTab));
+}
+$$('.ls-tab').forEach((b) => b.addEventListener('click', () => {
+  lsFolded = false;                      // tapping any tab reopens a folded strip
+  lsTab = b.dataset.ls;
+  saveStripPrefs(); applyStrip();
+  if (S) buildTouchStrip();
+}));
+$('#lsFold').addEventListener('click', () => { lsFolded = !lsFolded; saveStripPrefs(); applyStrip(); });
+// the audio mode list is the Control rail's list — one source, no drift
+$('#tAudMode').innerHTML = $('#audMode').innerHTML;
+applyStrip();
+
+// ---- live sets: ordered scene lists for a show ----------------------------------
+// Server contract: state.sets = [{id, name, sceneIds}], POST /api/sets {sets} replaces
+// the whole list. Until the server ships it, sets live in THIS browser (localStorage) —
+// the builder works either way, and says which world it is in. Steps store scene IDS,
+// so a renamed scene follows and a deleted one shows as "missing" instead of firing.
+const SETS_STORE = 'liveSets';
+let localSets = [];
+try {
+  const raw = JSON.parse(localStorage.getItem(SETS_STORE));
+  if (Array.isArray(raw)) localSets = raw.filter((s) => s && typeof s === 'object');
+} catch (e) { /* private mode or corrupt store: start empty */ }
+
+let liveSet = { setId: null, pos: -1 };  // which set is playing, and where in it
+try {
+  const raw = JSON.parse(localStorage.getItem('liveSetPos'));
+  if (raw && typeof raw === 'object') liveSet = { setId: raw.setId || null, pos: Number.isFinite(raw.pos) ? raw.pos : -1 };
+} catch (e) {}
+function saveLiveSetPos() { try { localStorage.setItem('liveSetPos', JSON.stringify(liveSet)); } catch (e) {} }
+
+let spOpen = false, spEdit = false;      // the ordered list, and whether it shows edit tools
+
+const serverHasSets = () => !!(S && Array.isArray(S.sets));
+const getSets = () => (serverHasSets() ? S.sets : localSets);
+const currentSet = () => getSets().find((s) => s.id === liveSet.setId) || null;
+const newSetId = () => 'set-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+function saveSets(sets) {
+  // Client-side validation per the contract: names capped at 40, and the POSTed
+  // sceneIds only ever name scenes the desk actually has. The local copy keeps missing
+  // ids so their rows can say "missing" instead of silently vanishing mid-edit.
+  const clean = sets.map((st) => ({
+    id: st.id || newSetId(),
+    name: String(st.name || 'Set').trim().slice(0, 40) || 'Set',
+    sceneIds: Array.isArray(st.sceneIds) ? st.sceneIds.slice() : [],
+  }));
+  if (serverHasSets()) {
+    S.sets = clean;
+    const valid = new Set(S.scenes.map((s) => s.id));
+    const posted = clean.map((st) => ({ ...st, sceneIds: st.sceneIds.filter((id) => valid.has(id)) }));
+    post('api/sets', { sets: posted }).then((r) => {
+      if (r && r.error) say(`set change did not reach the desk — ${r.error}`, true);
+      pullState();
+    });
+  } else {
+    localSets = clean;
+    try { localStorage.setItem(SETS_STORE, JSON.stringify(clean)); } catch (e) {}
+  }
+  buildTouchStrip();
+}
+
+function goSetStep(i) {
+  const st = currentSet();
+  if (!st || !st.sceneIds.length) return;
+  const pos = clamp(i, 0, st.sceneIds.length - 1);
+  liveSet.pos = pos;
+  saveLiveSetPos();
+  const sc = S.scenes.find((x) => x.id === st.sceneIds[pos]);
+  if (!sc) say(`step ${pos + 1} points at a scene that no longer exists`, true);
+  else { activeScene = sc.id; recallScene(sc.id); }
+  buildTouchStrip();
+}
+
+$('#setNext').addEventListener('click', () => goSetStep(liveSet.pos + 1));
+$('#setPrev').addEventListener('click', () => goSetStep(liveSet.pos - 1));
+$('#setNow').addEventListener('click', () => {
+  spOpen = !spOpen;
+  if (!spOpen) spEdit = false;
+  buildTouchStrip();
+});
+$('#setEdit').addEventListener('click', () => {
+  if (spOpen && spEdit) { spOpen = false; spEdit = false; }
+  else { spOpen = true; spEdit = true; }
+  buildTouchStrip();
+});
+$('#setPick').addEventListener('change', () => {
+  liveSet.setId = $('#setPick').value || null;
+  liveSet.pos = -1;
+  saveLiveSetPos();
+  buildTouchStrip();
+});
+
+// the ordered list: tap a name to jump; in edit mode the same rows reorder and remove
+$('#setList').addEventListener('click', (e) => {
+  const st = currentSet();
+  const t = e.target.closest('button');
+  if (!t || !st) return;
+  const ids = st.sceneIds;
+  if (t.dataset.jump != null) {
+    goSetStep(+t.dataset.jump);
+    if (!spEdit) { spOpen = false; buildTouchStrip(); }
+    return;
+  }
+  if (t.dataset.up != null) {
+    const i = +t.dataset.up;
+    [ids[i - 1], ids[i]] = [ids[i], ids[i - 1]];
+    if (liveSet.pos === i) liveSet.pos--; else if (liveSet.pos === i - 1) liveSet.pos++;
+  } else if (t.dataset.dn != null) {
+    const i = +t.dataset.dn;
+    [ids[i + 1], ids[i]] = [ids[i], ids[i + 1]];
+    if (liveSet.pos === i) liveSet.pos++; else if (liveSet.pos === i + 1) liveSet.pos--;
+  } else if (t.dataset.rm != null) {
+    const i = +t.dataset.rm;
+    ids.splice(i, 1);
+    if (liveSet.pos >= i) liveSet.pos--;
+  } else return;
+  saveLiveSetPos();
+  saveSets(getSets());
+});
+
+$('#sbAddCur').addEventListener('click', () => {
+  const st = currentSet();
+  if (!st) { say('make or pick a set first — press New set'); return; }
+  const sc = S && S.scenes.find((x) => x.id === (activeScene || S.activeScene));
+  if (!sc) { say('no scene is active — fire the look you want to add, then press this'); return; }
+  st.sceneIds.push(sc.id);
+  saveSets(getSets());
+  say(`added "${sc.name}" to "${st.name}" (step ${st.sceneIds.length})`);
+});
+$('#sbNew').addEventListener('click', () => {
+  const name = prompt('Name the set:', 'Set ' + (getSets().length + 1));
+  if (name == null) return;
+  const sets = getSets();
+  const st = { id: newSetId(), name: name.trim().slice(0, 40) || 'Set', sceneIds: [] };
+  sets.push(st);
+  liveSet.setId = st.id; liveSet.pos = -1; saveLiveSetPos();
+  spOpen = true; spEdit = true;
+  saveSets(sets);
+});
+$('#sbRen').addEventListener('click', () => {
+  const st = currentSet();
+  if (!st) { say('pick a set to rename'); return; }
+  const name = prompt('Rename the set:', st.name);
+  if (name == null || !name.trim()) return;
+  st.name = name.trim().slice(0, 40);
+  saveSets(getSets());
+});
+$('#sbDel').addEventListener('click', () => {
+  const st = currentSet();
+  if (!st) { say('pick a set to delete'); return; }
+  if (!confirm(`Delete the set "${st.name}"? The scenes themselves are untouched.`)) return;
+  const sets = getSets().filter((s) => s.id !== st.id);
+  liveSet.setId = null; liveSet.pos = -1; saveLiveSetPos();
+  saveSets(sets);
+});
+
+// ---- the strip's other tabs -----------------------------------------------------
+let tFxDepthTimer = null;
+$('#tFxDepth').addEventListener('input', () => {
+  $('#tFxDepthOut').textContent = Math.round(+$('#tFxDepth').value / 255 * 100) + '%';
+  clearTimeout(tFxDepthTimer);
+  tFxDepthTimer = setTimeout(() => post('api/fx', { depth: +$('#tFxDepth').value }), 40);
+});
+$('#tFxDepth').addEventListener('change', () => post('api/fx', { depth: +$('#tFxDepth').value }).then(pullState));
+$('#tFxPads').addEventListener('click', (e) => {
+  const b = e.target.closest('.fxpad');
+  if (!b || !S) return;
+  const same = fxRunning() && S.fx.mode === b.dataset.fx;
+  post('api/fx', same ? { mode: 'none' } : { mode: b.dataset.fx }).then(pullState);
+});
+$('#tTap').addEventListener('click', () => $('#tapBtn').click());   // one tap-tempo brain
+$('#tFxOff').addEventListener('click', () => post('api/fx', { mode: 'none' }).then(pullState));
+
+$('#tMicBtn').addEventListener('click', async () => {
+  if (mic.timer) stopMic(); else await startMic();
+  if (S) buildTouchStrip();
+});
+$('#tAudReact').addEventListener('click', () => {
+  if (!S || !S.audioCfg) return;
+  postAudioCfg({ enabled: !S.audioCfg.enabled });
+  buildTouchStrip();
+});
+$('#tAudBeats').addEventListener('click', () => {
+  if (!S || !S.audioCfg) return;
+  postAudioCfg({ useBeats: S.audioCfg.useBeats === false });
+  buildTouchStrip();
+});
+$('#tAudMode').addEventListener('change', (e) => { if (S) postAudioCfg({ mode: e.target.value }); });
+$('#tAudAmount').addEventListener('input', (e) => {
+  $('#tAudAmountOut').textContent = Math.round(+e.target.value / 255 * 100) + '%';
+  if (S) postAudioCfg({ amount: +e.target.value }, true);
+});
+
+$('#tLfoOff').addEventListener('click', allLfosOff);
+$('#tChaseStop').addEventListener('click', () => post('api/chase', { enabled: false }).then(pullState));
+$('#tReleaseHeld').addEventListener('click', () => {
+  if (!S) return;
+  const unis = [...new Set(Object.keys(S.raw).map((k) => +k.split(':')[0]))];
+  if (!unis.length) return;
+  for (const k of Object.keys(S.raw)) delete S.raw[k];
+  Promise.all(unis.map((u) => post('api/raw', { clear: true, universe: u }))).then(pullState);
+  say(`released held channels on universe${unis.length === 1 ? '' : 's'} ${unis.map((u) => u + 1).join(', ')}`);
+});
+
+function buildTouchStrip() {
+  if (!S) return;
+  // FX pads — the same server-published mode list as the Control rail
+  const pads = $('#tFxPads');
+  const modes = S.fxModes || ['none'];
+  if (pads.dataset.sig !== modes.join(',')) {
+    pads.dataset.sig = modes.join(',');
+    pads.innerHTML = modes.map((m) =>
+      `<button class="fxpad${m === 'none' ? ' off' : ''}" data-fx="${m}">${fxLabel(m)}</button>`).join('');
+  }
+  const live = fxRunning() ? S.fx.mode : 'none';
+  $$('.fxpad', pads).forEach((b) => b.classList.toggle('is-active', b.dataset.fx === live));
+  if (document.activeElement !== $('#tFxDepth')) $('#tFxDepth').value = S.fx.depth;
+  $('#tFxDepthOut').textContent = Math.round(S.fx.depth / 255 * 100) + '%';
+  $('#tBpm').textContent = S.fx.bpm;
+
+  // audio — mirrors buildAudio's guards: no config yet renders disabled, not broken
+  const cfg = S.audioCfg;
+  $('#tMicBtn').classList.toggle('on', !!mic.timer);
+  $('#tMicBtn').textContent = mic.timer ? 'Mic on' : 'Mic';
+  ['tAudReact', 'tAudMode', 'tAudBeats', 'tAudAmount'].forEach((id) => { $('#' + id).disabled = !cfg; });
+  $('#tAudReact').classList.toggle('on', !!(cfg && cfg.enabled));
+  $('#tAudBeats').classList.toggle('on', !cfg || cfg.useBeats !== false);
+  if (cfg) {
+    if (document.activeElement !== $('#tAudMode')) $('#tAudMode').value = cfg.mode || 'level';
+    if (document.activeElement !== $('#tAudAmount')) $('#tAudAmount').value = cfg.amount ?? 255;
+  }
+  $('#tAudAmountOut').textContent = Math.round(+$('#tAudAmount').value / 255 * 100) + '%';
+
+  buildTouchLayers();
+
+  // master tab switches — disabled when there is nothing to stop
+  $('#tChaseStop').disabled = !S.chase.enabled;
+  $('#tLfoOff').disabled = !(Array.isArray(S.lfos) && S.lfos.some((l) => l.enabled));
+  const held = Object.keys(S.raw).length;
+  $('#tReleaseHeld').disabled = !held;
+  $('#tReleaseHeld').textContent = held ? `Release ${held} held` : 'Release held';
+
+  buildSetPanel();
+}
+
+function buildSetPanel() {
+  const sets = getSets();
+  const pick = $('#setPick');
+  const pickSig = sets.map((s) => s.id + s.name + s.sceneIds.length).join('|') + '#' + liveSet.setId;
+  if (pick.dataset.sig !== pickSig) {
+    pick.dataset.sig = pickSig;
+    pick.innerHTML = (sets.length ? '' : '<option value="">no sets yet — press Edit</option>')
+      + sets.map((s) => `<option value="${esc(s.id)}"${s.id === liveSet.setId ? ' selected' : ''}>${esc(s.name)} (${s.sceneIds.length})</option>`).join('');
+  }
+  const st = currentSet();
+  const n = st ? st.sceneIds.length : 0;
+  const pos = st ? clamp(liveSet.pos, -1, n - 1) : -1;
+  const nameOf = (id) => { const sc = S.scenes.find((x) => x.id === id); return sc ? sc.name : 'missing scene'; };
+  $('#setProg').textContent = st && n ? `${pos + 1}/${n}` : '';
+  $('#setNowName').textContent = st
+    ? (pos >= 0 ? nameOf(st.sceneIds[pos]) : (n ? 'press Next to start' : 'empty set'))
+    : 'pick or build a set';
+  const nxt = st && pos + 1 < n ? nameOf(st.sceneIds[pos + 1]) : '';
+  $('#setNextName').textContent = nxt ? `next: ${nxt}` : (st && n && pos + 1 >= n ? 'end of set' : '');
+  $('#setPrev').disabled = !st || pos <= 0;
+  $('#setNext').disabled = !st || pos + 1 >= n;
+  $('#setEdit').classList.toggle('accent', spEdit);
+  $('#setLocalNote').hidden = serverHasSets();
+
+  $('#setListWrap').hidden = !spOpen;
+  $('#setPlayerMain').hidden = spOpen;
+  $('#sbTools').hidden = !spOpen || !spEdit;
+  if (!spOpen) return;
+  const list = $('#setList');
+  const listSig = (st ? st.id + '#' + st.sceneIds.map((id) => id + nameOf(id)).join(',') : 'none')
+    + '#' + pos + '#' + spEdit;
+  if (list.dataset.sig === listSig) return;
+  list.dataset.sig = listSig;
+  list.innerHTML = st
+    ? st.sceneIds.map((id, i) => {
+      const sc = S.scenes.find((x) => x.id === id);
+      return `<div class="strow${i === pos ? ' cur' : ''}${sc ? '' : ' missing'}">
+        <button class="n" data-jump="${i}">${i + 1}. ${sc ? esc(sc.name) : 'missing scene'}</button>
+        ${spEdit ? `<button class="sq" data-up="${i}" title="Move earlier"${i === 0 ? ' disabled' : ''}>↑</button>
+        <button class="sq" data-dn="${i}" title="Move later"${i === st.sceneIds.length - 1 ? ' disabled' : ''}>↓</button>
+        <button class="sq danger" data-rm="${i}" title="Remove this step">✕</button>` : ''}
+      </div>`;
+    }).join('') || '<p class="muted" style="padding:10px">Empty — fire a look, then "+ add current scene".</p>'
+    : '<p class="muted" style="padding:10px">No set selected — press New set.</p>';
+}
+
+wireLimits();
+showPage(location.hash.slice(1));
+// The slow poll reschedules itself after each answer instead of firing on a fixed
+// interval: on a slow wifi the interval stacked requests behind each other, and the
+// backlog tripped the "server offline" banner while the desk was fine. A hidden tab
+// does not poll at all — it was pulling the whole library every 1.5s for nobody.
+(function loopState() {
+  const next = () => setTimeout(loopState, 1500);
+  if (document.hidden) { next(); return; }
+  Promise.resolve(pullState()).then(next, next);
+})();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) pullState(); });
+setInterval(pullDmx, 100);

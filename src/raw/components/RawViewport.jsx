@@ -1270,6 +1270,13 @@ export default function RawViewport({
             <Canvas
                 key={canvasKey}
                 shadows
+                // offsetSize: measure the layout box, not the painted one. A
+                // Scene window is placed through the graph's viewport
+                // transform (translate + scale), and getBoundingClientRect
+                // returns the SCALED box there — at 70% zoom the canvas sized
+                // itself to 70% of its window and then got scaled again by
+                // the transform, double-shrinking it.
+                resize={{ scroll: true, debounce: { scroll: 50, resize: 0 }, offsetSize: true }}
                 onCreated={({ gl }) => bindContextGuard(gl)}
                 camera={{
                     position: camera.position || [0, 2.4, 6.5],

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-adam-adamyan",
+  "slug": "adam-adamyan",
+  "label": "Adam Adamyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/adam-adamyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

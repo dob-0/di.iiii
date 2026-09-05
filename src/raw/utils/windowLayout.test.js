@@ -8,6 +8,9 @@ import {
     getScopeMarkerTop,
     RAW_SCOPE_MARKER_HEIGHT,
     RAW_WINDOW_BOTTOM_RESERVE,
+    RAW_WINDOW_BOTTOM_RESERVE_WIDE,
+    RAW_WINDOW_MIN_HEIGHT,
+    RAW_WINDOW_MIN_WIDTH,
     RAW_WINDOW_PADDING
 } from './windowLayout.js'
 
@@ -91,8 +94,9 @@ describe('windowLayout', () => {
     it('places a minimized window by the bar it actually is, not by the height it would open to', () => {
         // The reported shape: a collapsed bar authored low on the surface, whose
         // stored height is a full panel. Clamped by the stored height it was
-        // dragged hundreds of pixels up, onto the cards. 810 - 56 - 132 = 622,
-        // so y: 640 lands at 622 rather than at 810 - 430 - 132 = 248.
+        // dragged hundreds of pixels up, onto the cards. On a 1440-wide
+        // (desktop) viewport the reserve is 40: 810 - 56 - 52 = 702, so
+        // y: 640 stays at 640 rather than landing at 810 - 430 - 52 = 328.
         expect(clampWindowFrame({
             x: 24,
             y: 640,
@@ -105,7 +109,7 @@ describe('windowLayout', () => {
             viewportWidth: 1440,
             viewportHeight: 810
         })).toEqual(expect.objectContaining({
-            y: 622,
+            y: 640,
             // the authored height survives, so expanding restores the real panel
             height: 430
         }))
@@ -122,7 +126,7 @@ describe('windowLayout', () => {
             allowOverflowTop: true,
             viewportWidth: 1440,
             viewportHeight: 810
-        })).toEqual(expect.objectContaining({ y: 248, height: 430 }))
+        })).toEqual(expect.objectContaining({ y: 328, height: 430 }))
     })
 
     it('allows view windows to overflow left while still clamping top and right edges', () => {
@@ -196,8 +200,8 @@ describe('windowLayout', () => {
             viewportWidth: 280,
             viewportHeight: 500
         })
-        expect(result.width).toBeGreaterThanOrEqual(260)
-        expect(result.height).toBeGreaterThanOrEqual(180)
+        expect(result.width).toBeGreaterThanOrEqual(RAW_WINDOW_MIN_WIDTH)
+        expect(result.height).toBeGreaterThanOrEqual(RAW_WINDOW_MIN_HEIGHT)
     })
 
     it('never lands a window flush against the bottom-right corner — the delete FAB and zoom controls live there', () => {
@@ -397,5 +401,28 @@ describe('getAnatomyDefaultFrame', () => {
             .toBe(true)
         expect(getAnatomyDefaultFrame({ viewportWidth: 390, viewportHeight: 664, workspaceTop: 300 }).minimized)
             .toBe(true)
+    })
+})
+
+describe('clampWindowFrame while resizing', () => {
+    it('a resize past the floor stops growing instead of sliding the window up', () => {
+        // Before: y was clamped AFTER height, against it, so a window grown
+        // past `viewportHeight - y - reserve` kept its bottom edge pinned and
+        // its top edge climbed to meet the cursor — the grip escaped from
+        // under the pointer and the window looked dead.
+        const grown = clampWindowFrame({ x: 100, y: 300, width: 760, height: 900 }, {
+            allowOverflowLeft: true, allowOverflowTop: true, viewportWidth: 1000, viewportHeight: 700, resizing: true
+        })
+        expect(grown.y).toBe(300)
+        expect(grown.x).toBe(100)
+        expect(grown.y + grown.height).toBeLessThanOrEqual(700 - RAW_WINDOW_PADDING - RAW_WINDOW_BOTTOM_RESERVE_WIDE)
+        expect(grown.x + grown.width).toBeLessThanOrEqual(1000 - RAW_WINDOW_PADDING)
+    })
+
+    it('never parks the header above the top edge on a very short viewport', () => {
+        const short = clampWindowFrame({ x: 20, y: 40, width: 300, height: 260 }, {
+            allowOverflowLeft: true, allowOverflowTop: true, viewportWidth: 500, viewportHeight: 300
+        })
+        expect(short.y).toBeGreaterThanOrEqual(0)
     })
 })

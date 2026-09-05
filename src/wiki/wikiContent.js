@@ -117,6 +117,7 @@ export const WIKI_ARTICLES = [
                 'Your spaces — real named spaces you own and can publish. These need a sign-in.'
             ] },
             'The Spaces page (/studio) shows exactly these shelves: Open Space · Your sandbox · Your spaces — so the answer to “where am I, what’s mine” is always the page itself. Admins additionally see guest sandboxes collapsed into one row with a count and a “Sweep expired” action.',
+            'As a guest, everything past the Open Space and your sandbox collapses into one row — “N other spaces” — since those two are the only ones you can actually use; click it to see the rest, and the choice is remembered on this device. Signed in, your own spaces are never collapsed. Click any public space’s picture to make it interactive right there in its card — walk around, look, without leaving the page — a plain “Open ↗” stays visible if you want the full page; click another picture (or scroll the live one away) and it hands the room back for that one.',
             'A sandbox only comes into existence when you actually enter it — just viewing a published space never creates one. Guest sandboxes are cleaned up after about a week of inactivity. Account sandboxes are yours for good: one untouched for about six months is folded down to a snapshot to keep the system lean, and your next visit restores it exactly as you left it. A sandbox holding Studio projects is never archived.',
             'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.',
             'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google) — everything comes with you: your whole sandbox, its projects and its files, moves onto your account automatically — or Export the project as a file you can import into any space later. The sign-in confirmation says when your sandbox came along. Existing account work is never overwritten by a later guest session.',
@@ -129,7 +130,7 @@ export const WIKI_ARTICLES = [
             'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page. Where no Main space is set at all, the landing offers “Look around” instead — a decorative walkable preview of its own hero, not a real space.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr'],
-        updated: '2026-08-23'
+        updated: '2026-09-03'
     },
     {
         id: 'jam-surface',
@@ -149,6 +150,29 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-23'
     },
     {
+        id: 'lighting-desk',
+        category: 'Spaces & access',
+        title: 'The lighting desk',
+        summary: 'di.iiii carries a full lighting desk. Patch your rig, save looks as scenes, run them from a phone — and let a graph play it.',
+        body: [
+            'A di.iiii running on your own machine has a lighting desk in it, at /light. Not a plugin and not a separate program: the same install that serves your projects also drives an Art-Net or ENTTEC rig, from the first fixture to the last scene of the night.',
+            'It opens on five pages, and they are five different jobs:',
+            { list: [
+                'Setup — patch the rig. Add each fixture, give it a profile and an address, and drag it into place on a plan of the room, so the desk looks like the room you are standing in. The plan is not a fixed canvas — pan and zoom go as far out as the rig needs, so a truss run or a followspot off to one side has somewhere to sit.',
+                'Control — the desk proper. Fixtures, colours, a master, scenes, chases, effects and LFOs; save what you are looking at as a scene and give it a name you will recognise in the dark. Looks stack on layers with their own fader, so a colour chase and a strobe can run at once instead of one replacing the other, and a look can follow the room instead of the patch order — Line sweep, Radar and Grid are one-press starters for a wave crossing the floor, a beam turning round its centre, and two waves crossing into a moving grid. Drag a fixture on the Setup stage and it moves inside every one of them.',
+                'Touch — the show surface. Big scene buttons, made for a phone in one hand at the back of the room.',
+                'Fader — plain channel faders, for when a fixture is doing something no profile explains and you need to poke a channel by hand.',
+                'MIDI — map a controller. Mappings live with the desk, not in one browser, so the same knobs work from any screen you open it on.'
+            ] },
+            'One rule that matters more than any other: output is OFF until you switch it on, under OUTPUT. Until then the desk runs, the stage view moves, scenes recall — and nothing leaves the machine. A dev server on a shared wifi can never blast a frame at somebody else\'s rig by accident, and a rig only ever lights when a person decided it should.',
+            'The rig is yours. Nothing in the desk is patched to any particular room — you name the fixtures, you set the addresses, you save the looks. Its data lives with your di.iiii install, so the show survives a restart and can be carried to the venue on the same laptop.',
+            'A graph can play the desk. Drop a DMX Out node into a canvas, leave it on its default rig, and Master, Channel, Value, Blackout and Scene are wired straight into the desk you just patched — an oscillator on a lamp, a scene name recalled by a button, a whole rig blacked out by a wire. See “DMX Out: the graph lights the room”.',
+            'The desk lives on a local di.iiii only — `di up`, or npm run dev. A hosted di-studio.xyz has no /light in it at all, on purpose: a lighting desk is a thing that reaches hardware in a room, and the room is where you are.'
+        ],
+        tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up'],
+        updated: '2026-09-03'
+    },
+    {
         id: 'projection-mapping',
         category: 'Spaces & access',
         title: 'Putting a space on a wall',
@@ -163,12 +187,13 @@ export const WIKI_ARTICLES = [
             'Corners snap — to the other surfaces\' corners, and to the frame\'s edges and middle — and the line they agreed with is drawn while you drag, so you can see what just happened. There is a grid too if you want one. Hold alt while dragging and nothing snaps at all, for the surface that genuinely sits a hair off its neighbour.',
             'Put a photograph of the wall behind the surfaces while you work: choose a file, set how strongly it shows through, and trace each paper edge over it. It is never projected — it is there to draw against. Do not expect the traced corners to be final, though. A photo is taken from where you stood, and the projector stands somewhere else; the shapes will still want a pass on site.',
             'Cues are how a wall gets performed instead of operated. Set the wall the way you want it, add a cue, and it keeps that state under a number key — press the key and the wall goes there, over the fade you gave it. Give a cue a hold time and Play walks through them on its own; a hold of zero means the show waits for you. A cue remembers what each surface is showing and how bright it is, and deliberately nothing about where it is: no keystroke should ever be able to move an alignment you spent an afternoon on.',
+            'A cue can carry the light as well as the wall. If the lighting desk is running on this machine, a Light button appears in the toolbar and each cue gets a picker holding everything the desk can fire — its looks and its scenes. Choose a look and firing the cue puts it on the desk’s cue layer, where it stays until another cue replaces it; choose a scene and the cue recalls it, fading over the cue’s own fade time. Either way the room and the projection change together. The lighting desk is local only — on di-studio.xyz there is no desk to talk to, the picker says so, and a cue that names a scene simply keeps the name until you are back at the venue.',
             'A camera can be a surface, so the room is on the wall beside the work. Surfaces can be duplicated, and one surface\'s shape or look pasted onto another. And a whole mapping can be exported as text and pasted into another machine, which matters because the laptop that drives the projector is usually not the one the mapping was made on.',
             '“Open output” opens a second window with nothing in it but the surfaces on black — no toolbar, no title, no cursor once it has been still. Drag that window onto the projector and put it full screen. Keep the first window on your laptop: the two stay in step, so you drag a corner while watching the wall.',
             'One caution. A surface showing a project or a page is a whole page running, and over a plain http:// address a browser only allows a handful at once — past about four, the rest never load. On di-studio.xyz this does not apply. If you are running from a laptop and the bar warns you about it, use video or image surfaces for some of them.'
         ],
-        tags: ['projection', 'mapping', 'projector', 'wall', 'exhibition', 'show', 'surface', 'corner pin', 'mask', 'output', 'cues', 'snapping', 'camera'],
-        updated: '2026-08-28'
+        tags: ['projection', 'mapping', 'projector', 'wall', 'exhibition', 'show', 'surface', 'corner pin', 'mask', 'output', 'cues', 'snapping', 'camera', 'lighting', 'light'],
+        updated: '2026-09-03'
     },
     {
         id: 'joining-a-space',
@@ -447,13 +472,14 @@ export const WIKI_ARTICLES = [
                 'The tour turns the visitor and never moves them, so it works the same on a laptop and in a headset. It surrenders permanently the moment the visitor turns the view themselves — an automatic turn that fights the mouse or the thumbstick is worse than none.'
             ] },
             'A caution for headsets: in VR the tour rotates the world around a body that is sitting still, which is the classic recipe for motion sickness — the visitor sees movement they do not feel. Keep turn slow and dwell long, and test on one person before an audience. If comfort matters more than a fixed running order, leave ringTour off and let the visitor turn their own head.',
-            'Idle motion is separate and older: an object with no authored animation and no timeline gets a gentle drift in the live view (models float and turn, flat media sways) so imported legacy scenes keep the look they had. Objects that were placed deliberately should say animation.mode: static, and anything parented to a group is left alone automatically — otherwise the parts of one object drift away from each other.',
+            'Idle motion is separate and older: an object with no authored animation and no timeline gets a gentle drift (models float and turn, flat media sways) so imported legacy scenes keep the look they had. Objects that were placed deliberately should say animation.mode: static, and anything parented to a group is left alone automatically — otherwise the parts of one object drift away from each other.',
+            'Motion you asked for used to start only when a visitor pressed Walk / Fly, so a scene you had animated opened as a still photograph and came alive one click later. An animation you set now runs from the frame the page opens on, and proximity — an object that comes up as you approach it — works there too. The drift described above is the exception: it stays a walk/fly thing, because it is a guess made on your behalf for scenes that never asked for movement, and the opening frame is not the place to guess. Set animation.mode yourself and the opening frame will show it. The editor holds perfectly still either way, so you can still place things. Fog behaves the same in both views now, and so do the grid’s colours and spacing and the render settings (exposure, tone mapping, antialiasing): what you author is what a visitor sees, before and after the click.',
             'Whether the button is there at all: a published page offers Walk / Fly whenever the room holds objects for it to show — and it does not matter whether the project also has a graph, so a project built in both editors is walkable on the strength of its objects. A project made of nodes and nothing else still has no button, because walk/fly renders objects and would drop the visitor into an empty version of the room they are already looking at. Give that project one real object and the door opens — and VR and AR open with it, since a headset session is entered from inside walk/fly.',
             'A composed opening shot does not close that door either: a project whose entry view is Fixed camera opens on the shot you framed and still offers Walk / Fly, because the shot is where the visit starts rather than a promise the visitor may never move. The mouse and touch stay live on that shot too — the visitor can orbit away from your framing the moment they arrive. Only the camera\u2019s explicit “locked” switch freezes the shot into a still, and only a Code entry view has no button, since it has no room to give one to.',
             'You frame that shot on whatever screen you are sitting at, and that screen is almost always a wide one. A phone held upright sees about half as much from side to side, so a shot framed to the edges of a laptop arrived on a phone with its edges cut off — in a room whose doors are spread across the width, the outer doors were simply not there. A composed shot now steps back on a narrow screen until it holds what you framed, so a visitor on a phone gets the whole shot instead of the middle of it. Nothing changes on a screen as wide as it is tall or wider: there you get exactly the frame you set. Locked shots step back too — that visitor is the one who cannot move to find what was cut.'
         ],
         tags: ['scene', 'room', 'spawn', 'vr', 'exhibition', 'tour', 'walk', 'animation'],
-        updated: '2026-09-01'
+        updated: '2026-09-03'
     },
     {
         id: 'spatial-video-sound',
@@ -516,6 +542,26 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['portal', 'walk', 'navigation', 'vr', 'exhibition', 'visiting'],
         updated: '2026-08-24'
+    },
+    {
+        id: 'portal-door-shape',
+        category: 'Editing',
+        title: 'What shape a door is',
+        summary: 'A gateway portal can be a square-cornered frame you walk through instead of a glowing ring on the floor.',
+        body: [
+            'A gateway portal has always drawn one thing: a glowing ring lying flat on the floor, with a soft halo around it. That reads well in a dark, atmospheric room, and it is still what every door does unless you say otherwise.',
+            'It is also the only thing a door could be, which made some rooms impossible to build. A ring is a circle with a glow — and a space built to the studio’s own identity has square corners everywhere, hairline edges, flat fills, and no glow at all. There was no way to author a doorway that belonged in one of those rooms.',
+            'So a portal now has a shape:',
+            { list: [
+                'style: "gateway" — the ring and its halo. The default, and exactly what it has always looked like.',
+                'style: "frame" — a threshold standing on the floor: two uprights, a lintel across the top, a sill across the bottom, all square-cornered and flat, with no halo. The opening carries a barely-there fill that is also its tap target, so pointing at the doorway itself works the way pointing at the ring does.'
+            ] },
+            'Both shapes are the same door in every other respect. They take the portal’s colour, they carry the same nameplate that appears as a visitor approaches, they open on a click in view mode, and they are entered on foot in walk mode from the same distance — a frame is drawn exactly as wide as the ring it replaces, so nothing about walking through changes. Scaling the portal scales the door.',
+            'A frame stands up out of the floor rather than lying in it, so it wants to sit at floor level; a portal placed high in the air will have its doorway hanging there. Rotating the portal aims the doorway, the same way it aims any other object.',
+            'Left alone, a portal keeps the ring — no existing room changes.'
+        ],
+        tags: ['portal', 'door', 'brand', 'exhibition', 'walk'],
+        updated: '2026-09-03'
     },
     {
         id: 'text-reveal',
@@ -871,6 +917,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'raw-windows-travel-with-the-canvas',
+        category: 'Editing',
+        title: 'Panel windows: travelling with the canvas, or pinned to the screen',
+        summary: 'An unpinned panel window (Scene, Text, Image, List) lives on the canvas with its card — pan and it moves, zoom and it shrinks. Press ⌖ to pin one to the screen instead. Resize from any edge, and scrolling inside a window scrolls the window, not the desk.',
+        body: [
+            'A panel node — Text, Scene, Image, List, Browser, Monitor — is two views of one thing: the card on the canvas and the window that shows its panel. Unpinned, that window is placed in the same graph space as the card: panning the canvas carries it along, and zooming out shrinks it with everything else, the way a scene parked far from the rest of the desk stays reachable by panning to it rather than by scrolling a fixed sidebar.',
+            { list: [
+                'Press ⌖ to pin a window to the screen — it holds still at its current on-screen position and size while the canvas pans and zooms underneath it, the old behaviour. Press it again to release it back onto the canvas, where it keeps exactly where it was standing.',
+                'Drag the title bar to move a window; drag any edge or corner to resize it, not only the bottom-right grip. Arrow keys on the title bar move it, arrow keys on the corner grip resize it — hold Shift for a one-pixel nudge.',
+                'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk, and Ctrl/⌘ + scroll zooms the desk from anywhere, including over a window.',
+                'On a phone every window stays pinned — the clamp that fits a wide default frame into a narrow screen is the whole layout there, and a window that travelled freely on the canvas would walk straight off it.'
+            ] }
+        ],
+        tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor'],
+        updated: '2026-09-03'
+    },
+    {
         id: 'raw-on-a-phone',
         category: 'Editing',
         title: 'Nodes on a phone: wiring with a finger',
@@ -1044,16 +1107,37 @@ export const WIKI_ARTICLES = [
         id: 'dmx-out-node',
         category: 'Editing',
         title: 'DMX Out: the graph lights the room',
-        summary: 'Wire numbers out to real lamps through a vizzz node — an Art-Net/DMX box on your network.',
+        summary: 'Wire numbers out to real lamps — either through di.iiii\'s own lighting desk, or through a vizzz box on your network.',
         body: [
-            'Add a DMX Out node from the palette and give it the address of a vizzz node — the small box wired into your DMX rig. The panel says what it finds: the rig by its own name and universe when it answers, and plainly who is not answering when it does not. Its Status port says the same thing, so a Text panel wired to Status is an honest meter.',
+            'Add a DMX Out node from the palette and choose which rig it speaks to. There are two, and the node says which one it is on.',
+            { list: [
+                'The lighting desk — di.iiii\'s own desk at /light, and what a new node picks. The rig, the scenes and the effects are already there; the graph is simply another pair of hands on it.',
+                'A vizzz node on the network — the small box wired straight into your DMX rig, given by address. This is what the node always did, and a graph you made before the desk existed keeps doing it: a node that names a host stays on its box.'
+            ] },
+            'On the desk, the panel says what the desk actually holds — how many fixtures are patched, how many scenes are saved, which look is up, whether an effect is running, and whether output is on. That sentence is also the Status port, so a Text panel wired to Status is an honest meter. “Open the desk” opens the desk itself in a new tab.',
             'Master dims the whole rig: whenever it changes, the new level goes out. Value at Channel sets one DMX channel the same way — wire an Oscillator through Range into Value and a lamp breathes on its own. Wires carry 0 to 1, as everywhere on the canvas; the node turns them into DMX bytes.',
-            'Blackout kills every channel the moment it rises, ahead of anything else queued. A Button, a Compare, a Toggle — anything true-or-false — makes a good Blackout.',
-            'Nothing is sent for a value that merely stays what it was, and fast wires are paced so a small rig is never asked sixty times a second.',
-            'One honest limit: the hosted editor is a https page and a rig on the local network speaks http, which browsers refuse to mix — the panel says so instead of failing silently. The local editor (`di up`, or npm run dev) is the surface that reaches a rig.'
+            'Scene is the desk\'s own port, and the strongest one: send a scene\'s name — the words you wrote on the desk — or its id, and the whole look is recalled with its fade. One string on a wire does what a hundred Channel and Value pairs could not. A name the node has not seen yet makes it re-read the desk\'s library and try again, so a scene saved a minute ago still fires.',
+            'Blackout kills the lights the moment it rises, ahead of anything else queued. A Button, a Compare, a Toggle — anything true-or-false — makes a good Blackout. The two rigs differ in one way worth knowing: on a vizzz node, blackout is a single blow and the rig recovers as soon as new levels arrive. On the desk it is a STATE — it stays down until it is lifted — so the node sends the falling edge too, and the lights come back when Blackout goes false.',
+            'Nothing is sent for a value that merely stays what it was, and fast wires are paced so neither a small box nor the desk is asked sixty times a second.',
+            'Both rigs need a di.iiii running on your own machine, for different reasons. The desk only exists on a local di.iiii (`di up`, or npm run dev) — a hosted di-studio.xyz has no desk in it, and the panel says so rather than going quiet. A vizzz box speaks http, and a https page is not allowed to reach it — the panel says that too. On a hosted tab the node is honest and idle; on your own machine it lights the room.'
         ],
-        tags: ['raw', 'nodes', 'dmx', 'artnet', 'light', 'device', 'performance'],
-        updated: '2026-08-31'
+        tags: ['raw', 'nodes', 'dmx', 'artnet', 'light', 'lighting desk', 'scene', 'device', 'performance'],
+        updated: '2026-09-03'
+    },
+    {
+        id: 'build-zones',
+        category: 'Editing',
+        title: 'A room that arranges itself',
+        summary: 'Turn build zones on and the room stops being free space: everything hung lands on the wall, in line, whoever adds it and however.',
+        body: [
+            'A room open to everybody fills up with everybody\'s aim. The Open Jam room came out of one night with thirty phones in it: photos at the origin, photos behind the wall, cones and empty text boxes left where someone found the editor. Nothing was wrong with any single edit. The room was simply free space, and free space is what a crowd makes a mess of.',
+            'Build zones make the wall a set of numbered slots. A photo that arrives is put in the next free one, scaled to the row height and squared to the hanging line — whether it came from a phone standing in the room, from the editor, or from a script. Drag one into the void and it goes to the nearest free slot instead: you still choose where on the wall it hangs, you just cannot choose nowhere.',
+            'The slots are a shape, not a stock. When the wall fills, the next photo starts a new bay and the room grows outward, so a jam never runs out of places to hang. Delete a photo and its slot is free again the moment it goes.',
+            'The rule lives on the server, which is what makes it a rule. Every edit passes through it, so nobody sees a differently arranged room and no client can talk its way around it.',
+            'Two things stay under your hand. Anything you pin keeps its place and takes no slot — that is how a QR code sits on its lectern instead of being hung as an exhibit. And the whole thing is a switch: turn build zones off and every picture stays exactly where it is, in a room that is free space again.'
+        ],
+        tags: ['room', 'space', 'jam', 'placement', 'build zones', 'photos', 'arrange'],
+        updated: '2026-09-03'
     },
     {
         id: 'raw-zen-workspace',
@@ -1096,7 +1180,7 @@ export const WIKI_ARTICLES = [
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['glossary', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['glossary', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

@@ -235,6 +235,11 @@ services:
       # which Caddy refuses to start (only the first block may be keyless).
       STAGING_DOMAIN: ${STAGING_DOMAIN:-staging.invalid.internal}
       STAGING_PORT: ${STAGING_PORT:-8081}
+      # A second, memorable door onto the SAME prod app and the SAME auth —
+      # the map lane already lives behind ProtectedSurface at
+      # /{space}/map/{project}; this only gives it its own name to hand out.
+      # Same inert-until-DNS-exists pattern as STAGING_DOMAIN above.
+      MAP_DOMAIN: ${MAP_DOMAIN:-map.invalid.internal}
     # Lets the Caddyfile's staging site block reach the staging Compose
     # project's client container by its host-published port, without
     # joining the two projects to a shared Docker network.
