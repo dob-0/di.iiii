@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- harvest the platform fixes out of Emily's two open PRs
+- six dependency bumps land together after the camp freeze
 
 Full detail: `PROGRESS.md`.
 
