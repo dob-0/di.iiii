@@ -5,6 +5,145 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-25 — dead CSS removed, 205 lines verified selector by selector
+
+The suite audit flagged ~1,050 dead lines. I deleted only what I verified
+myself, selector by selector:
+
+- `src/styles/layout-stack.css` — the whole file. All three selectors
+  (`.panel-container`, `.panel-dock-left`, `.panel-dock-bottom`) have zero
+  references in any jsx/js. Its `@import` is gone from `src/style.css`.
+- The seven `--mobile-shell-*` tokens — zero `var()` reads repo-wide.
+- The `.toolbar-*` family in `controls.css` — 14 selectors plus their
+  pseudo-state, compound and media-query rules, and `.editor-toolbar-primary`.
+  Every one checked individually: zero references.
+
+Verified after: build clean, brace balance holds (controls 37/37,
+mobile-shell 10/10), style guard tests pass, and landing/wiki/privacy render
+identically with no CSS console errors.
+
+The rest of the audit's dead list is left alone — it over-counts where BEM
+modifiers are template-composed, and I only remove what I can prove.
+
+## 2026-09-03 — four rules, each one paid for tonight
+
+The owner, after a page opened as a broken link in front of him: *"write rules to
+no mistake everytime."* Four went into `docs/ai/golden_rules.md`, each from a
+mistake made in this session rather than a good idea about mistakes:
+
+- **A 200 from this site is not proof a page is public.** A link audit across
+  three tiers reported 47 of 47 spaces open to strangers, including five the API
+  correctly refuses with 401. The client is a single-page app — the server hands
+  back the same `index.html` for every path, so the page always answers 200 and
+  the sign-in wall appears only after the client boots. Probe the API.
+- **A blank screenshot right after a merge is a deploy, not a defect.** Staging
+  came back fully white seconds after four PRs landed; health reported 58 seconds
+  of uptime. Check uptime before filing a regression.
+- **Measure the scene's own units before placing anything in it.** The image
+  plane's height was guessed twice (as `2·(h/w)·scale`, then `2·scale`) before
+  anyone read `ImageObject` and found `[aspect*3, 3]`. Each guess cost a full
+  apply-and-look round. A box's position is its base, not its centre.
+- **A driven browser cannot take pointer lock.** Six scripted turns to photograph
+  a door produced six identical empty frames, indistinguishable from "the door
+  does not render". Drag-look reads clientX/clientY and works.
+
+A fifth rule went to the owner's own machine notes rather than here, because it
+is about this desktop and not this repo: the flatpak Chromium has a private
+`/tmp`, so a `file:///tmp/...` page handed to it fails with ERR_FILE_NOT_FOUND —
+serve it on localhost instead.
+
+## 2026-09-01 — a room that can be read, not only looked at
+
+- **Every published room now carries a text layer** (`RoomTextLayer`): its name as an
+  `h1`, its 3D text lines as paragraphs, and each door as a real anchor. Visually hidden
+  with the clip-rect idiom, NOT `display:none` — the point is to stay in the
+  accessibility tree and the DOM. A focused door link becomes visible, which is also the
+  only way to leave a room without a mouse. It reads the same document the scene draws
+  from, so it can never tell a different story than the room.
+- **Why now:** `/` became the room itself. Before that, a crawler or screen reader met an
+  HTML landing page; after it, an empty `<div id="root">` with only the head's title.
+  `src/index.html` also gained a `<noscript>` floor for readers that never run the app.
+- **A guard earned its keep.** Importing `portalHref` from `PortalObject.jsx` pulled
+  three.js into the published page's static import graph and
+  `publicViewerCodeModeGraph.test.js` failed the build. The helper now lives in its own
+  leaf module, `src/project/viewport/portalHref.js`, re-exported from PortalObject so no
+  caller changed.
+- **The nearest door is wayfinding, not a name.** Glued to the title with a bare
+  separator it read as one compound title — the home room announced itself as
+  "EVERYTHING MADE HERE · WCC EXHIBITION". It has its own dimmed span now.
+- Still owed, and data not code: the local tier's home project is titled `di.i:
+  open_space`, a retired spelling that is now the `h1` a search engine reads. Staging
+  already carries a real title. The owner picks the word.
+
+## 2026-09-01 — sign in with Telegram, the server half
+
+The people who most need an account here cannot hold a Google one. At the Dilijan
+camp that meant one login shared across six laptops, one invite token across five
+children, and afterwards no way to say who had made what — the showcase wall had
+five screens and the record could not attribute four of them. This is the fix for
+the next workshop, and for any collaborator who should not have to make an account
+somewhere else to open their own work.
+
+Telegram has already proven who someone is by delivering a message to them. This
+turns that proof into a session here, through the same door GitHub and Google use.
+
+**The shape.** Two halves. di.bo mints (`POST /api/auth/telegram/login-link`,
+bot-only, presenting `TELEGRAM_LOGIN_SECRET`); the person opens the link
+(`GET /api/auth/telegram/callback?token=`) and lands signed in. After that it is
+identical to the OAuth providers — same `upsertUser`, same session, same
+sandbox hand-off — so **a guest who has already been building keeps their work
+when they sign in**, which is the difference between this and a fresh account.
+
+**What it deliberately refuses:**
+- The link is **single-use and lives 10 minutes**, because it rides a chat message
+  and a chat message is forwardable, screenshot-able and backed up to somebody
+  else's cloud. `consumed_at` is set *before* the session is issued, so a failure
+  costs a new link rather than handing a retry to whoever forwarded it.
+- Only the SHA-256 of the secret is stored. A stolen database mints nothing.
+- A wrong secret against a real id does **not** spend the token — otherwise
+  guessing an id would let anyone lock the real person out.
+- The mint endpoint takes `telegramId` numeric-only, and an avatar URL only from
+  Telegram's own CDN.
+- **A minted link can never carry a role.** `role`/`isUnrestricted` in the mint
+  body are ignored; a bot compromise costs accounts, not the platform. Guarded.
+- `TELEGRAM_LOGIN_SECRET` is its own secret, deliberately **not** the admin API
+  token, so a compromised bot cannot also write spaces.
+
+**A real bug the tests caught before it shipped:** with `OAUTH_CALLBACK_BASE_URL`
+unset the minted URL came out *relative* — useless the moment it reaches a chat.
+Deriving the origin from the request would have meant trusting a Host header to
+say where people sign in, so the endpoint now refuses with a 503 that names the
+missing variable instead.
+
+**Config (all three, or the provider stays off):**
+`TELEGRAM_LOGIN_SECRET` (shared with di.bo), `TELEGRAM_BOT_USERNAME` (advertised
+so a client can name the bot), `OAUTH_CALLBACK_BASE_URL` (already required by the
+OAuth providers). Unset secret = provider absent from `/api/auth/providers` and
+the routes not registered at all.
+
+**Not in this branch, on purpose:** the di.bo side that calls the mint endpoint,
+and the client button. This half is what both of those need, and it is testable
+on its own; shipping it first keeps the auth change reviewable by itself.
+
+Tests: `serverXR/src/telegramLoginStore.test.js` (11) and a `sign in with
+Telegram` block in `httpContracts.test.js` (7) covering the disabled case, the
+bot secret, id validation, the one-real-sign-in path, role refusal, and forged
+links. Full server contracts 114/114, lint clean.
+
+## 2026-09-05 — five green PRs landed as one batch, so no landing invalidates the next
+
+- Branch protection wants every PR up to date with dev, so five green PRs landed one by
+  one would each go BEHIND as the previous one merged. Merged them into one branch off
+  dev instead: the verification rules (#364), the lighting tempo grid (#363), the dead
+  CSS removal (#274), the room text layer (#285) and the Telegram server half (#282).
+  No two touch the same file.
+- The dead-CSS note carried a `#` heading instead of `##`, so `land` would have dropped
+  its title from CURRENT.md; fixed in place.
+- Left for the owner, deliberately: #290 (operator families) rewrites saved documents
+  on load and asks for a deliberate yes; #318, #289, #281 conflict on `known-fixes.md`
+  and the landing and want a rebase against the reworked front door; #170 is a
+  dependency decision.
+
 ## 2026-09-03 — the third route stops being grey on grey
 
 - "Open Jam" sat in the landing's hero between two legible buttons and could not be

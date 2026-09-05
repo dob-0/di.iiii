@@ -13,9 +13,11 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the third route stops being grey on grey
-- `/network` is one paper world end to end and LIVE ON PROD: the constellation is generated from `people.json` like the rooms, the third index is gone, and all three tiers agree
-- the two pages that still spoke the replaced design were the only HAND-KEPT ones in that space, which is how both kept printing a name the data had already corrected
+- dead CSS removed, 205 lines verified selector by selector
+- four rules, each one paid for tonight
+- a room that can be read, not only looked at
+- sign in with Telegram, the server half
+- five green PRs landed as one batch, so no landing invalidates the next
 
 Full detail: `PROGRESS.md`.
 
