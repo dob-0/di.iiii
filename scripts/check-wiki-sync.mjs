@@ -37,7 +37,8 @@ const readFileSafe = async (relativePath) => {
 // rule was skipped. Uses git commit dates, so it runs where history exists
 // (local + pre-push gate) and skips silently in shallow CI checkouts.
 const FRESHNESS_GRACE_DAYS = 7
-const USER_FACING_PATHS = ['src/studio', 'src/wcc', 'src/landing', 'src/project', 'src/beta', 'serverXR/src/routes']
+// `src/beta` was deleted 2026-08-06 and sat here dead until 2026-09-01.
+const USER_FACING_PATHS = ['src/studio', 'src/wcc', 'src/landing', 'src/project', 'serverXR/src/routes']
 
 const collectFreshnessErrors = (articles) => {
     let lastCode
