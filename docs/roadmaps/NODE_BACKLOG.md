@@ -29,13 +29,13 @@ every port that had zero consumers anywhere (`gridSize`, `slug`, `description`,
 `active`, `entry`, `state`, `signal`, `preview`, `world.background.texture`,
 per-node `position`/`width`/`height`, and the never-consumable `geom.*.out`
 Geometry ports) was deleted rather than left as a decorative wire target.
-Remaining gaps: `math.multiply`/`math.mix`/`math.clamp`, `world.light`,
+Remaining gaps: `math.op`'s Multiply operation/`math.mix`/`math.clamp`, `world.light`,
 `world.grid`, and `geom.sphere`/`geom.plane` wiring are implemented but still
 have no dedicated runtime test — correct by inspection, not yet guarded.
 
 | Group | Types |
 | --- | --- |
-| Compute (14) | `value.number` `value.color` `value.vec3` `value.boolean` `value.string` · `math.add` `math.subtract` `math.multiply` `math.divide` `math.mod` `math.pow` `math.sin` `math.mix` `math.clamp` |
+| Compute (14) | `value.number` `value.color` `value.vec3` `value.boolean` `value.string` · `math.add` `math.subtract` `math.multiply` `math.divide` `math.mod` `math.pow` `math.sin` `math.mix` `math.clamp` — **the first eight merged into `math.op` on 2026-09-01** (one card, an operation menu); Mix and Clamp stayed, their inputs are a different shape |
 | Clock (1) | `time` — **built 2026-07-30**, the first one off this backlog |
 | 3D (4) | `geom.cube` `geom.sphere` `geom.plane` `universe.desk.3d` |
 | World (3) | `world.light` `world.background` `world.grid` |

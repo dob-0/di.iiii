@@ -1075,6 +1075,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'math-and-route-nodes',
+        category: 'Editing',
+        title: 'Math and Route: one card, a menu of operations',
+        summary: 'Arithmetic is one node with an Operation menu, not eight nodes — and Gate and Switch are one node called Route.',
+        body: [
+            'Add a Math node from the palette and it arrives as Add. Open the inspector and the first thing on the sheet is Operation: Add, Subtract, Multiply, Divide, Modulo, Power, Sin, Absolute. Pick one and the card renames itself to match, so the canvas still reads at a glance — a graph of cards all saying "Math" would tell you nothing.',
+            'The two ports never move. Whatever operation you choose, the wires stay where you put them: A and B on the left, Result on the right. Sin and Absolute read only A, and say so by labelling the other port Unused rather than hiding it — a port that disappears takes your wire somewhere you cannot see it.',
+            'The operation also decides what an unwired port is worth. A bare Multiply is 1 and a bare Add is 0, the same as they always were, because each operation carries its own defaults.',
+            'Route is the same idea for the two nodes that choose which value speaks. In its Gate operation, Value passes through while Open is true and carries nothing at all when it is false — a closed gate is an unplugged wire, not a zero, so whatever is downstream falls back to its own value. In its Switch operation, Pick chooses between A and B, and any kind of value passes: colours and vectors as readily as numbers.',
+            'If you rename a card yourself, that name is yours — changing the operation will not overwrite it.',
+            'Some neighbours deliberately stayed as their own cards. Compare, Logic, Extremes and Round each answer several questions at once through several outputs, so they are already families; an operation menu could only ever answer one of them at a time. Mix, Clamp and Range take a different set of inputs, and folding them in would put ports on the card that most operations ignore.',
+            'Projects made before this change open exactly as they were. An old Add node becomes a Math node set to Add, with its wires attached to the same values, and the numbers it feeds downstream do not move.'
+        ],
+        tags: ['raw', 'nodes', 'math', 'logic', 'operator', 'gate', 'switch', 'add', 'multiply', 'numbers'],
+        updated: '2026-09-01'
+    },
+    {
         id: 'midi-in-node',
         category: 'Editing',
         title: 'MIDI In: a controller as a node',

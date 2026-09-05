@@ -140,7 +140,7 @@ describe('RawGraphSurface', () => {
 
     it('rejects incompatible port pairs (color -> number)', () => {
         const colorNode = makeNode('value.color', { id: 'color-1' })
-        const sinNode = makeNode('math.sin', { id: 'sin-1', graphX: 320 })
+        const sinNode = makeNode('math.op', { id: 'sin-1', graphX: 320, values: { operation: 'sin' } })
         const onCreateEdge = vi.fn()
 
         const { container } = render(
