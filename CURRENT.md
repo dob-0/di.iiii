@@ -13,10 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Continue with Telegram, on every card that already offers GitHub
-- the 2D landing, measured against the room it now stands in
-- the front door stopped advertising a closed show
-- the landing's two parked PRs and the Telegram button land together
+- a slug is an address: /<slug> resolves to the space, server-side
 
 Full detail: `PROGRESS.md`.
 
