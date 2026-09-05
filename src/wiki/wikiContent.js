@@ -119,7 +119,8 @@ export const WIKI_ARTICLES = [
             'The Spaces page (/studio) shows exactly these shelves: Open Space · Your sandbox · Your spaces — so the answer to “where am I, what’s mine” is always the page itself. Admins additionally see guest sandboxes collapsed into one row with a count and a “Sweep expired” action.',
             'As a guest, everything past the Open Space and your sandbox collapses into one row — “N other spaces” — since those two are the only ones you can actually use; click it to see the rest, and the choice is remembered on this device. Signed in, your own spaces are never collapsed. Click any public space’s picture to make it interactive right there in its card — walk around, look, without leaving the page — a plain “Open ↗” stays visible if you want the full page; click another picture (or scroll the live one away) and it hands the room back for that one.',
             'A sandbox only comes into existence when you actually enter it — just viewing a published space never creates one. Guest sandboxes are cleaned up after about a week of inactivity. Account sandboxes are yours for good: one untouched for about six months is folded down to a snapshot to keep the system lean, and your next visit restores it exactly as you left it. A sandbox holding Studio projects is never archived.',
-            'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.',
+            'Guests cannot create their own named spaces — sign in with GitHub, Google or Telegram to get spaces that are yours and stay.',
+            'Telegram is the third way in, for anyone who holds no GitHub or Google account: “Continue with Telegram” opens the di.iiii bot, you say /login to it, and the bot sends back a single-use link that expires in ten minutes — tapping it signs you in here, with everything you built as a guest carried onto the new account like any other sign-in.',
             'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google) — everything comes with you: your whole sandbox, its projects and its files, moves onto your account automatically — or Export the project as a file you can import into any space later. The sign-in confirmation says when your sandbox came along. Existing account work is never overwritten by a later guest session.',
             'For a live jam — an event, a workshop, a projected wall — share the short link di-studio.xyz/open_jam (or turn it into a QR code). It opens the shared Open Jam directly, and a one-line welcome shows first-timers how to add their visual. Anyone who scans can drop in an image, video or 3D model on the spot, no account needed.',
             'There are two ways in, and they are the same jam. di-studio.xyz/open_jam/scene puts you inside the scene — you stand in it, walk around, and add things where you are looking; it is the one to put on a flyer or a QR code for a phone. See "Standing in the jam" for what it does.',
@@ -130,8 +131,8 @@ export const WIKI_ARTICLES = [
             'The landing page has one door. It used to offer three side by side — “Step inside”, “Open Studio” and “Enter Space” — which asked a first-time visitor to choose between them before they knew what any of them were. Studio is not a rival to the door now: step inside, and Studio is there to walk into. The quiet “Already have spaces? Open Studio →” line under the button is the return path for people who already have work of their own.',
             'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page. Where no Main space is set at all, the landing offers “Look around” instead — a decorative walkable preview of its own hero, not a real space.'
         ],
-        tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr'],
-        updated: '2026-09-03'
+        tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr', 'telegram', 'sign in'],
+        updated: '2026-09-06'
     },
     {
         id: 'jam-surface',
