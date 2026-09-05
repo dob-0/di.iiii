@@ -772,7 +772,11 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-content: start;
     gap: clamp(20px, 3vw, 44px) clamp(32px, 5vw, 80px);
-    max-width: 1120px;
+    /* Runs to the panel edge, like the photo field below it. Deliberately NOT the
+       980/1120px measure the rest of the landing uses — the About panel is a
+       full-bleed composition, and a column stopping two-thirds across left a dead
+       third of the screen at 1920. */
+    max-width: none;
 }
 
 .wcc-text-columns--about p {
@@ -804,8 +808,15 @@
     content: "";
 }
 
+/* Normal flow, so it is exactly as tall as the whole About panel — the dots hang
+   off it and can therefore fall the full height of the page. A scroll container
+   cannot do this job: an absolutely positioned child of one resolves inset: 0
+   against the visible box, not the scrollable content. */
+.wcc-about-stage {
+    position: relative;
+}
+
 .wcc-about-running-dots {
-    grid-column: 1 / -1;
     position: absolute;
     inset: 0;
     overflow: hidden;
@@ -814,57 +825,71 @@
     pointer-events: none;
 }
 
+/* Each dot is parked at the position it will COME TO REST at — bottom/left — and
+   the animation only ever moves it away from there and back. That way the pile is
+   described by layout, not by the end of a keyframe, so it lands correctly under
+   reduced motion, where the global kill switch collapses every animation to
+   0.001ms and only the 100% frame is ever seen. */
 .wcc-about-running-dots span {
     position: absolute;
+    bottom: var(--about-dot-rest, 0px);
+    left: var(--about-dot-x, 50%);
+    width: var(--about-dot-size, 12px);
     aspect-ratio: 1;
     border-radius: 999px;
     background: #d90000;
     opacity: 0.72;
+    will-change: transform, opacity;
+    /* NEGATIVE delay: the cycle is already under way when the panel opens, so you
+       arrive to dots mid-fall and a pile already forming. A positive delay opens on
+       an empty screen and makes the whole thing look like it failed to start.
+
+       The names are prefixed --about-*: the hero's ambient dots REGISTER --dot-x and
+       --dot-y through @property as <length>, and a registered property type-checks,
+       so a percentage handed to a bare --dot-x is discarded for the registered
+       initial 0px and every dot silently stacks against the left edge. */
+    animation: wcc-dot-fall var(--about-dot-duration, 12s) linear calc(-1 * var(--about-dot-delay, 0s)) infinite;
 }
 
-.wcc-about-running-dots span:nth-child(1) {
-    width: 52px;
-    top: 12%;
-    left: 18%;
-    animation: wcc-dot-chaos-a 6.4s ease-in-out infinite;
-}
-
-.wcc-about-running-dots span:nth-child(2) {
-    width: 28px;
-    top: 58%;
-    left: 74%;
-    animation: wcc-dot-chaos-b 5.1s ease-in-out infinite;
-    animation-delay: -2.3s;
-}
-
-@keyframes wcc-dot-chaos-a {
-    0%   { transform: translate(0, 0); }
-    8%   { transform: translate(180px, -60px); }
-    17%  { transform: translate(-90px, 140px); }
-    25%  { transform: translate(240px, 80px); }
-    33%  { transform: translate(-30px, -180px); }
-    42%  { transform: translate(320px, 40px); }
-    50%  { transform: translate(-160px, 200px); }
-    58%  { transform: translate(100px, -120px); }
-    67%  { transform: translate(-280px, 60px); }
-    75%  { transform: translate(200px, 160px); }
-    83%  { transform: translate(-120px, -80px); }
-    92%  { transform: translate(260px, -140px); }
-    100% { transform: translate(0, 0); }
-}
-
-@keyframes wcc-dot-chaos-b {
-    0%   { transform: translate(0, 0); }
-    10%  { transform: translate(-200px, 80px); }
-    20%  { transform: translate(140px, -160px); }
-    30%  { transform: translate(-300px, -40px); }
-    40%  { transform: translate(80px, 180px); }
-    50%  { transform: translate(-180px, -120px); }
-    60%  { transform: translate(260px, 60px); }
-    70%  { transform: translate(-60px, 200px); }
-    80%  { transform: translate(320px, -80px); }
-    90%  { transform: translate(-240px, 100px); }
-    100% { transform: translate(0, 0); }
+/* One continuous cycle: fall, land, sit in the pile, fade, restart above. Travel is
+   in vh, not %: a percentage in translate resolves against the DOT's own box (a few
+   px), not the container, so it would barely move. Each dot carries its own start
+   height, so at any scroll position there are dots crossing the screen rather than
+   the whole shower happening in one band. */
+@keyframes wcc-dot-fall {
+    0% {
+        transform: translate(var(--about-dot-drift, 0px), calc(-1 * var(--about-dot-start, 140vh))) scale(0.5);
+        opacity: 0;
+    }
+    6% {
+        opacity: 0.72;
+    }
+    /* Lands, then one shallow bounce — without it every dot stops dead and the pile
+       reads as a still image. */
+    42% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0.72;
+    }
+    47% {
+        transform: translate(0, -14px) scale(1);
+    }
+    52% {
+        transform: translate(0, 0) scale(1);
+    }
+    /* Sits in the heap for roughly a third of the cycle, breathing slightly, so the
+       pile is a place dots stay rather than a line they touch and leave. */
+    76% {
+        transform: translate(calc(var(--about-dot-drift, 0px) * 0.03), -4px) scale(1);
+        opacity: 0.72;
+    }
+    92% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0;
+    }
+    100% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0;
+    }
 }
 
 .wcc-about-highlight {
@@ -885,6 +910,9 @@
 }
 
 .wcc-process-gallery__grid {
+    /* The wrapper is no longer inside the 1120px prose column, so the masonry
+       carries that cap itself and looks exactly as it did before. */
+    max-width: 1120px;
     column-count: 5;
     column-gap: clamp(10px, 1.25vw, 16px);
 }
@@ -931,6 +959,102 @@
 .wcc-process-photo:hover img,
 .wcc-process-photo:focus-visible img {
     filter: grayscale(0) contrast(1) brightness(1);
+}
+
+/* The desktop presentation of the same photos: a repulsion field on a canvas
+   instead of the masonry above. A canvas has no intrinsic size, so the height is
+   set here — tall enough that thirty scattered planes are not a smear, short
+   enough to leave the paragraphs above it on screen as you arrive. */
+/* Full panel width. 100% here is the reveal panel's content box, not a viewport
+   calculation — vw would include the scrollbar and overflow by its width on any
+   machine not using overlay scrollbars. */
+.wcc-process-gallery--field {
+    width: 100%;
+}
+
+.wcc-process-field {
+    position: relative;
+    width: 100%;
+    height: min(80vh, 860px);
+    margin: 8px 0;
+    touch-action: none;
+}
+
+.wcc-process-field canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* The pager for the enlarged view. Sits over the bottom of the field, centred,
+   and only exists while a photo is open. Black pill on the near-black ground, so
+   it reads as chrome over the photo rather than part of the scatter. */
+.wcc-process-field__pager {
+    position: absolute;
+    right: 0;
+    bottom: clamp(16px, 3vh, 34px);
+    left: 0;
+    z-index: 2;
+    display: flex;
+    gap: clamp(10px, 1.4vw, 20px);
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.wcc-process-field__pager > * {
+    pointer-events: auto;
+}
+
+.wcc-process-field__pager button {
+    min-width: 46px;
+    padding: 10px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    font: inherit;
+    font-size: 1rem;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+    transition: border-color 200ms ease, background 200ms ease;
+}
+
+.wcc-process-field__pager button:hover,
+.wcc-process-field__pager button:focus-visible {
+    border-color: #d90000;
+    background: rgba(0, 0, 0, 0.85);
+}
+
+.wcc-process-field__pager span {
+    padding: 10px 4px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.82rem;
+    letter-spacing: 0.14em;
+    font-variant-numeric: tabular-nums;
+}
+
+.wcc-process-field__pager-close {
+    margin-left: clamp(6px, 1vw, 14px);
+}
+
+/* The real controls behind the canvas: one button per photo, reachable by tab and
+   readable by a screen reader, but never painted. Not display:none and not
+   visibility:hidden — either would drop them from the tab order, and the tab order
+   is the entire point. Focus feedback happens in the canvas, which lights the
+   plane the focused button names. */
+.wcc-process-field__controls {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    list-style: none;
 }
 
 @media (max-width: 800px) {
@@ -1196,6 +1320,11 @@
 }
 
 .wcc-supported-by--about {
+    /* Above the dot layer. The dots are positioned with z-index 0, which still
+       paints over an unpositioned block, so the pile at the foot of the page was
+       landing on top of the funders' logos. */
+    position: relative;
+    z-index: 1;
     margin-top: clamp(40px, 6vw, 72px);
     padding-left: 0;
     border-top: 1px solid rgba(255, 255, 255, 0.10);
