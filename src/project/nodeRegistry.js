@@ -111,25 +111,17 @@ export const FAMILY_BY_TYPE = {
     'value.boolean': 'numbers',
     'value.string': 'numbers',
     'time': 'numbers',
-    'math.add': 'numbers',
-    'math.subtract': 'numbers',
-    'math.multiply': 'numbers',
-    'math.divide': 'numbers',
-    'math.mod': 'numbers',
-    'math.pow': 'numbers',
-    'math.sin': 'numbers',
+    'math.op': 'numbers',
     'math.mix': 'numbers',
     'math.clamp': 'numbers',
     'logic.compare': 'numbers',
-    'logic.gate': 'numbers',
-    'logic.switch': 'numbers',
+    'logic.route': 'numbers',
     'signal.lag': 'numbers',
     'value.noise': 'numbers',
     'math.range': 'numbers',
     'signal.lfo': 'numbers',
     'logic.combine': 'numbers',
     'math.extremes': 'numbers',
-    'math.abs': 'numbers',
     'math.round': 'numbers',
     'signal.ease': 'numbers',
     'signal.counter': 'numbers',
@@ -212,6 +204,95 @@ export const getNodeCardSummary = (node) => {
         return `${rows} row${rows === 1 ? '' : 's'} · ${groups} group${groups === 1 ? '' : 's'}`
     }
     return null
+}
+
+// --- Operator families ---
+//
+// One node, a menu of operations — the TouchDesigner Math CHOP shape, asked
+// for by name (2026-09-01): "there are math operator and all math things
+// there, not one by one". A family lives here when its members share ONE
+// port set and ONE output; the operation is a parameter, not a type.
+//
+// Two rules decided which of the eighteen math/logic types could join, and
+// both are about not losing somebody's work:
+//
+//   1. A type with more than one OUTPUT is already a family. Extremes answers
+//      Least and Greatest at once, Round answers three, Compare three, Logic
+//      four — this codebase chose wire-first families where TD chose a menu
+//      (see the 2026-08-20 "wire the question you mean" comments). One
+//      operation can only answer one question, so folding those in would
+//      silently drop a wire the day someone had two of them fed.
+//   2. A type whose INPUTS differ in shape stays out. Mix takes three ports
+//      of type `any`, Clamp three, Range five. Forcing them in puts ports on
+//      the card that most operations ignore.
+//
+// The ports are STATIC per family — never hidden by operation. A wire to a
+// port the registry does not declare collapses to the card's top-left corner
+// (RawGraphSurface.jsx's `idx < 0` fallback), which is exactly the invisible
+// wire a merge must not create. So an operation that reads only one of them
+// says so in the other's LABEL instead: `Unused`, and marks it `unused` so the
+// inspector stops offering a box for a number nothing will read.
+//
+// What DOES vary by operation: the port labels and the port defaults. The
+// defaults are load-bearing, not cosmetic — a bare Multiply answered 1 and a
+// bare Add answered 0 before the merge, and both still do.
+const operationPort = (id, type, label, extra = {}) => ({ id, type, label, ...extra })
+
+export const NODE_OPERATIONS = {
+    'math.op': [
+        { value: 'add',      label: 'Add',      inputs: [operationPort('a', 'number', 'A', { default: 0 }), operationPort('b', 'number', 'B', { default: 0 })] },
+        { value: 'subtract', label: 'Subtract', inputs: [operationPort('a', 'number', 'A', { default: 0 }), operationPort('b', 'number', 'B', { default: 0 })] },
+        { value: 'multiply', label: 'Multiply', inputs: [operationPort('a', 'number', 'A', { default: 1 }), operationPort('b', 'number', 'B', { default: 1 })] },
+        { value: 'divide',   label: 'Divide',   inputs: [operationPort('a', 'number', 'A', { default: 0 }), operationPort('b', 'number', 'B', { default: 1 })] },
+        { value: 'modulo',   label: 'Modulo',   inputs: [operationPort('a', 'number', 'A', { default: 0 }), operationPort('b', 'number', 'B', { default: 1 })] },
+        { value: 'power',    label: 'Power',    inputs: [operationPort('a', 'number', 'Base', { default: 1 }), operationPort('b', 'number', 'Exponent', { default: 1 })] },
+        { value: 'sin',      label: 'Sin',      inputs: [operationPort('a', 'number', 'Value', { default: 0 }), operationPort('b', 'number', 'Unused', { unused: true })] },
+        { value: 'absolute', label: 'Absolute', inputs: [operationPort('a', 'number', 'Value', { default: 0 }), operationPort('b', 'number', 'Unused', { unused: true })] },
+    ],
+    'logic.route': [
+        // Gate's Value carries NO default, exactly as logic.gate's did: a bare
+        // or closed Gate is an unplugged wire, not a zero (PASS_THROUGH_PORTS).
+        { value: 'gate',   label: 'Gate',   inputs: [operationPort('a', 'any', 'Value'), operationPort('b', 'any', 'Unused', { unused: true }), operationPort('pick', 'boolean', 'Open', { default: true })] },
+        { value: 'switch', label: 'Switch', inputs: [operationPort('a', 'any', 'A', { default: 0 }), operationPort('b', 'any', 'B', { default: 0 }), operationPort('pick', 'boolean', 'Pick', { default: false })] },
+    ],
+}
+
+export const getNodeOperations = (typeId) => NODE_OPERATIONS[typeId] || null
+
+// The operation a node is set to, always a real menu entry — an unset or
+// unknown `values.operation` reads as the first, which is the one the type's
+// static `inputs` and `defaultValues` describe.
+export const getNodeOperation = (node) => {
+    const menu = NODE_OPERATIONS[node?.typeId]
+    if (!menu) return null
+    return menu.find((operation) => operation.value === node?.values?.operation) || menu[0]
+}
+
+// The card's face. A canvas where every card says "Math" is worse than
+// thirteen types were, so the operation IS the name: created as it, renamed
+// with it, and only left alone once a person has typed their own.
+export const getNodeOperationLabel = (node) => getNodeOperation(node)?.label || null
+
+// The `label` half of an inspector edit that changed the operation. Returns
+// {} for every other edit and for a node whose name a person has typed —
+// their name is theirs, and an operator that renamed "Speed × 2" to
+// "Multiply" behind their back would be a small theft.
+export const operationLabelPatch = (node, component, nextValues) => {
+    if (component !== 'values') return {}
+    const menu = NODE_OPERATIONS[node?.typeId]
+    if (!menu) return {}
+    const nextOperation = nextValues?.operation
+    if (!nextOperation || nextOperation === node?.values?.operation) return {}
+    if (!isAutoOperationLabel(node, node?.label)) return {}
+    const label = menu.find((operation) => operation.value === nextOperation)?.label
+    return label ? { label } : {}
+}
+
+export const isAutoOperationLabel = (node, label) => {
+    const menu = NODE_OPERATIONS[node?.typeId]
+    if (!menu) return false
+    const type = getNodeType(node?.typeId)
+    return label === type?.label || menu.some((operation) => operation.label === label)
 }
 
 export const getNodeFamily = (typeId) => {
@@ -1675,121 +1756,36 @@ export const NODE_TYPES = {
     // MATH — transform values, connect anywhere
     // -----------------------------------------------------------------------
 
-    'math.add': {
-        id: 'math.add',
-        label: 'Add',
+    // The math family, merged 2026-09-01. Eight operations that all take two
+    // numbers and answer one — Add, Subtract, Multiply, Divide, Modulo, Power,
+    // Sin, Absolute — behind one card with an operation menu, the way a TD
+    // Math CHOP works. Extremes, Round, Mix, Clamp and Range stayed out; the
+    // two rules are stated at NODE_OPERATIONS.
+    //
+    // `inputs` here is the STATIC shape: ids and types only, no defaults. The
+    // defaults are per-operation (NODE_OPERATIONS) and reach every reader
+    // through getNodeInputs, so that switching the menu switches what a bare
+    // port answers — and so createNode seeds nothing that would then override
+    // the operation a person picks next.
+    'math.op': {
+        id: 'math.op',
+        label: 'Math',
         category: 'math',
         runtime: 'any',
         singleton: false,
+        keywords: [
+            'math', 'operator', 'add', 'plus', 'sum', 'subtract', 'minus', 'difference',
+            'multiply', 'times', 'product', 'divide', 'ratio', 'modulo', 'mod', 'remainder',
+            'power', 'pow', 'exponent', 'sin', 'sine', 'absolute', 'abs', 'magnitude',
+        ],
         inputs: [
-            { id: 'a', type: 'number', label: 'A', default: 0 },
-            { id: 'b', type: 'number', label: 'B', default: 0 },
+            { id: 'a', type: 'number', label: 'A' },
+            { id: 'b', type: 'number', label: 'B' },
         ],
         outputs: [
             { id: 'out', type: 'number', label: 'Result' },
         ],
-        defaultValues: {},
-        render: 'hidden',
-    },
-
-    'math.subtract': {
-        id: 'math.subtract',
-        label: 'Subtract',
-        category: 'math',
-        runtime: 'any',
-        singleton: false,
-        inputs: [
-            { id: 'a', type: 'number', label: 'A', default: 0 },
-            { id: 'b', type: 'number', label: 'B', default: 0 },
-        ],
-        outputs: [
-            { id: 'out', type: 'number', label: 'Result' },
-        ],
-        defaultValues: {},
-        render: 'hidden',
-    },
-
-    'math.multiply': {
-        id: 'math.multiply',
-        label: 'Multiply',
-        category: 'math',
-        runtime: 'any',
-        singleton: false,
-        inputs: [
-            { id: 'a', type: 'number', label: 'A', default: 1 },
-            { id: 'b', type: 'number', label: 'B', default: 1 },
-        ],
-        outputs: [
-            { id: 'out', type: 'number', label: 'Result' },
-        ],
-        defaultValues: {},
-        render: 'hidden',
-    },
-
-    'math.divide': {
-        id: 'math.divide',
-        label: 'Divide',
-        category: 'math',
-        runtime: 'any',
-        singleton: false,
-        inputs: [
-            { id: 'a', type: 'number', label: 'A', default: 0 },
-            { id: 'b', type: 'number', label: 'B', default: 1 },
-        ],
-        outputs: [
-            { id: 'out', type: 'number', label: 'Result' },
-        ],
-        defaultValues: {},
-        render: 'hidden',
-    },
-
-    'math.mod': {
-        id: 'math.mod',
-        label: 'Modulo',
-        category: 'math',
-        runtime: 'any',
-        singleton: false,
-        inputs: [
-            { id: 'a', type: 'number', label: 'A', default: 0 },
-            { id: 'b', type: 'number', label: 'B', default: 1 },
-        ],
-        outputs: [
-            { id: 'out', type: 'number', label: 'Result' },
-        ],
-        defaultValues: {},
-        render: 'hidden',
-    },
-
-    'math.pow': {
-        id: 'math.pow',
-        label: 'Power',
-        category: 'math',
-        runtime: 'any',
-        singleton: false,
-        inputs: [
-            { id: 'a', type: 'number', label: 'Base', default: 1 },
-            { id: 'b', type: 'number', label: 'Exponent', default: 1 },
-        ],
-        outputs: [
-            { id: 'out', type: 'number', label: 'Result' },
-        ],
-        defaultValues: {},
-        render: 'hidden',
-    },
-
-    'math.sin': {
-        id: 'math.sin',
-        label: 'Sin',
-        category: 'math',
-        runtime: 'any',
-        singleton: false,
-        inputs: [
-            { id: 'in', type: 'number', label: 'Input', default: 0 },
-        ],
-        outputs: [
-            { id: 'out', type: 'number', label: 'Result' },
-        ],
-        defaultValues: {},
+        defaultValues: { operation: 'add' },
         render: 'hidden',
     },
 
@@ -1854,40 +1850,30 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
-    'logic.gate': {
-        id: 'logic.gate',
-        label: 'Gate',
+    // Gate and Switch, merged 2026-09-01 — the two logic types that were one
+    // operation each. Both answer "which value speaks"; only the number of
+    // candidates differs, so they are one operator with a menu.
+    //
+    // Compare, Logic and Toggle stayed out: the first two already answer
+    // several questions at once through several outputs (rule 1 at
+    // NODE_OPERATIONS), and Toggle is a latch with memory between passes —
+    // not an operation on the values in front of it.
+    'logic.route': {
+        id: 'logic.route',
+        label: 'Route',
         category: 'logic',
         runtime: 'any',
         singleton: false,
+        keywords: ['route', 'gate', 'switch', 'open', 'closed', 'pick', 'choose', 'pass', 'select'],
         inputs: [
-            // No default on value: a Gate passes through what arrives, and a
-            // bare Gate honestly carries nothing (PASS_THROUGH_PORTS).
-            { id: 'value', type: 'any',     label: 'Value'                 },
-            { id: 'open',  type: 'boolean', label: 'Open',   default: true },
+            { id: 'a',    type: 'any',     label: 'Value' },
+            { id: 'b',    type: 'any',     label: 'Unused' },
+            { id: 'pick', type: 'boolean', label: 'Open'  },
         ],
         outputs: [
             { id: 'out', type: 'any', label: 'Result' },
         ],
-        defaultValues: {},
-        render: 'hidden',
-    },
-
-    'logic.switch': {
-        id: 'logic.switch',
-        label: 'Switch',
-        category: 'logic',
-        runtime: 'any',
-        singleton: false,
-        inputs: [
-            { id: 'a',    type: 'any',     label: 'A',    default: 0     },
-            { id: 'b',    type: 'any',     label: 'B',    default: 0     },
-            { id: 'pick', type: 'boolean', label: 'Pick', default: false },
-        ],
-        outputs: [
-            { id: 'out', type: 'any', label: 'Result' },
-        ],
-        defaultValues: {},
+        defaultValues: { operation: 'gate' },
         render: 'hidden',
     },
 
@@ -2047,23 +2033,6 @@ export const NODE_TYPES = {
         outputs: [
             { id: 'least',    type: 'number', label: 'Least'    },
             { id: 'greatest', type: 'number', label: 'Greatest' },
-        ],
-        defaultValues: {},
-        render: 'hidden',
-    },
-
-    'math.abs': {
-        id: 'math.abs',
-        label: 'Absolute',
-        category: 'math',
-        runtime: 'any',
-        singleton: false,
-        keywords: ['abs', 'absolute', 'magnitude', 'positive'],
-        inputs: [
-            { id: 'in', type: 'number', label: 'Value', default: 0 },
-        ],
-        outputs: [
-            { id: 'out', type: 'number', label: 'Result' },
         ],
         defaultValues: {},
         render: 'hidden',
@@ -2852,12 +2821,17 @@ export const createNode = (typeId, options = {}) => {
         if (port.default !== undefined) defaultValues[port.id] = port.default
     }
     Object.assign(defaultValues, type.defaultValues || {})
+    const values = { ...defaultValues, ...(options.values || {}) }
 
     return {
         id:        options.id    || generateId('node'),
         typeId,
-        label:     options.label || type.label,
-        values:    { ...defaultValues, ...(options.values || {}) },
+        // An operator family is born wearing its operation's name, not the
+        // family's: place Math and the card says Add, because a canvas of
+        // cards all reading "Math" would be worse than the thirteen types
+        // this replaced.
+        label:     options.label || getNodeOperationLabel({ typeId, values }) || type.label,
+        values,
         graphX:    options.graphX    ?? 0,
         graphY:    options.graphY    ?? 0,
         runtimeId: options.runtimeId || null,
@@ -3027,7 +3001,11 @@ export const getNodeInputs = (node, scopeNodes = null) => {
     // grow doors. Stated out loud rather than silently true: every node in
     // production today is a node.null.
     if (type.isNull) return (node.values?.portDefs || []).filter(p => p.dir === 'in')
-    const declared = type.inputs || []
+    // An operator family's port LABELS and DEFAULTS follow the operation the
+    // node is set to; the ids never do, so a wire lands in the same place
+    // whatever the menu says. Each operation's array is built once at module
+    // load, so this stays a lookup on a hot path.
+    const declared = getNodeOperation(node)?.inputs || type.inputs || []
     const promoted = doorwaysInside(node, scopeNodes, DOORWAY_IN_TYPE_ID)
     // Guarded, not spread unconditionally: an unguarded `[...declared]` turns a
     // shared reference into a fresh array on every call, on a hot path, with

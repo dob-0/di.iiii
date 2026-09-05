@@ -13,11 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- dead CSS removed, 205 lines verified selector by selector
-- four rules, each one paid for tonight
-- a room that can be read, not only looked at
-- sign in with Telegram, the server half
-- five green PRs landed as one batch, so no landing invalidates the next
+- thirteen math nodes become one, with a menu
 
 Full detail: `PROGRESS.md`.
 

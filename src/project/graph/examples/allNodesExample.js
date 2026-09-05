@@ -69,8 +69,8 @@ export const PASS_THROUGH_PORTS = [
         why: 're-frames what arrives; with nothing wired it carries nothing — an empty transform is not a shape'
     },
     {
-        port: 'logic.gate.out',
-        why: 'passes through what arrives while open; bare or closed it carries nothing — a closed gate is an unplugged wire, not a zero'
+        port: 'logic.route.out',
+        why: 'in its Gate operation — the one it is born in — it passes through what arrives while open; bare or closed it carries nothing, because a closed gate is an unplugged wire, not a zero'
     }
 ]
 
@@ -144,24 +144,27 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('time', 'time', { label: 'Time · clock', col: 0, row: 7 })
 
     // --- column 1: maths driven by the clock ----------------------------------
-    add('sin', 'math.sin', { label: 'Sin', col: 1, row: 0 })
-    add('multiply', 'math.multiply', { label: 'Multiply', col: 1, row: 1 })
-    add('add', 'math.add', { label: 'Add', col: 1, row: 2 })
+    // Eight of these cards are ONE type — math.op, set to eight operations.
+    // The example keeps them all so the chain still reads as arithmetic, and
+    // so the operator is seen wearing more than one face.
+    add('sin', 'math.op', { label: 'Sin', col: 1, row: 0, values: { operation: 'sin' } })
+    add('multiply', 'math.op', { label: 'Multiply', col: 1, row: 1, values: { operation: 'multiply' } })
+    add('add', 'math.op', { label: 'Add', col: 1, row: 2, values: { operation: 'add' } })
     add('clamp', 'math.clamp', { label: 'Clamp', col: 1, row: 3 })
-    add('mod', 'math.mod', { label: 'Modulo', col: 1, row: 4 })
-    add('divide', 'math.divide', { label: 'Divide', col: 1, row: 5 })
+    add('mod', 'math.op', { label: 'Modulo', col: 1, row: 4, values: { operation: 'modulo' } })
+    add('divide', 'math.op', { label: 'Divide', col: 1, row: 5, values: { operation: 'divide' } })
     add('mix', 'math.mix', { label: 'Mix', col: 1, row: 6 })
-    add('subtract', 'math.subtract', { label: 'Subtract', col: 1, row: 7 })
-    add('pow', 'math.pow', { label: 'Power', col: 1, row: 8 })
+    add('subtract', 'math.op', { label: 'Subtract', col: 1, row: 7, values: { operation: 'subtract' } })
+    add('pow', 'math.op', { label: 'Power', col: 1, row: 8, values: { operation: 'power' } })
     add('compare', 'logic.compare', { label: 'Compare', col: 1, row: 9 })
-    add('gate', 'logic.gate', { label: 'Gate', col: 1, row: 10 })
-    add('switch', 'logic.switch', { label: 'Switch', col: 1, row: 11 })
+    add('gate', 'logic.route', { label: 'Gate', col: 1, row: 10, values: { operation: 'gate' } })
+    add('switch', 'logic.route', { label: 'Switch', col: 1, row: 11, values: { operation: 'switch' } })
     add('lag', 'signal.lag', { label: 'Lag', col: 1, row: 12 })
     add('range', 'math.range', { label: 'Range', col: 1, row: 13 })
     add('lfo', 'signal.lfo', { label: 'Oscillator', col: 0, row: 10 })
     add('logicCombine', 'logic.combine', { label: 'Logic', col: 1, row: 14 })
     add('extremes', 'math.extremes', { label: 'Extremes', col: 1, row: 15 })
-    add('abs', 'math.abs', { label: 'Absolute', col: 1, row: 16 })
+    add('abs', 'math.op', { label: 'Absolute', col: 1, row: 16, values: { operation: 'absolute' } })
     add('round', 'math.round', { label: 'Round', col: 1, row: 17 })
     add('ease', 'signal.ease', { label: 'Ease', col: 1, row: 18 })
     add('counter', 'signal.counter', { label: 'Counter', col: 0, row: 11 })
@@ -327,7 +330,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // 0.5..1.5 band that exactly fills the clamp range — this is what makes
         // the sphere pulse. Scale it any wider and the clamp saturates, which
         // reads in the editor as a live wire carrying a frozen number.
-        wire('time', 'elapsed', 'sin', 'in'),
+        wire('time', 'elapsed', 'sin', 'a'),
         wire('sin', 'out', 'multiply', 'a'),
         wire('numB', 'out', 'multiply', 'b'),
         wire('multiply', 'out', 'add', 'a'),
@@ -364,8 +367,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // flips the Switch between the two colours.
         wire('divide', 'out', 'compare', 'a'),
         wire('numHalf', 'out', 'compare', 'b'),
-        wire('sin', 'out', 'gate', 'value'),
-        wire('compare', 'greater', 'gate', 'open'),
+        wire('sin', 'out', 'gate', 'a'),
+        wire('compare', 'greater', 'gate', 'pick'),
         wire('colorA', 'out', 'switch', 'a'),
         wire('colorB', 'out', 'switch', 'b'),
         wire('compare', 'less', 'switch', 'pick'),
@@ -382,7 +385,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('compare', 'less', 'logicCombine', 'b'),
         wire('sin', 'out', 'extremes', 'a'),
         wire('lfo', 'sine', 'extremes', 'b'),
-        wire('lfo', 'saw', 'abs', 'in'),
+        wire('lfo', 'saw', 'abs', 'a'),
         wire('lfo', 'square', 'round', 'in'),
         wire('divide', 'out', 'ease', 'in'),
 

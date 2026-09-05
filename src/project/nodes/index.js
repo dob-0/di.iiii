@@ -9,24 +9,16 @@ import { computeOutput as geomCone } from './geom.cone/runtime.js'
 import { computeOutput as geomCylinder } from './geom.cylinder/runtime.js'
 import { computeOutput as geomTorus } from './geom.torus/runtime.js'
 import { computeOutput as geomTransform } from './geom.transform/runtime.js'
-import { computeOutput as mathAdd } from './math.add/runtime.js'
 import { computeOutput as mathClamp } from './math.clamp/runtime.js'
+import { computeOutput as mathOp } from './math.op/runtime.js'
 import { computeOutput as mathExtremes } from './math.extremes/runtime.js'
-import { computeOutput as mathDivide } from './math.divide/runtime.js'
 import { computeOutput as mathMix } from './math.mix/runtime.js'
-import { computeOutput as mathMod } from './math.mod/runtime.js'
-import { computeOutput as mathMultiply } from './math.multiply/runtime.js'
-import { computeOutput as mathPow } from './math.pow/runtime.js'
 import { computeOutput as mathRange } from './math.range/runtime.js'
 import { computeOutput as mathRound } from './math.round/runtime.js'
-import { computeOutput as mathSin } from './math.sin/runtime.js'
-import { computeOutput as mathSubtract } from './math.subtract/runtime.js'
 import { computeOutput as timeClock } from './time/runtime.js'
 import { computeOutput as logicCombine } from './logic.combine/runtime.js'
 import { computeOutput as logicCompare } from './logic.compare/runtime.js'
-import { computeOutput as mathAbs } from './math.abs/runtime.js'
-import { computeOutput as logicGate } from './logic.gate/runtime.js'
-import { computeOutput as logicSwitch } from './logic.switch/runtime.js'
+import { computeOutput as logicRoute } from './logic.route/runtime.js'
 import { computeOutput as logicToggle } from './logic.toggle/runtime.js'
 import { computeOutput as mediaAudioLevels } from './media.audio/runtime.js'
 import { computeOutput as mediaVideoFrame } from './media.video/runtime.js'
@@ -73,24 +65,16 @@ export const NODE_RUNTIMES = new Map([
     ['geom.cylinder', geomCylinder],
     ['geom.torus', geomTorus],
     ['geom.transform', geomTransform],
-    ['math.add', mathAdd],
     ['math.clamp', mathClamp],
+    ['math.op', mathOp],
     ['math.extremes', mathExtremes],
-    ['math.divide', mathDivide],
     ['math.mix', mathMix],
-    ['math.mod', mathMod],
-    ['math.multiply', mathMultiply],
-    ['math.pow', mathPow],
     ['math.range', mathRange],
     ['math.round', mathRound],
-    ['math.sin', mathSin],
-    ['math.subtract', mathSubtract],
     ['time', timeClock],
     ['logic.combine', logicCombine],
     ['logic.compare', logicCompare],
-    ['math.abs', mathAbs],
-    ['logic.gate', logicGate],
-    ['logic.switch', logicSwitch],
+    ['logic.route', logicRoute],
     ['logic.toggle', logicToggle],
     ['media.audio', mediaAudioLevels],
     ['media.video', mediaVideoFrame],
