@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- six dependency bumps land together after the camp freeze
+- the Telegram secret reaches the container
 
 Full detail: `PROGRESS.md`.
 
