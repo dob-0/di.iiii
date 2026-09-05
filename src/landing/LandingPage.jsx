@@ -1,6 +1,7 @@
 /* global __APP_VERSION__ */
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { Box, Button, Stack, Typography } from '@mui/material'
+import { Box, Button, Stack, ThemeProvider, Typography } from '@mui/material'
+import { diFontTheme } from '../styles/muiTheme.js'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath } from '../utils/spaceRouting.js'
@@ -192,7 +193,7 @@ const CAPABILITIES = [
     'Publish scene state to server'
 ]
 
-export default function LandingPage() {
+function LandingPageInner() {
     // One destination for every session. It used to branch on the session,
     // which also meant these static hrefs pointed at the guest destination
     // during the tick before getApiSession resolved — click fast enough as a
@@ -778,5 +779,17 @@ export default function LandingPage() {
             )}
 
         </Box>
+    )
+}
+
+// The landing page renders MUI Buttons with no ThemeProvider above it, so
+// every button was coming back Roboto/Helvetica next to Inter copy. Wrapped
+// here rather than in RootApp: MUI is lazy-loaded and must not be imported
+// eagerly by the router (2026-07-17 perf audit).
+export default function LandingPage() {
+    return (
+        <ThemeProvider theme={diFontTheme}>
+            <LandingPageInner />
+        </ThemeProvider>
     )
 }

@@ -7,7 +7,7 @@
     color: var(--ui-text-primary);
     border: 1px solid var(--di-cyan-border);
     overflow: hidden;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
 }
 .floating-panel .panel-header {
     display: flex;
@@ -118,7 +118,7 @@
     background: rgba(7,11,20,0.65);
     color: var(--ui-text-primary);
     font-size: 12px;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--di-sans);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
 .floating-panel .prop-row input[type="number"] {
