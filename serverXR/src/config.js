@@ -194,6 +194,11 @@ const authIdentityLookup = new Map(authIdentities.map(identity => [identity.toke
 // one isn't a new escalation the way falling back to a lower-role one would be.
 const adminFallbackToken = authIdentities.find(identity => identity.role === 'admin')?.token
 const authSessionSecret = (process.env.AUTH_SESSION_SECRET || apiToken || adminFallbackToken || '').trim()
+// The token the server uses to call ITSELF (GitHub space-sync pulls a repo and
+// then writes it back through its own HTTP routes). Docker passes only
+// ADMIN_API_TOKEN, never API_TOKEN, so without this fallback every webhook and
+// every first sync answered itself with 401 on both tiers.
+const internalApiToken = (apiToken || adminFallbackToken || '').trim()
 
 if (requireAuth && !authIdentities.length) {
   throw new Error('At least one auth token is required when REQUIRE_AUTH is enabled.')
@@ -265,6 +270,7 @@ const config = {
   basePath,
   mountPath: basePath || '/',
   apiToken,
+  internalApiToken,
   requireAuth,
   corsOrigins,
   maxUploadBytes,
@@ -346,6 +352,19 @@ const config = {
       clientId: (process.env.GOOGLE_CLIENT_ID || '').trim(),
       clientSecret: (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
       enabled: Boolean((process.env.GOOGLE_CLIENT_ID || '').trim())
+    },
+    // Sign in with Telegram. Unlike github/google this is not an OAuth client:
+    // di.bo proves who someone is (Telegram delivered a message to them) and
+    // asks us for a one-time link. `loginSecret` is what lets it ask — it is a
+    // shared secret with the bot and NOTHING else, deliberately not the admin
+    // API token, so a compromised bot cannot also write spaces.
+    //
+    // botUsername is advertised so a client can offer "open di.bo" without
+    // hardcoding the bot's name; empty just means the button names no bot.
+    telegram: {
+      loginSecret: (process.env.TELEGRAM_LOGIN_SECRET || '').trim(),
+      botUsername: (process.env.TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, ''),
+      enabled: Boolean((process.env.TELEGRAM_LOGIN_SECRET || '').trim())
     }
   },
   // Human-approval gate for admin-level writes (see approvalGate.js). Unset

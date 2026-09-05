@@ -8,8 +8,27 @@ import { isPreviewRequest } from '../utils/previewMode.js'
 // Renders on every surface (mounted once in RootApp) — Studio, Raw, a space,
 // the landing page, the wiki. The whole value is that there is nowhere in
 // di.iiii you can be standing and not know which one you are standing in.
+
+// How long the chip spells itself out before the frame alone carries the
+// answer. Long enough to read on arrival, short enough that it is never the
+// thing sitting on top of a page's own bottom-corner controls.
+const CHIP_VISIBLE_MS = 4000
+
 export default function ModeMark() {
     const [serverLocal, setServerLocal] = useState(null)
+    const [collapsed, setCollapsed] = useState(false)
+
+    useEffect(() => {
+        // Same reasoning as the config fetch below: this overlay sits above the
+        // whole app, so even a state-setter timer must not be the thing that
+        // can throw and take a surface down with it.
+        try {
+            const timer = window.setTimeout(() => setCollapsed(true), CHIP_VISIBLE_MS)
+            return () => window.clearTimeout(timer)
+        } catch {
+            return undefined
+        }
+    }, [])
 
     useEffect(() => {
         if (!hasServerApi) return undefined
@@ -41,8 +60,10 @@ export default function ModeMark() {
     if (!mark) return null
 
     return (
-        <div className="mode-mark" data-mode={mode} style={{ '--mode-color': mark.color }}>
-            <div className="mode-mark-frame" />
+        <div className="mode-mark" data-mode={mode} data-collapsed={collapsed} style={{ '--mode-color': mark.color }}>
+            <div className="mode-mark-frame">
+                <span className="mode-mark-corner" />
+            </div>
             <div className="mode-mark-chip" title={`di.iiii — ${mark.note}`}>
                 <span className="mode-mark-dot" />
                 <span>{mark.label}</span>

@@ -1,0 +1,1660 @@
+{
+  "note": "One entry per person in the network — all 52 who make di.iiii, not only the ones with rooms yet. `works` (shape: {url,title,line,space,project}) are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. Generated from network-directions/data/inventory.json (52-person roster) via the MIX build's lib/data.mjs, then committed here as static data. build.mjs turns this into pages/<slug>.html and one di-space.<slug>.json each, via room-template.mjs's renderRoom(). Two works (azd and br_id_ge) are shared by more than one person, which is what draws the lines in a room's field. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make.",
+  "people": [
+    {
+      "slug": "gevorg-grigoryan",
+      "name": "Gevorg Aram Grigoryan",
+      "role": "XR director, developer",
+      "discipline": "XR director, developer",
+      "team": true,
+      "section": "team",
+      "sectionLabel": "team",
+      "city": null,
+      "bio": "dob_ — interdisciplinary artist and director, in the digital and artistic realms since 2009. Founder of di. studio; theatre-trained, now building the platform itself.",
+      "works": [
+        {
+          "url": "/",
+          "title": "di.iiii",
+          "line": "the platform itself",
+          "space": "main",
+          "project": "main-dii-project"
+        },
+        {
+          "url": "/br_id_ge",
+          "title": "br_id_ge",
+          "line": "Notations #2 — curated and developed",
+          "space": "br-id-ge",
+          "project": "landing"
+        }
+      ],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/dob______/"
+        },
+        {
+          "label": "GitHub",
+          "href": "https://github.com/dob-0"
+        }
+      ],
+      "num": "01",
+      "order": 1,
+      "resume": {
+        "focus": [
+          "director",
+          "new media artist",
+          "multimedia artist",
+          "electronic art production",
+          "digital art production",
+          "audiovisual production",
+          "curation",
+          "TouchDesigner",
+          "Blender"
+        ],
+        "timeline": [
+          {
+            "year": "2025",
+            "items": [
+              {
+                "title": "RecordAR",
+                "role": "art director",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Notations",
+                "role": "video art curator",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Alter ego",
+                "role": "creative director",
+                "place": "Public TV Company of Armenia"
+              },
+              {
+                "title": "Game changers: Intro to game dev. (UNICEF)",
+                "role": "soft skill trainer",
+                "place": "Gyumri Technology Center"
+              }
+            ]
+          },
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "Hayfilm cluster",
+                "role": "art director",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "OUT",
+                "role": "director",
+                "place": "NPAK, Armenia"
+              },
+              {
+                "title": "F33d6ack",
+                "role": "multimedia artist",
+                "place": "NPAK, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "ex: bkss",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "bisetka v:2",
+                "role": "art director",
+                "place": "Pathos Theatre, Munich, Germany"
+              },
+              {
+                "title": "taking space: ex:no_map",
+                "role": "multimedia artist",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Creative cognition: in_it",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Bisetka: talk place",
+                "role": "director",
+                "place": "HochX Theater, Munich, Germany"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "SPCTR",
+                "role": "multimedia artist",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Oda",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Galique",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Mards",
+                "role": "project manager",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Dimensions: 004",
+                "role": "multimedia artist",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "di. studio",
+                "role": "founder",
+                "place": "Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2021",
+            "items": [
+              {
+                "title": "#AygePar (Artworks For Peace)",
+                "role": "project manager",
+                "place": "Aygepar, Armenia"
+              },
+              {
+                "title": "in Basen (Artworks For Peace)",
+                "role": "project manager",
+                "place": "Basen, Armenia"
+              },
+              {
+                "title": "Ground art festival",
+                "role": "project manager",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "technoSapiens",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2016 – 2020",
+            "items": [
+              {
+                "title": "Wedding in the Back",
+                "role": "actor",
+                "place": "Gyumri State Drama Theater"
+              },
+              {
+                "title": "smileOmetr",
+                "role": "stage director",
+                "place": "Gyumri State Drama Theater"
+              },
+              {
+                "title": "Three Little Pigs",
+                "role": "stage director",
+                "place": "Gyumri State Drama Theater"
+              }
+            ]
+          },
+          {
+            "year": "2012 – 2019",
+            "items": [
+              {
+                "title": "Aratta",
+                "role": "creative director / band"
+              },
+              {
+                "title": "seenThat",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "PROF",
+                "role": "PR manager",
+                "place": "Gyumri, Armenia"
+              }
+            ]
+          }
+        ],
+        "cvUrl": "https://docs.google.com/document/d/14xkyBRArc9t7BqbKm_-2FDpzrjn84lPGdiDnuP23xr4/edit",
+        "cvLabel": "the full CV"
+      }
+    },
+    {
+      "slug": "emilya-nikoghosyan",
+      "name": "Emilya Nikoghosyan",
+      "role": "art director",
+      "discipline": "art director",
+      "team": true,
+      "section": "team",
+      "sectionLabel": "team",
+      "city": null,
+      "bio": "Multimedia artist, youth worker, activist — co-founder of di. studio, working across installation, concept art and production.",
+      "works": [
+        {
+          "url": "/algovrithm",
+          "title": "algovrithm",
+          "line": "part of Notations #2 XR",
+          "space": "algovrithm",
+          "project": null
+        },
+        {
+          "url": "/azd",
+          "title": "ազդ | azd",
+          "line": "a-1",
+          "space": "azd",
+          "project": "azd"
+        },
+        {
+          "url": null,
+          "title": "algovrithm",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-01",
+          "space": "br-id-ge",
+          "project": "n2-algovrithm"
+        },
+        {
+          "url": "/br_id_ge",
+          "title": "br_id_ge",
+          "line": "Notations #2 — team",
+          "space": "br-id-ge",
+          "project": "landing"
+        }
+      ],
+      "elsewhere": [
+        {
+          "label": "GitHub",
+          "href": "https://github.com/emilyanikoghosyan"
+        }
+      ],
+      "num": "02",
+      "order": 2,
+      "resume": {
+        "focus": [
+          "multimedia production",
+          "digital art production",
+          "project management",
+          "leadership",
+          "team collaboration",
+          "TouchDesigner",
+          "Resolume Arena"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "echo/4",
+                "role": "project coordinator, artist"
+              },
+              {
+                "title": "f33d6ack",
+                "role": "concept artist",
+                "place": "NPAK, Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Creative cognition: in_it",
+                "role": "multimedia artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "WIDS conference",
+                "role": "artist, manager",
+                "place": "EIF foundation, Gyumri, Armenia"
+              },
+              {
+                "title": "taking_place",
+                "role": "art coordinator",
+                "place": "Klopnikov groupe, Yerevan, Armenia"
+              },
+              {
+                "title": "di. studio",
+                "role": "founder",
+                "place": "Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "PELSA programme",
+                "role": "coordinator",
+                "place": "UNICEF Armenia, Gyumri"
+              }
+            ]
+          },
+          {
+            "year": "2019 – 2020",
+            "items": [
+              {
+                "title": "YIC Gyumri",
+                "role": "administrative assistant"
+              },
+              {
+                "title": "Aurora Forum",
+                "role": "event organizer",
+                "place": "IDEA foundation"
+              },
+              {
+                "title": "Children's World Day",
+                "role": "coordinator",
+                "place": "UNICEF Armenia"
+              }
+            ]
+          }
+        ],
+        "cvUrl": "https://drive.google.com/file/d/1AMSwsw7HOsf4u7v_IC6XSueuMMOZpiad/view",
+        "cvLabel": "the full CV — PDF"
+      }
+    },
+    {
+      "slug": "syuzi-ginosyan",
+      "name": "Syuzi Ginosyan",
+      "role": "curator",
+      "discipline": "curator",
+      "team": true,
+      "section": "team",
+      "sectionLabel": "team",
+      "city": "Gyumri",
+      "bio": "Curator based in Gyumri — MA in Art History and Theory. Co-founder of G.URBAN; curator for Gyumri Art Week; residencies and collaborations across Armenia and Germany.",
+      "works": [
+        {
+          "url": "/azd",
+          "title": "ազդ | azd",
+          "line": "bond (կապ)",
+          "space": "azd",
+          "project": "azd"
+        },
+        {
+          "url": null,
+          "title": "Tread from Wool",
+          "line": "Notations #2, KARATAV room, State Philharmonia of Armenia, 1-2 Aug 2026",
+          "space": "br-id-ge",
+          "project": "n2-tread-from-wool"
+        },
+        {
+          "url": "/br_id_ge",
+          "title": "br_id_ge",
+          "line": "Notations #2 — team",
+          "space": "br-id-ge",
+          "project": "landing"
+        }
+      ],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/ginosyansuzy/"
+        },
+        {
+          "label": "GitHub",
+          "href": "https://github.com/ginsyuz"
+        }
+      ],
+      "num": "03",
+      "order": 3,
+      "resume": {
+        "focus": [
+          "curation",
+          "art management",
+          "coordination",
+          "project direction",
+          "performing",
+          "Ableton",
+          "Logic Pro"
+        ],
+        "timeline": [
+          {
+            "year": "2026",
+            "items": [
+              {
+                "title": "WCC: Women Creating Change",
+                "role": "curator",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "azd",
+                "role": "curator and artist",
+                "place": "Gyumri, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2025",
+            "items": [
+              {
+                "title": "RecordAR: Analog and Digital Identities",
+                "role": "curator and coordinator",
+                "place": "Munich, Germany"
+              }
+            ]
+          },
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "Generator",
+                "role": "project manager, curator",
+                "place": "Munich, Germany / Barcelona, Spain"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Spielart Festival — bisetka: talk_place",
+                "role": "curator and performer",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "SUPERBOOKS4 — “Ground” book",
+                "role": "author, main coordinator",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Pact Zollverein Residency",
+                "role": "artist",
+                "place": "Essen, Germany"
+              },
+              {
+                "title": "HochX Residency",
+                "role": "artist",
+                "place": "Munich, Germany"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "MARDS residency",
+                "role": "curator and coordinator",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "di. studio",
+                "role": "curator",
+                "place": "Gyumri, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2015 – 2021",
+            "items": [
+              {
+                "title": "Ground art festival",
+                "role": "organizer and curator",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "With a Word",
+                "role": "curator and artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Anonymous",
+                "role": "curator",
+                "place": "Loft Gyumri"
+              }
+            ]
+          }
+        ],
+        "cvUrl": "https://drive.google.com/file/d/1sg6ytFluP_37HQHKvO1Ski4y7FjDn4gk/view",
+        "cvLabel": "the full CV — PDF"
+      }
+    },
+    {
+      "slug": "taron-grigoryan",
+      "name": "Taron Grigoryan",
+      "role": "multimedia, light",
+      "discipline": "multimedia, light",
+      "team": true,
+      "section": "team",
+      "sectionLabel": "team",
+      "city": null,
+      "bio": "Actor, lighting engineer and founder of SPCTR Lights — multimedia, audiovisual and music production, DJing.",
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/taronx_x_x/"
+        }
+      ],
+      "num": "04",
+      "order": 4,
+      "resume": {
+        "focus": [
+          "audiovisual production",
+          "music production",
+          "DJing",
+          "acting",
+          "lighting",
+          "3D printing"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "Hayfilm",
+                "role": "musician, video artist",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Vahakni",
+                "role": "musician",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "The Black Fountain",
+                "role": "musician",
+                "place": "Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Candyland (album)",
+                "role": "musician",
+                "place": "Amsterdam, Netherlands"
+              },
+              {
+                "title": "PACT Zollverein residency",
+                "role": "musician",
+                "place": "Essen, Germany"
+              },
+              {
+                "title": "Spielart festival",
+                "role": "musician",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Versace — music for Versace",
+                "role": "music producer",
+                "place": "Milan, Italy"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "SPCTR",
+                "role": "founder, curator, producer",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Artbox Armenia",
+                "role": "incubator alumnus",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "MARDs residency",
+                "role": "visual artist",
+                "place": "Munich, Germany"
+              }
+            ]
+          },
+          {
+            "year": "2016 – 2021",
+            "items": [
+              {
+                "title": "technoSapiens",
+                "role": "musician",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Ground art festival",
+                "role": "musician",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "Aratta",
+                "role": "lead guitarist"
+              }
+            ]
+          }
+        ],
+        "cvUrl": "https://drive.google.com/file/d/1UzTrZuwg1Go7Nf1Tm0Dg8a7yt5Z1waIY/view",
+        "cvLabel": "the full CV — PDF"
+      }
+    },
+    {
+      "slug": "yeva-abgaryan",
+      "name": "Yeva Abgaryan",
+      "role": "set design, 3D",
+      "discipline": "set design, 3D",
+      "team": true,
+      "section": "team",
+      "sectionLabel": "team",
+      "city": null,
+      "bio": "Set designer and production artist working with recycled materials — part of the art direction team renovating Hayfilm Studio into a new art venue.",
+      "works": [
+        {
+          "url": "/wcc/yeva-abgaryan",
+          "title": "WCC Exhibition",
+          "line": "her room",
+          "space": "wcc",
+          "project": "yeva-abgaryan"
+        },
+        {
+          "url": "/azd",
+          "title": "ազդ | azd",
+          "line": "Faceless",
+          "space": "azd",
+          "project": "azd"
+        }
+      ],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/6addreams/"
+        }
+      ],
+      "num": "05",
+      "order": 5,
+      "resume": {
+        "focus": [
+          "drawing",
+          "sculpting",
+          "piercing art",
+          "tattoo art",
+          "digital art production",
+          "Blender",
+          "Nomad Sculpt"
+        ],
+        "timeline": [
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "PACT Zollverein residency",
+                "role": "artist",
+                "place": "Essen, Germany"
+              },
+              {
+                "title": "SeenThat Ruins",
+                "role": "artist, designer",
+                "place": "Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "SPCTR",
+                "role": "art director, artist",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Mards residency",
+                "role": "artist",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Recycling Lamp",
+                "role": "concept artist, designer",
+                "place": "Munich, Germany"
+              },
+              {
+                "title": "Artbox Armenia",
+                "role": "incubator alumna",
+                "place": "Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2021",
+            "items": [
+              {
+                "title": "Ground art festival",
+                "role": "artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "MOCT Yerevan",
+                "role": "artist, volunteer",
+                "place": "Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2019",
+            "items": [
+              {
+                "title": "SeenThat",
+                "role": "designer, visual artist",
+                "place": "Gyumri, Armenia"
+              }
+            ]
+          }
+        ],
+        "cvUrl": "https://drive.google.com/file/d/1ncpODwX9HJ5Oa9X7kj1MBXN4-rGWa8f5/view",
+        "cvLabel": "the full CV — PDF"
+      }
+    },
+    {
+      "slug": "maria-matinyan",
+      "name": "Maria Matinyan",
+      "role": "multimedia artist, curator",
+      "discipline": "multimedia artist, curator",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/maria_matinyan/"
+        }
+      ],
+      "num": "006",
+      "order": 6
+    },
+    {
+      "slug": "carine-aroyan",
+      "name": "Carine Aroyan",
+      "role": "curator",
+      "discipline": "curator",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/carinearoyan_/"
+        }
+      ],
+      "num": "007",
+      "order": 7
+    },
+    {
+      "slug": "namor-votilav",
+      "name": "Namor Votilav",
+      "role": "curator, multimedia artist",
+      "discipline": "curator, multimedia artist",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/namor_votilav/"
+        }
+      ],
+      "num": "008",
+      "order": 8
+    },
+    {
+      "slug": "tatiana-vahani",
+      "name": "Tatiana Vahani",
+      "role": "curator",
+      "discipline": "curator",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/tateevee/"
+        }
+      ],
+      "num": "009",
+      "order": 9
+    },
+    {
+      "slug": "artak-gevorgyan",
+      "name": "Artak Gevorgyan",
+      "role": "curator",
+      "discipline": "curator",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "010",
+      "order": 10
+    },
+    {
+      "slug": "lusine-mlke-galstyan",
+      "name": "Lusine Mlke-Galstyan",
+      "role": "curator",
+      "discipline": "curator",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "between silence and motion",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": "br-id-ge",
+          "project": "n2-between-silence-and-motion"
+        }
+      ],
+      "elsewhere": [],
+      "num": "011",
+      "order": 11
+    },
+    {
+      "slug": "shoghakat-mlke-galstyan",
+      "name": "Shoghakat Mlke-Galstyan",
+      "role": "curator",
+      "discipline": "curator",
+      "team": false,
+      "section": "curators",
+      "sectionLabel": "curators",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "012",
+      "order": 12
+    },
+    {
+      "slug": "ani-khachikyan",
+      "name": "Ani Khachikyan",
+      "role": "performer",
+      "discipline": "performer",
+      "team": false,
+      "section": "performers",
+      "sectionLabel": "performers",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/ani___khachikyan/"
+        }
+      ],
+      "num": "013",
+      "order": 13
+    },
+    {
+      "slug": "gnun-martirosyan",
+      "name": "Gnun Martirosyan",
+      "role": "performer",
+      "discipline": "performer",
+      "team": false,
+      "section": "performers",
+      "sectionLabel": "performers",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/gnun_m/"
+        }
+      ],
+      "num": "014",
+      "order": 14
+    },
+    {
+      "slug": "meline-arshakyan",
+      "name": "Meline Arshakyan",
+      "role": "performer, dancer",
+      "discipline": "performer, dancer",
+      "team": false,
+      "section": "performers",
+      "sectionLabel": "performers",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/mel_arshakyan/"
+        }
+      ],
+      "num": "015",
+      "order": 15
+    },
+    {
+      "slug": "arsen-miqayelyan",
+      "name": "Arsen Miqayelyan",
+      "role": "performer",
+      "discipline": "performer",
+      "team": false,
+      "section": "performers",
+      "sectionLabel": "performers",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/arsentrampmiqayelyan/"
+        }
+      ],
+      "num": "016",
+      "order": 16
+    },
+    {
+      "slug": "alexandra-martini",
+      "name": "Alexandra Martini",
+      "role": "performer",
+      "discipline": "performer",
+      "team": false,
+      "section": "performers",
+      "sectionLabel": "performers",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/____portalex____/"
+        }
+      ],
+      "num": "017",
+      "order": 17
+    },
+    {
+      "slug": "kay-khachatryan",
+      "name": "Kay Khachatryan",
+      "role": "audio artist",
+      "discipline": "audio artist",
+      "team": false,
+      "section": "sound",
+      "sectionLabel": "sound",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": null,
+          "title": "Ambisonic Performances",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-01",
+          "space": "br-id-ge",
+          "project": "n2-ambisonic-performances"
+        }
+      ],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/kaikhachatryan/"
+        }
+      ],
+      "num": "018",
+      "order": 18
+    },
+    {
+      "slug": "areg-aydinyan",
+      "name": "Areg Aydinyan",
+      "role": "DJ, sound artist",
+      "discipline": "DJ, sound artist",
+      "team": false,
+      "section": "sound",
+      "sectionLabel": "sound",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "019",
+      "order": 19
+    },
+    {
+      "slug": "sasha-lenivec",
+      "name": "Sasha Lenivec",
+      "role": "sound artist",
+      "discipline": "sound artist",
+      "team": false,
+      "section": "sound",
+      "sectionLabel": "sound",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "020",
+      "order": 20
+    },
+    {
+      "slug": "vahagn-martirosyan",
+      "name": "Vahagn Martirosyan",
+      "role": "sound artist",
+      "discipline": "sound artist",
+      "team": false,
+      "section": "sound",
+      "sectionLabel": "sound",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "021",
+      "order": 21
+    },
+    {
+      "slug": "vera-vishnevaya",
+      "name": "Vera Vishnevaya",
+      "role": "sound artist",
+      "discipline": "sound artist",
+      "team": false,
+      "section": "sound",
+      "sectionLabel": "sound",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "022",
+      "order": 22
+    },
+    {
+      "slug": "nikita-maksimenko",
+      "name": "Nikita Maksimenko",
+      "role": "multimedia, sound",
+      "discipline": "multimedia, sound",
+      "team": false,
+      "section": "sound",
+      "sectionLabel": "sound",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "023",
+      "order": 23
+    },
+    {
+      "slug": "adam-adamyan",
+      "name": "Adam Adamyan",
+      "role": "visual artist",
+      "discipline": "visual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/adam___adamyan/"
+        }
+      ],
+      "num": "024",
+      "order": 24
+    },
+    {
+      "slug": "artush-koshtoyan",
+      "name": "Artush Koshtoyan",
+      "role": "visual artist",
+      "discipline": "visual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/artushkoshtoyan/"
+        }
+      ],
+      "num": "025",
+      "order": 25
+    },
+    {
+      "slug": "greta-grigoryan",
+      "name": "Greta Grigoryan",
+      "role": "visual artist",
+      "discipline": "visual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/azd",
+          "title": "ազդ | azd",
+          "line": "Anahit (Անահիտ)",
+          "space": "azd",
+          "project": "azd"
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "a.004",
+          "space": "platform-recordar",
+          "project": "platform-recordar-dii-project"
+        }
+      ],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/gr.ettaaa/"
+        }
+      ],
+      "num": "026",
+      "order": 26
+    },
+    {
+      "slug": "mane-meloyan",
+      "name": "Mane Meloyan",
+      "role": "visual artist",
+      "discipline": "visual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/mayneeey/"
+        }
+      ],
+      "num": "027",
+      "order": 27
+    },
+    {
+      "slug": "mery-petrosyan",
+      "name": "Mery Petrosyan",
+      "role": "visual artist",
+      "discipline": "visual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/wcc/mery-petrosyan",
+          "title": "WCC Exhibition",
+          "line": "her room",
+          "space": "wcc",
+          "project": "mery-petrosyan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "028",
+      "order": 28
+    },
+    {
+      "slug": "polina-vever",
+      "name": "Polina Vever",
+      "role": "visual artist",
+      "discipline": "visual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/pelageyaviter/"
+        }
+      ],
+      "num": "029",
+      "order": 29
+    },
+    {
+      "slug": "shahane-harutyunyan",
+      "name": "Shahane Harutyunyan",
+      "role": "visual artist",
+      "discipline": "visual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/azd",
+          "title": "ազդ | azd",
+          "line": "Misfit (միսֆիթ)",
+          "space": "azd",
+          "project": "azd"
+        },
+        {
+          "url": "/beyond-form",
+          "title": "Beyond Form",
+          "line": "open call, part 2",
+          "space": "beyond-form",
+          "project": "open-call"
+        }
+      ],
+      "elsewhere": [],
+      "num": "030",
+      "order": 30
+    },
+    {
+      "slug": "gor-muradyan",
+      "name": "Gor Muradyan",
+      "role": "visual artist",
+      "discipline": "visual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/gorgeooos/"
+        }
+      ],
+      "num": "031",
+      "order": 31
+    },
+    {
+      "slug": "luiza-khechoyan",
+      "name": "Luiza Khechoyan",
+      "role": "visual artist",
+      "discipline": "visual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "032",
+      "order": 32
+    },
+    {
+      "slug": "egor-lazensky",
+      "name": "Egor Lazensky",
+      "role": "VJ, multimedia artist",
+      "discipline": "VJ, multimedia artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/je_fous_le_camp/"
+        }
+      ],
+      "num": "033",
+      "order": 33
+    },
+    {
+      "slug": "alvie-starr",
+      "name": "Alvie Starr",
+      "role": "audiovisual artist",
+      "discipline": "audiovisual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "034",
+      "order": 34
+    },
+    {
+      "slug": "ani-rubenyan",
+      "name": "Ani Rubenyan",
+      "role": "audiovisual artist",
+      "discipline": "audiovisual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "035",
+      "order": 35
+    },
+    {
+      "slug": "anna-khlechyan",
+      "name": "Anna Khlechyan",
+      "role": "multimedia artist",
+      "discipline": "multimedia artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "036",
+      "order": 36
+    },
+    {
+      "slug": "misak-samakotian",
+      "name": "Misak Samakotian",
+      "role": "multimedia artist",
+      "discipline": "multimedia artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "037",
+      "order": 37
+    },
+    {
+      "slug": "nino-giorgadze",
+      "name": "Nino Giorgadze",
+      "role": "multimedia artist",
+      "discipline": "multimedia artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "038",
+      "order": 38
+    },
+    {
+      "slug": "vilen-gayfejyan",
+      "name": "Vilen Gayfejyan",
+      "role": "multimedia artist",
+      "discipline": "multimedia artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/vilengaifejyan/"
+        }
+      ],
+      "num": "039",
+      "order": 39
+    },
+    {
+      "slug": "yulia-stepanova",
+      "name": "Yulia Stepanova",
+      "role": "multimedia artist",
+      "discipline": "multimedia artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/night_editor_music/"
+        }
+      ],
+      "num": "040",
+      "order": 40
+    },
+    {
+      "slug": "sergey-virabyan",
+      "name": "Sergey Virabyan",
+      "role": "audiovisual artist",
+      "discipline": "audiovisual artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/koltrye/"
+        }
+      ],
+      "num": "041",
+      "order": 41
+    },
+    {
+      "slug": "albert-avetisyan",
+      "name": "Albert Avetisyan",
+      "role": "developer, sound",
+      "discipline": "developer, sound",
+      "team": false,
+      "section": "3d",
+      "sectionLabel": "3d · code · games",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/kaiz.ok.u/"
+        }
+      ],
+      "num": "042",
+      "order": 42
+    },
+    {
+      "slug": "gor-movsisyan",
+      "name": "Gor Movsisyan",
+      "role": "3D artist",
+      "discipline": "3D artist",
+      "team": false,
+      "section": "3d",
+      "sectionLabel": "3d · code · games",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/_tadashii__/"
+        }
+      ],
+      "num": "043",
+      "order": 43
+    },
+    {
+      "slug": "varujan-movsisyan",
+      "name": "Varujan Movsisyan",
+      "role": "3D artist",
+      "discipline": "3D artist",
+      "team": false,
+      "section": "3d",
+      "sectionLabel": "3d · code · games",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/__21st_century_schizoid_man__/"
+        }
+      ],
+      "num": "044",
+      "order": 44
+    },
+    {
+      "slug": "levon-avetisyan",
+      "name": "Levon Avetisyan",
+      "role": "programmer",
+      "discipline": "programmer",
+      "team": false,
+      "section": "3d",
+      "sectionLabel": "3d · code · games",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/lyo0ou/"
+        }
+      ],
+      "num": "045",
+      "order": 45
+    },
+    {
+      "slug": "slavik-avetisyan",
+      "name": "Slavik Avetisyan",
+      "role": "unity developer",
+      "discipline": "unity developer",
+      "team": false,
+      "section": "3d",
+      "sectionLabel": "3d · code · games",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/avetisyan.gd/"
+        }
+      ],
+      "num": "046",
+      "order": 46
+    },
+    {
+      "slug": "ruben-melikyan",
+      "name": "Ruben Melikyan",
+      "role": "game designer",
+      "discipline": "game designer",
+      "team": false,
+      "section": "3d",
+      "sectionLabel": "3d · code · games",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/_ruben_melikyan_/"
+        }
+      ],
+      "num": "047",
+      "order": 47
+    },
+    {
+      "slug": "grig-gevorgyan",
+      "name": "Grig Gevorgyan",
+      "role": "game developer",
+      "discipline": "game developer",
+      "team": false,
+      "section": "3d",
+      "sectionLabel": "3d · code · games",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/gr1gorius/"
+        }
+      ],
+      "num": "048",
+      "order": 48
+    },
+    {
+      "slug": "avetis-grigoryan",
+      "name": "Avetis Grigoryan",
+      "role": "game designer",
+      "discipline": "game designer",
+      "team": false,
+      "section": "3d",
+      "sectionLabel": "3d · code · games",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "049",
+      "order": 49
+    },
+    {
+      "slug": "hannes-kopke",
+      "name": "Hannes Köpke",
+      "role": "stage director",
+      "discipline": "stage director",
+      "team": false,
+      "section": "stage",
+      "sectionLabel": "stage · costume · design",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/ritagrechen/"
+        }
+      ],
+      "num": "050",
+      "order": 50
+    },
+    {
+      "slug": "olivia-rosendorfer",
+      "name": "Olivia Rosendorfer",
+      "role": "costume designer",
+      "discipline": "costume designer",
+      "team": false,
+      "section": "stage",
+      "sectionLabel": "stage · costume · design",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/ojmdra/"
+        }
+      ],
+      "num": "051",
+      "order": 51
+    },
+    {
+      "slug": "nyusha-terbalyan",
+      "name": "Nyusha Terbalyan",
+      "role": "designer",
+      "discipline": "designer",
+      "team": false,
+      "section": "stage",
+      "sectionLabel": "stage · costume · design",
+      "city": null,
+      "bio": null,
+      "works": [],
+      "elsewhere": [],
+      "num": "052",
+      "order": 52
+    }
+  ]
+}

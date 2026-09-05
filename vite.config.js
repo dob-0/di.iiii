@@ -164,7 +164,7 @@ export default function HostedPiece() {
 // Naming it means the next thing dropped into public/ for the website does not
 // silently become part of every artist's install — which is how the 25 MB wcc
 // microsite, the cPanel php shims and the site's OpenGraph images got there.
-const LOCAL_PUBLIC_INCLUDE = ['fonts', 'draco', 'basis', 'brand']
+const LOCAL_PUBLIC_INCLUDE = ['fonts', 'draco', 'basis', 'suite']
 
 // Belt and braces: the include-list above already leaves a work's public
 // directory out, but if someone adds one to the list by accident the registry
@@ -394,7 +394,7 @@ export default {
     root: 'src/',
     // An include-list, not a delete-list: under the local profile the public
     // directory is copied by localPublicDirPlugin, which names what a copy of
-    // the program needs (fonts, draco, basis, brand) and therefore cannot
+    // the program needs (fonts, draco, basis, suite) and therefore cannot
     // silently start shipping whatever gets dropped into public/ next.
     publicDir: LOCAL_PROFILE ? false : '../public/',
     envDir: '../',
@@ -490,6 +490,12 @@ export default {
                 target: DEV_PROXY_API_TARGET,
                 changeOrigin: true,
                 ws: true
+            },
+            // The lighting desk lives on the backend at /light (app-level, no /serverXR
+            // prefix) — its interface is plain files the desk serves itself.
+            '/light': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true
             },
             // Project documents store asset/API URLs as bare `/api/...` (no
             // `/serverXR` prefix) because in production Express serves both
@@ -622,7 +628,8 @@ export default {
             // test file under scripts/ is silently never collected, which is
             // worse than having no test at all: it looks covered and is not.
             '../scripts/**/*.{test,spec}.{js,mjs}',
-            '../sdk/**/*.{test,spec}.{js,mjs}'
+            '../sdk/**/*.{test,spec}.{js,mjs}',
+            '../spaces/**/*.{test,spec}.{js,mjs}'
         ],
         environment: 'jsdom',
         setupFiles: './setupTests.js',

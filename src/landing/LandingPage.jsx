@@ -1,12 +1,15 @@
 /* global __APP_VERSION__ */
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
-import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
+import { buildWikiPath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildSpacesPath } from '../studio/utils/studioRouting.js'
 import { flyInside, REST_POSE } from './enterFlight.js'
+import { crackAway } from './crackTransition.js'
+import PageDebris from './PageDebris.jsx'
+import { buildJamScenePath } from '../project/routing/jamRouting.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
 // LiveProjectScene into the landing chunk for every visitor — including phones,
@@ -43,6 +46,11 @@ const DOOR_SCENE_WAIT_MS = 1200
 // narrower destination was the better one.
 import './landing.css'
 
+// These labels are hardcoded rather than read from the space rows, so they
+// drift from the DB silently. Keep them equal to each space's live label —
+// checked 2026-09-01 against prod — and never put a dated claim in one: the
+// br_id_ge button advertised "live at Notations #2" for a month after the show
+// closed on 2026-08-02, because nothing here expires.
 const FEATURED_SPACES = [
     { id: 'wcc', label: 'WCC Exhibition', href: '/wcc', className: 'landing-cta-wcc' },
     // Was "br_id_ge · live at Notations #2". Notations #2 closed 2026-08-02;
@@ -51,7 +59,7 @@ const FEATURED_SPACES = [
     // claim this row is allowed to make — so it says the name, like the other
     // three, and stops dating itself.
     { id: 'br-id-ge', label: 'br_id_ge', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
-    { id: 'beyond-form', label: 'beyond_form', href: '/beyond-form', className: 'landing-cta-beyond-form' },
+    { id: 'beyond-form', label: 'Beyond Form', href: '/beyond-form', className: 'landing-cta-beyond-form' },
     { id: 'algovrithm', label: 'algovrithm', href: '/algovrithm', className: 'landing-cta-algo-vrithm' }
 ]
 
@@ -71,15 +79,24 @@ const LOCAL_TAGLINE = 'Running on your own machine. Offline, no account, and the
 const LOCAL_CTA_SUB = 'no account, no quota. Studio is a room on the same desk.'
 const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', desc: 'This di.iiii runs locally. Create as many spaces as you like — no sign-in, no quota, and your work stays in your own home folder.' }
 
-// Two of the three pillars, and step 04, promise reach a local install does not
-// have: `di up` binds 127.0.0.1, so there is no link anyone else can open and
-// no public URL to share. Saying so is not a smaller product — the same scene
-// carries to a hosted space when you want an audience, and that is the honest
-// version of the sentence. (LAN exposure is a deliberate later feature, see
+// Step 04's promise reaches further than a local install goes: `di up` binds
+// 127.0.0.1, so there is no link anyone else can open and no public URL to
+// share. Saying so is not a smaller product — the same scene carries to a
+// hosted space when you want an audience, and that is the honest version of
+// the sentence. (LAN exposure is a deliberate later feature, see
 // docs/deploy/DI_CLI.md.)
-const LOCAL_PILLAR_COLLAB = 'Everything is live in this browser and in any other on this machine. To work with someone else, push the space to a di.iiii you both can reach.'
-const LOCAL_PILLAR_PUBLISH = 'Spaces live at their own URL on this machine. Nothing leaves it until you send it somewhere — this server answers only to you.'
 const LOCAL_STEP_SHARE = { n: '04', title: 'Keep or carry', body: 'Your work sits in your home folder. `di backup` writes the whole thing to one file, and a space can be carried to a hosted di.iiii when it wants an audience.' }
+
+// The five moves, said once as short spec-sheet tags standing in the room
+// itself (the hero) rather than as a features list. Verbatim, owner's copy —
+// not to be reworded.
+const ROOM_TAGS = [
+    { n: '01', label: 'open a space, yours, at an address' },
+    { n: '02', label: 'put objects in the room' },
+    { n: '03', label: 'stand the camera where a visitor arrives' },
+    { n: '04', label: 'hand out the address' },
+    { n: '05', label: 'it stays as a file' }
+]
 
 const STEPS = [
     { n: '01', title: 'Open a space', body: 'Click "Step inside" — you get a space of your own, no account needed. Sign in to keep it and to make more.' },
@@ -140,7 +157,7 @@ const AUDIENCES = [
 ]
 
 const FEATURES = [
-    { icon: '◈', title: 'Everything is a node', desc: 'Every object is a typed node. Wire them, group them, script them.' },
+    { icon: '◈', title: 'The visit is the product', desc: 'What you make is exactly what a stranger opens — a link while it runs, a file when it ends. The editor is backstage.' },
     { icon: '◉', title: 'Real-time collaboration', desc: 'See teammates\' cursors and changes live, in the same space.' },
     { icon: '⬡', title: 'WebXR ready', desc: 'Enter VR or AR from any supported browser — no app install.' },
     { icon: '◫', title: 'Asset pipeline', desc: 'Upload images, 3D models, audio. Optimized and served automatically.' },
@@ -187,6 +204,10 @@ export default function LandingPage() {
     // against that shot and have to stay in register with it.
     const cameraPoseRef = useRef({ ...REST_POSE })
     const cancelFlightRef = useRef(null)
+    // Where the room says the walker will stand. Held in a ref, not state: it
+    // arrives when the document resolves and is only read at the moment the
+    // door is pressed, so re-rendering the page for it would buy nothing.
+    const arrivalPoseRef = useRef(null)
     // While the page is saying the wordmark and the line in HTML, the room
     // must not say them too — they sit one behind the other and neither reads.
     // Given back at the first frame of the flight, so the flat words hand off
@@ -197,18 +218,14 @@ export default function LandingPage() {
     // the tap arms it: the scene mounts, and the flight waits for the chunk
     // rather than starting over nothing.
     const [flightArmed, setFlightArmed] = useState(false)
+    // The page once it has stopped being a page: real meshes in the room's
+    // scene, falling. Held in state because the scene has to render them.
+    const [pieces, setPieces] = useState([])
     // Walk/fly and the calm orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to
     // the orbit view once you'd moved was a full Exit + Enter Space round
     // trip. This lets you flip between them without leaving "entered" at all.
     const [viewMode, setViewMode] = useState(false)
-    // di.iiii's "Main" space (set from /admin, or inline in Studio Hub's
-    // per-space "Main" badge) is the same space that already represents the
-    // di.iiii elsewhere — reuse it here instead of a second, parallel
-    // landing-only setting. When set, "Enter Space" opens that real,
-    // populated space instead of the decorative walkable void this page's
-    // own background renders.
-    const [mainSpaceId, setMainSpaceId] = useState(null)
     // True only when the server declares itself a local install AND auth is
     // off — the pair that makes "sign in to edit" a false sentence. Read from
     // /api/config, which this page already fetches; deliberately NOT from
@@ -235,7 +252,6 @@ export default function LandingPage() {
         let cancelled = false
         getServerConfig().then((cfg) => {
             if (cancelled) return
-            setMainSpaceId(cfg?.defaultSpaceId || null)
             setIsLocalInstall(Boolean(cfg?.local) && cfg?.requireAuth === false)
         }).catch(() => {})
         return () => { cancelled = true }
@@ -247,6 +263,23 @@ export default function LandingPage() {
     // apart into the space they were always standing in. A modified click
     // (new tab, new window, middle button) still has to behave like a link, so
     // it is left alone and follows the href.
+    const handleArrivalPose = useCallback((pose) => { arrivalPoseRef.current = pose }, [])
+
+    // Coming back out has to undo everything going in did. The room was given
+    // its words back at the first frame of the flight; if it keeps them while
+    // the page is speaking again, the wordmark and the line are drawn twice,
+    // one behind the other, and neither reads. Going in and coming out are the
+    // same switch, and it has to be thrown both ways.
+    const leaveRoom = useCallback(() => {
+        cancelFlightRef.current?.()
+        cancelFlightRef.current = null
+        cameraPoseRef.current = { ...REST_POSE }
+        setRoomSpeaks(false)
+        setViewMode(false)
+        setEntered(false)
+        setPieces([])
+    }, [])
+
     const openDoor = (event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
         event.preventDefault()
@@ -257,8 +290,10 @@ export default function LandingPage() {
             cancelFlightRef.current = flyInside({
                 root: rootRef.current,
                 cameraPoseRef,
+                endPose: arrivalPoseRef.current,
                 reducedMotion: typeof window !== 'undefined'
                     && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+                onPieces: setPieces,
                 onDone: () => {
                     cancelFlightRef.current = null
                     setEntered(true)
@@ -282,13 +317,25 @@ export default function LandingPage() {
             .catch(() => { window.clearTimeout(timeout); once() })
     }
 
-    const handleEnterSpace = () => {
-        if (mainSpaceId) {
-            window.location.href = buildAppSpacePath(mainSpaceId)
-            return
-        }
-        setEntered(true)
+    // The route below "Step inside": a real page (Spaces is a different
+    // surface, not a camera move within this one), so it gets the inverse
+    // of the glide — a crack, in the eyes, then the real navigation. A
+    // modified click still has to behave like a plain link.
+    const cancelCrackRef = useRef(null)
+    const openSpaces = (event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
+        event.preventDefault()
+        if (cancelCrackRef.current) return
+        cancelCrackRef.current = crackAway({
+            reducedMotion: typeof window !== 'undefined'
+                && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+            onDone: () => {
+                cancelCrackRef.current = null
+                window.location.href = studioHref
+            }
+        })
     }
+
     // The decorative WebGL background is fixed and full-screen; once the hero
     // scrolls out of view it's hidden behind opaque sections anyway. Stop
     // compositing/rendering it then so it doesn't stutter page scroll.
@@ -323,7 +370,7 @@ export default function LandingPage() {
     const showBackground = entered || flightArmed || (heroInView && !isSmallScreen)
 
     return (
-        <Box className="lp-root" data-page="landing" ref={rootRef}>
+        <Box className={`lp-root${entered ? ' lp-root--inside' : ''}`} data-page="landing" ref={rootRef}>
 
             {/* ── NAV ──────────────────────────────────────────── */}
             {!entered && (
@@ -354,6 +401,10 @@ export default function LandingPage() {
                                 interactive={entered && !viewMode}
                                 cameraPoseRef={cameraPoseRef}
                                 hideEntityTypes={roomSpeaks ? null : HERO_ECHO_TYPES}
+                                onArrivalPose={handleArrivalPose}
+                                sceneExtras={pieces.length
+                                    ? <PageDebris pieces={pieces} cameraPose={REST_POSE} />
+                                    : null}
                             />
                         </Suspense>
                     </Box>
@@ -388,49 +439,52 @@ export default function LandingPage() {
                         page renders itself — it only exists where there is no
                         real main space to enter, otherwise it is another door
                         wearing a preview's clothes. */}
-                    <Stack className="lp-hero-cta-row" direction="row" spacing={2} sx={{ pt: 1, pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {/* gap, not `spacing` (a margin-left on later siblings): the
+                        margin has no vertical component, so a row that wraps on
+                        a phone touches the one above it with zero space and the
+                        two read as one broken box. */}
+                    {/* Three routes, named the way the owner names them, in
+                        order of weight — not four peer buttons plus a chip
+                        row that left "the open space" impossible to find.
+                        Spaces is the 2nd main part, so it carries the accent
+                        wash even at rest instead of matching Open Jam's
+                        plain ghost treatment. "Look around" is folded in:
+                        it was only ever a stand-in for a real main space, and
+                        Spaces is that destination now. */}
+                    <Stack className="lp-hero-cta-row" direction="row" sx={{ pt: 1, pb: 1, gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
                         <Button className="landing-cta-primary" variant="contained" size="large" href={studioHref} onClick={openDoor}>
                             Step inside
                         </Button>
-                        {!mainSpaceId && (
-                            <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
-                                Look around
-                            </Button>
-                        )}
+                        <Button className="landing-cta-spaces" variant="outlined" size="large" href={studioHref} onClick={openSpaces}>
+                            The Spaces
+                        </Button>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildJamScenePath()}>
+                            Open Jam
+                        </Button>
                     </Stack>
 
                     <Typography className="lp-cta-sub">
                         {isLocalInstall ? LOCAL_CTA_SUB : 'no account, nothing to install — for you or for whoever opens your link.'}
-                        <br />
-                        <a href={studioHref}>Already have spaces? Open Studio →</a>
                     </Typography>
 
-                    {/* The row had no name, so the only place the word "spaces"
-                        appeared above the fold was a grey link in the top bar,
-                        while four unlabelled coloured buttons sat at the bottom
-                        of the hero looking like decoration. Naming them is what
-                        turns them into the second thing on the page. Its own
-                        element, before the row rather than inside it, so the
-                        row still holds exactly the four doors. */}
                     {!isLocalInstall && (
-                        <Typography className="lp-space-row-label">
-                            Or open one that&rsquo;s already running
-                        </Typography>
+                        <>
+                            <Typography className="lp-hero-featured-label">Featured exhibitions</Typography>
+                            <Stack className="lp-hero-space-row" direction="row" sx={{ pb: 2, gap: '10px 12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                {FEATURED_SPACES.map((space) => (
+                                    <Button
+                                        key={space.id}
+                                        className={`landing-cta-ghost ${space.className}`}
+                                        variant="outlined"
+                                        size="small"
+                                        href={space.href}
+                                    >
+                                        {space.label}
+                                    </Button>
+                                ))}
+                            </Stack>
+                        </>
                     )}
-
-                    <Stack className="lp-hero-space-row" direction="row" spacing={1.5} sx={{ pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        {(isLocalInstall ? [] : FEATURED_SPACES).map((space) => (
-                            <Button
-                                key={space.id}
-                                className={`landing-cta-ghost ${space.className}`}
-                                variant="outlined"
-                                size="small"
-                                href={space.href}
-                            >
-                                {space.label}
-                            </Button>
-                        ))}
-                    </Stack>
 
                     <Box component="a" className="lp-scroll-hint" href="#what" aria-label="Scroll to learn more">
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -441,7 +495,7 @@ export default function LandingPage() {
 
                 {entered && (
                     <>
-                        <button type="button" className="lp-enter-exit" onClick={() => { setEntered(false); setViewMode(false) }}>
+                        <button type="button" className="lp-enter-exit" onClick={leaveRoom}>
                             ← Back
                         </button>
                         <button type="button" className="lp-enter-exit lp-enter-viewtoggle" onClick={() => setViewMode((v) => !v)}>
@@ -460,64 +514,52 @@ export default function LandingPage() {
 
             {!entered && (
             <>
-            {/* ── WHAT IS DI.I ─────────────────────────────────── */}
+            {/* ── THE FIVE MOVES ───────────────────────────────── */}
+            {/* Not laid over the room any more: a mark scattered across the
+                viewport corners sat on a door in one screen and was clipped
+                by the bottom edge in another — a fact with no room behind it.
+                One quiet row instead, directly under the room, same ground
+                (var(--di-black), no seam of its own). */}
+            <Box className="lp-room-tags-strip">
+                <Box component="ol" className="lp-room-tags">
+                    {ROOM_TAGS.map((tag) => (
+                        <Box component="li" key={tag.n} className="lp-room-tag">
+                            <span className="lp-room-tag-n">{tag.n}</span>{tag.label}
+                        </Box>
+                    ))}
+                </Box>
+            </Box>
+
+            {/* ── HOW IT WAS BUILT ─────────────────────────────── */}
             <Box className="lp-section" component="section" id="what">
                 <Box className="lp-section-inner">
-                    <Typography className="lp-section-eyebrow">The short answer</Typography>
-                    <Typography className="lp-section-title" component="h2">What is di.iiii?</Typography>
-                    <Typography className="lp-section-body">
-                        di.iiii is where you make a 3D space and hand out its address.
-                        Build scenes, place objects, set up lighting and cameras,
-                        and invite others into the same space in real time — then publish,
-                        and anyone opens it in a browser or a headset with nothing to install.
+                    <Typography className="lp-section-eyebrow">How it was built</Typography>
+                    <Typography className="lp-section-title" component="h2">
+                        You just left a room like this one. Here&rsquo;s how it was built.
                     </Typography>
+                    <Typography className="lp-section-body" sx={{ mb: 0 }}>
+                        Five moves, done in order, by one person, with no crew. Everything on
+                        the label above is a step you can take today.
+                    </Typography>
+                </Box>
+            </Box>
 
-                    <Box className="lp-three-cols">
-                        {[
-                            {
-                                vis: (
-                                    <Box className="lp-col-vis">
-                                        <Box className="lp-vis-box" />
-                                        <Box className="lp-vis-box lp-vis-box-b" />
-                                    </Box>
-                                ),
-                                title: 'Create',
-                                body: 'Add 3D shapes, import models and images, write text in 3D space. Arrange everything with drag-and-drop controls.'
-                            },
-                            {
-                                vis: (
-                                    <Box className="lp-vis-collab">
-                                        <Box className="lp-vis-dot lp-dot-a" />
-                                        <Box className="lp-vis-dot lp-dot-b" />
-                                        <Box className="lp-vis-dot lp-dot-c" />
-                                        <Box className="lp-vis-pulse" />
-                                    </Box>
-                                ),
-                                title: 'Collaborate',
-                                body: isLocalInstall ? LOCAL_PILLAR_COLLAB : 'Invite anyone with a link. See live cursors and changes. Work together across the world without any setup.'
-                            },
-                            {
-                                vis: (
-                                    <Box className="lp-vis-publish">
-                                        <Box className="lp-vis-globe" />
-                                        <Box className="lp-vis-arrow" />
-                                    </Box>
-                                ),
-                                title: 'Publish',
-                                body: isLocalInstall ? LOCAL_PILLAR_PUBLISH : 'Every space has a public URL. Share the link — visitors see your work in their browser or in a VR/AR headset.'
-                            }
-                        ].map((col) => (
-                            <Box key={col.title} className="lp-col-card">
-                                {col.vis}
-                                <Typography className="lp-col-title" component="h3">{col.title}</Typography>
-                                <Typography className="lp-col-body">{col.body}</Typography>
-                            </Box>
-                        ))}
+            {/* ── ONE THAT'S LIVE ──────────────────────────────── */}
+            <Box className="lp-section" component="section" id="live">
+                <Box className="lp-section-inner">
+                    <Typography className="lp-section-eyebrow">One that&rsquo;s live</Typography>
+                    <Box className="lp-example-frame">
+                        <Typography className="lp-example-cap" component="p">Open Jam room</Typography>
+                        <Typography className="lp-example-body">
+                            Built for one night. Visitors held their phones up and their photos
+                            went straight onto the walls. By morning the jam was over — the room
+                            stayed, address and all.
+                        </Typography>
                     </Box>
                 </Box>
             </Box>
 
-            {/* ── HOW IT WORKS ─────────────────────────────────── */}
+            {/* ── HOW IT WORKS (the detailed version) ───────────── */}
             <Box className="lp-section" component="section" id="how">
                 <Box className="lp-section-inner">
                     <Typography className="lp-section-eyebrow">Getting started</Typography>
@@ -683,21 +725,19 @@ export default function LandingPage() {
                 </Box>
             </Box>
 
-            {/* ── ENTER ────────────────────────────────────────── */}
+            {/* ── WHAT YOU GET ─────────────────────────────────── */}
             <Box className="lp-section lp-enter-section" component="section" id="enter">
                 <Box className="lp-section-inner lp-enter-inner">
-                    <Box className="lp-enter-glow" aria-hidden="true" />
-                    <Typography className="lp-section-eyebrow">Ready?</Typography>
-                    <Typography className="lp-enter-title" component="h2">
-                        Start building your space.
-                    </Typography>
+                    <Typography className="lp-section-eyebrow">What you get</Typography>
                     <Typography className="lp-enter-body">
-                        A space of your own, empty and waiting. Build it in the browser, hand out the
-                        address while it runs, and take the whole thing away as one file when it ends.
-                        No account needed to start.
+                        A link while it runs, a file when it ends. Nothing to renew, nothing
+                        that vanishes because a server did.
                     </Typography>
-                    <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', justifyContent: 'center', mb: 2 }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href={studioHref} onClick={openDoor}>
+                    <Stack direction="row" sx={{ gap: '16px', flexWrap: 'wrap', justifyContent: 'center', mb: 2, mt: 3 }}>
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={buildJamScenePath()}>
+                            walk in and open your own room →
+                        </Button>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref} onClick={openDoor}>
                             Step inside
                         </Button>
                     </Stack>

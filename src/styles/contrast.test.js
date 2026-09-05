@@ -22,6 +22,8 @@ const ratio = (fg, bg) => {
 const rgbaValues = (declaration) => (declaration.match(/[\d.]+/g) || []).map(Number)
 
 const BLACK = [0, 0, 0]
+const WHITE = [255, 255, 255]
+const CYAN = [77, 249, 255]
 const AA_BODY = 4.5
 
 // The hero does not stand on the theme's black any more. Since the landing was
@@ -44,6 +46,37 @@ describe('dark theme text contrast', () => {
         const declared = base.match(/--di-text-muted:\s*([^;]+);/)
         expect(declared, '--di-text-muted must stay defined in base.css').toBeTruthy()
         expect(ratio(over(rgbaValues(declared[1]), BLACK), BLACK)).toBeGreaterThanOrEqual(AA_BODY)
+    })
+
+    // Everything above measures against the black ground, which is the right
+    // question for the page's own copy. The hero is the exception: its buttons
+    // float over a live WebGL room, and the walkable slab in it is nearly
+    // white. `.landing-cta-ghost` was muted white on `transparent` — 8.6:1 on
+    // black, and grey-on-grey the moment the slab drifted behind it. So the
+    // hero row's routes are measured against the worst ground they can land
+    // on, not the best one.
+    it('the hero routes stay readable over the brightest thing the room can put behind them', () => {
+        const css = read('../landing/landing.css')
+        const rule = (selector) => {
+            const found = css.match(new RegExp(`${selector.replace(/[.\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`))
+            expect(found, `${selector} must stay in landing.css`).toBeTruthy()
+            return found[1]
+        }
+        const decl = (body, prop) => {
+            const found = body.match(new RegExp(`${prop}:\\s*(rgba\\([^)]*\\))`))
+            expect(found, `${prop} in that rule must stay an explicit rgba`).toBeTruthy()
+            return rgbaValues(found[1])
+        }
+
+        const ghost = rule('.lp-hero-cta-row .landing-cta-ghost')
+        const scrim = over(decl(ghost, 'background'), WHITE)
+        expect(ratio(over(decl(ghost, 'color'), scrim), scrim)).toBeGreaterThanOrEqual(AA_BODY)
+
+        // The Spaces route takes its label from --di-cyan, so it needs the same
+        // scrim under it or the accent washes out against the slab too.
+        const spaces = rule('.lp-hero-cta-row .landing-cta-spaces')
+        const spacesGround = over(decl(spaces, 'background-color'), WHITE)
+        expect(ratio(CYAN, spacesGround)).toBeGreaterThanOrEqual(AA_BODY)
     })
 
     // The token only protects what uses it. This caught `.lp-enter-note` at

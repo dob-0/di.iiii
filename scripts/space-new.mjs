@@ -12,7 +12,7 @@
  *   --local-only      Only create the space locally (skip live server)
  *   --dry-run         Print what would happen without making changes
  *
- * Requires LIVE_API_TOKEN in .env.local (admin role) to create on the live server.
+ * Requires LIVE_API_TOKEN (admin role) in .env, .env.local or serverXR/.env.local.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -83,6 +83,10 @@ const main = async () => {
     const localEnv = {
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env'))),
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env.local'))),
+        // serverXR/.env.local is where LIVE_API_TOKEN actually lives; without
+        // this line space-new reported "LIVE_API_TOKEN is required" on a repo
+        // that had one, and sent you to the browser for no reason.
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
     }
     const getEnv = (key) => process.env[key] || localEnv[key] || ''
 

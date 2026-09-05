@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>di.i — brand guide</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --di-black:#000;
+    --di-white:#fff;
+    --di-cyan:#4df9ff;
+    --di-cyan-bright:#00e5ff;
+    --di-cyan-dim:rgba(77,249,255,0.10);
+    --di-cyan-border:rgba(77,249,255,0.30);
+    --di-text:#fff;
+    --di-text-muted:rgba(255,255,255,0.45);
+    --di-mono:'JetBrains Mono','Fira Code',monospace;
+    --di-sans:'Inter','Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--di-black);color:var(--di-text);font-family:var(--di-sans);}
+  ::selection{background:var(--di-cyan);color:#000}
+  a{color:var(--di-cyan)}
+  section{max-width:980px;margin:0 auto;padding:5.5rem 2rem;position:relative}
+  section + section{border-top:1px solid var(--di-cyan-border)}
+  .eyebrow{font-family:var(--di-mono);font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--di-cyan);display:flex;gap:0.5rem;align-items:center;margin-bottom:1.6rem}
+  .eyebrow .tick{color:var(--di-text-muted)}
+  h1,h2,h3{font-weight:800;margin:0 0 1rem;line-height:1.02;letter-spacing:-0.01em}
+  h2{font-size:2rem}
+  p{color:rgba(255,255,255,0.72);line-height:1.6;max-width:56ch;font-size:1rem}
+  .lede{font-size:1.15rem;color:rgba(255,255,255,0.85);max-width:60ch}
+  .mono{font-family:var(--di-mono)}
+  .corner{position:absolute;font-family:var(--di-mono);font-size:0.7rem;color:var(--di-text-muted)}
+
+  /* ---- hero ---- */
+  .hero{padding-top:7rem;padding-bottom:6rem;text-align:center}
+  .hero .shift{font-family:var(--di-mono);font-size:0.75rem;color:var(--di-cyan);letter-spacing:0.1em}
+  .wordmark{font-size:clamp(4rem,14vw,9rem);font-weight:800;letter-spacing:-0.04em;margin:1rem 0;line-height:1}
+  .wordmark span{color:var(--di-cyan)}
+  .tagline{color:rgba(255,255,255,0.6);max-width:44ch;margin:1.2rem auto 0;font-size:1.05rem}
+  .mark{width:64px;height:64px;margin:0 auto 1.5rem}
+
+  /* ---- logo section ---- */
+  .logo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--di-cyan-border);border:1px solid var(--di-cyan-border);margin-top:2rem}
+  .logo-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative}
+  .logo-cell.on-black{background:#000}
+  .logo-cell.on-white{background:#fff}
+  .logo-cell.on-cyan{background:var(--di-cyan)}
+  .logo-cell .label{position:absolute;bottom:0.75rem;left:0.75rem;font-family:var(--di-mono);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em}
+  .logo-cell.on-black .label{color:rgba(255,255,255,0.5)}
+  .logo-cell.on-white .label,.logo-cell.on-cyan .label{color:rgba(0,0,0,0.55)}
+  .logo-cell svg{width:34%;height:34%}
+
+  .clearspace{margin-top:3rem;border:1px dashed var(--di-cyan-border);padding:2.5rem;display:flex;align-items:center;justify-content:center;position:relative}
+  .clearspace svg{width:56px;height:56px}
+  .clearspace .rule{position:absolute;font-family:var(--di-mono);font-size:0.65rem;color:var(--di-text-muted)}
+  .rule.t{top:0.6rem;left:50%;transform:translateX(-50%)}
+  .rule.l{left:0.6rem;top:50%;transform:translateY(-50%) rotate(-90deg)}
+
+  .dont-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--di-cyan-border);border:1px solid var(--di-cyan-border);margin-top:1.5rem}
+  .dont-cell{background:#050505;padding:1.6rem;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.8rem;text-align:center}
+  .dont-cell svg{width:40px;height:40px}
+  .dont-cell .x{position:absolute}
+  .dont-cell span{font-family:var(--di-mono);font-size:0.7rem;color:rgba(255,255,255,0.5)}
+
+  /* ---- color ---- */
+  .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--di-cyan-border);border:1px solid var(--di-cyan-border);margin-top:2rem}
+  .swatch{padding:1.6rem;min-height:9rem;display:flex;flex-direction:column;justify-content:flex-end;gap:0.15rem}
+  .swatch .name{font-weight:700;font-size:0.95rem}
+  .swatch .hex{font-family:var(--di-mono);font-size:0.78rem;opacity:0.75}
+  .swatch .role{font-family:var(--di-mono);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;opacity:0.55;margin-bottom:0.4rem}
+
+  /* ---- type ---- */
+  .type-row{display:flex;justify-content:space-between;align-items:baseline;padding:1.4rem 0;border-bottom:1px solid var(--di-cyan-border)}
+  .type-row:last-child{border-bottom:none}
+  .type-row .meta{font-family:var(--di-mono);font-size:0.72rem;color:var(--di-text-muted);text-align:right;white-space:nowrap;padding-left:1.5rem}
+  .t-display{font-weight:800;font-size:2.6rem;letter-spacing:-0.02em}
+  .t-h2{font-weight:800;font-size:1.6rem}
+  .t-body{font-size:1.05rem;color:rgba(255,255,255,0.8)}
+  .t-mono{font-family:var(--di-mono);font-size:0.85rem;color:var(--di-cyan)}
+
+  /* ---- voice ---- */
+  .voice-list{display:flex;flex-wrap:wrap;gap:0.6rem;margin-top:1.8rem}
+  .voice-chip{font-family:var(--di-mono);font-size:0.8rem;border:1px solid var(--di-cyan-border);padding:0.4rem 0.8rem;border-radius:999px;color:var(--di-cyan)}
+  blockquote{margin:2rem 0 0;padding-left:1.2rem;border-left:2px solid var(--di-cyan);font-size:1.3rem;font-weight:600;line-height:1.35;max-width:38ch}
+
+  /* ---- applications ---- */
+  .apps-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;margin-top:2.5rem}
+  @media (max-width:720px){.apps-grid{grid-template-columns:1fr}}
+  .app-card{border:1px solid var(--di-cyan-border)}
+  .app-head{font-family:var(--di-mono);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--di-text-muted);padding:0.9rem 1rem;border-bottom:1px solid var(--di-cyan-border)}
+
+  /* instagram grid mock */
+  .ig-frame{padding:1rem}
+  .ig-profile{display:flex;gap:0.8rem;align-items:center;margin-bottom:1rem}
+  .ig-avatar{width:44px;height:44px;border-radius:50%;background:#000;border:1px solid var(--di-cyan);display:flex;align-items:center;justify-content:center}
+  .ig-avatar svg{width:20px;height:20px}
+  .ig-handle{font-weight:700;font-size:0.85rem}
+  .ig-bio{font-size:0.72rem;color:rgba(255,255,255,0.55);margin-top:0.1rem}
+  .ig-posts{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+  .ig-post{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:var(--di-mono);font-size:0.6rem;text-transform:uppercase;letter-spacing:0.05em}
+  .ig-post.a{background:#000;color:var(--di-text-muted)}
+  .ig-post.b{background:var(--di-cyan);color:#000}
+  .ig-post.c{background:#0a0a0a;color:var(--di-cyan);border:1px solid var(--di-cyan-border)}
+
+  /* youtube mock */
+  .yt-frame{padding:1rem}
+  .yt-banner{aspect-ratio:16/4;background:#000;border:1px solid var(--di-cyan-border);display:flex;align-items:center;justify-content:center;margin-bottom:1rem;position:relative;overflow:hidden}
+  .yt-banner .wm{font-weight:800;font-size:1.6rem}
+  .yt-banner .wm span{color:var(--di-cyan)}
+  .yt-thumb{aspect-ratio:16/9;background:#050505;border:1px solid var(--di-cyan-border);display:flex;flex-direction:column;justify-content:flex-end;padding:0.8rem;position:relative}
+  .yt-thumb .kicker{font-family:var(--di-mono);font-size:0.62rem;color:var(--di-cyan);text-transform:uppercase;letter-spacing:0.08em}
+  .yt-thumb .title{font-weight:800;font-size:1.1rem;line-height:1.05;margin-top:0.2rem}
+
+  /* web / favicon */
+  .web-row{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1rem}
+  .fav{width:56px;height:56px;background:#000;border:1px solid var(--di-cyan-border);display:flex;align-items:center;justify-content:center}
+  .fav svg{width:26px;height:26px}
+  .fav.alt{background:var(--di-cyan)}
+
+  footer{padding:3rem 2rem 4rem;text-align:center;font-family:var(--di-mono);font-size:0.72rem;color:var(--di-text-muted)}
+  footer a{color:var(--di-text-muted)}
+
+  table.spec{width:100%;border-collapse:collapse;margin-top:1.5rem;font-size:0.85rem}
+  table.spec th,table.spec td{text-align:left;padding:0.6rem 0.8rem;border-bottom:1px solid var(--di-cyan-border)}
+  table.spec th{font-family:var(--di-mono);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--di-text-muted);font-weight:400}
+</style>
+</head>
+<body>
+
+<!-- reusable mark: square-in-square, invertible -->
+<svg style="display:none">
+  <symbol id="di-mark" viewBox="0 0 100 100">
+    <rect x="2" y="2" width="96" height="96" fill="none" stroke="currentColor" stroke-width="10"/>
+    <rect x="38" y="38" width="24" height="24" fill="currentColor"/>
+  </symbol>
+</svg>
+
+<section class="hero">
+  <div class="mark" style="color:#fff"><svg viewBox="0 0 100 100" width="64" height="64"><use href="#di-mark"/></svg></div>
+  <div class="shift">shift + d + i</div>
+  <h1 class="wordmark">di<span>.</span>iiii</h1>
+  <p class="tagline">public spaces on the open web. make a space, hand out the address — a link while it runs, a file when it ends.</p>
+</section>
+
+<section>
+  <div class="eyebrow"><span class="tick">~</span> logo</div>
+  <h2>the mark</h2>
+  <p>A square holding a smaller square — an aperture, a frame, a place you can look through. It never changes shape and never gains an outline of its own beyond the two strokes shown here.</p>
+
+  <div class="logo-grid">
+    <div class="logo-cell on-black" style="color:#fff"><svg viewBox="0 0 100 100"><use href="#di-mark"/></svg><span class="label">on black</span></div>
+    <div class="logo-cell on-white" style="color:#000"><svg viewBox="0 0 100 100"><use href="#di-mark"/></svg><span class="label">on white</span></div>
+    <div class="logo-cell on-cyan" style="color:#000"><svg viewBox="0 0 100 100"><use href="#di-mark"/></svg><span class="label">on cyan</span></div>
+  </div>
+
+  <div class="clearspace">
+    <span class="rule t">min clearspace = 1× mark height, all sides</span>
+    <svg viewBox="0 0 100 100" style="color:#fff"><use href="#di-mark"/></svg>
+  </div>
+
+  <h3 style="margin-top:3rem;font-size:1.1rem">don't</h3>
+  <div class="dont-grid">
+    <div class="dont-cell" style="color:#fff"><svg viewBox="0 0 130 100"><rect x="20" y="10" width="90" height="80" fill="none" stroke="currentColor" stroke-width="10"/><rect x="52" y="35" width="26" height="30" fill="currentColor"/></svg><span>don't stretch or skew</span></div>
+    <div class="dont-cell" style="color:#ff5a5a"><svg viewBox="0 0 100 100"><use href="#di-mark"/></svg><span>don't recolor off-palette</span></div>
+    <div class="dont-cell" style="color:#fff"><svg viewBox="0 0 100 100" style="filter:drop-shadow(4px 6px 0 rgba(77,249,255,0.6))"><use href="#di-mark"/></svg><span>don't add shadow / glow / bevel</span></div>
+    <div class="dont-cell" style="color:rgba(255,255,255,0.15)"><svg viewBox="0 0 100 100"><use href="#di-mark"/></svg><span>don't drop below 30% opacity</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow"><span class="tick">~</span> color</div>
+  <h2>palette</h2>
+  <p>Black and white carry the work. Cyan is the single accent — one color, never a gradient, never diluted with a second hue.</p>
+  <div class="swatches">
+    <div class="swatch" style="background:#000"><div class="role">surface</div><div class="name">di black</div><div class="hex">#000000</div></div>
+    <div class="swatch" style="background:#fff;color:#000"><div class="role">surface</div><div class="name">di white</div><div class="hex">#FFFFFF</div></div>
+    <div class="swatch" style="background:#4df9ff;color:#000"><div class="role">accent — primary</div><div class="name">di cyan</div><div class="hex">#4DF9FF</div></div>
+    <div class="swatch" style="background:#00e5ff;color:#000"><div class="role">accent — bright (cta hover only)</div><div class="name">cyan bright</div><div class="hex">#00E5FF</div></div>
+    <div class="swatch" style="background:rgba(77,249,255,0.10)"><div class="role">fill</div><div class="name">cyan dim</div><div class="hex">rgba(77,249,255,.10)</div></div>
+    <div class="swatch" style="background:#050505;border:1px solid rgba(77,249,255,.3)"><div class="role">hairline</div><div class="name">cyan border</div><div class="hex">rgba(77,249,255,.30)</div></div>
+  </div>
+  <table class="spec">
+    <tr><th>token</th><th>value</th><th>use</th></tr>
+    <tr><td class="mono">--di-black</td><td class="mono">#000</td><td>base background</td></tr>
+    <tr><td class="mono">--di-text / --di-text-muted</td><td class="mono">#fff / rgba(255,255,255,.4)</td><td>primary / secondary copy</td></tr>
+    <tr><td class="mono">--di-cyan</td><td class="mono">#4df9ff</td><td>links, active state, single accent</td></tr>
+    <tr><td class="mono">--di-cyan-dim / --di-cyan-border</td><td class="mono">rgba(77,249,255,.10 / .30)</td><td>hover fills, hairline borders</td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="eyebrow"><span class="tick">~</span> type</div>
+  <h2>typography</h2>
+  <div class="type-row">
+    <div class="t-display">di.i</div>
+    <div class="meta">Inter 800 · display / wordmark<br>tight tracking (-0.02 to -0.04em)</div>
+  </div>
+  <div class="type-row">
+    <div class="t-h2">moving through many forms of process</div>
+    <div class="meta">Inter 800 · headline<br>lowercase, sentence-as-fragment</div>
+  </div>
+  <div class="type-row">
+    <div class="t-body">linking systems, spaces, and people.</div>
+    <div class="meta">Inter 400–500 · body<br>rgba(255,255,255,.7–.85)</div>
+  </div>
+  <div class="type-row">
+    <div class="t-mono">shift + d + i</div>
+    <div class="meta">JetBrains Mono · label / eyebrow / caption<br>uppercase, letter-spacing .06–.14em</div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow"><span class="tick">~</span> voice</div>
+  <h2>tone</h2>
+  <p class="lede">Spec-sheet, not sales copy. Short fragments. Underscored compounds only where two ideas genuinely fuse into one (virtual_physical, new_media) — never as a label for the studio itself. Lowercase headlines, no exclamation.</p>
+  <blockquote>"the visit is the product; the editor is backstage."</blockquote>
+  <div class="voice-list">
+    <div class="voice-chip">virtual_physical</div>
+    <div class="voice-chip">no_map</div>
+    <div class="voice-chip">open_space</div>
+    <div class="voice-chip">connecting</div>
+    <div class="voice-chip">live processes</div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow"><span class="tick">~</span> applications</div>
+  <h2>social &amp; web</h2>
+  <div class="apps-grid">
+    <div class="app-card">
+      <div class="app-head">instagram — profile</div>
+      <div class="ig-frame">
+        <div class="ig-profile">
+          <div class="ig-avatar" style="color:#4df9ff"><svg viewBox="0 0 100 100"><use href="#di-mark"/></svg></div>
+          <div>
+            <div class="ig-handle">di.iiii</div>
+            <div class="ig-bio">public spaces on the open web<br>di-studio.xyz</div>
+          </div>
+        </div>
+        <div class="ig-posts">
+          <div class="ig-post a">di.i</div>
+          <div class="ig-post b">field</div>
+          <div class="ig-post c">note</div>
+          <div class="ig-post c">note</div>
+          <div class="ig-post a">di.i</div>
+          <div class="ig-post b">rite</div>
+          <div class="ig-post b">wcc</div>
+          <div class="ig-post c">note</div>
+          <div class="ig-post a">di.i</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <div class="app-head">youtube — banner &amp; thumbnail</div>
+      <div class="yt-frame">
+        <div class="yt-banner">
+          <div class="wm">di<span>.</span>iiii <span style="font-family:var(--di-mono);font-size:0.8rem;color:rgba(255,255,255,0.4)">— public spaces on the open web</span></div>
+        </div>
+        <div class="yt-thumb">
+          <div class="kicker">di.i / field notes</div>
+          <div class="title">building bisetka in munich</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <div class="app-head">web — favicon</div>
+      <div class="ig-frame">
+        <div class="web-row">
+          <div class="fav" style="color:#4df9ff"><svg viewBox="0 0 100 100"><use href="#di-mark"/></svg></div>
+          <div class="fav" style="color:#fff"><svg viewBox="0 0 100 100"><use href="#di-mark"/></svg></div>
+          <div class="fav alt" style="color:#000"><svg viewBox="0 0 100 100"><use href="#di-mark"/></svg></div>
+        </div>
+        <p style="margin-top:1rem;font-size:0.85rem">16/32/180/512px exports, mark only, no wordmark below 32px.</p>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <div class="app-head">bio / one-line</div>
+      <div class="ig-frame">
+        <p class="mono" style="color:var(--di-cyan);font-size:0.9rem">di.i — three people; we build di.iiii, public spaces on the open web. di-studio.xyz</p>
+        <p style="font-size:0.8rem;margin-top:1rem">Short form (character-limited bios): <span class="mono" style="color:var(--di-cyan)">di.i — we build di.iiii · di-studio.xyz</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  di.i — brand guide · draft v1 · <a href="https://www.thedi.studio">www.thedi.studio</a>
+</footer>
+
+</body>
+</html>

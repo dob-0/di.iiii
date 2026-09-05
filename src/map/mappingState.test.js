@@ -137,6 +137,44 @@ describe('cues', () => {
         expect(withCue({ key: '0' }).mappingState.cues[0].key).toBe('')
     })
 
+    it('carries a lighting scene through the document, by id', () => {
+        // The wall and the light in the room are one show. The cue stores the
+        // desk's scene ID — a scene renamed at the venue must stay the scene
+        // the cue means.
+        const doc = withCue({ lightScene: 'sc-7' })
+        expect(doc.mappingState.cues[0].lightScene).toBe('sc-7')
+        expect(normalizeProjectDocument(doc).mappingState.cues[0].lightScene).toBe('sc-7')
+    })
+
+    it('leaves a cue that names no light exactly as it was', () => {
+        // The field is optional and MUST stay absent when unused, or adding it
+        // would rewrite every mapping that already exists.
+        const cue = withCue({ name: 'Open' }).mappingState.cues[0]
+        expect('lightScene' in cue).toBe(false)
+    })
+
+    it('sets and clears the lighting scene through the ordinary cue patch', () => {
+        const set = applyProjectOps(withCue({}), [
+            { type: 'setMappingCue', payload: { cueId: 'c1', patch: { lightScene: 'sc-7' } } }
+        ])
+        expect(set.mappingState.cues[0].lightScene).toBe('sc-7')
+
+        // "— none —" in the picker is an empty string, and it has to mean the
+        // field is gone rather than an empty scene id nobody can select.
+        const cleared = applyProjectOps(set, [
+            { type: 'setMappingCue', payload: { cueId: 'c1', patch: { lightScene: '' } } }
+        ])
+        expect('lightScene' in cleared.mappingState.cues[0]).toBe(false)
+    })
+
+    it('undoes naming a lighting scene', () => {
+        const before = withCue({})
+        const op = { type: 'setMappingCue', payload: { cueId: 'c1', patch: { lightScene: 'sc-7' } } }
+        const after = applyProjectOps(before, [op])
+        const back = applyProjectOps(after, invertProjectOps(before, [op]))
+        expect('lightScene' in back.mappingState.cues[0]).toBe(false)
+    })
+
     it('drops a surface entry that says nothing', () => {
         // An empty object reads like "this cue covers that surface" and would
         // make a capture look complete when it is not.

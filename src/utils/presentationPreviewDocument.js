@@ -6,6 +6,18 @@ export const PREVIEW_ISSUE_CODES = {
     sandboxApiDenied: 'sandbox_api_denied'
 }
 
+// A srcdoc document inherits its base URL from the shell page that set it, so
+// a bare `/serverXR/api/projects/<pid>/assets/<sha>` already resolves against
+// whichever tier is actually serving the page. An absolute copy of that same
+// path — baked in by hand (pasted from an address bar) or carried over from
+// another tier by a copy/sync step — pins the page to the tier it was
+// authored on instead. Stripping the origin at render time makes a document
+// work on every tier regardless of how the reference got saved.
+const SAME_ORIGIN_ASSET_URL_PATTERN = /(^|["'`(=])https?:\/\/[^\s"'`()<>]+?((?:\/serverXR)?\/api\/(?:projects|spaces)\/[^\s"'`()<>]+?\/assets\/[^\s"'`()<>]+)(?=["'`)>\s]|$)/gi
+
+export const stripSameOriginAssetHosts = (html = '') =>
+    String(html || '').replace(SAME_ORIGIN_ASSET_URL_PATTERN, (_match, lead, path) => `${lead}${path}`)
+
 const STORAGE_ERROR_PATTERN = /(localstorage|sessionstorage|allow-same-origin|sandboxed document|securityerror|forbidden)/i
 const SANDBOX_ERROR_PATTERN = /(sandbox|denied|securityerror|not allowed|blocked)/i
 
@@ -224,7 +236,8 @@ ${documentSource}
 }
 
 export function buildPresentationPreviewDocument(html = '', pageQuery = '', pageOrigin = '') {
-    return injectBootstrap(String(html || ''), String(pageQuery || ''), String(pageOrigin || ''))
+    const normalizedHtml = stripSameOriginAssetHosts(String(html || ''))
+    return injectBootstrap(normalizedHtml, String(pageQuery || ''), String(pageOrigin || ''))
 }
 
 export function getPreviewIssueMessage(code) {

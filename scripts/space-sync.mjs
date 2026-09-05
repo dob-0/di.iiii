@@ -439,7 +439,10 @@ async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, ti
       ...doc,
       // deviceAccess: owner opt-in — the viewer only unlocks camera/mic for pages
       // whose manifest declares it (the rite's lamp); absent means sandboxed
-      presentationState: { ...(doc?.presentationState || {}), mode: 'code', entryView: 'code', codeFiles, deviceAccess: manifest.deviceAccess === true },
+      // codeHtml is the older single-string home of the same page; the viewer prefers
+      // codeFiles, so a leftover codeHtml is a second, stale copy stored under the live
+      // one (found on staging 2026-09-02: brand-guide held both). One copy: clear it.
+      presentationState: { ...(doc?.presentationState || {}), mode: 'code', entryView: 'code', codeFiles, codeHtml: '', deviceAccess: manifest.deviceAccess === true },
       publishState: { ...(doc?.publishState || {}), shareEnabled: true },
     }),
   })

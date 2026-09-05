@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-luiza-khechoyan",
+  "slug": "luiza-khechoyan",
+  "label": "Luiza Khechoyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/luiza-khechoyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

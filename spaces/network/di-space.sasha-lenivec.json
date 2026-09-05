@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-sasha-lenivec",
+  "slug": "sasha-lenivec",
+  "label": "Sasha Lenivec",
+  "mode": "code",
+  "entry": "spaces/network/pages/sasha-lenivec.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-shoghakat-mlke-galstyan",
+  "slug": "shoghakat-mlke-galstyan",
+  "label": "Shoghakat Mlke-Galstyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/shoghakat-mlke-galstyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}
