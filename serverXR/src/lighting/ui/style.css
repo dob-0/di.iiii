@@ -72,6 +72,10 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .bpmbar i { display: block; height: 100%; width: 0; background: var(--accent); }
 .bpmnum { width: 62px; font-size: 20px; text-align: center; border: 0; background: none; padding: 0; }
 .tap { background: var(--pane2); border: 1px solid var(--line); border-radius: 0; padding: 6px 10px; font-size: 11px; }
+/* Snap sits beside Tap because it is the other half of the same idea: Tap says where the
+   beat is, snap says to wait for it. */
+.snapsel { background: var(--pane2); border: 1px solid var(--line); border-radius: 0; padding: 5px 4px; font-size: 11px; color: var(--muted); }
+.snapsel:focus { color: var(--text); }
 
 .statusstrip {
   background: var(--bar); border-bottom: 1px solid var(--line); padding: 6px 14px;

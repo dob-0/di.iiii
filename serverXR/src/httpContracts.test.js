@@ -3084,3 +3084,124 @@ describe('assets serve from a hidden directory (~/.di is one)', () => {
         expect(Buffer.from(await fetched.arrayBuffer()).equals(bytes)).toBe(true)
     })
 })
+
+// Sign in with Telegram. The mint endpoint is the entire trust boundary of the
+// feature: it is the only thing standing between "di.bo says who this is" and
+// a session on this server. It is tested here rather than only in the store's
+// own unit tests because the store cannot see a request, and every failure
+// below is a request-shaped one.
+describe('sign in with Telegram', () => {
+    // OAUTH_CALLBACK_BASE_URL is part of the config, not decoration: the
+    // minted link goes into a chat message and has to be absolute.
+    const withTelegram = {
+        TELEGRAM_LOGIN_SECRET: 'test-bot-secret',
+        TELEGRAM_BOT_USERNAME: '@diiii111bot',
+        OAUTH_CALLBACK_BASE_URL: 'https://example.test'
+    }
+
+    it('is absent until a bot secret is configured', async () => {
+        const server = await startServer({ requireAuth: true })
+        const providers = await (await fetch(`${server.baseUrl}/api/auth/providers`)).json()
+        expect(providers.telegram).toBe(false)
+        // And the endpoint must mint nothing — an advertised-off provider
+        // whose route still answers is the worst of both. It answers 401
+        // rather than 404 because the unregistered path falls through to the
+        // API's own auth guard; what matters is that no link comes back.
+        const minted = await fetch(`${server.baseUrl}/api/auth/telegram/login-link`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-telegram-login-secret': 'anything' },
+            body: JSON.stringify({ telegramId: '1' })
+        })
+        expect(minted.status).not.toBe(201)
+        expect(await minted.text()).not.toContain('telegram/callback')
+    })
+
+    it('advertises itself, and its bot, once configured', async () => {
+        const server = await startServer({ requireAuth: true, extraEnv: withTelegram })
+        const providers = await (await fetch(`${server.baseUrl}/api/auth/providers`)).json()
+        expect(providers.telegram).toBe(true)
+        // Stored without the @, so a client can build t.me/<name> safely.
+        expect(providers.telegramBot).toBe('diiii111bot')
+    })
+
+    it('refuses to mint a link for anyone who cannot present the bot secret', async () => {
+        const server = await startServer({ requireAuth: true, extraEnv: withTelegram })
+        for (const headers of [{}, { 'x-telegram-login-secret': 'wrong' }, { 'x-telegram-login-secret': '' }]) {
+            const res = await fetch(`${server.baseUrl}/api/auth/telegram/login-link`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', ...headers },
+                body: JSON.stringify({ telegramId: '207260649' })
+            })
+            expect(res.status).toBe(401)
+        }
+    })
+
+    it('refuses a Telegram id that is not a Telegram id', async () => {
+        const server = await startServer({ requireAuth: true, extraEnv: withTelegram })
+        for (const telegramId of ['', 'abc', '12a', '../../etc', '1'.repeat(21), null]) {
+            const res = await fetch(`${server.baseUrl}/api/auth/telegram/login-link`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', 'x-telegram-login-secret': 'test-bot-secret' },
+                body: JSON.stringify({ telegramId })
+            })
+            expect(res.status, `should refuse ${JSON.stringify(telegramId)}`).toBe(400)
+        }
+    })
+
+    it('turns a minted link into a real signed-in account, once', async () => {
+        const server = await startServer({ requireAuth: true, extraEnv: withTelegram })
+        const minted = await (await fetch(`${server.baseUrl}/api/auth/telegram/login-link`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-telegram-login-secret': 'test-bot-secret' },
+            body: JSON.stringify({ telegramId: '207260649', displayName: 'A Kid' })
+        })).json()
+        expect(minted.url).toContain('/api/auth/telegram/callback?token=')
+
+        const onServer = (url) => server.baseUrl + new URL(url).pathname + new URL(url).search
+        const res = await fetch(onServer(minted.url), { redirect: 'manual' })
+        expect(res.status).toBe(302)
+        expect(res.headers.get('location')).toContain('auth=ok')
+        const cookie = res.headers.get('set-cookie')
+        expect(cookie, 'the callback must set a session cookie').toBeTruthy()
+
+        // That cookie must be a NAMED person, not a guest — the whole point.
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`, {
+            headers: { cookie: cookie.split(';')[0] }
+        })).json()
+        expect(session.type).toBe('session')
+        expect(session.label).toBe('A Kid')
+
+        // And the link is spent: a forwarded chat message buys nothing.
+        const replay = await fetch(onServer(minted.url), { redirect: 'manual' })
+        expect(replay.headers.get('location')).toContain('auth=error')
+    })
+
+    it('never lets a minted link carry a role', async () => {
+        // A bot compromise must cost accounts, not the platform.
+        const server = await startServer({ requireAuth: true, extraEnv: withTelegram })
+        const minted = await (await fetch(`${server.baseUrl}/api/auth/telegram/login-link`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-telegram-login-secret': 'test-bot-secret' },
+            body: JSON.stringify({ telegramId: '999', displayName: 'Nobody', role: 'admin', isUnrestricted: true })
+        })).json()
+        const path = new URL(minted.url).pathname + new URL(minted.url).search
+        const res = await fetch(server.baseUrl + path, { redirect: 'manual' })
+        const cookie = res.headers.get('set-cookie').split(';')[0]
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`, { headers: { cookie } })).json()
+        expect(session.role).not.toBe('admin')
+        expect(session.isUnrestricted).toBeFalsy()
+    })
+
+    it('sends a forged or expired link to the same dead end as a spent one', async () => {
+        const server = await startServer({ requireAuth: true, extraEnv: withTelegram })
+        for (const token of ['dii_tglogin_deadbeef.forged', 'nonsense', '']) {
+            const res = await fetch(
+                `${server.baseUrl}/api/auth/telegram/callback?token=${encodeURIComponent(token)}`,
+                { redirect: 'manual' }
+            )
+            expect(res.status).toBe(302)
+            expect(res.headers.get('location')).toContain('auth=error')
+            expect(res.headers.get('set-cookie'), 'a bad link must not mint a session').toBeFalsy()
+        }
+    })
+})

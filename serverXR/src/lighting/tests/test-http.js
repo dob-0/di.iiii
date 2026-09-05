@@ -1176,6 +1176,32 @@ check('a hand-edited show cannot smuggle in an output the route would refuse', a
   await POST('/api/output/send/remove', { id: r.body.send.id });
 });
 
+check('firing on the beat waits for the beat, and says how long it will wait', async () => {
+  const f = await patch('drgb', { address: 460 });
+  const made = await POST('/api/looks/add', { look: { id: 'qz', name: 'Q', steps: [{ values: { '*': { dimmer: 255 } } }] } });
+  // A tempo anchored a moment ago at 60bpm: a beat is a whole second, so a press now
+  // has a real wait to report and nothing can land within a frame by luck.
+  await POST('/api/fx', { bpm: 60, epoch: Date.now() });
+  const r = await POST('/api/looks/fire', { id: made.body.look.id, quantize: 'beat' });
+  assert.strictEqual(r.body.quantized, 'beat');
+  assert.ok(r.body.inMs > 0 && r.body.inMs <= 1000, 'it says when it will land: ' + r.body.inMs);
+  const { body: during } = await GET('/api/state');
+  assert.ok(!during.layers.some((l) => l.lookId === 'qz' && l.on && l.level > 0), 'and it has NOT landed yet');
+  await new Promise((r2) => setTimeout(r2, r.body.inMs + 120));
+  const { body: after } = await GET('/api/state');
+  assert.ok(after.layers.some((l) => l.lookId === 'qz'), 'it lands on the beat, on its own');
+  await POST('/api/looks/remove', { id: 'qz' });
+  await POST('/api/fixtures/remove', { id: f.id });
+});
+
+check('without quantize a fire is immediate, exactly as it always was', async () => {
+  const made = await POST('/api/looks/add', { look: { id: 'nq', name: 'N', steps: [{ values: { '*': { dimmer: 255 } } }] } });
+  const r = await POST('/api/looks/fire', { id: made.body.look.id });
+  assert.ok(r.body.layer, 'it comes back with the layer, not a promise of one');
+  assert.strictEqual(r.body.inMs, undefined);
+  await POST('/api/looks/remove', { id: 'nq' });
+});
+
 check('the serial port has to be a serial device', async () => {
   const before = (await GET('/api/state')).body.output.serialPort;
   const bad = process.platform === 'win32' ? '\\\\.\\PhysicalDrive0' : '/dev/null';

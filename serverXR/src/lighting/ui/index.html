@@ -40,7 +40,14 @@
     <button id="goBtn" class="go">Go</button>
     <div class="bpm"><span>BPM</span><div class="bpmbar"><i id="bpmBar"></i></div></div>
     <input type="number" id="bpm" class="bpmnum" value="120" min="20" max="300">
-    <button id="tapBtn" class="tap" title="Tap tempo">Tap</button>
+    <button id="tapBtn" class="tap" title="Tap tempo — each tap also says WHERE the beat is, so waves start on the downbeat">Tap</button>
+    <!-- Snap: hold a press until the next beat or bar. A finger lands where it lands;
+         the music does not, and a light change that is 200ms late reads as a mistake. -->
+    <select id="snap" class="snapsel" title="Hold a scene or look until the next beat or bar of the tapped tempo, so a change lands in the track instead of near it">
+      <option value="off">snap off</option>
+      <option value="beat">on the beat</option>
+      <option value="bar">on the bar</option>
+    </select>
     <button id="saveNow" class="savenow" title="Save what is on the wire right now as a scene">Save scene</button>
   </div>
 </header>
