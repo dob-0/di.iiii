@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a slug is an address: /<slug> resolves to the space, server-side
+- harvest the platform fixes out of Emily's two open PRs
 
 Full detail: `PROGRESS.md`.
 

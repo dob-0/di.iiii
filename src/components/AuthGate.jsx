@@ -1,5 +1,6 @@
-import { Box, Button, CircularProgress, Divider, Link, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Divider, Link, Stack, TextField, ThemeProvider, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
+import { diFontTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpacePublicFlag from '../hooks/useSpacePublicFlag.js'
 import { getApiAuthProviders, getOAuthUrl, hasServerApi } from '../services/apiClient.js'
@@ -112,7 +113,7 @@ const stripInviteFromUrl = () => {
     } catch { /* cosmetic — the param only matters on first load */ }
 }
 
-export default function AuthGate({
+function AuthGateInner({
     children,
     requiredSpaceId = null,
     showAccountButton = true,
@@ -456,5 +457,17 @@ export default function AuthGate({
                 ) : null}
             </Stack>
         </Box>
+    )
+}
+
+// AuthGate is the outermost MUI-rendering wrapper on every gated surface (it
+// also renders AccountButton), so the font theme goes here rather than in a
+// root ThemeProvider — RootApp lazy-loads MUI on purpose and must not import
+// it eagerly. Studio nests its own theme inside this one and still wins.
+export default function AuthGate(props) {
+    return (
+        <ThemeProvider theme={diFontTheme}>
+            <AuthGateInner {...props} />
+        </ThemeProvider>
     )
 }
