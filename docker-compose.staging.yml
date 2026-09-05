@@ -42,6 +42,10 @@ services:
       OAUTH_CALLBACK_BASE_URL: ${STAGING_OAUTH_CALLBACK_BASE_URL:-}
       GITHUB_CLIENT_ID: ${STAGING_GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${STAGING_GITHUB_CLIENT_SECRET:-}
+      # Sign in with Telegram — a DIFFERENT bot and secret than production,
+      # or a link minted here would sign someone in on the wrong tier.
+      TELEGRAM_LOGIN_SECRET: ${STAGING_TELEGRAM_LOGIN_SECRET:-}
+      TELEGRAM_BOT_USERNAME: ${STAGING_TELEGRAM_BOT_USERNAME:-}
       # Same App, separate installation/webhook secret per environment -- the
       # webhook only ever reaches prod, so staging uses these for the App JWT
       # (Disconnect/Connect forces a sync there). See docker-compose.yml.
