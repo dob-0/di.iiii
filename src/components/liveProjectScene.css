@@ -46,6 +46,11 @@
     color: #ffffff;
 }
 
+.live-scene-nearest {
+    opacity: 0.55;
+    font-weight: 400;
+}
+
 .live-scene-hint {
     position: absolute;
     bottom: 26px;
