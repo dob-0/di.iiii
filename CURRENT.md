@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a PDF import renders every page and then throws; now it returns them
+- a visitor to /spaces sees the spaces
 
 Full detail: `PROGRESS.md`.
 
