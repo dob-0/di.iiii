@@ -38,6 +38,7 @@ const { initializeMesh } = require('./meshHub')
 const { loadReleaseInfo } = require('./releaseInfo')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
+const { createSpaceIdParam } = require('./routes/spaceIdParam')
 const { createKeyedLock } = require('./asyncLock')
 const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
@@ -1362,6 +1363,13 @@ router.post('/api/approvals/decision', async (req, res) => {
   const outcome = await approvalGate.handleDecision({ id, intentHash, decision, decisionToken, decidedBy, note })
   res.status(outcome.status).json(outcome.body)
 })
+
+// A space's public slug resolves to its real id here, once, for every route
+// on this router matching `:spaceId` (spaceRoutes, projectRoutes, syncRoutes,
+// inscriptionRoutes) — an id always wins, so a slug can never shadow another
+// space's id. Everything downstream (route handlers, req.requiredSpaceId
+// below, response bodies) already reads req.params.spaceId as the real id.
+router.param('spaceId', createSpaceIdParam({ normalizeSpaceId, spaceExists, findSpaceBySlug }))
 
 // Creating a space (POST /api/spaces) is open to any signed-in account; the
 // route handler enforces the free-tier quota (and blocks guests/tokens). Space

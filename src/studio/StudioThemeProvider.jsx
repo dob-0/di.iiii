@@ -1,4 +1,5 @@
 import { CssBaseline, GlobalStyles, ThemeProvider, createTheme } from '@mui/material'
+import { DI_FONT_FAMILY } from '../styles/muiTheme.js'
 import './styles/studio.css'
 
 /**
@@ -27,7 +28,7 @@ const studioTheme = createTheme({
         borderRadius: 8
     },
     typography: {
-        fontFamily: '"Inter", "Segoe UI", sans-serif',
+        fontFamily: DI_FONT_FAMILY,
         button: {
             textTransform: 'none',
             fontWeight: 600

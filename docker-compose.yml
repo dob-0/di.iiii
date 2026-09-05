@@ -61,6 +61,14 @@ services:
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
 
+      # Sign in with Telegram (optional): di.bo mints the link, presenting
+      # TELEGRAM_LOGIN_SECRET; the bot username feeds the web button's deep
+      # link. Both unset = provider absent, routes never registered. Added
+      # 2026-09-06: PR #282 wrote them to .env.example but never here, so the
+      # secret sat in the host .env while the container never saw it.
+      TELEGRAM_LOGIN_SECRET: ${TELEGRAM_LOGIN_SECRET:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+
       # GitHub App `dii-space-sync` (optional): one-click repo→space sync and
       # its push webhook. Distinct from the OAuth App above -- that one only
       # signs people in. Absent, `githubApp.isConfigured()` is false and the

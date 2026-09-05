@@ -141,6 +141,18 @@ textarea,
     user-select: text;
 }
 
+/* Form controls do NOT inherit font-family -- the UA stylesheet gives them their
+   own (Arial on Chrome/Windows). Without this, every unstyled button/select on
+   a surface silently opts out of the platform font. */
+button,
+input,
+optgroup,
+select,
+textarea
+{
+    font-family: inherit;
+}
+
 /* links/images are natively draggable and spawn a snapshot ghost mid-drag;
    suppressNativeDrag() covers Firefox, this covers WebKit/Blink without JS */
 img,

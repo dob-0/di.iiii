@@ -5,6 +5,141 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-06 — the Telegram secret reaches the container
+
+- PR #282 added `TELEGRAM_LOGIN_SECRET` and `TELEGRAM_BOT_USERNAME` to `.env.example` but
+  not to either compose file, so a value written to the host `.env` never entered the
+  server container and `/api/auth/providers` kept answering `telegram:false`. Found when
+  the owner set the secret on prod and nothing changed. Both compose files now pass the
+  pair through; staging reads `STAGING_TELEGRAM_*`, a separate bot and secret by design.
+- `docker compose up -d server` only recreates when the compose config changes, so the
+  deploy workflow's own `up -d` after this lands is what applies it.
+
+## 2026-09-06 — six dependency bumps land together after the camp freeze
+
+- Six dependabot PRs frozen since the Dilijan camp week (freeze ended Aug 31) each go
+  stale as the next lands, so they land as one branch instead of six races: pdfjs-dist
+  6.2.108→6.3.289 (root), @vitejs/plugin-react 6.0.5→6.1.1 (root, dev), multer 2.2.0→2.3.0
+  (serverXR), sharp 0.35.3→0.35.4 (serverXR), morgan 1.11.0→1.12.0 (serverXR),
+  softprops/action-gh-release 3.0.2→3.0.3 (release.yml, pinned SHA).
+- Checked `docs/ai/dependency-decisions.md` first — none of the six appear on the parked
+  list (drei, react-router-dom, eslint 10, MUI 9, node-alpine 26). All six were clear to
+  take.
+- pdfjs-dist 6.3 carries three `api-minor` return-shape changes (getJSActions,
+  getFieldObjects, markInfo now return Maps instead of plain objects). The only caller
+  in this repo, `src/studio/utils/assetFormats.js`'s `pdfToImageFiles`, uses only
+  `getDocument`/`getPage`/`getViewport`/`render` — none of the changed APIs — so the
+  bump is a no-op for this codebase's usage.
+- multer and morgan both carry security fixes (multer: 4 CVEs; morgan: CVE-2026-15603,
+  token-value escaping in log output) — real reasons to take them, not just routine.
+- No unit test exercises `pdfToImageFiles` itself (canvas rendering path); the existing
+  `assetFormats.test.js` only covers placement-whitelist logic, not the PDF render path.
+  A visual check of PDF-to-image import in Studio is still owed before calling this
+  surface verified — the guards below only prove it builds and lints clean.
+- Guards run in the worktree: lint (0 errors, 64 pre-existing warnings), build, full
+  vitest suite (368 files / 3542 tests), server-contracts (7 files / 115 tests),
+  `check-agent-docs.mjs`.
+
+## 2026-09-06 — harvest the platform fixes out of Emily's two open PRs
+
+Neither of emilyanikoghosyan's open PRs can land as it stands: #254
+(`feat/garage-sale`) puts a work in `src/`, and #180 (`feat/algovrithm-space`)
+is a stale fork branch whose base is ~1080 commits behind dev, so merging it
+would revert a great deal of dev. This branch takes the parts that are platform
+fixes on their own and leaves the rest, so the two PRs can be answered honestly
+rather than just closed.
+
+**Taken from #180 (feat/algovrithm-space):**
+
+- Form controls now inherit `font-family`. Buttons, inputs, selects and
+  textareas do not inherit it from their parent — the UA stylesheet gives them
+  their own — so every unstyled control was silently opting out of `--di-sans`.
+- `src/styles/muiTheme.js`: MUI injects its own typography (Roboto) through
+  emotion, which outranks plain stylesheet rules, so any surface rendering MUI
+  without a ThemeProvider fell back to Roboto/Helvetica. Measured on a built
+  preview of dev before changing anything: all seven landing-page buttons came
+  back `Roboto, Helvetica, Arial, sans-serif` while the tagline beside them was
+  Inter, and AuthGate/AccountButton had the same gap. Applied at AuthGate and
+  LandingPage, not at the router, because RootApp lazy-loads MUI on purpose.
+  StudioThemeProvider now reads the same token instead of its own copy of the
+  Inter stack. Checked in a headless Chromium at 1440x900 DPR2 before and
+  after: every button reports `--di-sans` now and no layout moved.
+- The last two hardcoded `'Inter', 'SF Pro Text', …` stacks in `src/`
+  (`styles/panels/base.css`) replaced by `var(--di-sans)`. Dev had already
+  migrated the rest. No pixels change; the platform font is one edit again.
+
+**Taken from #254 (feat/garage-sale):**
+
+- One golden rule: a document-style page in this app has to be its own scroll
+  container (`height: 100%; overflow-y: auto`), because `styles/base.css` pins
+  `html, body, #root` to `position: fixed`. A page written with
+  `min-height: 100vh` lays out, paints and screenshots correctly and simply
+  cannot be scrolled — no error, no failing test. Verified against dev: the
+  pin is still there and `pages/legal.css` is still the shape to copy. The
+  rule is kept, the page that taught it is not.
+
+**Left, and why:**
+
+- The whole of `src/garage/` (the moving-sale page, its stroke marker font, its
+  3D hero, its content file) and the `APP_PAGE_GARAGE` routing in
+  `utils/spaceRouting.js` + `RootApp.jsx`, plus its wiki article. A work lives
+  in its own repo and reaches the platform as a space; it does not get a folder
+  in `src/`, and platform routing does not grow a constant for one poster.
+  Nothing here is a defect — it is good work in the wrong repo.
+- The Montserrat typography pass: the woff2 files, `public/fonts/montserrat.css`,
+  the two `@fontsource` dependencies, the `src/index.jsx` import, and folding
+  `--di-mono` into `--di-sans`. Changing the platform typeface and removing
+  monospace from ~90 rules across the app is a design decision for the owner
+  and wants its own PR, not a ride along an algovrithm branch.
+- `src/algoVrithm/audioWake.js` and its tests: already on dev, and in a better
+  place — `src/utils/audioWake.js`, promoted out of the piece because the
+  question is not algovrithm's. Her branch's copy is the older one.
+- `ringTour.js`, `textReveal.js`, `entityAnimation.js`, `positionalVideoSound.js`,
+  the `EntityContent`/`Text2DObject` opacity fix, `PublicProjectViewer` and
+  `PortalObject` changes, both `projectSchema` mirrors and the
+  creation-vs-normalization defaults split: all already on dev, several
+  byte-identical. Their `known-fixes.md` entries are on dev too.
+- `src/beta/styles/beta.css` and `src/seed/styles/seed.css`: deleted on dev.
+- `package.json` / `package-lock.json`: the only real change is the two font
+  dependencies, which go with the parked typography PR.
+
+Nothing in either PR was rejected for quality. #254 is a placement question and
+#180 is a staleness question, and both are worth telling her plainly.
+
+## 2026-09-03 — a slug is an address: /<slug> resolves to the space, server-side
+
+- `spaceStore.js` has carried `slug`/`findSpaceBySlug` and PATCH-time slug
+  validation for a while, and `/api/resolve/:spaceSegment/:projectSegment` +
+  the OG-card route already resolved slug-or-id — but every other `:spaceId`
+  route (spaceRoutes, projectRoutes, syncRoutes, inscriptionRoutes, plus the
+  inline sync-key/invite/github-link routes in `index.js`) read
+  `req.params.spaceId` as if it were always the real id. `GET /cascade-club`
+  (id `cascade`) 404d before the client got a chance to render the space.
+- Fix: one `router.param('spaceId', ...)` in `index.js`, registered once on
+  the shared top-level router, resolves the segment to the real id for every
+  route matching that param name. An id always wins — it short-circuits
+  before any slug lookup runs, so a slug can never shadow another space's id.
+  New file `serverXR/src/routes/spaceIdParam.js` holds the resolver so it's
+  testable in isolation.
+- Guards: `serverXR/src/routes/spaceIdParam.test.js` — unit cases on the
+  resolver, plus a real Express router + real HTTP requests proving
+  id-wins-over-slug, slug-resolves-to-the-space (response carries the real
+  id), unknown-segment-404s, and one project-scoped route
+  (`GET /api/spaces/:spaceId/projects`) resolving through a slug.
+- Full suite green: `npx vitest run serverXR/src` — 51 files, 470 tests,
+  including `httpContracts.test.js` (real subprocess, exercises the actual
+  `index.js` wiring, not just the isolated test's own router).
+- **Left open on purpose**: the client still compares the raw URL segment to
+  a space's real `.id` in several places — `src/components/AuthGate.jsx`'s
+  session-scope check (drives the exact "Nothing lives at" message the bug
+  was reported against), `src/SpaceSurfaceApp.jsx`, `src/hooks/useAppState.js`
+  (`isReadOnly` lookup — the one with teeth: a locked space could read as
+  editable when reached by slug), `src/hooks/useSpaceSocket.js` (socket room
+  name), `src/storage/scenePersistence.js` (local cache key). That's a
+  multi-file client propagation, not a one-line adoption of the returned id,
+  and it needs browser verification before it ships — not bundled into this
+  server-side PR. Recorded in `docs/ai/known-fixes.md` alongside the fix.
+
 ## 2026-09-06 — Continue with Telegram, on every card that already offers GitHub
 
 - The server half (#282) has been live since 2026-09-05 with nothing to press. This
