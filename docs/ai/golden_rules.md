@@ -965,7 +965,7 @@ This does **not** fully solve node-to-node label collision (two labels can still
 
 **Why:** The SHA/ahead-behind ban above fixed *what* got written into CURRENT.md; it did nothing about *when* or *by whom*. Every branch was still pre-writing what it guessed `dev` would look like once merged, and `CURRENT.md`'s own "replace, don't append" convention meant whichever branch wrote last won — silently destroying whatever the previous writer had recorded. Confirmed on 2026-08-06: three separate sessions' real notes were permanently overwritten this way before their branch ever merged, recoverable only via `git fsck --dangling` (which nobody would think to run) — one of them was on this very rule's own commit, caught while writing it. A single-writer point, naturally serialized by git (only one branch can be `dev` at a time), closes the race that a naming convention alone cannot.
 
-**How:** `docs:ai:check` enforces the shape: `CURRENT.md` must contain the literal `active_branch: dev`; a branch off `dev`/`main` must have a matching session note before pushing, and its `CURRENT.md` must not differ from `origin/dev`; `dev`/`main` themselves must have an empty `docs/ai/sessions/` (forces the fold-in — cleanup is part of landing, not a courtesy). `.claude/commands/recap.md` writes the note; `.claude/commands/land.md` runs the fold.
+**How:** `docs:ai:check` enforces the shape: `CURRENT.md` must contain the literal `active_branch: dev`; a branch off `dev`/`main` must have a matching session note before pushing, and its `CURRENT.md` must not differ from `origin/dev`; `dev`/`main` themselves must have an empty `docs/ai/sessions/` (forces the fold-in — cleanup is part of landing, not a courtesy). `.claude/commands/recap.md` writes the note; since 2026-09-02 the fold itself runs in CI on every push to `dev` (`deploy-vps-staging.yml`'s `land` job, pushed as `github-actions[bot]`; the deploy's test job folds in place so the gate passes even when that push is rejected by branch protection) — `.claude/commands/land.md` remains the by-hand fold and the local worktree sweep.
 
 **Files:** `docs/ai/sessions/README.md, scripts/session-land.mjs, scripts/session-land-lib.mjs, scripts/check-agent-docs.mjs, .claude/commands/recap.md, .claude/commands/land.md`
 
@@ -1045,3 +1045,55 @@ When reviewing a PR that contains research or a decision, ask where its file
 is; when a session offers a URL, ask whether the ecosystem owns it.
 
 **Files:** `docs/research/README.md, docs/ai/RESEARCH_METHOD.md`
+
+### A 200 from this site is not proof a page is public — ask the API
+
+**Rule:** Never test whether a space or page is reachable-by-strangers with an HTTP status on the PAGE. The client is a single-page app: the server returns the same `index.html` for every path, so a private space answers `200` and the sign-in wall only appears after the client boots. Probe `/serverXR/api/spaces/<id>` (or the resource's own API route) with and without a token.
+
+**Why:** A link audit across all three tiers reported **47 of 47 spaces open to strangers**, including `atlas`, `decisions`, `library`, `funding` and prod's `network` — every one of which the API correctly refuses with `401`. Reported as-is, that is a false alarm that sends the owner hunting a breach that does not exist; the inverse error (a real exposure hidden behind a 200) is worse.
+
+**How:**
+```bash
+anon=$(curl -s -o /dev/null -w '%{http_code}' "$API/api/spaces/$id")
+owner=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TOKEN" "$API/api/spaces/$id")
+# anon 401 + owner 200 = private.  anon 200 = genuinely open.
+```
+The same trap has a sibling already in this file: a published page's DOM lives inside the srcdoc iframe, so `page.$$eval` on the top document returns 0 and reads exactly like "the deploy has not landed". Walk `page.frames()`.
+
+**Files:** `serverXR/src/routes/spaceRoutes.js` (where the rule actually lives)
+
+---
+
+### A blank screenshot right after a merge is a deploy, not a defect
+
+**Rule:** Before believing a blank or broken page on a tier, check `/serverXR/api/health` — if `uptimeSeconds` is under a minute or two, the container is mid-restart. Re-shoot, then judge.
+
+**Why:** A staging screenshot came back a fully white page seconds after four PRs landed. Nothing was wrong: health reported 58 seconds of uptime. Filing that as a regression would have cost a hunt through a deploy that was already fixing itself.
+
+**How:** `curl -s $TIER/serverXR/api/health | jq '.uptimeSeconds, .release.gitCommit'` before and after the shot.
+
+**Files:** `serverXR/src/index.js` (the health route)
+
+---
+
+### Measure the scene's own units before placing anything in it
+
+**Rule:** Do not infer a 3D object's size or anchor from a screenshot. Read the component. An image plane is built **3 units tall** and `3·aspect` wide (`ImageObject` sets `[aspect*3, 3]`) and is then multiplied by the transform scale; a box's `position` is its **base**, not its centre (`BoxObject` renders at `position-y = size[1]/2`).
+
+**Why:** Composing the Open Jam wall, height was guessed twice — first as `2·(h/w)·scale`, then as `2·scale`. Each wrong guess produced a plausible-looking wall that was wrong in a different way (banners eating their neighbours, then rows overlapping) and cost a full apply-and-look round to disprove. The third attempt read the component and was right immediately.
+
+**How:** `grep -n "planeGeometry\|boxGeometry\|args=" src/objectComponents/*.jsx` before authoring coordinates.
+
+**Files:** `src/objectComponents/ImageObject.jsx`, `src/objectComponents/BoxObject.jsx`
+
+---
+
+### A driven browser cannot take pointer lock — drag-look instead
+
+**Rule:** To verify anything in walk mode headlessly, do **not** click to enter pointer lock. A locked walker reads `movementX`, which Playwright cannot forge, and every frame comes back staring at the sky. Drive the look with an unlocked drag (`mouse.down` → `mouse.move` → `mouse.up`), which the walker reads from `clientX/clientY`.
+
+**Why:** Six scripted turns to photograph a door produced six identical empty frames — indistinguishable from "the door does not render". The door was fine. When a turn still will not verify, aim the fixed entry camera at the object, look, and set the camera back.
+
+**How:** See `LiveProjectScene`'s own comment: "the visible cursor's clientX/clientY is the one delta source that cannot lie".
+
+**Files:** `src/components/LiveProjectScene.jsx`, `src/components/walkModeConfig.js`

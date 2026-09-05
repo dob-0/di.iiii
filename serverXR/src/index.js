@@ -73,6 +73,7 @@ const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
+const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { createApprovalGate, createGatedRequestNet, verifyInboundSignature, GATED_ROUTES } = require('./approvalGate')
 const pendingActionStore = require('./pendingActionStore')
 const configStore = require('./configStore')
@@ -387,6 +388,15 @@ if (config.minFreeDiskBytes > 0) {
     minFreeBytes: config.minFreeDiskBytes
   }))
 }
+// The lighting desk (serverXR/src/lighting) at /light — a local-runtime lane, built on
+// first use, output off by default; see routes/lightingRoutes.js. Mounted ahead of the
+// JSON parser on purpose: the desk reads its own bodies.
+const lighting = registerLightingRoutes(app, {
+  dataDir: config.directories.dataDir,
+  mountPaths: [...new Set(['/light', `${config.mountPath || ''}/light`.replace(/\/+/g, '/')])],
+  offline: process.env.ARTNET_OFFLINE === '1'
+})
+
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
 app.use(morgan('tiny'))
 app.use((req, res, next) => {
@@ -394,8 +404,24 @@ app.use((req, res, next) => {
   next()
 })
 
+// A published code page runs in a sandboxed srcdoc iframe with no
+// allow-same-origin, so its origin is the literal string "null". An ES-module
+// import and a webfont fetch are both CORS-mode requests, and a null origin
+// fails them unless the response allows it — measured on staging 2026-09-03:
+// "Access to script at /vendor/three.module.min.js from origin 'null' has been
+// blocked by CORS policy", and the same for /fonts/inter-regular.woff, which is
+// why every code page using the house face had silently been falling back.
+// `/vendor/` and `/fonts/` hold public static files the site already serves to
+// anyone, so this grants nothing new. nginx carries the same rule for the
+// deployed tiers; this covers local dev and every offline `di` install.
+const CODE_PAGE_READABLE = /^\/(vendor|fonts)\//
+const allowNullOrigin = (res, filePath, req) => {
+  const url = req?.originalUrl || req?.url || filePath || ''
+  if (CODE_PAGE_READABLE.test(url)) res.setHeader('Access-Control-Allow-Origin', '*')
+}
+
 const router = express.Router()
-router.use(express.static(PUBLIC_DIR))
+router.use(express.static(PUBLIC_DIR, { setHeaders: allowNullOrigin }))
 
 // `di up` sets DI_LOCAL=1. Read at request time rather than at boot so tests
 // can toggle it, which is why it is a function and not a constant.
@@ -1186,7 +1212,7 @@ approvalGate.registerReauthorizer('spaces.delete', (args, subject, actorType) =>
 // point at the server's own public origin (e.g. https://di-studio.xyz/serverXR).
 const internalApiBase = () =>
   process.env.SELF_API_URL?.replace(/\/$/, '') || `http://127.0.0.1:${config.port}${config.basePath || ''}`
-const internalHeaders = () => ({ 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${config.apiToken}` })
+const internalHeaders = () => ({ 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${config.internalApiToken}` })
 
 // Upload one binary into a project through the server's own multipart asset
 // route (the route computes the content-hash id and returns the public URL).
@@ -1201,7 +1227,7 @@ async function uploadSyncedAsset(base, projectId, rel, buf) {
   const r = await httpRequest(`${base}/api/projects/${projectId}/assets`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${config.apiToken}`,
+      Authorization: `Bearer ${config.internalApiToken}`,
       'Content-Type': `multipart/form-data; boundary=${boundary}`,
       'Content-Length': body.length
     },
@@ -1956,7 +1982,7 @@ mountTargets.forEach((targetPath) => {
 // so /serverXR/api/* is already answered and can never fall through to index.html.
 const CLIENT_DIR = config.directories.clientDir
 if (CLIENT_DIR) {
-  app.use(express.static(CLIENT_DIR))
+  app.use(express.static(CLIENT_DIR, { setHeaders: allowNullOrigin }))
 
   app.get(/.*/, (req, res, next) => {
     // Anything the API owns is not ours, even unmatched — a wrong URL under the
@@ -2024,9 +2050,16 @@ initStorage()
     }
     approvalGate.startSweepLoop()
     pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
-    setInterval(() => {
+    // Spent and expired Telegram sign-in tokens. They are already worthless —
+    // consumed_at is what makes them so — this only stops the table growing
+    // one row per sign-in forever. Rides the space sweep rather than running
+    // on every mint, so a room full of people signing in at once pays nothing.
+    const { pruneLoginTokens } = require('./telegramLoginStore')
+    const sweep = () => {
       pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
-    }, 1000 * 60 * 30)
+      try { pruneLoginTokens() } catch (error) { logger.warn('Failed to prune login tokens', error) }
+    }
+    setInterval(sweep, 1000 * 60 * 30)
     // Daily snapshot of the open space — its scene and its project documents,
     // which is where the jam's contributions actually live. Vandalism
     // insurance (admin restores via POST /api/spaces/:id/restore-snapshot).

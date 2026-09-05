@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-ruben-melikyan",
+  "slug": "ruben-melikyan",
+  "label": "Ruben Melikyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/ruben-melikyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

@@ -372,6 +372,12 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'p2', type: 'portal', components: { reference: { spaceId: 's', projectId: 'p', mode: 'portal', label: 'Old' } } },
         // An unknown font name must fall back rather than reach a strange URL.
         { id: 'p3', type: 'portal', components: { reference: { spaceId: 's', projectId: 'p', label: 'X', labelFont: 'https://evil.example/f.woff' } } },
+        // Door shape: the square-cornered 'frame' has to survive the mirror,
+        // and an unknown shape has to fall back to the ring. The mirror is
+        // what the SERVER normalizes with, so a field it drops is a field the
+        // renderer never sees, however correct the ESM copy is.
+        { id: 'p4', type: 'portal', components: { reference: { spaceId: 's', projectId: 'p', style: 'frame' } } },
+        { id: 'p5', type: 'portal', components: { reference: { spaceId: 's', projectId: 'p', style: 'archway' } } },
         { id: 't1', type: 'text', components: { text: { value: 'a\nb', reveal: { mode: 'typewriter', speed: 999, delay: -5 } } } },
         { id: 't2', type: 'text', components: { text: { value: 'plain' } } },
         // Spatial video sound: a zero refDistance would make the panner divide
@@ -406,6 +412,19 @@ describe('ESM/CJS mirror equivalence', () => {
       const fromEsm = esm.normalizeProjectDocument(esm.cloneValue(fixture))
       expect(stripClock(fromCjs)).toEqual(stripClock(fromEsm))
     }
+  })
+
+  // Parity alone would be satisfied by both copies dropping the field, and a
+  // dropped field is invisible until a door renders as a ring in the browser.
+  it('the mirror keeps a square-cornered door and falls back for an unknown one', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [
+        { id: 'a', type: 'portal', components: { reference: { spaceId: 's', style: 'frame' } } },
+        { id: 'b', type: 'portal', components: { reference: { spaceId: 's', style: 'archway' } } },
+        { id: 'c', type: 'portal', components: { reference: { spaceId: 's' } } }
+      ]
+    })
+    expect(doc.entities.map((e) => e.components.reference.style)).toEqual(['frame', 'gateway', 'gateway'])
   })
 
   it('applies representative op batches identically', async () => {

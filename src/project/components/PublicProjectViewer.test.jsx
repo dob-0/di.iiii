@@ -276,6 +276,12 @@ describe('PublicProjectViewer', () => {
             expect(screen.queryByRole('button', { name: 'Walk / Fly' })).toBeNull()
             // hub-card preview thumbnails must not carry the view→create badge
             expect(screen.queryByText('Made with di.iiii')).toBeNull()
+            // Regression guard: a Studio space-card thumbnail is a still picture
+            // by design (SpaceHub.jsx's SpaceCardPreview) -- a directory page can
+            // render many of these at once, and authored animation/fog/render
+            // effects running in every one is exactly the laptop-killer the
+            // picture/live-card split (SpaceHub's SpaceCardLive) exists to avoid.
+            expect(screen.getByTestId('viewport-timelines').textContent).toBe('play:false')
         } finally {
             window.history.replaceState(null, '', '/')
         }
@@ -352,7 +358,10 @@ describe('PublicProjectViewer', () => {
         getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
 
-        const { container } = render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+        // A visitor space, not `main`: the badge is deliberately absent on
+        // di.iiii's own front room, where its href would lead back into the
+        // room the visitor is standing in (madeWithBadge.test.jsx).
+        const { container } = render(<PublicProjectViewer spaceId="wcc" projectId="live-project" spaceLabel="WCC" />)
 
         expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
         expect(container.querySelector('main').style.background).toBe('rgb(5, 7, 10)')
@@ -413,7 +422,7 @@ describe('PublicProjectViewer', () => {
         getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
 
-        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+        render(<PublicProjectViewer spaceId="wcc" projectId="live-project" spaceLabel="WCC" />)
 
         expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
         const badge = screen.getByRole('link', { name: /build your own space/i })

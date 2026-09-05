@@ -1,5 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MadeWithBadge from '../../components/MadeWithBadge.jsx'
+import RoomTextLayer from './RoomTextLayer.jsx'
+import './roomTextLayer.css'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
 import lazyWithReload from '../../utils/lazyWithReload.js'
 import ProjectSwitcher from './ProjectSwitcher.jsx'
@@ -348,6 +350,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 <Suspense fallback={loadingOverlay}>
                     <PublicProjectSceneSurface
                         projectId={projectId}
+                        spaceId={resolvedRouteSpaceId}
                         document={document}
                         title={viewerTitle}
                         entryView={entryView}
@@ -404,11 +407,22 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 />
             ) : null}
 
+            {/* What a reader gets where a canvas gives them nothing: the room's
+                name, its lines and its doors as real links. Same document the
+                scene draws from, so it can never drift from what is on screen. */}
+            {state.status === 'ready' && !isEmbed ? (
+                <RoomTextLayer
+                    title={viewerTitle}
+                    spaceId={resolvedRouteSpaceId}
+                    entities={document?.entities || []}
+                />
+            ) : null}
+
             {/* walk mode shows the badge in the LiveProjectScene chrome header */}
             {/* the host page carries its own badge; a second one inside the
                 window reads as chrome belonging to the work itself */}
             {state.status === 'ready' && navMode === 'orbit' && !isPreview && !isEmbed ? (
-                <MadeWithBadge variant="floating" />
+                <MadeWithBadge variant="floating" spaceId={resolvedRouteSpaceId} />
             ) : null}
 
             {/* the loading screen is deliberately black and full-bleed, which is

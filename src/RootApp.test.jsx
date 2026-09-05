@@ -127,7 +127,13 @@ describe('what "/" opens', () => {
         expect(await screen.findByText('landing-page')).toBeInTheDocument()
     })
 
-    it('shows the landing page on a hosted server', async () => {
+    // The front door is the room — and the landing IS the front door. It was
+    // briefly the other way round (#283): `/` opened `main` directly, because
+    // the landing was only a picture of the room. It is not a picture of it
+    // any more. Every element on that page now stands in that room at its own
+    // depth, and the door flies the camera off the flat view rather than
+    // navigating, so `/` is the landing and the room is one gesture inside it.
+    it('opens the front door on a hosted server, not the bare room', async () => {
         mockServerConfig.value = { local: false }
         window.history.pushState({}, '', '/')
         render(<RootApp />)
@@ -135,9 +141,39 @@ describe('what "/" opens', () => {
         expect(screen.queryByText('local-home')).toBeNull()
     })
 
+    // For anyone who wants the space itself and not the door.
+    it('opens the room bare at /?room=1', async () => {
+        mockServerConfig.value = { local: false }
+        window.history.pushState({}, '', '/?room=1')
+        render(<RootApp />)
+        expect(await screen.findByText(/space-surface-app:.*:main/)).toBeInTheDocument()
+        expect(screen.queryByText('landing-page')).toBeNull()
+    })
+
+    // Two promises at once. The name never appears in the bar ("i don't want
+    // have main"), AND a link already handed out keeps showing what it showed.
+    // `/main` opened the room for months; healing it to the bare `/` kept the
+    // first promise and broke the second, because `/` is the landing now.
+    it('heals /main to the room, without the name reaching the bar', async () => {
+        mockServerConfig.value = { local: false }
+        window.history.pushState({}, '', '/main')
+        render(<RootApp />)
+        expect(await screen.findByText(/space-surface-app:.*:main/)).toBeInTheDocument()
+        expect(window.location.pathname).toBe('/')
+        expect(new URLSearchParams(window.location.search).get('room')).toBe('1')
+    })
+
+    it('leaves the editor and project addresses inside that space alone', async () => {
+        mockServerConfig.value = { local: false }
+        window.history.pushState({}, '', '/main/studio')
+        render(<RootApp />)
+        expect(await screen.findByText(/studio-app/)).toBeInTheDocument()
+        expect(window.location.pathname).toBe('/main/studio')
+    })
+
     // Someone serving other people from their own machine has turned auth ON.
     // They get the ordinary front door, because their visitors are not them.
-    it('shows the landing page on a local install that requires auth', async () => {
+    it('opens the front door on a local install that requires auth', async () => {
         mockServerConfig.value = { local: true, requireAuth: true }
         window.history.pushState({}, '', '/')
         render(<RootApp />)
@@ -200,6 +236,8 @@ describe('RootApp', () => {
         expect(await screen.findByText('space-surface-app:editor:beta')).toBeInTheDocument()
         unmount()
 
+        // A local install keeps `/main` as a plain space address: there `/` is
+        // the owner's own home, so the heal deliberately does not apply.
         window.history.pushState({}, '', '/main')
         render(<RootApp />)
         expect(await screen.findByText('space-surface-app:editor:main')).toBeInTheDocument()

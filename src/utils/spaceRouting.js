@@ -28,6 +28,10 @@ export const RESERVED_APP_SEGMENTS = [
     // something else. Checked before reserving — no project and no space
     // answers to the word on any tier.
     'make',
+    // The lighting desk — /light, served by serverXR itself on a local di.iiii
+    // (serverXR/src/routes/lightingRoutes.js). Reserved so no space can take
+    // the word and shadow the desk on an install.
+    'light',
     // The layered addresses (studioRouting.js): /spaces and /{space}/projects.
     // Reserved here so a project slug can never shadow the space's own project
     // list. Checked against production and staging before reserving — no space

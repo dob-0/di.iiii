@@ -23,11 +23,104 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # Fold the session notes a merge just brought onto dev (`npm run land`, the
+  # step a human used to have to remember) and push the result back, so dev
+  # ends every merge in the landed state its own docs gate demands. Before
+  # this, 82 of the last 111 merges (14 days to 2026-09-02) needed a hand-run
+  # fold commit before staging would update.
+  #
+  # Why this cannot loop or double-deploy: a push made with GITHUB_TOKEN never
+  # triggers another workflow run (GitHub's own rule against workflows
+  # retriggering each other -- the same one tag-on-promotion.yml works
+  # around). So the fold commit does NOT start a second staging deploy, and
+  # THIS run has to be the one that deploys. It deploys github.sha, the merge
+  # commit: the fold only ever touches PROGRESS.md, CURRENT.md and
+  # docs/ai/sessions/, so the image built from the merge commit is the image
+  # the fold commit would produce -- release.gitCommit reports the merge sha,
+  # one commit behind dev's tip, and that is accepted on purpose.
+  #
+  # Why the deploy does not depend on the push succeeding: dev has classic
+  # branch protection with required status checks and no bypass for GitHub
+  # Actions. A fresh fold commit can't carry those checks, so the push may be
+  # rejected (GH006). That is a warning here, not a failure -- `test` folds
+  # its own checkout in place (ci.yml's land_in_place) so the docs check
+  # passes and staging deploys either way; the only thing lost is the
+  # bookkeeping commit, which `npm run land` still does by hand.
+  # continue-on-error keeps a crash in this job from blocking the deploy too.
+  #
+  # Concurrency: the workflow-level group above already serialises whole runs,
+  # so two merges minutes apart never fold at the same time. If dev still
+  # moved under us between fold and push, we re-fold from the new tip rather
+  # than rebasing a stale fold onto it (a rebase could leave a newly merged
+  # note unfolded); bounded to three tries.
+  land:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: write
+    steps:
+      # ref: dev, not github.sha -- we push on top of whatever dev is NOW, and
+      # this leaves a real local `dev` branch behind, which session-land.mjs
+      # requires (it refuses a detached HEAD). Shallow is fine: the scripts
+      # need no history and pushing one new commit needs none either.
+      - name: Checkout dev tip
+        if: github.ref == 'refs/heads/dev'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: dev
+
+      # No npm ci: session-land.mjs and repo-state.mjs import only node
+      # builtins and their sibling libs.
+      - name: Fold session notes and push
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          for attempt in 1 2 3; do
+            git fetch --quiet origin dev
+            git switch --quiet -C dev origin/dev
+            before=$(git rev-parse HEAD)
+
+            node scripts/session-land.mjs
+
+            if [ "$(git rev-parse HEAD)" = "$before" ]; then
+              echo "docs/ai/sessions/ already empty on dev -- nothing to fold."
+              exit 0
+            fi
+
+            if out=$(git push origin HEAD:refs/heads/dev 2>&1); then
+              echo "$out"
+              echo "::notice::Folded session notes into dev: $(git log -1 --format=%s)"
+              exit 0
+            fi
+            echo "$out"
+
+            if grep -qiE 'GH006|protected branch' <<<"$out"; then
+              echo "::warning::dev's branch protection rejected the fold commit (required status checks, no bypass for GitHub Actions). Staging still deploys -- the test job folds in place -- but the bookkeeping commit did not land: run 'npm run land' on dev by hand, or give the github-actions app a bypass on dev's rules so this job can do it."
+              exit 0
+            fi
+            echo "push rejected on attempt ${attempt} -- dev moved; re-folding from its new tip."
+          done
+
+          echo "::error::could not push the fold commit after 3 attempts; run 'npm run land' on dev by hand."
+          exit 1
+
   # Gate on the same test/lint/build/contract suite CI runs on every push —
   # previously this workflow and ci.yml were independent, so a failing test
   # suite did not block a staging deploy either (audit 2026-07-17).
+  # After `land`, not alongside it: one writer on dev at a time, and the
+  # fold's outcome (notice or warning) is on the run before anything deploys.
+  # The checks themselves run on github.sha, the merge commit, folded in place
+  # (land_in_place -- see the comment on `land`), so they pass whether or not
+  # `land` could push. Only on dev: a workflow_dispatch from another ref
+  # checks out that ref, and session-land.mjs refuses anything but dev.
   test:
+    needs: land
     uses: ./.github/workflows/ci.yml
+    with:
+      land_in_place: ${{ github.ref == 'refs/heads/dev' }}
     permissions:
       contents: read
 
@@ -50,7 +143,7 @@ jobs:
         run: echo "name=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
       - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0

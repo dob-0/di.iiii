@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import useXrAr from '../../hooks/useXrAr.js'
-import { computeFramingCamera, getPointsBoundingSphere, getViewportAspect } from '../../utils/cameraFraming.js'
+import { computeFramingCamera, fitCameraToAspect, getPointsBoundingSphere, getViewportAspect } from '../../utils/cameraFraming.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 import { XR_READY, xrAvailability } from '../../xr/xrAvailability.js'
 import lazyWithReload from '../../utils/lazyWithReload.js'
@@ -71,17 +71,22 @@ export const isCameraCaged = (entryView, fixedCamera) => (
 export const resolveViewerCamera = (document, aspect = getViewportAspect()) => {
     const entryView = document.presentationState?.entryView || 'scene'
     const fixedCamera = document.presentationState?.fixedCamera
+    // An authored shot gets the same aspect correction a fitted one does. It
+    // was composed on somebody's landscape screen; applied verbatim it is the
+    // portrait visitor who pays, and a locked camera pays hardest because
+    // they cannot move to see what was cut.
     if (entryView === 'fixed-camera' && fixedCamera?.locked) {
-        return fixedCamera
+        return fitCameraToAspect(fixedCamera, aspect)
     }
     if (entryView === 'fixed-camera') {
-        return fixedCamera || document.worldState?.savedView || null
+        return fitCameraToAspect(fixedCamera || document.worldState?.savedView || null, aspect)
     }
     return computeAutoFrameCamera(document, aspect) || document.worldState?.savedView || null
 }
 
 export default function PublicProjectSceneSurface({
     projectId,
+    spaceId = null,
     document,
     title,
     entryView,
@@ -145,6 +150,7 @@ export default function PublicProjectSceneSurface({
             {navMode === 'walk' ? (
                 <LiveProjectScene
                     projectId={projectId}
+                    spaceId={spaceId}
                     interactive
                     showChrome
                     title={title}
@@ -178,7 +184,14 @@ export default function PublicProjectSceneSurface({
                     // Timeline scrubber was being dragged, so a published scene
                     // sat frozen on its authored pose forever -- invisibly, since
                     // it rendered perfectly and only walk mode animated.
-                    playTimelines
+                    // Gated on !isPreview: a Studio space-card thumbnail
+                    // (SpaceHub.jsx's SpaceCardPreview, `?preview=1`) is a
+                    // static picture by design -- a wall of cards each running
+                    // authored animation, fog and RenderSettingsEffect at once
+                    // is the laptop-killer the picture/live split exists to
+                    // avoid. Only the one card a visitor clicked into "live"
+                    // (SpaceCardLive, no ?preview=1) gets timelines playing.
+                    playTimelines={!isPreview}
                 />
             )}
 

@@ -60,7 +60,7 @@ import { describeRootEmptyCanvas } from '../utils/emptyCanvasHint.js'
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
-import { RAW_ANATOMY_Z, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { RAW_ANATOMY_Z, RAW_WINDOW_MINIMIZED_HEIGHT, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
@@ -188,6 +188,11 @@ export default function RawEditor({
     // here whose opening size depends on the viewport it opens into, because on
     // a phone it has to finish above where the selection sheet docks.
     const [anatomyFrame, setAnatomyFrame] = useState(null)
+    // The canvas viewport as the graph surface publishes it — pan, zoom and
+    // where the surface's box begins. Unpinned panel windows are placed
+    // through it, which is what makes them part of the world.
+    const [graphViewport, setGraphViewport] = useState(null)
+    const handleViewportChange = useCallback((viewport) => setGraphViewport(viewport), [])
     const [chatOpen, setChatOpen] = useState(false)
     const [chatFrame, setChatFrame] = useState({ x: 24, y: 432, width: 280, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [readChatCount, setReadChatCount] = useState(0)
@@ -1865,14 +1870,35 @@ export default function RawEditor({
     // window wants to be, not where it renders. The bottom reserve alone moved
     // the seeded welcome window up by 116px, and insets read off the stored
     // frame put the graph's free band in the wrong place entirely.
+    // Which space a panel window lives in. Unpinned = the world, with the
+    // cards. Pinned = the screen, the old behaviour. On a phone everything is
+    // the screen: the clamp that fits a 680-wide default into 390px IS the
+    // layout there (the camp desks were authored against it), and a world
+    // window would walk straight out of it. Before the surface has published
+    // a viewport there is nothing to place through, so screen until then.
+    const narrowViewport = typeof window !== 'undefined' && window.innerWidth < 640
+    const windowSpaceFor = (frame) => (frame?.pinned || narrowViewport || !graphViewport) ? 'screen' : 'world'
+    // World windows are content: fit-all frames them along with the cards.
+    const worldWindowBounds = narrowViewport
+        ? []
+        : visibleViewNodes
+            .filter((node) => !node.values?.frame?.pinned)
+            .map((node) => {
+                const state = buildWindowStateFromNode(node, 0, graphContext)
+                return { x: state.x, y: state.y, width: state.width, height: state.minimized ? RAW_WINDOW_MINIMIZED_HEIGHT : state.height }
+            })
     const graphContentInsets = getGraphEdgeInsets({
         frames: [
             // The anatomy sheet is a docked window like any other, so the fit
             // has to dodge it too — otherwise the cards centre underneath the
             // window explaining them.
             ...(anatomyFrame && !anatomyFrame.minimized ? [anatomyFrame] : []),
+            // Only PINNED windows dock against the graph's edges now. An
+            // unpinned window lives in the world with the cards — it is
+            // content the fit frames, not chrome the fit dodges.
             ...visibleViewNodes
                 .filter((node) => node.values?.frame?.minimized !== true)
+                .filter((node) => windowSpaceFor(node.values?.frame) === 'screen')
                 .map((node) => node.values?.frame)
                 .filter(Boolean)
         ]
@@ -2193,6 +2219,8 @@ export default function RawEditor({
                     }
                     onSetActive={(node) => setActiveNodeId(node.typeId, node.parentId || null, node.id)}
                     activeMarkerTypeIds={activeMarkerTypeIds}
+                    onViewportChange={handleViewportChange}
+                    extraBounds={worldWindowBounds}
                 />
                 {/* Zen's three residents are surface, nodes, wordmark — this is
                     the wordmark. Ambient, kept when the toolbar is summoned too.
@@ -2216,9 +2244,14 @@ export default function RawEditor({
                         {dropState.busy ? 'Bringing it in…' : dropState.notice}
                     </div>
                 )}
-                {/* Panel nodes float above the graph as viewport-fixed windows */}
+                {/* Panel nodes are windows. Unpinned, a window stands IN the
+                    world like its card — pan the canvas and it travels, zoom
+                    and it shrinks — so many scenes can be spread across one
+                    desk. Pinned, it is fixed to the screen the old way; on a
+                    phone every window is, because the clamp is the layout. */}
                 {visibleViewNodes.map((node, index) => {
                     const windowState = buildWindowStateFromNode(node, index, graphContext)
+                    const space = windowSpaceFor(node.values?.frame)
                     // The family, not the type id: the cards say "the room" and
                     // the windows used to say UNIVERSE.WORLD. Same node, two
                     // vocabularies — and the colour is what ties the window to
@@ -2233,6 +2266,8 @@ export default function RawEditor({
                             accent={family?.color || null}
                             allowOverflowLeft
                             allowOverflowTop
+                            space={space}
+                            viewport={graphViewport}
                             onFocus={() => {
                                 selectNode(node.id)
                                 // already topmost → no op. Unconditional bumps
@@ -2269,13 +2304,36 @@ export default function RawEditor({
                                     patch: { values: { frame: { ...(node.values?.frame || {}), minimized: !node.values?.frame?.minimized } } }
                                 }
                             })}
-                            onTogglePin={() => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), pinned: !node.values?.frame?.pinned } } }
-                                }
-                            })}
+                            // Pinning changes the frame's coordinate space, so
+                            // the numbers are converted through the viewport at
+                            // that moment and the window stays exactly where the
+                            // eye left it: pin = world → screen pixels, unpin =
+                            // screen pixels → world units.
+                            onTogglePin={() => {
+                                const frame = node.values?.frame || {}
+                                const pinned = !frame.pinned
+                                const vp = graphViewport
+                                const converted = (!vp || narrowViewport) ? {} : pinned
+                                    ? {
+                                        x: (vp.originLeft || 0) + vp.panX + windowState.x * vp.zoom,
+                                        y: (vp.originTop || 0) + vp.panY + windowState.y * vp.zoom,
+                                        width: windowState.width * vp.zoom,
+                                        height: windowState.height * vp.zoom
+                                    }
+                                    : {
+                                        x: (windowState.x - (vp.originLeft || 0) - vp.panX) / vp.zoom,
+                                        y: (windowState.y - (vp.originTop || 0) - vp.panY) / vp.zoom,
+                                        width: windowState.width / vp.zoom,
+                                        height: windowState.height / vp.zoom
+                                    }
+                                applyLocalOps({
+                                    type: 'updateNode',
+                                    payload: {
+                                        nodeId: node.id,
+                                        patch: { values: { frame: { ...frame, ...converted, pinned } } }
+                                    }
+                                })
+                            }}
                             onEnter={() => handleEnterNode(node.id)}
                         >
                             {renderViewNodeContent(node)}

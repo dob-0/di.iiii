@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-artush-koshtoyan",
+  "slug": "artush-koshtoyan",
+  "label": "Artush Koshtoyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/artush-koshtoyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

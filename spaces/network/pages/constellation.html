@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>the constellation — di.iiii</title>
+<style>
+:root{
+  --paper:#f7f7f5; --paper-2:#efefec;
+  --ink:#111214; --ink-2:#55595e; --ink-3:#63686d; --rule:#dededa;
+  /* --accent marks (dots, rules, the lit star); --accent-ink is the one
+     that carries text — #0097a3 is 3.29:1 on paper and fails as type. */
+  --accent:#0097a3; --accent-ink:#00757f;
+  --accent-soft:rgba(0,151,163,.07); --accent-rule:rgba(0,151,163,.35);
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --sans:'Inter',-apple-system,'Segoe UI',sans-serif;
+  --col:1180px; --room:860px; --pad:56px;
+}
+@font-face{
+  font-family:'Inter'; src:url('/fonts/inter-regular.woff') format('woff'); font-weight:400 800; font-style:normal; font-display:swap;
+}
+*{box-sizing:border-box; border-radius:0 !important;}
+html{background:var(--paper);}
+body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;}
+a{color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+
+.sheet{position:relative;}
+
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);}
+.eyebrow .dot{color:var(--accent);}
+
+/* ---------- index ---------- */
+.indexPane{max-width:var(--col);padding:30px var(--pad) 26px var(--pad);}
+.masthead{max-width:60ch;}
+.indexPane h1{font-size:clamp(26px,2.6vw,34px);font-weight:700;letter-spacing:-0.02em;line-height:1.05;margin:14px 0 14px 0;}
+.indexPane h1 .dot{color:var(--accent);}
+.indexPane .dek{font-size:15.5px;color:var(--ink-2);line-height:1.6;margin:0;}
+.howto{font-family:var(--mono);font-size:12px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin:0;}
+
+.roster{max-width:var(--col);padding:0 var(--pad) 8px var(--pad);position:relative;}
+
+/* ---------- the ties ----------
+   One dot per person, pinned to the right edge of that person's own row and
+   scrolling with it; one arc per shared work, running between the two rows
+   that made it. Every mark can be followed to the names it is about. */
+.tie{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:0;}
+.tie-dot{fill:var(--ink-3);opacity:.5;transition:fill .14s ease,opacity .14s ease,r .14s ease;}
+.tie-dot.is-lit{fill:var(--accent);opacity:1;r:5;}
+.tie-arc{fill:none;stroke:var(--rule);stroke-width:1;transition:stroke .14s ease,stroke-width .14s ease;}
+.tie-arc.is-lit{stroke:var(--accent);stroke-width:1.4;}
+.tie-label{font-family:var(--mono);font-size:12px;fill:var(--ink-3);
+  transition:fill .14s ease;}
+.tie-label.is-lit{fill:var(--accent-ink);}
+.roster .group, .roster ul.catalogue, .roster .howto{position:relative;z-index:1;}
+
+/* Section labels are the strongest horizontal marks in the list — they are
+   the structure, and they used to be smaller than the ornament beside them. */
+.group{display:flex;align-items:baseline;gap:14px;margin:38px 0 0 0;
+  border-bottom:1.5px solid var(--ink);padding-bottom:7px;}
+.group .g-name{font-size:15px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;}
+.group .g-rule{flex:1;}
+.group .g-count{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;}
+.group:first-of-type{margin-top:18px;}
+
+ul.catalogue{list-style:none;margin:0;padding:0;}
+ul.catalogue li+li{border-top:1px solid var(--rule);}
+a.row{display:grid;grid-template-columns:minmax(200px,23ch) 1fr;align-items:baseline;column-gap:30px;
+  text-decoration:none;color:inherit;padding:11px 10px 11px 14px;position:relative;
+  transition:background .14s ease;}
+a.row::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:5px;height:5px;background:var(--accent);opacity:0;transition:opacity .14s ease;}
+a.row:hover,a.row:focus-visible,a.row.is-active{background:var(--accent-soft);outline:none;}
+a.row:hover::before,a.row:focus-visible::before,a.row.is-active::before{opacity:1;}
+a.row .name{font-size:19px;font-weight:600;letter-spacing:-0.012em;line-height:1.25;}
+/* the role belongs next to the name, not across an empty gutter */
+a.row .role{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);line-height:1.45;}
+a.row .made{display:block;font-family:var(--mono);font-size:12px;color:var(--accent-ink);
+  margin-top:3px;letter-spacing:.01em;}
+a.row .made .arrow{opacity:.6;}
+
+.indexFoot{max-width:var(--col);padding:34px var(--pad) 72px var(--pad);}
+.indexFoot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0 0 12px 0;
+  padding-top:20px;border-top:1px solid var(--rule);}
+.indexFoot p+p{padding-top:0;border-top:none;}
+.indexFoot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+.indexFoot a:hover,.indexFoot a:focus-visible{border-bottom-color:var(--accent);}
+
+/* ---------- both page types ---------- */
+/* Same header at every depth, because people arrive on foot as well as by
+   link: a door out of the network, then a door out of a person's room. */
+.pagehead{padding:26px var(--pad) 0 var(--pad);max-width:var(--col);
+  display:flex;justify-content:space-between;gap:16px;align-items:baseline;}
+.pagehead--room{max-width:var(--room);}
+.back{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);
+  text-decoration:none;display:inline-flex;align-items:center;gap:8px;}
+.back:hover,.back:focus-visible{color:var(--accent-ink);}
+
+.room-stage{max-width:var(--room);padding:46px var(--pad) 0 var(--pad);}
+.room-stage h1{font-size:clamp(38px,5.2vw,64px);font-weight:700;line-height:1.0;letter-spacing:-0.028em;margin:0 0 10px 0;}
+.room-stage .role{font-size:17px;color:var(--ink-2);margin:0;max-width:46ch;}
+.room-stage .city{font-size:12.5px;color:var(--ink-3);margin:6px 0 0 0;font-family:var(--mono);letter-spacing:.04em;}
+.room-stage .bio{font-size:16px;line-height:1.7;color:var(--ink-2);max-width:58ch;
+  margin:30px 0 0 0;padding-top:26px;border-top:1px solid var(--rule);}
+
+/* ---------- the journey (a CV cut into segments, not handed over flat) ---------- */
+.focus-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px 0;}
+.chip{border:1px solid var(--rule);padding:6px 12px;font-size:12px;font-family:var(--mono);
+  color:var(--ink-2);letter-spacing:.02em;}
+.timeline{margin:0;}
+.timeline details{border-top:1px solid var(--rule);}
+.timeline details:last-child{border-bottom:1px solid var(--rule);}
+.timeline summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:16px;
+  padding:14px 2px;font-family:var(--mono);}
+.timeline summary::-webkit-details-marker{display:none;}
+.timeline summary .yr{font-size:14px;font-weight:700;color:var(--ink);min-width:4.5ch;}
+.timeline summary .ct{font-size:12px;color:var(--ink-3);flex:1;text-align:right;}
+.timeline summary::after{content:'+';color:var(--accent-ink);margin-left:2px;font-size:14px;}
+.timeline details[open] summary::after{content:'−';}
+.timeline .yr-items{padding:0 2px 18px 2px;display:flex;flex-direction:column;gap:12px;}
+.ti{font-size:14.5px;line-height:1.5;color:var(--ink-2);}
+.ti .ti-t{font-weight:600;color:var(--ink);}
+.ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
+.ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
+.cv-link{margin:20px 0 0 0;}
+
+.section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
+  margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--rule);}
+
+/* flex, not grid: an auto-fill grid left a phantom empty cell showing the
+   container's own colour whenever the row was not full. */
+.doors{display:flex;flex-wrap:wrap;gap:14px;margin:0;}
+.door{flex:0 1 260px;min-height:132px;border:1px solid var(--rule);background:var(--paper);
+  padding:16px 16px 14px 16px;text-decoration:none;display:flex;flex-direction:column;
+  justify-content:flex-end;position:relative;transition:border-color .14s ease,background .14s ease;}
+.door:hover,.door:focus-visible{background:var(--accent-soft);border-color:var(--accent-rule);outline:none;}
+.door .t{font-size:17px;font-weight:600;line-height:1.2;}
+.door .l{font-size:12px;color:var(--ink-2);margin-top:5px;font-family:var(--mono);line-height:1.45;}
+.door::after{content:'→';position:absolute;right:14px;top:12px;color:var(--accent);opacity:0;
+  transition:opacity .14s ease,transform .14s ease;}
+.door:hover::after,.door:focus-visible::after{opacity:1;transform:translateX(2px);}
+.door--unlinked{border-style:dashed;background:transparent;cursor:default;}
+.door--unlinked .t{color:var(--ink-2);font-weight:500;}
+.door--unlinked .l{color:var(--ink-3);}
+.empty-note{color:var(--ink-2);font-size:15.5px;max-width:48ch;line-height:1.65;margin:0;}
+.elsewhere{display:flex;gap:10px;flex-wrap:wrap;}
+.plate{border:1px solid var(--rule);padding:9px 15px;font-size:12.5px;text-decoration:none;
+  color:var(--ink-2);font-family:var(--mono);transition:border-color .14s ease,color .14s ease;}
+.plate:hover,.plate:focus-visible{color:var(--accent-ink);border-color:var(--accent-rule);}
+
+.neighbours{display:flex;flex-wrap:wrap;gap:0 22px;max-width:64ch;}
+.neighbours a{font-size:14.5px;color:var(--ink-2);text-decoration:none;padding:5px 0;
+  border-bottom:1px solid transparent;}
+.neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
+
+.room-foot{max-width:var(--room);padding:44px var(--pad) 72px var(--pad);}
+.room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
+  padding-top:20px;border-top:1px solid var(--rule);}
+.room-foot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+
+/* Between these widths the list gives up a little of its own width so the
+   margin still exists — better than the drawing disappearing at 1280. */
+@media (max-width:1400px){ :root{--col:1040px;} }
+
+@media (max-width:1000px){
+  :root{--pad:26px;}
+  /* the roster starts at the top of a phone — no band above it. There is no
+     margin to hold the drawing at this width, so it thins to a whisper
+     across the whole sheet rather than sitting behind the names as smudges. */
+  .ground{opacity:.2;}
+  .ground canvas{-webkit-mask-image:none;mask-image:none;}
+  /* the two halves of the room header do not fit one line on a phone;
+     side by side they each wrapped mid-phrase. */
+  .pagehead{flex-direction:column;gap:9px;}
+  /* the section eyebrow is 39 characters and overruns 390px by a hair */
+  .pagehead .eyebrow{letter-spacing:.08em;}
+  a.row{grid-template-columns:1fr;row-gap:3px;padding:14px 10px 15px 14px;}
+  a.row .name{font-size:19px;}
+  .indexPane{padding-top:30px;padding-bottom:28px;}
+  .indexPane h1{font-size:27px;}
+  .room-stage{padding-top:34px;}
+  .door{flex:1 1 100%;min-height:112px;}
+  .group{margin-top:34px;}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .door,.back,a.row,.plate,.neighbours a{transition:none;}
+}
+
+.constPane{max-width:var(--col);padding:30px var(--pad) 22px var(--pad);}
+.constPane h1{font-size:clamp(26px,2.6vw,34px);font-weight:700;letter-spacing:-0.02em;line-height:1.05;margin:14px 0 14px 0;}
+.constPane h1 .dot{color:var(--accent);}
+.constPane .dek{font-size:15.5px;color:var(--ink-2);line-height:1.6;margin:0;max-width:62ch;}
+.fieldWrap{overflow-x:auto;overflow-y:hidden;padding:0 var(--pad) 4px var(--pad);}
+.drag{display:none;}
+/* The ring is 910px of drawing and the names on it have to stay readable, so
+   a narrow screen scrolls it sideways rather than shrinking the type to
+   nothing. Below that width the figure goes full-bleed and says so. */
+@media (max-width:1020px){
+  .fieldWrap{padding-left:0;padding-right:0;}
+  .drag{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3);
+    letter-spacing:.1em;text-transform:uppercase;margin:0 0 10px 0;padding:0 var(--pad);}
+}
+.fieldWrap svg{display:block;width:910px;height:910px;margin:0 auto;overflow:visible;}
+.c-arc{fill:none;stroke:var(--rule);stroke-width:1;}
+.c-dot{fill:var(--ink-3);}
+.c-dot.is-team{fill:var(--ink);}
+.c-dot.is-lit{fill:var(--accent);}
+.c-name{font-family:var(--sans);font-size:12.5px;fill:var(--ink-2);
+  paint-order:stroke;stroke:var(--paper);stroke-width:3px;stroke-linejoin:round;}
+.c-name.is-team{font-weight:600;fill:var(--ink);}
+.c-name.is-lit{fill:var(--ink);}
+.c-tie{fill:none;stroke:var(--accent-rule);stroke-width:1.2;}
+.c-hub{fill:var(--accent);}
+.c-worklabel{font-family:var(--mono);font-size:12px;fill:var(--accent-ink);letter-spacing:.04em;
+  paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round;}
+.fieldWrap a:hover .c-name,.fieldWrap a:focus-visible .c-name{fill:var(--accent-ink);}
+.constFoot{max-width:var(--col);padding:8px var(--pad) 64px var(--pad);}
+.constFoot .order{font-family:var(--mono);font-size:12px;color:var(--ink-3);letter-spacing:.08em;
+  text-transform:uppercase;margin:0 0 16px 0;line-height:1.9;}
+.constFoot p{font-size:14.5px;color:var(--ink-2);line-height:1.65;margin:0 0 10px 0;max-width:62ch;}
+.constFoot a{color:var(--accent-ink);}
+</style>
+</head>
+<body>
+<div class="sheet">
+<header class="pagehead">
+  <a class="back" href="/network" target="_top"><span aria-hidden="true">←</span> the network</a>
+  <div class="eyebrow">the constellation</div>
+</header>
+<header class="constPane">
+  <div class="masthead">
+    <h1>the whole field</h1>
+    <p class="dek">The same fifty-two the roster lists, laid on one ring so you can see all of them at once. They sit clockwise from the top in the order the roster keeps them, held apart where one group ends and the next starts. A curve gathers the people who made the same thing — so far br_id_ge and ազդ | azd. Every name is a door into that person's room.</p>
+  </div>
+</header>
+
+<p class="drag">drag the ring sideways <span aria-hidden="true">→</span></p>
+<div class="fieldWrap">
+<svg viewBox="45 45 910 910" role="img" aria-label="Every person who makes di.iiii, on one ring, with a curve for each work more than one of them made">
+  <path class="c-arc" d="M512.65 210.28 A290 290 0 0 1 661.12 258.87"/><path class="c-arc" d="M681.52 273.83 A290 290 0 0 1 787.52 462.15"/><path class="c-arc" d="M789.72 487.35 A290 290 0 0 1 754.25 639.49"/><path class="c-arc" d="M741.13 661.12 A290 290 0 0 1 593.22 774.61"/><path class="c-arc" d="M568.93 781.69 A290 290 0 0 1 213.38 455.88"/><path class="c-arc" d="M218.31 431.07 A290 290 0 0 1 371.74 239.91"/><path class="c-arc" d="M394.89 229.72 A290 290 0 0 1 487.35 210.28"/>
+  <g class="c-work" data-work="0"><path class="c-tie" d="M527.84 217.37 Q511.82 443.81 526.26 375.13"/><path class="c-tie" d="M558.44 222.08 Q511.82 443.81 526.26 375.13"/><path class="c-tie" d="M588.35 230.09 Q511.82 443.81 526.26 375.13"/><circle class="c-hub" cx="526.26" cy="375.13" r="3.5"/><text class="c-worklabel" x="526.26" y="361.13" text-anchor="middle" dominant-baseline="middle">br_id_ge</text></g>
+  <g class="c-work" data-work="1"><path class="c-tie" d="M558.44 222.08 Q491.56 469.84 481.24 432.98"/><path class="c-tie" d="M588.35 230.09 Q491.56 469.84 481.24 432.98"/><path class="c-tie" d="M644.67 255.61 Q491.56 469.84 481.24 432.98"/><path class="c-tie" d="M344.8 737.84 Q491.56 469.84 481.24 432.98"/><path class="c-tie" d="M218.04 534 Q491.56 469.84 481.24 432.98"/><circle class="c-hub" cx="481.24" cy="432.98" r="3.5"/><text class="c-worklabel" x="481.24" y="418.98" text-anchor="middle" dominant-baseline="middle">ազդ | azd</text></g>
+  <circle class="c-dot is-team is-lit" cx="528.42" cy="211.4" r="4.5"/><circle class="c-dot is-team is-lit" cx="559.68" cy="216.21" r="4.5"/><circle class="c-dot is-team is-lit" cx="590.22" cy="224.39" r="4.5"/><circle class="c-dot is-team" cx="619.69" cy="235.85" r="2.8"/><circle class="c-dot is-team is-lit" cx="647.73" cy="250.45" r="4.5"/><circle class="c-dot" cx="752.71" cy="357.75" r="2.8"/><circle class="c-dot" cx="715.93" cy="306.42" r="2.8"/><circle class="c-dot" cx="766.7" cy="386.11" r="2.8"/><circle class="c-dot" cx="785.03" cy="446.53" r="2.8"/><circle class="c-dot" cx="693.58" cy="284.07" r="2.8"/><circle class="c-dot" cx="735.73" cy="331.08" r="2.8"/><circle class="c-dot" cx="777.51" cy="415.82" r="2.8"/><circle class="c-dot" cx="787.91" cy="534.71" r="2.8"/><circle class="c-dot" cx="773.58" cy="596.21" r="2.8"/><circle class="c-dot" cx="761.48" cy="625.42" r="2.8"/><circle class="c-dot" cx="782.42" cy="565.85" r="2.8"/><circle class="c-dot" cx="789.98" cy="503.16" r="2.8"/><circle class="c-dot" cx="711.66" cy="698.24" r="2.8"/><circle class="c-dot" cx="731.98" cy="674.02" r="2.8"/><circle class="c-dot" cx="663.74" cy="739.35" r="2.8"/><circle class="c-dot" cx="636.71" cy="755.76" r="2.8"/><circle class="c-dot" cx="608.05" cy="769.12" r="2.8"/><circle class="c-dot" cx="688.82" cy="720.11" r="2.8"/><circle class="c-dot" cx="553.47" cy="785.03" r="2.8"/><circle class="c-dot" cx="428" cy="780.92" r="2.8"/><circle class="c-dot is-lit" cx="341.52" cy="742.87" r="4.5"/><circle class="c-dot" cx="292.71" cy="702.81" r="2.8"/><circle class="c-dot" cx="271.87" cy="679.04" r="2.8"/><circle class="c-dot" cx="226.42" cy="596.21" r="2.8"/><circle class="c-dot is-lit" cx="212.09" cy="534.71" r="4.5"/><circle class="c-dot" cx="368.91" cy="758.68" r="2.8"/><circle class="c-dot" cx="316.03" cy="724.17" r="2.8"/><circle class="c-dot" cx="397.85" cy="771.41" r="2.8"/><circle class="c-dot" cx="522.12" cy="789.15" r="2.8"/><circle class="c-dot" cx="490.51" cy="789.84" r="2.8"/><circle class="c-dot" cx="459.01" cy="787.09" r="2.8"/><circle class="c-dot" cx="253.73" cy="653.14" r="2.8"/><circle class="c-dot" cx="238.52" cy="625.42" r="2.8"/><circle class="c-dot" cx="210.02" cy="503.16" r="2.8"/><circle class="c-dot" cx="211.4" cy="471.58" r="2.8"/><circle class="c-dot" cx="217.58" cy="565.85" r="2.8"/><circle class="c-dot" cx="222.49" cy="415.82" r="2.8"/><circle class="c-dot" cx="247.29" cy="357.75" r="2.8"/><circle class="c-dot" cx="357.75" cy="247.29" r="2.8"/><circle class="c-dot" cx="284.07" cy="306.42" r="2.8"/><circle class="c-dot" cx="331.08" cy="264.27" r="2.8"/><circle class="c-dot" cx="306.42" cy="284.07" r="2.8"/><circle class="c-dot" cx="264.27" cy="331.08" r="2.8"/><circle class="c-dot" cx="233.3" cy="386.11" r="2.8"/><circle class="c-dot" cx="409.78" cy="224.39" r="2.8"/><circle class="c-dot" cx="471.58" cy="211.4" r="2.8"/><circle class="c-dot" cx="440.32" cy="216.21" r="2.8"/>
+    <a href="/network/gevorg-grigoryan" target="_top"><text class="c-name is-team is-lit" x="529.7" y="198.46" text-anchor="start" dominant-baseline="middle" transform="rotate(-84.37 529.7 198.46)">Gevorg Aram Grigoryan</text></a>
+  <a href="/network/emilya-nikoghosyan" target="_top"><text class="c-name is-team is-lit" x="562.35" y="203.48" text-anchor="start" dominant-baseline="middle" transform="rotate(-78.12 562.35 203.48)">Emilya Nikoghosyan</text></a>
+  <a href="/network/syuzi-ginosyan" target="_top"><text class="c-name is-team is-lit" x="594.26" y="212.03" text-anchor="start" dominant-baseline="middle" transform="rotate(-71.87 594.26 212.03)">Syuzi Ginosyan</text></a>
+  <a href="/network/taron-grigoryan" target="_top"><text class="c-name is-team" x="625.05" y="224.01" text-anchor="start" dominant-baseline="middle" transform="rotate(-65.62 625.05 224.01)">Taron Grigoryan</text></a>
+  <a href="/network/yeva-abgaryan" target="_top"><text class="c-name is-team is-lit" x="654.35" y="239.26" text-anchor="start" dominant-baseline="middle" transform="rotate(-59.37 654.35 239.26)">Yeva Abgaryan</text></a>
+  <a href="/network/maria-matinyan" target="_top"><text class="c-name" x="764.04" y="351.37" text-anchor="start" dominant-baseline="middle" transform="rotate(-29.37 764.04 351.37)">Maria Matinyan</text></a>
+  <a href="/network/carine-aroyan" target="_top"><text class="c-name" x="725.61" y="297.75" text-anchor="start" dominant-baseline="middle" transform="rotate(-41.87 725.61 297.75)">Carine Aroyan</text></a>
+  <a href="/network/namor-votilav" target="_top"><text class="c-name" x="778.65" y="381" text-anchor="start" dominant-baseline="middle" transform="rotate(-23.12 778.65 381)">Namor Votilav</text></a>
+  <a href="/network/tatiana-vahani" target="_top"><text class="c-name" x="797.81" y="444.13" text-anchor="start" dominant-baseline="middle" transform="rotate(-10.62 797.81 444.13)">Tatiana Vahani</text></a>
+  <a href="/network/artak-gevorgyan" target="_top"><text class="c-name" x="702.25" y="274.39" text-anchor="start" dominant-baseline="middle" transform="rotate(-48.12 702.25 274.39)">Artak Gevorgyan</text></a>
+  <a href="/network/lusine-mlke-galstyan" target="_top"><text class="c-name" x="746.29" y="323.51" text-anchor="start" dominant-baseline="middle" transform="rotate(-35.62 746.29 323.51)">Lusine Mlke-Galstyan</text></a>
+  <a href="/network/shoghakat-mlke-galstyan" target="_top"><text class="c-name" x="789.95" y="412.04" text-anchor="start" dominant-baseline="middle" transform="rotate(-16.87 789.95 412.04)">Shoghakat Mlke-Galstyan</text></a>
+  <a href="/network/ani-khachikyan" target="_top"><text class="c-name" x="800.82" y="536.27" text-anchor="start" dominant-baseline="middle" transform="rotate(6.88 800.82 536.27)">Ani Khachikyan</text></a>
+  <a href="/network/gnun-martirosyan" target="_top"><text class="c-name" x="785.84" y="600.52" text-anchor="start" dominant-baseline="middle" transform="rotate(19.38 785.84 600.52)">Gnun Martirosyan</text></a>
+  <a href="/network/meline-arshakyan" target="_top"><text class="c-name" x="773.2" y="631.04" text-anchor="start" dominant-baseline="middle" transform="rotate(25.63 773.2 631.04)">Meline Arshakyan</text></a>
+  <a href="/network/arsen-miqayelyan" target="_top"><text class="c-name" x="795.08" y="568.8" text-anchor="start" dominant-baseline="middle" transform="rotate(13.13 795.08 568.8)">Arsen Miqayelyan</text></a>
+  <a href="/network/alexandra-martini" target="_top"><text class="c-name" x="802.98" y="503.31" text-anchor="start" dominant-baseline="middle" transform="rotate(0.63 802.98 503.31)">Alexandra Martini</text></a>
+  <a href="/network/kay-khachatryan" target="_top"><text class="c-name" x="721.15" y="707.13" text-anchor="start" dominant-baseline="middle" transform="rotate(43.13 721.15 707.13)">Kay Khachatryan</text></a>
+  <a href="/network/areg-aydinyan" target="_top"><text class="c-name" x="742.38" y="681.82" text-anchor="start" dominant-baseline="middle" transform="rotate(36.88 742.38 681.82)">Areg Aydinyan</text></a>
+  <a href="/network/sasha-lenivec" target="_top"><text class="c-name" x="671.08" y="750.08" text-anchor="start" dominant-baseline="middle" transform="rotate(55.63 671.08 750.08)">Sasha Lenivec</text></a>
+  <a href="/network/vahagn-martirosyan" target="_top"><text class="c-name" x="642.83" y="767.22" text-anchor="start" dominant-baseline="middle" transform="rotate(61.88 642.83 767.22)">Vahagn Martirosyan</text></a>
+  <a href="/network/vera-vishnevaya" target="_top"><text class="c-name" x="612.89" y="781.18" text-anchor="start" dominant-baseline="middle" transform="rotate(68.13 612.89 781.18)">Vera Vishnevaya</text></a>
+  <a href="/network/nikita-maksimenko" target="_top"><text class="c-name" x="697.28" y="729.97" text-anchor="start" dominant-baseline="middle" transform="rotate(49.38 697.28 729.97)">Nikita Maksimenko</text></a>
+  <a href="/network/adam-adamyan" target="_top"><text class="c-name" x="555.87" y="797.81" text-anchor="start" dominant-baseline="middle" transform="rotate(79.38 555.87 797.81)">Adam Adamyan</text></a>
+  <a href="/network/artush-koshtoyan" target="_top"><text class="c-name" x="424.78" y="793.51" text-anchor="end" dominant-baseline="middle" transform="rotate(284.38 424.78 793.51)">Artush Koshtoyan</text></a>
+  <a href="/network/greta-grigoryan" target="_top"><text class="c-name is-lit" x="334.42" y="753.76" text-anchor="end" dominant-baseline="middle" transform="rotate(303.13 334.42 753.76)">Greta Grigoryan</text></a>
+  <a href="/network/mane-meloyan" target="_top"><text class="c-name" x="283.42" y="711.9" text-anchor="end" dominant-baseline="middle" transform="rotate(315.63 283.42 711.9)">Mane Meloyan</text></a>
+  <a href="/network/mery-petrosyan" target="_top"><text class="c-name" x="261.64" y="687.07" text-anchor="end" dominant-baseline="middle" transform="rotate(321.88 261.64 687.07)">Mery Petrosyan</text></a>
+  <a href="/network/polina-vever" target="_top"><text class="c-name" x="214.16" y="600.52" text-anchor="end" dominant-baseline="middle" transform="rotate(340.63 214.16 600.52)">Polina Vever</text></a>
+  <a href="/network/shahane-harutyunyan" target="_top"><text class="c-name is-lit" x="199.18" y="536.27" text-anchor="end" dominant-baseline="middle" transform="rotate(353.13 199.18 536.27)">Shahane Harutyunyan</text></a>
+  <a href="/network/gor-muradyan" target="_top"><text class="c-name" x="363.03" y="770.27" text-anchor="end" dominant-baseline="middle" transform="rotate(296.88 363.03 770.27)">Gor Muradyan</text></a>
+  <a href="/network/luiza-khechoyan" target="_top"><text class="c-name" x="307.78" y="734.22" text-anchor="end" dominant-baseline="middle" transform="rotate(309.38 307.78 734.22)">Luiza Khechoyan</text></a>
+  <a href="/network/egor-lazensky" target="_top"><text class="c-name" x="393.27" y="783.58" text-anchor="end" dominant-baseline="middle" transform="rotate(290.63 393.27 783.58)">Egor Lazensky</text></a>
+  <a href="/network/alvie-starr" target="_top"><text class="c-name" x="523.11" y="802.12" text-anchor="start" dominant-baseline="middle" transform="rotate(85.63 523.11 802.12)">Alvie Starr</text></a>
+  <a href="/network/ani-rubenyan" target="_top"><text class="c-name" x="490.09" y="802.84" text-anchor="end" dominant-baseline="middle" transform="rotate(271.88 490.09 802.84)">Ani Rubenyan</text></a>
+  <a href="/network/anna-khlechyan" target="_top"><text class="c-name" x="457.18" y="799.96" text-anchor="end" dominant-baseline="middle" transform="rotate(278.13 457.18 799.96)">Anna Khlechyan</text></a>
+  <a href="/network/misak-samakotian" target="_top"><text class="c-name" x="242.69" y="660" text-anchor="end" dominant-baseline="middle" transform="rotate(328.13 242.69 660)">Misak Samakotian</text></a>
+  <a href="/network/nino-giorgadze" target="_top"><text class="c-name" x="226.8" y="631.04" text-anchor="end" dominant-baseline="middle" transform="rotate(334.38 226.8 631.04)">Nino Giorgadze</text></a>
+  <a href="/network/vilen-gayfejyan" target="_top"><text class="c-name" x="197.02" y="503.31" text-anchor="end" dominant-baseline="middle" transform="rotate(359.38 197.02 503.31)">Vilen Gayfejyan</text></a>
+  <a href="/network/yulia-stepanova" target="_top"><text class="c-name" x="198.46" y="470.3" text-anchor="end" dominant-baseline="middle" transform="rotate(365.63 198.46 470.3)">Yulia Stepanova</text></a>
+  <a href="/network/sergey-virabyan" target="_top"><text class="c-name" x="204.92" y="568.8" text-anchor="end" dominant-baseline="middle" transform="rotate(346.88 204.92 568.8)">Sergey Virabyan</text></a>
+  <a href="/network/albert-avetisyan" target="_top"><text class="c-name" x="210.05" y="412.04" text-anchor="end" dominant-baseline="middle" transform="rotate(376.88 210.05 412.04)">Albert Avetisyan</text></a>
+  <a href="/network/gor-movsisyan" target="_top"><text class="c-name" x="235.96" y="351.37" text-anchor="end" dominant-baseline="middle" transform="rotate(389.38 235.96 351.37)">Gor Movsisyan</text></a>
+  <a href="/network/varujan-movsisyan" target="_top"><text class="c-name" x="351.37" y="235.96" text-anchor="end" dominant-baseline="middle" transform="rotate(420.63 351.37 235.96)">Varujan Movsisyan</text></a>
+  <a href="/network/levon-avetisyan" target="_top"><text class="c-name" x="274.39" y="297.75" text-anchor="end" dominant-baseline="middle" transform="rotate(401.88 274.39 297.75)">Levon Avetisyan</text></a>
+  <a href="/network/slavik-avetisyan" target="_top"><text class="c-name" x="323.51" y="253.71" text-anchor="end" dominant-baseline="middle" transform="rotate(414.38 323.51 253.71)">Slavik Avetisyan</text></a>
+  <a href="/network/ruben-melikyan" target="_top"><text class="c-name" x="297.75" y="274.39" text-anchor="end" dominant-baseline="middle" transform="rotate(408.13 297.75 274.39)">Ruben Melikyan</text></a>
+  <a href="/network/grig-gevorgyan" target="_top"><text class="c-name" x="253.71" y="323.51" text-anchor="end" dominant-baseline="middle" transform="rotate(395.63 253.71 323.51)">Grig Gevorgyan</text></a>
+  <a href="/network/avetis-grigoryan" target="_top"><text class="c-name" x="221.35" y="381" text-anchor="end" dominant-baseline="middle" transform="rotate(383.13 221.35 381)">Avetis Grigoryan</text></a>
+  <a href="/network/hannes-kopke" target="_top"><text class="c-name" x="405.74" y="212.03" text-anchor="end" dominant-baseline="middle" transform="rotate(431.88 405.74 212.03)">Hannes Köpke</text></a>
+  <a href="/network/olivia-rosendorfer" target="_top"><text class="c-name" x="470.3" y="198.46" text-anchor="end" dominant-baseline="middle" transform="rotate(444.38 470.3 198.46)">Olivia Rosendorfer</text></a>
+  <a href="/network/nyusha-terbalyan" target="_top"><text class="c-name" x="437.65" y="203.48" text-anchor="end" dominant-baseline="middle" transform="rotate(438.13 437.65 203.48)">Nyusha Terbalyan</text></a>
+</svg>
+</div>
+
+<footer class="constFoot">
+  <p class="order">clockwise from the top — team 5, curators 7, performers 5, sound 6, visual · multimedia 18, 3d · code · games 8, stage · costume · design 3</p>
+  <p>This is the whole roster and nothing else: no ranking, no size, no distance that means anything. The only line drawn between two people is a piece of work they both made.</p>
+  <p>The list, with what each person does, is on <a href="/network" target="_top">the network</a>.</p>
+</footer>
+</div>
+</body>
+</html>

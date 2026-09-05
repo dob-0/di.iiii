@@ -51,11 +51,30 @@ describe('projectSchema', () => {
         // before those fields existed render identically.
         expect(document.entities[0].components.reference).toEqual({
             spaceId: 'wcc', projectId: 'arthur', mode: 'embed', label: 'Arthur',
-            labelColor: '#ffffff', labelPlate: true, labelFont: 'default'
+            labelColor: '#ffffff', labelPlate: true, labelFont: 'default', style: 'gateway'
         })
         // unknown mode falls back to 'portal'
         expect(document.entities[1].components.reference.mode).toBe('portal')
         expect(document.entities[1].components.reference.label).toBe('')
+    })
+
+    // The brand allows no rounded corner and no glow, so a door had to be able
+    // to stop being a glowing ring. Opt-in, because every portal in every
+    // existing room was authored as one.
+    it('defaults a portal to the ring and only accepts a known door style', () => {
+        const document = normalizeProjectDocument({
+            entities: [
+                { type: 'portal', components: { reference: { spaceId: 'main' } } },
+                { type: 'portal', components: { reference: { spaceId: 'main', style: 'frame' } } },
+                { type: 'portal', components: { reference: { spaceId: 'main', style: 'archway' } } },
+                { type: 'portal', components: { reference: { spaceId: 'main', style: 42 } } }
+            ]
+        })
+
+        expect(document.entities[0].components.reference.style).toBe('gateway')
+        expect(document.entities[1].components.reference.style).toBe('frame')
+        expect(document.entities[2].components.reference.style).toBe('gateway')
+        expect(document.entities[3].components.reference.style).toBe('gateway')
     })
 
     it('normalizes a timeline component: sorts keys, clamps to duration, drops junk tracks', () => {

@@ -35,6 +35,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
@@ -253,14 +254,21 @@ const main = async () => {
     })
     console.log('  ok')
 
-    // 5. Asset binaries. Ids are preserved so the document's existing
-    //    references resolve without rewriting; already-present assets are
-    //    skipped so re-running is cheap.
+    // 5. Asset binaries. Ids are USUALLY preserved, so the document's
+    //    references usually resolve untouched — but the upload route strips
+    //    EXIF/GPS before hashing, and a scrubbed file no longer hashes to the
+    //    id we sent, so the route stores it under a new content address and
+    //    still answers 200. This used to count as "copied" and leave the
+    //    document pointing at nothing: 106 of 244 assets unresolvable on the
+    //    dev box after one full mirror. Every id the destination changes is
+    //    collected and the document is rewritten at the end.
+    //    Already-present assets are skipped so re-running is cheap.
     if (args.assets && assetList.length) {
         console.log(`\nSyncing ${assetList.length} assets`)
         let copied = 0
         let skipped = 0
         let failed = 0
+        const remap = {}
         for (const [index, asset] of assetList.entries()) {
             const assetId = asset?.id
             if (!assetId) continue
@@ -306,14 +314,33 @@ const main = async () => {
                     failed++
                     continue
                 }
+                const moved = remapFromUpload({
+                    requestedId: assetId,
+                    response: await upload.json().catch(() => null)
+                })
+                if (moved) Object.assign(remap, moved)
                 copied++
-                console.log(`  ${label} — ${bytes.length} bytes`)
+                console.log(`  ${label} — ${bytes.length} bytes${moved ? ' (stored under a new id — scrubbed)' : ''}`)
             } catch (error) {
                 console.log(`  ${label} — ${error?.message || error}`)
                 failed++
             }
         }
         console.log(`  ${copied} copied, ${skipped} already present, ${failed} failed`)
+
+        // The document was written in step 4 with the SOURCE's ids. Anything
+        // the destination re-addressed has to be followed there, or the copy
+        // renders grey where the original renders a photograph.
+        const moved = Object.keys(remap).length
+        if (moved) {
+            console.log(`  ${moved} asset(s) were re-addressed on arrival — repointing the document`)
+            await apiFetch(`${toBase}/api/projects/${projectId}/document`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...localAuth() },
+                body: JSON.stringify(remapAssetIds(document, remap)),
+            })
+            console.log('  ok')
+        }
     } else if (!args.assets) {
         console.log('\nSkipping assets (--no-assets)')
     }

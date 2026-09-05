@@ -69,4 +69,18 @@ describe('spaceChatStore', () => {
         expect(appendMessage({ id: 'm', spaceId: 'dilijan', text: '', ts: 1 })).toBe(false)
         expect(listRecent('dilijan')).toHaveLength(0)
     })
+
+    // The socket handler already caps userName/userId before this is called,
+    // but the store must not trust that — anything else that ever calls
+    // appendMessage directly gets the same ceiling for free.
+    it('truncates an oversized userName/userId to the identity cap', () => {
+        const hugeName = 'x'.repeat(100 * 1024)
+        const hugeId = 'y'.repeat(100 * 1024)
+        appendMessage({ id: 'm-1', spaceId: 'dilijan', userId: hugeId, userName: hugeName, text: 'hi', ts: 1000 })
+        const [row] = listRecent('dilijan')
+        expect(row.userName).toHaveLength(64)
+        expect(row.userId).toHaveLength(64)
+        expect(row.userName).toBe('x'.repeat(64))
+        expect(row.userId).toBe('y'.repeat(64))
+    })
 })

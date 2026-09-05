@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-taron-grigoryan",
+  "slug": "taron-grigoryan",
+  "label": "Taron Grigoryan",
+  "mode": "code",
+  "entry": "spaces/network/pages/taron-grigoryan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

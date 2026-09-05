@@ -188,7 +188,16 @@ export default function RawGraphSurface({
     // even show the toggle — most node types have no such concept.
     isNodeActive = () => false,
     onSetActive = () => {},
-    activeMarkerTypeIds = []
+    activeMarkerTypeIds = [],
+    // The canvas viewport, published upward so the editor can place things
+    // that live in graph space but are not cards — the panel windows. Called
+    // with { panX, panY, zoom, originLeft, originTop } on every change and on
+    // resize; origin is this surface's box in the page. Optional: Studio's
+    // read-only wrapper passes nothing.
+    onViewportChange = null,
+    // Graph-space rectangles that count as content for fit-all, so a world
+    // window parked away from the cards is framed too. [{ x, y, width, height }]
+    extraBounds = []
 }) {
     const { requestDelete, deleteConfirm } = useDeleteConfirm()
     const containerRef = useRef(null)
@@ -244,6 +253,22 @@ export default function RawGraphSurface({
         setZoom(clamped)
     }
 
+    // Publish the viewport whenever it moves — through applyViewport OR the
+    // pan drag, which writes the ref directly; both end in these three state
+    // values, so keying on them catches every path. Resize republishes the
+    // origin, which is the only part that can change without a pan.
+    useEffect(() => {
+        if (!onViewportChange) return undefined
+        const publish = () => {
+            const rect = containerRef.current?.getBoundingClientRect?.() || { left: 0, top: 0 }
+            const vp = viewportRef.current
+            onViewportChange({ panX: vp.panX, panY: vp.panY, zoom: vp.zoom, originLeft: rect.left, originTop: rect.top })
+        }
+        publish()
+        window.addEventListener('resize', publish)
+        return () => window.removeEventListener('resize', publish)
+    }, [onViewportChange, panX, panY, zoom])
+
     const updateZoom = (nextZoom) => {
         const vp = viewportRef.current
         const container = containerRef.current
@@ -269,6 +294,18 @@ export default function RawGraphSurface({
         const minY = Math.min(...subset.map((n) => n.graphY ?? 0))
         const maxX = Math.max(...subset.map((n) => (n.graphX ?? 0) + CARD_WIDTH))
         const maxY = Math.max(...subset.map((n) => (n.graphY ?? 0) + cardHeight(n, portScopeNodes)))
+        return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }
+    }
+
+    // Widen a bounds box to include the world windows, so fit-all frames the
+    // whole desk and not just the cards.
+    const withExtraBounds = (bounds) => {
+        const rects = (extraBounds || []).filter((r) => r && Number.isFinite(r.x) && Number.isFinite(r.y))
+        if (!bounds || !rects.length) return bounds
+        const minX = Math.min(bounds.minX, ...rects.map((r) => r.x))
+        const minY = Math.min(bounds.minY, ...rects.map((r) => r.y))
+        const maxX = Math.max(bounds.maxX, ...rects.map((r) => r.x + (r.width || 0)))
+        const maxY = Math.max(bounds.maxY, ...rects.map((r) => r.y + (r.height || 0)))
         return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }
     }
 
@@ -389,7 +426,7 @@ export default function RawGraphSurface({
      */
     const fitGraph = ({ force = false } = {}) => {
         if (!nodes.length) return
-        const all = boundsOf(nodes)
+        const all = withExtraBounds(boundsOf(nodes))
         const overviewZoom = zoomToFitBounds(all, { maxZoom: 1 })
         if (overviewZoom === null) return
 
@@ -523,8 +560,19 @@ export default function RawGraphSurface({
         const container = containerRef.current
         if (!container) return undefined
         const handleWheel = (event) => {
+            // Inside a window's BODY the wheel belongs to the panel — a text
+            // note scrolls, a list scrolls, the Scene orbits. The frame of a
+            // window (title bar, edges) and the canvas zoom the graph. Ctrl
+            // (a trackpad pinch arrives as ctrl+wheel) zooms the graph from
+            // anywhere, so a pinch over a window still zooms the desk.
+            if (!event.ctrlKey && !event.metaKey && event.target?.closest?.('.raw-window-body')) return
             event.preventDefault()
-            const factor = event.deltaY < 0 ? 1.1 : 0.9
+            // Proportional to the delta, not a flat ±10% per event: a trackpad
+            // fires dozens of small events per swipe and a flat step made it
+            // fly; a mouse notch (deltaY 100) lands near the old step.
+            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1
+            const magnitude = clamp(Math.abs(event.deltaY) * unit, 1, 120)
+            const factor = Math.exp((event.deltaY < 0 ? 1 : -1) * magnitude * 0.0016)
             const vp = viewportRef.current
             const rect = container.getBoundingClientRect()
             const mx = event.clientX - rect.left

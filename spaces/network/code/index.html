@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>network — di.iiii</title>
+<style>
+:root{
+  --paper:#f7f7f5; --paper-2:#efefec;
+  --ink:#111214; --ink-2:#55595e; --ink-3:#63686d; --rule:#dededa;
+  /* --accent marks (dots, rules, the lit star); --accent-ink is the one
+     that carries text — #0097a3 is 3.29:1 on paper and fails as type. */
+  --accent:#0097a3; --accent-ink:#00757f;
+  --accent-soft:rgba(0,151,163,.07); --accent-rule:rgba(0,151,163,.35);
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --sans:'Inter',-apple-system,'Segoe UI',sans-serif;
+  --col:1180px; --room:860px; --pad:56px;
+}
+@font-face{
+  font-family:'Inter'; src:url('/fonts/inter-regular.woff') format('woff'); font-weight:400 800; font-style:normal; font-display:swap;
+}
+*{box-sizing:border-box; border-radius:0 !important;}
+html{background:var(--paper);}
+body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;}
+a{color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+
+.sheet{position:relative;}
+
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);}
+.eyebrow .dot{color:var(--accent);}
+
+/* ---------- index ---------- */
+.indexPane{max-width:var(--col);padding:30px var(--pad) 26px var(--pad);}
+.masthead{max-width:60ch;}
+.indexPane h1{font-size:clamp(26px,2.6vw,34px);font-weight:700;letter-spacing:-0.02em;line-height:1.05;margin:14px 0 14px 0;}
+.indexPane h1 .dot{color:var(--accent);}
+.indexPane .dek{font-size:15.5px;color:var(--ink-2);line-height:1.6;margin:0;}
+.howto{font-family:var(--mono);font-size:12px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin:0;}
+
+.roster{max-width:var(--col);padding:0 var(--pad) 8px var(--pad);position:relative;}
+
+/* ---------- the ties ----------
+   One dot per person, pinned to the right edge of that person's own row and
+   scrolling with it; one arc per shared work, running between the two rows
+   that made it. Every mark can be followed to the names it is about. */
+.tie{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:0;}
+.tie-dot{fill:var(--ink-3);opacity:.5;transition:fill .14s ease,opacity .14s ease,r .14s ease;}
+.tie-dot.is-lit{fill:var(--accent);opacity:1;r:5;}
+.tie-arc{fill:none;stroke:var(--rule);stroke-width:1;transition:stroke .14s ease,stroke-width .14s ease;}
+.tie-arc.is-lit{stroke:var(--accent);stroke-width:1.4;}
+.tie-label{font-family:var(--mono);font-size:12px;fill:var(--ink-3);
+  transition:fill .14s ease;}
+.tie-label.is-lit{fill:var(--accent-ink);}
+.roster .group, .roster ul.catalogue, .roster .howto{position:relative;z-index:1;}
+
+/* Section labels are the strongest horizontal marks in the list — they are
+   the structure, and they used to be smaller than the ornament beside them. */
+.group{display:flex;align-items:baseline;gap:14px;margin:38px 0 0 0;
+  border-bottom:1.5px solid var(--ink);padding-bottom:7px;}
+.group .g-name{font-size:15px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;}
+.group .g-rule{flex:1;}
+.group .g-count{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;}
+.group:first-of-type{margin-top:18px;}
+
+ul.catalogue{list-style:none;margin:0;padding:0;}
+ul.catalogue li+li{border-top:1px solid var(--rule);}
+a.row{display:grid;grid-template-columns:minmax(200px,23ch) 1fr;align-items:baseline;column-gap:30px;
+  text-decoration:none;color:inherit;padding:11px 10px 11px 14px;position:relative;
+  transition:background .14s ease;}
+a.row::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:5px;height:5px;background:var(--accent);opacity:0;transition:opacity .14s ease;}
+a.row:hover,a.row:focus-visible,a.row.is-active{background:var(--accent-soft);outline:none;}
+a.row:hover::before,a.row:focus-visible::before,a.row.is-active::before{opacity:1;}
+a.row .name{font-size:19px;font-weight:600;letter-spacing:-0.012em;line-height:1.25;}
+/* the role belongs next to the name, not across an empty gutter */
+a.row .role{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);line-height:1.45;}
+a.row .made{display:block;font-family:var(--mono);font-size:12px;color:var(--accent-ink);
+  margin-top:3px;letter-spacing:.01em;}
+a.row .made .arrow{opacity:.6;}
+
+.indexFoot{max-width:var(--col);padding:34px var(--pad) 72px var(--pad);}
+.indexFoot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0 0 12px 0;
+  padding-top:20px;border-top:1px solid var(--rule);}
+.indexFoot p+p{padding-top:0;border-top:none;}
+.indexFoot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+.indexFoot a:hover,.indexFoot a:focus-visible{border-bottom-color:var(--accent);}
+
+/* ---------- both page types ---------- */
+/* Same header at every depth, because people arrive on foot as well as by
+   link: a door out of the network, then a door out of a person's room. */
+.pagehead{padding:26px var(--pad) 0 var(--pad);max-width:var(--col);
+  display:flex;justify-content:space-between;gap:16px;align-items:baseline;}
+.pagehead--room{max-width:var(--room);}
+.back{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);
+  text-decoration:none;display:inline-flex;align-items:center;gap:8px;}
+.back:hover,.back:focus-visible{color:var(--accent-ink);}
+
+.room-stage{max-width:var(--room);padding:46px var(--pad) 0 var(--pad);}
+.room-stage h1{font-size:clamp(38px,5.2vw,64px);font-weight:700;line-height:1.0;letter-spacing:-0.028em;margin:0 0 10px 0;}
+.room-stage .role{font-size:17px;color:var(--ink-2);margin:0;max-width:46ch;}
+.room-stage .city{font-size:12.5px;color:var(--ink-3);margin:6px 0 0 0;font-family:var(--mono);letter-spacing:.04em;}
+.room-stage .bio{font-size:16px;line-height:1.7;color:var(--ink-2);max-width:58ch;
+  margin:30px 0 0 0;padding-top:26px;border-top:1px solid var(--rule);}
+
+/* ---------- the journey (a CV cut into segments, not handed over flat) ---------- */
+.focus-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px 0;}
+.chip{border:1px solid var(--rule);padding:6px 12px;font-size:12px;font-family:var(--mono);
+  color:var(--ink-2);letter-spacing:.02em;}
+.timeline{margin:0;}
+.timeline details{border-top:1px solid var(--rule);}
+.timeline details:last-child{border-bottom:1px solid var(--rule);}
+.timeline summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:16px;
+  padding:14px 2px;font-family:var(--mono);}
+.timeline summary::-webkit-details-marker{display:none;}
+.timeline summary .yr{font-size:14px;font-weight:700;color:var(--ink);min-width:4.5ch;}
+.timeline summary .ct{font-size:12px;color:var(--ink-3);flex:1;text-align:right;}
+.timeline summary::after{content:'+';color:var(--accent-ink);margin-left:2px;font-size:14px;}
+.timeline details[open] summary::after{content:'−';}
+.timeline .yr-items{padding:0 2px 18px 2px;display:flex;flex-direction:column;gap:12px;}
+.ti{font-size:14.5px;line-height:1.5;color:var(--ink-2);}
+.ti .ti-t{font-weight:600;color:var(--ink);}
+.ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
+.ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
+.cv-link{margin:20px 0 0 0;}
+
+.section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
+  margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--rule);}
+
+/* flex, not grid: an auto-fill grid left a phantom empty cell showing the
+   container's own colour whenever the row was not full. */
+.doors{display:flex;flex-wrap:wrap;gap:14px;margin:0;}
+.door{flex:0 1 260px;min-height:132px;border:1px solid var(--rule);background:var(--paper);
+  padding:16px 16px 14px 16px;text-decoration:none;display:flex;flex-direction:column;
+  justify-content:flex-end;position:relative;transition:border-color .14s ease,background .14s ease;}
+.door:hover,.door:focus-visible{background:var(--accent-soft);border-color:var(--accent-rule);outline:none;}
+.door .t{font-size:17px;font-weight:600;line-height:1.2;}
+.door .l{font-size:12px;color:var(--ink-2);margin-top:5px;font-family:var(--mono);line-height:1.45;}
+.door::after{content:'→';position:absolute;right:14px;top:12px;color:var(--accent);opacity:0;
+  transition:opacity .14s ease,transform .14s ease;}
+.door:hover::after,.door:focus-visible::after{opacity:1;transform:translateX(2px);}
+.door--unlinked{border-style:dashed;background:transparent;cursor:default;}
+.door--unlinked .t{color:var(--ink-2);font-weight:500;}
+.door--unlinked .l{color:var(--ink-3);}
+.empty-note{color:var(--ink-2);font-size:15.5px;max-width:48ch;line-height:1.65;margin:0;}
+.elsewhere{display:flex;gap:10px;flex-wrap:wrap;}
+.plate{border:1px solid var(--rule);padding:9px 15px;font-size:12.5px;text-decoration:none;
+  color:var(--ink-2);font-family:var(--mono);transition:border-color .14s ease,color .14s ease;}
+.plate:hover,.plate:focus-visible{color:var(--accent-ink);border-color:var(--accent-rule);}
+
+.neighbours{display:flex;flex-wrap:wrap;gap:0 22px;max-width:64ch;}
+.neighbours a{font-size:14.5px;color:var(--ink-2);text-decoration:none;padding:5px 0;
+  border-bottom:1px solid transparent;}
+.neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
+
+.room-foot{max-width:var(--room);padding:44px var(--pad) 72px var(--pad);}
+.room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
+  padding-top:20px;border-top:1px solid var(--rule);}
+.room-foot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+
+/* Between these widths the list gives up a little of its own width so the
+   margin still exists — better than the drawing disappearing at 1280. */
+@media (max-width:1400px){ :root{--col:1040px;} }
+
+@media (max-width:1000px){
+  :root{--pad:26px;}
+  /* the roster starts at the top of a phone — no band above it. There is no
+     margin to hold the drawing at this width, so it thins to a whisper
+     across the whole sheet rather than sitting behind the names as smudges. */
+  .ground{opacity:.2;}
+  .ground canvas{-webkit-mask-image:none;mask-image:none;}
+  /* the two halves of the room header do not fit one line on a phone;
+     side by side they each wrapped mid-phrase. */
+  .pagehead{flex-direction:column;gap:9px;}
+  /* the section eyebrow is 39 characters and overruns 390px by a hair */
+  .pagehead .eyebrow{letter-spacing:.08em;}
+  a.row{grid-template-columns:1fr;row-gap:3px;padding:14px 10px 15px 14px;}
+  a.row .name{font-size:19px;}
+  .indexPane{padding-top:30px;padding-bottom:28px;}
+  .indexPane h1{font-size:27px;}
+  .room-stage{padding-top:34px;}
+  .door{flex:1 1 100%;min-height:112px;}
+  .group{margin-top:34px;}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .door,.back,a.row,.plate,.neighbours a{transition:none;}
+}
+</style>
+</head>
+<body>
+<div class="sheet">
+<header class="pagehead">
+  <a class="back" href="/" target="_top"><span aria-hidden="true">←</span> di.iiii</a>
+  <div class="eyebrow">the network</div>
+</header>
+<header class="indexPane">
+  <div class="masthead">
+    <h1>who makes di<span class="dot">.</span>iiii</h1>
+    <p class="dek">Fifty-two people make di.iiii — five run it, forty-seven make with it. Every name here has a room of its own. Nine of those rooms have work standing in them already; the rest are theirs to fill.</p>
+  </div>
+</header>
+
+<main class="roster">
+  <svg class="tie" aria-hidden="true"></svg>
+  <p class="howto">tap a name to open their room</p>
+  <h2 class="group"><span class="g-name">team</span><span class="g-rule"></span><span class="g-count">5</span></h2>
+  <ul class="catalogue">
+    <li><a class="row" href="/network/gevorg-grigoryan" target="_top" data-slug="gevorg-grigoryan"><span class="name">Gevorg Aram Grigoryan</span><span class="role">XR director, developer<span class="made"><span class="arrow">→ </span>di.iiii · br_id_ge</span></span></a></li>
+    <li><a class="row" href="/network/emilya-nikoghosyan" target="_top" data-slug="emilya-nikoghosyan"><span class="name">Emilya Nikoghosyan</span><span class="role">art director<span class="made"><span class="arrow">→ </span>algovrithm · ազդ | azd · br_id_ge</span></span></a></li>
+    <li><a class="row" href="/network/syuzi-ginosyan" target="_top" data-slug="syuzi-ginosyan"><span class="name">Syuzi Ginosyan</span><span class="role">curator<span class="made"><span class="arrow">→ </span>ազդ | azd · Tread from Wool · br_id_ge</span></span></a></li>
+    <li><a class="row" href="/network/taron-grigoryan" target="_top" data-slug="taron-grigoryan"><span class="name">Taron Grigoryan</span><span class="role">multimedia, light</span></a></li>
+    <li><a class="row" href="/network/yeva-abgaryan" target="_top" data-slug="yeva-abgaryan"><span class="name">Yeva Abgaryan</span><span class="role">set design, 3D<span class="made"><span class="arrow">→ </span>WCC Exhibition · ազդ | azd</span></span></a></li>
+  </ul>
+  <h2 class="group"><span class="g-name">curators</span><span class="g-rule"></span><span class="g-count">7</span></h2>
+  <ul class="catalogue">
+    <li><a class="row" href="/network/artak-gevorgyan" target="_top" data-slug="artak-gevorgyan"><span class="name">Artak Gevorgyan</span><span class="role">curator</span></a></li>
+    <li><a class="row" href="/network/carine-aroyan" target="_top" data-slug="carine-aroyan"><span class="name">Carine Aroyan</span><span class="role">curator</span></a></li>
+    <li><a class="row" href="/network/lusine-mlke-galstyan" target="_top" data-slug="lusine-mlke-galstyan"><span class="name">Lusine Mlke-Galstyan</span><span class="role">curator<span class="made"><span class="arrow">→ </span>between silence and motion</span></span></a></li>
+    <li><a class="row" href="/network/maria-matinyan" target="_top" data-slug="maria-matinyan"><span class="name">Maria Matinyan</span><span class="role">multimedia artist, curator</span></a></li>
+    <li><a class="row" href="/network/namor-votilav" target="_top" data-slug="namor-votilav"><span class="name">Namor Votilav</span><span class="role">curator, multimedia artist</span></a></li>
+    <li><a class="row" href="/network/shoghakat-mlke-galstyan" target="_top" data-slug="shoghakat-mlke-galstyan"><span class="name">Shoghakat Mlke-Galstyan</span><span class="role">curator</span></a></li>
+    <li><a class="row" href="/network/tatiana-vahani" target="_top" data-slug="tatiana-vahani"><span class="name">Tatiana Vahani</span><span class="role">curator</span></a></li>
+  </ul>
+  <h2 class="group"><span class="g-name">performers</span><span class="g-rule"></span><span class="g-count">5</span></h2>
+  <ul class="catalogue">
+    <li><a class="row" href="/network/alexandra-martini" target="_top" data-slug="alexandra-martini"><span class="name">Alexandra Martini</span><span class="role">performer</span></a></li>
+    <li><a class="row" href="/network/ani-khachikyan" target="_top" data-slug="ani-khachikyan"><span class="name">Ani Khachikyan</span><span class="role">performer</span></a></li>
+    <li><a class="row" href="/network/arsen-miqayelyan" target="_top" data-slug="arsen-miqayelyan"><span class="name">Arsen Miqayelyan</span><span class="role">performer</span></a></li>
+    <li><a class="row" href="/network/gnun-martirosyan" target="_top" data-slug="gnun-martirosyan"><span class="name">Gnun Martirosyan</span><span class="role">performer</span></a></li>
+    <li><a class="row" href="/network/meline-arshakyan" target="_top" data-slug="meline-arshakyan"><span class="name">Meline Arshakyan</span><span class="role">performer, dancer</span></a></li>
+  </ul>
+  <h2 class="group"><span class="g-name">sound</span><span class="g-rule"></span><span class="g-count">6</span></h2>
+  <ul class="catalogue">
+    <li><a class="row" href="/network/areg-aydinyan" target="_top" data-slug="areg-aydinyan"><span class="name">Areg Aydinyan</span><span class="role">DJ, sound artist</span></a></li>
+    <li><a class="row" href="/network/kay-khachatryan" target="_top" data-slug="kay-khachatryan"><span class="name">Kay Khachatryan</span><span class="role">audio artist<span class="made"><span class="arrow">→ </span>Ambisonic Performances</span></span></a></li>
+    <li><a class="row" href="/network/nikita-maksimenko" target="_top" data-slug="nikita-maksimenko"><span class="name">Nikita Maksimenko</span><span class="role">multimedia, sound</span></a></li>
+    <li><a class="row" href="/network/sasha-lenivec" target="_top" data-slug="sasha-lenivec"><span class="name">Sasha Lenivec</span><span class="role">sound artist</span></a></li>
+    <li><a class="row" href="/network/vahagn-martirosyan" target="_top" data-slug="vahagn-martirosyan"><span class="name">Vahagn Martirosyan</span><span class="role">sound artist</span></a></li>
+    <li><a class="row" href="/network/vera-vishnevaya" target="_top" data-slug="vera-vishnevaya"><span class="name">Vera Vishnevaya</span><span class="role">sound artist</span></a></li>
+  </ul>
+  <h2 class="group"><span class="g-name">visual · multimedia</span><span class="g-rule"></span><span class="g-count">18</span></h2>
+  <ul class="catalogue">
+    <li><a class="row" href="/network/adam-adamyan" target="_top" data-slug="adam-adamyan"><span class="name">Adam Adamyan</span><span class="role">visual artist</span></a></li>
+    <li><a class="row" href="/network/alvie-starr" target="_top" data-slug="alvie-starr"><span class="name">Alvie Starr</span><span class="role">audiovisual artist</span></a></li>
+    <li><a class="row" href="/network/ani-rubenyan" target="_top" data-slug="ani-rubenyan"><span class="name">Ani Rubenyan</span><span class="role">audiovisual artist</span></a></li>
+    <li><a class="row" href="/network/anna-khlechyan" target="_top" data-slug="anna-khlechyan"><span class="name">Anna Khlechyan</span><span class="role">multimedia artist</span></a></li>
+    <li><a class="row" href="/network/artush-koshtoyan" target="_top" data-slug="artush-koshtoyan"><span class="name">Artush Koshtoyan</span><span class="role">visual artist</span></a></li>
+    <li><a class="row" href="/network/egor-lazensky" target="_top" data-slug="egor-lazensky"><span class="name">Egor Lazensky</span><span class="role">VJ, multimedia artist</span></a></li>
+    <li><a class="row" href="/network/gor-muradyan" target="_top" data-slug="gor-muradyan"><span class="name">Gor Muradyan</span><span class="role">visual artist</span></a></li>
+    <li><a class="row" href="/network/greta-grigoryan" target="_top" data-slug="greta-grigoryan"><span class="name">Greta Grigoryan</span><span class="role">visual artist<span class="made"><span class="arrow">→ </span>ազդ | azd · RecordAR</span></span></a></li>
+    <li><a class="row" href="/network/luiza-khechoyan" target="_top" data-slug="luiza-khechoyan"><span class="name">Luiza Khechoyan</span><span class="role">visual artist</span></a></li>
+    <li><a class="row" href="/network/mane-meloyan" target="_top" data-slug="mane-meloyan"><span class="name">Mane Meloyan</span><span class="role">visual artist</span></a></li>
+    <li><a class="row" href="/network/mery-petrosyan" target="_top" data-slug="mery-petrosyan"><span class="name">Mery Petrosyan</span><span class="role">visual artist<span class="made"><span class="arrow">→ </span>WCC Exhibition</span></span></a></li>
+    <li><a class="row" href="/network/misak-samakotian" target="_top" data-slug="misak-samakotian"><span class="name">Misak Samakotian</span><span class="role">multimedia artist</span></a></li>
+    <li><a class="row" href="/network/nino-giorgadze" target="_top" data-slug="nino-giorgadze"><span class="name">Nino Giorgadze</span><span class="role">multimedia artist</span></a></li>
+    <li><a class="row" href="/network/polina-vever" target="_top" data-slug="polina-vever"><span class="name">Polina Vever</span><span class="role">visual artist</span></a></li>
+    <li><a class="row" href="/network/sergey-virabyan" target="_top" data-slug="sergey-virabyan"><span class="name">Sergey Virabyan</span><span class="role">audiovisual artist</span></a></li>
+    <li><a class="row" href="/network/shahane-harutyunyan" target="_top" data-slug="shahane-harutyunyan"><span class="name">Shahane Harutyunyan</span><span class="role">visual artist<span class="made"><span class="arrow">→ </span>ազդ | azd · Beyond Form</span></span></a></li>
+    <li><a class="row" href="/network/vilen-gayfejyan" target="_top" data-slug="vilen-gayfejyan"><span class="name">Vilen Gayfejyan</span><span class="role">multimedia artist</span></a></li>
+    <li><a class="row" href="/network/yulia-stepanova" target="_top" data-slug="yulia-stepanova"><span class="name">Yulia Stepanova</span><span class="role">multimedia artist</span></a></li>
+  </ul>
+  <h2 class="group"><span class="g-name">3d · code · games</span><span class="g-rule"></span><span class="g-count">8</span></h2>
+  <ul class="catalogue">
+    <li><a class="row" href="/network/albert-avetisyan" target="_top" data-slug="albert-avetisyan"><span class="name">Albert Avetisyan</span><span class="role">developer, sound</span></a></li>
+    <li><a class="row" href="/network/avetis-grigoryan" target="_top" data-slug="avetis-grigoryan"><span class="name">Avetis Grigoryan</span><span class="role">game designer</span></a></li>
+    <li><a class="row" href="/network/gor-movsisyan" target="_top" data-slug="gor-movsisyan"><span class="name">Gor Movsisyan</span><span class="role">3D artist</span></a></li>
+    <li><a class="row" href="/network/grig-gevorgyan" target="_top" data-slug="grig-gevorgyan"><span class="name">Grig Gevorgyan</span><span class="role">game developer</span></a></li>
+    <li><a class="row" href="/network/levon-avetisyan" target="_top" data-slug="levon-avetisyan"><span class="name">Levon Avetisyan</span><span class="role">programmer</span></a></li>
+    <li><a class="row" href="/network/ruben-melikyan" target="_top" data-slug="ruben-melikyan"><span class="name">Ruben Melikyan</span><span class="role">game designer</span></a></li>
+    <li><a class="row" href="/network/slavik-avetisyan" target="_top" data-slug="slavik-avetisyan"><span class="name">Slavik Avetisyan</span><span class="role">unity developer</span></a></li>
+    <li><a class="row" href="/network/varujan-movsisyan" target="_top" data-slug="varujan-movsisyan"><span class="name">Varujan Movsisyan</span><span class="role">3D artist</span></a></li>
+  </ul>
+  <h2 class="group"><span class="g-name">stage · costume · design</span><span class="g-rule"></span><span class="g-count">3</span></h2>
+  <ul class="catalogue">
+    <li><a class="row" href="/network/hannes-kopke" target="_top" data-slug="hannes-kopke"><span class="name">Hannes Köpke</span><span class="role">stage director</span></a></li>
+    <li><a class="row" href="/network/nyusha-terbalyan" target="_top" data-slug="nyusha-terbalyan"><span class="name">Nyusha Terbalyan</span><span class="role">designer</span></a></li>
+    <li><a class="row" href="/network/olivia-rosendorfer" target="_top" data-slug="olivia-rosendorfer"><span class="name">Olivia Rosendorfer</span><span class="role">costume designer</span></a></li>
+  </ul>
+</main>
+
+<footer class="indexFoot">
+  <p>The drawing beside this page is the same fifty-two, held apart. A line between two of them means they made the same thing — so far that is br_id_ge and ազդ | azd.</p>
+  <p>You can see the whole of it — all fifty-two on one ring — in the <a href="/network/constellation" target="_top">constellation</a>.</p>
+</footer>
+</div>
+
+<script>
+// The index's drawing, anchored to the list.
+//
+// It used to be a projected cloud on a fixed canvas while the roster scrolled
+// past it. That looks like a drawing and is not one: the same eight lines hang
+// in the same place while entirely different names pass behind them, so a line
+// that means "these two made the same thing" can never be traced to the two
+// names it belongs to — which two you see depends on where you stopped
+// scrolling. A mark whose meaning changes with the scroll position is
+// decoration, and on paper decoration reads as smudge.
+//
+// So every mark is now fixed to the row it is about. A person's dot sits at
+// the right edge of that person's own row and scrolls with it. A bracket
+// gathers everyone who made one work and carries that work's name, so it is
+// one mark per fact — the first version drew one arc per PAIR, which turned
+// two works into thirteen crossing lines and said no more than two brackets do.
+//
+// Below the width where there is a margin to draw in, it draws nothing at all.
+
+// works: [{ title, slugs: [...] }] — one entry per work more than one person made
+function createRosterField(svg, roster, works) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const GAP = 20;      // from a row's right edge to its dot
+  const FIRST = 34;    // from the dots to the first bracket's spine
+  const STEP = 40;     // between spines
+  let rows = [];
+  let nodes = new Map();   // slug -> circle
+  let ties = [];           // {slugs:Set, parts:[element]}
+
+  const el = (name, attrs) => {
+    const n = document.createElementNS(NS, name);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  };
+
+  function build() {
+    svg.replaceChildren();
+    nodes = new Map();
+    ties = [];
+    rows = [...roster.querySelectorAll('a.row')];
+    if (!rows.length) return;
+
+    const box = roster.getBoundingClientRect();
+    let rowRight = 0;
+    for (const row of rows) rowRight = Math.max(rowRight, row.getBoundingClientRect().right);
+    // A coarse gate first, so a phone does not build fifty-two nodes to throw
+    // them away; the exact check is at the end, once the marks can be measured.
+    if (window.innerWidth - rowRight < GAP + FIRST + 40) { svg.style.display = 'none'; return; }
+    svg.style.display = '';
+    svg.setAttribute('width', box.width);
+    svg.setAttribute('height', box.height);
+    svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+
+    const at = new Map();
+    const x = rowRight - box.left + GAP;
+    for (const row of rows) {
+      const r = row.getBoundingClientRect();
+      at.set(row.dataset.slug, r.top - box.top + r.height / 2);
+    }
+
+    // brackets under the dots, so a dot always reads as the end of its own tie
+    const gTie = el('g', {});
+    const gDot = el('g', {});
+    svg.append(gTie, gDot);
+
+    works.forEach((work, i) => {
+      const ys = work.slugs.map((s2) => at.get(s2)).filter((v) => v != null).sort((a, b) => a - b);
+      if (ys.length < 2) return;
+      const out = x + FIRST + i * STEP;
+      const top = ys[0]; const bot = ys[ys.length - 1];
+      const r = 10;
+      const parts = [el('path', {
+        class: 'tie-arc',
+        d: `M ${x} ${top} H ${out - r} Q ${out} ${top} ${out} ${top + r}`
+         + ` V ${bot - r} Q ${out} ${bot} ${out - r} ${bot} H ${x}`,
+      })];
+      for (const y of ys.slice(1, -1)) parts.push(el('path', { class: 'tie-arc', d: `M ${x} ${y} H ${out}` }));
+      // every label in one column, clear of every spine — a label tucked
+      // beside its own bracket sat on top of the next bracket's spine
+      const labelX = x + FIRST + Math.max(0, works.length - 1) * STEP + 14;
+      let labelY = (top + bot) / 2 + 4;
+      for (const seenTie of ties) if (Math.abs(seenTie.labelY - labelY) < 18) labelY = seenTie.labelY + 18;
+      parts.push(el('text', { class: 'tie-label', x: labelX, y: labelY }));
+      parts[parts.length - 1].textContent = work.title;
+      for (const p2 of parts) gTie.append(p2);
+      ties.push({ slugs: new Set(work.slugs), parts, labelY });
+    });
+
+    for (const row of rows) {
+      const c = el('circle', { cx: x, cy: at.get(row.dataset.slug), r: 3, class: 'tie-dot' });
+      gDot.append(c);
+      nodes.set(row.dataset.slug, c);
+    }
+
+    // No margin, no drawing — measured, not estimated. A bracket or a label
+    // clipped by the window edge is a mark that stops meaning anything, and
+    // the width a label needs depends on the work's name, not on a constant.
+    let right = 0;
+    for (const el of svg.querySelectorAll('path,circle,text')) {
+      right = Math.max(right, el.getBoundingClientRect().right);
+    }
+    if (right > window.innerWidth - 8) { svg.style.display = 'none'; }
+  }
+
+  function light(slug) {
+    for (const [s, c] of nodes) c.classList.toggle('is-lit', s === slug);
+    for (const tie of ties) {
+      const lit = slug != null && tie.slugs.has(slug);
+      for (const p2 of tie.parts) p2.classList.toggle('is-lit', lit);
+    }
+  }
+
+  build();
+  // rows change height when the roster reflows, and reflow is what moves a dot
+  // off the row it belongs to — the one failure this drawing cannot survive.
+  if (window.ResizeObserver) new ResizeObserver(build).observe(roster);
+  else window.addEventListener('resize', build);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(build);
+
+  return { light, rebuild: build };
+}
+
+const roster = document.querySelector('main.roster');
+const field = createRosterField(roster.querySelector('svg.tie'), roster, [{"title":"br_id_ge","slugs":["gevorg-grigoryan","emilya-nikoghosyan","syuzi-ginosyan"]},{"title":"ազդ | azd","slugs":["emilya-nikoghosyan","syuzi-ginosyan","yeva-abgaryan","greta-grigoryan","shahane-harutyunyan"]}]);
+// the list drives the drawing, never the other way round
+let active = null;
+function light(row) {
+  if (active === row) return;
+  if (active) active.classList.remove('is-active');
+  active = row;
+  if (row) row.classList.add('is-active');
+  field.light(row ? row.dataset.slug : null);
+}
+for (const row of roster.querySelectorAll('a.row')) {
+  row.addEventListener('pointerenter', () => light(row));
+  row.addEventListener('focus', () => light(row));
+}
+roster.addEventListener('pointerleave', () => light(null));
+</script>
+</body>
+</html>

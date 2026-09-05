@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useProjectStore } from '../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
 import { generateId } from '../shared/projectSchema.js'
+import { recallCueLighting } from './lightingLink.js'
 
 // Both map routes talk to one project document through the ordinary op layer,
 // so a mapping is a normal di.iiii document with normal history — not a file
@@ -97,6 +98,18 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         // duration off the same style change that moves the opacity.
         fireCue: (cue) => {
             if (!cue) return
+            // The light goes with the wall, and it goes FIRST — before the op
+            // batch rather than after it, so the two desks start their fades
+            // at the same moment instead of the rig waiting on a document
+            // round-trip. This is the single choke point every way of playing
+            // a cue passes through: the number key, Play walking the list, and
+            // the button in the cue list all end up here.
+            //
+            // recallCueLighting never rejects and never blocks: a cue with no
+            // scene touches no network, and a lighting desk that is not
+            // running (every hosted tab: /light answers 404 there) costs the
+            // projection cue nothing at all.
+            recallCueLighting(cue)
             const ops = [{ type: 'setMappingState', payload: { patch: { fade: cue.fade } } }]
             Object.entries(cue.surfaces).forEach(([surfaceId, patch]) => {
                 if (patch && Object.keys(patch).length) {

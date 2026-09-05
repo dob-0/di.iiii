@@ -1,4 +1,8 @@
 {$SITE_DOMAIN} {
+	# Caddy issues the certificate but does not send HSTS on its own. A year
+	# without preload: browsers that have visited once stop trying http://
+	# first, and there is no subdomain claim that could strand a future host.
+	header Strict-Transport-Security "max-age=31536000"
 	# Container-internal port moved to 8080 (audit #27): the client
 	# container now runs nginx as non-root, which can't bind below 1024.
 	reverse_proxy client:8080
@@ -12,5 +16,17 @@
 # Default lives in docker-compose.yml's environment: mapping, not here as
 # a Caddyfile {$VAR:default} -- see the comment there for why.
 {$STAGING_DOMAIN} {
+	header Strict-Transport-Security "max-age=31536000"
 	reverse_proxy host.docker.internal:{$STAGING_PORT:8081}
+}
+
+# map.di-studio.xyz — a memorable door onto the map lane, not a second app.
+# It reverse-proxies to the SAME prod client as {$SITE_DOMAIN} above, so
+# every path, asset and API call resolves exactly as it does there — the
+# map lane already sits behind ProtectedSurface (per-space sign-in), so this
+# adds a name, not a hole in the wall. Inert until MAP_DOMAIN is set in .env
+# and its DNS record exists, same as STAGING_DOMAIN above.
+{$MAP_DOMAIN} {
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy client:8080
 }

@@ -1,0 +1,1264 @@
+:root {
+  /* di.iiii: near-black, hard squares, one cyan accent. Not pure #000 — the stage's
+     dark fixture bodies and the panes need a step of separation to stay legible. */
+  --bg: #0c0c0d;
+  --bar: #060607;
+  --pane: #121213;
+  --pane2: #1a1a1c;
+  --field: #060607;
+  --cell: #161617;
+  --cell2: #232326;
+  --line: #26262a;
+  --text: #d8dadb;
+  --muted: #878d92;   /* was #6f7478 — one step brighter; the notes were unreadable in a dark booth */
+  --accent: #35d2dd;
+  --danger: #e0524a;
+  --stagebg: #0a0a0b;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: dark;   /* native widgets (selects, number spinners, scrollbars) render dark */
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }   /* beats the display rules below */
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+  /* The chrome (top bar + status strip) can wrap to more than one row on a narrow
+     window, so the page height is dealt by flex, not by a hard calc(100vh - 46px). */
+  display: flex; flex-direction: column;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); font-size: 11px; }
+.flex { flex: 1; }
+h2 { margin: 0; font-size: 12px; letter-spacing: .01em; font-weight: 600; color: var(--muted); }
+
+input[type=text], input[type=number], select {
+  background: var(--field); border: 1px solid var(--line); border-radius: 0;
+  padding: 5px 8px; min-width: 0;
+}
+input[type=number] { width: 74px; }
+input:focus, select:focus { outline: 1px solid var(--accent); }
+
+/* ---------------- top bar ---------------- */
+.topbar {
+  /* Was a fixed 46px single row: at mid widths the BPM/Tap/Save cluster overflowed the
+     bar and the Blackout button was clipped clean off. The bar now wraps and grows,
+     and stays pinned so Blackout is reachable even when the page scrolls. */
+  min-height: 46px; display: flex; align-items: stretch; flex-wrap: wrap; gap: 0;
+  background: var(--bar); border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 50; flex: none;
+}
+.dots { background: none; border: 0; color: var(--muted); padding: 0 14px; font-size: 15px; }
+.pages { display: flex; }
+.page-tab {
+  background: none; border: 0; border-bottom: 2px solid transparent;
+  color: var(--muted); padding: 0 18px; letter-spacing: .01em; font-size: 13px;
+}
+.page-tab.is-active { color: #fff; border-bottom-color: #fff; }
+/* Matches .page-tab, but it is an <a> to another page rather than a tab in this one. */
+.title { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; }
+.topright { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 4px 12px 4px 0; min-height: 44px; }
+.go {
+  background: var(--pane2); border: 1px solid var(--line); border-radius: 0;
+  padding: 6px 16px; font-weight: 700;
+}
+.go:active { background: var(--accent); color: #041012; }
+.bpm { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; color: var(--muted); letter-spacing: .1em; }
+.bpmbar { width: 46px; height: 3px; background: var(--line); border-radius: 0; overflow: hidden; }
+.bpmbar i { display: block; height: 100%; width: 0; background: var(--accent); }
+.bpmnum { width: 62px; font-size: 20px; text-align: center; border: 0; background: none; padding: 0; }
+.tap { background: var(--pane2); border: 1px solid var(--line); border-radius: 0; padding: 6px 10px; font-size: 11px; }
+/* Snap sits beside Tap because it is the other half of the same idea: Tap says where the
+   beat is, snap says to wait for it. */
+.snapsel { background: var(--pane2); border: 1px solid var(--line); border-radius: 0; padding: 5px 4px; font-size: 11px; color: var(--muted); }
+.snapsel:focus { color: var(--text); }
+
+.statusstrip {
+  background: var(--bar); border-bottom: 1px solid var(--line); padding: 6px 14px;
+  font-family: var(--mono); font-size: 11px; color: var(--muted); flex: none;
+}
+
+/* ---------------- page frame ---------------- */
+.page { display: none; flex: 1 1 auto; min-height: 0; flex-direction: column; }
+.page.is-active { display: flex; }
+
+.pane { background: var(--pane); border: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+.pane-head { display: flex; align-items: center; gap: 12px; padding: 7px 12px; border-bottom: 1px solid var(--line); flex: none; }
+.inline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.inline.pad { padding: 8px 12px; }
+.inline label { color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.sq {
+  background: var(--pane2); border: 1px solid var(--line); border-radius: 0;
+  padding: 5px 10px; font-size: 12px;
+}
+.sq:hover { border-color: var(--muted); }
+.sq.accent { background: var(--accent); color: #041012; border-color: var(--accent); font-weight: 600; }
+.sq.danger { color: var(--danger); }
+
+/* ---------------- setup: top split ---------------- */
+/* minmax(0, 1fr): a bare 1fr keeps its content's min-width, which let the patch grid
+   push the column wider than the window and shove panes over each other.
+   The --sp-* vars are the drag-to-resize handles' knobs (see .splitter below): the
+   stylesheet value is the default, a drag writes an inline px value over it, and
+   double-clicking the bar removes the inline value to land back here. Column gap is 0
+   because the 6px splitter column IS the gap; the 4px row gap only matters stacked. */
+.top-split { --sp-1: minmax(300px, 26%); display: grid; grid-template-columns: var(--sp-1) 6px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 4px 0; padding: 4px; height: var(--sp-h, 54%); min-height: 0; }
+@media (max-width: 1100px) { .top-split { grid-template-columns: 1fr; grid-template-rows: none; height: auto; } }
+
+.library .pane-head { justify-content: flex-start; }
+.subtabs { display: flex; margin-left: auto; }
+.subtab { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); padding: 4px 12px; font-size: 12px; letter-spacing: .01em; }
+.subtab.is-active { color: var(--text); border-bottom-color: #fff; }
+
+/* Flex, not a 3-row grid: the combo bar is a sometimes-there 4th child, and with fixed
+   grid rows its appearance pushed the patch form into an implicit row below the pane. */
+.lib-body { display: flex; flex-direction: column; min-height: 0; flex: 1; overflow: auto; }
+.lib-body > * { flex: none; }
+.lib-body .tree { flex: 1 1 auto; }
+.search { display: flex; gap: 6px; padding: 8px 12px; }
+.search input { flex: 1; }
+.search button { background: none; border: 0; color: var(--muted); padding: 0 6px; }
+
+.tree {
+  margin: 0 12px; background: var(--field); border: 1px solid var(--line);
+  overflow: auto; min-height: 62px;
+}
+.tree .cat { padding: 5px 10px; color: var(--muted); font-size: 12px; }
+.tree .item { padding: 3px 10px 3px 30px; cursor: pointer; }
+.tree .item:hover { background: var(--cell2); }
+.tree .item.sel { background: var(--cell2); color: var(--text); box-shadow: inset 2px 0 0 var(--accent); }
+
+/* ---- the Open Fixture Library browser ---- */
+/* It sits INSIDE the library pane rather than in a dialog: importing a fixture and then
+   dragging it onto the patch are one continuous gesture, and a modal would cut it. */
+.ofl { display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
+.oflbar { display: flex; gap: 6px; padding: 0 12px 6px; }
+.oflbar input { flex: 1; }
+.oflmsg { padding: 2px 12px 6px; font-size: 12px; }
+.oflmsg.bad { color: var(--bad, #e0736f); }
+.ofllist {
+  margin: 0 12px; background: var(--field); border: 1px solid var(--line);
+  overflow: auto; max-height: 240px; min-height: 62px;
+}
+.ofllist .cat { padding: 5px 10px; color: var(--muted); font-size: 12px; }
+.ofllist .cat.oflback { cursor: pointer; }
+.ofllist .cat.oflback:hover { background: var(--cell2); color: var(--text); }
+.ofllist .item { padding: 4px 10px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+.ofllist .item:hover { background: var(--cell2); }
+.ofllist .item i { color: var(--muted); font-style: normal; font-size: 11px; white-space: nowrap; }
+.oflmodes { margin: 6px 12px 0; background: var(--field); border: 1px solid var(--line); max-height: 200px; overflow: auto; }
+.oflmodes .cat { padding: 5px 10px; color: var(--muted); font-size: 12px; }
+.oflmode { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-top: 1px solid #ffffff08; }
+.oflmode .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.oflmode .txt span { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.lib-form { padding: 8px 12px 10px; border-top: 1px solid var(--line); margin-top: 8px; }
+.lib-sel { margin-bottom: 6px; font-size: 12px; }
+.lib-sel i {
+  display: block; font-style: normal; font-size: 11px; color: var(--muted);
+  margin-top: 1px; line-height: 1.35;
+}
+.frow { display: grid; grid-template-columns: 1fr 140px; align-items: center; gap: 8px; margin-bottom: 4px; }
+.frow span { color: var(--text); }
+.frow input, .frow select { width: 100%; }
+.frow2 { display: flex; gap: 10px; margin-bottom: 4px; }
+.frow2 label { flex: 1; display: flex; align-items: center; gap: 6px; color: var(--text); }
+.frow2 input { flex: 1; min-width: 0; width: 100%; }
+.patchbtn {
+  display: block; margin: 6px 0 0 auto; width: 130px; padding: 6px;
+  background: var(--pane2); border: 1px solid var(--muted); border-radius: 0;
+}
+.patchbtn:hover { background: var(--accent); color: #041012; border-color: var(--accent); }
+.hint { color: var(--muted); font-size: 11px; text-align: right; margin-top: 4px; min-height: 0; }
+
+/* ---------------- patch grid ---------------- */
+.patch-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--line); flex: none; }
+.patch-tools select { width: 130px; }
+.grid {
+  /* overflow auto, not hidden: the 32 columns have a real minimum width, so on a
+     narrow pane the grid scrolls inside itself instead of clipping half the cells. */
+  flex: 1; overflow: auto; padding: 5px;
+  display: grid; grid-template-columns: repeat(32, minmax(20px, 1fr));
+  grid-auto-rows: minmax(20px, 1fr); gap: 2px; align-content: stretch;
+}
+.gc {
+  background: var(--cell); border-radius: 0; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 10px; color: var(--muted); cursor: pointer;
+  overflow: hidden; white-space: nowrap;
+}
+.gc:hover { background: var(--cell2); }
+.gc.used {
+  background: var(--cell2); color: var(--text);
+  justify-content: space-between; padding: 0 6px; font-size: 11px;
+}
+.gc.used b { font-weight: 400; color: var(--text); }
+.gc.sel { outline: 1px solid var(--accent); color: #fff; }
+.gc.cont, .gc.cont span, .gc.cont b { color: transparent; }   /* continuation of a fixture that crosses a row: no repeated label */
+
+/* ---------------- groups ---------------- */
+.groups { display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); flex: none; min-width: 0; }
+/* min-width 0 so a long row of groups scrolls here instead of pushing the + button off-screen */
+.grouptabs { display: flex; gap: 4px; overflow-x: auto; min-width: 0; flex: 0 1 auto; }
+.gtab { background: none; border: 1px solid transparent; border-radius: 0; padding: 5px 14px; color: var(--muted); white-space: nowrap; }
+.gtab.is-active { border-color: #fff; color: var(--text); }
+.gtab .x { color: var(--muted); margin-left: 8px; }
+
+/* ---------------- stage ---------------- */
+.bottom-split { --sp-1: 190px; --sp-2: 470px; display: grid; grid-template-columns: minmax(0, 1fr) 6px var(--sp-1) 6px var(--sp-2); grid-template-rows: minmax(0, 1fr); gap: 4px 0; padding: 4px; flex: 1; min-height: 0; }
+@media (max-width: 1300px) { .bottom-split { --sp-1: 160px; --sp-2: 430px; } }
+@media (max-width: 1100px) { .bottom-split { grid-template-columns: 1fr; grid-template-rows: none; min-height: 420px; } }
+
+.stage-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--line); flex: none; }
+.tool { background: none; border: 1px solid transparent; border-radius: 0; color: var(--muted); width: 30px; height: 26px; font-size: 13px; }
+.tool.is-active, .tool:hover { border-color: var(--line); color: var(--text); background: var(--pane2); }
+.stage-tools .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.stage-tools input[type=range] { width: 90px; }
+
+/* The grid used to live on the inner (transformed) layer, sized to the old -1..2 world —
+   pan or zoom far enough past that and the backdrop ran out, so the "room" read as a
+   bounded canvas rather than a stage you can arrange a whole rig across. It lives on the
+   OUTER pane instead now: background-position/-size (set in placeStages, JS) track pan
+   and zoom directly, which tiles for real — there is no edge to run out of. */
+.stage {
+  flex: 1; position: relative; overflow: hidden; cursor: crosshair;
+  background-color: var(--stagebg);
+  background-image:
+    repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 40px);
+}
+/* the visible rect at zoom 1 — the 'home' screen the Fit button frames back to */
+.stage-inner::after {
+  content: ''; position: absolute; inset: 0; border: 1px dashed #ffffff14; pointer-events: none;
+}
+.stage.hand { cursor: grab; }
+.stage-inner { position: absolute; inset: 0; transform-origin: 0 0; }
+.stage-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); pointer-events: none; margin: 0; }
+
+.fx-node { position: absolute; transform: translate(-50%, -50%); }
+.fx-body {
+  position: relative; width: 34px; height: 30px; border-radius: 0;
+  border: 1px solid #00000055; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--text); font-weight: 600; cursor: grab;
+  background: #1d1d20; transition: background .1s linear;   /* matches paintStage's unlit body */
+}
+.fx-node.sel .fx-body { outline: 2px solid #fff; outline-offset: 1px; }
+.fx-node.dragging .fx-body { cursor: grabbing; }
+.fx-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 3px; font-size: 9px; color: var(--muted); white-space: nowrap; pointer-events: none; }
+
+.marquee { position: absolute; border: 1px solid var(--accent); background: #35d2dd22; pointer-events: none; }
+
+/* ---------------- selections ---------------- */
+.sellist { flex: 1; overflow: auto; }
+.selrow { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid #ffffff08; cursor: pointer; }
+.selrow:hover { background: #ffffff08; }
+.selrow i { width: 12px; height: 12px; border-radius: 0; flex: none; border: 1px solid var(--line); }   /* an unlit fixture is a black chip — keep its edge */
+/* Find: flash one lamp so it can be picked out of a rig of identical ones. The row
+   pulses with it, so the desk visibly agrees while the operator is looking at the rig
+   rather than at the screen. */
+.selrow .findbtn {
+  margin-left: auto; flex: none; background: none; border: 1px solid var(--line);
+  color: var(--muted); font-size: 11px; padding: 1px 7px; border-radius: 0; cursor: pointer;
+}
+.selrow .findbtn:hover { color: var(--text); background: var(--pane2); border-color: var(--muted); }
+.selrow.finding { box-shadow: inset 2px 0 0 var(--accent); }
+.selrow.finding .findbtn { color: var(--accent); border-color: var(--accent); animation: findpulse 0.5s steps(1) infinite; }
+@keyframes findpulse { 0% { opacity: 1; } 50% { opacity: 0.35; } 100% { opacity: 1; } }
+.selrow .n { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+/* ---------------- limits ---------------- */
+.limitcols { display: grid; grid-template-columns: 150px 1fr; height: 100%; min-height: 0; }
+.limitcol { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
+.limitcol.wide { border-right: 0; }
+.vslider { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 0; }
+.vval { font-size: 11px; color: var(--muted); }
+.vtrack { position: relative; width: 2px; background: var(--line); flex: 1; min-height: 120px; }
+.vfill { position: absolute; left: -1px; width: 4px; background: var(--accent); border-radius: 0; }
+.vhandle {
+  position: absolute; left: 50%; width: 22px; height: 12px; margin-left: -11px; margin-top: -6px;
+  background: var(--pane2); border: 1px solid var(--muted); border-radius: 0; padding: 0;
+}
+.movegrid { display: grid; grid-template-columns: 1fr 78px 1fr 78px; gap: 8px; padding: 12px; }
+.movebox {
+  background:
+    repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 24px),
+    var(--field);
+  border: 1px solid var(--line); height: 96px; position: relative; overflow: hidden;
+}
+.movebox i { position: absolute; left: 0; right: 0; background: #35d2dd22; border-top: 1px solid #35d2dd99; border-bottom: 1px solid #35d2dd99; }
+.movebox span { position: absolute; bottom: 4px; right: 6px; font-size: 11px; color: var(--muted); }
+.movelabels { display: flex; flex-direction: column; gap: 6px; justify-content: center; }
+.movelabels label { display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: var(--muted); }
+.movelabels input { width: 100%; }
+.invert { display: flex; gap: 12px; align-items: center; padding: 0 12px 12px; font-size: 12px; color: var(--muted); }
+.invert label { display: flex; gap: 4px; align-items: center; letter-spacing: 0; }
+
+/* ---------------- control page ---------------- */
+/* The rail default was 240px — too narrow for the FX/LFO/Audio stacks on a wide screen —
+   and both side columns are now draggable (.splitter): the vars are the knobs. */
+.ctl-top { --sp-1: 250px; --sp-3: 290px; --sp-2: 300px; display: grid; grid-template-columns: var(--sp-1) 6px minmax(0, 1fr) 6px var(--sp-3) 6px var(--sp-2); gap: 4px 0; padding: 4px; height: var(--sp-h, 50%); min-height: 260px; }
+.ctl-bottom { --sp-1: 180px; --sp-2: 640px; display: grid; grid-template-columns: minmax(0, 1fr) 6px var(--sp-1) 6px var(--sp-2); gap: 4px 0; padding: 4px; flex: 1; min-height: 0; }
+@media (max-width: 1400px) { .ctl-bottom { --sp-1: 150px; --sp-2: 520px; } }
+@media (max-width: 1250px) { .ctl-top { --sp-2: 260px; --sp-3: 250px; } .ctl-bottom { --sp-1: 140px; --sp-2: 440px; } }
+/* Stacked below 1100: the stack column becomes a full-width pane like every other one,
+   and needs a floor or it collapses to its sticky heads. */
+@media (max-width: 1100px) { .ctl-top, .ctl-bottom { grid-template-columns: 1fr; height: auto; } .stackpane { min-height: 420px; } }
+
+.transport { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); flex: none; }
+.transport .sq { flex: 1; }
+.banklist { flex: 1; overflow: auto; min-height: 60px; }
+/* group headers in the bank — derived from the scene naming convention in buildBank();
+   sticky so the section you are scrolled into stays named, and not .bankrow so every
+   click/long-press/hotkey path skips them by construction */
+.bankhead {
+  position: sticky; top: 0; z-index: 1; background: var(--pane);
+  padding: 5px 10px 3px; font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); border-bottom: 1px solid var(--line);
+  user-select: none; -webkit-user-select: none;
+}
+.bankrow { display: grid; grid-template-columns: 1fr 16px; border-bottom: 1px solid #ffffff08; cursor: pointer; }
+.bankrow:hover { background: #ffffff08; }
+.bankrow.sel { background: var(--pane2); }   /* the scene open in the detail pane, as opposed to .active, the one on stage */
+.bankrow .txt { padding: 7px 10px; }
+.bankrow .nm { display: block; }
+.bankrow.active .nm { color: var(--accent); }
+.bankrow .sub { font-size: 10px; color: var(--muted); }
+.bankrow .bar { background: var(--line); }
+.bankrow.active .bar { background: var(--accent); }
+
+.scenedetail { flex: 1; overflow: auto; padding: 14px; }
+.scenedetail .strip { display: flex; height: 26px; border-radius: 0; overflow: hidden; margin-bottom: 14px; border: 1px solid var(--line); }   /* a blackout scene is a black strip — keep its edge */
+.scenedetail .strip i { flex: 1; }
+.sd-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.sd-empty { color: var(--muted); }
+
+.railmaster { display: grid; justify-items: center; gap: 8px; padding: 12px; }
+.railmaster output { font-family: var(--mono); font-size: 15px; }
+.railchase { display: grid; gap: 6px; padding: 10px 12px; }
+.railchase label { display: flex; justify-content: space-between; align-items: center; color: var(--muted); }
+/* The rail stacks Master + FX + LFO + Audio + Output — far taller than the pane. Every
+   child is flex:none so nothing gets crushed to make room; the pane itself scrolls.
+   (Same fix .bankpane needed: shrinking flex children clip instead of scrolling.) */
+.railpane { overflow-y: auto; overflow-x: hidden; }
+.railpane > * { flex: none; }
+/* Section headers stick while their body scrolls under them, and fold on click —
+   app.js adds .foldable/.folded and .railfold on the bodies. */
+.railpane > .pane-head { position: sticky; top: 0; z-index: 2; background: var(--pane); }
+.pane-head.foldable { cursor: pointer; user-select: none; -webkit-user-select: none; }
+/* the LFO kill switch lives in the (foldable) section header, pushed to the far edge */
+#lfoAllOff { margin-left: auto; padding: 3px 9px; font-size: 11px; }
+#lfoAllOff:disabled { opacity: .35; }
+.pane-head.foldable h2::before { content: '▾ '; color: var(--muted); font-size: 9px; }
+.pane-head.foldable.folded h2::before { content: '▸ '; }
+.railfold { display: none !important; }
+.outdetails summary {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  cursor: pointer; list-style: none;
+}
+.outdetails summary::-webkit-details-marker { display: none; }
+.outdetails summary::before { content: '▸'; color: var(--muted); font-size: 10px; }
+.outdetails[open] summary::before { content: '▾'; }
+.outdetails summary span { font-size: 11px; }
+.blackout { background: none; border: 1px solid var(--danger); color: var(--danger); border-radius: 0; padding: 9px 14px; font-weight: 700; width: 100%; }
+.blackout.on { background: var(--danger); color: #041012; }   /* dark-on-fill, like text on the accent — white sat under 4.5:1 */
+.blackout.big { font-size: 18px; padding: 20px; }
+
+/* ---------------- fx panel ---------------- */
+/* Pads are built by app.js from the server's mode list. The running pad carries the
+   accent; the Off pad is quiet even while current, because idle is not a go state. */
+.fxpads { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 8px 12px 4px; }
+.fxpad {
+  background: var(--pane2); border: 1px solid var(--line); border-radius: 0;
+  padding: 7px 4px; font-size: 12px; color: var(--text);
+}
+.fxpad:hover { border-color: var(--muted); }
+.fxpad.is-active { background: var(--accent); border-color: var(--accent); color: #041012; font-weight: 600; }
+.fxpad.off { background: transparent; color: var(--muted); }
+.fxpad.off.is-active { background: var(--pane2); border-color: var(--muted); color: var(--text); font-weight: 400; }
+.fxspat.is-active { border-color: var(--accent); color: var(--accent); }
+.fxfader { display: flex; align-items: center; gap: 8px; padding: 4px 12px; }
+.fxfader label { color: var(--muted); }
+.fxfader input[type=range] { flex: 1; }
+.fxfader output { font-family: var(--mono); min-width: 40px; text-align: right; }
+.fxhint { margin: 4px 12px 6px; font-size: 11px; line-height: 1.4; }
+#fxState.running { color: var(--accent); }
+#fxDepthOut.bad { color: var(--danger); font-weight: 700; }   /* running at depth 0: working but invisible */
+
+/* ---------------- vertical faders ---------------- */
+.vwrap { position: relative; width: 36px; height: 150px; flex: none; }
+.vwrap.tall { height: 190px; }
+.vwrap input[type=range] {
+  position: absolute; top: 50%; left: 50%; width: 150px;
+  transform: translate(-50%, -50%) rotate(-90deg); transform-origin: center;
+}
+.vwrap.tall input[type=range] { width: 190px; }
+.vwrap input[type=range]::-webkit-slider-runnable-track { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
+.vwrap input[type=range]::-moz-range-track { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
+.vwrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 26px; margin-top: -10px; border-radius: 0; background: var(--cell2); border: 1px solid var(--muted); }
+.vwrap input[type=range]::-moz-range-thumb { width: 18px; height: 26px; border-radius: 0; background: var(--cell2); border: 1px solid var(--muted); }
+
+/* ---------------- attribute editor ---------------- */
+.attr-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); flex: none; }
+.attr-head .who { flex: 1; color: var(--muted); font-size: 12px; }
+.attr-body { flex: 1; display: grid; grid-template-columns: 118px minmax(0, 1fr); min-height: 0; }
+.attr-tabs { border-right: 1px solid var(--line); overflow: auto; }
+.atab { display: flex; align-items: center; gap: 7px; width: 100%; background: none; border: 0; text-align: left; padding: 11px 12px; color: var(--muted); font-size: 12px; }
+.atab.is-active { background: var(--pane2); color: var(--text); }
+.atab i { width: 6px; height: 6px; border-radius: 0; background: var(--muted); flex: none; }
+.atab.is-active i { background: var(--accent); }
+.attr-panels { overflow: auto; padding: 12px; }
+.apanel { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.faders { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+.fader { width: 82px; display: grid; justify-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 0; padding: 8px 4px; background: var(--bg); }
+.fader .fh { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.fader .fh i { width: 7px; height: 7px; border-radius: 0; flex: none; }
+.fader .chip { width: 26px; height: 26px; border-radius: 0; border: 1px solid var(--line); }
+.fader .fv { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.fader .quick { display: flex; gap: 3px; }
+.fader .quick button { background: var(--pane2); border: 1px solid var(--line); border-radius: 0; font-size: 10px; padding: 2px 5px; color: var(--text); }
+
+.picker { display: grid; gap: 8px; }
+.sqpick {
+  width: 226px; max-width: 100%; height: 186px; position: relative; border: 1px solid var(--line); cursor: crosshair;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), #fff),
+              linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+.sqpick .dot { position: absolute; width: 12px; height: 12px; border: 2px solid #fff; border-radius: 0; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 4px #000; }
+.hues { display: flex; height: 14px; gap: 2px; }
+.hues button { flex: 1; border: 1px solid var(--line); padding: 0; border-radius: 0; }   /* the black swatch needs an edge on a near-black pane */
+.pickfoot { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); }
+
+.xypad {
+  width: 186px; max-width: 100%; height: 186px; position: relative; border: 1px solid var(--line); cursor: crosshair;
+  background: repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 23px),
+              repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 23px), var(--field);
+}
+.xypad .dot { position: absolute; width: 14px; height: 14px; border: 2px solid var(--accent); border-radius: 0; transform: translate(-50%, -50%); pointer-events: none; }
+.selfoot { display: flex; gap: 4px; padding: 6px; border-top: 1px solid var(--line); }
+.selfoot .sq { flex: 1; }
+
+.nodes { display: grid; gap: 6px; padding: 0 12px 10px; }
+.node { background: var(--field); border-radius: 0; padding: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 11px; }
+.node .ip { font-family: var(--mono); color: var(--accent); }
+.node.stale { opacity: .5; }
+.node.stale .ip { color: var(--muted); }
+#pollAddress { flex: 1; min-width: 120px; }
+#phoneQr svg, #phoneQr img { display: block; max-width: min(180px, 100%); height: auto; }
+#pollResult:empty { display: none; }
+.err { color: var(--danger); font-family: var(--mono); font-size: 11px; padding: 0 12px 10px; }
+
+/* ---------------- touch page ---------------- */
+/* minmax(0,1fr) on the one column: without it the implicit column sized to the pad grid's
+   max-content, the page went 1334px wide on a 390px phone with overflow-x hidden, and
+   Master and Blackout in the strip sat 600px off-screen with no way to scroll to them. */
+.touchwrap { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px; padding: 12px; min-height: 0; }
+/* the shared scene filter, dressed as a pane row rather than a bare strip */
+.touchsearch { border: 1px solid var(--line); background: var(--pane); }
+/* group headers span the whole grid and stick while their section scrolls */
+.touchgrid .bankhead { grid-column: 1 / -1; }
+.touchgrid > .muted { grid-column: 1 / -1; }
+.touchmaster { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+.touchmaster output { font-family: var(--mono); font-size: 18px; }
+/* min(150px, 100%): on a viewport narrower than two tracks the track collapses to the
+   full width instead of overflowing the pane sideways */
+.touchgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 10px; align-content: start; overflow: auto; }
+.tbtn {
+  background: var(--pane2); border: 1px solid var(--line); border-radius: 0;
+  min-height: 90px; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  font-size: 15px; padding: 10px;
+}
+.tbtn.active { border-color: var(--accent); }
+.tbtn .strip { display: flex; height: 6px; width: 100%; border-radius: 0; overflow: hidden; border: 1px solid var(--line); }
+.tbtn .strip i { flex: 1; }
+
+/* ---------------- sliders ---------------- */
+input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: 24px; width: 100%; margin: 0; touch-action: none; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; background: var(--line); border-radius: 0; }
+input[type=range]::-moz-range-track { height: 4px; background: var(--line); border-radius: 0; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -7px; border-radius: 0; background: var(--text); }
+input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 0; background: var(--text); }
+
+/* ---------------- narrow screens: stack and scroll instead of overlapping ------- */
+@media (max-width: 1100px) {
+  /* Vertical scroll only. Horizontal overflow is handled INSIDE the panes (the patch
+     grid, the group tabs) — the body itself must never scroll sideways. */
+  body { overflow: hidden; overflow-y: auto; }
+  .page { flex: none; height: auto; min-height: calc(100vh - 47px); min-height: calc(100dvh - 47px); overflow: visible; }
+  .top-split, .ctl-top { height: auto; min-height: 0; }
+  .grid { max-height: 46vh; }
+  .stagepane { min-height: min(420px, 60vh); }
+  .attrpane { min-height: 300px; }
+  .library .tree { max-height: 200px; }
+  .banklist { max-height: 45vh; }
+  .title { display: none; }
+  .pills { margin-left: auto; }
+  /* .pills and .topright stay — they carry blackout and the safety warnings. */
+}
+@media (max-width: 700px) {
+  /* the grid keeps its 32 columns and scrolls sideways — the row/span maths depends on it */
+  .bottom-split, .limitcols { grid-template-columns: 1fr; }
+  .limitcol { border-right: 0; border-bottom: 1px solid var(--line); }
+  .vtrack { min-height: 90px; }
+  .movegrid { grid-template-columns: minmax(0, 1fr) 78px; }
+  /* attribute tabs become a horizontal strip so the panel keeps its full width */
+  .attr-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  .attr-tabs { display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+  .atab { width: auto; flex: none; }
+  .fmaster { flex-wrap: wrap; }
+  .fmaster input[type=range] { flex: 1; min-width: 110px; }
+}
+
+/* A squat window (half-height on a laptop) used to crush the fixed-percentage splits
+   until panes collapsed onto each other. Below a sane height the page scrolls instead. */
+@media (max-height: 560px) {
+  body { overflow: hidden; overflow-y: auto; }
+  .page { flex: none; height: auto; min-height: 0; overflow: visible; }
+  .top-split { height: auto; }
+  .grid { max-height: 420px; min-height: 240px; }
+  .ctl-top { height: auto; min-height: 260px; }
+  .bottom-split, .ctl-bottom { min-height: 380px; }
+  .stagepane { min-height: 340px; }
+}
+
+/* ---------------- drag a profile out of the library ---------------- */
+.tree .item { user-select: none; }
+.tree .item:active { cursor: grabbing; }
+.gc.drop { outline: 2px solid var(--accent); background: #35d2dd22; }
+.stage.dropping { box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* The scenes pane stacks head + transport + list + chase; on a short window the chase
+   block used to overflow the pane and land on top of the groups bar. */
+.bankpane { overflow: auto; }
+.bankpane .transport, .bankpane .railchase, .bankpane .inline.pad { flex: none; }
+.banklist { flex: 1 1 auto; }
+
+/* Chase controls: two rows instead of three, so the scenes pane fits on a short window. */
+.railchase { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.railchase label { justify-content: flex-start; }
+.railchase input[type=number] { width: 56px; }
+.railchase .sq { flex: 1 1 100%; }
+
+/* Drop feedback: where it can go, and what is in the way. */
+.gc.freehint { box-shadow: inset 0 0 0 1px var(--accent); }
+.gc.blocked { outline: 2px solid var(--danger); }
+
+/* A field the user set deliberately — the poll leaves it alone until the next patch. */
+input.pinned { border-color: var(--accent); }
+
+/* ---------------- fader page: a manual preset desk ---------------- */
+.fader-tools {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px; border-bottom: 1px solid var(--line); flex: none;
+}
+.fader-tools select { width: 130px; }
+.fader-tools .small { font-size: 11px; }
+.fmaster { display: flex; align-items: center; gap: 8px; }
+.fmaster label { font-size: 11px; color: var(--muted); }
+.fmaster input[type=range] { width: 130px; }
+.fmaster output { font-family: var(--mono); width: 42px; text-align: right; }
+.fmaster .blackout { width: auto; padding: 6px 14px; }
+
+.faderbank {
+  flex: 1; overflow: auto; padding: 14px 12px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 8px;
+  align-content: start;
+}
+.mf {
+  /* one explicit column: the implicit one sized to the rotated 180px range input, and the
+     value box, at 100% of that, spilled over the neighbouring channel */
+  grid-template-columns: minmax(0, 1fr);
+  background: var(--pane); border: 1px solid var(--line); border-radius: 0;
+  padding: 8px 4px; display: grid; justify-items: center; gap: 5px;
+}
+.mf.over { border-color: var(--accent); background: #35d2dd14; }
+.mf-ch { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.mf.over .mf-ch { color: var(--accent); }
+.mf .vwrap { height: 180px; width: 34px; }
+.mf .vwrap input[type=range] { width: 180px; }
+ .mf-num {
+  font-family: var(--mono); font-size: 12px; width: 46px; text-align: center;
+  padding: 2px 0; background: var(--field); border: 1px solid var(--line); border-radius: 0;
+}
+.mf.over .mf-num { border-color: var(--accent); }
+.mf-num::-webkit-inner-spin-button, .mf-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+/* Who owns this channel, and which of its channels this is. Fixed heights so an unpatched
+   gap does not shorten its cell and stagger the whole bank; clipped rather than wrapped so
+   a long fixture name cannot push the faders out of alignment. */
+.mf-who, .mf-role {
+  font-size: 10px; line-height: 12px; height: 12px; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;
+}
+.mf-who { color: var(--text); }
+.mf-role { color: var(--muted); }
+.mf.over .mf-who { color: var(--accent); }
+/* An unpatched channel still holds and still transmits — dimmed, never hidden. */
+.mf.unpatched .mf-ch { opacity: 0.55; }
+.mf-wire { font-family: var(--mono); font-size: 10px; color: var(--muted); height: 12px; }
+.mf-rel {
+  background: none; border: 1px solid transparent; border-radius: 0;
+  color: var(--muted); font-size: 12px; padding: 1px 7px;
+}
+.mf.over .mf-rel { border-color: var(--line); color: var(--text); }
+.mf-rel:hover { border-color: var(--muted); }
+/* at 1280 wide the top bar wraps and the panic button got a whole row 27px tall */
+#topBlackout { min-height: 36px; }
+/* the value box must never be wider than its channel cell — at phone widths it sat on top
+   of the next channel's box */
+.mf .mf-num { min-width: 0; width: 100%; padding: 2px 0; box-sizing: border-box; }   /* outranks the input[type=number] rule below */
+.gc.used { cursor: grab; }
+.gc.used:active { cursor: grabbing; }
+
+.fader-tools .jump { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; }
+.fader-tools .jump input { width: 68px; }
+.mf.flash { animation: mfflash .9s ease-out; }
+@keyframes mfflash { from { box-shadow: 0 0 0 2px var(--accent); } to { box-shadow: 0 0 0 2px transparent; } }
+
+/* Drag feedback belongs beside the grid, not across the window in the library pane. */
+#gridMsg { font-size: 12px; }
+#gridMsg.bad { color: var(--danger); }
+#gridMsg.good { color: var(--accent); }
+
+/* A scene whose fixtures have all been unpatched fires silently — say so on the pad. */
+.bankrow.dead .nm { color: var(--muted); text-decoration: line-through; }
+.bankrow.dead .sub { color: var(--danger); }
+.tbtn.dead { opacity: .55; border-style: dashed; }
+.tbtn .tnote { font-style: normal; font-size: 11px; color: var(--danger); }
+.deadwarn {
+  border: 1px solid var(--danger); border-radius: 0; padding: 10px 12px;
+  margin-bottom: 12px; color: var(--danger); font-size: 12px; line-height: 1.5;
+}
+.deadwarn.soft { border-color: var(--line); color: var(--muted); }
+
+/* Fixture name is editable in the Selections list — the only place that can set it. */
+.selname {
+  flex: 1; min-width: 0; background: none; border: 1px solid transparent;
+  border-radius: 0; padding: 2px 5px; color: inherit; font: inherit;
+}
+.selname:hover { border-color: var(--line); }
+.selname:focus { background: var(--field); border-color: var(--accent); outline: none; }
+.tree .item i { display: block; font-style: normal; font-size: 10px; color: var(--muted); line-height: 1.3; }
+
+/* Held channels override the fixtures everywhere — warn on every page, not just Fader. */
+.heldpill {
+  background: transparent; border: 1px solid var(--accent); color: var(--accent);
+  border-radius: 0; padding: 3px 12px; font-size: 11px; white-space: nowrap;
+}
+.heldpill:hover { background: var(--accent); color: #041012; }
+.setall { display: flex; align-items: center; gap: 4px; }
+.setall input { width: 74px; }
+.setall input.bad { border-color: var(--danger); background: #e0524a22; }
+
+.savenow {
+  background: var(--pane2); border: 1px solid var(--line); border-radius: 0;
+  padding: 6px 12px; font-size: 12px; white-space: nowrap;
+}
+.savenow:hover { border-color: var(--accent); color: var(--accent); }
+.savenow.ok { background: var(--accent); color: #041012; border-color: var(--accent); }
+
+/* ---------------- fixture builder ---------------- */
+.library .pane-head .small { padding: 3px 9px; font-size: 11px; }
+.combobar {
+  display: flex; align-items: center; gap: 8px; margin: 0 12px 8px;
+  padding: 7px 9px; background: #35d2dd14; border: 1px solid var(--accent);
+  border-radius: 0; font-size: 11px; color: var(--accent);
+}
+.combobar span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.combobar .sq { padding: 3px 9px; font-size: 11px; }
+.tree .item.multi { background: #35d2dd14; color: var(--accent); }
+.tree .item .edit { float: right; font-weight: 400; color: var(--muted); padding: 0 4px; }
+.tree .item .edit:hover { color: var(--accent); }
+
+.overlay {
+  position: fixed; inset: 0; z-index: 60; background: #0009;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.builderbox {
+  background: var(--pane); border: 1px solid var(--line); border-radius: 0;
+  width: 560px; max-width: 100%; max-height: 100%; display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px #000a;
+}
+.builder-head, .builder-foot {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+}
+.builder-head { border-bottom: 1px solid var(--line); }
+.builder-head h2 { font-size: 13px; color: var(--text); flex: 1; }
+.builder-foot { border-top: 1px solid var(--line); }
+.builder-body { padding: 12px 14px; overflow: auto; }
+.bsec { font-size: 11px; color: var(--text); margin: 14px 0 6px; }
+.bchans { display: grid; gap: 3px; }
+.bchan {
+  display: flex; align-items: center; gap: 8px; background: var(--field);
+  border: 1px solid var(--line); border-radius: 0; padding: 5px 8px;
+}
+.bnum { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 18px; }
+.bdot { width: 9px; height: 9px; border-radius: 0; flex: none; }
+.bname { flex: 1; font-size: 12px; }
+.brole { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.bmv {
+  background: var(--pane2); border: 1px solid var(--line); border-radius: 0;
+  color: var(--muted); width: 24px; height: 22px; font-size: 11px;
+}
+.bmv:hover:not(:disabled) { color: var(--text); border-color: var(--muted); }
+.bmv:disabled { opacity: .3; cursor: default; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip {
+  display: flex; align-items: center; gap: 5px; background: var(--pane2);
+  border: 1px solid var(--line); border-radius: 0; padding: 3px 10px; font-size: 11px;
+}
+.chip i { width: 7px; height: 7px; border-radius: 0; }
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.brow { display: flex; gap: 6px; margin-top: 8px; }
+.brow input { flex: 1; }
+.berr { color: var(--danger); font-size: 11px; margin-top: 10px; min-height: 14px; line-height: 1.4; }
+
+/* ---- serial output ---- */
+.serialstat { font-size: 12px; line-height: 1.5; }
+.serialstat .good { color: var(--accent); }
+.serialstat .bad, #serialStat .bad { color: var(--danger); }
+.serialstat .warn { color: var(--danger); }   /* the old amber warn was a second accent; red carries it here */
+#serialPort { min-width: 9em; }
+
+/* ---- top bar: pills, panic button, output liveness ---- */
+/* These sit outside .title deliberately: .title is hidden under 1100px, and the phone is
+   exactly where a held-channel or running-effect warning matters most. */
+.pills { display: flex; align-items: center; gap: 6px; flex: none; }
+.fxpill, .wirepill {
+  border: 1px solid var(--accent); background: transparent; color: var(--accent);
+  border-radius: 0; padding: 2px 8px; font-size: 11px; white-space: nowrap; cursor: pointer;
+}
+.fxpill:hover, .wirepill:hover { background: var(--accent); color: #041012; }
+.wirepill.stale { border-color: var(--danger); color: var(--danger); }
+/* The wire switch. ON is stated in the affirmative and coloured like the accent, because
+   "the rig is live" is a fact worth being able to read across a dark booth. */
+.outswitch #outEnable { border-color: var(--muted); color: var(--muted); }
+.outswitch #outEnable.on { border-color: var(--accent); color: var(--accent); }
+.outswitch #outEnable:hover { border-color: var(--text); color: var(--text); }
+/* Every other device the frames go to. A row that is off or will not open is dimmed and
+   says why, because the failure mode this list exists to prevent is half a rig going dark
+   for a reason nobody on the floor can see. */
+.sendrow {
+  display: flex; align-items: center; gap: 8px; padding: 4px 0;
+  border-bottom: 1px solid #ffffff08; font-size: 12px;
+}
+.sendrow b { flex: none; min-width: 60px; }
+.sendrow .st { margin-left: auto; }
+.sendrow.dead { color: var(--muted); }
+.sendrow.dead .st { color: var(--danger); }
+.sendrow .sq.small { padding: 1px 7px; font-size: 11px; }
+.topbo { padding: 4px 10px; font-size: 12px; }
+/* A control that has been pressed but not yet answered must not look like a finished one:
+   the panic button in particular has to stop claiming success before the desk has agreed. */
+.blackout.pending { opacity: .55; }
+.title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.statusstrip.bad { color: var(--danger); }
+
+/* ---- stage pan and drag surfaces ---- */
+/* Dragging is these surfaces' whole job: a marquee across the stage or a drag across the
+   patch grid was ALSO starting a browser text selection, leaving captions highlighted. */
+.stage, .grid, .grouptabs, .banklist, #touchGrid, .fxpads, .transport, .quick, .mf,
+.sellist, .stage-tools, .attrbody {
+  user-select: none;
+  -webkit-user-select: none;
+}
+body.space .stage { cursor: grab; }
+.stage.panning { cursor: grabbing; }
+
+/* ---- di.iiii ---- */
+/* Text on the accent must be dark to carry on cyan; the old orange used a warm brown. */
+.go:active, .heldpill:hover, .fxpill:hover, .wirepill:hover { color: #041012; }
+/* the dark-fixture body colour was warm; on the black stage it goes neutral */
+.fx-body { border-color: #000000aa; }
+
+/* ---------------- scene filter ---------------- */
+/* The bank runs to hundreds of scenes: the filter sits between the transport and the
+   list, reusing the library's .search look. */
+.scenesearch { flex: none; border-bottom: 1px solid var(--line); }
+
+/* ---------------- FX skips + LFO target chips ---------------- */
+.exchip { font-size: 11px; padding: 4px 8px; }
+.exchip.skip.is-active { border-color: var(--danger); color: var(--danger); background: #e0524a14; }
+.exchip.lfo-prof.is-active { border-color: var(--accent); color: var(--accent); background: #35d2dd14; }
+
+/* ---------------- LFO panel ---------------- */
+#lfoList { display: grid; gap: 6px; padding: 8px 12px 0; }
+.lforow { background: var(--bg); border: 1px solid var(--line); border-radius: 0; padding: 8px; display: grid; gap: 6px; }
+.lforow.idle { opacity: .6; }                    /* an LFO that exists but is not running */
+.lfo-top { display: flex; gap: 6px; align-items: center; }
+.lfo-en { min-width: 44px; flex: none; }
+.lfo-en.on { background: var(--accent); color: #041012; border-color: var(--accent); font-weight: 600; }
+.lfo-name { flex: 1; min-width: 0; }
+.lfo-top .lfo-del { flex: none; }
+.lfo-row2 { display: flex; gap: 4px; }
+.lfo-row2 select { flex: 1; min-width: 0; }
+.lfoslider { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
+.lfoslider span { width: 40px; flex: none; }
+.lfoslider input[type=range] { flex: 1; min-width: 0; }
+.lfoslider output { font-family: var(--mono); width: 36px; text-align: right; flex: none; }
+.lfo-bi { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+.lfo-targets { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* ---------------- the stack: layers, looks, steps ---------------- */
+/* One scrolling column, same chrome as the right rail: the pane-heads stick so you can
+   always see which of the three lists you are in after a long look library. */
+.stackpane { overflow-y: auto; overflow-x: hidden; }
+.stackpane > * { flex: none; }
+.stackpane > .pane-head { position: sticky; top: 0; z-index: 2; background: var(--pane); }
+
+/* minmax(0, 1fr), not the default `auto`: an auto grid track sizes to its widest child's
+   MIN-CONTENT, and a <select> reports the width of its longest option — so one look named
+   "Colour chase" pushed the whole column past the pane and scrolled the layer names off
+   the left edge. Every track and every field below is pinned to the column for that
+   reason; a fixed-width column is only fixed if nothing inside it can vote. */
+#layerList, #lookList { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 8px 12px; }
+.layerrow { background: var(--bg); border: 1px solid var(--line); padding: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+/* A layer that exists but is putting nothing in the room — off, empty, or at zero. The
+   whole point of the pane is that you can tell the difference at a glance. */
+.layerrow.idle { opacity: .6; }
+.layerrow.is-sel { border-color: var(--accent); }
+.lay-top { display: flex; gap: 6px; align-items: center; }
+.lay-on { min-width: 44px; flex: none; }
+.lay-on.on { background: var(--accent); color: #041012; border-color: var(--accent); font-weight: 600; }
+.lay-name { flex: 1; min-width: 0; }
+.lay-top .sq { flex: none; }
+/* The live dot: lit means this layer's values are reaching the composite right now. */
+.lay-live { width: 8px; height: 8px; flex: none; border: 1px solid var(--line); background: var(--field); }
+.lay-live.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.lay-look { width: 100%; min-width: 0; }
+.lay-adv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; }
+/* Label above control, not beside it: "LTP — takes over" is a phrase, and at 290px a
+   side-by-side label ate enough of the field to clip it to "LTP — takes ove". */
+.lay-adv label { display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: var(--muted); min-width: 0; }
+.lay-adv select, .lay-adv input { width: 100%; min-width: 0; }
+.lay-adv .lay-del { grid-column: 1 / -1; }
+
+.lookrow { display: flex; gap: 4px; align-items: stretch; }
+.lk-pick {
+  flex: 1; min-width: 0; text-align: left; background: var(--bg);
+  border: 1px solid var(--line); border-radius: 0; padding: 6px 8px;
+  display: flex; flex-direction: column; gap: 2px; overflow: hidden;
+}
+.lk-pick:hover { border-color: var(--muted); }
+.lookrow.is-sel .lk-pick { border-color: var(--accent); }
+.lk-pick b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lk-pick span { font-size: 10px; font-family: var(--mono); }
+.lookrow .sq { flex: none; }
+.lk-name { width: 100%; }
+
+.stepbox { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 8px 12px 12px; }
+.steprow { display: flex; gap: 6px; align-items: center; }
+.steprow > b { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 34px; flex: none; }
+.steprow input[type=range] { flex: 1; min-width: 0; }
+.steprow output { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 52px; text-align: right; flex: none; }
+.stepnums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.stepnums label { display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: var(--muted); min-width: 0; }
+.stepnums input { width: 100%; min-width: 0; }
+/* The look, said in words. This is the line that tells you a chase is a chase. */
+.stepwords { margin: 0; font-size: 11px; line-height: 1.45; }
+
+/* ---------------- audio panel ---------------- */
+/* Meters are painted by the analyser tick, not the state poll — they move at music speed. */
+.ameters { display: grid; gap: 4px; padding: 0 12px 4px; }
+.am { display: flex; align-items: center; gap: 6px; }
+.am span { width: 24px; font-family: var(--mono); font-size: 10px; color: var(--muted); flex: none; }
+.ambar { flex: 1; height: 6px; background: var(--field); border: 1px solid var(--line); overflow: hidden; }
+.ambar i { display: block; height: 100%; width: 0; background: var(--accent); }
+.beatdot { width: 12px; height: 12px; border: 1px solid var(--line); background: var(--field); flex: none; display: inline-block; }
+.beatdot.hit { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.audiocfg select { flex: 1; min-width: 0; }
+#audioNoSig { color: var(--danger); }
+#audioState.running { color: var(--accent); }
+
+/* ---------------- scene key macros ---------------- */
+/* The badge marks a tile with its bound key; the popover captures the next keypress.
+   Long-press is the finger's right-click, so neither the bank list nor the Touch
+   page's tile grid may offer the OS callout. */
+.banklist, #touchGrid { -webkit-touch-callout: none; }
+/* On the rows/tiles themselves too: a long-press must never raise the OS text-selection
+   or callout UI on the very elements whose long-press IS the context menu. */
+.bankrow, .tbtn { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.bankrow { position: relative; }
+/* Long scene names: ellipsis, never a wrap — and never under the hotkey badge. */
+.bankrow .txt { min-width: 0; overflow: hidden; }
+.bankrow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bankrow:has(.hk) .nm { padding-right: 34px; }
+.bankrow .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* tile names may wrap (the tile is tall), but must never widen the tile: a long
+   unbroken name was forcing every second column ~40% off a phone screen */
+.tbtn span { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.hk {
+  position: absolute; top: 3px; right: 19px; font-style: normal; font-family: var(--mono);
+  font-size: 9px; line-height: 1; padding: 2px 4px; border: 1px solid var(--accent);
+  color: var(--accent); background: #35d2dd14; pointer-events: none;
+}
+.bindpop {
+  position: fixed; z-index: 70; background: var(--pane); border: 1px solid var(--accent);
+  border-radius: 0; box-shadow: 0 10px 30px #000c; padding: 0 0 4px;
+  display: grid; gap: 0; width: 232px; max-width: calc(100vw - 16px);
+}
+.bindpop .bindname {
+  font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; padding: 9px 12px 7px; border-bottom: 1px solid var(--line);
+}
+.bindpop .bindhint { font-size: 11px; color: var(--muted); padding: 10px 12px 6px; }
+
+/* ---------------- drag-to-resize splitter bars ---------------- */
+/* Thin bars between the major panes. Vertical ones live in the 6px splitter columns of
+   the grids above; horizontal ones sit between the top and bottom halves of a page.
+   The visible line is 1px; the grab zone is widened by ::before (14px on touch). A drag
+   writes the neighbouring --sp-* var inline; double-click clears it back to default. */
+.splitter { position: relative; z-index: 6; touch-action: none; user-select: none; -webkit-user-select: none; }
+.splitter.v { cursor: col-resize; }
+.splitter.h { cursor: row-resize; height: 6px; flex: none; margin: 0 4px; }
+.splitter::after { content: ''; position: absolute; background: var(--line); }
+.splitter.v::after { left: 50%; top: 4px; bottom: 4px; width: 1px; margin-left: -0.5px; }
+.splitter.h::after { top: 50%; left: 4px; right: 4px; height: 1px; margin-top: -0.5px; }
+.splitter:hover::after, .splitter.dragging::after { background: var(--accent); }
+.splitter.v:hover::after, .splitter.v.dragging::after { width: 3px; margin-left: -1.5px; }
+.splitter.h:hover::after, .splitter.h.dragging::after { height: 3px; margin-top: -1.5px; }
+.splitter::before { content: ''; position: absolute; inset: 0; }
+.splitter.v::before { left: -3px; right: -3px; }
+.splitter.h::before { top: -3px; bottom: -3px; }
+/* Below the stacking breakpoint the responsive one-column layout wins outright. */
+@media (max-width: 1100px) { .splitter { display: none; } }
+/* A squat window already ignores the fixed row heights — the row bars go too. */
+@media (max-height: 560px) { .splitter.h { display: none; } }
+
+/* ---------------- scene context menu (in .bindpop, below) ---------------- */
+.popmenu { display: grid; }
+.popitem {
+  display: block; width: 100%; text-align: left; background: none; border: 0;
+  border-radius: 0; padding: 8px 12px; font-size: 12px; color: var(--text);
+}
+.popitem:hover, .popitem:focus-visible { background: var(--pane2); outline: none; }
+.popitem.danger { color: var(--danger); }
+/* an armed destructive row: the second press fires, anything else disarms it */
+.popitem.arm { background: #e0524a22; color: var(--danger); font-weight: 600; }
+.popedit { display: flex; gap: 6px; padding: 8px 12px; align-items: center; }
+.popedit input[type=text] { flex: 1; min-width: 0; }
+.popnum { display: flex; align-items: center; gap: 4px; flex: 1; color: var(--muted); font-size: 11px; }
+.popnum input { flex: 1; min-width: 0; width: 90px; }
+
+/* ---------------- fingers, not mice ---------------- */
+/* At a gig this runs on a phone or tablet: every control grows to a ~40px hit area on a
+   coarse pointer. Same look, same layout — just more metal to grab in the dark. */
+@media (pointer: coarse) {
+  .sq { padding: 9px 12px; min-height: 40px; }
+  .tool { width: 40px; height: 36px; font-size: 15px; }
+  .page-tab { padding: 0 14px; min-height: 44px; }
+  .dots { min-width: 44px; }
+  .go, .tap, .savenow, .topbo { padding-top: 9px; padding-bottom: 9px; }
+  .heldpill, .fxpill, .wirepill { padding-top: 6px; padding-bottom: 6px; }
+  /* 16px is the iOS threshold: anything smaller makes the browser zoom the whole page
+     the moment a field is focused, and the desk comes back mis-framed mid-show. */
+  input[type=text], input[type=number], select { padding: 8px 10px; font-size: 16px; }
+  .blackout { padding: 12px 14px; }
+  input[type=range] { height: 30px; }
+  input[type=range]::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -10px; }
+  input[type=range]::-moz-range-thumb { width: 24px; height: 24px; }
+  .vwrap { width: 44px; }
+  /* the release button under every held fader, and the panic buttons in the bars */
+  .mf-rel { min-width: 44px; min-height: 44px; }
+  #topBlackout, #fBlackout { min-height: 44px; }
+  .vwrap input[type=range]::-webkit-slider-thumb { width: 22px; height: 32px; margin-top: -13px; }
+  .vwrap input[type=range]::-moz-range-thumb { width: 22px; height: 32px; }
+  .vhandle { width: 30px; height: 18px; margin-left: -15px; margin-top: -9px; }
+  .mf .vwrap { width: 44px; }
+  .faderbank { grid-template-columns: repeat(auto-fill, minmax(min(76px, 100%), 1fr)); }
+  .mf-rel { padding: 5px 10px; font-size: 14px; }
+  .fader { width: 92px; }
+  .fader .quick button { padding: 6px 9px; font-size: 11px; }
+  .atab { padding: 13px 12px; }
+  .bankrow .txt { padding: 10px; }
+  .selrow { padding: 9px 10px; }
+  .tree .item { padding-top: 7px; padding-bottom: 7px; }
+  .bmv { width: 34px; height: 32px; }
+  .hues { height: 24px; }
+  .gtab { padding: 8px 14px; }
+  .fxpad { padding: 10px 4px; }
+  /* new controls: LFO rows, audio panel, FX-skip chips — same ≥40px rule */
+  .exchip { min-height: 40px; }
+  .lfo-en { min-width: 52px; }
+  .lfo-bi, .audiocfg label { min-height: 40px; }
+  /* the stack: layer rows, look rows and the step editor are all finger targets */
+  .lay-on { min-width: 52px; }
+  .lay-top .sq, .lookrow .sq { min-height: 44px; }
+  .lk-pick { min-height: 44px; justify-content: center; }
+  .steprow, .lay-adv label { min-height: 44px; }
+  .steprow input[type=range] { height: 44px; }
+  .tlay .ls-big { min-width: 56px; }
+  .beatdot { width: 18px; height: 18px; }
+  .lfoslider { min-height: 40px; }
+  /* scene context menu and tile badges: ≥40px rows for fingers */
+  .bindpop { width: 268px; }
+  .bindpop .bindhint { font-size: 12px; }
+  .popitem { padding: 12px; min-height: 40px; }
+  .popedit input, .popedit .sq { min-height: 40px; }
+  .hk { font-size: 11px; padding: 3px 6px; }
+  /* splitter bars: 14px grab zone around the 6px bar */
+  .splitter.v::before { left: -4px; right: -4px; }
+  .splitter.h::before { top: -4px; bottom: -4px; }
+}
+
+/* ================ visual-audit fixes ================ */
+
+/* Type floor: nothing under 11px. The 9-10px labels vanished at arm's length in a dark
+   booth, and the muted grey (raised in :root) carries most of them. */
+.bankhead, .hk, .fx-label, .bpm, .bankrow .sub, .movelabels label,
+.mf-wire, .tree .item i, .bnum, .brole, .gc, .fader .quick button { font-size: 11px; }
+
+/* 1366×768 showed ONE scene row: the bank keeps real height (its pane scrolls), and the
+   top half takes a little more of the page by default on short screens. */
+@media (max-height: 800px) and (min-width: 1101px) {
+  .banklist { min-height: 40vh; }
+  .ctl-top { height: var(--sp-h, 56%); }
+}
+
+/* Top-bar pills: never wider than the phone, never pushing Blackout off. */
+.pills { min-width: 0; }
+.fxpill, .wirepill, .heldpill { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 520px) {
+  /* pills get their own full-width row under the tabs instead of clipping off-screen */
+  .pills { flex: 1 1 100%; order: 5; justify-content: flex-start; padding: 2px 8px 4px; }
+  .fxpill, .wirepill, .heldpill { max-width: 46vw; }
+}
+
+/* Phone bank header: the transport wraps instead of crushing "+" to a sliver, and the
+   filter's clear ✕ stays on-screen (min-width:0 lets the input actually shrink). */
+.transport { flex-wrap: wrap; }
+.transport .sq { flex: 1 1 56px; min-width: 44px; }
+.search { min-width: 0; }
+.search input { min-width: 0; }
+.search button { flex: none; }
+
+/* Setup on a phone: form columns may shrink; the patch grid scrolls INSIDE its pane
+   with a scrollbar you can see, instead of clipping half the cells. */
+@media (max-width: 700px) {
+  .frow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.grid::-webkit-scrollbar { height: 8px; width: 8px; }
+.grid::-webkit-scrollbar-thumb { background: var(--cell2); }
+.grid::-webkit-scrollbar-track { background: var(--pane); }
+
+/* Fader page: the bank may scroll sideways itself in the worst case, but the PAGE never
+   does — and a track can collapse below its 60px ideal rather than clip channel 27. */
+.mf { min-width: 0; }
+.faderbank { grid-template-columns: repeat(auto-fill, minmax(min(60px, 100%), 1fr)); overflow-x: auto; }
+.page[data-page="fader"] { overflow-x: hidden; }
+
+/* The right rail is taller than its pane: a fade at the bottom edge says "more below". */
+.railpane::after {
+  content: ''; position: sticky; bottom: -1px; display: block; flex: none;
+  height: 26px; margin-top: -26px; z-index: 3; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--pane));
+}
+
+/* ================ TOUCH live strip ================ */
+/* The performance strip at the thumb edge of the Touch page: FX / Audio / Set / Master
+   in four tabs of fixed height (no layout jumps between tabs), collapsible to the tab
+   row alone. position:sticky pins it to the viewport bottom when the phone layout lets
+   the body scroll, so it is always under the thumb mid-set. */
+.livestrip {
+  position: sticky; bottom: 0; z-index: 10;
+  background: var(--pane); border: 1px solid var(--line);
+  display: flex; flex-direction: column; min-height: 0;
+  box-shadow: 0 -8px 24px #00000088;
+}
+.ls-tabs { display: flex; align-items: stretch; border-bottom: 1px solid var(--line); }
+.ls-tab {
+  flex: 1; min-height: 46px; background: none; border: 0; border-top: 3px solid transparent;
+  color: var(--muted); font-size: 14px; font-weight: 600; letter-spacing: .04em;
+}
+.ls-tab.is-active { color: var(--text); border-top-color: var(--accent); background: var(--pane2); }
+.ls-fold { width: 48px; flex: none; background: none; border: 0; color: var(--muted); font-size: 14px; }
+.ls-body { height: 212px; overflow: hidden; padding: 10px 12px; }
+@media (orientation: landscape) and (max-height: 520px) { .ls-body { height: 148px; } }
+.livestrip.folded .ls-body { display: none; }
+.livestrip.folded .ls-tabs { border-bottom: 0; }
+.ls-panel { display: none; height: 100%; flex-direction: column; gap: 10px; min-height: 0; }
+.ls-panel.is-active { display: flex; }
+.ls-row { display: flex; gap: 10px; align-items: center; flex: 1; min-height: 0; }
+.ls-row.wrap { flex-wrap: wrap; align-content: center; }
+/* A phone is narrower than the FX row: the depth fader shrank to 39px and FX off, the
+   strip's stop-everything button, was clipped off the right edge. Let the rows wrap and
+   the strip grow to fit, up to under half the screen. */
+@media (max-width: 520px) {
+  .ls-row { flex-wrap: wrap; }
+  .ls-row .ls-fader { flex: 1 1 100%; }   /* the .ls-fader rule below sets flex: 1, so this must outrank it */
+  .ls-body { height: auto; max-height: 45vh; overflow-y: auto; }
+}
+.ls-note { font-size: 11px; flex: none; margin: 0; }
+/* The Layers tab: one fat fader per layer, scrolling inside the strip's fixed height.
+   Nothing here builds or edits a layer — this is the tab you use with one thumb while
+   the song is running, and the only question it answers is "how much of it". */
+.ls-layers { flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 8px; align-content: start; }
+.tlay { display: flex; align-items: center; gap: 8px; }
+.tlay .ls-fader { flex: 1; }
+.tlay .ls-fader span { max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tlay.idle { opacity: .55; }
+
+/* pads scroll sideways in one fat row — every pad a real finger target */
+.ls-pads { display: flex; gap: 8px; overflow-x: auto; flex: none; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+.ls-pads .fxpad { min-width: 86px; min-height: 48px; flex: none; font-size: 13px; }
+
+/* fat, high-contrast faders — the stock 4px track is invisible in a dark booth */
+.ls-fader { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 140px; color: var(--muted); font-size: 12px; }
+.ls-fader input[type=range] { flex: 1; height: 44px; min-width: 0; }
+.ls-fader input[type=range]::-webkit-slider-runnable-track { height: 14px; background: var(--cell2); border: 1px solid var(--muted); border-radius: 0; }
+.ls-fader input[type=range]::-webkit-slider-thumb { width: 30px; height: 34px; margin-top: -11px; background: var(--text); border: 1px solid var(--bg); }
+.ls-fader input[type=range]::-moz-range-track { height: 14px; background: var(--cell2); border: 1px solid var(--muted); border-radius: 0; }
+.ls-fader input[type=range]::-moz-range-thumb { width: 30px; height: 34px; background: var(--text); border: 1px solid var(--bg); border-radius: 0; }
+.ls-fader output { font-family: var(--mono); min-width: 46px; text-align: right; color: var(--text); font-size: 14px; }
+
+.ls-big {
+  min-height: 48px; min-width: 84px; padding: 6px 12px;
+  background: var(--pane2); border: 1px solid var(--line); border-radius: 0;
+  font-size: 15px; font-weight: 700; color: var(--text);
+}
+.ls-big.accent { background: var(--accent); border-color: var(--accent); color: #041012; }
+.ls-big.danger { color: var(--danger); border-color: var(--danger); background: none; }
+.ls-big.on { background: var(--accent); border-color: var(--accent); color: #041012; }
+.ls-big:disabled { opacity: .35; }
+.ls-bpm { display: flex; flex-direction: column; align-items: center; flex: none; min-width: 54px; }
+.ls-bpm b { font-size: 22px; font-family: var(--mono); line-height: 1.1; }
+.ls-bpm span { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
+.ls-panel select { min-height: 44px; max-width: 46vw; }
+.tmeter { flex: 1; min-width: 60px; height: 14px; }
+.ls-panel .beatdot { width: 22px; height: 22px; }
+.blackout.lsbo { width: auto; min-height: 48px; padding: 6px 18px; flex: none; margin-left: auto; }
+
+/* ---- set player ---- */
+.sp-top { display: flex; gap: 8px; align-items: center; flex: none; }
+.sp-top select { flex: 1; min-width: 0; }
+.sp-top .sq { min-height: 44px; flex: none; }
+.sp-prog { font-family: var(--mono); color: var(--muted); flex: none; font-size: 14px; }
+.sp-main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.sp-now {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; background: none; border: 1px dashed var(--line); border-radius: 0; color: var(--text); overflow: hidden;
+}
+.sp-now b { font-size: 20px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-now span { font-size: 12px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-nav { display: flex; gap: 10px; flex: none; }
+.sp-nav .ls-big { flex: 1 1 30%; min-height: 56px; font-size: 18px; }
+.sp-listwrap { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.setlist { flex: 1; overflow: auto; border: 1px solid var(--line); background: var(--field); }
+.strow { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-bottom: 1px solid #ffffff08; min-height: 44px; }
+.strow.cur { background: var(--pane2); box-shadow: inset 2px 0 0 var(--accent); }
+.strow .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; background: none; border: 0; color: var(--text); font-size: 14px; min-height: 36px; }
+.strow.missing .n { color: var(--danger); text-decoration: line-through; }
+.strow .sq { min-height: 36px; min-width: 40px; flex: none; }
+.sb-tools { display: flex; gap: 6px; flex-wrap: wrap; flex: none; }
+.sb-tools .sq { min-height: 44px; }
+
+/* Kind toggle beside the scene filter: All / animations / statics. Matches the search
+   row's height; the active one reads bright like an active page tab. */
+.kindbtn {
+  background: var(--pane2); color: var(--muted); border: 1px solid var(--line);
+  min-width: 40px; min-height: 44px; font-size: 15px; border-radius: 6px; cursor: pointer;
+}
+.kindbtn.is-active { color: #fff; border-color: #fff; }
+
+/* ================ MIDI page ================ */
+/* The control surface, in the same panes and the same buttons as every other page. It
+   was a separate document with its own palette; nothing here invents a second look. */
+.midiwrap { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding: 4px; overflow: auto; }
+
+/* The gate and the four readouts you need while mapping — sticky, because the map table
+   is long and arming from the bottom of it must not mean scrolling back up. */
+.midibar {
+  position: sticky; top: 0; z-index: 5; flex: none;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  background: var(--pane); border: 1px solid var(--line); padding: 8px 10px;
+}
+.miarm {
+  border: 1px solid var(--line); border-radius: 0; padding: 9px 18px;
+  font-weight: 700; letter-spacing: .06em; min-height: 44px; min-width: 200px;
+}
+.miarm.safe { background: var(--pane2); color: var(--muted); }
+/* Live is the one place on this desk that is allowed to shout: the rig is being driven
+   by a box of knobs somebody else can lean on. */
+.miarm.live { background: var(--danger); border-color: var(--danger); color: #fff; }
+.mipill {
+  border: 1px solid var(--line); background: var(--field); color: var(--muted);
+  padding: 5px 10px; font-family: var(--mono); font-size: 11px; white-space: nowrap;
+}
+.mipill b { color: var(--text); font-weight: 600; }
+.mipill.good { border-color: var(--accent); color: var(--accent); }
+.mipill.good b { color: var(--accent); }
+.mipill.bad { border-color: var(--danger); color: var(--danger); }
+.mipill.bad b { color: var(--danger); }
+#miSaveStat.bad { color: var(--danger); }
+
+.midicols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; align-items: start; }
+@media (max-width: 1000px) { .midicols { grid-template-columns: minmax(0, 1fr); } }
+.midicol { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.midicol .pane { flex: none; }
+.midibody { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.minote { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.minote b { color: var(--text); }
+.minote .bad, .minote b.bad { color: var(--danger); }
+.midibody code {
+  font-family: var(--mono); font-size: 11px; background: var(--pane2);
+  border: 1px solid var(--line); padding: 1px 5px; color: var(--text);
+}
+.midibody select { max-width: 100%; flex: 1 1 180px; min-width: 0; }
+
+/* the input log: the one place that proves the controller is talking at all */
+.mimon {
+  height: 190px; overflow: auto; background: var(--field); border: 1px solid var(--line);
+  padding: 6px 8px; font-family: var(--mono); font-size: 11px;
+}
+.mimon div { white-space: pre; color: var(--muted); }
+.mimon div.cc { color: var(--accent); }
+.mimon div.note { color: var(--text); }
+.mimon div.other { color: #5b6273; }
+.empty { color: var(--muted); font-style: italic; }
+
+/* the mapping table */
+.mitablewrap { overflow-x: auto; min-width: 0; }
+.mitable { width: 100%; border-collapse: collapse; }
+.mitable th {
+  text-align: left; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; padding: 0 6px 6px; border-bottom: 1px solid var(--line);
+}
+.mitable th.r, .mitable .mival { text-align: right; }
+.mitable td { padding: 4px 6px; border-bottom: 1px solid #ffffff08; vertical-align: middle; }
+.mitable tr.learning td { background: var(--cell2); }
+.mitable tr.hit td { background: #35d2dd22; }
+.mitgt { color: var(--text); }
+.mitgt.missing { color: var(--danger); text-decoration: line-through; }
+.mival { color: var(--muted); font-family: var(--mono); font-size: 11px; width: 62px; white-space: nowrap; }
+.miact { text-align: right; white-space: nowrap; }
+.miact .sq { padding: 3px 8px; font-size: 11px; }
+.mibind { color: var(--text); font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+.mibind.none { color: var(--muted); }
+.mibind.pickup { color: var(--accent); }   /* waiting to be caught — soft takeover */
+.migrp td {
+  background: var(--field); color: var(--muted); font-size: 10px;
+  letter-spacing: .12em; text-transform: uppercase; padding: 7px 6px;
+}
+
+/* scene chips: tap one, then press a pad */
+.michips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 300px; overflow: auto; }
+.michip {
+  background: var(--pane2); border: 1px solid var(--line); border-radius: 0;
+  color: var(--muted); font-size: 12px; padding: 6px 10px; min-height: 34px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.michip:hover { border-color: var(--muted); }
+.michip.bound { color: var(--accent); border-color: var(--accent); }
+.michip.bound i { font-style: normal; font-family: var(--mono); font-size: 10px; opacity: .8; }
+.michip.learning { color: #fff; border-color: #fff; background: var(--cell2); }
+
+@media (pointer: coarse) {
+  .michip { min-height: 44px; }
+  .miact .sq { min-height: 40px; min-width: 44px; }
+  .mitable td { padding: 6px; }
+  .midibody select { min-height: 44px; }
+}

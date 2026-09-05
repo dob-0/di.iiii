@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-ani-khachikyan",
+  "slug": "ani-khachikyan",
+  "label": "Ani Khachikyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/ani-khachikyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

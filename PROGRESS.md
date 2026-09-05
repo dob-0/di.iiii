@@ -5,6 +5,1488 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-25 — dead CSS removed, 205 lines verified selector by selector
+
+The suite audit flagged ~1,050 dead lines. I deleted only what I verified
+myself, selector by selector:
+
+- `src/styles/layout-stack.css` — the whole file. All three selectors
+  (`.panel-container`, `.panel-dock-left`, `.panel-dock-bottom`) have zero
+  references in any jsx/js. Its `@import` is gone from `src/style.css`.
+- The seven `--mobile-shell-*` tokens — zero `var()` reads repo-wide.
+- The `.toolbar-*` family in `controls.css` — 14 selectors plus their
+  pseudo-state, compound and media-query rules, and `.editor-toolbar-primary`.
+  Every one checked individually: zero references.
+
+Verified after: build clean, brace balance holds (controls 37/37,
+mobile-shell 10/10), style guard tests pass, and landing/wiki/privacy render
+identically with no CSS console errors.
+
+The rest of the audit's dead list is left alone — it over-counts where BEM
+modifiers are template-composed, and I only remove what I can prove.
+
+## 2026-09-03 — four rules, each one paid for tonight
+
+The owner, after a page opened as a broken link in front of him: *"write rules to
+no mistake everytime."* Four went into `docs/ai/golden_rules.md`, each from a
+mistake made in this session rather than a good idea about mistakes:
+
+- **A 200 from this site is not proof a page is public.** A link audit across
+  three tiers reported 47 of 47 spaces open to strangers, including five the API
+  correctly refuses with 401. The client is a single-page app — the server hands
+  back the same `index.html` for every path, so the page always answers 200 and
+  the sign-in wall appears only after the client boots. Probe the API.
+- **A blank screenshot right after a merge is a deploy, not a defect.** Staging
+  came back fully white seconds after four PRs landed; health reported 58 seconds
+  of uptime. Check uptime before filing a regression.
+- **Measure the scene's own units before placing anything in it.** The image
+  plane's height was guessed twice (as `2·(h/w)·scale`, then `2·scale`) before
+  anyone read `ImageObject` and found `[aspect*3, 3]`. Each guess cost a full
+  apply-and-look round. A box's position is its base, not its centre.
+- **A driven browser cannot take pointer lock.** Six scripted turns to photograph
+  a door produced six identical empty frames, indistinguishable from "the door
+  does not render". Drag-look reads clientX/clientY and works.
+
+A fifth rule went to the owner's own machine notes rather than here, because it
+is about this desktop and not this repo: the flatpak Chromium has a private
+`/tmp`, so a `file:///tmp/...` page handed to it fails with ERR_FILE_NOT_FOUND —
+serve it on localhost instead.
+
+## 2026-09-01 — a room that can be read, not only looked at
+
+- **Every published room now carries a text layer** (`RoomTextLayer`): its name as an
+  `h1`, its 3D text lines as paragraphs, and each door as a real anchor. Visually hidden
+  with the clip-rect idiom, NOT `display:none` — the point is to stay in the
+  accessibility tree and the DOM. A focused door link becomes visible, which is also the
+  only way to leave a room without a mouse. It reads the same document the scene draws
+  from, so it can never tell a different story than the room.
+- **Why now:** `/` became the room itself. Before that, a crawler or screen reader met an
+  HTML landing page; after it, an empty `<div id="root">` with only the head's title.
+  `src/index.html` also gained a `<noscript>` floor for readers that never run the app.
+- **A guard earned its keep.** Importing `portalHref` from `PortalObject.jsx` pulled
+  three.js into the published page's static import graph and
+  `publicViewerCodeModeGraph.test.js` failed the build. The helper now lives in its own
+  leaf module, `src/project/viewport/portalHref.js`, re-exported from PortalObject so no
+  caller changed.
+- **The nearest door is wayfinding, not a name.** Glued to the title with a bare
+  separator it read as one compound title — the home room announced itself as
+  "EVERYTHING MADE HERE · WCC EXHIBITION". It has its own dimmed span now.
+- Still owed, and data not code: the local tier's home project is titled `di.i:
+  open_space`, a retired spelling that is now the `h1` a search engine reads. Staging
+  already carries a real title. The owner picks the word.
+
+## 2026-09-01 — sign in with Telegram, the server half
+
+The people who most need an account here cannot hold a Google one. At the Dilijan
+camp that meant one login shared across six laptops, one invite token across five
+children, and afterwards no way to say who had made what — the showcase wall had
+five screens and the record could not attribute four of them. This is the fix for
+the next workshop, and for any collaborator who should not have to make an account
+somewhere else to open their own work.
+
+Telegram has already proven who someone is by delivering a message to them. This
+turns that proof into a session here, through the same door GitHub and Google use.
+
+**The shape.** Two halves. di.bo mints (`POST /api/auth/telegram/login-link`,
+bot-only, presenting `TELEGRAM_LOGIN_SECRET`); the person opens the link
+(`GET /api/auth/telegram/callback?token=`) and lands signed in. After that it is
+identical to the OAuth providers — same `upsertUser`, same session, same
+sandbox hand-off — so **a guest who has already been building keeps their work
+when they sign in**, which is the difference between this and a fresh account.
+
+**What it deliberately refuses:**
+- The link is **single-use and lives 10 minutes**, because it rides a chat message
+  and a chat message is forwardable, screenshot-able and backed up to somebody
+  else's cloud. `consumed_at` is set *before* the session is issued, so a failure
+  costs a new link rather than handing a retry to whoever forwarded it.
+- Only the SHA-256 of the secret is stored. A stolen database mints nothing.
+- A wrong secret against a real id does **not** spend the token — otherwise
+  guessing an id would let anyone lock the real person out.
+- The mint endpoint takes `telegramId` numeric-only, and an avatar URL only from
+  Telegram's own CDN.
+- **A minted link can never carry a role.** `role`/`isUnrestricted` in the mint
+  body are ignored; a bot compromise costs accounts, not the platform. Guarded.
+- `TELEGRAM_LOGIN_SECRET` is its own secret, deliberately **not** the admin API
+  token, so a compromised bot cannot also write spaces.
+
+**A real bug the tests caught before it shipped:** with `OAUTH_CALLBACK_BASE_URL`
+unset the minted URL came out *relative* — useless the moment it reaches a chat.
+Deriving the origin from the request would have meant trusting a Host header to
+say where people sign in, so the endpoint now refuses with a 503 that names the
+missing variable instead.
+
+**Config (all three, or the provider stays off):**
+`TELEGRAM_LOGIN_SECRET` (shared with di.bo), `TELEGRAM_BOT_USERNAME` (advertised
+so a client can name the bot), `OAUTH_CALLBACK_BASE_URL` (already required by the
+OAuth providers). Unset secret = provider absent from `/api/auth/providers` and
+the routes not registered at all.
+
+**Not in this branch, on purpose:** the di.bo side that calls the mint endpoint,
+and the client button. This half is what both of those need, and it is testable
+on its own; shipping it first keeps the auth change reviewable by itself.
+
+Tests: `serverXR/src/telegramLoginStore.test.js` (11) and a `sign in with
+Telegram` block in `httpContracts.test.js` (7) covering the disabled case, the
+bot secret, id validation, the one-real-sign-in path, role refusal, and forged
+links. Full server contracts 114/114, lint clean.
+
+## 2026-09-05 — five green PRs landed as one batch, so no landing invalidates the next
+
+- Branch protection wants every PR up to date with dev, so five green PRs landed one by
+  one would each go BEHIND as the previous one merged. Merged them into one branch off
+  dev instead: the verification rules (#364), the lighting tempo grid (#363), the dead
+  CSS removal (#274), the room text layer (#285) and the Telegram server half (#282).
+  No two touch the same file.
+- The dead-CSS note carried a `#` heading instead of `##`, so `land` would have dropped
+  its title from CURRENT.md; fixed in place.
+- Left for the owner, deliberately: #290 (operator families) rewrites saved documents
+  on load and asks for a deliberate yes; #318, #289, #281 conflict on `known-fixes.md`
+  and the landing and want a rebase against the reworked front door; #170 is a
+  dependency decision.
+
+## 2026-09-03 — the third route stops being grey on grey
+
+- "Open Jam" sat in the landing's hero between two legible buttons and could not be
+  read: muted white on a transparent ground, with the room's near-white walkable slab
+  drifting behind it. Measured against that slab it was 1.10:1.
+- Both outlined routes in `.lp-hero-cta-row` now carry their own dark scrim. The ghost
+  treatment is unchanged everywhere else on the page — the fault was the transparent
+  ground under a live 3D backdrop, not the treatment itself.
+- The contrast suite had passed this for weeks because every case composited against
+  black, which is the page's ground and not the hero's. The new guard composites each
+  hero route's declared background over **white** instead, and was watched failing at
+  1.10:1 with the scrim taken out.
+- Looked at both widths on local before and after: 1440x900 and 390x844.
+
+## 2026-09-03 — the network rooms carry a CV, and the landing names its three routes
+
+Both pieces of work below already merged into `dev` without a note of their own; this
+file is the record for the next `land`.
+
+### The network rooms (#352)
+
+- The owner corrected his own entry — "im Gevorg Aram Grigoryan dob_0 … XR director
+  developer" — so `people.json` now reads `Gevorg Aram Grigoryan` / `XR director,
+  developer`, not the deck's older "Gevorg Grigoryan / head of di.iiii, development".
+- `people.json` entries take an optional `resume` (`focus[]`, `timeline[{year, items}]`,
+  `cvUrl`), rendered by a new `resumeHTML()` in `lib/room-content.mjs` as focus chips
+  plus a year-by-year `<details>` accordion; five team rooms have one (gevorg, emilya,
+  syuzi, yeva, taron), condensed from each person's master CV in the studio Drive.
+- `<details>` rather than any scripted accordion because `network-pages.test.js` fails
+  any room page containing `<script>`, and every new font-size had to clear the same
+  file's 12px floor.
+- **The actual PDF is linked, not hosted, and that is still open.** `space-sync.mjs`
+  reads `include` globs as utf8, so a binary pushed that way is corrupted; the CVs point
+  at their Drive documents until the PDFs get a real home on the platform.
+- Verified on staging as an anonymous visitor after a first push silently shipped stale
+  content: `space-sync --tier <t>` sends whatever is on disk in the invoking worktree, and
+  reports "document updated" either way — a `git reset --hard` before the sync is enough
+  to publish the pre-fix files. Pull the merge, grep the page for the change, then sync.
+- The repo's own `Deploy space code files` job fails on `dev` with `LIVE_API_TOKEN
+  (staging) is not configured` — a missing GitHub secret, so this data push stays manual.
+
+### The landing (#353)
+
+- Three named routes, weighted as the owner names them: Step inside (primary), **The
+  Spaces** — his "2nd main part", now a cyan-wash treatment rather than a ghost link —
+  and Open Jam, which he could not find on the page at all before.
+- The four exhibition chips moved out of that decision row under a "Featured exhibitions"
+  label, so they read as specific work instead of a fourth competing route.
+- New `crackTransition.js`: the inverse of `enterFlight.js`'s glide, for the Spaces route.
+  The screen splits into shards from a random point and flies apart before the real
+  navigation. Origin, shard count and each shard's angle/distance/rotation are re-rolled
+  per call — "not the same play twice" was explicit in the brief.
+- Two things that cost a rebuild and are worth not rediscovering: a shard filled with the
+  page's own ground colour is invisible against it (they carry a cyan gradient now), and
+  `translate()` placed inside `scale()` has its distance multiplied by the scale, which
+  flung every shard off-screen before the first visible frame.
+- `mainSpaceId` and the "Look around" / "Enter Space" pair it drove are gone — Spaces is
+  unconditionally that destination now. The two tests tied to the old button were
+  rewritten to assert the three-route hierarchy instead.
+- **Still open:** on a laptop, "Open Jam" now sits where one of the room's stray flat
+  white planes shows through, and its muted label goes low-contrast there (phone is
+  fine). The fix belongs to the front-room redesign that removes those planes, not to
+  the button.
+
+### Not done, deliberately
+
+- The front-room redesign is built in two grounds on the LOCAL tier only and still waits
+  on the owner's pick; nothing was applied to `main`.
+
+## 2026-09-03 — build zones: a room that arranges itself
+
+The owner, after the Open Jam room came back from one night with thirty phones in
+it: *"some logic where someone will add something and it will not mess again and
+it will be arranged … like in games, where you can build and where you can't."*
+Restated and approved with his two answers: a **platform feature with a per-room
+switch**, and **the server places it** rather than the editor snapping.
+
+- `worldState.placement` turns a room's build zones on. Absent means free space,
+  the historical behaviour, and switching it off leaves every photo where it
+  hangs — a switch, never a migration.
+- The slots are a **formula, not a stored list**: `slotAt(layout, i)` deals i
+  round-robin across back wall and two wings, rows alternating, columns spreading
+  outward from the centre. Slot 200 exists as surely as slot 1, so the wall grows
+  outward and a jam never runs out. Occupancy is read back from where entities
+  actually stand, so it is self-healing — delete a photo and its slot is free.
+- Every incoming op batch passes through `placeOps` in `projectRoutes` BEFORE it
+  is versioned, so the rewritten ops are what enter the log and reach every peer.
+  That is what makes it a rule rather than a suggestion: a phone, a script and a
+  signed-in author all land on the same hanging line.
+- A drag goes to the NEAREST free slot. The hand still chooses where on the wall,
+  just not "nowhere".
+- `components.placement.pinned` opts a thing out — the QR on its lectern is
+  furniture, not an exhibit for the wall to swallow.
+- Uploads now record the picture's proportions (EXIF orientation applied), which
+  is what lets a 3.3:1 banner be scaled into its slot instead of eating its
+  neighbours. Assets uploaded before this keep the row height.
+- `shared/placement.cjs` and `src/shared/placement.js` are hand-kept twins, server
+  and editor, with a test that fails if they ever disagree — the same convention
+  the project schema's twins use.
+
+Checked through the wire, not only in units: a contract test posts a photo asking
+for the origin and asserts it does not get one there.
+
+## 2026-09-03 — the Open Jam room, and the rule that keeps a room one
+
+The owner, looking at the room thirty phones had edited in one night: *"fix the
+open jam make it stylish it looks so poor and something there are overlap"*, and
+then the real ask — *"some logic where someone will add something and it will not
+mess again and it will be arranged … like in games, where you can build and where
+you can't"*.
+
+- **"Poor" was weight, not taste.** The fourteen photos were phone originals,
+  18.5 MB for one wall, up to 2.7 MB each. On staging a visitor saw ONE photo
+  while the rest crawled in, and read that as a broken room. `shrink-photos.mjs`
+  makes 1280px copies (3.0 MB in all) and swaps them through the op log.
+- **The trap under that:** the visitor page builds its image list from the
+  DOCUMENT's own asset table (`buildAssetMap` reads `doc.assets`), so a file that
+  is uploaded but not listed there renders as nothing at all. Every upload needs
+  an `upsertAsset` op beside the `updateComponent`; the stale record goes with
+  `deleteAsset`. Two rounds of "the photos are on the server and the wall is
+  empty" came from exactly this.
+- **"Overlap" was eye height.** The four steps and the QR stood in front of the
+  walls, so they read straight through the photos behind them. There is no clear
+  band up there — a portrait phone photo hangs from y 0.2 to 3.2. They lie on the
+  floor now as a lectern, which is the only empty part of the entry frame.
+- **Numbers measured rather than guessed**, after two wrong guesses cost a round
+  each: an image plane is built **3 units TALL** and 3·aspect wide
+  (`ImageObject`), then multiplied by the transform scale — so a uniform scale
+  already gives an even hanging line and only a banner needs its width capped.
+  A box's position is its **base**, not its centre (`BoxObject` renders at
+  `position-y = size[1]/2`).
+- **The phone frame is the entry camera's fov, not the layout.** One row of a
+  wide wall shrank to a band across the middle of a portrait phone. Two rows and
+  a tighter shot (fov 58 → 44, camera pulled in) let a phone see the back wall.
+  The aspect fit gives a phone what a SQUARE viewport would see, so a subject
+  wider than it is tall must be composed with that in mind.
+- **Four grounds** in `compose-open-jam.mjs --style=`: `night`, `paper`,
+  `blueprint`, `blue`. The owner picked *"paper + blue )) mix it"* — `blueprint`
+  is that mix, and it is live on all three tiers.
+- **Build zones** (#329) answer the real ask, and the room turns them on. The
+  composer now places photos with `slotAt()` from `shared/placement.cjs` — the
+  same module the server uses — so switching the rule on moves nothing and the
+  next photo lands in the next free slot. The QR is `placement.pinned`: it is
+  furniture on its lectern, not an exhibit for the wall to swallow.
+- **The QR pointed at the wrong door.** It encoded `/open_jam`, the full Studio
+  editor, which on the phone that scans it is six controls and no way through —
+  the exact failure `/open_jam/scene` (JamSurface) was written to fix. The code
+  was made before that surface existed. `set-jam-qr.mjs` rewrites it.
+
+Prod writes are refused for a session, so the owner ran the two prod lines from
+his own terminal; staging and local went through from here. Walked on all three
+as a plain visitor, desktop and phone.
+
+### The path, later the same night
+
+The other half of the ask: *"a landing inside where people after scanning the QR
+start a path, where staged things teach and help you create, and the final point
+is seeing all the other spaces — a circle of working, all in eyes."* He picked
+direction A from three sketches: the landing is not a page in front of the room,
+it IS the room.
+
+- Three stations lie on the floor between the entry and the wall, each one
+  sentence at the moment it is true. They lie flat like the lectern for the same
+  reason: text at eye height in front of the walls reads through the photographs.
+- The door out stands BEHIND the visitor, facing back in. A door between them and
+  the wall reads as a picture frame with somebody's cat in it, and one at the side
+  crowds the arrival — but the moment you want the way on is the moment you turn
+  round, and then it is the only thing there. Square-cornered frame (#336), the
+  room's own blue.
+- It names the **space**, not the project: `portalHref` builds `/main/<project>`
+  from a projectId and plain `/main` without one, and the front room is being
+  rebuilt in another session — a door naming today's project id would break the
+  day that lands.
+- Everything the path is made of is `placement.pinned`. It is the building, not
+  the exhibition, and the build zones must never hang it.
+- The walkable floor now stops 2.5 units short of the back wall. At one unit a
+  walker's nose is pressed against somebody's photograph and the room disappears —
+  seen in a scripted walk, not guessed.
+
+**How to drive a walk in a test:** do NOT click to take pointer lock. A locked
+walker reads `movementX`, which a driven browser cannot fake, and every frame
+comes back looking at the sky. Unlocked drag-look reads clientX/clientY instead
+("the visible cursor's clientX/clientY is the one delta source that cannot lie",
+LiveProjectScene), so drive the whole journey by dragging. When a turn still will
+not verify, aim the entry camera at the thing on LOCAL, look, and put the camera
+back — that is how the door was confirmed.
+
+# feat/lighting-spatial-waves — a look can fan across the room (2026-09-03)
+
+## What changed
+
+The desk could already stack looks on layers, but a wave only ever fanned by
+selection index — patch order. The old `fx.js` effects engine had known how to
+read the stage arrangement for years (x/x-/y/y-/radial/radial-); that fan is now
+in the Look/Layer content model, where it can be layered, coloured and masked
+instead of being the one global thing running on the whole rig. `angle` was
+added alongside: phase walking round the room's centre, which is a radar sweep.
+
+- `looks.js` — `SPATIAL`, a `spatial` field on a look (default `patch`, so every
+  existing look behaves exactly as before), `spatialFrac()`, and `stepPosition()`
+  taking the fixture so it can use geometry instead of index.
+- Three one-press starters — **Line sweep** (x), **Radar** (angle), **Grid** (two
+  orthogonal waves stacked HTP, different measures so the crossing point moves) —
+  and a **Follow** picker in the step editor for any look.
+- The arrange stage's world bound went from -1..2 to ±1000, min zoom 0.25 → 0.01,
+  and the grid backdrop moved off the transformed inner layer onto the outer pane
+  (JS-driven `background-position`/`-size`) so it tiles instead of running out at
+  the old margin. A truss run or an off-stage followspot has somewhere to sit.
+- Regression tests: patch-vs-spatial traces differ, a far-apart pair on x cannot
+  share a phase, opposite sides of centre differ under `angle`, and an unknown
+  spatial value falls back to patch rather than throwing.
+
+## Verified
+
+Ran a scratch desk on :8734 with 4 fixtures, fired each starter in a real
+headless browser, watched per-fixture brightness genuinely differ as Radar
+rotated, changed a look's Follow value from the UI and confirmed the round trip
+through the server. Panned the stage a long way — backdrop still there, no dead
+zone. Both lighting suites and ESLint clean. Landed as #350, pulled into the
+5173 dev stack and confirmed live there.
+
+## Not done, on purpose
+
+Video/image upload and pixel-mapped media playback (the Resolume media-engine
+half of the ask) is a different output model — RGB pixel buffers, not per-fixture
+DMX roles — too big to build and verify honestly in the time this session had.
+It is its own lane, not a leftover of this one.
+
+---
+## 2026-09-03 — a short door onto the map lane
+
+The owner: *"i want short link or it would better map.di-studio.xyz and
+light.di-studio.xyz, desk.di-studio.xyz audit that all and fix all link plz"*,
+then, on what "desk" meant and why: *"give all to use … keep our data … we have
+public and private info so keep how needed what needed … what we create as tool
+it need to be on hand."*
+
+Three different answers, because the three tools are not in the same state:
+
+- **`map.di-studio.xyz` — built here.** The map lane is already hosted on prod
+  and already sits behind `ProtectedSurface` (per-space sign-in), so a second
+  hostname adds a name, not a hole. `Caddyfile` gains a `{$MAP_DOMAIN}` block
+  reverse-proxying to the SAME `client:8080` as `{$SITE_DOMAIN}` — not a second
+  app, the identical one under a shorter name. `docker-compose.yml` wires the
+  var with the same inert-until-set default pattern `STAGING_DOMAIN` uses.
+  Two things still need the owner's hand: the DNS record (no registrar access
+  from this machine) and setting `MAP_DOMAIN` in prod's `.env`.
+- **`light.di-studio.xyz` — not a link problem.** The lighting desk has no
+  hosted implementation at all; a hosted di-studio.xyz says so rather than
+  going quiet, by design (`docs/architecture/LIGHTING_DESK_DESIGN.md`, real
+  ArtNet/DMX hardware access). A subdomain would proxy to the same "no desk
+  here" page. Making it real is a tunnel-a-machine-with-hardware-access
+  project, and a lighting rig facing the public internet is its own decision,
+  not a DNS edit.
+- **`desk.di-studio.xyz` — asked and answered "I meant something else."** The
+  literal reading (di.desk, the coordination workspace this session runs
+  inside) is local-only with zero auth by deliberate design — every framed
+  tier and every agent's chat, unguarded. Asked the owner directly rather than
+  guess; he confirmed that is not what he meant, without saying what he did.
+  Left open, not built.
+
+**One real limitation of `map.di-studio.xyz`, written down rather than found
+later:** the session cookie is host-only (no `Domain` attribute), so signing in
+on `di-studio.xyz` does not carry over to `map.di-studio.xyz` — separate
+sign-ins per hostname. That is consistent with "public and private stay how
+they are" (nothing shared that shouldn't be), but it is not "one session
+everywhere," and making it that would mean a shared-domain cookie readable by
+every subdomain added later — a real tradeoff, not made here.
+
+Not started this session: the "audit all links, audit UX/UI, make it simple"
+half of the ask — the machine this session runs on goes offline within the
+hour (unrelated shutdown notice), so the infra half was finished and the audit
+was left for whichever session picks this up next.
+
+# feat/network-all-of-us
+
+The network: a page listing everyone who makes di.iiii, and a room per person.
+
+## What it is
+
+`spaces/network/` holds 52 people in `people.json` and generates, from that one
+file, the index at `/network` and 52 rooms at `/network/<slug>`. `build.mjs`
+writes `code/index.html` (via `index-template.mjs`) and `pages/<slug>.html` plus
+one `di-space.<slug>.json` each (via `room-template.mjs`). Both templates share
+`lib/css.mjs` and `lib/field.client.js`. Nothing in the space is hand-kept; a
+test re-renders every page and compares bytes.
+
+## The rebuild
+
+The first version was built as "b, with elements of a" and delivered that as
+adjacency: a white roster column beside a black star panel, sharing a hard
+edge. On a phone it stacked into a black block over a white page. The owner
+saw it on staging and said so.
+
+What it is now: one sheet of paper. The field is drawn into that paper on a
+transparent 2D canvas, masked with a gradient so it dissolves into the right
+margin — no second background anywhere, so there is no edge to see. Hovering a
+name lights that person's point; a room opens with its person already lit and
+lines out to whoever they made something with, which is the same list the page
+prints underneath. The dark, turnable version of the field stays as its own
+page at `/network/constellation`, where it is the subject rather than a panel.
+
+Four defects behind it are in `docs/ai/known-fixes.md`: the seam, the AA
+failures, 229 KB of three.js for 52 dots, and a room's own person rendering
+inside the masked half.
+
+## Decisions worth keeping
+
+- **No per-row numbers.** A numbered list of named artists reads as a ranking
+  of them. Sections carry the structure and their own counts; inside a section
+  the order is alphabetical, which says plainly that it is not a ranking. Team
+  keeps its declared order — it is a masthead.
+- **The list drives the field, never the reverse.** The canvas is
+  `pointer-events: none`. It cannot steal a scroll or a tap, and the roster is
+  the only interface on the page.
+- **Every number in the copy is generated.** "Fifty-two people make di.iiii —
+  five run it, forty-seven make with it" comes from `people.json`. The hand-
+  typed version had already drifted.
+- **Two accent tokens.** `--accent` (#0097a3) draws marks; `--accent-ink`
+  (#00757f) carries text. The brand cyan #4DF9FF is the light-on-dark form and
+  fails as type on paper.
+- **Every mark on the ground comes from a fact.** A dot is a person; a clump
+  is a section and is as big as the number of people in it; the team sits at
+  the centre and the other sections ring them; a line means two of them made
+  the same thing; the lit dot is the name you are on. The test is a count: if
+  the page carries more kinds of mark than kinds of fact, the surplus reads as
+  dirt — and on paper dirt shows immediately. A soft halo under every dot and
+  a Fibonacci sphere that meant nothing both failed that count and are gone.
+- **A mark has to hold still relative to what it is about.** The drawing was
+  a fixed canvas behind a scrolling list, so the same lines hung in the same
+  place while different names passed behind them, and no line could be traced
+  to its two names. It is anchored now: a dot sits on its own row and scrolls
+  with it, and a bracket gathers everyone who made one work and carries that
+  work's name. Rooms dropped their field for the same reason — unlabelled
+  dots beside a list of names cannot be traced to it.
+- **The drawing hides itself when there is no margin to hold it** — below that width a bracket would be clipped by the window edge, and a clipped bracket stops meaning anything.
+- **On a phone the index draws nothing**.
+
+## Open
+
+- The owner has asked for some names to be removed from the roster ("we will
+  fix in the future"). A peer session has put the numbered 52 in front of him
+  and will forward which. When the numbers arrive it is a `people.json` edit
+  plus `node spaces/network/build.mjs` — and the removed person's room stays
+  on any tier it already reached, because the sync engine never deletes.
+- `/network/the-index` still holds the earlier stand-alone roster page, now
+  superseded by the index itself. It is unlinked but reachable. Retire it or
+  fold it in.
+- Prod holds 9 of the 55 network projects. Promoting needs the code first, then
+  `space-sync --all --tier prod`, then the owner's word.
+- No portraits exist for anyone on this machine. One image per row is the thing
+  that would turn a directory into a portrait, and it is the same data.
+
+## 2026-09-03 — a door can be a square-cornered frame, not only a glowing ring
+
+- `PortalObject.jsx` hardcoded one door: a torus ring lying flat on the floor
+  (`args=[1.1,0.12,16,48]`), an additive circular tap membrane, and an additive
+  radial-gradient glow sprite at scale 3.4. The brand's geometry rule is
+  absolute — square corners only, hairline borders, flat fills, never shadow,
+  glow or bevel — so the platform could not author a doorway that belonged in a
+  room built to its own identity. Every door was a glowing coloured circle.
+- `reference.style` on a portal now picks the shape: `'gateway'` (default, the
+  ring exactly as it was) or `'frame'` — four thin boxes (jamb left/right,
+  lintel, sill), butt-jointed, square corners, `meshBasicMaterial` in the
+  entity's `appearance.color`, no glow sprite and no additive blending. The
+  opening carries a flat 10% fill that is also the tap target, the same
+  "nearly invisible, full-size hit area" trick the ring's membrane uses, but
+  with normal blending — additive over a dark room *is* a glow.
+- Opt-in by construction: an unknown or absent `style` normalises to
+  `'gateway'`, so nothing authored before this changes.
+- The frame's opening half-width is deliberately the ring's major radius (1.1)
+  and its bar the ring's tube (0.12), so `portalWalkThrough`'s
+  `1.3 × XZ-scale` latch fits both shapes and needed **no** change — only a
+  comment saying why. Asserted in `PortalObject.frame.test.js` rather than left
+  to a coincidence.
+- The whole frame sits ABOVE y = 0 rather than centring the sill on it. The
+  first build centred it, and the screenshot showed why that is wrong: a room
+  whose floor is at y = 0 swallows the sill and leaves a П where the mark's
+  closed square should be. A sill is the thing you step over; 12cm of it now
+  stands on the floor and the rectangle closes.
+- The nameplate is the one thing that moves: a ring's plate floats at y=1.9
+  over a marker lying flat, which for a 2.64-tall frame would hang it in the
+  middle of the doorway. `portalLabelHeight(style)` clears the lintel instead.
+  Reveal, fade, plate and font behaviour are untouched.
+- **The mirror was the trap.** `shared/projectSchema.cjs` is what the SERVER
+  normalises with, and it silently dropped `style` — the ESM copy was correct,
+  every unit test was green, and the door still rendered as a ring in the
+  browser. Found by running the stack and looking, not by testing. Both copies
+  updated; `schemaSync.test.js` gained fixtures plus an explicit assertion,
+  because parity alone is satisfied by both copies dropping the field.
+- Verified by looking, as an anonymous visitor on a throwaway stack (vite 5198
+  / serverXR 4098, scratchpad DATA_ROOT), headless Chromium swiftshader at
+  1440×900: orbit arrival shows a glowing ring and a square-cornered doorway
+  side by side; walk mode shows both; walking into the frame travels to the
+  room it names.
+- Both renderers already delegate portals to `PortalObject`
+  (`EntityContent.jsx` in orbit, `LiveProjectScene.jsx` in walk), so one change
+  covers both — confirmed in the browser on both paths.
+- Not done: no Studio inspector control for `style`. It is document-authored,
+  exactly like `labelPlate`/`labelFont`/`labelColor`, which have no control
+  either.
+
+## 2026-09-03 — Raw panel window polish: resize, wheel policy, canvas scale, bottom reserve
+
+- Ported a set of Raw window fixes from an unpushed branch (bcd6b097,
+  `feat/raw-one-surface`) onto current `dev`, keeping PR #312's pin/world
+  model exactly (`frame.pinned === true` = screen pixels clamped to the
+  viewport; otherwise graph units through the viewport transform). No
+  `frame.space` field introduced.
+- `DesktopWindow.jsx`: resize from every edge/corner (`RESIZE_DIRS`), with
+  `setPointerCapture` on pointer-down and the pointer effect filtered by
+  `pointerId` so a fast drag or a second finger can't drop/steal the
+  gesture. `resizeFrame()` holds the non-dragged edge still. The SE grip is
+  a real `<button>`; header + grip take arrow keys (16px / Shift 1px).
+- `windowLayout.js`: `RAW_WINDOW_MIN_WIDTH`/`_MIN_HEIGHT` (200/120, was
+  260/180), `getBottomReserve(viewportWidth)` (40 on ≥640px, 120 below), a
+  `resizing` option on `clampWindowFrame` that caps growth against the
+  window's own position instead of sliding its top-left corner up.
+- `RawGraphSurface.jsx`: a wheel over `.raw-window-body` belongs to the
+  panel unless ctrl/meta held; zoom step is now proportional to `deltaY`.
+- `RawViewport.jsx`: `<Canvas resize={{..., offsetSize: true}}>` so a Scene
+  window's canvas doesn't double-shrink under the viewport's own `scale()`.
+- Phone overflow menu now fixes to the viewport below 640px (dev lacked it).
+- NOT ported: "window follows its card" placement, sceneExample changes.
+- Verified: `windowLayout.test.js` (30), `DesktopWindow.test.jsx` (13),
+  `RawGraphSurface.test.jsx` (44) green. `npm run lint`/`test`/`build` — see
+  PR. Headless Playwright at 1280×800 DPR2 on `/open/raw`: west resize grows
+  leftward without moving the top edge; wheel over a window body leaves
+  canvas zoom unchanged, wheel over empty canvas zooms; a Scene window's
+  canvas fills its body at canvas zoom 0.7.
+- Left open: panel windows are not DOM descendants of `.raw-graph-surface`
+  (positioned via the published viewport, not nested in the stage), so the
+  wheel guard's test builds the DOM shape directly since `RawGraphSurface`
+  takes no `children` prop.
+
+## 2026-09-03 — the arrival frame and walk mode stop disagreeing (fog, motion, grid, render settings)
+
+- A visitor meets TWO renderers a click apart, and they answered the same
+  document differently. On arrival (`navMode: 'orbit'`)
+  `PublicProjectSceneSurface` mounts `StudioViewport`; Walk / Fly swaps in
+  `LiveProjectScene`. Four world-level fields were read by exactly one of them:
+  `worldState.fog` and `components.animation`/`proximity` by walk only,
+  `worldState.grid*` and `renderSettings` by orbit only.
+- **Fog on arrival.** `StudioViewport` now renders `<fog>` with walk's exact
+  semantics (colour falls back to `backgroundColor`, `enabled: false` switches it
+  off). Deliberately narrower than walk in one respect: only an AUTHORED
+  `worldState.fog` is honoured. Walk's implicit 8..50m default is composed for a
+  camera standing inside the room at eye height; an orbit camera framing a large
+  scene from 40m outside would wash the whole arrival to the fog colour, so
+  rooms that never authored a fog are untouched.
+- **Motion on arrival — AUTHORED motion only.** `useTimelinePreviewPose` became
+  `useEntityPose` and now also applies `components.animation` and
+  `components.proximity`, in walk's order (dimming first, authored keyframes
+  beating idle motion). Two gates:
+  - the existing `LiveTimelineContext` (`playTimelines`), which only
+    `PublicProjectSceneSurface` sets — the Studio editor and the low-power space
+    card previews stay still, because objects that drift under the gizmo cannot
+    be placed;
+  - a new `authoredAnimation()` resolver instead of `resolveAnimation()`. The
+    latter's fallback (models float, flat media sways, anything named "fly"
+    orbits) has run in walk forever and is untouched there, but reaching it from
+    the arrival frame would set WCC's sculpture, the Dilijan camp room and every
+    other already-published room drifting on the first frame a stranger sees,
+    with no author having asked. Arrival shows motion someone chose, or none.
+  The phase seed moved to `animationSeed()` in `entityAnimation.js` and is
+  shared, so an authored spin does not jump when the visitor clicks Walk.
+- **The floor survives the click.** Walk mode's `<Grid>` read nothing from the
+  document — `args=[80,80] cellColor="#2a3038" sectionColor="#3c4654"
+  fadeDistance={40}` — so every walkable room had the same slate lattice.
+  It now reads the nine `worldState.grid*` fields, keeping `infiniteGrid`:
+  copying StudioViewport's `args` would end the walker's floor at gridSize/2
+  metres and every existing room would lose its ground.
+- **`gridCellColor` never worked anywhere.** StudioViewport passed it to drei's
+  `Grid` as `color`, which is not a prop — it was dropped and every grid drew
+  drei's default BLACK cells, so the Studio's "Grid cell colour" picker
+  (`StudioShellPanels.jsx:870`) wrote a field nothing read. Found while making
+  the two sides agree; fixing walk alone would have left them disagreeing the
+  other way. Now `cellColor` on both.
+- **`renderSettings` in walk.** `RenderSettingsEffect` moved out of
+  `StudioViewport` to `src/project/viewport/RenderSettingsEffect.jsx` and both
+  surfaces mount it (toneMapping, exposure, shadowMap). Walk's `<Canvas>` also
+  takes `shadows` and `antialias` from the document, and `dpr` from
+  `dprMin`/`dprMax` — clamped by a new `WALK_DPR_CEILING = 1.8`, walk's existing
+  ceiling: a still arrival frame can afford 2x on a retina phone, a
+  continuously-moving first-person camera cannot.
+- Guards: 7 new source-level tripwires in `rendererParity.test.js` (the file that
+  already guards this exact class of drift) + 3 behavioural ones for
+  `animationSeed`. 42 files / 273 tests green across the touched trees.
+- Verified by looking, not by asserting. Local stack on spare ports (vite 5197,
+  serverXR 4097, throwaway DATA_ROOT), one project authored through the API
+  carrying a fog (`#e2611c`, 4..30), a magenta/yellow grid, a `spin` entity and
+  `toneMappingExposure: 3`. Headless Playwright at 1440x900, anonymous, before
+  (origin/dev) and after:
+  - orbit before: posts white to the horizon, black grid cells, and **0 pixels
+    changed** between two frames a second apart. After: posts fading orange,
+    magenta cells, 13,684 pixels changed — bounded to the spinning bar while the
+    static posts held still.
+  - the asymmetry, on a second room holding one box with NO animation component:
+    orbit **0 changed pixels** across the whole frame, walk **3,799** on the bar
+    itself (cropped, so the ambient particles are not doing the arguing). The
+    fallback still drifts it in walk and never touches the arrival frame.
+  - walk before: dim slate floor at exposure 1. After: the authored magenta and
+    yellow floor, visibly brighter. Re-authoring the document to
+    `toneMappingExposure: 0.25` and re-shooting walk darkened the whole frame —
+    walk is reading the field, not inheriting a default.
+- Left open: `worldState.fog` has no Studio UI at all (authored via API/ops
+  only), which is why so few rooms will notice the arrival-fog change. Worth a
+  field in the World panel next to the grid controls.
+
+## 2026-09-03 — the lighting desk answers to the field: looks, layers, fan, a fixture library, sACN
+
+Owner: *"look to all light control apps … analyse why what is good … make best light
+controller that even can happen in world."* Four parallel audits — the consoles
+(grandMA3, Eos, MagicQ, Titan, Hog, ONYX), the club and VJ tools (Resolume, Daslight,
+MADRIX, Arkaos, TouchDesigner), the open-source and protocol layer, and an inventory of
+our own desk — are distilled in `docs/architecture/LIGHTING_DESK_DESIGN.md`.
+
+The finding: every serious desk is one machine, and its four load-bearing ideas are
+reference-not-value, tracking, selection order as data, and phase as an ordinary
+attribute. We had none of them. What shipped the same day (#328, #331):
+
+- **Looks and layers** (`looks.js`). One content object: a look is a list of steps. One
+  step is a scene or a palette; two that snap are a chase; two that ease and are spread
+  by phase are a wave. A layer is that look under a finger — level, merge, priority,
+  mask, rate — composited over the fixtures' own values, so an effect can ride on top of
+  a running look. An empty stack renders exactly as before, which is what let it land.
+- **Fan** (`fan.js`), seven Eos styles, seeded random, reading selection order.
+- **The fixture library** (`library.js`): Open Fixture Library by name, cached beside the
+  show, carrying each channel's resting value — the line that stops an imported head
+  coming up dark with a shut shutter.
+- **sACN** (`sacn.js`): multicast groups and a priority number, verified on the wire.
+- **Palettes**: a look can follow another look, and the interface says so in words.
+- The interface for all of it, seen at 1280×800 and 390×844, plus a Layers tab on the
+  phone strip; the desk clock now drives looks, so Tap retimes everything running.
+
+Also #326: a hosted tier serves its own index.html for an unknown address, so the DMX Out
+panel and the map toolbar were believing a 200 that was a web page. Both now require a
+JSON content type; an HTML 200 reads as "no desk here", which is the truth.
+
+Not built, in the design's order: cue lists with tracking, the drawn operator surface,
+a clock with visible phase and nudge, timecode/Link/OSC-in, and the end state only this
+repo can reach — one cue moving the lights, the projection and the room together.
+
+## 2026-09-03 (cont'd) — cue-fires-look, the portability plan settled, a real save bug found and fixed
+
+Follow-on to the field-audit session above. Three things:
+
+- **A map cue can fire a look, not only a scene** (#340) — the newer content model was
+  unreachable from the mapper until now. A look is FIRED onto the desk's own cue layer
+  (created on first use, one-clip-per-layer); a scene is still RECALLED with the cue's
+  fade. `lightLook` sits beside `lightScene` in both schema copies.
+- **`docs/architecture/LIGHTING_SHOW_PORTABILITY.md`** — a plan, not a build, written and
+  answered across several rounds with a peer session relaying to the owner. Settled: the
+  show is a SPACE file (`spaces/<id>/show.json`), not a project-document key — a visitor
+  fetches the space's scene, not a document, so a document key would ship a megabyte of
+  looks to everyone who can never run them; the fixture id-vs-index problem is named as
+  the real blocker (a look is keyed by an id generated on one machine, meaningless
+  elsewhere — needs the fixture `index` to become a real, unique identity first); the
+  club's 588 scenes stay where they are; a visitor to a published space sees nothing.
+  Nothing built yet — waiting on the owner.
+- **Fixed a real bug, found by losing data to it**: the atomic save (this morning's own
+  work) renamed the live show file aside before renaming the new one in, leaving a window
+  where it did not exist. A desk restarting into that window found nothing, and would
+  have silently saved emptiness over a real show. Now: copy-aside + atomic rename onto the
+  live path (never absent), and a desk that booted empty refuses to overwrite a show that
+  turns up later — preserves it, names it, says so. Both covered by tests.
+
+## 2026-09-03 — the lighting desk moves in: /light, DMX Out on the desk, map cues with light, MIDI in the suite
+
+The club's Art-Net desk (a zero-dependency Node.js DMX desk that arrived as three Telegram
+zips, hardened the same day in `~/artnet-desk`: crash paths, NaN guards, atomic saves,
+UTF-8 bodies, Linux/macOS serial, phone layout) is now di.iiii's own tool at
+`serverXR/src/lighting`, CLEAN — no rig, no scenes; a rig gets patched here when wanted.
+`docs/architecture/LIGHTING_DESK.md` is the note.
+
+- `desk.js` is the desk as a factory; `standalone.js` the same desk on its own port (what
+  the club machine runs — `~/artnet-desk` is now an INSTALL that syncs `desk/` from here).
+- Mounted at `/light` behind the local-runtime guard (hosted → 404), BEFORE the JSON
+  parser, built on first request, output OFF by default so a dev server never
+  broadcasts on the studio wifi. `light` reserved in both space routers; Vite proxies it.
+- The DMX Out node's default rig is the desk (`rig: desk|vizzz`, a config select): master,
+  blackout as a state, raw channel, and a new Scene input recalling by id or name off
+  `/light/api/scenes/summary`; `/light/api/summary` is the cheap poll.
+- A map cue carries an optional `lightScene` and fires it through `fireCue`; the map desk
+  shows a Light link when the desk answers.
+- MIDI is the desk's fifth page: one dispatcher (the old separate page silently unhooked
+  the scene menu's pad binds), map saved with the show via `api/midi`.
+- Gates: the desk's three suites run under `npm test` (lighting.test.js); lightingRoutes,
+  dmxRigClient, DmxOutPanelWindow, nodeRegistry, map and schemaSync tests extended; wiki
+  `lighting-desk` + `dmx-out-node` + `projection-mapping` updated.
+
+Left: a real ENTTEC widget on Linux (the serial path is proven on a pty only); the club
+desk still runs the pre-hardening build; the AI-director routes beyond summary (events,
+beat, preview, the AI lane) are listed in `~/artnet-desk/AI-DIRECTOR.md`.
+
+## 2026-09-03 — dev absorbs main so the promotion can go
+
+The dev → main promotion (#284) had turned CONFLICTING. Not on new work: the suite/brand
+pages were committed straight to `main` (#300, 05:40) and separately to `dev` as PRs
+(#305/#307, 17:10 and 18:06) that went on to add the studio's third person. The two copies
+collided add/add in `public/suite/index.html` and `serverXR/src/routes/ogRoutes.js`.
+
+Resolution: `dev`'s copy on both files — the newer superset, three people not two. `main`'s
+other commits (earlier promotion merges, the nginx redirect fixes, the README wordmark) come
+across untouched. After this merge `origin/main ← dev` is clean, and #284 carries the other
+session's #306 (four cherry-picks already on dev), which closes as superseded.
+
+The lesson is the one the one-copy rule already states: a page committed to `main` directly
+and to `dev` separately is two copies, and the next promotion has to choose.
+
+## 2026-09-02 — the dev box was never a copy of staging
+
+`tier-sync.mjs` was written to move work UP a tier, because `local:mirror` and
+`project-pull` only ever move it down. It worked, and then it lied: after copying
+`br-id-ge`'s 71 Notations 2 scenes to staging it reported **"nothing to move — the
+destination already holds everything the source has"** while 32 documents differed
+between the two tiers.
+
+It compared **project ids**. Two tiers can hold every slug in common and different work
+inside every one of them, and that is exactly the drift that had been reported from the
+desk: *"when you work and push to staging and open local it not the same."*
+
+### Why they were never the same
+
+Two rules in `local-mirror.mjs` — both documented, both silent, both mine:
+
+1. **"Prod always wins for a space both tiers hold."** The dev box mirrors PRODUCTION
+   first. It was never a copy of staging.
+2. **"Existing local projects are left alone unless `--force`."** A project the mirror has
+   already seen never refreshes again.
+
+So local is a copy of *prod*, frozen at first contact. Measured across three tiers — 6 of
+12 sampled projects were byte-identical to production and differed from staging:
+
+| project | local | staging | prod | |
+|---|---|---|---|---|
+| dilijan/tsaghkanots | 20629p | 7261p | 20629p | local == prod |
+| dilijan/the-yard | 21602p | 23697p | 21602p | local == prod |
+| dilijan/welcome | 0e 1802p | **265e 16a** | 265e 16a | local behind BOTH |
+| open/open-jam | 3e 5n | 47e 16a | 49e 16a | three versions |
+
+### `--audit`
+
+    node scripts/tier-sync.mjs --from local --to staging --audit
+
+Reads every document from both tiers, compares signatures, exits 1 on any drift. Three
+classes: only-on-source, only-on-destination, and **same slug / different work** — the one
+the id comparison could not see.
+
+**Two traps it had to be taught, both found by running it:**
+
+- **A published page is not an entity.** It lives in `presentationState.codeHtml`. On
+  entity count alone, `main/brand-guide` (354KB), `funding/funding-board` (300KB),
+  `dilijan/t-workbench` (2.7MB) and every room of the Dilijan camp read as **empty**. The
+  first pass of a purge of "empty" projects had all of them on its list. Nothing may call a
+  project empty on entity count alone.
+- **`projectMeta.createdAt`/`updatedAt` are per-database bookkeeping** — when *that* tier
+  first saw the row, not when the work changed. Every project a sync has ever moved is
+  stamped on arrival. First live run: **155 differences, 138 of them nothing but those two
+  numbers.** `VOLATILE_PATHS` strips them, with `publishState.lastExportAt` and
+  `showState.clockEpoch`. Add to that list before adding a field a tier stamps for itself.
+
+After stripping: 55 real differences — 23 debris in `open`, 32 genuine content drift.
+
+### The audit said equal. The screenshot said grey.
+
+`dilijan/welcome` on localhost and on staging, side by side after the mirror: same room, same
+camera, same 265 objects — and the photo wall **grey on local, sixteen photographs on
+staging**. The audit compared documents and the documents matched.
+
+The upload route strips EXIF/GPS **before** hashing, so a scrubbed file no longer hashes to
+the id the caller sent. The route drops the requested id, stores under the new content
+address, and answers **200**. `project-pull` counted a success and left the document pointing
+at ids that are now nowhere. Its own comment said the opposite: *"Ids are preserved so the
+document's existing references resolve without rewriting."*
+
+    16 assets stored locally, 16 referenced by the document, ZERO ids in common
+
+Measured across the dev box: **106 of 244 assets unresolvable, in 8 projects** —
+`library/di-library` 51/51, `dilijan/desk` 17/17, `dilijan/welcome` 14/16.
+
+`scripts/asset-remap-lib.mjs` reads the id the server actually stored out of its own
+response and follows it through the document — `assets[].id`, `assets[].url`,
+`components.media.assetId`, `worldState.environmentAssetId`, and asset URLs inside
+`presentationState.codeHtml`. Deliberately a generic walk rather than a field list, because
+that list grows every time a component learns to carry media. Both `project-pull.mjs` and
+`tier-sync.mjs` re-PUT the document when anything moved.
+
+Re-pulling a photo-heavy space hits the local upload limiter (60 per 10 minutes). A 429 is a
+wait and a retry, not a failure.
+
+Fixed, re-pulled, and looked at again: **106 → 0 unresolvable**, and the photo wall on
+localhost now carries the same sixteen photographs as staging.
+
+**A consequence that had to be designed for.** Because each tier scrubs on arrival, the same
+photograph is legitimately stored at two different content addresses — so the audit reported
+all 7 photo-carrying projects as drifted *immediately after copying them correctly*. That is
+the cries-wolf failure again, arriving by a different road. `documentSignature` now carries a
+second `shape` hash, taken with every asset addressed by NAME instead of by id, and
+`planAudit` reports those as a separate class: **"same work, assets re-addressed on arrival —
+not drift to fix"**. It is not a claim of equality — nothing in a document can prove two
+rewritten files are the same picture — which is why it is a class of its own and never folded
+into a match. A photograph actually swapped for a different one changes its filename, and the
+strict hash still catches it. Both cases are guarded.
+
+### Done
+
+- **71 `br-id-ge` projects local → staging**, 0 failed, documents verified equal and
+  `n2-hub` looked at on staging as a plain visitor with no token.
+- **`--audit`** with 12 new guards (18 in `tier-sync.test.js`, 7 in `asset-remap-lib.test.js`).
+- **The dev box re-mirrored FROM staging** with `--tier staging --force`, so localhost and
+  staging finally hold the same work. `serverXR/data/di.db` backed up to `~/di-backups/`
+  first — a forced mirror overwrites every local copy.
+- Final audit: **0 projects with different work.** What remains is the 23 debris below, and 7
+  projects whose assets were re-addressed on arrival.
+
+### "It's really not the same" — because every worktree is its own tier
+
+After all of the above the owner opened localhost and it still did not match staging. It
+could not: **each worktree's `serverXR/.env.local` says `DATA_ROOT=./data`**, relative, so
+every worktree runs its own database. Seven on this machine, five of them stale copies. I had
+synced the one in *my* worktree; the dev router hands the owner whichever stack booted first —
+a different tree, a different `di.db`. Verified on my surface, not theirs.
+
+Fix: **one shared local tier at `~/.local/share/di.iiii/data`** (the synced data copied there,
+WAL checkpointed first), and `DATA_ROOT=` pointed at it, absolute, in every worktree's
+`.env.local`. Proven, not assumed: `/proc/<pid>/fd` of the `:4000` server shows it reading the
+shared `di.db`, and `frontframe.dii.localhost:8088` serves it. The env-file edits themselves
+were refused by the permission classifier (they hold tokens) — `scripts/tmp-share-local-tier.sh`
+does all ten and the owner runs it. A stack already running keeps its old database until
+restarted.
+
+### `--changed` — the "work local, push to staging" flow
+
+Pushes what the audit says differs, plus what is missing; never touches a re-addressed one.
+Keeps a baseline (`<DATA_ROOT>/tier-sync-baseline.json`, keyed by destination) of what was
+last synced, and **refuses** a project that changed on both sides since — or that has no
+baseline at all. That second rule was learned the hard way: the first live dry run, with no
+baseline, queued an hour-old local copy over `br-id-ge/landing`, which someone had edited on
+staging twenty minutes earlier. The baseline is now established from whatever the two tiers
+already agree on, so one run after a mirror makes everything known-synced.
+
+Also found while running it: `platform-recordar` on **staging** references an image by one
+id in its page and lists it under another in `assets[]` (one image, two ids — a pre-scrub
+manifest). Local's copy is consistent; staging's is not; the audit refuses it correctly.
+
+### Owed
+
+- **23 debris projects in `open`** — `debug3-true-false-1784237913844`, `td-check2-…`,
+  `phase5-test-…`, `untitled-project` — local-only, deletion refused by Claude's permission
+  classifier, so the owner runs `node scripts/tmp-purge.mjs` (untracked; archives every
+  document to `~/di-backups/` first). Until then the audit's only finding is those 23.
+- **Two owner-run scripts, both untracked:** `scripts/tmp-share-local-tier.sh` (points every
+  worktree at the shared tier) and `scripts/tmp-purge.mjs` (the `open` debris). Land or delete
+  after running — a one-off that survives in a worktree is a trap for the next session.
+- **`platform-recordar` on staging** — page uses asset `0bda33d5…`, manifest says `c8155802…`
+  for the same image. A re-save in Studio or a one-line manifest fix; until then `--changed`
+  refuses it, correctly.
+- **New worktrees still get `DATA_ROOT=./data`** unless whoever creates them copies a fixed
+  `.env.local`. The durable fix is `dev-stack.mjs` refusing a relative `DATA_ROOT` on this
+  machine, or the main checkout's `.env.local` being the template. Not done.
+- A `--pull` direction: `--audit` reports drift and stops, because which side is right is a
+  question about the work, not about the data.
+- **`/tmp` is a 16 GB tmpfs and was found at 100%**, which killed commands mid-task with
+  ENOSPC. 13.9 GB of it belongs to two *other* Claude sessions' scratchpads
+  (`2573aee0…` 9.7 GB, `7e7c16ea…` 4.2 GB) and was deliberately left alone. Anything a
+  session needs to survive a reboot does not belong in the scratchpad — `tmp-purge.mjs` was
+  moved to `~/di-backups/` for exactly this reason.
+
+### Not part of this branch, done live on prod the same session
+
+`library` and `funding` invite links minted for Emilya (label `Emilya`, link expires
+2026-09-09; the access it grants is permanent). Verified in a clean browser: refused with no
+link, full page with it, still open on a later visit with `?invite=` gone. The previous pair,
+labelled "Gevorg", had expired on 08-26 having never been opened. Details in auto-memory
+`reference_dii_prod_data_writes`.
+
+## 2026-09-02 — the entry stops lurching when the walker takes over
+
+Reported by the owner: *"click to step inside and you will see there are some bag when it
+turning the walking mode its like glich or something"*.
+
+- **The flight landed on the wrong spot.** It was written against the walker's DEFAULT
+  start, `z = 6`. This room authors `worldState.spawn` at `z = 15` and `LiveProjectScene`
+  applies it, so the camera flew to one place and the walker took over nine metres behind
+  it. Measured rather than reasoned about: `window.__diiWalkerRef` read `z: 15` while the
+  flight's end pose said 6, and sampling the handover every 140ms showed the room visibly
+  snapping back between two adjacent frames.
+- **The room reports its arrival now.** `onArrivalPose` resolves `worldState.spawn` (or
+  the default) into camera terms the moment the document loads, and the flight lands on
+  that. The authored spawn is the author's decision about where a visitor stands; the
+  flight's job is to deliver them to it, not to guess it.
+- **The field of view was moving too.** The composed entry shot is fov 50, the walk camera
+  is 60, and the swap happens on the same frame as the handover — a zoom pop on top of the
+  jolt. The flight crosses the difference as it goes, so the wider field is already on when
+  the walker arrives.
+
+Guards: 3 new cases in `enterFlight.test.js` — a reported pose wins over the default, an
+unusable one falls back, and the flight arrives wearing the walk fov. Two existing cases
+were loosened from `toEqual(WALK_POSE)` to position/target, because the fov is now
+deliberately different at the end.
+
+**Looked at**: the handover sampled every 140ms at `?flight=3000`, before and after. Before,
+the last flight frame and the first walk frame are two different shots. After, they are
+the same one.
+
+### Two more, reported while this was open
+
+- **The landing reappeared for about a second after arriving.** The originals are only
+  `visibility: hidden` while their clones fly, so the moment the flight put them back the
+  hero was still at opacity 1 — and `.lp-hero-inner--hidden` then faded it out over half a
+  second, which reads as the page coming back after you have already arrived. Two changes:
+  `.lp-root--flying` now takes the hero's opacity to 0 *during* the flight (nobody can see
+  a hidden element fade), so there is nothing left to hide at the end; and the flight hands
+  over FIRST and tears its clones down two frames later, so the clones cover React's commit
+  instead of leaving a bare frame between them. Measured per animation frame across the
+  handover: hero opacity was 1 → 0 over ~520ms, and is now 0 throughout.
+- **Coming back out left the room talking over the page.** The room is given its words back
+  at the first frame of the flight; `← Back` restored the page without taking them away
+  again, so the wordmark and the line were drawn twice, one behind the other. Going in and
+  coming out are the same switch and it is now thrown both ways — `leaveRoom` cancels any
+  flight in progress, returns the camera to the composed rest pose, and hushes the room.
+
+### And then the page stopped being a page
+
+The owner, on the entry: *"i want to like in game liminal they all can be 3d objects but
+with right physics it can look other's"*. Offered the trade, he chose **swap at the seam** —
+real HTML at rest, real objects from the moment the door is pressed.
+
+- **CSS3D was a ceiling, not a bug.** The browser draws DOM in its own compositing layer
+  above the WebGL canvas and cannot interleave the two by depth, so a door could pass
+  behind the wordmark and never in front of it. No arrangement of the maths gets past that;
+  the elements have to become objects in the room's own scene.
+- **They do now.** Each visible element is drawn onto a canvas from its own computed style
+  — family, weight, size, colour, tracking, border, fill, and each coloured run separately,
+  so the wordmark keeps its cyan dot — and handed to a mesh in the room through the
+  `sceneExtras` seam. `placeInWorld` is the inverse projection: the piece lands on exactly
+  the pixels its element covered, verified to a tenth of a pixel, so the first frame of the
+  fall is the last frame of the page.
+- **Then gravity.** Hand-written, about forty lines: weight, a floor, and rest. No engine —
+  ~500KB on the one page whose load time is already on the defect list, to buy three things
+  worth forty lines. Pages do not bounce, so the vertical speed is killed rather than
+  reflected and friction eats the slide; they turn as they fall and lie flat, face up, in
+  the same pose the room's own 77 floor pages are already in. The page you arrived from
+  ends up on the floor of the room, and you walk in among it.
+- Deterministic scatter: `Math.random()` during render is impure and React's lint says so.
+  Seeded from the piece's index, which also means a fall can be looked at twice and
+  compared.
+- `pageInSpace.js` and its test are deleted. The CSS3D lift is superseded, and keeping a
+  second entry mechanism nobody reaches would be two implementations of one moment.
+
+Guards: 4 in `pagePieces.test.js`, and the no-2D-canvas path in `enterFlight.test.js` —
+a browser that refuses a context still opens the door, with nothing to throw.
+
+### Perspective when you walk
+
+*"it would be great to keep perspective when you walk it will not all in the one on one"* —
+and he was right: every piece came to rest in one band at one depth, so walking past them
+gave no parallax and the floor read as a single decal.
+
+Fixed by where they HANG, not by how hard they are thrown. Each piece now hangs at its own
+distance along its own view ray, spread 4m to 16m. A ray through the eye projects to the
+same point at any depth, so every piece still covers exactly the pixels its element covered
+— the identity at the seam is untouched — but the page is already spread through the room's
+depth before it starts to fall. Throwing them harder to get the same effect had put them
+all past the doors as specks.
+
+Three bugs found by measuring rather than squinting, with a dev-only `__diiPageDebris`
+readout added for exactly that:
+
+- **Every piece came to rest at x = 0.** The "sideways" vector was the piece's whole offset
+  from the eye, which is dominated by how far away it is — so it pointed forward, and every
+  page was thrown down the middle. The forward component is removed now.
+- **Then every piece went to the same side.** `jitter` was `sin()` of a nearly-linear input:
+  fine over large or irregular values, and for eight consecutive indices with one salt it
+  returned the same sign **seven times out of eight**. Replaced with a real integer hash.
+- **And then they still did**, because the sign was applied twice — once on the fallback
+  vector and once on the scale — which squares it, for exactly the centred pieces that
+  needed it.
+
+Measured after: resting distances 6.5, 7.3, 8.6, 9.9, 11.5, 14.7, 14.8, 19.0 metres from
+where the walker stands, spread to both sides. Each page also lies at its own yaw and its
+own few millimetres above the floor — one shared resting pose read as a printed pattern
+rather than paper that fell, and coplanar transparent planes z-fight.
+
+### Why it went dark
+
+*"and why it goes dark?"* — because a scrim written for the page was still being painted
+over the room after the page had gone.
+
+`.lp-hero::after` is a `linear-gradient` to `rgba(0,0,0,0.34)` across the middle, and
+`.lp-hero` carries a black ground under it. Both exist for one job: making the landing copy
+readable over a bright room. The flight turns them off (`.lp-root--flying`) — which is why
+mid-flight looked right — and the teardown turned them straight back on, so a visitor who
+was now standing INSIDE the room was looking at it through a 34% black wash with no copy
+left to justify it.
+
+The wash follows the copy now: `.lp-root--inside` is set while `entered` and shares the
+flying rules. Measured rather than eyeballed — the computed `::after` opacity read
+1 / 0 / **1** across rest, flying and entered, and now reads 1 / 0 / **0**.
+
+## 2026-09-02 — the platform's space is `di.iiii`, and the network has a room per person
+
+- Space `main` is labelled `di.iiii` on prod and staging (was "Works"); the repo declaration
+  already said so — `npm run spaces:audit -- --space main` is green on both tiers.
+- `main` now declares three of the platform's own pages as projects, pushed from this repo
+  and live on BOTH tiers: `/main/suite` (the very file nginx serves at `/suite/`),
+  `/main/landing` (the 2026 standing copy of the front door), `/main/brand-guide` (a copy
+  of di-brand/brand-guide.html — edit there, copy here). All `publish:false`; the front
+  room `main-dii-project` stays the door and stays undeclared (Studio-authored scene).
+- The og card for `main` no longer reads "di.iiii — a space on di.iiii." — the platform's
+  own space carries the front-door line (`ogRoutes.js`, test added).
+- `spaces/network/` is in git (it was untracked in the shared checkout). The roster's team
+  names match `/suite` (Gevorg Grigoryan, Syuzi Ginosyan). Eight people have a room:
+  the five-person team + Mery Petrosyan, Greta Grigoryan, Shahane Harutyunyan (everyone
+  with a work already standing on prod). Rooms are generated from `people.json` by
+  `spaces/network/build.mjs`; ids are `network-<slug>` (ids are global; `yeva-abgaryan`
+  and `mery-petrosyan` are wcc's), addresses are `/network/<slug>`. Live on staging AND
+  prod, walked as a visitor (roster → room → work → back; phone too).
+- Still undone: staging's `main` keeps two stale drafts the repo does not declare —
+  `privacy` (July text, says studio_network, unreachable at `/main/privacy` because the
+  word is a reserved app segment) and `brand-directions` (rough, no source). Removal is
+  the owner's call. `/suite` static on prod still shows two people until the next
+  promotion carries #304.
+- Follow-up: declared-page sources moved out of `spaces/*/code/` (`main/pages/`,
+  `network/pages/`). The "Deploy space code files" workflow watches `spaces/*/code/**`
+  and runs `space-code-push`, which writes into a space's PUBLISHED project — for `main`
+  that is the front room. It fails today (no `LIVE_API_TOKEN` secret), which is the only
+  reason it did nothing; the layout no longer relies on that. The roster stays at
+  `spaces/network/code/index.html` on purpose — code-push and the sync write it the same.
+
+## 2026-09-02 — dev folds its own session notes: the staging deploy lands them
+
+- The single biggest source of failed deploys, measured: in the 14 days to today, 111
+  merges into `dev`, 82 hand-run `chore(land)` fold commits, and a 60% failure rate on
+  `Deploy VPS Staging`. Cause: every PR is REQUIRED to carry a `docs/ai/sessions/` note,
+  so every merge commit puts a note on `dev`, and `docs:ai:check` (run inside the deploy
+  via ci.yml) refuses a non-empty sessions dir on `dev`. Staging only moved once a human
+  ran `npm run land` and pushed.
+- Fix, two halves in `deploy-vps-staging.yml` + `ci.yml`:
+  1. A first job `land` (push to `dev` only, `contents: write`, `continue-on-error`)
+     checks out `dev`'s tip, runs `scripts/session-land.mjs`, and pushes the fold commit
+     as `github-actions[bot]`. Fetch → re-fold → push, bounded to three tries, re-folding
+     from the new tip instead of rebasing so a note merged in the gap is never left
+     unfolded. No `npm ci` — the scripts import only node builtins.
+  2. `ci.yml` gains a `workflow_call` input `land_in_place` (default false, so PRs and
+     the production deploy are unchanged). The staging `test` job passes it, and the
+     checkout is folded in place before any check runs — the tree under test is the
+     tree the fold produces, whether or not the push in (1) was accepted.
+- Why not "push and let the fold commit trigger the deploy": a `GITHUB_TOKEN` push
+  never triggers another workflow. So there is no second run and no loop; this run
+  deploys `github.sha`, the merge commit. The fold touches only `PROGRESS.md`,
+  `CURRENT.md` and `docs/ai/sessions/`, so the image is the same code — accepted, and
+  written into the workflow comments: `release.gitCommit` on staging reads one commit
+  behind `dev`'s tip after a merge.
+- The known unknown: `dev` has classic branch protection with required status checks
+  (`build-and-test`, `browser-checks / browser-checks`) and no bypass for GitHub
+  Actions (`enforce_admins` off is why the owner's hand pushes go through). A fresh
+  fold commit cannot carry those checks, so the bot push will most likely be rejected
+  (GH006) until the owner gives the github-actions app a bypass or moves `dev` to a
+  ruleset with one. The job treats that as a warning, not a failure: staging deploys
+  either way, and `npm run land` by hand remains the fallback for the bookkeeping
+  commit. A live probe on a throwaway protected branch was prepared but not run (it
+  needs a repo-settings write); the first real answer is this PR's own merge — read the
+  `land` job's annotation on that run.
+- `scripts/session-land.mjs`: with nothing to fold it now still runs the worktree
+  sweep. CI folding cannot see anyone's disk, and without this the "landing sweeps it,
+  not memory" rule would have quietly stopped being true the day the fold stopped being
+  manual. Docs updated in the same change: sessions README, golden rule "CURRENT.md has
+  exactly one writer", LIVE_DEPLOY.md, `.claude/commands/land.md`, parallel-agents.md.
+- Validated locally: both workflows YAML-parse; `session-land.mjs --dry-run` against a
+  planted note; lint, the session-land/repo-state unit tests, `docs:ai:check` and
+  `docs:wiki:check` all pass. Not testable locally: the Actions run itself.
+
+## 2026-09-02 — both tiers send HSTS
+
+The 2026-09-02 live walk read the response headers of `/` on prod and staging:
+`X-Frame-Options`, `Referrer-Policy` and `nosniff` were there, `Strict-Transport-Security`
+was not. Caddy issues the certificates but never adds that header by itself, so a
+browser that has visited before still tried `http://` first on every fresh tab.
+
+- One `header Strict-Transport-Security "max-age=31536000"` line in each site block
+  of the tracked `Caddyfile`. A year, no `preload`, no `includeSubDomains` — nothing
+  that could strand a future host under the domain.
+- Reaches the live Caddy only on the next `main` promotion: the prod deploy workflow
+  is the one that checks out `Caddyfile` and reloads Caddy; the staging block lives
+  in the same file, so staging gets it at the same moment.
+- A Content-Security-Policy is deliberately NOT added: published spaces are arbitrary
+  HTML that pulls Leaflet, CARTO tiles, jsdelivr, Google fonts and the default draco
+  decoder from third parties. A platform-wide CSP would break the works; it belongs
+  per-route, decided later.
+
+## 2026-09-02 — GitHub space-sync stops answering itself with 401
+
+When a linked repo pushes, or a space is first connected, `serverXR` pulls the
+repo and then writes it back through its own HTTP routes, authenticating with
+`config.apiToken` — that is `API_TOKEN`/`SERVERXR_API_TOKEN`. `docker-compose.yml`
+passes only `ADMIN_API_TOKEN` into the container (compose env is an allow-list), so
+on prod and staging the self-call header was a bare `Bearer ` and every webhook and
+every initial sync failed with `internal document GET failed (401)`. Failed closed,
+so never a hole — but the feature was dead on both tiers since it shipped.
+
+- `config.internalApiToken` = `API_TOKEN` if set, else the admin-role fallback the
+  session secret already trusts (`adminFallbackToken`), never a lower-role token.
+  Both self-call sites in `index.js` use it.
+- Tests: the Docker case (only `ADMIN_API_TOKEN`) resolves to it; `API_TOKEN` still
+  wins when present; an editor-only token yields nothing.
+- Not verified end to end against a real GitHub App push — that needs a linked
+  repo on staging; the first real webhook after this lands is the proof.
+
+## 2026-09-02 — a null frame no longer takes the server down
+
+A whole-platform audit found the one thing that was dangerous: `JSON.parse('null')`
+succeeds, and both the unauthenticated mesh relay (`meshHub.js handleMessage`) and
+seven Socket.IO space handlers (`join-space`, `scene-update`, `object-changed`,
+`object-added`, `object-deleted`, `user-cursor`, `selection-changed`) then read a
+field off the result. `ws` surfaces the throw as an uncaught exception; socket.io
+dispatches listeners inside `nextTick`, so it is uncaught there too. serverXR has no
+`uncaughtException` handler, so one WebSocket frame from any visitor, or one emit
+from any guest session, exited the process on both tiers. Docker restarted it; a
+two-line loop would have been a standing outage.
+
+- The relay now drops any frame that is not a plain object; the seven handlers
+  default `data` to `{}`, which is what the other five already did.
+- Two regression tests, one per file, send the bad payloads and assert the server
+  still answers. Both fail against the pre-fix code with the exact
+  `Cannot destructure property 'spaceId' of 'data' as it is null` crash.
+- Not done, on purpose: a process-level `uncaughtException` logger. Node's default
+  already exits with a stack; adding a handler that swallows would hide the next
+  one of these.
+
+## Cap space/project chat identity fields and check the disk floor on space chat writes
+
+- `userName`/`userId` on both `project-chat-message` and `space-chat-message` were
+  unbounded — only `text` was capped (`CHAT_MESSAGE_MAX_LENGTH`, 500). socket.io's
+  1MB default frame size meant a guest could ride ~1MB of identity into a persisted
+  chat line, and `space-chat-message` writes 500 kept lines per space to SQLite. Added
+  a shared `normalizeChatIdentity` (64-char cap) used at both socket handlers, and a
+  matching cap inside `spaceChatStore.appendMessage` itself so the store is safe
+  regardless of caller.
+- The disk-full guard on HTTP writes (`diskGuard.js` → `createDiskWriteGuard`, wired
+  in `index.js`) never saw socket traffic — a chat line skips multer and the JSON
+  body parser entirely. Extracted the guard's cached statfs check into a new
+  `createFreeSpaceChecker` export (same caching/warn-once behaviour, no duplicated
+  numbers) and reused it from `space-chat-message`: below `config.minFreeDiskBytes`
+  free, the message is dropped before it reaches `spaceChatStore.appendMessage` —
+  no new client-facing event, matching how a flood-limited message is already
+  silently dropped.
+- `project-chat-message` isn't persisted (ephemeral, room-scoped like
+  `project-cursor`), so it isn't part of the disk-fill vector — only got the
+  identity cap, for the same reason its `text` is already capped: a large frame is
+  still a large frame in memory/on the wire even if nothing hits SQLite.
+- `normalizeChatMessageId` already capped and charset-validated the client-supplied
+  `id` (64 chars, `[A-Za-z0-9_-]+`) before this change — no gap there.
+- Left as-is: a `sandbox-*` space accepted by `canAccessSpace` before the space
+  exists on disk. No existing socket-side "space must exist" check to reuse in one
+  line; a real fix would need its own review of sandbox provisioning, out of scope
+  for this pass.
+- Tests: `serverXR/src/spaceChatStore.test.js` gained a truncation test (100KB
+  userName/userId → stored at 64 chars). `serverXR/src/socketHandlers.test.js`
+  gained a real socket.io integration test (in-process server + `socket.io-client`,
+  same pattern as `meshHub.test.js`) proving a message is dropped without
+  broadcasting below the configured free-disk floor, and still broadcasts/persists
+  above it. `npx vitest run serverXR/src` — 455/455 passing. `npx eslint` clean on
+  all touched files.
+
+## 2026-09-02 — The Light Put Back arrives as a space, and space:code-push turns out to be broken three ways
+
+A new work — 14 laser photographs from MOCT × MECHATRONICA (Davit Nersisyan) run
+through a photo → threshold → vector → depth-cloud → scan → ILDA pipeline — lands on
+staging as the space `the-light-put-back`, not as repo code. `src/works/works.js`
+says a third work never joins the platform tree, and this obeys that.
+
+Getting it there exercised `scripts/space-code-push.mjs` for real, which is how three
+faults surfaced that no test could have caught, because all three are silent:
+
+- It sent `PATCH` to `/api/projects/:id/document`. `projectRoutes.js` registers only
+  `GET` and `PUT` there, so express answered a bare `404 {}` — which reads like a
+  missing project and sends you hunting in the wrong file.
+- It set `presentationState.mode = 'code'` but never `entryView`. The viewer decides
+  with `showCodeView = entryView === 'code'`. So the push succeeded, the file landed
+  byte-for-byte (sha256 verified against the local file), the script printed
+  `ok — 1 file(s) pushed`, and the published URL kept rendering an empty scene.
+- `space-new.mjs` read `.env` and root `.env.local` but not `serverXR/.env.local`,
+  where `LIVE_API_TOKEN` actually lives — so it refused to create a space on a repo
+  that had a perfectly good token, and sent the operator to the browser instead.
+  `space-code-push.mjs` had read all three paths since it was written.
+
+Fixed, with guards in `scripts/space-code-push.test.js` that read the **server** as
+the source of truth rather than restating the fix: one parses `projectRoutes.js` for
+the methods actually registered on that path, one asserts every `presentationState`
+key `spaceSyncPlan.js` writes is also written by the script. Both fail against the
+pre-fix script.
+
+A fourth thing is documented rather than fixed: a space with no `publishedProjectId`
+opens its scene regardless of what its project holds, so a fresh space needs
+`PATCH /api/spaces/:id {publishedProjectId}` before the pushed page is what the URL
+shows. `space-new` → `space-code-push` alone never produces a visible page.
+
+### Still open, deliberately
+
+- The space is **private** (`isPublic: false`). Making it public is a gated patch and
+  the owner's call — these are someone else's photographs.
+- The page is **4.3 MB**, because all 14 plates, tophat fields and depth maps are
+  inlined as data URIs. It belongs in space assets (SHA-256, per the manifesto) and
+  should be re-cut that way before this ever goes near prod. `dii-space-weight-audit`
+  is the tool for it.
+- On staging the platform's own STAGING badge sits on top of the page's transport bar
+  (bottom-left). Staging-only chrome over a work's own controls — worth a look if
+  other code-mode spaces hit it.
+
+## 2026-09-01 — a composed arrival stops cropping on a phone
+
+- **An authored entry camera is now fitted to the viewport it actually lands in.**
+  `resolveViewerCamera` handed the `fixed-camera` entry view straight to the renderer,
+  raw. A shot is composed on the author's screen, which is landscape; a portrait phone
+  reads the same fov across half the horizontal field, so the composition arrived cut.
+  On di.iiii's own front room that put two of the four doors off both sides of the
+  frame — and the doors ARE the page's links, so the phone visitor was handed a page
+  with half its navigation missing and nothing saying so.
+- The correction is `fitCameraToAspect` in `src/utils/cameraFraming.js`: dolly the
+  camera back along its own view axis by `getAspectFitScale`, the same factor
+  `computeFramingCamera` already applies to a fitted shot (orthographic zooms out
+  instead). That factor is **1 for every square-or-wider viewport**, so an author on
+  their own landscape screen gets their shot back byte-identical and this can only ever
+  widen — the module's standing "err wider, never crop" rule, now applied to the one
+  lane that had been exempt from it.
+- A `locked: true` camera is widened too. It is the visitor who cannot move to see
+  what was cut, so it is the one that most needs to arrive whole.
+- Guards: 4 cases in `cameraFraming.test.js` (identity on landscape, the dolly on a
+  390×844 phone with the view axis unchanged, ortho zoom, degenerate position==target),
+  5 in the new `publicViewerEntryCamera.test.js` covering all four `resolveViewerCamera`
+  branches. 5 of the 9 were watched failing with the correction forced back to 1; the
+  other 4 assert the landscape identity, which must hold either way. **Verified by looking**, 1440×900 DPR2 and 390×844 DPR3, against a local
+  server holding staging's real `main` document: before, the phone showed two sliced
+  arcs and no outer doors; after, all four doors are in frame.
+
+### What this branch does NOT fix — both are data on `main`, not code
+
+- **Prod's `main` room has no doors and no wordmark.** Prod's published document holds
+  83 entities, all `image`/`model`/`cone`/`box`; staging's holds 89 — the extra six are
+  the four `e-flagship-door-*` portals and the wordmark and tagline text, written to
+  staging alone by three `replaceDocument` ops on 2026-09-01 01:18–02:15Z. `/` becomes
+  that room when #284 lands, so promoting the code without carrying the room gives
+  production a front door of floor images and no way in. Prod also still has
+  `entryView: 'scene'`, whose auto-frame points at the centroid of the 77-image floor
+  gallery and leaves the doors far up-left in an empty blue field (reproduced locally
+  against prod's own document).
+- **The composed shot itself needs recomposing.** Staging's authored camera —
+  position `[-0.2, 4.3, 3]`, target `[-0.2, 4.3, -19]` — sits 12 units from an arc of
+  doors spread ±10.7, so the outer two fall outside the horizontal fov on a laptop
+  before any phone is involved. `[0, 3, 14.5]` → `[0, 1.2, -14]`, same fov 50, holds all
+  four doors, the wordmark and the line with margin at 1440×900, and with the fix above
+  keeps all four on a 390px phone. Verified by looking at both. It is an authoring act
+  on the space, so it is the owner's to apply, not this branch's.
+
+### Applied to staging (data, this session)
+
+- `main-dii-project` presentation on **staging** moved to `position [0, 3, 14.5]` /
+  `target [0, 1.2, -14]` (op `setPresentationState`, version 155 → 156). Verified live and
+  signed out: desktop holds all four doors, the wordmark and the line. The phone still
+  crops there until this branch deploys — staging runs the pre-fix resolver. Rollback is
+  the previous value, `[-0.2, 4.3, 3]` → `[-0.2, 4.3, -19]`.
+- **`LIVE_API_TOKEN` writes fine.** `CURRENT.md` has carried "LIVE_API_TOKEN (staging)
+  401s on writes; PROD_API_TOKEN is the working one" — it took `POST /api/projects/
+  main-dii-project/ops` at 200 on the first try. Whatever 401'd, it was not this.
+
+## 2026-09-01 — what the flight lifts, and where /main lands
+
+Both found by a signed-out walk of the whole journey on prod and local, then
+reproduced and fixed here. Both are faults in the entry that landed earlier today.
+
+- **The flight smeared when pressed from the footer on a phone.** "Whatever is on
+  screen flies" is right, but a closing section is 1918px tall on a 390px phone: pushed
+  toward the eye it does not come apart, it draws a wall of clipped display type past
+  both edges. `visibleLayers` now skips anything larger than the viewport it is leaving —
+  too big to be seen leaving means it stays with the page and fades.
+- **The same sentence flew twice.** `.lp-section-inner` contains a `.lp-cta-sub` and both
+  are in the lift list, so one sentence was lifted as its own layer and again inside its
+  ancestor, then slid apart at two depths. Layers contained by another layer are dropped:
+  an ancestor carries its children rather than racing them.
+- **`/main` stopped opening the room.** The heal was written when `/` WAS the room, and
+  kept working — into a landing page — once `/` became the front door again. A public
+  address kept resolving but stopped showing what it had shown for months. It now heals
+  to `/?room=1`: the name is still gone from the bar, and the link still arrives in the
+  room.
+
+Guards: three cases in `enterFlight.test.js` (oversize, nesting, and the existing
+on-screen rule), all watched failing; `RootApp.test.jsx` now asserts the room renders on
+`/main` AND that `room=1` is on the healed URL. Verified by pressing the footer door at
+390x844 DPR3 before and after — 3 layers with the sentence doubled, then 2 with the
+section moving as one block.
+
+### Reported and NOT true
+
+The same walk reported that after the flight the four doors are inert — "cursor default,
+click does nothing". They are not. Hovering a ring gives `cursor: pointer` and clicking
+navigates; I landed on `/br_id_ge` from the arrival state. The sweep missed the rings,
+which is itself the real finding: **the doors are small, unnamed targets**, and a stranger
+sweeping that row mostly hits nothing. That is a room defect, not a flight defect, and it
+is tracked with the portal-label bug rather than fixed here.
+
+## 2026-09-01 — the landing page is in the room, and the door is a camera move
+
+- **`/` is the landing again, and the landing is the front door.** #283 made `/` open
+  `main` directly on the grounds that the landing was only a picture of the room. It is
+  not a picture of it any more: every element of the page now stands in that room at its
+  own depth, and **Step inside** flies the camera off the flat view instead of
+  navigating. `?room=1` opens the room bare. `/main` still heals to `/` — the owner's
+  "i don't want have main" is untouched; the old link now resolves to the front door,
+  which is the same room with a way in.
+- **The UI is identical by construction, and it was measured.** Every element that flies
+  is the same markup, cloned with its classes intact and rendered by `CSS3DRenderer` as a
+  real DOM element carrying a 3D transform — there is no second implementation of the
+  landing to drift from the first. A DOM snapshot of all **316 elements** under `.lp-root`
+  (box, colour, font, opacity, visibility, z-index, text) taken before and after this
+  branch differs on **5 rows, all of them the sampled opacity of the hero's own keyframe
+  animation**. Nothing moved.
+- **The equation the whole thing rests on**: put the camera at `D = viewportHeight /
+  (2·tan(fov/2))` over a scene measured in CSS pixels and an object at `z = 0` lands on
+  screen at its own pixel size. An element measured at `(left, top, w, h)` and placed at
+  `x = left + w/2 − W/2`, `y = −(top + h/2 − H/2)` renders exactly where it already was,
+  so frame zero of the flight is the frame before it. Depth is then free: push an element
+  to `z` and scale it by `(D − z)/D` and the perspective cancels — the page is spread
+  through space while it still looks flat, and only the camera reveals it.
+- **The room behind the page is posed, not orbiting.** `LiveProjectScene` gained
+  `cameraPoseRef`, a ref read inside `useFrame` — 60 poses a second through React state
+  would re-render the scene on every frame. It rests on the space's own composed entry
+  camera `[0, 3, 14.5] → [0, 1.2, −14]` and ends on the walker's pose `[0, 1.6, 6]`, so
+  the last frame of the flight and the first frame of walking are the same pose and the
+  handover has nothing to cover up.
+- **`hideEntityTypes`, so the room stops saying what the page is saying.** The landing's
+  HTML wordmark sat directly in front of the room's 3D one; two copies of the same three
+  words, one behind the other, neither readable. The room's are hidden while the page
+  speaks for them and given back on the first frame of the flight, which turns a
+  collision into a handover. A rule about types, not a list of ids — the landing has no
+  business knowing what the room's entities are called.
+- Two traps worth keeping. **A clone keeps the cursor**: the button you just pressed
+  stays `:hover` for the whole flight, and this button's hover is white, so the cyan door
+  turned white the instant it left the page — `.lp-in-space *` is now
+  `pointer-events: none !important`. And **distance decides duration**: the flight covers
+  a fixed number of metres, so a page hung 2.6m away was overtaken a third of the way in
+  and the whole effect lasted under half a second. At 12m the crossing lands at about
+  nine tenths, which is the difference between a page that comes apart and one that
+  vanishes.
+- Reduced motion gets the destination and no flight. A phone, which never mounts the 3D
+  for a passive visit, arms the scene on the press and waits up to 1.2s for the chunk
+  before flying.
+- Guards: 6 in `pageInSpace.test.js` (the 1:1 equation, depth cancellation, clone-not-move,
+  rest state, teardown), 7 in `enterFlight.test.js` (what is on screen is what flies,
+  reduced motion, cancel restores the page exactly). `RootApp.test.jsx` and
+  `LandingPage.test.jsx` rewritten to the new intent — the door no longer navigates and
+  no longer asks for a session, and a modified click still opens a tab. The
+  cancel-restores case was watched failing with the restore removed.
+- **Verified by looking**, 1440×900 and 390×844: the resting page, the flight sampled at
+  five points through `?flight=<ms>` (a new debug knob, same shape as `?inputdebug=1`),
+  and the walk handover. Plus `/main`, `/?room=1` and `/?tour=1` live.
+
+### Left open
+
+- The hero's scrim was tuned against a dark tilted backdrop; the room now sits behind the
+  copy as the brighter composed entry shot, and the body copy reads at lower contrast
+  than it did. Worth a pass on `.lp-hero::after` before this goes anywhere near prod.
+- The four featured-space buttons overlap each other at 390px. Pre-existing, visible on
+  production today, untouched here.
+
+## 2026-09-01 — the front door is the room, and the badge stops looping back to it
+
+- **`/` opens the home room instead of a page about it.** The landing already rendered
+  the `main` space as a decorative backdrop and wrote the wordmark and the one line in
+  HTML on top of it, so `/` and `/main` showed the same room and only one of them let
+  you into it. `/` now opens the room itself, and **`/main` heals to `/`** — the room has
+  one address and a visitor is never shown one called "main". The old link still resolves
+  rather than 404s, because a link already handed out is never withdrawn; it just arrives
+  at the canonical door. Only the BARE path heals: `/main/studio`, `/main/raw/…` and
+  `/main/p/…` keep their names, and a LOCAL install keeps `/main` as an ordinary space
+  address, because there `/` is the owner's own home. The landing page is moved, not
+  deleted: `/?tour=1`, the same escape hatch the local home already used.
+- **"Made with di.iiii — build yours" no longer appears inside di.iiii's own space.**
+  Its href is a hard-coded `/`, and `/` renders `main`, so in that room the one
+  affordance meant to lead somewhere led back to where the visitor was standing. Owner
+  found it by walking the room. It is judged from an explicit `spaceId` prop threaded
+  through `PublicProjectViewer` → `PublicProjectSceneSurface` → `LiveProjectScene`;
+  a first attempt read the route with `useLocation()` and threw in every surface that
+  mounts without a router (18 tests), which is why the prop is worth the three lines.
+- Two existing viewer tests used `spaceId="main"` as an arbitrary fixture while
+  asserting the badge is present; they now use a visitor space, which is what they
+  always meant. Root-route tests updated to the new intent.
+- The room itself is **data, not in this branch**: four portals to WCC / br_id_ge /
+  beyond_form / algovrithm, a 3D wordmark and tagline, spawn pulled back so the arc
+  composes on a phone. Two traps worth keeping: 3D text lies FLAT until the entity
+  rotates +90° on X, and an entity with no authored `animation` inherits `float`,
+  whose Y-spin reads as a roll on rotated text — pin `mode: 'static'`.
+- Guards: `src/components/madeWithBadge.test.jsx` (4 cases; 2 fail against the pre-fix
+  component, verified by disabling the guard). Wiki updated for both changes.
+
+## 2026-08-19 — install-matrix was the last workflow still on actions/checkout@v4
+
+- Every other workflow in `.github/workflows/` already pins
+  `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1` — nine call sites
+  across ci, release, browser-checks, both deploys, both publish jobs, deploy-space-code
+  and auto-pr. `install-matrix.yml` alone still floated on `@v4`, in six jobs.
+- This pins those six the same way, by hash with the version in a trailing comment, so
+  the repo has exactly one checkout version and no floating tags. `actions/checkout@v` no
+  longer appears anywhere in the tree.
+- Verified: the file still parses as YAML and all six jobs (`pack`, `linux`, `update`,
+  `offline`, `windows`, `docker-mode`) survive the edit. Nothing else in the workflow
+  changed, and no application code is touched, so there is nothing to look at in a
+  browser.
+- Supersedes Dependabot PR #143, which proposed the same bump as a floating `@v7` tag
+  and conflicts on current `dev`.
+- Still unproven, and it is the reason to watch this one: the windows install-test job
+  in this matrix was already failing before the pin. Pinning checkout does not fix it and
+  was never meant to — if that job is still red after this lands, it is the pre-existing
+  failure, not the pin.
+
+## 2026-08-19 — react-router-dom 6.30.4 → 7.18.2, the park condition fired
+
+- The bump was parked since 2026-07-28 because every 7.x carried GHSA-qwww-vcr4-c8h2
+  (RSC CSRF, high) and high severity trips the CI gate. 7.18.2 is the first patched
+  release — the advisory range ends exactly there. `npm audit --production
+  --audit-level=high` now reports 0 vulnerabilities on the root and on `serverXR`,
+  re-run by hand and confirmed, so the gate that blocked this is green and the two
+  moderates that sat on 6.30.x are gone with it.
+- Zero code changes. The whole react-router surface here is `BrowserRouter`,
+  `useLocation` and `useNavigate` across `src/RootApp.jsx` and `src/hooks/useAppRoute.js`
+  — all unchanged in v7. None of the v7 future flags apply: there are no `<Routes>`,
+  no data router, no loaders. `docs/ai/dependency-decisions.md` records why, flag by flag.
+- Verified by looking, not by inference. `npm run verify:surfaces` and
+  `verify:surfaces:mobile` were run against this branch's own dev stack after merging
+  `dev` in: 24 of 25 device × page combos clean, 0 horizontal overflow everywhere. The
+  landing, `/wiki`, `/studio` and `/raw` screenshots were opened and read — Raw's starter
+  desk still wires Sky into World and paints the room, on desktop and on iPhone.
+- The 5 failing combos are all `/main`, all the same 401/403 on
+  `/serverXR/api/spaces/main`. That is a local dev database with no `main` space and a
+  guest session, not a router regression — the local Spaces list holds only `open` and
+  `sandbox`.
+- Left deliberately undone: `react-router-dom` is a deprecated re-export shim in v7 and
+  is removed in v8. Renaming to `react-router` and rewriting the two imports belongs to
+  the v8 upgrade — it would also move the package Dependabot tracks.
+- Supersedes Dependabot PR #150, which bumps the same package but is not rebased on
+  current `dev` and carries no decision record.
+
 # Session notes — docs/three-distances
 
 ## 2026-08-31 — Three Distances: the owner's shape for local, LAN, and hosted, written down

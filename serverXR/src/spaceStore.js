@@ -25,7 +25,7 @@ const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
 // immutable `id`) must never shadow a reserved top-level route segment —
 // see src/utils/spaceRouting.js's RESERVED_APP_SEGMENTS on the client side,
 // which this mirrors. docs/architecture/SPEC_space_urls_and_portability.md.
-const RESERVED_SPACE_SLUGS = new Set(['admin', 'preferences', 'prefrenaces', 'preferances', 'wiki', 'beta', 'studio', 'raw', 'seed', 'open_jam', 'p', 'spaces', 'projects'])
+const RESERVED_SPACE_SLUGS = new Set(['admin', 'preferences', 'prefrenaces', 'preferances', 'wiki', 'beta', 'studio', 'raw', 'seed', 'open_jam', 'p', 'spaces', 'projects', 'light'])
 
 // Thumbnail variants for image assets — the space hub grid used to pull the
 // full-resolution original for every card's preview image. Resized once per
