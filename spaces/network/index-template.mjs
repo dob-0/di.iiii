@@ -118,7 +118,7 @@ ${g.people.map((p) => '    ' + rowHTML(p)).join('\n')}
 
 <footer class="indexFoot">
   <p>The drawing beside this page is the same ${words(people.length)}, held apart. A line between two of them means they made the same thing — ${sharedLine}.</p>
-  <p>You can turn it and look at it on its own in the <a href="/network/constellation" target="_top">constellation</a>.</p>
+  <p>You can see the whole of it — all ${words(people.length)} on one ring — in the <a href="/network/constellation" target="_top">constellation</a>.</p>
 </footer>
 </div>
 

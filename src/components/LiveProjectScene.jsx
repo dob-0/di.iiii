@@ -1887,7 +1887,16 @@ export default function LiveProjectScene({
                             {exitLabel}
                         </button>
                         <span className="live-scene-title">
-                            {title}{nearestLabel ? ` · ${nearestLabel}` : ''}
+                            {title}
+                            {/* The nearest door is WAYFINDING, not part of the
+                                room's name. Glued on with a bare separator it
+                                read as a compound title — the home room
+                                announced itself as "EVERYTHING MADE HERE · WCC
+                                EXHIBITION". Its own dimmer span says "you are
+                                near this" instead. */}
+                            {nearestLabel ? (
+                                <span className="live-scene-nearest"> · {nearestLabel}</span>
+                            ) : null}
                         </span>
                         <MadeWithBadge variant="chrome" spaceId={spaceId} />
                     </header>

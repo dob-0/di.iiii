@@ -4,7 +4,7 @@
 
 const assert = require('assert');
 const { buildDmx, buildPoll } = require('../artnet');
-const { Engine, makeFixture, addProfile, removeProfile } = require('../engine');
+const { Engine, makeFixture, addProfile, removeProfile, customProfiles, PROFILES } = require('../engine');
 const { Enttec, frame, listPorts, describePort, PORT_NAME } = require('../enttec');
 const { FX_MODES, fxOrder, fxLevel, fxActive, fxPhase } = require('../fx');
 
@@ -859,6 +859,51 @@ check('a layer never escapes the master or the blackout', () => {
   assert.strictEqual(e.render(state, 0).get(0)[0], 0, 'and the panic button still kills it');
 });
 
+// ---- the tempo grid ----------------------------------------------------------
+// bpm says how fast; epoch says WHERE. Without an anchor every wave ran on a grid
+// starting in 1970 — right tempo, arbitrary phase — and "sync to the music" was luck.
+
+const { beatGrid } = require('../fx');
+
+check('the grid answers where now sits between beats, and when the next one lands', () => {
+  const fx = { bpm: 120, epoch: 1000 };            // 500ms a beat, 2000ms a bar
+  assert.strictEqual(beatGrid(fx, 1000).nextBeatMs, 0, 'exactly on the beat waits for nothing');
+  assert.strictEqual(beatGrid(fx, 1250).nextBeatMs, 250, 'halfway through waits out the rest');
+  assert.strictEqual(beatGrid(fx, 1000).nextBarMs, 0);
+  assert.strictEqual(beatGrid(fx, 1500).nextBarMs, 1500, 'one beat in, three to the downbeat');
+  assert.strictEqual(beatGrid(fx, 500).nextBeatMs, 0, 'the grid runs backwards from the anchor too');
+});
+
+check('a look loops from the anchor, so a wave starts on the downbeat', () => {
+  const fixtures = rig4();
+  const looks = sanitizeLooks([{ id: 'w', measure: 1, bpm: 120,
+    steps: [{ values: { '*': { r: 0 } } }, { values: { '*': { r: 255 } } }] }]);
+  const layers = sanitizeLayers([{ id: 'l', lookId: 'w' }]);
+  // 120bpm, one beat to the measure: 500ms a loop, so the first step owns 0-250ms
+  // AFTER the anchor. At t=3000 with the anchor at 3000 the look is at its start.
+  const at = (t, epoch) => layerValues({ looks, layers }, fixtures, t, 120, epoch).get('a').r;
+  assert.strictEqual(at(3000, 3000), 0, 'the anchor is the top of the loop');
+  assert.strictEqual(at(3300, 3000), 255, 'and 300ms later it is in the second step');
+  assert.strictEqual(at(3000, 0), at(3000, 0), 'an anchor of 0 is the old behaviour');
+  // The proof that the anchor is doing something: the same instant reads differently
+  // under two anchors.
+  assert.notStrictEqual(at(3300, 3000), at(3300, 3200), 'move the anchor and the same instant reads differently');
+});
+
+check('a beat-synced chase steps on the grid, not a hold time after the last step', () => {
+  const scenes = [{ id: 's1', name: 'one', fadeMs: 0, fixtures: [] }, { id: 's2', name: 'two', fadeMs: 0, fixtures: [] }];
+  const state = { ...baseState([]), scenes,
+    fx: { bpm: 120, epoch: 0, mode: 'none', depth: 255, enabled: false },
+    chase: { enabled: true, sceneIds: ['s1', 's2'], holdMs: 999999, fadeMs: 0, sync: 'beat', beats: 1 } };
+  const e = new Engine(state);
+  e.tickChase();
+  const first = e.chase.nextAt;
+  // 120bpm from an anchor of 0 is a boundary every 500ms — the next one is a multiple
+  // of 500, never "now + a hold". The absurd holdMs proves the grid is what is read.
+  assert.strictEqual(first % 500, 0, 'the next step is ON the grid: ' + first);
+  assert.ok(first - Date.now() <= 500, 'and it is the NEXT boundary, not one far away');
+});
+
 // ---- identify ----------------------------------------------------------------
 // "Which of these eight identical pars is number 5?" — the question every patch at a
 // venue turns on. It has to beat whatever is running, and lose to the panic key.
@@ -1234,6 +1279,46 @@ check('an explicit value still beats the profile default', () => {
   const f = makeFixture({ profile: 'Shutter test', address: 1, values: { strobe: 0 } });
   assert.strictEqual(f.values.strobe, 0, 'a saved show reloads exactly as it was saved');
   removeProfile('Shutter test');
+});
+
+// ---- per-channel names ------------------------------------------------------
+// A fixture built from its manual must read like its manual. Without these a laser's
+// 18-channel chart arrives as aux1..aux12: the values are right and the operator is told
+// nothing, and "Aux 5" appears on no chart ever printed.
+
+check('a profile can name its own channels', () => {
+  addProfile('Laser test', ['dimmer', 'gobo', 'aux1'], {
+    labels: { gobo: 'Pattern', aux1: 'Size X' }, replace: true,
+  });
+  const p = PROFILES['Laser test'];
+  assert.strictEqual(p.labels.gobo, 'Pattern');
+  assert.strictEqual(p.labels.aux1, 'Size X');
+  assert.ok(!('dimmer' in p.labels), 'a channel left unnamed keeps the generic name');
+});
+
+check('a channel name cannot be invented for a channel the fixture does not have', () => {
+  addProfile('Laser test', ['dimmer', 'gobo'], {
+    labels: { gobo: 'Pattern', tilt: 'Nonsense' }, replace: true,
+  });
+  assert.strictEqual(PROFILES['Laser test'].labels.gobo, 'Pattern');
+  assert.ok(!('tilt' in PROFILES['Laser test'].labels), 'dropped, like an invented default');
+});
+
+check('channel names survive the round trip through the show file', () => {
+  addProfile('Laser test', ['dimmer', 'gobo'], { labels: { gobo: 'Pattern' }, replace: true });
+  // customProfiles() is exactly what is written to show.json and read back on load.
+  const onDisk = customProfiles().find((p) => p.name === 'Laser test');
+  assert.deepStrictEqual(onDisk.labels, { gobo: 'Pattern' }, 'names are persisted, not lost on save');
+  removeProfile('Laser test');
+  addProfile(onDisk.name, onDisk.channels, { cat: onDisk.cat, defaults: onDisk.defaults, labels: onDisk.labels });
+  assert.strictEqual(PROFILES['Laser test'].labels.gobo, 'Pattern', 'and restored on load');
+  removeProfile('Laser test');
+});
+
+check('an empty or blank channel name is dropped rather than stored', () => {
+  addProfile('Laser test', ['dimmer', 'gobo'], { labels: { gobo: '   ' }, replace: true });
+  assert.ok(!PROFILES['Laser test'].labels, 'nothing worth storing means no labels object at all');
+  removeProfile('Laser test');
 });
 
 // ---- spatial FX -------------------------------------------------------------

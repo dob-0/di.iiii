@@ -2050,9 +2050,16 @@ initStorage()
     }
     approvalGate.startSweepLoop()
     pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
-    setInterval(() => {
+    // Spent and expired Telegram sign-in tokens. They are already worthless —
+    // consumed_at is what makes them so — this only stops the table growing
+    // one row per sign-in forever. Rides the space sweep rather than running
+    // on every mint, so a room full of people signing in at once pays nothing.
+    const { pruneLoginTokens } = require('./telegramLoginStore')
+    const sweep = () => {
       pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
-    }, 1000 * 60 * 30)
+      try { pruneLoginTokens() } catch (error) { logger.warn('Failed to prune login tokens', error) }
+    }
+    setInterval(sweep, 1000 * 60 * 30)
     // Daily snapshot of the open space — its scene and its project documents,
     // which is where the jam's contributions actually live. Vandalism
     // insurance (admin restores via POST /api/spaces/:id/restore-snapshot).

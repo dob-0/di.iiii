@@ -205,7 +205,7 @@ function spatialFrac(spatial, fixture) {
 // ordered selection by default, or from its room position when the look names a spatial
 // fan — this is the one line that turns a two-step look into a wave, and the one branch
 // that turns that wave into a line crossing the room instead of the patch order.
-function stepPosition(look, index, count, now, rate, clockBpm, fixture) {
+function stepPosition(look, index, count, now, rate, clockBpm, fixture, epoch = 0) {
   // The desk's clock unless the look insists on its own. This is what makes Tap mean
   // something: one tempo, and every running look retimes to it at once. A look with its
   // own bpm has opted out on purpose — a slow swell under a fast chase.
@@ -215,7 +215,11 @@ function stepPosition(look, index, count, now, rate, clockBpm, fixture) {
   const geo = spatialFrac(look.spatial, fixture);
   const frac = geo != null ? geo : (count > 1 ? index / count : 0);
   const spread = frac * (look.phase / 360);
-  const p = (now / periodMs + spread) % 1;
+  // Against the desk's beat anchor, not against 1970. Tap says which instant is a beat,
+  // and every loop then STARTS there — a four-beat wave crosses the room once per bar
+  // from the downbeat instead of at the correct speed and an arbitrary offset. An epoch
+  // of 0 is the old anchor exactly, so a show made before this renders unchanged.
+  const p = ((now - epoch) / periodMs + spread) % 1;
   return p < 0 ? p + 1 : p;
 }
 
@@ -266,14 +270,14 @@ function resolveValue(v, role, fixtureId, looks, depth = 0) {
 }
 
 // Everything one look is saying right now, as fixtureId -> { role: 0..255 }.
-function evalLook(look, fixtures, now, { rate = 1, looks = new Map(), bpm = 120 } = {}) {
+function evalLook(look, fixtures, now, { rate = 1, looks = new Map(), bpm = 120, epoch = 0 } = {}) {
   const out = new Map();
   if (!look || !look.steps.length) return out;
   const chosen = look.fixtures.length
     ? look.fixtures.map((id) => fixtures.find((f) => f.id === id)).filter(Boolean)
     : fixtures;
   chosen.forEach((f, index) => {
-    const pos = stepPosition(look, index, chosen.length, now, rate, bpm, f);
+    const pos = stepPosition(look, index, chosen.length, now, rate, bpm, f, epoch);
     const { a, b, t } = stepBlend(look, pos);
     // '*' is "every fixture in the selection" — one value set walking the rig by phase.
     // A per-fixture key is a snapshot. Both live in the same object.
@@ -299,7 +303,7 @@ function evalLook(look, fixtures, now, { rate = 1, looks = new Map(), bpm = 120 
 // The whole stack, composited: fixtureId -> { role: 0..255 }, or null when nothing is
 // running (in which case the renderer takes the fixtures' own values, exactly as it did
 // before layers existed — a desk with no layers behaves as though this file were absent).
-function layerValues(state, fixtures, now, clockBpm) {
+function layerValues(state, fixtures, now, clockBpm, epoch = 0) {
   const layers = Array.isArray(state.layers) ? state.layers : [];
   if (!layers.length) return null;
   const lookList = Array.isArray(state.looks) ? state.looks : [];
@@ -323,7 +327,7 @@ function layerValues(state, fixtures, now, clockBpm) {
   const ordered = [...live].sort((a, b) => a.priority - b.priority);
   for (const layer of ordered) {
     if (layer.level <= 0) continue;
-    const values = evalLook(looks.get(layer.lookId), fixtures, now, { rate: layer.rate, looks, bpm: clockBpm });
+    const values = evalLook(looks.get(layer.lookId), fixtures, now, { rate: layer.rate, looks, bpm: clockBpm, epoch });
     for (const [fixtureId, cell] of values) {
       const target = out.get(fixtureId) || {};
       for (const [role, v] of Object.entries(cell)) {

@@ -19,7 +19,7 @@ const {
   addProfile, removeProfile, customProfiles, findProfile,
   AUDIO_MODES, sanitizeAudioCfg,
 } = require('./engine');
-const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive } = require('./fx');
+const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive, beatGrid } = require('./fx');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
 const { STYLES: FAN_STYLES, fanValues } = require('./fan');
 const library = require('./library');
@@ -58,7 +58,10 @@ function createDesk(opts = {}) {
     raw: {},
     scenes: [],
     activeScene: null,
-    chase: { enabled: false, sceneIds: [], holdMs: 2000, fadeMs: 800 },
+    chase: { enabled: false, sceneIds: [], holdMs: 2000, fadeMs: 800,
+      // 'clock' steps every holdMs, as it always did. 'beat' steps on the tempo grid,
+      // every `beats` beats — the desk running on the music instead of beside it.
+      sync: 'clock', beats: 4 },
     midi: { maps: [] },
     // The content model: looks are lists of steps, layers are looks under a finger.
     // Both empty means the desk renders exactly as it did before they existed.
@@ -242,7 +245,7 @@ function createDesk(opts = {}) {
       // would silently turn every custom fixture into a 3-channel RGB one — the patch would
       // come back from disk quietly wrong, which is the worst way to lose a rig.
       for (const p of disk.customProfiles || []) {
-        try { addProfile(p.name, p.channels, { cat: p.cat, replace: true, defaults: p.defaults }); }
+        try { addProfile(p.name, p.channels, { cat: p.cat, replace: true, defaults: p.defaults, labels: p.labels }); }
         catch (e) { log('  skipped custom fixture "' + p.name + '": ' + e.message); }
       }
       s.customProfiles = customProfiles();
@@ -311,6 +314,46 @@ function createDesk(opts = {}) {
     if (sacn && (sacn.priority !== priority || sacn.targets.join() !== targets.join())) { sacn.close(); sacn = null; }
     if (!sacn) sacn = new SACN({ offline, targets, priority, sourceName: 'di.iiii lighting desk' });
     return sacn;
+  }
+
+  // ---- the tempo grid, and landing on it ------------------------------------
+  // Changes waiting for the next beat or bar. They are held so that shutting the desk
+  // down cannot leave a timer that fires into a closed process, and so a blackout can
+  // cancel everything queued — a panic key that leaves a strobe still due to land in
+  // 400ms is not a panic key.
+  const pending = [];
+  function quantiseWait(mode) {
+    if (mode !== 'beat' && mode !== 'bar') return 0;
+    const g = beatGrid(state.fx, Date.now());
+    const wait = mode === 'bar' ? g.nextBarMs : g.nextBeatMs;
+    // Within a frame of the boundary IS the boundary: waiting 8ms to be exact would
+    // arrive on the same 25ms frame anyway, and a "queued" answer for something that
+    // happens immediately reads as a bug.
+    return wait < 30 ? 0 : Math.round(wait);
+  }
+  function cancelPending() {
+    while (pending.length) clearTimeout(pending.pop());
+  }
+
+  // Put a look on a layer. The route body and the quantised timer both come through here,
+  // so a change that waited for the beat is the same change as one that did not.
+  function fireLook(look, body) {
+    const layerId = typeof body.layerId === 'string' && body.layerId ? body.layerId : CUE_LAYER;
+    let layer = state.layers.find((l) => l.id === layerId);
+    if (!layer) {
+      layer = sanitizeLayer({
+        id: layerId,
+        name: layerId === CUE_LAYER ? 'Cues' : layerId,
+        priority: state.layers.reduce((n, l) => Math.max(n, l.priority), 0) + 1,
+      });
+      state.layers.push(layer);
+    }
+    layer.lookId = look.id;
+    layer.on = true;
+    layer.level = body.level != null && Number.isFinite(+body.level)
+      ? Math.max(0, Math.min(1, +body.level)) : 1;
+    save(); pushFrame();
+    return layer;
   }
 
   // ---- more than one device at once -----------------------------------------
@@ -807,7 +850,7 @@ function createDesk(opts = {}) {
       // cannot be, so the library can hide those controls rather than offering them and
       // then refusing.
       profiles: Object.fromEntries(Object.entries(PROFILES).map(([k, v]) =>
-        [k, { label: v.label, channels: v.channels, cat: v.cat, custom: !!v.custom }])),
+        [k, { label: v.label, channels: v.channels, cat: v.cat, custom: !!v.custom, labels: v.labels }])),
       // What each channel role IS, so the interface can ask rather than keep its own copy.
       roleKinds: roleKinds(),
       // Profiles patched on fixtures whose channels are ALL generic (c1, c2, ...): pure
@@ -1022,25 +1065,22 @@ function createDesk(opts = {}) {
     // layer that outside callers drive, created on first use and visible in the stack
     // like any other. Fire look A then look B and the layer holds B, which is the
     // one-clip-per-layer rule the whole interface already reads by.
+    // QUANTISED FIRING. A finger lands where it lands; the music does not. `quantize:
+    // 'beat'` or `'bar'` holds the change until the next boundary of the desk's tempo
+    // grid, which is the difference between a light change that is in the track and one
+    // that is merely near it. The reply says when it will land, so the interface can show
+    // the wait rather than looking like it ignored the press. 'off' (the default) is
+    // immediate, exactly as before.
     'POST /api/looks/fire': (req, res, body) => {
       const look = state.looks.find((l) => l.id === body.id);
       if (!look) return json(res, { error: 'no such look' }, 404);
-      const layerId = typeof body.layerId === 'string' && body.layerId ? body.layerId : CUE_LAYER;
-      let layer = state.layers.find((l) => l.id === layerId);
-      if (!layer) {
-        layer = sanitizeLayer({
-          id: layerId,
-          name: layerId === CUE_LAYER ? 'Cues' : layerId,
-          priority: state.layers.reduce((n, l) => Math.max(n, l.priority), 0) + 1,
-        });
-        state.layers.push(layer);
+      const wait = quantiseWait(body.quantize);
+      if (wait > 0) {
+        const at = Date.now() + wait;
+        pending.push(setTimeout(() => { fireLook(look, body); }, wait));
+        return json(res, { ok: true, look: { id: look.id, name: look.name }, quantized: body.quantize, at, inMs: wait });
       }
-      layer.lookId = look.id;
-      layer.on = true;
-      layer.level = body.level != null && Number.isFinite(+body.level)
-        ? Math.max(0, Math.min(1, +body.level)) : 1;
-      save(); pushFrame();
-      json(res, { ok: true, look: { id: look.id, name: look.name }, layer });
+      json(res, { ok: true, look: { id: look.id, name: look.name }, layer: fireLook(look, body) });
     },
 
     // What an outside caller may fire, in one list: the looks and the scenes, each
@@ -1120,7 +1160,11 @@ function createDesk(opts = {}) {
 
     'POST /api/master': (req, res, body) => {
       if (body.master != null && Number.isFinite(+body.master)) state.master = Math.max(0, Math.min(255, Math.round(+body.master)));
-      if (body.blackout != null) state.blackout = !!body.blackout;
+      if (body.blackout != null) {
+        state.blackout = !!body.blackout;
+        // A panic key that leaves a strobe still due to land in 400ms is not a panic key.
+        if (state.blackout) cancelPending();
+      }
       engine.cancelFade(); save(); pushFrame(); json(res, { ok: true });
     },
 
@@ -1181,7 +1225,7 @@ function createDesk(opts = {}) {
 
       let name;
       try {
-        name = addProfile(body.name, body.channels, { cat: body.cat, replace: !!body.replace, defaults: body.defaults });
+        name = addProfile(body.name, body.channels, { cat: body.cat, replace: !!body.replace, defaults: body.defaults, labels: body.labels });
       } catch (e) {
         return json(res, { error: e.message }, 400);
       }
@@ -1550,6 +1594,17 @@ function createDesk(opts = {}) {
 
     'POST /api/scenes/recall': (req, res, body) => {
       const scene = state.scenes.find((s) => s.id === body.id);
+      // Same grid as a look: hold the recall until the next beat or bar when asked to.
+      const wait = scene ? quantiseWait(body.quantize) : 0;
+      if (wait > 0) {
+        const at = Date.now() + wait;
+        pending.push(setTimeout(() => {
+          if (state.chase.enabled) { state.chase.enabled = false; engine.chase.running = false; }
+          engine.recallScene(scene, body.fadeMs);
+          save(); pushFrame();
+        }, wait));
+        return json(res, { ok: true, quantized: body.quantize, at, inMs: wait });
+      }
       // A manual recall takes the rig over: a running chase is PAUSED first, or its next
       // hold would snap the operator's choice back within seconds. The chase engine itself
       // never comes through here — tickChase calls engine.recallScene directly — so this
@@ -1587,6 +1642,8 @@ function createDesk(opts = {}) {
           : state.chase.sceneIds,
         holdMs: body.holdMs != null ? Math.max(50, body.holdMs | 0) : state.chase.holdMs,
         fadeMs: body.fadeMs != null ? Math.max(0, body.fadeMs | 0) : state.chase.fadeMs,
+        sync: body.sync === 'beat' || body.sync === 'clock' ? body.sync : (state.chase.sync || 'clock'),
+        beats: body.beats != null ? Math.max(0.25, Math.min(64, +body.beats || 1)) : (state.chase.beats || 4),
       });
       // A chase with no steps can never be armed: `enabled` left true on an empty list is a
       // landmine — the first "include in chase" later would start a fast chase instantly.
@@ -1811,10 +1868,14 @@ function createDesk(opts = {}) {
     clearInterval(timer);
     clearInterval(pollTimer);
     clearTimeout(firstPoll);
+    // Anything waiting for the next beat is dropped rather than left to fire into a
+    // process that has gone, and every extra device is let go of like the main two.
+    cancelPending();
     try { writeShow(); } catch (e) { log('could not save the show on close: ' + e.message); }
     artnet.close();
     if (enttec) enttec.close();
     if (sacn) sacn.close();
+    for (const id of [...extraDrivers.keys()]) closeExtra(id);
   }
 
   return { handle, close, state, engine, writeShow, summary, showFile: SHOW };

@@ -72,6 +72,10 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .bpmbar i { display: block; height: 100%; width: 0; background: var(--accent); }
 .bpmnum { width: 62px; font-size: 20px; text-align: center; border: 0; background: none; padding: 0; }
 .tap { background: var(--pane2); border: 1px solid var(--line); border-radius: 0; padding: 6px 10px; font-size: 11px; }
+/* Snap sits beside Tap because it is the other half of the same idea: Tap says where the
+   beat is, snap says to wait for it. */
+.snapsel { background: var(--pane2); border: 1px solid var(--line); border-radius: 0; padding: 5px 4px; font-size: 11px; color: var(--muted); }
+.snapsel:focus { color: var(--text); }
 
 .statusstrip {
   background: var(--bar); border-bottom: 1px solid var(--line); padding: 6px 14px;
@@ -583,6 +587,18 @@ input.pinned { border-color: var(--accent); }
 }
 .mf.over .mf-num { border-color: var(--accent); }
 .mf-num::-webkit-inner-spin-button, .mf-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+/* Who owns this channel, and which of its channels this is. Fixed heights so an unpatched
+   gap does not shorten its cell and stagger the whole bank; clipped rather than wrapped so
+   a long fixture name cannot push the faders out of alignment. */
+.mf-who, .mf-role {
+  font-size: 10px; line-height: 12px; height: 12px; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;
+}
+.mf-who { color: var(--text); }
+.mf-role { color: var(--muted); }
+.mf.over .mf-who { color: var(--accent); }
+/* An unpatched channel still holds and still transmits — dimmed, never hidden. */
+.mf.unpatched .mf-ch { opacity: 0.55; }
 .mf-wire { font-family: var(--mono); font-size: 10px; color: var(--muted); height: 12px; }
 .mf-rel {
   background: none; border: 1px solid transparent; border-radius: 0;
