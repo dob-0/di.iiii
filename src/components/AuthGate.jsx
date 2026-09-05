@@ -7,6 +7,7 @@ import { redeemSpaceInvite } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { startOAuth } from '../utils/oauthNavigate.js'
 import { buildAppSpacePath, buildWikiPath } from '../utils/spaceRouting.js'
+import { telegramSignInUrl } from '../utils/telegramSignIn.js'
 import AccountButton from './AccountButton.jsx'
 import { OUT_OF_SCOPE_EXPLAIN, OUT_OF_SCOPE_REDIRECT } from './authGateScope.js'
 import LoadingScreen from './LoadingScreen.jsx'
@@ -27,7 +28,8 @@ const ProviderSignInButtons = ({ providers, refresh }) => {
         const t = setInterval(() => { refresh() }, 3000)
         return () => clearInterval(t)
     }, [waitingForTab, refresh])
-    if (!providers?.github && !providers?.google) return null
+    const telegramUrl = telegramSignInUrl(providers)
+    if (!providers?.github && !providers?.google && !telegramUrl) return null
     const start = (provider) => { if (startOAuth(getOAuthUrl(provider))) setWaitingForTab(true) }
     return (
         <>
@@ -70,6 +72,32 @@ const ProviderSignInButtons = ({ providers, refresh }) => {
                 >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
                     Continue with Google
+                </Button>
+            )}
+            {telegramUrl && (
+                // A link, not a handler: the bot mints the single-use sign-in URL
+                // and sends it into the chat, so this only has to open the bot.
+                // The session lands in this tab when they tap it, which is what
+                // the waiting poll above is already for.
+                <Button
+                    fullWidth
+                    variant="outlined"
+                    component="a"
+                    href={telegramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setWaitingForTab(true)}
+                    sx={{
+                        textTransform: 'none',
+                        justifyContent: 'flex-start',
+                        gap: 1,
+                        borderColor: 'var(--ui-border)',
+                        color: 'var(--ui-text-primary)',
+                        '&:hover': { borderColor: 'var(--ui-accent)' }
+                    }}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z" /></svg>
+                    Continue with Telegram
                 </Button>
             )}
         </>

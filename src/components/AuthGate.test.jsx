@@ -226,3 +226,42 @@ describe('AuthGate invite arrival', () => {
         expect(screen.queryByRole('link', { name: /What a collaborator can do/ })).not.toBeInTheDocument()
     })
 })
+
+// Sign in with Telegram, the client half. Unlike GitHub and Google this is not
+// an OAuth hop: the bot mints the single-use link, so the button is a plain
+// link to the bot and the server has to name the bot for it to exist at all.
+describe('AuthGate Telegram sign-in', () => {
+    afterEach(() => {
+        providersState.current = { github: false, google: false }
+    })
+
+    it('offers Continue with Telegram, pointed at the bot with the login payload', async () => {
+        providersState.current = { github: true, google: true, telegram: true, telegramBot: 'diiii111bot' }
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<AuthGate>editor</AuthGate>)
+
+        const button = await screen.findByRole('link', { name: /Continue with Telegram/ })
+        expect(button).toHaveAttribute('href', 'https://t.me/diiii111bot?start=login')
+    })
+
+    it('leaves the button out when the server says telegram is off', async () => {
+        providersState.current = { github: true, google: true, telegram: false }
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<AuthGate>editor</AuthGate>)
+
+        expect(await screen.findByRole('button', { name: /Continue with GitHub/ })).toBeInTheDocument()
+        expect(screen.queryByRole('link', { name: /Continue with Telegram/ })).not.toBeInTheDocument()
+    })
+
+    // /api/auth/providers reports telegram without telegramBot when
+    // TELEGRAM_BOT_USERNAME is unset. There is no address to send anyone to,
+    // so a button here would be a dead end.
+    it('leaves the button out when the bot has no username to open', async () => {
+        providersState.current = { github: true, google: false, telegram: true }
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<AuthGate>editor</AuthGate>)
+
+        expect(await screen.findByRole('button', { name: /Continue with GitHub/ })).toBeInTheDocument()
+        expect(screen.queryByRole('link', { name: /Continue with Telegram/ })).not.toBeInTheDocument()
+    })
+})
