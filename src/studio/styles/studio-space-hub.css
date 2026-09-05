@@ -186,47 +186,36 @@
     margin-top: 4px;
 }
 
-/* Collapsed row hiding everything a guest doesn't own/edit — a real button
-   (not a link) so it is a natural tab stop with a visible focus ring, and
-   tall enough for a thumb on a phone. */
-.ssh-rest-toggle {
+/* The visitor's own scratch space: a quiet line under the grid, a real
+   button so it is a tab stop with a focus ring and thumb-tall on a phone. */
+.ssh-sandbox-line {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
-    min-height: 40px;
+    margin: 4px 0 22px;
     font-size: 0.82rem;
-    font-family: inherit;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--di-cyan-border, rgba(77,249,255,0.12));
-    color: var(--di-text-muted, rgba(200,230,240,0.6));
-    padding: 8px 14px;
+    color: var(--di-text-muted, rgba(200,230,240,0.45));
+}
+
+.ssh-sandbox-link {
+    min-height: 40px;
+    padding: 8px 0;
+    background: none;
+    border: none;
+    font: inherit;
+    color: var(--di-cyan, #4df9ff);
     cursor: pointer;
-    border-radius: 2px;
-    transition: border-color 0.1s, color 0.1s, background 0.1s;
+    text-align: left;
 }
 
-.ssh-rest-toggle:hover {
-    border-color: rgba(77,249,255,0.3);
-    color: var(--di-text, #e8f4f8);
-    background: rgba(77,249,255,0.04);
+.ssh-sandbox-link:hover {
+    text-decoration: underline;
 }
 
-.ssh-rest-toggle:focus-visible {
+.ssh-sandbox-link:focus-visible {
     outline: 2px solid rgba(77,249,255,0.5);
     outline-offset: 2px;
-}
-
-.ssh-rest-toggle--open {
-    margin-bottom: 10px;
-    font-size: 0.75rem;
-    min-height: 32px;
-    padding: 4px 10px;
-}
-
-.ssh-rest-toggle-chevron {
-    font-size: 0.7em;
 }
 
 .ssh-space-tagline {
@@ -268,7 +257,15 @@
     grid-template-columns: repeat(auto-fit, minmax(280px, 480px));
 }
 
-.ssh-featured-grid .ssh-space-card {
+.ssh-featured-grid /* A visitor's grid is the page itself, not a directory strip beside two
+   featured cards -- give each card enough width for its picture and address.
+   Comes after .ssh-spaces-grid on purpose: same specificity, later wins. */
+.ssh-spaces-grid--visitor {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.ssh-space-card {
     padding: 20px 22px;
 }
 
