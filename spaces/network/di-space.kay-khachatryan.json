@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-kay-khachatryan",
+  "slug": "kay-khachatryan",
+  "label": "Kay Khachatryan",
+  "mode": "code",
+  "entry": "spaces/network/pages/kay-khachatryan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

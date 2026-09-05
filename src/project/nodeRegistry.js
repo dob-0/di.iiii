@@ -697,7 +697,7 @@ export const NODE_TYPES = {
         category: 'device',
         runtime: 'web',
         singleton: false,
-        keywords: ['dmx', 'artnet', 'art-net', 'light', 'lights', 'rig', 'lamp', 'fixture', 'vizzz', 'stage'],
+        keywords: ['dmx', 'artnet', 'art-net', 'light', 'lights', 'rig', 'lamp', 'fixture', 'vizzz', 'stage', 'desk', 'lighting desk', 'scene', 'blackout', 'fixtures'],
         inputs: [
             // Wires carry 0..1, the LFO/Range convention; the panel turns them
             // into DMX bytes. Value without a Channel is meaningless, so both
@@ -708,22 +708,40 @@ export const NODE_TYPES = {
             // `any`, the MIDI Out idiom: a Button, a Compare, a Toggle are
             // exactly what should kill the lights.
             { id: 'blackout', type: 'any',    label: 'Blackout' },
+            // Desk only: an id or the name written on the scene. A scene is a
+            // whole look on a whole rig, so one word here does what a hundred
+            // Channel/Value pairs could not.
+            { id: 'scene',    type: 'string', label: 'Scene' },
         ],
         outputs: [
             { id: 'status', type: 'string', label: 'Status' },
         ],
-        // Host is config, not a port — you set it once for the room you are
-        // in, and nothing upstream should be able to repoint the rig
+        // Rig and Host are config, not ports — you set them once for the room
+        // you are in, and nothing upstream should be able to repoint the rig
         // mid-graph (the keeper's endpoint rationale).
-        defaultValues: { host: '' },
+        //
+        // 'desk' is the default: the graph is a project, and this di.iiii's own
+        // lighting desk (/light) is where that project's rig, scenes and FX
+        // live. A saved graph with no `rig` at all keeps its old behaviour —
+        // the panel reads a node that names a host as 'vizzz'.
+        defaultValues: { rig: 'desk', host: '' },
         configInputs: [
+            {
+                id: 'rig',
+                type: 'string',
+                label: 'Rig',
+                options: [
+                    { value: 'desk',  label: 'The lighting desk' },
+                    { value: 'vizzz', label: 'A vizzz node on the network' },
+                ],
+            },
             { id: 'host', type: 'string', label: 'Host' },
         ],
-        // panel-2d for the capture-family reason: "no rig named" and "the rig
-        // isn't answering" are the normal states of this node, and both need
-        // somewhere to be said.
+        // panel-2d for the capture-family reason: "no rig named", "the rig
+        // isn't answering" and "the desk's output is off" are all normal states
+        // of this node, and each needs somewhere to be said.
         render: 'panel-2d',
-        defaultFrame: { width: 340, height: 200 },
+        defaultFrame: { width: 340, height: 260 },
     },
 
     'device.midi.out': {

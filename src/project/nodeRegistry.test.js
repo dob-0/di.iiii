@@ -460,3 +460,36 @@ describe('what a node is made of', () => {
     })
 })
 
+
+// Two rigs answer to one node: di.iiii's own lighting desk at /light, and a
+// vizzz box on the LAN. The registry is where that choice is declared.
+describe('device.dmx.out', () => {
+    it('offers the two rigs as a choice and starts a new node on the desk', () => {
+        const type = NODE_TYPES['device.dmx.out']
+        const rig = type.configInputs.find((config) => config.id === 'rig')
+        expect(rig.options.map((option) => option.value)).toEqual(['desk', 'vizzz'])
+        expect(type.defaultValues.rig).toBe('desk')
+        expect(createNode('device.dmx.out').values.rig).toBe('desk')
+    })
+
+    it('keeps Host for the vizzz rig', () => {
+        const type = NODE_TYPES['device.dmx.out']
+        expect(type.configInputs.some((config) => config.id === 'host')).toBe(true)
+        expect(type.defaultValues.host).toBe('')
+    })
+
+    it('carries a Scene input — one word recalls a whole look off the desk', () => {
+        const scene = NODE_TYPES['device.dmx.out'].inputs.find((port) => port.id === 'scene')
+        expect(scene).toBeDefined()
+        expect(scene.type).toBe('string')
+    })
+
+    // 'web', not 'local': the sending happens in the page (fetch, no native
+    // driver), and a 'local' runtime would drop the node out of every web
+    // palette. The panel is what says a hosted tab has no desk to talk to.
+    it('stays a web node and is findable by what a person would search for', () => {
+        expect(NODE_TYPES['device.dmx.out'].runtime).toBe('web')
+        expect(listNodeTypes({ query: 'lighting desk' }).map((type) => type.id)).toContain('device.dmx.out')
+        expect(listNodeTypes({ query: 'vizzz' }).map((type) => type.id)).toContain('device.dmx.out')
+    })
+})

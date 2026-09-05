@@ -120,4 +120,55 @@ describe('presentationPreviewDocument', () => {
         expect(getPreviewIssueMessage(PREVIEW_ISSUE_CODES.storageUnavailable)).toContain('Storage unavailable')
         expect(getPreviewIssueMessage(PREVIEW_ISSUE_CODES.sandboxApiDenied)).toContain('sandboxed browser API')
     })
+
+    // A page copied between tiers (or hand-authored with a pasted absolute
+    // URL) keeps pointing at the tier it was saved on — the asset id may not
+    // even exist on the tier now serving the page. srcdoc inherits the
+    // shell's base URL, so the relative form always resolves correctly.
+    describe('stripSameOriginAssetHosts (via buildPresentationPreviewDocument)', () => {
+        it('strips a same-tier absolute host from a project asset src', () => {
+            const result = buildPresentationPreviewDocument(
+                '<img src="https://staging.di-studio.xyz/serverXR/api/projects/p1/assets/abc123.png">'
+            )
+            expect(result).toContain('src="/serverXR/api/projects/p1/assets/abc123.png"')
+            expect(result).not.toContain('staging.di-studio.xyz')
+        })
+
+        it('strips a prod host baked into a document served on any tier', () => {
+            const result = buildPresentationPreviewDocument(
+                '<img src="https://di-studio.xyz/serverXR/api/projects/p1/assets/abc123.png">'
+            )
+            expect(result).toContain('src="/serverXR/api/projects/p1/assets/abc123.png"')
+            expect(result).not.toContain('di-studio.xyz')
+        })
+
+        it('strips a host from a CSS url() reference to a space asset', () => {
+            const result = buildPresentationPreviewDocument(
+                '<style>body{background:url(https://staging.di-studio.xyz/serverXR/api/spaces/main/assets/xyz.jpg)}</style>'
+            )
+            expect(result).toContain('url(/serverXR/api/spaces/main/assets/xyz.jpg)')
+        })
+
+        it('strips a host from an asset path with no /serverXR mount prefix', () => {
+            const result = buildPresentationPreviewDocument(
+                '<img src="https://di-studio.xyz/api/projects/p1/assets/abc123.png">'
+            )
+            expect(result).toContain('src="/api/projects/p1/assets/abc123.png"')
+        })
+
+        it('leaves an already-relative asset reference untouched', () => {
+            const result = buildPresentationPreviewDocument(
+                '<img src="/serverXR/api/projects/p1/assets/abc123.png">'
+            )
+            expect(result).toContain('src="/serverXR/api/projects/p1/assets/abc123.png"')
+        })
+
+        it('leaves unrelated absolute URLs (og:image, external links) alone', () => {
+            const result = buildPresentationPreviewDocument(
+                '<a href="https://di-studio.xyz">di-studio.xyz</a><meta property="og:image" content="https://di-studio.xyz/suite/og-image.png">'
+            )
+            expect(result).toContain('href="https://di-studio.xyz"')
+            expect(result).toContain('content="https://di-studio.xyz/suite/og-image.png"')
+        })
+    })
 })

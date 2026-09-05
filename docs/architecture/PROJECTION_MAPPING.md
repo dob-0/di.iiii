@@ -53,6 +53,7 @@ on a flat wall, a corner-pin is exactly enough.
 | `mapTestPattern.jsx` | alignment patterns |
 | `transportCeiling.js` | the HTTP/1.1 ceiling and its warning |
 | `useMapDocument.js` | the document, the op layer, and the BroadcastChannel courier |
+| `lightingLink.js` | the one wire to the lighting desk at `/light` |
 
 Schema lives in `src/shared/projectSchema.js` as `mappingState`, mirrored in
 `shared/projectSchema.cjs`. Ops: `setMappingState`, `createMappingSurface`,
@@ -83,6 +84,25 @@ style change as the value it should animate does not reliably run.
 
 Playback state is deliberately NOT in the document. Two windows watching one
 mapping must not each believe they are running the show.
+
+**A cue can also carry light.** `cue.lightScene` is optional and holds the ID of
+a scene on the lighting desk (`serverXR/src/lighting`, served at `/light` on a
+LOCAL di.iiii). Firing the cue POSTs `/light/api/scenes/recall {id, fadeMs}` —
+the cue's own fade, converted from seconds once, in `lightingLink.js`. The ID is
+stored and the NAME is shown: a scene renamed at the venue is still the scene
+the cue meant.
+
+Every call to the lighting desk goes through `lightingLink.js`, and every one is
+fire-and-forget with a catch. The desk is absent far more often than it is
+present — a hosted di.iiii answers 404 for the whole `/light` tree — and a
+projection cue that waited on a rig, or threw when there wasn't one, would make
+the wall depend on the least available thing in the room. The wall is the
+promise; the light is a bonus. For the same reason the toolbar's "Light" link
+and the cue editor's scene picker are drawn only after a `GET /light/api/summary`
+probe answers 200, so a hosted tab never offers a door that leads to a 404.
+
+The field is emitted only when it holds something, so every mapping written
+before cues could carry light round-trips byte-identical.
 
 ## Snapping
 

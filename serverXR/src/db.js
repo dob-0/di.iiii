@@ -242,6 +242,27 @@ const SCHEMA = `
     created_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_page_events_type_created ON page_events(event_type, created_at);
+
+  -- Telegram sign-in hand-offs. di.bo mints one of these for a person who is
+  -- already proven to it (Telegram delivered the message), and the person
+  -- follows the link to become a signed-in account here.
+  --
+  -- Single-use and short-lived ON PURPOSE: the link travels through a chat,
+  -- and a chat message can be forwarded. Only the hash is stored, so the
+  -- database is useless to anyone who reads it, and consumed_at is what makes
+  -- a forwarded link worthless the moment the first person opens it.
+  CREATE TABLE IF NOT EXISTS telegram_login_tokens (
+    id TEXT PRIMARY KEY,
+    secret_hash TEXT NOT NULL,
+    telegram_id TEXT NOT NULL,
+    display_name TEXT,
+    avatar_url TEXT,
+    return_to TEXT,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    consumed_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_telegram_login_expiry ON telegram_login_tokens(expires_at);
 `
 
 // Patch a DatabaseSync instance to expose the better-sqlite3 surface used

@@ -255,6 +255,22 @@ describe('RawGraphSurface', () => {
         expect(getByText('100%')).toBeTruthy()
     })
 
+    // The editor places world windows through this: every zoom and pan has to
+    // reach it, or a window sits still while the cards under it move.
+    it('publishes the viewport to onViewportChange on every zoom change', () => {
+        const onViewportChange = vi.fn()
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { getByRole } = render(
+            <RawGraphSurface nodes={[colorNode]} edges={[]} onViewportChange={onViewportChange} />
+        )
+        expect(onViewportChange).toHaveBeenCalled()
+        const before = onViewportChange.mock.calls.at(-1)[0]
+        expect(before).toEqual(expect.objectContaining({ zoom: expect.any(Number), panX: expect.any(Number), panY: expect.any(Number) }))
+        fireEvent.click(getByRole('button', { name: 'Zoom in' }))
+        const after = onViewportChange.mock.calls.at(-1)[0]
+        expect(after.zoom).toBeGreaterThan(before.zoom)
+    })
+
     it('calls onDeleteEdge when a wire path is clicked', () => {
         const colorNode = makeNode('value.color', { id: 'color-1' })
         const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320 })
@@ -917,5 +933,31 @@ describe('the way into what a node is made of', () => {
         const { container } = emptyScope({ onExplainScope })
         fireEvent.click(container.querySelector('.raw-empty-state-actions button'))
         expect(onExplainScope).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe('wheel policy', () => {
+    // Panel windows are not React children of this component — they are
+    // placed by RawEditor and positioned through the published viewport — so
+    // a window's DOM node is not a descendant of `.raw-graph-surface` in
+    // production either. The guard is asserted directly against the DOM the
+    // wheel listener actually sees, which is what a real window's markup
+    // would look like if it ever did land inside this subtree.
+    it('a wheel inside a window body belongs to the panel; on the frame or with ctrl it zooms the graph', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { container } = render(<RawGraphSurface nodes={[colorNode]} edges={[]} initialZoom={1} />)
+        const surface = container.querySelector('.raw-graph-surface')
+        const windowEl = document.createElement('section')
+        windowEl.className = 'raw-window'
+        windowEl.innerHTML = '<header class="raw-window-header">t</header><div class="raw-window-body">b</div>'
+        surface.appendChild(windowEl)
+        const readZoom = () => container.querySelector('.raw-graph-zoom-value').textContent
+        fireEvent.wheel(surface.querySelector('.raw-window-body'), { deltaY: -100 })
+        expect(readZoom()).toBe('100%')
+        fireEvent.wheel(surface.querySelector('.raw-window-body'), { deltaY: -100, ctrlKey: true })
+        expect(readZoom()).not.toBe('100%')
+        const mid = readZoom()
+        fireEvent.wheel(surface.querySelector('.raw-window-header'), { deltaY: -100 })
+        expect(readZoom()).not.toBe(mid)
     })
 })

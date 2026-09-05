@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-nikita-maksimenko",
+  "slug": "nikita-maksimenko",
+  "label": "Nikita Maksimenko",
+  "mode": "code",
+  "entry": "spaces/network/pages/nikita-maksimenko.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

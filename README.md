@@ -1,4 +1,4 @@
-<img src="public/brand/wordmark-on-black.png" alt="di.iiii" width="360">
+<img src="public/suite/wordmark-on-black.png" alt="di.iiii" width="360">
 
 ## di.iiii hosts 3D spaces on the web
 
@@ -51,7 +51,7 @@ This is where the project is going, but not all of it is fully shipped yet.
 - move toward recursive node-first project documents and node ops
 - prefer shared project logic over expanding older one-off editor paths
 - keep the web as the universal authoring and runtime substrate
-- support broader spatial, physical-world, and hardware-linked reality creation over time
+- support spaces that reach into the physical world and linked hardware over time
 
 ## Space + Project Workflow
 

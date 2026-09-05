@@ -93,6 +93,16 @@ const encodeOptionsFor = (format, metadata) =>
 // — a photo whose metadata we failed to strip is exactly the file that must
 // not end up on a public URL. Non-images (video, models, archives, SVG) are
 // not raster images, carry no EXIF GPS, and still pass through untouched.
+// EXIF orientation is applied by rotate(), so a portrait phone photo stored
+// with width/height swapped in its header must be reported the way it renders.
+const dimensionsOf = (metadata) => {
+  const width = Number(metadata?.width) || 0
+  const height = Number(metadata?.height) || 0
+  if (!width || !height) return {}
+  const turned = [5, 6, 7, 8].includes(Number(metadata?.orientation))
+  return turned ? { width: height, height: width } : { width, height }
+}
+
 async function scrubImageMetadata(filePath) {
   const looksLikeImage = Boolean(sniffRasterImage(await readHead(filePath)))
   const unscrubbed = (reason, format) => ({
@@ -128,7 +138,10 @@ async function scrubImageMetadata(filePath) {
     const output = isAnimated ? pipeline : pipeline.rotate()
     await output.toFormat(format, encodeOptionsFor(format, metadata)).toFile(tempPath)
     await fsp.rename(tempPath, filePath)
-    return { scrubbed: true, format, animated: isAnimated, safeToStore: true }
+    // The proportions travel with the result: a room with build zones has to
+    // scale a banner down to its slot, and reading the file a second time to
+    // learn 3.3:1 would be a second decode of every upload.
+    return { scrubbed: true, format, animated: isAnimated, safeToStore: true, ...dimensionsOf(metadata) }
   } catch (error) {
     await fsp.rm(tempPath, { force: true }).catch(() => {})
     // Logged rather than silent: for a non-image this is harmless, for an image

@@ -39,3 +39,45 @@ describe('space-code-push names no default target', () => {
         expect(code).toMatch(/process\.exitCode\s*=\s*1/)
     })
 })
+
+// Three bugs shipped together in this script and each one was silent: it printed
+// "ok — 1 file(s) pushed" while the published page stayed empty. The guards below
+// read the SERVER as the source of truth so the script cannot drift from it again.
+
+const SERVER_ROUTES = fs.readFileSync(
+    path.join(ROOT_DIR, 'serverXR', 'src', 'routes', 'projectRoutes.js'), 'utf8')
+const SYNC_PLAN = fs.readFileSync(
+    path.join(ROOT_DIR, 'serverXR', 'src', 'spaceSyncPlan.js'), 'utf8')
+
+describe('space-code-push writes what the server actually accepts', () => {
+    it('uses a method serverXR registers on /api/projects/:projectId/document', () => {
+        // PATCH matched no route and returned a bare 404, which reads exactly
+        // like a missing project — the wrong thing to go looking for.
+        const method = code.match(/method:\s*'([A-Z]+)'/)?.[1]
+        expect(method).toBeTruthy()
+        const registered = [...SERVER_ROUTES.matchAll(
+            /router\.(get|put|post|patch|delete)\('\/api\/projects\/:projectId\/document'/g)
+        ].map((m) => m[1].toUpperCase())
+        expect(registered).toContain(method)
+    })
+
+    it('sets every presentationState key spaceSyncPlan sets', () => {
+        // The viewer keys on entryView ("showCodeView = entryView === 'code'"),
+        // not on mode. Setting mode alone left the page showing an empty scene.
+        for (const key of ['mode', 'entryView', 'codeFiles']) {
+            expect(SYNC_PLAN).toMatch(new RegExp(`\\b${key}\\b`))
+            expect(code).toMatch(new RegExp(`\\b${key}\\b`))
+        }
+        expect(code).toMatch(/shareEnabled/)
+    })
+})
+
+describe('space-new finds the token where it actually lives', () => {
+    it('reads serverXR/.env.local, like its sibling scripts', () => {
+        // LIVE_API_TOKEN lives in serverXR/.env.local. Reading only the root
+        // .env.local made space-new report "LIVE_API_TOKEN is required" on a
+        // repo that had one, and send the operator to the browser for nothing.
+        const spaceNew = fs.readFileSync(path.join(ROOT_DIR, 'scripts', 'space-new.mjs'), 'utf8')
+        expect(spaceNew).toMatch(/'serverXR',\s*'\.env\.local'/)
+    })
+})

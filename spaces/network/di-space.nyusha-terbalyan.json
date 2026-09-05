@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-nyusha-terbalyan",
+  "slug": "nyusha-terbalyan",
+  "label": "Nyusha Terbalyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/nyusha-terbalyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

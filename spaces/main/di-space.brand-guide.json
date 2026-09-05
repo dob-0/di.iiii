@@ -1,0 +1,13 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "main",
+  "projectId": "brand-guide",
+  "slug": "brand-guide",
+  "label": "di.i — brand guide",
+  "mode": "code",
+  "entry": "spaces/main/pages/brand-guide/index.html",
+  "include": [],
+  "assets": [],
+  "publish": false,
+  "note": "Copy of di-brand/brand-guide.html (repo dob-0/di-brand). Edit there, copy here, sync."
+}

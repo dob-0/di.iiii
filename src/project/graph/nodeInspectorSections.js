@@ -25,6 +25,24 @@ const portToInspectorField = (port, node = null) => {
             options: Object.entries(PORT_TYPES).map(([value, meta]) => ({ value, label: meta.label }))
         }
     }
+    // A port (or configInput) that declares its own `options` is a choice, not
+    // a typed string — the doorway rule above, generalised so a node type can
+    // say so in the registry instead of being special-cased here. DMX Out's
+    // `rig` is the first: two rigs answer to the node and typing the word is
+    // exactly how you get a node that silently does nothing.
+    if (Array.isArray(port.options) && port.options.length) {
+        return {
+            label,
+            path,
+            type: 'select',
+            portType: port.type || 'string',
+            options: port.options.map((option) => (
+                typeof option === 'string'
+                    ? { value: option, label: option }
+                    : { value: option.value, label: option.label || option.value }
+            ))
+        }
+    }
     if (port.type === 'color') return { label, path, type: 'color', portType: 'color' }
     if (port.type === 'boolean') return { label, path, type: 'checkbox', portType: 'boolean' }
     if (port.type === 'number') return { label, path, type: 'number', min: port.min, max: port.max, step: port.step, portType: 'number', default: port.default }

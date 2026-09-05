@@ -251,6 +251,9 @@
 .map-field-slider { flex-direction: row; align-items: center; gap: 6px; }
 .map-field-slider > span { flex: 0 0 66px; }
 .map-field-slider input[type='range'] { flex: 1 1 auto; height: auto; border: 0; padding: 0; accent-color: var(--ui-accent); }
+/* A sentence standing where a control would be — same muted prose, no lead-in
+   gap, because the row is already spaced by the field. */
+.map-field .map-empty { margin: 0; }
 .map-field-slider output { flex: 0 0 34px; font-family: var(--di-mono); font-size: 10px; color: var(--ui-text-primary); text-align: right; }
 
 .map-action,
@@ -264,6 +267,9 @@
     height: var(--panel-control-height);
     cursor: pointer;
 }
+/* A link wearing the button's clothes — an anchor ignores the height a button
+   honours, so it is centred explicitly rather than sitting a pixel high. */
+a.map-action { display: inline-flex; align-items: center; text-decoration: none; }
 .map-mini { font-size: 10px; padding: 2px 5px; height: auto; }
 .map-action:hover,
 .map-toggle:hover,

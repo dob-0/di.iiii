@@ -158,6 +158,9 @@ function handleMessage(state, ws, raw, now) {
   } catch {
     return
   }
+  // "null", "1" and "[]" all parse; the relay is unauthenticated, so a frame
+  // that is not an object must be dropped, not dereferenced.
+  if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return
   const { roomId, nodeId } = ws._mesh
   ws._mesh.lastSeen = now
   const room = state.rooms.get(roomId)
