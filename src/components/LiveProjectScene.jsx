@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Grid, Text, Billboard } from '@react-three/drei'
+import { Grid, OrbitControls, Text, Billboard } from '@react-three/drei'
 import { TROIKA_FONT_URL } from '../project/viewport/troikaFont.js'
 import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
 import * as THREE from 'three'
@@ -62,6 +62,15 @@ const PARTICLE_COUNT = 900
 const IDLE_ORBIT_RADIUS = 8
 const IDLE_ORBIT_HEIGHT = 3.5
 const IDLE_ORBIT_SPEED = 0.12
+
+// View mode's limits. The floor of the dolly keeps a visitor from ending up
+// inside a door; the ceiling keeps them from backing out until the room is a
+// speck. VIEW_ORBIT_DRIFT_SPEED is the calm turn that runs until the first
+// drag, deliberately slower than the decorative IDLE_ORBIT: this one is a room
+// waiting to be handled, not a background.
+const VIEW_ORBIT_MIN_DISTANCE = 3
+const VIEW_ORBIT_MAX_DISTANCE = 90
+const VIEW_ORBIT_DRIFT_SPEED = 0.35
 
 const tmpVec = new THREE.Vector3()
 const tmpLook = new THREE.Vector3()
@@ -1199,6 +1208,58 @@ function IdleOrbit({ center }) {
     return null
 }
 
+// View mode: the room is handled instead of walked. Mounted in place of
+// <Walker> inside the SAME Canvas, so flipping between the two costs no WebGL
+// context and the camera simply keeps the pose the other one left it in.
+//
+// Why this and not the published viewer's orbit surface (StudioViewport):
+// that is a second renderer with a second Canvas, and swapping to it here
+// would tear down the room's WebGL context, its loaded assets and the
+// landing's own sceneExtras on every press of one button. It also does not
+// render portals as portals, so the doors would stop being doors.
+function ViewOrbit({ center }) {
+    const controlsRef = useRef(null)
+    const { camera } = useThree()
+    const [drifting, setDrifting] = useState(true)
+
+    useEffect(() => {
+        const controls = controlsRef.current
+        if (!controls) return
+        // Take the pivot from where the camera is ALREADY looking, at roughly
+        // the room's own depth. Aiming straight at `center` would swing the
+        // view on the frame the button is pressed; the toggle has to be a
+        // handover, not a cut.
+        const distance = THREE.MathUtils.clamp(
+            camera.position.distanceTo(center),
+            VIEW_ORBIT_MIN_DISTANCE,
+            VIEW_ORBIT_MAX_DISTANCE
+        )
+        camera.getWorldDirection(tmpDir)
+        controls.target.copy(camera.position).addScaledVector(tmpDir, distance)
+        controls.update()
+    }, [camera, center])
+
+    return (
+        <OrbitControls
+            ref={controlsRef}
+            enableDamping
+            dampingFactor={0.08}
+            enablePan={false}
+            enableZoom
+            rotateSpeed={0.55}
+            zoomSpeed={0.8}
+            minDistance={VIEW_ORBIT_MIN_DISTANCE}
+            maxDistance={VIEW_ORBIT_MAX_DISTANCE}
+            // Stop just short of the floor: below it the room is seen from
+            // underneath its own grid, which reads as the scene disappearing.
+            maxPolarAngle={Math.PI * 0.495}
+            autoRotate={drifting}
+            autoRotateSpeed={VIEW_ORBIT_DRIFT_SPEED}
+            onStart={() => setDrifting(false)}
+        />
+    )
+}
+
 function useLiveProjectDocument(projectId) {
     const [doc, setDoc] = useState(null)
     // A failed fetch used to be caught silently, leaving `doc` null forever --
@@ -1382,6 +1443,12 @@ export default function LiveProjectScene({
     projectId,
     spaceId = null,
     interactive = true,
+    // `orbit`: the room's VIEW mode. Only meaningful while `interactive` --
+    // the pair is (walk, orbit), and a non-interactive scene is decorative and
+    // takes no input at all. The landing's "◐ View mode" button used to switch
+    // `interactive` off, which handed the visitor the decorative drift and a
+    // pointer-events:none layer: a view mode in which nothing at all answered.
+    orbit = false,
     showChrome = true,
     showEntities = true,
     // `hideEntityTypes`: entity types this render leaves out. The landing says
@@ -1467,6 +1534,12 @@ export default function LiveProjectScene({
     const isArActive = xr.isArModeActive && xr.isXrPresenting
     const playerRef = useRef({ x: 0, z: 6, yaw: Math.PI, pitch: 0, altY: EYE_HEIGHT })
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
+    // The two interactive modes. `walking` gates everything that belongs to
+    // the walker -- its controls, its chrome, its hints -- so view mode does
+    // not leave a joystick or a "drag to look" line on screen for a camera
+    // that no longer answers to them.
+    const walking = interactive && !orbit
+    const viewing = interactive && orbit
     // Dev-only observability hook for scripts/input-check.mjs: input-contract
     // probes assert on real walker state instead of guessing from screenshots.
     // The ref (not the object) — worldState.spawn replaces playerRef.current.
@@ -1536,14 +1609,14 @@ export default function LiveProjectScene({
     }, [xr.domOverlayRoot])
 
     useEffect(() => {
-        if (!interactive || !showModeControls) return undefined
+        if (!walking || !showModeControls) return undefined
         const onKey = (e) => {
             if (isTypingTarget(e.target)) return
             if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f)
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [interactive, showModeControls])
+    }, [walking, showModeControls])
 
     const entities = useMemo(() => doc?.entities || [], [doc?.entities])
     // Legacy-imported projects store assets with an empty `url` field (the
@@ -1699,7 +1772,7 @@ export default function LiveProjectScene({
                 <RenderSettingsEffect renderSettings={renderSettings} />
                 <color attach="background" args={[backgroundColor]} />
                 {fogEnabled ? <fog attach="fog" args={[fogColor, fogNear, fogFar]} /> : null}
-                {interactive && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
+                {walking && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
                     <AtmosphereBlender zones={atmosphereZones} playerRef={playerRef} baseBg={backgroundColor} />
                 ) : null}
                 {worldState.hubDecor && atmosphereZones.length > 0 ? (
@@ -1751,7 +1824,7 @@ export default function LiveProjectScene({
                 ))}
                 {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
                 {sceneExtras}
-                {interactive ? (
+                {walking ? (
                     <Walker
                         playerRef={playerRef}
                         onNearestZone={setNearestLabel}
@@ -1768,13 +1841,15 @@ export default function LiveProjectScene({
                         isArActive={isArActive}
                         arTouchElRef={arTouchElRef}
                     />
+                ) : viewing ? (
+                    <ViewOrbit center={center} />
                 ) : cameraPoseRef ? (
                     <PosedCamera poseRef={cameraPoseRef} />
                 ) : (
                     <IdleOrbit center={center} />
                 )}
-                {interactive && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
-                {interactive && worldState.ringTour?.enabled ? (
+                {walking && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
+                {walking && worldState.ringTour?.enabled ? (
                     <RingTour playerRef={playerRef} config={worldState.ringTour} />
                 ) : null}
                 </XR>
@@ -1790,13 +1865,13 @@ export default function LiveProjectScene({
             {(() => {
                 const controlsUI = (
                     <>
-                        {interactive && isMobile && (
+                        {walking && isMobile && (
                             <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
                         )}
-                        {interactive && isMobile && flyMode && showModeControls && (
+                        {walking && isMobile && flyMode && showModeControls && (
                             <VerticalTouchControls vertTouchRef={vertTouchRef} />
                         )}
-                        {interactive && showModeControls && (
+                        {walking && showModeControls && (
                             <button
                                 type="button"
                                 className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
@@ -1836,10 +1911,11 @@ export default function LiveProjectScene({
             {/* Enter AR/VR are functional controls too -- a caller that hides
                 chrome (the landing page) still needs a way to actually start
                 a session, not just walk/fly on the flat screen. Still gated
-                on `interactive` -- a purely decorative background (e.g.
+                on `walking` -- a purely decorative background (e.g.
                 Studio Hub's) has no Walker/locomotion wired up to make a
-                session usable. */}
-            {interactive && showModeControls && (xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
+                session usable, and neither has view mode: XR entry lives
+                inside walk mode, which is where the locomotion is. */}
+            {walking && showModeControls && (xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
                 <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, zIndex: 11 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
                         {xr.supportedXrModes.vr && (
@@ -1901,19 +1977,19 @@ export default function LiveProjectScene({
                         <MadeWithBadge variant="chrome" spaceId={spaceId} />
                     </header>
 
-                    {interactive && !isMobile && !isLocked && (
+                    {walking && !isMobile && !isLocked && (
                         <p className="live-scene-hint live-scene-hint--lock">
                             Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; F · fly
                         </p>
                     )}
-                    {interactive && !isMobile && isLocked && (
+                    {walking && !isMobile && isLocked && (
                         <p className="live-scene-hint">
                             WASD · move &nbsp;·&nbsp; Mouse · look &nbsp;·&nbsp; F · {flyMode ? 'walk' : 'fly'}
                             {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
                             &nbsp;·&nbsp; ESC · release
                         </p>
                     )}
-                    {interactive && showMoveHint && (isMobile || !isLocked) && (
+                    {walking && showMoveHint && (isMobile || !isLocked) && (
                         <MoveHintVisual isMobile={isMobile} />
                     )}
                 </>

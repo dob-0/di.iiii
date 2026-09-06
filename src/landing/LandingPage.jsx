@@ -222,10 +222,14 @@ function LandingPageInner() {
     // The page once it has stopped being a page: real meshes in the room's
     // scene, falling. Held in state because the scene has to render them.
     const [pieces, setPieces] = useState([])
-    // Walk/fly and the calm orbiting view are both rendered by the same
+    // Walk/fly and the orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to
     // the orbit view once you'd moved was a full Exit + Enter Space round
     // trip. This lets you flip between them without leaving "entered" at all.
+    // View mode is a MODE of the interactive room, not the absence of one:
+    // it used to switch `interactive` off, which gave the visitor the
+    // decorative drift behind a pointer-events:none layer -- one frame that
+    // answered nothing, whichever way they dragged.
     const [viewMode, setViewMode] = useState(false)
     // True only when the server declares itself a local install AND auth is
     // off — the pair that makes "sign in to edit" a false sentence. Read from
@@ -399,7 +403,8 @@ function LandingPageInner() {
                     <Box className="lp-hero-bg" aria-hidden="true">
                         <Suspense fallback={null}>
                             <GridFloorBackground
-                                interactive={entered && !viewMode}
+                                interactive={entered}
+                                orbit={viewMode}
                                 cameraPoseRef={cameraPoseRef}
                                 hideEntityTypes={roomSpeaks ? null : HERO_ECHO_TYPES}
                                 onArrivalPose={handleArrivalPose}
@@ -502,13 +507,15 @@ function LandingPageInner() {
                         <button type="button" className="lp-enter-exit lp-enter-viewtoggle" onClick={() => setViewMode((v) => !v)}>
                             {viewMode ? '→ Walk / fly' : '◐ View mode'}
                         </button>
-                        {!viewMode && (
-                            <p className="lp-enter-hint">
-                                {isMobile
+                        <p className="lp-enter-hint">
+                            {viewMode
+                                ? (isMobile
+                                    ? 'Drag to orbit · Pinch to zoom · Tap a door'
+                                    : 'Drag to orbit · Scroll to zoom · Click a door')
+                                : (isMobile
                                     ? 'Joystick to move · Drag to look · Fly button to switch modes'
-                                    : 'Walk (WASD) · Drag to look · F to fly (Space/Q up · C/E down) · V to view'}
-                            </p>
-                        )}
+                                    : 'Walk (WASD) · Drag to look · F to fly (Space/Q up · C/E down) · V to view')}
+                        </p>
                     </>
                 )}
             </Box>

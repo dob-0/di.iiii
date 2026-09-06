@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import MapTestPattern from './mapTestPattern.jsx'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
+import { PREVIEW_READY_MESSAGE } from '../utils/previewMode.js'
 
 // One surface's content, unwarped. Everything here draws into a plain
 // width x height box at the surface's own resolution; the corner-pin above it
@@ -155,6 +156,23 @@ function MapCameraSource({ deviceId, label, width, height }) {
 function MapPageSource({ src, isProject, label, width, height }) {
     const [booting, setBooting] = useState(true)
     const releaseRef = useRef(null)
+    const frameRef = useRef(null)
+
+    // A PROJECT surface is our own page in preview mode, so it can say when it
+    // has actually painted — `load` fires on the shell HTML, seconds before
+    // the scene is anywhere, which is what let the whole wall boot at once.
+    // A URL surface is somebody else's page and can only ever offer `load`.
+    useEffect(() => {
+        if (booting || !isProject) return undefined
+        const onMessage = (event) => {
+            if (event.origin !== window.location.origin) return
+            if (event.data?.type !== PREVIEW_READY_MESSAGE) return
+            if (event.source !== frameRef.current?.contentWindow) return
+            releaseRef.current?.()
+        }
+        window.addEventListener('message', onMessage)
+        return () => window.removeEventListener('message', onMessage)
+    }, [booting, isProject])
 
     useEffect(() => {
         setBooting(true)
@@ -176,9 +194,10 @@ function MapPageSource({ src, isProject, label, width, height }) {
     return (
         <iframe
             className="map-source-frame"
+            ref={frameRef}
             src={src}
             title={label || 'Surface source'}
-            onLoad={() => releaseRef.current?.()}
+            onLoad={isProject ? undefined : () => releaseRef.current?.()}
                 // A PROJECT surface is our own page on our own origin, and it
                 // is not sandboxed. `allow-scripts allow-same-origin` on a
                 // same-origin frame is the combination the browser itself

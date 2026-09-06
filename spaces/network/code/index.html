@@ -14,7 +14,7 @@
   --accent-soft:rgba(0,151,163,.07); --accent-rule:rgba(0,151,163,.35);
   --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
   --sans:'Inter',-apple-system,'Segoe UI',sans-serif;
-  --col:1180px; --room:860px; --pad:56px;
+  --col:1180px; --room:860px; --pad:56px; --paper-col:52vw;
 }
 @font-face{
   font-family:'Inter'; src:url('/fonts/inter-regular.woff') format('woff'); font-weight:400 800; font-style:normal; font-display:swap;
@@ -41,19 +41,29 @@ a{color:inherit;}
 
 .roster{max-width:var(--col);padding:0 var(--pad) 8px var(--pad);position:relative;}
 
-/* ---------- the ties ----------
-   One dot per person, pinned to the right edge of that person's own row and
-   scrolling with it; one arc per shared work, running between the two rows
-   that made it. Every mark can be followed to the names it is about. */
-.tie{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:0;}
-.tie-dot{fill:var(--ink-3);opacity:.5;transition:fill .14s ease,opacity .14s ease,r .14s ease;}
-.tie-dot.is-lit{fill:var(--accent);opacity:1;r:5;}
-.tie-arc{fill:none;stroke:var(--rule);stroke-width:1;transition:stroke .14s ease,stroke-width .14s ease;}
-.tie-arc.is-lit{stroke:var(--accent);stroke-width:1.4;}
-.tie-label{font-family:var(--mono);font-size:12px;fill:var(--ink-3);
-  transition:fill .14s ease;}
-.tie-label.is-lit{fill:var(--accent-ink);}
-.roster .group, .roster ul.catalogue, .roster .howto{position:relative;z-index:1;}
+/* ---------- the field ----------
+   The same fifty-two, in depth, on the same paper. The list is the
+   interface; the field is its twin, and lighting one lights the other.
+   Nothing here paints a ground — the canvas is transparent. */
+.spread{display:grid;grid-template-columns:minmax(0,var(--paper-col)) minmax(0,1fr);
+  grid-template-areas:'head field' 'list field' 'foot field';align-items:start;gap:0;}
+.paperTop{grid-area:head;min-width:0;}
+.roster{grid-area:list;}
+.indexFoot{grid-area:foot;}
+.fieldCol{grid-area:field;position:sticky;top:0;height:100vh;min-width:0;}
+.field{position:absolute;inset:0;touch-action:pan-y;cursor:grab;}
+.field:active{cursor:grabbing;}
+.fieldNote{position:absolute;left:0;bottom:26px;font-family:var(--mono);font-size:12px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);}
+
+.fieldCard{position:absolute;width:224px;background:var(--paper);border:1px solid var(--rule);
+  box-shadow:0 14px 34px rgba(17,18,20,.12);padding:12px 14px 12px 14px;pointer-events:none;}
+.fieldCard .fc-name{font-size:16px;font-weight:600;line-height:1.25;letter-spacing:-0.01em;}
+.fieldCard .fc-role{font-family:var(--mono);font-size:12px;color:var(--ink-2);margin-top:4px;line-height:1.45;}
+.fieldCard .fc-works{font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-top:2px;}
+.fieldCard a{display:inline-block;margin-top:9px;font-family:var(--mono);font-size:12px;
+  color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);
+  pointer-events:auto;}
 
 /* Section labels are the strongest horizontal marks in the list — they are
    the structure, and they used to be smaller than the ornament beside them. */
@@ -161,16 +171,24 @@ a.row .made .arrow{opacity:.6;}
 .room-foot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
 
 /* Between these widths the list gives up a little of its own width so the
-   margin still exists — better than the drawing disappearing at 1280. */
-@media (max-width:1400px){ :root{--col:1040px;} }
+   field still has room to be a body and not a sliver. */
+@media (max-width:1400px){ :root{--col:1040px; --paper-col:54vw;} }
+@media (max-width:1180px){ :root{--paper-col:56vw; --pad:38px;} }
 
 @media (max-width:1000px){
   :root{--pad:26px;}
-  /* the roster starts at the top of a phone — no band above it. There is no
-     margin to hold the drawing at this width, so it thins to a whisper
-     across the whole sheet rather than sitting behind the names as smudges. */
-  .ground{opacity:.2;}
-  .ground canvas{-webkit-mask-image:none;mask-image:none;}
+  /* No margin to hold a field beside the list at this width, so it goes
+     above it as a quiet strip: it still drifts, it is still the same cloud,
+     but it takes no drag and lifts no card — the names are the interface
+     here, and a finger on the strip must still scroll the page. */
+  .spread{grid-template-columns:minmax(0,1fr);
+    grid-template-areas:'head' 'field' 'list' 'foot';}
+  .wide-only{display:none;}
+  .fieldCol{position:relative;height:240px;top:auto;opacity:.8;
+    margin:2px var(--pad) 10px var(--pad);}
+  .field{touch-action:auto;cursor:default;}
+  .fieldNote{display:none;}
+  .fieldCard{display:none;}
   /* the two halves of the room header do not fit one line on a phone;
      side by side they each wrapped mid-phrase. */
   .pagehead{flex-direction:column;gap:9px;}
@@ -192,6 +210,8 @@ a.row .made .arrow{opacity:.6;}
 </head>
 <body>
 <div class="sheet">
+<div class="spread">
+<div class="paperTop">
 <header class="pagehead">
   <a class="back" href="/" target="_top"><span aria-hidden="true">←</span> di.iiii</a>
   <div class="eyebrow">the network</div>
@@ -202,10 +222,10 @@ a.row .made .arrow{opacity:.6;}
     <p class="dek">Fifty-two people make di.iiii — five run it, forty-seven make with it. Every name here has a room of its own. Nine of those rooms have work standing in them already; the rest are theirs to fill.</p>
   </div>
 </header>
+</div>
 
 <main class="roster">
-  <svg class="tie" aria-hidden="true"></svg>
-  <p class="howto">tap a name to open their room</p>
+  <p class="howto">tap a name to open their room<span class="wide-only"> · drag the field to turn it</span></p>
   <h2 class="group"><span class="g-name">team</span><span class="g-rule"></span><span class="g-count">5</span></h2>
   <ul class="catalogue">
     <li><a class="row" href="/network/gevorg-grigoryan" target="_top" data-slug="gevorg-grigoryan"><span class="name">Gevorg Aram Grigoryan</span><span class="role">XR director, developer<span class="made"><span class="arrow">→ </span>di.iiii · br_id_ge</span></span></a></li>
@@ -282,149 +302,351 @@ a.row .made .arrow{opacity:.6;}
 </main>
 
 <footer class="indexFoot">
-  <p>The drawing beside this page is the same fifty-two, held apart. A line between two of them means they made the same thing — so far that is br_id_ge and ազդ | azd.</p>
+  <p>The field beside this page is the same fifty-two, held apart in depth — the five who run it in the middle, everyone else around them. Turn it with a drag. A line between two of them means they made the same thing — so far that is br_id_ge and ազդ | azd.</p>
   <p>You can see the whole of it — all fifty-two on one ring — in the <a href="/network/constellation" target="_top">constellation</a>.</p>
 </footer>
+
+<aside class="fieldCol" aria-hidden="true">
+  <canvas class="field"></canvas>
+  <div class="fieldCard" hidden>
+    <div class="fc-name"></div>
+    <div class="fc-role"></div>
+    <div class="fc-works"></div>
+    <a href="/" target="_top" tabindex="-1">→ room</a>
+  </div>
+  <p class="fieldNote">fifty-two people · drag to turn</p>
+</aside>
+</div>
 </div>
 
 <script>
-// The index's drawing, anchored to the list.
+// The field: the same fifty-two, in depth, beside the list.
 //
-// It used to be a projected cloud on a fixed canvas while the roster scrolled
-// past it. That looks like a drawing and is not one: the same eight lines hang
-// in the same place while entirely different names pass behind them, so a line
-// that means "these two made the same thing" can never be traced to the two
-// names it belongs to — which two you see depends on where you stopped
-// scrolling. A mark whose meaning changes with the scroll position is
-// decoration, and on paper decoration reads as smudge.
+// It is a cloud, not a chart. The five who run it sit in a tight core, the
+// forty-seven around them on a shell, and the whole of it turns — slowly on
+// its own, faster under a finger — so the arrangement reads as a solid and
+// not as scatter. A line is drawn only where work is shared, and the work's
+// name sits where its lines meet.
 //
-// So every mark is now fixed to the row it is about. A person's dot sits at
-// the right edge of that person's own row and scrolls with it. A bracket
-// gathers everyone who made one work and carries that work's name, so it is
-// one mark per fact — the first version drew one arc per PAIR, which turned
-// two works into thirteen crossing lines and said no more than two brackets do.
+// No library. A point is three multiplications and a divide; fifty-two of
+// them is nothing, and the last time this drawing existed it cost 229 KB
+// over 36 requests to say the same thing.
 //
-// Below the width where there is a margin to draw in, it draws nothing at all.
+// The list is still the interface. Every mark here has a row it belongs to:
+// lighting a row lights its point, lighting a point lights its row, and the
+// card that lifts off a point carries the same door the row already is.
 
-// works: [{ title, slugs: [...] }] — one entry per work more than one person made
-function createRosterField(svg, roster, works) {
-  const NS = 'http://www.w3.org/2000/svg';
-  const GAP = 20;      // from a row's right edge to its dot
-  const FIRST = 34;    // from the dots to the first bracket's spine
-  const STEP = 40;     // between spines
-  let rows = [];
-  let nodes = new Map();   // slug -> circle
-  let ties = [];           // {slugs:Set, parts:[element]}
+// people: [{slug,name,role,team,works:[title]}]  ties: [{title,slugs:[]}]
+function createField(mount, people, ties, hooks) {
+  const canvas = mount.querySelector('canvas');
+  const card = mount.querySelector('.fieldCard');
+  const ctx = canvas.getContext('2d');
+  const reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const narrow = window.matchMedia('(max-width:999px)');
 
-  const el = (name, attrs) => {
-    const n = document.createElementNS(NS, name);
-    for (const k in attrs) n.setAttribute(k, attrs[k]);
-    return n;
+  const cs = getComputedStyle(document.documentElement);
+  const tok = (n, fb) => (cs.getPropertyValue(n) || fb).trim();
+  const PAPER = tok('--paper', '#f7f7f5');
+  const INK = tok('--ink', '#111214');
+  const INK2 = tok('--ink-2', '#55595e');
+  const INK3 = tok('--ink-3', '#63686d');
+  const RULE = tok('--rule', '#dededa');
+  const ACCENT = tok('--accent', '#0097a3');
+  const ACCENT_INK = tok('--accent-ink', '#00757f');
+  const MONO = tok('--mono', 'monospace');
+  const SANS = tok('--sans', 'sans-serif');
+
+  // A stable per-person wobble, so the shell has thickness and no two
+  // neighbours sit at the same distance — deterministic, or the cloud would
+  // rearrange itself on every reload.
+  function seed(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.round(h * 16777619) >>> 0; }
+    return (h % 1000) / 1000;
+  }
+  const GOLD = Math.PI * (3 - Math.sqrt(5));
+  function onSphere(i, n) {
+    const y = n < 2 ? 0 : 1 - (i / (n - 1)) * 2;
+    const r = Math.sqrt(Math.max(0, 1 - y * y));
+    const a = i * GOLD;
+    return [Math.cos(a) * r, y, Math.sin(a) * r];
+  }
+
+  // team in the core, everyone else on the shell. people.json is in section
+  // order, so consecutive spiral steps put a discipline in one band.
+  const pts = [];
+  const bySlug = new Map();
+  const team = people.filter((p) => p.team);
+  const rest = people.filter((p) => !p.team);
+  const place = (list, base, spread) => list.forEach((p, i) => {
+    const v = onSphere(i, list.length);
+    const r = base * (1 - spread / 2 + spread * seed(p.slug));
+    const pt = { p, x: v[0] * r, y: v[1] * r, z: v[2] * r, sx: 0, sy: 0, t: 1, lit: 0 };
+    pts.push(pt); bySlug.set(p.slug, pt);
+  });
+  place(team, 0.42, 0.22);
+  place(rest, 1.0, 0.16);
+
+  const tieSets = ties.map((t) => ({ title: t.title, slugs: t.slugs.filter((s) => bySlug.has(s)) }))
+    .filter((t) => t.slugs.length > 1);
+  const kin = new Map();
+  for (const t of tieSets) {
+    for (const a of t.slugs) {
+      if (!kin.has(a)) kin.set(a, new Set());
+      for (const b of t.slugs) if (b !== a) kin.get(a).add(b);
+    }
+  }
+
+  let yaw = 0.6; let pitch = -0.18; let spin = 0;
+  let w = 0; let h = 0; let scale = 1; let dpr = 1;
+  let lit = null; let cardFor = null; let dirty = true;
+  const D = 3.05;
+
+  function measure() {
+    const r = mount.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    w = Math.max(1, Math.round(r.width)); h = Math.max(1, Math.round(r.height));
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // the cloud reads as a body only when it is given the short side; on a
+    // phone strip that side is the height, and it must not be cropped.
+    scale = Math.min(w * 0.36, h * 0.42);
+    dirty = true;
+  }
+
+  function project() {
+    const cy = Math.cos(yaw); const sy = Math.sin(yaw);
+    const cp = Math.cos(pitch); const sp = Math.sin(pitch);
+    const cx = w / 2; const cyc = h / 2;
+    for (const q of pts) {
+      const x1 = q.x * cy + q.z * sy;
+      const z1 = q.z * cy - q.x * sy;
+      const y1 = q.y * cp - z1 * sp;
+      const z2 = q.y * sp + z1 * cp;
+      const t = D / (D + z2);
+      q.t = t; q.sx = cx + x1 * scale * t; q.sy = cyc + y1 * scale * t;
+    }
+  }
+
+  const depth = (t) => Math.max(0, Math.min(1, (t - 0.72) / 0.82));
+
+  // Labels are placed last and out of each other's way: a name that lands on
+  // another name, or on a work's name, is two marks that cancel. There are
+  // never many at once — the work titles, and whoever is lit.
+  const marks = [];
+  const NUDGE = [0, -16, 16, -32, 32, -48, 48, -64, 64];
+  function put(text, x, y, font, colour, align) {
+    ctx.font = font;
+    const wd = ctx.measureText(text).width;
+    let ax = align === 'right' ? x - wd : align === 'center' ? x - wd / 2 : x;
+    if (ax + wd > w - 6) ax = Math.max(6, w - 6 - wd);
+    if (ax < 6) ax = 6;
+    const free = (ay) => !marks.some((m) => Math.abs(m.y - ay) < 16
+      && ax < m.x + m.w + 7 && m.x < ax + wd + 7);
+    let ay = y;
+    for (const d of NUDGE) if (free(y + d)) { ay = y + d; break; }
+    marks.push({ x: ax, y: ay, w: wd, text, font, colour });
+  }
+
+  function drawMarks() {
+    ctx.textAlign = 'left';
+    ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.strokeStyle = PAPER;
+    for (const m of marks) {
+      ctx.font = m.font;
+      ctx.strokeText(m.text, m.x, m.y);
+      ctx.fillStyle = m.colour;
+      ctx.fillText(m.text, m.x, m.y);
+    }
+    marks.length = 0;
+  }
+
+  function draw() {
+    project();
+    ctx.clearRect(0, 0, w, h);
+    ctx.textBaseline = 'middle';
+    const near = lit ? kin.get(lit) : null;
+
+    // the ties first, under the points: a line is the ground a dot stands on
+    const meets = [];
+    for (const t of tieSets) {
+      const members = t.slugs.map((s) => bySlug.get(s));
+      let mx = 0; let my = 0;
+      for (const m of members) { mx += m.sx; my += m.sy; }
+      mx /= members.length; my /= members.length;
+      const on = lit != null && t.slugs.indexOf(lit) >= 0;
+      ctx.strokeStyle = on ? ACCENT : INK3;
+      ctx.lineWidth = on ? 1.3 : 1;
+      ctx.globalAlpha = on ? 0.9 : 0.3;
+      for (const m of members) {
+        ctx.beginPath();
+        ctx.moveTo(m.sx, m.sy);
+        // bowed towards the meeting point, so eight lines read as one bundle
+        ctx.quadraticCurveTo((m.sx + mx) / 2 + (my - m.sy) * 0.12,
+          (m.sy + my) / 2 + (m.sx - mx) * 0.12, mx, my);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      meets.push({ title: t.title, x: mx, y: my, on });
+    }
+
+    // far to near, so a nearer dot is never drawn under a farther one
+    const order = pts.slice().sort((a, b) => a.t - b.t);
+    for (const q of order) {
+      const d = depth(q.t);
+      const isLit = q.p.slug === lit;
+      const isKin = !isLit && near && near.has(q.p.slug);
+      const r = (1.6 + 2.0 * d) * (q.p.team ? 1.3 : 1) * (isLit ? 1.9 : isKin ? 1.35 : 1);
+      ctx.globalAlpha = isLit ? 1 : isKin ? 0.95 : 0.34 + 0.56 * d;
+      ctx.fillStyle = isLit || isKin ? ACCENT : q.p.team ? INK : INK2;
+      ctx.beginPath(); ctx.arc(q.sx, q.sy, r, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 1;
+      q.r = r;
+    }
+
+    // whoever is lit gets their name — nearest first, so the one under the
+    // pointer keeps the place it asked for and the rest give way
+    const named = order.filter((q) => (q.p.slug === lit && !cardFor) || (near && near.has(q.p.slug)))
+      .sort((a, b) => (a.p.slug === lit ? -1 : b.p.slug === lit ? 1 : b.t - a.t));
+    for (const m of meets) put(m.title, m.x, m.y - 13, '12px ' + MONO, m.on ? ACCENT_INK : INK3, 'center');
+    for (const q of named) {
+      const isLit = q.p.slug === lit;
+      const size = isLit ? 14 : 12.5;
+      const font = (isLit ? '600 ' : '') + size + 'px ' + SANS;
+      ctx.font = font;
+      const wd = ctx.measureText(q.p.name).width;
+      const right = q.sx + q.r + 7 + wd > w - 6;
+      put(q.p.name, right ? q.sx - q.r - 7 : q.sx + q.r + 7, q.sy, font,
+        isLit ? INK : ACCENT_INK, right ? 'right' : 'left');
+    }
+    drawMarks();
+    dirty = false;
+  }
+
+  function frame() {
+    if (spin) { yaw += spin; dirty = true; } else if (!reduce) { yaw += 0.0011; dirty = true; }
+    if (spin) spin *= 0.92;
+    if (Math.abs(spin) < 0.0002) spin = 0;
+    if (dirty) { draw(); if (cardFor) placeCard(cardFor); }
+    requestAnimationFrame(frame);
+  }
+
+  // ---- the card that lifts off a point ----
+  function placeCard(q) {
+    const cw = card.offsetWidth || 220; const ch = card.offsetHeight || 90;
+    let x = q.sx + 16; let y = q.sy - ch / 2;
+    if (x + cw > w - 8) x = q.sx - cw - 16;
+    card.style.left = Math.max(8, Math.min(w - cw - 8, x)) + 'px';
+    card.style.top = Math.max(8, Math.min(h - ch - 8, y)) + 'px';
+  }
+
+  function showCard(q) {
+    cardFor = q;
+    card.querySelector('.fc-name').textContent = q.p.name;
+    card.querySelector('.fc-role').textContent = q.p.role;
+    const n = (q.p.works || []).length;
+    card.querySelector('.fc-works').textContent = n ? (n === 1 ? '1 work here' : n + ' works here') : 'room to fill';
+    card.querySelector('a').setAttribute('href', '/network/' + q.p.slug);
+    card.hidden = false;
+    placeCard(q);
+  }
+
+  function hideCard() { cardFor = null; card.hidden = true; }
+
+  function light(slug, withCard) {
+    if (lit === slug && !withCard) return;
+    lit = slug; dirty = true;
+    if (withCard && slug && bySlug.has(slug)) showCard(bySlug.get(slug)); else if (!slug) hideCard();
+    if (hooks && hooks.onLight) hooks.onLight(slug);
+  }
+
+  function pick(cx2, cy2) {
+    let best = null; let bs = Infinity;
+    for (const q of pts) {
+      const dx = q.sx - cx2; const dy = q.sy - cy2;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > 400) continue;
+      // a nearer point wins a close call, as it does to the eye
+      const s = d2 - q.t * 40;
+      if (s < bs) { bs = s; best = q; }
+    }
+    return best;
+  }
+
+  // ---- turning it ----
+  let drag = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (narrow.matches) return;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 };
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    const r = canvas.getBoundingClientRect();
+    if (drag && drag.id === e.pointerId) {
+      const dx = e.clientX - drag.x; const dy = e.clientY - drag.y;
+      drag.x = e.clientX; drag.y = e.clientY;
+      drag.moved += Math.abs(dx) + Math.abs(dy);
+      yaw += dx * 0.006;
+      // the horizontal drag is the one that turns it; the vertical is kept
+      // shallow so the cloud never tips onto its side and loses its shape
+      pitch = Math.max(-0.7, Math.min(0.7, pitch + dy * 0.004));
+      spin = dx * 0.0012;
+      dirty = true;
+      hideCard();
+      return;
+    }
+    if (narrow.matches) return;
+    const q = pick(e.clientX - r.left, e.clientY - r.top);
+    if (q) light(q.p.slug, true); else light(null);
+  });
+  const end = (e) => {
+    if (!drag || drag.id !== e.pointerId) return;
+    const wasTap = drag.moved < 6;
+    drag = null;
+    if (wasTap) {
+      const r = canvas.getBoundingClientRect();
+      const q = pick(e.clientX - r.left, e.clientY - r.top);
+      if (q && hooks && hooks.onOpen) hooks.onOpen(q.p.slug);
+    }
   };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', () => { drag = null; });
+  canvas.addEventListener('pointerleave', () => { if (!drag) light(null); });
 
-  function build() {
-    svg.replaceChildren();
-    nodes = new Map();
-    ties = [];
-    rows = [...roster.querySelectorAll('a.row')];
-    if (!rows.length) return;
+  measure();
+  if (window.ResizeObserver) new ResizeObserver(measure).observe(mount);
+  else window.addEventListener('resize', measure);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+  requestAnimationFrame(frame);
 
-    const box = roster.getBoundingClientRect();
-    let rowRight = 0;
-    for (const row of rows) rowRight = Math.max(rowRight, row.getBoundingClientRect().right);
-    // A coarse gate first, so a phone does not build fifty-two nodes to throw
-    // them away; the exact check is at the end, once the marks can be measured.
-    if (window.innerWidth - rowRight < GAP + FIRST + 40) { svg.style.display = 'none'; return; }
-    svg.style.display = '';
-    svg.setAttribute('width', box.width);
-    svg.setAttribute('height', box.height);
-    svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
-
-    const at = new Map();
-    const x = rowRight - box.left + GAP;
-    for (const row of rows) {
-      const r = row.getBoundingClientRect();
-      at.set(row.dataset.slug, r.top - box.top + r.height / 2);
-    }
-
-    // brackets under the dots, so a dot always reads as the end of its own tie
-    const gTie = el('g', {});
-    const gDot = el('g', {});
-    svg.append(gTie, gDot);
-
-    works.forEach((work, i) => {
-      const ys = work.slugs.map((s2) => at.get(s2)).filter((v) => v != null).sort((a, b) => a - b);
-      if (ys.length < 2) return;
-      const out = x + FIRST + i * STEP;
-      const top = ys[0]; const bot = ys[ys.length - 1];
-      const r = 10;
-      const parts = [el('path', {
-        class: 'tie-arc',
-        d: `M ${x} ${top} H ${out - r} Q ${out} ${top} ${out} ${top + r}`
-         + ` V ${bot - r} Q ${out} ${bot} ${out - r} ${bot} H ${x}`,
-      })];
-      for (const y of ys.slice(1, -1)) parts.push(el('path', { class: 'tie-arc', d: `M ${x} ${y} H ${out}` }));
-      // every label in one column, clear of every spine — a label tucked
-      // beside its own bracket sat on top of the next bracket's spine
-      const labelX = x + FIRST + Math.max(0, works.length - 1) * STEP + 14;
-      let labelY = (top + bot) / 2 + 4;
-      for (const seenTie of ties) if (Math.abs(seenTie.labelY - labelY) < 18) labelY = seenTie.labelY + 18;
-      parts.push(el('text', { class: 'tie-label', x: labelX, y: labelY }));
-      parts[parts.length - 1].textContent = work.title;
-      for (const p2 of parts) gTie.append(p2);
-      ties.push({ slugs: new Set(work.slugs), parts, labelY });
-    });
-
-    for (const row of rows) {
-      const c = el('circle', { cx: x, cy: at.get(row.dataset.slug), r: 3, class: 'tie-dot' });
-      gDot.append(c);
-      nodes.set(row.dataset.slug, c);
-    }
-
-    // No margin, no drawing — measured, not estimated. A bracket or a label
-    // clipped by the window edge is a mark that stops meaning anything, and
-    // the width a label needs depends on the work's name, not on a constant.
-    let right = 0;
-    for (const el of svg.querySelectorAll('path,circle,text')) {
-      right = Math.max(right, el.getBoundingClientRect().right);
-    }
-    if (right > window.innerWidth - 8) { svg.style.display = 'none'; }
-  }
-
-  function light(slug) {
-    for (const [s, c] of nodes) c.classList.toggle('is-lit', s === slug);
-    for (const tie of ties) {
-      const lit = slug != null && tie.slugs.has(slug);
-      for (const p2 of tie.parts) p2.classList.toggle('is-lit', lit);
-    }
-  }
-
-  build();
-  // rows change height when the roster reflows, and reflow is what moves a dot
-  // off the row it belongs to — the one failure this drawing cannot survive.
-  if (window.ResizeObserver) new ResizeObserver(build).observe(roster);
-  else window.addEventListener('resize', build);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(build);
-
-  return { light, rebuild: build };
+  return { light: (s) => light(s, false), rebuild: measure };
 }
 
 const roster = document.querySelector('main.roster');
-const field = createRosterField(roster.querySelector('svg.tie'), roster, [{"title":"br_id_ge","slugs":["gevorg-grigoryan","emilya-nikoghosyan","syuzi-ginosyan"]},{"title":"ազդ | azd","slugs":["emilya-nikoghosyan","syuzi-ginosyan","yeva-abgaryan","greta-grigoryan","shahane-harutyunyan"]}]);
-// the list drives the drawing, never the other way round
+const rows = new Map();
+for (const row of roster.querySelectorAll('a.row')) rows.set(row.dataset.slug, row);
 let active = null;
-function light(row) {
+function mark(slug) {
+  const row = slug ? rows.get(slug) : null;
   if (active === row) return;
   if (active) active.classList.remove('is-active');
-  active = row;
-  if (row) row.classList.add('is-active');
-  field.light(row ? row.dataset.slug : null);
+  active = row || null;
+  if (active) active.classList.add('is-active');
 }
-for (const row of roster.querySelectorAll('a.row')) {
-  row.addEventListener('pointerenter', () => light(row));
-  row.addEventListener('focus', () => light(row));
+const field = createField(
+  document.querySelector('.fieldCol'),
+  [{"slug":"gevorg-grigoryan","name":"Gevorg Aram Grigoryan","role":"XR director, developer","team":true,"works":["di.iiii","br_id_ge"]},{"slug":"emilya-nikoghosyan","name":"Emilya Nikoghosyan","role":"art director","team":true,"works":["algovrithm","ազդ | azd","br_id_ge"]},{"slug":"syuzi-ginosyan","name":"Syuzi Ginosyan","role":"curator","team":true,"works":["ազդ | azd","Tread from Wool","br_id_ge"]},{"slug":"taron-grigoryan","name":"Taron Grigoryan","role":"multimedia, light","team":true,"works":[]},{"slug":"yeva-abgaryan","name":"Yeva Abgaryan","role":"set design, 3D","team":true,"works":["WCC Exhibition","ազդ | azd"]},{"slug":"maria-matinyan","name":"Maria Matinyan","role":"multimedia artist, curator","team":false,"works":[]},{"slug":"carine-aroyan","name":"Carine Aroyan","role":"curator","team":false,"works":[]},{"slug":"namor-votilav","name":"Namor Votilav","role":"curator, multimedia artist","team":false,"works":[]},{"slug":"tatiana-vahani","name":"Tatiana Vahani","role":"curator","team":false,"works":[]},{"slug":"artak-gevorgyan","name":"Artak Gevorgyan","role":"curator","team":false,"works":[]},{"slug":"lusine-mlke-galstyan","name":"Lusine Mlke-Galstyan","role":"curator","team":false,"works":["between silence and motion"]},{"slug":"shoghakat-mlke-galstyan","name":"Shoghakat Mlke-Galstyan","role":"curator","team":false,"works":[]},{"slug":"ani-khachikyan","name":"Ani Khachikyan","role":"performer","team":false,"works":[]},{"slug":"gnun-martirosyan","name":"Gnun Martirosyan","role":"performer","team":false,"works":[]},{"slug":"meline-arshakyan","name":"Meline Arshakyan","role":"performer, dancer","team":false,"works":[]},{"slug":"arsen-miqayelyan","name":"Arsen Miqayelyan","role":"performer","team":false,"works":[]},{"slug":"alexandra-martini","name":"Alexandra Martini","role":"performer","team":false,"works":[]},{"slug":"kay-khachatryan","name":"Kay Khachatryan","role":"audio artist","team":false,"works":["Ambisonic Performances"]},{"slug":"areg-aydinyan","name":"Areg Aydinyan","role":"DJ, sound artist","team":false,"works":[]},{"slug":"sasha-lenivec","name":"Sasha Lenivec","role":"sound artist","team":false,"works":[]},{"slug":"vahagn-martirosyan","name":"Vahagn Martirosyan","role":"sound artist","team":false,"works":[]},{"slug":"vera-vishnevaya","name":"Vera Vishnevaya","role":"sound artist","team":false,"works":[]},{"slug":"nikita-maksimenko","name":"Nikita Maksimenko","role":"multimedia, sound","team":false,"works":[]},{"slug":"adam-adamyan","name":"Adam Adamyan","role":"visual artist","team":false,"works":[]},{"slug":"artush-koshtoyan","name":"Artush Koshtoyan","role":"visual artist","team":false,"works":[]},{"slug":"greta-grigoryan","name":"Greta Grigoryan","role":"visual artist","team":false,"works":["ազդ | azd","RecordAR"]},{"slug":"mane-meloyan","name":"Mane Meloyan","role":"visual artist","team":false,"works":[]},{"slug":"mery-petrosyan","name":"Mery Petrosyan","role":"visual artist","team":false,"works":["WCC Exhibition"]},{"slug":"polina-vever","name":"Polina Vever","role":"visual artist","team":false,"works":[]},{"slug":"shahane-harutyunyan","name":"Shahane Harutyunyan","role":"visual artist","team":false,"works":["ազդ | azd","Beyond Form"]},{"slug":"gor-muradyan","name":"Gor Muradyan","role":"visual artist","team":false,"works":[]},{"slug":"luiza-khechoyan","name":"Luiza Khechoyan","role":"visual artist","team":false,"works":[]},{"slug":"egor-lazensky","name":"Egor Lazensky","role":"VJ, multimedia artist","team":false,"works":[]},{"slug":"alvie-starr","name":"Alvie Starr","role":"audiovisual artist","team":false,"works":[]},{"slug":"ani-rubenyan","name":"Ani Rubenyan","role":"audiovisual artist","team":false,"works":[]},{"slug":"anna-khlechyan","name":"Anna Khlechyan","role":"multimedia artist","team":false,"works":[]},{"slug":"misak-samakotian","name":"Misak Samakotian","role":"multimedia artist","team":false,"works":[]},{"slug":"nino-giorgadze","name":"Nino Giorgadze","role":"multimedia artist","team":false,"works":[]},{"slug":"vilen-gayfejyan","name":"Vilen Gayfejyan","role":"multimedia artist","team":false,"works":[]},{"slug":"yulia-stepanova","name":"Yulia Stepanova","role":"multimedia artist","team":false,"works":[]},{"slug":"sergey-virabyan","name":"Sergey Virabyan","role":"audiovisual artist","team":false,"works":[]},{"slug":"albert-avetisyan","name":"Albert Avetisyan","role":"developer, sound","team":false,"works":[]},{"slug":"gor-movsisyan","name":"Gor Movsisyan","role":"3D artist","team":false,"works":[]},{"slug":"varujan-movsisyan","name":"Varujan Movsisyan","role":"3D artist","team":false,"works":[]},{"slug":"levon-avetisyan","name":"Levon Avetisyan","role":"programmer","team":false,"works":[]},{"slug":"slavik-avetisyan","name":"Slavik Avetisyan","role":"unity developer","team":false,"works":[]},{"slug":"ruben-melikyan","name":"Ruben Melikyan","role":"game designer","team":false,"works":[]},{"slug":"grig-gevorgyan","name":"Grig Gevorgyan","role":"game developer","team":false,"works":[]},{"slug":"avetis-grigoryan","name":"Avetis Grigoryan","role":"game designer","team":false,"works":[]},{"slug":"hannes-kopke","name":"Hannes Köpke","role":"stage director","team":false,"works":[]},{"slug":"olivia-rosendorfer","name":"Olivia Rosendorfer","role":"costume designer","team":false,"works":[]},{"slug":"nyusha-terbalyan","name":"Nyusha Terbalyan","role":"designer","team":false,"works":[]}],
+  [{"title":"br_id_ge","slugs":["gevorg-grigoryan","emilya-nikoghosyan","syuzi-ginosyan"]},{"title":"ազդ | azd","slugs":["emilya-nikoghosyan","syuzi-ginosyan","yeva-abgaryan","greta-grigoryan","shahane-harutyunyan"]}],
+  // the point lights the row it is about, and clicking it opens the same
+  // door the row already is — the roster link, so the top-level navigation
+  // a published page is allowed comes from a real link click.
+  { onLight: mark, onOpen: (slug) => { const r = rows.get(slug); if (r) r.click(); } },
+);
+for (const [slug, row] of rows) {
+  row.addEventListener('pointerenter', () => { mark(slug); field.light(slug); });
+  row.addEventListener('focus', () => { mark(slug); field.light(slug); });
 }
-roster.addEventListener('pointerleave', () => light(null));
+roster.addEventListener('pointerleave', () => { mark(null); field.light(null); });
 </script>
 </body>
 </html>
