@@ -13,9 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the front door's view mode orbits, zooms and opens doors
-- a space card frees its boot slot when it has painted, not when its HTML arrived
-- the space cards paint and the front door's view mode works, landed together
+- Offline: the festival machine — a model on the table, and three things that reached out
 
 Full detail: `PROGRESS.md`.
 
