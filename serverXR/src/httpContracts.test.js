@@ -2480,6 +2480,27 @@ describe('open-call application contracts', () => {
         expect(submitRes.headers.get('access-control-allow-origin')).toBe('*')
     })
 
+    it('lets a sandboxed code page read the house font from a client dir', async () => {
+        // express.static's setHeaders is (res, path, stat): the request is not an
+        // argument. Read on a `di` install 2026-09-06 — every /fonts request from
+        // origin "null" came back without the header and the house face fell back.
+        const clientDir = await mkdtemp(path.join(os.tmpdir(), 'dii-client-'))
+        await mkdir(path.join(clientDir, 'fonts'), { recursive: true })
+        await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
+        await writeFile(path.join(clientDir, 'fonts', 'inter-regular.woff'), 'not-really-a-font')
+        await writeFile(path.join(clientDir, 'plain.txt'), 'no header for this one')
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const origin = new URL(server.baseUrl).origin
+
+        const font = await fetch(`${origin}/fonts/inter-regular.woff`, { headers: { Origin: 'null' } })
+        expect(font.status).toBe(200)
+        expect(font.headers.get('access-control-allow-origin')).toBe('*')
+
+        const other = await fetch(`${origin}/plain.txt`, { headers: { Origin: 'null' } })
+        expect(other.status).toBe(200)
+        expect(other.headers.get('access-control-allow-origin')).toBeNull()
+    })
+
     it('serves project asset reads with permissive CORS for sandboxed iframes', async () => {
         const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
 

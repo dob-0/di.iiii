@@ -58,15 +58,23 @@ export const parseKeeperReply = (payload) => {
 // A bare host is the most likely thing to be pasted ("http://localhost:11434"),
 // and it is not a chat endpoint. Complete it to Ollama's, since that is what a
 // local box runs; leave anything with a path alone.
-export const resolveKeeperEndpoint = (endpoint) => {
+export const resolveKeeperEndpoint = (endpoint) => resolveKeeperEndpoints(endpoint)[0] ?? ''
+
+// Every chat URL a pasted value could mean, in the order to try them. A bare
+// host is Ollama's /api/chat first and OpenAI's /v1/chat/completions second —
+// llama.cpp and LM Studio only answer the second, and a 404 on the first is
+// how askKeeper finds that out instead of the person having to know it.
+export const resolveKeeperEndpoints = (endpoint) => {
     const trimmed = String(endpoint || '').trim().replace(/\/+$/, '')
-    if (!trimmed) return ''
+    if (!trimmed) return []
     try {
         const url = new URL(trimmed)
-        if (url.pathname === '' || url.pathname === '/') return `${trimmed}/api/chat`
-        return trimmed
+        if (url.pathname === '' || url.pathname === '/') {
+            return [`${trimmed}/api/chat`, `${trimmed}/v1/chat/completions`]
+        }
+        return [trimmed]
     } catch {
-        return trimmed
+        return [trimmed]
     }
 }
 
@@ -78,28 +86,35 @@ export const askKeeper = async ({
     signal,
     fetchImpl = typeof fetch === 'function' ? fetch : null
 } = {}) => {
-    const url = resolveKeeperEndpoint(endpoint)
-    if (!url) return { status: KEEPER_STATUS.IDLE, text: '', error: 'No keeper endpoint set.' }
+    const candidates = resolveKeeperEndpoints(endpoint)
+    if (!candidates.length) return { status: KEEPER_STATUS.IDLE, text: '', error: 'No keeper endpoint set.' }
     if (!fetchImpl) return { status: KEEPER_STATUS.ERROR, text: '', error: 'No fetch available.' }
 
     let response
-    try {
-        response = await fetchImpl(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(buildKeeperRequest({ model, system, prompt })),
-            signal
-        })
-    } catch (error) {
-        // A refused connection and a CORS rejection are indistinguishable from
-        // here, and both mean the same thing to the person: the box isn't
-        // answering. Say that instead of surfacing a TypeError.
-        if (error?.name === 'AbortError') return { status: KEEPER_STATUS.IDLE, text: '', error: '' }
-        return {
-            status: KEEPER_STATUS.UNREACHABLE,
-            text: '',
-            error: `Could not reach the keeper at ${url}.`
+    let url = candidates[0]
+    for (let i = 0; i < candidates.length; i += 1) {
+        url = candidates[i]
+        try {
+            response = await fetchImpl(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(buildKeeperRequest({ model, system, prompt })),
+                signal
+            })
+        } catch (error) {
+            // A refused connection and a CORS rejection are indistinguishable from
+            // here, and both mean the same thing to the person: the box isn't
+            // answering. Say that instead of surfacing a TypeError.
+            if (error?.name === 'AbortError') return { status: KEEPER_STATUS.IDLE, text: '', error: '' }
+            return {
+                status: KEEPER_STATUS.UNREACHABLE,
+                text: '',
+                error: `Could not reach the keeper at ${url}.`
+            }
         }
+        // 404 on a guessed path means "wrong kind of server", so try the next
+        // guess; any other answer is the box's real reply.
+        if (response?.status !== 404 || i === candidates.length - 1) break
     }
 
     if (!response?.ok) {

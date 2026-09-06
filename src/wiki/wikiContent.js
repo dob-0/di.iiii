@@ -345,6 +345,7 @@ export const WIKI_ARTICLES = [
         body: [
             'Add an agent node from the palette. It opens as a chat window: type, and Claude answers in a live stream, right there on the canvas. Conversations are saved to your account — reopen the node and the chat is still there.',
             'On your own machine — meaning a di.iiii you run locally (`di up` in its ordinary mode, or the dev server), not the hosted site and not the docker container, which cannot see programs on the host — if Claude Code is installed and logged in (a Claude Pro/Max subscription), the node just works — no API key at all: di.iiii talks to your local Claude, and conversations continue across sessions. Otherwise it runs on the Claude API key connected to your account, and the node itself asks for it: paste the key straight into the panel (or sign in first, if you are a guest) — no detour through settings. Keys stay on the server: the browser never talks to Anthropic directly, and nobody else can use yours.',
+            'No internet at all — a festival, a venue with power and nothing else? If the local install names a model on the same machine (LLM_BASE_URL in ~/.di/di.env pointing at a llama.cpp or Ollama server, LLM_MODEL naming the model), the node answers from that model when no key is connected, and switches to it mid-conversation when Claude cannot be reached. The panel names the model that answered.',
             { list: [
                 'Each agent node holds its own conversation — place several for parallel topics.',
                 'Replies stream token by token; usage (tokens in/out) is recorded per turn on your account.',
@@ -1065,7 +1066,7 @@ export const WIKI_ARTICLES = [
             'Add a Keeper from the palette (category Agent) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
             'The Keeper is pointed at an endpoint rather than signed in to an account. You give it a URL and a model name; nothing runs as you, and no key is stored. That means it works with a model on your own machine, and it works with no internet at all — which is the situation it was built for.',
             { list: [
-                'Endpoint — a chat URL. A bare host such as http://localhost:11434 is completed for you; anything with a path is used as given.',
+                'Endpoint — a chat URL. A bare host such as http://localhost:11434 or http://127.0.0.1:8090 is completed for you (Ollama\'s path is tried first, then the OpenAI-style one that llama.cpp and LM Studio answer); anything with a path is used as given.',
                 'Model — the model name that server knows, for example qwen3.',
                 'System — an optional instruction that shapes every answer.'
             ] },
