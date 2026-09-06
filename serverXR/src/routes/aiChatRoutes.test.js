@@ -102,6 +102,16 @@ describe('aiChatRoutes — the model on this machine', () => {
     expect(res.events.at(-1).data.assistantMessage).toMatchObject({ role: 'assistant', content: 'Hello.', model: 'qwen3-4b' })
   })
 
+  it('tells the local model its own name, never Claude\'s', async () => {
+    const { routes, deps } = setup()
+    const chatId = await openChat(routes)
+    await run(routes['post /api/ai/chats/:chatId/messages'], localReq({ params: { chatId }, body: { text: 'who are you?' } }))
+    const { system } = deps.localModelStreamFn.mock.calls[0][0]
+    expect(system).toMatch(/^You are qwen3-4b, running on this machine/)
+    expect(system).not.toMatch(/You are Claude/)
+    expect(system).toMatch(/di\.iiii holds spaces/)
+  })
+
   it('refuses with no-ai-connection when nothing at all can answer', async () => {
     const { routes } = setup({ localModelFn: () => null })
     const chatId = await openChat(routes)
