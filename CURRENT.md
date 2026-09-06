@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a visitor to /spaces sees the spaces
+- the dev server serves fonts to the thumbnail frames like prod does
 
 Full detail: `PROGRESS.md`.
 
