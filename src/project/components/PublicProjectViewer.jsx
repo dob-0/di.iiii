@@ -235,6 +235,17 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
 
     useEffect(() => {
         if (!projectId) return undefined
+        // A thumbnail does NOT hold a live stream open. An SSE connection is a
+        // socket that never closes, and a browser gives one origin six of them
+        // over HTTP/1.1: twelve space cards each opening one exhausted the
+        // connection pool, and every card after the sixth could not fetch a
+        // single module — it sat on the black loading screen forever no matter
+        // how long anyone waited. That is the second half of the same bug the
+        // boot queue was written for, and the one that made "wait longer" not
+        // work. A card is a picture of the space as published; it re-reads the
+        // document when it remounts (scrolling away and back), and clicking it
+        // opens the real live surface, stream and all.
+        if (isPreview) return undefined
 
         const syncService = syncServiceRef.current
         syncService.connect({
@@ -288,7 +299,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         return () => {
             syncService.disconnect()
         }
-    }, [applyIncomingOps, projectId, reloadDocument])
+    }, [applyIncomingOps, isPreview, projectId, reloadDocument])
 
     const viewerTitle = useMemo(() => {
         if (!document?.projectMeta?.title) return spaceLabel || resolvedRouteSpaceId
