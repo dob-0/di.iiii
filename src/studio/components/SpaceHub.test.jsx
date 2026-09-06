@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SpaceHub from './SpaceHub.jsx'
 
@@ -206,38 +206,104 @@ describe('SpaceHub', () => {
         }
     })
 
-    it('boots at most two previews at once and frees a slot when an iframe loads', async () => {
-        vi.stubGlobal('IntersectionObserver', class {
-            constructor(callback) { this.callback = callback }
-            observe(target) { this.callback([{ isIntersecting: true, target }]) }
-            unobserve() {}
-            disconnect() {}
-        })
+    // 13 public spaces: one more than the card grid's boot ceiling, so exactly
+    // one card is left waiting and it is unambiguous what freed its slot.
+    const thirteenPublicSpaces = Array.from({ length: 13 }, (_, index) => ({
+        id: `s${index}`,
+        label: `S${index}`,
+        isOwner: true,
+        isPublic: true,
+        publishedProjectId: `p${index}`
+    }))
+
+    const everyCardVisible = () => vi.stubGlobal('IntersectionObserver', class {
+        constructor(callback) { this.callback = callback }
+        observe(target) { this.callback([{ isIntersecting: true, target }]) }
+        unobserve() {}
+        disconnect() {}
+    })
+
+    const frameIn = (spaceId) => screen.getByText(spaceId)
+        .closest('.ssh-space-card')
+        .querySelector('.ssh-card-preview iframe')
+
+    it('frees a card’s boot slot when the preview says it has PAINTED, not when its html loads', async () => {
+        everyCardVisible()
         try {
-            listServerSpaces.mockResolvedValue([
-                { id: 'one', label: 'One', isOwner: true, isPublic: true, publishedProjectId: 'p1' },
-                { id: 'two', label: 'Two', isOwner: true, isPublic: true, publishedProjectId: 'p2' },
-                { id: 'three', label: 'Three', isOwner: true, isPublic: true, publishedProjectId: 'p3' }
-            ])
+            listServerSpaces.mockResolvedValue(thirteenPublicSpaces)
 
             render(<SpaceHub />)
 
-            await screen.findByText('one')
-            const framesIn = (spaceId) => screen.getByText(spaceId)
-                .closest('.ssh-space-card')
-                .querySelector('.ssh-card-preview iframe')
-            // only the first two boot; the third waits for a free slot. Wait for
-            // the boot to settle first -- see the sibling test above for why a
-            // synchronous read here is a race, not an assertion.
-            await waitFor(() => expect(framesIn('one')).not.toBeNull())
-            expect(framesIn('two')).not.toBeNull()
-            expect(framesIn('three')).toBeNull()
+            await screen.findByText('s0')
+            await waitFor(() => expect(frameIn('s0')).not.toBeNull())
+            expect(frameIn('s11')).not.toBeNull()
+            expect(frameIn('s12')).toBeNull()
 
-            fireEvent.load(framesIn('one'))
-            await waitFor(() => expect(framesIn('three')).not.toBeNull())
-            // the loaded iframe stays mounted — only its boot slot was freed
-            expect(framesIn('one')).not.toBeNull()
+            // `load` fires when the iframe's HTML document arrives, which for
+            // this app is ~100ms in -- before its chunks, its scene document or
+            // one asset. Releasing there is what let twelve app instances boot
+            // at once and starve each other on a black loading screen.
+            fireEvent.load(frameIn('s0'))
+            await Promise.resolve()
+            expect(frameIn('s12')).toBeNull()
+
+            // the embedded app reports pixels; only then does the queue move on
+            fireEvent(window, new MessageEvent('message', {
+                data: { type: 'dii:preview-ready', spaceId: 's0' },
+                origin: window.location.origin,
+                source: frameIn('s0').contentWindow
+            }))
+            await waitFor(() => expect(frameIn('s12')).not.toBeNull())
+            // the reporting iframe stays mounted — only its boot slot was freed
+            expect(frameIn('s0')).not.toBeNull()
         } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('ignores a ready message that did not come from the card’s own frame', async () => {
+        everyCardVisible()
+        try {
+            listServerSpaces.mockResolvedValue(thirteenPublicSpaces)
+
+            render(<SpaceHub />)
+
+            await screen.findByText('s0')
+            await waitFor(() => expect(frameIn('s0')).not.toBeNull())
+
+            fireEvent(window, new MessageEvent('message', {
+                data: { type: 'dii:preview-ready', spaceId: 's0' },
+                origin: 'https://somewhere-else.example',
+                source: frameIn('s0').contentWindow
+            }))
+            fireEvent(window, new MessageEvent('message', {
+                data: { type: 'dii:preview-ready', spaceId: 's0' },
+                origin: window.location.origin,
+                source: window
+            }))
+            await Promise.resolve()
+            expect(frameIn('s12')).toBeNull()
+        } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('a preview that never reports gives its slot back on the backstop', async () => {
+        everyCardVisible()
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        try {
+            listServerSpaces.mockResolvedValue(thirteenPublicSpaces)
+
+            render(<SpaceHub />)
+
+            await screen.findByText('s0')
+            await waitFor(() => expect(frameIn('s0')).not.toBeNull())
+            expect(frameIn('s12')).toBeNull()
+
+            await act(async () => { await vi.advanceTimersByTimeAsync(12000) })
+            expect(frameIn('s12')).not.toBeNull()
+        } finally {
+            vi.useRealTimers()
             vi.unstubAllGlobals()
         }
     })

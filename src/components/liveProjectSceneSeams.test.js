@@ -50,10 +50,12 @@ describe('the seams the jam surface uses stay optional', () => {
             .split('\n')
             .find((line) => line.includes('<MobileJoystick'))
         expect(joystickLine).toBeTruthy()
-        // The joystick's own guard is `interactive && isMobile`, one line up.
+        // The joystick's own guard is `walking && isMobile`, one line up —
+        // `walking` being `interactive && !orbit`, since view mode moves the
+        // camera with a drag and has no joystick to answer.
         const guardLine = SOURCE
             .split('\n')
-            .find((line) => line.includes('interactive && isMobile && (') || line.includes('interactive && isMobile &&'))
+            .find((line) => line.includes('walking && isMobile &&'))
         expect(guardLine).toBeTruthy()
         expect(guardLine).not.toMatch(/showModeControls/)
     })
