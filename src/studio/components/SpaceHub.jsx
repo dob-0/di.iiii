@@ -186,11 +186,14 @@ function SpaceCardLive({ spaceId, label, onRelease }) {
     )
 }
 
-// localStorage key remembering whether a guest chose to open the "other
-// spaces" shelf -- the shelf they don't own or edit, which is closed by
-// default so the two things a guest can actually use (Open Space, their
-// sandbox) own the first screen instead of a wall of read-only cards.
-const REST_SHELF_STORAGE_KEY = 'di_spaces_rest_open'
+const OPEN_SPACE_HINT = 'everyone builds here, together'
+const SANDBOX_HINT = 'private scratch — only you see it'
+
+// A visitor's grid leads with the spaces that have something to show — a
+// cover image or a published project. Everything else keeps the server's
+// order behind them (Array.sort is stable), so this only ever demotes the
+// blank ones; it never hides a space.
+const hasSomethingToShow = (space) => Boolean(space.previewImageAssetId || space.publishedProjectId)
 
 export default function SpaceHub() {
     const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit, spaces: sessionScopes, openSpaceId, sandboxSpaceId } = useAuthSession()
@@ -211,6 +214,8 @@ export default function SpaceHub() {
     const [previewMgr, setPreviewMgr] = useState(null)
     const [providers, setProviders] = useState(null) // null until sign-in requested
     const [copiedLiveId, setCopiedLiveId] = useState(null)
+    // Spaces whose cover image failed to load — see the card preview below.
+    const [brokenCovers, setBrokenCovers] = useState(() => new Set())
     const [copiedInviteId, setCopiedInviteId] = useState(null)
     // 'grid' = the card shelves (default); 'map' = the spatial constellation lens.
     const [viewMode, setViewMode] = useState(() => {
@@ -229,21 +234,10 @@ export default function SpaceHub() {
         setLiveSpaceId(current => (current === spaceId ? null : current))
     }, [])
 
-    // Restored per browser (see REST_SHELF_STORAGE_KEY). Only guests ever see
-    // the collapsed state -- an account keeps its own spaces expanded, as before.
-    const [restShelfOpen, setRestShelfOpen] = useState(() => {
-        try { return localStorage.getItem(REST_SHELF_STORAGE_KEY) === '1' } catch { return false }
-    })
-    const toggleRestShelf = useCallback(() => {
-        setRestShelfOpen(prev => {
-            const next = !prev
-            try { localStorage.setItem(REST_SHELF_STORAGE_KEY, next ? '1' : '0') } catch { /* private mode */ }
-            return next
-        })
-    }, [])
-
     const isGuest = type === 'guest'
     const isAccount = authenticated && !isGuest
+    // Guest session or signed out: the page is the public spaces, nothing else.
+    const isVisitor = !isAccount
     const isAdmin = role === 'admin'
     const canManage = (space) => space.isOwner || isAdmin
 
@@ -554,16 +548,30 @@ export default function SpaceHub() {
         }
     }, [linker])
 
-    // Three shelves — the whole space model at a glance: where we meet,
-    // what's mine, what I own. Anything not open/sandbox falls to the third.
+    // Signed in: three shelves — the whole space model at a glance: where we
+    // meet, what's mine, what I own. Anything not open/sandbox falls to the third.
     const openSpaceCard = spaces.find(s => s.id === openSpaceId) || null
     const sandboxCard = spaces.find(s => s.kind === 'sandbox') || null
     const restSpaces = spaces.filter(s => s !== openSpaceCard && s !== sandboxCard)
-    const shelves = [
-        openSpaceCard && { key: 'open', label: 'Open Space', hint: 'everyone builds here, together', items: [openSpaceCard] },
-        sandboxCard && { key: 'sandbox', label: 'Your sandbox', hint: 'private scratch — only you see it', items: [sandboxCard] },
-        restSpaces.length > 0 && { key: 'spaces', label: isAccount ? 'Your spaces' : 'Live spaces', hint: null, items: restSpaces }
-    ].filter(Boolean)
+
+    // A visitor gets ONE shelf holding every space the server listed for them,
+    // Open Space among the others, open on arrival. This page is the way in to
+    // the public spaces; folding them behind an "N other spaces" line made the
+    // page's whole point the one thing you had to click to find. The private
+    // sandbox is not one of the places to visit, so it leaves the grid and
+    // becomes a quiet line underneath it.
+    const visitorSpaces = spaces
+        .filter(s => s !== sandboxCard)
+        .slice()
+        .sort((a, b) => Number(hasSomethingToShow(b)) - Number(hasSomethingToShow(a)))
+
+    const shelves = isVisitor
+        ? [visitorSpaces.length > 0 && { key: 'spaces', label: null, hint: null, items: visitorSpaces }].filter(Boolean)
+        : [
+            openSpaceCard && { key: 'open', label: 'Open Space', hint: OPEN_SPACE_HINT, items: [openSpaceCard] },
+            sandboxCard && { key: 'sandbox', label: 'Your sandbox', hint: SANDBOX_HINT, items: [sandboxCard] },
+            restSpaces.length > 0 && { key: 'spaces', label: 'Your spaces', hint: null, items: restSpaces }
+        ].filter(Boolean)
 
     return (
         <Box className="studio-shell-root ssh-root">
@@ -664,8 +672,7 @@ export default function SpaceHub() {
 
                 {isGuest && (
                     <p className="ssh-guest-banner">
-                        Guest session — build with everyone in the Open Space, or use your private sandbox.
-                        Sign in to create spaces that are yours and stay.
+                        Guest session — step into any space here, or sign in to make one that is yours.
                     </p>
                 )}
 
@@ -709,54 +716,17 @@ export default function SpaceHub() {
                 {viewMode === 'grid' && (
                 <div className="ssh-shelves-grid">
                 {shelves.map(({ key, label, hint, items }) => {
-                    // "Live spaces" is everything the visitor didn't come here
-                    // for and (if a guest) usually can't edit. Collapse it to
-                    // one line by default so the Open Space and the sandbox —
-                    // the two things a guest can actually use — own the first
-                    // screen; an account keeps seeing its own spaces expanded,
-                    // exactly as before.
-                    const isRestShelf = key === 'spaces'
-                    // Only collapse when there's something to lead with instead —
-                    // a guest with neither an Open Space nor a sandbox (an old
-                    // invite-scoped session, say) has nothing else on the page,
-                    // and hiding their only card behind a toggle would strand them.
-                    const collapsible = isGuest && isRestShelf && Boolean(openSpaceCard || sandboxCard)
                     const featured = key === 'open' || key === 'sandbox'
-
-                    if (collapsible && !restShelfOpen) {
-                        return (
-                            <section key={key} className={`ssh-shelf ssh-shelf--${key}`}>
-                                <button
-                                    type="button"
-                                    className="ssh-rest-toggle"
-                                    aria-expanded={false}
-                                    onClick={toggleRestShelf}
-                                >
-                                    <span className="ssh-rest-toggle-chevron" aria-hidden="true">▸</span>
-                                    {items.length} other space{items.length === 1 ? '' : 's'}
-                                </button>
-                            </section>
-                        )
-                    }
 
                     return (
                     <section key={key} className={`ssh-shelf ssh-shelf--${key}`}>
-                        <p className="ssh-shelf-label">
-                            {label}
-                            {hint ? <span className="ssh-shelf-hint"> — {hint}</span> : null}
-                        </p>
-                        {collapsible && (
-                            <button
-                                type="button"
-                                className="ssh-rest-toggle ssh-rest-toggle--open"
-                                aria-expanded={true}
-                                onClick={toggleRestShelf}
-                            >
-                                <span className="ssh-rest-toggle-chevron" aria-hidden="true">▾</span>
-                                Hide
-                            </button>
+                        {label && (
+                            <p className="ssh-shelf-label">
+                                {label}
+                                {hint ? <span className="ssh-shelf-hint"> — {hint}</span> : null}
+                            </p>
                         )}
-                        <div className={`ssh-spaces-grid${featured ? ' ssh-featured-grid' : ''}`}>
+                        <div className={`ssh-spaces-grid${featured ? ' ssh-featured-grid' : ''}${isVisitor ? ' ssh-spaces-grid--visitor' : ''}`}>
                         {items.map((space) => {
                             const isMain = space.id === defaultSpaceId
                             const isLinking = linker?.spaceId === space.id
@@ -777,7 +747,11 @@ export default function SpaceHub() {
                                         <span className="ssh-space-id">{space.kind === 'sandbox' ? 'sandbox' : space.id}</span>
                                         {isMain && <span className="ssh-badge-main">Main</span>}
                                         {space.isPublic && <span className="ssh-badge-live">Live</span>}
-                                        {space.isPublic && !canEnter(space) && <span className="ssh-badge-viewonly">View live</span>}
+                                        {/* "View live" tells an account which of the spaces on
+                                            its page it cannot edit. On a visitor's page that is
+                                            every card, so it says nothing and wraps the header
+                                            onto two lines — Live alone carries it there. */}
+                                        {space.isPublic && !canEnter(space) && !isVisitor && <span className="ssh-badge-viewonly">View live</span>}
                                     </div>
                                     {(() => {
                                         const isLive = liveSpaceId === space.id
@@ -800,8 +774,14 @@ export default function SpaceHub() {
                                         // to the Open Space's picture it read as broken rather than
                                         // as "empty on purpose". Draw the absence instead: same
                                         // frame, one muted line, no image request.
-                                        const isEmptySandbox = space.kind === 'sandbox' && !canGoLive && !space.previewImageAssetId
-                                        if (!isLive && !canGoLive && !space.previewImageAssetId && !isEmptySandbox) return null
+                                        // A cover image whose asset is gone (algovrithm's is
+                                        // 404 on prod) drew the browser's broken-image glyph in
+                                        // the card. Fall back to the space's own live preview
+                                        // the moment the image fails, so the grid never shows a
+                                        // torn picture to a visitor.
+                                        const coverAssetId = brokenCovers.has(space.id) ? null : space.previewImageAssetId
+                                        const isEmptySandbox = space.kind === 'sandbox' && !canGoLive && !coverAssetId
+                                        if (!isLive && !canGoLive && !coverAssetId && !isEmptySandbox) return null
                                         return (
                                             <div
                                                 className={`ssh-card-preview${isLive ? ' ssh-card-preview--live' : ''}${isEmptySandbox ? ' ssh-card-preview--empty' : ''}`}
@@ -818,11 +798,17 @@ export default function SpaceHub() {
                                                         label={space.label || space.id}
                                                         onRelease={() => releaseLive(space.id)}
                                                     />
-                                                ) : space.previewImageAssetId ? (
+                                                ) : coverAssetId ? (
                                                     <img
-                                                        src={getServerSpaceAssetUrl(space.id, space.previewImageAssetId, { width: 480 })}
+                                                        src={getServerSpaceAssetUrl(space.id, coverAssetId, { width: 480 })}
                                                         alt=""
                                                         loading="lazy"
+                                                        onError={() => setBrokenCovers(prev => {
+                                                            if (prev.has(space.id)) return prev
+                                                            const next = new Set(prev)
+                                                            next.add(space.id)
+                                                            return next
+                                                        })}
                                                     />
                                                 ) : isEmptySandbox ? (
                                                     <p className="ssh-card-preview-empty-line">nothing in it yet — open it and put something in</p>
@@ -833,9 +819,12 @@ export default function SpaceHub() {
                                         )
                                     })()}
                                     <p className="ssh-space-label">{space.label || space.id}</p>
-                                    {featured && hint && (
-                                        <p className="ssh-space-tagline">{hint}</p>
-                                    )}
+                                    {/* In a visitor's single grid the Open Space is one card
+                                        among the others, so it carries its own line instead of
+                                        a shelf heading above it. */}
+                                    {(featured && hint) || (isVisitor && space.id === openSpaceId) ? (
+                                        <p className="ssh-space-tagline">{featured ? hint : OPEN_SPACE_HINT}</p>
+                                    ) : null}
                                     {linkedTitle && (
                                         <p className="ssh-space-project">Project: {linkedTitle}</p>
                                     )}
@@ -1037,6 +1026,22 @@ export default function SpaceHub() {
                     )
                 })}
                 </div>
+                )}
+
+                {/* The sandbox is a scratch place of your own, not one of the
+                    spaces to visit — one line under the grid, not half the
+                    first screen announcing that it is empty. */}
+                {viewMode === 'grid' && isVisitor && sandboxCard && (
+                    <p className="ssh-sandbox-line">
+                        <button
+                            type="button"
+                            className="ssh-sandbox-link"
+                            onClick={() => openCard(sandboxCard)}
+                        >
+                            Your private sandbox
+                        </button>
+                        <span className="ssh-sandbox-line-hint">— only you see it</span>
+                    </p>
                 )}
 
                 {isAdmin && sandboxSummary && sandboxSummary.total > 0 && (
