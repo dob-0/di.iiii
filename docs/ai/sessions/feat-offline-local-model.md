@@ -42,3 +42,5 @@ app itself loads nothing from anywhere else; the faults were around it.
 Still reaching out, by design or by data: `the-light-put-back`'s page loads three.js and
 Google Fonts from CDNs (a work, re-cut owed); `hosq`'s page loads Google Fonts; `/wcc` is
 left out of a local build on purpose.
+
+Owner's words of the day, verbatim: `docs/ai/owner-notes/2026-09-06.md`.
