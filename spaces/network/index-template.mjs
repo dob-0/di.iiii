@@ -11,7 +11,7 @@ import { CSS, esc } from './lib/css.mjs';
 import { workKey } from './lib/neighbors.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const FIELD_JS_PATH = path.join(HERE, 'lib/roster-field.client.js');
+const FIELD_JS_PATH = path.join(HERE, 'lib/field.client.js');
 
 const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
   'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
@@ -96,6 +96,8 @@ export function renderIndex(people) {
 </head>
 <body>
 <div class="sheet">
+<div class="spread">
+<div class="paperTop">
 <header class="pagehead">
   <a class="back" href="/" target="_top"><span aria-hidden="true">←</span> di.iiii</a>
   <div class="eyebrow">the network</div>
@@ -106,10 +108,10 @@ export function renderIndex(people) {
     <p class="dek">${dek}</p>
   </div>
 </header>
+</div>
 
 <main class="roster">
-  <svg class="tie" aria-hidden="true"></svg>
-  <p class="howto">tap a name to open their room</p>
+  <p class="howto">tap a name to open their room<span class="wide-only"> · drag the field to turn it</span></p>
 ${groups.map((g) => `  <h2 class="group"><span class="g-name">${esc(g.label)}</span><span class="g-rule"></span><span class="g-count">${g.people.length}</span></h2>
   <ul class="catalogue">
 ${g.people.map((p) => '    ' + rowHTML(p)).join('\n')}
@@ -117,29 +119,56 @@ ${g.people.map((p) => '    ' + rowHTML(p)).join('\n')}
 </main>
 
 <footer class="indexFoot">
-  <p>The drawing beside this page is the same ${words(people.length)}, held apart. A line between two of them means they made the same thing — ${sharedLine}.</p>
+  <p>The field beside this page is the same ${words(people.length)}, held apart in depth — the ${words(team)} who run it in the middle, everyone else around them. Turn it with a drag. A line between two of them means they made the same thing — ${sharedLine}.</p>
   <p>You can see the whole of it — all ${words(people.length)} on one ring — in the <a href="/network/constellation" target="_top">constellation</a>.</p>
 </footer>
+
+<aside class="fieldCol" aria-hidden="true">
+  <canvas class="field"></canvas>
+  <div class="fieldCard" hidden>
+    <div class="fc-name"></div>
+    <div class="fc-role"></div>
+    <div class="fc-works"></div>
+    <a href="/" target="_top" tabindex="-1">→ room</a>
+  </div>
+  <p class="fieldNote">${words(people.length)} people · drag to turn</p>
+</aside>
+</div>
 </div>
 
 <script>
 ${fieldJs}
 const roster = document.querySelector('main.roster');
-const field = createRosterField(roster.querySelector('svg.tie'), roster, ${JSON.stringify(ties)});
-// the list drives the drawing, never the other way round
+const rows = new Map();
+for (const row of roster.querySelectorAll('a.row')) rows.set(row.dataset.slug, row);
 let active = null;
-function light(row) {
+function mark(slug) {
+  const row = slug ? rows.get(slug) : null;
   if (active === row) return;
   if (active) active.classList.remove('is-active');
-  active = row;
-  if (row) row.classList.add('is-active');
-  field.light(row ? row.dataset.slug : null);
+  active = row || null;
+  if (active) active.classList.add('is-active');
 }
-for (const row of roster.querySelectorAll('a.row')) {
-  row.addEventListener('pointerenter', () => light(row));
-  row.addEventListener('focus', () => light(row));
+const field = createField(
+  document.querySelector('.fieldCol'),
+  ${JSON.stringify(people.map((p) => ({
+    slug: p.slug,
+    name: p.name,
+    role: p.role,
+    team: !!p.team,
+    works: [...new Set((p.works || []).map((w) => w.title))],
+  })))},
+  ${JSON.stringify(ties)},
+  // the point lights the row it is about, and clicking it opens the same
+  // door the row already is — the roster link, so the top-level navigation
+  // a published page is allowed comes from a real link click.
+  { onLight: mark, onOpen: (slug) => { const r = rows.get(slug); if (r) r.click(); } },
+);
+for (const [slug, row] of rows) {
+  row.addEventListener('pointerenter', () => { mark(slug); field.light(slug); });
+  row.addEventListener('focus', () => { mark(slug); field.light(slug); });
 }
-roster.addEventListener('pointerleave', () => light(null));
+roster.addEventListener('pointerleave', () => { mark(null); field.light(null); });
 </script>
 </body>
 </html>
