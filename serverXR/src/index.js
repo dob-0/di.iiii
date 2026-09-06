@@ -416,8 +416,14 @@ app.use((req, res, next) => {
 // anyone, so this grants nothing new. nginx carries the same rule for the
 // deployed tiers; this covers local dev and every offline `di` install.
 const CODE_PAGE_READABLE = /^\/(vendor|fonts)\//
-const allowNullOrigin = (res, filePath, req) => {
-  const url = req?.originalUrl || req?.url || filePath || ''
+// express.static calls setHeaders(res, filePath, stat) — there is no request
+// argument. An earlier version took a third parameter as the request, read the
+// stat object instead, fell through to the absolute file path and matched
+// nothing: measured on a `di` install 2026-09-06, every code page's font
+// request from origin "null" still came back without the header. The request
+// lives on the response.
+const allowNullOrigin = (res) => {
+  const url = res.req?.originalUrl || res.req?.url || ''
   if (CODE_PAGE_READABLE.test(url)) res.setHeader('Access-Control-Allow-Origin', '*')
 }
 

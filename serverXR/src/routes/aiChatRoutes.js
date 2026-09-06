@@ -11,6 +11,7 @@ const aiConnectionStore = require('../aiConnectionStore')
 const chatStore = require('../aiChatStore')
 const anthropic = require('../anthropicClient')
 const localClaude = require('../localClaudeRunner')
+const localModel = require('../localModelClient')
 const { isLocalOperatorRequest } = require('./agentBoardRoutes')
 
 // Cost controls: per-subject message rate + per-user in-flight streams.
@@ -41,7 +42,9 @@ const HISTORY_LIMIT = 40
 function registerAiChatRoutes(router, {
   streamFn = anthropic.streamChatCompletion,
   localRunFn = localClaude.runLocalClaude,
-  localAvailableFn = localClaude.isLocalClaudeAvailable
+  localAvailableFn = localClaude.isLocalClaudeAvailable,
+  localModelStreamFn = localModel.streamLocalModel,
+  localModelFn = localModel.describeLocalModel
 } = {}) {
   const inFlight = new Map() // userId -> count
 
@@ -50,6 +53,11 @@ function registerAiChatRoutes(router, {
   // loopback + local server (non-production, or DI_LOCAL=1 on a di CLI
   // install) — never a hosted path.
   const localBackendFor = (req) => isLocalOperatorRequest(req) && localAvailableFn()
+  // A model on this machine (LLM_BASE_URL — llama.cpp, Ollama, …). Same gate.
+  // It answers when nothing else can: no key and no local claude, or the
+  // internet is gone mid-conversation — the festival case, where the box on
+  // the table is the only model there is.
+  const localModelFor = (req) => (isLocalOperatorRequest(req) ? localModelFn() : null)
 
   const requireAccount = (req, res, next) => {
     const userId = req.authState?.subject
@@ -69,7 +77,8 @@ function registerAiChatRoutes(router, {
   router.get('/api/ai/providers', requireAccount, (req, res) => {
     res.json({
       keyConnected: Boolean(aiConnectionStore.getConnection(req.aiUserId, 'claude')),
-      localClaude: localBackendFor(req)
+      localClaude: localBackendFor(req),
+      localModel: localModelFor(req)
     })
   })
 
@@ -128,7 +137,9 @@ function registerAiChatRoutes(router, {
     }
     const apiKey = aiConnectionStore.getKey(userId, 'claude')
     const useLocal = !apiKey && localBackendFor(req)
-    if (!apiKey && !useLocal) {
+    const onThisMachine = localModelFor(req)
+    const useLocalModel = !apiKey && !useLocal && Boolean(onThisMachine)
+    if (!apiKey && !useLocal && !useLocalModel) {
       res.status(403).json({ error: 'no-ai-connection', hint: 'Connect your Claude API key from your account menu first.' })
       return
     }
@@ -164,16 +175,36 @@ function registerAiChatRoutes(router, {
     const abortController = new AbortController()
     res.on('close', () => abortController.abort())
 
+    const askLocalModel = () => localModelStreamFn({
+      system: SYSTEM_PROMPT,
+      messages: [...history, { role: 'user', content: text }],
+      signal: abortController.signal,
+      onDelta: (delta) => send('delta', { text: delta })
+    })
+    // Fall through to the box's own model when the chosen backend cannot be
+    // reached at all — never when it answered and refused (a bad key is still
+    // a bad key). Nothing streamed yet in that case, so the reply is whole.
+    const canFallBack = (error, streamed) => Boolean(onThisMachine) && !streamed && !abortController.signal.aborted
+      && (localModel.isNetworkFailure(error) || (useLocal && error.status !== 401))
+
     inFlight.set(userId, (inFlight.get(userId) || 0) + 1)
+    let streamed = false
+    const sendDelta = (delta) => { streamed = true; send('delta', { text: delta }) }
     try {
       let result
-      if (useLocal) {
+      if (useLocalModel) {
+        result = await askLocalModel()
+      } else if (useLocal) {
         // continuity via Claude Code's own --resume; no history replay needed
         result = await localRunFn({
           prompt: text,
           resumeSessionId: chat.claude_session_id || null,
           signal: abortController.signal,
-          onDelta: (delta) => send('delta', { text: delta })
+          onDelta: sendDelta
+        }).catch((error) => {
+          if (!canFallBack(error, streamed)) throw error
+          send('notice', { text: `No way out to Claude — answering from ${onThisMachine.model || 'the model'} on this machine.` })
+          return askLocalModel()
         })
         if (result.sessionId && result.sessionId !== chat.claude_session_id) {
           chatStore.setClaudeSession(userId, chat.id, result.sessionId)
@@ -185,7 +216,11 @@ function registerAiChatRoutes(router, {
           system: SYSTEM_PROMPT,
           messages: [...history, { role: 'user', content: text }],
           signal: abortController.signal,
-          onDelta: (delta) => send('delta', { text: delta })
+          onDelta: sendDelta
+        }).catch((error) => {
+          if (!canFallBack(error, streamed)) throw error
+          send('notice', { text: `No way out to Claude — answering from ${onThisMachine.model || 'the model'} on this machine.` })
+          return askLocalModel()
         })
       }
       const assistantMessage = chatStore.appendMessage(userId, chat.id, {

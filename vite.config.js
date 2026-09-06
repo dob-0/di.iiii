@@ -164,7 +164,9 @@ export default function HostedPiece() {
 // Naming it means the next thing dropped into public/ for the website does not
 // silently become part of every artist's install — which is how the 25 MB wcc
 // microsite, the cPanel php shims and the site's OpenGraph images got there.
-const LOCAL_PUBLIC_INCLUDE = ['fonts', 'draco', 'basis', 'suite']
+// unicode-fonts: the Armenian glyph fallback for 3D text (public/unicode-fonts/README.md)
+// — without it a local install reaches for a CDN it does not have.
+const LOCAL_PUBLIC_INCLUDE = ['fonts', 'draco', 'basis', 'suite', 'unicode-fonts']
 
 // Belt and braces: the include-list above already leaves a work's public
 // directory out, but if someone adds one to the list by accident the registry

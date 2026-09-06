@@ -53,6 +53,13 @@ describe('a code page can read /vendor/ and /fonts/ from its null origin', () =>
         // both static mounts, or an offline install serves the font and never the header
         const mounts = server.match(/express\.static\([^)]*setHeaders: allowNullOrigin[^)]*\)/g) || []
         expect(mounts.length).toBe(2)
+        // express.static's setHeaders is (res, path, stat) — the request is on the
+        // response. A helper that takes it as a third argument reads the stat and
+        // never matches; that is how the header was missing on every `di` install
+        // until 2026-09-06 while this file was green.
+        const helper = server.slice(server.indexOf('const allowNullOrigin'))
+        expect(helper.slice(0, helper.indexOf('\n}'))).toMatch(/res\.req/)
+        expect(helper.slice(0, helper.indexOf('=>'))).not.toMatch(/req\)/)
     })
 
     it('does not open the whole site — the allowance is scoped to those two paths', () => {

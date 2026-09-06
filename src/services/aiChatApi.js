@@ -4,8 +4,10 @@
 
 import { apiFetch } from './apiClient.js'
 
-// {keyConnected, localClaude} — localClaude is true only on the operator's
-// own machine (loopback dev server with a logged-in `claude` CLI).
+// {keyConnected, localClaude, localModel} — localClaude is true only on the
+// operator's own machine (loopback dev server with a logged-in `claude` CLI);
+// localModel is {baseUrl, model} when that machine names a model of its own
+// (LLM_BASE_URL — llama.cpp, Ollama), or null.
 export const getAiProviders = async () => apiFetch('/api/ai/providers')
 
 export const listAiChats = async () => (await apiFetch('/api/ai/chats')).chats
@@ -27,9 +29,11 @@ export const deleteAiChat = async (chatId) => (
 // Resolves after the stream ends. Callbacks:
 //   onAccepted(userMessage) — the persisted user turn
 //   onDelta(text)           — streamed reply chunk
+//   onNotice(text)          — the server changed course (e.g. no internet, so
+//                             the model on this machine is answering instead)
 //   onDone(assistantMessage) — the persisted assistant turn
 //   onError(message, status)
-export async function sendAiChatMessage(chatId, text, { model, onAccepted, onDelta, onDone, onError, signal } = {}) {
+export async function sendAiChatMessage(chatId, text, { model, onAccepted, onDelta, onNotice, onDone, onError, signal } = {}) {
     let response
     try {
         response = await apiFetch(`/api/ai/chats/${encodeURIComponent(chatId)}/messages`, {
@@ -62,6 +66,7 @@ export async function sendAiChatMessage(chatId, text, { model, onAccepted, onDel
         }
         if (eventName === 'accepted') onAccepted?.(payload.userMessage)
         else if (eventName === 'delta') onDelta?.(payload.text)
+        else if (eventName === 'notice') onNotice?.(payload.text)
         else if (eventName === 'done') {
             terminal = true
             onDone?.(payload.assistantMessage, payload.stopReason)
