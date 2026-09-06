@@ -8,8 +8,9 @@
  * same as one at a desk.
  *
  *   di up · down · status · open · logs · doctor · where
+ *   di new · save · open FILE · spaces
  *   di backup · restore · update · uninstall
- *   di link · sync
+ *   di link · sync · mcp · version · help
  *
  * Design rule: this file only routes. What to run is decided in detect.mjs
  * (pure), how to ask the machine in probe.mjs, how to run it in runner-*.mjs,
@@ -277,25 +278,76 @@ const cmdSave = async (args) => {
     say(ui.saved(spaceId, out, size))
 }
 
+/**
+ * The door the browser's "Open a file" uses — POST /api/spaces/bundle, which
+ * hands the file to the same bundle tool. A running server imports in place;
+ * nobody else on this machine notices.
+ *
+ * The file is streamed, not read into memory: a .diiii can be hundreds of MB.
+ * The server caps what it takes over the wire (MAX_UPLOAD_MB) and answers 413
+ * — or, when the cap trips mid-stream, drops the connection before any answer
+ * — so both come back as `tooLarge` and the caller takes the path with no cap.
+ */
+const openThroughServer = async ({ port, file, as }) => {
+    const form = new FormData()
+    form.append('bundle', await fs.openAsBlob(file), path.basename(file))
+    if (as) form.append('as', as)
+    try {
+        const response = await fetch(`${localUrl(port)}/serverXR/api/spaces/bundle`, { method: 'POST', body: form })
+        const body = await response.json().catch(() => ({}))
+        if (response.ok) return { ok: true, spaceId: body?.spaceId || null }
+        if (response.status === 413) return { ok: false, tooLarge: true }
+        return { ok: false, error: body?.error || `the server answered ${response.status}` }
+    } catch (error) {
+        if (await probeHealth(port)) return { ok: false, tooLarge: true }
+        return { ok: false, error: String(error?.message || error) }
+    }
+}
+
 const cmdOpenFile = async (args, file) => {
     const home = HOME()
     if (!requireInstalled(home)) return
     const resolved = path.resolve(file)
     if (!fs.existsSync(resolved)) { fail(`no such file: ${resolved}`); process.exitCode = 1; return }
 
-    // Importing writes rows the running server has open. Stop it, put the work
-    // in, start it again if it was up — the artist asked to open a file, not to
-    // manage a server.
     const port = resolvePort(home)
-    const wasRunning = await probeHealth(port)
-    if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
+    const running = await probeHealth(port)
+    const named = args.flags.as || path.basename(resolved).replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
+
+    // A running server takes the file through its own API, the way the
+    // browser does. Stopping it would close every tab open on this machine for
+    // an import the server does in place. Two cases still need the stop below:
+    // --force, because the space being replaced may be open in one of those
+    // tabs; and a file the server will not take over the wire.
+    if (running && !args.flags.force) {
+        const result = await openThroughServer({ port, file: resolved, as: args.flags.as })
+        if (result.ok) {
+            const opened = result.spaceId || named
+            say(ui.opened(opened, `${localUrl(port)}/${opened}`))
+            return
+        }
+        if (!result.tooLarge) {
+            fail(result.error)
+            fail(ui.openedNothing(path.basename(resolved)))
+            process.exitCode = 1
+            return
+        }
+        say(ui.tooLargeForWire(path.basename(resolved)))
+    } else if (running) {
+        say(ui.forceStops())
+    }
+
+    // Nothing is running, or the file needs the server out of the way:
+    // import against the database directly, and put the server back if it was
+    // up — the artist asked to open a file, not to manage a server.
+    if (running) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
     const toolArgs = ['import', resolved]
     if (args.flags.as) toolArgs.push('--as', args.flags.as)
     if (args.flags.force) toolArgs.push('--force')
     const code = await runBundleTool(home, toolArgs, { verbose: Boolean(args.flags.verbose) })
 
-    if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true } })
+    if (running) await cmdUp({ _: [], flags: { 'no-open': true } })
     if (code !== 0) {
         // The tool has already said what was wrong — a space of that name
         // already here, or a file from a newer di.iiii — and said it in its own
@@ -306,8 +358,7 @@ const cmdOpenFile = async (args, file) => {
         process.exitCode = 1
         return
     }
-    const opened = args.flags.as || path.basename(resolved).replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
-    say(ui.opened(opened, `${localUrl(resolvePort(home))}/${opened}`))
+    say(ui.opened(named, `${localUrl(resolvePort(home))}/${named}`))
 }
 
 const cmdNew = async (args) => {
@@ -419,7 +470,23 @@ const cmdBackup = async (args) => {
 
     let size = null
     try { size = humanSize((await fsp.stat(out)).size) } catch { /* printed without it */ }
-    say(ui.backed(out, size))
+    // What the line says is inside is read off the data root, by the same two
+    // facts install-bundle.mjs packs by: a show file, a chat folder with
+    // something in it. Saying "your whole di.iiii" was the lie this replaces.
+    const data = paths(home).data
+    say(ui.backed(out, size, {
+        lightShow: fs.existsSync(path.join(data, 'lighting', 'show.json')),
+        agentChat: hasFiles(path.join(data, 'agent-chat'))
+    }))
+}
+
+const hasFiles = (dir) => {
+    try {
+        return fs.readdirSync(dir, { withFileTypes: true }).some((entry) =>
+            entry.isFile() || (entry.isDirectory() && hasFiles(path.join(dir, entry.name))))
+    } catch {
+        return false
+    }
 }
 
 const cmdRestore = async (args) => {
@@ -454,6 +521,12 @@ const cmdRestore = async (args) => {
     say(ui.restoreWarning(paths(home).data))
     if (!args.flags.yes) { say(style.dim('add --yes when you are sure.')); return }
 
+    // Out of the way first, like the snapshot path above. A running lighting
+    // desk holds its show in memory and writes it back on the next change, so
+    // a show restored underneath it would last until the first fader move.
+    const wasRunning = await probeHealth(resolvePort(home))
+    if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
+
     const versionDir = currentVersionDir(home)
     const script = path.join(versionDir, 'scripts', 'install-bundle.mjs')
     const child = spawn(node.nodeBinary(home), [script, 'import', path.resolve(file), '--force'], {
@@ -461,6 +534,7 @@ const cmdRestore = async (args) => {
         env: { ...process.env, DATA_ROOT: paths(home).data }
     })
     const code = await new Promise(resolve => child.on('exit', resolve))
+    if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true } })
     process.exitCode = code === 0 ? 0 : 1
 }
 
@@ -672,11 +746,17 @@ const cmdVersion = () => { say(installedVersion(HOME()) || 'not installed') }
 // the decision to let an agent publish is made once, by a person, outside the
 // conversation that would ask for it.
 const cmdMcp = async (args) => {
-    // In an install the SDK sits beside cli/; in a checkout it is two levels
-    // up. Try both rather than assume, or this command works for whoever
-    // wrote it and nobody else.
+    if (args.flags.help) { say(ui.mcpUsage()); return }
+    // The installed SDK first — it is the one that matches the server it will
+    // talk to and the release.json it introduces itself with. Then beside
+    // cli/ (an install run some other way), then two levels up (a checkout).
     const here = path.dirname(fileURLToPath(import.meta.url))
-    const candidates = [path.join(here, '..', 'sdk', 'mcp.mjs'), path.join(here, '..', '..', 'sdk', 'mcp.mjs')]
+    const installed = currentVersionDir(HOME())
+    const candidates = [
+        installed ? path.join(installed, 'sdk', 'mcp.mjs') : null,
+        path.join(here, '..', 'sdk', 'mcp.mjs'),
+        path.join(here, '..', '..', 'sdk', 'mcp.mjs')
+    ].filter(Boolean)
     const entry = candidates.find((p) => fs.existsSync(p))
     if (!entry) { fail('this di.iiii has no sdk/ — it was packed before `di mcp` existed'); process.exitCode = 1; return }
     const port = resolvePort(HOME(), args.flags?.port)
@@ -706,15 +786,30 @@ const COMMANDS = {
     uninstall: cmdUninstall,
     version: cmdVersion,
     mcp: cmdMcp,
-    help: () => say(ui.help())
+    help: (args) => say(ui.usageFor(args._[1]) || ui.help())
 }
+
+// The flags a bare `di` (which is `di up`) understands. Anything else typed
+// on a bare `di` used to fall through to the default action — `di --version`
+// started the server — so an unknown flag is refused with the usage instead.
+const BARE_FLAGS = new Set(['port', 'no-open', 'verbose'])
 
 const main = async () => {
     const args = parseArgs(process.argv.slice(2))
     const name = args._[0]
 
+    if (args.flags.version || name === '-v' || name === '-V') { cmdVersion(); return }
+    if (name === '-h' || (args.flags.help && !COMMANDS[name])) { say(ui.help()); return }
+
     // Bare `di` starts it if it can, and explains itself if it cannot.
     if (!name) {
+        const unknown = Object.keys(args.flags).find((flag) => !BARE_FLAGS.has(flag))
+        if (unknown) {
+            fail(`no such option: --${unknown}`)
+            say(ui.help())
+            process.exitCode = 1
+            return
+        }
         if (isInstalled(HOME())) { await cmdUp(args); return }
         say(ui.help())
         return
@@ -726,12 +821,26 @@ const main = async () => {
         process.exitCode = 1
         return
     }
+    if (args.flags.help) { say(ui.usageFor(name) || ui.help()); return }
     await command(args)
 }
 
-main().catch((error) => {
-    fail(String(error?.stack || error?.message || error))
-    process.exitCode = 1
-})
+// Only when run as `di`. The shim reaches this file through the `current`
+// symlink while Node reports the real path, so both sides are resolved before
+// they are compared; a test importing this module must not start a server.
+const invokedDirectly = (() => {
+    try {
+        return fs.realpathSync(process.argv[1] || '') === fs.realpathSync(fileURLToPath(import.meta.url))
+    } catch {
+        return false
+    }
+})()
 
-export { COMMANDS, parseArgs }
+if (invokedDirectly) {
+    main().catch((error) => {
+        fail(String(error?.stack || error?.message || error))
+        process.exitCode = 1
+    })
+}
+
+export { BARE_FLAGS, COMMANDS, main, parseArgs }

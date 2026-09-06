@@ -4,9 +4,12 @@
  *
  * An install bundle is a tar.gz of per-space bundles (scripts/space-bundle.mjs
  * format, secrets stripped the same way) plus the admin instance config
- * (`spaces/_server-config.json` — globalSpaceId etc.). Users are NOT included:
- * accounts, sessions, and OAuth links are install-specific; space owner ids
- * are dropped exactly as in single-space bundles.
+ * (`spaces/_server-config.json` — globalSpaceId etc.) plus the work under the
+ * data root that belongs to no space: the light show (`lighting/` — show.json
+ * and the fixture library the desk imported) and the folder the local agent
+ * chat runs in (`agent-chat/`). Users are NOT included: accounts, sessions,
+ * OAuth links and the AI chat history are rows keyed by user and stay with the
+ * install; space owner ids are dropped exactly as in single-space bundles.
  *
  * Usage:
  *   node scripts/install-bundle.mjs export [options]
@@ -37,6 +40,24 @@ const BUNDLE_FORMAT = 'di.install-bundle'
 const BUNDLE_VERSION = 1
 const CONFIG_FILENAME = '_server-config.json'
 
+// Directories under the data root carried whole, beside the spaces. Nothing
+// else under data/ qualifies: di.db holds the accounts and sessions that must
+// not travel, uploads/ is multer's landing strip, snapshots/ are copies of
+// this same data. A bundle written before these existed lists none of them in
+// its manifest and imports exactly as it did.
+const CARRIED_DIRS = ['lighting', 'agent-chat']
+
+const hasFiles = (dir) => {
+    try {
+        return fs.readdirSync(dir, { withFileTypes: true }).some((entry) =>
+            entry.isFile() || (entry.isDirectory() && hasFiles(path.join(dir, entry.name))))
+    } catch {
+        return false
+    }
+}
+
+const describeCarried = (dirs) => dirs.map((dir) => ({ lighting: 'the light show', 'agent-chat': 'agent chat' })[dir] || dir)
+
 const die = (msg) => { console.error(`[install-bundle] ERROR: ${msg}`); process.exit(1) }
 const log = (msg) => console.log(`[install-bundle] ${msg}`)
 
@@ -63,7 +84,7 @@ const readJson = async (file) => JSON.parse(await fsp.readFile(file, 'utf8'))
 // ---------------------------------------------------------------- export
 
 async function exportInstall(args) {
-    const { spacesDir, dbPath } = resolvePaths(args.dataRoot)
+    const { dataRoot, spacesDir, dbPath } = resolvePaths(args.dataRoot)
     if (!fs.existsSync(dbPath)) die(`no database at ${dbPath} — wrong --data-root?`)
 
     let db
@@ -100,19 +121,29 @@ async function exportInstall(args) {
             await fsp.copyFile(configSrc, path.join(staging, 'config', CONFIG_FILENAME))
         }
 
+        const carried = []
+        for (const dir of CARRIED_DIRS) {
+            const src = path.join(dataRoot, dir)
+            if (!hasFiles(src)) continue
+            await fsp.cp(src, path.join(staging, dir), { recursive: true })
+            carried.push(dir)
+        }
+
         const manifest = {
             format: BUNDLE_FORMAT,
             version: BUNDLE_VERSION,
             exportedAt: new Date().toISOString(),
             spaces: spaceIds,
-            config: hasConfig
+            config: hasConfig,
+            dirs: carried
         }
         await fsp.writeFile(path.join(staging, 'install.json'), JSON.stringify(manifest, null, 2))
 
         const out = path.resolve(args.out || 'di.install-bundle.tar.gz')
         execFileSync('tar', ['-czf', out, '-C', staging, '.'])
         const size = (fs.statSync(out).size / 1024 / 1024).toFixed(2)
-        log(`exported install → ${out} (${size} MB, ${spaceIds.length} spaces${hasConfig ? ', instance config' : ''})`)
+        const inside = [`${spaceIds.length} spaces`, ...describeCarried(carried), hasConfig ? 'instance config' : null].filter(Boolean)
+        log(`exported install → ${out} (${size} MB, ${inside.join(', ')})`)
         return out
     } finally {
         await fsp.rm(staging, { recursive: true, force: true })
@@ -160,7 +191,23 @@ async function importInstall(args) {
             }
         }
 
-        log(`imported install into ${dataRoot} (${manifest.spaces.length} spaces: ${manifest.spaces.join(', ')})`)
+        const restored = []
+        for (const dir of Array.isArray(manifest.dirs) ? manifest.dirs : []) {
+            if (!CARRIED_DIRS.includes(dir)) { log(`skipped ${dir}/ — not a directory this tool carries`); continue }
+            const src = path.join(staging, dir)
+            if (!fs.existsSync(src)) die(`corrupt bundle: ${dir}/ named in install.json but missing`)
+            const dst = path.join(dataRoot, dir)
+            if (hasFiles(dst) && !args.force) {
+                log(`${dir}/ kept — ${dst} already has work in it (use --force to replace it)`)
+                continue
+            }
+            await fsp.rm(dst, { recursive: true, force: true })
+            await fsp.cp(src, dst, { recursive: true })
+            restored.push(dir)
+        }
+
+        const inside = [`${manifest.spaces.length} spaces: ${manifest.spaces.join(', ')}`, ...describeCarried(restored)]
+        log(`imported install into ${dataRoot} (${inside.join('; ')})`)
         return manifest.spaces
     } finally {
         await fsp.rm(staging, { recursive: true, force: true })
@@ -169,8 +216,13 @@ async function importInstall(args) {
 
 // ---------------------------------------------------------------- main
 
-const invokedDirectly = process.argv[1]
-    && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+// Both sides resolved: Node reports the main module by its real path, while an
+// install is reached through the `current` symlink. Compared unresolved, a
+// hand-typed `node ~/.di/current/scripts/install-bundle.mjs import …` did
+// nothing and exited 0.
+const invokedDirectly = (() => {
+    try { return fs.realpathSync(process.argv[1] || '') === fs.realpathSync(fileURLToPath(import.meta.url)) } catch { return false }
+})()
 
 if (invokedDirectly) {
     const args = parseArgs(process.argv.slice(2))

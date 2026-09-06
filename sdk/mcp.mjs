@@ -28,9 +28,21 @@ const arg = (name, fallback = null) => {
     return i === -1 ? fallback : process.argv[i + 1]
 }
 
-const VERSION = (() => {
-    try { return JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version } catch { return '0.0.0' }
-})()
+// What this build is, for serverInfo. An install has release.json at its root
+// and no package.json — the runtime is packed without one, which is how every
+// install introduced itself as 0.0.0. A checkout is the other way round, and
+// where both exist release.json wins: package.json carries the repo's number,
+// not the released one.
+export const detectVersion = (root) => {
+    for (const file of ['release.json', 'package.json']) {
+        try {
+            const version = JSON.parse(readFileSync(new URL(file, root), 'utf8')).version
+            if (version) return String(version)
+        } catch { /* not this one */ }
+    }
+    return '0.0.0'
+}
+const VERSION = detectVersion(new URL('../', import.meta.url))
 
 // MCP tool names are conservative about punctuation; the dots stay in the SDK
 // where they read better and become underscores on the wire.

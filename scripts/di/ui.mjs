@@ -63,6 +63,10 @@ export const ui = {
         + `  one file, everything in it. open it on any di.iiii with: ${CMD} open ${file}`,
     opened: (id, url) => `opened ${id}.\n  ${url}`,
     openedNothing: (name) => `${name} was not opened — see above. Your di.iiii is unchanged.`,
+    // The two reasons `open FILE` still stops a running di.iiii, said before
+    // it happens: every tab on this machine is about to lose its connection.
+    tooLargeForWire: (name) => style.dim(`${name} is more than the running di.iiii takes over the wire — stopping it to open the file directly.`),
+    forceStops: () => style.dim('--force replaces a space that may be open in a browser — stopping di.iiii for it.'),
     spacesHere: (ids) => ['in this di.iiii:', ...ids.map((id) => `  ${id}`)].join('\n'),
     noSpacesYet: () => `nothing here yet. make one with: ${CMD} new "my show"`,
 
@@ -103,9 +107,13 @@ export const ui = {
 
     snapshotRestored: (name) => `restored ${name}. what was there was moved aside, not deleted.`,
 
-    backed: (file, size) => [
+    // Says what is in the file and what is not. It used to say "your whole
+    // di.iiii", and the light show was not in it; accounts still are not.
+    backed: (file, size, { lightShow = false, agentChat = false } = {}) => [
         `saved ${file}${size ? ` (${size})` : ''}`,
-        style.dim('this one file is your whole di.iiii — copy it anywhere.')
+        style.dim(`  inside: every space (scenes, projects, assets)${lightShow ? ', the light show' : ''}${agentChat ? ', the agent chat folder' : ''}, and this di.iiii's settings.`),
+        style.dim('  not inside: accounts, sign-ins and the AI chat history — those stay with this machine.'),
+        style.dim(`  read it back on any di.iiii with: ${CMD} restore FILE`)
     ].join('\n'),
 
     restoreWarning: (dataDir) => [
@@ -227,6 +235,24 @@ export const ui = {
         ].filter((line) => line !== null).join('\n')
     },
 
+    // `di mcp --help` and `di help mcp`. Printed instead of starting the
+    // server, which is what --help used to do — silently, on stdin.
+    mcpUsage: () => [
+        style.bold(`${CMD} mcp`) + style.dim(' — hand this di.iiii to an agent that speaks MCP'),
+        '',
+        'not a server you leave running: the agent starts it, talks to it over stdin,',
+        'and it ends with the conversation.',
+        '',
+        `  claude mcp add di -- ${CMD} mcp`,
+        `  ${CMD} mcp --port N       talk to a di.iiii running somewhere other than 4000`,
+        '',
+        'reading and private moves just run. public moves — making a space public, minting',
+        'an invite link, deleting a space — are refused unless the agent was started with',
+        'DI_MCP_ALLOW_PUBLIC=1, and each one still has to carry confirm: true.'
+    ].join('\n'),
+
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage() })[name]?.() || null,
+
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
         '',
@@ -239,7 +265,7 @@ export const ui = {
         `  ${CMD} save SPACE    save it as one file you can carry anywhere`,
         `  ${CMD} open FILE     open a file someone saved (or ${CMD} open, for di.iiii itself)`,
         `  ${CMD} spaces        what is in this di.iiii`,
-        `  ${CMD} backup        write your whole di.iiii to one file`,
+        `  ${CMD} backup        every space and the light show, in one file`,
         `  ${CMD} restore FILE  read one back in`,
         `  ${CMD} restore --snapshot   the copies taken automatically before an update`,
         '',
@@ -254,6 +280,8 @@ export const ui = {
         `  ${CMD} doctor        what this machine can and cannot do`,
         `  ${CMD} where         the three paths that matter`,
         `  ${CMD} uninstall     remove it, keep your work`,
+        `  ${CMD} version       which di.iiii this is (also --version, -v)`,
+        `  ${CMD} help mcp      more on one command (also ${CMD} mcp --help)`,
         '',
         style.dim('  --port N     run somewhere other than 4000'),
         style.dim('  --verbose    show the docker/npm/node underneath'),

@@ -345,8 +345,13 @@ export { exportSpace, importSpace, resolvePaths, SLUG_REGEX }
 
 // ---------------------------------------------------------------- main
 
-const invokedDirectly = process.argv[1]
-    && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+// Both sides resolved: Node reports the main module by its real path, while an
+// install is reached through the `current` symlink. Compared unresolved, a
+// hand-typed `node ~/.di/current/scripts/space-bundle.mjs export …` did
+// nothing and exited 0.
+const invokedDirectly = (() => {
+    try { return fs.realpathSync(process.argv[1] || '') === fs.realpathSync(fileURLToPath(import.meta.url)) } catch { return false }
+})()
 
 if (invokedDirectly) {
     const args = parseArgs(process.argv.slice(2))
