@@ -12,6 +12,11 @@ const PREFERRED_SPACE_ID = 'main'
 export default function GridFloorBackground({
     opacity = 1,
     interactive = false,
+    // Which interactive mode: false walks the room, true orbits it. Only read
+    // while `interactive` — see LiveProjectScene. A caller that wants the
+    // room's view mode passes `interactive orbit`, NOT `interactive={false}`:
+    // the latter is the decorative, click-through background.
+    orbit = false,
     // Handed straight to the scene: the landing poses this background during
     // its entry flight (see landing/pageInSpace.js). Absent, the scene keeps
     // its decorative idle orbit.
@@ -67,6 +72,7 @@ export default function GridFloorBackground({
                         <LiveProjectScene
                             projectId={projectId}
                             interactive={interactive}
+                            orbit={orbit}
                             cameraPoseRef={cameraPoseRef}
                             hideEntityTypes={hideEntityTypes}
                             onArrivalPose={onArrivalPose}
