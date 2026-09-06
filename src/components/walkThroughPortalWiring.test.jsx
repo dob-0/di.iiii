@@ -90,15 +90,23 @@ describe('clicking a portal still enters it', () => {
 })
 
 describe('where walking through is wired', () => {
-    it('only the Walker gets it, and the Walker only exists when interactive', () => {
-        // The one call site. Anything else — the idle orbit, a non-interactive
-        // background, a ?preview=1 thumbnail — reaches no walker at all, so
-        // there is nothing to gate a second time.
+    it('only the Walker gets it, and the Walker only exists while walking', () => {
+        // The one call site. Anything else — view mode's orbit, the idle
+        // orbit, a non-interactive background, a ?preview=1 thumbnail —
+        // reaches no walker at all, so there is nothing to gate a second time.
         const callSites = SCENE.match(/onPortalReached=/g) || []
         expect(callSites).toHaveLength(1)
-        const walkerBlock = SCENE.slice(SCENE.indexOf('{interactive ? ('), SCENE.indexOf('<IdleOrbit'))
+        const walkerBlock = SCENE.slice(SCENE.indexOf('{walking ? ('), SCENE.indexOf('<ViewOrbit'))
         expect(walkerBlock).toContain('<Walker')
         expect(walkerBlock).toContain('onPortalReached={handlePortalReached}')
+    })
+
+    // View mode reaches portals the other way: a click, which PortalObject has
+    // always carried. It must never grow a walk-through of its own — nobody is
+    // walking, so a proximity latch there would fire on a dolly.
+    it('view mode enters a door by clicking it, not by drifting into it', () => {
+        const viewBlock = SCENE.slice(SCENE.indexOf('function ViewOrbit'), SCENE.indexOf('function useLiveProjectDocument'))
+        expect(viewBlock).not.toMatch(/onPortalReached|portalWalk/)
     })
 
     it('goes where the click goes, through the router and not a page load', () => {
