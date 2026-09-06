@@ -5,6 +5,125 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-06 — the front door's view mode orbits, zooms and opens doors
+
+- The complaint, verbatim: *"the view mode is useless when you click step inside after
+  that when want to see view mode it useless just one frame nothing."* Reproduced on
+  prod: after "Step inside", pressing "◐ View mode" gave a frame that answered nothing —
+  a 300px drag changed zero pixels.
+- The cause was one expression. `LandingPage.jsx` passed
+  `interactive={entered && !viewMode}`, so view mode did not switch the room to another
+  mode: it switched the room OFF. `GridFloorBackground` then set `pointer-events: none`
+  and `LiveProjectScene` handed the camera to `PosedCamera` (the landing's own
+  `cameraPoseRef`, pinned at `REST_POSE`) — hence one still frame, not even the
+  decorative drift.
+- View mode is now a MODE of the interactive room. `LiveProjectScene` takes an `orbit`
+  prop; `interactive` stays true across the toggle and the pair (`walking`, `viewing`)
+  decides which controller mounts. `walking` also gates the walker's own chrome — the
+  mobile joystick, the Fly button, the F key, XR entry, the lock hints — so view mode no
+  longer leaves controls on screen for a camera that cannot answer them.
+- `ViewOrbit` mounts drei's `OrbitControls` in place of `<Walker>` inside the SAME
+  Canvas. Chosen over rendering `PublicProjectSceneSurface`'s orbit surface
+  (`StudioViewport`), which is a second renderer with a second Canvas: swapping to it
+  would tear down the room's WebGL context, its loaded assets and the landing's own
+  `sceneExtras` on every press of one button, and it does not draw portals as portals —
+  the doors would stop being doors.
+- No jump on the toggle. The pivot is taken from where the camera is already looking,
+  at roughly the room's own depth (`clamp(distance to centre, 3, 90)` along the current
+  forward axis) rather than snapped onto the room's centre.
+- The calm drift runs as `autoRotate` and stops at the first drag. Pan is off, the polar
+  angle stops just short of the floor, the dolly is capped at 3–90 units.
+- Doors behave as they always did in the published viewer: hover shows the nameplate and
+  the cursor turns to a pointer; a click (a tap on a phone) goes through. Walking through
+  a door stays walk-mode-only — nobody is walking in view mode, and a proximity latch
+  there would fire on a dolly.
+- The hint under the buttons says what actually works: "Drag to orbit · Scroll to zoom ·
+  Click a door" on a desktop, "Drag to orbit · Pinch to zoom · Tap a door" on a phone.
+  The walk hint is unchanged, and it now renders in both modes instead of vanishing.
+- "→ Walk / fly" returns to the walker exactly where it was standing — the walker's
+  `playerRef` survives the toggle, which is what it did before this change too.
+- Nothing else on the landing moved: the copy, the flight into the room, PageDebris,
+  Back.
+
+### Looked at, not assumed
+
+Headless Chromium (swiftshader) against this branch on vite :5191, proxying the local
+API. Screenshots read, not just captured. Desktop 1440×900 DPR1 and phone 390×844 DPR3
+with real touch and pinch:
+
+- desktop drag: **31.4%** of pixels differ (was 0.00% — two identical frames — on prod)
+- desktop wheel zoom: **31.2%**; hover a door: the nameplate appears, `body.cursor`
+  becomes `pointer`; clicking it navigated to `/beyond-form`
+- phone touch drag: **46.8%**; phone pinch: **46.1%**; a tap on a door went to `/br_id_ge`
+- back in walk mode: drag-look **8.5%**, W alone **19.1%** (measured against `dev`'s
+  **20.3%** on the same move — the walker is untouched); phone joystick **8.3%**
+- zero console errors on the landing in both viewports
+
+### Guards
+
+`npm run lint` 0 errors · `npm run test -- --run` green · `npm run build` green ·
+`node scripts/check-agent-docs.mjs` green.
+
+Two existing source-shape guards named the old expression and were updated to the new
+one, keeping their intent: `liveProjectSceneSeams.test.js` (the joystick's guard is
+`walking && isMobile`) and `walkThroughPortalWiring.test.jsx` (the walk-through is wired
+to the Walker only), the latter gaining a case that view mode never grows a
+walk-through of its own. New: `src/landing/landingViewMode.test.jsx` and
+`src/components/GridFloorBackground.test.jsx`.
+
+### Not done
+
+`src/wiki/wikiContent.js` needed no change — it describes view mode on published pages
+(clicking a ring, the nameplate on hover), and every sentence there is now true of the
+front door too. Nothing in it described the front door's modes.
+
+## 2026-09-06 — a space card frees its boot slot when it has painted, not when its HTML arrived
+
+- The owner's `/spaces` left 8 of 12 cards black with a spinner minutes after opening. Reproduced
+  exactly on a local guest session: 4 of 12 painted at 20s, and still 4 of 12 at 30s — the grid was
+  not slow, it was stuck.
+- Two causes, both measured, not reasoned about.
+- **The stream.** Each preview iframe opened its own SSE connection to the project's event log and
+  held it open. A browser gives one origin six sockets over HTTP/1.1, so the first six cards took
+  every connection and cards seven to twelve could not fetch a single module for as long as anyone
+  waited. That is why waiting longer never helped. A thumbnail no longer opens the stream (nor the
+  two-second space-meta poll): it is a picture of the space as published, it re-reads on remount,
+  and clicking it opens the real live surface with the stream and all.
+- **The release.** The boot queue freed a card's slot on the iframe's `load` event, which for an SPA
+  fires when the shell HTML arrives — before its chunks, its scene document or one asset. The queue
+  drained in about a second and twelve full app instances booted at once anyway. The embedded app
+  now posts `dii:preview-ready` to its host once the loading screen is gone and something has
+  actually drawn, and only that frees the slot. A 12s backstop covers a page that never reports;
+  unmount and scroll-away release as before. One watcher at app start covers every embeddable
+  route — the published viewer, a code page, and the generic `<App />` a space without a project
+  falls back to.
+- **The queue's slot count was itself part of the problem.** Cards are the same app at different
+  routes, so overlapping module requests coalesce; staggering them through a narrow queue makes
+  each pay its own revalidation. Painted at 20s on the local dev server, twelve public spaces:
+  2 slots → 6, 6 slots → 6, 12 slots → 12. The space grid now boots up to 12 at once (the cap is
+  only a ceiling for a very long grid); the projection mapper keeps the tight default of 2, since
+  its surfaces are different pages at full output resolution with nothing to share.
+- Before/after, guest, 1440×900, DPR 1, counting cards whose loading screen was gone and whose
+  canvas had drawn: dev server 4/12 → 12/12 at 20s (last card at 9.4s, all twelve within 10s);
+  production build 12/12 by 3.5s.
+- `MapSourceView` gets the same ready-release for PROJECT surfaces (our own page, so it can report).
+  A URL surface is somebody else's page and keeps `load` — it has nothing else to offer.
+- None of the twelve local spaces carries a cover image, so all twelve boot a live preview. A card
+  with a working cover already shows the image and takes no boot slot; covers remain the way to make
+  a grid instant rather than merely fast.
+
+## 2026-09-06 — the space cards paint and the front door's view mode works, landed together
+
+- #383: a thumbnail no longer holds its own event stream (six sockets per origin walled off
+  every card past the sixth), the boot slot frees when the preview has PAINTED rather than
+  when its HTML arrived, and space cards may boot twelve at once because the same app at
+  twelve routes shares its module requests. Measured: 4 of 12 painted at 20 s before, 12 of
+  12 after, all by 3.5 s in a production build.
+- #384: the front door's "View mode" had switched the room OFF (pointer-events none, camera
+  pinned). It now orbits, zooms and opens doors inside the same canvas — a controller swap,
+  not a second renderer, so the room's WebGL context and the fallen page survive the toggle.
+- Batched so neither goes BEHIND the other.
+
 ## 2026-09-06 — the network field gets its depth and its connection back, on paper
 
 - The owner: *"we have the connection in 3d where is that we worked and it lost"*, *"i want to
