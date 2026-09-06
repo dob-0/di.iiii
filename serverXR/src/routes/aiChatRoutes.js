@@ -39,6 +39,15 @@ const SYSTEM_PROMPT = [
 
 const HISTORY_LIMIT = 40
 
+// The model on this machine gets the same vocabulary and the same no-counts
+// rule, but not Claude's name: asked who it was, qwen3-4b answered "I am
+// Claude, made by Anthropic" (measured 2026-09-06). A false name in the
+// owner's product is worse than no name.
+const localModelSystemPrompt = (model) => SYSTEM_PROMPT.replace(
+    'You are Claude, working alongside a creator inside di.iiii,',
+    `You are ${model || 'a language model'}, running on this machine with no internet, working alongside a creator inside di.iiii,`
+)
+
 function registerAiChatRoutes(router, {
   streamFn = anthropic.streamChatCompletion,
   localRunFn = localClaude.runLocalClaude,
@@ -176,7 +185,7 @@ function registerAiChatRoutes(router, {
     res.on('close', () => abortController.abort())
 
     const askLocalModel = () => localModelStreamFn({
-      system: SYSTEM_PROMPT,
+      system: localModelSystemPrompt(onThisMachine?.model),
       messages: [...history, { role: 'user', content: text }],
       signal: abortController.signal,
       onDelta: (delta) => send('delta', { text: delta })
