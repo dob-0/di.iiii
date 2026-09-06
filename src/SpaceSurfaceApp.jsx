@@ -3,6 +3,7 @@ import { getServerSpace, supportsServerSpaces } from './services/serverSpaces.js
 import { APP_PAGE_PREFERENCES } from './utils/spaceRouting.js'
 import lazyWithReload from './utils/lazyWithReload.js'
 import LoadingScreen from './components/LoadingScreen.jsx'
+import { isPreviewRequest } from './utils/previewMode.js'
 
 const App = lazyWithReload(() => import('./App.jsx'), 'app')
 const BlankNodeWorkspaceApp = lazyWithReload(() => import('./raw/BlankNodeWorkspaceApp.jsx'), 'raw-workspace')
@@ -67,9 +68,15 @@ export default function SpaceSurfaceApp({ routeState }) {
         }))
 
         void loadSpace()
-        refreshTimer = window.setInterval(() => {
-            void loadSpace({ preserveCurrent: true })
-        }, SPACE_META_REFRESH_MS)
+        // A thumbnail reads the space once. The poll exists so an open live
+        // surface notices a newly published project; a grid of twelve cards
+        // each polling every two seconds is twelve extra requests a second
+        // fighting the same six-connection pool the cards need to boot at all.
+        if (!isPreviewRequest()) {
+            refreshTimer = window.setInterval(() => {
+                void loadSpace({ preserveCurrent: true })
+            }, SPACE_META_REFRESH_MS)
+        }
 
         return () => {
             cancelled = true
