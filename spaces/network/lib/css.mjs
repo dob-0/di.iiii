@@ -1,10 +1,10 @@
 // Shared design tokens + components for the index and every room page.
 //
 // ONE ground. The page is a sheet of paper; the network is drawn into that
-// same paper as a faint graphite diagram, masked so it dissolves into the
-// margin instead of butting against the text. Nothing here paints a second
-// background — the previous version put a black panel beside a white column
-// and the seam was the whole problem.
+// same paper as a faint graphite diagram — now with depth in it, a cloud that
+// turns beside the list. Nothing here paints a second background: the field
+// sits ON the paper, and the previous version's black panel beside a white
+// column is what made the seam that had to go.
 //
 // Cyan: the brand value #4DF9FF is the light-on-dark form and disappears on
 // paper, so --accent carries it at a weight that holds against #f7f7f5.
@@ -20,7 +20,7 @@ export const CSS = `
   --accent-soft:rgba(0,151,163,.07); --accent-rule:rgba(0,151,163,.35);
   --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
   --sans:'Inter',-apple-system,'Segoe UI',sans-serif;
-  --col:1180px; --room:860px; --pad:56px;
+  --col:1180px; --room:860px; --pad:56px; --paper-col:52vw;
 }
 @font-face{
   font-family:'Inter'; src:url('/fonts/inter-regular.woff') format('woff'); font-weight:400 800; font-style:normal; font-display:swap;
@@ -47,19 +47,29 @@ a{color:inherit;}
 
 .roster{max-width:var(--col);padding:0 var(--pad) 8px var(--pad);position:relative;}
 
-/* ---------- the ties ----------
-   One dot per person, pinned to the right edge of that person's own row and
-   scrolling with it; one arc per shared work, running between the two rows
-   that made it. Every mark can be followed to the names it is about. */
-.tie{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:0;}
-.tie-dot{fill:var(--ink-3);opacity:.5;transition:fill .14s ease,opacity .14s ease,r .14s ease;}
-.tie-dot.is-lit{fill:var(--accent);opacity:1;r:5;}
-.tie-arc{fill:none;stroke:var(--rule);stroke-width:1;transition:stroke .14s ease,stroke-width .14s ease;}
-.tie-arc.is-lit{stroke:var(--accent);stroke-width:1.4;}
-.tie-label{font-family:var(--mono);font-size:12px;fill:var(--ink-3);
-  transition:fill .14s ease;}
-.tie-label.is-lit{fill:var(--accent-ink);}
-.roster .group, .roster ul.catalogue, .roster .howto{position:relative;z-index:1;}
+/* ---------- the field ----------
+   The same fifty-two, in depth, on the same paper. The list is the
+   interface; the field is its twin, and lighting one lights the other.
+   Nothing here paints a ground — the canvas is transparent. */
+.spread{display:grid;grid-template-columns:minmax(0,var(--paper-col)) minmax(0,1fr);
+  grid-template-areas:'head field' 'list field' 'foot field';align-items:start;gap:0;}
+.paperTop{grid-area:head;min-width:0;}
+.roster{grid-area:list;}
+.indexFoot{grid-area:foot;}
+.fieldCol{grid-area:field;position:sticky;top:0;height:100vh;min-width:0;}
+.field{position:absolute;inset:0;touch-action:pan-y;cursor:grab;}
+.field:active{cursor:grabbing;}
+.fieldNote{position:absolute;left:0;bottom:26px;font-family:var(--mono);font-size:12px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);}
+
+.fieldCard{position:absolute;width:224px;background:var(--paper);border:1px solid var(--rule);
+  box-shadow:0 14px 34px rgba(17,18,20,.12);padding:12px 14px 12px 14px;pointer-events:none;}
+.fieldCard .fc-name{font-size:16px;font-weight:600;line-height:1.25;letter-spacing:-0.01em;}
+.fieldCard .fc-role{font-family:var(--mono);font-size:12px;color:var(--ink-2);margin-top:4px;line-height:1.45;}
+.fieldCard .fc-works{font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-top:2px;}
+.fieldCard a{display:inline-block;margin-top:9px;font-family:var(--mono);font-size:12px;
+  color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);
+  pointer-events:auto;}
 
 /* Section labels are the strongest horizontal marks in the list — they are
    the structure, and they used to be smaller than the ornament beside them. */
@@ -167,16 +177,24 @@ a.row .made .arrow{opacity:.6;}
 .room-foot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
 
 /* Between these widths the list gives up a little of its own width so the
-   margin still exists — better than the drawing disappearing at 1280. */
-@media (max-width:1400px){ :root{--col:1040px;} }
+   field still has room to be a body and not a sliver. */
+@media (max-width:1400px){ :root{--col:1040px; --paper-col:54vw;} }
+@media (max-width:1180px){ :root{--paper-col:56vw; --pad:38px;} }
 
 @media (max-width:1000px){
   :root{--pad:26px;}
-  /* the roster starts at the top of a phone — no band above it. There is no
-     margin to hold the drawing at this width, so it thins to a whisper
-     across the whole sheet rather than sitting behind the names as smudges. */
-  .ground{opacity:.2;}
-  .ground canvas{-webkit-mask-image:none;mask-image:none;}
+  /* No margin to hold a field beside the list at this width, so it goes
+     above it as a quiet strip: it still drifts, it is still the same cloud,
+     but it takes no drag and lifts no card — the names are the interface
+     here, and a finger on the strip must still scroll the page. */
+  .spread{grid-template-columns:minmax(0,1fr);
+    grid-template-areas:'head' 'field' 'list' 'foot';}
+  .wide-only{display:none;}
+  .fieldCol{position:relative;height:240px;top:auto;opacity:.8;
+    margin:2px var(--pad) 10px var(--pad);}
+  .field{touch-action:auto;cursor:default;}
+  .fieldNote{display:none;}
+  .fieldCard{display:none;}
   /* the two halves of the room header do not fit one line on a phone;
      side by side they each wrapped mid-phrase. */
   .pagehead{flex-direction:column;gap:9px;}
