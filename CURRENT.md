@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the dev server serves fonts to the thumbnail frames like prod does
+- the network field gets its depth and its connection back, on paper
 
 Full detail: `PROGRESS.md`.
 
