@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Offline: the festival machine — a model on the table, and three things that reached out
+- The festival machine, inventoried; the local model gets its own name
 
 Full detail: `PROGRESS.md`.
 
