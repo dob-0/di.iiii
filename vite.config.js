@@ -126,7 +126,11 @@ const emitInstallScriptsPlugin = () => ({
 // than shipping 88 MB while reporting success.
 const LOCAL_PROFILE = process.env.DI_PROFILE === 'local'
 
-const HOSTED_PIECE_STUB = '\0di-local:hosted-piece'
+// A real file, not a virtual module: it needs the router, the works registry
+// and the preview protocol, and a component that lives in the tree can be
+// linted, tested and read. Nothing imports it — the resolve below is its only
+// door, so the hosted build never carries it.
+const HOSTED_PIECE_STUB = path.resolve(ROOT_DIR, 'src/works/HostedPieceStub.jsx')
 const HOSTED_ASSET_STUB = '\0di-local:hosted-asset'
 
 // Which entry points and asset directories belong to a work rather than to the
@@ -138,24 +142,6 @@ const HOSTED_ASSET_STUB = '\0di-local:hosted-asset'
 // pack log still saying "local profile". One registry, two readers.
 const HOSTED_PIECE_ENTRIES = workEntries()
 const HOSTED_ASSET_DIRS = workAssetDirs().map((dir) => dir.replace(/^src\//, ''))
-
-// A piece's space does not exist in a fresh local install, so these routes are
-// unreachable there by the same rule as any other space you do not have. The
-// card is for the one case that can still reach them: someone who makes a
-// space with that id themselves.
-const HOSTED_PIECE_SOURCE = `import { createElement } from 'react'
-export default function HostedPiece() {
-    return createElement('div', {
-        style: {
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            minHeight: '100vh', padding: '2rem', textAlign: 'center',
-            font: '400 0.95rem/1.6 system-ui, sans-serif',
-            color: 'rgba(255,255,255,0.72)', background: '#0a0a0a'
-        }
-    }, createElement('p', { style: { maxWidth: '30rem', margin: 0 } },
-        'This piece is part of di-studio.xyz, not of di.iiii itself, so it was left out of this copy. Everything else is here.'))
-}
-`
 
 // public/ under the local profile: an include-list.
 //
@@ -209,7 +195,6 @@ const localProfilePlugin = () => ({
 
     load(id) {
         if (id === HOSTED_ASSET_STUB) return 'export default ""\n'
-        if (id === HOSTED_PIECE_STUB) return HOSTED_PIECE_SOURCE
         return null
     },
 

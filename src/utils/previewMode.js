@@ -15,6 +15,13 @@ export function isPreviewRequest(search) {
 // Both sides import this name so the string can never drift apart.
 export const PREVIEW_READY_MESSAGE = 'dii:preview-ready'
 
+// The message a preview iframe posts when it has NOTHING to paint: under
+// DI_PROFILE=local a work's route is a stub (src/works/HostedPieceStub.jsx),
+// a page of text with no canvas and no frame, so the paint watcher below would
+// never report and the host would sit on a black card until its backstop. The
+// stub says so instead, and the card draws its own line.
+export const PREVIEW_STUB_MESSAGE = 'dii:preview-stub'
+
 // A preview surface is painted when the app's one loading screen is gone AND
 // something that actually draws is in the document: a WebGL canvas (every
 // scene renderer) or an iframe (a code-mode published page, which is an
@@ -36,15 +43,23 @@ const PAINT_GIVE_UP_MS = 30000
 // inserted on is the frame BEFORE the renderer has drawn into it.
 const PAINT_STABLE_FRAMES = 2
 
-export function signalPreviewReady(spaceId = '') {
+const postToPreviewHost = (type, spaceId) => {
     if (typeof window === 'undefined') return false
     if (window.parent === window) return false
     try {
-        window.parent.postMessage({ type: PREVIEW_READY_MESSAGE, spaceId }, window.location.origin)
+        window.parent.postMessage({ type, spaceId }, window.location.origin)
         return true
     } catch {
         return false
     }
+}
+
+export function signalPreviewReady(spaceId = '') {
+    return postToPreviewHost(PREVIEW_READY_MESSAGE, spaceId)
+}
+
+export function signalPreviewStub(spaceId = '') {
+    return postToPreviewHost(PREVIEW_STUB_MESSAGE, spaceId)
 }
 
 // Watches this document until its preview surface has painted, then tells the
