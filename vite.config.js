@@ -461,6 +461,12 @@ export default {
     server:
     {
         host: true, // Open to local network and display URL
+        // Published pages render inside srcdoc iframes, whose origin is `null`, so
+        // their @font-face requests to /fonts/* are cross-origin. Caddy answers
+        // them with `access-control-allow-origin: *` on staging and prod; without
+        // the same header here, every thumbnail on a local /spaces fell back to a
+        // system font and the console filled with CORS errors (seen 2026-09-06).
+        headers: { 'Access-Control-Allow-Origin': '*' },
         // HTTPS, opt-in via `npm run dev:xr`. Only needed to reach the dev
         // server from a VR HEADSET: WebXR requires a secure context, so a
         // standalone headset cannot use the plain-http LAN address — WebXR is
