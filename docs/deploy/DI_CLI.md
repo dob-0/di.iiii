@@ -16,8 +16,9 @@ Then:
 
 ```
 di up          start it, and open it
+di up --lan    the same, answering on this wifi too — for phones in the room
 di down        stop it
-di status      what is running, where, and how big
+di status      what is running, where, whether the room can reach it, and how big
 
 di new NAME    start a new space
 di save SPACE  save it as one file you can carry anywhere
@@ -173,8 +174,52 @@ a sentence they can act on.
 One process, one port. `serverXR` serves the API *and* the built app via
 `CLIENT_DIR` — no Vite, no second port, no build on the artist's machine.
 Bound to `127.0.0.1`: a laptop on café wifi with auth off is not meant to be an
-editor the whole room shares. LAN exposure is a later, deliberate feature that
-arrives with an auth story.
+editor the whole room shares.
+
+### `di up --lan` — the room
+
+The festival case (`docs/testing/FESTIVAL_MACHINE_2026-09-06.md`): one laptop,
+no internet, and a phone that needs the lighting desk's Touch page. `di up --lan`
+binds every interface for **that start only**, prints the machine's IPv4
+addresses as URLs, and says the one thing that matters in plain words:
+
+```
+di.iiii is running.  http://localhost:4000
+on this network:
+  http://192.168.1.5:4000  (wlp3s0)
+anyone on this network can open and edit it — auth is off. di down when the room is done.
+```
+
+What it does and does not change:
+
+- **Nothing is written down.** `di.env` still holds only the port; the next
+  plain `di up` is loopback again. `di status` and `di where` ask the running
+  server which bind is in force (`GET /serverXR/api/config` →
+  `listen: { lan, addresses }`) rather than remembering anything.
+- **Auth stays off**, so "the room can open it" means "the room can edit it".
+  That is the owner's decision for a festival, and the sentence above is printed
+  on every such start so nobody inherits it by accident.
+- **The device routes open with it.** The desk at `/light` sits behind the OSC
+  lane's `DI_ALLOW_LAN_DEVICES` guard, which refuses non-loopback requests;
+  `--lan` sets that flag for the child, since a phone that can reach the port but
+  not the desk is the same broken evening. The desk's Phone box reads the bind
+  from its own status and shows the real URL and QR under `--lan`, and
+  "Phones cannot reach this desk — start it with: di up --lan" without it.
+- **The operator surfaces stay on this machine.** The agent board, the local
+  Claude chat, the model on the box and the work-status route all check the
+  request's own socket address for loopback, with `trust proxy` off. A phone on
+  the wifi gets 404 from them under `--lan` exactly as before.
+- **A restart keeps the bind it found.** `di open FILE` and `di update` stop
+  and restart the server; both ask for the bind before stopping and hand it back,
+  so the phones in the room do not drop without a word.
+- **Docker mode has no `--lan`** — its compose pins `127.0.0.1:${PORT}` — and
+  the CLI says so rather than starting loopback and pretending. It also never
+  asks that server which bind is in force: the container binds `0.0.0.0` inside
+  and would say "network", but the published port is loopback, so `status` and
+  `where` report "this machine only" on a docker install.
+- **A headset is still out.** WebXR needs a secure context, and a LAN address
+  over plain http is not one; `--lan` opens the page to a headset's browser but
+  not the XR session. That gap is separate and unsolved.
 
 `npm run selfhost` still exists and is unchanged — that is the developer path,
 for someone who wants the source and the dev stack.

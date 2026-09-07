@@ -75,6 +75,7 @@ const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
+const { describeListen } = require('./listenInfo')
 const { createApprovalGate, createGatedRequestNet, verifyInboundSignature, GATED_ROUTES } = require('./approvalGate')
 const pendingActionStore = require('./pendingActionStore')
 const configStore = require('./configStore')
@@ -392,10 +393,16 @@ if (config.minFreeDiskBytes > 0) {
 // The lighting desk (serverXR/src/lighting) at /light — a local-runtime lane, built on
 // first use, output off by default; see routes/lightingRoutes.js. Mounted ahead of the
 // JSON parser on purpose: the desk reads its own bodies.
+// One answer to "how does this server listen", handed to the desk (its Phone
+// box) and to /api/config (the CLI's status/where): the bind is the fact, and
+// `di up --lan` is the only thing that changes it.
+const describeListenNow = () => describeListen({ host: config.host })
+
 const lighting = registerLightingRoutes(app, {
   dataDir: config.directories.dataDir,
   mountPaths: [...new Set(['/light', `${config.mountPath || ''}/light`.replace(/\/+/g, '/')])],
-  offline: process.env.ARTNET_OFFLINE === '1'
+  offline: process.env.ARTNET_OFFLINE === '1',
+  listen: describeListenNow
 })
 
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
@@ -1976,7 +1983,8 @@ registerConfigRoutes(router, {
   // open space exists.
   onConfigChanged: () => ensureOpenSpace(),
   approvalGate,
-  requireAuth: config.requireAuth
+  requireAuth: config.requireAuth,
+  listen: describeListenNow
 })
 
 const mountTargets = new Set([config.mountPath])

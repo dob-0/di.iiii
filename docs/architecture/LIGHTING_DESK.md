@@ -54,7 +54,13 @@ library push is up to 16 MB, byte-exact). Vite proxies `/light` to the backend i
    The setting is saved with the show.
 
 LAN reach follows the OSC lane: loopback only unless `DI_ALLOW_LAN_DEVICES=1`, which is
-what a phone on the Touch page needs. The desk's phone panel says so when it is off.
+what a phone on the Touch page needs. On a `di` install that flag rides with `di up --lan`,
+which is also the only start that binds anything but loopback (`docs/deploy/DI_CLI.md`).
+The host hands the desk its bind (`createDesk({ listen })` → `status.listen`, read per
+poll) and the Phone box reads it: the real URL and QR when a phone can get there, and
+"Phones cannot reach this desk — start it with: di up --lan" when it cannot — never a
+URL no phone can open. A desk that was not told (the standalone club build before its
+next sync) trusts the interface list as it always did.
 
 ## Looks and layers
 

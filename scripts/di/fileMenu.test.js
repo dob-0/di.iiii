@@ -75,7 +75,7 @@ describe('opening a file is not a server-management task', () => {
         expect(cli).toContain("fetch(`${localUrl(port)}/serverXR/api/spaces/bundle`, { method: 'POST', body: form })")
         expect(cli).toContain("form.append('bundle', await fs.openAsBlob(file), path.basename(file))")
         const ask = open.indexOf('await openThroughServer({ port, file: resolved, as: args.flags.as })')
-        const stop = open.indexOf('if (running) { try { await runnerFor(home).stop({ home }) }')
+        const stop = open.indexOf('if (wasRunning) { try { await runnerFor(home).stop({ home }) }')
         expect(ask).toBeGreaterThan(-1)
         expect(stop).toBeGreaterThan(ask)
     })
@@ -83,12 +83,12 @@ describe('opening a file is not a server-management task', () => {
     it('keeps the stop-and-import path for what the API cannot take, and says why first', () => {
         // --force replaces a space a tab may be standing in; a file over the
         // server's upload cap never arrives. Both are said before the stop.
-        expect(open).toContain('if (running && !args.flags.force)')
+        expect(open).toContain('if (wasRunning && !args.flags.force)')
         expect(open).toContain('say(ui.tooLargeForWire(path.basename(resolved)))')
         expect(open).toContain('say(ui.forceStops())')
         const importAt = open.indexOf("const toolArgs = ['import', resolved]")
-        const stop = open.indexOf('if (running) { try { await runnerFor(home).stop({ home }) }')
-        const restart = open.indexOf("if (running) await cmdUp({ _: [], flags: { 'no-open': true } })\n    if (code !== 0)")
+        const stop = open.indexOf('if (wasRunning) { try { await runnerFor(home).stop({ home }) }')
+        const restart = open.indexOf("if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })\n    if (code !== 0)")
         expect(importAt).toBeGreaterThan(stop)
         expect(restart).toBeGreaterThan(importAt)
     })

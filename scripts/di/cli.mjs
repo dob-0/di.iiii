@@ -42,35 +42,19 @@ import {
     stageVersion
 } from './install.mjs'
 import { isWindows, paths } from './paths.mjs'
-import { probeAll, probeHealth } from './probe.mjs'
+import { probeAll, probeHealth, probeLanAddresses, probeListen } from './probe.mjs'
 import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
     currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    localUrl, readState, resolvePort, writeEnv, writeState
+    lanUrl, localUrl, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
 import { buildSyncAudit } from './sync-plan.mjs'
 import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
+import { parseArgs } from './args.mjs'
 import { CMD, fail, say, style, ui } from './ui.mjs'
-
-const parseArgs = (argv) => {
-    const args = { _: [], flags: {} }
-    for (let i = 0; i < argv.length; i += 1) {
-        const token = argv[i]
-        if (!token.startsWith('--')) { args._.push(token); continue }
-        const name = token.slice(2)
-        if (name === 'port') { args.flags.port = argv[++i]; continue }
-        if (name === 'out') { args.flags.out = argv[++i]; continue }
-        if (name === 'from') { args.flags.from = argv[++i]; continue }
-        if (name === 'as') { args.flags.as = argv[++i]; continue }
-        if (name === 'remote') { args.flags.remote = argv[++i]; continue }
-        if (name === 'key') { args.flags.key = argv[++i]; continue }
-        args.flags[name] = true
-    }
-    return args
-}
 
 const HOME = () => {
     const override = String(process.env.DI_HOME || '').trim()
@@ -114,17 +98,37 @@ const spaceNames = async (port) => {
 
 // ── commands ──────────────────────────────────────────────────────────────
 
+/** What `status` and `where` say about the bind in force, from the server's own answer. */
+const reachText = (reach, port) => ui.reach({ lan: reach.lan, urls: reach.addresses.map((address) => lanUrl(address, port)) })
+
+/**
+ * The bind in force, as this CLI may repeat it. Asked of the server on a node
+ * install. Not asked on a docker install: the container always binds 0.0.0.0
+ * and would answer `lan: true`, but the compose publishes that port on
+ * 127.0.0.1 only, so what a phone can reach is loopback — the same reason
+ * `--lan` is refused there.
+ */
+const probeReach = async (home, port) => (
+    readState(home).mode === 'docker' ? { lan: false, addresses: [] } : probeListen(port)
+)
+
 const cmdUp = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
     const port = resolvePort(home, args.flags.port)
     const runner = runnerFor(home)
+    // `--lan` is per start and is never written down: the room is let in by a
+    // person typing it tonight, and tomorrow's `di up` is loopback again.
+    const lan = Boolean(args.flags.lan)
 
-    if (await probeHealth(port)) { say(ui.alreadyRunning(localUrl(port))); return }
+    // Refused before the already-running check, or a running docker install
+    // would be told it is "on this network too".
+    if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
+    if (await probeHealth(port)) { say(ui.alreadyRunning(localUrl(port), await probeReach(home, port), lan)); return }
 
     say(ui.starting())
     try {
-        await runner.start({ home, port, verbose: Boolean(args.flags.verbose) })
+        await runner.start({ home, port, host: lan ? '0.0.0.0' : '127.0.0.1', verbose: Boolean(args.flags.verbose) })
     } catch (error) {
         fail(String(error.message || error))
         process.exitCode = 1
@@ -133,6 +137,7 @@ const cmdUp = async (args) => {
     await writeEnv(home, { PORT: String(port) })
 
     say(ui.running(localUrl(port), await spaceNames(port)))
+    if (lan) say(ui.onThisNetwork(probeLanAddresses().map(({ iface, address }) => ({ iface, url: lanUrl(address, port) }))))
     if (!args.flags['no-open']) openBrowser(localUrl(port))
     await noticeNewVersion(home)
 }
@@ -195,10 +200,12 @@ const cmdStatus = async () => {
         return
     }
     const size = info.mode === 'node' ? humanSize(await dirSize(paths(home).data)) : null
+    const reach = await probeReach(home, port)
     say([
         `running (${info.mode})`,
         info.version,
         localUrl(port),
+        reach ? reachText(reach, port) : null,
         `data ${info.dataDir}${size ? ` (${size})` : ''}`
     ].filter(Boolean).join(style.dim(' · ')))
 }
@@ -311,7 +318,7 @@ const cmdOpenFile = async (args, file) => {
     if (!fs.existsSync(resolved)) { fail(`no such file: ${resolved}`); process.exitCode = 1; return }
 
     const port = resolvePort(home)
-    const running = await probeHealth(port)
+    const wasRunning = await probeHealth(port)
     const named = args.flags.as || path.basename(resolved).replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
 
     // A running server takes the file through its own API, the way the
@@ -319,7 +326,7 @@ const cmdOpenFile = async (args, file) => {
     // an import the server does in place. Two cases still need the stop below:
     // --force, because the space being replaced may be open in one of those
     // tabs; and a file the server will not take over the wire.
-    if (running && !args.flags.force) {
+    if (wasRunning && !args.flags.force) {
         const result = await openThroughServer({ port, file: resolved, as: args.flags.as })
         if (result.ok) {
             const opened = result.spaceId || named
@@ -333,21 +340,24 @@ const cmdOpenFile = async (args, file) => {
             return
         }
         say(ui.tooLargeForWire(path.basename(resolved)))
-    } else if (running) {
+    } else if (wasRunning) {
         say(ui.forceStops())
     }
 
     // Nothing is running, or the file needs the server out of the way:
     // import against the database directly, and put the server back if it was
     // up — the artist asked to open a file, not to manage a server.
-    if (running) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
+    // Asked before the stop: a `--lan` start comes back as a `--lan` start, or
+    // the phones in the room drop silently on the restart.
+    const wasLan = wasRunning ? Boolean((await probeReach(home, port))?.lan) : false
+    if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
     const toolArgs = ['import', resolved]
     if (args.flags.as) toolArgs.push('--as', args.flags.as)
     if (args.flags.force) toolArgs.push('--force')
     const code = await runBundleTool(home, toolArgs, { verbose: Boolean(args.flags.verbose) })
 
-    if (running) await cmdUp({ _: [], flags: { 'no-open': true } })
+    if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
     if (code !== 0) {
         // The tool has already said what was wrong — a space of that name
         // already here, or a file from a newer di.iiii — and said it in its own
@@ -416,14 +426,20 @@ const cmdLogs = async (args) => {
     say(await runner.readLog(home, 200))
 }
 
-const cmdWhere = () => {
+const cmdWhere = async () => {
     const home = HOME()
     const p = paths(home)
     const runner = runnerFor(home)
+    const port = resolvePort(home)
+    // Asked of the running server, not read from a file — there is no file:
+    // `--lan` is per start.
+    const running = await probeHealth(port)
+    const reach = running ? await probeReach(home, port) : null
     say([
         `app    ${currentVersionDir(home) || style.dim('not installed')}`,
         `work   ${isInstalled(home) ? runner.describe(home).dataDir : p.data}`,
-        `di     ${p.shim}`
+        `di     ${p.shim}`,
+        `reach  ${reach ? reachText(reach, port) : style.dim(running ? 'running' : 'not running')}`
     ].join('\n'))
 }
 
@@ -525,6 +541,7 @@ const cmdRestore = async (args) => {
     // desk holds its show in memory and writes it back on the next change, so
     // a show restored underneath it would last until the first fader move.
     const wasRunning = await probeHealth(resolvePort(home))
+    const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
     const versionDir = currentVersionDir(home)
@@ -534,7 +551,7 @@ const cmdRestore = async (args) => {
         env: { ...process.env, DATA_ROOT: paths(home).data }
     })
     const code = await new Promise(resolve => child.on('exit', resolve))
-    if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true } })
+    if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
     process.exitCode = code === 0 ? 0 : 1
 }
 
@@ -653,13 +670,14 @@ const cmdUpdate = async (args) => {
 
     const runner = runnerFor(home)
     const wasRunning = await probeHealth(resolvePort(home))
+    const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     try { await runner.stop({ home }) } catch { /* already down */ }
 
     await activate({ home, ...staged, version: release.version, mode: readState(home).mode })
     await pruneVersions({ home, keep: [release.version, from].filter(Boolean) })
 
     say(ui.updated(from, release.version))
-    if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true } })
+    if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
 }
 
 /**

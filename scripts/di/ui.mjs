@@ -48,7 +48,30 @@ export const ui = {
         style.dim(`stop it with: ${CMD} down`)
     ].filter(Boolean).join('\n'),
 
-    alreadyRunning: (url) => `already running — ${style.cyan(url)}`,
+    alreadyRunning: (url, reach = null, wantedLan = false) => [
+        `already running — ${style.cyan(url)}${reach ? style.dim(`  ${reach.lan ? 'on this network too' : 'this machine only'}`) : ''}`,
+        wantedLan && reach && !reach.lan
+            ? style.dim(`to let the room in: ${CMD} down, then ${CMD} up --lan`)
+            : null
+    ].filter(Boolean).join('\n'),
+
+    // `--lan`. The room can open it, and with auth off the room can edit it —
+    // said once, plainly, on every such start, because nothing writes the flag
+    // down and nobody should inherit it by accident.
+    onThisNetwork: (urls) => [
+        urls.length
+            ? ['on this network:', ...urls.map(({ url, iface }) => `  ${style.cyan(url)}  ${style.dim(`(${iface})`)}`)].join('\n')
+            : 'on this network:  no address yet — join a wifi or a hotspot and it answers there too.',
+        style.yellow(`anyone on this network can open and edit it — auth is off. ${CMD} down when the room is done.`)
+    ].join('\n'),
+
+    lanNotInDocker: () => '--lan is not available in docker mode — that install answers on this machine only.',
+
+    // What `status` and `where` say about the bind in force. Asked of the
+    // running server, never remembered: `--lan` is per start.
+    reach: ({ lan, urls }) => lan
+        ? `this network — ${urls.length ? urls.join(', ') : 'no address yet'}`
+        : 'this machine only',
 
     stopped: (dataDir) => `stopped. your work is safe in ${dataDir}`,
     notRunning: () => 'not running.',
@@ -284,6 +307,7 @@ export const ui = {
         `  ${CMD} help mcp      more on one command (also ${CMD} mcp --help)`,
         '',
         style.dim('  --port N     run somewhere other than 4000'),
+        style.dim('  --lan        answer on this wifi too, for phones in the room — anyone on it can edit'),
         style.dim('  --verbose    show the docker/npm/node underneath'),
         ''
     ].join('\n')
