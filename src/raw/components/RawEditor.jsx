@@ -54,13 +54,23 @@ import { buildWikiPath } from '../../utils/spaceRouting.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
+// Which space a panel window lives in. Unpinned = the world, with the cards.
+// Pinned = the screen, the old behaviour. On a phone everything is the
+// screen: the clamp that fits a 680-wide default into 390px IS the layout
+// there (the camp desks were authored against it), and a world window would
+// walk straight out of it. Before the surface has published a viewport there
+// is nothing to place through, so screen until then. One rule, read both
+// where a window is rendered and where a new one is placed.
+const isNarrowViewport = () => typeof window !== 'undefined' && window.innerWidth < RAW_NARROW_VIEWPORT
+const panelWindowSpace = (frame, viewport) => (frame?.pinned || isNarrowViewport() || !viewport) ? 'screen' : 'world'
 
 import { buildRawOutPath, buildRawProjectPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { describeRootEmptyCanvas } from '../utils/emptyCanvasHint.js'
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
-import { RAW_ANATOMY_Z, RAW_WINDOW_MINIMIZED_HEIGHT, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { getCardBox } from '../utils/cardGeometry.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
@@ -818,8 +828,15 @@ export default function RawEditor({
         }
     }, [dispatch, document, isLocalWorkspace, isSavingToSpace, resolvedSpaceId])
 
+    // An input port with a wire into it takes its value from the wire; a typed
+    // value there was accepted and silently ignored. The sheet marks it.
+    const wiredPortIds = scopedSelectedNode
+        ? (document.edges || [])
+            .filter((edge) => edge.toNodeId === scopedSelectedNode.id)
+            .map((edge) => edge.toPort)
+        : []
     const inspectorSections = scopedSelectedNode
-        ? deriveNodeInspectorSections(scopedSelectedNode)
+        ? deriveNodeInspectorSections(scopedSelectedNode, { wiredPortIds })
         : (scopedSelectedEntity
             ? getInspectorSections(scopedSelectedEntity)
             : [
@@ -987,6 +1004,23 @@ export default function RawEditor({
                 .filter(Boolean)
         })
 
+    // A new panel window opens against its card and wholly on screen. The
+    // frame buildNodeValues hands over is screen arithmetic around the click;
+    // an unpinned window is graph units placed through the viewport, and near
+    // the bottom or right of the screen the guess opened partly outside it
+    // (festival-machine inventory 2026-09-06). Only creation comes through
+    // here — a window a person has dragged is never re-placed.
+    const placeFrameForNewNode = useCallback((frame, node, place) => placeNewWindowFrame({
+        frame,
+        card: getCardBox(node),
+        anchor: place,
+        space: panelWindowSpace(frame, graphViewport),
+        viewport: graphViewport,
+        viewportWidth: typeof window === 'undefined' ? undefined : window.innerWidth,
+        viewportHeight: typeof window === 'undefined' ? undefined : window.innerHeight,
+        workspaceTop: chromeVisible ? workspaceTop : RAW_WINDOW_PADDING
+    }), [chromeVisible, graphViewport, workspaceTop])
+
     const handlePaletteCreate = ({ definition, params, placement: palettePlace }) => {
         if (!definition) return
         const place = palettePlace || {}
@@ -1013,6 +1047,9 @@ export default function RawEditor({
         for (let step = 0; step < 24 && collides(cardX, cardY); step += 1) {
             cardX += 44
             cardY += 44
+        }
+        if (values.frame) {
+            values.frame = placeFrameForNewNode(values.frame, { typeId: definition.id, graphX: cardX, graphY: cardY, values }, place)
         }
         const nextNode = createNode(definition.id, {
             values,
@@ -1087,11 +1124,16 @@ export default function RawEditor({
                     : await saveAssetFromFile(file)
                 if (!asset?.id) throw new Error('no asset id')
                 const values = buildNodeValuesForType(typeId, {}, place, { workspaceTop, topZIndex })
+                // Fan them out so a multi-file drop doesn't stack cards.
+                const graphX = (place.graphX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2) + (index * 32)
+                const graphY = Math.max(20, (place.graphY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2) + (index * 32))
+                if (values.frame) {
+                    values.frame = placeFrameForNewNode(values.frame, { typeId, graphX, graphY, values }, place)
+                }
                 const node = createNode(typeId, {
                     values: { ...values, src: asset.id },
-                    // Fan them out so a multi-file drop doesn't stack cards.
-                    graphX: (place.graphX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2) + (index * 32),
-                    graphY: Math.max(20, (place.graphY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2) + (index * 32)),
+                    graphX,
+                    graphY,
                     parentId: targetScopeId,
                     createdBy: currentAuthor(displayName)
                 })
@@ -1127,7 +1169,7 @@ export default function RawEditor({
             busy: false,
             notice: [failureNotice, rejectedNotice].filter(Boolean).join(' ')
         })
-    }, [applyLocalOps, currentScopeId, projectId, topZIndex, workspaceTop])
+    }, [applyLocalOps, currentScopeId, placeFrameForNewNode, projectId, topZIndex, workspaceTop])
 
     // The inspector's "＋" on an asset port: same storage as a drop, but the
     // node already exists, so this only fills that port in.
@@ -1877,14 +1919,8 @@ export default function RawEditor({
     // window wants to be, not where it renders. The bottom reserve alone moved
     // the seeded welcome window up by 116px, and insets read off the stored
     // frame put the graph's free band in the wrong place entirely.
-    // Which space a panel window lives in. Unpinned = the world, with the
-    // cards. Pinned = the screen, the old behaviour. On a phone everything is
-    // the screen: the clamp that fits a 680-wide default into 390px IS the
-    // layout there (the camp desks were authored against it), and a world
-    // window would walk straight out of it. Before the surface has published
-    // a viewport there is nothing to place through, so screen until then.
-    const narrowViewport = typeof window !== 'undefined' && window.innerWidth < 640
-    const windowSpaceFor = (frame) => (frame?.pinned || narrowViewport || !graphViewport) ? 'screen' : 'world'
+    const narrowViewport = isNarrowViewport()
+    const windowSpaceFor = (frame) => panelWindowSpace(frame, graphViewport)
     // World windows are content: fit-all frames them along with the cards.
     const worldWindowBounds = narrowViewport
         ? []

@@ -83,7 +83,18 @@ const CODE_SECTION = {
     fields: [{ label: 'Body', path: ['__code'], type: 'textarea', portType: 'string', component: 'values' }]
 }
 
-export const deriveNodeInspectorSections = (node) => {
+// An input port with a wire into it reads the wire, not the stored value —
+// the sheet used to offer the box anyway and a typed value was silently
+// ignored (festival-machine inventory 2026-09-06). `wired` lets the inspector
+// show the field read-only and say why. A field's first path segment is the
+// port id, and the edge's toPort is the same id.
+const markWiredFields = (fields, wiredPortIds = []) => {
+    if (!wiredPortIds.length) return fields
+    const wired = new Set(wiredPortIds)
+    return fields.map((field) => (wired.has(field.path?.[0]) ? { ...field, wired: true } : field))
+}
+
+export const deriveNodeInspectorSections = (node, { wiredPortIds = [] } = {}) => {
     if (!node) return []
     const typeId = node.typeId || node.definitionId
     const type = getNodeType(typeId)
@@ -99,10 +110,10 @@ export const deriveNodeInspectorSections = (node) => {
             {
                 id: 'values',
                 label: 'Node',
-                fields: [
+                fields: markWiredFields([
                     { label: 'Body', path: ['body'], type: 'textarea', portType: 'string' },
                     ...dynamicPorts
-                ]
+                ], wiredPortIds)
             },
             CODE_SECTION
         ]
@@ -158,7 +169,7 @@ export const deriveNodeInspectorSections = (node) => {
     // the first thing in it and is not a port, and `port` has exactly one
     // meaning here (docs/ai/vocabulary.md): where a wire attaches.
     const sections = fields.length
-        ? [{ id: 'values', label: operations ? 'Operation and ports' : 'Ports', fields }]
+        ? [{ id: 'values', label: operations ? 'Operation and ports' : 'Ports', fields: markWiredFields(fields, wiredPortIds) }]
         : []
     // Only when there IS stored code. The section used to ship on every node —
     // a dead "Code — stored, not run" textarea under every Cube and Sphere,

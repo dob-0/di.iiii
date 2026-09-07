@@ -326,3 +326,102 @@ export function getAnatomyDefaultFrame({
         minimized: band < RAW_ANATOMY_MIN_BAND
     }
 }
+
+// Where a NEW panel window opens.
+//
+// buildNodeValues hands over a frame that is screen arithmetic around the
+// click (x = clientX − 180, y = clientY − 36). That was the right answer while
+// every window was screen-fixed. Since windows moved into the world
+// (2026-09-03) an unpinned frame is GRAPH units placed through the canvas
+// viewport and never clamped — so the same numbers landed a window pan-and-
+// origin away from the click and, near the bottom or right of the screen,
+// partly outside it (festival-machine inventory 2026-09-06, reproduced twice,
+// prod too). This replaces the guess with a placement: the window opens
+// against its own card — below it, else above, else beside — and whichever
+// spot wins is pulled wholly inside the viewport by the SAME clamp
+// DesktopWindow applies, so the phone's x=12/width=366 layout is respected
+// rather than re-derived. Only new windows come through here: a window a
+// person dragged stays exactly where it was dropped.
+//
+// `card` is the node's card box in graph units; `frame` is in the units of
+// `space` ('world' = graph units, 'screen' = viewport pixels). The viewport
+// converts both ways: screen = origin + pan + graph * zoom.
+export const RAW_NEW_WINDOW_GAP = 16
+
+const rectsOverlap = (a, b) => (
+    a.x < b.x + b.width && a.x + a.width > b.x
+    && a.y < b.y + b.height && a.y + a.height > b.y
+)
+
+export function placeNewWindowFrame({
+    frame = {},
+    card = null,
+    anchor = null,
+    space = 'screen',
+    viewport = null,
+    viewportWidth,
+    viewportHeight,
+    workspaceTop = DEFAULT_RAW_WORKSPACE_TOP
+} = {}) {
+    const vp = viewport && Number.isFinite(viewport.zoom) && viewport.zoom > 0 ? viewport : null
+    const inWorld = space === 'world' && vp !== null
+    const scale = inWorld ? vp.zoom : 1
+    const originX = (Number(vp?.originLeft) || 0) + (Number(vp?.panX) || 0)
+    const originY = (Number(vp?.originTop) || 0) + (Number(vp?.panY) || 0)
+    const bounds = { minTop: workspaceTop, viewportWidth, viewportHeight }
+
+    // The window's on-screen size, capped the way the window itself caps it
+    // (a 680-wide default on a 390px phone becomes 366 here, not later).
+    const sized = clampWindowFrame({
+        x: RAW_WINDOW_PADDING,
+        y: workspaceTop,
+        width: (Number(frame.width) || RAW_WINDOW_MIN_WIDTH) * scale,
+        height: (Number(frame.height) || RAW_WINDOW_MIN_HEIGHT) * scale
+    }, bounds)
+    const width = sized.width
+    const height = sized.height
+
+    // What the window opens against, in screen pixels: the card when the
+    // viewport can place it, else the point that was clicked, else nothing —
+    // in which case the frame's own position is simply clamped.
+    let reference = null
+    if (card && vp && Number.isFinite(card.x) && Number.isFinite(card.y)) {
+        reference = {
+            x: originX + card.x * vp.zoom,
+            y: originY + card.y * vp.zoom,
+            width: (Number(card.width) || 0) * vp.zoom,
+            height: (Number(card.height) || 0) * vp.zoom
+        }
+    } else if (Number.isFinite(anchor?.clientX) && Number.isFinite(anchor?.clientY)) {
+        reference = { x: anchor.clientX, y: anchor.clientY, width: 0, height: 0 }
+    }
+
+    let placed
+    if (!reference) {
+        const startX = inWorld ? originX + (Number(frame.x) || 0) * scale : (Number(frame.x) || RAW_WINDOW_PADDING)
+        const startY = inWorld ? originY + (Number(frame.y) || 0) * scale : (Number(frame.y) || workspaceTop)
+        placed = clampWindowFrame({ x: startX, y: startY, width, height }, bounds)
+    } else {
+        const gap = RAW_NEW_WINDOW_GAP
+        const candidates = [
+            { x: reference.x, y: reference.y + reference.height + gap },
+            { x: reference.x, y: reference.y - gap - height },
+            { x: reference.x + reference.width + gap, y: reference.y },
+            { x: reference.x - gap - width, y: reference.y }
+        ].map((spot) => clampWindowFrame({ ...spot, width, height }, bounds))
+        // Clamping can drag a spot back over the card (no room below → the
+        // window slides up onto it); the first spot still clear of the card
+        // wins. When none is — a phone, where a window is wider than the room
+        // beside a card — below-and-clamped is the honest fallback: whole on
+        // screen, and the graph fit already dodges windows.
+        placed = candidates.find((spot) => !rectsOverlap(spot, reference)) || candidates[0]
+    }
+
+    return {
+        ...frame,
+        x: inWorld ? Math.round((placed.x - originX) / scale) : placed.x,
+        y: inWorld ? Math.round((placed.y - originY) / scale) : placed.y,
+        width: inWorld ? Math.round(placed.width / scale) : placed.width,
+        height: inWorld ? Math.round(placed.height / scale) : placed.height
+    }
+}
