@@ -110,6 +110,25 @@ export const VENDOR_MAP = [
     { test: new RegExp(String.raw`^${NPM}/marked(?:@15(?:\.0(?:\.12)?)?)?/marked\.min\.js$`), to: 'marked@15.0.12/marked.min.js' }
 ]
 
+// A decoder DIRECTORY handed to a loader in JavaScript, not a tag — the one
+// shape of CDN URL inside code that is safe to rewrite, because it is a whole
+// constant URL with a single meaning and the platform already serves the same
+// files. three's DRACOLoader asks this directory for draco_decoder.wasm and
+// draco_wasm_wrapper.js; /draco/ (public/draco/) holds exactly those, which is
+// how every room in the app decodes a compressed GLB offline.
+export const DECODER_MAP = [
+    {
+        test: new RegExp(String.raw`^${NPM}/three@0\.\d+\.\d+/examples/jsm/libs/draco/$`),
+        to: '/draco/',
+        needs: ['/draco/draco_decoder.wasm', '/draco/draco_wasm_wrapper.js']
+    }
+]
+
+export const decoderPathFor = (url) => {
+    const bare = (url.startsWith('//') ? `https:${url}` : url).split(/[?#]/)[0]
+    return DECODER_MAP.find((entry) => entry.test.test(bare)) || null
+}
+
 const hostOf = (url) => {
     try { return new URL(url.startsWith('//') ? `https:${url}` : url).hostname } catch { return '' }
 }
@@ -199,6 +218,19 @@ export const rewriteHtml = (input = '', { dropFonts = false } = {}) => {
         return next
     })
 
+    // The one exception to "never touch code": a decoder directory (see
+    // DECODER_MAP). Rewritten wherever it appears, including inside the
+    // JavaScript that hands it to a loader.
+    const decoderNeeds = new Set()
+    for (const entry of DECODER_MAP) {
+        const inCode = new RegExp(entry.test.source.replace(/^\^/, '').replace(/\$$/, ''), 'g')
+        html = html.replace(inCode, (url, offset) => {
+            changes.push({ kind: 'rewrite', where: 'decoder path', line: lineOf(html, offset), from: url, to: entry.to })
+            entry.needs.forEach((need) => decoderNeeds.add(need))
+            return entry.to
+        })
+    }
+
     // Anything the page still fetches from a CDN — inside JavaScript, an
     // import(), a fallback string — is reported, never touched.
     const reportedFonts = new Set(changes.filter((c) => c.kind === 'font').map((c) => c.from))
@@ -209,6 +241,7 @@ export const rewriteHtml = (input = '', { dropFonts = false } = {}) => {
 
     // An importmap prefix only helps if the addons the page imports are here.
     const fetches = new Set(changes.filter((c) => c.kind === 'rewrite' && !c.to.endsWith('/')).map((c) => c.to))
+    decoderNeeds.forEach((need) => fetches.add(need))
     const rewroteAddons = changes.filter((c) => c.kind === 'rewrite' && c.where === 'importmap' && c.to.endsWith('/examples/jsm/'))
     for (const entry of rewroteAddons) {
         const seen = new Set()

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-    VENDOR_MAP, VENDOR_DIR, rewriteHtml, rewriteDocument, vendorPathFor, resolveApi, parseArgs, missingVendorFiles
+    VENDOR_MAP, VENDOR_DIR, DECODER_MAP, decoderPathFor, rewriteHtml, rewriteDocument, vendorPathFor, resolveApi, parseArgs, missingVendorFiles
 } from './page-vendor-cdn.mjs'
 
 describe('the map cannot drift from the files', () => {
@@ -120,15 +120,17 @@ describe('rewriteHtml', () => {
     })
 
     it('leaves a URL inside JavaScript alone and reports it', () => {
+        // A decoder directory is the single exception (see its own block below);
+        // every other CDN URL in code is reported and left exactly as it is.
         const input = `<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script type="module">
 const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14'
-dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/');
+const FALLBACK = 'https://unpkg.com/some-lib@1.2.3/dist/some-lib.js'
 </script>`
         const { html, changes } = rewriteHtml(input)
         expect(html).toContain('<script src="/vendor/three@0.128.0/three.min.js">')
         expect(html).toContain("const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14'")
-        expect(html).toContain("setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/')")
+        expect(html).toContain("const FALLBACK = 'https://unpkg.com/some-lib@1.2.3/dist/some-lib.js'")
         const left = changes.filter((c) => c.kind === 'left')
         expect(left.map((c) => c.line)).toEqual([3, 4])
     })
@@ -153,6 +155,34 @@ dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/
         expect(html).toBe(input)
         // The anchor is prose, reported as left in place, not rewritten.
         expect(changes).toEqual([{ kind: 'left', where: 'elsewhere', line: 1, from: 'https://unpkg.com/' }])
+    })
+})
+
+describe('a decoder directory — the one URL rewritten inside code', () => {
+    // azd hands three's DRACOLoader a decoder directory on a CDN, so its
+    // sculptures never decode offline. It is a whole constant URL with one
+    // meaning, and the platform serves the same two files at /draco/.
+    it('rewrites setDecoderPath and asks for what the loader will fetch', () => {
+        const { html, changes, fetches } = rewriteHtml("loader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/')")
+        expect(html).toBe("loader.setDecoderPath('/draco/')")
+        expect(changes).toEqual([{ kind: 'rewrite', where: 'decoder path', line: 1, from: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/', to: '/draco/' }])
+        expect(fetches).toEqual(['/draco/draco_decoder.wasm', '/draco/draco_wasm_wrapper.js'])
+    })
+
+    it('is idempotent and leaves every other jsm URL in code alone', () => {
+        const input = "import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js')"
+        const { html, changes } = rewriteHtml(input)
+        expect(html).toBe(input)
+        expect(changes.map((c) => c.kind)).toEqual(['left'])
+        const once = rewriteHtml("loader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/')").html
+        expect(rewriteHtml(once).html).toBe(once)
+    })
+
+    it('matches any three version and nothing that is not a decoder directory', () => {
+        expect(decoderPathFor('https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/libs/draco/')?.to).toBe('/draco/')
+        expect(decoderPathFor('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/draco_decoder.wasm')).toBeNull()
+        expect(decoderPathFor('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/')).toBeNull()
+        expect(DECODER_MAP.every((entry) => entry.needs.length > 0)).toBe(true)
     })
 })
 
