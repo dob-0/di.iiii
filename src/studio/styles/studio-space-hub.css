@@ -218,6 +218,44 @@
     outline-offset: 2px;
 }
 
+/* ─── ON THIS MACHINE ─── the tools that are not spaces */
+.ssh-tools-line {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 22px;
+    font-size: 0.82rem;
+    color: var(--di-text-muted);
+}
+
+.ssh-tools-label {
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+}
+
+.ssh-tools-link {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    color: var(--di-cyan);
+    text-decoration: none;
+}
+
+.ssh-tools-link:hover {
+    text-decoration: underline;
+}
+
+.ssh-tools-link:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--di-cyan) 50%, transparent);
+    outline-offset: 2px;
+}
+
+.ssh-tools-hint {
+    color: var(--di-text-muted);
+}
+
 .ssh-space-tagline {
     margin: 2px 0 0;
     font-size: 0.85rem;
