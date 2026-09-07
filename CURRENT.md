@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- A decoder directory is the one CDN URL worth rewriting inside code
+- Production, asked for twice
 
 Full detail: `PROGRESS.md`.
 
