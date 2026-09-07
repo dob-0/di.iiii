@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-    VENDOR_MAP, VENDOR_DIR, rewriteHtml, rewriteDocument, vendorPathFor, resolveApi, parseArgs
+    VENDOR_MAP, VENDOR_DIR, rewriteHtml, rewriteDocument, vendorPathFor, resolveApi, parseArgs, missingVendorFiles
 } from './page-vendor-cdn.mjs'
 
 describe('the map cannot drift from the files', () => {
@@ -178,7 +178,51 @@ describe('rewriteDocument', () => {
     })
 
     it('reports nothing for a scene project', () => {
-        expect(rewriteDocument({ entities: [] })).toEqual({ document: { entities: [] }, changes: [], changed: false })
+        expect(rewriteDocument({ entities: [] })).toEqual({ document: { entities: [] }, changes: [], changed: false, fetches: [] })
+    })
+
+    it('names every concrete /vendor/ file the rewritten pages will fetch, once', () => {
+        const document = {
+            presentationState: {
+                codeHtml: `<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">import 'three/addons/loaders/GLTFLoader.js'; import 'three/addons/loaders/GLTFLoader.js'; import 'three/addons/controls/OrbitControls.js'</script>`,
+                codeFiles: [{ name: 'index.html', content: '<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"></script><link href="https://fonts.googleapis.com/css2?family=X" rel="stylesheet">' }]
+            }
+        }
+        const { fetches } = rewriteDocument(document)
+        expect(fetches.sort()).toEqual([
+            '/vendor/three@0.160.0/examples/jsm/controls/OrbitControls.js',
+            '/vendor/three@0.160.0/examples/jsm/loaders/GLTFLoader.js',
+            '/vendor/three@0.160.0/three.module.min.js'
+        ])
+    })
+})
+
+describe('code before data', () => {
+    it('lists every /vendor/ path the origin does not answer 200 for', async () => {
+        const seen = []
+        const fetchImpl = async (url) => {
+            seen.push(url)
+            if (url.endsWith('/three.min.js')) return { status: 200 }
+            if (url.endsWith('/leaflet.js')) throw Object.assign(new Error('fetch failed'), { name: 'TypeError' })
+            return { status: 404 }
+        }
+        const missing = await missingVendorFiles('http://localhost:4000', [
+            '/vendor/three@0.160.0/three.min.js',
+            '/vendor/marked@15.0.12/marked.min.js',
+            '/vendor/three@0.160.0/three.min.js',
+            '/vendor/leaflet@1.9.4/leaflet.js'
+        ], { fetchImpl })
+        expect(seen).toHaveLength(3)
+        expect(seen[0]).toBe('http://localhost:4000/vendor/leaflet@1.9.4/leaflet.js')
+        expect(missing).toEqual([
+            { pathname: '/vendor/leaflet@1.9.4/leaflet.js', status: 'fetch failed' },
+            { pathname: '/vendor/marked@15.0.12/marked.min.js', status: 404 }
+        ])
+    })
+
+    it('is satisfied by an origin that serves them all', async () => {
+        expect(await missingVendorFiles('http://x', ['/vendor/a', '/vendor/b'], { fetchImpl: async () => ({ status: 200 }) })).toEqual([])
     })
 })
 
@@ -198,6 +242,8 @@ describe('never production', () => {
     it('defaults to a local dry-run and rejects an unknown flag', () => {
         expect(parseArgs(['--space', 'azd'])).toMatchObject({ tier: 'local', apply: false, dropFonts: false, spaces: ['azd'] })
         expect(parseArgs(['--space', 'azd', '--drop-fonts'])).toMatchObject({ dropFonts: true })
+        expect(parseArgs(['--space', 'azd'])).toMatchObject({ restore: false })
+        expect(parseArgs(['--space', 'azd', '--restore', '--originals', '/x'])).toMatchObject({ restore: true, apply: false, originals: '/x' })
         expect(() => parseArgs(['--write'])).toThrow(/unknown argument/)
     })
 })

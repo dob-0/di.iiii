@@ -24,10 +24,17 @@
  * the map does not know — is left exactly as it is and printed, because a
  * blind replace inside prose or code is how a page gets quietly broken.
  *
+ * Code before data. `--apply` first asks the target's own origin for every
+ * /vendor/ file the rewritten pages would fetch; one 404 and NOTHING is
+ * written. A page rewritten against a server that has no /vendor/ yet is
+ * black online too — that happened on the owner's install on 2026-09-07
+ * (docs/ai/sessions/feat-vendor-cdn-libs-for-offline-pages.md).
+ *
  * Usage:
  *   node scripts/page-vendor-cdn.mjs --space azd                    # local, dry-run
  *   node scripts/page-vendor-cdn.mjs --tier staging --space dilijan  # staging, dry-run
  *   node scripts/page-vendor-cdn.mjs --space azd --apply
+ *   node scripts/page-vendor-cdn.mjs --space azd --restore --apply   # put the originals back
  *
  * Options:
  *   --tier <local|staging>   default local. There is no prod entry: production
@@ -45,6 +52,11 @@
  *                            <tier>/<space>/<project>.html (+ one file per
  *                            codeFiles entry, + the whole document as JSON,
  *                            which is what a restore actually needs)
+ *   --restore                the other direction: PUT the saved
+ *                            <project>.document.json back for every --space /
+ *                            --project that has one under --originals. Dry-run
+ *                            lists them; --apply writes. No vendor check — the
+ *                            originals are the CDN pages that work online
  *   --api <url>              a scratch stack instead of the tier's API (a test
  *                            serverXR on a spare port). Refused for di-studio.xyz.
  *
@@ -142,8 +154,11 @@ const LINK_TAG = /<link\b[^>]*>/gi
 const ANY_CDN_URL = /(?:https?:)?\/\/(?:cdnjs\.cloudflare\.com|unpkg\.com|cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)[^\s"'`)<>]*/g
 
 /**
- * Rewrite one HTML text. Returns { html, changes } where every change is
- * { kind: 'rewrite' | 'drop' | 'font' | 'unknown' | 'left' | 'missing-addon', line, from, to? }.
+ * Rewrite one HTML text. Returns { html, changes, fetches } where every change is
+ * { kind: 'rewrite' | 'drop' | 'font' | 'unknown' | 'left' | 'missing-addon', line, from, to? }
+ * and `fetches` is every concrete /vendor/ path the rewritten page will ask the
+ * server for (a prefix rewrite contributes the addons the page imports through
+ * it) — what --apply probes before it writes anything.
  * Pure: the same input always gives the same output, and running it on its
  * own output changes nothing.
  */
@@ -193,48 +208,71 @@ export const rewriteHtml = (input = '', { dropFonts = false } = {}) => {
     }
 
     // An importmap prefix only helps if the addons the page imports are here.
+    const fetches = new Set(changes.filter((c) => c.kind === 'rewrite' && !c.to.endsWith('/')).map((c) => c.to))
     const rewroteAddons = changes.filter((c) => c.kind === 'rewrite' && c.where === 'importmap' && c.to.endsWith('/examples/jsm/'))
     for (const entry of rewroteAddons) {
         const seen = new Set()
         for (const m of html.matchAll(/["']three\/addons\/([^"']+)["']/g)) {
             if (seen.has(m[1])) continue
             seen.add(m[1])
+            fetches.add(`${entry.to}${m[1]}`)
             const file = path.join(VENDOR_DIR, entry.to.replace(/^\/vendor\//, ''), m[1])
             if (!fs.existsSync(file)) changes.push({ kind: 'missing-addon', where: 'importmap', line: lineOf(html, m.index), from: `three/addons/${m[1]}`, to: `${entry.to}${m[1]}` })
         }
     }
 
-    return { html, changes }
+    return { html, changes, fetches: [...fetches] }
 }
 
 /** Rewrite codeHtml and every codeFiles[].content of one document (shallow copy). */
 export const rewriteDocument = (document, options = {}) => {
     const ps = document?.presentationState
-    if (!ps) return { document, changes: [], changed: false }
+    if (!ps) return { document, changes: [], changed: false, fetches: [] }
     const next = { ...document, presentationState: { ...ps } }
     const changes = []
+    const fetches = new Set()
     let changed = false
 
     if (typeof ps.codeHtml === 'string') {
         const r = rewriteHtml(ps.codeHtml, options)
         if (r.html !== ps.codeHtml) { next.presentationState.codeHtml = r.html; changed = true }
         changes.push(...r.changes.map((c) => ({ ...c, file: 'codeHtml' })))
+        r.fetches.forEach((f) => fetches.add(f))
     }
     if (Array.isArray(ps.codeFiles)) {
         next.presentationState.codeFiles = ps.codeFiles.map((file) => {
             const content = typeof file?.content === 'string' ? file.content : ''
             const r = rewriteHtml(content, options)
             changes.push(...r.changes.map((c) => ({ ...c, file: `codeFiles/${file?.name || '?'}` })))
+            r.fetches.forEach((f) => fetches.add(f))
             if (r.html === content) return file
             changed = true
             return { ...file, content: r.html }
         })
     }
-    return { document: next, changes, changed }
+    return { document: next, changes, changed, fetches: [...fetches] }
+}
+
+/**
+ * Which of the /vendor/ paths the rewritten pages will fetch does this origin
+ * NOT serve? A GET per path (HEAD is not what a browser sends and a static
+ * mount may answer it differently); anything but 200 counts as missing.
+ */
+export const missingVendorFiles = async (origin, fetches, { fetchImpl = fetch } = {}) => {
+    const missing = []
+    for (const pathname of [...new Set(fetches)].sort()) {
+        try {
+            const res = await fetchImpl(origin + pathname, { signal: AbortSignal.timeout(TIMEOUT_MS) })
+            if (res.status !== 200) missing.push({ pathname, status: res.status })
+        } catch (error) {
+            missing.push({ pathname, status: error?.name === 'TimeoutError' ? 'timeout' : String(error?.message || error) })
+        }
+    }
+    return missing
 }
 
 export const parseArgs = (argv) => {
-    const args = { tier: 'local', spaces: [], projects: [], apply: false, dropFonts: false, originals: null, api: null }
+    const args = { tier: 'local', spaces: [], projects: [], apply: false, dropFonts: false, restore: false, originals: null, api: null }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
         if (arg === '--tier') args.tier = argv[++i]
@@ -243,6 +281,7 @@ export const parseArgs = (argv) => {
         else if (arg === '--apply') args.apply = true
         else if (arg === '--dry-run') args.apply = false
         else if (arg === '--drop-fonts') args.dropFonts = true
+        else if (arg === '--restore') args.restore = true
         else if (arg === '--originals') args.originals = argv[++i]
         else if (arg === '--api') args.api = argv[++i]
         else throw new Error(`unknown argument ${arg}`)
@@ -309,6 +348,40 @@ const main = async () => {
         if (i === -1) throw new Error(`--project wants <space>/<id>, got ${p}`)
         return { spaceId: p.slice(0, i), projectId: p.slice(i + 1) }
     })
+    const originalsDir = args.originals || defaultOriginals()
+
+    if (args.restore) {
+        // The saved documents are the source here, not the API: a space's
+        // restore set is exactly the projects an --apply once wrote.
+        for (const spaceId of args.spaces) {
+            const dir = path.join(originalsDir, args.tier, spaceId)
+            const saved = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.document.json')) : []
+            if (!saved.length) console.log(`  ${spaceId}: no originals under ${dir}`)
+            for (const f of saved) targets.push({ spaceId, projectId: f.slice(0, -'.document.json'.length) })
+        }
+        console.log(`${args.apply ? 'RESTORE' : 'RESTORE DRY-RUN'} tier=${args.tier} api=${base} — ${targets.length} project(s)\noriginals ← ${originalsDir}\n`)
+        const restored = []
+        for (const { spaceId, projectId } of targets) {
+            const label = `${spaceId}/${projectId}`
+            const file = path.join(originalsDir, args.tier, spaceId, `${projectId}.document.json`)
+            if (!fs.existsSync(file)) { console.log(`  ${label}: no original at ${file} — skipped`); continue }
+            const original = JSON.parse(fs.readFileSync(file, 'utf8'))
+            const cdnUrls = new Set()
+            for (const html of [original.presentationState?.codeHtml, ...(original.presentationState?.codeFiles || []).map((c) => c?.content)]) {
+                for (const m of String(html || '').matchAll(ANY_CDN_URL)) cdnUrls.add(m[0])
+            }
+            console.log(`  ${label}: ${cdnUrls.size} CDN URL(s) come back`)
+            if (!args.apply) continue
+            const put = await call(`/api/projects/${projectId}/document`, { method: 'PUT', body: JSON.stringify(original) })
+            if (!put.ok) { console.log(`    restore FAILED: HTTP ${put.status}`); process.exitCode = 1; continue }
+            console.log('    restored')
+            restored.push(label)
+        }
+        if (args.apply) console.log(`\n${restored.length} project(s) restored: ${restored.join(', ') || '—'}`)
+        else console.log('\ndry-run — nothing written; pass --apply to restore.')
+        return
+    }
+
     for (const spaceId of args.spaces) {
         const res = await call(`/api/spaces/${spaceId}/projects`)
         if (!res.ok) { console.error(`  ${spaceId}: HTTP ${res.status} listing projects — skipped`); continue }
@@ -316,10 +389,11 @@ const main = async () => {
         for (const p of body.projects || []) targets.push({ spaceId, projectId: p.id })
     }
 
-    const originalsDir = args.originals || defaultOriginals()
     console.log(`${args.apply ? 'APPLY' : 'DRY-RUN'} tier=${args.tier} api=${base} — ${targets.length} project(s)${args.dropFonts ? ', Google Fonts links dropped' : ''}${args.apply ? `\noriginals → ${originalsDir}` : ''}\n`)
 
-    const written = []
+    // Plan everything first, write nothing yet: the vendor probe below has to
+    // see every path the whole run would introduce before the first PUT.
+    const plans = []
     let untouched = 0
     for (const { spaceId, projectId } of targets) {
         const label = `${spaceId}/${projectId}`
@@ -327,16 +401,36 @@ const main = async () => {
         if (!res.ok) { console.log(`  ${label}: HTTP ${res.status} — skipped`); continue }
         const body = await res.json()
         const document = body.document || body
-        const { document: next, changes, changed } = rewriteDocument(document, { dropFonts: args.dropFonts })
+        const { document: next, changes, changed, fetches } = rewriteDocument(document, { dropFonts: args.dropFonts })
         if (!changes.length) { untouched++; continue }
         console.log(`  ${label}${changed ? '' : '  (nothing to rewrite)'}`)
         printChanges(changes)
-        if (!changed || !args.apply) continue
-        const savedTo = saveOriginal({ dir: originalsDir, tier: args.tier, spaceId, projectId, document })
-        const put = await call(`/api/projects/${projectId}/document`, { method: 'PUT', body: JSON.stringify(next) })
-        if (!put.ok) { console.log(`    write FAILED: HTTP ${put.status} (original kept at ${savedTo})`); process.exitCode = 1; continue }
-        console.log(`    written (original at ${savedTo}/${projectId}.*)`)
-        written.push(label)
+        if (changed) plans.push({ spaceId, projectId, label, document, next, fetches })
+    }
+
+    const written = []
+    if (args.apply && plans.length) {
+        const origin = new URL(base).origin
+        const missing = await missingVendorFiles(origin, plans.flatMap((p) => p.fetches))
+        if (missing.length) {
+            console.log(`\nREFUSED — ${origin} does not serve ${missing.length} of the /vendor/ files these pages would need; nothing written.`)
+            for (const m of missing) console.log(`    ${m.status}  ${origin}${m.pathname}`)
+            console.log('A page pointed at a /vendor/ that is not there is black online as well as offline.\n'
+                + 'Install a build that carries public/vendor/ on this server first (code before data):\n'
+                + '  a di install:  DI_PROFILE=local npm run build && node scripts/pack-runtime.mjs --no-build --version=<v>\n'
+                + '                 then  di update --from dist-runtime/di-runtime-<v>.tar.gz\n'
+                + '  a hosted tier: deploy the branch that has public/vendor/, then re-run this.')
+            process.exitCode = 1
+            return
+        }
+        console.log(`\n${origin} serves every /vendor/ file these pages need (${new Set(plans.flatMap((p) => p.fetches)).size} probed).`)
+        for (const { spaceId, projectId, label, document, next } of plans) {
+            const savedTo = saveOriginal({ dir: originalsDir, tier: args.tier, spaceId, projectId, document })
+            const put = await call(`/api/projects/${projectId}/document`, { method: 'PUT', body: JSON.stringify(next) })
+            if (!put.ok) { console.log(`  ${label}: write FAILED: HTTP ${put.status} (original kept at ${savedTo})`); process.exitCode = 1; continue }
+            console.log(`  ${label}: written (original at ${savedTo}/${projectId}.*)`)
+            written.push(label)
+        }
     }
 
     console.log(`\n${untouched} project(s) load nothing from a CDN.`)

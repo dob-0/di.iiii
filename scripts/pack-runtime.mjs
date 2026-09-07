@@ -93,6 +93,14 @@ const main = async () => {
     if (full && !distHasHostedPieces) {
         die('--full asked for the complete pieces, but dist/ was built under DI_PROFILE=local. Rebuild without it.')
     }
+    // Published pages rewritten by scripts/page-vendor-cdn.mjs fetch their
+    // libraries from /vendor/; a dist/ built before public/vendor/ existed
+    // would install a server that 404s them, and those pages go black online
+    // as well as offline (that was the owner's install on 2026-09-07).
+    if (!fs.existsSync(path.join(ROOT, 'dist', 'vendor', 'VENDOR.md'))) {
+        die('dist/ has no vendor/ — it predates public/vendor/ or was built from a tree without it.\n'
+            + '  rebuild:  DI_PROFILE=local npm run build')
+    }
 
     await fsp.rm(stage, { recursive: true, force: true })
     await fsp.mkdir(stage, { recursive: true })
