@@ -166,7 +166,11 @@ export default function HostedPiece() {
 // microsite, the cPanel php shims and the site's OpenGraph images got there.
 // unicode-fonts: the Armenian glyph fallback for 3D text (public/unicode-fonts/README.md)
 // — without it a local install reaches for a CDN it does not have.
-const LOCAL_PUBLIC_INCLUDE = ['fonts', 'draco', 'basis', 'suite', 'unicode-fonts']
+// vendor: the pinned copies of three.js, Leaflet, cannon-es, marked and
+// es-module-shims that published pages load from /vendor/ instead of a CDN
+// (public/vendor/VENDOR.md) — without it an install 404s every one of them and
+// the pages that were rewritten to use them go black offline AND online.
+const LOCAL_PUBLIC_INCLUDE = ['fonts', 'draco', 'basis', 'suite', 'unicode-fonts', 'vendor']
 
 // Belt and braces: the include-list above already leaves a work's public
 // directory out, but if someone adds one to the list by accident the registry
