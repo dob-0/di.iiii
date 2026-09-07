@@ -18,8 +18,16 @@
 - Wiki: "Chat with Claude" summary and cost bullet cover the local Claude and the model on
   the box; the Keeper entry says which host is which; new entry `the-toybox` for
   `/{space}/make/{project}`.
-- Verified: vitest on `HostedPieceStub.test.jsx`, `previewMode.test.js`,
-  `SpaceHub.test.jsx`, `KeeperPanelWindow.test.jsx`, `WikiPage.test.jsx`,
-  `packProfile.test.js`, `works/boundary.test.js`; `DI_PROFILE=local npm run build`
-  green and under the 15 MB budget; the built dist served by a scratch serverXR
-  (`DI_LOCAL=1`, spare port) and screenshots of `/wcc` and the `/` grid read.
+- Second pass: CI's `copyVocabulary.test.js` refused the first toybox entry — five
+  strings said `Raw` and one said `lane`. Now "the node editor" and "an address", per
+  `docs/ai/vocabulary.md`; the route `/{space}/raw/projects/{project}` stays, it is an
+  identifier.
+- Verified: vitest on `copyVocabulary.test.js`, `HostedPieceStub.test.jsx`,
+  `previewMode.test.js`, `SpaceHub.test.jsx`, `KeeperPanelWindow.test.jsx`,
+  `WikiPage.test.jsx`, `nodeLabelVocabulary.test.js`, `packProfile.test.js`,
+  `works/boundary.test.js`; `DI_PROFILE=local npm run build` green and under the
+  15 MB budget; the built dist served by a scratch serverXR (`DI_LOCAL=1`, spare port)
+  and screenshots of `/wcc`, `/algovrithm/scene` on a phone, the `/` grid, a wcc card
+  made live, and the wiki entry read. Trap: that scratch server needs
+  `APP_BASE_PATH=/serverXR` (as `scripts/di/runner-node.mjs` sets it) — without it
+  the API router also mounts at `/` and its monitor page shadows the SPA's front door.
