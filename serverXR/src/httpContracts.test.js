@@ -2480,6 +2480,27 @@ describe('open-call application contracts', () => {
         expect(submitRes.headers.get('access-control-allow-origin')).toBe('*')
     })
 
+    it('lets a sandboxed code page read the house font from a client dir', async () => {
+        // express.static's setHeaders is (res, path, stat): the request is not an
+        // argument. Read on a `di` install 2026-09-06 — every /fonts request from
+        // origin "null" came back without the header and the house face fell back.
+        const clientDir = await mkdtemp(path.join(os.tmpdir(), 'dii-client-'))
+        await mkdir(path.join(clientDir, 'fonts'), { recursive: true })
+        await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
+        await writeFile(path.join(clientDir, 'fonts', 'inter-regular.woff'), 'not-really-a-font')
+        await writeFile(path.join(clientDir, 'plain.txt'), 'no header for this one')
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const origin = new URL(server.baseUrl).origin
+
+        const font = await fetch(`${origin}/fonts/inter-regular.woff`, { headers: { Origin: 'null' } })
+        expect(font.status).toBe(200)
+        expect(font.headers.get('access-control-allow-origin')).toBe('*')
+
+        const other = await fetch(`${origin}/plain.txt`, { headers: { Origin: 'null' } })
+        expect(other.status).toBe(200)
+        expect(other.headers.get('access-control-allow-origin')).toBeNull()
+    })
+
     it('serves project asset reads with permissive CORS for sandboxed iframes', async () => {
         const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
 
@@ -2933,6 +2954,38 @@ describe('nonexistent space vs restricted space', () => {
 
         const locked = await fetch(`${server.baseUrl}/api/spaces/secret-lab`, { headers: { Cookie: guestCookie } })
         expect(locked.status).toBe(403)
+    })
+
+    // The scene read is the one every room opens with, and it used to
+    // provision the space it was asked for: a directory and a blank
+    // scene.json per mistyped id, in the real data tier. With auth on,
+    // requireReadRole's 404 hid this; with auth off (a `di up` install) the
+    // handler ran, and seven stub folders appeared during the 2026-09-06
+    // festival-machine test. A read must answer 404 and leave the disk alone
+    // in both modes — and a boot-ensured space that has a row but no
+    // scene.json yet (main) must still read as the blank scene, since the
+    // read no longer writes one.
+    it('404s a scene read for a space that never existed and leaves the disk alone, auth on or off', async () => {
+        for (const requireAuth of [false, true]) {
+            const server = await startServer({ requireAuth })
+            const spacesDir = path.join(server.dataRoot, 'spaces')
+            const before = (await readdir(spacesDir)).sort()
+            expect(before).toContain('main')
+
+            const missing = await fetch(`${server.baseUrl}/api/spaces/never-made/scene`, { headers: withAuth(server.apiToken) })
+            expect(missing.status).toBe(404)
+            await expect(missing.json()).resolves.toMatchObject({ error: 'Space not found.' })
+            expect((await readdir(spacesDir)).sort()).toEqual(before)
+            expect(fs.existsSync(path.join(spacesDir, 'never-made'))).toBe(false)
+
+            const main = await fetch(`${server.baseUrl}/api/spaces/main/scene`, { headers: withAuth(server.apiToken) })
+            expect(main.status).toBe(200)
+            const payload = await main.json()
+            expect(payload.scene).toBeTruthy()
+            expect(payload.version).toBe(0)
+            // Reading did not write the blank scene down either.
+            expect(fs.existsSync(path.join(spacesDir, 'main', 'scene.json'))).toBe(false)
+        }
     })
 })
 

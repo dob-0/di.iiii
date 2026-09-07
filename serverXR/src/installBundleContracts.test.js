@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { execFile, spawn } from 'node:child_process'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import net from 'node:net'
 import os from 'node:os'
@@ -226,5 +226,102 @@ describe('install bundle contracts', () => {
         // with --force it succeeds
         const { stdout: forcedOut } = await runInstallScript(['import', bundlePath, '--force'], targetRoot)
         expect(forcedOut).toContain('1 spaces: subset-keep')
+    }, 90000)
+})
+
+// The light show lived at data/lighting/show.json and was in no backup; the
+// festival machine (docs/testing/FESTIVAL_MACHINE_2026-09-06.md) is where that
+// was found. It travels now, with the fixture library beside it and the folder
+// the local agent chat runs in — and a bundle written before they did still
+// restores.
+describe('what an install bundle carries beside the spaces', () => {
+    const seedRoot = async (root, { show = true, chat = true } = {}) => {
+        if (show) {
+            await mkdir(path.join(root, 'lighting', 'library', 'fixtures'), { recursive: true })
+            await writeFile(path.join(root, 'lighting', 'show.json'), JSON.stringify({ name: 'festival rig', scenes: [1, 2, 3] }))
+            await writeFile(path.join(root, 'lighting', 'show.prev.json'), JSON.stringify({ name: 'before' }))
+            await writeFile(path.join(root, 'lighting', 'library', 'fixtures', 'cs-1000.json'), '{"channels":6}')
+        }
+        if (chat) {
+            await mkdir(path.join(root, 'agent-chat'), { recursive: true })
+            await writeFile(path.join(root, 'agent-chat', 'CLAUDE.md'), 'house rules')
+        }
+    }
+
+    it('carries the light show and the agent chat folder, and restores them', async () => {
+        const sourceRoot = await makeTempDir('dii-install-show-a-')
+        const sourceServer = await startServer(sourceRoot)
+        await seedSpace(sourceServer, 'show-space')
+        await sourceServer.stop()
+        await seedRoot(sourceRoot)
+
+        const workDir = await makeTempDir('dii-install-out-')
+        const bundlePath = path.join(workDir, 'show.tar.gz')
+        const { stdout: exportOut } = await runInstallScript(['export', '--out', bundlePath], sourceRoot)
+        expect(exportOut).toContain('the light show')
+        expect(exportOut).toContain('agent chat')
+
+        const targetRoot = await makeTempDir('dii-install-show-b-')
+        const { stdout: importOut } = await runInstallScript(['import', bundlePath], targetRoot)
+        expect(importOut).toContain('the light show')
+        expect(JSON.parse(await readFile(path.join(targetRoot, 'lighting', 'show.json'), 'utf8')).name).toBe('festival rig')
+        expect(await readFile(path.join(targetRoot, 'lighting', 'library', 'fixtures', 'cs-1000.json'), 'utf8')).toBe('{"channels":6}')
+        expect(await readFile(path.join(targetRoot, 'agent-chat', 'CLAUDE.md'), 'utf8')).toBe('house rules')
+
+        // and the desk on the target reads that show — it is not just a file
+        const targetServer = await startServer(targetRoot)
+        const state = await fetch(`${targetServer.baseUrl}/light/api/state`)
+        expect(state.status).toBe(200)
+        expect((await fetch(`${targetServer.baseUrl}/api/spaces/show-space`)).status).toBe(200)
+    }, 90000)
+
+    it('keeps a show already on the target unless --force, exactly like the instance config', async () => {
+        const sourceRoot = await makeTempDir('dii-install-show-c-')
+        const sourceServer = await startServer(sourceRoot)
+        await sourceServer.stop()
+        await seedRoot(sourceRoot, { chat: false })
+        const workDir = await makeTempDir('dii-install-out-')
+        const bundlePath = path.join(workDir, 'show.tar.gz')
+        await runInstallScript(['export', '--out', bundlePath], sourceRoot)
+
+        const targetRoot = await makeTempDir('dii-install-show-d-')
+        await mkdir(path.join(targetRoot, 'lighting'), { recursive: true })
+        await writeFile(path.join(targetRoot, 'lighting', 'show.json'), JSON.stringify({ name: 'the club' }))
+
+        const { stdout: kept } = await runInstallScript(['import', bundlePath], targetRoot)
+        expect(kept).toContain('lighting/ kept')
+        expect(JSON.parse(await readFile(path.join(targetRoot, 'lighting', 'show.json'), 'utf8')).name).toBe('the club')
+
+        await runInstallScript(['import', bundlePath, '--force'], targetRoot)
+        expect(JSON.parse(await readFile(path.join(targetRoot, 'lighting', 'show.json'), 'utf8')).name).toBe('festival rig')
+    }, 90000)
+
+    it('still restores a bundle written before either existed', async () => {
+        const sourceRoot = await makeTempDir('dii-install-show-e-')
+        const sourceServer = await startServer(sourceRoot)
+        await seedSpace(sourceServer, 'old-space')
+        await sourceServer.stop()
+
+        const workDir = await makeTempDir('dii-install-out-')
+        const bundlePath = path.join(workDir, 'new.tar.gz')
+        await runInstallScript(['export', '--out', bundlePath], sourceRoot)
+
+        // the manifest as the previous tool wrote it: no `dirs` field at all
+        const unpacked = path.join(workDir, 'unpacked')
+        await mkdir(unpacked)
+        await execFileAsync('tar', ['-xzf', bundlePath, '-C', unpacked])
+        const manifest = JSON.parse(await readFile(path.join(unpacked, 'install.json'), 'utf8'))
+        expect(manifest.dirs).toEqual([])
+        delete manifest.dirs
+        await writeFile(path.join(unpacked, 'install.json'), JSON.stringify(manifest))
+        const oldBundle = path.join(workDir, 'old.tar.gz')
+        await execFileAsync('tar', ['-czf', oldBundle, '-C', unpacked, '.'])
+
+        const targetRoot = await makeTempDir('dii-install-show-f-')
+        const { stdout } = await runInstallScript(['import', oldBundle], targetRoot)
+        expect(stdout).toContain('old-space')
+        expect(existsSync(path.join(targetRoot, 'lighting'))).toBe(false)
+        const targetServer = await startServer(targetRoot)
+        expect((await fetch(`${targetServer.baseUrl}/api/spaces/old-space`)).status).toBe(200)
     }, 90000)
 })

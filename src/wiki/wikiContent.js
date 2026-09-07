@@ -163,7 +163,7 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Setup — patch the rig. Add each fixture, give it a profile and an address, and drag it into place on a plan of the room, so the desk looks like the room you are standing in. The plan is not a fixed canvas — pan and zoom go as far out as the rig needs, so a truss run or a followspot off to one side has somewhere to sit.',
                 'Control — the desk proper. Fixtures, colours, a master, scenes, chases, effects and LFOs; save what you are looking at as a scene and give it a name you will recognise in the dark. Looks stack on layers with their own fader, so a colour chase and a strobe can run at once instead of one replacing the other, and a look can follow the room instead of the patch order — Line sweep, Radar and Grid are one-press starters for a wave crossing the floor, a beam turning round its centre, and two waves crossing into a moving grid. Drag a fixture on the Setup stage and it moves inside every one of them.',
-                'Touch — the show surface. Big scene buttons, made for a phone in one hand at the back of the room.',
+                'Touch — the show surface. Big scene buttons, made for a phone in one hand at the back of the room. A phone can only get there when di.iiii was started with di up --lan; the desk’s Phone box shows the address and a QR code when it can, and says so plainly when it cannot.',
                 'Fader — plain channel faders, for when a fixture is doing something no profile explains and you need to poke a channel by hand.',
                 'MIDI — map a controller. Mappings live with the desk, not in one browser, so the same knobs work from any screen you open it on.'
             ] },
@@ -172,8 +172,8 @@ export const WIKI_ARTICLES = [
             'A graph can play the desk. Drop a DMX Out node into a canvas, leave it on its default rig, and Master, Channel, Value, Blackout and Scene are wired straight into the desk you just patched — an oscillator on a lamp, a scene name recalled by a button, a whole rig blacked out by a wire. See “DMX Out: the graph lights the room”.',
             'The desk lives on a local di.iiii only — `di up`, or npm run dev. A hosted di-studio.xyz has no /light in it at all, on purpose: a lighting desk is a thing that reaches hardware in a room, and the room is where you are.'
         ],
-        tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up'],
-        updated: '2026-09-03'
+        tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up', 'lan', 'phone'],
+        updated: '2026-09-06'
     },
     {
         id: 'projection-mapping',
@@ -341,18 +341,19 @@ export const WIKI_ARTICLES = [
         id: 'claude-chat-node',
         category: 'Editing',
         title: 'Chat with Claude',
-        summary: 'Place an agent node on the canvas and chat with Claude while you work — powered by your own connected API key.',
+        summary: 'Place an agent node on the canvas and chat while you work — with the Claude on this machine, with your own API key, or, with no internet at all, with a model on the box.',
         body: [
             'Add an agent node from the palette. It opens as a chat window: type, and Claude answers in a live stream, right there on the canvas. Conversations are saved to your account — reopen the node and the chat is still there.',
             'On your own machine — meaning a di.iiii you run locally (`di up` in its ordinary mode, or the dev server), not the hosted site and not the docker container, which cannot see programs on the host — if Claude Code is installed and logged in (a Claude Pro/Max subscription), the node just works — no API key at all: di.iiii talks to your local Claude, and conversations continue across sessions. Otherwise it runs on the Claude API key connected to your account, and the node itself asks for it: paste the key straight into the panel (or sign in first, if you are a guest) — no detour through settings. Keys stay on the server: the browser never talks to Anthropic directly, and nobody else can use yours.',
+            'No internet at all — a festival, a venue with power and nothing else? If the local install names a model on the same machine (LLM_BASE_URL in ~/.di/di.env pointing at a llama.cpp or Ollama server, LLM_MODEL naming the model), the node answers from that model when no key is connected, and switches to it mid-conversation when Claude cannot be reached. The panel names the model that answered.',
             { list: [
                 'Each agent node holds its own conversation — place several for parallel topics.',
                 'Replies stream token by token; usage (tokens in/out) is recorded per turn on your account.',
-                'Costs go to your own Anthropic account, with a per-reply cap and a rate limit as guardrails.'
+                'With a key connected, costs go to your own Anthropic account, with a per-reply cap and a rate limit as guardrails. A local Claude runs on its subscription, and a model on the box costs nothing and needs no key — it costs the machine instead, so a small model on a laptop is slow rather than free.'
             ] }
         ],
-        tags: ['ai', 'claude', 'chat', 'raw', 'agent', 'node'],
-        updated: '2026-08-19'
+        tags: ['ai', 'claude', 'chat', 'raw', 'agent', 'node', 'local', 'offline'],
+        updated: '2026-09-06'
     },
     {
         id: 'publishing',
@@ -1045,7 +1046,8 @@ export const WIKI_ARTICLES = [
                 'di update — installs the newest version, and never touches your work; di update --rollback returns to the one before',
                 'di update --from FILE — updates from a file on this machine, for a venue with no network',
                 'di restore --snapshot — the copies di.iiii takes of your work by itself, before an update that changes how it is stored',
-                'di status — what is running, on which address, and how much space your work takes',
+                'di status — what is running, on which address, whether the room can reach it, and how much space your work takes',
+                'di up --lan — answers on this wifi too, so a phone in the room can open it (the lighting desk’s Touch page, for one). Auth is off on a local di.iiii, so this means anyone on that network can edit — di up says so every time, and it lasts for that start only: the next di up is back to this machine alone',
                 'di doctor — what this machine can and cannot do, and what to install if something is missing',
                 'di mcp — hands this di.iiii to Claude, or any other agent that speaks MCP'
             ] },
@@ -1065,7 +1067,7 @@ export const WIKI_ARTICLES = [
             'Add a Keeper from the palette (category Agent) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
             'The Keeper is pointed at an endpoint rather than signed in to an account. You give it a URL and a model name; nothing runs as you, and no key is stored. That means it works with a model on your own machine, and it works with no internet at all — which is the situation it was built for.',
             { list: [
-                'Endpoint — a chat URL. A bare host such as http://localhost:11434 is completed for you; anything with a path is used as given.',
+                'Endpoint — a chat URL. A bare host is enough: http://127.0.0.1:8090 is where llama.cpp and LM Studio answer, http://localhost:11434 is Ollama, and the node completes either for you — Ollama\'s chat path is tried first and the OpenAI-style one second, so you never have to know which kind of box it is. Anything with a path is used as given.',
                 'Model — the model name that server knows, for example qwen3.',
                 'System — an optional instruction that shapes every answer.'
             ] },
@@ -1073,8 +1075,21 @@ export const WIKI_ARTICLES = [
             'Two ports carry the result into the graph: Reply (the text) and Busy (true while it is thinking). Wire something into the Prompt port and the graph asks the question instead of you — the box then shows what it was asked and becomes read-only.',
             'If the keeper cannot be reached the node says so. A browser will also refuse a call to a local model that has not been told to allow this page, so a model box may need its allowed origins set before it will answer.'
         ],
-        tags: ['raw', 'nodes', 'keeper', 'agent', 'llm', 'local', 'offline', 'ollama'],
-        updated: '2026-08-19'
+        tags: ['raw', 'nodes', 'keeper', 'agent', 'llm', 'local', 'offline', 'ollama', 'llama.cpp'],
+        updated: '2026-09-06'
+    },
+    {
+        id: 'the-toybox',
+        category: 'Editing',
+        title: 'The toybox: a room on a phone',
+        summary: '/{space}/make/{project} opens a project as one full-screen room with four words under it — add, colour, photo, talk. The same project the node editor shows, under a lid a child can hold.',
+        body: [
+            'Made for a day camp in Dilijan, where five children aged 10 to 17 were building 3D rooms on their own phones. The node editor is a workshop bench, and on a 390px screen it is eight stacked window bars and a node graph at 34% zoom — with the thing being made nowhere on the screen. The toybox is the same project with a different lid: the room fills the screen and is tappable, and four words sit under it, Armenian first and English beneath. Add puts one of five shapes on the ground in front of you; colour paints what you tapped, from nine; photo takes a picture from the phone and stands it in the room; talk opens the chat, here or with everyone in the space.',
+            'Nothing new is stored. It is the same project, the same op layer and the same renderer the node editor uses, so a mentor opening /{space}/raw/projects/{project} sees every object a child made, signed by name — the toybox asks for a first name once, and that is the name on the work.',
+            'One address shape only: /{space}/make/{project}. There is no list page and no default — a child follows a link a mentor wrote down, because an address that guessed which project you meant could open the wrong child\'s room. A bare /make is not the toybox and opens nothing useful. It sits behind the same gate as the node editor, so an invite that opens the space opens its toybox too.'
+        ],
+        tags: ['make', 'toybox', 'phone', 'camp', 'children', 'raw', 'project'],
+        updated: '2026-09-06'
     },
     {
         id: 'math-and-route-nodes',

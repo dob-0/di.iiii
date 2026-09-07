@@ -24,7 +24,7 @@ import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
-import { PREVIEW_READY_MESSAGE } from '../../utils/previewMode.js'
+import { PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE } from '../../utils/previewMode.js'
 import '../styles/studio-space-hub.css'
 
 // Every space card embeds the SAME app at a different route, and browsers
@@ -72,6 +72,11 @@ function SpaceCardPreview({ spaceId, label }) {
     const [visible, setVisible] = useState(false)
     const [booted, setBooted] = useState(false)
     const [scale, setScale] = useState(0)
+    // The frame said its route is a local-profile stub (a work that is not in
+    // this copy). Sticky on purpose: the answer will not change while the
+    // grid is open, so scrolling the card away and back must not boot the
+    // frame again to hear it a second time.
+    const [stub, setStub] = useState(false)
     const releaseRef = useRef(null)
 
     useEffect(() => {
@@ -101,7 +106,7 @@ function SpaceCardPreview({ spaceId, label }) {
     }, [])
 
     useEffect(() => {
-        if (!visible) {
+        if (!visible || stub) {
             setBooted(false)
             return undefined
         }
@@ -111,17 +116,21 @@ function SpaceCardPreview({ spaceId, label }) {
             releaseRef.current = null
             release()
         }
-    }, [visible])
+    }, [visible, stub])
 
-    // The embedded app posts dii:preview-ready once it has painted. Only this
-    // card's own frame may free this card's slot, so the message is matched on
-    // the iframe's contentWindow, not on the space id in the payload.
+    // The embedded app posts dii:preview-ready once it has painted, or
+    // dii:preview-stub when there is nothing to paint (a work left out of a
+    // local copy). Either frees the slot. Only this card's own frame may free
+    // this card's slot, so the message is matched on the iframe's
+    // contentWindow, not on the space id in the payload.
     useEffect(() => {
         if (!booted) return undefined
         const onMessage = (event) => {
             if (event.origin !== window.location.origin) return
-            if (event.data?.type !== PREVIEW_READY_MESSAGE) return
+            const type = event.data?.type
+            if (type !== PREVIEW_READY_MESSAGE && type !== PREVIEW_STUB_MESSAGE) return
             if (event.source !== frameRef.current?.contentWindow) return
+            if (type === PREVIEW_STUB_MESSAGE) setStub(true)
             releaseRef.current?.()
         }
         window.addEventListener('message', onMessage)
@@ -141,8 +150,10 @@ function SpaceCardPreview({ spaceId, label }) {
     // picture is the "make it live" button), and two nested boxes of the
     // same class doubled the border/aspect-ratio frame.
     return (
-        <div ref={hostRef} className="ssh-card-preview-fill" aria-hidden="true">
-            {visible && booted ? (
+        <div ref={hostRef} className={`ssh-card-preview-fill${stub ? ' ssh-card-preview-fill--stub' : ''}`} aria-hidden="true">
+            {stub ? (
+                <p className="ssh-card-preview-empty-line">not in this copy — this piece lives on di-studio.xyz</p>
+            ) : visible && booted ? (
                 <iframe
                     ref={frameRef}
                     src={`${buildAppSpacePath(spaceId)}?preview=1`}

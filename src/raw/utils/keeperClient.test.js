@@ -5,6 +5,7 @@ import {
     buildKeeperRequest,
     parseKeeperReply,
     resolveKeeperEndpoint,
+    resolveKeeperEndpoints,
     stripThinking
 } from './keeperClient.js'
 
@@ -57,6 +58,16 @@ describe('resolveKeeperEndpoint', () => {
             .toBe('https://box.local/v1/chat/completions')
     })
 
+    it('names the OpenAI path as the second guess for a bare host', () => {
+        expect(resolveKeeperEndpoints('http://127.0.0.1:8090')).toEqual([
+            'http://127.0.0.1:8090/api/chat',
+            'http://127.0.0.1:8090/v1/chat/completions'
+        ])
+        expect(resolveKeeperEndpoints('https://box.local/v1/chat/completions'))
+            .toEqual(['https://box.local/v1/chat/completions'])
+        expect(resolveKeeperEndpoints('')).toEqual([])
+    })
+
     it('treats empty as unset', () => {
         expect(resolveKeeperEndpoint('')).toBe('')
         expect(resolveKeeperEndpoint(undefined)).toBe('')
@@ -80,6 +91,25 @@ describe('askKeeper', () => {
         const result = await askKeeper({ endpoint: 'http://box:11434', model: 'qwen3', prompt: 'hi', fetchImpl })
         expect(result).toMatchObject({ status: KEEPER_STATUS.ANSWERED, text: 'Welcome.' })
         expect(fetchImpl.mock.calls[0][0]).toBe('http://box:11434/api/chat')
+    })
+
+    it('falls through to the OpenAI path when a bare host 404s Ollama\'s (llama.cpp on the table)', async () => {
+        const calls = []
+        const fetchImpl = vi.fn(async (url) => {
+            calls.push(url)
+            if (url.endsWith('/api/chat')) return { ok: false, status: 404, statusText: 'Not Found', json: async () => ({}) }
+            return okResponse({ choices: [{ message: { content: 'Here.' } }] })
+        })
+        const result = await askKeeper({ endpoint: 'http://127.0.0.1:8090', model: 'qwen3-4b', prompt: 'there?', fetchImpl })
+        expect(calls).toEqual(['http://127.0.0.1:8090/api/chat', 'http://127.0.0.1:8090/v1/chat/completions'])
+        expect(result).toMatchObject({ status: KEEPER_STATUS.ANSWERED, text: 'Here.' })
+    })
+
+    it('does not guess a second path when the first was given explicitly', async () => {
+        const fetchImpl = vi.fn(async () => ({ ok: false, status: 404, statusText: 'Not Found', json: async () => ({}) }))
+        const result = await askKeeper({ endpoint: 'http://box.local/custom/chat', model: 'm', prompt: 'p', fetchImpl })
+        expect(fetchImpl).toHaveBeenCalledTimes(1)
+        expect(result.status).toBe(KEEPER_STATUS.ERROR)
     })
 
     it('reports an unreachable box rather than throwing', async () => {

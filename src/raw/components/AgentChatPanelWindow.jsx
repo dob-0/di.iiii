@@ -12,6 +12,10 @@ import { connectAiKey, getApiAuthProviders, getOAuthUrl } from '../../services/a
 
 const STREAM_ID = 'streaming-reply'
 
+// Who is speaking: Claude, unless the turn was answered by a model on this
+// machine — then its own name, so a festival reply is never labelled Claude.
+const authorLabel = (model) => (model && !/claude/i.test(model) ? model : 'Claude')
+
 export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
     const [messages, setMessages] = useState([])
     const [draft, setDraft] = useState('')
@@ -21,6 +25,10 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
     const [connection, setConnection] = useState('checking')
     const [keyDraft, setKeyDraft] = useState('')
     const [providers, setProviders] = useState(null)
+    // the model on this machine, when the server names one (LLM_BASE_URL) —
+    // it answers with no key at all, and it takes over when the internet is gone
+    const [localModel, setLocalModel] = useState(null)
+    const [localOnly, setLocalOnly] = useState(false)
     const listRef = useRef(null)
     const chatIdRef = useRef(chatId || null)
 
@@ -33,9 +41,11 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
                 if (cancelled) return
                 // never demote an already-connected panel: a slow providers
                 // response must not revert a connect the user just completed
+                setLocalModel(available?.localModel || null)
+                setLocalOnly(Boolean(available?.localModel) && !available?.keyConnected && !available?.localClaude)
                 setConnection((current) => {
                     if (current === 'connected') return current
-                    return available?.keyConnected || available?.localClaude ? 'connected' : 'none'
+                    return available?.keyConnected || available?.localClaude || available?.localModel ? 'connected' : 'none'
                 })
             })
             .catch((e) => {
@@ -126,6 +136,7 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
             await sendAiChatMessage(chatIdRef.current, text, {
                 onAccepted: (userMessage) => setMessages((prev) => [...prev, userMessage]),
                 onDelta: (delta) => setStreamText((prev) => (prev ?? '') + delta),
+                onNotice: (text) => setNotice(text),
                 onDone: (assistantMessage, stopReason) => {
                     setMessages((prev) => [...prev, assistantMessage])
                     if (stopReason === 'max_tokens') setNotice('The reply hit its length limit and may be cut short.')
@@ -166,18 +177,20 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
                             ? 'Connect your Claude to start — paste your API key below. It is stored encrypted on your account; the browser never talks to Anthropic.'
                             : connection === 'guest'
                                 ? 'Sign in to chat with your own Claude.'
-                                : 'Ask Claude anything — replies stream in live.'}
+                                : localOnly
+                                    ? `Answers come from ${localModel?.model || 'the model'} on this machine — no key, no internet needed.`
+                                    : 'Ask Claude anything — replies stream in live.'}
                     </div>
                 )}
                 {messages.map((message) => (
                     <div key={message.id} className={`raw-chat-message${message.role === 'user' ? ' is-self' : ''}`}>
-                        <span className="raw-chat-message-author">{message.role === 'user' ? 'You' : 'Claude'}</span>
+                        <span className="raw-chat-message-author">{message.role === 'user' ? 'You' : authorLabel(message.model)}</span>
                         <p className="raw-chat-message-text">{message.content}</p>
                     </div>
                 ))}
                 {streamText !== null && (
                     <div key={STREAM_ID} className="raw-chat-message">
-                        <span className="raw-chat-message-author">Claude</span>
+                        <span className="raw-chat-message-author">{localOnly ? authorLabel(localModel?.model) : 'Claude'}</span>
                         <p className="raw-chat-message-text">{streamText || '…'}</p>
                     </div>
                 )}
@@ -219,7 +232,7 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
                         className="raw-chat-input"
                         value={draft}
                         onChange={(event) => setDraft(event.target.value)}
-                        placeholder="Message Claude…"
+                        placeholder={localOnly ? `Message ${localModel?.model || 'the model'}…` : 'Message Claude…'}
                         maxLength={4000}
                     />
                     <button type="submit" disabled={!draft.trim() || streamText !== null || connection === 'checking'}>Send</button>

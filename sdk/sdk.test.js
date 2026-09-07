@@ -4,7 +4,12 @@ import { MOVES } from './moves.js'
 import { ApprovalPending, DiError, createHttp } from './http.js'
 import { PUBLIC, PublicMoveRefused, guard, reachOf } from './reach.js'
 import { resolveBase, resolveToken } from './credentials.js'
-import { createHandler, describeTools, inputSchema, moveName, toolName } from './mcp.mjs'
+import { createHandler, describeTools, detectVersion, inputSchema, moveName, toolName } from './mcp.mjs'
+import { spawnSync } from 'node:child_process'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 /** A server that answers from a table, and records what it was asked. */
 const fakeServer = (routes) => {
@@ -256,5 +261,54 @@ describe('the agent face', () => {
         const out = await handle({ id: 1, method: 'tools/call', params: { name: 'space_list', arguments: {} } })
         expect(out.result.isError).toBe(true)
         expect(out.result.content[0].text).toContain('boom')
+    })
+})
+
+// An install introduced itself to every MCP client as 0.0.0: the version was
+// read from ../package.json, which the packed runtime does not carry. It has
+// release.json instead.
+describe('what the server says it is', () => {
+    const root = () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'di-mcp-version-'))
+        return { dir, url: pathToFileURL(`${dir}${path.sep}`) }
+    }
+
+    it('reads release.json — the install shape', () => {
+        const { dir, url } = root()
+        fs.writeFileSync(path.join(dir, 'release.json'), JSON.stringify({ version: '0.4.2-offline.7', schemaVersion: 1 }))
+        expect(detectVersion(url)).toBe('0.4.2-offline.7')
+    })
+
+    it('reads package.json where there is no release.json — the checkout shape', () => {
+        const { dir, url } = root()
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ version: '0.4.0' }))
+        expect(detectVersion(url)).toBe('0.4.0')
+    })
+
+    it('prefers release.json when both exist — the packed number, not the repo number', () => {
+        const { dir, url } = root()
+        fs.writeFileSync(path.join(dir, 'release.json'), JSON.stringify({ version: '1.2.3' }))
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ version: '0.4.0' }))
+        expect(detectVersion(url)).toBe('1.2.3')
+    })
+
+    it('falls back to 0.0.0 only when neither file is there', () => {
+        expect(detectVersion(root().url)).toBe('0.0.0')
+    })
+
+    it('is what a real `node sdk/mcp.mjs` reports on initialize — this checkout\'s package.json', () => {
+        // Spawned: under vitest the module's import.meta.url is an http-scheme
+        // URL that reaches no file, so the handler in-process always says 0.0.0
+        // and proves nothing about what an agent is told.
+        const entry = path.resolve(path.dirname(new URL(import.meta.url).pathname), 'mcp.mjs')
+        const expected = JSON.parse(fs.readFileSync(path.resolve(path.dirname(entry), '..', 'package.json'), 'utf8')).version
+        const result = spawnSync(process.execPath, [entry, '--base', 'http://127.0.0.1:1/serverXR'], {
+            encoding: 'utf8',
+            timeout: 15000,
+            input: '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n'
+        })
+        const answer = JSON.parse(result.stdout.trim().split('\n')[0])
+        expect(answer.result.serverInfo.version).toBe(expected)
+        expect(expected).not.toBe('0.0.0')
     })
 })

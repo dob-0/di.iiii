@@ -25,6 +25,6 @@ services:
     restart: "no"
     ports: !override
       # Loopback only. A local install on café wifi with auth off is not meant
-      # to be an editor the whole room shares — LAN exposure is a later,
-      # deliberate feature with an auth story of its own.
+      # to be an editor the whole room shares. The node runner has `di up --lan`
+      # for the room; docker mode does not, and the CLI refuses the flag here.
       - "127.0.0.1:${PORT:-4000}:8080"

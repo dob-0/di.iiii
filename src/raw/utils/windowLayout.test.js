@@ -6,6 +6,8 @@ import {
     selectMountedPanelNodes,
     getAnatomyDefaultFrame,
     getScopeMarkerTop,
+    placeNewWindowFrame,
+    RAW_NEW_WINDOW_GAP,
     RAW_SCOPE_MARKER_HEIGHT,
     RAW_WINDOW_BOTTOM_RESERVE,
     RAW_WINDOW_BOTTOM_RESERVE_WIDE,
@@ -424,5 +426,148 @@ describe('clampWindowFrame while resizing', () => {
             allowOverflowLeft: true, allowOverflowTop: true, viewportWidth: 500, viewportHeight: 300
         })
         expect(short.y).toBeGreaterThanOrEqual(0)
+    })
+})
+
+// A new panel window opens against its card and wholly on screen. The
+// festival-machine inventory (2026-09-06) reproduced the old behaviour twice:
+// a panel placed low or right on the screen opened with its window cut off,
+// because an unpinned frame is graph units placed through the viewport and
+// nothing clamped it. These assert the placement in SCREEN pixels — the only
+// space "inside the viewport" means anything in — by rendering the returned
+// frame through the same viewport arithmetic DesktopWindow uses.
+describe('placeNewWindowFrame', () => {
+    const desktop = { viewportWidth: 1440, viewportHeight: 900, workspaceTop: 64 }
+    const phone = { viewportWidth: 390, viewportHeight: 844, workspaceTop: 64 }
+    // The surface's box starts under the topbar; the canvas opens panned by 60.
+    const viewport = { panX: 60, panY: 60, zoom: 1, originLeft: 0, originTop: 64 }
+    const agentFrame = { x: 0, y: 0, width: 420, height: 480, zIndex: 7, visible: true }
+    const agentCard = (x, y) => ({ x, y, width: 200, height: 74 })
+
+    const onScreen = (frame, vp, space = 'world') => (space === 'world'
+        ? {
+            x: vp.originLeft + vp.panX + frame.x * vp.zoom,
+            y: vp.originTop + vp.panY + frame.y * vp.zoom,
+            width: frame.width * vp.zoom,
+            height: frame.height * vp.zoom
+        }
+        : { x: frame.x, y: frame.y, width: frame.width, height: frame.height })
+    const expectInside = (rect, { viewportWidth, viewportHeight, workspaceTop }) => {
+        expect(rect.x).toBeGreaterThanOrEqual(RAW_WINDOW_PADDING)
+        expect(rect.y).toBeGreaterThanOrEqual(workspaceTop)
+        expect(rect.x + rect.width).toBeLessThanOrEqual(viewportWidth - RAW_WINDOW_PADDING)
+        expect(rect.y + rect.height).toBeLessThanOrEqual(viewportHeight - RAW_WINDOW_PADDING - RAW_WINDOW_BOTTOM_RESERVE_WIDE)
+    }
+    const overlaps = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+
+    it('opens below the card, left-aligned with it, when there is room', () => {
+        const card = agentCard(200, 100)
+        const frame = placeNewWindowFrame({ frame: agentFrame, card, space: 'world', viewport, ...desktop })
+        expect(frame).toMatchObject({ x: 200, y: 100 + 74 + RAW_NEW_WINDOW_GAP, width: 420, height: 480 })
+        expectInside(onScreen(frame, viewport), desktop)
+    })
+
+    it('flips above the card when there is no room below (the reproduced gap)', () => {
+        // Card low on a 1440x900 screen: 64 + 60 + 600 = 724px down. Below it
+        // the 480px window would end at 1294 — 446px off the bottom.
+        const card = agentCard(900, 600)
+        const frame = placeNewWindowFrame({ frame: agentFrame, card, space: 'world', viewport, ...desktop })
+        const rect = onScreen(frame, viewport)
+        expectInside(rect, desktop)
+        expect(rect.y + rect.height).toBeLessThanOrEqual(onScreen({ ...card }, viewport).y - RAW_NEW_WINDOW_GAP)
+        expect(overlaps(rect, onScreen(card, viewport))).toBe(false)
+        expect(frame.width).toBe(420)
+        expect(frame.height).toBe(480)
+    })
+
+    it('a card in the bottom-right corner still gets a whole window that does not cover it', () => {
+        const card = agentCard(1300, 700)
+        const frame = placeNewWindowFrame({ frame: agentFrame, card, space: 'world', viewport, ...desktop })
+        const rect = onScreen(frame, viewport)
+        expectInside(rect, desktop)
+        expect(overlaps(rect, onScreen(card, viewport))).toBe(false)
+    })
+
+    it('goes beside the card when neither below nor above fits', () => {
+        // A short viewport: below and above both clamp back onto the card.
+        const short = { viewportWidth: 1440, viewportHeight: 620, workspaceTop: 64 }
+        const card = agentCard(300, 200)
+        const frame = placeNewWindowFrame({ frame: agentFrame, card, space: 'world', viewport, ...short })
+        const rect = onScreen(frame, viewport)
+        expectInside(rect, short)
+        expect(overlaps(rect, onScreen(card, viewport))).toBe(false)
+        expect(rect.x).toBe(onScreen(card, viewport).x + 200 + RAW_NEW_WINDOW_GAP)
+    })
+
+    it.each([0.5, 0.25, 0.1, 0.05])('answers in graph units at zoom %s — the window keeps its authored size', (zoom) => {
+        // Below zoom ~0.3 the window's screen size drops under the clamp's
+        // 200x120 pixel floor. That floor is for SCREEN windows; a world window
+        // is allowed to be small on screen (it is far away), and inflating it
+        // to the floor and dividing back by zoom wrote a 4000x2400 frame into
+        // the document at 5% (review of PR #393). Only the viewport cap may
+        // shrink it; nothing may grow it.
+        const zoomedOut = { panX: 60, panY: 60, zoom, originLeft: 0, originTop: 64 }
+        const card = agentCard(2000, 1200)
+        const frame = placeNewWindowFrame({ frame: agentFrame, card, space: 'world', viewport: zoomedOut, ...desktop })
+        expect(frame.width).toBe(420)
+        expect(frame.height).toBe(480)
+        const rect = onScreen(frame, zoomedOut)
+        expectInside(rect, desktop)
+        expect(overlaps(rect, onScreen(card, zoomedOut))).toBe(false)
+    })
+
+    it('the gap to the card is graph units as well — zoomed out, the window still opens against its card', () => {
+        // With the gap in screen pixels, a window placed at 10% sat 160 graph
+        // units under its card and 144px away from it once zoom was back at 1.
+        const zoomedOut = { panX: 60, panY: 60, zoom: 0.1, originLeft: 0, originTop: 64 }
+        const card = agentCard(2000, 1200)
+        const frame = placeNewWindowFrame({ frame: agentFrame, card, space: 'world', viewport: zoomedOut, ...desktop })
+        expect(frame).toMatchObject({ x: 2000, y: 1200 + 74 + RAW_NEW_WINDOW_GAP, width: 420, height: 480 })
+    })
+
+    it('a world window smaller than the world minimum is raised to it, in graph units, whatever the zoom', () => {
+        // DesktopWindow's worldSettle floors a world frame at 200x120 GRAPH
+        // units; the placement agrees with it in the same units.
+        const zoomedOut = { panX: 60, panY: 60, zoom: 0.1, originLeft: 0, originTop: 64 }
+        const tiny = { ...agentFrame, width: 90, height: 40 }
+        const frame = placeNewWindowFrame({ frame: tiny, card: agentCard(200, 100), space: 'world', viewport: zoomedOut, ...desktop })
+        expect(frame.width).toBe(RAW_WINDOW_MIN_WIDTH)
+        expect(frame.height).toBe(RAW_WINDOW_MIN_HEIGHT)
+    })
+
+    it('zoomed in, only the viewport cap shrinks the window, and the stored frame still renders whole', () => {
+        const zoomedIn = { panX: 60, panY: 60, zoom: 3, originLeft: 0, originTop: 64 }
+        const card = agentCard(40, 20)
+        const frame = placeNewWindowFrame({ frame: agentFrame, card, space: 'world', viewport: zoomedIn, ...desktop })
+        expect(frame.width).toBeLessThanOrEqual(420)
+        expect(frame.height).toBeLessThanOrEqual(480)
+        expectInside(onScreen(frame, zoomedIn), desktop)
+    })
+
+    it('on a phone the frame is screen pixels and lands on the phone clamp: x=12, width=366, whole on screen', () => {
+        // 390x844: every window is screen-fixed and the clamp IS the layout
+        // (memory: the camp desks were authored against x=12/width=366). A
+        // window wider than the room beside a card cannot avoid it; what it
+        // must not do is hang off the bottom.
+        const card = agentCard(100, 300)
+        const frame = placeNewWindowFrame({ frame: agentFrame, card, space: 'screen', viewport, ...phone })
+        expect(frame.x).toBe(RAW_WINDOW_PADDING)
+        expect(frame.width).toBe(390 - RAW_WINDOW_PADDING * 2)
+        expect(frame.y).toBeGreaterThanOrEqual(64)
+        expect(frame.y + frame.height).toBeLessThanOrEqual(844 - RAW_WINDOW_PADDING - RAW_WINDOW_BOTTOM_RESERVE)
+    })
+
+    it('with no viewport yet, opens below the pointer and inside the screen', () => {
+        const frame = placeNewWindowFrame({
+            frame: agentFrame, anchor: { clientX: 1400, clientY: 880 }, space: 'screen', viewport: null, ...desktop
+        })
+        expectInside(onScreen(frame, viewport, 'screen'), desktop)
+    })
+
+    it('with nothing to open against, simply clamps the frame it was given', () => {
+        const frame = placeNewWindowFrame({ frame: { ...agentFrame, x: 1300, y: 800 }, space: 'screen', viewport: null, ...desktop })
+        expectInside(onScreen(frame, viewport, 'screen'), desktop)
+        expect(frame.zIndex).toBe(7)
+        expect(frame.visible).toBe(true)
     })
 })

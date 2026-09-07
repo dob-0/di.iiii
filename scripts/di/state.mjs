@@ -73,6 +73,7 @@ export const resolvePort = (home, override) => {
 }
 
 export const localUrl = (port) => `http://localhost:${port}`
+export const lanUrl = (address, port) => `http://${address}:${port}`
 
 /** The installed version directory `current` points at, or null. */
 export const currentVersionDir = (home) => {

@@ -413,6 +413,16 @@
     inset: 0;
 }
 
+/* The frame reported dii:preview-stub: a work's route that a local copy does
+   not carry. Same line as the empty sandbox, centred in the same frame --
+   the alternative was that page of text scaled down to a black card. */
+.ssh-card-preview-fill--stub {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
 .ssh-card-live-frame {
     position: absolute;
     inset: 0;

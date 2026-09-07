@@ -5,6 +5,525 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## A decoder directory is the one CDN URL worth rewriting inside code
+
+`page-vendor-cdn.mjs` deliberately never touches a URL inside JavaScript — a blind replace
+in prose or code is how a page gets quietly broken. One shape earns an exception, and the
+azd page is why: it hands three's `DRACOLoader` a decoder DIRECTORY on jsdelivr, so offline
+its compressed models never decode and the page sat at "INITIALIZING SPACE... 0%".
+
+`DECODER_MAP` holds that one shape — `…/three@<version>/examples/jsm/libs/draco/` → `/draco/`.
+It is a whole constant URL with a single meaning, and the platform already serves
+`draco_decoder.wasm` and `draco_wasm_wrapper.js` there (that is how every room in the app
+decodes a compressed GLB offline). The two files are added to the `fetches` the `--apply`
+guard probes before it writes, so the rule cannot point a page at a decoder the target does
+not serve. Rewriting is idempotent, and every other URL in code is still only reported.
+
+Verified: 41 tests in `scripts/page-vendor-cdn.test.js` and `space-sync-vendor.test.js` pass
+(three new, one updated — it had pinned the old "setDecoderPath is left alone" contract);
+eslint clean. Applied on the local tier and SEEN offline: `/azd` boots and reads (the essay,
+the artist names, one canvas) where it used to be stuck at 0%. Its Carto basemap tiles are a
+live map and stay unreachable offline — nothing to vendor there.
+
+## 2026-09-06 — `di up --lan`: a phone in the room can open the festival machine
+
+The one blocker in `docs/testing/FESTIVAL_MACHINE_2026-09-06.md`: the install listened on
+`127.0.0.1` only, the CLI had no way to say otherwise, and the lighting desk's Phone box
+printed a LAN URL and a QR code no phone could open. Owner's decision: `di up --lan`, auth
+stays off, the room can edit.
+
+### What changed
+
+- **`di up --lan`** (`scripts/di/cli.mjs`, `runner-node.mjs`, `ui.mjs`, `probe.mjs`,
+  `state.mjs`): binds `0.0.0.0` for that start, prints every non-internal IPv4 address as a
+  URL with its interface name, and one plain yellow warning — "anyone on this network can
+  open and edit it — auth is off". Nothing persisted: `di.env` still holds only the port.
+  The runner also sets `DI_ALLOW_LAN_DEVICES=1` for a wildcard bind, because `/light` sits
+  behind that guard and would 403 every phone otherwise; it probes readiness on loopback,
+  since `0.0.0.0` is not a connectable address on every OS. Docker mode refuses the flag
+  (its compose pins `127.0.0.1`). `parseArgs` moved verbatim to `scripts/di/args.mjs` so it
+  can be tested without running the CLI.
+- **`di status` / `di where`** ask the running server which bind is in force
+  (`probeListen` → `GET /serverXR/api/config`) and say "this machine only" or
+  "this network — http://…". `di open FILE` and `di update` ask before they stop the
+  server and restart with the same bind, so a `--lan` night does not silently drop its
+  phones on an import.
+- **Server** (`serverXR/src/listenInfo.js`, new; `routes/configRoutes.js`, `index.js`):
+  `/api/config` gains read-only `listen: { lan, addresses }`, computed per request from
+  `config.host`. Addresses only when the bind is not loopback AND the runtime is local
+  (`di` install or a dev box) — a hosted server also binds `0.0.0.0` and its container
+  addresses are not for an unauthenticated endpoint to hand out.
+- **Lighting desk** (`routes/lightingRoutes.js`, `lighting/desk.js`, `lighting/standalone.js`,
+  `lighting/ui/app.js`): the host passes `listen` into `createDesk`, `status.listen` carries
+  it per poll, and `buildPhone()` shows "Phones cannot reach this desk — start it with:
+  di up --lan" with no QR when `listen.lan` is false or the LAN guard is closed, the real
+  URL + QR otherwise. A desk never told (`listen` null) behaves as before. `standalone.js`
+  spells its own `listen` inline so `lighting/` stays self-contained for the club machine.
+- **Review fix (docker mode's reach):** the container always binds `0.0.0.0` (no `HOST`,
+  no `DI_LOCAL`) while the compose publishes the port on `127.0.0.1`, so a docker install's
+  server answers `listen.lan: true` and the CLI repeated it — `di status` / `di where` said
+  "this network — no address yet" and a running `di up --lan` said "on this network too",
+  because the docker refusal sat after the already-running return. One helper in `cli.mjs`,
+  `probeReach(home, port)`, answers `{ lan: false, addresses: [] }` for a docker install and
+  asks the server otherwise; all five sites (status, where, the already-running branch of
+  up, and the ask-before-stop in open-file and update) go through it, and `cmdUp` refuses
+  `--lan` in docker mode before it looks for a running server. Reproduced and re-run
+  against a fake docker-mode `DI_HOME` and my own server bound `0.0.0.0` on a spare port:
+  before, all three commands claimed network reach; after, "this machine only" and the
+  refusal. Node mode on the same server still reads "this network — http://…".
+- **Kept, deliberately:** the agent board, local Claude, local model and work-status gates
+  key on `req.socket.remoteAddress` (`trust proxy` off) — a LAN visitor is still refused
+  under `--lan`; `agentBoardStore.test.js` and `aiChatRoutes.test.js` already hold that.
+- Docs: `docs/deploy/DI_CLI.md` (new `di up --lan` section, replaces "LAN exposure is a
+  later feature"), `docs/architecture/LIGHTING_DESK.md`, `docker-compose.di.yml` comment,
+  wiki (`src/wiki/wikiContent.js`: the `di` list and the desk's Touch line).
+
+### How it was verified
+
+- New tests: `scripts/di/lan.test.js` (arg parsing, address filtering, source-level
+  guards on cli/runner/ui), `serverXR/src/listenInfo.test.js`, `serverXR/src/routes/configRoutes.test.js`,
+  two cases in `routes/lightingRoutes.test.js`; `fileMenu.test.js`'s restart needle updated.
+  Existing suites of every touched file rerun green (see the PR body for the list).
+- Seen, not assumed: my own serverXR on a spare port, started twice exactly as the runner
+  does — `HOST=127.0.0.1` and `HOST=0.0.0.0 DI_ALLOW_LAN_DEVICES=1` — headless Chromium at
+  DPR 2 on `/light/` with the Output block open; both Phone-box states read from the
+  screenshots. `/api/config` curled in both states; a request from this machine's LAN
+  address confirmed 200 on `/light/api/summary` under `--lan` and 403 without.
+
+### Still open
+
+- A standalone headset is still out: WebXR needs a secure context and a LAN address over
+  plain http is not one. Separate gap.
+- The Open Space's QR still points at di-studio.xyz (data, not this lane).
+
+## 2026-09-07 — published pages load their libraries from /vendor/, not a CDN
+
+The festival-machine inventory (`docs/testing/FESTIVAL_MACHINE_2026-09-06.md`) found
+`the-light-put-back`, `azd`, the Dilijan camp works and br_id_ge's field black offline:
+their HTML pulls three.js, Leaflet, cannon-es, marked and es-module-shims from cdnjs /
+unpkg / jsdelivr. This branch is the platform half plus the tool; the data changes are
+applied on the local tier and reported here, not committed.
+
+### What changed (code)
+
+- **`public/vendor/`** — pinned copies at the exact versions the pages use: three r128
+  UMD, three 0.160.0 UMD + ESM + `examples/jsm/{loaders/GLTFLoader,loaders/DRACOLoader,
+  controls/OrbitControls,utils/BufferGeometryUtils}.js`, three 0.166.1 ESM +
+  `RoomEnvironment.js`, cannon-es 0.20.0, es-module-shims 1.8.0, leaflet 1.9.4 (js, css,
+  images), marked 15.0.12. `VENDOR.md` there lists every file, source URL, version and
+  sha256. 3.4 MB on top of the 740 KB already there; 4.1 MB in all. Layout is
+  `<package>@<version>/…`, add a version, never overwrite one.
+  Skipped on purpose: @mediapipe/tasks-vision (10 MB wasm + models from Google storage —
+  `dilijan/anahit-vachagan`, `dilijan/aircanvas` and the rite keep needing internet),
+  Google Fonts (not a library), map tiles.
+- **One location, proven.** The previous attempt hesitated between `public/vendor/` and
+  `serverXR/public/vendor/`. `serverXR/public/` holds only the fallback index; the tiers
+  serve `dist/` (vite copies `public/` in) and a `di` install serves `CLIENT_DIR=dist`
+  through serverXR's static mount. So the files live in the root `public/vendor/` where
+  `three.module.min.js` already was, and `vite.config.js` adds `vendor` to
+  `LOCAL_PUBLIC_INCLUDE` so the local-profile build carries it. Measured: `DI_PROFILE=local
+  npm run build`, a scratch serverXR on :4141 with that dist, `/vendor/three@0.160.0/
+  three.min.js` → 200 `text/javascript` with `Access-Control-Allow-Origin: *`.
+  The owner's install on :4000 (0.4.2-offline.7) has NO `/vendor/` at all (404 even for
+  the old `three.module.min.js`) — it was built before `vendor` was in the include list.
+  It needs a rebuild from this branch before the rewritten pages paint there.
+- **`scripts/page-vendor-cdn.mjs`** (+ test, 21 cases). `--tier local|staging` (no prod
+  entry, `--api` refuses di-studio.xyz), `--space`/`--project`, dry-run by default,
+  `--apply` saves every rewritten project's original HTML + whole document JSON first
+  (`--originals`, default `~/di-backups/page-vendor-cdn/<tier>/<space>/`). Rewrites ONLY
+  `<script src>`, `<link href>` and importmap values it knows; anything else on a CDN
+  (a URL inside JavaScript, an unknown library) is left and printed. Google Fonts links
+  are KEPT by default and reported — dropping them restyles a page that works online
+  and offline the fallback face shows either way; `--drop-fonts` removes them. The test
+  asserts every map target exists under `public/vendor/` and that `VENDOR.md` names every
+  file, so the map and the directory cannot drift apart.
+  **Code before data, enforced (review fix):** `--apply` now plans every rewrite first,
+  then GETs each concrete `/vendor/` file the rewritten pages would fetch (`rewriteHtml`
+  returns `fetches`; an importmap prefix contributes the addons the page imports) from
+  the target's own origin. One answer that is not 200 and NOTHING is written — the
+  refusal names each missing URL and the install/deploy step that fixes it. Proven on
+  `:4000`: `--apply` → `REFUSED — http://localhost:4000 does not serve 2 of the /vendor/
+  files`, document untouched; on the scratch `:4141` with this branch's dist → `serves
+  every /vendor/ file these pages need (13 probed)` and the 13 writes went through.
+  **`--restore`** is the way back: PUTs the saved `<project>.document.json` for every
+  `--space`/`--project` under `--originals` (dry-run lists, `--apply` writes). Round-trip
+  proven on `:4141`: restore → the CDN URLs are back → apply → rewritten again.
+- **`scripts/pack-runtime.mjs`** refuses a `dist/` with no `vendor/VENDOR.md` — a pack
+  built from a stale or pre-vendor dist would install a server that 404s the rewritten
+  pages. Its existing tests (`packProfile`, `runnerDocker`) still pass.
+
+### Data — local tier (`http://localhost:4000`): applied, then RESTORED the same morning
+
+The apply was a mistake in order, and the review caught it: the owner's install
+(`0.4.2-offline.7`, no `/vendor/` at all) served the 13 rewritten pages black ONLINE —
+`the-light-put-back` stuck at "LOADING THE PHOTOGRAPHS" with `THREE is not defined`,
+`ops-board` with `marked is not defined`. The rule applied to staging (code before data)
+had not been applied to local. **Restored at 09:52** with
+`node scripts/page-vendor-cdn.mjs --tier local --restore --originals <lane>/originals
+--space the-light-put-back --space azd --space dilijan --space br-id-ge --apply` — all 13
+back to their CDN HTML, verified: every document answers with its cdnjs / jsdelivr URLs
+again, and headless Chromium ONLINE against `:4000` paints `/the-light-put-back` (the full
+piece, seven stages, the player), `/br-id-ge/ops-board` (the rendered board) and `/azd`
+(the models), zero page errors, zero failed requests — screenshots read
+(`shots/online-4000-restored/`). So `:4000` is exactly where it was before this lane:
+works online, the CDN pages black offline. The Dilijan asset copy (below) stays — it only
+turned 404s into 200s.
+
+**The three steps that close the gap on the festival machine, in this order** (the first
+is the owner's hand — `di update` on the owner's install is not an agent's to run):
+
+1. Install a build that carries `/vendor/`. `di update` follows GitHub releases, and no
+   release from a tree with this branch exists, so it is a file install. The pack is
+   already built from this branch (dev after #387, so it carries the offline model work
+   too — `serverXR/src/localModelClient.js` is inside) and sits where installers live:
+   `di update --from /mnt/data/installers/di-runtime-0.4.2-offline.8.tar.gz`
+   (sha256 `6381c00d…7b90795`, `.sha256` beside it; 4.6 MB; the version is the box's own
+   series so `--rollback` reads as offline.8 → offline.7). To rebuild it from any tree
+   that contains this branch: `DI_PROFILE=local npm run build && node
+   scripts/pack-runtime.mjs --no-build --version=0.4.2-offline.9`.
+   Check: `curl -sI http://localhost:4000/vendor/three@0.160.0/three.min.js` → 200.
+2. `node scripts/page-vendor-cdn.mjs --tier local --space the-light-put-back --space azd
+   --space dilijan --space br-id-ge --apply` — the probe passes now, 13 pages rewritten,
+   originals saved under `~/di-backups/page-vendor-cdn/local/`.
+3. Cut the internet and open `/the-light-put-back`, `/br-id-ge/ops-board`, `/dilijan/the-yard`.
+
+The 13 projects the apply rewrites (and the restore put back):
+`the-light-put-back/the-light-put-back` · `azd/azd` · `dilijan/{elevation,
+anahit-vachagan, mushroom-house, the-yard, dilijan-drive}` · `br-id-ge/{newww,
+br-id-ge-field, br-id-ge-graph, v-oooooo, br-id-ge-guide, ops-board}`.
+Left in place and reported: `azd` sets the Draco decoder path to jsdelivr inside its
+JavaScript (`setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/
+libs/draco/')`, and its model IS draco-compressed); mediapipe in `anahit-vachagan`,
+`aircanvas`, `newww`.
+
+The Dilijan camp assets: 18 files (6.5 MB — the-yard's point cloud and photos,
+elevation's mesh, mushroom-house / orange-room / tsaghkanots data, worlds' seven
+thumbnails) were 404 on the local tier because they are referenced only from the pages'
+HTML, never from `document.assets[]` — so `tier-sync` and `project-pull` (which move
+`assets[]`) report "nothing missing". Copied file-level from staging into the tier's
+`spaces/dilijan/blobs/<sha256>` + `projects/<id>/assets/<sha256>.json`, each file's
+sha256 checked against its id before writing, nothing overwritten, no document touched
+(the API upload route re-encodes JPEGs and would have changed their ids). Every asset ref
+in every dilijan page now answers 200 on :4000.
+
+### Verified offline (headless Chromium, every non-localhost request aborted)
+
+Against the scratch serverXR on :4141 (this branch's dist + a snapshot of the tier with
+the same rewrites and assets), screenshots read: `/the-light-put-back` paints the full
+piece (three 0.160 from /vendor/); `/br-id-ge` landing, `/br-id-ge/br-id-ge-field`
+(three 0.166.1 ESM via the rewritten importmap), `/br-id-ge/ops-board` (marked),
+`/br-id-ge/v-oooooo` (three r128 + marked); `/dilijan` room, `/dilijan/worlds` with its
+seven thumbnails, `/dilijan/{elevation, the-yard, mushroom-house, dilijan-drive,
+orange-room, tsaghkanots}` all paint. `/dilijan/anahit-vachagan` is blank (mediapipe,
+expected). `/azd` is black offline — only because of the Draco decoder URL in its
+JavaScript; online on the same server it paints with every library from /vendor/. A
+one-line page edit (`setDecoderPath('/draco/')`, the platform ships the decoder there)
+would finish it — the owner's call, not done here.
+
+### Staging — dry-run only, NOT applied
+
+Same 13 projects, same diff. Held because staging does not serve `/vendor/three@0.160.0/…`
+until this branch deploys (nginx answers 404 there today) — applying now would black the
+pages online (memory: code before data). After the deploy:
+`node scripts/page-vendor-cdn.mjs --tier staging --space the-light-put-back --space azd
+--space dilijan --space br-id-ge --apply`. Prod is the owner's word.
+
+### Still open
+
+- The festival machine is closed by the three steps above; step 1 is the owner's. Until
+  it runs, the CDN pages are black offline there — as they were before this lane, and
+  not black online.
+- Staging: deploy first (this branch on dev), then the apply command above with
+  `--tier staging`; the probe now refuses the wrong order there too.
+- `azd`'s Draco decoder path; mediapipe for the two camera works and the rite.
+- The mesh websocket on a scratch serverXR logs "closed before handshake" for the camp
+  pages — not this lane, noted.
+
+## 2026-09-06 — `di backup` carries the light show, `di open FILE` stops nothing, `di --version` prints a version
+
+The festival-machine inventory (`docs/testing/FESTIVAL_MACHINE_2026-09-06.md`) named
+three things in the `di` CLI. All three are fixed here, each with a test that would have
+caught it.
+
+- **The light show travels.** `scripts/install-bundle.mjs` now carries `data/lighting/`
+  (show.json, show.prev.json, the fixture library) and `data/agent-chat/` whole, beside
+  the spaces, and lists them in `install.json` as `dirs`. Import puts them back; keeps a
+  show already on the target unless `--force` (same rule as the instance config); a
+  bundle written before the field existed lists nothing and imports exactly as before.
+  `di backup` no longer says "this one file is your whole di.iiii" — it says what is
+  inside (every space, the light show when there is one, the agent chat folder when it
+  has something in it, the settings) and what is not (accounts, sign-ins and the AI chat
+  history, which are rows keyed by user in di.db and stay with the machine).
+  `di restore FILE` now stops a running server first and puts it back after: a running
+  lighting desk holds its show in memory and writes it back on the next change, so a show
+  restored underneath it lasted until the first fader move.
+- **`di open FILE` goes through the running server.** `POST /api/spaces/bundle`, the same
+  door the browser's Open a file uses, streamed with `fs.openAsBlob`. Nobody else on the
+  machine loses their tabs. The stop-import-restart path is kept for exactly two cases and
+  says why before it stops: `--force` (the space being replaced may be open in a tab) and a
+  file over the server's upload cap (`MAX_UPLOAD_MB`, 100 by default — a 413, or the
+  connection the server drops mid-stream; the server's own 413 text sends people to
+  `di open`, so `di open` had to be the path with no cap).
+- **Routing.** `--version` / `-v` print the version; `di mcp --help` and `di help mcp`
+  print a usage instead of silently serving MCP on stdin; an unknown flag on a bare `di`
+  refuses with the usage instead of falling through to `di up` (`BARE_FLAGS` is the
+  allow-list: `--port`, `--no-open`, `--verbose`). `main()` now runs only when the file is
+  invoked directly, so tests can import the CLI's table and parser.
+- **`di mcp` says which version it is.** `sdk/mcp.mjs` read `../package.json`, which the
+  packed runtime does not carry; it reads `../release.json` first (the install), then
+  `package.json` (a checkout), and `cmdMcp` prefers the installed `sdk/` over the one
+  beside the running `cli.mjs`.
+- **A silent no-op found on the way:** both bundle scripts guarded `invokedDirectly` by
+  comparing `process.argv[1]` unresolved against Node's realpath'd `import.meta.url`, so
+  `node ~/.di/current/scripts/install-bundle.mjs import …` typed by hand did nothing and
+  exited 0. Both guards realpath both sides now.
+
+Verified: `scripts/di/cliRouting.test.js` (spawned, temp `DI_HOME`, including through a
+`current` symlink), `scripts/di/openFile.test.js` (a real install layout under a temp
+`DI_HOME`, `di up` on a free port with `MAX_UPLOAD_MB=1`: open-through-API leaves the pid
+alone, a clash comes back in the server's words, a 2.5 MB file takes the fallback,
+backup lists the show, restore puts it back), `serverXR/src/installBundleContracts.test.js`
+(the show and the chat folder round-trip and the desk on the target serves the restored
+show; kept-unless-`--force`; a manifest with no `dirs` field imports), `sdk/sdk.test.js`
+(`detectVersion` in both shapes). Walked by hand against a fake install on port 4171 before
+any of the tests were written. Never touched `~/.di`.
+
+## The local copy's "left out" stub has a way back, and the card says so
+
+- Festival-machine gap (`docs/testing/FESTIVAL_MACHINE_2026-09-06.md`): on a `di` install
+  the front room's WCC and algovrithm doors landed on one sentence with no way back, and
+  their two cards said LIVE over a black preview.
+- The stub is a real component now, `src/works/HostedPieceStub.jsx`; the local profile in
+  `vite.config.js` resolves every works-registry entry to that file instead of a virtual
+  module (nothing imports it, so the hosted build never carries it). It names the piece,
+  says where it lives, and offers `← the spaces` (`/`) and `the {id} space in Studio`
+  (`/{id}/studio`), both `target="_top"` so a card made live still leaves the card.
+- Preview protocol grew one message next to `dii:preview-ready`: `dii:preview-stub`
+  (`PREVIEW_STUB_MESSAGE`, `signalPreviewStub` in `src/utils/previewMode.js`). The stub
+  posts it under `?preview=1`; `SpaceCardPreview` frees the boot slot on it, drops the
+  frame, and draws "not in this copy — this piece lives on di-studio.xyz" in the same
+  frame the empty sandbox uses. No other card changes.
+- Keeper window: the endpoint placeholder and the setup line name both boxes
+  (llama.cpp/LM Studio at :8090, Ollama at :11434, both chat paths tried).
+- Wiki: "Chat with Claude" summary and cost bullet cover the local Claude and the model on
+  the box; the Keeper entry says which host is which; new entry `the-toybox` for
+  `/{space}/make/{project}`.
+- Second pass: CI's `copyVocabulary.test.js` refused the first toybox entry — five
+  strings said `Raw` and one said `lane`. Now "the node editor" and "an address", per
+  `docs/ai/vocabulary.md`; the route `/{space}/raw/projects/{project}` stays, it is an
+  identifier.
+- Verified: vitest on `copyVocabulary.test.js`, `HostedPieceStub.test.jsx`,
+  `previewMode.test.js`, `SpaceHub.test.jsx`, `KeeperPanelWindow.test.jsx`,
+  `WikiPage.test.jsx`, `nodeLabelVocabulary.test.js`, `packProfile.test.js`,
+  `works/boundary.test.js`; `DI_PROFILE=local npm run build` green and under the
+  15 MB budget; the built dist served by a scratch serverXR (`DI_LOCAL=1`, spare port)
+  and screenshots of `/wcc`, `/algovrithm/scene` on a phone, the `/` grid, a wcc card
+  made live, and the wiki entry read. Trap: that scratch server needs
+  `APP_BASE_PATH=/serverXR` (as `scripts/di/runner-node.mjs` sets it) — without it
+  the API router also mounts at `/` and its monitor page shadows the SPA's front door.
+
+## 2026-09-07 — a new panel window opens whole on screen; a wired port reads as wired
+
+- Festival-machine inventory (2026-09-06) gap: in `/open/raw` a panel node placed low or
+  right on the screen opened its window partly outside the viewport (reproduced twice,
+  prod too). Cause: `buildNodeValues` hands over a frame that is screen arithmetic
+  around the click (`clientX − 180`, `clientY − 36`), but since windows moved into the
+  world (2026-09-03) an unpinned frame is GRAPH units placed through the canvas
+  viewport — pan and origin away from the click, and never clamped.
+- Fix: `placeNewWindowFrame` in `src/raw/utils/windowLayout.js`. A new window opens
+  against its own card — below it, else above, else beside — and the winning spot is
+  pulled wholly inside the viewport by the same `clampWindowFrame` DesktopWindow
+  applies, so the phone's x=12/width=366 layout is respected, not re-derived. It
+  answers in graph units for world windows (size preserved at any zoom) and in screen
+  pixels for pinned/phone windows. Only creation goes through it (palette create and
+  file drop in `RawEditor.jsx`); a window a person dragged is never re-placed, and
+  stored patch frames are untouched data.
+- The card box (`CARD_WIDTH`, `cardHeight`) moved out of `RawGraphSurface.jsx` into
+  `src/raw/utils/cardGeometry.js` so the editor and the surface agree where a card
+  ends; the surface's numbers did not change (`graphGeometry.test.jsx` still green).
+- Same area, minor: the inspector offered an editable box for an input port that has a
+  wire into it, and a typed value was silently ignored. `deriveNodeInspectorSections`
+  now takes `wiredPortIds` and marks those fields; `PropertyInspector` renders them
+  disabled with a small "wired" hint and a title explaining that unplugging the wire
+  lets you type. Field stays visible — a box that vanishes when a wire lands reads as
+  a bug.
+- Verified: vitest `windowLayout.test.js` (placement at 1440x900, a 620-tall viewport,
+  zoom 0.5, 390x844 phone, no viewport yet, nothing to open against),
+  `nodeInspectorSections.test.js`, `PropertyInspector.test.jsx`, plus every test under
+  `src/raw` and `src/project/graph` — all green; eslint zero errors (warnings are
+  dev's own, two fewer than before). Seen: own stack on 4147/4148, headless Chromium
+  at DPR 2 — double-click at (1330,820) and (720,840) on 1440x900 and at (300,700) on
+  390x844, place Agent: every window `getBoundingClientRect` inside the viewport,
+  above the card and clear of it; the Cube inspector with a Colour wire shows
+  "Colour WIRED" disabled, Size still live; zero console errors.
+- Review of PR #393 (2026-09-07): `placeNewWindowFrame` ran the window's SCREEN size
+  through `clampWindowFrame`, whose 200x120 floor is screen pixels, then divided back
+  by zoom — so a world window placed at 5% was stored 4000x2400 (reviewer measured it;
+  the unit test at zoom 0.5 sat above the ~0.3 threshold and missed it). Fix:
+  `clampWindowFrame` takes optional `minWidth`/`minHeight` (defaults unchanged for its
+  other callers) and the placement passes the world minimum scaled by zoom, which is
+  exactly `worldSettle`'s 200x120 graph-unit floor as seen on screen. Same class, same
+  fix: the 16px gap to the card was screen pixels too (320 graph units at 5%, the
+  window a screen away from its card once zoom came back), now `RAW_NEW_WINDOW_GAP`
+  graph units for a world window. Tests: `it.each` over zoom 0.5/0.25/0.1/0.05 keeps
+  420x480, a tiny frame is raised to 200x120 graph units, the gap is graph units at
+  0.1, zoom 3 only shrinks. Seen on a fresh stack (serverXR 4171 + vite 4172, headless
+  Chromium 1440x900 at DPR 2): a first Agent at 100%, toolbar to 5%, a second Agent —
+  stored frame 360x280, y = card bottom + 16, rendered 18x14px directly under its
+  10x4px card; back at 105% it renders 380x297 (authored x zoom), 14px under the card.
+  At 300% the second window is stored 360x264 (height capped by the viewport, never
+  grown); nothing fits beside a card that big, so the below-and-clamped fallback
+  covers it — the branch's documented fallback, unchanged. Note: on an EMPTY canvas
+  the first node triggers the surface's one-time fit, which is why a lone placement at
+  5% reads as 100% afterwards — pre-existing and by design.
+- Not done: the phone card itself can land under the zoom toolbar when the tap is
+  near the bottom (pre-existing card placement, not the window) — outside this lane.
+
+## 2026-09-06 — an unknown address answers "nothing lives here" on a local install too, and reading it writes nothing
+
+Two of the festival-machine inventory's minor gaps (`docs/testing/FESTIVAL_MACHINE_2026-09-06.md`), the "not-found" lane.
+
+- **Server.** `GET /api/spaces/:id/scene` called `ensureSpaceScene` before reading, so a
+  read for an id nobody created wrote a directory and a blank `scene.json` into the real
+  data tier. With auth on, `requireReadRole`'s own 404 hid it; with auth off (a `di up`
+  install) the handler ran — seven stub folders during the inventory. The read now checks
+  `spaceExists` and answers `404 Space not found.` without touching the disk; the
+  `ensureSpaceScene` call is gone from the read path. Nothing that legitimately comes into
+  being on first access changed: a session's own sandbox and the boot-ensured open space are
+  provisioned by the `/api/spaces/:spaceId` middleware and boot code *before* this handler,
+  and a row that has no `scene.json` yet (`main` after boot) reads as the blank scene, which
+  is what the first write started from anyway. Writes (`POST /ops`, `POST /api/spaces`,
+  inscriptions) still ensure.
+- **Client.** `AuthGate` skipped every check when `requireAuth` was off, so `/make` or a
+  typo on a local install opened a silent empty room with Enter VR/AR on it, where the live
+  site says "Nothing lives at …". The gate now runs the same existence lookup the
+  out-of-scope path uses (only once the session has answered — while it loads, `requireAuth`
+  reads false on every tier, and a hosted page must not pay for a lookup it never uses) and
+  shows the same card, with the same doors; the sign-in buttons and account chip stay off,
+  there is nothing to sign in to. The card is one component now (`ClosedDoorCard`) rendered
+  by both branches, so the wording cannot drift.
+- `useSpacePublicFlag` reported the OLD id's answer for the render between the id changing
+  and its effect running — `loading:false, exists:true` for a space nobody had looked up
+  yet. It now reports loading synchronously for a new id. (That frame also flashed the
+  "Access restricted" card on the hosted tier before the lookup began.)
+
+Verified: `npx vitest run serverXR/src/httpContracts.test.js` (the new contract boots a
+server with auth off and on, GETs an unknown id's scene, expects 404, asserts
+`data/spaces` is byte-for-byte the same directory listing, and that `main` still reads 200
+with no `scene.json` written), `spaceRoutes.sceneAssetCache/driveImport/spaceIdParam`
+tests, `src/components/AuthGate.test.jsx` (five local-install cases: a real space renders,
+no-space renders at once, a typo and a bare `make` get the card with the Open Space door
+and no sign-in controls, the room is held back until the lookup answers). Seen: a
+`DI_PROFILE=local` build served by my own serverXR on a scratch data root with every
+non-local request aborted — `/make` and `/does-not-exist` show the card at 1280×800 and
+390×844, `/open` still opens the room, `data/spaces` stayed `main` + `open` after three
+unknown-id scene reads.
+
+Not done: `GET /api/spaces/:id/ops` for an unknown id still answers 200 with an empty
+history (no disk write, so left alone). The card's only door on a local install is
+Open Space — the session names no sandbox there; a door to `/spaces` would be the useful
+addition, not made here.
+
+## The festival-machine gaps, landed as one batch
+
+Six PRs from the 2026-09-06 inventory (`docs/testing/FESTIVAL_MACHINE_2026-09-06.md`),
+each written by its own agent and reviewed by two more, merged into one branch so they
+cost one CI run instead of six races.
+
+- **#392 `di up --lan`** — the blocker. A phone in the room can open the machine; the flag
+  is per start, prints every non-internal IPv4 with its interface and one warning that auth
+  is off, and refuses in docker mode (the container binds 0.0.0.0 while compose publishes
+  loopback). `GET /api/config` gained a read-only `listen: { lan, addresses }`; the lighting
+  desk's Phone box reads it and says "start it with: di up --lan" instead of showing a QR
+  code that cannot work. The local-operator gates (agent board, local claude, local model)
+  stay keyed on a loopback remote address, so a LAN visitor still gets 404.
+- **#391 `di backup` carries the light show** — and the AI chats; the line no longer claims
+  more than it holds. `di open FILE` imports through the running server the way the browser
+  does instead of restarting it for everyone. `di --version` prints a version, `di mcp --help`
+  prints usage, and MCP reports the install's real version.
+- **#389 an unknown space id** 404s on a scene read and writes nothing (it used to create a
+  directory in the real tier), and the "Nothing lives at …" card now shows on a local install
+  instead of a silent empty room.
+- **#393 a new panel window** opens whole on screen at any zoom, and a wired input port is
+  read-only in the inspector instead of silently ignoring what you type.
+- **#390 the "left out of this copy" stub** names the piece and offers two doors back; the
+  space card says "not in this copy" instead of showing a black frame. Wiki updated for the
+  local model, the keeper's two hosts, and the toybox.
+- **#394 vendored libraries** — three (0.128/0.160/0.166), leaflet, cannon-es, marked and
+  es-module-shims under `public/vendor/`, plus `scripts/page-vendor-cdn.mjs` to point a
+  published page at them. The tool refuses to rewrite a page for a `/vendor/` the target
+  server does not serve, and `--restore` puts an original back.
+
+Conflict resolution in this batch, all in `scripts/di/`: `cmdOpenFile` takes #391's
+through-the-server import and #392's remembered `--lan` bind on the paths that still stop
+the server; `di restore FILE` keeps the bind too (its `--snapshot` path stops and stays down
+by design, so the test slices the file path only).
+
+Verified on the batch: `npm run test -- --run` 3692 passed / 1 skipped, eslint clean on the
+resolved files, docs gate passes.
+
+## The festival machine, inventoried; the local model gets its own name
+
+Eleven testers walked every surface of aylmo's `di` install with the internet refused,
+every blocker was reproduced twice, a critic tested the gaps. The inventory lives at
+`docs/testing/FESTIVAL_MACHINE_2026-09-06.md` — the one-line answer: the tools work
+offline, the room does not (loopback-only bind, no phone, no headset; CDN-loading pages
+go dark).
+
+One code change: the model on the box was handed Claude's system prompt and introduced
+itself as Claude. `localModelSystemPrompt(model)` in `aiChatRoutes.js` names the model
+instead; test in `aiChatRoutes.test.js`.
+
+Owner decisions surfaced: `di up --lan`; the light show into `di backup`/`di save`;
+re-cut the CDN-loading pages; the Dilijan camp assets are missing from the local tier.
+
+## Offline: the festival machine — a model on the table, and three things that reached out
+
+The situation: power, no internet, one machine, everything on hand. Walked on a real
+`di` install with every outbound request refused (headless, `page.route` abort). The
+app itself loads nothing from anywhere else; the faults were around it.
+
+### The agent node answers from the model on this machine
+
+- `serverXR/src/localModelClient.js` — streams OpenAI-style `/v1/chat/completions`
+  from `LLM_BASE_URL` (llama.cpp, Ollama, LM Studio), model `LLM_MODEL`. Same contract
+  as the Anthropic client. `<think>` blocks are dropped even when a tag is split across
+  two chunks. Connection failures reject as 503 with the code kept.
+- `routes/aiChatRoutes.js` — `/api/ai/providers` adds `localModel: {baseUrl, model} | null`,
+  local operator only (loopback + `DI_LOCAL=1` or non-production). Order: API key →
+  local `claude` → local model. When Claude cannot be reached at all (`ENOTFOUND`,
+  `ECONNREFUSED`, …) and nothing has streamed yet, the turn is answered by the local
+  model after a `notice` event. A refused key (401) never falls back. Tests:
+  `aiChatRoutes.test.js` (fake router, SSE frames read back).
+- Agent panel: a local model counts as connected; replies are labelled by the model
+  that answered; the notice is shown. `aiChatApi` carries `onNotice`.
+- Keeper node: a bare host tries Ollama's `/api/chat` and then `/v1/chat/completions`.
+- On a `di` install: `LLM_BASE_URL=http://127.0.0.1:8090` and `LLM_MODEL=…` in
+  `~/.di/di.env`. Proven on aylmo: no key, no claude on PATH, a turn answered by
+  qwen3-4b through the install's own API.
+
+### Three offline faults, fixed
+
+- **The house font never reached a published page on a local install.** express.static's
+  `setHeaders` is `(res, path, stat)` — the helper read the stat as the request and
+  matched nothing, so every `/fonts` request from origin "null" came back without
+  `Access-Control-Allow-Origin`. Reads the request off `res.req` now; contract test
+  boots a server with `CLIENT_DIR`.
+- **Armenian 3D text fetched from jsdelivr at render time.** troika's unicode-font-resolver
+  defaults to the CDN. `public/unicode-fonts/` vendors the Armenian block and two weights
+  of Noto Sans Armenian (36 KB); `troikaFont.js` calls `configureTextBuilder({ unicodeFontsURL })`;
+  `troika-three-text` is now a declared dependency; the local-profile include-list
+  carries the directory.
+- **`di update` died on a data root that is a symlink** (an install pointed at the shared
+  local tier): `fs.cp` refused to lay the link over the rehearsal copy. Copies the
+  realpath with `dereference` now; test in `updateSafety.test.js`.
+
+Still reaching out, by design or by data: `the-light-put-back`'s page loads three.js and
+Google Fonts from CDNs (a work, re-cut owed); `hosq`'s page loads Google Fonts; `/wcc` is
+left out of a local build on purpose.
+
+Owner's words of the day, verbatim: `docs/ai/owner-notes/2026-09-06.md`.
+
 ## 2026-09-06 — the front door's view mode orbits, zooms and opens doors
 
 - The complaint, verbatim: *"the view mode is useless when you click step inside after

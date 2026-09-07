@@ -92,6 +92,18 @@ describe('the rehearsal', () => {
         await fsp.rm(scratch, { recursive: true, force: true })
     })
 
+    it('rehearses a data root that is a symlink to a shared tier', async () => {
+        const home = makeHome({ schema: 1, files: { 'spaces/open/scene.json': '{"v":2}' } })
+        const real = `${paths(home).data}-real`
+        fs.renameSync(paths(home).data, real)
+        fs.symlinkSync(real, paths(home).data)
+        const scratch = await rehearseAgainst({ home })
+        expect(fs.existsSync(path.join(scratch, 'di.db'))).toBe(true)
+        expect(fs.readFileSync(path.join(scratch, 'spaces/open/scene.json'), 'utf8')).toBe('{"v":2}')
+        expect(fs.lstatSync(scratch).isSymbolicLink()).toBe(false)
+        await fsp.rm(scratch, { recursive: true, force: true })
+    })
+
     it('has nothing to rehearse on a first install, and says so rather than passing', async () => {
         const home = fs.mkdtempSync(path.join(os.tmpdir(), 'di-safety-'))
         homes.push(home)

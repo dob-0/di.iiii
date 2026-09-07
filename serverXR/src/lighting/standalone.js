@@ -17,6 +17,14 @@ const desk = createDesk({
   offline: process.env.ARTNET_OFFLINE === '1',
   bindPort: process.env.ARTNET_BIND_PORT != null ? Number(process.env.ARTNET_BIND_PORT) : null,
   outputEnabledDefault: true,
+  // The club desk binds every interface unless HOST says otherwise; a HOST=127.0.0.1
+  // start must not keep printing a phone URL it cannot answer on. Spelled out here
+  // rather than required from serverXR: this directory runs on its own on the club
+  // machine (see lighting.test.js), so it must not reach outside itself.
+  listen: () => {
+    const lan = !['127.0.0.1', 'localhost', '::1'].includes(HTTP_HOST);
+    return { lan, addresses: lan ? localAddresses().map((a) => a.address) : [] };
+  },
 });
 
 const server = http.createServer((req, res) => { desk.handle(req, res); });

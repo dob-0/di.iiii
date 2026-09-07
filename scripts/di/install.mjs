@@ -338,7 +338,10 @@ export const rehearseAgainst = async ({ home }) => {
     // The whole data root, not just di.db: the server opens assets and space
     // directories on boot too, and a rehearsal that copied only the database
     // would pass on an install whose real start would not.
-    await fsp.cp(p.data, scratch, { recursive: true })
+    // The data root may be a symlink — an install pointed at a shared tier —
+    // and fs.cp refuses to lay a link over the scratch directory. Copy what it
+    // points at, and follow links inside too: the rehearsal must open files.
+    await fsp.cp(await fsp.realpath(p.data), scratch, { recursive: true, dereference: true })
     return scratch
 }
 

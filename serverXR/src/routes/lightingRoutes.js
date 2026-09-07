@@ -15,7 +15,7 @@ const { requireLocalRuntime, isLanAllowed } = require('../localRuntimeGuard')
 // (relative paths, so /light/ and /serverXR/light/ both work) and its /api/* routes.
 // It is mounted BEFORE express.json so the desk reads its own bodies — a library push
 // is up to 16 MB, byte-exact, and the desk's cap and UTF-8 handling apply.
-function registerLightingRoutes(app, { dataDir, mountPaths = ['/light'], offline = false, log } = {}) {
+function registerLightingRoutes(app, { dataDir, mountPaths = ['/light'], offline = false, log, listen = null } = {}) {
   let desk = null
   const getDesk = () => {
     if (desk) return desk
@@ -25,6 +25,9 @@ function registerLightingRoutes(app, { dataDir, mountPaths = ['/light'], offline
       offline,
       outputEnabledDefault: false,
       lanAllowed: isLanAllowed(),
+      // How the server around the desk listens — the Phone box reads it, so a
+      // loopback-only `di up` stops printing a phone URL no phone can open.
+      listen,
       log
     })
     return desk
