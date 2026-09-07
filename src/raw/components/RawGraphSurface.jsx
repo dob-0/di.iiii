@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
+import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, cardHeight } from '../utils/cardGeometry.js'
 import {
     arePortsCompatible,
     getNodeCardSummary,
@@ -11,9 +12,6 @@ import {
     getPortType
 } from '../../project/nodeRegistry.js'
 
-const CARD_WIDTH = 200
-const HEADER_HEIGHT = 44
-const PORT_ROW_HEIGHT = 22
 const PORT_DOT_RADIUS = 5
 const GRAPH_MIN_ZOOM = 0.05
 const GRAPH_MAX_ZOOM = 8
@@ -88,15 +86,8 @@ const DOOR_WIDTH_PX = 34
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
-// scopeNodes is threaded through every geometry helper because a container's
-// ports are DERIVED from the doorway nodes inside it — see getNodeInputs. Miss
-// one of these call sites and the container grows a socket the card does not
-// draw, or draws one the wires do not land on.
-const cardHeight = (node, scopeNodes = null) => {
-    const rows = Math.max(getNodeInputs(node, scopeNodes).length, getNodeOutputs(node, scopeNodes).length, 1)
-    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + 8
-}
-
+// The card box itself (CARD_WIDTH, cardHeight) lives in cardGeometry.js: the
+// editor places a panel node's window against it and must not guess.
 const inputPortCenter = (node, portId, scopeNodes = null) => {
     const inputs = getNodeInputs(node, scopeNodes)
     const idx = inputs.findIndex((p) => p.id === portId)

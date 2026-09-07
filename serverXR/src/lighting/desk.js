@@ -45,6 +45,9 @@ function createDesk(opts = {}) {
   const bindPort = opts.bindPort == null ? null : Number(opts.bindPort);
   const outputEnabledDefault = opts.outputEnabledDefault !== false;
   const lanAllowed = opts.lanAllowed !== false;
+  // The host's own account of its bind ({ lan, addresses }), asked per status read.
+  // Null when nobody told the desk — the interface then trusts the interface list.
+  const listen = typeof opts.listen === 'function' ? opts.listen : null;
   const log = opts.log || console.log;
   // True when this desk found no show to load. It stays true only until the first write,
   // and it is what stops an empty desk from silently replacing a real one.
@@ -891,6 +894,7 @@ function createDesk(opts = {}) {
         sacn: sacn ? sacn.status() : null,
         outputEnabled: !!state.output.enabled,
         lanAllowed,
+        listen: listen ? listen() : null,
         serial: enttec ? enttec.status() : null,
         // Every other device, and whether it is actually connected. A second widget that
         // will not open has to be visible as a dead line here, not as a dark half of the

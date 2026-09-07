@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isPreviewRequest, PREVIEW_READY_MESSAGE, signalPreviewReady, watchPreviewPaint } from './previewMode.js'
+import { isPreviewRequest, PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE, signalPreviewReady, signalPreviewStub, watchPreviewPaint } from './previewMode.js'
 
 const originalSearch = window.location.search
 
@@ -36,6 +36,21 @@ describe('signalPreviewReady', () => {
             { type: PREVIEW_READY_MESSAGE, spaceId: 'showroom' },
             window.location.origin
         )
+    })
+})
+
+describe('signalPreviewStub', () => {
+    it('posts the stub message on the same protocol as ready', () => {
+        const postMessage = vi.fn()
+        expect(signalPreviewStub('wcc')).toBe(false)
+
+        vi.spyOn(window, 'parent', 'get').mockReturnValue({ postMessage })
+        expect(signalPreviewStub('wcc')).toBe(true)
+        expect(postMessage).toHaveBeenCalledWith(
+            { type: PREVIEW_STUB_MESSAGE, spaceId: 'wcc' },
+            window.location.origin
+        )
+        expect(PREVIEW_STUB_MESSAGE).not.toBe(PREVIEW_READY_MESSAGE)
     })
 })
 

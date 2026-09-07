@@ -8,6 +8,7 @@
 
 import { execFile, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
 
@@ -136,6 +137,42 @@ export const probeHealth = async (port, host = '127.0.0.1', basePath = '/serverX
         clearTimeout(timer)
     }
 }, false)
+
+/**
+ * The addresses a phone on tonight's wifi could type: non-internal IPv4, one
+ * per interface. Pure over the interface table so a test can hand it one; the
+ * default asks the machine.
+ */
+export const probeLanAddresses = (interfaces = os.networkInterfaces()) => {
+    const out = []
+    for (const [iface, entries] of Object.entries(interfaces || {})) {
+        for (const entry of entries || []) {
+            if (entry.internal) continue
+            if (entry.family !== 'IPv4' && entry.family !== 4) continue
+            out.push({ iface, address: entry.address })
+        }
+    }
+    return out
+}
+
+/**
+ * How the running server listens — asked, not remembered, because `--lan` is
+ * per start and nothing writes it down. Null when it cannot say: not running,
+ * or a server from before the field existed.
+ */
+export const probeListen = async (port, host = '127.0.0.1', basePath = '/serverXR') => quiet(async () => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 2000)
+    try {
+        const response = await fetch(`http://${host}:${port}${basePath}/api/config`, { signal: controller.signal })
+        if (!response.ok) return null
+        const listen = (await response.json())?.config?.listen
+        if (!listen || typeof listen.lan !== 'boolean') return null
+        return { lan: listen.lan, addresses: Array.isArray(listen.addresses) ? listen.addresses : [] }
+    } finally {
+        clearTimeout(timer)
+    }
+}, null)
 
 /** Everything decideMode needs, gathered concurrently. */
 export const probeAll = async ({ home, forcedMode = null } = {}) => {

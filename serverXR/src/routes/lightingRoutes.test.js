@@ -21,10 +21,10 @@ afterEach(async () => {
   for (const [k, v] of Object.entries(envBefore)) { if (v == null) delete process.env[k]; else process.env[k] = v }
 })
 
-const boot = async () => {
+const boot = async (extra = {}) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dii-light-'))
   const app = express()
-  const lane = registerLightingRoutes(app, { dataDir: dir, offline: true, log: () => {} })
+  const lane = registerLightingRoutes(app, { dataDir: dir, offline: true, log: () => {}, ...extra })
   // What index.js does after the lane: the JSON parser must not have eaten the body.
   app.use(express.json())
   const { server, base } = await listen(app)
@@ -88,5 +88,30 @@ describe('the lighting desk at /light', () => {
     const { base } = await boot()
     const res = await fetch(`${base}/light/api/summary`)
     expect(res.status).toBe(200)
+  })
+
+  // The Phone box printed a LAN URL and a QR on a loopback-only `di up`, where no
+  // phone could open either. The host now tells the desk how it listens, and the
+  // desk's status carries it to the page — read per poll, so a hotspot dealing a
+  // new address mid-show is followed.
+  it('carries the host\'s account of its bind in status, read fresh each time', async () => {
+    delete process.env.NODE_ENV
+    let calls = 0
+    const listen = () => { calls += 1; return { lan: false, addresses: [] } }
+    const { base } = await boot({ listen })
+    const first = await (await fetch(`${base}/light/api/state`)).json()
+    expect(first.status.listen).toEqual({ lan: false, addresses: [] })
+    expect(first.status.lanAllowed).toBe(false)
+    const second = await (await fetch(`${base}/light/api/state`)).json()
+    expect(second.status.listen).toEqual({ lan: false, addresses: [] })
+    expect(calls).toBe(2)
+  })
+
+  it('says nothing about the bind when nobody told it — the standalone club desk case', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    const body = await (await fetch(`${base}/light/api/state`)).json()
+    expect(body.status.listen).toBeNull()
+    expect(Array.isArray(body.status.interfaces)).toBe(true)
   })
 })

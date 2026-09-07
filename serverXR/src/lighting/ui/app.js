@@ -3075,10 +3075,21 @@ function buildPhone() {
   const port = location.port || 80;
   // Wherever this desk is mounted — '/' alone, '/light/' inside di.iiii.
   const base = location.pathname.replace(/[^/]*$/, '');
-  const ifs = (S.status.interfaces || []).filter((i) => i.address && i.address !== '127.0.0.1');
-  const sig = ifs.map((i) => i.address).join(',') + ':' + port;
+  // The host's own word on its bind. A `di up` without --lan listens on loopback
+  // only, and the LAN guard refuses phones besides — whatever the interface list
+  // says, no phone can open that URL, and a QR for it is worse than none. A desk
+  // that was never told (an older host) keeps trusting the interface list.
+  const listen = S.status.listen;
+  const reachable = !listen || (listen.lan && S.status.lanAllowed !== false);
+  const ifs = reachable ? (S.status.interfaces || []).filter((i) => i.address && i.address !== '127.0.0.1') : [];
+  const sig = (reachable ? 'lan' : 'local') + ':' + ifs.map((i) => i.address).join(',') + ':' + port;
   if (box.dataset.sig === sig) return;
   box.dataset.sig = sig;
+  if (!reachable) {
+    box.innerHTML = '<span class="muted">Phones cannot reach this desk — start it with: <b>di up --lan</b></span>';
+    $('#phoneQr').innerHTML = '';
+    return;
+  }
   if (!ifs.length) {
     box.innerHTML = '<span class="muted">No network — join a wifi or a hotspot and this fills in.</span>';
     $('#phoneQr').innerHTML = '';

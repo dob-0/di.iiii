@@ -8,7 +8,7 @@ import { detectAssetMediaKind } from '../../utils/mediaAssetTypes.js'
 // the field shows what you typed; only valid parses commit; blur snaps back
 // to the canonical value; focus selects everything (a fresh number replaces,
 // not appends) and Enter closes the keyboard.
-function NumberField({ value, fallback = 0, min, max, step, onCommit }) {
+function NumberField({ value, fallback = 0, min, max, step, onCommit, disabled = false }) {
     const [draft, setDraft] = useState(null)
     const canonical = Number.isFinite(Number(value)) ? value : fallback
     return (
@@ -18,6 +18,7 @@ function NumberField({ value, fallback = 0, min, max, step, onCommit }) {
             min={min}
             max={max}
             step={step}
+            disabled={disabled}
             style={{ width: '100%', minWidth: 0 }}
             onFocus={(event) => {
                 setDraft(String(canonical))
@@ -63,21 +64,24 @@ const getAssetOptionsForField = (field, assetOptions = []) => {
     return assetOptions.filter((asset) => detectAssetMediaKind(asset) === field.assetKind)
 }
 
-function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetFile = null }) {
+// `disabled` is the wired case: the port reads its wire, so the box shows the
+// stored value but takes nothing — the input is disabled rather than hidden,
+// because a field that vanishes when a wire lands reads as a bug.
+function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetFile = null, disabled = false }) {
     if (field.type === 'textarea') {
-        return <textarea value={value || ''} onChange={(event) => onChange(event.target.value)} rows={4} />
+        return <textarea value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} rows={4} />
     }
     if (field.type === 'color') {
         // The port's real default, not white: an unset Colour on a blue cube
         // showed a white swatch while the cube stood there blue (S24 audit).
-        return <input type="color" value={value || field.default || '#ffffff'} onChange={(event) => onChange(event.target.value)} />
+        return <input type="color" value={value || field.default || '#ffffff'} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
     }
     if (field.type === 'checkbox') {
-        return <input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} />
+        return <input type="checkbox" checked={Boolean(value)} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
     }
     if (field.type === 'select') {
         return (
-            <select value={value || ''} onChange={(event) => onChange(event.target.value)}>
+            <select value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
                 {(field.options || []).map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
@@ -101,6 +105,7 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
                         <input
                             type="file"
                             accept={ASSET_FIELD_ACCEPT[field.assetKind] || undefined}
+                            disabled={disabled}
                             onChange={(event) => {
                                 const file = event.target.files?.[0]
                                 event.target.value = ''
@@ -109,7 +114,7 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
                         />
                     </label>
                 ) : null}
-                <select value={value || ''} onChange={(event) => onChange(event.target.value || null)}>
+                <select value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value || null)}>
                     <option value="">Unassigned</option>
                     {getAssetOptionsForField(field, assetOptions).map((asset) => (
                         <option key={asset.id} value={asset.id}>{asset.name}</option>
@@ -127,6 +132,7 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
                 max={field.max}
                 step={field.step ?? 0.1}
                 onCommit={onChange}
+                disabled={disabled}
             />
         )
     }
@@ -146,6 +152,7 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
                         value={Number.isFinite(Number(arr[axis])) ? arr[axis] : (fallback[axis] ?? 0)}
                         fallback={fallback[axis] ?? 0}
                         step={field.step ?? 0.1}
+                        disabled={disabled}
                         onCommit={(committed) => {
                             const next = [
                                 Number.isFinite(Number(arr[0])) ? arr[0] : (fallback[0] ?? 0),
@@ -171,7 +178,7 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
             </span>
         )
     }
-    return <input type="text" value={value || ''} onChange={(event) => onChange(event.target.value)} />
+    return <input type="text" value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
 }
 
 // The rename verb. It did not exist anywhere in the UI (audit 08-21: the
@@ -249,17 +256,23 @@ export default function PropertyInspector({
                                 {section.fields.map((field) => {
                                     const value = readNestedValue(sectionValue, field.path)
                                     const isFullWidth = field.type === 'textarea' || field.type === 'select' || field.type === 'asset'
+                                    const wired = field.wired === true
                                     return (
                                         <label
                                             key={`${section.id}-${field.label}`}
-                                            className={`raw-property-field${field.type === 'checkbox' ? ' raw-checkbox-field' : ''}${isFullWidth ? ' raw-full-width-field' : ''}`}
+                                            className={`raw-property-field${field.type === 'checkbox' ? ' raw-checkbox-field' : ''}${isFullWidth ? ' raw-full-width-field' : ''}${wired ? ' is-wired' : ''}`}
+                                            title={wired ? 'This port takes its value from the wire into it. Unplug the wire to type one.' : undefined}
                                         >
-                                            <span>{field.label}</span>
+                                            <span>
+                                                {field.label}
+                                                {wired ? <em className="raw-property-wired">wired</em> : null}
+                                            </span>
                                             <PropertyField
                                                 field={field}
                                                 value={value}
                                                 assetOptions={assetOptions}
                                                 onPickAssetFile={onPickAssetFile}
+                                                disabled={wired}
                                                 onChange={(nextValue) => {
                                                     const nextSectionValue = setNestedValue(sectionValue, field.path, nextValue)
                                                     onSectionChange?.(field.component || section.id, nextSectionValue)

@@ -167,6 +167,25 @@ describe('deriveNodeInspectorSections', () => {
         expect(rig.options.map((option) => option.value)).toEqual(['desk', 'vizzz'])
     })
 
+    // A wire into a port makes the sheet's box for it a lie: the node reads
+    // the wire and a typed value went nowhere (festival-machine inventory,
+    // 2026-09-06). The builder marks the field; the inspector greys it.
+    it('marks an input port that has a wire into it, and only that one', () => {
+        const fields = deriveNodeInspectorSections(createNode('geom.cube'), { wiredPortIds: ['color'] })
+            .find((section) => section.id === 'values')?.fields || []
+        expect(fields.find((field) => field.path[0] === 'color')?.wired).toBe(true)
+        expect(fields.filter((field) => field.wired)).toHaveLength(1)
+    })
+
+    it('marks a node.null dynamic port the same way', () => {
+        const node = createNode('node.null', {
+            values: { body: '', portDefs: [{ dir: 'in', id: 'title', type: 'string', label: 'Title' }] }
+        })
+        const fields = deriveNodeInspectorSections(node, { wiredPortIds: ['title'] })[0].fields
+        expect(fields.find((field) => field.path[0] === 'title')?.wired).toBe(true)
+        expect(fields.find((field) => field.path[0] === 'body')?.wired).toBeUndefined()
+    })
+
 it('keeps the Code section\'s values.__code distinct from node.null\'s own values.body', () => {
         const node = createNode('node.null', { values: { body: 'the null node body', portDefs: [] } })
         const sections = deriveNodeInspectorSections(node)

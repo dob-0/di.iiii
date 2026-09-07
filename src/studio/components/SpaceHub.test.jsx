@@ -308,6 +308,41 @@ describe('SpaceHub', () => {
         }
     })
 
+    it('draws "not in this copy" on a card whose preview says its route is a local-profile stub', async () => {
+        everyCardVisible()
+        try {
+            listServerSpaces.mockResolvedValue(thirteenPublicSpaces)
+
+            render(<SpaceHub />)
+
+            await screen.findByText('s0')
+            await waitFor(() => expect(frameIn('s0')).not.toBeNull())
+            expect(frameIn('s12')).toBeNull()
+
+            // Under DI_PROFILE=local a work's route (wcc, algovrithm) is a
+            // page of text with no canvas, so it never says preview-ready. It
+            // says preview-stub instead, from the card's own frame.
+            fireEvent(window, new MessageEvent('message', {
+                data: { type: 'dii:preview-stub', spaceId: 's0' },
+                origin: window.location.origin,
+                source: frameIn('s0').contentWindow
+            }))
+
+            // the slot is freed like a paint would free it
+            await waitFor(() => expect(frameIn('s12')).not.toBeNull())
+            // and the card draws its own line in place of the scaled-down frame
+            const card = screen.getByText('s0').closest('.ssh-space-card')
+            expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
+            expect(card.querySelector('.ssh-card-preview-fill--stub')).not.toBeNull()
+            expect(card.textContent).toContain('not in this copy')
+            // every other card paints exactly as before
+            expect(frameIn('s1')).not.toBeNull()
+            expect(screen.getByText('s1').closest('.ssh-space-card').textContent).not.toContain('not in this copy')
+        } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
     it('shows the custom preview image instead of the live embed when set', async () => {
         listServerSpaces.mockResolvedValue([
             { id: 'gallery', label: 'Gallery', isOwner: true, isPublic: true, publishedProjectId: 'p1', previewImageAssetId: 'cover123' }

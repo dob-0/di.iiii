@@ -59,6 +59,12 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
     await fsp.mkdir(p.logs, { recursive: true })
     await fsp.mkdir(p.run, { recursive: true })
 
+    // `di up --lan` binds every interface. That is the one deliberate act that
+    // also opens the device routes (the lighting desk's Touch page, OSC) to the
+    // room, and the guard's own flag is how the server hears it. A loopback
+    // start leaves whatever di.env says about it alone.
+    const wildcard = host === '0.0.0.0' || host === '::'
+
     const logStream = fs.openSync(p.serverLog, 'a')
     // Detached on every OS, and unref'd on every OS. Windows was the exception
     // here and that is exactly what hung `di up`: without detach+unref the
@@ -80,14 +86,17 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
             CLIENT_DIR: layout.client,
             DATA_ROOT: p.data,
             // A local install is one person on their own machine. Auth off is
-            // what makes it usable without an account; loopback-only binding
-            // above is what keeps that from meaning "the café can edit it".
+            // what makes it usable without an account; the loopback bind
+            // above — the default — is what keeps that from meaning "the café
+            // can edit it", and `--lan` says the opposite out loud first.
             REQUIRE_AUTH: 'false',
             NODE_ENV: 'production',
             // NODE_ENV=production would otherwise close the local-operator
-            // gate (agent board, local claude chat) on a personal install.
-            // Loopback binding above is still what keeps it local-only.
-            DI_LOCAL: '1'
+            // gate (agent board, local claude chat, the model on this box) on
+            // a personal install. Those gates check the request's own address
+            // and stay loopback-only under --lan.
+            DI_LOCAL: '1',
+            ...(wildcard ? { DI_ALLOW_LAN_DEVICES: '1' } : {})
         }
     })
 
@@ -96,9 +105,13 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
 
     if (verbose) process.stdout.write(`[di] pid ${child.pid}, log ${p.serverLog}\n`)
 
+    // A wildcard bind answers on loopback as well, and 0.0.0.0 is not an
+    // address every OS lets a client connect to — probe what a browser on this
+    // machine would use.
+    const probeHost = wildcard ? '127.0.0.1' : host
     const deadline = Date.now() + 30000
     while (Date.now() < deadline) {
-        if (await probeHealth(port, host)) return { pid: child.pid, port, host }
+        if (await probeHealth(port, probeHost)) return { pid: child.pid, port, host }
         if (!pidAlive(child.pid)) {
             const tail = await readLog(home, 20)
             throw new Error(`the server stopped while starting.\n${tail}`)

@@ -2955,6 +2955,38 @@ describe('nonexistent space vs restricted space', () => {
         const locked = await fetch(`${server.baseUrl}/api/spaces/secret-lab`, { headers: { Cookie: guestCookie } })
         expect(locked.status).toBe(403)
     })
+
+    // The scene read is the one every room opens with, and it used to
+    // provision the space it was asked for: a directory and a blank
+    // scene.json per mistyped id, in the real data tier. With auth on,
+    // requireReadRole's 404 hid this; with auth off (a `di up` install) the
+    // handler ran, and seven stub folders appeared during the 2026-09-06
+    // festival-machine test. A read must answer 404 and leave the disk alone
+    // in both modes — and a boot-ensured space that has a row but no
+    // scene.json yet (main) must still read as the blank scene, since the
+    // read no longer writes one.
+    it('404s a scene read for a space that never existed and leaves the disk alone, auth on or off', async () => {
+        for (const requireAuth of [false, true]) {
+            const server = await startServer({ requireAuth })
+            const spacesDir = path.join(server.dataRoot, 'spaces')
+            const before = (await readdir(spacesDir)).sort()
+            expect(before).toContain('main')
+
+            const missing = await fetch(`${server.baseUrl}/api/spaces/never-made/scene`, { headers: withAuth(server.apiToken) })
+            expect(missing.status).toBe(404)
+            await expect(missing.json()).resolves.toMatchObject({ error: 'Space not found.' })
+            expect((await readdir(spacesDir)).sort()).toEqual(before)
+            expect(fs.existsSync(path.join(spacesDir, 'never-made'))).toBe(false)
+
+            const main = await fetch(`${server.baseUrl}/api/spaces/main/scene`, { headers: withAuth(server.apiToken) })
+            expect(main.status).toBe(200)
+            const payload = await main.json()
+            expect(payload.scene).toBeTruthy()
+            expect(payload.version).toBe(0)
+            // Reading did not write the blank scene down either.
+            expect(fs.existsSync(path.join(spacesDir, 'main', 'scene.json'))).toBe(false)
+        }
+    })
 })
 
 // Work as files, the browser's half. The same document `di save` writes and
