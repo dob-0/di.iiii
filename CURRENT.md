@@ -13,10 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the festival machine was inventoried offline (`docs/testing/FESTIVAL_MACHINE_2026-09-06.md`)
-  and its gaps landed as one batch: `di up --lan` (a phone in the room), `/vendor/` libraries
-  for published pages, `di backup` carries the light show, the "left out" stub has a way back,
-  panel windows open whole, an unknown address answers "nothing lives here" and writes nothing
+- A decoder directory is the one CDN URL worth rewriting inside code
 
 Full detail: `PROGRESS.md`.
 
