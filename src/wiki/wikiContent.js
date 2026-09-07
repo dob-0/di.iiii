@@ -163,7 +163,7 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Setup — patch the rig. Add each fixture, give it a profile and an address, and drag it into place on a plan of the room, so the desk looks like the room you are standing in. The plan is not a fixed canvas — pan and zoom go as far out as the rig needs, so a truss run or a followspot off to one side has somewhere to sit.',
                 'Control — the desk proper. Fixtures, colours, a master, scenes, chases, effects and LFOs; save what you are looking at as a scene and give it a name you will recognise in the dark. Looks stack on layers with their own fader, so a colour chase and a strobe can run at once instead of one replacing the other, and a look can follow the room instead of the patch order — Line sweep, Radar and Grid are one-press starters for a wave crossing the floor, a beam turning round its centre, and two waves crossing into a moving grid. Drag a fixture on the Setup stage and it moves inside every one of them.',
-                'Touch — the show surface. Big scene buttons, made for a phone in one hand at the back of the room.',
+                'Touch — the show surface. Big scene buttons, made for a phone in one hand at the back of the room. A phone can only get there when di.iiii was started with di up --lan; the desk’s Phone box shows the address and a QR code when it can, and says so plainly when it cannot.',
                 'Fader — plain channel faders, for when a fixture is doing something no profile explains and you need to poke a channel by hand.',
                 'MIDI — map a controller. Mappings live with the desk, not in one browser, so the same knobs work from any screen you open it on.'
             ] },
@@ -172,8 +172,8 @@ export const WIKI_ARTICLES = [
             'A graph can play the desk. Drop a DMX Out node into a canvas, leave it on its default rig, and Master, Channel, Value, Blackout and Scene are wired straight into the desk you just patched — an oscillator on a lamp, a scene name recalled by a button, a whole rig blacked out by a wire. See “DMX Out: the graph lights the room”.',
             'The desk lives on a local di.iiii only — `di up`, or npm run dev. A hosted di-studio.xyz has no /light in it at all, on purpose: a lighting desk is a thing that reaches hardware in a room, and the room is where you are.'
         ],
-        tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up'],
-        updated: '2026-09-03'
+        tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up', 'lan', 'phone'],
+        updated: '2026-09-06'
     },
     {
         id: 'projection-mapping',
@@ -1046,7 +1046,8 @@ export const WIKI_ARTICLES = [
                 'di update — installs the newest version, and never touches your work; di update --rollback returns to the one before',
                 'di update --from FILE — updates from a file on this machine, for a venue with no network',
                 'di restore --snapshot — the copies di.iiii takes of your work by itself, before an update that changes how it is stored',
-                'di status — what is running, on which address, and how much space your work takes',
+                'di status — what is running, on which address, whether the room can reach it, and how much space your work takes',
+                'di up --lan — answers on this wifi too, so a phone in the room can open it (the lighting desk’s Touch page, for one). Auth is off on a local di.iiii, so this means anyone on that network can edit — di up says so every time, and it lasts for that start only: the next di up is back to this machine alone',
                 'di doctor — what this machine can and cannot do, and what to install if something is missing',
                 'di mcp — hands this di.iiii to Claude, or any other agent that speaks MCP'
             ] },

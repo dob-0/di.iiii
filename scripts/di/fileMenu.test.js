@@ -69,7 +69,7 @@ describe('opening a file is not a server-management task', () => {
     it('stops the server, imports, and puts it back if it was up', () => {
         const stop = cli.indexOf('if (wasRunning) { try { await runnerFor(home).stop({ home }) }')
         const importAt = cli.indexOf("const toolArgs = ['import', resolved]")
-        const restart = cli.indexOf("if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true } })\n    if (code !== 0)")
+        const restart = cli.indexOf("if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })\n    if (code !== 0)")
         expect(stop).toBeGreaterThan(-1)
         expect(importAt).toBeGreaterThan(stop)
         expect(restart).toBeGreaterThan(importAt)

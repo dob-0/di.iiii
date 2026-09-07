@@ -1,4 +1,10 @@
-function registerConfigRoutes(router, { requireAdminAlways, configStore, onConfigChanged = null, approvalGate = null, requireAuth = false }) {
+const { describeListen } = require('../listenInfo')
+
+function registerConfigRoutes(router, { requireAdminAlways, configStore, onConfigChanged = null, approvalGate = null, requireAuth = false, listen = null }) {
+  // A function, called per request: a hotspot deals the laptop a fresh address
+  // mid-evening and the answer has to follow it. index.js passes the real bind;
+  // the fallback reads the same variable config.js does.
+  const listenNow = typeof listen === 'function' ? listen : () => describeListen({ host: process.env.HOST })
   const serializeConfig = (cfg) => ({
     defaultSpaceId: cfg.defaultSpaceId || null,
     // null = no global space → each guest gets a private sandbox.
@@ -9,7 +15,10 @@ function registerConfigRoutes(router, { requireAdminAlways, configStore, onConfi
     // install on the visitor's own machine, and is auth even on? Read at
     // request time so tests can toggle DI_LOCAL per boot.
     local: process.env.DI_LOCAL === '1',
-    requireAuth: Boolean(requireAuth)
+    requireAuth: Boolean(requireAuth),
+    // Read-only. Whether a phone in the room could reach this server at all
+    // (`di up --lan`), and on which addresses — addresses only when it can.
+    listen: listenNow()
   })
 
   if (approvalGate) {
