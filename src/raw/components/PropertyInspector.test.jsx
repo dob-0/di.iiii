@@ -128,6 +128,48 @@ describe('PropertyInspector', () => {
     })
 })
 
+describe('a wired port (festival-machine inventory, 2026-09-06)', () => {
+    it('renders the field read-only with a "wired" hint instead of a box that ignores what you type', () => {
+        const onSectionChange = vi.fn()
+        render(
+            <PropertyInspector
+                title="Cube"
+                sections={[{
+                    id: 'values',
+                    label: 'Ports',
+                    fields: [
+                        { label: 'Colour', path: ['color'], type: 'color', portType: 'color', wired: true },
+                        { label: 'Size', path: ['size'], type: 'number', portType: 'number', default: 1 }
+                    ]
+                }]}
+                values={{ values: { color: '#5fa8ff', size: 1 } }}
+                onSectionChange={onSectionChange}
+            />
+        )
+        const colour = screen.getByDisplayValue('#5fa8ff')
+        expect(colour.disabled).toBe(true)
+        expect(screen.getByText('wired')).toBeTruthy()
+        // The unwired neighbour is untouched.
+        expect(screen.getByRole('spinbutton').disabled).toBe(false)
+    })
+
+    it('disables every axis of a wired vec3', () => {
+        render(
+            <PropertyInspector
+                title="Cube"
+                sections={[{
+                    id: 'values',
+                    label: 'Ports',
+                    fields: [{ label: 'Position', path: ['position'], type: 'vec3', portType: 'vec3', wired: true }]
+                }]}
+                values={{ values: { position: [0, 0, 0] } }}
+                onSectionChange={vi.fn()}
+            />
+        )
+        expect(screen.getAllByRole('spinbutton').every((input) => input.disabled)).toBe(true)
+    })
+})
+
 describe('the number edit buffer (phone audit, 2026-08-20)', () => {
     const numberSection = () => [{
         id: 'values',

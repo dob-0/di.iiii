@@ -1953,6 +1953,28 @@
     text-overflow: ellipsis;
 }
 
+/* A port with a wire into it: the box stays, greyed, and the label says why.
+   Hiding the field instead made a landed wire look like a lost setting. */
+.raw-property-wired {
+    margin-left: 6px;
+    font-style: normal;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--di-cyan);
+}
+
+.raw-property-field.is-wired > span {
+    color: rgba(244, 247, 251, 0.6);
+}
+
+.raw-property-field input:disabled,
+.raw-property-field textarea:disabled,
+.raw-property-field select:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 .raw-checkbox-field {
     flex-direction: row;
     align-items: center;
