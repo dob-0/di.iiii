@@ -641,8 +641,19 @@ function registerSpaceRoutes(router, {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
       if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      // A read never provisions. This used to ensureSpaceScene first, so a
+      // GET for an id nobody created wrote a directory and a blank scene.json
+      // into the real data tier — with auth off (a `di up` install)
+      // requireReadRole's own 404 never runs, and seven stub folders turned
+      // up during the 2026-09-06 festival-machine test. The spaces that do
+      // come into being on first access (a session's own sandbox, the
+      // boot-ensured open space) are provisioned before this handler, so
+      // they already exist here; a row without a scene.json yet reads as
+      // the blank scene, which is what the first write starts from anyway.
+      if (!(await spaceExists(spaceId))) {
+        return res.status(404).json({ error: 'Space not found.' })
+      }
       const { scenePath } = getSpacePaths(spaceId)
-      await ensureSpaceScene(spaceId)
       const scene = await readJson(scenePath, blankScene)
       const assetBaseUrl = `${req.baseUrl || ''}/api/spaces/${spaceId}/assets`
       const meta = await loadSpaceMeta(spaceId)

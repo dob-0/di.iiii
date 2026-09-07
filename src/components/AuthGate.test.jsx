@@ -20,7 +20,9 @@ vi.mock('../services/serverSpaces.js', () => ({
     supportsServerSpaces: true,
     // 'ghost' plays the mistyped id: the server 404s for a space that was
     // never created, and the card must say so instead of talking scope.
-    getServerSpace: (spaceId) => (spaceId === 'ghost'
+    // 'make' is the lane word typed with no space in front of it — the same
+    // 404 on a real server, since no space is called that.
+    getServerSpace: (spaceId) => (spaceId === 'ghost' || spaceId === 'make'
         ? Promise.reject(Object.assign(new Error('Space not found.'), { status: 404 }))
         : Promise.resolve({ id: spaceId, isPublic: spaceId === 'pub' }))
 }))
@@ -135,27 +137,84 @@ describe('AuthGate restricted card doors', () => {
 })
 
 // On a local install (`di up`) the server reports requireAuth: false, and
-// AuthGate must let everything through — the restricted card is unreachable
-// no matter what space the URL names. Both fixtures used to hardcode
-// requireAuth: true, so this short-circuit was never asserted.
+// AuthGate lets every space through — there is no scope, so the restricted
+// card is unreachable no matter what the URL names. The NOT-FOUND card is
+// not: the gate used to wave an address that names no space (/make, a typo)
+// through to a silent empty room with Enter VR/AR on it, while the live site
+// said "Nothing lives at …" (festival-machine inventory, 2026-09-06). The
+// session shape mirrors what the server sends with auth off: authenticated,
+// type 'disabled', no scope list, the open space named, no sandbox.
+const localSession = () => ({
+    requireAuth: false,
+    local: true,
+    authenticated: true,
+    type: 'disabled',
+    role: 'admin',
+    loading: false,
+    error: null,
+    spaces: null,
+    openSpaceId: 'open',
+    sandboxSpaceId: null,
+    login: vi.fn(),
+    logout: vi.fn(),
+    refresh: vi.fn()
+})
+
 describe('AuthGate on a local install (requireAuth off)', () => {
-    it('renders children for any space and never shows a card', () => {
-        mockUseAuthSession.mockReturnValue({
-            requireAuth: false,
-            local: true,
-            authenticated: false,
-            loading: false,
-            error: null,
-            spaces: null,
-            login: vi.fn(),
-            logout: vi.fn(),
-            refresh: vi.fn()
-        })
+    afterEach(() => {
+        mockAppNavigate.mockClear()
+    })
+
+    it('renders children for a space that exists and never shows a card', async () => {
+        mockUseAuthSession.mockReturnValue(localSession())
         render(<AuthGate requiredSpaceId="anything-at-all">editor</AuthGate>)
 
-        expect(screen.getByText('editor')).toBeInTheDocument()
+        expect(await screen.findByText('editor')).toBeInTheDocument()
         expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Nothing lives at/)).not.toBeInTheDocument()
         expect(screen.queryByText(/Sign in/)).not.toBeInTheDocument()
+    })
+
+    it('renders children at once when no space is required', () => {
+        mockUseAuthSession.mockReturnValue(localSession())
+        render(<AuthGate>editor</AuthGate>)
+
+        expect(screen.getByText('editor')).toBeInTheDocument()
+    })
+
+    it('says nothing lives at a mistyped address, with the open space as the door', async () => {
+        mockUseAuthSession.mockReturnValue(localSession())
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+
+        expect(await screen.findByText(/Nothing lives at/)).toBeInTheDocument()
+        expect(screen.queryByText('editor')).not.toBeInTheDocument()
+        expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
+        // Nothing to sign in to on a local install: no provider buttons, no
+        // account chip, no sandbox (the session has none).
+        expect(screen.queryByText(/Sign in/)).not.toBeInTheDocument()
+        expect(screen.queryByText('account-button')).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Your private sandbox' })).not.toBeInTheDocument()
+
+        fireEvent.click(screen.getByRole('button', { name: 'Open Space' }))
+        expect(mockAppNavigate).toHaveBeenCalledWith('/open')
+    })
+
+    it('treats a bare /make as an address that names no space', async () => {
+        mockUseAuthSession.mockReturnValue(localSession())
+        render(<AuthGate requiredSpaceId="make">editor</AuthGate>)
+
+        expect(await screen.findByText(/Nothing lives at “make”/)).toBeInTheDocument()
+        expect(screen.queryByText('editor')).not.toBeInTheDocument()
+    })
+
+    // The room must not paint for a frame before the lookup answers — that
+    // frame is a whole 3D viewer mounting and unmounting.
+    it('holds the room back until the lookup has answered', () => {
+        mockUseAuthSession.mockReturnValue(localSession())
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+
+        expect(screen.queryByText('editor')).not.toBeInTheDocument()
+        expect(screen.getByRole('status')).toHaveTextContent(/Finding this space/)
     })
 })
 
