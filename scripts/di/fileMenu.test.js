@@ -66,13 +66,36 @@ describe('the document says what wrote it', () => {
 })
 
 describe('opening a file is not a server-management task', () => {
-    it('stops the server, imports, and puts it back if it was up', () => {
-        const stop = cli.indexOf('if (wasRunning) { try { await runnerFor(home).stop({ home }) }')
-        const importAt = cli.indexOf("const toolArgs = ['import', resolved]")
-        const restart = cli.indexOf("if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true } })\n    if (code !== 0)")
-        expect(stop).toBeGreaterThan(-1)
+    const open = cli.slice(cli.indexOf('const cmdOpenFile'), cli.indexOf('const cmdNew'))
+
+    it('goes through the running server, by the same door the browser uses', () => {
+        // Found on the festival machine: `di open FILE` stopped and restarted
+        // the server for everyone on it, while the browser's Open a file went
+        // through the API in place. Two doors, two behaviours.
+        expect(cli).toContain("fetch(`${localUrl(port)}/serverXR/api/spaces/bundle`, { method: 'POST', body: form })")
+        expect(cli).toContain("form.append('bundle', await fs.openAsBlob(file), path.basename(file))")
+        const ask = open.indexOf('await openThroughServer({ port, file: resolved, as: args.flags.as })')
+        const stop = open.indexOf('if (running) { try { await runnerFor(home).stop({ home }) }')
+        expect(ask).toBeGreaterThan(-1)
+        expect(stop).toBeGreaterThan(ask)
+    })
+
+    it('keeps the stop-and-import path for what the API cannot take, and says why first', () => {
+        // --force replaces a space a tab may be standing in; a file over the
+        // server's upload cap never arrives. Both are said before the stop.
+        expect(open).toContain('if (running && !args.flags.force)')
+        expect(open).toContain('say(ui.tooLargeForWire(path.basename(resolved)))')
+        expect(open).toContain('say(ui.forceStops())')
+        const importAt = open.indexOf("const toolArgs = ['import', resolved]")
+        const stop = open.indexOf('if (running) { try { await runnerFor(home).stop({ home }) }')
+        const restart = open.indexOf("if (running) await cmdUp({ _: [], flags: { 'no-open': true } })\n    if (code !== 0)")
         expect(importAt).toBeGreaterThan(stop)
         expect(restart).toBeGreaterThan(importAt)
+    })
+
+    it('treats a 413, or a connection the server dropped mid-upload, as "too large"', () => {
+        expect(cli).toContain("if (response.status === 413) return { ok: false, tooLarge: true }")
+        expect(cli).toContain('if (await probeHealth(port)) return { ok: false, tooLarge: true }')
     })
 
     it('leaves the last word to the failure, not to the restart banner', () => {
