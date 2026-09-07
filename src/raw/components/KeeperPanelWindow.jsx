@@ -90,7 +90,9 @@ export default function KeeperPanelWindow({ node, values, onReplyChange, onConfi
                 <div className="raw-keeper-panel-setup">
                     <div className="raw-keeper-panel-status raw-keeper-panel-status-setup">
                         Point the keeper at a model to wake it &mdash; a box on this
-                        network, or one on this machine.
+                        network, or one on this machine. A bare host is enough:
+                        llama.cpp and LM Studio answer at :8090, Ollama at :11434,
+                        and both chat paths are tried.
                     </div>
                     <label className="raw-keeper-panel-field">
                         <span className="raw-keeper-panel-label">Endpoint</span>
@@ -98,7 +100,7 @@ export default function KeeperPanelWindow({ node, values, onReplyChange, onConfi
                             className="raw-keeper-panel-input"
                             type="text"
                             value={endpoint}
-                            placeholder="http://localhost:11434"
+                            placeholder="http://127.0.0.1:8090 or :11434"
                             onChange={(event) => onConfigChange?.(node.id, { endpoint: event.target.value })}
                         />
                     </label>
