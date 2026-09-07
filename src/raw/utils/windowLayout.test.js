@@ -499,8 +499,14 @@ describe('placeNewWindowFrame', () => {
         expect(rect.x).toBe(onScreen(card, viewport).x + 200 + RAW_NEW_WINDOW_GAP)
     })
 
-    it('answers in graph units at any zoom — the window keeps its authored size', () => {
-        const zoomedOut = { panX: 60, panY: 60, zoom: 0.5, originLeft: 0, originTop: 64 }
+    it.each([0.5, 0.25, 0.1, 0.05])('answers in graph units at zoom %s — the window keeps its authored size', (zoom) => {
+        // Below zoom ~0.3 the window's screen size drops under the clamp's
+        // 200x120 pixel floor. That floor is for SCREEN windows; a world window
+        // is allowed to be small on screen (it is far away), and inflating it
+        // to the floor and dividing back by zoom wrote a 4000x2400 frame into
+        // the document at 5% (review of PR #393). Only the viewport cap may
+        // shrink it; nothing may grow it.
+        const zoomedOut = { panX: 60, panY: 60, zoom, originLeft: 0, originTop: 64 }
         const card = agentCard(2000, 1200)
         const frame = placeNewWindowFrame({ frame: agentFrame, card, space: 'world', viewport: zoomedOut, ...desktop })
         expect(frame.width).toBe(420)
@@ -508,6 +514,34 @@ describe('placeNewWindowFrame', () => {
         const rect = onScreen(frame, zoomedOut)
         expectInside(rect, desktop)
         expect(overlaps(rect, onScreen(card, zoomedOut))).toBe(false)
+    })
+
+    it('the gap to the card is graph units as well — zoomed out, the window still opens against its card', () => {
+        // With the gap in screen pixels, a window placed at 10% sat 160 graph
+        // units under its card and 144px away from it once zoom was back at 1.
+        const zoomedOut = { panX: 60, panY: 60, zoom: 0.1, originLeft: 0, originTop: 64 }
+        const card = agentCard(2000, 1200)
+        const frame = placeNewWindowFrame({ frame: agentFrame, card, space: 'world', viewport: zoomedOut, ...desktop })
+        expect(frame).toMatchObject({ x: 2000, y: 1200 + 74 + RAW_NEW_WINDOW_GAP, width: 420, height: 480 })
+    })
+
+    it('a world window smaller than the world minimum is raised to it, in graph units, whatever the zoom', () => {
+        // DesktopWindow's worldSettle floors a world frame at 200x120 GRAPH
+        // units; the placement agrees with it in the same units.
+        const zoomedOut = { panX: 60, panY: 60, zoom: 0.1, originLeft: 0, originTop: 64 }
+        const tiny = { ...agentFrame, width: 90, height: 40 }
+        const frame = placeNewWindowFrame({ frame: tiny, card: agentCard(200, 100), space: 'world', viewport: zoomedOut, ...desktop })
+        expect(frame.width).toBe(RAW_WINDOW_MIN_WIDTH)
+        expect(frame.height).toBe(RAW_WINDOW_MIN_HEIGHT)
+    })
+
+    it('zoomed in, only the viewport cap shrinks the window, and the stored frame still renders whole', () => {
+        const zoomedIn = { panX: 60, panY: 60, zoom: 3, originLeft: 0, originTop: 64 }
+        const card = agentCard(40, 20)
+        const frame = placeNewWindowFrame({ frame: agentFrame, card, space: 'world', viewport: zoomedIn, ...desktop })
+        expect(frame.width).toBeLessThanOrEqual(420)
+        expect(frame.height).toBeLessThanOrEqual(480)
+        expectInside(onScreen(frame, zoomedIn), desktop)
     })
 
     it('on a phone the frame is screen pixels and lands on the phone clamp: x=12, width=366, whole on screen', () => {

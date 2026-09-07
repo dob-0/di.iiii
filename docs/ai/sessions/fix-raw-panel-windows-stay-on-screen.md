@@ -32,5 +32,25 @@
   390x844, place Agent: every window `getBoundingClientRect` inside the viewport,
   above the card and clear of it; the Cube inspector with a Colour wire shows
   "Colour WIRED" disabled, Size still live; zero console errors.
+- Review of PR #393 (2026-09-07): `placeNewWindowFrame` ran the window's SCREEN size
+  through `clampWindowFrame`, whose 200x120 floor is screen pixels, then divided back
+  by zoom — so a world window placed at 5% was stored 4000x2400 (reviewer measured it;
+  the unit test at zoom 0.5 sat above the ~0.3 threshold and missed it). Fix:
+  `clampWindowFrame` takes optional `minWidth`/`minHeight` (defaults unchanged for its
+  other callers) and the placement passes the world minimum scaled by zoom, which is
+  exactly `worldSettle`'s 200x120 graph-unit floor as seen on screen. Same class, same
+  fix: the 16px gap to the card was screen pixels too (320 graph units at 5%, the
+  window a screen away from its card once zoom came back), now `RAW_NEW_WINDOW_GAP`
+  graph units for a world window. Tests: `it.each` over zoom 0.5/0.25/0.1/0.05 keeps
+  420x480, a tiny frame is raised to 200x120 graph units, the gap is graph units at
+  0.1, zoom 3 only shrinks. Seen on a fresh stack (serverXR 4171 + vite 4172, headless
+  Chromium 1440x900 at DPR 2): a first Agent at 100%, toolbar to 5%, a second Agent —
+  stored frame 360x280, y = card bottom + 16, rendered 18x14px directly under its
+  10x4px card; back at 105% it renders 380x297 (authored x zoom), 14px under the card.
+  At 300% the second window is stored 360x264 (height capped by the viewport, never
+  grown); nothing fits beside a card that big, so the below-and-clamped fallback
+  covers it — the branch's documented fallback, unchanged. Note: on an EMPTY canvas
+  the first node triggers the surface's one-time fit, which is why a lone placement at
+  5% reads as 100% afterwards — pre-existing and by design.
 - Not done: the phone card itself can land under the zoom toolbar when the tap is
   near the bottom (pre-existing card placement, not the window) — outside this lane.

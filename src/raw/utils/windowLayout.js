@@ -81,6 +81,13 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
     // like it had stopped responding. Cap the size against the window's own
     // position instead, so growth simply stops at the edge.
     const resizing = bounds.resizing === true
+    // The floor is in the frame's own units. For a screen window that is
+    // 200x120 pixels; a world window placed while zoomed out hands over its
+    // screen size and its floor scaled the same way, so a far-away window is
+    // allowed to be small on screen instead of being inflated to 200x120 and
+    // written back into the document at 200/zoom (4000 wide at 5%).
+    const minWidth = Number.isFinite(bounds.minWidth) && bounds.minWidth > 0 ? bounds.minWidth : RAW_WINDOW_MIN_WIDTH
+    const minHeight = Number.isFinite(bounds.minHeight) && bounds.minHeight > 0 ? bounds.minHeight : RAW_WINDOW_MIN_HEIGHT
 
     const nextX = hasFiniteValue(frame.x) ? Number(frame.x) : (minLeft ?? 0)
     const nextY = hasFiniteValue(frame.y) ? Number(frame.y) : (effectiveMinTop ?? 0)
@@ -89,13 +96,13 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
     // fixed size ships as-is on a 390px phone: wider than the whole screen, and
     // tall enough to cover it below the topbar, with no way to see anything else.
     const maxWidth = viewportWidth
-        ? Math.max(RAW_WINDOW_MIN_WIDTH, (resizing ? viewportWidth - nextX : viewportWidth - viewportPadding) - viewportPadding)
+        ? Math.max(minWidth, (resizing ? viewportWidth - nextX : viewportWidth - viewportPadding) - viewportPadding)
         : Infinity
     const maxHeight = viewportHeight
-        ? Math.max(RAW_WINDOW_MIN_HEIGHT, viewportHeight - (resizing ? Math.max(nextY, effectiveMinTop ?? 0) : (effectiveMinTop ?? 0)) - bottomEdgePadding)
+        ? Math.max(minHeight, viewportHeight - (resizing ? Math.max(nextY, effectiveMinTop ?? 0) : (effectiveMinTop ?? 0)) - bottomEdgePadding)
         : Infinity
-    const width = clamp(Math.max(RAW_WINDOW_MIN_WIDTH, Number(frame.width) || RAW_WINDOW_MIN_WIDTH), RAW_WINDOW_MIN_WIDTH, maxWidth)
-    const height = clamp(Math.max(RAW_WINDOW_MIN_HEIGHT, Number(frame.height) || RAW_WINDOW_MIN_HEIGHT), RAW_WINDOW_MIN_HEIGHT, maxHeight)
+    const width = clamp(Math.max(minWidth, Number(frame.width) || minWidth), minWidth, maxWidth)
+    const height = clamp(Math.max(minHeight, Number(frame.height) || minHeight), minHeight, maxHeight)
     const maxX = viewportWidth
         ? (allowOverflowLeft
             ? viewportWidth - width - viewportPadding
@@ -368,7 +375,18 @@ export function placeNewWindowFrame({
     const scale = inWorld ? vp.zoom : 1
     const originX = (Number(vp?.originLeft) || 0) + (Number(vp?.panX) || 0)
     const originY = (Number(vp?.originTop) || 0) + (Number(vp?.panY) || 0)
-    const bounds = { minTop: workspaceTop, viewportWidth, viewportHeight }
+    // The clamp's 200x120 floor is DesktopWindow's floor for a screen window;
+    // for a world window worldSettle applies the same 200x120 in GRAPH units,
+    // which on screen is that times the zoom. Handing the clamp the scaled
+    // floor keeps the two in the same units — otherwise a window placed at 5%
+    // zoom was inflated to 200 screen pixels and stored as 4000 graph units.
+    const bounds = {
+        minTop: workspaceTop,
+        viewportWidth,
+        viewportHeight,
+        minWidth: RAW_WINDOW_MIN_WIDTH * scale,
+        minHeight: RAW_WINDOW_MIN_HEIGHT * scale
+    }
 
     // The window's on-screen size, capped the way the window itself caps it
     // (a 680-wide default on a 390px phone becomes 366 here, not later).
@@ -402,7 +420,10 @@ export function placeNewWindowFrame({
         const startY = inWorld ? originY + (Number(frame.y) || 0) * scale : (Number(frame.y) || workspaceTop)
         placed = clampWindowFrame({ x: startX, y: startY, width, height }, bounds)
     } else {
-        const gap = RAW_NEW_WINDOW_GAP
+        // The gap is in the window's own units too: 16 screen pixels at 5%
+        // zoom is 320 graph units, and the window ended up a screen away from
+        // its card once the zoom came back.
+        const gap = RAW_NEW_WINDOW_GAP * scale
         const candidates = [
             { x: reference.x, y: reference.y + reference.height + gap },
             { x: reference.x, y: reference.y - gap - height },
