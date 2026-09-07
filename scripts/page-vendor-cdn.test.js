@@ -256,17 +256,25 @@ describe('code before data', () => {
     })
 })
 
-describe('never production', () => {
-    it('has no prod tier and refuses one by name', () => {
-        expect(() => resolveApi({ tier: 'prod' })).toThrow(/local or staging/)
+describe('production is asked for twice', () => {
+    it('refuses the prod tier until --allow-production says it out loud', () => {
+        expect(() => resolveApi({ tier: 'prod' })).toThrow(/--allow-production/)
+        expect(resolveApi({ tier: 'prod', allowProduction: true })).toBe('https://di-studio.xyz/serverXR')
         expect(resolveApi({ tier: 'local' })).toBe('http://localhost:4000/serverXR')
         expect(resolveApi({ tier: 'staging' })).toBe('https://staging.di-studio.xyz/serverXR')
+        expect(() => resolveApi({ tier: 'nope' })).toThrow(/local, staging or prod/)
     })
 
-    it('refuses an --api that points at di-studio.xyz', () => {
+    it('refuses an --api that points at di-studio.xyz by any spelling, with the same flag', () => {
         expect(() => resolveApi({ tier: 'local', api: 'https://di-studio.xyz/serverXR' })).toThrow(/production/)
         expect(() => resolveApi({ tier: 'local', api: 'https://www.di-studio.xyz/serverXR/' })).toThrow(/production/)
+        expect(resolveApi({ tier: 'local', api: 'https://di-studio.xyz/serverXR', allowProduction: true })).toBe('https://di-studio.xyz/serverXR')
         expect(resolveApi({ tier: 'local', api: 'http://localhost:4141/serverXR/' })).toBe('http://localhost:4141/serverXR')
+    })
+
+    it('the flag is off unless it is typed', () => {
+        expect(parseArgs(['--space', 'azd'])).toMatchObject({ allowProduction: false })
+        expect(parseArgs(['--tier', 'prod', '--space', 'azd', '--allow-production'])).toMatchObject({ tier: 'prod', allowProduction: true })
     })
 
     it('defaults to a local dry-run and rejects an unknown flag', () => {
