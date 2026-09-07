@@ -32,6 +32,18 @@ stays off, the room can edit.
   di up --lan" with no QR when `listen.lan` is false or the LAN guard is closed, the real
   URL + QR otherwise. A desk never told (`listen` null) behaves as before. `standalone.js`
   spells its own `listen` inline so `lighting/` stays self-contained for the club machine.
+- **Review fix (docker mode's reach):** the container always binds `0.0.0.0` (no `HOST`,
+  no `DI_LOCAL`) while the compose publishes the port on `127.0.0.1`, so a docker install's
+  server answers `listen.lan: true` and the CLI repeated it — `di status` / `di where` said
+  "this network — no address yet" and a running `di up --lan` said "on this network too",
+  because the docker refusal sat after the already-running return. One helper in `cli.mjs`,
+  `probeReach(home, port)`, answers `{ lan: false, addresses: [] }` for a docker install and
+  asks the server otherwise; all five sites (status, where, the already-running branch of
+  up, and the ask-before-stop in open-file and update) go through it, and `cmdUp` refuses
+  `--lan` in docker mode before it looks for a running server. Reproduced and re-run
+  against a fake docker-mode `DI_HOME` and my own server bound `0.0.0.0` on a spare port:
+  before, all three commands claimed network reach; after, "this machine only" and the
+  refusal. Node mode on the same server still reads "this network — http://…".
 - **Kept, deliberately:** the agent board, local Claude, local model and work-status gates
   key on `req.socket.remoteAddress` (`trust proxy` off) — a LAN visitor is still refused
   under `--lan`; `agentBoardStore.test.js` and `aiChatRoutes.test.js` already hold that.

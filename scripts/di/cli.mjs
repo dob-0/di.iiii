@@ -100,6 +100,17 @@ const spaceNames = async (port) => {
 /** What `status` and `where` say about the bind in force, from the server's own answer. */
 const reachText = (reach, port) => ui.reach({ lan: reach.lan, urls: reach.addresses.map((address) => lanUrl(address, port)) })
 
+/**
+ * The bind in force, as this CLI may repeat it. Asked of the server on a node
+ * install. Not asked on a docker install: the container always binds 0.0.0.0
+ * and would answer `lan: true`, but the compose publishes that port on
+ * 127.0.0.1 only, so what a phone can reach is loopback — the same reason
+ * `--lan` is refused there.
+ */
+const probeReach = async (home, port) => (
+    readState(home).mode === 'docker' ? { lan: false, addresses: [] } : probeListen(port)
+)
+
 const cmdUp = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
@@ -109,8 +120,10 @@ const cmdUp = async (args) => {
     // person typing it tonight, and tomorrow's `di up` is loopback again.
     const lan = Boolean(args.flags.lan)
 
-    if (await probeHealth(port)) { say(ui.alreadyRunning(localUrl(port), await probeListen(port), lan)); return }
+    // Refused before the already-running check, or a running docker install
+    // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
+    if (await probeHealth(port)) { say(ui.alreadyRunning(localUrl(port), await probeReach(home, port), lan)); return }
 
     say(ui.starting())
     try {
@@ -186,7 +199,7 @@ const cmdStatus = async () => {
         return
     }
     const size = info.mode === 'node' ? humanSize(await dirSize(paths(home).data)) : null
-    const reach = await probeListen(port)
+    const reach = await probeReach(home, port)
     say([
         `running (${info.mode})`,
         info.version,
@@ -284,7 +297,7 @@ const cmdOpenFile = async (args, file) => {
     const wasRunning = await probeHealth(port)
     // Asked before the stop: a `--lan` start comes back as a `--lan` start, or
     // the phones in the room drop silently on the restart.
-    const wasLan = wasRunning ? Boolean((await probeListen(port))?.lan) : false
+    const wasLan = wasRunning ? Boolean((await probeReach(home, port))?.lan) : false
     if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
     const toolArgs = ['import', resolved]
@@ -370,7 +383,7 @@ const cmdWhere = async () => {
     // Asked of the running server, not read from a file — there is no file:
     // `--lan` is per start.
     const running = await probeHealth(port)
-    const reach = running ? await probeListen(port) : null
+    const reach = running ? await probeReach(home, port) : null
     say([
         `app    ${currentVersionDir(home) || style.dim('not installed')}`,
         `work   ${isInstalled(home) ? runner.describe(home).dataDir : p.data}`,
@@ -582,7 +595,7 @@ const cmdUpdate = async (args) => {
 
     const runner = runnerFor(home)
     const wasRunning = await probeHealth(resolvePort(home))
-    const wasLan = wasRunning ? Boolean((await probeListen(resolvePort(home)))?.lan) : false
+    const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     try { await runner.stop({ home }) } catch { /* already down */ }
 
     await activate({ home, ...staged, version: release.version, mode: readState(home).mode })

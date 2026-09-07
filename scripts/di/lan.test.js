@@ -79,8 +79,14 @@ describe('what `di up --lan` does', () => {
         expect(ui).toContain("no address yet — join a wifi or a hotspot")
     })
 
-    it('refuses in docker mode rather than pretending', () => {
-        expect(up).toContain("runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker())")
+    it('refuses in docker mode rather than pretending, before it looks for a running server', () => {
+        // A docker install that is up would otherwise be told "on this network
+        // too" — the container binds 0.0.0.0, the compose publishes 127.0.0.1.
+        const refused = up.indexOf("runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker())")
+        const alreadyRunning = up.indexOf('if (await probeHealth(port)) { say(ui.alreadyRunning(')
+        expect(refused).toBeGreaterThan(-1)
+        expect(alreadyRunning).toBeGreaterThan(-1)
+        expect(refused).toBeLessThan(alreadyRunning)
     })
 
     it('is offered in the help', () => {
@@ -111,14 +117,24 @@ describe('status and where ask the server which bind is in force', () => {
     it('reads /api/config rather than any file, in both commands', () => {
         const status = cli.slice(cli.indexOf('const cmdStatus'), cli.indexOf('const cmdOpen ='))
         const where = cli.slice(cli.indexOf('const cmdWhere'), cli.indexOf('const cmdDoctor'))
-        expect(status).toContain('const reach = await probeListen(port)')
-        expect(where).toContain('const reach = running ? await probeListen(port) : null')
+        expect(status).toContain('const reach = await probeReach(home, port)')
+        expect(where).toContain('const reach = running ? await probeReach(home, port) : null')
         expect(where).toContain('`reach  ${')
     })
 
     it('says the two states in plain words', () => {
         expect(ui).toContain("'this machine only'")
         expect(ui).toContain('this network — ')
+    })
+
+    it('never asks a docker install — its container binds 0.0.0.0 but the compose publishes 127.0.0.1', () => {
+        // One helper answers loopback for docker and asks the server otherwise;
+        // every site in the CLI goes through it, so no command can repeat the
+        // container's own answer.
+        const helper = cli.slice(cli.indexOf('const probeReach'), cli.indexOf('const cmdUp'))
+        expect(helper).toContain("readState(home).mode === 'docker' ? { lan: false, addresses: [] } : probeListen(port)")
+        expect(cli.split('probeListen(port)').length - 1).toBe(1)
+        expect(cli.split('probeReach(home, ').length - 1).toBe(5)
     })
 })
 
@@ -129,7 +145,7 @@ describe('a restart keeps the bind it found', () => {
     it('asks before stopping, in open-file and in update', () => {
         for (const [from, to] of [['const cmdOpenFile', 'const cmdNew'], ['const cmdUpdate', 'const cmdLink']]) {
             const body = cli.slice(cli.indexOf(from), cli.indexOf(to))
-            const asked = body.indexOf('const wasLan = wasRunning ? Boolean((await probeListen(')
+            const asked = body.indexOf('const wasLan = wasRunning ? Boolean((await probeReach(home, ')
             const stopped = body.indexOf('.stop({ home })')
             const restarted = body.indexOf("flags: { 'no-open': true, lan: wasLan }")
             expect(asked, `${from} never asks`).toBeGreaterThan(-1)

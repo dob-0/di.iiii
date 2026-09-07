@@ -213,7 +213,10 @@ What it does and does not change:
   and restart the server; both ask for the bind before stopping and hand it back,
   so the phones in the room do not drop without a word.
 - **Docker mode has no `--lan`** — its compose pins `127.0.0.1:${PORT}` — and
-  the CLI says so rather than starting loopback and pretending.
+  the CLI says so rather than starting loopback and pretending. It also never
+  asks that server which bind is in force: the container binds `0.0.0.0` inside
+  and would say "network", but the published port is loopback, so `status` and
+  `where` report "this machine only" on a docker install.
 - **A headset is still out.** WebXR needs a secure context, and a LAN address
   over plain http is not one; `--lan` opens the page to a headset's browser but
   not the XR session. That gap is separate and unsolved.
