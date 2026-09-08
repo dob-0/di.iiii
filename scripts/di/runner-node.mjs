@@ -114,6 +114,18 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
         if (await probeHealth(port, probeHost)) return { pid: child.pid, port, host }
         if (!pidAlive(child.pid)) {
             const tail = await readLog(home, 20)
+            // Below 1024 the kernel refuses the bind unless the binary carries
+            // the capability, and the log says EACCES and nothing a person can
+            // act on. Say the one line that fixes it, naming the very node this
+            // install runs — a general "use sudo" would send someone to grant
+            // it to the wrong binary.
+            if (port < 1024 && /EACCES|permission denied/i.test(tail)) {
+                throw new Error(
+                    `port ${port} needs one permission this install does not have yet.\n`
+                    + 'run this once, then start again:\n\n'
+                    + `  pkexec setcap cap_net_bind_service=+ep ${nodeBinary(home)}\n`
+                )
+            }
             throw new Error(`the server stopped while starting.\n${tail}`)
         }
         await wait(300)

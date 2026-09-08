@@ -48,7 +48,7 @@ import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
     currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    lanUrl, localUrl, readState, resolvePort, writeEnv, writeState
+    lanUrl, localUrl, nameUrl, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
@@ -144,7 +144,7 @@ const cmdUp = async (args) => {
 
     const summary = await spaceSummary(port)
     const prettyLocal = await probePrettyLocalName(port)
-    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl: prettyLocal ? `http://${prettyLocal}:${port}` : null }))
+    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl: prettyLocal ? nameUrl(prettyLocal, port) : null }))
     if (lan) {
         const addresses = probeLanAddresses()
         // One word beats four numbers when it is read out to a room. Published
@@ -153,7 +153,7 @@ const cmdUp = async (args) => {
         const named = await probeCanPublishName() ? await publishName(home, addresses[0]?.address) : null
         say(ui.onThisNetwork(
             addresses.map(({ iface, address }) => ({ iface, url: lanUrl(address, port) })),
-            named ? `http://${named}:${port}` : null
+            named ? nameUrl(named, port) : null
         ))
     }
     if (!args.flags['no-open']) openBrowser(localUrl(port))

@@ -72,8 +72,13 @@ export const resolvePort = (home, override) => {
     return DEFAULT_PORT
 }
 
-export const localUrl = (port) => `http://localhost:${port}`
-export const lanUrl = (address, port) => `http://${address}:${port}`
+// Port 80 is the one a browser never shows, so neither do we: an address a
+// person is asked to type by hand must not carry a number they would have to
+// be told to leave out.
+const portPart = (port) => (Number(port) === 80 ? '' : `:${port}`)
+export const localUrl = (port) => `http://localhost${portPart(port)}`
+export const lanUrl = (address, port) => `http://${address}${portPart(port)}`
+export const nameUrl = (name, port) => `http://${name}${portPart(port)}`
 
 /** The installed version directory `current` points at, or null. */
 export const currentVersionDir = (home) => {
