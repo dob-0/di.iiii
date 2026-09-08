@@ -42,11 +42,36 @@ export const warn = (message = '') => { process.stderr.write(`${style.yellow(mes
 export const fail = (message = '') => { process.stderr.write(`${style.red(message)}\n`) }
 
 export const ui = {
-    running: (url, spaces) => [
-        `di.iiii is running.  ${style.cyan(url)}`,
-        spaces?.length ? style.dim(`your spaces: ${spaces.join(', ')}`) : null,
-        style.dim(`stop it with: ${CMD} down`)
-    ].filter(Boolean).join('\n'),
+    // What a start prints. It used to be three lines — the address, six space
+    // ids and how to stop — and everything else di.iiii can do was a thing you
+    // had to already know: the tools room, the lighting desk, the wiki, and
+    // above all that phones in the room need `--lan`. A person who has just
+    // typed `di up` is exactly the person who does not know those, so they are
+    // printed once, here, plainly.
+    running: (url, spaces, { spaceCount = null, lan = false, prettyUrl = null, secure = false } = {}) => {
+        const base = prettyUrl || url
+        // The note column is measured, not guessed: a certificate makes every
+        // address longer and a fixed width silently ran the two together.
+        const width = Math.max(...['/tools', '/spaces', '/light/', '/wiki'].map(path => `${base}${path}`.length)) + 3
+        const door = (word, path, note) => `  ${style.cyan(word.padEnd(8))}${`${base}${path}`.padEnd(width)}${style.dim(note)}`
+        const spacesNote = spaceCount === null
+            ? (spaces?.length ? spaces.join(', ') : 'your spaces')
+            : `${spaceCount} ${spaceCount === 1 ? 'space' : 'spaces'}${spaces?.length ? ` — ${spaces.slice(0, 4).join(', ')}…` : ''}`
+        return [
+            `di.iiii is running.  ${style.cyan(prettyUrl || url)}`,
+            prettyUrl && secure
+                ? style.dim('  a real certificate — so the camera, the microphone, MIDI and XR all work.')
+                : (prettyUrl ? style.dim(`  one address, here and on the phones. ${url} answers too.`) : null),
+            '',
+            door('tools', '/tools', 'every tool, in one room'),
+            door('spaces', '/spaces', spacesNote),
+            door('light', '/light/', 'the lighting desk — output off until you say so'),
+            door('wiki', '/wiki', 'how all of it works'),
+            '',
+            lan ? null : style.dim(`phones in the room cannot reach this — ${CMD} down, then ${CMD} up --lan`),
+            style.dim(`${CMD} help for the rest · ${CMD} down to stop`)
+        ].filter(value => value !== null).join('\n')
+    },
 
     alreadyRunning: (url, reach = null, wantedLan = false) => [
         `already running — ${style.cyan(url)}${reach ? style.dim(`  ${reach.lan ? 'on this network too' : 'this machine only'}`) : ''}`,
@@ -58,14 +83,103 @@ export const ui = {
     // `--lan`. The room can open it, and with auth off the room can edit it —
     // said once, plainly, on every such start, because nothing writes the flag
     // down and nobody should inherit it by accident.
-    onThisNetwork: (urls) => [
+    // With a name published there is nothing left to say about addresses — the
+    // card already printed the one everyone types. The numbers stay, dimmed,
+    // for the phone whose resolver does not do mDNS.
+    onThisNetwork: (urls, namedUrl = null, guests = false) => [
         urls.length
-            ? ['on this network:', ...urls.map(({ url, iface }) => `  ${style.cyan(url)}  ${style.dim(`(${iface})`)}`)].join('\n')
+            ? [namedUrl ? style.dim('if a phone cannot find that name:') : 'on this network:',
+                ...urls.map(({ url, iface }) => `  ${namedUrl ? style.dim(url) : style.cyan(url)}  ${style.dim(`(${iface})`)}`)].join('\n')
             : 'on this network:  no address yet — join a wifi or a hotspot and it answers there too.',
-        style.yellow(`anyone on this network can open and edit it — auth is off. ${CMD} down when the room is done.`)
-    ].join('\n'),
+        guests
+            ? ui.guestsOn()
+            : style.yellow(`anyone on this network can open and edit it — auth is off. ${CMD} down when the room is done.`)
+    ].filter(Boolean).join('\n'),
 
     lanNotInDocker: () => '--lan is not available in docker mode — that install answers on this machine only.',
+
+    // ── one space, two installs ───────────────────────────────────────────
+    // The words a person reads off one laptop and types into another. The key
+    // is shown once and belongs to that space alone.
+    invited: (spaceId, url, key) => [
+        `${style.cyan(spaceId)} is open to one other di.iiii.`,
+        '',
+        'on their machine:',
+        `  ${style.cyan(`${CMD} follow ${spaceId} --from ${url} --key ${key}`)}`,
+        '',
+        style.dim('or, to keep the key out of their shell history:'),
+        style.dim(`  echo '${key}' | ${CMD} follow ${spaceId} --from ${url} --key -`),
+        '',
+        style.dim('that key opens this space and nothing else, and you can take it back:'),
+        style.dim(`  ${CMD} invite ${spaceId} --revoke`)
+    ].join('\n'),
+
+    inviteRefused: (spaceId, reason) => [
+        `could not open ${spaceId} to anyone.`,
+        style.dim(reason ? String(reason) : 'the server refused, and said nothing about why.')
+    ].join('\n'),
+
+    noInvites: (spaceId) => `${spaceId} has no keys out. ${style.dim('nothing to take back.')}`,
+    invitesRevoked: (spaceId, count) => [
+        `took back ${count} ${count === 1 ? 'key' : 'keys'} for ${style.cyan(spaceId)}.`,
+        style.dim('any di.iiii following it with one of those stops carrying now.')
+    ].join('\n'),
+
+    // A space of this name is already here. Wiring someone else's log into it
+    // would merge two people's work with no way to tell afterwards which was
+    // whose — `main` is the front room on every install, and ids are short
+    // words that collide.
+    followWouldMerge: (spaceId) => [
+        `you already have a space called ${style.cyan(spaceId)}.`,
+        style.dim('following would join the two, both ways, and nothing here would say which edits were whose.'),
+        style.dim(`if that is what you want, say so: ${CMD} follow ${spaceId} --from … --key … --into ${spaceId}`)
+    ].join('\n'),
+
+    checkingFollow: () => style.dim('looking for that di.iiii…'),
+
+    followRefused: (reason, where) => ({
+        unreachable: `nothing answers at ${where} — check the address, and that both machines are on the same wifi.`,
+        missing: 'that di.iiii has no space by that name.',
+        denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
+        'local-space': 'this install could not make room for it — is di.iiii running here?',
+        itself: 'that address is this di.iiii — a space cannot follow itself.'
+    }[reason] || `could not follow ${where}.`),
+
+    following: (spaceId, remote, running) => [
+        `following ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}.`,
+        style.dim('edits travel both ways — the room and every project in it. your copy stays on your disk.'),
+        // Said plainly rather than discovered: images and models are not carried
+        // yet, so a scene that leans on them will show their absence until they
+        // are. Better a sentence now than a grey wall later.
+        style.dim('images and models are not carried yet — they stay where they were added.'),
+        running ? null : style.dim(`start it to begin: ${CMD} up`)
+    ].filter(Boolean).join('\n'),
+
+    followList: (follows, live) => {
+        const ids = Object.keys(follows || {})
+        if (!ids.length) return `this di.iiii follows nothing. ${style.dim(`${CMD} follow <space> --from <url> --key <key>`)}`
+        const byId = new Map((live || []).map(entry => [entry.spaceId, entry]))
+        return ids.map((id) => {
+            const entry = follows[id]
+            const state = byId.get(id)
+            const where = String(entry.remote || '').replace(/\/serverXR$/, '')
+            if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
+            const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
+            return `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
+        }).join('\n')
+    },
+
+    unfollowed: (spaceId) => `no longer following ${spaceId}. ${style.dim('your copy stays exactly as it is.')}`,
+    notFollowing: (spaceId) => `this di.iiii was not following ${spaceId}.`,
+
+    guestsWithoutLan: () => `--guests only matters with --lan: on a loopback start nobody else can reach this. Try: ${CMD} up --lan --guests`,
+
+    // Said in place of the "anyone can edit it" warning, because it is the
+    // opposite fact and the room deserves to hear which one is true tonight.
+    guestsOn: () => [
+        'visitors arrive as guests: their own room and the open space, and nothing of yours.',
+        style.dim(`you, on this machine, stay the owner — no sign-in. ${CMD} down when the room is done.`)
+    ].join('\n'),
 
     // What `status` and `where` say about the bind in force. Asked of the
     // running server, never remembered: `--lan` is per start.
@@ -308,6 +422,7 @@ export const ui = {
         '',
         style.dim('  --port N     run somewhere other than 4000'),
         style.dim('  --lan        answer on this wifi too, for phones in the room — anyone on it can edit'),
+        style.dim('  --guests     with --lan: visitors get their own room, not yours'),
         style.dim('  --verbose    show the docker/npm/node underneath'),
         ''
     ].join('\n')

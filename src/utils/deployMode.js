@@ -29,6 +29,13 @@ const LOOPBACK = new Set(['', 'localhost', '127.0.0.1', '0.0.0.0', '::1'])
 const isPrivateHost = (host) => {
     if (LOOPBACK.has(host)) return true
     if (host.endsWith('.localhost') || host.endsWith('.local')) return true
+    // `local.<anything>` — the shape a real certificate for a local install
+    // takes, because a browser only trusts a padlock on a name someone owns
+    // (local.thedi.studio here). Without this the address looks public, the
+    // first paint says "hosted", and the local-only doors — the lighting desk,
+    // the sessions desk — are missing from the tools room until a request
+    // resolves. The server's word still decides; this only decides who asks.
+    if (host.split('.')[0] === 'local') return true
     // A bare name with no dot is a LAN or tailnet machine, never a public site.
     if (!host.includes('.')) return true
     if (/^10\./.test(host) || /^192\.168\./.test(host)) return true

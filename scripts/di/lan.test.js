@@ -73,7 +73,12 @@ describe('what `di up --lan` does', () => {
     })
 
     it('prints the addresses and exactly one warning that the room can edit', () => {
-        expect(up).toContain('if (lan) say(ui.onThisNetwork(')
+        // The addresses are printed under --lan and nowhere else. Asserted as a
+        // shape, not as one line of source: the block also publishes the mDNS
+        // name now, and a guard that pins formatting fails on every rewrite
+        // that keeps the rule.
+        expect(up).toMatch(/if \(lan\)[\s\S]{0,600}ui\.onThisNetwork\(/)
+        expect(up.split('ui.onThisNetwork(').length - 1).toBe(1)
         const warning = 'anyone on this network can open and edit it — auth is off.'
         expect(ui.split(warning).length - 1).toBe(1)
         expect(ui).toContain("no address yet — join a wifi or a hotspot")
@@ -83,7 +88,7 @@ describe('what `di up --lan` does', () => {
         // A docker install that is up would otherwise be told "on this network
         // too" — the container binds 0.0.0.0, the compose publishes 127.0.0.1.
         const refused = up.indexOf("runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker())")
-        const alreadyRunning = up.indexOf('if (await probeHealth(port)) { say(ui.alreadyRunning(')
+        const alreadyRunning = up.indexOf('if (await alive(home, port)) { say(ui.alreadyRunning(')
         expect(refused).toBeGreaterThan(-1)
         expect(alreadyRunning).toBeGreaterThan(-1)
         expect(refused).toBeLessThan(alreadyRunning)
@@ -108,8 +113,11 @@ describe('the runner under --lan', () => {
     })
 
     it('waits for the server on loopback, since 0.0.0.0 is not an address on every OS', () => {
-        expect(runner).toContain("const probeHost = wildcard ? '127.0.0.1' : host")
-        expect(runner).toContain('probeHealth(port, probeHost)')
+        // With a certificate the wait asks on the certificate's own name — a
+        // browser would too, and 127.0.0.1 fails the hostname check. Without
+        // one, the loopback rule this guard was written for still holds.
+        expect(runner).toContain("wildcard ? '127.0.0.1' : host")
+        expect(runner).toMatch(/probeHealth\(port, probeHost/)
     })
 })
 
@@ -132,8 +140,12 @@ describe('status and where ask the server which bind is in force', () => {
         // every site in the CLI goes through it, so no command can repeat the
         // container's own answer.
         const helper = cli.slice(cli.indexOf('const probeReach'), cli.indexOf('const cmdUp'))
-        expect(helper).toContain("readState(home).mode === 'docker' ? { lan: false, addresses: [] } : probeListen(port)")
-        expect(cli.split('probeListen(port)').length - 1).toBe(1)
+        expect(helper).toContain("if (readState(home).mode === 'docker') return { lan: false, addresses: [] }")
+        // Asked at most twice inside the one helper — once on the certificate's
+        // own name (an install with https answers nowhere else) and once plain —
+        // and nowhere else in the CLI.
+        expect(helper.split('probeListen(').length - 1).toBe(2)
+        expect(cli.split('probeListen(').length - 1).toBe(2)
         // open-file, update and restore each ask before their stop; status, where and
         // the already-running branch of up ask to report the reach.
         expect(cli.split('probeReach(home, ').length - 1).toBe(6)

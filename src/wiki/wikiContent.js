@@ -1053,10 +1053,56 @@ export const WIKI_ARTICLES = [
             ] },
             'Before an update changes anything, the new version opens a COPY of your work and checks it can read it — if it cannot, the update stops and you are still on the version you were. And when an update changes how the work is stored, di.iiii keeps a copy of it first, so going back is always possible: di restore --snapshot lists them. Going back to a version too old to read your work is refused rather than done, because that would not fail, it would quietly misread it.',
             'It does not need admin rights, and it does not ask for a password. It runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away. Docker is there too, but only if you ask for it (di install --docker) — a container cannot reach things on your machine, so the surfaces that talk to your own tools (the agent board, a Claude installed on this computer) work in the ordinary mode and not in the container one.',
-            'A local space can now be linked to one on di-studio.xyz: di link connects the two, and di sync compares them and moves work in whichever direction is safe — it refuses rather than guess when both sides have changed. di backup and the space bundles on the Spaces page are still there when you would rather carry a file.'
+            'A local space can now be linked to one on di-studio.xyz: di link connects the two, and di sync compares them and moves work in whichever direction is safe — it refuses rather than guess when both sides have changed. di backup and the space bundles on the Spaces page are still there when you would rather carry a file.',
+            'A space can also be shared with another artist\u2019s di.iiii directly, over the same wifi, with no internet and no account in the middle — see \u201cTwo artists, two machines, one space\u201d.',
+            'If you own a domain, an install can answer on a name of your own with a real certificate: put the certificate at ~/.di/tls/cert.pem and its key beside it, and di up serves https on the name written in the certificate. That padlock is what a browser wants before it will give a page the camera, the microphone, Web MIDI or XR — none of which a phone gets over plain http, however local the machine is.'
         ],
-        tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup'],
-        updated: '2026-08-21'
+        tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate'],
+        updated: '2026-09-09'
+    },
+    {
+        id: 'tools-room',
+        category: 'Getting started',
+        title: 'Tools: one screen everything opens from',
+        summary: 'Studio, the node editor, the lighting desk, the projection mapper and the desk, in one place, at /tools.',
+        body: [
+            'Every tool di.iiii has now has a door in one place. Open /tools and they are all there: Studio, the node editor, the lighting desk, the projection mapper, and — on your own machine — the sessions desk.',
+            'Before this, some of them could only be reached by typing an address. The lighting desk answered at /light and nothing linked to it; the projection mapper lives at /<space>/map/<project>, which needs a project id nothing in the interface would tell you. From the tools screen you pick a space, then a project, and it opens.',
+            'Each tile says what the tool is holding right now — how many spaces, whether the lighting desk\u2019s output is off, whether a mapper has a project to map. What needs a project asks for one instead of failing at an address.',
+            'The node editor opens on a project rather than on the empty browser canvas it used to; the bare canvas is still there, named for what it is — a canvas saved nowhere.'
+        ],
+        tags: ['tools', 'studio', 'raw', 'light', 'projection', 'desk', 'local'],
+        updated: '2026-09-09'
+    },
+    {
+        id: 'guests-in-the-room',
+        category: 'Spaces & access',
+        title: 'Letting a room work without handing over your spaces',
+        summary: 'di up --lan --guests: visitors get their own room and the open space, and nothing of yours.',
+        body: [
+            'A local di.iiii on the wifi used to have one setting: auth off. Everyone who opened the address was, to the server, you — your spaces, every delete button, the admin page. Fine for five people you know; not something to leave open in a room.',
+            'di up --lan --guests turns auth on for everyone except the person at the machine. A visitor arrives as a guest exactly as they would on di-studio.xyz: their own sandbox room and the shared open space, editor there and nowhere else. Your spaces are not listed, a private one answers 403, and so does the admin page.',
+            'You are not asked to sign in on your own laptop, because a local di.iiii has no accounts to sign in to. The address the request came from decides: anything arriving from this machine is you, and everyone on the network is a guest.',
+            'It lasts for that start only, like --lan itself. The start prints which of the two is true tonight.'
+        ],
+        tags: ['guests', 'lan', 'room', 'local', 'access', 'workshop'],
+        updated: '2026-09-09'
+    },
+    {
+        id: 'following-a-space',
+        category: 'Spaces & access',
+        title: 'Two artists, two machines, one space',
+        summary: 'di invite and di follow: a space that lives on two di.iiii at once, with edits travelling both ways.',
+        body: [
+            'Two people with di.iiii on their own laptops can work in one space. One of them opens it: di invite my-space prints a single line. The other types it: di follow my-space --from <address> --key <key>.',
+            'From then on the room and every project inside it are the same on both machines, and an edit made on either appears on the other — measured at a few hundredths of a second across a wifi. Both keep the whole work on their own disk; this is not a screen share.',
+            'The key is for that one space, gives editor rights and nothing else, and can be taken back: di invite my-space --revoke. To keep it out of a shell history, pipe it: echo <key> | di follow my-space --from <address> --key -',
+            'di follows says what is being carried and whether it is keeping up. di unfollow stops it and deletes nothing — the copy you have stays exactly as it is.',
+            'Two things it deliberately will not do. It refuses to follow into a space you already have, unless you say --into and mean it, because ids are short words and joining two people\u2019s work is not undoable. And it never carries a whole-scene replacement — a snapshot restore on one machine does not overwrite the other; that is a conversation, not an edit.',
+            'What does not travel yet: images and models. A followed scene will show their absence until they do.'
+        ],
+        tags: ['follow', 'invite', 'collaboration', 'local', 'two machines', 'sync'],
+        updated: '2026-09-09'
     },
     {
         id: 'keeper-node',
@@ -1215,7 +1261,7 @@ export const WIKI_ARTICLES = [
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['glossary', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['glossary', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

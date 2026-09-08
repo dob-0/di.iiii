@@ -42,19 +42,22 @@ import {
     stageVersion
 } from './install.mjs'
 import { isWindows, paths } from './paths.mjs'
-import { probeAll, probeHealth, probeLanAddresses, probeListen } from './probe.mjs'
+import { probeAll, probeCanPublishName, probeHealth, probeLanAddresses, probeListen, probePrettyLocalName } from './probe.mjs'
+import { publishName, stopName, updateRoomName } from './name.mjs'
 import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
     currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    lanUrl, localUrl, readState, resolvePort, writeEnv, writeState
+    ensureGuestSecrets, lanUrl, localUrl, nameUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
 import { buildSyncAudit } from './sync-plan.mjs'
 import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
+import { checkFollowable, createLocalSpace, instanceOf, listInvites, localSpaceExists, mintInvite, resolveBase, revokeInvite } from './share.mjs'
+import { addFollow, readFollows, removeFollow } from './follows.mjs'
 import { parseArgs } from './args.mjs'
-import { CMD, fail, say, style, ui } from './ui.mjs'
+import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 
 const HOME = () => {
     const override = String(process.env.DI_HOME || '').trim()
@@ -85,14 +88,57 @@ const openBrowser = (url) => {
     }
 }
 
-const spaceNames = async (port) => {
+/** Read a secret from the pipe, so it never appears in argv or shell history. */
+const readStdin = async () => {
+    if (process.stdin.isTTY) return ''
+    const chunks = []
+    for await (const chunk of process.stdin) chunks.push(chunk)
+    return Buffer.concat(chunks).toString('utf8')
+}
+
+/**
+ * Is this install answering — asked the way a browser would.
+ *
+ * With a certificate the server speaks https and only https, and the
+ * certificate is for a NAME: probing http://localhost then reported "not
+ * running" about a server that was serving the room perfectly. One helper, so
+ * every command asks the same correct question.
+ */
+const alive = async (home, port) => {
+    const cert = readCert(home)
+    if (cert && await probeHealth(port, cert.name, '/serverXR', 'https')) return true
+    return probeHealth(port)
+}
+
+/**
+ * The address to PRINT for this install. The certificate's name when there is
+ * one — that is the address the app itself shows, the one on the phones, and
+ * the only one with a padlock. Anything that tells a person where their di.iiii
+ * is must agree with what their browser shows.
+ */
+const publicUrl = (home, port) => {
+    const cert = readCert(home)
+    return cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : localUrl(port)
+}
+
+/** How this install talks to ITSELF: always loopback, never the pretty name. */
+const spaceNames = async (port) => (await spaceSummary(port)).names
+
+// The names AND how many there are: the start card says "20 spaces — main,
+// open, …", which a truncated list of six alone cannot say.
+const spaceSummary = async (port, base = null, token = null) => {
     try {
-        const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`)
-        if (!response.ok) return []
+        // With guests on, the CLI's own request arrives like any other and would
+        // be counted as one: it asks with the install's admin token so the card
+        // reports the owner's estate, not the public half of it.
+        const response = await fetch(`${base || localUrl(port)}/serverXR/api/spaces`,
+            token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+        if (!response.ok) return { names: [], count: null }
         const body = await response.json()
-        return (body?.spaces || []).map(space => space.id).slice(0, 6)
+        const all = body?.spaces || []
+        return { names: all.map(space => space.id).slice(0, 6), count: all.length }
     } catch {
-        return []
+        return { names: [], count: null }
     }
 }
 
@@ -108,9 +154,14 @@ const reachText = (reach, port) => ui.reach({ lan: reach.lan, urls: reach.addres
  * 127.0.0.1 only, so what a phone can reach is loopback — the same reason
  * `--lan` is refused there.
  */
-const probeReach = async (home, port) => (
-    readState(home).mode === 'docker' ? { lan: false, addresses: [] } : probeListen(port)
-)
+const probeReach = async (home, port) => {
+    if (readState(home).mode === 'docker') return { lan: false, addresses: [] }
+    // Asked on the same terms the server answers: with a certificate it speaks
+    // https on its own name, and asking over http got no answer at all — which
+    // `di where` then printed as if it were the answer.
+    const cert = readCert(home)
+    return (cert && await probeListen(port, cert.name, '/serverXR', 'https')) || probeListen(port)
+}
 
 const cmdUp = async (args) => {
     const home = HOME()
@@ -121,14 +172,24 @@ const cmdUp = async (args) => {
     // person typing it tonight, and tomorrow's `di up` is loopback again.
     const lan = Boolean(args.flags.lan)
 
+    // `--guests` is the difference between "my friends are working with me" and
+    // "I can leave this open in a room". Off, a LAN start hands every visitor
+    // the owner's whole estate — every space, every delete button, the admin
+    // page. On, a visitor arrives as a guest exactly as they would on the
+    // hosted site: their own sandbox and the open space, editor there and
+    // nowhere else. Per start, like --lan, and pointless without it.
+    const guests = Boolean(args.flags.guests)
+    if (guests && !lan) warn(ui.guestsWithoutLan())
+
     // Refused before the already-running check, or a running docker install
     // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
-    if (await probeHealth(port)) { say(ui.alreadyRunning(localUrl(port), await probeReach(home, port), lan)); return }
+    if (await alive(home, port)) { say(ui.alreadyRunning(publicUrl(home, port), await probeReach(home, port), lan)); return }
 
     say(ui.starting())
     try {
-        await runner.start({ home, port, host: lan ? '0.0.0.0' : '127.0.0.1', verbose: Boolean(args.flags.verbose) })
+        if (guests) await ensureGuestSecrets(home)
+        await runner.start({ home, port, host: lan ? '0.0.0.0' : '127.0.0.1', guests, verbose: Boolean(args.flags.verbose) })
     } catch (error) {
         fail(String(error.message || error))
         process.exitCode = 1
@@ -136,9 +197,61 @@ const cmdUp = async (args) => {
     }
     await writeEnv(home, { PORT: String(port) })
 
-    say(ui.running(localUrl(port), await spaceNames(port)))
-    if (lan) say(ui.onThisNetwork(probeLanAddresses().map(({ iface, address }) => ({ iface, url: lanUrl(address, port) }))))
-    if (!args.flags['no-open']) openBrowser(localUrl(port))
+    // A certificate outranks every other name: it is the only one that gets a
+    // padlock, and the padlock is what a browser wants before it hands over a
+    // camera, a microphone, MIDI or XR. Its name is the address.
+    const cert = readCert(home)
+
+    // ONE name for everyone. A name resolves to a single address, and which
+    // address is right depends on who asks: loopback is right for this machine
+    // and useless to a phone; the wifi address is right for both, because a
+    // machine can reach itself there too. So the name follows the start —
+    // pointed at tonight's wifi address under --lan, back to loopback without
+    // it — through the owner's own dns-update hook. No hook, no change.
+    if (cert) {
+        await updateRoomName(home, cert.name, lan ? probeLanAddresses()[0]?.address : '127.0.0.1')
+    }
+
+    const summary = await spaceSummary(
+        port,
+        cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : null,
+        guests ? readEnv(home).ADMIN_API_TOKEN : null
+    )
+
+    // ONE address, if the machine can hold one. `di.local` is published over
+    // mDNS for this start, and it is the same word on this laptop and on a
+    // phone in the room — so the card leads with it and everything else becomes
+    // the fallback nobody has to read out. Without avahi (or without --lan,
+    // where putting a name on the network would be a lie) we try di.localhost,
+    // which costs nothing and is asked before it is printed, and failing that
+    // we print localhost like we always did.
+    const addresses = lan ? probeLanAddresses() : []
+    const named = lan && !cert && await probeCanPublishName()
+        ? await publishName(home, addresses[0]?.address)
+        : null
+    const pretty = cert ? cert.name : (named || await probePrettyLocalName(port))
+    const scheme = cert ? 'https' : 'http'
+    const prettyUrl = pretty ? `${scheme}://${pretty}${port === 80 || port === 443 ? '' : `:${port}`}` : null
+
+    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl, secure: Boolean(cert) }))
+    if (lan) {
+        // With a certificate the room gets the padlocked name too — its second
+        // name, pointed at tonight's address by the owner's own hook. Without
+        // the hook (or without a second name) nothing is claimed: the addresses
+        // below are then the whole truth.
+        say(ui.onThisNetwork(
+            // An install with a certificate answers https and only https, so
+            // the by-address fallback has to be written that way — over that
+            // route the certificate's name will not match and the browser will
+            // warn, which is exactly why it is the fallback and not the name.
+            addresses.map(({ iface, address }) => ({ iface, url: lanUrl(address, port, cert ? 'https' : 'http') })),
+            // One name, already pointed at this machine's address on tonight's
+            // wifi, so the phones type exactly what the laptop types.
+            cert ? prettyUrl : (named ? nameUrl(named, port) : null),
+            guests
+        ))
+    }
+    if (!args.flags['no-open']) openBrowser(prettyUrl || localUrl(port))
     await noticeNewVersion(home)
 }
 
@@ -184,6 +297,7 @@ const cmdDown = async () => {
     if (!requireInstalled(home)) return
     const runner = runnerFor(home)
     const was = await runner.stop({ home })
+    await stopName(home)
     say(was ? ui.stopped(runner.describe(home).dataDir) : ui.notRunning())
 }
 
@@ -193,7 +307,7 @@ const cmdStatus = async () => {
     const port = resolvePort(home)
     const runner = runnerFor(home)
     const info = runner.describe(home)
-    const healthy = await probeHealth(port)
+    const healthy = await alive(home, port)
 
     if (!healthy) {
         say(`${ui.notRunning()}  ${style.dim(`${info.version || '?'} · ${info.dataDir}`)}`)
@@ -204,7 +318,7 @@ const cmdStatus = async () => {
     say([
         `running (${info.mode})`,
         info.version,
-        localUrl(port),
+        publicUrl(home, port),
         reach ? reachText(reach, port) : null,
         `data ${info.dataDir}${size ? ` (${size})` : ''}`
     ].filter(Boolean).join(style.dim(' · ')))
@@ -218,9 +332,9 @@ const cmdOpen = async (args) => {
     // either there or it is not.
     if (args._[1]) { await cmdOpenFile(args, args._[1]); return }
     const port = resolvePort(home)
-    if (!(await probeHealth(port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
-    say(localUrl(port))
-    openBrowser(localUrl(port))
+    if (!(await alive(home, port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
+    say(publicUrl(home, port))
+    openBrowser(publicUrl(home, port))
 }
 
 /**
@@ -295,7 +409,7 @@ const cmdSave = async (args) => {
  * — or, when the cap trips mid-stream, drops the connection before any answer
  * — so both come back as `tooLarge` and the caller takes the path with no cap.
  */
-const openThroughServer = async ({ port, file, as }) => {
+const openThroughServer = async ({ home, port, file, as }) => {
     const form = new FormData()
     form.append('bundle', await fs.openAsBlob(file), path.basename(file))
     if (as) form.append('as', as)
@@ -306,7 +420,7 @@ const openThroughServer = async ({ port, file, as }) => {
         if (response.status === 413) return { ok: false, tooLarge: true }
         return { ok: false, error: body?.error || `the server answered ${response.status}` }
     } catch (error) {
-        if (await probeHealth(port)) return { ok: false, tooLarge: true }
+        if (await alive(home, port)) return { ok: false, tooLarge: true }
         return { ok: false, error: String(error?.message || error) }
     }
 }
@@ -318,7 +432,7 @@ const cmdOpenFile = async (args, file) => {
     if (!fs.existsSync(resolved)) { fail(`no such file: ${resolved}`); process.exitCode = 1; return }
 
     const port = resolvePort(home)
-    const wasRunning = await probeHealth(port)
+    const wasRunning = await alive(home, port)
     const named = args.flags.as || path.basename(resolved).replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
 
     // A running server takes the file through its own API, the way the
@@ -327,10 +441,10 @@ const cmdOpenFile = async (args, file) => {
     // --force, because the space being replaced may be open in one of those
     // tabs; and a file the server will not take over the wire.
     if (wasRunning && !args.flags.force) {
-        const result = await openThroughServer({ port, file: resolved, as: args.flags.as })
+        const result = await openThroughServer({ home, port, file: resolved, as: args.flags.as })
         if (result.ok) {
             const opened = result.spaceId || named
-            say(ui.opened(opened, `${localUrl(port)}/${opened}`))
+            say(ui.opened(opened, `${publicUrl(home, port)}/${opened}`))
             return
         }
         if (!result.tooLarge) {
@@ -381,7 +495,7 @@ const cmdNew = async (args) => {
     // what a legal space id is, which words are reserved, and what a new space
     // starts out containing. A second implementation here would drift from it.
     const port = resolvePort(home)
-    if (!(await probeHealth(port))) await cmdUp({ _: [], flags: { 'no-open': true } })
+    if (!(await alive(home, port))) await cmdUp({ _: [], flags: { 'no-open': true } })
     try {
         const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`, {
             method: 'POST',
@@ -391,7 +505,7 @@ const cmdNew = async (args) => {
         const body = await response.json().catch(() => ({}))
         if (!response.ok) { fail(body?.error || `could not make a space called "${name}"`); process.exitCode = 1; return }
         const id = body?.space?.id || name
-        say(ui.made(id, `${localUrl(port)}/${id}`))
+        say(ui.made(id, `${publicUrl(home, port)}/${id}`))
     } catch (error) {
         fail(String(error?.message || error))
         process.exitCode = 1
@@ -402,7 +516,7 @@ const cmdSpaces = async () => {
     const home = HOME()
     if (!requireInstalled(home)) return
     const port = resolvePort(home)
-    if (!(await probeHealth(port))) { say(ui.notRunning()); return }
+    if (!(await alive(home, port))) { say(ui.notRunning()); return }
     try {
         const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`)
         const body = await response.json()
@@ -433,7 +547,7 @@ const cmdWhere = async () => {
     const port = resolvePort(home)
     // Asked of the running server, not read from a file — there is no file:
     // `--lan` is per start.
-    const running = await probeHealth(port)
+    const running = await alive(home, port)
     const reach = running ? await probeReach(home, port) : null
     say([
         `app    ${currentVersionDir(home) || style.dim('not installed')}`,
@@ -732,7 +846,7 @@ const cmdSync = async (args) => {
     if (!link) { say(ui.notLinked(spaceId)); process.exitCode = 1; return }
 
     const port = resolvePort(home, args.flags.port)
-    const local = (await probeHealth(port))
+    const local = (await alive(home, port))
         ? await gatherLocalSide({ port, spaceId, token: link.key })
         : { reachable: false }
     const remote = await gatherSide({ base: link.remote, spaceId, token: link.key })
@@ -784,8 +898,140 @@ const cmdMcp = async (args) => {
 
 // ── routing ───────────────────────────────────────────────────────────────
 
+/**
+ * `di invite <space>` — hand one space to another artist's di.iiii.
+ *
+ * Prints the single line they type on their machine. The key is per-space,
+ * editor-scoped and revocable; it is shown once, here, and not written into
+ * anything this install would ever hand out.
+ */
+const cmdInvite = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const spaceId = args._[1]
+    if (!spaceId) { fail(`which space? — ${CMD} invite my-space`); process.exitCode = 1; return }
+
+    const port = resolvePort(home)
+    const cert = readCert(home)
+    const base = `${cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : localUrl(port)}/serverXR`
+    if (!await probeHealth(port, cert ? cert.name : '127.0.0.1', '/serverXR', cert ? 'https' : 'http')) {
+        fail(`${CMD} is not running — start it first: ${CMD} up --lan`)
+        process.exitCode = 1
+        return
+    }
+
+    const token = readEnv(home).ADMIN_API_TOKEN || null
+
+    // `--revoke` — the control the invite itself advertises. It was printed
+    // before it existed, which made the one promise attached to a credential
+    // handed to another person a lie.
+    if (args.flags.revoke) {
+        const keys = await listInvites({ base, spaceId, token })
+        if (!keys.length) { say(ui.noInvites(spaceId)); return }
+        let revoked = 0
+        for (const key of keys) {
+            if (await revokeInvite({ base, spaceId, keyId: key.id, token })) revoked += 1
+        }
+        say(ui.invitesRevoked(spaceId, revoked))
+        return
+    }
+
+    const minted = await mintInvite({ base, spaceId, token, label: 'follow' })
+    if (!minted.ok) {
+        fail(ui.inviteRefused(spaceId, minted.reason))
+        process.exitCode = 1
+        return
+    }
+    say(ui.invited(spaceId, base.replace(/\/serverXR$/, ''), minted.key))
+}
+
+/**
+ * `di follow <space> --from <url> --key <key>` — join a space that lives on
+ * another di.iiii. Both sides keep the whole work; the edits travel.
+ */
+const cmdFollow = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const spaceId = args._[1]
+    const from = args.flags.from
+    // A key on the command line lands in shell history and in `ps` for every
+    // other account on the machine. `--key -` reads it from the pipe, and
+    // DI_FOLLOW_KEY from the environment; the flag stays for the simple case.
+    const key = args.flags.key === '-' || args.flags.key === true
+        ? (await readStdin()).trim()
+        : (args.flags.key || String(process.env.DI_FOLLOW_KEY || '').trim() || null)
+    if (!spaceId || !from) {
+        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
+        process.exitCode = 1
+        return
+    }
+
+    say(ui.checkingFollow())
+    const base = await resolveBase(from)
+    if (!base) { fail(ui.followRefused('unreachable', from)); process.exitCode = 1; return }
+
+    const check = await checkFollowable({ base, spaceId, key })
+    if (!check.ok) { fail(ui.followRefused(check.reason, from)); process.exitCode = 1; return }
+
+    const port = resolvePort(home)
+    const selfBase = `${localUrl(port)}/serverXR`
+    const running = await alive(home, port)
+
+    // Following yourself is a loop with no second person in it: the same server
+    // reading and writing its own log forever.
+    if (running) {
+        const [there, here] = await Promise.all([instanceOf(base), instanceOf(selfBase)])
+        if (there && here && there === here) { fail(ui.followRefused('itself', from)); process.exitCode = 1; return }
+    }
+
+    // A space of that name already here is somebody's work — `main` is the front
+    // room on every install. Wiring a stranger's log into it, and pushing its
+    // contents out to them, must be asked for out loud.
+    if (running && !args.flags.into && await localSpaceExists({ base: selfBase, spaceId, token: readEnv(home).ADMIN_API_TOKEN || null })) {
+        fail(ui.followWouldMerge(spaceId))
+        process.exitCode = 1
+        return
+    }
+
+    // The space has to exist here for the ops to land in. Created through this
+    // install's own route, so it is an ordinary space in every other way.
+    if (running) {
+        const made = await createLocalSpace({ base: selfBase, spaceId, token: readEnv(home).ADMIN_API_TOKEN || null })
+        if (!made.ok) { fail(ui.followRefused('local-space', from)); process.exitCode = 1; return }
+    }
+
+    await addFollow(paths(home).data, spaceId, { remote: base, token: key })
+    say(ui.following(spaceId, base, running))
+}
+
+/** `di follows` — what this install is following, and whether it is keeping up. */
+const cmdFollows = async () => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const follows = readFollows(paths(home).data)
+    const port = resolvePort(home)
+    const live = await fetch(`${localUrl(port)}/serverXR/api/follows`)
+        .then(response => (response.ok ? response.json() : null))
+        .catch(() => null)
+    say(ui.followList(follows, live?.follows || []))
+}
+
+/** `di unfollow <space>` — stop carrying edits. Nothing here is deleted. */
+const cmdUnfollow = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const spaceId = args._[1]
+    if (!spaceId) { fail(`which space? — ${CMD} unfollow their-space`); process.exitCode = 1; return }
+    const { removed } = await removeFollow(paths(home).data, spaceId)
+    say(removed ? ui.unfollowed(spaceId) : ui.notFollowing(spaceId))
+}
+
 const COMMANDS = {
     up: cmdUp,
+    invite: cmdInvite,
+    follow: cmdFollow,
+    follows: cmdFollows,
+    unfollow: cmdUnfollow,
     down: cmdDown,
     stop: cmdDown,
     status: cmdStatus,

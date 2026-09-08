@@ -2,9 +2,12 @@ require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.en
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env') })
 const express = require('express')
 const http = require('http')
+const https = require('https')
 const cors = require('cors')
 const morgan = require('morgan')
 const multer = require('multer')
+const fs = require('node:fs')
+const { isOwnerAtTheMachine } = require('./localOwner')
 const path = require('node:path')
 const crypto = require('node:crypto')
 const { initDb } = require('./db')
@@ -572,7 +575,32 @@ const getAuthState = (req) => {
   return sessionState
 }
 
+// The person sitting at the machine, on a personal install, is the owner —
+// even when auth is on for everyone else.
+//
+// `di up --guests` exists so a room can be handed a link without being handed
+// the owner's estate: a visitor arrives as a guest with their own sandbox and
+// the open space, which is exactly what the hosted product already gives them.
+// Without this rule the owner would get the same thing on their own laptop —
+// locked out of their own spaces, with no account to sign in to, because a
+// local install has no accounts by design.
+//
+// So loopback, on an install that says it is local, is the owner. Same rule and
+// same reasoning as the operator-only agent board (routes/agentBoardRoutes.js):
+// a request arriving over the loopback interface came from this machine, and
+// `di up` puts no proxy in front of itself. Everyone on the network arrives as
+// a guest, which is the entire point of the mode.
 const getPublicAuthState = (req) => {
+  if (config.requireAuth && isOwnerAtTheMachine(req)) {
+    return buildAuthState({
+      authenticated: true,
+      type: 'session',
+      role: 'admin',
+      subject: 'local-owner',
+      label: 'This machine',
+      isUnrestricted: true
+    })
+  }
   if (!config.requireAuth) {
     return buildAuthState({
       authenticated: true,
@@ -2052,6 +2080,23 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: message })
 })
 
+/**
+ * Read a certificate pair, or null. Never throws: a missing or half-written
+ * pair means "no https today", not "no di.iiii today".
+ */
+const readTlsFiles = (certPath, keyPath) => {
+  if (!certPath || !keyPath) return null
+  try {
+    const cert = fs.readFileSync(certPath)
+    const key = fs.readFileSync(keyPath)
+    if (!cert.length || !key.length) return null
+    return { cert, key }
+  } catch (error) {
+    logger.warn(`Certificate not usable (${error.code || error.message}) — serving http`)
+    return null
+  }
+}
+
 const PORT = config.port
 
 const snapshotOpenSpace = async () => {
@@ -2093,7 +2138,23 @@ initStorage()
       archiveIdleAccountSandboxes().catch((error) => logger.warn('Failed to archive idle sandboxes', error))
     }, 1000 * 60 * 60 * 24)
 
-    const httpServer = http.createServer(app)
+    // A padlock on a machine in a room.
+    //
+    // Browsers hand out the camera, the microphone, Web MIDI and WebXR only on
+    // a secure origin. `localhost` is exempt by fiat — a phone on the same wifi
+    // is not, so every one of those is missing on a LAN address over plain
+    // http, which is exactly the situation a festival puts us in.
+    //
+    // TLS_CERT and TLS_KEY are a certificate for a name the owner controls
+    // (di mints it; see scripts/di). Present and readable: this server speaks
+    // https. Absent, unreadable, or expired: it speaks http exactly as before
+    // and says so once — a local install must never fail to start over a
+    // certificate.
+    const tlsFiles = readTlsFiles(process.env.TLS_CERT, process.env.TLS_KEY)
+    const httpServer = tlsFiles
+      ? https.createServer({ cert: tlsFiles.cert, key: tlsFiles.key }, app)
+      : http.createServer(app)
+    if (tlsFiles) logger.info(`Serving https — certificate ${process.env.TLS_CERT}`)
 
     initializeSocket(httpServer, {
       ...config,
@@ -2113,7 +2174,36 @@ initStorage()
 
     initializeMesh(httpServer, config)
 
+    // Spaces this install follows on another di.iiii (serverXR/src/follow).
+    // Started after listen, never before: a follower reaches this server over
+    // its own HTTP routes, so there has to be a server to reach.
+    const startFollowsWhenUp = () => {
+      try {
+        const { startFollows } = require('./follow')
+        startFollows({
+          dataDir: config.directories.dataDir,
+          port: PORT,
+          basePath: config.basePath || '/serverXR',
+          selfToken: config.internalApiToken || null,
+          // A followed space must exist here before anything can land in it.
+          // `di follow` makes it when the install is running; a follow written
+          // while it was down, or carried in on a backup, arrives without one.
+          ensureSpace: async (spaceId) => {
+            const id = normalizeSpaceId(spaceId)
+            if (!id || await spaceExists(id)) return
+            await ensureSpaceScene(id)
+            await upsertSpaceMeta(id, { label: id, allowEdits: true })
+          },
+          log: logger
+        })
+      } catch (error) {
+        // A room that cannot be followed is still a room. Never fatal.
+        logger.warn(`[follow] not started: ${error.message || error}`)
+      }
+    }
+
     httpServer.listen(PORT, config.host, () => {
+      startFollowsWhenUp()
       pushEvent('server-started', {
         port: PORT,
         host: config.host,

@@ -126,12 +126,18 @@ export const probePort = async (port, host = '127.0.0.1') => quiet(async () => {
     }
 }, false)
 
-/** Is the thing on that port ours, and healthy. */
-export const probeHealth = async (port, host = '127.0.0.1', basePath = '/serverXR') => quiet(async () => {
+/**
+ * Is the thing on that port ours, and healthy.
+ *
+ * `scheme` because an install with a certificate answers https and nothing
+ * else — asking it over http would say "the server never came up" about a
+ * server that is up and correct.
+ */
+export const probeHealth = async (port, host = '127.0.0.1', basePath = '/serverXR', scheme = 'http') => quiet(async () => {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 2000)
     try {
-        const response = await fetch(`http://${host}:${port}${basePath}/api/health`, { signal: controller.signal })
+        const response = await fetch(`${scheme}://${host}:${port}${basePath}/api/health`, { signal: controller.signal })
         return response.ok
     } finally {
         clearTimeout(timer)
@@ -160,11 +166,11 @@ export const probeLanAddresses = (interfaces = os.networkInterfaces()) => {
  * per start and nothing writes it down. Null when it cannot say: not running,
  * or a server from before the field existed.
  */
-export const probeListen = async (port, host = '127.0.0.1', basePath = '/serverXR') => quiet(async () => {
+export const probeListen = async (port, host = '127.0.0.1', basePath = '/serverXR', scheme = 'http') => quiet(async () => {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 2000)
     try {
-        const response = await fetch(`http://${host}:${port}${basePath}/api/config`, { signal: controller.signal })
+        const response = await fetch(`${scheme}://${host}:${port}${basePath}/api/config`, { signal: controller.signal })
         if (!response.ok) return null
         const listen = (await response.json())?.config?.listen
         if (!listen || typeof listen.lan !== 'boolean') return null
@@ -192,3 +198,29 @@ export const probeAll = async ({ home, forcedMode = null } = {}) => {
 }
 
 export { NODE_FLOOR, parseVersion, satisfiesFloor }
+
+/**
+ * A name to type instead of an address.
+ *
+ * Two of them, and neither needs a root password or a file in /etc:
+ *
+ *   di.localhost — this machine only. Every current browser and every resolver
+ *     that follows RFC 6761 sends *.localhost to loopback, but "every" is not
+ *     "all", so it is asked before it is printed. A pretty address that does
+ *     not answer is worse than an ugly one that does.
+ *
+ *   di.local — the room. Published over mDNS by avahi-publish, which any Linux
+ *     desktop with avahi running can do as an ordinary user; phones resolve it
+ *     natively. Only offered with --lan: putting a name on the network is a
+ *     network act, and the loopback default is nobody's business but this
+ *     machine's.
+ */
+export const probePrettyLocalName = async (port, name = 'di.localhost', scheme = 'http') => {
+    const answered = await probeHealth(port, name, '/serverXR', scheme)
+    return answered ? name : null
+}
+
+export const probeCanPublishName = async () => quiet(async () => {
+    await execFileAsync('avahi-publish', ['--version'], { timeout: NET_TIMEOUT_MS })
+    return true
+}, false)

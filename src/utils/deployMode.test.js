@@ -54,6 +54,17 @@ describe('resolveDeployMode', () => {
     it('keeps localhost local even when the server says it is not', () => {
         expect(resolveDeployMode({ hostname: 'localhost', local: false })).toBe(MODE_LOCAL)
     })
+
+    // An install with a real certificate is reached at a name it owns, so the
+    // address bar stops looking private. `local.<domain>` is that name's shape,
+    // and reading it as hosted hid the local-only tools until a request came
+    // back.
+    it('reads local.<domain> as this machine', () => {
+        expect(resolveDeployMode({ hostname: 'local.thedi.studio', local: null })).toBe(MODE_LOCAL)
+        expect(resolveDeployMode({ hostname: 'local.example.com', local: null })).toBe(MODE_LOCAL)
+        // and does not swallow a site that merely starts with the letters
+        expect(resolveDeployMode({ hostname: 'locally.example.com', local: null })).toBe(MODE_HOSTED)
+    })
 })
 
 describe('deployModeMark', () => {

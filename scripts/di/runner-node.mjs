@@ -13,7 +13,7 @@ import process from 'node:process'
 
 import { isWindows, paths, versionLayout } from './paths.mjs'
 import { probeHealth } from './probe.mjs'
-import { currentVersionDir, readEnv, readState } from './state.mjs'
+import { currentVersionDir, readCert, readEnv, readState } from './state.mjs'
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -49,7 +49,7 @@ const pidAlive = (pid) => {
 
 export const isRunning = (home) => pidAlive(readPid(home))
 
-export const start = async ({ home, port, host = '127.0.0.1', verbose = false }) => {
+export const start = async ({ home, port, host = '127.0.0.1', guests = false, verbose = false }) => {
     const p = paths(home)
     const versionDir = currentVersionDir(home)
     if (!versionDir) throw new Error('not installed')
@@ -64,6 +64,7 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
     // room, and the guard's own flag is how the server hears it. A loopback
     // start leaves whatever di.env says about it alone.
     const wildcard = host === '0.0.0.0' || host === '::'
+    const cert = readCert(home)
 
     const logStream = fs.openSync(p.serverLog, 'a')
     // Detached on every OS, and unref'd on every OS. Windows was the exception
@@ -89,13 +90,27 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
             // what makes it usable without an account; the loopback bind
             // above — the default — is what keeps that from meaning "the café
             // can edit it", and `--lan` says the opposite out loud first.
-            REQUIRE_AUTH: 'false',
+            //
+            // `--guests` turns it on for everyone EXCEPT the person at the
+            // machine: the server reads a loopback request on a DI_LOCAL
+            // install as the owner (serverXR getPublicAuthState), so the owner
+            // never meets a sign-in card on their own laptop, and everyone on
+            // the network arrives as a guest with their own sandbox.
+            REQUIRE_AUTH: guests ? 'true' : 'false',
+            // Session cookies marked Secure are dropped by the browser over
+            // plain http — which is every guest, on an install with no
+            // certificate. Follow the certificate, not NODE_ENV.
+            AUTH_SESSION_COOKIE_SECURE: cert ? 'true' : 'false',
             NODE_ENV: 'production',
             // NODE_ENV=production would otherwise close the local-operator
             // gate (agent board, local claude chat, the model on this box) on
             // a personal install. Those gates check the request's own address
             // and stay loopback-only under --lan.
             DI_LOCAL: '1',
+            // The certificate, if this install has one. Handed over as paths:
+            // the server reads them itself and falls back to http if either is
+            // unreadable, so a half-installed pair can never stop a start.
+            ...(cert ? { TLS_CERT: cert.cert, TLS_KEY: cert.key } : {}),
             ...(wildcard ? { DI_ALLOW_LAN_DEVICES: '1' } : {})
         }
     })
@@ -108,12 +123,33 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
     // A wildcard bind answers on loopback as well, and 0.0.0.0 is not an
     // address every OS lets a client connect to — probe what a browser on this
     // machine would use.
-    const probeHost = wildcard ? '127.0.0.1' : host
+    // With a certificate the server answers https and only https, and the
+    // certificate is for a NAME — 127.0.0.1 would fail the hostname check even
+    // though the server is perfectly up. So the wait asks on the same terms a
+    // browser will.
+    const probeHost = cert ? cert.name : (wildcard ? '127.0.0.1' : host)
+    const scheme = cert ? 'https' : 'http'
     const deadline = Date.now() + 30000
     while (Date.now() < deadline) {
-        if (await probeHealth(port, probeHost)) return { pid: child.pid, port, host }
+        if (await probeHealth(port, probeHost, '/serverXR', scheme)) return { pid: child.pid, port, host }
+        // A certificate this build cannot use (an app older than the https
+        // support) answers http and is perfectly alive — believe the server,
+        // not our expectation of it.
+        if (cert && await probeHealth(port, wildcard ? '127.0.0.1' : host)) return { pid: child.pid, port, host, insecure: true }
         if (!pidAlive(child.pid)) {
             const tail = await readLog(home, 20)
+            // Below 1024 the kernel refuses the bind unless the binary carries
+            // the capability, and the log says EACCES and nothing a person can
+            // act on. Say the one line that fixes it, naming the very node this
+            // install runs — a general "use sudo" would send someone to grant
+            // it to the wrong binary.
+            if (port < 1024 && /EACCES|permission denied/i.test(tail)) {
+                throw new Error(
+                    `port ${port} needs one permission this install does not have yet.\n`
+                    + 'run this once, then start again:\n\n'
+                    + `  pkexec setcap cap_net_bind_service=+ep ${nodeBinary(home)}\n`
+                )
+            }
             throw new Error(`the server stopped while starting.\n${tail}`)
         }
         await wait(300)
@@ -121,11 +157,41 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
     throw new Error('the server did not answer in time — see: di logs')
 }
 
+/**
+ * Any server of THIS install still running, whatever the pid file says.
+ *
+ * The pid file is written once per start and lost whenever a start races, a
+ * crash beats the write, or an update swaps the version under a running
+ * process. Twice in one evening that left a server from a deleted version
+ * holding the port: `di up` saw a healthy port and said "already running",
+ * `di down` killed nothing, and the address answered 404 from a dist that no
+ * longer existed. A process running out of this install's own versions
+ * directory is this install's server, whether or not we wrote its number down.
+ */
+const strayServers = (home) => {
+    if (isWindows) return []
+    const versions = paths(home).versions
+    try {
+        const listed = spawnSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8' })
+        return String(listed.stdout || '')
+            .split('\n')
+            .filter(line => line.includes(versions) && line.includes('serverXR/src/index.js'))
+            .map(line => Number(line.trim().split(/\s+/)[0]))
+            .filter(pid => Number.isFinite(pid) && pid !== process.pid)
+    } catch {
+        return []
+    }
+}
+
 export const stop = async ({ home }) => {
     const pid = readPid(home)
+    const strays = strayServers(home).filter(other => other !== pid)
+    for (const other of strays) {
+        try { process.kill(other, 'SIGTERM') } catch { /* already gone */ }
+    }
     if (!pidAlive(pid)) {
         await fsp.rm(paths(home).pidFile, { force: true })
-        return false
+        return strays.length > 0
     }
     try {
         if (isWindows) {

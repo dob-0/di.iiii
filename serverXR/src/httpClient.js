@@ -6,7 +6,7 @@
 const http = require('node:http')
 const https = require('node:https')
 
-const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs = 20000 } = {}) =>
+const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs = 20000, signal = null } = {}) =>
   new Promise((resolve, reject) => {
     let u
     try { u = new URL(url) } catch (e) { return reject(e) }
@@ -27,6 +27,13 @@ const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs
     })
     req.on('error', reject)
     req.setTimeout(timeoutMs, () => req.destroy(new Error('request timeout')))
+    // A caller may change its mind: a replication read parked on another server
+    // for twenty seconds has to be abandonable the instant this machine makes
+    // an edit of its own, or the edit waits out someone else's silence.
+    if (signal) {
+      if (signal.aborted) req.destroy(new Error('aborted'))
+      else signal.addEventListener('abort', () => req.destroy(new Error('aborted')), { once: true })
+    }
     if (body) req.write(body)
     req.end()
   })

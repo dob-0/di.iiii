@@ -705,10 +705,32 @@ function registerSpaceRoutes(router, {
       // of reading+parsing the whole retained history and filtering in JS
       // (2026-07-17 perf audit) -- this is the most frequent read of this
       // table (every catch-up/reconnect hits it).
-      const filtered = Number.isFinite(since)
+      let filtered = Number.isFinite(since)
         ? await readOpsHistorySince(spaceId, since)
         : await readOpsHistory(spaceId)
-      const meta = await loadSpaceMeta(spaceId)
+      let meta = await loadSpaceMeta(spaceId)
+
+      // `?wait=<seconds>` — hold the request open until this space changes.
+      //
+      // For a di.iiii following this one across the room or across the
+      // internet. Polling on a timer is either wasteful or slow; a held request
+      // is neither, needs no socket (a per-space sync key cannot open one), and
+      // costs one idle connection. Capped, and only ever entered when there is
+      // nothing to send: a caller that is behind gets its ops immediately.
+      const wait = Math.min(Number(req.query.wait) || 0, 30)
+      if (wait > 0 && !filtered.length) {
+        const { waitForChange } = require('../follow/waiters')
+        const closed = new AbortController()
+        req.on('close', () => closed.abort())
+        const changed = await waitForChange(spaceId, wait * 1000, { signal: closed.signal })
+        if (changed) {
+          filtered = Number.isFinite(since)
+            ? await readOpsHistorySince(spaceId, since)
+            : await readOpsHistory(spaceId)
+          meta = await loadSpaceMeta(spaceId)
+        }
+      }
+
       const latestVersion = meta?.sceneVersion || 0
       res.json({
         ops: filtered,
@@ -731,6 +753,15 @@ function registerSpaceRoutes(router, {
       const normalizedOps = normalizeIncomingOps(ops)
       if (!normalizedOps.length) {
         return res.status(400).json({ error: 'No operations provided.' })
+      }
+
+      // A write to a space nobody created is a 404, not a 500. `ensureSpaceScene`
+      // writes the scene file but no row, so the op history's foreign key threw
+      // deep inside and answered "Server error" — which a di.iiii following this
+      // one reads as "keep trying", forever. Same refusal, and the same
+      // reasoning, as the scene read above.
+      if (!(await spaceExists(spaceId))) {
+        return res.status(404).json({ error: 'Space not found.' })
       }
 
       await ensureSpaceScene(spaceId)
@@ -784,6 +815,14 @@ function registerSpaceRoutes(router, {
       }
       const { nextVersion, opsWithVersion } = result
       if (opsWithVersion.length) {
+        // A follower on this install carries what just landed to the other
+        // machine. Nudged rather than polled: the wait is otherwise whatever
+        // backoff the quiet had earned, which a person reads as "their screen
+        // is broken". Never fatal — an install that follows nothing has no
+        // follower to wake.
+        try { require('../follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+        // and release any di.iiii holding a request open on this space
+        try { require('../follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
         broadcastLiveEvent(spaceId, 'scene-op', {
           version: nextVersion,
           ops: opsWithVersion

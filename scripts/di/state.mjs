@@ -8,6 +8,7 @@
  */
 
 import fs from 'node:fs'
+import { randomBytes, X509Certificate } from 'node:crypto'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 
@@ -52,6 +53,24 @@ export const readEnv = (home) => {
     return out
 }
 
+/**
+ * The two secrets guest mode needs, minted once and kept in di.env.
+ *
+ * With auth on, the server wants a key to sign session cookies with and at
+ * least one identity to call an admin. A personal install has no accounts and
+ * nobody to hand a password to, so di mints both itself: random, local, never
+ * printed, never sent anywhere. Already there means already right — regenerating
+ * them would sign out every guest mid-evening.
+ */
+export const ensureGuestSecrets = async (home) => {
+    const env = readEnv(home)
+    const patch = {}
+    if (!env.AUTH_SESSION_SECRET) patch.AUTH_SESSION_SECRET = randomBytes(32).toString('hex')
+    if (!env.ADMIN_API_TOKEN) patch.ADMIN_API_TOKEN = randomBytes(24).toString('hex')
+    if (Object.keys(patch).length) await writeEnv(home, patch)
+    return { ...env, ...patch }
+}
+
 export const writeEnv = async (home, patch = {}) => {
     const p = paths(home)
     const next = { ...readEnv(home), ...patch }
@@ -60,7 +79,12 @@ export const writeEnv = async (home, patch = {}) => {
         .map(([key, value]) => `${key}=${value}`)
         .join('\n')
     await fsp.mkdir(p.home, { recursive: true })
-    await fsp.writeFile(p.env, `${body}\n`)
+    // 0600, and chmod on rewrite: this file holds the session-signing secret and
+    // an admin token since guest mode, and it was being written world-readable
+    // on a machine other people log into. Same treatment credentialsStore gives
+    // the sync keys, for the same reason.
+    await fsp.writeFile(p.env, `${body}\n`, { mode: 0o600 })
+    try { await fsp.chmod(p.env, 0o600) } catch { /* a filesystem without modes */ }
     return next
 }
 
@@ -72,8 +96,43 @@ export const resolvePort = (home, override) => {
     return DEFAULT_PORT
 }
 
-export const localUrl = (port) => `http://localhost:${port}`
-export const lanUrl = (address, port) => `http://${address}:${port}`
+// Port 80 is the one a browser never shows, so neither do we: an address a
+// person is asked to type by hand must not carry a number they would have to
+// be told to leave out.
+const portPart = (port) => (Number(port) === 80 || Number(port) === 443 ? '' : `:${port}`)
+/**
+ * The certificate this install holds, or null. The NAME comes out of the
+ * certificate itself rather than a setting: a name in di.env could disagree
+ * with what the certificate actually covers, and a browser believes the
+ * certificate.
+ */
+export const readCert = (home) => {
+    const p = paths(home)
+    try {
+        const pem = fs.readFileSync(p.tlsCert, 'utf8')
+        fs.accessSync(p.tlsKey)
+        const x509 = new X509Certificate(pem)
+        const subject = x509.subject || ''
+        // Every name this certificate is good for, in the order the CA wrote
+        // them. The first is the address for this machine; a second one is the
+        // name the room uses, and it has to be pointed at the LAN address of
+        // the day (see the dns-update hook).
+        const names = String(x509.subjectAltName || '')
+            .split(',')
+            .map(part => part.trim())
+            .filter(part => part.startsWith('DNS:'))
+            .map(part => part.slice(4))
+        const name = (subject.split('\n').find(line => line.startsWith('CN=')) || '').slice(3).trim() || names[0] || ''
+        if (!name) return null
+        return { name, names: names.length ? names : [name], cert: p.tlsCert, key: p.tlsKey }
+    } catch {
+        return null
+    }
+}
+
+export const localUrl = (port) => `http://localhost${portPart(port)}`
+export const lanUrl = (address, port, scheme = 'http') => `${scheme}://${address}${portPart(port)}`
+export const nameUrl = (name, port) => `http://${name}${portPart(port)}`
 
 /** The installed version directory `current` points at, or null. */
 export const currentVersionDir = (home) => {
