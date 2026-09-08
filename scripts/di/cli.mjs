@@ -96,6 +96,32 @@ const readStdin = async () => {
     return Buffer.concat(chunks).toString('utf8')
 }
 
+/**
+ * Is this install answering — asked the way a browser would.
+ *
+ * With a certificate the server speaks https and only https, and the
+ * certificate is for a NAME: probing http://localhost then reported "not
+ * running" about a server that was serving the room perfectly. One helper, so
+ * every command asks the same correct question.
+ */
+const alive = async (home, port) => {
+    const cert = readCert(home)
+    if (cert && await probeHealth(port, cert.name, '/serverXR', 'https')) return true
+    return probeHealth(port)
+}
+
+/**
+ * The address to PRINT for this install. The certificate's name when there is
+ * one — that is the address the app itself shows, the one on the phones, and
+ * the only one with a padlock. Anything that tells a person where their di.iiii
+ * is must agree with what their browser shows.
+ */
+const publicUrl = (home, port) => {
+    const cert = readCert(home)
+    return cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : localUrl(port)
+}
+
+/** How this install talks to ITSELF: always loopback, never the pretty name. */
 const spaceNames = async (port) => (await spaceSummary(port)).names
 
 // The names AND how many there are: the start card says "20 spaces — main,
@@ -128,9 +154,14 @@ const reachText = (reach, port) => ui.reach({ lan: reach.lan, urls: reach.addres
  * 127.0.0.1 only, so what a phone can reach is loopback — the same reason
  * `--lan` is refused there.
  */
-const probeReach = async (home, port) => (
-    readState(home).mode === 'docker' ? { lan: false, addresses: [] } : probeListen(port)
-)
+const probeReach = async (home, port) => {
+    if (readState(home).mode === 'docker') return { lan: false, addresses: [] }
+    // Asked on the same terms the server answers: with a certificate it speaks
+    // https on its own name, and asking over http got no answer at all — which
+    // `di where` then printed as if it were the answer.
+    const cert = readCert(home)
+    return (cert && await probeListen(port, cert.name, '/serverXR', 'https')) || probeListen(port)
+}
 
 const cmdUp = async (args) => {
     const home = HOME()
@@ -153,7 +184,7 @@ const cmdUp = async (args) => {
     // Refused before the already-running check, or a running docker install
     // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
-    if (await probeHealth(port)) { say(ui.alreadyRunning(localUrl(port), await probeReach(home, port), lan)); return }
+    if (await alive(home, port)) { say(ui.alreadyRunning(publicUrl(home, port), await probeReach(home, port), lan)); return }
 
     say(ui.starting())
     try {
@@ -276,7 +307,7 @@ const cmdStatus = async () => {
     const port = resolvePort(home)
     const runner = runnerFor(home)
     const info = runner.describe(home)
-    const healthy = await probeHealth(port)
+    const healthy = await alive(home, port)
 
     if (!healthy) {
         say(`${ui.notRunning()}  ${style.dim(`${info.version || '?'} · ${info.dataDir}`)}`)
@@ -287,7 +318,7 @@ const cmdStatus = async () => {
     say([
         `running (${info.mode})`,
         info.version,
-        localUrl(port),
+        publicUrl(home, port),
         reach ? reachText(reach, port) : null,
         `data ${info.dataDir}${size ? ` (${size})` : ''}`
     ].filter(Boolean).join(style.dim(' · ')))
@@ -301,9 +332,9 @@ const cmdOpen = async (args) => {
     // either there or it is not.
     if (args._[1]) { await cmdOpenFile(args, args._[1]); return }
     const port = resolvePort(home)
-    if (!(await probeHealth(port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
-    say(localUrl(port))
-    openBrowser(localUrl(port))
+    if (!(await alive(home, port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
+    say(publicUrl(home, port))
+    openBrowser(publicUrl(home, port))
 }
 
 /**
@@ -389,7 +420,7 @@ const openThroughServer = async ({ port, file, as }) => {
         if (response.status === 413) return { ok: false, tooLarge: true }
         return { ok: false, error: body?.error || `the server answered ${response.status}` }
     } catch (error) {
-        if (await probeHealth(port)) return { ok: false, tooLarge: true }
+        if (await alive(home, port)) return { ok: false, tooLarge: true }
         return { ok: false, error: String(error?.message || error) }
     }
 }
@@ -401,7 +432,7 @@ const cmdOpenFile = async (args, file) => {
     if (!fs.existsSync(resolved)) { fail(`no such file: ${resolved}`); process.exitCode = 1; return }
 
     const port = resolvePort(home)
-    const wasRunning = await probeHealth(port)
+    const wasRunning = await alive(home, port)
     const named = args.flags.as || path.basename(resolved).replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
 
     // A running server takes the file through its own API, the way the
@@ -413,7 +444,7 @@ const cmdOpenFile = async (args, file) => {
         const result = await openThroughServer({ port, file: resolved, as: args.flags.as })
         if (result.ok) {
             const opened = result.spaceId || named
-            say(ui.opened(opened, `${localUrl(port)}/${opened}`))
+            say(ui.opened(opened, `${publicUrl(home, port)}/${opened}`))
             return
         }
         if (!result.tooLarge) {
@@ -464,7 +495,7 @@ const cmdNew = async (args) => {
     // what a legal space id is, which words are reserved, and what a new space
     // starts out containing. A second implementation here would drift from it.
     const port = resolvePort(home)
-    if (!(await probeHealth(port))) await cmdUp({ _: [], flags: { 'no-open': true } })
+    if (!(await alive(home, port))) await cmdUp({ _: [], flags: { 'no-open': true } })
     try {
         const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`, {
             method: 'POST',
@@ -474,7 +505,7 @@ const cmdNew = async (args) => {
         const body = await response.json().catch(() => ({}))
         if (!response.ok) { fail(body?.error || `could not make a space called "${name}"`); process.exitCode = 1; return }
         const id = body?.space?.id || name
-        say(ui.made(id, `${localUrl(port)}/${id}`))
+        say(ui.made(id, `${publicUrl(home, port)}/${id}`))
     } catch (error) {
         fail(String(error?.message || error))
         process.exitCode = 1
@@ -485,7 +516,7 @@ const cmdSpaces = async () => {
     const home = HOME()
     if (!requireInstalled(home)) return
     const port = resolvePort(home)
-    if (!(await probeHealth(port))) { say(ui.notRunning()); return }
+    if (!(await alive(home, port))) { say(ui.notRunning()); return }
     try {
         const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`)
         const body = await response.json()
@@ -516,7 +547,7 @@ const cmdWhere = async () => {
     const port = resolvePort(home)
     // Asked of the running server, not read from a file — there is no file:
     // `--lan` is per start.
-    const running = await probeHealth(port)
+    const running = await alive(home, port)
     const reach = running ? await probeReach(home, port) : null
     say([
         `app    ${currentVersionDir(home) || style.dim('not installed')}`,
@@ -815,7 +846,7 @@ const cmdSync = async (args) => {
     if (!link) { say(ui.notLinked(spaceId)); process.exitCode = 1; return }
 
     const port = resolvePort(home, args.flags.port)
-    const local = (await probeHealth(port))
+    const local = (await alive(home, port))
         ? await gatherLocalSide({ port, spaceId, token: link.key })
         : { reachable: false }
     const remote = await gatherSide({ base: link.remote, spaceId, token: link.key })
@@ -944,7 +975,7 @@ const cmdFollow = async (args) => {
 
     const port = resolvePort(home)
     const selfBase = `${localUrl(port)}/serverXR`
-    const running = await probeHealth(port)
+    const running = await alive(home, port)
 
     // Following yourself is a loop with no second person in it: the same server
     // reading and writing its own log forever.

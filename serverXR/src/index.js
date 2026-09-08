@@ -2185,6 +2185,15 @@ initStorage()
           port: PORT,
           basePath: config.basePath || '/serverXR',
           selfToken: config.internalApiToken || null,
+          // A followed space must exist here before anything can land in it.
+          // `di follow` makes it when the install is running; a follow written
+          // while it was down, or carried in on a backup, arrives without one.
+          ensureSpace: async (spaceId) => {
+            const id = normalizeSpaceId(spaceId)
+            if (!id || await spaceExists(id)) return
+            await ensureSpaceScene(id)
+            await upsertSpaceMeta(id, { label: id, allowEdits: true })
+          },
           log: logger
         })
       } catch (error) {

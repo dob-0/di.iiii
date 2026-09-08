@@ -95,7 +95,7 @@ describe('opening a file is not a server-management task', () => {
 
     it('treats a 413, or a connection the server dropped mid-upload, as "too large"', () => {
         expect(cli).toContain("if (response.status === 413) return { ok: false, tooLarge: true }")
-        expect(cli).toContain('if (await probeHealth(port)) return { ok: false, tooLarge: true }')
+        expect(cli).toContain('if (await alive(home, port)) return { ok: false, tooLarge: true }')
     })
 
     it('leaves the last word to the failure, not to the restart banner', () => {

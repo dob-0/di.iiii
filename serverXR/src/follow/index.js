@@ -22,12 +22,19 @@ const selfBase = (port, basePath = '/serverXR') => `http://127.0.0.1:${port}${ba
  * @param {string} options.basePath     this server's mount path
  * @param {string|null} options.selfToken  a token that can write here (guest mode makes one)
  */
-const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null, log = console } = {}) => {
+const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null, ensureSpace = null, log = console } = {}) => {
     const follows = readFollows(dataDir)
     for (const [spaceId, entry] of Object.entries(follows)) {
         if (running.has(spaceId)) continue
         const local = side({ base: selfBase(port, basePath), spaceId, token: selfToken })
         const remote = side({ base: entry.remote, spaceId: entry.spaceId || spaceId, token: entry.token })
+        // The space has to exist here or every write lands on nothing. `di
+        // follow` makes it when the install is running, but a follow written
+        // while it was down — or restored from a backup onto a fresh machine —
+        // would otherwise start and fail forever.
+        Promise.resolve(ensureSpace?.(spaceId)).catch((error) => {
+            log.warn?.(`[follow] ${spaceId}: could not make room for it here (${error?.message || error})`)
+        })
         log.info?.(`[follow] ${spaceId} follows ${entry.remote}`)
         running.set(spaceId, startFollowing({ local, remote, log }))
     }

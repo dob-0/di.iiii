@@ -88,7 +88,7 @@ describe('what `di up --lan` does', () => {
         // A docker install that is up would otherwise be told "on this network
         // too" — the container binds 0.0.0.0, the compose publishes 127.0.0.1.
         const refused = up.indexOf("runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker())")
-        const alreadyRunning = up.indexOf('if (await probeHealth(port)) { say(ui.alreadyRunning(')
+        const alreadyRunning = up.indexOf('if (await alive(home, port)) { say(ui.alreadyRunning(')
         expect(refused).toBeGreaterThan(-1)
         expect(alreadyRunning).toBeGreaterThan(-1)
         expect(refused).toBeLessThan(alreadyRunning)
@@ -140,8 +140,12 @@ describe('status and where ask the server which bind is in force', () => {
         // every site in the CLI goes through it, so no command can repeat the
         // container's own answer.
         const helper = cli.slice(cli.indexOf('const probeReach'), cli.indexOf('const cmdUp'))
-        expect(helper).toContain("readState(home).mode === 'docker' ? { lan: false, addresses: [] } : probeListen(port)")
-        expect(cli.split('probeListen(port)').length - 1).toBe(1)
+        expect(helper).toContain("if (readState(home).mode === 'docker') return { lan: false, addresses: [] }")
+        // Asked at most twice inside the one helper — once on the certificate's
+        // own name (an install with https answers nowhere else) and once plain —
+        // and nowhere else in the CLI.
+        expect(helper.split('probeListen(').length - 1).toBe(2)
+        expect(cli.split('probeListen(').length - 1).toBe(2)
         // open-file, update and restore each ask before their stop; status, where and
         // the already-running branch of up ask to report the reach.
         expect(cli.split('probeReach(home, ').length - 1).toBe(6)

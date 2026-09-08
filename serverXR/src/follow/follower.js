@@ -19,7 +19,7 @@
  */
 
 const { httpRequest } = require('../httpClient')
-const { moreToCarry, planDirection, planAfterConflict, nextInterval, refusedWholeWork } = require('./followPlan')
+const { accountedThrough, moreToCarry, unseen, planDirection, planAfterConflict, nextInterval, refusedWholeWork, WHOLE_WORK_OPS } = require('./followPlan')
 const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
 
 const FLOOR_MS = 700
@@ -57,12 +57,13 @@ const rememberSeen = (seen, ops = []) => {
 // parser OOMs under the memory limits of the shared hosting the live site runs
 // on, and that bug class has shipped here twice. httpContracts.test.js keeps it
 // at zero, and this file is no exception for being new.
-const request = async (url, { method = 'GET', token = null, body = null, timeoutMs = TIMEOUT_MS } = {}) => {
+const request = async (url, { method = 'GET', token = null, body = null, timeoutMs = TIMEOUT_MS, signal = null } = {}) => {
     const payloadBody = body ? JSON.stringify(body) : null
     try {
         const response = await httpRequest(url, {
             method,
             timeoutMs,
+            signal,
             headers: {
                 Accept: 'application/json',
                 ...(payloadBody ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payloadBody) } : {}),
@@ -101,12 +102,16 @@ const side = ({ base, spaceId, token = null }) => ({
  * parameter simply answers straight away, and the loop falls back to its own
  * timing — so this is an improvement, never a requirement.
  */
-const readOps = async (from, stream, since, { waitSeconds = 0 } = {}) => {
+const readOps = async (from, stream, since, { waitSeconds = 0, signal = null } = {}) => {
     const plain = from.opsUrl(stream, since)
     const url = waitSeconds > 0
         ? `${plain}${plain.includes('?') ? '&' : '?'}wait=${waitSeconds}`
         : plain
-    const answer = await request(url, { token: from.token, timeoutMs: (waitSeconds ? waitSeconds * 1000 : 0) + TIMEOUT_MS })
+    const answer = await request(url, {
+        token: from.token,
+        timeoutMs: (waitSeconds ? waitSeconds * 1000 : 0) + TIMEOUT_MS,
+        signal
+    })
     if (!answer.ok) return { reachable: false, ops: [], latestVersion: null, status: answer.status }
     return {
         reachable: true,
@@ -177,6 +182,9 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
     // Woken by this install's own writes, so an edit made here leaves at once
     // instead of waiting out whatever backoff the quiet had earned.
     let wakeNow = null
+    // The request currently parked on the other machine, if any — abandoned the
+    // moment this install writes something of its own.
+    let parking = null
     const sleep = (ms) => new Promise((resolve) => {
         const timer = setTimeout(resolve, ms)
         wakeNow = () => { clearTimeout(timer); wakeNow = null; resolve() }
@@ -213,8 +221,20 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
     /** Carry one stream, both ways. */
     const runStream = async (stream, { wait = false } = {}) => {
         const cursor = cursorFor(stream)
-        const theirs = await readOps(remote, stream, cursor.remoteVersion, { waitSeconds: wait ? WAIT_SECONDS : 0 })
+
+        // OUR side first, always. A read parked on the other machine can be
+        // held for twenty seconds, and an edit made here while it is parked
+        // would wait out someone else's silence — the one thing the whole
+        // design is against. Read ours, then park, and let a local write abort
+        // the park (see wake()).
         const ours = await readOps(local, stream, cursor.localVersion)
+        const parkable = wait && ours.reachable && !unseen(ours.ops, seen).length
+        parking = parkable ? new AbortController() : null
+        const theirs = await readOps(remote, stream, cursor.remoteVersion, {
+            waitSeconds: parkable ? WAIT_SECONDS : 0,
+            signal: parking?.signal || null
+        })
+        parking = null
 
         // A project one side does not have yet is a 404 on that stream, not a
         // failure of the follow: it will exist on the next pass.
@@ -229,18 +249,21 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
 
         const inbound = await carry({ to: local, stream, ops: theirs.ops, seen, targetVersion: ours.latestVersion })
         const outbound = await carry({ to: remote, stream, ops: ours.ops, seen, targetVersion: theirs.latestVersion })
+        // Anything a whole-work op blocked is still accounted for: it was seen,
+        // considered, and deliberately left where it is.
+        rememberSeen(seen, [...theirs.ops, ...ours.ops].filter(op => WHOLE_WORK_OPS.has(op?.type)))
 
-        // Each cursor advances only as far as the ops that side actually gave
-        // up: the remote cursor to the last remote op we carried IN, the local
-        // cursor to the last local op we carried OUT. When a batch was capped
-        // the rest is read again on the next tick, which is why the loop does
-        // not sleep while there is more to carry.
+        // Each cursor advances through the ops that side has ACCOUNTED for —
+        // carried now, or already known from carrying them the other way — and
+        // stops dead at the first it has not. Advancing further would skip the
+        // ops past a capped batch; advancing less would re-read the same ops
+        // forever, which is exactly what happened when the cursor only followed
+        // what a write had carried.
         const more = moreToCarry(theirs.ops, seen) || moreToCarry(ours.ops, seen)
         cursors.set(stream.key, {
-            localVersion: outbound.carriedThrough ?? (ours.ops.length ? cursor.localVersion : ours.latestVersion),
-            remoteVersion: inbound.carriedThrough ?? (theirs.ops.length ? cursor.remoteVersion : theirs.latestVersion)
+            localVersion: accountedThrough(ours.ops, seen, ours.latestVersion) ?? cursor.localVersion,
+            remoteVersion: accountedThrough(theirs.ops, seen, theirs.latestVersion) ?? cursor.remoteVersion
         })
-        rememberSeen(seen, theirs.ops.slice(0, 0))
 
         return {
             moved: inbound.moved || outbound.moved,
@@ -331,7 +354,15 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
     loop()
     return {
         stop() { stopped = true },
-        wake() { interval = FLOOR_MS; wakeNow?.() },
+        wake() {
+            interval = FLOOR_MS
+            // Both: end the sleep between ticks, AND abandon a read parked on
+            // the other machine. Without the second, `di follow`'s own promise —
+            // that an edit leaves at once — was true only when the loop happened
+            // to be between ticks.
+            parking?.abort()
+            wakeNow?.()
+        },
         get state() { return { spaceId: local.spaceId, remote: remote.base, ...state } }
     }
 }

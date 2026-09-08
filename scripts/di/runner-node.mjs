@@ -157,11 +157,41 @@ export const start = async ({ home, port, host = '127.0.0.1', guests = false, ve
     throw new Error('the server did not answer in time — see: di logs')
 }
 
+/**
+ * Any server of THIS install still running, whatever the pid file says.
+ *
+ * The pid file is written once per start and lost whenever a start races, a
+ * crash beats the write, or an update swaps the version under a running
+ * process. Twice in one evening that left a server from a deleted version
+ * holding the port: `di up` saw a healthy port and said "already running",
+ * `di down` killed nothing, and the address answered 404 from a dist that no
+ * longer existed. A process running out of this install's own versions
+ * directory is this install's server, whether or not we wrote its number down.
+ */
+const strayServers = (home) => {
+    if (isWindows) return []
+    const versions = paths(home).versions
+    try {
+        const listed = spawnSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8' })
+        return String(listed.stdout || '')
+            .split('\n')
+            .filter(line => line.includes(versions) && line.includes('serverXR/src/index.js'))
+            .map(line => Number(line.trim().split(/\s+/)[0]))
+            .filter(pid => Number.isFinite(pid) && pid !== process.pid)
+    } catch {
+        return []
+    }
+}
+
 export const stop = async ({ home }) => {
     const pid = readPid(home)
+    const strays = strayServers(home).filter(other => other !== pid)
+    for (const other of strays) {
+        try { process.kill(other, 'SIGTERM') } catch { /* already gone */ }
+    }
     if (!pidAlive(pid)) {
         await fsp.rm(paths(home).pidFile, { force: true })
-        return false
+        return strays.length > 0
     }
     try {
         if (isWindows) {

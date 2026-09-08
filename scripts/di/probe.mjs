@@ -166,11 +166,11 @@ export const probeLanAddresses = (interfaces = os.networkInterfaces()) => {
  * per start and nothing writes it down. Null when it cannot say: not running,
  * or a server from before the field existed.
  */
-export const probeListen = async (port, host = '127.0.0.1', basePath = '/serverXR') => quiet(async () => {
+export const probeListen = async (port, host = '127.0.0.1', basePath = '/serverXR', scheme = 'http') => quiet(async () => {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 2000)
     try {
-        const response = await fetch(`http://${host}:${port}${basePath}/api/config`, { signal: controller.signal })
+        const response = await fetch(`${scheme}://${host}:${port}${basePath}/api/config`, { signal: controller.signal })
         if (!response.ok) return null
         const listen = (await response.json())?.config?.listen
         if (!listen || typeof listen.lan !== 'boolean') return null

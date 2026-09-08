@@ -95,4 +95,24 @@ const nextInterval = ({ moved, current, floor = 700, ceiling = 30000 }) => {
     return Math.min(ceiling, Math.max(floor, Math.round((current || floor) * 1.6)))
 }
 
-module.exports = { BATCH, WHOLE_WORK_OPS, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval }
+/**
+ * How far a cursor may move: through every op we have accounted for, in order,
+ * stopping at the first we have not.
+ *
+ * "Accounted for" is carried OR already known — an op we sent to the other side
+ * comes back in their log, and if that did not advance the cursor the same op
+ * would be re-read on every tick forever. Measured: a single edit each way left
+ * both cursors pinned and both servers polled continuously for the life of the
+ * follow. Contiguous on purpose: a gap must hold the cursor back, or the ops
+ * inside it are lost.
+ */
+const accountedThrough = (ops = [], accounted = new Set(), fallback = null) => {
+    let through = null
+    for (const op of ops) {
+        if (!op?.opId || !accounted.has(op.opId)) return through
+        if (Number.isFinite(op.version)) through = op.version
+    }
+    return ops.length ? (through ?? fallback) : fallback
+}
+
+module.exports = { BATCH, WHOLE_WORK_OPS, accountedThrough, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval }

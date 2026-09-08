@@ -18,11 +18,13 @@ const { side, startFollowing } = require('./follower.js')
 // A unit test of followPlan.js already proves the rule (followPlan.test.js);
 // only two servers can prove the rule is wired to anything.
 //
-// The budget is generous for one reason, and it is a defect, not a machine:
-// the loop parks its read on the other install for WAIT_SECONDS (20s), and a
-// write made HERE cannot leave until that parked read comes back — wake() can
-// cut a sleep but not an in-flight request. So every case that carries an edit
-// OUT of the follower waits out that park. See the note above the B→A test.
+// The budget is generous for one reason, and it is the follower's, not the
+// machine's: the loop parks its read on the other install for WAIT_SECONDS
+// (20s), and a write made HERE cannot leave until that parked read comes back
+// — wake() can cut a sleep but not an in-flight request. So an edit made on
+// the following side can sit for a whole park before it travels. Deadlines
+// below are sized for that; none of them is a sleep, so the file gets faster
+// on its own the day that changes.
 vi.setConfig({ testTimeout: 45_000, hookTimeout: 60_000 })
 
 const SERVER_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -195,9 +197,8 @@ describe('a space that lives on two di.iiii at once', () => {
 
         follower = startFollowing({
             local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
-            remote: (() => { const r = side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }); const o = r.opsUrl.bind(r); r.opsUrl = (st, since) => { const u = o(st, since); console.log('REQ', Date.now() % 100000, u.replace(/^.*serverXR/, '')); return u }; return r })(),
-            log: { warn: () => {}, info: () => {} },
-            onState: (st) => console.log('TICK', Date.now() % 100000, st.status, st.carriedIn, st.carriedOut, st.lastError || '')
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} }
         })
     })
 
@@ -222,11 +223,10 @@ describe('a space that lives on two di.iiii at once', () => {
         expect(log.latestVersion).toBeGreaterThan(0)
     })
 
-    // The slow direction, and the one worth watching: the loop parks its read
-    // on the host for up to 20s, and an edit made on the FOLLOWER cannot leave
-    // until that read returns. Nothing here waits on a clock — the deadline is
-    // only large enough to survive that park; if the stall is ever fixed this
-    // test simply finishes sooner.
+    // The slow direction, and the one worth watching: the loop has parked its
+    // read on the host, and this edit cannot leave until that read returns —
+    // measured at a full 20s here. Nothing below waits on a clock; the
+    // deadline is only wide enough to survive the park.
     it('carries an edit made on the follower back to the host', async () => {
         const written = await writeOp(following, addObject('chair', 'op-follower-chair'))
         expect(written.status).toBe(200)
@@ -314,7 +314,6 @@ describe('a space that lives on two di.iiii at once', () => {
         expect(objectIds(await readScene(hosting))).toContain('window')
         expect(follower.state.status).toBe('following')
         expect(follower.state.lastError).toBeNull()
-        console.log('A-LOG-AFTER-RESTART', hosting.logs().split('\n').filter(l => l.includes('/ops')).join('\n'))
     })
 })
 

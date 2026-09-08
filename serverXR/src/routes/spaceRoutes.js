@@ -755,6 +755,15 @@ function registerSpaceRoutes(router, {
         return res.status(400).json({ error: 'No operations provided.' })
       }
 
+      // A write to a space nobody created is a 404, not a 500. `ensureSpaceScene`
+      // writes the scene file but no row, so the op history's foreign key threw
+      // deep inside and answered "Server error" — which a di.iiii following this
+      // one reads as "keep trying", forever. Same refusal, and the same
+      // reasoning, as the scene read above.
+      if (!(await spaceExists(spaceId))) {
+        return res.status(404).json({ error: 'Space not found.' })
+      }
+
       await ensureSpaceScene(spaceId)
 
       // Serialized per space: the version check and the read-modify-write it
