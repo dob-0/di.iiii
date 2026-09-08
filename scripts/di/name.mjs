@@ -58,6 +58,28 @@ export const publishName = async (home, address, { name = MDNS_NAME } = {}) => {
     }
 }
 
+/**
+ * Point the room's name at tonight's address, if the owner left a hook.
+ *
+ * Returns the name on success, null when there is no hook, no second name, or
+ * the hook fails — a name that did not move is a name that does not answer,
+ * and `di up` says the addresses out loud anyway.
+ */
+export const updateRoomName = async (home, name, address) => {
+    if (!name || !address) return null
+    const hook = paths(home).dnsHook
+    try {
+        fs.accessSync(hook, fs.constants.X_OK)
+    } catch {
+        return null
+    }
+    return new Promise((resolve) => {
+        const child = spawn(hook, [name, address], { stdio: 'ignore' })
+        child.on('error', () => resolve(null))
+        child.on('exit', (code) => resolve(code === 0 ? name : null))
+    })
+}
+
 export const stopName = async (home) => {
     const pid = readPid(home)
     if (alive(pid)) {

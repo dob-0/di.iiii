@@ -43,7 +43,7 @@ import {
 } from './install.mjs'
 import { isWindows, paths } from './paths.mjs'
 import { probeAll, probeCanPublishName, probeHealth, probeLanAddresses, probeListen, probePrettyLocalName } from './probe.mjs'
-import { publishName, stopName } from './name.mjs'
+import { publishName, stopName, updateRoomName } from './name.mjs'
 import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
@@ -146,7 +146,18 @@ const cmdUp = async (args) => {
     // padlock, and the padlock is what a browser wants before it hands over a
     // camera, a microphone, MIDI or XR. Its name is the address.
     const cert = readCert(home)
-    const summary = await spaceSummary(port, cert ? `https://${cert.name}:${port}` : null)
+
+    // ONE name for everyone. A name resolves to a single address, and which
+    // address is right depends on who asks: loopback is right for this machine
+    // and useless to a phone; the wifi address is right for both, because a
+    // machine can reach itself there too. So the name follows the start —
+    // pointed at tonight's wifi address under --lan, back to loopback without
+    // it — through the owner's own dns-update hook. No hook, no change.
+    if (cert) {
+        await updateRoomName(home, cert.name, lan ? probeLanAddresses()[0]?.address : '127.0.0.1')
+    }
+
+    const summary = await spaceSummary(port, cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : null)
 
     // ONE address, if the machine can hold one. `di.local` is published over
     // mDNS for this start, and it is the same word on this laptop and on a
@@ -165,9 +176,19 @@ const cmdUp = async (args) => {
 
     say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl, secure: Boolean(cert) }))
     if (lan) {
+        // With a certificate the room gets the padlocked name too — its second
+        // name, pointed at tonight's address by the owner's own hook. Without
+        // the hook (or without a second name) nothing is claimed: the addresses
+        // below are then the whole truth.
         say(ui.onThisNetwork(
-            addresses.map(({ iface, address }) => ({ iface, url: lanUrl(address, port) })),
-            named ? nameUrl(named, port) : null
+            // An install with a certificate answers https and only https, so
+            // the by-address fallback has to be written that way — over that
+            // route the certificate's name will not match and the browser will
+            // warn, which is exactly why it is the fallback and not the name.
+            addresses.map(({ iface, address }) => ({ iface, url: lanUrl(address, port, cert ? 'https' : 'http') })),
+            // One name, already pointed at this machine's address on tonight's
+            // wifi, so the phones type exactly what the laptop types.
+            cert ? prettyUrl : (named ? nameUrl(named, port) : null)
         ))
     }
     if (!args.flags['no-open']) openBrowser(prettyUrl || localUrl(port))

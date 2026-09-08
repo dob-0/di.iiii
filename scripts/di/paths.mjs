@@ -52,6 +52,12 @@ export const paths = (home = diHome()) => ({
     tls: path.join(home, 'tls'),
     tlsCert: path.join(home, 'tls', 'cert.pem'),
     tlsKey: path.join(home, 'tls', 'key.pem'),
+    // Optional, executable, written by whoever owns the domain: called as
+    // `dns-update <name> <address>` when --lan starts, so the name the room
+    // types follows the machine onto tonight's wifi. A hook and not a built-in
+    // because the credentials for a DNS provider are the owner's business and
+    // must never live inside di.
+    dnsHook: path.join(home, 'dns-update'),
     credentials: path.join(home, 'credentials.json'),
     // Taken automatically before an update that moves the schema, because
     // `--rollback` restores the app and an update moves more than the app.

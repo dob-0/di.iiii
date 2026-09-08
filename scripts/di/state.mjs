@@ -88,17 +88,27 @@ export const readCert = (home) => {
     try {
         const pem = fs.readFileSync(p.tlsCert, 'utf8')
         fs.accessSync(p.tlsKey)
-        const subject = new X509Certificate(pem).subject || ''
-        const name = (subject.split('\n').find(line => line.startsWith('CN=')) || '').slice(3).trim()
+        const x509 = new X509Certificate(pem)
+        const subject = x509.subject || ''
+        // Every name this certificate is good for, in the order the CA wrote
+        // them. The first is the address for this machine; a second one is the
+        // name the room uses, and it has to be pointed at the LAN address of
+        // the day (see the dns-update hook).
+        const names = String(x509.subjectAltName || '')
+            .split(',')
+            .map(part => part.trim())
+            .filter(part => part.startsWith('DNS:'))
+            .map(part => part.slice(4))
+        const name = (subject.split('\n').find(line => line.startsWith('CN=')) || '').slice(3).trim() || names[0] || ''
         if (!name) return null
-        return { name, cert: p.tlsCert, key: p.tlsKey }
+        return { name, names: names.length ? names : [name], cert: p.tlsCert, key: p.tlsKey }
     } catch {
         return null
     }
 }
 
 export const localUrl = (port) => `http://localhost${portPart(port)}`
-export const lanUrl = (address, port) => `http://${address}${portPart(port)}`
+export const lanUrl = (address, port, scheme = 'http') => `${scheme}://${address}${portPart(port)}`
 export const nameUrl = (name, port) => `http://${name}${portPart(port)}`
 
 /** The installed version directory `current` points at, or null. */
