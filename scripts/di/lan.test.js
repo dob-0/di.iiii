@@ -113,8 +113,11 @@ describe('the runner under --lan', () => {
     })
 
     it('waits for the server on loopback, since 0.0.0.0 is not an address on every OS', () => {
-        expect(runner).toContain("const probeHost = wildcard ? '127.0.0.1' : host")
-        expect(runner).toContain('probeHealth(port, probeHost)')
+        // With a certificate the wait asks on the certificate's own name — a
+        // browser would too, and 127.0.0.1 fails the hostname check. Without
+        // one, the loopback rule this guard was written for still holds.
+        expect(runner).toContain("wildcard ? '127.0.0.1' : host")
+        expect(runner).toMatch(/probeHealth\(port, probeHost/)
     })
 })
 
