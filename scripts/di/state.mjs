@@ -76,7 +76,7 @@ export const resolvePort = (home, override) => {
 // Port 80 is the one a browser never shows, so neither do we: an address a
 // person is asked to type by hand must not carry a number they would have to
 // be told to leave out.
-const portPart = (port) => (Number(port) === 80 ? '' : `:${port}`)
+const portPart = (port) => (Number(port) === 80 || Number(port) === 443 ? '' : `:${port}`)
 /**
  * The certificate this install holds, or null. The NAME comes out of the
  * certificate itself rather than a setting: a name in di.env could disagree
