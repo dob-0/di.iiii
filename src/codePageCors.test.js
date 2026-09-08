@@ -31,7 +31,7 @@ const read = (name) => readFileSync(path.join(REPO_ROOT, name), 'utf8')
 describe('a code page can read /vendor/ and /fonts/ from its null origin', () => {
     it('nginx allows any origin on those two directories', () => {
         const conf = read('nginx.conf')
-        const block = conf.slice(conf.indexOf('location ~ ^/(vendor|fonts)/'))
+        const block = conf.slice(conf.indexOf('location ~ ^/(vendor|fonts|draco|basis|unicode-fonts)/'))
         expect(block).not.toBe('')
         const body = block.slice(0, block.indexOf('\n    }'))
         expect(body).toMatch(/add_header\s+Access-Control-Allow-Origin\s+"\*"\s+always;/)
@@ -39,7 +39,7 @@ describe('a code page can read /vendor/ and /fonts/ from its null origin', () =>
 
     it('nginx repeats the security headers, which a location with its own add_header drops', () => {
         const conf = read('nginx.conf')
-        const block = conf.slice(conf.indexOf('location ~ ^/(vendor|fonts)/'))
+        const block = conf.slice(conf.indexOf('location ~ ^/(vendor|fonts|draco|basis|unicode-fonts)/'))
         const body = block.slice(0, block.indexOf('\n    }'))
         for (const header of ['X-Content-Type-Options', 'Content-Security-Policy', 'Referrer-Policy']) {
             expect(body).toContain(`add_header ${header}`)
@@ -48,7 +48,7 @@ describe('a code page can read /vendor/ and /fonts/ from its null origin', () =>
 
     it('the node path sets the same header, so local dev and offline `di` installs match the tiers', () => {
         const server = read('serverXR/src/index.js')
-        expect(server).toMatch(/CODE_PAGE_READABLE\s*=\s*\/\^\\\/\(vendor\|fonts\)\\\/\//)
+        expect(server).toMatch(/CODE_PAGE_READABLE\s*=\s*\/\^\\\/\(vendor\|fonts\|draco\|basis\|unicode-fonts\)\\\/\//)
         expect(server).toContain("res.setHeader('Access-Control-Allow-Origin', '*')")
         // both static mounts, or an offline install serves the font and never the header
         const mounts = server.match(/express\.static\([^)]*setHeaders: allowNullOrigin[^)]*\)/g) || []
@@ -62,7 +62,22 @@ describe('a code page can read /vendor/ and /fonts/ from its null origin', () =>
         expect(helper.slice(0, helper.indexOf('=>'))).not.toMatch(/req\)/)
     })
 
-    it('does not open the whole site — the allowance is scoped to those two paths', () => {
+    // Added 2026-09-09 after watching /spaces on staging: a space card renders
+    // in a sandboxed frame too, so the Draco decoder it fetches to open a
+    // compressed model is a CORS-mode request from origin "null". It failed
+    // exactly the way the font did — silently, as a card that never paints its
+    // model.
+    it('covers the decoders a scene needs, not just the fonts and the vendored scripts', () => {
+        const conf = read('nginx.conf')
+        const server = read('serverXR/src/index.js')
+        const location = conf.slice(conf.indexOf('location ~ ^/('), conf.indexOf('location ~ ^/(') + 60)
+        for (const dir of ['draco', 'basis', 'unicode-fonts']) {
+            expect(location).toContain(dir)
+            expect(server).toContain(dir)
+        }
+    })
+
+    it('does not open the whole site — the allowance is scoped to those paths', () => {
         const server = read('serverXR/src/index.js')
         const conf = read('nginx.conf')
         // nginx: the only Access-Control-Allow-Origin is inside the scoped location

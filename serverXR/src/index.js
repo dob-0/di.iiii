@@ -425,7 +425,14 @@ app.use((req, res, next) => {
 // `/vendor/` and `/fonts/` hold public static files the site already serves to
 // anyone, so this grants nothing new. nginx carries the same rule for the
 // deployed tiers; this covers local dev and every offline `di` install.
-const CODE_PAGE_READABLE = /^\/(vendor|fonts)\//
+// draco/, basis/ and unicode-fonts/ joined the list on 2026-09-09, measured on
+// staging: a space card's preview renders in a sandboxed frame too, and the
+// Draco decoder it fetches to open a compressed model is a CORS-mode request —
+// "Cross-Origin Request Blocked … /draco/draco_wasm_wrapper.js" on /spaces,
+// which shows as a card that never paints its model rather than as an error
+// anyone would see. Same reasoning as the other two: public static files the
+// site already serves to anyone.
+const CODE_PAGE_READABLE = /^\/(vendor|fonts|draco|basis|unicode-fonts)\//
 // express.static calls setHeaders(res, filePath, stat) — there is no request
 // argument. An earlier version took a third parameter as the request, read the
 // stat object instead, fell through to the absolute file path and matched
