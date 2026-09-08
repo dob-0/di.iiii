@@ -11,11 +11,15 @@ export const APP_PAGE_PREFERENCES_ALIASES = [
 export const APP_PAGE_WIKI = 'wiki'
 export const APP_PAGE_PRIVACY = 'privacy'
 export const APP_PAGE_TERMS = 'terms'
+// The workshop — /tools (src/tools/ToolsRoom.jsx). The one address that leads to
+// every other tool, so it must not be takeable by a space.
+export const APP_PAGE_TOOLS = 'tools'
 export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
     APP_PAGE_WIKI,
     APP_PAGE_PRIVACY,
     APP_PAGE_TERMS,
+    APP_PAGE_TOOLS,
     'beta',
     'raw',
     'seed',
@@ -111,6 +115,12 @@ export const isPreferencesPageSegment = (value = '') => APP_PAGE_PREFERENCES_ALI
 export const isWikiPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_WIKI
 export const isPrivacyPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_PRIVACY
 export const isTermsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TERMS
+export const isToolsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TOOLS
+
+export const buildToolsPath = () => {
+    const prefix = getAppBasePrefix()
+    return `${prefix}/${APP_PAGE_TOOLS}`.replace(/\/{2,}/g, '/')
+}
 
 export const buildWikiPath = () => {
     const prefix = getAppBasePrefix()
@@ -153,6 +163,12 @@ export const getAppLocationState = (locationLike = null) => {
         if (isTermsPageSegment(segment)) {
             return {
                 page: APP_PAGE_TERMS,
+                spaceId: null
+            }
+        }
+        if (isToolsPageSegment(segment)) {
+            return {
+                page: APP_PAGE_TOOLS,
                 spaceId: null
             }
         }

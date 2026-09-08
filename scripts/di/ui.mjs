@@ -42,11 +42,29 @@ export const warn = (message = '') => { process.stderr.write(`${style.yellow(mes
 export const fail = (message = '') => { process.stderr.write(`${style.red(message)}\n`) }
 
 export const ui = {
-    running: (url, spaces) => [
-        `di.iiii is running.  ${style.cyan(url)}`,
-        spaces?.length ? style.dim(`your spaces: ${spaces.join(', ')}`) : null,
-        style.dim(`stop it with: ${CMD} down`)
-    ].filter(Boolean).join('\n'),
+    // What a start prints. It used to be three lines — the address, six space
+    // ids and how to stop — and everything else di.iiii can do was a thing you
+    // had to already know: the tools room, the lighting desk, the wiki, and
+    // above all that phones in the room need `--lan`. A person who has just
+    // typed `di up` is exactly the person who does not know those, so they are
+    // printed once, here, plainly.
+    running: (url, spaces, { spaceCount = null, lan = false } = {}) => {
+        const door = (word, path, note) => `  ${style.cyan(word.padEnd(8))}${`${url}${path}`.padEnd(34)}${style.dim(note)}`
+        const spacesNote = spaceCount === null
+            ? (spaces?.length ? spaces.join(', ') : 'your spaces')
+            : `${spaceCount} ${spaceCount === 1 ? 'space' : 'spaces'}${spaces?.length ? ` — ${spaces.slice(0, 4).join(', ')}…` : ''}`
+        return [
+            `di.iiii is running.  ${style.cyan(url)}`,
+            '',
+            door('tools', '/tools', 'every tool, in one room'),
+            door('spaces', '/spaces', spacesNote),
+            door('light', '/light/', 'the lighting desk — output off until you say so'),
+            door('wiki', '/wiki', 'how all of it works'),
+            '',
+            lan ? null : style.dim(`phones in the room cannot reach this — ${CMD} down, then ${CMD} up --lan`),
+            style.dim(`${CMD} help for the rest · ${CMD} down to stop`)
+        ].filter(value => value !== null).join('\n')
+    },
 
     alreadyRunning: (url, reach = null, wantedLan = false) => [
         `already running — ${style.cyan(url)}${reach ? style.dim(`  ${reach.lan ? 'on this network too' : 'this machine only'}`) : ''}`,

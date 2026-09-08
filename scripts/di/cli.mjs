@@ -85,14 +85,19 @@ const openBrowser = (url) => {
     }
 }
 
-const spaceNames = async (port) => {
+const spaceNames = async (port) => (await spaceSummary(port)).names
+
+// The names AND how many there are: the start card says "20 spaces — main,
+// open, …", which a truncated list of six alone cannot say.
+const spaceSummary = async (port) => {
     try {
         const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`)
-        if (!response.ok) return []
+        if (!response.ok) return { names: [], count: null }
         const body = await response.json()
-        return (body?.spaces || []).map(space => space.id).slice(0, 6)
+        const all = body?.spaces || []
+        return { names: all.map(space => space.id).slice(0, 6), count: all.length }
     } catch {
-        return []
+        return { names: [], count: null }
     }
 }
 
@@ -136,7 +141,8 @@ const cmdUp = async (args) => {
     }
     await writeEnv(home, { PORT: String(port) })
 
-    say(ui.running(localUrl(port), await spaceNames(port)))
+    const summary = await spaceSummary(port)
+    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan }))
     if (lan) say(ui.onThisNetwork(probeLanAddresses().map(({ iface, address }) => ({ iface, url: lanUrl(address, port) }))))
     if (!args.flags['no-open']) openBrowser(localUrl(port))
     await noticeNewVersion(home)

@@ -25,7 +25,7 @@ import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
-import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
 // The jam as a place you stand in. Its own chunk: it reaches three.js through
@@ -36,6 +36,7 @@ const JamSurface = lazy(() => import('./project/components/JamSurface.jsx'))
 const MakeSurface = lazy(() => import('./make/MakeSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
+const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 
 // The space `/` opens. Kept in step with GridFloorBackground's PREFERRED_SPACE_ID
@@ -424,6 +425,17 @@ function AppRouter() {
 
     // Top-level /privacy and /terms for now — may need to move under the /-/
     // namespace once SPEC_url_architecture_and_tree_addressing.md is signed off.
+    // `/tools` — the workshop (src/tools/ToolsRoom.jsx): the room the other
+    // tools are reached from. A plain top-level page like the wiki, and open on
+    // the same terms — it names doors, it opens no space.
+    if (appState.page === APP_PAGE_TOOLS) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <ToolsRoom isLocalInstall={localInstall.isLocal} />
+            </Suspense>
+        )
+    }
+
     if (appState.page === APP_PAGE_PRIVACY) {
         return (
             <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
@@ -445,6 +457,7 @@ function AppRouter() {
         && appState.page !== APP_PAGE_WIKI
         && appState.page !== APP_PAGE_PRIVACY
         && appState.page !== APP_PAGE_TERMS
+        && appState.page !== APP_PAGE_TOOLS
 
     if (isRootLanding) {
         // ?tour=1 keeps the landing reachable on a local install, where `/` is

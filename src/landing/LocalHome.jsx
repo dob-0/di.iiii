@@ -46,6 +46,7 @@ export default function LocalHome() {
                     </>
                 )}
                 <span className="lh-doors">
+                    <a href="/tools">Tools</a>
                     <a href="/studio">Studio</a>
                     <a href="/raw">Raw</a>
                     <a href="/wiki">Wiki</a>
