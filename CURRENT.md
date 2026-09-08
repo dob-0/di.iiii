@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Production, asked for twice
+- every tool got a door, the install got a padlocked name, and a space can now live on two machines at once
 
 Full detail: `PROGRESS.md`.
 
