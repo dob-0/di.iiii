@@ -48,14 +48,14 @@ import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
     currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    lanUrl, localUrl, nameUrl, readCert, readState, resolvePort, writeEnv, writeState
+    ensureGuestSecrets, lanUrl, localUrl, nameUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
 import { buildSyncAudit } from './sync-plan.mjs'
 import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
 import { parseArgs } from './args.mjs'
-import { CMD, fail, say, style, ui } from './ui.mjs'
+import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 
 const HOME = () => {
     const override = String(process.env.DI_HOME || '').trim()
@@ -90,9 +90,13 @@ const spaceNames = async (port) => (await spaceSummary(port)).names
 
 // The names AND how many there are: the start card says "20 spaces — main,
 // open, …", which a truncated list of six alone cannot say.
-const spaceSummary = async (port, base = null) => {
+const spaceSummary = async (port, base = null, token = null) => {
     try {
-        const response = await fetch(`${base || localUrl(port)}/serverXR/api/spaces`)
+        // With guests on, the CLI's own request arrives like any other and would
+        // be counted as one: it asks with the install's admin token so the card
+        // reports the owner's estate, not the public half of it.
+        const response = await fetch(`${base || localUrl(port)}/serverXR/api/spaces`,
+            token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
         if (!response.ok) return { names: [], count: null }
         const body = await response.json()
         const all = body?.spaces || []
@@ -127,6 +131,15 @@ const cmdUp = async (args) => {
     // person typing it tonight, and tomorrow's `di up` is loopback again.
     const lan = Boolean(args.flags.lan)
 
+    // `--guests` is the difference between "my friends are working with me" and
+    // "I can leave this open in a room". Off, a LAN start hands every visitor
+    // the owner's whole estate — every space, every delete button, the admin
+    // page. On, a visitor arrives as a guest exactly as they would on the
+    // hosted site: their own sandbox and the open space, editor there and
+    // nowhere else. Per start, like --lan, and pointless without it.
+    const guests = Boolean(args.flags.guests)
+    if (guests && !lan) warn(ui.guestsWithoutLan())
+
     // Refused before the already-running check, or a running docker install
     // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
@@ -134,7 +147,8 @@ const cmdUp = async (args) => {
 
     say(ui.starting())
     try {
-        await runner.start({ home, port, host: lan ? '0.0.0.0' : '127.0.0.1', verbose: Boolean(args.flags.verbose) })
+        if (guests) await ensureGuestSecrets(home)
+        await runner.start({ home, port, host: lan ? '0.0.0.0' : '127.0.0.1', guests, verbose: Boolean(args.flags.verbose) })
     } catch (error) {
         fail(String(error.message || error))
         process.exitCode = 1
@@ -157,7 +171,11 @@ const cmdUp = async (args) => {
         await updateRoomName(home, cert.name, lan ? probeLanAddresses()[0]?.address : '127.0.0.1')
     }
 
-    const summary = await spaceSummary(port, cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : null)
+    const summary = await spaceSummary(
+        port,
+        cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : null,
+        guests ? readEnv(home).ADMIN_API_TOKEN : null
+    )
 
     // ONE address, if the machine can hold one. `di.local` is published over
     // mDNS for this start, and it is the same word on this laptop and on a
@@ -188,7 +206,8 @@ const cmdUp = async (args) => {
             addresses.map(({ iface, address }) => ({ iface, url: lanUrl(address, port, cert ? 'https' : 'http') })),
             // One name, already pointed at this machine's address on tonight's
             // wifi, so the phones type exactly what the laptop types.
-            cert ? prettyUrl : (named ? nameUrl(named, port) : null)
+            cert ? prettyUrl : (named ? nameUrl(named, port) : null),
+            guests
         ))
     }
     if (!args.flags['no-open']) openBrowser(prettyUrl || localUrl(port))

@@ -8,7 +8,7 @@
  */
 
 import fs from 'node:fs'
-import { X509Certificate } from 'node:crypto'
+import { randomBytes, X509Certificate } from 'node:crypto'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 
@@ -51,6 +51,24 @@ export const readEnv = (home) => {
         out[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim()
     }
     return out
+}
+
+/**
+ * The two secrets guest mode needs, minted once and kept in di.env.
+ *
+ * With auth on, the server wants a key to sign session cookies with and at
+ * least one identity to call an admin. A personal install has no accounts and
+ * nobody to hand a password to, so di mints both itself: random, local, never
+ * printed, never sent anywhere. Already there means already right — regenerating
+ * them would sign out every guest mid-evening.
+ */
+export const ensureGuestSecrets = async (home) => {
+    const env = readEnv(home)
+    const patch = {}
+    if (!env.AUTH_SESSION_SECRET) patch.AUTH_SESSION_SECRET = randomBytes(32).toString('hex')
+    if (!env.ADMIN_API_TOKEN) patch.ADMIN_API_TOKEN = randomBytes(24).toString('hex')
+    if (Object.keys(patch).length) await writeEnv(home, patch)
+    return { ...env, ...patch }
 }
 
 export const writeEnv = async (home, patch = {}) => {

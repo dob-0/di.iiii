@@ -7,6 +7,7 @@ const cors = require('cors')
 const morgan = require('morgan')
 const multer = require('multer')
 const fs = require('node:fs')
+const { isOwnerAtTheMachine } = require('./localOwner')
 const path = require('node:path')
 const crypto = require('node:crypto')
 const { initDb } = require('./db')
@@ -574,7 +575,32 @@ const getAuthState = (req) => {
   return sessionState
 }
 
+// The person sitting at the machine, on a personal install, is the owner —
+// even when auth is on for everyone else.
+//
+// `di up --guests` exists so a room can be handed a link without being handed
+// the owner's estate: a visitor arrives as a guest with their own sandbox and
+// the open space, which is exactly what the hosted product already gives them.
+// Without this rule the owner would get the same thing on their own laptop —
+// locked out of their own spaces, with no account to sign in to, because a
+// local install has no accounts by design.
+//
+// So loopback, on an install that says it is local, is the owner. Same rule and
+// same reasoning as the operator-only agent board (routes/agentBoardRoutes.js):
+// a request arriving over the loopback interface came from this machine, and
+// `di up` puts no proxy in front of itself. Everyone on the network arrives as
+// a guest, which is the entire point of the mode.
 const getPublicAuthState = (req) => {
+  if (config.requireAuth && isOwnerAtTheMachine(req)) {
+    return buildAuthState({
+      authenticated: true,
+      type: 'session',
+      role: 'admin',
+      subject: 'local-owner',
+      label: 'This machine',
+      isUnrestricted: true
+    })
+  }
   if (!config.requireAuth) {
     return buildAuthState({
       authenticated: true,

@@ -86,15 +86,26 @@ export const ui = {
     // With a name published there is nothing left to say about addresses — the
     // card already printed the one everyone types. The numbers stay, dimmed,
     // for the phone whose resolver does not do mDNS.
-    onThisNetwork: (urls, namedUrl = null) => [
+    onThisNetwork: (urls, namedUrl = null, guests = false) => [
         urls.length
             ? [namedUrl ? style.dim('if a phone cannot find that name:') : 'on this network:',
                 ...urls.map(({ url, iface }) => `  ${namedUrl ? style.dim(url) : style.cyan(url)}  ${style.dim(`(${iface})`)}`)].join('\n')
             : 'on this network:  no address yet — join a wifi or a hotspot and it answers there too.',
-        style.yellow(`anyone on this network can open and edit it — auth is off. ${CMD} down when the room is done.`)
+        guests
+            ? ui.guestsOn()
+            : style.yellow(`anyone on this network can open and edit it — auth is off. ${CMD} down when the room is done.`)
     ].filter(Boolean).join('\n'),
 
     lanNotInDocker: () => '--lan is not available in docker mode — that install answers on this machine only.',
+
+    guestsWithoutLan: () => `--guests only matters with --lan: on a loopback start nobody else can reach this. Try: ${CMD} up --lan --guests`,
+
+    // Said in place of the "anyone can edit it" warning, because it is the
+    // opposite fact and the room deserves to hear which one is true tonight.
+    guestsOn: () => [
+        'visitors arrive as guests: their own room and the open space, and nothing of yours.',
+        style.dim(`you, on this machine, stay the owner — no sign-in. ${CMD} down when the room is done.`)
+    ].join('\n'),
 
     // What `status` and `where` say about the bind in force. Asked of the
     // running server, never remembered: `--lan` is per start.
@@ -337,6 +348,7 @@ export const ui = {
         '',
         style.dim('  --port N     run somewhere other than 4000'),
         style.dim('  --lan        answer on this wifi too, for phones in the room — anyone on it can edit'),
+        style.dim('  --guests     with --lan: visitors get their own room, not yours'),
         style.dim('  --verbose    show the docker/npm/node underneath'),
         ''
     ].join('\n')

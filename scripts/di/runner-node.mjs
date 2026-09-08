@@ -49,7 +49,7 @@ const pidAlive = (pid) => {
 
 export const isRunning = (home) => pidAlive(readPid(home))
 
-export const start = async ({ home, port, host = '127.0.0.1', verbose = false }) => {
+export const start = async ({ home, port, host = '127.0.0.1', guests = false, verbose = false }) => {
     const p = paths(home)
     const versionDir = currentVersionDir(home)
     if (!versionDir) throw new Error('not installed')
@@ -90,7 +90,17 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
             // what makes it usable without an account; the loopback bind
             // above — the default — is what keeps that from meaning "the café
             // can edit it", and `--lan` says the opposite out loud first.
-            REQUIRE_AUTH: 'false',
+            //
+            // `--guests` turns it on for everyone EXCEPT the person at the
+            // machine: the server reads a loopback request on a DI_LOCAL
+            // install as the owner (serverXR getPublicAuthState), so the owner
+            // never meets a sign-in card on their own laptop, and everyone on
+            // the network arrives as a guest with their own sandbox.
+            REQUIRE_AUTH: guests ? 'true' : 'false',
+            // Session cookies marked Secure are dropped by the browser over
+            // plain http — which is every guest, on an install with no
+            // certificate. Follow the certificate, not NODE_ENV.
+            AUTH_SESSION_COOKIE_SECURE: cert ? 'true' : 'false',
             NODE_ENV: 'production',
             // NODE_ENV=production would otherwise close the local-operator
             // gate (agent board, local claude chat, the model on this box) on
