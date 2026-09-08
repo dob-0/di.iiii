@@ -151,7 +151,12 @@ export default function ToolsRoom({ isLocalInstall = false }) {
             <div className="tr-page">
                 <h1 className="tr-title">Tools</h1>
                 <p className="tr-lede">
-                    Everything di.iiii can do, in one place. Each opens on this machine — nothing here reaches the internet.
+                    {isLocalInstall
+                        // True on an install and false on the hosted tiers, where
+                        // this same screen was telling a visitor to staging that
+                        // nothing reaches the internet — from a page served over it.
+                        ? 'Everything di.iiii can do, in one place. Each opens on this machine — nothing here reaches the internet.'
+                        : 'Everything di.iiii can do, in one place. Some of it — the lighting desk, the sessions desk — only exists on a di.iiii running on your own machine.'}
                 </p>
 
                 <div className="tr-groups">
