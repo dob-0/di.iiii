@@ -43,6 +43,9 @@ export const paths = (home = diHome()) => ({
     serverLog: path.join(home, 'logs', 'server.log'),
     run: path.join(home, 'run'),
     pidFile: path.join(home, 'run', 'server.pid'),
+    // The mDNS publisher that gives the room a name to type instead of an IP.
+    // Beside the server's pid for the same reason: `di down` has to end both.
+    namePidFile: path.join(home, 'run', 'name.pid'),
     credentials: path.join(home, 'credentials.json'),
     // Taken automatically before an update that moves the schema, because
     // `--rollback` restores the app and an update moves more than the app.

@@ -42,7 +42,8 @@ import {
     stageVersion
 } from './install.mjs'
 import { isWindows, paths } from './paths.mjs'
-import { probeAll, probeHealth, probeLanAddresses, probeListen } from './probe.mjs'
+import { probeAll, probeCanPublishName, probeHealth, probeLanAddresses, probeListen, probePrettyLocalName } from './probe.mjs'
+import { publishName, stopName } from './name.mjs'
 import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
@@ -142,8 +143,19 @@ const cmdUp = async (args) => {
     await writeEnv(home, { PORT: String(port) })
 
     const summary = await spaceSummary(port)
-    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan }))
-    if (lan) say(ui.onThisNetwork(probeLanAddresses().map(({ iface, address }) => ({ iface, url: lanUrl(address, port) }))))
+    const prettyLocal = await probePrettyLocalName(port)
+    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl: prettyLocal ? `http://${prettyLocal}:${port}` : null }))
+    if (lan) {
+        const addresses = probeLanAddresses()
+        // One word beats four numbers when it is read out to a room. Published
+        // for this start only, and only when the machine can — the addresses
+        // are printed either way.
+        const named = await probeCanPublishName() ? await publishName(home, addresses[0]?.address) : null
+        say(ui.onThisNetwork(
+            addresses.map(({ iface, address }) => ({ iface, url: lanUrl(address, port) })),
+            named ? `http://${named}:${port}` : null
+        ))
+    }
     if (!args.flags['no-open']) openBrowser(localUrl(port))
     await noticeNewVersion(home)
 }
@@ -190,6 +202,7 @@ const cmdDown = async () => {
     if (!requireInstalled(home)) return
     const runner = runnerFor(home)
     const was = await runner.stop({ home })
+    await stopName(home)
     say(was ? ui.stopped(runner.describe(home).dataDir) : ui.notRunning())
 }
 

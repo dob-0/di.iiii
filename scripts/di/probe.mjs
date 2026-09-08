@@ -192,3 +192,29 @@ export const probeAll = async ({ home, forcedMode = null } = {}) => {
 }
 
 export { NODE_FLOOR, parseVersion, satisfiesFloor }
+
+/**
+ * A name to type instead of an address.
+ *
+ * Two of them, and neither needs a root password or a file in /etc:
+ *
+ *   di.localhost — this machine only. Every current browser and every resolver
+ *     that follows RFC 6761 sends *.localhost to loopback, but "every" is not
+ *     "all", so it is asked before it is printed. A pretty address that does
+ *     not answer is worse than an ugly one that does.
+ *
+ *   di.local — the room. Published over mDNS by avahi-publish, which any Linux
+ *     desktop with avahi running can do as an ordinary user; phones resolve it
+ *     natively. Only offered with --lan: putting a name on the network is a
+ *     network act, and the loopback default is nobody's business but this
+ *     machine's.
+ */
+export const probePrettyLocalName = async (port, name = 'di.localhost') => {
+    const answered = await probeHealth(port, name)
+    return answered ? name : null
+}
+
+export const probeCanPublishName = async () => quiet(async () => {
+    await execFileAsync('avahi-publish', ['--version'], { timeout: NET_TIMEOUT_MS })
+    return true
+}, false)

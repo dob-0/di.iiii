@@ -48,13 +48,15 @@ export const ui = {
     // above all that phones in the room need `--lan`. A person who has just
     // typed `di up` is exactly the person who does not know those, so they are
     // printed once, here, plainly.
-    running: (url, spaces, { spaceCount = null, lan = false } = {}) => {
-        const door = (word, path, note) => `  ${style.cyan(word.padEnd(8))}${`${url}${path}`.padEnd(34)}${style.dim(note)}`
+    running: (url, spaces, { spaceCount = null, lan = false, prettyUrl = null } = {}) => {
+        const base = prettyUrl || url
+        const door = (word, path, note) => `  ${style.cyan(word.padEnd(8))}${`${base}${path}`.padEnd(34)}${style.dim(note)}`
         const spacesNote = spaceCount === null
             ? (spaces?.length ? spaces.join(', ') : 'your spaces')
             : `${spaceCount} ${spaceCount === 1 ? 'space' : 'spaces'}${spaces?.length ? ` — ${spaces.slice(0, 4).join(', ')}…` : ''}`
         return [
-            `di.iiii is running.  ${style.cyan(url)}`,
+            `di.iiii is running.  ${style.cyan(prettyUrl || url)}`,
+            prettyUrl ? style.dim(`  ${url} answers too`) : null,
             '',
             door('tools', '/tools', 'every tool, in one room'),
             door('spaces', '/spaces', spacesNote),
@@ -76,12 +78,15 @@ export const ui = {
     // `--lan`. The room can open it, and with auth off the room can edit it —
     // said once, plainly, on every such start, because nothing writes the flag
     // down and nobody should inherit it by accident.
-    onThisNetwork: (urls) => [
+    onThisNetwork: (urls, namedUrl = null) => [
+        namedUrl
+            ? `for the phones in the room:  ${style.cyan(namedUrl)}${style.dim('   — that name, typed as it is')}`
+            : null,
         urls.length
-            ? ['on this network:', ...urls.map(({ url, iface }) => `  ${style.cyan(url)}  ${style.dim(`(${iface})`)}`)].join('\n')
+            ? [namedUrl ? style.dim('or by address:') : 'on this network:', ...urls.map(({ url, iface }) => `  ${style.cyan(url)}  ${style.dim(`(${iface})`)}`)].join('\n')
             : 'on this network:  no address yet — join a wifi or a hotspot and it answers there too.',
         style.yellow(`anyone on this network can open and edit it — auth is off. ${CMD} down when the room is done.`)
-    ].join('\n'),
+    ].filter(Boolean).join('\n'),
 
     lanNotInDocker: () => '--lan is not available in docker mode — that install answers on this machine only.',
 

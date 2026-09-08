@@ -73,7 +73,12 @@ describe('what `di up --lan` does', () => {
     })
 
     it('prints the addresses and exactly one warning that the room can edit', () => {
-        expect(up).toContain('if (lan) say(ui.onThisNetwork(')
+        // The addresses are printed under --lan and nowhere else. Asserted as a
+        // shape, not as one line of source: the block also publishes the mDNS
+        // name now, and a guard that pins formatting fails on every rewrite
+        // that keeps the rule.
+        expect(up).toMatch(/if \(lan\)[\s\S]{0,600}ui\.onThisNetwork\(/)
+        expect(up.split('ui.onThisNetwork(').length - 1).toBe(1)
         const warning = 'anyone on this network can open and edit it — auth is off.'
         expect(ui.split(warning).length - 1).toBe(1)
         expect(ui).toContain("no address yet — join a wifi or a hotspot")
