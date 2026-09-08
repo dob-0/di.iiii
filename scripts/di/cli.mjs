@@ -409,7 +409,7 @@ const cmdSave = async (args) => {
  * — or, when the cap trips mid-stream, drops the connection before any answer
  * — so both come back as `tooLarge` and the caller takes the path with no cap.
  */
-const openThroughServer = async ({ port, file, as }) => {
+const openThroughServer = async ({ home, port, file, as }) => {
     const form = new FormData()
     form.append('bundle', await fs.openAsBlob(file), path.basename(file))
     if (as) form.append('as', as)
@@ -441,7 +441,7 @@ const cmdOpenFile = async (args, file) => {
     // --force, because the space being replaced may be open in one of those
     // tabs; and a file the server will not take over the wire.
     if (wasRunning && !args.flags.force) {
-        const result = await openThroughServer({ port, file: resolved, as: args.flags.as })
+        const result = await openThroughServer({ home, port, file: resolved, as: args.flags.as })
         if (result.ok) {
             const opened = result.spaceId || named
             say(ui.opened(opened, `${publicUrl(home, port)}/${opened}`))
