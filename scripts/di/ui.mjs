@@ -56,7 +56,7 @@ export const ui = {
             : `${spaceCount} ${spaceCount === 1 ? 'space' : 'spaces'}${spaces?.length ? ` — ${spaces.slice(0, 4).join(', ')}…` : ''}`
         return [
             `di.iiii is running.  ${style.cyan(prettyUrl || url)}`,
-            prettyUrl ? style.dim(`  ${url} answers too`) : null,
+            prettyUrl ? style.dim(`  one address, here and on the phones. ${url} answers too.`) : null,
             '',
             door('tools', '/tools', 'every tool, in one room'),
             door('spaces', '/spaces', spacesNote),
@@ -78,12 +78,13 @@ export const ui = {
     // `--lan`. The room can open it, and with auth off the room can edit it —
     // said once, plainly, on every such start, because nothing writes the flag
     // down and nobody should inherit it by accident.
+    // With a name published there is nothing left to say about addresses — the
+    // card already printed the one everyone types. The numbers stay, dimmed,
+    // for the phone whose resolver does not do mDNS.
     onThisNetwork: (urls, namedUrl = null) => [
-        namedUrl
-            ? `for the phones in the room:  ${style.cyan(namedUrl)}${style.dim('   — that name, typed as it is')}`
-            : null,
         urls.length
-            ? [namedUrl ? style.dim('or by address:') : 'on this network:', ...urls.map(({ url, iface }) => `  ${style.cyan(url)}  ${style.dim(`(${iface})`)}`)].join('\n')
+            ? [namedUrl ? style.dim('if a phone cannot find that name:') : 'on this network:',
+                ...urls.map(({ url, iface }) => `  ${namedUrl ? style.dim(url) : style.cyan(url)}  ${style.dim(`(${iface})`)}`)].join('\n')
             : 'on this network:  no address yet — join a wifi or a hotspot and it answers there too.',
         style.yellow(`anyone on this network can open and edit it — auth is off. ${CMD} down when the room is done.`)
     ].filter(Boolean).join('\n'),

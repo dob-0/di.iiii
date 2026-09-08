@@ -143,20 +143,29 @@ const cmdUp = async (args) => {
     await writeEnv(home, { PORT: String(port) })
 
     const summary = await spaceSummary(port)
-    const prettyLocal = await probePrettyLocalName(port)
-    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl: prettyLocal ? nameUrl(prettyLocal, port) : null }))
+
+    // ONE address, if the machine can hold one. `di.local` is published over
+    // mDNS for this start, and it is the same word on this laptop and on a
+    // phone in the room — so the card leads with it and everything else becomes
+    // the fallback nobody has to read out. Without avahi (or without --lan,
+    // where putting a name on the network would be a lie) we try di.localhost,
+    // which costs nothing and is asked before it is printed, and failing that
+    // we print localhost like we always did.
+    const addresses = lan ? probeLanAddresses() : []
+    const named = lan && await probeCanPublishName()
+        ? await publishName(home, addresses[0]?.address)
+        : null
+    const pretty = named || (named ? null : await probePrettyLocalName(port))
+    const prettyUrl = pretty ? nameUrl(pretty, port) : null
+
+    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl }))
     if (lan) {
-        const addresses = probeLanAddresses()
-        // One word beats four numbers when it is read out to a room. Published
-        // for this start only, and only when the machine can — the addresses
-        // are printed either way.
-        const named = await probeCanPublishName() ? await publishName(home, addresses[0]?.address) : null
         say(ui.onThisNetwork(
             addresses.map(({ iface, address }) => ({ iface, url: lanUrl(address, port) })),
             named ? nameUrl(named, port) : null
         ))
     }
-    if (!args.flags['no-open']) openBrowser(localUrl(port))
+    if (!args.flags['no-open']) openBrowser(prettyUrl || localUrl(port))
     await noticeNewVersion(home)
 }
 
