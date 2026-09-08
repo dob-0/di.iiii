@@ -2174,7 +2174,27 @@ initStorage()
 
     initializeMesh(httpServer, config)
 
+    // Spaces this install follows on another di.iiii (serverXR/src/follow).
+    // Started after listen, never before: a follower reaches this server over
+    // its own HTTP routes, so there has to be a server to reach.
+    const startFollowsWhenUp = () => {
+      try {
+        const { startFollows } = require('./follow')
+        startFollows({
+          dataDir: config.directories.dataDir,
+          port: PORT,
+          basePath: config.basePath || '/serverXR',
+          selfToken: config.internalApiToken || null,
+          log: logger
+        })
+      } catch (error) {
+        // A room that cannot be followed is still a room. Never fatal.
+        logger.warn(`[follow] not started: ${error.message || error}`)
+      }
+    }
+
     httpServer.listen(PORT, config.host, () => {
+      startFollowsWhenUp()
       pushEvent('server-started', {
         port: PORT,
         host: config.host,

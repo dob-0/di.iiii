@@ -98,6 +98,56 @@ export const ui = {
 
     lanNotInDocker: () => '--lan is not available in docker mode — that install answers on this machine only.',
 
+    // ── one space, two installs ───────────────────────────────────────────
+    // The words a person reads off one laptop and types into another. The key
+    // is shown once and belongs to that space alone.
+    invited: (spaceId, url, key) => [
+        `${style.cyan(spaceId)} is open to one other di.iiii.`,
+        '',
+        'on their machine:',
+        `  ${style.cyan(`${CMD} follow ${spaceId} --from ${url} --key ${key}`)}`,
+        '',
+        style.dim('that key opens this space and nothing else, and you can take it back:'),
+        style.dim(`  ${CMD} invite ${spaceId} --revoke`)
+    ].join('\n'),
+
+    inviteRefused: (spaceId, reason) => [
+        `could not open ${spaceId} to anyone.`,
+        style.dim(reason ? String(reason) : 'the server refused, and said nothing about why.')
+    ].join('\n'),
+
+    checkingFollow: () => style.dim('looking for that di.iiii…'),
+
+    followRefused: (reason, where) => ({
+        unreachable: `nothing answers at ${where} — check the address, and that both machines are on the same wifi.`,
+        missing: 'that di.iiii has no space by that name.',
+        denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
+        'local-space': 'this install could not make room for it — is di.iiii running here?'
+    }[reason] || `could not follow ${where}.`),
+
+    following: (spaceId, remote, running) => [
+        `following ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}.`,
+        style.dim('edits travel both ways. your copy stays on your disk.'),
+        running ? null : style.dim(`start it to begin: ${CMD} up`)
+    ].filter(Boolean).join('\n'),
+
+    followList: (follows, live) => {
+        const ids = Object.keys(follows || {})
+        if (!ids.length) return `this di.iiii follows nothing. ${style.dim(`${CMD} follow <space> --from <url> --key <key>`)}`
+        const byId = new Map((live || []).map(entry => [entry.spaceId, entry]))
+        return ids.map((id) => {
+            const entry = follows[id]
+            const state = byId.get(id)
+            const where = String(entry.remote || '').replace(/\/serverXR$/, '')
+            if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
+            const moving = `in ${state.carriedIn} · out ${state.carriedOut}`
+            return `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
+        }).join('\n')
+    },
+
+    unfollowed: (spaceId) => `no longer following ${spaceId}. ${style.dim('your copy stays exactly as it is.')}`,
+    notFollowing: (spaceId) => `this di.iiii was not following ${spaceId}.`,
+
     guestsWithoutLan: () => `--guests only matters with --lan: on a loopback start nobody else can reach this. Try: ${CMD} up --lan --guests`,
 
     // Said in place of the "anyone can edit it" warning, because it is the

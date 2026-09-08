@@ -7,6 +7,23 @@ function registerStatusRoutes(router, {
   startedAt,
   releaseInfo
 }) {
+  // What this install is following on other di.iiii, and whether the ops are
+  // moving. Read-only and loopback-only: it names other machines and is nobody
+  // else's business, least of all a visitor's.
+  router.get('/api/follows', (req, res) => {
+    const address = req.socket?.remoteAddress || ''
+    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address)) {
+      res.status(404).json({ error: 'not found' })
+      return
+    }
+    try {
+      const { followStates } = require('../follow')
+      res.json({ follows: followStates() })
+    } catch {
+      res.json({ follows: [] })
+    }
+  })
+
   router.get('/api/health', (req, res) => {
     const memory = process.memoryUsage()
     res.json({

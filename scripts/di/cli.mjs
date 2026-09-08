@@ -54,6 +54,8 @@ import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
 import { buildSyncAudit } from './sync-plan.mjs'
 import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
+import { checkFollowable, createLocalSpace, mintInvite, resolveBase } from './share.mjs'
+import { addFollow, readFollows, removeFollow } from './follows.mjs'
 import { parseArgs } from './args.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 
@@ -857,8 +859,102 @@ const cmdMcp = async (args) => {
 
 // ── routing ───────────────────────────────────────────────────────────────
 
+/**
+ * `di invite <space>` — hand one space to another artist's di.iiii.
+ *
+ * Prints the single line they type on their machine. The key is per-space,
+ * editor-scoped and revocable; it is shown once, here, and not written into
+ * anything this install would ever hand out.
+ */
+const cmdInvite = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const spaceId = args._[1]
+    if (!spaceId) { fail(`which space? — ${CMD} invite my-space`); process.exitCode = 1; return }
+
+    const port = resolvePort(home)
+    const cert = readCert(home)
+    const base = `${cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : localUrl(port)}/serverXR`
+    if (!await probeHealth(port, cert ? cert.name : '127.0.0.1', '/serverXR', cert ? 'https' : 'http')) {
+        fail(`${CMD} is not running — start it first: ${CMD} up --lan`)
+        process.exitCode = 1
+        return
+    }
+
+    const minted = await mintInvite({ base, spaceId, token: readEnv(home).ADMIN_API_TOKEN || null, label: 'follow' })
+    if (!minted.ok) {
+        fail(ui.inviteRefused(spaceId, minted.reason))
+        process.exitCode = 1
+        return
+    }
+    say(ui.invited(spaceId, base.replace(/\/serverXR$/, ''), minted.key))
+}
+
+/**
+ * `di follow <space> --from <url> --key <key>` — join a space that lives on
+ * another di.iiii. Both sides keep the whole work; the edits travel.
+ */
+const cmdFollow = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const spaceId = args._[1]
+    const from = args.flags.from
+    const key = args.flags.key
+    if (!spaceId || !from) {
+        fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
+        process.exitCode = 1
+        return
+    }
+
+    say(ui.checkingFollow())
+    const base = await resolveBase(from)
+    if (!base) { fail(ui.followRefused('unreachable', from)); process.exitCode = 1; return }
+
+    const check = await checkFollowable({ base, spaceId, key })
+    if (!check.ok) { fail(ui.followRefused(check.reason, from)); process.exitCode = 1; return }
+
+    // The space has to exist here for the ops to land in. Created through this
+    // install's own route, so it is an ordinary space in every other way.
+    const port = resolvePort(home)
+    const selfBase = `${localUrl(port)}/serverXR`
+    const running = await probeHealth(port)
+    if (running) {
+        const made = await createLocalSpace({ base: selfBase, spaceId, token: readEnv(home).ADMIN_API_TOKEN || null })
+        if (!made.ok) { fail(ui.followRefused('local-space', from)); process.exitCode = 1; return }
+    }
+
+    await addFollow(paths(home).data, spaceId, { remote: base, token: key })
+    say(ui.following(spaceId, base, running))
+}
+
+/** `di follows` — what this install is following, and whether it is keeping up. */
+const cmdFollows = async () => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const follows = readFollows(paths(home).data)
+    const port = resolvePort(home)
+    const live = await fetch(`${localUrl(port)}/serverXR/api/follows`)
+        .then(response => (response.ok ? response.json() : null))
+        .catch(() => null)
+    say(ui.followList(follows, live?.follows || []))
+}
+
+/** `di unfollow <space>` — stop carrying edits. Nothing here is deleted. */
+const cmdUnfollow = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const spaceId = args._[1]
+    if (!spaceId) { fail(`which space? — ${CMD} unfollow their-space`); process.exitCode = 1; return }
+    const { removed } = await removeFollow(paths(home).data, spaceId)
+    say(removed ? ui.unfollowed(spaceId) : ui.notFollowing(spaceId))
+}
+
 const COMMANDS = {
     up: cmdUp,
+    invite: cmdInvite,
+    follow: cmdFollow,
+    follows: cmdFollows,
+    unfollow: cmdUnfollow,
     down: cmdDown,
     stop: cmdDown,
     status: cmdStatus,
