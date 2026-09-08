@@ -267,10 +267,30 @@ function registerProjectRoutes(router, {
       // of reading+parsing the whole retained history and filtering in JS
       // (2026-07-17 perf audit) -- this is the most frequent read of this
       // table (every catch-up/reconnect hits it).
-      const filtered = Number.isFinite(since)
+      let filtered = Number.isFinite(since)
         ? await readProjectOpsSince(spacesDir, project.spaceId, project.projectId, since)
         : await readProjectOps(spacesDir, project.spaceId, project.projectId)
-      const latestVersion = Number(project.meta?.documentVersion) || 0
+      let latestProject = project
+
+      // `?wait=<seconds>` — the same parameter, for the same reason, as on the
+      // scene ops route: a di.iiii following this one parks here rather than
+      // polling, so an edit inside a project crosses in the time one request
+      // takes. Only entered when there is nothing to send.
+      const wait = Math.min(Number(req.query.wait) || 0, 30)
+      if (wait > 0 && !filtered.length) {
+        const { waitForChange } = require('../follow/waiters')
+        const closed = new AbortController()
+        req.on('close', () => closed.abort())
+        const changed = await waitForChange(`project:${project.projectId}`, wait * 1000, { signal: closed.signal })
+        if (changed) {
+          filtered = Number.isFinite(since)
+            ? await readProjectOpsSince(spacesDir, project.spaceId, project.projectId, since)
+            : await readProjectOps(spacesDir, project.spaceId, project.projectId)
+          latestProject = (await resolveProjectContext(req.params.projectId)) || project
+        }
+      }
+
+      const latestVersion = Number(latestProject.meta?.documentVersion) || 0
       res.json({
         ops: filtered,
         latestVersion
@@ -384,6 +404,20 @@ function registerProjectRoutes(router, {
       }
       const { nextVersion, nextMeta, nextDocument, versionedOps } = result
       if (versionedOps.length) {
+        // A followed space carries its projects too: wake this install's
+        // follower, and release any di.iiii holding a read open on this
+        // project. Neither is ever fatal — an install that follows nothing has
+        // no follower to wake and nobody parked.
+        try { require('../follow').nudgeFollow(project.spaceId) } catch { /* no follows here */ }
+        try {
+          const { noteChange } = require('../follow/waiters')
+          noteChange(`project:${project.projectId}`)
+          // …and the SPACE, because a follower parks on the room's log while
+          // it waits. Without this a project edit sat until that park expired —
+          // measured at five seconds, which is five seconds of the other artist
+          // watching nothing happen.
+          noteChange(project.spaceId)
+        } catch { /* nobody waiting */ }
         await broadcastProjectLiveEvent(project.projectId, 'project-op', {
           version: nextVersion,
           ops: versionedOps

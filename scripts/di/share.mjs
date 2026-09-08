@@ -88,6 +88,28 @@ export const checkFollowable = async ({ base, spaceId, key }) => {
     return { ok: true, latestVersion: ops.payload?.latestVersion ?? null }
 }
 
+/** The identity of the di.iiii at a base — used to refuse following yourself. */
+export const instanceOf = async (base) => {
+    const health = await request(`${base}/api/health`)
+    if (!health.ok) return null
+    const { startedAt = null, port = null } = health.payload || {}
+    return `${startedAt}:${port}`
+}
+
+/** Revoke a key minted by `di invite`. */
+export const listInvites = async ({ base, spaceId, token }) => {
+    const answer = await request(`${base}/api/spaces/${encodeURIComponent(spaceId)}/sync-keys`, { token })
+    return answer.ok ? (answer.payload?.keys || []) : []
+}
+
+export const revokeInvite = async ({ base, spaceId, keyId, token }) => {
+    const answer = await request(`${base}/api/spaces/${encodeURIComponent(spaceId)}/sync-keys/${encodeURIComponent(keyId)}`, {
+        method: 'DELETE',
+        token
+    })
+    return answer.ok
+}
+
 /** Does this install already hold that space? */
 export const localSpaceExists = async ({ base, spaceId, token = null }) => {
     const answer = await request(`${base}/api/spaces/${encodeURIComponent(spaceId)}`, { token })

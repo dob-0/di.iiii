@@ -54,7 +54,7 @@ import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
 import { buildSyncAudit } from './sync-plan.mjs'
 import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
-import { checkFollowable, createLocalSpace, mintInvite, resolveBase } from './share.mjs'
+import { checkFollowable, createLocalSpace, instanceOf, listInvites, localSpaceExists, mintInvite, resolveBase, revokeInvite } from './share.mjs'
 import { addFollow, readFollows, removeFollow } from './follows.mjs'
 import { parseArgs } from './args.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
@@ -86,6 +86,14 @@ const openBrowser = (url) => {
         // A machine with no browser (a server, a bare WSL) is not an error —
         // the URL is already printed.
     }
+}
+
+/** Read a secret from the pipe, so it never appears in argv or shell history. */
+const readStdin = async () => {
+    if (process.stdin.isTTY) return ''
+    const chunks = []
+    for await (const chunk of process.stdin) chunks.push(chunk)
+    return Buffer.concat(chunks).toString('utf8')
 }
 
 const spaceNames = async (port) => (await spaceSummary(port)).names
@@ -881,7 +889,23 @@ const cmdInvite = async (args) => {
         return
     }
 
-    const minted = await mintInvite({ base, spaceId, token: readEnv(home).ADMIN_API_TOKEN || null, label: 'follow' })
+    const token = readEnv(home).ADMIN_API_TOKEN || null
+
+    // `--revoke` — the control the invite itself advertises. It was printed
+    // before it existed, which made the one promise attached to a credential
+    // handed to another person a lie.
+    if (args.flags.revoke) {
+        const keys = await listInvites({ base, spaceId, token })
+        if (!keys.length) { say(ui.noInvites(spaceId)); return }
+        let revoked = 0
+        for (const key of keys) {
+            if (await revokeInvite({ base, spaceId, keyId: key.id, token })) revoked += 1
+        }
+        say(ui.invitesRevoked(spaceId, revoked))
+        return
+    }
+
+    const minted = await mintInvite({ base, spaceId, token, label: 'follow' })
     if (!minted.ok) {
         fail(ui.inviteRefused(spaceId, minted.reason))
         process.exitCode = 1
@@ -899,7 +923,12 @@ const cmdFollow = async (args) => {
     if (!requireInstalled(home)) return
     const spaceId = args._[1]
     const from = args.flags.from
-    const key = args.flags.key
+    // A key on the command line lands in shell history and in `ps` for every
+    // other account on the machine. `--key -` reads it from the pipe, and
+    // DI_FOLLOW_KEY from the environment; the flag stays for the simple case.
+    const key = args.flags.key === '-' || args.flags.key === true
+        ? (await readStdin()).trim()
+        : (args.flags.key || String(process.env.DI_FOLLOW_KEY || '').trim() || null)
     if (!spaceId || !from) {
         fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
         process.exitCode = 1
@@ -913,11 +942,28 @@ const cmdFollow = async (args) => {
     const check = await checkFollowable({ base, spaceId, key })
     if (!check.ok) { fail(ui.followRefused(check.reason, from)); process.exitCode = 1; return }
 
-    // The space has to exist here for the ops to land in. Created through this
-    // install's own route, so it is an ordinary space in every other way.
     const port = resolvePort(home)
     const selfBase = `${localUrl(port)}/serverXR`
     const running = await probeHealth(port)
+
+    // Following yourself is a loop with no second person in it: the same server
+    // reading and writing its own log forever.
+    if (running) {
+        const [there, here] = await Promise.all([instanceOf(base), instanceOf(selfBase)])
+        if (there && here && there === here) { fail(ui.followRefused('itself', from)); process.exitCode = 1; return }
+    }
+
+    // A space of that name already here is somebody's work — `main` is the front
+    // room on every install. Wiring a stranger's log into it, and pushing its
+    // contents out to them, must be asked for out loud.
+    if (running && !args.flags.into && await localSpaceExists({ base: selfBase, spaceId, token: readEnv(home).ADMIN_API_TOKEN || null })) {
+        fail(ui.followWouldMerge(spaceId))
+        process.exitCode = 1
+        return
+    }
+
+    // The space has to exist here for the ops to land in. Created through this
+    // install's own route, so it is an ordinary space in every other way.
     if (running) {
         const made = await createLocalSpace({ base: selfBase, spaceId, token: readEnv(home).ADMIN_API_TOKEN || null })
         if (!made.ok) { fail(ui.followRefused('local-space', from)); process.exitCode = 1; return }

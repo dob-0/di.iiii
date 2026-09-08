@@ -37,9 +37,25 @@ const BATCH = 200
  * duplicate — but every op would make one pointless round trip forever, and a
  * quiet room would never stop talking.
  */
+// `replaceScene` is not an edit. It is the whole work, overwritten, and it
+// appears in the log whenever someone restores a snapshot or pulls a scene from
+// another tier. Carried across a follow it would silently make one artist's
+// copy of the room become the other's, with no snapshot and no way back — the
+// exact act syncRoutes.js exists to make deliberate and reversible. A follow
+// carries edits; a whole-scene replacement is a conversation between people.
+const WHOLE_WORK_OPS = new Set(['replaceScene', 'replaceDocument'])
+
 const unseen = (ops = [], seen = new Set()) => ops
-    .filter(op => op && op.opId && !seen.has(op.opId))
+    .filter(op => op && op.opId && !seen.has(op.opId) && !WHOLE_WORK_OPS.has(op.type))
     .slice(0, BATCH)
+
+/** Did we stop short of the end — i.e. is there more to carry right now? */
+const moreToCarry = (ops = [], seen = new Set()) => ops
+    .filter(op => op && op.opId && !seen.has(op.opId) && !WHOLE_WORK_OPS.has(op.type))
+    .length > BATCH
+
+/** Whether a batch contained a whole-work op we refused to carry. */
+const refusedWholeWork = (ops = []) => ops.some(op => WHOLE_WORK_OPS.has(op?.type))
 
 /**
  * The next move for one direction.
@@ -79,4 +95,4 @@ const nextInterval = ({ moved, current, floor = 700, ceiling = 30000 }) => {
     return Math.min(ceiling, Math.max(floor, Math.round((current || floor) * 1.6)))
 }
 
-module.exports = { BATCH, unseen, planDirection, planAfterConflict, nextInterval }
+module.exports = { BATCH, WHOLE_WORK_OPS, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval }

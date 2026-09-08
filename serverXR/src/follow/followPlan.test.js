@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-const { unseen, planDirection, planAfterConflict, nextInterval, BATCH } = require('./followPlan')
+const { unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, BATCH } = require('./followPlan')
 
 const op = (id) => ({ opId: id, type: 'updateEntity', payload: {}, version: 1 })
 
@@ -70,5 +70,25 @@ describe('how often to ask', () => {
         expect(nextInterval({ moved: false, current: 700 })).toBe(1120)
         expect(nextInterval({ moved: false, current: 25000 })).toBe(30000)
         expect(nextInterval({ moved: false, current: 30000 })).toBe(30000)
+    })
+})
+
+describe('what a follow refuses to carry', () => {
+    // A snapshot restore or a tier pull appends `replaceScene` to the log. Carried
+    // across a follow it would make one artist's copy of the room silently become
+    // the other's, with no snapshot and no way back.
+    it('never carries a whole-scene or whole-document replacement', () => {
+        const ops = [op('a'), { opId: 'wipe', type: 'replaceScene', payload: {} }, op('b')]
+        expect(unseen(ops, new Set()).map(o => o.opId)).toEqual(['a', 'b'])
+        expect(refusedWholeWork(ops)).toBe(true)
+        expect(refusedWholeWork([op('a')])).toBe(false)
+    })
+
+    it('says when there is more than one batch waiting, so the loop does not sleep on it', () => {
+        const many = Array.from({ length: BATCH + 1 }, (_, i) => op(`op${i}`))
+        expect(moreToCarry(many, new Set())).toBe(true)
+        expect(moreToCarry(many.slice(0, BATCH), new Set())).toBe(false)
+        // and what is already carried does not count towards the next batch
+        expect(moreToCarry(many, new Set(many.map(o => o.opId)))).toBe(false)
     })
 })

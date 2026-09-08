@@ -21,9 +21,16 @@ const os = require('node:os')
 
 const LOOPBACK = ['127.0.0.1', '::1', '::ffff:127.0.0.1']
 
+// A container bridge, a VPN or a virtual switch is not "this machine" in the
+// sense that matters: traffic arrives on those from other things, and a
+// published docker port rewrites the source address to the bridge. Only real
+// interfaces of the host count.
+const BORROWED = /^(docker|br-|virbr|veth|cni|flannel|podman|lxc|tun|tap)/i
+
 const ownAddresses = (interfaces = os.networkInterfaces()) => {
   const out = new Set(LOOPBACK)
-  for (const entries of Object.values(interfaces || {})) {
+  for (const [name, entries] of Object.entries(interfaces || {})) {
+    if (BORROWED.test(name)) continue
     for (const entry of entries || []) {
       if (!entry?.address) continue
       out.add(entry.address)
@@ -33,12 +40,22 @@ const ownAddresses = (interfaces = os.networkInterfaces()) => {
   return out
 }
 
+// A request that went through a proxy carries the marks of one. A browser
+// talking straight to this server never sends these, and a proxy on this very
+// machine would otherwise make every visitor on earth look like the owner —
+// nginx, cloudflared, ngrok and `ssh -L` all terminate the connection here and
+// re-originate it from loopback. Presence of the header is the one honest sign
+// available, so it forfeits the grant rather than being trusted or parsed.
+const PROXY_MARKS = ['x-forwarded-for', 'forwarded', 'x-real-ip', 'x-forwarded-host']
+const cameThroughAProxy = (req) => PROXY_MARKS.some(header => Boolean(req?.headers?.[header]))
+
 /**
  * @param {{socket?: {remoteAddress?: string}}} req
  * @param {{ isLocal?: boolean, interfaces?: object }} [options] — both injected by the tests
  */
 const isOwnerAtTheMachine = (req, { isLocal = process.env.DI_LOCAL === '1', interfaces } = {}) => {
   if (!isLocal) return false
+  if (cameThroughAProxy(req)) return false
   const address = req?.socket?.remoteAddress || ''
   if (!address) return false
   return ownAddresses(interfaces).has(address)

@@ -16,7 +16,7 @@ const interfaces = {
   ]
 }
 
-const from = (address) => ({ socket: { remoteAddress: address } })
+const from = (address, headers = {}) => ({ socket: { remoteAddress: address }, headers })
 
 describe('who counts as the owner of a personal install', () => {
     it('is the person at the machine, on loopback and on its own wifi address', () => {
@@ -54,5 +54,30 @@ describe('who counts as the owner of a personal install', () => {
 
     it('always holds loopback, even on a machine with no network at all', () => {
         expect([...ownAddresses({})]).toContain('127.0.0.1')
+    })
+
+    // A proxy on this very machine — nginx, cloudflared, ngrok, `ssh -L`, a
+    // published docker port — terminates the visitor's connection and makes a
+    // new one from loopback. Without this, every visitor on earth is the owner.
+    it('refuses the grant to anything that came through a proxy', () => {
+        expect(isOwnerAtTheMachine(from('127.0.0.1', { 'x-forwarded-for': '203.0.113.9' }), { isLocal: true, interfaces })).toBe(false)
+        expect(isOwnerAtTheMachine(from('127.0.0.1', { forwarded: 'for=203.0.113.9' }), { isLocal: true, interfaces })).toBe(false)
+        expect(isOwnerAtTheMachine(from('192.168.15.187', { 'x-real-ip': '10.1.1.1' }), { isLocal: true, interfaces })).toBe(false)
+        // and a plain browser, which sends none of them, still counts
+        expect(isOwnerAtTheMachine(from('127.0.0.1', { 'user-agent': 'Firefox' }), { isLocal: true, interfaces })).toBe(true)
+    })
+
+    it('does not count a container bridge or a virtual switch as this machine', () => {
+        // A published docker port rewrites the source to the bridge address, so
+        // treating docker0 as "here" would hand the container's traffic the
+        // owner's estate.
+        const withDocker = {
+            ...interfaces,
+            docker0: [{ address: '172.17.0.1', family: 'IPv4', internal: false }],
+            'br-abc123': [{ address: '172.18.0.1', family: 'IPv4', internal: false }]
+        }
+        expect(isOwnerAtTheMachine(from('172.17.0.1'), { isLocal: true, interfaces: withDocker })).toBe(false)
+        expect(isOwnerAtTheMachine(from('172.18.0.1'), { isLocal: true, interfaces: withDocker })).toBe(false)
+        expect(isOwnerAtTheMachine(from('192.168.15.187'), { isLocal: true, interfaces: withDocker })).toBe(true)
     })
 })

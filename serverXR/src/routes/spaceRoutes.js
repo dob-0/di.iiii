@@ -720,7 +720,9 @@ function registerSpaceRoutes(router, {
       const wait = Math.min(Number(req.query.wait) || 0, 30)
       if (wait > 0 && !filtered.length) {
         const { waitForChange } = require('../follow/waiters')
-        const changed = await waitForChange(spaceId, wait * 1000)
+        const closed = new AbortController()
+        req.on('close', () => closed.abort())
+        const changed = await waitForChange(spaceId, wait * 1000, { signal: closed.signal })
         if (changed) {
           filtered = Number.isFinite(since)
             ? await readOpsHistorySince(spaceId, since)

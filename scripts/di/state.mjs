@@ -79,7 +79,12 @@ export const writeEnv = async (home, patch = {}) => {
         .map(([key, value]) => `${key}=${value}`)
         .join('\n')
     await fsp.mkdir(p.home, { recursive: true })
-    await fsp.writeFile(p.env, `${body}\n`)
+    // 0600, and chmod on rewrite: this file holds the session-signing secret and
+    // an admin token since guest mode, and it was being written world-readable
+    // on a machine other people log into. Same treatment credentialsStore gives
+    // the sync keys, for the same reason.
+    await fsp.writeFile(p.env, `${body}\n`, { mode: 0o600 })
+    try { await fsp.chmod(p.env, 0o600) } catch { /* a filesystem without modes */ }
     return next
 }
 

@@ -27,6 +27,19 @@ const clientKey = (req) => {
 // everywhere else DI_LOCAL is consulted.
 const isLocalInstall = () => process.env.DI_LOCAL === '1'
 
+// …but `di up --lan --guests` is a room full of strangers on exactly such an
+// install, which is the one case the paragraph above did not anticipate. There
+// the exemption is drawn where it was always meant to be: the person AT the
+// machine is not counted, and everyone who arrived over the network is. An
+// unmetered guest can otherwise mint sandboxes and upload until the disk that
+// is hosting the evening is full.
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
+const isUncounted = (req) => {
+  if (!isLocalInstall()) return false
+  if (process.env.REQUIRE_AUTH !== 'true') return true
+  return LOOPBACK.has(req?.socket?.remoteAddress || '')
+}
+
 // `scope` is the half of the 429 sentence that names WHAT was counted. It
 // defaults to the address because that is what the default keyFn counts —
 // a limiter given a keyFn that counts something else (a session subject,
@@ -37,7 +50,7 @@ function createRateLimiter({ windowMs = 60_000, max = 30, name = 'requests', key
   let lastSweep = Date.now()
 
   return function rateLimit(req, res, next) {
-    if (isLocalInstall()) return next()
+    if (isUncounted(req)) return next()
     const now = Date.now()
 
     if (now - lastSweep > windowMs) {

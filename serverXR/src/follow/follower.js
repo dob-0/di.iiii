@@ -19,7 +19,8 @@
  */
 
 const { httpRequest } = require('../httpClient')
-const { planDirection, planAfterConflict, nextInterval } = require('./followPlan')
+const { moreToCarry, planDirection, planAfterConflict, nextInterval, refusedWholeWork } = require('./followPlan')
+const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
 
 const FLOOR_MS = 700
 // Five seconds, not thirty. A followed space is a room with someone else in
@@ -83,13 +84,12 @@ const side = ({ base, spaceId, token = null }) => ({
     base: String(base || '').replace(/\/$/, ''),
     spaceId,
     token,
-    opsUrl(since) {
-        const url = `${this.base}/api/spaces/${encodeURIComponent(this.spaceId)}/ops`
+    url(path) { return `${this.base}${path}` },
+    opsUrl(stream, since) {
+        const url = this.url(stream.opsPath)
         return since === null || since === undefined ? url : `${url}?since=${encodeURIComponent(since)}`
     },
-    writeUrl() {
-        return `${this.base}/api/spaces/${encodeURIComponent(this.spaceId)}/ops`
-    }
+    writeUrl(stream) { return this.url(stream.writePath) }
 })
 
 /**
@@ -101,10 +101,11 @@ const side = ({ base, spaceId, token = null }) => ({
  * parameter simply answers straight away, and the loop falls back to its own
  * timing — so this is an improvement, never a requirement.
  */
-const readOps = async (from, since, { waitSeconds = 0 } = {}) => {
+const readOps = async (from, stream, since, { waitSeconds = 0 } = {}) => {
+    const plain = from.opsUrl(stream, since)
     const url = waitSeconds > 0
-        ? `${from.opsUrl(since)}${from.opsUrl(since).includes('?') ? '&' : '?'}wait=${waitSeconds}`
-        : from.opsUrl(since)
+        ? `${plain}${plain.includes('?') ? '&' : '?'}wait=${waitSeconds}`
+        : plain
     const answer = await request(url, { token: from.token, timeoutMs: (waitSeconds ? waitSeconds * 1000 : 0) + TIMEOUT_MS })
     if (!answer.ok) return { reachable: false, ops: [], latestVersion: null, status: answer.status }
     return {
@@ -119,15 +120,30 @@ const readOps = async (from, since, { waitSeconds = 0 } = {}) => {
  * HTTP's: how many landed, whether the target moved, and whether we are still
  * in step with it.
  */
-const carry = async ({ from, to, ops, seen, targetVersion }) => {
+const carry = async ({ to, stream, ops, seen, targetVersion }) => {
     const plan = planDirection({ ops, seen, targetVersion })
     if (!plan) return { wrote: 0, targetVersion, moved: false }
 
-    const answer = await request(to.writeUrl(), { method: 'POST', token: to.token, body: plan })
+    const answer = await request(to.writeUrl(stream), { method: 'POST', token: to.token, body: plan })
     if (answer.ok) {
         rememberSeen(seen, plan.ops)
         const newVersion = Number.isFinite(answer.payload?.newVersion) ? answer.payload.newVersion : targetVersion
-        return { wrote: plan.ops.length, targetVersion: newVersion, moved: true }
+        // A write that landed but changed nothing (every op already known — the
+        // receiving server dedupes by opId) is not movement. Counting it as
+        // movement pinned the loop at its floor forever and made `di follows`
+        // report work being carried when none was.
+        const landed = Array.isArray(answer.payload?.ops) ? answer.payload.ops.length : plan.ops.length
+        return {
+            wrote: landed,
+            targetVersion: newVersion,
+            moved: landed > 0,
+            // The version of the last op we actually took from the SOURCE. The
+            // source cursor may only advance this far: a batch is capped, and
+            // advancing to "everything that existed when we read" would skip
+            // every op past the cap — permanently, silently, and on the very
+            // first tick of a follow with history.
+            carriedThrough: plan.ops[plan.ops.length - 1]?.version ?? null
+        }
     }
 
     if (answer.status === 409) {
@@ -135,10 +151,10 @@ const carry = async ({ from, to, ops, seen, targetVersion }) => {
         // yet. Take them, and come back on the next tick with the new floor.
         const { apply, retryAt } = planAfterConflict(answer.payload)
         rememberSeen(seen, apply)
-        return { wrote: 0, targetVersion: retryAt ?? targetVersion, moved: apply.length > 0, caughtUp: apply }
+        return { wrote: 0, targetVersion: retryAt ?? targetVersion, moved: apply.length > 0, caughtUp: apply, carriedThrough: null }
     }
 
-    return { wrote: 0, targetVersion, moved: false, failed: answer.status || answer.error || 'unreachable' }
+    return { wrote: 0, targetVersion, moved: false, carriedThrough: null, failed: answer.status || answer.error || 'unreachable' }
 }
 
 /**
@@ -151,8 +167,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
     const seen = new Set()
     let stopped = false
     let interval = FLOOR_MS
-    let cursors = { localVersion: null, remoteVersion: null }
-    let state = { status: 'starting', carriedIn: 0, carriedOut: 0, lastError: null, lastMoveAt: null }
+    // One cursor pair per stream — the room's own log and every project in it.
+    // Keyed by stream, because a project's version counter has nothing to do
+    // with the room's, and both have nothing to do with the other machine's.
+    const cursors = new Map()
+    let streams = [sceneStream(local.spaceId)]
+    let state = { status: 'starting', carriedIn: 0, carriedOut: 0, streams: 1, lastError: null, lastMoveAt: null }
 
     // Woken by this install's own writes, so an edit made here leaves at once
     // instead of waiting out whatever backoff the quiet had earned.
@@ -162,59 +182,149 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
         wakeNow = () => { clearTimeout(timer); wakeNow = null; resolve() }
     })
 
-    const tick = async () => {
-        // The remote read parks; the local read never does — this install's own
-        // writes wake the loop directly (nudgeFollow), and two parked requests
-        // would just be two ways to sleep.
-        const theirs = await readOps(remote, cursors.remoteVersion, { waitSeconds: WAIT_SECONDS })
-        const ours = await readOps(local, cursors.localVersion)
+    const cursorFor = (stream) => cursors.get(stream.key) || { localVersion: null, remoteVersion: null }
 
+    /** The projects on both sides, so a project made on either appears on both. */
+    const refreshStreams = async () => {
+        const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
+        const [here, there] = await Promise.all([
+            request(local.url(path), { token: local.token }),
+            request(remote.url(path), { token: remote.token })
+        ])
+        const localProjects = projectIdsFrom(here.payload)
+        const remoteProjects = projectIdsFrom(there.payload)
+
+        // A project that exists only there has to exist here before its ops can
+        // land. Made through this server's own route, with the same id: ids are
+        // global in di.iiii, so the same project is the same project on both
+        // machines.
+        for (const projectId of remoteProjects) {
+            if (localProjects.includes(projectId)) continue
+            const made = await request(local.url(path), {
+                method: 'POST', token: local.token, body: { slug: projectId, title: projectId }
+            })
+            if (!made.ok && made.status !== 409) {
+                log.warn?.(`[follow] ${local.spaceId}: could not make room for ${projectId} (${made.status})`)
+            }
+        }
+        streams = streamsFor({ spaceId: local.spaceId, localProjects, remoteProjects })
+    }
+
+    /** Carry one stream, both ways. */
+    const runStream = async (stream, { wait = false } = {}) => {
+        const cursor = cursorFor(stream)
+        const theirs = await readOps(remote, stream, cursor.remoteVersion, { waitSeconds: wait ? WAIT_SECONDS : 0 })
+        const ours = await readOps(local, stream, cursor.localVersion)
+
+        // A project one side does not have yet is a 404 on that stream, not a
+        // failure of the follow: it will exist on the next pass.
         if (!theirs.reachable) {
-            state = { ...state, status: 'waiting', lastError: `the other di.iiii is not answering (${theirs.status || 'no route'})` }
-            return false
+            if (theirs.status === 404) return { moved: false, skipped: true }
+            return { moved: false, failed: `the other di.iiii is not answering (${theirs.status || 'no route'})` }
         }
         if (!ours.reachable) {
-            state = { ...state, status: 'waiting', lastError: 'this install is not answering its own op log' }
-            return false
+            if (ours.status === 404) return { moved: false, skipped: true }
+            return { moved: false, failed: 'this install is not answering its own op log' }
         }
 
-        // Their new ops go into us; ours go out to them. Each write is based on
-        // the version of the side being written to — never the other one.
-        const inbound = await carry({ from: remote, to: local, ops: theirs.ops, seen, targetVersion: ours.latestVersion })
-        const outbound = await carry({ from: local, to: remote, ops: ours.ops, seen, targetVersion: theirs.latestVersion })
+        const inbound = await carry({ to: local, stream, ops: theirs.ops, seen, targetVersion: ours.latestVersion })
+        const outbound = await carry({ to: remote, stream, ops: ours.ops, seen, targetVersion: theirs.latestVersion })
 
-        cursors = {
-            localVersion: inbound.targetVersion ?? ours.latestVersion,
-            remoteVersion: outbound.targetVersion ?? theirs.latestVersion
+        // Each cursor advances only as far as the ops that side actually gave
+        // up: the remote cursor to the last remote op we carried IN, the local
+        // cursor to the last local op we carried OUT. When a batch was capped
+        // the rest is read again on the next tick, which is why the loop does
+        // not sleep while there is more to carry.
+        const more = moreToCarry(theirs.ops, seen) || moreToCarry(ours.ops, seen)
+        cursors.set(stream.key, {
+            localVersion: outbound.carriedThrough ?? (ours.ops.length ? cursor.localVersion : ours.latestVersion),
+            remoteVersion: inbound.carriedThrough ?? (theirs.ops.length ? cursor.remoteVersion : theirs.latestVersion)
+        })
+        rememberSeen(seen, theirs.ops.slice(0, 0))
+
+        return {
+            moved: inbound.moved || outbound.moved,
+            more,
+            carriedIn: inbound.wrote,
+            carriedOut: outbound.wrote,
+            // A whole-work op sat in the log and was left there deliberately.
+            // Said out loud, because silence would look like everything crossed.
+            refused: refusedWholeWork(theirs.ops) || refusedWholeWork(ours.ops),
+            failed: inbound.failed || outbound.failed || null
         }
-        rememberSeen(seen, theirs.ops)
-        rememberSeen(seen, ours.ops)
+    }
 
-        const failed = inbound.failed || outbound.failed || null
-        const moved = inbound.moved || outbound.moved
+    const tick = async () => {
+        await refreshStreams()
+
+        let parked = false
+        let moved = false
+        let more = false
+        let refused = false
+        let carriedIn = 0
+        let carriedOut = 0
+        let failed = null
+
+        // The room's own log parks on the other side (that is what makes a
+        // followed room feel like one room); the project logs are asked
+        // straight out, so one quiet project cannot hold up the rest.
+        // Projects first, the room last: the last stream is the one that parks.
+        const ordered = [...streams.slice(1), streams[0]]
+        for (const [index, stream] of ordered.entries()) {
+            if (stopped) break
+            // The room's own log parks on the other side — that is what makes
+            // a followed room feel like one room. It is read LAST so the
+            // projects, which never park, are already carried when we settle
+            // into the wait.
+            const willPark = index === ordered.length - 1
+            const result = await runStream(stream, { wait: willPark })
+            if (willPark) parked = true
+            if (result.skipped) continue
+            moved = moved || result.moved
+            more = more || result.more
+            refused = refused || result.refused
+            carriedIn += result.carriedIn || 0
+            carriedOut += result.carriedOut || 0
+            failed = failed || result.failed
+        }
+
         state = {
-            status: failed ? 'waiting' : 'following',
-            carriedIn: state.carriedIn + inbound.wrote,
-            carriedOut: state.carriedOut + outbound.wrote,
-            lastError: failed ? `a write was refused (${failed})` : null,
+            status: failed ? 'waiting' : (more ? 'catching up' : 'following'),
+            carriedIn: state.carriedIn + carriedIn,
+            carriedOut: state.carriedOut + carriedOut,
+            streams: streams.length,
+            lastError: failed
+                || (refused ? 'one side replaced a whole scene — that is not carried by a follow; use di sync' : null),
             lastMoveAt: moved ? Date.now() : state.lastMoveAt
         }
-        return moved
+        // Still behind: go round again at once. A capped batch that slept would
+        // trickle a long history across at one batch per tick.
+        return { moved, parked: parked && !more, more }
     }
 
     const loop = async () => {
         while (!stopped) {
             let moved = false
+            let parked = false
+            const startedAt = Date.now()
             try {
-                moved = await tick()
+                ({ moved, parked } = await tick())
             } catch (error) {
                 // A follower must never take the server down with it.
                 state = { ...state, status: 'waiting', lastError: String(error?.message || error) }
                 log.warn?.(`[follow] ${local.spaceId}: ${state.lastError}`)
             }
-            onState({ spaceId: local.spaceId, remote: remote.base, ...state, cursors })
-            interval = nextInterval({ moved, current: interval, floor: FLOOR_MS, ceiling: CEILING_MS })
-            await sleep(interval)
+            onState({ spaceId: local.spaceId, remote: remote.base, ...state })
+            // A tick that PARKED has already done its waiting on the other
+            // machine, and came back because something moved there — go round
+            // again at once rather than sleeping through the thing we were
+            // woken for. The elapsed check keeps a server that answers a park
+            // instantly (an old one that ignores `wait`) from becoming a spin.
+            const elapsed = Date.now() - startedAt
+            interval = parked && elapsed > 200
+                ? 0
+                : nextInterval({ moved, current: interval, floor: FLOOR_MS, ceiling: CEILING_MS })
+            if (interval > 0) await sleep(interval)
         }
     }
 
@@ -222,7 +332,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
     return {
         stop() { stopped = true },
         wake() { interval = FLOOR_MS; wakeNow?.() },
-        get state() { return { spaceId: local.spaceId, remote: remote.base, ...state, cursors } }
+        get state() { return { spaceId: local.spaceId, remote: remote.base, ...state } }
     }
 }
 

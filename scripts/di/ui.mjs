@@ -107,6 +107,9 @@ export const ui = {
         'on their machine:',
         `  ${style.cyan(`${CMD} follow ${spaceId} --from ${url} --key ${key}`)}`,
         '',
+        style.dim('or, to keep the key out of their shell history:'),
+        style.dim(`  echo '${key}' | ${CMD} follow ${spaceId} --from ${url} --key -`),
+        '',
         style.dim('that key opens this space and nothing else, and you can take it back:'),
         style.dim(`  ${CMD} invite ${spaceId} --revoke`)
     ].join('\n'),
@@ -116,18 +119,39 @@ export const ui = {
         style.dim(reason ? String(reason) : 'the server refused, and said nothing about why.')
     ].join('\n'),
 
+    noInvites: (spaceId) => `${spaceId} has no keys out. ${style.dim('nothing to take back.')}`,
+    invitesRevoked: (spaceId, count) => [
+        `took back ${count} ${count === 1 ? 'key' : 'keys'} for ${style.cyan(spaceId)}.`,
+        style.dim('any di.iiii following it with one of those stops carrying now.')
+    ].join('\n'),
+
+    // A space of this name is already here. Wiring someone else's log into it
+    // would merge two people's work with no way to tell afterwards which was
+    // whose — `main` is the front room on every install, and ids are short
+    // words that collide.
+    followWouldMerge: (spaceId) => [
+        `you already have a space called ${style.cyan(spaceId)}.`,
+        style.dim('following would join the two, both ways, and nothing here would say which edits were whose.'),
+        style.dim(`if that is what you want, say so: ${CMD} follow ${spaceId} --from … --key … --into ${spaceId}`)
+    ].join('\n'),
+
     checkingFollow: () => style.dim('looking for that di.iiii…'),
 
     followRefused: (reason, where) => ({
         unreachable: `nothing answers at ${where} — check the address, and that both machines are on the same wifi.`,
         missing: 'that di.iiii has no space by that name.',
         denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
-        'local-space': 'this install could not make room for it — is di.iiii running here?'
+        'local-space': 'this install could not make room for it — is di.iiii running here?',
+        itself: 'that address is this di.iiii — a space cannot follow itself.'
     }[reason] || `could not follow ${where}.`),
 
     following: (spaceId, remote, running) => [
         `following ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}.`,
-        style.dim('edits travel both ways. your copy stays on your disk.'),
+        style.dim('edits travel both ways — the room and every project in it. your copy stays on your disk.'),
+        // Said plainly rather than discovered: images and models are not carried
+        // yet, so a scene that leans on them will show their absence until they
+        // are. Better a sentence now than a grey wall later.
+        style.dim('images and models are not carried yet — they stay where they were added.'),
         running ? null : style.dim(`start it to begin: ${CMD} up`)
     ].filter(Boolean).join('\n'),
 
@@ -140,7 +164,7 @@ export const ui = {
             const state = byId.get(id)
             const where = String(entry.remote || '').replace(/\/serverXR$/, '')
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
-            const moving = `in ${state.carriedIn} · out ${state.carriedOut}`
+            const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
             return `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
         }).join('\n')
     },
