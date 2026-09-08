@@ -27,8 +27,16 @@ const snapTo = (value, step) => Math.round(value / step) * step
 export default function ModalTransform({ op, selectedEntities, controlsRef, onPreview, onCommit, onCancel, onStatus }) {
     const sessionRef = useRef(null)
     const cbRef = useRef({})
-    cbRef.current = { onPreview, onCommit, onCancel, onStatus }
     const [hudLines, setHudLines] = useState([])
+
+    // The callbacks, kept where the keyboard and mouse handlers below can reach
+    // the CURRENT ones without re-binding the session on every render. Written
+    // in an effect rather than during render: a ref written mid-render is a
+    // write to state React has not committed yet, and the rule that says so
+    // (react-hooks/refs) is an error in the linter CI installs.
+    useEffect(() => {
+        cbRef.current = { onPreview, onCommit, onCancel, onStatus }
+    })
 
     useEffect(() => {
         if (!op || !selectedEntities?.length) return undefined
