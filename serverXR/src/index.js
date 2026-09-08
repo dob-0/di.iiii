@@ -2,9 +2,11 @@ require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.en
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env') })
 const express = require('express')
 const http = require('http')
+const https = require('https')
 const cors = require('cors')
 const morgan = require('morgan')
 const multer = require('multer')
+const fs = require('node:fs')
 const path = require('node:path')
 const crypto = require('node:crypto')
 const { initDb } = require('./db')
@@ -2052,6 +2054,23 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: message })
 })
 
+/**
+ * Read a certificate pair, or null. Never throws: a missing or half-written
+ * pair means "no https today", not "no di.iiii today".
+ */
+const readTlsFiles = (certPath, keyPath) => {
+  if (!certPath || !keyPath) return null
+  try {
+    const cert = fs.readFileSync(certPath)
+    const key = fs.readFileSync(keyPath)
+    if (!cert.length || !key.length) return null
+    return { cert, key }
+  } catch (error) {
+    logger.warn(`Certificate not usable (${error.code || error.message}) — serving http`)
+    return null
+  }
+}
+
 const PORT = config.port
 
 const snapshotOpenSpace = async () => {
@@ -2093,7 +2112,23 @@ initStorage()
       archiveIdleAccountSandboxes().catch((error) => logger.warn('Failed to archive idle sandboxes', error))
     }, 1000 * 60 * 60 * 24)
 
-    const httpServer = http.createServer(app)
+    // A padlock on a machine in a room.
+    //
+    // Browsers hand out the camera, the microphone, Web MIDI and WebXR only on
+    // a secure origin. `localhost` is exempt by fiat — a phone on the same wifi
+    // is not, so every one of those is missing on a LAN address over plain
+    // http, which is exactly the situation a festival puts us in.
+    //
+    // TLS_CERT and TLS_KEY are a certificate for a name the owner controls
+    // (di mints it; see scripts/di). Present and readable: this server speaks
+    // https. Absent, unreadable, or expired: it speaks http exactly as before
+    // and says so once — a local install must never fail to start over a
+    // certificate.
+    const tlsFiles = readTlsFiles(process.env.TLS_CERT, process.env.TLS_KEY)
+    const httpServer = tlsFiles
+      ? https.createServer({ cert: tlsFiles.cert, key: tlsFiles.key }, app)
+      : http.createServer(app)
+    if (tlsFiles) logger.info(`Serving https — certificate ${process.env.TLS_CERT}`)
 
     initializeSocket(httpServer, {
       ...config,

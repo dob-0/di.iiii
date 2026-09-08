@@ -48,15 +48,20 @@ export const ui = {
     // above all that phones in the room need `--lan`. A person who has just
     // typed `di up` is exactly the person who does not know those, so they are
     // printed once, here, plainly.
-    running: (url, spaces, { spaceCount = null, lan = false, prettyUrl = null } = {}) => {
+    running: (url, spaces, { spaceCount = null, lan = false, prettyUrl = null, secure = false } = {}) => {
         const base = prettyUrl || url
-        const door = (word, path, note) => `  ${style.cyan(word.padEnd(8))}${`${base}${path}`.padEnd(34)}${style.dim(note)}`
+        // The note column is measured, not guessed: a certificate makes every
+        // address longer and a fixed width silently ran the two together.
+        const width = Math.max(...['/tools', '/spaces', '/light/', '/wiki'].map(path => `${base}${path}`.length)) + 3
+        const door = (word, path, note) => `  ${style.cyan(word.padEnd(8))}${`${base}${path}`.padEnd(width)}${style.dim(note)}`
         const spacesNote = spaceCount === null
             ? (spaces?.length ? spaces.join(', ') : 'your spaces')
             : `${spaceCount} ${spaceCount === 1 ? 'space' : 'spaces'}${spaces?.length ? ` — ${spaces.slice(0, 4).join(', ')}…` : ''}`
         return [
             `di.iiii is running.  ${style.cyan(prettyUrl || url)}`,
-            prettyUrl ? style.dim(`  one address, here and on the phones. ${url} answers too.`) : null,
+            prettyUrl && secure
+                ? style.dim('  a real certificate — so the camera, the microphone, MIDI and XR all work.')
+                : (prettyUrl ? style.dim(`  one address, here and on the phones. ${url} answers too.`) : null),
             '',
             door('tools', '/tools', 'every tool, in one room'),
             door('spaces', '/spaces', spacesNote),

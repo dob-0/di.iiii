@@ -48,7 +48,7 @@ import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
     currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    lanUrl, localUrl, nameUrl, readState, resolvePort, writeEnv, writeState
+    lanUrl, localUrl, nameUrl, readCert, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
@@ -90,9 +90,9 @@ const spaceNames = async (port) => (await spaceSummary(port)).names
 
 // The names AND how many there are: the start card says "20 spaces — main,
 // open, …", which a truncated list of six alone cannot say.
-const spaceSummary = async (port) => {
+const spaceSummary = async (port, base = null) => {
     try {
-        const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`)
+        const response = await fetch(`${base || localUrl(port)}/serverXR/api/spaces`)
         if (!response.ok) return { names: [], count: null }
         const body = await response.json()
         const all = body?.spaces || []
@@ -142,7 +142,11 @@ const cmdUp = async (args) => {
     }
     await writeEnv(home, { PORT: String(port) })
 
-    const summary = await spaceSummary(port)
+    // A certificate outranks every other name: it is the only one that gets a
+    // padlock, and the padlock is what a browser wants before it hands over a
+    // camera, a microphone, MIDI or XR. Its name is the address.
+    const cert = readCert(home)
+    const summary = await spaceSummary(port, cert ? `https://${cert.name}:${port}` : null)
 
     // ONE address, if the machine can hold one. `di.local` is published over
     // mDNS for this start, and it is the same word on this laptop and on a
@@ -152,13 +156,14 @@ const cmdUp = async (args) => {
     // which costs nothing and is asked before it is printed, and failing that
     // we print localhost like we always did.
     const addresses = lan ? probeLanAddresses() : []
-    const named = lan && await probeCanPublishName()
+    const named = lan && !cert && await probeCanPublishName()
         ? await publishName(home, addresses[0]?.address)
         : null
-    const pretty = named || (named ? null : await probePrettyLocalName(port))
-    const prettyUrl = pretty ? nameUrl(pretty, port) : null
+    const pretty = cert ? cert.name : (named || await probePrettyLocalName(port))
+    const scheme = cert ? 'https' : 'http'
+    const prettyUrl = pretty ? `${scheme}://${pretty}${port === 80 || port === 443 ? '' : `:${port}`}` : null
 
-    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl }))
+    say(ui.running(localUrl(port), summary.names, { spaceCount: summary.count, lan, prettyUrl, secure: Boolean(cert) }))
     if (lan) {
         say(ui.onThisNetwork(
             addresses.map(({ iface, address }) => ({ iface, url: lanUrl(address, port) })),

@@ -13,7 +13,7 @@ import process from 'node:process'
 
 import { isWindows, paths, versionLayout } from './paths.mjs'
 import { probeHealth } from './probe.mjs'
-import { currentVersionDir, readEnv, readState } from './state.mjs'
+import { currentVersionDir, readCert, readEnv, readState } from './state.mjs'
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -64,6 +64,7 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
     // room, and the guard's own flag is how the server hears it. A loopback
     // start leaves whatever di.env says about it alone.
     const wildcard = host === '0.0.0.0' || host === '::'
+    const cert = readCert(home)
 
     const logStream = fs.openSync(p.serverLog, 'a')
     // Detached on every OS, and unref'd on every OS. Windows was the exception
@@ -96,6 +97,10 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
             // a personal install. Those gates check the request's own address
             // and stay loopback-only under --lan.
             DI_LOCAL: '1',
+            // The certificate, if this install has one. Handed over as paths:
+            // the server reads them itself and falls back to http if either is
+            // unreadable, so a half-installed pair can never stop a start.
+            ...(cert ? { TLS_CERT: cert.cert, TLS_KEY: cert.key } : {}),
             ...(wildcard ? { DI_ALLOW_LAN_DEVICES: '1' } : {})
         }
     })
@@ -108,10 +113,19 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
     // A wildcard bind answers on loopback as well, and 0.0.0.0 is not an
     // address every OS lets a client connect to — probe what a browser on this
     // machine would use.
-    const probeHost = wildcard ? '127.0.0.1' : host
+    // With a certificate the server answers https and only https, and the
+    // certificate is for a NAME — 127.0.0.1 would fail the hostname check even
+    // though the server is perfectly up. So the wait asks on the same terms a
+    // browser will.
+    const probeHost = cert ? cert.name : (wildcard ? '127.0.0.1' : host)
+    const scheme = cert ? 'https' : 'http'
     const deadline = Date.now() + 30000
     while (Date.now() < deadline) {
-        if (await probeHealth(port, probeHost)) return { pid: child.pid, port, host }
+        if (await probeHealth(port, probeHost, '/serverXR', scheme)) return { pid: child.pid, port, host }
+        // A certificate this build cannot use (an app older than the https
+        // support) answers http and is perfectly alive — believe the server,
+        // not our expectation of it.
+        if (cert && await probeHealth(port, wildcard ? '127.0.0.1' : host)) return { pid: child.pid, port, host, insecure: true }
         if (!pidAlive(child.pid)) {
             const tail = await readLog(home, 20)
             // Below 1024 the kernel refuses the bind unless the binary carries

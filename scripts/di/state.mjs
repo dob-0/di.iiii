@@ -8,6 +8,7 @@
  */
 
 import fs from 'node:fs'
+import { X509Certificate } from 'node:crypto'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 
@@ -76,6 +77,26 @@ export const resolvePort = (home, override) => {
 // person is asked to type by hand must not carry a number they would have to
 // be told to leave out.
 const portPart = (port) => (Number(port) === 80 ? '' : `:${port}`)
+/**
+ * The certificate this install holds, or null. The NAME comes out of the
+ * certificate itself rather than a setting: a name in di.env could disagree
+ * with what the certificate actually covers, and a browser believes the
+ * certificate.
+ */
+export const readCert = (home) => {
+    const p = paths(home)
+    try {
+        const pem = fs.readFileSync(p.tlsCert, 'utf8')
+        fs.accessSync(p.tlsKey)
+        const subject = new X509Certificate(pem).subject || ''
+        const name = (subject.split('\n').find(line => line.startsWith('CN=')) || '').slice(3).trim()
+        if (!name) return null
+        return { name, cert: p.tlsCert, key: p.tlsKey }
+    } catch {
+        return null
+    }
+}
+
 export const localUrl = (port) => `http://localhost${portPart(port)}`
 export const lanUrl = (address, port) => `http://${address}${portPart(port)}`
 export const nameUrl = (name, port) => `http://${name}${portPart(port)}`

@@ -46,6 +46,12 @@ export const paths = (home = diHome()) => ({
     // The mDNS publisher that gives the room a name to type instead of an IP.
     // Beside the server's pid for the same reason: `di down` has to end both.
     namePidFile: path.join(home, 'run', 'name.pid'),
+    // A certificate for a name the owner controls. Its presence is the whole
+    // switch: with it this install speaks https, and a phone gets the camera,
+    // the microphone, MIDI and XR that a browser withholds from plain http.
+    tls: path.join(home, 'tls'),
+    tlsCert: path.join(home, 'tls', 'cert.pem'),
+    tlsKey: path.join(home, 'tls', 'key.pem'),
     credentials: path.join(home, 'credentials.json'),
     // Taken automatically before an update that moves the schema, because
     // `--rollback` restores the app and an update moves more than the app.

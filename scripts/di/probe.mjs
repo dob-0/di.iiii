@@ -126,12 +126,18 @@ export const probePort = async (port, host = '127.0.0.1') => quiet(async () => {
     }
 }, false)
 
-/** Is the thing on that port ours, and healthy. */
-export const probeHealth = async (port, host = '127.0.0.1', basePath = '/serverXR') => quiet(async () => {
+/**
+ * Is the thing on that port ours, and healthy.
+ *
+ * `scheme` because an install with a certificate answers https and nothing
+ * else — asking it over http would say "the server never came up" about a
+ * server that is up and correct.
+ */
+export const probeHealth = async (port, host = '127.0.0.1', basePath = '/serverXR', scheme = 'http') => quiet(async () => {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 2000)
     try {
-        const response = await fetch(`http://${host}:${port}${basePath}/api/health`, { signal: controller.signal })
+        const response = await fetch(`${scheme}://${host}:${port}${basePath}/api/health`, { signal: controller.signal })
         return response.ok
     } finally {
         clearTimeout(timer)
@@ -209,8 +215,8 @@ export { NODE_FLOOR, parseVersion, satisfiesFloor }
  *     network act, and the loopback default is nobody's business but this
  *     machine's.
  */
-export const probePrettyLocalName = async (port, name = 'di.localhost') => {
-    const answered = await probeHealth(port, name)
+export const probePrettyLocalName = async (port, name = 'di.localhost', scheme = 'http') => {
+    const answered = await probeHealth(port, name, '/serverXR', scheme)
     return answered ? name : null
 }
 
