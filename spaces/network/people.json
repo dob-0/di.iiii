@@ -32,6 +32,20 @@
           "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
           "space": null,
           "project": null
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "art director — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -425,6 +439,20 @@
           "line": "Notations #2 — team",
           "space": "br-id-ge",
           "project": "landing"
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "project coordinator — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -595,6 +623,13 @@
           "title": "BISETKA: talk_place",
           "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
           "space": null,
+          "project": null
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
           "project": null
         }
       ],
@@ -786,6 +821,13 @@
           "title": "BISETKA: talk_place",
           "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
           "space": null,
+          "project": null
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
           "project": null
         }
       ],
@@ -984,6 +1026,20 @@
           "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
           "space": null,
           "project": null
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "character designer — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -1132,6 +1188,13 @@
           "title": "BISETKA: talk_place",
           "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
           "space": null,
+          "project": null
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
           "project": null
         }
       ],
@@ -1500,7 +1563,15 @@
       "sectionLabel": "visual · multimedia",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "printing artist, lithography and riso — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1529,6 +1600,13 @@
           "url": null,
           "title": "BISETKA: talk_place",
           "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "graphic designer — Yerevan's 1990s Cascade rebuilt in VR, 2025",
           "space": null,
           "project": null
         }
@@ -1630,7 +1708,15 @@
       "sectionLabel": "visual · multimedia",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "creative lead — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1664,6 +1750,13 @@
           "line": "open call, part 2",
           "space": "beyond-form",
           "project": "open-call"
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "“under the gaze” — linography and AR, Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
         }
       ],
       "elsewhere": [],
@@ -1833,7 +1926,22 @@
       "sectionLabel": "visual · multimedia",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "level designer — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1912,7 +2020,15 @@
       "sectionLabel": "3d · code · games",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "3D artist — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [],
       "num": "043",
       "order": 43
@@ -1942,7 +2058,15 @@
       "sectionLabel": "3d · code · games",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "VR film shot with Shahane Harutyunyan in Gyumri — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1982,7 +2106,15 @@
       "sectionLabel": "3d · code · games",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "developer — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -2002,7 +2134,15 @@
       "sectionLabel": "3d · code · games",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "tech lead, Unity developer — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
