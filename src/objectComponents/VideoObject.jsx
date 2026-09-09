@@ -4,6 +4,7 @@ import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
 import { attachVideoPlaybackRetry, attachVideoSound, configureVideoElement } from '../utils/videoPlayback.js'
+import useRoomSound from '../hooks/useRoomSound.js'
 import {
     attachPositionalVideoSound,
     getOrCreateAudioListener,
@@ -171,9 +172,18 @@ function SpatialVideoSound({ targetRef, video, volume, distance, maxDistance }) 
 }
 
 export default function VideoObject({
-    assetRef, data, opacity = 1, linkActive, muted = true, volume = 1, loop = true,
+    assetRef, data, opacity = 1, linkActive, muted: authoredMuted = true, volume = 1, loop = true,
     spatial = false, distance, maxDistance
 }) {
+    // The visitor's sound switch (src/utils/roomSound.js). On an ungated page —
+    // Studio's viewport, Raw — `soundAllowed` is always true and this reduces
+    // to the author's own `muted`. On a visitor's surface a video with sound is
+    // a moving picture until they ask for it, and a `?preview=1` thumbnail can
+    // never ask. It has to fold in HERE rather than at the call site because
+    // `muted` also keys the element cache and decides `wantsSpatial`: an
+    // element routed into Web Audio can never be un-routed.
+    const { soundAllowed } = useRoomSound()
+    const muted = authoredMuted !== false || !soundAllowed
     const assetUrl = useAssetUrl(assetRef, { preferRemoteSource: true })
     const isVideoType = !assetRef?.mimeType || assetRef.mimeType.startsWith('video/')
     const rawSource = (isVideoType ? assetUrl : null) || data || null

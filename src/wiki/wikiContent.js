@@ -107,6 +107,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-10'
     },
     {
+        id: 'sound-in-a-room',
+        category: 'Spaces & access',
+        title: 'Sound in a room, and the switch that starts off',
+        summary: 'A room with sound in it stays silent until a visitor asks. The switch is in the room, and a space card never makes a noise.',
+        body: [
+            'A room can hold sound — an AUDIO object always makes noise, and a VIDEO does when its author turns its sound on. Until 2026-09-10 both simply started playing the moment the room resolved, which meant the Spaces page — where every card is a live room in miniature — could have several soundtracks going at once from a page that looks like a list of pictures.',
+            'Now sound is something a visitor asks for. A room you open is silent, and if there is anything to hear it carries a SOUND OFF button beside Walk / Fly. Press it and the room plays; the answer is remembered on that machine, so you are only asked once.',
+            'The button is only there when the room actually holds a sound. A switch on a silent room would promise something that is not there.',
+            'A space card, a map source and a projection source never make a noise and have no button — they are pictures of a room, not the room.',
+            'Nothing changes for the author: inside Studio and inside Nodes a sound plays as it always did, because someone placing a sound has to be able to hear it.'
+        ],
+        tags: ['sound', 'audio', 'video', 'mute', 'spaces', 'rooms', 'visitor'],
+        updated: '2026-09-10'
+    },
+    {
         id: 'the-surface-bar',
         category: 'Getting started',
         title: 'The bar: where you are, and the way out',

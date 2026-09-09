@@ -37,6 +37,46 @@
     border-color: var(--di-danger);
 }
 
+/* The room's own right-hand corner: the sound switch, then the badge. The
+   switch is only here when the room actually holds a sound (LiveProjectScene
+   asks the entities), so its presence is itself the notice that there is
+   something to hear. Off is the resting state and reads as the quieter of the
+   two. */
+.live-scene-chrome-right {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+}
+
+.live-scene-sound {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.72);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-label);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+    padding: 8px 14px;
+    border-radius: var(--di-radius-pill);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color var(--di-motion-base) ease, border-color var(--di-motion-base) ease, background-color var(--di-motion-base) ease;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+
+.live-scene-sound:hover {
+    color: var(--di-text);
+    border-color: var(--di-cyan-line);
+}
+
+.live-scene-sound.is-on {
+    color: var(--di-cyan);
+    border-color: var(--di-cyan);
+    background: var(--di-cyan-wash);
+}
+
 .live-scene-title {
     font-size: 12px;
     letter-spacing: 0.28em;

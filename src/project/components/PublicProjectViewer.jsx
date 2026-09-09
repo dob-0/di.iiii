@@ -2,6 +2,8 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import MadeWithBadge from '../../components/MadeWithBadge.jsx'
 import SurfaceBar from '../../components/SurfaceBar.jsx'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
+import useRoomSound, { useVisitorSoundGate } from '../../hooks/useRoomSound.js'
+import { roomHasSound } from '../../utils/roomSound.js'
 import RoomTextLayer from './RoomTextLayer.jsx'
 import './roomTextLayer.css'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
@@ -177,6 +179,13 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     }, [reloadDocument])
 
     const document = state.document
+
+    // A visitor is standing here, not authoring. Arming the gate is what makes
+    // an `audio` entity silent until asked — see src/utils/roomSound.js. The
+    // editor never arms it, so an author still hears what they place.
+    useVisitorSoundGate()
+    const { soundOn, locked: soundLocked, toggleSound } = useRoomSound()
+    const hasSound = useMemo(() => roomHasSound(document?.entities), [document?.entities])
     const publishState = document?.publishState || {}
     const presentationState = document?.presentationState || {}
     const entryView = viewMode || presentationState.entryView || 'scene'
@@ -405,6 +414,30 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 author choose between a composed opening shot and a room anyone
                 could walk — two unrelated things. An authored camera is how the
                 visit STARTS, not a promise they may never move. */}
+            {/* Only where there is something to hear. A sound switch on a
+                silent room promises a sound that is not there — and every room
+                would have carried one. Sits above Walk / Fly rather than beside
+                it so the pair reads as one column of room controls at any
+                width, including a phone. */}
+            {state.status === 'ready' && hasSound && !soundLocked && !isPreview ? (
+                <button
+                    type="button"
+                    aria-pressed={soundOn}
+                    style={{
+                        ...overlayButtonStyle,
+                        position: 'absolute',
+                        top: localInstall.isLocal ? 'calc(1rem + var(--sbar-h, 36px))' : '1rem',
+                        right: navMode === 'orbit' && walkGateOpen ? '9.5rem' : '1rem',
+                        zIndex: 20,
+                        color: soundOn ? 'var(--di-cyan)' : undefined,
+                        borderColor: soundOn ? 'var(--di-cyan)' : undefined,
+                    }}
+                    onClick={toggleSound}
+                >
+                    {soundOn ? 'Sound on' : 'Sound off'}
+                </button>
+            ) : null}
+
             {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
                 <button
                     type="button"
