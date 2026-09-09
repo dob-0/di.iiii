@@ -25,7 +25,8 @@ import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
-import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import ReservedAddressCard, { hasReservedAddressCard } from './components/ReservedAddressCard.jsx'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
 // The jam as a place you stand in. Its own chunk: it reaches three.js through
@@ -108,6 +109,14 @@ function RawSurfaceRoute({ rawState, spaceId }) {
             {surface}
         </ProtectedSurface>
     )
+}
+
+// A full page load of /light on a local install never gets here — serverXR
+// answers it before index.html exists. A client-side navigation can, and the
+// desk is not a React route, so the only way to reach it is to leave the SPA.
+function LocalLightingDeskHandoff() {
+    useEffect(() => { window.location.assign('/light/') }, [])
+    return <RouteSurfaceFallback label="Opening the lighting desk" detail="" />
 }
 
 function SpaceSurfaceRoute({ appState }) {
@@ -262,6 +271,7 @@ function AppRouter() {
     const makeState = getMakeLocationState(location)
     const mapState = getMapLocationState(location)
     const appState = getAppLocationState(location)
+    const bareReserved = getBareReservedSegment(location)
 
     // The Raw lane was called Seed until 2026-07-30. Old /seed links still
     // resolve; rewrite them to /raw so the address bar heals instead of keeping
@@ -504,6 +514,27 @@ function AppRouter() {
     // of the permanent one, which is the form published links actually use.
     if (appState.projectId && appState.toolSegment) {
         return <ProjectToolDoorway appState={appState} />
+    }
+
+    // Last, after every lane router has declined: a bare reserved word is not a
+    // space id and must not be looked up as one. `/raw`, `/studio` and
+    // `/spaces` returned above; what reaches here is `/make`, `/light`,
+    // `/projects` — words the platform reserved so no space could take them,
+    // which is why asking the server for a space by that name can only 404 and
+    // why the answer it produced ("check the spelling") was advice for a
+    // problem nobody had.
+    if (bareReserved && hasReservedAddressCard(bareReserved)) {
+        // `/light` on a local install never reaches the SPA at all — serverXR
+        // serves the desk itself, before index.html. Only a client-side
+        // navigation can land here, and on that machine the desk does exist,
+        // so hand the address back to the server rather than explain it away.
+        if (bareReserved === 'light' && localInstall.isLocal) {
+            return <LocalLightingDeskHandoff />
+        }
+        if (bareReserved === 'light' && !localInstall.resolved) {
+            return <RouteSurfaceFallback label="Loading" detail="" />
+        }
+        return <ReservedAddressCard word={bareReserved} />
     }
 
     return <SpaceSurfaceRoute appState={appState} />

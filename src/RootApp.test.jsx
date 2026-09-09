@@ -17,6 +17,9 @@ vi.mock('./hooks/useAuthSession.js', () => ({
 
 const mockSpacePublicOverrides = {}
 const mockVanityResolutions = {}
+// Every id the app asked the server about. A reserved word can never BE a
+// space, so asking is itself the defect — the answer is 404 by construction.
+const mockSpaceLookups = vi.hoisted(() => [])
 
 // What the server says about itself. ModeMark asks on every surface, and it
 // decides what "/" renders, so tests set it per case.
@@ -26,10 +29,13 @@ vi.mock('./services/serverSpaces.js', () => ({
     supportsServerSpaces: true,
     getServerConfig: () => Promise.resolve(mockServerConfig.value),
     listServerSpaces: () => Promise.resolve([]),
-    getServerSpace: (spaceId) => Promise.resolve({
-        id: spaceId,
-        isPublic: spaceId === 'pub' || Boolean(mockSpacePublicOverrides[spaceId])
-    }),
+    getServerSpace: (spaceId) => {
+        mockSpaceLookups.push(spaceId)
+        return Promise.resolve({
+            id: spaceId,
+            isPublic: spaceId === 'pub' || Boolean(mockSpacePublicOverrides[spaceId])
+        })
+    },
     resolveVanityProjectLink: (spaceSegment, projectSegment) =>
         Promise.resolve(mockVanityResolutions[`${spaceSegment}/${projectSegment}`] || null)
 }))
@@ -241,6 +247,54 @@ describe('RootApp', () => {
         window.history.pushState({}, '', '/main')
         render(<RootApp />)
         expect(await screen.findByText('space-surface-app:editor:main')).toBeInTheDocument()
+    })
+})
+
+// A bare reserved word is not a space id. `make` and `light` are in
+// RESERVED_APP_SEGMENTS so that no space can ever be named one — which made
+// `GET /api/spaces/make` a question with only one possible answer, and made
+// its answer ("Nothing lives at “make” — check the spelling") wrong twice:
+// the spelling was right, and the toybox exists at a longer address. On a
+// hosted tier the same card was the whole of what a visitor asking for the
+// lighting desk ever saw, with nginx's SPA catch-all serving index.html and
+// serverXR's local-runtime 404 never reaching the browser at all.
+describe('RootApp bare reserved addresses', () => {
+    afterEach(() => {
+        window.history.pushState({}, '', '/')
+        mockServerConfig.value = { local: true }
+        mockSpaceLookups.length = 0
+    })
+
+    it('explains the toybox at /make instead of hunting for a space called make', async () => {
+        window.history.pushState({}, '', '/make')
+        render(<RootApp />)
+
+        expect(await screen.findByText(/The toybox opens one project/)).toBeInTheDocument()
+        expect(screen.queryByText(/space-surface-app/)).toBeNull()
+        expect(mockSpaceLookups).not.toContain('make')
+    })
+
+    it('says where the lighting desk lives when /light is asked of a hosted tier', async () => {
+        mockServerConfig.value = { local: false }
+        window.history.pushState({}, '', '/light')
+        render(<RootApp />)
+
+        expect(await screen.findByText(/runs on a di\.iiii that is on your own machine/)).toBeInTheDocument()
+        expect(screen.queryByText(/space-surface-app/)).toBeNull()
+        expect(mockSpaceLookups).not.toContain('light')
+    })
+
+    // The lane words are bare reserved segments too, and they answer for
+    // themselves further up the dispatch. This card must never shadow them.
+    it('leaves the lanes that claim their own bare word alone', async () => {
+        window.history.pushState({}, '', '/spaces')
+        const { unmount } = render(<RootApp />)
+        expect(await screen.findByText('studio-app:spaces:')).toBeInTheDocument()
+        unmount()
+
+        window.history.pushState({}, '', '/raw')
+        render(<RootApp />)
+        expect(await screen.findByText(/raw-app:/)).toBeInTheDocument()
     })
 })
 
