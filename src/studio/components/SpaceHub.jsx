@@ -21,7 +21,7 @@ import GithubSyncSection from '../../components/preferences/GithubSyncSection.js
 import SpaceConstellation from './SpaceConstellation.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { appNavigate } from '../../utils/appNavigate.js'
-import { buildAppSpacePath } from '../../utils/spaceRouting.js'
+import { buildAppSpacePath, buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
 import {
@@ -1004,6 +1004,20 @@ export default function SpaceHub() {
                                     ) : null}
                                     {linkedTitle && (
                                         <p className="ssh-space-project">Project: {linkedTitle}</p>
+                                    )}
+                                    {/* A card opens the space's one door. Everything
+                                        else the space holds had no address anybody
+                                        would click — 114 projects on this copy, most
+                                        of them behind front pages nothing linked to.
+                                        One line, under the name, on every card whose
+                                        space this visitor is allowed into. */}
+                                    {(space.isPublic || canEnter(space)) && (
+                                        <p className="ssh-space-inside">
+                                            <a
+                                                href={buildSpaceContentsPath(space.id)}
+                                                onClick={e => e.stopPropagation()}
+                                            >Everything inside</a>
+                                        </p>
                                     )}
                                     {space.publishedProjectId && !space.isPublic && (
                                         <p className="ssh-space-warning">

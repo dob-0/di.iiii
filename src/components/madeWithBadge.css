@@ -101,3 +101,11 @@
         display: none;
     }
 }
+
+/* The twin of the floating badge: the way from a room to the rest of the space
+   it is in (SpaceContentsBadge.jsx). Same corner, same shape, same manners —
+   it sits one tap-target to the right so the two never overlap, and it is the
+   only other thing di.iiii is allowed to draw on somebody else's page. */
+.made-with-di--contents {
+    left: 44px;
+}

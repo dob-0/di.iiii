@@ -25,7 +25,7 @@ import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
-import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 import ReservedAddressCard, { hasReservedAddressCard } from './components/ReservedAddressCard.jsx'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
@@ -52,6 +52,10 @@ const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 // page draws on a 2D canvas and must never pull three.js for a visitor who has
 // not pressed Enter.
 const WikiPage = lazy(() => import('./wiki/WikiPage.jsx'))
+// `/{space}/projects` — everything a space holds. Its own chunk: it is a list of
+// links and must never pull three.js for a visitor who only wants to read what
+// is in a space.
+const SpaceContentsPage = lazy(() => import('./pages/SpaceContentsPage.jsx'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'))
 const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
 // AuthGate pulls in MUI + AccountButton -- lazy so public routes (landing,
@@ -137,6 +141,38 @@ function SpaceSurfaceRoute({ appState }) {
             <SpaceSurfaceApp routeState={appState} />
         </ProtectedSurface>
     )
+}
+
+// `/{space}/projects` — the space's contents (src/pages/SpaceContentsPage.jsx).
+//
+// Gated exactly the way the space itself is, by the same hook and the same
+// isPublic flag SpaceSurfaceRoute and RawSurfaceRoute read: a public space's
+// contents are as public as the space, a private space's contents stay behind
+// the gate. Nothing here decides access on its own — "public" keeps meaning one
+// thing, and the server enforces it again on /api/spaces/:id/contents whatever
+// this component believes.
+//
+// Which PROJECTS the page lists is a separate question with a separate answer,
+// and that one is only ever answered on the server: drafts and archived work
+// never reach a visitor. See serverXR/src/routes/projectRoutes.js.
+function SpaceContentsRoute({ spaceId }) {
+    const { isPublic, loading } = useSpacePublicFlag(spaceId)
+
+    if (loading) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+
+    const page = (
+        <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+            <SpaceContentsPage spaceId={spaceId} />
+        </Suspense>
+    )
+
+    if (isPublic) {
+        return page
+    }
+
+    return <ProtectedSurface requiredSpaceId={spaceId}>{page}</ProtectedSurface>
 }
 
 // Resolves the bare /{spaceSlugOrId}/{projectSlugOrId} public link shape —
@@ -394,6 +430,14 @@ function AppRouter() {
                 </Suspense>
             </ProtectedSurface>
         )
+    }
+
+    // Before Studio's own dispatch: /{space}/projects is the space's contents,
+    // not a tool's hub. Studio no longer parses that shape (studioRouting.js),
+    // but the order is written down here too — the address belongs to the level
+    // that owns the things in it.
+    if (appState.page === APP_PAGE_SPACE_CONTENTS && appState.spaceId) {
+        return <SpaceContentsRoute spaceId={appState.spaceId} />
     }
 
     if (isStudioLocation(studioState)) {

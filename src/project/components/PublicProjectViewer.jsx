@@ -1,7 +1,9 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MadeWithBadge from '../../components/MadeWithBadge.jsx'
+import SpaceContentsBadge from '../../components/SpaceContentsBadge.jsx'
 import SurfaceBar from '../../components/SurfaceBar.jsx'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
+import useSpaceContentsCount from '../../hooks/useSpaceContentsCount.js'
 import useRoomSound, { useVisitorSoundGate } from '../../hooks/useRoomSound.js'
 import { roomHasSound } from '../../utils/roomSound.js'
 import RoomTextLayer from './RoomTextLayer.jsx'
@@ -25,6 +27,7 @@ import {
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 import { consumeArriveWalking } from '../../components/arriveWalking.js'
+import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -111,6 +114,14 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // install, where `/` is the Spaces list. So: on a machine that is running
     // di.iiii, the room carries the bar and the space you are in stays named.
     const localInstall = useLocalInstall()
+    // How many things are on show in this space — the number that decides
+    // whether there is a rest of the space to offer at all. 0 or 1 means this
+    // room IS the space, and both the corner link and the reader's door list
+    // stay silent. Never asked for in a preview or an embedded window: a
+    // thumbnail and somebody else's page are not places to leave from.
+    const spaceContentsCount = useSpaceContentsCount(
+        !isPreview && !isEmbed ? resolvedRouteSpaceId : null
+    )
 
     const applyIncomingDocument = useCallback((nextDocument) => {
         const normalized = normalizeProjectDocument({
@@ -470,12 +481,16 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
 
             {/* What a reader gets where a canvas gives them nothing: the room's
                 name, its lines and its doors as real links. Same document the
-                scene draws from, so it can never drift from what is on screen. */}
+                scene draws from, so it can never drift from what is on screen.
+                The last door in the list is the rest of the space: this layer is
+                the one part of a published page a crawler and a screen reader
+                actually read, and it named only the doors the author had placed. */}
             {state.status === 'ready' && !isEmbed ? (
                 <RoomTextLayer
                     title={viewerTitle}
                     spaceId={resolvedRouteSpaceId}
                     entities={document?.entities || []}
+                    contentsHref={spaceContentsCount > 1 ? buildSpaceContentsPath(resolvedRouteSpaceId) : null}
                 />
             ) : null}
 
@@ -483,11 +498,14 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             {/* the host page carries its own badge; a second one inside the
                 window reads as chrome belonging to the work itself */}
             {state.status === 'ready' && navMode === 'orbit' && !isPreview && !isEmbed ? (
-                <MadeWithBadge
-                    variant="floating"
-                    spaceId={resolvedRouteSpaceId}
-                    homeIsThisRoom={!localInstall.isLocal}
-                />
+                <>
+                    <MadeWithBadge
+                        variant="floating"
+                        spaceId={resolvedRouteSpaceId}
+                        homeIsThisRoom={!localInstall.isLocal}
+                    />
+                    <SpaceContentsBadge spaceId={resolvedRouteSpaceId} count={spaceContentsCount} />
+                </>
             ) : null}
 
             {localInstall.isLocal && !isPreview && !isEmbed ? (

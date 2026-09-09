@@ -58,7 +58,7 @@ export const WIKI_ARTICLES = [
             'A project is one thing you make inside a space. A space can hold many projects, and one of them can be marked as the space’s published (live) project.',
             'The address of a project always begins with its space. The editor addresses put the tool first for historical reasons, which is why the shortcut below exists — it is the one that reads the way the product is actually arranged:',
             { list: [
-                '/<space>/projects — the space’s projects. This is the one to use: the list belongs to the space, not to whichever tool you are holding.',
+                '/<space>/projects — everything in a space, listed, each thing saying whether it is a scene or a page. Open to whoever the space is open to: on a public space no sign-in is needed. This is the one to use — the list belongs to the space, not to whichever tool you are holding.',
                 '/spaces — all of your spaces',
                 '/<space>/studio — the same list, in Studio’s older address',
                 '/<space>/raw/projects — the same projects, in the node editor’s older address',
@@ -68,8 +68,31 @@ export const WIKI_ARTICLES = [
                 '/<space>/p/<id> — the public viewer for any single project (on a public space, no login needed — share a draft or a second project without moving the published pointer)'
             ] }
         ],
-        tags: ['spaces', 'projects', 'basics'],
-        updated: '2026-08-21'
+        tags: ['spaces', 'projects', 'basics', 'contents'],
+        updated: '2026-09-10'
+    },
+    {
+        id: 'everything-in-a-space',
+        category: 'Getting started',
+        title: 'Everything in a space',
+        summary: 'A space shows all of its work at /<space>/projects, and each thing says whether it is a scene or a page.',
+        body: [
+            'A space has one published project — the thing its address opens on. That is the front door, and until 2026-09-10 it was also the only way in: a visitor could reach the published project and nothing else, however much else the space held.',
+            'On this copy that meant 114 projects with real work in them that no click reached from anywhere. Most were not stray — they sat behind front pages that themselves had no address anybody linked to.',
+            '/<space>/projects is now the space’s own contents. One list, in one order, one line each:',
+            { list: [
+                'the name, as a link straight to the work',
+                'Scene or Page — read from the project’s own presentation setting, not guessed. A scene is the 3D place you can be inside; a page is a published web page. A scene set to one fixed view still says Scene, and adds “one view”.',
+                'when it was last touched',
+                'and the one row marked “the way in”, which is the project the space’s bare address opens on'
+            ] },
+            'It is open on exactly the terms the space is. A public space’s contents are public; a private space’s contents stay behind the same sign-in as the space. Work that is not on show is never listed to anybody: a draft, an archived project and anything in the trash are absent, and that is enforced by the server, not by the page.',
+            'Two ways in. Every card on /spaces carries an “Everything inside” line, and inside a public room a second corner mark next to “Made with di.iiii” opens the same list — it appears only when there is more than one thing in the space, because a room that is the whole of its space has nothing to send you to.',
+            'A space holding one thing, and that thing being the front door, sends you to the room instead. A list whose only row is the room you would already be standing in says less than the room does.',
+            'Filing is somewhere else. Drafts, archived work, shelves and the trash live in Studio, at /<space>/studio, and this page only says so — to somebody who could already get in.'
+        ],
+        tags: ['spaces', 'projects', 'contents', 'visitors', 'published', 'scene', 'page'],
+        updated: '2026-09-10'
     },
     {
         id: 'the-front-door',

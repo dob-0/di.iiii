@@ -72,6 +72,88 @@ function registerProjectRoutes(router, {
     }
   })
 
+  // ── what a space holds, for whoever is allowed to look ───────────────────
+  //
+  // The projects index above is the AUTHOR's list: every row, whatever state
+  // it is in, because filing and unfiling is what an author does with it. This
+  // is the sibling a visitor needs — the same space, only the work that is
+  // actually finished and on show, with one extra fact per row that the meta
+  // table cannot carry: whether the thing is a scene or a page.
+  //
+  // Access is NOT decided here. `/api/spaces/:spaceId` sets req.requiredSpaceId
+  // and `requireReadRole('viewer')` (serverXR/src/index.js) has already let this
+  // request through — public space, or a session scoped to it. Adding a filter
+  // here on top of that gate is the whole point: the gate says who may look at
+  // the space, this says what is on show inside it. Widening either one was
+  // never on the table; the projects that could not be found were never the
+  // projects somebody should not see.
+  //
+  // Two rows are dropped that the author's list keeps:
+  //   - state 'draft' and 'archived' — the two words the product already has
+  //     for "not on show" (projectStore.js PROJECT_STATES).
+  //   - a title still wearing the pre-2026-09-10 "[archived]" prefix, which is
+  //     what archiving WAS before the column existed. StudioHub reads the same
+  //     rule client-side; a visitor's copy has to be enforced server-side or it
+  //     is a suggestion.
+  // Trashed rows never appear at all — listProjectsInSpace excludes them.
+  const isLegacyArchivedTitle = (title = '') => String(title).trimStart().startsWith('[archived]')
+
+  // A scene or a page, read from the document rather than guessed from a
+  // column. There is no stored "kind" and there must not be one: a document
+  // carries entities[] and nodes[] at the same time and nothing enforces
+  // either, so a kind written down at creation is a claim the data cannot
+  // keep. presentationState.mode is the setting the author actually sets, and
+  // it is what the published surface already obeys.
+  //
+  // Cached on (project, document version, updatedAt) so a space of sixty
+  // projects parses its documents once and then answers out of memory; any
+  // write moves one of those two numbers, so a stale label is not reachable.
+  const presentationModeCache = new Map()
+  const PRESENTATION_MODE_CACHE_MAX = 4000
+  const readPresentationMode = async (spaceId, meta) => {
+    const key = `${meta.id}:${meta.documentVersion ?? 0}:${meta.updatedAt ?? 0}`
+    if (presentationModeCache.has(key)) return presentationModeCache.get(key)
+    let mode = 'scene'
+    try {
+      const document = await readProjectDocument(spacesDir, spaceId, meta.id)
+      const raw = document?.presentationState?.mode
+      if (raw === 'scene' || raw === 'fixed-camera' || raw === 'code') mode = raw
+    } catch {
+      // A document that cannot be read is still a project that exists; call it
+      // a scene (the schema default) rather than dropping the row and hiding
+      // the very thing this route was built to make findable.
+      mode = 'scene'
+    }
+    if (presentationModeCache.size >= PRESENTATION_MODE_CACHE_MAX) presentationModeCache.clear()
+    presentationModeCache.set(key, mode)
+    return mode
+  }
+
+  router.get('/api/spaces/:spaceId/contents', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      if (!(await spaceExists(spaceId))) {
+        return res.status(404).json({ error: 'Space not found.' })
+      }
+      const onShow = (await listProjectsInSpace(spacesDir, spaceId))
+        .filter((meta) => (meta.state || 'live') === 'live' && !isLegacyArchivedTitle(meta.title))
+      const projects = []
+      for (const meta of onShow) {
+        projects.push({
+          id: meta.id,
+          slug: meta.slug || null,
+          title: meta.title,
+          mode: await readPresentationMode(spaceId, meta),
+          updatedAt: meta.updatedAt
+        })
+      }
+      res.json({ spaceId, projects })
+    } catch (error) {
+      next(error)
+    }
+  })
+
   router.post('/api/spaces/:spaceId/projects', async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)

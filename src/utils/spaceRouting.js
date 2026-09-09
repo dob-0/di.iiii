@@ -9,6 +9,15 @@ export const APP_PAGE_PREFERENCES_ALIASES = [
     'preferances'
 ]
 export const APP_PAGE_WIKI = 'wiki'
+// `/{space}/projects` — everything a space holds, for whoever is allowed to
+// look (src/pages/SpaceContentsPage.jsx). Not a new word: the segment was
+// already reserved, and the layered address added on 2026-08-21 already meant
+// "the space's projects, not whichever tool you happen to be holding". Until
+// 2026-09-10 it rendered Studio's own hub behind Studio's own gate, so the one
+// address that named the space's contents answered a visitor with a login
+// wall. The author's hub keeps its own address, `/{space}/studio`.
+export const APP_PAGE_SPACE_CONTENTS = 'space-contents'
+export const SPACE_CONTENTS_SEGMENT = 'projects'
 export const APP_PAGE_PRIVACY = 'privacy'
 export const APP_PAGE_TERMS = 'terms'
 // The workshop — /tools (src/tools/ToolsRoom.jsx). The one address that leads to
@@ -137,6 +146,13 @@ export const isWikiPageSegment = (value = '') => (value || '').trim().toLowerCas
 export const isPrivacyPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_PRIVACY
 export const isTermsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TERMS
 export const isToolsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TOOLS
+export const isSpaceContentsSegment = (value = '') => (value || '').trim().toLowerCase() === SPACE_CONTENTS_SEGMENT
+
+export const buildSpaceContentsPath = (spaceId) => {
+    const prefix = getAppBasePrefix()
+    if (!spaceId) return prefix ? `${prefix}/` : '/'
+    return `${prefix}/${spaceId}/${SPACE_CONTENTS_SEGMENT}`.replace(/\/{2,}/g, '/')
+}
 
 export const buildToolsPath = () => {
     const prefix = getAppBasePrefix()
@@ -199,6 +215,23 @@ export const getAppLocationState = (locationLike = null) => {
             // as a query parameter — the one level that owns everything else, demoted
             // to something you could drop and still have a valid URL. The old form
             // keeps parsing above, so no existing link rots.
+            // The space's own contents. Checked here, with the other exact
+            // two-segment shapes, so it is claimed before the generic
+            // /{space}/{projectSlug} rule below could read "projects" as the
+            // name of a project — which it never can, the word is reserved,
+            // but the parser has to be correct on its own rather than depend
+            // on the caller's dispatch order.
+            // …and the first segment has to be a space, not a tool: `/raw/projects`
+            // and `/studio/projects` are each lane's own space-less form and are
+            // claimed by their own parsers. Without this guard they would parse as
+            // the contents of a space called "raw" or "studio" — spaces that can
+            // never exist, because both words are reserved.
+            if (segments.length === 2 && !isReservedAppSegment(segment) && isSpaceContentsSegment(segments[1])) {
+                return {
+                    page: APP_PAGE_SPACE_CONTENTS,
+                    spaceId: segment
+                }
+            }
             if (segments.length === 2 && isPreferencesPageSegment(segments[1])) {
                 return {
                     page: APP_PAGE_PREFERENCES,

@@ -3258,3 +3258,128 @@ describe('sign in with Telegram', () => {
         }
     })
 })
+
+// The contents of a space, for whoever is allowed to look.
+//
+// Measured on the owner's own tier on 2026-09-10: 22 spaces, 201 projects, and
+// 114 of those projects reachable by no click from anywhere — not junk, every
+// one with content, most of it sitting behind three front pages that nothing
+// links to. The fix is a visitor-facing list; these are the two things that
+// list must never get wrong, and both are checked against a server with auth
+// ON, because a guard written against a local no-auth install proves nothing
+// about the tier the audience is on.
+describe('a space\'s contents', () => {
+    const publish = async (server, spaceId) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ isPublic: true })
+        })
+        expect(response.status).toBe(200)
+    }
+
+    const setState = async (server, projectId, state) => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${projectId}/shelf`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ state })
+        })
+        expect(response.status).toBe(200)
+    }
+
+    const setMode = async (server, projectId, mode) => {
+        const current = await (await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, {
+            headers: withAuth(server.apiToken)
+        })).json()
+        const response = await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            // The PUT body IS the document — not an envelope around it.
+            body: JSON.stringify({
+                ...current.document,
+                presentationState: { ...(current.document.presentationState || {}), mode }
+            })
+        })
+        expect(response.status).toBe(200)
+    }
+
+    const makeSpace = async (server, slug, label) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label, slug })
+        })
+        expect(response.status).toBe(201)
+    }
+
+    it('shows a visitor every live project in a public space, and says what each one is', async () => {
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' }
+        })
+        await makeSpace(server, 'contents-open', 'Contents Open')
+        await publish(server, 'contents-open')
+
+        const room = await createServerProject(server, 'contents-open', { title: 'The Room', slug: 'the-room' })
+        const page = await createServerProject(server, 'contents-open', { title: 'The Page', slug: 'the-page' })
+        const shot = await createServerProject(server, 'contents-open', { title: 'One Shot', slug: 'one-shot' })
+        await setMode(server, page.id, 'code')
+        await setMode(server, shot.id, 'fixed-camera')
+
+        // No token, no cookie: exactly what the audience holds.
+        const response = await fetch(`${server.baseUrl}/api/spaces/contents-open/contents`)
+        expect(response.status).toBe(200)
+        const { projects } = await response.json()
+        const byId = Object.fromEntries(projects.map((p) => [p.id, p]))
+        expect(Object.keys(byId).sort()).toEqual([room.id, shot.id, page.id].sort())
+        // slug is null here: creating a project uses the slug only to mint the
+        // id, and the public handle stays unset until somebody sets one. The
+        // field is carried anyway so the page can prefer the pretty link when
+        // there is one and fall back to /{space}/p/{id} when there is not.
+        expect(byId[room.id]).toMatchObject({ title: 'The Room', slug: null, mode: 'scene' })
+        expect(byId[page.id]).toMatchObject({ mode: 'code' })
+        expect(byId[shot.id]).toMatchObject({ mode: 'fixed-camera' })
+    })
+
+    it('never shows a visitor a draft, an archived project, or anything in a private space', async () => {
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' }
+        })
+        await makeSpace(server, 'contents-open', 'Contents Open')
+        await publish(server, 'contents-open')
+        await makeSpace(server, 'contents-shut', 'Contents Shut')
+
+        const live = await createServerProject(server, 'contents-open', { title: 'On Show', slug: 'on-show' })
+        const draft = await createServerProject(server, 'contents-open', { title: 'Not Finished', slug: 'not-finished' })
+        const archived = await createServerProject(server, 'contents-open', { title: 'Put Away', slug: 'put-away' })
+        // The pre-2026-09-10 way of archiving: the word typed into the title.
+        const legacy = await createServerProject(server, 'contents-open', { title: '[archived] Older Still', slug: 'older-still' })
+        const secret = await createServerProject(server, 'contents-shut', { title: 'Private Work', slug: 'private-work' })
+        await setState(server, draft.id, 'draft')
+        await setState(server, archived.id, 'archived')
+
+        const response = await fetch(`${server.baseUrl}/api/spaces/contents-open/contents`)
+        expect(response.status).toBe(200)
+        const ids = (await response.json()).projects.map((p) => p.id)
+        expect(ids).toEqual([live.id])
+        expect(ids).not.toContain(draft.id)
+        expect(ids).not.toContain(archived.id)
+        expect(ids).not.toContain(legacy.id)
+
+        // A private space answers a visitor the way every other read of it
+        // does — and the title of the work inside it is never in the body.
+        const shut = await fetch(`${server.baseUrl}/api/spaces/contents-shut/contents`)
+        expect(shut.status).toBe(401)
+        expect(await shut.text()).not.toContain('Private Work')
+        expect(secret.id).toBe('private-work')
+
+        // The author still sees everything at their own address.
+        const authored = await fetch(`${server.baseUrl}/api/spaces/contents-open/projects`, {
+            headers: withAuth(server.apiToken)
+        })
+        expect(authored.status).toBe(200)
+        const authoredIds = (await authored.json()).projects.map((p) => p.id).sort()
+        expect(authoredIds).toEqual([archived.id, draft.id, legacy.id, live.id].sort())
+    })
+})
