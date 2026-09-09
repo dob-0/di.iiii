@@ -8,6 +8,7 @@
  *   --from   <url>    Live server API base (default: $LIVE_API_URL or https://di-studio.xyz/serverXR)
  *   --to     <url>    Local server API base (default: $LOCAL_API_URL or http://localhost:4000/serverXR)
  *   --token  <token>  Bearer token for the live server (default: $LIVE_API_TOKEN)
+ *   --local-token <t> Bearer token for the destination (default: $API_TOKEN)
  *   --assets          Also download missing asset files via sync-space-assets logic
  *   --dry-run         Print what would happen without making changes
  *
@@ -43,6 +44,7 @@ const parseArgs = (argv) => {
         if (arg === '--from') { args.from = argv[++i]; continue }
         if (arg === '--to') { args.to = argv[++i]; continue }
         if (arg === '--token') { args.token = argv[++i]; continue }
+        if (arg === '--local-token') { args.localToken = argv[++i]; continue }
         if (arg === '--assets') { args.assets = true; continue }
         if (arg === '--dry-run') { args.dryRun = true; continue }
     }
@@ -109,6 +111,9 @@ const main = async () => {
     const fromBase = (args.from || getEnv('LIVE_API_URL') || DEFAULT_LIVE_URL).replace(/\/+$/, '')
     const toBase = (args.to || getEnv('LOCAL_API_URL') || DEFAULT_LOCAL_URL).replace(/\/+$/, '')
     const token = args.token || getEnv('LIVE_API_TOKEN') || ''
+    // The destination may need a token of its own — an install serves over https and
+    // authorises writes the same way the live tiers do.
+    const localToken = args.localToken || getEnv('API_TOKEN') || ''
     const { spaceId, dryRun, assets } = args
 
     console.log(`[space-pull] ${spaceId}`)
@@ -138,10 +143,23 @@ const main = async () => {
     // 3. Also load into local dev server (or write directly to data dir if server not running)
     const localPutUrl = `${toBase}/api/spaces/${spaceId}/scene`
     console.log(`Registering with local dev server at ${localPutUrl}`)
+    // A `di` install runs with SCENE_REPLACE_REQUIRE_PRECONDITION on, and answers 428
+    // to a replace that does not say which version it is based on. Read the destination's
+    // own version and send that: a pull deliberately replaces whatever is there.
+    let baseVersion = null
     try {
-        await apiFetch(localPutUrl, {
+        const current = await apiFetch(`${toBase}/api/spaces/${spaceId}/scene`, { headers: buildHeaders(localToken) })
+        baseVersion = current?.version ?? current?.scene?.sceneVersion ?? current?.sceneVersion ?? null
+    } catch { /* space may not exist at the destination yet */ }
+    try {
+        await apiFetch(baseVersion === null ? localPutUrl : `${localPutUrl}?baseVersion=${baseVersion}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                ...(localToken ? { Authorization: `Bearer ${localToken}` } : {}),
+                ...(baseVersion === null ? {} : { 'If-Match': `"${baseVersion}"` }),
+            },
             body: JSON.stringify(scene),
         })
         console.log(`  ok — space "${spaceId}" registered in local DB`)
