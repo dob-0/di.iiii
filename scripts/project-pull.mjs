@@ -36,6 +36,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
+import { collectProjectAssetRefs } from './document-asset-refs.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
@@ -198,7 +199,11 @@ const main = async () => {
         throw new Error('Could not determine a target space — pass --space <id>.')
     }
     const title = document?.projectMeta?.title || remote?.project?.title || projectId
-    const assetList = Array.isArray(document.assets) ? document.assets : []
+    // The manifest is not the whole dependency list. A code-mode page carries
+    // its assets as URLs inside built markup and leaves `document.assets`
+    // empty — `beyond-form/open-call` printed "0 assets", copied nothing, and
+    // arrived pointing at 13 GLBs only production had. See document-asset-refs.
+    const assetList = collectProjectAssetRefs(document, projectId)
     const entityCount = Array.isArray(document.entities) ? document.entities.length : 0
 
     console.log(`  "${title}"`)
