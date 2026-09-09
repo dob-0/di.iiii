@@ -1425,6 +1425,10 @@
         {
           "label": "Instagram",
           "href": "https://www.instagram.com/adam___adamyan/"
+        },
+        {
+          "label": "Website",
+          "href": "https://adamadamyan.com"
         }
       ],
       "num": "024",
@@ -1487,7 +1491,7 @@
     },
     {
       "slug": "mane-meloyan",
-      "name": "Mane Meloyan",
+      "name": "Mané Meloian",
       "role": "visual artist",
       "discipline": "visual artist",
       "team": false,
@@ -1593,6 +1597,10 @@
         {
           "label": "Instagram",
           "href": "https://www.instagram.com/gorgeooos/"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/gormooradyan"
         }
       ],
       "num": "031",
@@ -1609,7 +1617,16 @@
       "city": null,
       "bio": null,
       "works": [],
-      "elsewhere": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/pirojochekkk/"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/luizadreamer"
+        }
+      ],
       "num": "032",
       "order": 32
     },
@@ -1680,7 +1697,7 @@
     },
     {
       "slug": "misak-samakotian",
-      "name": "Misak Samakotian",
+      "name": "Misak Samokatyan",
       "role": "multimedia artist",
       "discipline": "multimedia artist",
       "team": false,
@@ -1689,7 +1706,12 @@
       "city": null,
       "bio": null,
       "works": [],
-      "elsewhere": [],
+      "elsewhere": [
+        {
+          "label": "YouTube",
+          "href": "https://www.youtube.com/@MisakSamokatyan"
+        }
+      ],
       "num": "037",
       "order": 37
     },
@@ -1704,7 +1726,12 @@
       "city": null,
       "bio": null,
       "works": [],
-      "elsewhere": [],
+      "elsewhere": [
+        {
+          "label": "Website",
+          "href": "https://himikolostsun.art"
+        }
+      ],
       "num": "038",
       "order": 38
     },
@@ -1723,6 +1750,10 @@
         {
           "label": "Instagram",
           "href": "https://www.instagram.com/vilengaifejyan/"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/vilengayfejyan"
         }
       ],
       "num": "039",
