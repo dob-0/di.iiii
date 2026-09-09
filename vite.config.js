@@ -104,7 +104,7 @@ const emitInstallScriptsPlugin = () => ({
 //
 // What the studio's pieces cost, measured on a full build:
 //   88 MB   algovrithm — 31 reels (80.6) and scan.glb (7.4)
-//   25 MB   public/wcc — the Alla Virabyan exhibition microsite
+//   25 MB   public/wcc — media for the WCC microsite (src/wccSite)
 //   ~10 MB  di.iiii itself: js, wasm, css, fonts, draco, basis
 //
 // The reels are NOT pulled in by the algovrithm route. assetLibrary.js globs
@@ -521,7 +521,7 @@ export default {
         modulePreload: {
             // Vite's own heuristic modulepreloads any chunk shared by enough
             // lazy routes from the root index.html itself -- three-vendor,
-            // vendor, and wcc-vendor all qualify (nearly every route needs
+            // vendor, and gsap-vendor all qualify (nearly every route needs
             // three.js) and were confirmed via a real build to be eagerly
             // modulepreloaded from index.html even after the entry chunk's own
             // hard import of three-vendor was removed (2026-07-17 perf audit).
@@ -535,7 +535,7 @@ export default {
                 // react-vendor (the React runtime itself) and app-runtime/
                 // rolldown-runtime (tiny, genuinely needed to boot at all) stay.
                 // Only the large, route-specific vendor bundles are deferred.
-                return deps.filter((dep) => !/\/(three-vendor|vendor|wcc-vendor)-/.test(dep))
+                return deps.filter((dep) => !/\/(three-vendor|vendor|gsap-vendor)-/.test(dep))
             }
         },
         rollupOptions: {
@@ -602,13 +602,13 @@ export default {
                     if (pkg === 'jszip' || pkg === 'idb-keyval') return 'utils-vendor'
 
                     // gsap is only ever imported by the lazy-loaded wcc route
-                    // (WccExperience.jsx / wcc/landing/LandingPage.jsx). Left in
+                    // (WccExperience.jsx / wccSite/landing/LandingPage.jsx). Left in
                     // the 'vendor' catch-all below, it gets merged into the SAME
                     // chunk as eagerly-loaded deps (e.g. MUI via AuthGate), which
                     // drags gsap into every route's eager load too. Giving it its
                     // own chunk name lets it stay lazy, loaded only when the wcc
                     // route actually mounts (2026-07-17 perf audit).
-                    if (pkg === 'gsap') return 'wcc-vendor'
+                    if (pkg === 'gsap') return 'gsap-vendor'
 
                     return 'vendor'
                 }

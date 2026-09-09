@@ -1,5 +1,5 @@
 /* Self-hosted Space Mono, following the pattern WCC established in
- * src/wcc/landing/fonts.css — same reasoning, which is worth repeating: loading
+ * src/wccSite/landing/fonts.css — same reasoning, which is worth repeating: loading
  * this from Google would hand every visitor's IP address and user agent to a
  * third party on page load, with no consent and no way to opt out.
  *

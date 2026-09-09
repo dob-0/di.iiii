@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * promote-wcc-projects.mjs — copy WCC project documents (+ referenced assets)
+ * promote-space-projects.mjs — copy a space's project documents (+ referenced assets)
  * from one live environment to another, e.g. staging → prod.
  *
  * Zone/portal positions are authored inside a project's document (entity
@@ -8,7 +8,7 @@
  * this script, so staging edits stay on staging until this is run.
  *
  * Usage:
- *   node scripts/promote-wcc-projects.mjs [options]
+ *   node scripts/promote-space-projects.mjs [options]
  *
  * Options:
  *   --space   <id>     Space ID (default: wcc)
@@ -119,7 +119,7 @@ async function main() {
         process.exitCode = 1; return
     }
 
-    console.log(`[promote-wcc-projects] space=${SPACE_ID}  ${FROM_URL} → ${TO_URL}`)
+    console.log(`[promote-space-projects] space=${SPACE_ID}  ${FROM_URL} → ${TO_URL}`)
     if (DRY_RUN) console.log('[dry-run] No changes will be made.\n')
 
     const { projects = [] } = await apiFetch(`${FROM_URL}/api/spaces/${SPACE_ID}/projects`, { headers: authHeaders(FROM_TOKEN) })

@@ -58,7 +58,7 @@ payloads between room members without inspecting or storing them.
 **Third parties — main app: none.** No analytics, telemetry, error reporting, tag
 manager or session replay anywhere; `src/index.html` loads same-origin assets only.
 Exceptions live on the **WCC surface only**: Google Fonts CSS
-(`src/wcc/landing/landing.css:1-2`) and `unpkg.com` UMD scripts
+(`src/wccSite/landing/landing.css:1-2`) and `unpkg.com` UMD scripts
 (`public/wcc/artist-works-land/support.js:988,1423,1425`). Google APIs JS loads only
 when a user opens Drive import (`src/hooks/useDriveImport.js:16`).
 
@@ -111,8 +111,8 @@ decision, and several need code before a policy could truthfully describe them.
    stripping breaks orientation; any fix must preserve the EXIF orientation tag.
 6. ~~**Google Fonts on WCC leaks visitor IP + user agent to Google**~~ — **fixed
    2026-07-29** for the React WCC surface: DM Sans and Noto Sans Armenian are
-   self-hosted in `src/wcc/landing/fonts/` (OFL, license texts included) and
-   `src/wcc/landing/fonts.css` replaces the two `@import`s. Verified with
+   self-hosted in `src/wccSite/landing/fonts/` (OFL, license texts included) and
+   `src/wccSite/landing/fonts.css` replaces the two `@import`s. Verified with
    Playwright: zero external requests, both faces load with metrics distinct
    from the fallback. **Still open:** the legacy static bundle
    `public/wcc/artist-works-land/` loads Google Fonts *and* three `unpkg.com`

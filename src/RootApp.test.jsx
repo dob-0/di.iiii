@@ -75,7 +75,7 @@ vi.mock('./studio/StudioApp.jsx', () => ({
     }
 }))
 
-vi.mock('./wcc/WccExperience.jsx', () => ({
+vi.mock('./wccSite/WccExperience.jsx', () => ({
     default: function MockWccExperience({ initialMode }) {
         return <div>wcc-experience:{initialMode}</div>
     }

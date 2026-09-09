@@ -56,7 +56,7 @@
         "install:export": "node scripts/install-bundle.mjs export",
         "install:import": "node scripts/install-bundle.mjs import",
         "selfhost": "node scripts/self-host.mjs",
-        "wcc:promote": "node scripts/promote-wcc-projects.mjs",
+        "space:promote": "node scripts/promote-space-projects.mjs",
         "check:input": "node scripts/input-check.mjs",
         "preview": "vite preview",
         "lint": "eslint src serverXR scripts sdk shared vite.config.js eslint.config.js",
