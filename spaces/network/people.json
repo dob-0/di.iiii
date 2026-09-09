@@ -25,6 +25,13 @@
           "line": "Notations #2 — curated and developed",
           "space": "br-id-ge",
           "project": "landing"
+        },
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -35,21 +42,26 @@
         {
           "label": "GitHub",
           "href": "https://github.com/dob-0"
+        },
+        {
+          "label": "YouTube",
+          "href": "https://www.youtube.com/@gevorg_aram1"
+        },
+        {
+          "label": "Telegram",
+          "href": "https://t.me/dob_0"
         }
       ],
       "num": "01",
       "order": 1,
       "resume": {
         "focus": [
-          "director",
-          "new media artist",
-          "multimedia artist",
-          "contemporary artist",
-          "electronic art production",
-          "digital art production",
-          "audiovisual production",
+          "directing",
+          "new media",
           "curation",
-          "acting",
+          "audiovisual production",
+          "projection mapping",
+          "XR",
           "TouchDesigner",
           "Blender",
           "Resolume",
@@ -62,6 +74,11 @@
             "year": "2026",
             "items": [
               {
+                "title": "Notations #2",
+                "role": "curator, Video Art programme",
+                "place": "hosq, State Philharmonia of Armenia · National Gallery · Hayfilm Cluster, Yerevan, 1–2 Aug"
+              },
+              {
                 "title": "br_id_ge",
                 "role": "director, developer",
                 "place": "Notations #2, State Philharmonia of Armenia, Yerevan"
@@ -72,14 +89,19 @@
             "year": "2025",
             "items": [
               {
-                "title": "RecordAR",
+                "title": "Notations #1 — XR.001",
+                "role": "curator",
+                "place": "hosq, Yerevan, Armenia"
+              },
+              {
+                "title": "RecordAR: Analog and Digital Identities",
                 "role": "art director",
                 "place": "educational programme, Munich, Germany"
               },
               {
-                "title": "Notations",
-                "role": "video art curator",
-                "place": "residency programme, hosq.co, Yerevan, Armenia"
+                "title": "RecordAR",
+                "role": "XR exhibition",
+                "place": "BYOB Interactive Installations, Yerevan, 7 Nov · Interaktiv Tagung, JFF Media Center, Munich, 20 Nov"
               },
               {
                 "title": "Alter ego",
@@ -104,7 +126,7 @@
               {
                 "title": "OUT",
                 "role": "director",
-                "place": "performance, NPAK, Armenia"
+                "place": "performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, 25 May"
               },
               {
                 "title": "F33d6ack",
@@ -116,6 +138,11 @@
           {
             "year": "2023",
             "items": [
+              {
+                "title": "HochX ResidenXies",
+                "role": "artist in residence",
+                "place": "HochX Theater & Live Art, Munich, Germany, July"
+              },
               {
                 "title": "Bisetka: talk place",
                 "role": "director",
@@ -562,6 +589,13 @@
           "line": "Notations #2 — team",
           "space": "br-id-ge",
           "project": "landing"
+        },
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -746,7 +780,15 @@
       "sectionLabel": "team",
       "city": null,
       "bio": "Actor, lighting engineer, musician and DJ — co-founder of SPCTR Lights (2022–2023) and, since 2025, of Yokozo. Multimedia, audiovisual and music production.",
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -935,6 +977,13 @@
           "line": "Faceless",
           "space": "azd",
           "project": "azd"
+        },
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -1077,7 +1126,15 @@
       "sectionLabel": "curators",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1217,7 +1274,15 @@
       "sectionLabel": "performers",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1324,6 +1389,13 @@
           "line": "Notations #2, curator — State Philharmonia of Armenia, 2026-08-01",
           "space": "br-id-ge",
           "project": "n2-ambisonic-performances"
+        },
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -1390,7 +1462,15 @@
       "sectionLabel": "sound",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [],
       "num": "022",
       "order": 22
@@ -1444,7 +1524,15 @@
       "sectionLabel": "visual · multimedia",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1949,7 +2037,15 @@
       "sectionLabel": "stage · costume · design",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1969,7 +2065,15 @@
       "sectionLabel": "stage · costume · design",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
