@@ -328,7 +328,11 @@ describe('SpaceHub', () => {
             render(<SpaceHub />)
 
             await screen.findByText('s0')
-            await waitFor(() => expect(frameIn('s0')).not.toBeNull())
+            // The default 1s waitFor is the machine's budget, not this
+            // behaviour's: twelve card frames mount before s0 reports, and on a
+            // loaded CI runner that crossed 1s and failed here while passing
+            // every time locally. The assertion is unchanged.
+            await waitFor(() => expect(frameIn('s0')).not.toBeNull(), { timeout: 8000 })
             expect(frameIn('s12')).toBeNull()
 
             // Under DI_PROFILE=local a work's route (wcc, algovrithm) is a
@@ -341,7 +345,7 @@ describe('SpaceHub', () => {
             }))
 
             // the slot is freed like a paint would free it
-            await waitFor(() => expect(frameIn('s12')).not.toBeNull())
+            await waitFor(() => expect(frameIn('s12')).not.toBeNull(), { timeout: 8000 })
             // and the card draws its own line in place of the scaled-down frame
             const card = screen.getByText('s0').closest('.ssh-space-card')
             expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
