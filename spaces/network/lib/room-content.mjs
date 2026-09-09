@@ -81,3 +81,18 @@ export function resumeHTML(person) {
     ledgerHTML(r.positions, 'positions') +
     ledgerHTML(r.education, 'education');
 }
+
+// Where a room's facts came from. A roster is only worth reading if a reader
+// can see what it stands on, and the answer differs per person: some of this
+// is public and linkable (a festival's credit page, the person's own site),
+// some is the studio's own archive, which is named but never linked — those
+// documents carry dates of birth and private addresses and must stay closed.
+export function sourcesHTML(person) {
+  const src = person.sources;
+  if (!src || !src.length) return '';
+  return '<div class="section-label">where this comes from</div><ul class="sources">' +
+    src.map((s) => '<li>' + (s.href
+      ? '<a href="' + esc(s.href) + '" target="_blank" rel="noopener">' + esc(s.label) + '</a>'
+      : '<span class="src-closed">' + esc(s.label) + '</span>') + '</li>').join('') +
+    '</ul><p class="src-note">Assembled from those sources with AI, so a detail may be wrong — tell us and it is fixed.</p>';
+}

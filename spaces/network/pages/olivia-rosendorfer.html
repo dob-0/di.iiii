@@ -175,6 +175,17 @@ a.row .made .arrow{opacity:.6;}
   border-bottom:1px solid transparent;}
 .neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
 
+ul.sources{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;}
+ul.sources li{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  padding-left:15px;position:relative;}
+ul.sources li::before{content:'';position:absolute;left:0;top:.55em;width:5px;height:1px;background:var(--accent);}
+ul.sources a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+ul.sources a:hover,ul.sources a:focus-visible{border-bottom-color:var(--accent);}
+/* Named, not linked: the studio's own files are closed on purpose. */
+.src-closed{color:var(--ink-3);}
+.src-note{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  margin:14px 0 0 0;max-width:62ch;}
+
 .room-foot{max-width:var(--room);padding:44px var(--pad) 72px var(--pad);}
 .room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
   padding-top:20px;border-top:1px solid var(--rule);}
@@ -237,6 +248,7 @@ a.row .made .arrow{opacity:.6;}
   <div class="section-label">elsewhere</div><div class="elsewhere"><a class="plate" href="https://www.instagram.com/ojmdra/" target="_blank" rel="noopener">Instagram</a></div>
   <div class="section-label">made things with</div>
     <nav class="neighbours"><a href="/network/gevorg-grigoryan" target="_top">Gevorg Aram Grigoryan</a><a href="/network/syuzi-ginosyan" target="_top">Syuzi Ginosyan</a><a href="/network/taron-grigoryan" target="_top">Taron Grigoryan</a><a href="/network/yeva-abgaryan" target="_top">Yeva Abgaryan</a><a href="/network/maria-matinyan" target="_top">Maria Matinyan</a><a href="/network/ani-khachikyan" target="_top">Ani Khachikyan</a><a href="/network/kay-khachatryan" target="_top">Kay Khachatryan</a><a href="/network/vera-vishnevaya" target="_top">Vera Vishnevaya</a><a href="/network/artush-koshtoyan" target="_top">Artush Koshtoyan</a><a href="/network/hannes-kopke" target="_top">Hannes Köpke</a></nav>
+  <div class="section-label">where this comes from</div><ul class="sources"><li><span class="src-closed">their CV, studio archive — held, not published</span></li><li><a href="https://ritagrechen.de/project.php?id=bisetka%3A-talk_place" target="_blank" rel="noopener">BISETKA: talk_place credits, fachbetrieb rita grechen</a></li><li><a href="https://www.olivia-rosendorfer.de/vita" target="_blank" rel="noopener">her own vita</a></li></ul><p class="src-note">Assembled from those sources with AI, so a detail may be wrong — tell us and it is fixed.</p>
 </main>
 <footer class="room-foot">
   <p>A room in the <a href="/network" target="_top">network</a> — one for each person who makes di.iiii. It is theirs to fill.</p>

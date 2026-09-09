@@ -399,7 +399,37 @@
             "place": "Gyumri, Armenia"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "Notations #2, hosq",
+          "href": "https://hosq.co/notations-festival"
+        },
+        {
+          "label": "Notations #1, hosq",
+          "href": "http://hosq.co/notations-01-festival"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "emilya-nikoghosyan",
@@ -584,7 +614,27 @@
             "place": "Gyumri, Armenia"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        },
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "syuzi-ginosyan",
@@ -803,7 +853,32 @@
             "org": "State Academy of Fine Arts of Armenia"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "G.URBAN platform",
+          "href": "https://www.gurbanplatform.com/page/community.html"
+        }
+      ]
     },
     {
       "slug": "taron-grigoryan",
@@ -993,7 +1068,22 @@
             "place": "Gyumri, Armenia"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        }
+      ]
     },
     {
       "slug": "yeva-abgaryan",
@@ -1170,7 +1260,28 @@
             "place": "Yerevan, Armenia"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        },
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        }
+      ]
     },
     {
       "slug": "maria-matinyan",
@@ -1205,7 +1316,23 @@
         }
       ],
       "num": "006",
-      "order": 6
+      "order": 6,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "her own site",
+          "href": "https://www.mariamatinyan.am/"
+        }
+      ]
     },
     {
       "slug": "carine-aroyan",
@@ -1225,7 +1352,16 @@
         }
       ],
       "num": "007",
-      "order": 7
+      "order": 7,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "her own site",
+          "href": "https://carinearoyan.com/"
+        }
+      ]
     },
     {
       "slug": "namor-votilav",
@@ -1332,7 +1468,16 @@
             "org": "Chelyabinsk State Academy of Culture and Arts"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/Namor"
+        }
+      ]
     },
     {
       "slug": "tatiana-vahani",
@@ -1352,7 +1497,16 @@
         }
       ],
       "num": "009",
-      "order": 9
+      "order": 9,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "her own site",
+          "href": "https://www.tatianavahan.com/"
+        }
+      ]
     },
     {
       "slug": "artak-gevorgyan",
@@ -1367,7 +1521,12 @@
       "works": [],
       "elsewhere": [],
       "num": "010",
-      "order": 10
+      "order": 10,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "lusine-mlke-galstyan",
@@ -1397,7 +1556,19 @@
       ],
       "elsewhere": [],
       "num": "011",
-      "order": 11
+      "order": 11,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        },
+        {
+          "label": "MIHR Theatre",
+          "href": "https://mihrtheatre.com/about"
+        }
+      ]
     },
     {
       "slug": "shoghakat-mlke-galstyan",
@@ -1412,7 +1583,16 @@
       "works": [],
       "elsewhere": [],
       "num": "012",
-      "order": 12
+      "order": 12,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "MIHR Theatre",
+          "href": "https://mihrtheatre.com/about"
+        }
+      ]
     },
     {
       "slug": "ani-khachikyan",
@@ -1440,7 +1620,16 @@
         }
       ],
       "num": "013",
-      "order": 13
+      "order": 13,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        }
+      ]
     },
     {
       "slug": "gnun-martirosyan",
@@ -1546,7 +1735,16 @@
             "place": "Moscow"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        }
+      ]
     },
     {
       "slug": "meline-arshakyan",
@@ -1649,7 +1847,12 @@
             "place": "Yerevan, Armenia"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "arsen-miqayelyan",
@@ -1669,7 +1872,12 @@
         }
       ],
       "num": "016",
-      "order": 16
+      "order": 16,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "alexandra-martini",
@@ -1793,7 +2001,12 @@
             "place": "Paris, France"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "kay-khachatryan",
@@ -1989,7 +2202,19 @@
             "org": "“METLEX” course"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        }
+      ]
     },
     {
       "slug": "areg-aydinyan",
@@ -2004,7 +2229,12 @@
       "works": [],
       "elsewhere": [],
       "num": "019",
-      "order": 19
+      "order": 19,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "sasha-lenivec",
@@ -2019,7 +2249,12 @@
       "works": [],
       "elsewhere": [],
       "num": "020",
-      "order": 20
+      "order": 20,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "vahagn-martirosyan",
@@ -2034,7 +2269,12 @@
       "works": [],
       "elsewhere": [],
       "num": "021",
-      "order": 21
+      "order": 21,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "vera-vishnevaya",
@@ -2057,7 +2297,16 @@
       ],
       "elsewhere": [],
       "num": "022",
-      "order": 22
+      "order": 22,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        }
+      ]
     },
     {
       "slug": "nikita-maksimenko",
@@ -2072,7 +2321,12 @@
       "works": [],
       "elsewhere": [],
       "num": "023",
-      "order": 23
+      "order": 23,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "adam-adamyan",
@@ -2104,7 +2358,16 @@
         }
       ],
       "num": "024",
-      "order": 24
+      "order": 24,
+      "sources": [
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "his own site",
+          "href": "https://adamadamyan.com"
+        }
+      ]
     },
     {
       "slug": "artush-koshtoyan",
@@ -2139,7 +2402,23 @@
         }
       ],
       "num": "025",
-      "order": 25
+      "order": 25,
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        }
+      ]
     },
     {
       "slug": "greta-grigoryan",
@@ -2174,7 +2453,18 @@
         }
       ],
       "num": "026",
-      "order": 26
+      "order": 26,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "mane-meloyan",
@@ -2194,7 +2484,12 @@
         }
       ],
       "num": "027",
-      "order": 27
+      "order": 27,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "mery-petrosyan",
@@ -2217,7 +2512,15 @@
       ],
       "elsewhere": [],
       "num": "028",
-      "order": 28
+      "order": 28,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "polina-vever",
@@ -2245,7 +2548,15 @@
         }
       ],
       "num": "029",
-      "order": 29
+      "order": 29,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "shahane-harutyunyan",
@@ -2282,7 +2593,18 @@
       ],
       "elsewhere": [],
       "num": "030",
-      "order": 30
+      "order": 30,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "gor-muradyan",
@@ -2306,7 +2628,16 @@
         }
       ],
       "num": "031",
-      "order": 31
+      "order": 31,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/gormooradyan"
+        }
+      ]
     },
     {
       "slug": "luiza-khechoyan",
@@ -2330,7 +2661,16 @@
         }
       ],
       "num": "032",
-      "order": 32
+      "order": 32,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/luizadreamer"
+        }
+      ]
     },
     {
       "slug": "egor-lazensky",
@@ -2350,7 +2690,12 @@
         }
       ],
       "num": "033",
-      "order": 33
+      "order": 33,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "alvie-starr",
@@ -2365,7 +2710,12 @@
       "works": [],
       "elsewhere": [],
       "num": "034",
-      "order": 34
+      "order": 34,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "ani-rubenyan",
@@ -2380,7 +2730,12 @@
       "works": [],
       "elsewhere": [],
       "num": "035",
-      "order": 35
+      "order": 35,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "anna-khlechyan",
@@ -2395,7 +2750,12 @@
       "works": [],
       "elsewhere": [],
       "num": "036",
-      "order": 36
+      "order": 36,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "misak-samakotian",
@@ -2415,7 +2775,16 @@
         }
       ],
       "num": "037",
-      "order": 37
+      "order": 37,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "his own channel",
+          "href": "https://www.youtube.com/@MisakSamokatyan"
+        }
+      ]
     },
     {
       "slug": "nino-giorgadze",
@@ -2435,7 +2804,16 @@
         }
       ],
       "num": "038",
-      "order": 38
+      "order": 38,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "her own site",
+          "href": "https://himikolostsun.art"
+        }
+      ]
     },
     {
       "slug": "vilen-gayfejyan",
@@ -2568,7 +2946,18 @@
             "place": "Yerevan, Armenia"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "yulia-stepanova",
@@ -2588,7 +2977,12 @@
         }
       ],
       "num": "040",
-      "order": 40
+      "order": 40,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "sergey-virabyan",
@@ -2667,7 +3061,12 @@
             "org": "TUMO Center for Creative Technologies"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "albert-avetisyan",
@@ -2682,7 +3081,12 @@
       "works": [],
       "elsewhere": [],
       "num": "042",
-      "order": 42
+      "order": 42,
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "gor-movsisyan",
@@ -2705,7 +3109,15 @@
       ],
       "elsewhere": [],
       "num": "043",
-      "order": 43
+      "order": 43,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "varujan-movsisyan",
@@ -2720,7 +3132,12 @@
       "works": [],
       "elsewhere": [],
       "num": "044",
-      "order": 44
+      "order": 44,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "levon-avetisyan",
@@ -2821,7 +3238,15 @@
             "place": "Gyumri branch"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "slavik-avetisyan",
@@ -2924,7 +3349,12 @@
             "org": "National Polytechnic College"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "ruben-melikyan",
@@ -3015,7 +3445,15 @@
           }
         ],
         "education": []
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "grig-gevorgyan",
@@ -3170,7 +3608,15 @@
             "org": "Yerevan State University"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "avetis-grigoryan",
@@ -3185,7 +3631,12 @@
       "works": [],
       "elsewhere": [],
       "num": "049",
-      "order": 49
+      "order": 49,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "hannes-kopke",
@@ -3213,7 +3664,20 @@
         }
       ],
       "num": "050",
-      "order": 50
+      "order": 50,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/"
+        }
+      ]
     },
     {
       "slug": "olivia-rosendorfer",
@@ -3378,7 +3842,20 @@
             "place": "Dresden, Germany"
           }
         ]
-      }
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "her own vita",
+          "href": "https://www.olivia-rosendorfer.de/vita"
+        }
+      ]
     },
     {
       "slug": "nyusha-terbalyan",
@@ -3393,7 +3870,12 @@
       "works": [],
       "elsewhere": [],
       "num": "052",
-      "order": 52
+      "order": 52,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     }
   ]
 }

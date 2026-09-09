@@ -175,6 +175,17 @@ a.row .made .arrow{opacity:.6;}
   border-bottom:1px solid transparent;}
 .neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
 
+ul.sources{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;}
+ul.sources li{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  padding-left:15px;position:relative;}
+ul.sources li::before{content:'';position:absolute;left:0;top:.55em;width:5px;height:1px;background:var(--accent);}
+ul.sources a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+ul.sources a:hover,ul.sources a:focus-visible{border-bottom-color:var(--accent);}
+/* Named, not linked: the studio's own files are closed on purpose. */
+.src-closed{color:var(--ink-3);}
+.src-note{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  margin:14px 0 0 0;max-width:62ch;}
+
 .room-foot{max-width:var(--room);padding:44px var(--pad) 72px var(--pad);}
 .room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
   padding-top:20px;border-top:1px solid var(--rule);}
@@ -237,6 +248,7 @@ a.row .made .arrow{opacity:.6;}
   
   <div class="section-label">also in sound</div>
     <nav class="neighbours"><a href="/network/kay-khachatryan" target="_top">Kay Khachatryan</a><a href="/network/areg-aydinyan" target="_top">Areg Aydinyan</a><a href="/network/sasha-lenivec" target="_top">Sasha Lenivec</a><a href="/network/vahagn-martirosyan" target="_top">Vahagn Martirosyan</a><a href="/network/vera-vishnevaya" target="_top">Vera Vishnevaya</a></nav>
+  <div class="section-label">where this comes from</div><ul class="sources"><li><span class="src-closed">the studio network deck, April 2026 — held, not published</span></li></ul><p class="src-note">Assembled from those sources with AI, so a detail may be wrong — tell us and it is fixed.</p>
 </main>
 <footer class="room-foot">
   <p>A room in the <a href="/network" target="_top">network</a> — one for each person who makes di.iiii. It is theirs to fill.</p>
