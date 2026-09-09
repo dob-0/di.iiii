@@ -53,8 +53,14 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const TIMEOUT_MS = 30000
 const TRANSFER_TIMEOUT_MS = 120000
 
+// The local tier is not always a dev server on 4000: a `di` install serves the same
+// database over https on its own name (LOCAL_API_URL in serverXR/.env.local, or the
+// environment). Without this the script cannot see the machine it is running on.
+export const localBase = (env = {}) =>
+    (process.env.LOCAL_API_URL || env.LOCAL_API_URL || 'http://localhost:4000').replace(/\/+$/, '') + '/serverXR'
+
 export const TIERS = {
-    local: { base: 'http://localhost:4000/serverXR', tokenKey: 'API_TOKEN' },
+    local: { base: localBase(), tokenKey: 'API_TOKEN' },
     staging: { base: 'https://staging.di-studio.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
     prod: { base: 'https://di-studio.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
 }
@@ -289,9 +295,15 @@ export const planSync = ({ source, destination, force = false }) => {
     return plan
 }
 
+// A worktree without its own serverXR/.env.local used to get an empty object here, no
+// token on any request, and one unexplained "fetch failed". The environment is the
+// fallback, and wins where it is set.
+const ENV_KEYS = ['API_TOKEN', 'LIVE_API_TOKEN', 'PROD_API_TOKEN', 'LOCAL_API_URL']
+const fromProcess = () => Object.fromEntries(ENV_KEYS.filter((k) => process.env[k]).map((k) => [k, process.env[k]]))
+
 const readEnv = () => {
     const file = path.join(ROOT_DIR, 'serverXR', '.env.local')
-    if (!fs.existsSync(file)) return {}
+    if (!fs.existsSync(file)) return fromProcess()
     return Object.fromEntries(
         fs.readFileSync(file, 'utf8')
             .split(/\r?\n/)
@@ -329,7 +341,8 @@ const main = async () => {
         process.exit(1)
     }
 
-    const env = readEnv()
+    const env = { ...readEnv(), ...fromProcess() }
+    TIERS.local.base = localBase(env)
     const from = { ...TIERS[args.from], token: env[TIERS[args.from].tokenKey] }
     const to = { ...TIERS[args.to], token: env[TIERS[args.to].tokenKey] }
 
@@ -573,7 +586,7 @@ const copyAssets = async ({ call, from, to, projectId, document }) => {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
     main().catch((error) => {
-        console.error(error.message)
+        console.error(process.env.TIER_SYNC_DEBUG ? error.stack : error.message)
         process.exit(1)
     })
 }
