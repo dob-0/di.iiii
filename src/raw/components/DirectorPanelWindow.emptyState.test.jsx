@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-// The local build carries no works at all (DI_PROFILE=local stubs every work
+// The slim build carries no works at all (DI_LOCAL_SLIM=1 stubs every work
 // entry), so the registry has no descriptor to give. That is a true statement
 // about the build, not a failure — but before the works registry the director
 // window would have rendered against a piece that was not there.

@@ -500,7 +500,11 @@ exists", and thirteen siblings made that false. A rule in a comment is a wish.
   lay out a platform panel. Prefix a tool's classes with the tool's name.
 - The offline build reads the same registry. It used to hold its own typed list
   of what to exclude, which meant a new work silently rejoined every artist's
-  download while the pack log still said "local profile".
+  download while the pack log still said "local profile". Which build carries
+  which is decided in `src/works/buildProfile.js` — since 2026-09-10 a local
+  install carries the works and `DI_LOCAL_SLIM=1` is the strip, because an
+  install that cannot open its owner's own exhibition offline is not an offline
+  install. The registry is still the only place a work is named.
 - Persisted names are not code names. `SETTINGS_KEY = 'algovrithm'` in
   `src/timeline/timingOverlay.js` stays that word: it is the key production
   data is stored under, and renaming it would silently orphan every retimed

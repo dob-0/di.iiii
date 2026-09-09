@@ -1,11 +1,19 @@
-// The local profile's cuts are made by pattern, not by import, so the thing
+// The slim profile's cuts are made by pattern, not by import, so the thing
 // that breaks them is a rename or a reformat somewhere else in the tree. Each
 // of these is a cut that would otherwise fail silently — and silence here does
-// not mean a broken build, it means an artist downloading 117 MB of the
-// studio's own work again while every log line says "local profile".
+// not mean a broken build, it means someone who asked for the 15 MB download
+// getting 128 MB while every log line says "local-slim profile".
+//
+// Since 2026-09-10 the cuts belong to `DI_LOCAL_SLIM=1`, not to
+// `DI_PROFILE=local`: a local install carries the works, because an install
+// that cannot open the owner's own exhibition offline is not an offline
+// install. src/works/localProfile.test.js asserts WHICH build gets which; this
+// file asserts that the cut, when it is made, still lands where it aims.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { PROGRAM_PUBLIC_DIRS, resolveBuildProfile } from '../src/works/buildProfile.js'
+import { workPublicDirs } from '../src/works/works.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(join(ROOT, p), 'utf8')
@@ -27,10 +35,15 @@ describe('the local build profile still cuts where it thinks it does', () => {
         // could go stale without anyone touching it: a new work simply was
         // not in the list. src/works/boundary.test.js checks that the paths
         // the registry names are real; this checks the profile still asks.
-        expect(viteConfig).toContain("from './src/works/works.js'")
-        expect(viteConfig).toContain('const HOSTED_PIECE_ENTRIES = workEntries()')
-        expect(viteConfig).toContain('workAssetDirs()')
+        const buildProfile = read('src/works/buildProfile.js')
+        expect(viteConfig).toContain("from './src/works/buildProfile.js'")
+        expect(buildProfile).toContain("from './works.js'")
+        expect(buildProfile).toContain('workEntries()')
+        expect(buildProfile).toContain('workAssetDirs()')
+        expect(buildProfile).toContain('workPublicDirs()')
+        expect(viteConfig).toContain('const HOSTED_PIECE_ENTRIES = BUILD_PROFILE.stubEntries')
         expect(viteConfig).not.toMatch(/HOSTED_PIECE_ENTRIES = \[/)
+        expect(buildProfile).not.toMatch(/stubEntries: \[\s*'/)
     })
 
     it('no longer reaches the media bin from the general tool', () => {
@@ -48,24 +61,34 @@ describe('the local build profile still cuts where it thinks it does', () => {
     })
 
     it('copies a public include-list whose directories all exist', () => {
-        const list = viteConfig.match(/const LOCAL_PUBLIC_INCLUDE = \[([^\]]*)\]/)
-        expect(list).toBeTruthy()
-        for (const name of list[1].split(',').map(s => s.trim().replace(/'/g, '')).filter(Boolean)) {
+        // Both halves of it: the program's own directories, typed once in
+        // buildProfile.js, and each work's, which come from the registry.
+        for (const name of [...PROGRAM_PUBLIC_DIRS, ...workPublicDirs()]) {
             expect(() => readFileSync(join(ROOT, 'public', name))).toThrow(/EISDIR|illegal operation on a directory/)
         }
+        expect(resolveBuildProfile({ DI_PROFILE: 'local' }).publicInclude)
+            .toEqual([...PROGRAM_PUBLIC_DIRS, ...workPublicDirs()])
     })
 })
 
 describe('the packer refuses the wrong dist', () => {
     const packer = read('scripts/pack-runtime.mjs')
 
-    it('checks dist for studio pieces before archiving', () => {
-        expect(packer).toContain("dist', 'wcc'")
-        expect(packer).toContain(".mp4")
+    it('asks the build what it is instead of sniffing dist', () => {
+        // It used to look for dist/wcc and for .mp4s in assets/. That answered
+        // "local or hosted" only while a local build was the one without them.
+        // A local build has both now, so the guess would refuse a correct
+        // artifact — or, worse, pack the wrong one and label it right.
+        expect(packer).toContain("'build-profile.json'")
+        expect(packer).toContain('marker.profile !== profile')
+        expect(packer).not.toContain("dist', 'wcc'")
+        expect(read('vite.config.js')).toContain("fileName: 'build-profile.json'")
     })
 
     it('records the profile in release.json', () => {
         expect(packer).toContain('profile,')
+        // …and which works an artist can actually open offline.
+        expect(packer).toContain('works: marker.works')
     })
 
     it('passes the packed version to the build so the app announces it', () => {
@@ -82,12 +105,15 @@ describe('the packer refuses the wrong dist', () => {
 // if a work, a font, a video or a dependency joins the artist's build by any
 // route at all, the number moves and this fails.
 //
-// The budget is deliberately loose (roughly 50% headroom over today's 9.6 MB)
+// The budget is deliberately loose (roughly 15% headroom over today's 13.9 MB)
 // so ordinary growth does not cry wolf. It is not there to police a megabyte.
 // It is there to catch the 88 MB kind of mistake, which is the kind that
 // actually happened.
-describe('the local build stays a download an artist would accept', () => {
-    const BUDGET_MB = 15
+//
+// It applies to the SLIM build only. A plain local build is meant to be large:
+// it carries the works on purpose, and its size is the works' size.
+describe('the slim build stays a download an artist would accept', () => {
+    const BUDGET_MB = 16
     const distDir = join(ROOT, 'dist')
 
     const totalBytes = (dir) => readdirSync(dir, { withFileTypes: true }).reduce((sum, entry) => {
@@ -95,12 +121,11 @@ describe('the local build stays a download an artist would accept', () => {
         return sum + (entry.isDirectory() ? totalBytes(full) : statSync(full).size)
     }, 0)
 
-    it.skipIf(!existsSync(join(distDir, 'index.html')))('is under the budget, if a build is there to measure', () => {
-        // Only meaningful for a local-profile build; the hosted one is
-        // supposed to be large, and carries the works to prove it.
-        const hosted = existsSync(join(distDir, 'wcc'))
-            || readdirSync(join(distDir, 'assets')).some((name) => name.endsWith('.mp4'))
-        if (hosted) return
+    it.skipIf(!existsSync(join(distDir, 'build-profile.json')))('is under the budget, if a slim build is there to measure', () => {
+        // The build wrote down what it is. Sniffing for dist/wcc used to
+        // answer this and now cannot: a local build has one.
+        const marker = JSON.parse(readFileSync(join(distDir, 'build-profile.json'), 'utf8'))
+        if (marker.profile !== 'local-slim') return
 
         const mb = totalBytes(distDir) / 1024 / 1024
         expect(mb, `dist/ is ${mb.toFixed(1)} MB against a ${BUDGET_MB} MB budget — something joined the artist's build`).toBeLessThan(BUDGET_MB)

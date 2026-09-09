@@ -1,4 +1,4 @@
-/* global __APP_VERSION__ */
+/* global __APP_VERSION__, __DI_WORKS__ */
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, ThemeProvider, Typography } from '@mui/material'
 import { diFontTheme } from '../styles/muiTheme.js'
@@ -11,6 +11,7 @@ import { flyInside, REST_POSE } from './enterFlight.js'
 import { crackAway } from './crackTransition.js'
 import PageDebris from './PageDebris.jsx'
 import { buildJamScenePath } from '../project/routing/jamRouting.js'
+import { WORK_IDS } from '../works/works.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
 // LiveProjectScene into the landing chunk for every visitor — including phones,
@@ -64,6 +65,28 @@ const FEATURED_SPACES = [
     { id: 'algovrithm', label: 'algovrithm', href: '/algovrithm', className: 'landing-cta-algo-vrithm' }
 ]
 
+// WHICH OF THOSE FOUR IS A DOOR ONTO SOMETHING, HERE.
+//
+// Two are works — code in this repo, compiled into the artifact (see
+// src/works/works.js). Two are spaces — rows on di-studio.xyz's database,
+// which a fresh install does not have. The row used to be hidden whole on any
+// local install, and that was right for both halves at the time: the works
+// were stripped out of the local build and the spaces were never there.
+//
+// The works are in a local build now. The spaces still are not. So the row
+// asks the two questions separately: a work shows if it is IN this artifact,
+// which the build wrote into __DI_WORKS__; a space shows if this is the hosted
+// site. Neither chip is a door onto nothing.
+//
+// __DI_WORKS__ is a build-time define — undefined under a plain `vitest` or
+// any tooling that does not go through vite.config.js, where the full registry
+// is the honest answer.
+const WORKS_IN_THIS_BUILD = typeof __DI_WORKS__ === 'undefined' ? WORK_IDS : __DI_WORKS__
+
+export const featuredSpacesFor = ({ isLocalInstall = false } = {}) => FEATURED_SPACES.filter(
+    (space) => (WORK_IDS.includes(space.id) ? WORKS_IN_THIS_BUILD.includes(space.id) : !isLocalInstall)
+)
+
 // A `di up` install on the visitor's own machine has no accounts and no
 // quota — the server says so (config.local + requireAuth off) and this page
 // must not keep speaking hosted-product copy at someone who owns the whole
@@ -72,10 +95,9 @@ const FEATURED_SPACES = [
 // article ("Run di.iiii on your own machine").
 const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Click "Step inside" or go to any space URL. This is your machine — everything here is yours to edit, no account involved.' }
 // The hero's two lines are the hosted pitch. "No download. No install." is
-// read, on a local install, by someone who has just done both — and the
-// featured row below advertises di-studio.xyz's own exhibitions, which are not
-// in this copy and whose spaces do not exist in a fresh install, so every chip
-// is a door onto nothing. Same one boolean, no second mode.
+// read, on a local install, by someone who has just done both. (The featured
+// row was hidden here too; it is filtered per chip now — see
+// featuredSpacesFor above.) Same one boolean, no second mode.
 const LOCAL_TAGLINE = 'Running on your own machine. Offline, no account, and the work stays in your home folder.'
 const LOCAL_CTA_SUB = 'no account, no quota. Studio is a room on the same desk.'
 const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', desc: 'This di.iiii runs locally. Create as many spaces as you like — no sign-in, no quota, and your work stays in your own home folder.' }
@@ -236,6 +258,7 @@ function LandingPageInner() {
     // /api/config, which this page already fetches; deliberately NOT from
     // /api/auth/session, which would mint a guest session for every visitor.
     const [isLocalInstall, setIsLocalInstall] = useState(false)
+    const featuredSpaces = featuredSpacesFor({ isLocalInstall })
     const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches)
     // Phones do not get the decorative WebGL hero. landing.css has tried to
     // disable it below 520px since the hero was built, but the rule targets
@@ -473,11 +496,11 @@ function LandingPageInner() {
                         {isLocalInstall ? LOCAL_CTA_SUB : 'no account, nothing to install — for you or for whoever opens your link.'}
                     </Typography>
 
-                    {!isLocalInstall && (
+                    {featuredSpaces.length > 0 && (
                         <>
                             <Typography className="lp-hero-featured-label">Featured exhibitions</Typography>
                             <Stack className="lp-hero-space-row" direction="row" sx={{ pb: 2, gap: '10px 12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                {FEATURED_SPACES.map((space) => (
+                                {featuredSpaces.map((space) => (
                                     <Button
                                         key={space.id}
                                         className={`landing-cta-ghost ${space.className}`}
