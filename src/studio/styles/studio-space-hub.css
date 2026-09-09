@@ -250,16 +250,22 @@
     gap: 12px;
 }
 
-/* The two shelves a guest actually uses (Open Space, sandbox) get more room
-   than a generic grid card — this is the first screen, not the directory.
+/* Open Space and the sandbox keep their own shelves — they are the room everyone
+   shares and the one that is yours — but not their own SIZE. A 480px card with a
+   480px picture on top of it made the first thing on the page the biggest and
+   loudest thing on it, and pushed everything anyone actually came for below the
+   fold. Same width as every other card; the shelf label is what marks them.
    Comes after .ssh-spaces-grid on purpose: same specificity, later wins. */
 .ssh-featured-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 480px));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
 }
 
-.ssh-featured-grid /* A visitor's grid is the page itself, not a directory strip beside two
-   featured cards -- give each card enough width for its picture and address.
-   Comes after .ssh-spaces-grid on purpose: same specificity, later wins. */
+/* A visitor's grid is the page itself, not a directory strip beside two featured
+   cards -- give each card enough width for its picture and address.
+   Comes after .ssh-spaces-grid on purpose: same specificity, later wins.
+   (This rule spent a while unreachable: the comment sat INSIDE the selector,
+   which made it read as `.ssh-featured-grid .ssh-spaces-grid--visitor` — a
+   descendant that never exists.) */
 .ssh-spaces-grid--visitor {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
@@ -727,4 +733,11 @@
 .ssh-space-warning .ssh-card-btn {
     margin-left: 6px;
     vertical-align: baseline;
+}
+
+/* One button on a resting card, the eight behind it. See SpaceHub's manageId. */
+.ssh-card-manage {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
 }

@@ -261,6 +261,10 @@ export default function SpaceHub() {
     // Spaces whose cover image failed to load — see the card preview below.
     const [brokenCovers, setBrokenCovers] = useState(() => new Set())
     const [copiedInviteId, setCopiedInviteId] = useState(null)
+    // Which card is showing its management buttons, or null. Eight buttons under
+    // every card turned the grid into a wall of controls with the work squeezed
+    // between them; they live behind "Manage" now, one card open at a time.
+    const [manageId, setManageId] = useState(null)
     // 'grid' = the card shelves (default); 'list' = one dense row per space, which
     // is the only view that stays readable past ~20 spaces; 'map' = the spatial lens.
     const [viewMode, setViewMode] = useState(() => {
@@ -644,12 +648,22 @@ export default function SpaceHub() {
     // The list is one flat run of rows, in the arranged order, pinned shelves included.
     const listSpaces = applyView(arrangeable, { arrange, filter: filterMode })
 
+    // The two featured shelves are a PAIR — the room everyone shares beside the one
+    // that is yours — and only earn their own row when both are there. Alone, a
+    // single card claimed a half-width row with the whole rest of the screen empty
+    // beside it, which is what made the first thing on the page the worst-looking
+    // thing on it. On its own it joins the grid as the first card instead, exactly
+    // as it already does on a visitor's page, and carries its line on the card.
+    const featuredCards = [openShelfCard, sandboxShelfCard].filter(Boolean)
+    const pairFeatured = featuredCards.length === 2
+    const mergedRest = pairFeatured ? arrangedRest : [...featuredCards, ...arrangedRest]
+
     const shelves = isVisitor
         ? [visitorSpaces.length > 0 && { key: 'spaces', label: null, hint: null, items: visitorSpaces }].filter(Boolean)
         : [
-            openShelfCard && { key: 'open', label: 'Open Space', hint: OPEN_SPACE_HINT, items: [openShelfCard] },
-            sandboxShelfCard && { key: 'sandbox', label: 'Your sandbox', hint: SANDBOX_HINT, items: [sandboxShelfCard] },
-            arrangedRest.length > 0 && { key: 'spaces', label: 'Your spaces', hint: null, items: arrangedRest }
+            pairFeatured && { key: 'open', label: 'Open Space', hint: OPEN_SPACE_HINT, items: [openShelfCard] },
+            pairFeatured && { key: 'sandbox', label: 'Your sandbox', hint: SANDBOX_HINT, items: [sandboxShelfCard] },
+            mergedRest.length > 0 && { key: 'spaces', label: 'Your spaces', hint: null, items: mergedRest }
         ].filter(Boolean)
 
     return (
@@ -983,8 +997,10 @@ export default function SpaceHub() {
                                     {/* In a visitor's single grid the Open Space is one card
                                         among the others, so it carries its own line instead of
                                         a shelf heading above it. */}
-                                    {(featured && hint) || (isVisitor && space.id === openSpaceId) ? (
-                                        <p className="ssh-space-tagline">{featured ? hint : OPEN_SPACE_HINT}</p>
+                                    {(featured && hint) || space.id === openSpaceId || space.kind === 'sandbox' ? (
+                                        <p className="ssh-space-tagline">
+                                            {featured ? hint : (space.kind === 'sandbox' ? SANDBOX_HINT : OPEN_SPACE_HINT)}
+                                        </p>
                                     ) : null}
                                     {linkedTitle && (
                                         <p className="ssh-space-project">Project: {linkedTitle}</p>
@@ -1016,6 +1032,17 @@ export default function SpaceHub() {
                                     )}
 
                                     {canManage(space) && (
+                                        <div className="ssh-card-manage" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                            <button
+                                                className={`ssh-card-btn${manageId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                                aria-expanded={manageId === space.id}
+                                                onClick={() => setManageId(id => (id === space.id ? null : space.id))}
+                                            >
+                                                {manageId === space.id ? 'Done' : 'Manage'}
+                                            </button>
+                                        </div>
+                                    )}
+                                    {canManage(space) && manageId === space.id && (
                                         <div className="ssh-card-actions" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                                             <button className="ssh-card-btn" onClick={e => handleRename(space, e)}>
                                                 Rename

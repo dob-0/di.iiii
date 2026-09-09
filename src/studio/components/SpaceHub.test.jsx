@@ -79,6 +79,15 @@ const cardActionsFor = (spaceId) => {
     return [...card.querySelectorAll('.ssh-card-btn')].map((btn) => btn.textContent)
 }
 
+// A resting card shows one button ("Manage"); the management row is behind it.
+// Open it first, the way a person does, then read the actions.
+const openManageFor = (spaceId) => {
+    const card = screen.getByText(spaceId).closest('.ssh-space-card')
+    const toggle = [...card.querySelectorAll('.ssh-card-btn')].find((b) => b.textContent === 'Manage')
+    if (toggle) fireEvent.click(toggle)
+    return card
+}
+
 describe('SpaceHub', () => {
     beforeEach(() => {
         listServerSpaces.mockReset()
@@ -110,10 +119,13 @@ describe('SpaceHub', () => {
         render(<SpaceHub />)
 
         await screen.findByText('mine')
+        // Resting, an owned card offers only Manage — the eight actions are behind it.
+        expect(cardActionsFor('mine')).toEqual(['Manage'])
+        openManageFor('mine')
         expect(cardActionsFor('mine')).toEqual(
             expect.arrayContaining(['Rename', 'Delete', 'GitHub sync'])
         )
-        // Someone else's public space: no management, only the live-link Copy.
+        // Someone else's public space: no management at all, only the live-link Copy.
         expect(cardActionsFor('theirs')).toEqual(['Copy'])
         expect(screen.getByText('View live')).toBeTruthy()
     })
@@ -382,6 +394,7 @@ describe('SpaceHub', () => {
         render(<SpaceHub />)
 
         await screen.findByText('mine')
+        openManageFor('mine')
         fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
         const fileInput = screen.getByText('Upload image').querySelector('input[type="file"]')
         const file = new File(['img-bytes'], 'cover.png', { type: 'image/png' })
@@ -400,6 +413,7 @@ describe('SpaceHub', () => {
         render(<SpaceHub />)
 
         await screen.findByText('anyones')
+        openManageFor('anyones')
         expect(cardActionsFor('anyones')).toEqual(
             expect.arrayContaining(['Rename', 'Delete'])
         )
