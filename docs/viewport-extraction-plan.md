@@ -23,7 +23,7 @@ The `entity.type → objectComponents` mapping exists, near-identical, in **four
 | `src/studio/components/StudioViewport.jsx:24` | `EntityContent` | **superset** — adds `wireframe`/`opacity` props + 4 light-entity cases (`pointLight`/`spotLight`/`directionalLight`/`ambientLight`) |
 | `src/beta/components/BetaViewport.jsx:43` | `EntityVisual` (inline `content`) | subset — no wireframe/opacity, no lights |
 | `src/components/LiveProjectScene.jsx:64` | `EntityVisual` | has opacity; runtime/animation playback wrapper |
-| `src/wcc/scene/WccExhibition.jsx:98` | `EntityVisual` | has wireframe/opacity |
+| `src/wccSite/scene/WccExhibition.jsx:98` | `EntityVisual` | has wireframe/opacity |
 
 Same nine primitive cases (`box · sphere · cone · cylinder · text · image · video · audio · model`), same prop names, same `default → BoxObject`. The asset lookup (`media.assetId ? assetMap.get(...) : null`) is identical in all four. **This is the single most duplicated piece of 3D code in the repo** and the reason "fix it twice" keeps happening (same root cause as the duplicated `Walker`).
 

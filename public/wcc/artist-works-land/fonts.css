@@ -3,7 +3,7 @@
  * Replaces the two fonts.googleapis.com stylesheet links (DM Sans
  * opsz,wght@9..40,400;9..40,500 and Noto Sans Armenian wght@400;500) — the
  * last third-party requests in the product. Same pattern as the React WCC
- * surface (src/wcc/landing/fonts.css). Declarations below are Google's own
+ * surface (src/wccSite/landing/fonts.css). Declarations below are Google's own
  * CSS verbatim, with src rewritten to local files; Google serves the same
  * woff2 for both requested weights of each subset, so weights are collapsed
  * into ranges. Both families are variable fonts under the SIL Open Font

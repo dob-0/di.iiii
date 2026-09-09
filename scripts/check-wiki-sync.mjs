@@ -38,7 +38,7 @@ const readFileSafe = async (relativePath) => {
 // (local + pre-push gate) and skips silently in shallow CI checkouts.
 const FRESHNESS_GRACE_DAYS = 7
 // `src/beta` was deleted 2026-08-06 and sat here dead until 2026-09-01.
-const USER_FACING_PATHS = ['src/studio', 'src/wcc', 'src/landing', 'src/project', 'serverXR/src/routes']
+const USER_FACING_PATHS = ['src/studio', 'src/wccSite', 'src/landing', 'src/project', 'serverXR/src/routes']
 
 const collectFreshnessErrors = (articles) => {
     let lastCode

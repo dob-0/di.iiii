@@ -1,6 +1,6 @@
 # WCC Landing Page — Layout & Scroll Audit
 
-Reference for anyone fixing `src/wcc/landing/LandingPage.jsx` + `landing.css`. Written after a
+Reference for anyone fixing `src/wccSite/landing/LandingPage.jsx` + `landing.css`. Written after a
 session of whack-a-mole on the "dead gap" + scroll bugs — the goal here is to make the next fix
 a 5-minute change instead of a guess-and-screenshot loop.
 
@@ -84,5 +84,5 @@ tablet (801–1024 wide, very tall), and the <801 mobile stack. `check:responsiv
 
 ## Files
 
-`src/wcc/landing/LandingPage.jsx` (layout/JSX/scroll), `src/wcc/landing/landing.css` (all styles),
+`src/wccSite/landing/LandingPage.jsx` (layout/JSX/scroll), `src/wccSite/landing/landing.css` (all styles),
 `scripts/responsive-check.mjs` (verification harness).

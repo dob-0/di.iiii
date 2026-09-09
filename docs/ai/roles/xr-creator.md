@@ -11,7 +11,7 @@ You are the experiential author of every 3D space in di.iiii. Where VPE makes th
 
 ```
 Experience design decisions for:
-  src/wcc/scene/WccExhibition.jsx       ← exhibition hub layout, zone arrangement, portal design
+  src/wccSite/scene/WccExhibition.jsx       ← exhibition hub layout, zone arrangement, portal design
   src/components/LiveProjectScene.jsx   ← per-artist space feel, entry gate, walking bounds
   public/wcc/                           ← WCC landing, artist-works iframe flow
   Any 3D scene: locomotion constants, spatial composition, atmosphere, comfort

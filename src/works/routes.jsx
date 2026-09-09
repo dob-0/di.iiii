@@ -14,7 +14,7 @@ import { lazy } from 'react'
  * resolve to a stub, so the work is not in the artifact at all.
  */
 
-const WccExperience = lazy(() => import('../wcc/WccExperience.jsx'))
+const WccExperience = lazy(() => import('../wccSite/WccExperience.jsx'))
 const AlgoVrithmExperience = lazy(() => import('../algoVrithm/AlgoVrithmExperience.jsx'))
 const AlgoVrithmLanding = lazy(() => import('../algoVrithm/landing/AlgoVrithmLanding.jsx'))
 

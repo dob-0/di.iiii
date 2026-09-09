@@ -15,7 +15,7 @@ di.iiii platform  (dob-0/di.iiii)
 Spaces live on di-studio.xyz (queried prod 2026-08-10):
 ├── main            default space
 ├── br-id-ge        tele-symbiotic XR performance  (linked repo dob-0/br_id_ge)
-├── wcc             World Creative Commons  (public landing → live scene, src/wcc/)
+├── wcc             WCC: Women Creating Change (public landing → live scene, src/wccSite/)
 ├── beyond-form     Gyumri Art Week exhibition page
 ├── platform-recordar  RecordAR landing
 ├── azd · algovrithm · open
@@ -61,7 +61,7 @@ _ii communicates with its own Debian machine via SSH (`scripts/sync.sh`). No con
 | di.iiii `src/` | di.iiii `dist/` | `npm run build` (Vite) |
 | di.iiii `AGENTS.md` | `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.cursor/rules/*.mdc` | `npm run docs:ai:sync` (auto-runs via PostToolUse hook) |
 | br_id_ge `main` | GitHub Pages (`dob-0.github.io/br_id_ge/`) | `.github/workflows/pages.yml` on push |
-| WCC public page | di.iiii `src/wcc/` | Shipped — per-space `isPublic` flag + in-repo scene (see `docs/WCC_MERGE_PLAN.md`) |
+| WCC public page | di.iiii `src/wccSite/` | Shipped — per-space `isPublic` flag + in-repo scene (see `docs/WCC_MERGE_PLAN.md`) |
 
 ## Canonical sources
 

@@ -1,5 +1,15 @@
 # WCC: public landing page that transforms into the live 3D scene
 
+> **HISTORY, not the current design.** Read this for how the `isPublic` flag and
+> the `diiEnterExhibition()` bridge came to exist — both are real and still in
+> the platform. Do **not** read it as a description of `/wcc`: that route does
+> not go through a space's Code view at all. It mounts the in-repo microsite
+> `src/wccSite/WccExperience.jsx` (see `src/works/works.js`, which explains the
+> two meanings of "wcc"). The `wcc` space and its eleven artist projects are a
+> separate thing living at `/wcc/<slug>`.
+>
+> The exhibition's name is **WCC: Women Creating Change**.
+
 Supersedes the old merge plan for a `wcc-space` branch (that branch never
 existed on `origin` or on Emily's fork — this doc was stale). What actually
 happened: Emily built a one-off public landing page on her fork

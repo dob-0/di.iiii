@@ -33,13 +33,30 @@
 
 export const WORKS = [
     {
+        // "wcc" NAMES TWO DIFFERENT THINGS, and both are correct.
+        //
+        //   1. THIS — the coded microsite in src/wccSite/: a landing page and a
+        //      3D scene, compiled into the bundle, served at exactly /wcc and
+        //      /wcc/scene. It has no rows in any database.
+        //   2. The `wcc` SPACE — real rows on the tiers, holding eleven artist
+        //      projects, served at /wcc/<slug> by the ordinary space router.
+        //      Moved between tiers by scripts/promote-space-projects.mjs.
+        //
+        // So /wcc bare is code and /wcc/anything is data, and nothing on screen
+        // says so. Both names are load-bearing: the URLs are public and the
+        // space id is written into prod, so neither can be renamed. The source
+        // directory carries the -Site suffix instead, which is the only half
+        // free to be clearer.
+        //
+        // The exhibition is "WCC: Women Creating Change". Some older docs
+        // expand it as "World Creative Commons" — that is simply wrong.
         id: 'wcc',
         label: 'WCC Exhibition',
         path: '/wcc',
         // Real files, checked by the boundary test — a renamed entry point
         // fails loudly instead of quietly re-fattening the artifact.
-        source: 'src/wcc',
-        entries: ['src/wcc/WccExperience.jsx'],
+        source: 'src/wccSite',
+        entries: ['src/wccSite/WccExperience.jsx'],
         // Copied wholesale by vite from public/, so the local profile has to
         // know the name to leave it out. 25 MB.
         publicDirs: ['wcc'],

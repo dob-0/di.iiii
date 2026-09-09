@@ -53,7 +53,7 @@ segments), not a flat router table.
 | Public viewer | `/<space>` | Live published project (orbit / walk / XR). |
 | **Studio** | `/<space>/studio` | **Stable main editor.** Five-window layout (World, View, Assets, Outliner, Inspector), now with a phone layout. This is where most product work happens. |
 | Raw | `/<space>/raw` | Experimental node-first editor lane (absorbed Beta's role 2026-08-06). Research / editor-v2. Not the shipped default. |
-| WCC | `/wcc/...` | World Creative Commons surface — public showcase / artist-enter experience. |
+| WCC | `/wcc/...` | The "WCC: Women Creating Change" exhibition — coded microsite at /wcc, the `wcc` SPACE at /wcc/<slug>. |
 | Admin / Ops | `/admin?space=<space>` | Space management + Ops Graph. |
 | V1 | (compatibility) | Legacy fallback + migration-sensitive behavior. |
 
@@ -73,7 +73,7 @@ segments), not a flat router table.
 | `src/studio/` | Stable main editor lane (`StudioApp.jsx`, `components/`, `hooks/`). Main product work. |
 | `src/raw/` | Experimental node-first lane (`RawApp.jsx`, `BlankNodeWorkspaceApp.jsx`; absorbed `src/beta/`'s role 2026-08-06). |
 | `src/project/` | **Shared document/collab logic center.** `nodeRegistry.js`, `entityRegistry.js`, state, sync, presence, viewport, import/transfer. New shared logic goes here. |
-| `src/wcc/` | World Creative Commons public experience. |
+| `src/wccSite/` | The coded "WCC: Women Creating Change" microsite. Not the `wcc` space. |
 | `src/shared/` | Client-side schema mirrors (`projectSchema.js`, `sceneSchema.js`). |
 | `src/objectComponents/` | 3D object component implementations. |
 | `src/xr/` | XR-specific rendering. |

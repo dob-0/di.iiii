@@ -37,7 +37,7 @@ This repo currently behaves like one platform with multiple editor generations r
 - `src/studio/`
   - Studio-specific routes and UI
   - stable main authoring surface attached to a space route
-- `src/wcc/`
+- `src/wccSite/`
   - the `wcc` linked-space exhibition (landing page + 3D gallery), routed through the same
     server-verified public/private check as any other space
 - `shared/`

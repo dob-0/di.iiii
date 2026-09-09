@@ -138,7 +138,7 @@ filter you remember to update.
 
 **How:** When you build something that feels like it should be a platform-wide capability, grep for every component that renders "the same kind of thing" (e.g. `LiveProjectScene` vs `PublicProjectViewer` vs `StudioViewport` — three different renderers for what a casual look might assume is one "viewer"). If they diverge, ask: does this change apply to (a) just the surface you touched, (b) all surfaces going forward, or (c) all surfaces including pre-existing content? Each answer has a different blast radius and risk level — confirm which one before writing code that assumes the answer.
 
-**Files:** `src/components/LiveProjectScene.jsx`, `src/project/components/PublicProjectViewer.jsx`, `src/wcc/WccExperience.jsx` — three independent renderers in this repo that look like they should be "the" viewer but aren't.
+**Files:** `src/components/LiveProjectScene.jsx`, `src/project/components/PublicProjectViewer.jsx`, `src/wccSite/WccExperience.jsx` — three independent renderers in this repo that look like they should be "the" viewer but aren't.
 
 ### Keep the user-facing Wiki current with every shipped feature
 
