@@ -4,6 +4,7 @@ import { Html, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { useWebglContextGuard, WebglContextLostOverlay } from '../../components/WebglContextGuard.jsx'
 import {
+    fitDistance,
     layoutSpaces,
     layoutProjects,
     nodeScale,
@@ -28,8 +29,11 @@ function SpaceNode({ node, count, selected, dimmed, onSelect }) {
         if (coreRef.current) coreRef.current.scale.setScalar(scale * breathe)
         if (haloRef.current) {
             const h = 1 + Math.sin(t * 1.6 + node.phase * 6.28) * (alive ? 0.16 : 0.05)
-            haloRef.current.scale.setScalar(scale * 2.35 * h)
-            haloRef.current.material.opacity = (selected ? 0.5 : dimmed ? 0.1 : 0.26) * h
+            // 2.35x at 0.26 opacity meant any two neighbouring spaces overlapped
+            // into a muddy band with no readable boundary — and the halo is the
+            // biggest thing on screen, so the muddle was the composition.
+            haloRef.current.scale.setScalar(scale * 1.85 * h)
+            haloRef.current.material.opacity = (selected ? 0.38 : dimmed ? 0.06 : 0.15) * h
         }
         if (ringRef.current) ringRef.current.rotation.z = t * 0.6
     })
@@ -53,7 +57,7 @@ function SpaceNode({ node, count, selected, dimmed, onSelect }) {
             </mesh>
             <mesh ref={haloRef}>
                 <sphereGeometry args={[1, 24, 24]} />
-                <meshBasicMaterial color={node.color} transparent opacity={0.26} blending={THREE.AdditiveBlending} depthWrite={false} />
+                <meshBasicMaterial color={node.color} transparent opacity={0.15} blending={THREE.AdditiveBlending} depthWrite={false} />
             </mesh>
             {selected && (
                 <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
@@ -61,10 +65,18 @@ function SpaceNode({ node, count, selected, dimmed, onSelect }) {
                     <meshBasicMaterial color={node.color} transparent opacity={0.9} />
                 </mesh>
             )}
-            <Html position={[0, scale * 1.9, 0]} center distanceFactor={10} zIndexRange={[20, 0]} pointerEvents="none">
+            {/* No distanceFactor: with one, a label's size is its DEPTH, so the
+                near spaces shouted in 30px type while the far ones were 6px
+                specks — the picture read as an accident. A name is a name at any
+                distance; depth is already said by the node's own size. */}
+            <Html position={[0, scale * 1.9, 0]} center zIndexRange={[20, 0]} pointerEvents="none">
+                {/* One name. It used to draw the id in mono AND the label in a
+                    sans directly under it with no gap — the same words twice, in
+                    two typefaces, on every node. The id is what a space with no
+                    label is called anyway, and when there IS a label the id
+                    belongs in the panel, not on the star. */}
                 <button type="button" className={`scon-label${selected ? ' scon-label--on' : ''}${dimmed ? ' scon-label--dim' : ''}`} onClick={handle} style={{ pointerEvents: 'auto' }}>
-                    <span className="scon-label-id">{node.id}</span>
-                    <span className="scon-label-name">{node.space.label || node.id}</span>
+                    {node.space.label || node.id}
                 </button>
             </Html>
         </group>
@@ -229,13 +241,48 @@ export default function SpaceConstellation({
 
     const manageable = selectedSpace ? canManage(selectedSpace) : false
 
+    // Open on a frame that holds the whole estate. The old fixed [0, 6, 18] was
+    // chosen when there were six spaces; at 22 it cropped the outer ones against
+    // the panel edge, which reads as a broken view rather than a large one.
+    //
+    // The frame's real shape decides how far back to stand — a phone is TALLER
+    // than it is wide, so a distance computed for 16/9 cropped half the estate
+    // off both sides. Measured, not assumed, and bucketed so an ordinary resize
+    // does not rebuild the canvas.
+    const wrapRef = useRef(null)
+    const [aspect, setAspect] = useState(16 / 9)
+    useEffect(() => {
+        const el = wrapRef.current
+        if (!el || typeof ResizeObserver === 'undefined') return undefined
+        const read = () => {
+            const { width, height } = el.getBoundingClientRect()
+            if (!width || !height) return
+            const next = Math.round((width / height) * 4) / 4
+            setAspect(prev => (prev === next ? prev : next))
+        }
+        read()
+        const observer = new ResizeObserver(read)
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [])
+
+    const cameraPosition = useMemo(() => {
+        const d = fitDistance(nodes, { fov: 55, aspect })
+        // Higher than it is far: looking down on the disc rather than across it
+        // is what keeps the near edge from swelling past the bottom of the frame.
+        return [0, d * 0.52, d * 0.86]
+    }, [nodes, aspect])
+
     return (
         <div className="scon-root">
-            <div className="scon-canvas-wrap">
+            <div className="scon-canvas-wrap" ref={wrapRef}>
                 {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
                 <Canvas
-                    key={canvasKey}
-                    camera={{ position: [0, 6, 18], fov: 55 }}
+                    /* the camera is built once per canvas, so a frame that
+                       changes shape enough to need a different distance gets a
+                       new one */
+                    key={`${canvasKey}:${aspect}`}
+                    camera={{ position: cameraPosition, fov: 55 }}
                     onCreated={({ gl }) => bindContextGuard(gl)}
                     gl={{ antialias: true, alpha: true, powerPreference: 'low-power' }}
                     dpr={[1, 2]}
@@ -260,6 +307,10 @@ export default function SpaceConstellation({
                     <span><i style={{ background: NODE_COLORS.public }} /> public</span>
                     <span><i style={{ background: NODE_COLORS.private }} /> private</span>
                     <span><i style={{ background: NODE_COLORS.sandbox }} /> sandbox</span>
+                    {/* The two loudest signals on screen were the two the legend
+                        never mentioned. */}
+                    <span className="scon-legend-note">size = what is in it</span>
+                    <span className="scon-legend-note">the glow breathes on a space that is live</span>
                 </div>
                 <p className="scon-hint mono">drag to orbit · scroll to zoom · click a star</p>
             </div>

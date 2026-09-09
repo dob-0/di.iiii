@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+    fitDistance,
     layoutSpaces,
     layoutProjects,
     nodeScale,
@@ -94,5 +95,54 @@ describe('layoutProjects', () => {
     })
     it('handles no projects', () => {
         expect(layoutProjects([], [0, 0, 0], 1)).toEqual([])
+    })
+})
+
+describe('fitDistance', () => {
+    const ring = (n) => layoutSpaces(
+        Array.from({ length: n }, (_, i) => ({ id: `s${i}`, isPublic: true, publishedProjectId: 'p' })),
+        {}
+    )
+
+    it('stands far enough back that the outermost space is inside the frame', () => {
+        const nodes = ring(22)
+        const distance = fitDistance(nodes, { fov: 55, aspect: 16 / 9 })
+        const reach = Math.max(...nodes.map(n => Math.hypot(n.position[0], n.position[1], n.position[2])))
+        // The spaces lie on a disc seen from a shallow angle: what has to fit is
+        // its WIDTH. Fitting the height leaves the estate a dot in the middle.
+        const halfWidthAtOrigin = distance * Math.tan((55 * Math.PI) / 360) * (16 / 9)
+        expect(halfWidthAtOrigin).toBeGreaterThan(reach)
+    })
+
+    it('does not stand so far back that the estate becomes a cluster', () => {
+        const nodes = ring(22)
+        const reach = Math.max(...nodes.map(n => Math.hypot(n.position[0], n.position[1], n.position[2])))
+        const d = fitDistance(nodes, { fov: 55, aspect: 16 / 9 })
+        const halfHeight = d * Math.tan((55 * Math.PI) / 360)
+        // On a wide frame the HEIGHT is what binds — the disc is foreshortened
+        // to about 0.62 of its width — so that is what "fills the frame" means.
+        expect((reach * 0.62) / halfHeight).toBeGreaterThan(0.6)
+    })
+
+    it('backs off on a portrait frame instead of cropping the sides', () => {
+        const nodes = ring(22)
+        expect(fitDistance(nodes, { fov: 55, aspect: 0.62 }))
+            .toBeGreaterThan(fitDistance(nodes, { fov: 55, aspect: 16 / 9 }))
+    })
+
+    it('backs off as the estate grows, instead of cropping it', () => {
+        expect(fitDistance(ring(22))).toBeGreaterThan(fitDistance(ring(6)))
+    })
+
+    it('never gets so close that a handful of spaces fill the window', () => {
+        expect(fitDistance(ring(1))).toBeGreaterThanOrEqual(12)
+        expect(fitDistance([])).toBe(18)
+    })
+
+    it('stays inside one frame as the estate grows — sqrt spread, not linear', () => {
+        // 22 spaces on the old linear spread reached 31 units; the whole point
+        // is that the outer ring stops running away from the middle.
+        const reach = Math.max(...ring(22).map(n => Math.hypot(n.position[0], n.position[1], n.position[2])))
+        expect(reach).toBeLessThan(18)
     })
 })
