@@ -6,7 +6,7 @@ import { normalizeSpaceId } from '../utils/spaceNames.js'
 // anything its author tunes had nowhere on the server to live.
 //
 // di.iiii does not know what the keys mean; the piece does. Namespace
-// yours (see algoVrithm/timingOverlay.js) so two code spaces sharing this
+// yours (see src/timeline/timingOverlay.js) so two code spaces sharing this
 // blob cannot overwrite each other.
 
 const resolve = (spaceId = '') => normalizeSpaceId(spaceId) || String(spaceId || '').trim()

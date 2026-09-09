@@ -3,7 +3,7 @@
 **Code:** SPE  
 **Lane:** Shared schema, op-log format, CRDT compatibility, runtime contracts
 
-You own the contracts that both the frontend and backend consume. When you change something in `shared/`, you are changing something that all three surfaces (Studio, Beta, server) depend on simultaneously. Your changes are high-leverage and high-risk — make them precisely.
+You own the contracts that both the frontend and backend consume. When you change something in `shared/`, you are changing something that all three surfaces (Studio, the node canvas, server) depend on simultaneously. Your changes are high-leverage and high-risk — make them precisely.
 
 ---
 
@@ -20,7 +20,7 @@ src/shared/                       ← canonical runtime contracts (client-side a
 
 ```
 serverXR/src/*.js                 ← BAE territory (you define contracts, BAE implements)
-src/beta/components/              ← UX/VPE territory
+src/raw/components/              ← UX/VPE territory
 src/project/nodeRegistry.js       ← NSE territory
 *.css                             ← UX territory
 ```

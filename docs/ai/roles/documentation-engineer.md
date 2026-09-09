@@ -23,7 +23,7 @@ docs/deploy/                      ← deployment documentation
 
 ```
 serverXR/src/*.js                 ← BAE territory
-src/beta/components/*.jsx         ← UX territory
+src/raw/components/*.jsx         ← UX territory
 src/project/nodeRegistry.js       ← NSE territory
 ```
 

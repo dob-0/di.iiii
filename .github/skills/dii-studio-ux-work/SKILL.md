@@ -38,7 +38,7 @@ Make the smallest Studio-only change that advances the shipped product without p
 - StudioInspector: property panel for selected objects and nodes
 - StudioViewport: three.js render surface, controls, gizmos
 - StudioPresentationSurface: presentation overlay, iframe embed, view controls
-- src/studio/hooks/useStudioLayoutPrefs.js: persisted panel layout preferences
+- src/studio/hooks/useStudioPanelState.js: which panels are open; src/studio/hooks/useViewportLayout.js: viewport split
 - src/studio/utils/studioRouting.js: route path builders for Studio surfaces
 
 ## Decision Checklist Before Editing

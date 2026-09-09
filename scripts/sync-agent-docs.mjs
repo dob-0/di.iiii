@@ -57,6 +57,21 @@ export const AI_DOC_SCOPES = [
     cursorRuleFile: '20-src-studio.mdc'
   },
   {
+    // src/raw carries its own AGENTS.md and its bridge files, and for a while
+    // it was not listed here — so CLAUDE.md/GEMINI.md sat in that directory
+    // saying "AUTO-GENERATED, do not edit by hand" while nothing regenerated
+    // them. A banner naming a command that never runs is worse than no banner.
+    dir: 'src/raw',
+    slug: 'src-raw',
+    title: 'Node Editor Lane',
+    role: 'the node canvas, node registry, graph runtime, and the windows on that surface',
+    primaryRoles: ['Node System Engineer (NSE)'],
+    primaryModel: 'Sonnet',
+    roleCard: 'docs/ai/roles/node-system-engineer.md',
+    applyTo: 'src/raw/**/*',
+    cursorRuleFile: '40-src-raw.mdc'
+  },
+  {
     dir: 'src/shared',
     slug: 'src-shared',
     title: 'Shared Schema Runtime',

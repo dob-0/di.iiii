@@ -23,7 +23,7 @@ src/*/AGENTS.md                   ← scoped routing guides for each area
 
 ```
 serverXR/src/*.js                 ← implementation — BAE territory
-src/beta/components/*.jsx         ← implementation — UX/VPE territory
+src/raw/components/*.jsx         ← implementation — UX/VPE territory
 src/project/nodeRegistry.js       ← implementation — NSE territory
 *.css                             ← implementation — UX territory
 ```
@@ -43,7 +43,7 @@ These come from MANIFESTO.md. They do not bend for scope, timeline, or a bad pro
 | 3 | Op-log stays CRDT-compatible | Every new op type is append-only and commutative |
 | 4 | Asset IDs move toward content-addressing | No new random UUID schemes for asset storage |
 | 5 | serverXR is the write authority | Frontend state is display state — no direct DB writes from client |
-| 6 | Studio is the main lane | Beta behavior is not shipped as default UX |
+| 6 | Studio is the main lane | Experimental node-lane behavior is not shipped as default UX |
 | 7 | shared/ is the canonical schema layer | No schema fork into lane-specific code |
 
 When any task prompt would break one of these, your job is to refuse, explain the non-negotiable, and propose a compliant alternative.
@@ -83,7 +83,7 @@ When a task arrives and the correct role is unclear:
 - The task embeds a secret in the frontend bundle
 - The task requires mutating the op-log (not appending)
 - The task forks schema logic into a lane-specific file
-- The task ships Beta behavior as the Studio default
+- The task ships experimental node-lane behavior as the Studio default
 - The task introduces a new asset ID scheme that is not content-addressable
 - The task force-pushes to main without a stated emergency hotfix justification
 

@@ -32,9 +32,10 @@ const normalizeProjectId = (value) => {
 // docs/architecture/SPEC_space_urls_and_portability.md. Unlike space slugs,
 // project slugs only need to be unique within their own space (the public
 // link shape is /{spaceSlugOrId}/{projectSlugOrId}), and are additionally
-// blocked from 'studio'/'beta'/'p' — those would be ambiguous with the
-// existing /{space}/studio, /{space}/beta, /{space}/p/... routes.
-const PROJECT_RESERVED_SLUGS = new Set(['studio', 'beta', 'raw', 'seed', 'p', 'projects', 'admin', 'preferences'])
+// blocked from every top-level app word — spaceRouting.js drops a reserved
+// segment in that position, so a project slug matching one is unreachable at
+// its own address. One shared list: shared/reservedSegments.cjs.
+const { RESERVED_PROJECT_SLUGS: PROJECT_RESERVED_SLUGS } = require('../../shared/reservedSegments.cjs')
 const normalizeProjectSlug = (value) => {
   if (value === null || value === undefined || value === '') return null
   const slug = safeSlug(value)

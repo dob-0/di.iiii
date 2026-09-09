@@ -21,16 +21,27 @@ A space is declared in the repo that is master for it.
 
 | space | declared in | pages |
 | --- | --- | --- |
-| `main`, `open`, `wcc`, `azd` | here | authored in Studio — none in any repo |
+| `open`, `wcc`, `azd` | here | authored in Studio — none in any repo |
+| `main` | here | **3 manifests declared here** — suite, landing, brand-guide |
+| `network` | here | **54 manifests declared here**, generated from `people.json` |
 | `algovrithm` | here | none, ever: its scene is React in `src/algoVrithm/` |
 | `br-id-ge` | `dob-0/br_id_ge` | 4 |
 | `beyond-form` | `dob-0/beyond_form` | 1 |
 | `platform-recordar` | `dob-0/platform_recordar` | 1 |
 
-The five declared here have an **empty `projects` list**, which the engine reads
-as a space-only declaration (v6): it reconciles the space and touches no
-content. Their pages belong to whoever is editing them in Studio, and a sync
-must never have an opinion about those.
+**Four of the six declared here — `algovrithm`, `azd`, `open`, `wcc` — have an
+empty `projects` list**, which the engine reads as a space-only declaration
+(v6): it reconciles the space and touches no content. Their pages belong to
+whoever is editing them in Studio, and a sync must never have an opinion about
+those.
+
+**`main` (3) and `network` (54) DO carry manifests, and `--all` will push every
+one of them over whatever is live.** That mode is push-only — repo → `PUT`, no
+read-back, no diff, no undo (`docs/ai/golden_rules.md`). `network`'s own
+declaration says the rooms are handed over one by one: *"When a person takes
+their room over in Studio, remove their manifest from `projects`."* Copying the
+`wcc` command line below and swapping the space id is exactly how someone's
+live edits get overwritten — check the `projects` length before running it.
 
 ## Commands
 
@@ -84,12 +95,14 @@ curl -X PATCH -H "Authorization: Bearer $PROD_API_TOKEN" -H 'Content-Type: appli
   -d '{"ownerUserId":"<account-id>"}' https://di-studio.xyz/serverXR/api/spaces/<spaceId>
 ```
 
-As of 2026-08-06 all 8 production spaces are `ownerUserId: null`, so every
-publish, invite, rename and delete falls through to a platform admin. The route
-that fixes it is on `feat/space-declared` and **is not deployed** — a PATCH
-carrying `ownerUserId` against the current staging or production build is
-accepted with a 200 and silently ignored, which is what "not deployed" looks
-like from the outside. Ship the branch first, then adopt.
+Spaces created before ownership existed carry `ownerUserId: null`, so every
+publish, invite, rename and delete on those falls through to a platform admin.
+**The PATCH handler has landed** — `serverXR/src/routes/spaceRoutes.js`, the
+`ownerUserId !== undefined` branch — so adoption works against any tier running
+that build or later. (This paragraph used to say the route was unshipped and a
+PATCH was silently ignored; that was true of `feat/space-declared` before it
+merged, and stopped being true without the paragraph noticing.) GET the space
+back and confirm the field before assuming an older prod build accepted it.
 
 ## Adding a space
 

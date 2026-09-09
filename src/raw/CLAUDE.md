@@ -6,7 +6,7 @@
 
 ## Details
 
-- This is the native Claude entrypoint for Raw Experimental Lane.
+- This is the native Claude entrypoint for Node Editor Lane.
 - Keep canonical instructions in [AGENTS.md](AGENTS.md), not here.
 - Use [../../docs/ai/index.md](../../docs/ai/index.md) only when you need deeper reference.
 - Put personal overrides in `CLAUDE.local.md` or user-scoped Claude memory, not in tracked bridge files.

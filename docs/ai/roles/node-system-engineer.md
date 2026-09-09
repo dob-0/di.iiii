@@ -14,8 +14,8 @@ src/project/nodeRegistry.js           ← canonical node and port type definitio
 src/project/graph/nodeGraphRuntime.js    ← graph evaluation and node execution
 src/project/graph/nodeInspectorSections.js← inspector field definitions per node type
 src/project/graph/nodeSurfaceFilters.js  ← which nodes appear on which surface
-src/beta/utils/surfaceWorkflow.js     ← which workflow actions appear per surface
-src/beta/utils/betaGuide.js          ← Beta help content (surface-aware)
+src/raw/utils/surfaceWorkflow.js     ← which workflow actions appear per surface
+src/raw/utils/rawGuide.js          ← the node lane's help content
 ```
 
 ---
@@ -23,13 +23,13 @@ src/beta/utils/betaGuide.js          ← Beta help content (surface-aware)
 ## Must Never Touch
 
 ```
-src/beta/styles/beta.css             ← visual identity — UX territory
+src/raw/styles/raw.css             ← visual identity — UX territory
 src/styles/                          ← shared styles — UX territory
 *.css                                ← any CSS file
 serverXR/                            ← backend — BAE territory
 shared/                              ← schema contracts — SPE territory
 src/shared/                          ← schema contracts — SPE territory
-src/beta/components/BetaViewport.jsx ← 3D rendering — VPE territory
+src/raw/components/RawViewport.jsx ← 3D rendering — VPE territory
 src/objectComponents/                ← 3D objects — VPE territory
 ```
 
@@ -44,9 +44,9 @@ If a node type requires a new visual representation in the viewport, write the d
 This is the source of truth for all node types. Every node type must be registered here. The registry exports:
 
 ```js
-NODE_DEFINITIONS     // array of node type definitions
+NODE_TYPES     // array of node type definitions
 NODE_CATEGORIES      // category display metadata
-getNodeDefinition(type)  // lookup by type string
+getNodeType(type)  // lookup by type string
 ```
 
 ### Node Definition Shape
@@ -82,10 +82,10 @@ getNodeDefinition(type)  // lookup by type string
 
 ### Adding a New Node Type
 
-1. Define it in `NODE_DEFINITIONS` with a namespaced type, ports, surface, and category
+1. Define it in `NODE_TYPES` with a namespaced type, ports, surface, and category
 2. If it needs inspector fields beyond auto-generated port controls, add a section in `nodeInspectorSections.js`
 3. If it should appear on a specific surface only, set `surface` correctly and verify `nodeSurfaceFilters.js`
-4. If it renders in the viewport, hand off to VPE with the port schema — do not touch `BetaViewport.jsx` yourself
+4. If it renders in the viewport, hand off to VPE with the port schema — do not touch `RawViewport.jsx` yourself
 5. Add a test in `nodeRegistry.test.js`
 
 ### Surface Routing for Nodes
@@ -128,7 +128,7 @@ Execution model:
 - Evaluate each node using its input port values
 - Output port values are passed to downstream nodes
 
-The runtime is called by `BetaEditor` on document change. It does not write to the document — it produces a separate evaluated state that the viewport and inspector read.
+The runtime is called by `RawEditor` on document change. It does not write to the document — it produces a separate evaluated state that the viewport and inspector read.
 
 ### Rules for Runtime Changes
 
@@ -143,9 +143,9 @@ The runtime is called by `BetaEditor` on document change. It does not write to t
 
 - `npm run lint` passes
 - `npm run test` passes — specifically `nodeRegistry.test.js` and `nodeGraphRuntime.test.js`
-- All new node types have entries in `NODE_DEFINITIONS`
+- All new node types have entries in `NODE_TYPES`
 - All new port types are documented in the Port Types table above
-- No logic forked into `BetaEditor.jsx` or `BetaViewport.jsx` — it belongs here
+- No logic forked into `RawEditor.jsx` or `RawViewport.jsx` — it belongs here
 - Inspector field overrides live in `nodeInspectorSections.js`, not in components
 
 ---

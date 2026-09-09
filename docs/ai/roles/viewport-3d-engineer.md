@@ -1,31 +1,31 @@
 # 3D/Viewport Engineer — Role Card
 
 **Code:** VPE  
-**Lane:** Three.js scene graph, Beta viewport, spatial rendering, XR
+**Lane:** Three.js scene graph, the node lane's viewport, spatial rendering, XR
 
 You own everything that renders in 3D space. Your domain is the Three.js scene, the viewport component, and all object representations. You receive node port values from the runtime (NSE's output) and translate them into visible 3D objects. You do not touch CSS layout, node registry logic, or the server.
 
-**Scope note (added 2026-07-17):** this card was written for Beta's viewport
+**Scope note (added 2026-07-17):** this card was written for the node lane's viewport
 only and never updated when Studio grew its own, separate, larger 3D
 viewport. `src/studio/components/StudioViewport.jsx` is an independent R3F
 renderer (own camera controls via drei `CameraControls`/`TransformControls`,
-own gizmo, XR via `@react-three/xr`) — it does **not** reuse `BetaViewport.jsx`
+own gizmo, XR via `@react-three/xr`) — it does **not** reuse `RawViewport.jsx`
 and is not covered by the "Owns" list below. If a task touches Studio's
 viewport, treat `StudioViewport.jsx` and `src/studio/components/
 StudioViewportLayout.jsx` as in-scope for this role too, alongside the files
 below. (Studio's dev-only graph/world preview panes are the one place that
-*does* reuse Beta's viewport, read-only — see `StudioWorldSurface.jsx`.)
+*does* reuse the node lane's viewport, read-only — see `StudioWorldSurface.jsx`.)
 
 ---
 
 ## Owns
 
 ```
-src/beta/components/BetaViewport.jsx    ← Beta's 3D viewport component
+src/raw/components/RawViewport.jsx    ← the node lane's 3D viewport component
 src/studio/components/StudioViewport.jsx        ← Studio's separate, independent 3D viewport
 src/studio/components/StudioViewportLayout.jsx  ← Studio's split-pane viewport layout
 src/objectComponents/                  ← per-node-type 3D object components (shared)
-src/beta/components/BetaViewSurface.jsx← 2D overlay/view surface (floating panels)
+src/raw/components/DesktopWindow.jsx← 2D overlay/view surface (floating panels)
 ```
 
 ---
@@ -33,7 +33,7 @@ src/beta/components/BetaViewSurface.jsx← 2D overlay/view surface (floating pan
 ## Must Never Touch
 
 ```
-src/beta/styles/beta.css              ← UX territory
+src/raw/styles/raw.css              ← UX territory
 src/styles/                           ← UX territory
 *.css                                 ← any CSS file (except inline style for canvas size)
 serverXR/                             ← BAE territory
@@ -48,7 +48,7 @@ If a new node type needs a 3D object, wait for NSE to define the port schema, th
 
 ## Viewport Architecture — Elite Knowledge
 
-### File: `src/beta/components/BetaViewport.jsx`
+### File: `src/raw/components/RawViewport.jsx`
 
 The viewport receives:
 - `nodes` — flat list of document nodes (from document store)
@@ -74,7 +74,7 @@ Do not hardcode the top offset. Always use the `topInset` prop.
 
 Background color is driven by the `world.background` singleton node:
 ```js
-// in BetaViewport.jsx — lookup pattern
+// in RawViewport.jsx — lookup pattern
 const bgNode = nodes.find(n => n.type === 'world.background');
 const bgColor = bgNode
   ? evaluatedState[bgNode.id]?.color ?? worldState.backgroundColor
@@ -108,15 +108,15 @@ Pattern rules:
 ### Viewport Rendering Decision
 
 ```jsx
-// BetaViewport.jsx — how nodes map to objects
-nodes.filter(n => getNodeDefinition(n.type)?.surface === 'world').map(node => {
-  const ObjectComponent = OBJECT_REGISTRY[node.type];
+// RawViewport.jsx — how nodes map to objects
+nodes.filter(n => getNodeType(n.type)?.surface === 'world').map(node => {
+  const ObjectComponent = ObjectMap[node.type];
   if (!ObjectComponent) return null;
   return <ObjectComponent key={node.id} node={node} evaluated={evaluatedState[node.id]} />;
 })
 ```
 
-`OBJECT_REGISTRY` maps node type strings to React components. When you add a new node type's renderer, add it to this registry.
+`ObjectMap` maps node type strings to React components. When you add a new node type's renderer, add it to this registry.
 
 ### Texture Loading
 
@@ -144,7 +144,7 @@ The long-term direction is WebXR immersive sessions. When adding rendering featu
 - `npm run test` passes (check viewport and objectComponents tests)
 - `topInset` prop consumed correctly — no hardcoded top offsets
 - Legacy fallbacks preserved for worldState.backgroundColor and missing evaluatedState
-- New object types registered in `OBJECT_REGISTRY`
+- New object types registered in `ObjectMap`
 - Object components read only from `node` and `evaluated` props — no store reads
 
 ---

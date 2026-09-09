@@ -44,7 +44,7 @@ pattern. Drift is made *un-mergeable* and *un-ignorable*, not magically fixed.
 
 Claude Code hooks in `.claude/settings.json`:
 - editing `src/wiki/wikiContent.js` → runs `docs:wiki:check` immediately (blocks on failure);
-- editing a user-facing surface (`src/{studio,beta,landing,project,wcc}`, serverXR routes) → prints a
+- editing a user-facing surface (`src/{studio,landing,project,wccSite}`, serverXR routes) → prints a
   reminder to update the wiki article + bump its `updated` date.
 
 This is the "after we change behavior, update the docs" enforcement. A deterministic script cannot
