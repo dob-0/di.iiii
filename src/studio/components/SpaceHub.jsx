@@ -21,7 +21,10 @@ import GithubSyncSection from '../../components/preferences/GithubSyncSection.js
 import SpaceConstellation from './SpaceConstellation.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { appNavigate } from '../../utils/appNavigate.js'
-import { buildAppSpacePath } from '../../utils/spaceRouting.js'
+// The card's door. A space whose bare segment a work has taken (`/wcc`) is
+// addressed through its published project instead, so the picture, the frame
+// and the links all open the SPACE and not the code sharing its name.
+import { buildSpaceDoorPath } from '../../works/segments.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
 import {
@@ -69,7 +72,7 @@ const PREVIEW_VIEWPORT_HEIGHT = 576
 // loop). The iframe only mounts while the card is near the viewport so
 // off-screen spaces cost nothing, and unmounts again when scrolled away to
 // free its WebGL context. Boots are queued through requestPreviewBoot above.
-function SpaceCardPreview({ spaceId, label }) {
+function SpaceCardPreview({ doorPath, label }) {
     const hostRef = useRef(null)
     const frameRef = useRef(null)
     const [visible, setVisible] = useState(false)
@@ -159,7 +162,7 @@ function SpaceCardPreview({ spaceId, label }) {
             ) : visible && booted ? (
                 <iframe
                     ref={frameRef}
-                    src={`${buildAppSpacePath(spaceId)}?preview=1`}
+                    src={`${doorPath}?preview=1`}
                     title={`${label} — live preview`}
                     loading="lazy"
                     tabIndex={-1}
@@ -183,7 +186,7 @@ function SpaceCardPreview({ spaceId, label }) {
 // same flag the static thumbnail deliberately leaves off. Releases itself
 // (calls onRelease) the moment it scrolls out of view: a WebGL scene left
 // running off-screen is exactly the laptop-killer this feature exists to avoid.
-function SpaceCardLive({ spaceId, label, onRelease }) {
+function SpaceCardLive({ doorPath, label, onRelease }) {
     const hostRef = useRef(null)
     const [scale, setScale] = useState(0)
 
@@ -212,7 +215,7 @@ function SpaceCardLive({ spaceId, label, onRelease }) {
     return (
         <div ref={hostRef} className="ssh-card-live-frame">
             <iframe
-                src={buildAppSpacePath(spaceId)}
+                src={doorPath}
                 title={`${label} — live`}
                 style={{
                     width: `${PREVIEW_VIEWPORT_WIDTH}px`,
@@ -224,7 +227,7 @@ function SpaceCardLive({ spaceId, label, onRelease }) {
                 <span className="ssh-card-live-label">{label}</span>
                 <a
                     className="ssh-card-live-open"
-                    href={buildAppSpacePath(spaceId)}
+                    href={doorPath}
                     target="_blank"
                     rel="noreferrer"
                     onClick={e => e.stopPropagation()}
@@ -358,7 +361,7 @@ export default function SpaceHub() {
 
     const openCard = (space) => {
         if (!canEnter(space) && space.isPublic) {
-            appNavigate(buildAppSpacePath(space.id))
+            appNavigate(buildSpaceDoorPath(space))
             return
         }
         openSpace(space.id)
@@ -879,7 +882,7 @@ export default function SpaceHub() {
                                     <span className="ssh-list-acts" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                                         <button type="button" className="ssh-card-btn" onClick={() => openCard(space)}>Open</button>
                                         {space.isPublic && (
-                                            <a className="ssh-card-btn" href={buildAppSpacePath(space.id)} onClick={e => e.stopPropagation()}>Live</a>
+                                            <a className="ssh-card-btn" href={buildSpaceDoorPath(space)} onClick={e => e.stopPropagation()}>Live</a>
                                         )}
                                     </span>
                                 </div>
@@ -932,7 +935,7 @@ export default function SpaceHub() {
                                         const isLive = liveSpaceId === space.id
                                         // isPublic alone, NOT isPublic && publishedProjectId.
                                         // SpaceCardPreview embeds the SPACE's own live route
-                                        // (`buildAppSpacePath(spaceId)?preview=1`) — it never
+                                        // (its door path + `?preview=1`) — it never
                                         // needed a published project, and the extra condition
                                         // blanked exactly one card: the Open Space, which is the
                                         // first card a visitor sees and the room the whole
@@ -969,7 +972,7 @@ export default function SpaceHub() {
                                             >
                                                 {isLive ? (
                                                     <SpaceCardLive
-                                                        spaceId={space.id}
+                                                        doorPath={buildSpaceDoorPath(space)}
                                                         label={space.label || space.id}
                                                         onRelease={() => releaseLive(space.id)}
                                                     />
@@ -988,7 +991,7 @@ export default function SpaceHub() {
                                                 ) : isEmptySandbox ? (
                                                     <p className="ssh-card-preview-empty-line">nothing in it yet — open it and put something in</p>
                                                 ) : (
-                                                    <SpaceCardPreview spaceId={space.id} label={space.label || space.id} />
+                                                    <SpaceCardPreview doorPath={buildSpaceDoorPath(space)} label={space.label || space.id} />
                                                 )}
                                             </div>
                                         )
