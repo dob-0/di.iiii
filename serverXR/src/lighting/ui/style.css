@@ -25,14 +25,19 @@
    lighter than the platform's ground so a fixture body stays legible next to a
    pane. What it must share is the way home, below. */
 .homelink {
+  /* The top bar stretches its children; without this the door became a box as
+     tall as the whole bar. */
+  align-self: center;
   color: var(--text);
   text-decoration: none;
-  font: 600 12px/1 var(--mono);
+  font: 600 11px/1 var(--mono);
   letter-spacing: 0.08em;
-  padding: 7px 9px;
+  padding: 6px 8px;
+  margin-right: 2px;
   border: 1px solid var(--line);
   border-radius: 0;
   white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .homelink:hover { border-color: var(--accent); color: var(--accent); }
