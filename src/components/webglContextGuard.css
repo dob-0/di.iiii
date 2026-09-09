@@ -7,8 +7,8 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    background: rgba(6, 10, 16, 0.82);
-    color: var(--di-text, #fff);
+    background: var(--di-scrim);
+    color: var(--di-text);
     font-size: 13px;
     text-align: center;
     -webkit-backdrop-filter: blur(4px);
@@ -17,14 +17,14 @@
 
 .webgl-context-lost button {
     padding: 8px 16px;
-    border-radius: 999px;
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
-    background: rgba(6, 10, 16, 0.92);
-    color: var(--di-cyan, #4df9ff);
+    border-radius: var(--di-radius-pill);
+    border: 1px solid var(--di-cyan-border);
+    background: var(--di-scrim-strong);
+    color: var(--di-cyan);
     font-size: 13px;
     cursor: pointer;
 }
 
 .webgl-context-lost button:hover {
-    border-color: var(--di-cyan, #4df9ff);
+    border-color: var(--di-cyan);
 }

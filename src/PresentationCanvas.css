@@ -1,3 +1,8 @@
+/* The presented page is PAPER, and stays paper: the cream ground, the white
+   sheet and the brown ink below are what a slide looks like projected in a
+   room, not a surface that forgot the dark theme. Listed in
+   src/styles/spine.test.js under BY_DESIGN. The two toasts that float over it
+   ARE platform chrome and do carry the spine. */
 .presentation-canvas-shell {
     position: fixed;
     inset: 0;
@@ -30,8 +35,8 @@
 .presentation-frame-status {
     max-width: 320px;
     padding: 10px 12px;
-    border-radius: 12px;
-    background: rgba(16, 23, 38, 0.86);
+    border-radius: var(--di-radius);
+    background: var(--di-scrim-strong);
     color: rgba(255,255,255,0.82);
     font-size: 12px;
     line-height: 1.45;
@@ -39,9 +44,9 @@
 }
 
 .presentation-frame-status {
-    background: rgba(118, 77, 14, 0.9);
-    border: 1px solid rgba(255, 205, 112, 0.35);
-    color: rgba(255, 240, 208, 0.95);
+    background: rgba(var(--di-warning-rgb), 0.16);
+    border: 1px solid rgba(var(--di-warning-rgb), 0.35);
+    color: var(--di-warning);
 }
 
 .presentation-empty-state {

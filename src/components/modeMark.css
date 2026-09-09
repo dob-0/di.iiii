@@ -39,9 +39,9 @@
     gap: 7px;
     padding: 4px 9px;
     border: 1px solid var(--mode-color);
-    background: rgba(6, 10, 16, 0.88);
+    background: var(--di-scrim-strong);
     color: var(--mode-color);
-    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-family: var(--di-mono);
     font-size: 10px;
     letter-spacing: 0.12em;
     line-height: 1;
@@ -70,7 +70,7 @@
 }
 
 .mode-mark-host {
-    color: var(--di-text-muted, rgba(255, 255, 255, 0.4));
+    color: var(--di-text-muted);
     letter-spacing: 0.04em;
 }
 

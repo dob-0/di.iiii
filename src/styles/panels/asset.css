@@ -32,8 +32,8 @@
     gap: 8px;
     padding: 10px;
     border: 1px solid var(--ui-border);
-    border-radius: 10px;
-    background: rgba(10, 16, 28, 0.6);
+    border-radius: var(--di-radius);
+    background: var(--di-scrim);
 }
 
 .asset-drive-account {
@@ -57,7 +57,7 @@
     max-height: 200px;
     overflow-y: auto;
     border: 1px solid var(--ui-border);
-    border-radius: 8px;
+    border-radius: var(--di-radius);
 }
 
 .asset-drive-file {
@@ -98,15 +98,15 @@
     min-width: 0;
     padding: 7px 10px;
     font-size: 12px;
-    color: #fff;
-    background: rgba(10, 16, 28, 0.9);
+    color: var(--di-text);
+    background: var(--di-scrim-strong);
     border: 1px solid var(--ui-border);
-    border-radius: 8px;
+    border-radius: var(--di-radius);
 }
 
 .asset-drive-input:focus {
     outline: none;
-    border-color: rgba(120, 185, 232, 0.6);
+    border-color: rgba(var(--di-cyan-rgb), 0.6);
 }
 
 .asset-drive-notice {
@@ -115,11 +115,11 @@
 }
 
 .asset-drive-notice.is-error {
-    color: rgba(255, 138, 128, 0.92);
+    color: var(--di-danger);
 }
 
 .asset-drive-notice.is-ok {
-    color: rgba(120, 200, 150, 0.92);
+    color: var(--di-success);
 }
 
 .asset-list {
@@ -134,14 +134,14 @@
     gap: 8px;
     padding: 10px;
     border: 1px solid var(--ui-border);
-    border-radius: 10px;
-    background: linear-gradient(180deg, rgba(18, 28, 45, 0.82), rgba(10, 16, 28, 0.9));
+    border-radius: var(--di-radius);
+    background: var(--di-surface-2);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
 .asset-row.is-unused {
-    border-color: rgba(255, 177, 80, 0.34);
-    background: linear-gradient(180deg, rgba(53, 35, 10, 0.78), rgba(29, 18, 5, 0.9));
+    border-color: rgba(var(--di-warning-rgb), 0.34);
+    background: rgba(var(--di-warning-rgb), 0.08);
 }
 
 .asset-meta {
@@ -160,7 +160,7 @@
 
 .asset-name {
     font-weight: 600;
-    color: #f4f8ff;
+    color: var(--di-text);
     word-break: break-word;
 }
 
@@ -173,7 +173,7 @@
 .asset-tag {
     font-size: 11px;
     padding: 2px 7px;
-    border-radius: 999px;
+    border-radius: var(--di-radius-pill);
     border: 1px solid rgba(255,255,255,0.2);
     color: rgba(255,255,255,0.72);
     white-space: nowrap;
@@ -208,9 +208,9 @@
 
 .asset-action-button {
     padding: 6px 10px;
-    border-radius: 7px;
-    border: 1px solid rgba(119, 186, 255, 0.28);
-    background: rgba(19, 92, 164, 0.18);
+    border-radius: var(--di-radius);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.28);
+    background: rgba(var(--di-cyan-rgb), 0.12);
     color: var(--ui-text-primary);
     font-size: 12px;
     font-weight: 600;
@@ -219,19 +219,19 @@
 }
 
 .asset-action-button:hover:not(:disabled) {
-    background: rgba(19, 92, 164, 0.28);
-    border-color: rgba(141, 203, 255, 0.38);
+    background: rgba(var(--di-cyan-rgb), 0.2);
+    border-color: rgba(var(--di-cyan-rgb), 0.38);
     transform: translateY(-1px);
 }
 
 .asset-action-button.primary {
-    background: rgba(0, 198, 255, 0.2);
-    border-color: rgba(0, 198, 255, 0.35);
+    background: rgba(var(--di-cyan-rgb), 0.2);
+    border-color: var(--di-cyan-line);
 }
 
 .asset-action-button.warning {
-    background: rgba(255, 177, 80, 0.16);
-    border-color: rgba(255, 177, 80, 0.3);
+    background: rgba(var(--di-warning-rgb), 0.16);
+    border-color: rgba(var(--di-warning-rgb), 0.3);
 }
 
 .asset-action-button:disabled {

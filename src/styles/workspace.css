@@ -1,24 +1,17 @@
 :root {
-    --workspace-bg: rgba(11, 15, 22, 0.84);
-    --workspace-chrome-surface: linear-gradient(
-        180deg,
-        rgba(15, 19, 28, 0.96) 0%,
-        rgba(11, 15, 22, 0.9) 100%
-    );
-    --workspace-surface: rgba(13, 18, 26, 0.9);
-    --workspace-surface-elevated: rgba(17, 22, 32, 0.96);
+    /* Was a 180deg gradient between two near-blacks at .96 and .9 -- the same
+       veil written twice with a 4-unit hue drift. One scrim now. */
+    --workspace-chrome-surface: var(--di-scrim-strong);
+    --workspace-surface: var(--di-scrim-strong);
+    --workspace-surface-elevated: var(--di-scrim-strong);
     --workspace-surface-soft: rgba(255, 255, 255, 0.025);
-    --workspace-surface-accent: rgba(79, 214, 255, 0.1);
+    --workspace-surface-accent: var(--di-cyan-dim);
     --workspace-border: rgba(255, 255, 255, 0.07);
     --workspace-border-strong: rgba(255, 255, 255, 0.12);
-    --workspace-text: rgba(244, 246, 255, 0.96);
-    --workspace-text-soft: rgba(244, 246, 255, 0.72);
-    --workspace-text-dim: rgba(244, 246, 255, 0.48);
+    --workspace-text: var(--di-text);
+    --workspace-text-soft: rgba(255, 255, 255, 0.72);
+    --workspace-text-dim: var(--di-text-muted);
     --workspace-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
-    --workspace-radius-xl: 14px;
-    --workspace-radius-lg: 8px;
-    --workspace-radius-md: 8px;
-    --workspace-radius-sm: 6px;
     --workspace-space-1: 4px;
     --workspace-space-2: 8px;
     --workspace-space-3: 12px;
@@ -31,6 +24,11 @@
     --workspace-rail-width: 64px;
     --workspace-drawer-width-library: 320px;
     --workspace-drawer-width-detail: 360px;
+    /* Read with a hardcoded fallback until 2026-09-10; nothing ever set them,
+       so the fallback WAS the value. Declared here instead, which keeps the
+       runtime override hook and drops the second palette. */
+    --workspace-appbar-right-offset: var(--workspace-side-gap);
+    --workspace-dock-width: var(--workspace-rail-width);
 }
 
 .editor-workspace {
@@ -58,7 +56,7 @@
     position: fixed;
     top: var(--workspace-appbar-top);
     left: var(--workspace-side-gap);
-    right: var(--workspace-appbar-right-offset, var(--workspace-side-gap));
+    right: var(--workspace-appbar-right-offset);
     z-index: 114;
 }
 
@@ -66,13 +64,13 @@
     position: fixed;
     top: var(--workspace-appbar-top);
     right: var(--workspace-side-gap);
-    width: var(--workspace-dock-width, var(--workspace-rail-width));
+    width: var(--workspace-dock-width);
     height: calc(var(--workspace-appbar-height) + 7px);
     border-top: 1px solid var(--workspace-border);
     border-right: 1px solid var(--workspace-border);
     border-bottom: none;
     border-left: none;
-    border-radius: 0 10px 0 0;
+    border-radius: 0 var(--di-radius) 0 0;
     background: var(--workspace-chrome-surface);
     box-shadow: var(--workspace-shadow);
     -webkit-backdrop-filter: blur(18px);
@@ -87,7 +85,7 @@
     gap: var(--workspace-space-3);
     min-height: var(--workspace-appbar-height);
     padding: 8px 10px;
-    border-radius: 10px 0 8px 10px;
+    border-radius: var(--di-radius) 0 var(--di-radius) var(--di-radius);
     border: 1px solid var(--workspace-border);
     border-right: none;
     background: var(--workspace-chrome-surface);
@@ -132,7 +130,7 @@
     align-items: center;
     gap: 4px;
     padding: 2px;
-    border-radius: var(--workspace-radius-md);
+    border-radius: var(--di-radius);
     background: rgba(255, 255, 255, 0.018);
     border: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -141,7 +139,7 @@
     min-height: var(--workspace-control-height);
     min-width: 0;
     padding: 0 12px;
-    border-radius: var(--workspace-radius-sm);
+    border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: var(--workspace-surface-soft);
     box-shadow: none;
@@ -168,27 +166,27 @@
 .workspace-rail-button.is-active,
 .mobile-nav-button.is-active {
     background: var(--workspace-surface-accent);
-    border-color: rgba(79, 214, 255, 0.22);
+    border-color: rgba(var(--di-cyan-rgb), 0.22);
     color: var(--workspace-text);
-    box-shadow: inset 0 0 0 1px rgba(79, 214, 255, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(var(--di-cyan-rgb), 0.08);
 }
 
 .workspace-command-button.success-button {
-    background: rgba(30, 203, 146, 0.1);
-    border-color: rgba(30, 203, 146, 0.16);
-    color: #c5fff0;
+    background: rgba(var(--di-success-rgb), 0.1);
+    border-color: rgba(var(--di-success-rgb), 0.16);
+    color: var(--di-success);
 }
 
 .workspace-command-button.warning-button {
-    background: rgba(255, 179, 71, 0.1);
-    border-color: rgba(255, 179, 71, 0.16);
-    color: #ffe2b2;
+    background: rgba(var(--di-warning-rgb), 0.1);
+    border-color: rgba(var(--di-warning-rgb), 0.16);
+    color: var(--di-warning);
 }
 
 .workspace-command-button.clear-button {
-    background: rgba(242, 95, 92, 0.1);
-    border-color: rgba(242, 95, 92, 0.18);
-    color: #ffd1d0;
+    background: rgba(var(--di-danger-rgb), 0.1);
+    border-color: rgba(var(--di-danger-rgb), 0.18);
+    color: var(--di-danger);
 }
 
 .workspace-command-button:disabled {
@@ -209,7 +207,7 @@
     gap: 6px;
     min-height: 30px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: var(--di-radius-pill);
     background: rgba(255, 255, 255, 0.025);
     border: 1px solid var(--workspace-border);
     color: var(--workspace-text-soft);
@@ -226,8 +224,8 @@
     content: '';
     width: 6px;
     height: 6px;
-    border-radius: 999px;
-    background: #46cfff;
+    border-radius: var(--di-radius-pill);
+    background: var(--di-cyan);
     flex: 0 0 auto;
 }
 
@@ -266,7 +264,7 @@
     display: flex;
     align-items: stretch;
     min-height: 0;
-    border-radius: 0 0 14px 14px;
+    border-radius: 0 0 var(--di-radius) var(--di-radius);
     border: 1px solid var(--workspace-border);
     border-top: none;
     background: var(--workspace-chrome-surface);
@@ -290,7 +288,7 @@
     position: relative;
     min-height: 48px;
     padding: 8px 6px;
-    border-radius: 8px;
+    border-radius: var(--di-radius);
     border: 1px solid transparent;
     background: transparent;
     color: var(--workspace-text-soft);
@@ -322,9 +320,9 @@
     min-width: 16px;
     height: 16px;
     padding: 0 5px;
-    border-radius: 999px;
-    background: rgba(79, 214, 255, 0.12);
-    color: #dff8ff;
+    border-radius: var(--di-radius-pill);
+    background: var(--di-line);
+    color: var(--di-cyan);
     font-size: 9px;
     font-weight: 700;
 }
@@ -401,7 +399,7 @@
 .workspace-header-button {
     min-height: 28px;
     padding: 0 9px;
-    border-radius: 7px;
+    border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.02);
     color: var(--workspace-text-soft);
@@ -422,7 +420,7 @@
 .workspace-drawer-tab {
     min-height: 30px;
     padding: 0 10px;
-    border-radius: 7px;
+    border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: transparent;
     color: var(--workspace-text-soft);
@@ -504,7 +502,7 @@
 
 .workspace-empty-state {
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.015);
     color: var(--workspace-text-soft);
@@ -527,7 +525,7 @@
     align-items: center;
     min-height: 40px;
     padding: 0 14px;
-    border-radius: 8px;
+    border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.03);
     text-transform: none;
@@ -583,7 +581,7 @@
 .dock-panel .gizmo-section,
 .sheet-panel .gizmo-section {
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--di-radius);
 }
 
 .dock-panel .asset-toolbar,
@@ -604,7 +602,7 @@
 .dock-panel .toggle-button-small,
 .sheet-panel .toggle-button-small {
     min-height: 36px;
-    border-radius: 7px;
+    border-radius: var(--di-radius);
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: none;
@@ -618,7 +616,7 @@
 .dock-panel .asset-action-button.primary,
 .sheet-panel .asset-action-button.primary {
     background: var(--workspace-surface-accent);
-    border-color: rgba(79, 214, 255, 0.26);
+    border-color: rgba(var(--di-cyan-rgb), 0.26);
     color: var(--workspace-text);
 }
 
@@ -631,7 +629,7 @@
 .sheet-panel select,
 .sheet-panel .text-input {
     min-height: 36px;
-    border-radius: 8px;
+    border-radius: var(--di-radius);
     background: rgba(255, 255, 255, 0.035);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: none;
@@ -666,7 +664,7 @@
     gap: 8px;
     padding: 8px;
     min-height: auto;
-    border-radius: 14px;
+    border-radius: var(--di-radius);
     border-right: 1px solid var(--workspace-border);
 }
 
@@ -703,7 +701,7 @@
     bottom: calc(env(safe-area-inset-bottom) + 8px);
     display: flex;
     flex-direction: column;
-    border-radius: 18px;
+    border-radius: var(--di-radius);
     border: 1px solid var(--workspace-border-strong);
     background: var(--workspace-chrome-surface);
     box-shadow: var(--workspace-shadow);
@@ -798,16 +796,16 @@
 .mobile-xr-button {
     min-height: 42px;
     justify-content: center;
-    border-color: rgba(125, 211, 252, 0.22);
-    background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(15, 23, 42, 0.82));
+    border-color: rgba(var(--di-cyan-rgb), 0.22);
+    background: linear-gradient(135deg, rgba(var(--di-cyan-rgb), 0.2), var(--di-scrim));
 }
 
 .mobile-xr-button:not(:disabled) {
-    color: #e0f2fe;
+    color: var(--di-cyan);
 }
 
 .mobile-xr-button:not(:disabled):hover {
-    border-color: rgba(186, 230, 253, 0.55);
+    border-color: rgba(var(--di-cyan-rgb), 0.55);
 }
 
 .mobile-workbench-nav {
@@ -827,7 +825,7 @@
     min-height: 46px;
     min-width: 0;
     padding: 0 10px;
-    border-radius: 10px;
+    border-radius: var(--di-radius);
     border: 1px solid transparent;
     background: transparent;
     color: var(--workspace-text-soft);
@@ -850,7 +848,7 @@
 .mobile-workbench .workspace-empty-state-inline {
     padding: 10px 12px;
     margin: 2px 0 0;
-    border-radius: 8px;
+    border-radius: var(--di-radius);
 }
 
 .mobile-workbench .workspace-empty-title {
@@ -952,14 +950,14 @@
     .mobile-editor-shell.is-compact .workspace-appbar-mobile {
         padding: 7px;
         gap: 7px;
-        border-radius: 12px;
+        border-radius: var(--di-radius);
     }
 
     .mobile-editor-shell.is-compact .mobile-workbench {
         left: 6px;
         right: 6px;
         bottom: calc(env(safe-area-inset-bottom) + 6px);
-        border-radius: 14px;
+        border-radius: var(--di-radius);
     }
 
     .mobile-editor-shell.is-compact .mobile-workbench.is-compact-open {

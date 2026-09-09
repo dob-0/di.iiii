@@ -39,7 +39,7 @@
     justify-content: center !important;
     min-height: 44px;
     background: var(--di-cyan) !important;
-    color: #000 !important;
+    color: var(--di-black) !important;
     font-weight: 700 !important;
     font-size: 0.9rem !important;
     padding: 11px 24px !important;
@@ -55,7 +55,7 @@
 
 .landing-cta-primary:hover,
 .lp-btn-primary:hover {
-    background: #fff !important;
+    background: var(--di-text) !important;
     box-shadow: none !important;
 }
 
@@ -124,7 +124,7 @@
 
 .landing-cta-spaces:hover {
     background: var(--di-cyan) !important;
-    color: #000 !important;
+    color: var(--di-black) !important;
 }
 
 /* The hero's buttons sit on top of a live room whose brightness is not ours to
@@ -134,19 +134,19 @@
    both outlined routes get a dark scrim of their own so the label survives
    whatever the room does behind it. */
 .lp-hero-cta-row .landing-cta-ghost {
-    background: rgba(4, 6, 14, 0.74) !important;
+    background: var(--di-scrim) !important;
     color: rgba(255, 255, 255, 0.88) !important;
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
 }
 
 .lp-hero-cta-row .landing-cta-ghost:hover {
-    background: rgba(4, 6, 14, 0.88) !important;
+    background: var(--di-scrim-strong) !important;
     color: var(--di-cyan) !important;
 }
 
 .lp-hero-cta-row .landing-cta-spaces {
-    background-color: rgba(4, 6, 14, 0.74) !important;
+    background-color: var(--di-scrim) !important;
     background-image: linear-gradient(var(--di-cyan-dim), var(--di-cyan-dim)) !important;
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
@@ -155,7 +155,7 @@
 .lp-hero-cta-row .landing-cta-spaces:hover {
     background-color: var(--di-cyan) !important;
     background-image: none !important;
-    color: #000 !important;
+    color: var(--di-black) !important;
 }
 
 .lp-btn-link {
@@ -294,7 +294,7 @@ body.is-landing .account-btn-wrapper {
     overflow: hidden;
     padding: 48px 24px 40px;
     border-bottom: 1px solid var(--di-cyan-border);
-    background: #000;
+    background: var(--di-black);
 
     /* The two numbers that decide whether the hero copy is readable, kept as
        tokens because `src/styles/contrast.test.js` reads them and computes the
@@ -754,7 +754,7 @@ body.is-landing .account-btn-wrapper {
 
 .lp-wiki-card:hover,
 .lp-wiki-card:focus-visible {
-    background: rgba(77, 249, 255, 0.06);
+    background: var(--di-cyan-wash);
 }
 
 .lp-wiki-card-more {
@@ -1157,7 +1157,10 @@ body.is-landing .account-btn-wrapper {
 .lp-crack-shard {
     position: absolute;
     inset: 0;
-    background: linear-gradient(var(--shard-deg, 45deg), var(--di-cyan) 0%, rgba(77, 249, 255, 0.35) 38%, var(--di-black) 72%);
+    /* crackTransition.js sets --shard-deg inline per shard; this declaration is
+       the resting default it overrides, not a second source of the angle. */
+    --shard-deg: 45deg;
+    background: linear-gradient(var(--shard-deg), var(--di-cyan) 0%, var(--di-cyan-line) 38%, var(--di-black) 72%);
     opacity: 0;
     transform-origin: var(--ox) var(--oy);
     /* translate is the OUTER function on purpose — applied after scale, so

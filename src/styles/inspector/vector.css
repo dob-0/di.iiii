@@ -3,14 +3,14 @@
     flex-direction: column;
     gap: 10px;
     border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 10px;
+    border-radius: var(--di-radius);
     padding: 6px;
-    background: rgba(7,10,18,0.65);
+    background: var(--di-scrim);
     min-width: 0;
 }
 .vector-grid .prop-row-stacked {
     padding: 4px 6px 6px;
-    border-radius: 8px;
+    border-radius: var(--di-radius);
     background: rgba(255,255,255,0.015);
     border: 1px solid rgba(255,255,255,0.04);
     gap: 4px;
@@ -32,8 +32,8 @@
     flex-direction: column;
     gap: 2px;
     padding: 6px 6px 5px;
-    border-radius: 10px;
-    background: rgba(8,12,20,0.92);
+    border-radius: var(--di-radius);
+    background: var(--di-scrim-strong);
     border: 1px solid rgba(255,255,255,0.07);
     min-width: 0;
 }
@@ -62,10 +62,10 @@
     min-width: 0;
     padding: 4px 6px;
     border: 1px solid rgba(255,255,255,0.18);
-    border-radius: 6px;
-    background: rgba(2,4,9,0.9);
+    border-radius: var(--di-radius);
+    background: var(--di-scrim-strong);
     color: var(--ui-text-primary);
-    font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    font-family: var(--di-mono);
     font-size: 10px;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
@@ -73,6 +73,6 @@
     min-height: 26px;
 }
 .gizmo-controls .vec3-axis input:focus-visible {
-    outline: 2px solid rgba(0, 198, 255, 0.5);
+    outline: 2px solid rgba(var(--di-cyan-rgb), 0.5);
     outline-offset: 1px;
 }

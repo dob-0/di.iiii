@@ -20,10 +20,10 @@
     flex-direction: column;
     gap: 10px;
     padding: 14px 18px 16px;
-    background: rgba(5, 6, 15, 0.88);
-    border-top: 1px solid rgba(77, 249, 255, 0.35);
+    background: var(--di-scrim-strong);
+    border-top: 1px solid var(--di-cyan-line);
     backdrop-filter: blur(6px);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--di-mono);
     font-size: 11px;
     color: rgba(255, 255, 255, 0.72);
     user-select: none;
@@ -37,7 +37,7 @@
 }
 
 .di-director-tag {
-    color: #4df9ff;
+    color: var(--di-cyan);
     letter-spacing: 0.18em;
     text-transform: uppercase;
     font-weight: 700;
@@ -46,7 +46,7 @@
 .di-director-time {
     font-size: 14px;
     font-variant-numeric: tabular-nums;
-    color: #fff;
+    color: var(--di-text);
 }
 
 .di-director-now {
@@ -63,21 +63,21 @@
 .di-director button {
     font-family: inherit;
     font-size: 11px;
-    color: #4df9ff;
-    background: rgba(77, 249, 255, 0.08);
-    border: 1px solid rgba(77, 249, 255, 0.4);
-    border-radius: 4px;
+    color: var(--di-cyan);
+    background: rgba(var(--di-cyan-rgb), 0.08);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.4);
+    border-radius: var(--di-radius);
     padding: 4px 9px;
     cursor: pointer;
 }
 
 .di-director button:hover {
-    background: rgba(77, 249, 255, 0.2);
+    background: rgba(var(--di-cyan-rgb), 0.2);
 }
 
 .di-director button.is-active {
-    color: #05060f;
-    background: #4df9ff;
+    color: var(--di-black);
+    background: var(--di-cyan);
 }
 
 .di-director-rates {
@@ -98,7 +98,7 @@
     padding-top: 16px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 4px;
+    border-radius: var(--di-radius);
     cursor: crosshair;
     overflow: hidden;
     /* NEVER shrink. The panel is a flex column inside a height-capped row, so
@@ -141,9 +141,9 @@
     display: flex;
     align-items: center;
     box-sizing: border-box;
-    background: rgba(77, 249, 255, 0.14);
-    border: 1px solid #4df9ff;
-    border-radius: 3px;
+    background: rgba(var(--di-cyan-rgb), 0.14);
+    border: 1px solid var(--di-cyan);
+    border-radius: var(--di-radius);
     cursor: grab;
     overflow: hidden;
 }
@@ -159,10 +159,10 @@
    away the colour coding that tells the author which world a clip is in. A
    brighter fill plus a white ring reads at a glance and leaves that intact. */
 .di-director-clip.is-inspected {
-    background: rgba(77, 249, 255, 0.34);
+    background: rgba(var(--di-cyan-rgb), 0.34);
     box-shadow:
         0 0 0 1px rgba(255, 255, 255, 0.75),
-        0 0 12px rgba(77, 249, 255, 0.45);
+        0 0 12px rgba(var(--di-cyan-rgb), 0.45);
     /* Above its neighbours, so the ring is not clipped where windows overlap —
        and windows overlap on purpose here (see sequences/index.js). */
     z-index: 1;
@@ -174,7 +174,7 @@
     align-items: baseline;
     gap: 8px;
     padding: 0 8px;
-    color: #fff;
+    color: var(--di-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -191,12 +191,12 @@
     width: 8px;
     align-self: stretch;
     flex: 0 0 8px;
-    background: rgba(77, 249, 255, 0.55);
+    background: rgba(var(--di-cyan-rgb), 0.55);
     cursor: ew-resize;
 }
 
 .di-director-handle:hover {
-    background: #4df9ff;
+    background: var(--di-cyan);
 }
 
 /* A stretch with nothing on screen — the piece playing to an empty room.
@@ -207,13 +207,13 @@
     bottom: 0;
     background: repeating-linear-gradient(
         45deg,
-        rgba(255, 76, 92, 0.28),
-        rgba(255, 76, 92, 0.28) 5px,
+        rgba(var(--di-danger-rgb), 0.28),
+        rgba(var(--di-danger-rgb), 0.28) 5px,
         transparent 5px,
         transparent 10px
     );
-    border-left: 1px solid rgba(255, 76, 92, 0.7);
-    border-right: 1px solid rgba(255, 76, 92, 0.7);
+    border-left: 1px solid rgba(var(--di-danger-rgb), 0.7);
+    border-right: 1px solid rgba(var(--di-danger-rgb), 0.7);
     pointer-events: none;
 }
 
@@ -222,8 +222,8 @@
     top: 0;
     bottom: 0;
     width: 1px;
-    background: #ff4c5c;
-    box-shadow: 0 0 6px rgba(255, 76, 92, 0.9);
+    background: var(--di-danger);
+    box-shadow: 0 0 6px rgba(var(--di-danger-rgb), 0.9);
     pointer-events: none;
 }
 
@@ -241,7 +241,7 @@
     font-size: 11px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #fff;
+    color: var(--di-text);
 }
 
 .di-director-inspector-head em {
@@ -285,16 +285,16 @@
     font-family: inherit;
     font-size: 11px;
     font-variant-numeric: tabular-nums;
-    color: #fff;
+    color: var(--di-text);
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 3px;
+    border-radius: var(--di-radius);
     padding: 3px 6px;
 }
 
 .di-director-field:focus {
     outline: none;
-    border-color: #4df9ff;
+    border-color: var(--di-cyan);
 }
 
 .di-director-ripple {
@@ -345,23 +345,23 @@
 /* Asset clips read differently from written sequences on the timeline — one
    is a file placed in the room, the other is the room. */
 .di-director-clip.is-asset {
-    background: rgba(255, 176, 77, 0.14);
-    border-color: #ffb04d;
+    background: rgba(var(--di-warning-rgb), 0.14);
+    border-color: var(--di-warning);
     border-style: dashed;
 }
 
 .di-director-clip.is-asset .di-director-handle {
-    background: rgba(255, 176, 77, 0.55);
+    background: rgba(var(--di-warning-rgb), 0.55);
 }
 
 .di-director-clip.is-asset .di-director-handle:hover {
-    background: #ffb04d;
+    background: var(--di-warning);
 }
 
 .di-director-remove {
-    color: #ff8a94 !important;
-    border-color: rgba(255, 138, 148, 0.45) !important;
-    background: rgba(255, 138, 148, 0.08) !important;
+    color: var(--di-danger) !important;
+    border-color: rgba(var(--di-danger-rgb), 0.45) !important;
+    background: rgba(var(--di-danger-rgb), 0.08) !important;
     line-height: 1;
     /* Pushed to the end of the row so it is never adjacent to a field the
        author is tabbing through — a destructive control next to a number input
@@ -386,7 +386,7 @@
 }
 
 .di-director-warn {
-    color: #ff8a94;
+    color: var(--di-danger);
 }
 
 .di-director-note {
@@ -398,8 +398,8 @@
    `margin-left: auto` that used to push Copy over now pushes the pair. */
 .di-director-save {
     margin-left: auto;
-    border-color: rgba(77, 249, 255, 0.55) !important;
-    color: #cfefff !important;
+    border-color: rgba(var(--di-cyan-rgb), 0.55) !important;
+    color: var(--di-text) !important;
 }
 
 .di-director-save:disabled {
@@ -412,10 +412,10 @@
     height: 160px;
     font-family: inherit;
     font-size: 11px;
-    color: #cfefff;
+    color: var(--di-text);
     background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(77, 249, 255, 0.35);
-    border-radius: 4px;
+    border: 1px solid var(--di-cyan-line);
+    border-radius: var(--di-radius);
     padding: 8px;
     resize: vertical;
 }
@@ -426,11 +426,20 @@
    the root beside both halves rather than inside the editor — the editor clips
    its own overflow, which would eat a handle straddling its top edge.
    `touch-action: none` or a touch drag scrolls the page instead of resizing. */
+/* The seam's default share. Declared here rather than on .di-split-handle
+   itself: the experience sets --di-split as an inline style on the ROOT
+   element and the handle inherits it, so a declaration on the handle's own
+   selector would shadow the live value and freeze the bar at 45% while the
+   halves moved. :root is far enough away to lose to the inline value. */
+:root {
+    --di-split: 45%;
+}
+
 .di-split-handle {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: var(--di-split, 45%);
+    bottom: var(--di-split);
     height: 9px;
     margin-bottom: -4px;
     z-index: 6;
@@ -440,7 +449,7 @@
 
 .di-split-handle:hover,
 .di-split-handle:focus-visible {
-    background: rgba(77, 249, 255, 0.35);
+    background: var(--di-cyan-line);
     outline: none;
 }
 
@@ -477,7 +486,7 @@
 
 .di-director-rowhint b {
     font-weight: 400;
-    color: rgba(77, 249, 255, 0.75);
+    color: rgba(var(--di-cyan-rgb), 0.75);
 }
 
 /* Breaks onto its own line inside the row's flex-wrap, so opening a disclosure
@@ -500,7 +509,7 @@
 }
 
 .di-director-section.is-open .di-director-section-toggle {
-    color: #4df9ff !important;
+    color: var(--di-cyan) !important;
 }
 
 .di-director-section-body {
@@ -510,7 +519,7 @@
     gap: 6px 10px;
     margin-top: 5px;
     padding: 7px 9px;
-    border-left: 1px solid rgba(77, 249, 255, 0.28);
+    border-left: 1px solid rgba(var(--di-cyan-rgb), 0.28);
     background: rgba(255, 255, 255, 0.03);
 }
 
@@ -578,7 +587,7 @@
 }
 
 .di-director-swatch-item:has(.is-selected) .di-director-swatch-name {
-    color: #4df9ff;
+    color: var(--di-cyan);
 }
 
 /* Square, not round: these read as sampled material rather than as status
@@ -587,7 +596,7 @@
     width: 17px;
     height: 17px;
     padding: 0 !important;
-    border-radius: 2px;
+    border-radius: var(--di-radius);
     /* A pale swatch on a dark panel has no edge of its own, and a dark one is
        invisible against the panel. A constant hairline gives every swatch the
        same silhouette regardless of what it contains. */
@@ -597,8 +606,8 @@
 /* Ring rather than a border swap: changing the border would move the swatch by
    a pixel as it is selected, and a colour you are comparing must not jump. */
 .di-director-swatch.is-selected {
-    border-color: #fff !important;
-    box-shadow: 0 0 0 2px rgba(77, 249, 255, 0.9);
+    border-color: var(--di-text) !important;
+    box-shadow: 0 0 0 2px rgba(var(--di-cyan-rgb), 0.9);
 }
 
 .di-director-custom-toggle {
@@ -615,9 +624,9 @@
    The background MUST be restated rather than only the colour: without it the
    global fill still applies and cyan text lands on a cyan block. */
 .di-director-custom-toggle.is-active {
-    color: #4df9ff !important;
-    border-color: rgba(77, 249, 255, 0.5) !important;
-    background: rgba(77, 249, 255, 0.1) !important;
+    color: var(--di-cyan) !important;
+    border-color: rgba(var(--di-cyan-rgb), 0.5) !important;
+    background: var(--di-cyan-dim) !important;
 }
 
 .di-director-custom {
@@ -630,7 +639,7 @@
     padding: 0;
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 3px;
+    border-radius: var(--di-radius);
     cursor: pointer;
 }
 
@@ -645,7 +654,7 @@
     font-style: normal;
     font-size: 10px;
     line-height: 1.45;
-    color: #f8cca4;
+    color: var(--di-warning);
 }
 
 /* ---- lights ---- */
@@ -692,26 +701,26 @@
 
 .di-director-kind.is-active,
 .di-director-stop.is-active {
-    color: #4df9ff !important;
-    border-color: rgba(77, 249, 255, 0.5) !important;
-    background: rgba(77, 249, 255, 0.1) !important;
+    color: var(--di-cyan) !important;
+    border-color: rgba(var(--di-cyan-rgb), 0.5) !important;
+    background: var(--di-cyan-dim) !important;
 }
 
 /* "place" hands the gizmo to this light. Amber while armed — the same amber
    the timeline already uses for a clip you are manipulating, so "something in
    the scene is under your cursor" keeps one colour across the panel. */
 .di-director-place.is-selected {
-    color: #ffb04d !important;
-    border-color: rgba(255, 176, 77, 0.55) !important;
-    background: rgba(255, 176, 77, 0.12) !important;
+    color: var(--di-warning) !important;
+    border-color: rgba(var(--di-warning-rgb), 0.55) !important;
+    background: rgba(var(--di-warning-rgb), 0.12) !important;
 }
 
 /* Same reasoning as the sequence remove: destructive, so it sits at the end of
    the line and never next to a field being tabbed through. */
 .di-director-light-remove {
-    color: #ff8a94 !important;
-    border-color: rgba(255, 138, 148, 0.45) !important;
-    background: rgba(255, 138, 148, 0.08) !important;
+    color: var(--di-danger) !important;
+    border-color: rgba(var(--di-danger-rgb), 0.45) !important;
+    background: rgba(var(--di-danger-rgb), 0.08) !important;
     line-height: 1;
     margin-left: auto;
 }
@@ -721,13 +730,13 @@
    one sequence's material, not to the piece. Sits above the director in the
    same bottom stack and inherits its typography. */
 .di-dispersion {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--di-mono);
     font-size: 10px;
     letter-spacing: 0.08em;
     color: rgba(255, 255, 255, 0.72);
-    background: rgba(5, 6, 15, 0.82);
+    background: var(--di-scrim);
     border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 10px;
+    border-radius: var(--di-radius);
     padding: 10px 12px;
     margin-bottom: 8px;
     backdrop-filter: blur(6px);
@@ -755,14 +764,14 @@
     color: rgba(255, 255, 255, 0.72);
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 999px;
+    border-radius: var(--di-radius-pill);
     padding: 3px 10px;
     cursor: pointer;
 }
 
 .di-dispersion-actions button:hover {
-    color: #4df9ff;
-    border-color: rgba(77, 249, 255, 0.6);
+    color: var(--di-cyan);
+    border-color: rgba(var(--di-cyan-rgb), 0.6);
 }
 
 /* Two columns on anything wide enough. Eight sliders in one column pushes the
@@ -786,7 +795,7 @@
 }
 
 .di-dispersion-collapse:focus-visible {
-    outline: 2px solid #80ffff;
+    outline: 2px solid var(--di-cyan);
     outline-offset: 2px;
 }
 
@@ -810,13 +819,13 @@
 /* The moved-off-default marker. Bright, because the whole point is that it is
    findable in a panel of eight identical rows. */
 .di-dispersion-name em {
-    color: #4df9ff;
+    color: var(--di-cyan);
     font-style: normal;
 }
 
 .di-dispersion-row input[type='range'] {
     width: 100%;
-    accent-color: #4df9ff;
+    accent-color: var(--di-cyan);
     cursor: pointer;
 }
 

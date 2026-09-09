@@ -16,7 +16,7 @@
     position: absolute;
     inset: 0;
     border: none;
-    background: rgba(6, 10, 16, 0.82);
+    background: var(--di-scrim);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     cursor: default;
@@ -28,12 +28,12 @@
     max-width: 720px;
     max-height: min(86vh, 640px);
     overflow-y: auto;
-    background: rgba(14, 20, 30, 0.97);
-    border: 1px solid rgba(79, 214, 255, 0.25);
-    border-radius: 12px;
+    background: var(--di-surface-2);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.25);
+    border-radius: var(--di-radius);
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
     padding: 24px 28px 16px;
-    color: #fff;
+    color: var(--di-text);
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -47,7 +47,7 @@
 
 .sh-help-mark {
     font-size: 22px;
-    color: var(--di-cyan, #4fd6ff);
+    color: var(--di-cyan);
     line-height: 1.2;
 }
 
@@ -78,7 +78,7 @@
     padding: 0 4px;
 }
 
-.sh-help-close:hover { color: #fff; }
+.sh-help-close:hover { color: var(--di-text); }
 
 .sh-help-mode-tabs,
 .sh-help-section-tabs {
@@ -90,8 +90,8 @@
 .sh-help-section-tabs button {
     appearance: none;
     background: none;
-    border: 1px solid rgba(79, 214, 255, 0.2);
-    border-radius: 999px;
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.2);
+    border-radius: var(--di-radius-pill);
     color: rgba(255, 255, 255, 0.55);
     font-size: 11px;
     letter-spacing: 0.08em;
@@ -103,9 +103,9 @@
 
 .sh-help-mode-tabs button.is-active,
 .sh-help-section-tabs button.is-active {
-    color: var(--di-cyan, #4fd6ff);
-    border-color: var(--di-cyan, #4fd6ff);
-    background: rgba(79, 214, 255, 0.1);
+    color: var(--di-cyan);
+    border-color: var(--di-cyan);
+    background: var(--di-cyan-dim);
 }
 
 .sh-help-body {
@@ -129,18 +129,18 @@
 .sh-help-diagram {
     position: relative;
     height: 150px;
-    border: 1px solid rgba(79, 214, 255, 0.18);
-    border-radius: 8px;
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.18);
+    border-radius: var(--di-radius);
     overflow: hidden;
-    background: #05070a;
+    background: var(--di-surface);
 }
 
 .sh-help-grid {
     position: absolute;
     inset: 0;
     background-image:
-        linear-gradient(rgba(79, 214, 255, 0.12) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(79, 214, 255, 0.12) 1px, transparent 1px);
+        linear-gradient(var(--di-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--di-line) 1px, transparent 1px);
     background-size: 24px 24px;
     transform: perspective(300px) rotateX(55deg) translateY(30%) scale(2);
     transform-origin: center 70%;
@@ -153,9 +153,9 @@
     width: 34px;
     height: 34px;
     transform: translate(-50%, -50%) rotate(-8deg);
-    border: 1.5px solid var(--di-cyan, #4fd6ff);
-    background: rgba(79, 214, 255, 0.12);
-    border-radius: 3px;
+    border: 1.5px solid var(--di-cyan);
+    background: var(--di-line);
+    border-radius: var(--di-radius);
 }
 
 .sh-help-cube--small {
@@ -164,7 +164,7 @@
 }
 
 .sh-help-cube--selected {
-    box-shadow: 0 0 12px rgba(79, 214, 255, 0.45);
+    box-shadow: 0 0 12px rgba(var(--di-cyan-rgb), 0.45);
 }
 
 .sh-help-orbit {
@@ -174,7 +174,7 @@
     width: 110px;
     height: 64px;
     transform: translate(-50%, -50%);
-    border: 1px dashed rgba(79, 214, 255, 0.5);
+    border: 1px dashed rgba(var(--di-cyan-rgb), 0.5);
     border-radius: 50%;
 }
 
@@ -185,8 +185,8 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--di-cyan, #4fd6ff);
-    box-shadow: 0 0 8px rgba(79, 214, 255, 0.8);
+    background: var(--di-cyan);
+    box-shadow: 0 0 8px rgba(var(--di-cyan-rgb), 0.8);
     animation: sh-help-orbit-dot 6s linear infinite;
     transform-origin: -52px 4px;
 }
@@ -200,7 +200,7 @@
     position: absolute;
     left: calc(50% + 30px);
     top: calc(52% - 34px);
-    color: var(--di-cyan, #4fd6ff);
+    color: var(--di-cyan);
     font-size: 18px;
     font-weight: 600;
     animation: sh-help-pulse 2.4s ease-in-out infinite;
@@ -214,20 +214,20 @@
     flex-direction: column;
     gap: 5px;
     padding: 7px;
-    border: 1px solid rgba(79, 214, 255, 0.3);
-    border-radius: 6px;
-    background: rgba(10, 16, 24, 0.8);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+    background: var(--di-surface-3);
 }
 
 .sh-help-chip-tray span {
     width: 26px;
     height: 7px;
-    border-radius: 2px;
-    background: rgba(79, 214, 255, 0.35);
+    border-radius: var(--di-radius);
+    background: var(--di-cyan-line);
 }
 
 .sh-help-chip-tray span:first-child {
-    background: var(--di-cyan, #4fd6ff);
+    background: var(--di-cyan);
 }
 
 .sh-help-axis {
@@ -239,9 +239,9 @@
     transform-origin: left center;
 }
 
-.sh-help-axis--x { background: #ff6b81; transform: rotate(14deg); }
-.sh-help-axis--y { background: #6bff9e; transform: rotate(-90deg); width: 40px; }
-.sh-help-axis--z { background: #6b9eff; transform: rotate(160deg); }
+.sh-help-axis--x { background: var(--axis-x); transform: rotate(14deg); }
+.sh-help-axis--y { background: var(--axis-y); transform: rotate(-90deg); width: 40px; }
+.sh-help-axis--z { background: var(--axis-z); transform: rotate(160deg); }
 
 .sh-help-ring {
     position: absolute;
@@ -250,7 +250,7 @@
     width: 84px;
     height: 84px;
     transform: translate(-50%, -50%);
-    border: 1px solid rgba(79, 214, 255, 0.5);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.5);
     border-radius: 50%;
     animation: sh-help-pulse 3s ease-in-out infinite;
 }
@@ -260,10 +260,10 @@
     right: 12px;
     bottom: 12px;
     padding: 3px 10px;
-    border: 1px solid var(--di-cyan, #4fd6ff);
-    border-radius: 999px;
-    color: var(--di-cyan, #4fd6ff);
-    font-family: ui-monospace, monospace;
+    border: 1px solid var(--di-cyan);
+    border-radius: var(--di-radius-pill);
+    color: var(--di-cyan);
+    font-family: var(--di-mono);
     font-size: 11px;
 }
 
@@ -285,15 +285,15 @@
 }
 
 .sh-help-callout {
-    border: 1px solid rgba(79, 214, 255, 0.15);
-    border-radius: 6px;
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.15);
+    border-radius: var(--di-radius);
     padding: 8px 10px;
-    background: rgba(10, 16, 24, 0.6);
+    background: var(--di-surface-3);
 }
 
 .sh-help-callout-icon {
     display: block;
-    color: var(--di-cyan, #4fd6ff);
+    color: var(--di-cyan);
     font-size: 14px;
     margin-bottom: 4px;
 }
@@ -324,10 +324,10 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    border: 1px solid rgba(79, 214, 255, 0.15);
-    border-radius: 6px;
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.15);
+    border-radius: var(--di-radius);
     padding: 9px 12px;
-    background: rgba(10, 16, 24, 0.6);
+    background: var(--di-surface-3);
 }
 
 .sh-help-steps li span {
@@ -336,9 +336,9 @@
     height: 20px;
     display: grid;
     place-items: center;
-    border: 1px solid var(--di-cyan, #4fd6ff);
+    border: 1px solid var(--di-cyan);
     border-radius: 50%;
-    color: var(--di-cyan, #4fd6ff);
+    color: var(--di-cyan);
     font-size: 11px;
     font-weight: 700;
 }
@@ -361,7 +361,7 @@
 }
 
 .sh-help-shortcut-title {
-    color: rgba(79, 214, 255, 0.7);
+    color: rgba(var(--di-cyan-rgb), 0.7);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.1em;
@@ -378,18 +378,18 @@
 }
 
 .sh-help-shortcut-row code {
-    color: var(--di-cyan, #4fd6ff);
-    background: rgba(79, 214, 255, 0.1);
-    border: 1px solid rgba(79, 214, 255, 0.2);
-    border-radius: 4px;
+    color: var(--di-cyan);
+    background: var(--di-cyan-dim);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.2);
+    border-radius: var(--di-radius);
     padding: 1px 6px;
     font-size: 11px;
     white-space: nowrap;
-    font-family: ui-monospace, monospace;
+    font-family: var(--di-mono);
 }
 
 .sh-help-shortcut-row span {
-    color: rgba(200, 216, 232, 0.8);
+    color: rgba(255, 255, 255, 0.8);
     font-size: 12px;
     text-align: right;
 }

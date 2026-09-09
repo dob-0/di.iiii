@@ -11,10 +11,10 @@
     align-items: center;
     gap: 10px;
     padding: 8px 14px;
-    background: rgba(6, 10, 16, 0.92);
-    border: 1px solid rgba(79, 214, 255, 0.3);
-    border-radius: 999px;
-    color: var(--di-text, #e8f4f8);
+    background: var(--di-scrim-strong);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius-pill);
+    color: var(--di-text);
     font-size: 13px;
     letter-spacing: 0.02em;
     white-space: nowrap;
@@ -36,16 +36,16 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: rgba(79, 214, 255, 0.25);
+    background: rgba(var(--di-cyan-rgb), 0.25);
 }
 
 .studio-coach-dot.is-done {
-    background: var(--di-cyan, #4fd6ff);
+    background: var(--di-cyan);
 }
 
 .studio-coach-dot.is-active {
-    background: rgba(79, 214, 255, 0.6);
-    box-shadow: 0 0 6px rgba(79, 214, 255, 0.5);
+    background: rgba(var(--di-cyan-rgb), 0.6);
+    box-shadow: 0 0 6px rgba(var(--di-cyan-rgb), 0.5);
 }
 
 .studio-coach-close {

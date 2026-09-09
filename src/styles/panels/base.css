@@ -61,7 +61,7 @@
 }
 .floating-panel .close-button:hover,
 .floating-panel .close-button:focus-visible {
-    color: #fefefe;
+    color: var(--di-text);
 }
 .floating-panel .panel-content {
     padding: 12px;
@@ -115,7 +115,7 @@
     padding: 4px 6px;
     border-radius: 0;
     border: 1px solid var(--di-cyan-border);
-    background: rgba(7,11,20,0.65);
+    background: var(--di-scrim);
     color: var(--ui-text-primary);
     font-size: 12px;
     font-family: var(--di-sans);
@@ -139,14 +139,14 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: radial-gradient(circle, #fff 0%, var(--ui-accent) 55%, var(--ui-accent-strong) 100%);
+    background: radial-gradient(circle, var(--di-text) 0%, var(--ui-accent) 55%, var(--ui-accent-strong) 100%);
     box-shadow: 0 0 0 2px rgba(0,0,0,0.4);
 }
 .floating-panel input[type="range"]::-moz-range-thumb {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: radial-gradient(circle, #fff 0%, var(--ui-accent) 55%, var(--ui-accent-strong) 100%);
+    background: radial-gradient(circle, var(--di-text) 0%, var(--ui-accent) 55%, var(--ui-accent-strong) 100%);
     border: none;
     box-shadow: 0 0 0 2px rgba(0,0,0,0.4);
 }
@@ -175,10 +175,10 @@
     color: rgba(255,255,255,0.6);
 }
 .floating-panel .panel-subtext.panel-subtext-error {
-    color: #f87171;
+    color: var(--di-danger);
 }
 .floating-panel .panel-subtext.panel-subtext-success {
-    color: #4ade80;
+    color: var(--di-success);
 }
 
 .panel-divider {

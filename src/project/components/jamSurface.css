@@ -17,7 +17,7 @@
     position: fixed;
     inset: 0;
     overflow: hidden;
-    background: #05070a;
+    background: var(--di-black);
 }
 
 .jam-overlay {
@@ -25,8 +25,8 @@
     inset: 0;
     z-index: 12;
     pointer-events: none;
-    font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
-    color: #f2f5f8;
+    font-family: var(--di-sans);
+    color: var(--di-text);
 }
 
 .jam-overlay button,
@@ -50,7 +50,7 @@
     justify-content: space-between;
     gap: 0.75rem;
     padding: calc(env(safe-area-inset-top, 0px) + 0.7rem) 0.9rem 0.7rem;
-    background: linear-gradient(to bottom, rgba(5, 7, 10, 0.72), rgba(5, 7, 10, 0));
+    background: linear-gradient(to bottom, var(--di-scrim), transparent);
 }
 
 .jam-count {
@@ -66,24 +66,25 @@
     width: 0.5rem;
     height: 0.5rem;
     border-radius: 50%;
-    background: #4ade80;
-    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.18);
+    background: var(--di-success);
+    box-shadow: 0 0 0 3px rgba(var(--di-success-rgb), 0.18);
 }
 
 .jam-count-dot.is-alone {
-    background: #94a3b8;
-    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.16);
+    /* Nobody else in the room: the dot goes neutral, not coloured. */
+    background: var(--di-text-muted);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16);
 }
 
 .jam-exit {
     font-size: 0.78rem;
     font-weight: 600;
-    color: rgba(242, 245, 248, 0.72);
+    color: rgba(255, 255, 255, 0.72);
     text-decoration: none;
     padding: 0.45rem 0.7rem;
-    border-radius: 999px;
-    border: 1px solid rgba(242, 245, 248, 0.18);
-    background: rgba(5, 7, 10, 0.5);
+    border-radius: var(--di-radius-pill);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: var(--di-scrim);
     white-space: nowrap;
 }
 
@@ -104,9 +105,9 @@
     width: 4rem;
     height: 4rem;
     border-radius: 50%;
-    border: 1px solid rgba(242, 245, 248, 0.28);
-    background: rgba(12, 16, 22, 0.86);
-    color: #f2f5f8;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: var(--di-scrim-strong);
+    color: var(--di-text);
     font-size: 2rem;
     line-height: 1;
     font-weight: 300;
@@ -121,10 +122,10 @@
 }
 
 .jam-mine-chip {
-    border: 1px solid rgba(242, 245, 248, 0.16);
-    background: rgba(5, 7, 10, 0.55);
-    color: rgba(242, 245, 248, 0.78);
-    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: var(--di-scrim);
+    color: rgba(255, 255, 255, 0.78);
+    border-radius: var(--di-radius-pill);
     padding: 0.35rem 0.8rem;
     font-size: 0.75rem;
     font-weight: 600;
@@ -139,9 +140,9 @@
     right: 0;
     bottom: 0;
     pointer-events: auto;
-    background: rgba(10, 13, 18, 0.96);
-    border-top: 1px solid rgba(242, 245, 248, 0.12);
-    border-radius: 1.1rem 1.1rem 0 0;
+    background: var(--di-scrim-strong);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--di-radius) var(--di-radius) 0 0;
     padding: 0.9rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
     box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.55);
     max-height: 72dvh;
@@ -152,8 +153,8 @@
 .jam-sheet-grip {
     width: 2.4rem;
     height: 0.25rem;
-    border-radius: 999px;
-    background: rgba(242, 245, 248, 0.24);
+    border-radius: var(--di-radius-pill);
+    background: rgba(255, 255, 255, 0.24);
     margin: 0 auto 0.85rem;
 }
 
@@ -174,7 +175,7 @@
 .jam-sheet-close {
     background: none;
     border: none;
-    color: rgba(242, 245, 248, 0.6);
+    color: rgba(255, 255, 255, 0.6);
     font-size: 0.85rem;
     font-weight: 600;
     padding: 0.3rem 0.4rem;
@@ -195,10 +196,10 @@
     justify-content: center;
     gap: 0.35rem;
     min-height: 4.6rem;
-    border-radius: 0.85rem;
-    border: 1px solid rgba(242, 245, 248, 0.14);
-    background: rgba(242, 245, 248, 0.05);
-    color: #f2f5f8;
+    border-radius: var(--di-radius);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--di-text);
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
@@ -206,7 +207,7 @@
 
 .jam-shape:active,
 .jam-file:active {
-    background: rgba(242, 245, 248, 0.12);
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .jam-shape-icon {
@@ -234,17 +235,17 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: rgba(242, 245, 248, 0.5);
+    color: var(--di-text-muted);
     margin-bottom: 0.4rem;
 }
 
 .jam-input {
     width: 100%;
     box-sizing: border-box;
-    border-radius: 0.7rem;
-    border: 1px solid rgba(242, 245, 248, 0.16);
-    background: rgba(242, 245, 248, 0.05);
-    color: #f2f5f8;
+    border-radius: var(--di-radius);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--di-text);
     padding: 0.7rem 0.75rem;
     font: inherit;
     font-size: 1rem;
@@ -267,7 +268,7 @@
 }
 
 .jam-colour.is-on {
-    border-color: #f2f5f8;
+    border-color: var(--di-text);
 }
 
 .jam-row {
@@ -278,22 +279,22 @@
 .jam-btn {
     flex: 1;
     min-height: 3rem;
-    border-radius: 0.75rem;
-    border: 1px solid rgba(242, 245, 248, 0.16);
-    background: rgba(242, 245, 248, 0.05);
-    color: #f2f5f8;
+    border-radius: var(--di-radius);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--di-text);
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
 }
 
 .jam-btn:active {
-    background: rgba(242, 245, 248, 0.12);
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .jam-btn.is-danger {
-    border-color: rgba(248, 113, 113, 0.4);
-    color: #fca5a5;
+    border-color: rgba(var(--di-danger-rgb), 0.4);
+    color: var(--di-danger);
 }
 
 .jam-mine-list {
@@ -308,10 +309,10 @@
     gap: 0.6rem;
     min-height: 3rem;
     padding: 0 0.85rem;
-    border-radius: 0.75rem;
-    border: 1px solid rgba(242, 245, 248, 0.14);
-    background: rgba(242, 245, 248, 0.05);
-    color: #f2f5f8;
+    border-radius: var(--di-radius);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--di-text);
     font-size: 0.85rem;
     font-weight: 600;
     text-align: left;
@@ -329,7 +330,7 @@
 .jam-note {
     font-size: 0.78rem;
     line-height: 1.5;
-    color: rgba(242, 245, 248, 0.55);
+    color: rgba(255, 255, 255, 0.55);
     margin: 0.2rem 0 0;
 }
 
@@ -339,9 +340,9 @@
     transform: translateX(-50%);
     top: calc(env(safe-area-inset-top, 0px) + 3.2rem);
     padding: 0.4rem 0.8rem;
-    border-radius: 999px;
-    background: rgba(5, 7, 10, 0.78);
-    border: 1px solid rgba(242, 245, 248, 0.16);
+    border-radius: var(--di-radius-pill);
+    background: var(--di-scrim);
+    border: 1px solid rgba(255, 255, 255, 0.16);
     font-size: 0.76rem;
     font-weight: 600;
     white-space: nowrap;
@@ -357,8 +358,8 @@
         transform: translateX(-50%);
         width: min(30rem, calc(100% - 2rem));
         bottom: 1rem;
-        border-radius: 1.1rem;
-        border: 1px solid rgba(242, 245, 248, 0.12);
+        border-radius: var(--di-radius);
+        border: 1px solid rgba(255, 255, 255, 0.12);
     }
 }
 

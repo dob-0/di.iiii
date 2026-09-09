@@ -90,6 +90,25 @@
     --di-cyan-wash: rgba(77, 249, 255, 0.06);
     --di-cyan-line: rgba(77, 249, 255, 0.35);
 
+    /* The brand colours as channel triples, so a surface can pick its own alpha
+       without writing the colour's numbers out by hand. Seventeen different
+       cyan alphas were live across studio.css alone — each one a literal, each
+       one a place a palette change would miss. `rgba(var(--di-cyan-rgb), .2)`
+       is the sanctioned form; `rgba(77, 249, 255, .2)` is not, and the spine
+       test fails on it. */
+    --di-cyan-rgb: 77, 249, 255;
+    --di-danger-rgb: 242, 95, 92;
+    --di-success-rgb: 77, 249, 192;
+    --di-warning-rgb: 255, 179, 71;
+
+    /* A scrim: the dark veil laid over a live room or a 3D background so text
+       on top of it stays readable whatever moves underneath. Two weights, and
+       nothing between them. Both were hand-written near-blacks that differed
+       per stylesheet — rgba(3,7,14,.74) on the wiki, rgba(4,6,14,.74) on the
+       landing, rgba(4,6,9,.9) in Studio: the same intention, three colours. */
+    --di-scrim: rgba(4, 6, 14, 0.74);
+    --di-scrim-strong: rgba(4, 6, 14, 0.9);
+
     /* Space: one rhythm. Every gap, padding and margin is one of these. */
     --di-space-1: 6px;
     --di-space-2: 12px;

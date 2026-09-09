@@ -17,16 +17,16 @@
 }
 .space-row {
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
+    border-radius: var(--di-radius);
     padding: 10px;
-    background: rgba(7,11,20,0.7);
+    background: var(--di-scrim);
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 .space-row.current-space {
     border-color: var(--ui-accent);
-    box-shadow: 0 0 12px rgba(70,201,255,0.25);
+    box-shadow: 0 0 12px rgba(var(--di-cyan-rgb), 0.25);
 }
 .space-row-header {
     display: flex;
@@ -40,12 +40,12 @@
 .space-row-badge {
     font-size: 11px;
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--di-radius-pill);
     border: 1px solid rgba(255,255,255,0.12);
 }
 .space-row-badge.badge-permanent {
     color: var(--ui-accent);
-    border-color: rgba(70,201,255,0.45);
+    border-color: rgba(var(--di-cyan-rgb), 0.45);
 }
 .space-row-badge.badge-temp {
     color: rgba(255,255,255,0.65);
@@ -57,8 +57,8 @@
 }
 .space-row-badge.badge-live {
     color: var(--ui-accent);
-    border-color: rgba(70,201,255,0.45);
-    background: rgba(70,201,255,0.12);
+    border-color: rgba(var(--di-cyan-rgb), 0.45);
+    background: var(--di-line);
 }
 .space-row-live-link {
     font-size: 11px;
@@ -81,14 +81,14 @@
 .space-row-actions button {
     padding: 5px 8px;
     font-size: 11px;
-    border-radius: 6px;
+    border-radius: var(--di-radius);
     border: 1px solid rgba(255,255,255,0.1);
     background: linear-gradient(140deg, rgba(255,255,255,0.03), rgba(0,0,0,0.25));
     color: var(--ui-text-primary);
     cursor: pointer;
 }
 .space-row-actions button.danger {
-    background: linear-gradient(135deg, #7a1f2c, #b8302f);
+    background: rgba(var(--di-danger-rgb), 0.28);
     border-color: rgba(255,255,255,0.12);
 }
 .space-row-actions button:disabled {

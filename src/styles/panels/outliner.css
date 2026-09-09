@@ -11,7 +11,7 @@
     justify-content: space-between;
     background: var(--ui-surface-muted);
     border: 1px solid var(--ui-border);
-    border-radius: 8px;
+    border-radius: var(--di-radius);
     padding: 6px 10px;
     cursor: pointer;
     transition: border-color 0.15s ease, background 0.15s ease;
@@ -19,7 +19,7 @@
 
 .object-row.object-selected {
     border-color: var(--ui-accent);
-    background: rgba(70,201,255,0.1);
+    background: var(--di-cyan-dim);
 }
 
 .object-row-main {
@@ -64,7 +64,7 @@
     justify-content: space-between;
     background: var(--ui-surface-muted);
     border: 1px solid var(--ui-border);
-    border-radius: 8px;
+    border-radius: var(--di-radius);
     padding: 6px 10px;
 }
 

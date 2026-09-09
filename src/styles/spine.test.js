@@ -27,17 +27,101 @@ const SPINE_FILES = [
     'studio/styles/space-constellation.css',
     'tools/toolsRoom.css',
     'components/surfaceBar.css',
+    'wiki/wiki.css',
+    'studio/styles/studio-hub.css',
+    'landing/landing.css',
+    'studio/styles/studio.css',
+    // Already clean when the list was widened on 2026-09-10 — by luck, not by
+    // rule, which is exactly why they are listed: from here they stay clean.
+    'style.css',
+    'styles/panels/world.css',
+    'styles/panels/view.css',
+    'styles/panels/media.css',
+    'styles/panels/inspector.css',
+    'components/loadingScreen.css',
+    'studio/components/studioCodeSpaceDirector.css',
+    'pages/legal.css',
+    'styles/inspector/inputs.css',
+    'project/components/roomTextLayer.css',
+    'components/madeWithBadge.css',
+    'styles/panels/outliner.css',
+    'components/modeMark.css',
+    'map/mapSurface.css',
+    'styles/panels/base.css',
+    'styles/preferences.css',
+    'styles/controls.css',
+    'styles/inspector/misc.css',
+    'styles/inspector-controls.css',
+    'styles/inspector/vector.css',
+    'styles/inspector/overlays.css',
+    'styles/inspector/media.css',
+    'styles/panels/asset.css',
+    'styles/panels/spaces.css',
+    'styles/menu.css',
+    'styles/mobile-shell.css',
+    'studio/styles/studio-mobile.css',
+    'studio/styles/studio-coach.css',
+    'ViewPanel.css',
+    'landing/localHome.css',
+    'components/webglContextGuard.css',
+    'components/authReturnNotice.css',
+    'styles/workspace.css',
+    'project/components/jamSurface.css',
+    'studio/styles/studio-help.css',
+    'raw/director/director.css',
+    'components/liveProjectScene.css',
+    'components/confirmDeleteDialog.css',
+    'raw/styles/raw.css',
 ]
 
-// Not yet converted, and honest about it. Each line is a debt, not an exemption:
-// raw.css alone carries eight different corner radiuses.
-const NOT_YET = [
-    'raw/styles/raw.css',
-    'studio/styles/studio.css',
-    'studio/styles/studio-hub.css',
-    'wiki/wiki.css',
-    'landing/landing.css',
+// Not yet converted, and honest about it. Each line is a debt, not an
+// exemption. The list was five names until 2026-09-10, which flattered the
+// truth: there are 56 stylesheets in src/, and this is every platform one that
+// still carries a colour literal, a stray typeface, an off-spine corner or a
+// token read with a fallback. The number after each is the count of violations
+// measured the day it was listed — a debt you can see the size of.
+//
+// The two WORKS — src/algoVrithm/ and src/wccSite/ — are deliberately absent.
+// They are artworks with their own identity, grandfathered by
+// src/works/boundary.test.js; the platform's spine is not theirs to carry.
+// src/styles/base.css is absent too: it is where the literals are SUPPOSED to
+// live.
+
+// Off the spine on purpose, not by neglect. A surface that is deliberately NOT
+// the platform's dark chrome is a decision somebody made, and it has to be
+// written down here or the next pass will "fix" it back.
+//
+//   PresentationCanvas.css — the presented page is PAPER. Cream ground
+//   (#f4efe3 → #e9dfca), brown ink, soft shadow: it is what a slide looks like
+//   when it is projected in a room, and the dark chrome around it is the frame,
+//   not the picture. Converting it to --di-bg/--di-ink would give a black page.
+//   The chrome parts of that file — the toolbar, the badge — are fair game and
+//   were converted; the page itself is not.
+//
+//   makeSurface.css — the toybox is PAPER too, and bilingual. Its own header
+//   says it: "Raw is cyan on near-black. This is paper." Warm ground, ink-dark
+//   text, soft 16–26px corners, made for a child on a phone in Dilijan in
+//   August; line 578 of that file records the device test where --di-cyan on a
+//   cream sheet meant a child could not see there was a second room to tap.
+//   And its type stack fronts a self-hosted 'Noto Sans Armenian' — --di-sans
+//   carries no Armenian glyphs at all, so forcing rule 3 here would drop every
+//   Armenian word to whatever the phone happens to have. It joins the spine
+//   the day base.css grows a light half (paper/card/ink/ink-soft) and either an
+//   Armenian face inside --di-sans or a sanctioned --di-sans-hy. Both are the
+//   owner's call, not a stylesheet's.
+//
+//   serverXR/src/lighting/ui/ — the lighting desk keeps its own dense booth
+//   skin (see its style.css). Not in src/ at all, listed here for the record.
+const BY_DESIGN = [
+    'PresentationCanvas.css',
+    'make/makeSurface.css',
 ]
+
+// Empty, and that is the point: on 2026-09-10 every platform stylesheet in
+// src/ carries the spine. A file added here is a debt with a name and a
+// number, not a quiet exception — the two real exceptions live in BY_DESIGN
+// above, with the reason written out.
+const NOT_YET = []
 
 const read = (rel) => fs.readFileSync(path.join(SRC, rel), 'utf8')
 
@@ -78,7 +162,11 @@ describe('the spine', () => {
     })
 
     it.each(SPINE_FILES)('%s names no typeface of its own', (rel) => {
-        const fonts = linesOf(read(rel), /font-family\s*:(?!\s*(var\(--di-(sans|mono)\)|inherit)\s*;)/)
+        // `!important` is tolerated here and in the radius check below: these
+        // declarations exist to beat MUI's injected MuiButtonBase styles, and a
+        // value that is already exactly what the spine wants must not be flagged
+        // for carrying the flag that makes it win.
+        const fonts = linesOf(read(rel), /font-family\s*:(?!\s*(var\(--di-(sans|mono)\)|inherit)\s*(!important\s*)?;)/)
             .concat(linesOf(read(rel), /font\s*:[^;]*(?:'[^']+'|"[^"]+")/))
         expect(fonts, `two families exist: var(--di-sans) and var(--di-mono):\n${fonts.join('\n')}`).toEqual([])
     })
@@ -89,7 +177,8 @@ describe('the spine', () => {
             const m = line.match(/border-radius\s*:\s*([^;]+);/)
             if (!m) return
             const value = m[1].trim()
-            if (!value.split(/\s+/).every(part => ALLOWED_RADII.has(part))) bad.push(`${i + 1}: ${line.trim()}`)
+            const parts = value.split(/\s+/).filter(part => part !== '!important')
+            if (!parts.every(part => ALLOWED_RADII.has(part))) bad.push(`${i + 1}: ${line.trim()}`)
         })
         expect(bad, `0, 50%, var(--di-radius) or var(--di-radius-pill):\n${bad.join('\n')}`).toEqual([])
     })
@@ -97,6 +186,12 @@ describe('the spine', () => {
     it.each(SPINE_FILES)('%s reads no token with a hardcoded fallback', (rel) => {
         const fallbacks = linesOf(read(rel), /var\(\s*--[a-z0-9-]+\s*,/i)
         expect(fallbacks, `a fallback is a second palette nobody chose:\n${fallbacks.join('\n')}`).toEqual([])
+    })
+
+    it.each(BY_DESIGN)('%s is a deliberate exception, and still exists', (rel) => {
+        expect(fs.existsSync(path.join(SRC, rel))).toBe(true)
+        expect(SPINE_FILES).not.toContain(rel)
+        expect(NOT_YET).not.toContain(rel)
     })
 
     it('keeps an honest list of what is not converted yet', () => {

@@ -1,3 +1,18 @@
+/* The knobs a component hands this stylesheet, given their resting values HERE
+   rather than as a var() fallback at each call site. A fallback is a second
+   palette nobody chose: the same token wore three different neutrals in three
+   rules. An inline style set by the component still wins over every one of
+   these. */
+:root {
+    --card-scale: 1;
+    --card-family: var(--di-cyan);
+    --family-color: transparent;
+    --window-accent: rgba(255, 255, 255, 0.42);
+    --raw-scaffold-top: 64px;
+    --raw-bottom-chrome: 0px;
+    --raw-sheet-inset: 0px;
+}
+
 .raw-editor-shell,
 .raw-hub {
     min-height: 100vh;
@@ -12,7 +27,7 @@
 .raw-root-canvas-mode {
     position: fixed;
     inset: 0;
-    background: #000;
+    background: var(--di-black);
     overflow: hidden;
     min-height: unset;
 }
@@ -30,7 +45,7 @@
 
 .raw-root-canvas-hint {
     text-align: center;
-    color: rgba(244, 247, 251, 0.2);
+    color: rgba(255, 255, 255, 0.2);
     font-family: var(--di-mono);
     font-size: 13px;
     letter-spacing: 0.18em;
@@ -56,10 +71,10 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: calc(5px * var(--card-scale, 1));
-    width: calc(160px * var(--card-scale, 1));
-    padding: calc(16px * var(--card-scale, 1)) calc(16px * var(--card-scale, 1)) calc(14px * var(--card-scale, 1));
-    background: #0a0a0a;
+    gap: calc(5px * var(--card-scale));
+    width: calc(160px * var(--card-scale));
+    padding: calc(16px * var(--card-scale)) calc(16px * var(--card-scale)) calc(14px * var(--card-scale));
+    background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
     border-radius: 0;
     cursor: grab;
@@ -80,22 +95,22 @@
 }
 
 .raw-world-node-icon {
-    font-size: calc(24px * var(--card-scale, 1));
+    font-size: calc(24px * var(--card-scale));
     line-height: 1;
-    color: rgba(244, 247, 251, 0.35);
+    color: rgba(255, 255, 255, 0.35);
 }
 
 .raw-world-node-title {
-    font-size: calc(13px * var(--card-scale, 1));
+    font-size: calc(13px * var(--card-scale));
     font-weight: 600;
-    color: #f4f7fb;
+    color: var(--di-text);
     text-align: center;
     line-height: 1.2;
 }
 
 .raw-world-node-type {
-    font-size: calc(10px * var(--card-scale, 1));
-    color: rgba(244, 247, 251, 0.38);
+    font-size: calc(10px * var(--card-scale));
+    color: rgba(255, 255, 255, 0.38);
     font-family: var(--di-mono);
     letter-spacing: 0.05em;
     max-width: 100%;
@@ -105,15 +120,15 @@
 }
 
 .raw-world-node-enter {
-    margin-top: calc(6px * var(--card-scale, 1));
+    margin-top: calc(6px * var(--card-scale));
     -webkit-appearance: none;
     appearance: none;
     border: 1px solid var(--di-cyan-border);
     border-radius: 0;
-    background: rgba(63, 105, 246, 0.12);
+    background: var(--di-line);
     color: var(--di-cyan);
-    padding: calc(5px * var(--card-scale, 1)) calc(12px * var(--card-scale, 1));
-    font-size: calc(11px * var(--card-scale, 1));
+    padding: calc(5px * var(--card-scale)) calc(12px * var(--card-scale));
+    font-size: calc(11px * var(--card-scale));
     letter-spacing: 0.04em;
     cursor: pointer;
     transition: background 0.14s, border-color 0.14s;
@@ -122,8 +137,8 @@
 }
 
 .raw-world-node-enter:hover {
-    background: rgba(63, 105, 246, 0.24);
-    border-color: rgba(107, 147, 255, 0.6);
+    background: rgba(var(--di-cyan-rgb), 0.24);
+    border-color: rgba(var(--di-cyan-rgb), 0.6);
 }
 
 .raw-printer-profile-actions {
@@ -131,7 +146,7 @@
     padding: 10px;
     border-radius: 0;
     border: 1px solid var(--di-cyan-border);
-    background: #0a0a0a;
+    background: var(--di-surface);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -140,9 +155,9 @@
 .raw-printer-profile-actions button {
     -webkit-appearance: none;
     appearance: none;
-    border: 1px solid rgba(107, 147, 255, 0.4);
-    background: rgba(63, 105, 246, 0.12);
-    color: #d7e2ff;
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.4);
+    background: var(--di-line);
+    color: var(--di-text);
     border-radius: 0;
     padding: 7px 10px;
     font-size: 12px;
@@ -156,7 +171,7 @@
 
 .raw-printer-profile-actions span {
     font-size: 11px;
-    color: rgba(244, 247, 251, 0.5);
+    color: rgba(255, 255, 255, 0.5);
     font-family: var(--di-mono);
 }
 
@@ -175,7 +190,7 @@
     position: fixed;
     width: 280px;
     border-radius: 0;
-    background: #101418;
+    background: var(--di-surface-2);
     border: 1px solid rgba(255, 255, 255, 0.14);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9);
 
@@ -193,15 +208,15 @@
     background: transparent;
     border: none;
     outline: none;
-    color: #f4f7fb;
+    color: var(--di-text);
     font-size: 14px;
     font-family: var(--di-mono);
     letter-spacing: 0.03em;
-    caret-color: #4f9eff;
+    caret-color: var(--di-cyan);
 }
 
 .raw-node-palette-input::placeholder {
-    color: rgba(244, 247, 251, 0.28);
+    color: rgba(255, 255, 255, 0.28);
 }
 
 .raw-node-palette-list {
@@ -239,7 +254,7 @@
     border: none;
     background: transparent;
     border-radius: 0;
-    color: #f4f7fb;
+    color: var(--di-text);
     cursor: pointer;
     text-align: left;
     font-size: 13px;
@@ -269,7 +284,7 @@
 }
 
 .raw-node-palette-item-title span {
-    color: rgba(244, 247, 251, 0.36);
+    color: rgba(255, 255, 255, 0.36);
     font-size: 11px;
     font-family: var(--di-mono);
     white-space: nowrap;
@@ -283,16 +298,16 @@
 /* Commands sit above node types in the same list; the tag is what tells you a
    row summons something rather than creating it. */
 .raw-node-palette-tag.is-command {
-    background: rgba(77, 249, 255, 0.14);
-    color: rgba(210, 245, 255, 0.85);
+    background: rgba(var(--di-cyan-rgb), 0.14);
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .raw-node-palette-tag {
     flex-shrink: 0;
     padding: 2px 6px;
-    border-radius: 3px;
-    background: rgba(244, 247, 251, 0.08);
-    color: rgba(244, 247, 251, 0.4);
+    border-radius: var(--di-radius);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.4);
     font-size: 9.5px;
     letter-spacing: 0.02em;
     text-transform: uppercase;
@@ -301,7 +316,7 @@
 
 .raw-node-palette-empty {
     padding: 12px 14px;
-    color: rgba(244, 247, 251, 0.32);
+    color: rgba(255, 255, 255, 0.32);
     font-size: 12px;
     font-family: var(--di-mono);
     letter-spacing: 0.08em;
@@ -318,24 +333,24 @@
     align-items: center;
     justify-content: space-between;
     padding: 7px 10px 5px;
-    background: #0a0a0a;
-    color: rgba(210, 245, 255, 0.55);
+    background: var(--di-surface);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 10px;
     font-family: var(--di-mono);
     letter-spacing: 0.15em;
     text-transform: lowercase;
-    border-left: 2px solid var(--family-color, transparent);
+    border-left: 2px solid var(--family-color);
 }
 
 .raw-node-palette-group-count {
-    color: rgba(244, 247, 251, 0.28);
+    color: rgba(255, 255, 255, 0.28);
     letter-spacing: 0;
 }
 
 /* The same color the family header carries, on every row — one vocabulary
    between palette and canvas. */
 .raw-node-palette-item {
-    border-left: 2px solid var(--family-color, transparent);
+    border-left: 2px solid var(--family-color);
 }
 
 /* A shell places and holds its ports but computes nothing yet — it must not
@@ -363,7 +378,7 @@
     font-family: var(--di-mono);
     letter-spacing: 0.16em;
     text-transform: lowercase;
-    color: rgba(244, 247, 251, 0.3);
+    color: rgba(255, 255, 255, 0.3);
     -webkit-user-select: none;
     user-select: none;
 }
@@ -381,10 +396,10 @@
     width: 220px;
     min-height: 200px;
     padding: 28px 24px;
-    background: #0a0a0a;
+    background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
     border-radius: 0;
-    color: #f4f7fb;
+    color: var(--di-text);
     cursor: pointer;
     text-align: left;
     display: flex;
@@ -414,7 +429,7 @@
 }
 
 .raw-world-type-card p {
-    color: rgba(244, 247, 251, 0.44);
+    color: rgba(255, 255, 255, 0.44);
     font-size: 12px;
     margin: 0;
     line-height: 1.55;
@@ -466,7 +481,7 @@
 
 .raw-hub-onboarding-copy p {
     margin: 0;
-    color: rgba(244, 247, 251, 0.62);
+    color: rgba(255, 255, 255, 0.62);
     line-height: 1.5;
 }
 
@@ -481,7 +496,7 @@
     gap: 10px;
     padding: 16px;
     border: 1px solid var(--di-cyan-border);
-    background: #0a0a0a;
+    background: var(--di-surface);
 }
 
 .raw-hub-onboarding-mark {
@@ -492,7 +507,7 @@
     border: 1px solid var(--di-cyan-border);
     color: var(--di-cyan);
     font-size: 18px;
-    background: rgba(77, 249, 255, 0.05);
+    background: rgba(var(--di-cyan-rgb), 0.05);
 }
 
 .raw-hub-onboarding-mark span {
@@ -516,10 +531,10 @@
     align-items: center;
     padding: 5px 8px;
     border: 1px solid var(--di-cyan-border);
-    color: rgba(244, 247, 251, 0.75);
+    color: rgba(255, 255, 255, 0.75);
     font-size: 11px;
     font-family: var(--di-mono);
-    background: rgba(77, 249, 255, 0.04);
+    background: rgba(var(--di-cyan-rgb), 0.04);
 }
 
 .raw-hub-onboarding-steps {
@@ -527,7 +542,7 @@
     gap: 5px;
     margin: 0;
     padding-left: 18px;
-    color: rgba(244, 247, 251, 0.84);
+    color: rgba(255, 255, 255, 0.84);
     line-height: 1.4;
     font-size: 12px;
 }
@@ -536,15 +551,15 @@
     -webkit-appearance: none;
     appearance: none;
     justify-self: start;
-    border: 1px solid rgba(77, 249, 255, 0.3);
-    background: rgba(77, 249, 255, 0.08);
-    color: #f4f7fb;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(var(--di-cyan-rgb), 0.08);
+    color: var(--di-text);
     padding: 10px 14px;
     cursor: pointer;
 }
 
 .raw-hub-onboarding-card button:hover {
-    background: rgba(77, 249, 255, 0.16);
+    background: rgba(var(--di-cyan-rgb), 0.16);
     border-color: var(--di-cyan);
     color: var(--di-cyan);
 }
@@ -612,7 +627,7 @@
     min-height: 180px;
     max-height: 34vh;
     overflow: auto;
-    background: #0a0a0a;
+    background: var(--di-surface);
 }
 
 .raw-hub-empty {
@@ -631,7 +646,7 @@
     align-items: center;
     border: 1px solid var(--di-cyan-border);
     border-top: none;
-    background: #0a0a0a;
+    background: var(--di-surface);
 }
 
 .space-sync-msg {
@@ -682,7 +697,7 @@
 }
 
 .space-sync-msg--ok { color: var(--di-cyan); }
-.space-sync-msg--err { color: #e05a5a; }
+.space-sync-msg--err { color: var(--di-danger); }
 
 .space-sync-btn {
     -webkit-appearance: none;
@@ -715,7 +730,7 @@
     gap: 0;
     border: 1px solid var(--di-cyan-border);
     border-top: none;
-    background: #0a0a0a;
+    background: var(--di-surface);
 }
 
 .raw-hub-footer button {
@@ -743,12 +758,12 @@
 }
 
 .raw-hub-warnings {
-    border: 1px solid rgba(220, 80, 70, 0.3);
+    border: 1px solid rgba(var(--di-danger-rgb), 0.3);
     border-top: none;
     padding: 12px 14px;
     font-size: 12px;
     font-family: var(--di-mono);
-    color: #f4877e;
+    color: var(--di-danger);
 }
 
 .raw-hub-warnings p {
@@ -773,22 +788,22 @@
 .raw-chip,
 .raw-status-pill,
 .raw-user-pill {
-    background: rgba(18, 31, 48, 0.92);
-    color: #f4f7fb;
+    background: var(--di-scrim-strong);
+    color: var(--di-text);
 }
 
 .raw-status-pill.is-connected {
-    background: #135b47;
+    background: rgba(var(--di-success-rgb), 0.3);
 }
 
 .raw-status-pill.is-connecting,
 .raw-status-pill.is-idle {
-    background: #425168;
+    background: var(--di-surface-4);
 }
 
 .raw-status-pill.is-degraded,
 .raw-status-pill.is-disconnected {
-    background: #7a3b35;
+    background: rgba(var(--di-danger-rgb), 0.3);
 }
 
 .raw-hub-actions,
@@ -860,8 +875,8 @@
 }
 
 .raw-project-list li > button.danger:hover {
-    color: #f4877e;
-    background: rgba(220, 80, 70, 0.1);
+    color: var(--di-danger);
+    background: rgba(var(--di-danger-rgb), 0.1);
 }
 
 .raw-outliner button,
@@ -901,8 +916,8 @@
 
 .raw-outliner button.is-selected {
     border-color: var(--di-cyan);
-    background: #162338;
-    color: #f4f7fb;
+    background: rgba(var(--di-cyan-rgb), 0.16);
+    color: var(--di-text);
 }
 
 .raw-file-button,
@@ -957,7 +972,7 @@
 
 .raw-window-actions button:hover,
 .raw-window-actions button:focus-visible {
-    color: #fff;
+    color: var(--di-text);
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -965,7 +980,7 @@
 .raw-window-actions button:last-child:hover,
 .raw-window-actions button:last-child:focus-visible {
     color: var(--di-danger);
-    background: rgba(242, 95, 92, 0.12);
+    background: rgba(var(--di-danger-rgb), 0.12);
 }
 
 .raw-topbar-actions button.is-active {
@@ -990,8 +1005,8 @@
     padding: 10px 16px;
     font-size: 13px;
     font-weight: 600;
-    color: #1b1005;
-    background: #f0b429;
+    color: var(--di-black);
+    background: var(--di-warning);
     text-align: center;
 }
 
@@ -1051,7 +1066,7 @@
     border: none;
     border-radius: 0;
     background: transparent;
-    color: rgba(244, 247, 251, 0.52);
+    color: rgba(255, 255, 255, 0.52);
     padding: 6px 10px;
     cursor: pointer;
     font-size: 12px;
@@ -1068,7 +1083,7 @@
 .raw-topbar-name {
     font-size: 13px;
     font-weight: 600;
-    color: rgba(244, 247, 251, 0.72);
+    color: rgba(255, 255, 255, 0.72);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1091,8 +1106,8 @@
     height: 28px;
     padding: 0 10px;
     border: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.04);
-    color: rgba(244, 247, 251, 0.74);
+    background: rgba(var(--di-cyan-rgb), 0.04);
+    color: rgba(255, 255, 255, 0.74);
     font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -1133,7 +1148,7 @@
 }
 
 .raw-topbar-crumb-sep {
-    color: rgba(244, 247, 251, 0.25);
+    color: rgba(255, 255, 255, 0.25);
     font-size: 14px;
     line-height: 1;
     padding: 0 2px;
@@ -1144,11 +1159,11 @@
     appearance: none;
     border: none;
     background: transparent;
-    color: rgba(244, 247, 251, 0.45);
+    color: rgba(255, 255, 255, 0.45);
     font-size: 12px;
     font-family: var(--di-mono);
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: var(--di-radius);
     cursor: pointer;
     white-space: nowrap;
     line-height: 1;
@@ -1158,20 +1173,20 @@
 }
 
 .raw-topbar-crumb:hover {
-    background: rgba(77, 249, 255, 0.08);
+    background: rgba(var(--di-cyan-rgb), 0.08);
     color: var(--di-cyan);
 }
 
 .raw-topbar-crumb.is-current {
-    color: rgba(244, 247, 251, 0.9);
+    color: rgba(255, 255, 255, 0.9);
     font-weight: 600;
-    background: rgba(77, 249, 255, 0.06);
+    background: var(--di-cyan-wash);
     border: 1px solid var(--di-cyan-border);
 }
 
 /* Depth indicator — subtle inset when inside a node */
 .raw-surface-shell.is-inside-node {
-    box-shadow: inset 0 0 0 2px rgba(77, 249, 255, 0.08);
+    box-shadow: inset 0 0 0 2px rgba(var(--di-cyan-rgb), 0.08);
 }
 
 
@@ -1217,10 +1232,10 @@
 .raw-topbar-primary-action {
     -webkit-appearance: none;
     appearance: none;
-    border: 1px solid rgba(77, 249, 255, 0.38);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.38);
     border-radius: 0;
-    background: rgba(77, 249, 255, 0.10);
-    color: #f4f7fb;
+    background: var(--di-cyan-dim);
+    color: var(--di-text);
     padding: 7px 12px;
     font-size: 12px;
     font-weight: 600;
@@ -1229,7 +1244,7 @@
 }
 
 .raw-topbar-primary-action:hover {
-    background: rgba(77, 249, 255, 0.18);
+    background: rgba(var(--di-cyan-rgb), 0.18);
     border-color: var(--di-cyan);
     color: var(--di-cyan);
 }
@@ -1262,12 +1277,12 @@
     gap: 6px;
     padding: 6px 10px;
     border-radius: 0;
-    background: rgba(77, 249, 255, 0.04);
+    background: rgba(var(--di-cyan-rgb), 0.04);
 }
 
 .raw-topbar-scale-control label {
     font-size: 12px;
-    color: rgba(244, 247, 251, 0.56);
+    color: rgba(255, 255, 255, 0.56);
     font-family: var(--di-mono);
     letter-spacing: 0.02em;
 }
@@ -1279,18 +1294,18 @@
     border-radius: 0;
     /* Was a blue-violet nobody else in the lane uses — a hue with no job. */
     background: rgba(255, 255, 255, 0.06);
-    color: #f4f7fb;
+    color: var(--di-text);
     padding: 4px 8px;
     font-size: 11px;
     font-family: var(--di-mono);
     cursor: pointer;
-    border: 1px solid rgba(107, 147, 255, 0.28);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.28);
     min-width: 50px;
 }
 
 .raw-topbar-scale-control select:hover {
-    background: rgba(63, 105, 246, 0.18);
-    border-color: rgba(107, 147, 255, 0.48);
+    background: rgba(var(--di-cyan-rgb), 0.18);
+    border-color: rgba(var(--di-cyan-rgb), 0.48);
 }
 
 .raw-topbar-node-count {
@@ -1301,7 +1316,7 @@
     padding: 0 4px;
     cursor: pointer;
     font-size: 11px;
-    color: rgba(244, 247, 251, 0.36);
+    color: rgba(255, 255, 255, 0.36);
     font-family: var(--di-mono);
     letter-spacing: 0.04em;
     transition: color 0.1s;
@@ -1309,7 +1324,7 @@
 
 .raw-topbar-node-count:hover,
 .raw-topbar-node-count.is-active {
-    color: rgba(244, 247, 251, 0.8);
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .raw-topbar-overflow {
@@ -1357,7 +1372,7 @@
     border: none;
     border-radius: 0;
     background: transparent;
-    color: rgba(244, 247, 251, 0.48);
+    color: rgba(255, 255, 255, 0.48);
     padding: 6px 10px;
     cursor: pointer;
     font-size: 16px;
@@ -1366,7 +1381,7 @@
 
 .raw-topbar-overflow-btn:hover {
     background: var(--di-cyan-dim);
-    color: #f4f7fb;
+    color: var(--di-text);
 }
 
 /* ── Overflow dropdown menu ── */
@@ -1376,7 +1391,7 @@
     right: 0;
     min-width: 180px;
     border-radius: 0;
-    background: #0a0a0a;
+    background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
     padding: 6px;
     display: grid;
@@ -1390,7 +1405,7 @@
     border: none;
     border-radius: 0;
     background: transparent;
-    color: rgba(244, 247, 251, 0.72);
+    color: rgba(255, 255, 255, 0.72);
     padding: 9px 12px;
     cursor: pointer;
     font-size: 13px;
@@ -1427,10 +1442,10 @@
     z-index: 1300;
     -webkit-appearance: none;
     appearance: none;
-    border: 1px solid rgba(220, 80, 70, 0.4);
+    border: 1px solid rgba(var(--di-danger-rgb), 0.4);
     border-radius: 0;
-    background: #1a0807;
-    color: #f4877e;
+    background: rgba(var(--di-danger-rgb), 0.1);
+    color: var(--di-danger);
     padding: 10px 18px;
     cursor: pointer;
     font-size: 13px;
@@ -1439,8 +1454,8 @@
 }
 
 .raw-delete-fab:hover {
-    background: #280b08;
-    color: #ffb0aa;
+    background: rgba(var(--di-danger-rgb), 0.2);
+    color: var(--di-danger);
 }
 
 /* ONE JOB PER COLOUR (2026-08-18). A window and a graph card used to be the
@@ -1464,9 +1479,9 @@
     left: 0;
     display: flex;
     flex-direction: column;
-    background: #101418;
+    background: var(--di-surface-2);
     border: 1px solid rgba(255, 255, 255, 0.14);
-    border-top: 2px solid var(--window-accent, rgba(255, 255, 255, 0.14));
+    border-top: 2px solid var(--window-accent);
     border-radius: 0;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 60px rgba(0, 0, 0, 0.9);
     overflow: hidden;
@@ -1539,17 +1554,17 @@
 }
 .raw-property-title-button:hover,
 .raw-property-title-button:focus-visible {
-    border-bottom-color: rgba(77, 249, 255, 0.55);
+    border-bottom-color: rgba(var(--di-cyan-rgb), 0.55);
 }
 .raw-property-title-input {
     font: inherit;
     font-weight: 600;
     width: 100%;
     box-sizing: border-box;
-    background: rgba(77, 249, 255, 0.06);
+    background: var(--di-cyan-wash);
     color: inherit;
-    border: 1px solid rgba(77, 249, 255, 0.45);
-    border-radius: 4px;
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.45);
+    border-radius: var(--di-radius);
     padding: 2px 6px;
 }
 
@@ -1561,7 +1576,7 @@
     display: block;
     font-size: 10px;
     letter-spacing: 0.14em;
-    color: var(--window-accent, rgba(244, 247, 251, 0.42));
+    color: var(--window-accent);
     font-family: var(--di-mono);
 }
 
@@ -1599,9 +1614,9 @@
        2026-08-20). An affordance that cannot be seen is not an affordance. */
     background:
         linear-gradient(135deg,
-            transparent 52%, rgba(77, 249, 255, 0.45) 52%, rgba(77, 249, 255, 0.45) 60%,
+            transparent 52%, rgba(var(--di-cyan-rgb), 0.45) 52%, rgba(var(--di-cyan-rgb), 0.45) 60%,
             transparent 60%, transparent 70%,
-            rgba(77, 249, 255, 0.45) 70%, rgba(77, 249, 255, 0.45) 78%, transparent 78%);
+            rgba(var(--di-cyan-rgb), 0.45) 70%, rgba(var(--di-cyan-rgb), 0.45) 78%, transparent 78%);
     opacity: 0.75;
     /* Above every panel's own corner chrome — the handle owns this corner. */
     z-index: 12;
@@ -1692,7 +1707,7 @@
     -webkit-appearance: none;
     appearance: none;
     border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(10, 12, 14, 0.72);
+    background: var(--di-scrim);
     color: rgba(255, 255, 255, 0.62);
     width: 28px;
     height: 28px;
@@ -1714,9 +1729,9 @@
 }
 
 .raw-world-panel-btn.is-live {
-    color: #ff5f5f;
-    border-color: #ff5f5f;
-    background: rgba(255, 95, 95, 0.12);
+    color: var(--di-danger);
+    border-color: var(--di-danger);
+    background: rgba(var(--di-danger-rgb), 0.12);
 }
 
 /* ── World fullscreen mode ── */
@@ -1735,7 +1750,7 @@
 }
 
 .raw-viewport-shell {
-    background: #080c14;
+    background: var(--di-surface);
 }
 
 .raw-viewport-empty-hint {
@@ -1750,16 +1765,16 @@
 .raw-viewport-empty-stage {
     position: absolute;
     inset: 32px;
-    border: 1px dashed rgba(77, 249, 255, 0.16);
-    background: radial-gradient(circle at center, rgba(77, 249, 255, 0.05), transparent 54%);
+    border: 1px dashed rgba(var(--di-cyan-rgb), 0.16);
+    background: radial-gradient(circle at center, rgba(var(--di-cyan-rgb), 0.05), transparent 54%);
 }
 
 .raw-viewport-empty-grid {
     position: absolute;
     inset: 0;
     background:
-        linear-gradient(0deg, rgba(77, 249, 255, 0.07) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(77, 249, 255, 0.07) 1px, transparent 1px);
+        linear-gradient(0deg, rgba(var(--di-cyan-rgb), 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--di-cyan-rgb), 0.07) 1px, transparent 1px);
     background-size: 36px 36px;
 }
 
@@ -1770,14 +1785,14 @@
     width: 84px;
     height: 84px;
     transform: translate(-50%, -50%);
-    border: 1px solid rgba(77, 249, 255, 0.24);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.24);
 }
 
 .raw-viewport-empty-crosshair::before,
 .raw-viewport-empty-crosshair::after {
     content: '';
     position: absolute;
-    background: rgba(77, 249, 255, 0.24);
+    background: rgba(var(--di-cyan-rgb), 0.24);
 }
 
 .raw-viewport-empty-crosshair::before {
@@ -1804,20 +1819,20 @@
     width: min(320px, calc(100vw - 80px));
     padding: 18px;
     border: 1px solid var(--di-cyan-border);
-    background: rgba(10, 10, 10, 0.88);
-    box-shadow: 0 0 0 1px rgba(77, 249, 255, 0.06);
+    background: var(--di-scrim-strong);
+    box-shadow: 0 0 0 1px var(--di-cyan-wash);
     text-align: center;
 }
 
 .raw-viewport-empty-panel strong {
     font-size: 20px;
     line-height: 1.2;
-    color: #f4f7fb;
+    color: var(--di-text);
 }
 
 .raw-viewport-empty-panel p {
     margin: 0;
-    color: rgba(244, 247, 251, 0.62);
+    color: rgba(255, 255, 255, 0.62);
     line-height: 1.5;
 }
 
@@ -1825,15 +1840,15 @@
     -webkit-appearance: none;
     appearance: none;
     justify-self: center;
-    border: 1px solid rgba(77, 249, 255, 0.3);
-    background: rgba(77, 249, 255, 0.08);
-    color: #f4f7fb;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(var(--di-cyan-rgb), 0.08);
+    color: var(--di-text);
     padding: 10px 14px;
     cursor: pointer;
 }
 
 .raw-viewport-empty-panel button:hover {
-    background: rgba(77, 249, 255, 0.16);
+    background: rgba(var(--di-cyan-rgb), 0.16);
     border-color: var(--di-cyan);
     color: var(--di-cyan);
 }
@@ -1848,8 +1863,8 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #ff8f47;
-    box-shadow: 0 0 0 3px rgba(255, 143, 71, 0.2);
+    background: var(--di-warning);
+    box-shadow: 0 0 0 3px rgba(var(--di-warning-rgb), 0.2);
 }
 
 .raw-cursor-marker span,
@@ -1858,8 +1873,8 @@
     top: 16px;
     left: 0;
     white-space: nowrap;
-    background: #0a0a0a;
-    color: #fff;
+    background: var(--di-surface);
+    color: var(--di-text);
     border-radius: 0;
     padding: 4px 10px;
     font-size: 11px;
@@ -1891,13 +1906,13 @@
 .raw-property-sheet-header h4 {
     font-size: 15px;
     font-weight: 600;
-    color: #f4f7fb;
+    color: var(--di-text);
     margin: 0 0 3px;
 }
 
 .raw-property-sheet-header p {
     font-size: 11px;
-    color: rgba(244, 247, 251, 0.4);
+    color: rgba(255, 255, 255, 0.4);
     font-family: var(--di-mono);
     letter-spacing: 0.04em;
     margin: 0;
@@ -1925,7 +1940,7 @@
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: rgba(244, 247, 251, 0.36);
+    color: rgba(255, 255, 255, 0.36);
     font-family: var(--di-mono);
     margin: 0 0 10px;
 }
@@ -1945,7 +1960,7 @@
 
 .raw-property-field > span {
     font-size: 11px;
-    color: rgba(244, 247, 251, 0.45);
+    color: rgba(255, 255, 255, 0.45);
     letter-spacing: 0.02em;
     font-family: var(--di-mono);
     white-space: nowrap;
@@ -1965,7 +1980,7 @@
 }
 
 .raw-property-field.is-wired > span {
-    color: rgba(244, 247, 251, 0.6);
+    color: rgba(255, 255, 255, 0.6);
 }
 
 .raw-property-field input:disabled,
@@ -1990,8 +2005,8 @@
     width: 100%;
     border-radius: 0;
     border: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.04);
-    color: #f4f7fb;
+    background: rgba(var(--di-cyan-rgb), 0.04);
+    color: var(--di-text);
     padding: 7px 10px;
     font-size: 12px;
     font-family: inherit;
@@ -2022,7 +2037,7 @@
     height: 34px;
     border-radius: 0;
     border: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.04);
+    background: rgba(var(--di-cyan-rgb), 0.04);
     padding: 3px 6px;
     cursor: pointer;
 }
@@ -2030,7 +2045,7 @@
 .raw-property-field input[type='checkbox'] {
     width: 16px;
     height: 16px;
-    accent-color: #3f69f6;
+    accent-color: var(--di-cyan);
     cursor: pointer;
     flex-shrink: 0;
 }
@@ -2088,7 +2103,7 @@
 
 .raw-create-btn:hover,
 .raw-create-btn:focus-visible {
-    background: rgba(77, 249, 255, 0.08);
+    background: rgba(var(--di-cyan-rgb), 0.08);
     border-color: var(--di-cyan);
     color: var(--di-cyan);
 }
@@ -2139,7 +2154,7 @@
 
 .raw-publish-choice:hover,
 .raw-publish-choice:focus-visible {
-    background: rgba(77, 249, 255, 0.08);
+    background: rgba(var(--di-cyan-rgb), 0.08);
     border-color: var(--di-cyan);
     color: var(--di-cyan);
 }
@@ -2147,7 +2162,7 @@
 .raw-publish-choice.is-on {
     border-color: var(--di-cyan);
     color: var(--di-cyan);
-    background: rgba(77, 249, 255, 0.12);
+    background: var(--di-line);
 }
 
 .raw-publish-hint {
@@ -2197,7 +2212,7 @@
 
 .raw-publish-copy:hover,
 .raw-publish-copy:focus-visible {
-    background: rgba(77, 249, 255, 0.08);
+    background: rgba(var(--di-cyan-rgb), 0.08);
     border-color: var(--di-cyan);
     color: var(--di-cyan);
 }
@@ -2210,7 +2225,7 @@
 }
 
 .raw-publish-status.is-warn {
-    color: #ffb86c;
+    color: var(--di-warning);
 }
 
 .raw-text-panel {
@@ -2222,7 +2237,7 @@
     margin: 0;
     font-size: 20px;
     line-height: 1.5;
-    color: #f4f7fb;
+    color: var(--di-text);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     max-width: 100%;
@@ -2247,23 +2262,23 @@
     font: inherit;
     font-size: 20px;
     line-height: 1.5;
-    color: #f4f7fb;
+    color: var(--di-text);
     overflow-wrap: anywhere;
 }
 
 .raw-text-panel-input::placeholder {
-    color: rgba(244, 247, 251, 0.35);
+    color: rgba(255, 255, 255, 0.35);
 }
 
 .raw-text-panel-input:focus-visible {
-    outline: 1px solid rgba(110, 231, 249, 0.85);
+    outline: 1px solid rgba(var(--di-cyan-rgb), 0.85);
     outline-offset: 4px;
 }
 
 .raw-text-panel-driven {
     margin: 12px 0 0;
     font-size: 13px;
-    color: rgba(244, 247, 251, 0.55);
+    color: rgba(255, 255, 255, 0.55);
 }
 
 /* 20px is a presentation size on a desk; on a 390px phone it turns three
@@ -2362,14 +2377,14 @@
 }
 
 .raw-chat-message-remove:hover {
-    color: #ff8080;
+    color: var(--di-danger);
 }
 
 .raw-chat-message-text {
     margin: 0;
     font-size: 14px;
     line-height: 1.4;
-    color: #f4f7fb;
+    color: var(--di-text);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
@@ -2395,14 +2410,14 @@
     background: transparent;
     border: 1px solid var(--di-cyan-border);
     outline: none;
-    color: #f4f7fb;
+    color: var(--di-text);
     padding: 8px 10px;
     font-size: 13px;
     font-family: var(--di-mono);
 }
 
 .raw-chat-input::placeholder {
-    color: rgba(244, 247, 251, 0.28);
+    color: rgba(255, 255, 255, 0.28);
 }
 
 .raw-chat-input-row button {
@@ -2412,7 +2427,7 @@
 .raw-image-panel {
     width: 100%;
     height: 100%;
-    background: #05080f;
+    background: var(--di-surface);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2426,7 +2441,7 @@
 
 .raw-image-panel-empty p {
     margin: 0;
-    color: rgba(244, 247, 251, 0.52);
+    color: rgba(255, 255, 255, 0.52);
     font-family: var(--di-mono);
     font-size: 12px;
 }
@@ -2436,7 +2451,7 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
-    background: #05080f;
+    background: var(--di-surface);
 }
 
 .raw-assets-list,
@@ -2463,8 +2478,8 @@
 .raw-overlay-message {
     padding: 18px;
     border-radius: 0;
-    background: #0a0a0a;
-    color: rgba(244, 247, 251, 0.48);
+    background: var(--di-surface);
+    color: rgba(255, 255, 255, 0.48);
 }
 
 /* The blank canvas is where a beginner lands, and it opens in zen — no topbar,
@@ -2496,9 +2511,9 @@
     appearance: none;
     min-height: 44px;
     padding: 0 20px;
-    border: 1px solid rgba(77, 249, 255, 0.5);
-    border-radius: 999px;
-    background: rgba(77, 249, 255, 0.12);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.5);
+    border-radius: var(--di-radius-pill);
+    background: var(--di-line);
     color: var(--di-cyan);
     font-family: inherit;
     font-size: 14px;
@@ -2507,7 +2522,7 @@
 }
 
 .raw-empty-state button:hover {
-    background: rgba(77, 249, 255, 0.26);
+    background: rgba(var(--di-cyan-rgb), 0.26);
 }
 
 .raw-overlay-message {
@@ -2519,13 +2534,13 @@
 
 .raw-overlay-message.is-error,
 .raw-activity-row.is-error {
-    background: rgba(131, 49, 44, 0.28);
-    color: #f4877e;
+    background: rgba(var(--di-danger-rgb), 0.28);
+    color: var(--di-danger);
 }
 
 .raw-activity-row.is-warning {
-    background: rgba(164, 109, 18, 0.26);
-    color: #f4c36e;
+    background: rgba(var(--di-warning-rgb), 0.26);
+    color: var(--di-warning);
 }
 
 .raw-view-surface {
@@ -2533,7 +2548,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: #080c14;
+    background: var(--di-surface);
     overflow: hidden;
     cursor: grab;
 }
@@ -2555,7 +2570,7 @@
     gap: 8px;
     padding: 6px 8px;
     border: 1px solid var(--di-cyan-border);
-    background: rgba(6, 10, 18, 0.92);
+    background: var(--di-scrim-strong);
 }
 
 .raw-view-zoom-controls button {
@@ -2582,7 +2597,7 @@
     padding: 24px;
     border-radius: 0;
     border: 1px solid var(--di-cyan-border);
-    background: #0a0a0a;
+    background: var(--di-surface);
 
 }
 
@@ -2594,7 +2609,7 @@
 .raw-empty-view-state p,
 .raw-graph-surface-header p {
     margin: 0;
-    color: rgba(244, 247, 251, 0.50);
+    color: rgba(255, 255, 255, 0.50);
 }
 
 .raw-surface-shell {
@@ -2612,7 +2627,7 @@
     gap: 16px;
     padding: 14px 16px;
     border: 1px solid var(--di-cyan-border);
-    background: rgba(8, 12, 20, 0.92);
+    background: var(--di-scrim-strong);
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
 }
@@ -2625,13 +2640,13 @@
     display: block;
     margin: 0 0 4px;
     font-size: 13px;
-    color: #f4f7fb;
+    color: var(--di-text);
     letter-spacing: 0.02em;
 }
 
 .raw-surface-workflow-copy p {
     margin: 0;
-    color: rgba(244, 247, 251, 0.62);
+    color: rgba(255, 255, 255, 0.62);
     font-size: 12px;
     line-height: 1.45;
 }
@@ -2646,10 +2661,10 @@
 .raw-surface-workflow-actions button {
     -webkit-appearance: none;
     appearance: none;
-    border: 1px solid rgba(77, 249, 255, 0.3);
+    border: 1px solid var(--di-cyan-border);
     border-radius: 0;
-    background: rgba(77, 249, 255, 0.08);
-    color: #f4f7fb;
+    background: rgba(var(--di-cyan-rgb), 0.08);
+    color: var(--di-text);
     padding: 8px 12px;
     font-size: 12px;
     cursor: pointer;
@@ -2657,7 +2672,7 @@
 }
 
 .raw-surface-workflow-actions button:hover {
-    background: rgba(77, 249, 255, 0.16);
+    background: rgba(var(--di-cyan-rgb), 0.16);
     border-color: var(--di-cyan);
     color: var(--di-cyan);
 }
@@ -2678,7 +2693,7 @@
 }
 
 .raw-topbar-help-action:hover {
-    background: rgba(77, 249, 255, 0.16);
+    background: rgba(var(--di-cyan-rgb), 0.16);
     border-color: var(--di-cyan);
     color: var(--di-cyan);
 }
@@ -2754,14 +2769,14 @@
        property instead of an inline `top`, so the phone bottom-sheet rule
        below can actually win. An inline declaration cannot be overridden by a
        media query. */
-    top: var(--raw-scaffold-top, 64px);
+    top: var(--raw-scaffold-top);
     right: 24px;
     width: min(320px, calc(100vw - 48px));
     max-height: calc(100vh - 88px);
     max-height: calc(100dvh - 88px);
     z-index: 1350;
     border-radius: 0;
-    background: #0a0a0a;
+    background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
 
     overflow: hidden;
@@ -2779,7 +2794,7 @@
     background:
         linear-gradient(0deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-        #060a12;
+        var(--di-surface);
     background-size: 36px 36px;
 }
 
@@ -2824,7 +2839,7 @@
     position: absolute;
     /* Bottom-LEFT: .raw-delete-fab is position:fixed at bottom/right 24px with
        z-index 1300, so anything in the bottom-right corner sits underneath it. */
-    bottom: calc(16px + var(--raw-bottom-chrome, 0px) + env(safe-area-inset-bottom));
+    bottom: calc(16px + var(--raw-bottom-chrome) + env(safe-area-inset-bottom));
     left: calc(16px + env(safe-area-inset-left));
     transition: bottom 0.18s ease;
     z-index: 2;
@@ -2836,7 +2851,7 @@
     /* Furniture (see the window rule): the zoom cluster is a tool for looking
        at the work, not part of it. */
     border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(16, 20, 24, 0.94);
+    background: var(--di-scrim-strong);
 }
 
 .raw-graph-zoom-controls button {
@@ -2879,7 +2894,7 @@
 .raw-graph-node-card {
     background: var(--di-black);
     border: 1px solid var(--di-cyan-border);
-    border-color: color-mix(in srgb, var(--card-family, #4df9ff) 46%, transparent);
+    border-color: color-mix(in srgb, var(--card-family) 46%, transparent);
     border-radius: 0;
     color: var(--di-text);
     cursor: pointer;
@@ -2892,7 +2907,7 @@
 }
 
 .raw-graph-node-card:hover {
-    border-color: rgba(77, 249, 255, 0.55);
+    border-color: rgba(var(--di-cyan-rgb), 0.55);
 }
 
 .raw-graph-node-card:active {
@@ -2901,7 +2916,7 @@
 
 .raw-graph-node-card.is-selected {
     border-color: var(--di-cyan);
-    box-shadow: 0 0 0 1px var(--di-cyan), 0 0 18px rgba(77, 249, 255, 0.15);
+    box-shadow: 0 0 0 1px var(--di-cyan), 0 0 18px rgba(var(--di-cyan-rgb), 0.15);
 }
 
 /* di.i hollow-square icon — the brand node motif, now in the node's own family
@@ -2910,7 +2925,7 @@
 .raw-graph-node-icon {
     width: 14px;
     height: 14px;
-    border: 3px solid var(--card-family, var(--di-cyan));
+    border: 3px solid var(--card-family);
     background: transparent;
     flex-shrink: 0;
 }
@@ -2928,7 +2943,7 @@
     padding: 0;
     border: none;
     background: transparent;
-    color: rgba(244, 247, 251, 0.22);
+    color: rgba(255, 255, 255, 0.22);
     font-size: 10px;
     line-height: 16px;
     text-align: center;
@@ -2936,7 +2951,7 @@
 }
 
 .raw-graph-node-active-toggle:hover {
-    color: rgba(244, 247, 251, 0.5);
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .raw-graph-node-active-toggle.is-active {
@@ -3002,12 +3017,12 @@
     gap: 4px;
     min-height: 22px;
     padding: 3px 5px;
-    border: 1px solid rgba(244, 247, 251, 0.28);
-    border-radius: 6px;
-    background: rgba(10, 14, 22, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: var(--di-radius);
+    background: var(--di-scrim-strong);
     /* Was rgba(244,247,251,0.2) on --di-black — about 1.6:1, under the 3:1
        floor for a non-text control. */
-    color: rgba(244, 247, 251, 0.62);
+    color: rgba(255, 255, 255, 0.62);
     font-family: inherit;
     font-size: 12px;
     line-height: 1;
@@ -3021,8 +3036,8 @@
 .raw-graph-node-card:hover .raw-graph-node-door,
 .raw-graph-node-card.is-selected .raw-graph-node-door,
 .raw-graph-node-door:focus-visible {
-    color: rgba(77, 249, 255, 0.95);
-    border-color: rgba(77, 249, 255, 0.5);
+    color: rgba(var(--di-cyan-rgb), 0.95);
+    border-color: rgba(var(--di-cyan-rgb), 0.5);
 }
 
 /* A card that actually holds something says so, and says how much. Every card
@@ -3031,8 +3046,8 @@
    control reopens a closed panel window, and an un-enterable empty container is
    a box that can never be filled. */
 .raw-graph-node-door.has-contents {
-    color: var(--card-family, rgba(77, 249, 255, 0.95));
-    border-color: var(--card-family, rgba(77, 249, 255, 0.55));
+    color: var(--card-family);
+    border-color: color-mix(in srgb, var(--card-family) 55%, transparent);
 }
 
 .raw-graph-node-child-count {
@@ -3061,8 +3076,8 @@
         min-height: 44px;
         min-width: 44px;
         justify-content: center;
-        color: rgba(77, 249, 255, 0.9);
-        border-color: rgba(77, 249, 255, 0.45);
+        color: rgba(var(--di-cyan-rgb), 0.9);
+        border-color: rgba(var(--di-cyan-rgb), 0.45);
     }
 }
 
@@ -3117,7 +3132,7 @@
    glows, one that cannot goes quiet. Before this, an incompatible drop was
    pure silence. */
 .raw-graph-port-dot--in.is-compatible {
-    box-shadow: 0 0 0 3px rgba(77, 249, 255, 0.35);
+    box-shadow: 0 0 0 3px var(--di-cyan-line);
     transform: scale(1.3);
 }
 
@@ -3185,7 +3200,7 @@
     appearance: none;
     border: 1px solid var(--di-cyan-border);
     border-radius: 0;
-    background: rgba(6, 10, 18, 0.92);
+    background: var(--di-scrim-strong);
     color: var(--di-text-muted);
     font-family: var(--di-mono);
     font-size: 11px;
@@ -3244,7 +3259,7 @@
     grid-template-rows: auto auto 1fr auto;
     overflow: hidden;
     border-radius: 0;
-    background: #0a0a0a;
+    background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
 
 }
@@ -3274,8 +3289,8 @@
     width: 100%;
     border-radius: 0;
     border: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.04);
-    color: #f4f7fb;
+    background: rgba(var(--di-cyan-rgb), 0.04);
+    color: var(--di-text);
     padding: 10px 12px;
 }
 
@@ -3296,17 +3311,17 @@
     border: none;
     cursor: pointer;
     border-radius: 0;
-    background: rgba(77, 249, 255, 0.04);
+    background: rgba(var(--di-cyan-rgb), 0.04);
     padding: 10px 12px;
-    color: #f4f7fb;
+    color: var(--di-text);
     font-weight: 600;
 }
 
 .raw-op-family-tabs button.is-active,
 .raw-op-create-footer button:last-child,
 .raw-op-list button.is-selected {
-    background: #162338;
-    color: #f4f7fb;
+    background: rgba(var(--di-cyan-rgb), 0.16);
+    color: var(--di-text);
 }
 
 .raw-op-create-body {
@@ -3331,7 +3346,7 @@
 
 .raw-op-list button span,
 .raw-op-preview-browser-bar code {
-    color: rgba(244, 247, 251, 0.44);
+    color: rgba(255, 255, 255, 0.44);
     font-size: 12px;
 }
 
@@ -3363,7 +3378,7 @@
     display: grid;
     grid-template-rows: auto auto 1fr auto;
     overflow: hidden;
-    background: #0a0a0a;
+    background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
 }
 
@@ -3386,7 +3401,7 @@
     border: 1px solid var(--di-cyan-border);
     color: var(--di-cyan);
     font-size: 20px;
-    background: rgba(77, 249, 255, 0.05);
+    background: rgba(var(--di-cyan-rgb), 0.05);
 }
 
 .raw-help-header h3 {
@@ -3396,7 +3411,7 @@
 
 .raw-help-header p {
     margin: 0;
-    color: rgba(244, 247, 251, 0.62);
+    color: rgba(255, 255, 255, 0.62);
     line-height: 1.5;
 }
 
@@ -3413,15 +3428,15 @@
     -webkit-appearance: none;
     appearance: none;
     border: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.04);
-    color: #f4f7fb;
+    background: rgba(var(--di-cyan-rgb), 0.04);
+    color: var(--di-text);
     padding: 10px 12px;
     cursor: pointer;
 }
 
 .raw-help-mode-tabs button.is-active,
 .raw-help-tabs button.is-active {
-    background: #162338;
+    background: rgba(var(--di-cyan-rgb), 0.16);
 }
 
 .raw-help-body {
@@ -3431,7 +3446,7 @@
     padding: 22px;
     overflow: auto;
     scrollbar-width: thin;
-    scrollbar-color: rgba(77, 249, 255, 0.3) rgba(77, 249, 255, 0.04);
+    scrollbar-color: var(--di-cyan-border) rgba(var(--di-cyan-rgb), 0.04);
 }
 
 .raw-help-body::-webkit-scrollbar {
@@ -3440,22 +3455,22 @@
 }
 
 .raw-help-body::-webkit-scrollbar-track {
-    background: rgba(77, 249, 255, 0.04);
+    background: rgba(var(--di-cyan-rgb), 0.04);
 }
 
 .raw-help-body::-webkit-scrollbar-thumb {
-    background: rgba(77, 249, 255, 0.3);
-    border: 1px solid rgba(10, 10, 10, 0.9);
+    background: var(--di-cyan-border);
+    border: 1px solid var(--di-scrim-strong);
 }
 
 .raw-help-body::-webkit-scrollbar-thumb:hover {
-    background: rgba(77, 249, 255, 0.5);
+    background: rgba(var(--di-cyan-rgb), 0.5);
 }
 
 .raw-help-visual-stage,
 .raw-help-side {
     border: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.03);
+    background: rgba(var(--di-cyan-rgb), 0.03);
     padding: 18px;
 }
 
@@ -3477,7 +3492,7 @@
     bottom: 18px;
     padding: 4px 8px;
     border: 1px solid var(--di-cyan-border);
-    color: rgba(244, 247, 251, 0.75);
+    color: rgba(255, 255, 255, 0.75);
     font-size: 11px;
     font-family: var(--di-mono);
 }
@@ -3491,8 +3506,8 @@
 .raw-help-diagram-start-col {
     align-self: center;
     height: 140px;
-    border: 1px solid rgba(77, 249, 255, 0.18);
-    background: rgba(77, 249, 255, 0.05);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.18);
+    background: rgba(var(--di-cyan-rgb), 0.05);
 }
 
 .raw-help-diagram-start-world::before,
@@ -3503,7 +3518,7 @@
     width: 56%;
     height: 56%;
     margin: 24px auto 0;
-    border: 1px solid rgba(77, 249, 255, 0.26);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.26);
 }
 
 .raw-help-diagram-grid {
@@ -3513,15 +3528,15 @@
     bottom: 16%;
     height: 34%;
     background:
-        linear-gradient(0deg, rgba(77, 249, 255, 0.18) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(77, 249, 255, 0.18) 1px, transparent 1px);
+        linear-gradient(0deg, rgba(var(--di-cyan-rgb), 0.18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--di-cyan-rgb), 0.18) 1px, transparent 1px);
     background-size: 26px 26px;
 }
 
 .raw-help-diagram-world-node {
     position: absolute;
-    border: 1px solid rgba(77, 249, 255, 0.35);
-    background: rgba(77, 249, 255, 0.08);
+    border: 1px solid var(--di-cyan-line);
+    background: rgba(var(--di-cyan-rgb), 0.08);
 }
 
 .raw-help-diagram-cube {
@@ -3536,13 +3551,13 @@
     height: 76px;
     right: 18%;
     top: 31%;
-    border-radius: 999px;
+    border-radius: var(--di-radius-pill);
 }
 
 .raw-help-diagram-window {
     position: absolute;
-    border: 1px solid rgba(77, 249, 255, 0.3);
-    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid var(--di-cyan-border);
+    background: var(--di-cyan-wash);
     padding: 12px;
     display: grid;
     gap: 8px;
@@ -3551,7 +3566,7 @@
 .raw-help-diagram-window span {
     display: block;
     height: 12px;
-    background: rgba(77, 249, 255, 0.16);
+    background: rgba(var(--di-cyan-rgb), 0.16);
 }
 
 .raw-help-diagram-window-a {
@@ -3572,8 +3587,8 @@
     position: absolute;
     width: 96px;
     height: 54px;
-    border: 1px solid rgba(77, 249, 255, 0.32);
-    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.32);
+    background: var(--di-cyan-wash);
 }
 
 .raw-help-diagram-graph-node-a {
@@ -3594,7 +3609,7 @@
 .raw-help-diagram-wire {
     position: absolute;
     height: 2px;
-    background: rgba(77, 249, 255, 0.28);
+    background: rgba(var(--di-cyan-rgb), 0.28);
     transform-origin: left center;
 }
 
@@ -3637,7 +3652,7 @@
     border: 1px solid var(--di-cyan-border);
     color: var(--di-cyan);
     font-size: 30px;
-    background: rgba(77, 249, 255, 0.05);
+    background: rgba(var(--di-cyan-rgb), 0.05);
 }
 
 .raw-help-callout strong {
@@ -3647,7 +3662,7 @@
 
 .raw-help-callout p {
     margin: 0;
-    color: rgba(244, 247, 251, 0.72);
+    color: rgba(255, 255, 255, 0.72);
     line-height: 1.45;
 }
 
@@ -3669,7 +3684,7 @@
     align-items: start;
     padding: 10px 12px;
     border: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.02);
+    background: rgba(var(--di-cyan-rgb), 0.02);
 }
 
 .raw-help-step-card span {
@@ -3685,7 +3700,7 @@
 
 .raw-help-step-card p {
     margin: 4px 0 0;
-    color: rgba(244, 247, 251, 0.84);
+    color: rgba(255, 255, 255, 0.84);
     line-height: 1.45;
 }
 
@@ -3694,7 +3709,7 @@
     gap: 8px;
     margin: 0;
     padding-left: 18px;
-    color: rgba(244, 247, 251, 0.82);
+    color: rgba(255, 255, 255, 0.82);
     line-height: 1.5;
 }
 
@@ -3708,7 +3723,7 @@
     grid-template-columns: 110px minmax(0, 1fr);
     gap: 14px;
     padding: 10px 0;
-    border-bottom: 1px solid rgba(77, 249, 255, 0.12);
+    border-bottom: 1px solid var(--di-line);
 }
 
 .raw-help-control-row:last-child {
@@ -3716,13 +3731,13 @@
 }
 
 .raw-help-control-row span {
-    color: rgba(244, 247, 251, 0.58);
+    color: rgba(255, 255, 255, 0.58);
     font-family: var(--di-mono);
     font-size: 12px;
 }
 
 .raw-help-control-row strong {
-    color: rgba(244, 247, 251, 0.9);
+    color: rgba(255, 255, 255, 0.9);
     font-weight: 500;
     line-height: 1.45;
 }
@@ -3738,10 +3753,10 @@
     align-items: center;
     padding: 5px 8px;
     border: 1px solid var(--di-cyan-border);
-    color: rgba(244, 247, 251, 0.75);
+    color: rgba(255, 255, 255, 0.75);
     font-size: 11px;
     font-family: var(--di-mono);
-    background: rgba(77, 249, 255, 0.04);
+    background: rgba(var(--di-cyan-rgb), 0.04);
 }
 
 .raw-help-footer {
@@ -3751,7 +3766,7 @@
 }
 
 .raw-help-footer span {
-    color: rgba(244, 247, 251, 0.56);
+    color: rgba(255, 255, 255, 0.56);
     font-family: var(--di-mono);
     font-size: 12px;
     word-break: break-word;
@@ -3783,7 +3798,7 @@
     gap: 10px;
     padding: 14px;
     border: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.03);
+    background: rgba(var(--di-cyan-rgb), 0.03);
 }
 
 .raw-help-audience-head {
@@ -3799,7 +3814,7 @@
     height: 28px;
     color: var(--di-cyan);
     border: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.04);
+    background: rgba(var(--di-cyan-rgb), 0.04);
 }
 
 .raw-help-audience-card h4 {
@@ -3810,7 +3825,7 @@
 .raw-help-audience-steps {
     margin: 0;
     padding-left: 18px;
-    color: rgba(244, 247, 251, 0.82);
+    color: rgba(255, 255, 255, 0.82);
     line-height: 1.45;
     font-size: 13px;
 }
@@ -3825,7 +3840,7 @@
 .raw-op-preview-browser-shell {
     border-radius: 0;
     border: 1px solid var(--di-cyan-border);
-    background: #0a0a0a;
+    background: var(--di-surface);
 
     overflow: hidden;
 }
@@ -3839,7 +3854,7 @@
 }
 
 .raw-op-preview-cube-shell {
-    background: linear-gradient(180deg, #0d1a30 0%, #0a1224 100%);
+    background: linear-gradient(180deg, var(--di-surface-2) 0%, var(--di-surface) 100%);
 }
 
 .raw-op-preview-cube {
@@ -3861,7 +3876,7 @@
     width: 100%;
     height: 100%;
     border: 0;
-    background: #ffffff;
+    background: var(--di-text);
 }
 
 .raw-op-preview-browser-bar,
@@ -3871,7 +3886,7 @@
     gap: 4px;
     padding: 12px 14px;
     border-bottom: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.04);
+    background: rgba(var(--di-cyan-rgb), 0.04);
 }
 
 .raw-op-param-grid {
@@ -3886,7 +3901,7 @@
     height: 100%;
     display: grid;
     grid-template-rows: auto 1fr;
-    background: #080c14;
+    background: var(--di-surface);
 }
 
 .raw-world-browser-node {
@@ -3899,7 +3914,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    background: #080c14;
+    background: var(--di-surface);
     display: grid;
     place-items: center;
     overflow: hidden;
@@ -3922,15 +3937,18 @@
     text-align: center;
     font-size: 13px;
     line-height: 1.4;
-    color: var(--di-cyan-dim, #9fd7ff);
-    background: rgba(8, 12, 20, 0.86);
+    /* was var(--di-cyan-dim, #9fd7ff): the token is declared as cyan at 0.1
+       alpha, so this label has been ~invisible on its near-black panel since
+       the token landed. The author meant a pale cyan; this is it. */
+    color: var(--di-cyan);
+    background: var(--di-scrim-strong);
 }
 
 .raw-mic-panel {
     position: relative;
     width: 100%;
     height: 100%;
-    background: #080c14;
+    background: var(--di-surface);
     display: grid;
     place-items: center;
     padding: 0 20px;
@@ -3939,10 +3957,10 @@
 .raw-mic-panel-meter {
     width: 100%;
     height: 10px;
-    border-radius: 6px;
+    border-radius: var(--di-radius-pill);
     overflow: hidden;
-    background: rgba(77, 249, 255, 0.08);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    background: rgba(var(--di-cyan-rgb), 0.08);
+    border: 1px solid var(--di-cyan-border);
 }
 
 .raw-mic-panel-meter-fill {
@@ -3950,7 +3968,7 @@
     height: 100%;
     transform-origin: left center;
     transform: scaleX(0);
-    background: linear-gradient(90deg, #4df9ff, #5fa8ff);
+    background: var(--di-cyan);
     /* volume updates go straight to this transform every animation frame
        (see MicSourcePanel) — a transition here would fight that and lag. */
 }
@@ -3960,7 +3978,7 @@
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    background: #080c14;
+    background: var(--di-surface);
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -3968,14 +3986,17 @@
     overflow-y: auto;
     font-size: 13px;
     line-height: 1.45;
-    color: var(--di-cyan-dim, #9fd7ff);
+    /* was var(--di-cyan-dim, #9fd7ff): the token is declared as cyan at 0.1
+       alpha, so this label has been ~invisible on its near-black panel since
+       the token landed. The author meant a pale cyan; this is it. */
+    color: var(--di-cyan);
 }
 
 .raw-midi-panel-status {
     padding: 8px 10px;
-    border-radius: 4px;
-    background: rgba(77, 249, 255, 0.07);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+    border-radius: var(--di-radius);
+    background: rgba(var(--di-cyan-rgb), 0.07);
+    border: 1px solid var(--di-cyan-border);
 }
 
 .raw-midi-panel-field {
@@ -3998,24 +4019,24 @@
     min-height: 34px;
     padding: 6px 8px;
     font: inherit;
-    color: #e8f6ff;
-    background: rgba(77, 249, 255, 0.06);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
-    border-radius: 4px;
+    color: var(--di-text);
+    background: var(--di-cyan-wash);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
 }
 
 .raw-midi-panel-select:focus-visible {
-    outline: 2px solid var(--di-cyan, #4df9ff);
+    outline: 2px solid var(--di-cyan);
     outline-offset: 1px;
 }
 
 .raw-midi-panel-last {
     margin-top: auto;
     padding: 8px 10px;
-    color: #e8f6ff;
-    background: rgba(8, 12, 20, 0.7);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.22));
-    border-radius: 4px;
+    color: var(--di-text);
+    background: var(--di-scrim);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
 }
@@ -4029,7 +4050,7 @@
        plus padding overflowed the window by exactly the padding — 398px of
        content in a 368px window, clipped at the right edge on a phone. */
     box-sizing: border-box;
-    background: #080c14;
+    background: var(--di-surface);
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -4037,7 +4058,10 @@
     overflow-y: auto;
     font-size: 13px;
     line-height: 1.45;
-    color: var(--di-cyan-dim, #9fd7ff);
+    /* was var(--di-cyan-dim, #9fd7ff): the token is declared as cyan at 0.1
+       alpha, so this label has been ~invisible on its near-black panel since
+       the token landed. The author meant a pale cyan; this is it. */
+    color: var(--di-cyan);
 }
 
 .raw-keeper-panel-field {
@@ -4065,14 +4089,14 @@
     resize: vertical;
     padding: 7px 9px;
     font: inherit;
-    color: #e8f6ff;
-    background: rgba(77, 249, 255, 0.06);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
-    border-radius: 4px;
+    color: var(--di-text);
+    background: var(--di-cyan-wash);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
 }
 
 .raw-keeper-panel-input:focus-visible {
-    outline: 2px solid var(--di-cyan, #4df9ff);
+    outline: 2px solid var(--di-cyan);
     outline-offset: 1px;
 }
 
@@ -4090,10 +4114,10 @@
 .raw-keeper-panel-ask {
     padding: 6px 14px;
     font: inherit;
-    color: #08131a;
-    background: var(--di-cyan, #4df9ff);
+    color: var(--di-black);
+    background: var(--di-cyan);
     border: none;
-    border-radius: 4px;
+    border-radius: var(--di-radius);
     cursor: pointer;
     /* Touch target — a workspace node has to be usable with one finger.
        See docs/architecture/RAW_WORKSPACE.md §8 q4. */
@@ -4101,13 +4125,13 @@
 }
 
 .raw-keeper-panel-ask:disabled {
-    background: rgba(77, 249, 255, 0.22);
-    color: rgba(232, 246, 255, 0.55);
+    background: rgba(var(--di-cyan-rgb), 0.22);
+    color: rgba(255, 255, 255, 0.55);
     cursor: not-allowed;
 }
 
 .raw-keeper-panel-ask:focus-visible {
-    outline: 2px solid #e8f6ff;
+    outline: 2px solid var(--di-text);
     outline-offset: 2px;
 }
 
@@ -4120,12 +4144,12 @@
 
 .raw-keeper-panel-state-unreachable,
 .raw-keeper-panel-state-error {
-    color: #ff9e9e;
+    color: var(--di-danger);
     opacity: 1;
 }
 
 .raw-keeper-panel-state-answered {
-    color: #9effb0;
+    color: var(--di-success);
     opacity: 1;
 }
 
@@ -4133,22 +4157,22 @@
    messages sit in the flow so a reply and an error can be read together. */
 .raw-keeper-panel-status {
     padding: 8px 10px;
-    border-radius: 4px;
-    background: rgba(77, 249, 255, 0.07);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+    border-radius: var(--di-radius);
+    background: rgba(var(--di-cyan-rgb), 0.07);
+    border: 1px solid var(--di-cyan-border);
 }
 
 .raw-keeper-panel-status-error {
-    color: #ffc9c9;
-    background: rgba(255, 120, 120, 0.1);
-    border-color: rgba(255, 120, 120, 0.35);
+    color: var(--di-danger);
+    background: rgba(var(--di-danger-rgb), 0.1);
+    border-color: rgba(var(--di-danger-rgb), 0.35);
 }
 
 .raw-keeper-panel-status code {
     font-size: 12px;
     padding: 1px 4px;
-    border-radius: 3px;
-    background: rgba(8, 12, 20, 0.6);
+    border-radius: var(--di-radius);
+    background: var(--di-scrim);
     /* A URL is one unbreakable token and the panel is narrow — without this it
        runs past the edge of its own box. */
     overflow-wrap: anywhere;
@@ -4158,10 +4182,10 @@
     flex: 1;
     min-height: 0;
     padding: 9px 10px;
-    color: #e8f6ff;
-    background: rgba(8, 12, 20, 0.7);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.22));
-    border-radius: 4px;
+    color: var(--di-text);
+    background: var(--di-scrim);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
@@ -4219,7 +4243,7 @@
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    background: #080c14;
+    background: var(--di-surface);
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -4227,14 +4251,17 @@
     overflow-y: auto;
     font-size: 13px;
     line-height: 1.45;
-    color: var(--di-cyan-dim, #9fd7ff);
+    /* was var(--di-cyan-dim, #9fd7ff): the token is declared as cyan at 0.1
+       alpha, so this label has been ~invisible on its near-black panel since
+       the token landed. The author meant a pale cyan; this is it. */
+    color: var(--di-cyan);
 }
 
 .raw-dmx-panel-setup {
     padding: 8px 10px;
-    border-radius: 4px;
-    background: rgba(77, 249, 255, 0.07);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+    border-radius: var(--di-radius);
+    background: rgba(var(--di-cyan-rgb), 0.07);
+    border: 1px solid var(--di-cyan-border);
 }
 
 .raw-dmx-panel-field {
@@ -4255,14 +4282,14 @@
     box-sizing: border-box;
     padding: 7px 9px;
     font: inherit;
-    color: #e8f6ff;
-    background: rgba(77, 249, 255, 0.06);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
-    border-radius: 4px;
+    color: var(--di-text);
+    background: var(--di-cyan-wash);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
 }
 
 .raw-dmx-panel-input:focus-visible {
-    outline: 2px solid var(--di-cyan, #4df9ff);
+    outline: 2px solid var(--di-cyan);
     outline-offset: 1px;
 }
 
@@ -4277,9 +4304,9 @@
 
 .raw-dmx-panel-status {
     padding: 8px 10px;
-    border-radius: 4px;
-    background: rgba(8, 12, 20, 0.7);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+    border-radius: var(--di-radius);
+    background: var(--di-scrim);
+    border: 1px solid var(--di-cyan-border);
     /* A host is one unbreakable token and the panel is narrow. */
     overflow-wrap: anywhere;
 }
@@ -4375,7 +4402,7 @@
        — exactly when Delete is the button you want. */
     .raw-delete-fab {
         top: auto;
-        bottom: calc(var(--raw-sheet-inset, 0px) + 12px);
+        bottom: calc(var(--raw-sheet-inset) + 12px);
         right: calc(12px + env(safe-area-inset-right));
     }
 }
@@ -4389,7 +4416,7 @@
     display: flex;
     flex-direction: column;
     z-index: 100;
-    background: var(--raw-canvas-bg, #0d0d0d);
+    background: var(--di-surface);
 }
 
 .raw-system-window-bar {
@@ -4397,7 +4424,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 12px;
-    background: var(--raw-topbar-bg, #111);
+    background: var(--di-surface-2);
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
     flex-shrink: 0;
     height: 36px;
@@ -4441,7 +4468,7 @@
     width: 100%;
     height: 100%;
     overflow-y: auto;
-    background: #080c14;
+    background: var(--di-surface);
     padding: 12px 16px;
     font-size: 12px;
     color: var(--di-text);
@@ -4454,7 +4481,10 @@
     height: 100%;
     padding: 16px;
     text-align: center;
-    color: var(--di-cyan-dim, #9fd7ff);
+    /* was var(--di-cyan-dim, #9fd7ff): the token is declared as cyan at 0.1
+       alpha, so this label has been ~invisible on its near-black panel since
+       the token landed. The author meant a pale cyan; this is it. */
+    color: var(--di-cyan);
 }
 
 .raw-work-status-section {
@@ -4485,12 +4515,12 @@
 }
 
 .raw-work-status-tree-branch {
-    color: #4df9ff;
+    color: var(--di-cyan);
     font-weight: 600;
 }
 
 .raw-work-status-dirty {
-    color: #ffb86c;
+    color: var(--di-warning);
 }
 
 .raw-agent-run-panel {
@@ -4500,16 +4530,16 @@
     flex-direction: column;
     gap: 8px;
     padding: 12px 16px;
-    background: #080c14;
+    background: var(--di-surface);
 }
 
 .raw-agent-run-panel-input {
     flex: 1;
     min-height: 48px;
     resize: none;
-    background: rgba(77, 249, 255, 0.05);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
-    border-radius: 6px;
+    background: rgba(var(--di-cyan-rgb), 0.05);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
     color: var(--di-text);
     font: inherit;
     padding: 8px;
@@ -4529,20 +4559,20 @@
 }
 
 .raw-agent-run-panel-status-running {
-    color: #4df9ff;
+    color: var(--di-cyan);
 }
 
 .raw-agent-run-panel-status-done {
-    color: #50fa7b;
+    color: var(--di-success);
 }
 
 .raw-agent-run-panel-status-failed,
 .raw-agent-run-panel-status-stopped {
-    color: #ff5555;
+    color: var(--di-danger);
 }
 
 .raw-agent-run-panel-error {
-    color: #ff5555;
+    color: var(--di-danger);
     font-size: 12px;
 }
 
@@ -4558,8 +4588,8 @@
 .raw-agent-run-panel-message {
     margin: 0;
     padding: 6px 8px;
-    background: rgba(77, 249, 255, 0.04);
-    border-radius: 6px;
+    background: rgba(var(--di-cyan-rgb), 0.04);
+    border-radius: var(--di-radius);
     font-size: 12px;
     line-height: 1.4;
     white-space: pre-wrap;
@@ -4569,19 +4599,19 @@
 .raw-agent-run-panel-result {
     margin: 0;
     padding: 6px 8px;
-    border-radius: 6px;
+    border-radius: var(--di-radius);
     font-size: 12px;
     line-height: 1.4;
     font-weight: 600;
-    color: #50fa7b;
-    background: rgba(80, 250, 123, 0.08);
+    color: var(--di-success);
+    background: rgba(var(--di-success-rgb), 0.08);
     white-space: pre-wrap;
     word-break: break-word;
 }
 
 .raw-agent-run-panel-result-error {
-    color: #ff5555;
-    background: rgba(255, 85, 85, 0.08);
+    color: var(--di-danger);
+    background: rgba(var(--di-danger-rgb), 0.08);
 }
 
 .raw-agent-run-panel-cost {
@@ -4605,7 +4635,7 @@
     max-height: 200px;
     overflow: auto;
     background: rgba(255, 255, 255, 0.03);
-    border-radius: 6px;
+    border-radius: var(--di-radius);
     font-size: 11px;
     line-height: 1.4;
     white-space: pre-wrap;
@@ -4619,8 +4649,8 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: #05080f;
-    color: #f4f7fb;
+    background: var(--di-surface);
+    color: var(--di-text);
     font-family: var(--di-mono);
     font-size: 11px;
     overflow: hidden;
@@ -4631,7 +4661,7 @@
     align-items: baseline;
     gap: 12px;
     padding: 8px 12px 6px;
-    border-bottom: 1px solid rgba(244, 247, 251, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .raw-timeline-title {
@@ -4641,9 +4671,9 @@
 
 .raw-timeline-transport {
     background: none;
-    border: 1px solid #2c3a4d;
-    border-radius: 4px;
-    color: #4f9eff;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: var(--di-radius);
+    color: var(--di-cyan);
     cursor: pointer;
     font-size: 10px;
     line-height: 1;
@@ -4651,31 +4681,31 @@
 }
 
 .raw-timeline-transport:hover {
-    border-color: #4f9eff;
+    border-color: var(--di-cyan);
 }
 
 .raw-timeline-readout {
-    color: #4f9eff;
+    color: var(--di-cyan);
     font-variant-numeric: tabular-nums;
 }
 
 .raw-timeline-meta {
     margin-left: auto;
-    color: rgba(244, 247, 251, 0.52);
+    color: rgba(255, 255, 255, 0.52);
 }
 
 .raw-timeline-ruler {
     position: relative;
     height: 16px;
     flex: none;
-    border-bottom: 1px solid rgba(244, 247, 251, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .raw-timeline-tick {
     position: absolute;
     top: 2px;
     transform: translateX(-50%);
-    color: rgba(244, 247, 251, 0.38);
+    color: rgba(255, 255, 255, 0.38);
     font-size: 9px;
     white-space: nowrap;
     pointer-events: none;
@@ -4692,7 +4722,7 @@
     flex: 1;
     min-height: 56px;
     margin: 10px 0;
-    background: #080c14;
+    background: var(--di-surface);
     cursor: text;
     touch-action: none;
 }
@@ -4705,16 +4735,16 @@
     align-items: center;
     box-sizing: border-box;
     padding: 0 6px;
-    background: rgba(79, 158, 255, 0.16);
-    border: 1px solid rgba(79, 158, 255, 0.5);
-    border-radius: 3px;
+    background: rgba(var(--di-cyan-rgb), 0.16);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.5);
+    border-radius: var(--di-radius);
     cursor: grab;
     overflow: hidden;
 }
 
 .raw-timeline-clip--selected {
-    background: rgba(79, 158, 255, 0.32);
-    border-color: #4f9eff;
+    background: rgba(var(--di-cyan-rgb), 0.32);
+    border-color: var(--di-cyan);
 }
 
 .raw-timeline-clip-label {
@@ -4741,7 +4771,7 @@
 .raw-timeline-handle--end { right: 0; }
 
 .raw-timeline-handle:hover {
-    background: #4f9eff;
+    background: var(--di-cyan);
 }
 
 /* A gap is the piece playing to an empty room — invisible in the numbers,
@@ -4752,11 +4782,11 @@
     bottom: 0;
     background: repeating-linear-gradient(
         45deg,
-        rgba(255, 95, 95, 0.16) 0 6px,
+        rgba(var(--di-danger-rgb), 0.16) 0 6px,
         transparent 6px 12px
     );
-    border-left: 1px solid rgba(255, 95, 95, 0.5);
-    border-right: 1px solid rgba(255, 95, 95, 0.5);
+    border-left: 1px solid rgba(var(--di-danger-rgb), 0.5);
+    border-right: 1px solid rgba(var(--di-danger-rgb), 0.5);
     pointer-events: none;
 }
 
@@ -4765,9 +4795,9 @@
     position: absolute;
     top: 8px;
     bottom: 8px;
-    background: rgba(244, 195, 110, 0.22);
-    border-left: 1px solid #f4c36e;
-    border-right: 1px solid #f4c36e;
+    background: rgba(var(--di-warning-rgb), 0.22);
+    border-left: 1px solid var(--di-warning);
+    border-right: 1px solid var(--di-warning);
     pointer-events: none;
 }
 
@@ -4776,7 +4806,7 @@
     top: 0;
     bottom: 0;
     width: 1px;
-    background: #f4877e;
+    background: var(--di-danger);
     pointer-events: none;
 }
 
@@ -4787,7 +4817,7 @@
     left: -4px;
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
-    border-top: 5px solid #f4877e;
+    border-top: 5px solid var(--di-danger);
 }
 
 .raw-timeline-tools {
@@ -4795,15 +4825,15 @@
     align-items: center;
     gap: 8px;
     padding: 6px 12px 10px;
-    border-top: 1px solid rgba(244, 247, 251, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
     flex-wrap: wrap;
 }
 
 .raw-timeline-tool {
-    background: rgba(244, 247, 251, 0.06);
-    color: #f4f7fb;
-    border: 1px solid rgba(244, 247, 251, 0.16);
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--di-text);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: var(--di-radius);
     padding: 3px 9px;
     font-family: inherit;
     font-size: 10px;
@@ -4811,8 +4841,8 @@
 }
 
 .raw-timeline-tool:hover:not(:disabled) {
-    border-color: #4f9eff;
-    color: #4f9eff;
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
 }
 
 .raw-timeline-tool:disabled {
@@ -4821,32 +4851,32 @@
 }
 
 .raw-timeline-tool--danger:hover:not(:disabled) {
-    border-color: #ff5f5f;
-    color: #ff5f5f;
+    border-color: var(--di-danger);
+    color: var(--di-danger);
 }
 
 .raw-timeline-speed {
     display: flex;
     align-items: center;
     gap: 6px;
-    color: rgba(244, 247, 251, 0.62);
+    color: rgba(255, 255, 255, 0.62);
     font-size: 10px;
 }
 
 .raw-timeline-speed input {
     width: 84px;
-    accent-color: #4f9eff;
+    accent-color: var(--di-cyan);
 }
 
 .raw-timeline-speed-value {
     font-variant-numeric: tabular-nums;
-    color: #f4f7fb;
+    color: var(--di-text);
     min-width: 34px;
 }
 
 .raw-timeline-status {
     margin-left: auto;
-    color: rgba(244, 247, 251, 0.52);
+    color: rgba(255, 255, 255, 0.52);
     font-size: 10px;
 }
 
@@ -4857,22 +4887,22 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: #05080f;
+    background: var(--di-surface);
     overflow: auto;
 }
 
 .raw-director-note {
     flex: none;
     padding: 6px 10px;
-    border-bottom: 1px solid rgba(244, 247, 251, 0.08);
-    color: rgba(244, 247, 251, 0.52);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.52);
     font-family: var(--di-mono);
     font-size: 10px;
     line-height: 1.5;
 }
 
-.raw-director-note strong { color: #f4f7fb; font-weight: 600; }
-.raw-director-note code { color: #4f9eff; }
+.raw-director-note strong { color: var(--di-text); font-weight: 600; }
+.raw-director-note code { color: var(--di-cyan); }
 
 /* The director was authored to sit at the bottom of the piece's viewport
    (position:absolute; bottom:0 in algoVrithm.css). Inside a Raw window there
@@ -4950,8 +4980,8 @@
         align-items: center;
         min-height: 44px;
         padding: 0 12px;
-        border-radius: 6px;
-        background: rgba(10, 14, 22, 0.62);
+        border-radius: var(--di-radius);
+        background: var(--di-scrim);
         color: rgba(255, 255, 255, 0.44);
     }
 }
@@ -4965,7 +4995,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(10, 14, 22, 0.55);
+    background: var(--di-scrim);
     border: 2px dashed var(--di-cyan);
     pointer-events: none;
     z-index: 1250;
@@ -4976,10 +5006,10 @@
     font-weight: 700;
     font-size: 15px;
     letter-spacing: 0.02em;
-    color: #ffffff;
-    background: rgba(10, 14, 22, 0.85);
+    color: var(--di-text);
+    background: var(--di-scrim-strong);
     border: 1px solid var(--di-cyan);
-    border-radius: 999px;
+    border-radius: var(--di-radius-pill);
     padding: 10px 18px;
 }
 
@@ -4994,16 +5024,16 @@
     line-height: 1.45;
     text-align: center;
     color: rgba(255, 255, 255, 0.92);
-    background: rgba(10, 14, 22, 0.92);
+    background: var(--di-scrim-strong);
     border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 12px;
+    border-radius: var(--di-radius);
     padding: 10px 16px;
     pointer-events: none;
     z-index: 1260;
 }
 
 .raw-drop-notice.is-warning {
-    border-color: var(--di-amber, #ffb86c);
+    border-color: var(--di-warning);
 }
 
 /* You are inside something. Never hidden — not by zen, not by fullscreen.
@@ -5023,9 +5053,9 @@
     font-family: var(--di-sans);
     font-size: 12px;
     color: rgba(255, 255, 255, 0.78);
-    background: rgba(10, 14, 22, 0.92);
-    border: 1px solid rgba(77, 249, 255, 0.35);
-    border-radius: 999px;
+    background: var(--di-scrim-strong);
+    border: 1px solid var(--di-cyan-line);
+    border-radius: var(--di-radius-pill);
     padding: 2px 4px 2px 2px;
     z-index: 1400;
     pointer-events: auto;
@@ -5039,7 +5069,7 @@
 }
 
 .raw-scope-marker-label strong {
-    color: #ffffff;
+    color: var(--di-text);
     font-weight: 600;
 }
 
@@ -5057,8 +5087,8 @@
     min-width: 44px;
     min-height: 44px;
     border: none;
-    border-radius: 999px;
-    background: rgba(77, 249, 255, 0.14);
+    border-radius: var(--di-radius-pill);
+    background: rgba(var(--di-cyan-rgb), 0.14);
     color: var(--di-cyan);
     font-size: 15px;
     line-height: 1;
@@ -5068,7 +5098,7 @@
 
 .raw-scope-marker-out:hover,
 .raw-scope-marker-root:hover {
-    background: rgba(77, 249, 255, 0.28);
+    background: rgba(var(--di-cyan-rgb), 0.28);
 }
 
 .raw-inspector-asset-field {
@@ -5096,7 +5126,7 @@
     color: var(--di-cyan);
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 8px;
+    border-radius: var(--di-radius);
     font-size: 16px;
     line-height: 1;
 }
@@ -5132,9 +5162,9 @@
     flex-direction: column;
     gap: 2px;
     padding: 6px;
-    background: rgba(10, 14, 22, 0.97);
-    border: 1px solid rgba(77, 249, 255, 0.35);
-    border-radius: 10px;
+    background: var(--di-scrim-strong);
+    border: 1px solid var(--di-cyan-line);
+    border-radius: var(--di-radius);
     font-family: var(--di-sans);
 }
 
@@ -5156,7 +5186,7 @@
     padding: 0 12px;
     text-align: left;
     border: none;
-    border-radius: 7px;
+    border-radius: var(--di-radius);
     background: transparent;
     color: rgba(255, 255, 255, 0.92);
     font-family: inherit;
@@ -5167,7 +5197,7 @@
 
 .raw-graph-port-menu button:hover,
 .raw-graph-port-menu button:focus-visible {
-    background: rgba(77, 249, 255, 0.16);
+    background: rgba(var(--di-cyan-rgb), 0.16);
     color: var(--di-cyan);
 }
 
@@ -5188,9 +5218,9 @@
     font-family: var(--di-sans);
     font-size: 13px;
     color: rgba(255, 255, 255, 0.9);
-    background: rgba(10, 14, 22, 0.95);
-    border: 1px solid rgba(77, 249, 255, 0.4);
-    border-radius: 999px;
+    background: var(--di-scrim-strong);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.4);
+    border-radius: var(--di-radius-pill);
 }
 
 .raw-promoted-notice strong {
@@ -5205,8 +5235,8 @@
     min-width: 44px;
     padding: 0 14px;
     border: none;
-    border-radius: 999px;
-    background: rgba(77, 249, 255, 0.16);
+    border-radius: var(--di-radius-pill);
+    background: rgba(var(--di-cyan-rgb), 0.16);
     color: var(--di-cyan);
     font-family: inherit;
     font-size: 13px;
@@ -5216,7 +5246,7 @@
 }
 
 .raw-promoted-notice button:hover {
-    background: rgba(77, 249, 255, 0.3);
+    background: var(--di-cyan-border);
 }
 
 .raw-promoted-notice-close {
@@ -5245,20 +5275,20 @@
     font-family: var(--di-sans);
     font-size: 12px;
     line-height: 1.55;
-    color: rgba(244, 247, 251, 0.72);
+    color: rgba(255, 255, 255, 0.72);
 }
 
 .raw-anatomy-banner {
     margin: 0 0 12px;
     padding: 8px 10px;
     border-left: 2px solid var(--di-warning);
-    background: rgba(255, 179, 71, 0.08);
-    color: rgba(255, 213, 153, 0.92);
+    background: rgba(var(--di-warning-rgb), 0.08);
+    color: rgba(var(--di-warning-rgb), 0.92);
 }
 
 .raw-anatomy-lede {
     margin: 0 0 16px;
-    color: rgba(244, 247, 251, 0.86);
+    color: rgba(255, 255, 255, 0.86);
 }
 
 .raw-anatomy-lede strong { color: var(--di-text); }
@@ -5279,7 +5309,7 @@
     font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(244, 247, 251, 0.5);
+    color: rgba(255, 255, 255, 0.5);
 }
 
 /* The badge carries the ANSWER, not decoration — "a door", "its own window",
@@ -5290,7 +5320,7 @@
     font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: none;
-    color: var(--window-accent, rgba(244, 247, 251, 0.6));
+    color: var(--window-accent);
 }
 
 .raw-anatomy-slot h5 {
@@ -5300,7 +5330,7 @@
     font-weight: 400;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(244, 247, 251, 0.34);
+    color: rgba(255, 255, 255, 0.34);
 }
 
 .raw-anatomy-slot p { margin: 0; }
@@ -5335,7 +5365,7 @@
     font-size: 10px;
     font-style: normal;
     letter-spacing: 0.06em;
-    color: rgba(244, 247, 251, 0.36);
+    color: rgba(255, 255, 255, 0.36);
 }
 
 .raw-anatomy-value {
@@ -5357,7 +5387,7 @@
    word — and it is never blank, which would read as a rendering failure. */
 .raw-anatomy-value.is-empty {
     font-style: italic;
-    color: rgba(244, 247, 251, 0.38);
+    color: rgba(255, 255, 255, 0.38);
 }
 
 .raw-anatomy-swatch {
@@ -5372,10 +5402,10 @@
     display: block;
     margin-top: 2px;
     font-size: 11px;
-    color: rgba(244, 247, 251, 0.46);
+    color: rgba(255, 255, 255, 0.46);
 }
 
-.raw-anatomy-door { color: rgba(244, 247, 251, 0.38); }
+.raw-anatomy-door { color: rgba(255, 255, 255, 0.38); }
 
 .raw-anatomy-goto {
     -webkit-appearance: none;
@@ -5387,7 +5417,7 @@
     padding: 0 8px;
     border: 0;
     background: none;
-    color: rgba(244, 247, 251, 0.6);
+    color: rgba(255, 255, 255, 0.6);
     font-family: inherit;
     font-size: 11px;
     cursor: pointer;
@@ -5401,7 +5431,7 @@
 .raw-anatomy-foot {
     margin: 0;
     font-size: 11px;
-    color: rgba(244, 247, 251, 0.4);
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .raw-anatomy-foot { margin-top: 10px; }
@@ -5411,7 +5441,7 @@
     padding-top: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.09);
     font-size: 11px;
-    color: rgba(244, 247, 251, 0.4);
+    color: rgba(255, 255, 255, 0.4);
 }
 
 /* Two buttons where there was one. Stacked rather than side by side: at the
@@ -5445,8 +5475,8 @@
     min-height: 44px;
     padding: 0 14px;
     border: none;
-    border-radius: 999px;
-    background: rgba(77, 249, 255, 0.1);
+    border-radius: var(--di-radius-pill);
+    background: var(--di-cyan-dim);
     color: var(--di-cyan);
     font-family: inherit;
     font-size: 12px;
@@ -5457,7 +5487,7 @@
 }
 
 .raw-scope-marker-what:hover,
-.raw-scope-marker-what:focus-visible { background: rgba(77, 249, 255, 0.26); }
+.raw-scope-marker-what:focus-visible { background: rgba(var(--di-cyan-rgb), 0.26); }
 
 /* The empty state had no max-width and had never carried more than one short
    sentence; the "made of code" line ran the full 1440px of the canvas as a
@@ -5473,7 +5503,7 @@
     display: inline-block;
     font-family: var(--di-mono);
     font-size: 11px;
-    color: rgba(244, 247, 251, 0.5);
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .raw-anatomy-disclosure {
@@ -5486,7 +5516,7 @@
     padding: 0 10px;
     border: 0;
     background: none;
-    color: rgba(244, 247, 251, 0.6);
+    color: rgba(255, 255, 255, 0.6);
     font-family: inherit;
     font-size: 11px;
     cursor: pointer;
@@ -5499,7 +5529,7 @@
 .raw-anatomy-code-note {
     margin: 4px 0 0;
     font-size: 11px;
-    color: rgba(244, 247, 251, 0.4);
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .raw-anatomy-code-note.is-refusal { color: var(--di-warning); }
@@ -5507,12 +5537,12 @@
 .raw-anatomy-code {
     margin: 6px 0 0;
     padding: 10px 12px;
-    background: #0a0a0a;
+    background: var(--di-surface);
     border-left: 2px solid rgba(255, 255, 255, 0.14);
     font-family: var(--di-mono);
     font-size: 11px;
     line-height: 1.5;
-    color: rgba(244, 247, 251, 0.78);
+    color: rgba(255, 255, 255, 0.78);
     /* Sideways inside its own box, never wrapped: wrapped code lies about
        where its lines end, and the window body must not scroll horizontally. */
     overflow-x: auto;
@@ -5537,17 +5567,17 @@
     z-index: 5;
     min-height: 44px;
     padding: 8px 18px;
-    background: rgba(10, 14, 18, 0.82);
-    color: rgba(77, 249, 255, 0.92);
-    border: 1px solid rgba(77, 249, 255, 0.45);
-    border-radius: 6px;
+    background: var(--di-scrim);
+    color: rgba(var(--di-cyan-rgb), 0.92);
+    border: 1px solid rgba(var(--di-cyan-rgb), 0.45);
+    border-radius: var(--di-radius);
     font-family: var(--di-mono);
     font-size: 13px;
     letter-spacing: 0.06em;
     cursor: pointer;
 }
-.raw-room-exit:hover { background: rgba(77, 249, 255, 0.14); }
-.raw-room-exit:focus-visible { outline: 2px solid rgba(77, 249, 255, 0.7); outline-offset: 2px; }
+.raw-room-exit:hover { background: rgba(var(--di-cyan-rgb), 0.14); }
+.raw-room-exit:focus-visible { outline: 2px solid rgba(var(--di-cyan-rgb), 0.7); outline-offset: 2px; }
 
 /* The projector cable: /out is a room and nothing else. Fixed and black so a
    reload flashes dark, not white, on a projector; the viewport shell inside
@@ -5555,7 +5585,7 @@
 .raw-out-surface {
     position: fixed;
     inset: 0;
-    background: #05070c;
+    background: var(--di-surface);
 }
 
 .raw-out-message {
@@ -5574,7 +5604,7 @@
     inset: 0;
     display: grid;
     place-items: center;
-    background: #05070c;
+    background: var(--di-surface);
 }
 
 .raw-monitor-panel canvas {
@@ -5619,10 +5649,10 @@
 .raw-button-panel-go {
     flex: 1;
     min-height: 64px;
-    border: 1px solid #2c6e4f;
-    border-radius: 6px;
-    background: #0d2018;
-    color: #7dffb8;
+    border: 1px solid rgba(var(--di-success-rgb), 0.4);
+    border-radius: var(--di-radius);
+    background: rgba(var(--di-success-rgb), 0.1);
+    color: var(--di-success);
     font-size: 18px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -5631,12 +5661,12 @@
 }
 
 .raw-button-panel-go:active {
-    background: #16563a;
-    color: #d2ffe8;
+    background: rgba(var(--di-success-rgb), 0.3);
+    color: var(--di-success);
 }
 
 .raw-button-panel-count {
-    color: rgba(244, 247, 251, 0.55);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 11px;
     text-align: center;
 }
@@ -5645,13 +5675,13 @@
 .raw-wire-notice {
     position: fixed;
     transform: translate(-50%, -130%);
-    background: rgba(10, 14, 22, 0.95);
-    border: 1px solid rgba(255, 107, 122, 0.55);
-    color: #ffb3bc;
-    font-family: var(--raw-mono, ui-monospace, monospace);
+    background: var(--di-scrim-strong);
+    border: 1px solid rgba(var(--di-danger-rgb), 0.55);
+    color: var(--di-danger);
+    font-family: var(--di-mono);
     font-size: 12px;
     padding: 6px 10px;
-    border-radius: 3px;
+    border-radius: var(--di-radius);
     pointer-events: none;
     z-index: 60;
     max-width: 260px;
@@ -5684,7 +5714,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    border-bottom: 1px solid rgba(244, 247, 251, 0.14);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
     padding-bottom: 6px;
     margin-bottom: 10px;
 }
@@ -5701,13 +5731,13 @@
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: rgba(244, 247, 251, 0.72);
+    color: rgba(255, 255, 255, 0.72);
 }
 
 .raw-list-count {
     font-size: 12px;
     font-variant-numeric: tabular-nums;
-    color: rgba(244, 247, 251, 0.4);
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .raw-list-rows {
@@ -5732,15 +5762,15 @@
     padding: 8px 10px;
     border: 1px solid transparent;
     border-radius: 0;
-    background: rgba(244, 247, 251, 0.04);
+    background: rgba(255, 255, 255, 0.04);
     font: inherit;
     font-size: 16px;
-    color: #f4f7fb;
+    color: var(--di-text);
 }
 
 .raw-list-text:focus-visible {
     outline: none;
-    border-color: rgba(110, 231, 249, 0.85);
+    border-color: rgba(var(--di-cyan-rgb), 0.85);
 }
 
 .raw-list-row-controls {
@@ -5753,42 +5783,42 @@
 .raw-list-btn {
     width: 44px;
     height: 44px;
-    border: 1px solid rgba(244, 247, 251, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 0;
     background: transparent;
-    color: rgba(244, 247, 251, 0.78);
+    color: rgba(255, 255, 255, 0.78);
     font-size: 15px;
     line-height: 1;
     cursor: pointer;
 }
 
-.raw-list-btn:hover:not(:disabled) { background: rgba(244, 247, 251, 0.08) }
+.raw-list-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08) }
 .raw-list-btn:disabled { opacity: 0.3; cursor: default }
-.raw-list-btn.is-danger:hover { border-color: #ff8a7a; color: #ff8a7a }
+.raw-list-btn.is-danger:hover { border-color: var(--di-danger); color: var(--di-danger) }
 
 .raw-list-move {
     height: 44px;
     max-width: 118px;
     padding: 0 8px;
-    border: 1px solid rgba(244, 247, 251, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 0;
     background: transparent;
-    color: rgba(244, 247, 251, 0.78);
+    color: rgba(255, 255, 255, 0.78);
     font: inherit;
     font-size: 13px;
 }
 
-.raw-list-move option { background: #0d1219; color: #f4f7fb }
+.raw-list-move option { background: var(--di-surface); color: var(--di-text) }
 
 .raw-list-add {
     align-self: flex-start;
     margin-top: 8px;
     min-height: 44px;
     padding: 0 14px;
-    border: 1px dashed rgba(244, 247, 251, 0.24);
+    border: 1px dashed rgba(255, 255, 255, 0.24);
     border-radius: 0;
     background: transparent;
-    color: rgba(244, 247, 251, 0.62);
+    color: rgba(255, 255, 255, 0.62);
     font: inherit;
     font-size: 14px;
     cursor: pointer;
@@ -5799,16 +5829,16 @@
    44px hit area — it just stops wearing a box until you reach for it. */
 .raw-list-group-head .raw-list-btn {
     border-color: transparent;
-    color: rgba(244, 247, 251, 0.4);
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .raw-list-group-head .raw-list-btn:hover {
-    border-color: #ff8a7a;
-    color: #ff8a7a;
+    border-color: var(--di-danger);
+    color: var(--di-danger);
 }
 
-.raw-list-add:hover { border-style: solid; color: #f4f7fb }
-.raw-list-add.is-group { border-color: rgba(110, 231, 249, 0.4); color: rgba(110, 231, 249, 0.9) }
+.raw-list-add:hover { border-style: solid; color: var(--di-text) }
+.raw-list-add.is-group { border-color: rgba(var(--di-cyan-rgb), 0.4); color: rgba(var(--di-cyan-rgb), 0.9) }
 
 /* The controls stack under the text on a phone rather than squeezing a
    44px row into 90px of leftover width. */
@@ -5830,7 +5860,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgba(244, 247, 251, 0.5);
+    color: rgba(255, 255, 255, 0.5);
     font-variant-numeric: tabular-nums;
     pointer-events: none;
 }

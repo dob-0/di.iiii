@@ -62,10 +62,24 @@ describe('dark theme text contrast', () => {
             expect(found, `${selector} must stay in landing.css`).toBeTruthy()
             return found[1]
         }
+        // Since the spine landed (2026-09-10) these values are tokens, not
+        // literals — `background: var(--di-scrim)`. The guard has to follow the
+        // token into base.css rather than demand a literal here, or "use the
+        // token" and "prove it is readable" become opposite instructions.
+        const resolve = (value) => {
+            let v = value.trim()
+            for (let hop = 0; hop < 4 && v.startsWith('var('); hop += 1) {
+                const name = v.slice(4, v.indexOf(')')).trim()
+                const declared = read('./base.css').match(new RegExp(`${name}:\\s*([^;]+);`))
+                expect(declared, `${name} must stay declared in base.css`).toBeTruthy()
+                v = declared[1].trim()
+            }
+            return rgbaValues(v)
+        }
         const decl = (body, prop) => {
-            const found = body.match(new RegExp(`${prop}:\\s*(rgba\\([^)]*\\))`))
-            expect(found, `${prop} in that rule must stay an explicit rgba`).toBeTruthy()
-            return rgbaValues(found[1])
+            const found = body.match(new RegExp(`${prop}:\\s*(rgba\\([^)]*\\)|var\\(--[a-z0-9-]+\\))`))
+            expect(found, `${prop} in that rule must stay an rgba or a token that resolves to one`).toBeTruthy()
+            return resolve(found[1])
         }
 
         const ghost = rule('.lp-hero-cta-row .landing-cta-ghost')

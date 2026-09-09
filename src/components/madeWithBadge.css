@@ -8,7 +8,7 @@
        site and a dark one alike, instead of a fixed cyan pill that only
        suited the platform's own dark theme. */
     color: rgba(255, 255, 255, 0.85);
-    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-family: var(--di-mono);
     font-size: 0.65rem;
     letter-spacing: 0.03em;
     text-decoration: none;
@@ -80,8 +80,8 @@
     mix-blend-mode: normal;
     opacity: 1;
     color: rgba(255, 255, 255, 0.92);
-    background: rgba(8, 10, 14, 0.92);
-    border-radius: 3px;
+    background: var(--di-scrim-strong);
+    border-radius: var(--di-radius);
 }
 
 @media (prefers-reduced-motion: reduce) {

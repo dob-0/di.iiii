@@ -12,7 +12,7 @@
     place-items: center;
     /* Fixed and full-bleed so nothing underneath shows at the edges, and so a
        short load cannot produce a scrollbar that appears and vanishes. */
-    background: #000;
+    background: var(--di-black);
     z-index: 9999;
 }
 

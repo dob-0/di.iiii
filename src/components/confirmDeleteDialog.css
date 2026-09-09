@@ -7,7 +7,7 @@
     display: grid;
     place-items: center;
     padding: 24px;
-    background: rgba(0, 0, 0, 0.62);
+    background: var(--di-scrim);
 }
 
 .confirm-scrim {
@@ -27,14 +27,14 @@
     flex-direction: column;
     gap: 12px;
     padding: 22px;
-    background: var(--di-surface, #0a0a0a);
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
-    color: var(--di-text, #fff);
-    font-family: var(--di-mono, monospace);
+    background: var(--di-surface);
+    border: 1px solid var(--di-cyan-border);
+    color: var(--di-text);
+    font-family: var(--di-mono);
 }
 
 .confirm-dialog.is-someone-elses {
-    border-color: var(--di-warning, #ffb347);
+    border-color: var(--di-warning);
 }
 
 .confirm-title {
@@ -54,11 +54,11 @@
 
 .confirm-names,
 .confirm-body {
-    color: var(--di-text-muted, rgba(255, 255, 255, 0.5));
+    color: var(--di-text-muted);
 }
 
 .confirm-warning {
-    color: var(--di-warning, #ffb347);
+    color: var(--di-warning);
 }
 
 .confirm-actions {
@@ -73,30 +73,30 @@
     min-height: 44px;
     min-width: 96px;
     padding: 10px 18px;
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    border: 1px solid var(--di-cyan-border);
     border-radius: 0;
-    background: var(--di-surface, #0a0a0a);
-    color: var(--di-text, #fff);
+    background: var(--di-surface);
+    color: var(--di-text);
     font: inherit;
     cursor: pointer;
 }
 
 .confirm-action:hover {
-    border-color: var(--di-cyan, #4df9ff);
-    background: var(--di-cyan-dim, rgba(77, 249, 255, 0.1));
+    border-color: var(--di-cyan);
+    background: var(--di-cyan-dim);
 }
 
 .confirm-action.is-danger {
-    border-color: var(--di-danger, #f25f5c);
-    color: var(--di-danger, #f25f5c);
+    border-color: var(--di-danger);
+    color: var(--di-danger);
 }
 
 .confirm-action.is-danger:hover {
-    background: rgba(242, 95, 92, 0.12);
+    background: rgba(var(--di-danger-rgb), 0.12);
 }
 
 .confirm-action:focus-visible {
-    outline: 1px solid var(--di-cyan, #4df9ff);
+    outline: 1px solid var(--di-cyan);
     outline-offset: 2px;
 }
 

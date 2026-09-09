@@ -18,7 +18,7 @@
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: rgba(3, 7, 14, 0.74);
+    background: var(--di-scrim);
     backdrop-filter: blur(7px);
     -webkit-backdrop-filter: blur(7px);
 }
@@ -93,7 +93,7 @@
     padding: 10px 14px;
     border: 1px solid var(--di-cyan-border);
     border-radius: 0;
-    background: rgba(77, 249, 255, 0.06);
+    background: var(--di-cyan-wash);
     color: var(--di-text);
     font: inherit;
     outline: none;

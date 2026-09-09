@@ -51,8 +51,8 @@
 .toggle-button.active {
     background: linear-gradient(135deg, var(--ui-accent-strong), var(--ui-accent));
     border-color: rgba(255,255,255,0.35);
-    color: #fff;
-    box-shadow: 0 8px 18px rgba(70,201,255,0.35);
+    color: var(--di-text);
+    box-shadow: 0 8px 18px rgba(var(--di-cyan-rgb), 0.35);
 }
 
 .slider-cluster .slider-row {
@@ -97,7 +97,7 @@
     color: var(--ui-text-primary);
     background: var(--ui-surface-muted);
     border: 1px solid var(--ui-border);
-    border-radius: 8px;
+    border-radius: var(--di-radius);
     cursor: pointer;
     outline: none;
     box-shadow: var(--ui-shadow);
@@ -109,22 +109,22 @@
     transform: translateY(-1px);
 }
 .toggle-button.success-button {
-    background: linear-gradient(135deg, #0f3f2f, #1a7b58);
-    border-color: rgba(30,203,146,0.45);
-    color: #b6ffe7;
+    background: rgba(var(--di-success-rgb), 0.16);
+    border-color: rgba(var(--di-success-rgb), 0.45);
+    color: var(--di-success);
 }
 .toggle-button.success-button:hover {
-    background: linear-gradient(135deg, #14523e, #1fb683);
-    border-color: rgba(82,246,194,0.9);
+    background: rgba(var(--di-success-rgb), 0.28);
+    border-color: rgba(var(--di-success-rgb), 0.9);
 }
 .toggle-button.warning-button {
-    background: linear-gradient(135deg, #4a2604, #7a4607);
-    border-color: rgba(255,187,59,0.5);
-    color: #ffdca1;
+    background: rgba(var(--di-warning-rgb), 0.16);
+    border-color: rgba(var(--di-warning-rgb), 0.5);
+    color: var(--di-warning);
 }
 .toggle-button.warning-button:hover {
-    background: linear-gradient(135deg, #5f3206, #a4600c);
-    border-color: rgba(255,210,99,0.9);
+    background: rgba(var(--di-warning-rgb), 0.28);
+    border-color: rgba(var(--di-warning-rgb), 0.9);
 }
 .toggle-button:disabled {
     opacity: 0.5;
@@ -162,8 +162,8 @@
 .hidden-ui-xr-button {
     min-width: 96px;
     padding: 7px 14px;
-    border-radius: 8px;
-    background: rgba(52, 58, 68, 0.64);
+    border-radius: var(--di-radius);
+    background: var(--di-surface-3);
     border-color: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.86);
     box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
@@ -173,7 +173,7 @@
 }
 
 .hidden-ui-xr-button:hover {
-    background: rgba(66, 73, 84, 0.78);
+    background: var(--di-surface-4);
     border-color: rgba(255, 255, 255, 0.18);
 }
 
@@ -200,17 +200,17 @@
 .collaboration-cursor-dot {
     width: 12px;
     height: 12px;
-    border-radius: 999px;
+    border-radius: var(--di-radius-pill);
     border: 2px solid rgba(255,255,255,0.92);
     background: linear-gradient(135deg, var(--ui-accent), var(--ui-success));
-    box-shadow: 0 0 0 4px rgba(70, 201, 255, 0.16);
+    box-shadow: 0 0 0 4px rgba(var(--di-cyan-rgb), 0.16);
 }
 
 .collaboration-cursor-label {
     padding: 4px 8px;
     border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 999px;
-    background: rgba(10, 16, 28, 0.92);
+    border-radius: var(--di-radius-pill);
+    background: var(--di-scrim-strong);
     color: var(--ui-text-primary);
     font-size: 11px;
     font-weight: 600;
@@ -222,13 +222,13 @@
 
 /* --- Style for the Clear All button --- */
 .top-right-controls .clear-button {
-    background-color: #e74c3c;
+    background-color: var(--di-danger);
     color: white;
-    border-color: #e74c3c;
+    border-color: var(--di-danger);
 }
 .top-right-controls .clear-button:hover {
-    background-color: #c0392b;
-    border-color: #c0392b;
+    background-color: var(--di-danger);
+    border-color: var(--di-danger);
 }
 
 /* --- Editor Toolbar --- */

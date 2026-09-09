@@ -120,7 +120,7 @@
     font-family: var(--di-mono);
     font-size: 0.85em;
     color: var(--di-text);
-    background: rgba(77, 249, 255, 0.08);
+    background: rgba(var(--di-cyan-rgb), 0.08);
     padding: 1px 5px;
 }
 
@@ -142,7 +142,7 @@
     max-width: 720px;
     margin: 24px auto 0;
     padding-top: 20px;
-    border-top: 1px solid rgba(77, 249, 255, 0.15);
+    border-top: 1px solid rgba(var(--di-cyan-rgb), 0.15);
 }
 
 .legal-footer-brand { font-weight: 700; letter-spacing: -0.03em; }
