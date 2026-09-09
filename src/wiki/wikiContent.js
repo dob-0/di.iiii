@@ -92,6 +92,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-01'
     },
     {
+        id: 'the-surface-bar',
+        category: 'Getting started',
+        title: 'The bar: where you are, and the way out',
+        summary: 'Every surface carries the same strip — Spaces, Studio, Nodes, Tools, Light, Wiki — and says which one you are on.',
+        body: [
+            'Every surface in di.iiii carries one bar along the top. On the left is the di.iiii wordmark, which always leads to Spaces, and — when the surface belongs to a space — the name of that space, which leads to it. On the right are the destinations, always the same six in the same order: Spaces, Studio, Nodes, Tools, Light, Wiki. The one you are on is stated in cyan and is not a link.',
+            'Standing inside a space, Studio and Nodes mean THAT space\'s studio and node canvas, not the general hub — so moving between the ways of working never loses the space you were in.',
+            'Light only appears where di.iiii is actually running on the machine you are using, because the lighting desk talks to fixtures on the local network. The lighting desk itself keeps its own denser, squarer look — it is read at arm\'s length in a dark booth — but it now carries a di.iiii link home, which it did not before.',
+            'The bar hides itself in a presentation: an embedded window, a preview thumbnail, and a headset are showing the work, not the tool.'
+        ],
+        tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw'],
+        updated: '2026-09-09'
+    },
+    {
         id: 'spaces-map-view',
         category: 'Spaces & access',
         title: 'Grid, List or Map: three ways to see your spaces, and how to arrange them',

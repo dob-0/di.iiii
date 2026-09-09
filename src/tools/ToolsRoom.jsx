@@ -1,6 +1,7 @@
 /* global __APP_VERSION__ */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import './toolsRoom.css'
+import SurfaceBar from '../components/SurfaceBar.jsx'
 import { DeskMark, LightMark, MapperMark, RawMark, StudioMark } from './toolMarks.jsx'
 import { listProjects } from '../project/services/projectsApi.js'
 import { listServerSpaces } from '../services/serverSpaces.js'
@@ -139,14 +140,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
 
     return (
         <div className="tr">
-            <div className="tr-bar">
-                <span><strong>di.iiii</strong></span>
-                <span className="tr-sep">·</span>
-                <span>tools</span>
-                <span className="tr-sep tr-host-sep">·</span>
-                <span className="tr-host">{typeof window === 'undefined' ? '' : window.location.host}</span>
-                <a href="/">back to spaces</a>
-            </div>
+            <SurfaceBar here="tools" isLocalInstall={isLocalInstall} />
 
             <div className="tr-page">
                 <h1 className="tr-title">Tools</h1>

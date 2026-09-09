@@ -18,6 +18,26 @@
   color-scheme: dark;   /* native widgets (selects, number spinners, scrollbars) render dark */
 }
 
+/* This desk does NOT load the platform's base.css and does not share its
+   tokens, and that is a decision, not an oversight (recorded 2026-09-09 when
+   the design audit flagged it): it is an instrument, read at arm's length in a
+   dark booth by someone whose hands are busy — denser, squarer and a step
+   lighter than the platform's ground so a fixture body stays legible next to a
+   pane. What it must share is the way home, below. */
+.homelink {
+  color: var(--text);
+  text-decoration: none;
+  font: 600 12px/1 var(--mono);
+  letter-spacing: 0.08em;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  white-space: nowrap;
+}
+
+.homelink:hover { border-color: var(--accent); color: var(--accent); }
+.homelink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }   /* beats the display rules below */
 html, body { height: 100%; }

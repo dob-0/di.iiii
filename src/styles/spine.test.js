@@ -26,6 +26,7 @@ const SPINE_FILES = [
     'studio/styles/studio-space-hub.css',
     'studio/styles/space-constellation.css',
     'tools/toolsRoom.css',
+    'components/surfaceBar.css',
 ]
 
 // Not yet converted, and honest about it. Each line is a debt, not an exemption:

@@ -20,8 +20,12 @@ const PLATFORM_HOME_SPACE_ID = 'main'
 
 export const isPlatformOwnSpace = (spaceId) => spaceId === PLATFORM_HOME_SPACE_ID
 
-export default function MadeWithBadge({ variant = 'floating', spaceId = null }) {
-    if (isPlatformOwnSpace(spaceId)) return null
+// `homeIsThisRoom` is what the suppression actually depends on: the badge is
+// pointless inside the room that `/` renders, and hiding it anywhere else takes
+// away the only exit a walked room has. On an install `/` is the Spaces list,
+// so `main` walked there had no way out at all until this was a prop.
+export default function MadeWithBadge({ variant = 'floating', spaceId = null, homeIsThisRoom = true }) {
+    if (homeIsThisRoom && isPlatformOwnSpace(spaceId)) return null
 
     return (
         <a

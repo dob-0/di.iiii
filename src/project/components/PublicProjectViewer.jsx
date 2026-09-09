@@ -1,5 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MadeWithBadge from '../../components/MadeWithBadge.jsx'
+import SurfaceBar from '../../components/SurfaceBar.jsx'
+import useLocalInstall from '../../hooks/useLocalInstall.js'
 import RoomTextLayer from './RoomTextLayer.jsx'
 import './roomTextLayer.css'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
@@ -101,6 +103,12 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     }, [state.document])
 
     const resolvedRouteSpaceId = spaceId || DEFAULT_PROJECT_SPACE_ID
+    // Standing in a room, the only way out was one badge to the whole Spaces
+    // grid — and inside `main` not even that, because the badge assumes `/`
+    // already IS this room. True for a visitor to di-studio.xyz, false on an
+    // install, where `/` is the Spaces list. So: on a machine that is running
+    // di.iiii, the room carries the bar and the space you are in stays named.
+    const localInstall = useLocalInstall()
 
     const applyIncomingDocument = useCallback((nextDocument) => {
         const normalized = normalizeProjectDocument({
@@ -400,7 +408,16 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
                 <button
                     type="button"
-                    style={{ ...overlayButtonStyle, position: 'absolute', top: '1rem', right: '1rem', zIndex: 20 }}
+                    style={{
+                        ...overlayButtonStyle,
+                        position: 'absolute',
+                        // Clears the surface bar when one is present — a control
+                        // half under the platform's own chrome is worse than no
+                        // chrome at all.
+                        top: localInstall.isLocal ? 'calc(1rem + var(--sbar-h, 36px))' : '1rem',
+                        right: '1rem',
+                        zIndex: 20,
+                    }}
                     onClick={() => setNavMode('walk')}
                 >
                     Walk / Fly
@@ -433,7 +450,20 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             {/* the host page carries its own badge; a second one inside the
                 window reads as chrome belonging to the work itself */}
             {state.status === 'ready' && navMode === 'orbit' && !isPreview && !isEmbed ? (
-                <MadeWithBadge variant="floating" spaceId={resolvedRouteSpaceId} />
+                <MadeWithBadge
+                    variant="floating"
+                    spaceId={resolvedRouteSpaceId}
+                    homeIsThisRoom={!localInstall.isLocal}
+                />
+            ) : null}
+
+            {localInstall.isLocal && !isPreview && !isEmbed ? (
+                <SurfaceBar
+                    float
+                    space={resolvedRouteSpaceId}
+                    spaceLabel={spaceLabel && spaceLabel !== 'di.iiii' ? spaceLabel : resolvedRouteSpaceId}
+                    isLocalInstall
+                />
             ) : null}
 
             {/* the loading screen is deliberately black and full-bleed, which is

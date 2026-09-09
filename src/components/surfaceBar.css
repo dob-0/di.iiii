@@ -1,0 +1,104 @@
+/* The bar. Written in the spine — every value here is a token from base.css,
+   and src/styles/spine.test.js keeps it that way. */
+
+:root {
+    /* What a surface under a floating bar has to clear. Read by the room's own
+       controls; changing the bar's height changes theirs in one place. */
+    --sbar-h: 36px;
+}
+
+.sbar {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    padding: 10px var(--di-space-3);
+    border-bottom: 1px solid var(--di-line);
+    background: var(--di-bg);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-label);
+    letter-spacing: 0.04em;
+    /* Above a canvas, below a modal. The bar must never be the thing a dialog
+       has to fight. */
+    position: relative;
+    z-index: 20;
+}
+
+.sbar-home {
+    color: var(--di-ink);
+    text-decoration: none;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+}
+
+.sbar-sep { color: var(--di-faint); }
+
+.sbar-where {
+    color: var(--di-success);
+    text-decoration: none;
+    /* A long space name must not push the way out off the edge of a phone. */
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sbar-where:hover { text-decoration: underline; }
+
+.sbar-links {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-3);
+    margin-left: auto;
+}
+
+.sbar-link {
+    color: var(--di-dim);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: var(--di-label-tracking);
+    transition: color var(--di-motion-base) ease;
+}
+
+.sbar-link:hover { color: var(--di-ink); }
+
+.sbar-link.is-here {
+    color: var(--di-cyan);
+    /* Where you are is stated, not clickable-looking. */
+    cursor: default;
+}
+
+/* Over a canvas that owns the whole window (the bare node workspace, a walked
+   room) the bar cannot take a row of its own — it floats on the top edge with
+   its own ground under it so it stays readable over anything. */
+.sbar--float {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: color-mix(in srgb, var(--di-bg) 82%, transparent);
+    backdrop-filter: blur(8px);
+    z-index: 60;
+}
+
+/* A phone: the bar scrolls sideways rather than wrapping into two rows over the
+   work, and the touch targets stay a finger wide. */
+@media (max-width: 720px) {
+    .sbar {
+        gap: var(--di-space-1);
+        padding: 8px var(--di-space-2);
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .sbar::-webkit-scrollbar { display: none; }
+
+    .sbar-links { gap: var(--di-space-2); }
+
+    .sbar-link,
+    .sbar-home {
+        padding: 6px 0;
+        white-space: nowrap;
+    }
+
+    .sbar-where { max-width: 30vw; }
+}

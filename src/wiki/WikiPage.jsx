@@ -3,6 +3,8 @@ import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import { WIKI_ARTICLES, WIKI_CATEGORIES } from './wikiContent.js'
 import './wiki.css'
+import SurfaceBar from '../components/SurfaceBar.jsx'
+import useLocalInstall from '../hooks/useLocalInstall.js'
 
 // Lazy, not static — same fix as LandingPage.jsx: a plain import ships the
 // three.js vendor chunk (1.47 MB) to every wiki reader, phones included,
@@ -30,6 +32,9 @@ export default function WikiPage() {
     // visitors (LandingPage avoids it for exactly that reason) — accepted here
     // to reuse the one canonical role check rather than invent a second.
     const { role } = useAuthSession()
+    // The lighting desk only exists where di.iiii is actually running, so the
+    // bar offers it only there.
+    const localInstall = useLocalInstall()
 
     useEffect(() => {
         document.body.classList.add('is-landing')
@@ -77,14 +82,13 @@ export default function WikiPage() {
                 <GridFloorBackground aria-hidden="true" interactive={false} />
             </Suspense>
 
-            <nav className="wiki-nav">
-                <a href="/" className="wiki-nav-logo">di<span className="wiki-dot">.</span>iiii</a>
-                <div className="wiki-nav-links">
-                    <a href="/" className="wiki-nav-link">← Home</a>
-                    <a href="/studio" className="wiki-nav-link">Studio</a>
-                    {role === 'admin' && <a href="/admin" className="wiki-nav-link">Admin</a>}
-                </div>
-            </nav>
+            {/* The wiki described Raw, Tools and the lighting desk in named
+                sections and linked to none of them; its own way home was a
+                fourth name ("← Home") for the screen three other surfaces
+                already called three other things. One bar, one set of names. */}
+            <SurfaceBar here="wiki" isLocalInstall={localInstall.isLocal}>
+                {role === 'admin' && <a className="sbar-link" href="/admin">Admin</a>}
+            </SurfaceBar>
 
             <header className="wiki-header">
                 <p className="wiki-eyebrow">Help &amp; Wiki</p>
