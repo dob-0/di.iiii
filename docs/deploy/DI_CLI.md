@@ -116,21 +116,29 @@ venue with no wifi runs exactly the same as one at a desk.
 uninstall physically cannot reach it. `di uninstall` removes the app and keeps
 your work; `di uninstall --with-data` is the only thing that deletes it.
 
-About 70 MB installed — a 3.1 MB download plus serverXR's production
-dependencies. The repo's own `node_modules` is 877 MB, which is why an artist
-gets a built runtime rather than a checkout.
+A 113.6 MB download, most of which is the studio's two pieces: algovrithm's
+31 reels and photogrammetry scan (88 MB) and the wcc exhibition microsite
+(25 MB), against ~15 MB of di.iiii itself. The repo's own `node_modules` is
+877 MB, which is why an artist gets a built runtime rather than a checkout.
 
-It used to be 170 MB from a 103 MB download, because the artifact carried
-di-studio.xyz along with the program: algovrithm's 31 reels and scan (88 MB),
-the wcc exhibition microsite (25 MB), and the site's own hosting furniture —
-against ~10 MB of di.iiii. The build now runs under `DI_PROFILE=local`, which
-leaves those out of the graph rather than deleting the files afterwards (see
-the local profile in `vite.config.js` — the reels were reached through
-`raw/director/pieces.js`, the general tool, not through the piece's own route,
-which is why the old `--lean` had to warn that a surface would show missing
-media). `npm run di:pack -- --full` builds the complete hosted shape for
-anyone who wants the pieces on their own machine; `--lean` is gone, and says
-so if you pass it.
+Three shapes come out of `npm run di:pack`, and the build writes which one it
+made into `dist/build-profile.json` so the packer cannot mislabel it:
+
+| command | what it carries | dist | tarball |
+| --- | --- | --- | --- |
+| `npm run di:pack` | the program and the works | 128 MB | 113.6 MB |
+| `npm run di:pack -- --slim` | the program alone | 15 MB | 4.7 MB |
+| `npm run di:pack -- --full` | the hosted shape, furniture and all | 128 MB | — |
+
+`--slim` is the artifact the local profile used to produce unconditionally.
+`DI_LOCAL_SLIM=1` leaves the works out of the graph rather than deleting the
+files afterwards (see the local profile in `vite.config.js` — the reels were
+reached through `raw/director/pieces.js`, the general tool, not through the
+piece's own route, which is why the old `--lean` had to warn that a surface
+would show missing media). It stopped being the default on 2026-09-10: an
+install that answers "this piece lives on di-studio.xyz" when its owner opens
+his own exhibition, on a machine with no internet, is not an offline install.
+`--lean` is gone, and says so if you pass it.
 
 Nothing is written outside `$HOME`. Nothing asks for sudo, on any OS.
 

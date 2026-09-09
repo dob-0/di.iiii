@@ -16,7 +16,7 @@ export function isPreviewRequest(search) {
 export const PREVIEW_READY_MESSAGE = 'dii:preview-ready'
 
 // The message a preview iframe posts when it has NOTHING to paint: under
-// DI_PROFILE=local a work's route is a stub (src/works/HostedPieceStub.jsx),
+// DI_LOCAL_SLIM=1 a work's route is a stub (src/works/HostedPieceStub.jsx),
 // a page of text with no canvas and no frame, so the paint watcher below would
 // never report and the host would sit on a black card until its backstop. The
 // stub says so instead, and the card draws its own line.

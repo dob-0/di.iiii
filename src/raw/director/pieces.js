@@ -42,7 +42,7 @@ export const PIECE_IDS = WORKS.filter((work) => work.director).map((work) => wor
  * Load a piece's descriptor. Async because a descriptor reaches the piece's
  * own modules — its sequences, its media bin — and the director must not put
  * those in the bundle everyone downloads. Returns null for an id no work
- * claims, and under DI_PROFILE=local for every work, since that build carries
+ * claims, and under DI_LOCAL_SLIM=1 for every work, since that build carries
  * no works at all. DirectorPanelWindow renders its empty state for both, which
  * is the truthful answer in each case.
  */

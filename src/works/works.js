@@ -10,12 +10,18 @@
  *
  * Why a registry rather than the platform importing each piece directly:
  *
- *   1. The offline install. `DI_PROFILE=local` builds di.iiii the program and
- *      leaves the works out — 123 MB of dist becomes 9.6 MB. That exclusion
- *      used to be a hand-typed list in vite.config.js, which meant a new work
- *      silently rejoined every artist's download while the build log still
- *      said "local profile". The profile reads THIS file now, so a work that
- *      is registered is a work the offline build already knows to leave out.
+ *   1. The offline install. Every build asks this file what a work IS — where
+ *      its entry points are, which public/ directory holds its media — so the
+ *      three shapes the repo produces (hosted, local, local-slim) all cut at
+ *      the same named seams. That used to be a hand-typed list in
+ *      vite.config.js, which meant a new work silently rejoined every artist's
+ *      download while the build log still said "local profile".
+ *
+ *      Which shape gets which is not decided here: see
+ *      src/works/buildProfile.js. Since 2026-09-10 a local install carries the
+ *      works — 128 MB of dist — because an install that cannot open the
+ *      owner's own exhibition offline is not an offline install. The 15 MB
+ *      strip survives as `DI_LOCAL_SLIM=1`.
  *
  *   2. Direction. Before this, 19 platform files imported from inside
  *      algovrithm — including the Raw director, a general tool, which reached

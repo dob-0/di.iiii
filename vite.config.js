@@ -5,7 +5,7 @@ import { execSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 // Plain data, no imports of its own — see the note at the top of that file.
-import { workAssetDirs, workEntries, workPublicDirs } from './src/works/works.js'
+import { resolveBuildProfile } from './src/works/buildProfile.js'
 import { isMeasuredFile } from './scripts/node-anatomy-lib.mjs'
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
@@ -95,17 +95,50 @@ const emitInstallScriptsPlugin = () => ({
     }
 })
 
+/**
+ * dist/build-profile.json — what this artifact IS, written by the build that
+ * made it.
+ *
+ * Three shapes come out of this repo and they share every filename, so the
+ * packer used to tell them apart by sniffing: "does dist/wcc exist, are there
+ * .mp4s in assets/". That worked only while a local build was the one without
+ * them. Now a local build has both, and a guess would either refuse a correct
+ * artifact or pack the wrong one and record the wrong profile in release.json.
+ *
+ * So the build says so, once, in a file the packer reads (scripts/pack-runtime.mjs).
+ */
+const emitBuildProfilePlugin = () => ({
+    name: 'emit-build-profile',
+    apply: 'build',
+    generateBundle() {
+        this.emitFile({
+            type: 'asset',
+            fileName: 'build-profile.json',
+            source: `${JSON.stringify({ profile: BUILD_PROFILE.profile, works: BUILD_PROFILE.works }, null, 2)}\n`
+        })
+    }
+})
+
 // ── the local profile ────────────────────────────────────────────────────────
 //
-// `DI_PROFILE=local` builds di.iiii the PROGRAM. The default build is
-// di-studio.xyz — the program plus the studio's own pieces, plus the hosting
-// furniture that only means anything on that domain — and that is 92% of the
-// download an artist gets from `curl … /get | sh`.
+// `DI_PROFILE=local` builds di.iiii for an artist's own machine: the program
+// and the studio's own pieces, without the hosting furniture that only means
+// anything on di-studio.xyz. `DI_LOCAL_SLIM=1` alongside it builds the program
+// ALONE — which is what `local` used to mean, and no longer does.
 //
-// What the studio's pieces cost, measured on a full build:
+// Why it changed. The strip was measured and correct and it broke the one
+// person it was built for: on the owner's own install, offline, /wcc answered
+// "this piece lives on di-studio.xyz" and /wcc/logos/wcc.svg 404'd. An install
+// that needs the internet to show you your own exhibition is not an offline
+// install. Asked to choose, he said "we need full" — so full is the default
+// and the small download is a flag someone asks for on purpose.
+//
+// What the studio's pieces cost, measured:
 //   88 MB   algovrithm — 31 reels (80.6) and scan.glb (7.4)
 //   25 MB   public/wcc — media for the WCC microsite (src/wccSite)
-//   ~10 MB  di.iiii itself: js, wasm, css, fonts, draco, basis
+//   ~15 MB  di.iiii itself: js, wasm, css, fonts, draco, basis, vendor
+//
+// Everything below is what DI_LOCAL_SLIM=1 does, unchanged.
 //
 // The reels are NOT pulled in by the algovrithm route. assetLibrary.js globs
 // its own assets/ folder eagerly, and raw/director/pieces.js imports that glob
@@ -124,7 +157,12 @@ const emitInstallScriptsPlugin = () => ({
 // The hosted build is untouched — no flag, no change. And a cut that misses is
 // an error, never a quiet full-size build: the transform below refuses rather
 // than shipping 88 MB while reporting success.
-const LOCAL_PROFILE = process.env.DI_PROFILE === 'local'
+//
+// The decisions themselves are data, in src/works/buildProfile.js, so they can
+// be asserted without paying for a build — src/works/localProfile.test.js.
+const BUILD_PROFILE = resolveBuildProfile(process.env)
+const LOCAL_PROFILE = BUILD_PROFILE.local
+const LOCAL_SLIM = BUILD_PROFILE.slim
 
 // A real file, not a virtual module: it needs the router, the works registry
 // and the preview protocol, and a component that lives in the tree can be
@@ -140,28 +178,15 @@ const HOSTED_ASSET_STUB = '\0di-local:hosted-asset'
 // build only knew about the works someone had remembered to tell it about. A
 // new work would have rejoined every artist's download in silence, with the
 // pack log still saying "local profile". One registry, two readers.
-const HOSTED_PIECE_ENTRIES = workEntries()
-const HOSTED_ASSET_DIRS = workAssetDirs().map((dir) => dir.replace(/^src\//, ''))
+const HOSTED_PIECE_ENTRIES = BUILD_PROFILE.stubEntries
+const HOSTED_ASSET_DIRS = BUILD_PROFILE.stubAssetDirs.map((dir) => dir.replace(/^src\//, ''))
 
-// public/ under the local profile: an include-list.
-//
-// vite copies publicDir wholesale and offers no filter, so the choice is
-// between copying everything and deleting afterwards, or naming what belongs.
-// Naming it means the next thing dropped into public/ for the website does not
-// silently become part of every artist's install — which is how the 25 MB wcc
-// microsite, the cPanel php shims and the site's OpenGraph images got there.
-// unicode-fonts: the Armenian glyph fallback for 3D text (public/unicode-fonts/README.md)
-// — without it a local install reaches for a CDN it does not have.
-// vendor: the pinned copies of three.js, Leaflet, cannon-es, marked and
-// es-module-shims that published pages load from /vendor/ instead of a CDN
-// (public/vendor/VENDOR.md) — without it an install 404s every one of them and
-// the pages that were rewritten to use them go black offline AND online.
-const LOCAL_PUBLIC_INCLUDE = ['fonts', 'draco', 'basis', 'suite', 'unicode-fonts', 'vendor']
-
-// Belt and braces: the include-list above already leaves a work's public
-// directory out, but if someone adds one to the list by accident the registry
-// says it does not belong in a copy of the program.
-const LOCAL_PUBLIC_EXCLUDE = workPublicDirs()
+// public/ under a local profile: an include-list, still — the program's own
+// directories, plus each work's own when the works are in this build. The list
+// and the reasoning live in src/works/buildProfile.js; a work's directory is
+// never typed here, it comes from the registry.
+const LOCAL_PUBLIC_INCLUDE = BUILD_PROFILE.publicInclude || []
+const LOCAL_PUBLIC_EXCLUDE = BUILD_PROFILE.publicExclude
 
 const localPublicDirPlugin = () => ({
     name: 'di-local-public-dir',
@@ -385,8 +410,9 @@ export default {
     root: 'src/',
     // An include-list, not a delete-list: under the local profile the public
     // directory is copied by localPublicDirPlugin, which names what a copy of
-    // the program needs (fonts, draco, basis, suite) and therefore cannot
-    // silently start shipping whatever gets dropped into public/ next.
+    // the program needs (fonts, draco, basis, suite, unicode-fonts, vendor)
+    // plus each work's own media, and therefore cannot silently start shipping
+    // whatever gets dropped into public/ next.
     publicDir: LOCAL_PROFILE ? false : '../public/',
     envDir: '../',
     // Keep the dep-optimizer cache in the WORKTREE, not in node_modules.
@@ -405,7 +431,12 @@ export default {
     define: {
         __APP_VERSION__: JSON.stringify(APP_VERSION),
         __APP_GIT_BRANCH__: JSON.stringify(APP_GIT_BRANCH),
-        __APP_GIT_COMMIT__: JSON.stringify(APP_GIT_COMMIT)
+        __APP_GIT_COMMIT__: JSON.stringify(APP_GIT_COMMIT),
+        // Which works are actually in THIS artifact. The front door used to
+        // hide its exhibition row on any local install, on the reasoning that
+        // the works were not in the download — true then, wrong now, and it
+        // was never the same question. A build fact belongs to the build.
+        __DI_WORKS__: JSON.stringify(BUILD_PROFILE.works)
     },
     resolve: {
         alias: {
@@ -415,8 +446,13 @@ export default {
     },
     plugins:
     [
-        // DI_PROFILE=local — di.iiii without the studio's own pieces
-        ...(LOCAL_PROFILE ? [localProfilePlugin(), localPublicDirPlugin()] : []),
+        // DI_PROFILE=local — di.iiii for an artist's own machine: the program
+        // and the works, without di-studio.xyz's hosting furniture.
+        ...(LOCAL_PROFILE ? [localPublicDirPlugin()] : []),
+        // …and DI_LOCAL_SLIM=1 on top of it — the program alone. This is the
+        // plugin that cuts the works out, so on a plain local build it is not
+        // installed at all rather than installed and inert.
+        ...(LOCAL_SLIM ? [localProfilePlugin()] : []),
 
         stubXrEmulatorPlugin(),
         // Restart server on static/public file change
@@ -427,6 +463,9 @@ export default {
 
         // Publish install.sh / install.ps1 as /get.sh and /get.ps1
         emitInstallScriptsPlugin(),
+
+        // dist/build-profile.json — which of the three shapes this dist is
+        emitBuildProfilePlugin(),
 
         // Save from the algovrithm director panel (dev only)
         algoVrithmSavePlugin(),

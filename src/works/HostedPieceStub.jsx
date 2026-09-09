@@ -6,12 +6,17 @@ import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
 import { isPreviewRequest, signalPreviewStub } from '../utils/previewMode.js'
 
 /**
- * What a work's route renders under DI_PROFILE=local.
+ * What a work's route renders under DI_LOCAL_SLIM=1.
  *
- * The local profile (vite.config.js) resolves every entry in the works
- * registry to THIS file, so the piece is not in the artifact at all. Nothing
- * imports it by name: it is reached only through that resolve, and the hosted
- * build never bundles it.
+ * The slim profile (vite.config.js) resolves every entry in the works registry
+ * to THIS file, so the piece is not in the artifact at all. Nothing imports it
+ * by name: it is reached only through that resolve, and neither the hosted
+ * build nor a plain `DI_PROFILE=local` one bundles it.
+ *
+ * It used to be what every local install showed, which is how the owner ended
+ * up unable to open his own WCC exhibition on his own machine. A local install
+ * carries the works now; this is for someone who asked for the small download
+ * on purpose, and who therefore knows what is missing.
  *
  * It used to be one sentence with no way out. On the festival machine the
  * front room's WCC and algovrithm doors landed here, and the only way back was
