@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- every tool got a door, the install got a padlocked name, and a space can now live on two machines at once
+- one word, three jobs: untangling "wcc"
 
 Full detail: `PROGRESS.md`.
 
