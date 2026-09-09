@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- one word, three jobs: untangling "wcc"
+- the general case of the wcc tangle: four lists, no agreement, and docs nothing checks
 
 Full detail: `PROGRESS.md`.
 
