@@ -111,6 +111,27 @@ export const buildPreferencesPath = (spaceId) => {
 }
 
 export const isReservedAppSegment = (value = '') => RESERVED_APP_SEGMENTS.includes((value || '').trim().toLowerCase())
+
+// A bare `/{reserved-word}` that no lane claimed — `/make`, `/light`,
+// `/projects`. The word is reserved precisely so no space can ever be named
+// it, which makes `GET /api/spaces/make` a question with a guaranteed answer:
+// 404. Asking anyway produced the generic not-found card — "there is no space
+// with that address, check the spelling" — which is wrong advice twice over
+// (the spelling was right; the thing exists, at a longer address) and, on a
+// hosted tier, was the only thing a visitor asking for the lighting desk ever
+// saw. Call this LAST in RootApp's dispatch, after every lane router has had
+// its chance: `/raw`, `/studio` and `/spaces` are bare reserved words too, and
+// they answer for themselves.
+export const getBareReservedSegment = (locationLike = null) => {
+    const resolvedLocation = locationLike || (typeof window !== 'undefined' ? window.location : null)
+    if (!resolvedLocation) return null
+    const relative = stripAppBasePath(resolvedLocation.pathname || '/')
+        .replace(/^\/+/g, '')
+        .replace(/\/+$/g, '')
+    if (!relative || relative.includes('/')) return null
+    const word = relative.trim().toLowerCase()
+    return isReservedAppSegment(word) ? word : null
+}
 export const isPreferencesPageSegment = (value = '') => APP_PAGE_PREFERENCES_ALIASES.includes((value || '').trim().toLowerCase())
 export const isWikiPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_WIKI
 export const isPrivacyPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_PRIVACY

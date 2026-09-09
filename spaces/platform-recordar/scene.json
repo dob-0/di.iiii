@@ -1,0 +1,2176 @@
+{
+  "ambientLight": {
+    "color": "#dc8add",
+    "intensity": 1.7
+  },
+  "assets": [
+    {
+      "createdAt": 1762952598565,
+      "id": "8ae0f1a339b808897a9c4f1897a5160e456278182b7e69f659277dbb369be10d",
+      "mimeType": "application/octet-stream",
+      "name": "danicloud2.glb",
+      "size": 296064,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/8ae0f1a339b808897a9c4f1897a5160e456278182b7e69f659277dbb369be10d"
+    },
+    {
+      "createdAt": 1762952843901,
+      "id": "0561e9b24c6472e92968b13234d3d4c9b56cafecee3ed3fed753fedcbed31c5d",
+      "mimeType": "application/octet-stream",
+      "name": "danimoon.glb",
+      "size": 567492,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/0561e9b24c6472e92968b13234d3d4c9b56cafecee3ed3fed753fedcbed31c5d"
+    },
+    {
+      "createdAt": 1762953590717,
+      "id": "af58890f40724abf397876c4a853e5ec152aee88290e4ea45c28fe6bece14ffd",
+      "mimeType": "application/octet-stream",
+      "name": "chudik.glb",
+      "size": 555784,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/af58890f40724abf397876c4a853e5ec152aee88290e4ea45c28fe6bece14ffd"
+    },
+    {
+      "createdAt": 1762953590760,
+      "id": "8c50fc1899b42a3e1baadd316153ee737f35cddd5689efbbb6a149b9be8ce6e6",
+      "mimeType": "application/octet-stream",
+      "name": "tree.glb",
+      "size": 629096,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/8c50fc1899b42a3e1baadd316153ee737f35cddd5689efbbb6a149b9be8ce6e6"
+    },
+    {
+      "createdAt": 1762953590807,
+      "id": "9a9e06e2be4065ae4e42b8d6f288220aabf38e7306ee40987ca8f05c8b3aa29a",
+      "mimeType": "application/octet-stream",
+      "name": "untitled.glb",
+      "size": 1874852,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/9a9e06e2be4065ae4e42b8d6f288220aabf38e7306ee40987ca8f05c8b3aa29a"
+    },
+    {
+      "createdAt": 1762954307725,
+      "id": "37826c243c9430b0add15c6d9244a9705e2a87c9846b1c996034969e9a18928a",
+      "mimeType": "application/octet-stream",
+      "name": "hornetqueen(1).glb",
+      "size": 209896,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/37826c243c9430b0add15c6d9244a9705e2a87c9846b1c996034969e9a18928a"
+    },
+    {
+      "createdAt": 1762954307742,
+      "id": "b1f5738b6fe7c002e8e38130a729a5755e1f828c13552b4d0c98fec56effd03a",
+      "mimeType": "application/octet-stream",
+      "name": "l100(2).glb",
+      "size": 1072836,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/b1f5738b6fe7c002e8e38130a729a5755e1f828c13552b4d0c98fec56effd03a"
+    },
+    {
+      "createdAt": 1762955216598,
+      "id": "293bacee46519c64ac1184cf6964fcbdf27588c17fa13c002bbac2bc31e2d879",
+      "mimeType": "video/mp4",
+      "name": "arthur.mp4",
+      "size": 15706988,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/293bacee46519c64ac1184cf6964fcbdf27588c17fa13c002bbac2bc31e2d879"
+    },
+    {
+      "createdAt": 1762955703115,
+      "id": "23e88fd0dcd4cae5310267a72ca9502319b188350277b9fd14360c40348cb459",
+      "mimeType": "video/mp4",
+      "name": "video (1).mp4",
+      "size": 34342378,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/23e88fd0dcd4cae5310267a72ca9502319b188350277b9fd14360c40348cb459"
+    },
+    {
+      "createdAt": 1762976655756,
+      "id": "0005629619eb3870f54d6aa590e86a768e06911a39ca6d5d89dd62d4b217eb2b",
+      "mimeType": "application/octet-stream",
+      "name": "danistar.glb",
+      "size": 263992,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/0005629619eb3870f54d6aa590e86a768e06911a39ca6d5d89dd62d4b217eb2b"
+    },
+    {
+      "createdAt": 1762978974469,
+      "id": "b293be7e-da6f-4dc9-a72c-279f405d7537",
+      "mimeType": "video/webm",
+      "name": "IMG_6276.webm",
+      "size": 1389603,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/b293be7e-da6f-4dc9-a72c-279f405d7537"
+    },
+    {
+      "createdAt": 1762979913351,
+      "id": "8cae42d5-2e9d-4aaf-8332-154b7b8f8ab0",
+      "mimeType": "image/webp",
+      "name": "DASHA.webp",
+      "size": 200560,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/8cae42d5-2e9d-4aaf-8332-154b7b8f8ab0"
+    },
+    {
+      "createdAt": 1762980551204,
+      "id": "1ccd00e1-c1dc-47d5-ad91-4bd10aba35b3",
+      "mimeType": "image/webp",
+      "name": "DANI.webp",
+      "size": 256462,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/1ccd00e1-c1dc-47d5-ad91-4bd10aba35b3"
+    },
+    {
+      "createdAt": 1762981428508,
+      "id": "3eb728ee-6304-4339-aef5-75d89d78e6f5",
+      "mimeType": "image/webp",
+      "name": "MO.webp",
+      "size": 504380,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/3eb728ee-6304-4339-aef5-75d89d78e6f5"
+    },
+    {
+      "createdAt": 1762983392451,
+      "id": "03ff2475-99c9-4714-83e6-28eb792139d5",
+      "mimeType": "video/webm",
+      "name": "IMG_0303.webm",
+      "size": 968100,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/03ff2475-99c9-4714-83e6-28eb792139d5"
+    },
+    {
+      "createdAt": 1763054537744,
+      "id": "07e938ee-e377-4eed-ac78-2fd922bc2656",
+      "mimeType": "image/webp",
+      "name": "veronica.webp",
+      "size": 308764,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/07e938ee-e377-4eed-ac78-2fd922bc2656"
+    },
+    {
+      "createdAt": 1763576816190,
+      "id": "4c729a46-002a-41a5-b0c7-3395a7f1a330",
+      "mimeType": "image/webp",
+      "name": "plat.webp",
+      "size": 240314,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/4c729a46-002a-41a5-b0c7-3395a7f1a330"
+    },
+    {
+      "createdAt": 1763577156187,
+      "id": "9d0cdbf1-5f4a-4ea1-b638-4f345186b9c7",
+      "mimeType": "image/webp",
+      "name": "erkar 2.webp",
+      "size": 307128,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/9d0cdbf1-5f4a-4ea1-b638-4f345186b9c7"
+    },
+    {
+      "createdAt": 1785980401115,
+      "id": "c51b190ec5e6d3fe13c40474d897269625581ca899f68eecc17ab2559ac7e81b",
+      "mimeType": "model/gltf-binary",
+      "name": "platform-recordar-inline-1.glb",
+      "size": 20852,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/c51b190ec5e6d3fe13c40474d897269625581ca899f68eecc17ab2559ac7e81b"
+    },
+    {
+      "createdAt": 1785980402163,
+      "id": "28eb5fcadd14f664efd30c8f63086bb16ff984a55f51df801e0a2246b49bd85d",
+      "mimeType": "model/gltf-binary",
+      "name": "platform-recordar-inline-2.glb",
+      "size": 14956,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/28eb5fcadd14f664efd30c8f63086bb16ff984a55f51df801e0a2246b49bd85d"
+    },
+    {
+      "createdAt": 1785980403319,
+      "id": "6643ed9a62d1f2796de572db4eaf60c1ba6eeea7666b8a9852179f8ce1014f0a",
+      "mimeType": "model/gltf-binary",
+      "name": "platform-recordar-inline-3.glb",
+      "size": 80180,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/6643ed9a62d1f2796de572db4eaf60c1ba6eeea7666b8a9852179f8ce1014f0a"
+    },
+    {
+      "createdAt": 1785980404435,
+      "id": "59db5f5efda47e9415d6e12ff70495f6187ad32456ba14a618329b02ce62353d",
+      "mimeType": "model/gltf-binary",
+      "name": "platform-recordar-inline-4.glb",
+      "size": 60864,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/59db5f5efda47e9415d6e12ff70495f6187ad32456ba14a618329b02ce62353d"
+    },
+    {
+      "createdAt": 1785980405687,
+      "id": "f4e24d398f4ddaac68f6948e4e0ef4422566515472ce6211ca5a2f1a18d57cf7",
+      "mimeType": "model/gltf-binary",
+      "name": "platform-recordar-inline-5.glb",
+      "size": 132148,
+      "url": "/serverXR/api/spaces/platform-recordar/assets/f4e24d398f4ddaac68f6948e4e0ef4422566515472ce6211ca5a2f1a18d57cf7"
+    }
+  ],
+  "assetsBaseUrl": "https://di-studio.xyz/serverXR/api/spaces/platform_recordar/assets",
+  "backgroundColor": "#eaebe0",
+  "default3DView": {
+    "position": [
+      0,
+      1.6,
+      4
+    ],
+    "target": [
+      0,
+      1,
+      0
+    ]
+  },
+  "defaultSceneVersion": null,
+  "directionalLight": {
+    "color": "#bababa",
+    "intensity": 2.25,
+    "position": [
+      -8,
+      12,
+      5
+    ]
+  },
+  "gridAppearance": {
+    "cellSize": 0.75,
+    "cellThickness": 0.75,
+    "fadeDistance": 117,
+    "fadeStrength": 1,
+    "offset": 0.03,
+    "sectionSize": 6,
+    "sectionThickness": 1.2
+  },
+  "gridSize": 1000,
+  "isGizmoVisible": true,
+  "isGridVisible": true,
+  "isPerfVisible": false,
+  "objects": [
+    {
+      "assetRef": {
+        "createdAt": 1785980401115,
+        "id": "c51b190ec5e6d3fe13c40474d897269625581ca899f68eecc17ab2559ac7e81b",
+        "mimeType": "model/gltf-binary",
+        "name": "platform-recordar-inline-1.glb",
+        "size": 20852
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762453325537,
+      "isVisible": true,
+      "modelColor": "#ffffff",
+      "position": [
+        -19,
+        -10,
+        -7
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        2.7755575615628914e-16,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        2.5,
+        5.7,
+        2.6
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1785980402163,
+        "id": "28eb5fcadd14f664efd30c8f63086bb16ff984a55f51df801e0a2246b49bd85d",
+        "mimeType": "model/gltf-binary",
+        "name": "platform-recordar-inline-2.glb",
+        "size": 14956
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762453379904,
+      "isVisible": true,
+      "modelColor": "#ffffff",
+      "position": [
+        -23,
+        -10,
+        -11
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        5.551115123125782e-16,
+        2.3551386880256624e-16,
+        -3.1415926535897927
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        -7.800000000000001,
+        20.900000000000002,
+        13.200000000000001
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "assetRef": null,
+      "color": "#000000",
+      "data": "greta video text",
+      "fontFamily": "Arial",
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762458798863,
+      "isVisible": true,
+      "position": [
+        14,
+        0,
+        5
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        0,
+        0.1,
+        0.1
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-2d"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1785980403319,
+        "id": "6643ed9a62d1f2796de572db4eaf60c1ba6eeea7666b8a9852179f8ce1014f0a",
+        "mimeType": "model/gltf-binary",
+        "name": "platform-recordar-inline-3.glb",
+        "size": 80180
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762459747176,
+      "isVisible": true,
+      "position": [
+        8,
+        -3,
+        -64
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        0,
+        -0.2617993877991494,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        2.7,
+        2.7,
+        2.7
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1785980404435,
+        "id": "59db5f5efda47e9415d6e12ff70495f6187ad32456ba14a618329b02ce62353d",
+        "mimeType": "model/gltf-binary",
+        "name": "platform-recordar-inline-4.glb",
+        "size": 60864
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762503395125,
+      "isVisible": true,
+      "position": [
+        30,
+        1,
+        -31
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        3.141592653589793,
+        -1.1102230246251565e-16,
+        -3.141592653589793
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        26,
+        20.400000000000002,
+        29
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1785980405687,
+        "id": "f4e24d398f4ddaac68f6948e4e0ef4422566515472ce6211ca5a2f1a18d57cf7",
+        "mimeType": "model/gltf-binary",
+        "name": "platform-recordar-inline-5.glb",
+        "size": 132148
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762503483822,
+      "isVisible": true,
+      "modelColor": "#ffffff",
+      "position": [
+        -45,
+        -1,
+        18
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        -4.17288277686834e-18,
+        1.5707963267948966,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        27.3,
+        25.3,
+        27.8
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#ffffff",
+      "data": "G.URBAN",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_regular",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762952364689.0054,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        -16,
+        -10,
+        -7
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        5.551115123125783e-16,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1.6,
+        2.3000000000000003,
+        2
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    },
+    {
+      "applyModelColor": false,
+      "assetRef": {
+        "createdAt": 1762952598565,
+        "id": "8ae0f1a339b808897a9c4f1897a5160e456278182b7e69f659277dbb369be10d",
+        "mimeType": "application/octet-stream",
+        "name": "danicloud2.glb",
+        "size": 296064
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762952598621.6467,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "modelColor": "#ffffff",
+      "opacity": 1,
+      "position": [
+        31,
+        0.05,
+        -22
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        0.03450007639203532,
+        -0.5105260316210677,
+        0.04817573540708582
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        56,
+        48.2,
+        42.300000000000004
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "applyModelColor": false,
+      "assetRef": {
+        "createdAt": 1762952843901,
+        "id": "0561e9b24c6472e92968b13234d3d4c9b56cafecee3ed3fed753fedcbed31c5d",
+        "mimeType": "application/octet-stream",
+        "name": "danimoon.glb",
+        "size": 567492
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762952843935.6956,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "modelColor": "#ffffff",
+      "opacity": 1,
+      "position": [
+        31,
+        1,
+        -32
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        39,
+        35.300000000000004,
+        76.10000000000001
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "applyModelColor": false,
+      "assetRef": {
+        "createdAt": 1762953590717,
+        "id": "af58890f40724abf397876c4a853e5ec152aee88290e4ea45c28fe6bece14ffd",
+        "mimeType": "application/octet-stream",
+        "name": "chudik.glb",
+        "size": 555784
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762953590734.6123,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "modelColor": "#ffffff",
+      "opacity": 1,
+      "position": [
+        28,
+        2,
+        42
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        -3.141592653589793,
+        -0.7853981633974482,
+        -3.141592653589793
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        42.5,
+        39.7,
+        44
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "applyModelColor": false,
+      "assetRef": {
+        "createdAt": 1762953590760,
+        "id": "8c50fc1899b42a3e1baadd316153ee737f35cddd5689efbbb6a149b9be8ce6e6",
+        "mimeType": "application/octet-stream",
+        "name": "tree.glb",
+        "size": 629096
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762953590786.7356,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "modelColor": "#ffffff",
+      "opacity": 1,
+      "position": [
+        29,
+        0,
+        48
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        0,
+        0.7853981633974482,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        22.400000000000002,
+        22.400000000000002,
+        22.400000000000002
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "applyModelColor": false,
+      "assetRef": {
+        "createdAt": 1762953590807,
+        "id": "9a9e06e2be4065ae4e42b8d6f288220aabf38e7306ee40987ca8f05c8b3aa29a",
+        "mimeType": "application/octet-stream",
+        "name": "untitled.glb",
+        "size": 1874852
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762953590843.827,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "modelColor": "#ffffff",
+      "opacity": 1,
+      "position": [
+        17,
+        -2,
+        52
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        -3.141592653589793,
+        -1.0471975511965974,
+        3.141592653589793
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        28.3,
+        30.3,
+        34
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "applyModelColor": false,
+      "assetRef": {
+        "createdAt": 1762954307725,
+        "id": "37826c243c9430b0add15c6d9244a9705e2a87c9846b1c996034969e9a18928a",
+        "mimeType": "application/octet-stream",
+        "name": "hornetqueen(1).glb",
+        "size": 209896
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762954307742.0051,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "modelColor": "#0062ff",
+      "opacity": 1,
+      "position": [
+        -21,
+        15,
+        -4
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1.5,
+        1.5,
+        1.5
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "applyModelColor": false,
+      "assetRef": {
+        "createdAt": 1762954307742,
+        "id": "b1f5738b6fe7c002e8e38130a729a5755e1f828c13552b4d0c98fec56effd03a",
+        "mimeType": "application/octet-stream",
+        "name": "l100(2).glb",
+        "size": 1072836
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762954307812.1174,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "modelColor": "#802828",
+      "opacity": 1,
+      "position": [
+        -15,
+        18,
+        -6
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        0.10712481115028823,
+        0.37996824461564405,
+        -0.2437654073317777
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        0.8,
+        1.8,
+        0.8
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1762955216598,
+        "id": "293bacee46519c64ac1184cf6964fcbdf27588c17fa13c002bbac2bc31e2d879",
+        "mimeType": "video/mp4",
+        "name": "arthur.mp4",
+        "size": 15706988
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762955216654.1638,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "opacity": 1,
+      "position": [
+        39.5,
+        6.5,
+        6
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948981,
+        -0.020796326794896142,
+        1.5707963267948988
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        4.3,
+        4.3,
+        4.3
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "video"
+    },
+    {
+      "assetRef": null,
+      "color": "#ffcc00",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762955354265.9758,
+      "isVisible": true,
+      "linkActive": true,
+      "linkUrl": "https://www.youtube.com/watch?v=AoURuruSEa0",
+      "position": [
+        6,
+        0,
+        22
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        4.7,
+        4.2,
+        4.7
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "sphereRadius": 0.5,
+      "type": "sphere"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1762955703115,
+        "id": "23e88fd0dcd4cae5310267a72ca9502319b188350277b9fd14360c40348cb459",
+        "mimeType": "video/mp4",
+        "name": "video (1).mp4",
+        "size": 34342378
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762955703242.5557,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "opacity": 1,
+      "position": [
+        -5,
+        3,
+        -40
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948972,
+        -1.5700924586837754e-16,
+        1.232595164407831e-32
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        2,
+        0.6000000000000001,
+        2.5
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "video"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#fbff00",
+      "data": "by:",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_bold",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762968125703.1204,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        -22,
+        -10,
+        -7
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        5.551115123125783e-16,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1.9000000000000001,
+        1.7000000000000002,
+        2.1
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    },
+    {
+      "applyModelColor": false,
+      "assetRef": {
+        "createdAt": 1762976655756,
+        "id": "0005629619eb3870f54d6aa590e86a768e06911a39ca6d5d89dd62d4b217eb2b",
+        "mimeType": "application/octet-stream",
+        "name": "danistar.glb",
+        "size": 263992
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762976655911.6511,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "materialsAssetRef": null,
+      "modelColor": "#ffffff",
+      "modelFormat": "gltf",
+      "opacity": 1,
+      "position": [
+        30,
+        1,
+        -26
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        0,
+        -1.308996938995748,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        66.3,
+        56.800000000000004,
+        66.3
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "model"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1762978974469,
+        "id": "b293be7e-da6f-4dc9-a72c-279f405d7537",
+        "mimeType": "video/webm",
+        "name": "IMG_6276.webm",
+        "size": 1389603
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762978974531.307,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "opacity": 1,
+      "position": [
+        -20,
+        6.5,
+        43
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948972,
+        2.581268532253489e-15,
+        3.0853981633974485
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        5.800000000000001,
+        4.9,
+        4.9
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "video"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1762979913351,
+        "id": "8cae42d5-2e9d-4aaf-8332-154b7b8f8ab0",
+        "mimeType": "image/webp",
+        "name": "DASHA.webp",
+        "size": 200560
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762979913433.5193,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "opacity": 1,
+      "position": [
+        -43.9,
+        5.24,
+        -32.6
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948963,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        5,
+        5,
+        3.5
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "image"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1762980551204,
+        "id": "1ccd00e1-c1dc-47d5-ad91-4bd10aba35b3",
+        "mimeType": "image/webp",
+        "name": "DANI.webp",
+        "size": 256462
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762980551261.0222,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "opacity": 1,
+      "position": [
+        -49.6,
+        5.179999999999999,
+        -38
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948972,
+        4.440892098500626e-16,
+        1.5707963267948972
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        2.7,
+        2.3000000000000003,
+        3.5
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "image"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1762981428508,
+        "id": "3eb728ee-6304-4339-aef5-75d89d78e6f5",
+        "mimeType": "image/webp",
+        "name": "MO.webp",
+        "size": 504380
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762981428563.8325,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "opacity": 1,
+      "position": [
+        -38.45,
+        5.25,
+        -38
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948963,
+        4.440892098500626e-16,
+        -1.5707963267948963
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        2.4000000000000004,
+        2,
+        3.5
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "image"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1762983392451,
+        "id": "03ff2475-99c9-4714-83e6-28eb792139d5",
+        "mimeType": "video/webm",
+        "name": "IMG_0303.webm",
+        "size": 968100
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762983392508.8499,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "opacity": 1,
+      "position": [
+        -70,
+        3,
+        -5
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.550708423677158,
+        0,
+        -1.5800000000000003
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        3,
+        3,
+        2.9999999999999996
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "video"
+    },
+    {
+      "assetRef": null,
+      "boxSize": [
+        1,
+        1,
+        1
+      ],
+      "color": "#0000ff",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1762985544505.114,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        -44,
+        0,
+        -38
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        0,
+        0.01,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        11,
+        10.5,
+        10.5
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "box"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#ffffff",
+      "data": "Stone prints by\n\n\nMO\n\nDasha \n\nDaniel Ndayashime\n\nVeronika Balakirieva",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_regular",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763054092709.6987,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        -39,
+        6,
+        -43
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.570796326794897,
+        -2.465190328815662e-32,
+        3.141592653589793
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1.2000000000000002,
+        2.9000000000000004,
+        1
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1763054537744,
+        "id": "07e938ee-e377-4eed-ac78-2fd922bc2656",
+        "mimeType": "image/webp",
+        "name": "veronica.webp",
+        "size": 308764
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763054537764.476,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "opacity": 1,
+      "position": [
+        -44,
+        10.5,
+        -38
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        2.5200000000000005,
+        4.86,
+        3.6
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "image"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1763576816190,
+        "id": "4c729a46-002a-41a5-b0c7-3395a7f1a330",
+        "mimeType": "image/webp",
+        "name": "plat.webp",
+        "size": 240314
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763576816225.681,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "opacity": 1,
+      "position": [
+        -9.792592592592591,
+        3.6,
+        -1
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948961,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        2.7104000000000013,
+        2.7104000000000013,
+        3.2912000000000012
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "image"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1763577156187,
+        "id": "9d0cdbf1-5f4a-4ea1-b638-4f345186b9c7",
+        "mimeType": "image/webp",
+        "name": "erkar 2.webp",
+        "size": 307128
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763577156238.9314,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "opacity": 1,
+      "position": [
+        9.18518518518519,
+        3.6,
+        -1
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948963,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        2.660000000000001,
+        2.660000000000001,
+        3.230000000000001
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "image"
+    },
+    {
+      "assetRef": {
+        "createdAt": 1763579756778,
+        "id": "2022u52jt",
+        "mimeType": "image/webp",
+        "name": "erkar 3.webp",
+        "size": 313462
+      },
+      "color": "#ff0000",
+      "data": null,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763579756813.498,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "opacity": 1,
+      "position": [
+        -29.3925925925926,
+        3.6,
+        -1
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948961,
+        0,
+        0
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        2.7104000000000013,
+        2.7104000000000013,
+        3.2912000000000012
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "image"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#2b00ff",
+      "data": "John Avalencher",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_regular",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763580167030.0225,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        -18,
+        14,
+        -6
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948966,
+        1.1102230246251565e-16,
+        -0.523598775598299
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#2b00ff",
+      "data": "Dasha",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_regular",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763580368616.893,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        -10.3,
+        7,
+        -40
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948963,
+        3.0814879110195774e-33,
+        -3.925231146709437e-17
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#2b00ff",
+      "data": "Daniel Ndayishimiye",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_regular",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763582749375.407,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        27,
+        6,
+        -31
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948963,
+        -1.1102230246251565e-16,
+        0.7853981633974483
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#2b00ff",
+      "data": "Stone printings",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_regular",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763582953114.8386,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        -47,
+        -2,
+        -37
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948963,
+        3.0814879110195774e-33,
+        -3.925231146709437e-17
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#2b00ff",
+      "data": "Greta Grigoryan",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_regular",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763583521444.5674,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        -70,
+        8,
+        2.5
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948966,
+        1.1102230246251565e-16,
+        -1.5707963267948966
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        0.9999999999999999,
+        0.9999999999999999,
+        0.9999999999999999
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#2b00ff",
+      "data": "MO",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_regular",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763584059796.2297,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        -42,
+        8,
+        19
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.570796326794897,
+        2.7755575615628914e-16,
+        -2.617993877991494
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#2b00ff",
+      "data": "Arthur Stainer",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_regular",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763584333113.7026,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        42.5,
+        14,
+        -6
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948972,
+        0,
+        1.5707963267948972
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#2b00ff",
+      "data": "Ibrahim Hatahet",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_regular",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763584447854.4634,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        -8.5,
+        14.5,
+        42
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.5707963267948972,
+        9.860761315262648e-32,
+        -3.1415926535897927
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    },
+    {
+      "assetRef": null,
+      "bevelEnabled3D": true,
+      "bevelSize3D": 0.01,
+      "bevelThickness3D": 0.02,
+      "color": "#2b00ff",
+      "data": "Veronika Balakirieva",
+      "depth3D": 0.2,
+      "font3D": "helvetiker_regular",
+      "fontSize3D": 0.5,
+      "fontStyle": "normal",
+      "fontWeight": "normal",
+      "id": 1763585424178.6023,
+      "isVisible": true,
+      "linkActive": false,
+      "linkUrl": "",
+      "position": [
+        35,
+        8,
+        36
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotation": [
+        1.570796326794897,
+        -3.885780586188048e-16,
+        2.0943951023931966
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ],
+      "type": "text-3d"
+    }
+  ],
+  "presentation": {
+    "fixedCamera": {
+      "far": 200,
+      "fov": 60,
+      "locked": true,
+      "near": 0.1,
+      "position": [
+        0,
+        1.6,
+        4
+      ],
+      "projection": "perspective",
+      "target": [
+        0,
+        1,
+        0
+      ],
+      "zoom": 1
+    },
+    "html": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>XR Studio / Deploy View</title>\n    <style>\n      :root {\n        color-scheme: dark;\n        --bg: #090c10;\n        --bg-secondary: #10151c;\n        --panel: rgba(15, 20, 28, 0.88);\n        --panel-strong: rgba(18, 24, 34, 0.94);\n        --line: rgba(255, 255, 255, 0.1);\n        --text: #eef3ff;\n        --muted: #98a4bb;\n        --accent: #6ee7ff;\n        --accent-strong: #9bff8a;\n      }\n\n      * {\n        box-sizing: border-box;\n      }\n\n      body {\n        margin: 0;\n        min-height: 100vh;\n        font-family: \"Space Grotesk\", \"Inter\", system-ui, sans-serif;\n        background:\n          radial-gradient(circle at 10% 10%, rgba(110, 231, 255, 0.18), transparent 30%),\n          radial-gradient(circle at 90% 15%, rgba(155, 255, 138, 0.12), transparent 26%),\n          linear-gradient(180deg, #0b0f15 0%, #090c10 100%);\n        color: var(--text);\n      }\n\n      .shell {\n        min-height: 100vh;\n        display: grid;\n        grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.95fr);\n      }\n\n      .hero,\n      .rail {\n        padding: clamp(24px, 4vw, 48px);\n      }\n\n      .hero {\n        display: flex;\n        flex-direction: column;\n        justify-content: space-between;\n        gap: 32px;\n        border-right: 1px solid var(--line);\n      }\n\n      .kicker,\n      .label {\n        font-size: 11px;\n        font-weight: 700;\n        letter-spacing: 0.22em;\n        text-transform: uppercase;\n        color: var(--accent);\n      }\n\n      h1 {\n        margin: 18px 0 18px;\n        max-width: 9ch;\n        font-size: clamp(3rem, 7vw, 6.6rem);\n        line-height: 0.92;\n        letter-spacing: -0.06em;\n      }\n\n      .lead {\n        max-width: 56ch;\n        margin: 0;\n        font-size: 1.02rem;\n        line-height: 1.8;\n        color: var(--muted);\n      }\n\n      .hero-grid {\n        display: grid;\n        grid-template-columns: repeat(3, minmax(0, 1fr));\n        gap: 14px;\n      }\n\n      .metric,\n      .panel {\n        border: 1px solid var(--line);\n        background: var(--panel);\n        backdrop-filter: blur(18px);\n      }\n\n      .metric {\n        min-height: 112px;\n        padding: 18px;\n      }\n\n      .metric strong {\n        display: block;\n        margin-top: 10px;\n        font-size: 1.15rem;\n      }\n\n      .metric span,\n      .panel p,\n      .panel li {\n        color: var(--muted);\n      }\n\n      .rail {\n        display: flex;\n        flex-direction: column;\n        gap: 16px;\n        background: linear-gradient(180deg, rgba(16, 21, 28, 0.92), rgba(9, 12, 16, 0.96));\n      }\n\n      .panel {\n        padding: 18px;\n        background: var(--panel-strong);\n      }\n\n      .panel h2 {\n        margin: 10px 0 12px;\n        font-size: 1rem;\n        letter-spacing: -0.03em;\n      }\n\n      .panel p {\n        margin: 0;\n        line-height: 1.7;\n      }\n\n      .panel ul {\n        margin: 12px 0 0;\n        padding-left: 18px;\n        line-height: 1.7;\n      }\n\n      .cta-row {\n        display: flex;\n        flex-wrap: wrap;\n        gap: 12px;\n      }\n\n      .button {\n        display: inline-flex;\n        align-items: center;\n        justify-content: center;\n        min-height: 46px;\n        padding: 0 18px;\n        border: 1px solid var(--line);\n        text-decoration: none;\n        color: var(--text);\n        background: rgba(255, 255, 255, 0.02);\n      }\n\n      .button.primary {\n        color: #071017;\n        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);\n        border-color: transparent;\n        font-weight: 700;\n      }\n\n      .code {\n        font-family: \"JetBrains Mono\", \"SFMono-Regular\", Consolas, monospace;\n        font-size: 0.86rem;\n        color: #c7d3e8;\n      }\n\n      @media (max-width: 960px) {\n        .shell {\n          grid-template-columns: 1fr;\n        }\n\n        .hero {\n          border-right: 0;\n          border-bottom: 1px solid var(--line);\n        }\n\n        .hero-grid {\n          grid-template-columns: 1fr;\n        }\n      }\n    </style>\n  </head>\n  <body>\n    <main class=\"shell\">\n      <section class=\"hero\">\n        <div>\n          <div class=\"kicker\">XR Studio / Code View / Deploy Ready</div>\n          <h1>Build the space like a launch page.</h1>\n          <p class=\"lead\">\n            This starter is for artist microsites, public programme pages, open calls, and client-facing launches.\n            Replace the copy, colors, links, and sections below while keeping everything in one portable HTML file.\n          </p>\n        </div>\n\n        <div class=\"hero-grid\">\n          <article class=\"metric\">\n            <div class=\"label\">Mode</div>\n            <strong>Single-file HTML</strong>\n            <span>Best for reliable preview, export, and handoff.</span>\n          </article>\n          <article class=\"metric\">\n            <div class=\"label\">Studio</div>\n            <strong>Artist + XR Workflow</strong>\n            <span>Good for bespoke client pages that still live inside the editor.</span>\n          </article>\n          <article class=\"metric\">\n            <div class=\"label\">Delivery</div>\n            <strong>Preview, export, publish</strong>\n            <span>Paste custom code or move this file into a real deploy pipeline later.</span>\n          </article>\n        </div>\n      </section>\n\n      <aside class=\"rail\">\n        <section class=\"panel\">\n          <div class=\"label\">Structure</div>\n          <h2>What to edit first</h2>\n          <ul>\n            <li>Swap the headline and deck for the artist or project.</li>\n            <li>Turn the right-side panels into programme, credits, schedule, or CTA blocks.</li>\n            <li>Wire your publish link, form link, or contact email into the buttons.</li>\n          </ul>\n        </section>\n\n        <section class=\"panel\">\n          <div class=\"label\">Deploy Notes</div>\n          <h2>Keep this handoff clean</h2>\n          <p>\n            Static HTML is the lowest-friction path inside this sandbox. Full React, Babel, or CDN-heavy experiments\n            can still work, but they are better once the project already has its own public host.\n          </p>\n        </section>\n\n        <section class=\"panel\">\n          <div class=\"label\">Actions</div>\n          <h2>Next steps</h2>\n          <div class=\"cta-row\">\n            <a class=\"button primary\" href=\"mailto:studio@example.com?subject=Space%20launch\">Launch Inquiry</a>\n            <a class=\"button\" href=\"https://example.com\">Public Link</a>\n          </div>\n          <p class=\"code\" style=\"margin-top: 14px;\">\n            Tip: keep this file self-contained while the design is moving quickly.\n          </p>\n        </section>\n      </aside>\n    </main>\n  </body>\n</html>",
+    "mode": "scene",
+    "sourceType": "html",
+    "url": ""
+  },
+  "renderSettings": {
+    "antialias": true,
+    "dpr": [
+      1,
+      2
+    ],
+    "powerPreference": "high-performance",
+    "shadowType": 2,
+    "shadows": true,
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 1.3
+  },
+  "savedView": {
+    "position": [
+      -9.67766250112163,
+      16.80833744762501,
+      -11.456326066617766
+    ],
+    "target": [
+      -9.677662237237074,
+      -2.625086627413613,
+      -11.45634549911401
+    ],
+    "viewMode": "3D"
+  },
+  "sceneVersion": 81,
+  "transformSnaps": {
+    "rotation": 15,
+    "scale": 0.1,
+    "translation": 1
+  },
+  "version": 4
+}

@@ -6,6 +6,7 @@ import {
     buildProjectToolPath,
     buildVanityProjectPath,
     getAppLocationState,
+    getBareReservedSegment,
     isProjectToolSegment,
     isReservedAppSegment
 } from './spaceRouting.js'
@@ -171,5 +172,33 @@ describe('spaceRouting', () => {
     it('never turns /:space/studio into a doorway — a space-level lane is claimed by its own parser, and a project can never be named studio or raw anyway', () => {
         expect(getAppLocationState(new URL('https://example.com/wcc/studio')).toolSegment).toBeUndefined()
         expect(getAppLocationState(new URL('https://example.com/wcc/raw')).toolSegment).toBeUndefined()
+    })
+})
+
+// A reserved word is reserved so that no space can ever be named it. That
+// makes a bare `/make` or `/light` a question the server can only answer 404
+// to — and the not-found card it produced blamed the spelling for a word
+// spelled correctly. RootApp calls this last, after the lane routers.
+describe('getBareReservedSegment', () => {
+    const at = (pathname) => new URL(`https://example.com${pathname}`)
+
+    it('names a bare reserved word', () => {
+        expect(getBareReservedSegment(at('/make'))).toBe('make')
+        expect(getBareReservedSegment(at('/light'))).toBe('light')
+        expect(getBareReservedSegment(at('/light/'))).toBe('light')
+        expect(getBareReservedSegment(at('/LIGHT'))).toBe('light')
+    })
+
+    it('says nothing about an ordinary space address', () => {
+        expect(getBareReservedSegment(at('/'))).toBeNull()
+        expect(getBareReservedSegment(at('/gallery'))).toBeNull()
+        expect(getBareReservedSegment(at('/makers'))).toBeNull()
+    })
+
+    // The toybox's own address is three segments and belongs to makeRouting;
+    // only the bare word is unclaimed.
+    it('says nothing once the word has something after it', () => {
+        expect(getBareReservedSegment(at('/gallery/make/proj'))).toBeNull()
+        expect(getBareReservedSegment(at('/make/proj'))).toBeNull()
     })
 })

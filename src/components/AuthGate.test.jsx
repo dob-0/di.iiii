@@ -20,9 +20,7 @@ vi.mock('../services/serverSpaces.js', () => ({
     supportsServerSpaces: true,
     // 'ghost' plays the mistyped id: the server 404s for a space that was
     // never created, and the card must say so instead of talking scope.
-    // 'make' is the lane word typed with no space in front of it — the same
-    // 404 on a real server, since no space is called that.
-    getServerSpace: (spaceId) => (spaceId === 'ghost' || spaceId === 'make'
+    getServerSpace: (spaceId) => (spaceId === 'ghost'
         ? Promise.reject(Object.assign(new Error('Space not found.'), { status: 404 }))
         : Promise.resolve({ id: spaceId, isPublic: spaceId === 'pub' }))
 }))
@@ -139,7 +137,7 @@ describe('AuthGate restricted card doors', () => {
 // On a local install (`di up`) the server reports requireAuth: false, and
 // AuthGate lets every space through — there is no scope, so the restricted
 // card is unreachable no matter what the URL names. The NOT-FOUND card is
-// not: the gate used to wave an address that names no space (/make, a typo)
+// not: the gate used to wave an address that names no space (a typo)
 // through to a silent empty room with Enter VR/AR on it, while the live site
 // said "Nothing lives at …" (festival-machine inventory, 2026-09-06). The
 // session shape mirrors what the server sends with auth off: authenticated,
@@ -199,13 +197,10 @@ describe('AuthGate on a local install (requireAuth off)', () => {
         expect(mockAppNavigate).toHaveBeenCalledWith('/open')
     })
 
-    it('treats a bare /make as an address that names no space', async () => {
-        mockUseAuthSession.mockReturnValue(localSession())
-        render(<AuthGate requiredSpaceId="make">editor</AuthGate>)
-
-        expect(await screen.findByText(/Nothing lives at “make”/)).toBeInTheDocument()
-        expect(screen.queryByText('editor')).not.toBeInTheDocument()
-    })
+    // A bare /make or /light no longer reaches this card at all: those words
+    // are reserved, no space can be named one, and RootApp answers them with
+    // the card that names what the word IS (ReservedAddressCard) instead of
+    // blaming the spelling. What remains here is the mistyped id above.
 
     // The room must not paint for a frame before the lookup answers — that
     // frame is a whole 3D viewer mounting and unmounting.

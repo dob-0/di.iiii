@@ -201,10 +201,10 @@ export const WIKI_ARTICLES = [
             'One rule that matters more than any other: output is OFF until you switch it on, under OUTPUT. Until then the desk runs, the stage view moves, scenes recall — and nothing leaves the machine. A dev server on a shared wifi can never blast a frame at somebody else\'s rig by accident, and a rig only ever lights when a person decided it should.',
             'The rig is yours. Nothing in the desk is patched to any particular room — you name the fixtures, you set the addresses, you save the looks. Its data lives with your di.iiii install, so the show survives a restart and can be carried to the venue on the same laptop.',
             'A graph can play the desk. Drop a DMX Out node into a canvas, leave it on its default rig, and Master, Channel, Value, Blackout and Scene are wired straight into the desk you just patched — an oscillator on a lamp, a scene name recalled by a button, a whole rig blacked out by a wire. See “DMX Out: the graph lights the room”.',
-            'The desk lives on a local di.iiii only — `di up`, or npm run dev. A hosted di-studio.xyz has no /light in it at all, on purpose: a lighting desk is a thing that reaches hardware in a room, and the room is where you are.'
+            'The desk lives on a local di.iiii only — `di up`, or npm run dev. A hosted di-studio.xyz has no /light in it at all, on purpose: a lighting desk is a thing that reaches hardware in a room, and the room is where you are. Asking a hosted address for /light says exactly that, and offers the install — it used to hand back an ordinary di.iiii page with no explanation at all.'
         ],
         tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up', 'lan', 'phone'],
-        updated: '2026-09-06'
+        updated: '2026-09-10'
     },
     {
         id: 'projection-mapping',
@@ -1163,10 +1163,10 @@ export const WIKI_ARTICLES = [
         body: [
             'Made for a day camp in Dilijan, where five children aged 10 to 17 were building 3D rooms on their own phones. The node editor is a workshop bench, and on a 390px screen it is eight stacked window bars and a node graph at 34% zoom — with the thing being made nowhere on the screen. The toybox is the same project with a different lid: the room fills the screen and is tappable, and four words sit under it, Armenian first and English beneath. Add puts one of five shapes on the ground in front of you; colour paints what you tapped, from nine; photo takes a picture from the phone and stands it in the room; talk opens the chat, here or with everyone in the space.',
             'Nothing new is stored. It is the same project, the same op layer and the same renderer the node editor uses, so a mentor opening /{space}/raw/projects/{project} sees every object a child made, signed by name — the toybox asks for a first name once, and that is the name on the work.',
-            'One address shape only: /{space}/make/{project}. There is no list page and no default — a child follows a link a mentor wrote down, because an address that guessed which project you meant could open the wrong child\'s room. A bare /make is not the toybox and opens nothing useful. It sits behind the same gate as the node editor, so an invite that opens the space opens its toybox too.'
+            'One address shape only: /{space}/make/{project}. There is no list page and no default — a child follows a link a mentor wrote down, because an address that guessed which project you meant could open the wrong child\'s room. A bare /make is not the toybox: no project is named in it, so there is nothing for it to open, and the page says so and points here. It sits behind the same gate as the node editor, so an invite that opens the space opens its toybox too.'
         ],
         tags: ['make', 'toybox', 'phone', 'camp', 'children', 'raw', 'project'],
-        updated: '2026-09-06'
+        updated: '2026-09-10'
     },
     {
         id: 'math-and-route-nodes',
