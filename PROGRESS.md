@@ -5,6 +5,138 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-10 — one style, one bar, one way to pack the work
+
+Five steps the owner approved from an audit page (`/what-we-have/p/shape`), after
+three parallel audits measured what the surfaces actually look like, how they
+connect, and how work is held. Every step landed on `dev`, deployed to staging,
+and was installed on the owner's own machine as a `di` build before being called
+done.
+
+- **The spine.** `base.css` now declares what the surfaces were already USING and
+  nobody had declared — `--di-ink`, `--di-dim`, `--di-line`, `--di-bg` were read
+  everywhere with hardcoded fallbacks, a second palette that nobody chose. Added
+  with them: `--di-faint`, the surface ladder each screen re-invented in hex, the
+  accent's two tints, two corner values, a five-step space rhythm, a type scale.
+  Deleted from the three converted stylesheets: `#4fd6ff` (a near-miss cyan, 15
+  uses), `#53d79b`, `'Space Mono'`, `'Outfit'`, and every radius that was not 0
+  or 2px — nine were live. Global `:focus-visible` ring (per-surface
+  `outline: none` had deleted the browser's and replaced it with nothing) and one
+  `prefers-reduced-motion` rule. `src/styles/spine.test.js` enforces it per file;
+  `SPINE_FILES` grows as files convert and `NOT_YET` names the debt out loud.
+- **The bar.** `SurfaceBar` on `/tools`, `/wiki`, the bare node canvas and every
+  walked room: where you are on the left, the same six destinations on the right,
+  `Light` only on a local install, Studio and Nodes scoped to the space you are
+  standing in. Two surfaces had no way out AT ALL — the lighting desk (no
+  wordmark, no menu, nothing) and `main` walked, whose badge suppresses itself on
+  the assumption that `/` is already that room, true on di-studio.xyz and false
+  on an install. The desk keeps its own dense booth skin, now written down as a
+  decision, and gets one door home.
+- **The map.** Every star drew its name twice in two typefaces, labels scaled
+  with depth (30px near, 6px far), and the ring spread linearly so the 22nd space
+  sat 31 units out and the view opened cropped. One name, one size, `sqrt`
+  spacing, and `fitDistance()` fitting the disc by width AND by its foreshortened
+  height from the frame's MEASURED aspect — fit one and the other crops, and
+  which binds depends on the window.
+- **Collections, draft/live/archived, and a trash.** There was no container
+  between a space and a project (one space holds 74 of 200), no archive but five
+  titles with `[archived]` typed in front, and `deleteProject()` was
+  `deleteById.run()` + `rm -rf` in the same call with no undo anywhere. A
+  collection is a shelf inside a space that holds work by reference; deleting a
+  shelf loosens rather than deletes. Delete now marks `deleted_at`, leaves every
+  byte, answers with `restorableUntil`, and only `purgeTrash()` (on the existing
+  half-hour sweep, 30 days) removes anything. `upsertProjectMeta` un-trashes, so
+  restoring a snapshot over a deleted project brings it back instead of failing
+  on a UNIQUE constraint.
+- **Two bugs that were one.** `/make` and `/light` on a hosted tier both fell
+  through as a lookup for a space that can never exist, because
+  `RESERVED_APP_SEGMENTS` was guarded at `segments[1]` and never at `segments[0]`.
+  No nginx change needed: nginx never proxies `/` to Node.
+- **Beyond Form's 13 files were never lost** — production had them whole. A code
+  page's uploads are written into the built markup and never into
+  `document.assets`, which every transfer script read and nothing else, so the
+  pull said "0 assets" and exited clean. `collectProjectAssetRefs()` reads the ids
+  off the document itself, and `npm run assets:audit` names any project whose
+  tier lacks files it references.
+
+Left open, in the tree: `npm run assets:audit`'s first run found five more broken
+projects nobody had been told about (`open/front-room`, `front-room-light`,
+`look-signal`, `look-night`, `look-paper` — 76–78 referenced assets each, present
+on no tier, ids from before content addressing). `algovrithm` is still a public,
+empty space permanently shadowed at its own url by `src/algoVrithm/`. Five
+stylesheets remain unconverted, named in `spine.test.js`.
+
+## 2026-09-10 — Beyond Form's 13 missing GLBs: found on prod, restored, and the blind spot closed
+
+- `beyond-form/open-call` referenced 13 GLBs. The dev box and staging had none of
+  them — five console 404s per view, the works never drawn, the space card unable
+  to paint. **Production had all 13, whole.** They were pulled from prod and pushed
+  to local and staging; asset ids are the sha256 of the stored bytes, so every
+  re-upload landed on the id the document already names and nothing had to be
+  rewritten. 39/39 asset GETs now answer 200 across the three tiers.
+- The cause was not lost bytes but an invisible dependency. `space-sync.mjs`
+  uploads a code page's files and rewrites their names into
+  `/serverXR/api/projects/<id>/assets/<sha256>` URLs *inside the built markup*,
+  and never writes a row into `document.assets`. Every transfer script read that
+  manifest alone — `project-pull.mjs` had `const assetList = document.assets` —
+  so this project reported `0 assets`, copied nothing, and exited 0. Same shape as
+  the asset-remap bug of the same file: a transfer trusting a document to declare
+  its own assets.
+- `scripts/document-asset-refs.mjs` now reads the ids off the document itself
+  (manifest rows, then every 64-hex asset URL in any string). `project-pull.mjs`
+  uses it, so `local-mirror.mjs` does too.
+- `npm run assets:audit` (`scripts/asset-refs-audit.mjs`) walks a tier and names
+  every project referencing assets that tier does not hold, exiting 1. Its first
+  real run found five more, all on the dev box and all pre-existing:
+  `open/front-room`, `open/front-room-light`, `open/look-signal`, `open/look-night`,
+  `open/look-paper` — 76–78 assets each, every one missing, uuid-style ids from
+  before content addressing. **Not fixed here** — a separate restore, and nobody
+  had ever been told they were broken.
+- Looked at, not assumed: headless Chromium on `https://local.thedi.studio/beyond-form`
+  and on staging, walking into the srcdoc frame — all 13 GLB requests 200, zero
+  console errors, the Gyumri houses and the artists' models painting, and the
+  beyond-form card on `/spaces` showing its page again.
+
+## 2026-09-10 — a bare reserved word is not a space id, and now says what it is
+
+Two defects, one cause. `/make` fired `GET /serverXR/api/spaces/make` → 404 on every
+tier; `/light` on di-studio.xyz and staging returned 200 and rendered the same
+ordinary card. Both words are in `RESERVED_APP_SEGMENTS` *so that no space can ever
+be named them* — and `getAppLocationState` guarded that list at `segments[1]` only,
+never at `segments[0]`. A bare `/{reserved}` therefore fell through as a space id to
+`SpaceSurfaceRoute`, whose lookup can only 404, whose card then read "there is no
+space with that address. Check the spelling" — wrong advice for a word spelled
+correctly, and the whole of what a visitor asking a hosted tier for the lighting desk
+ever saw.
+
+- `getBareReservedSegment()` names a bare unclaimed reserved word. RootApp calls it
+  LAST, after every lane router: `/raw`, `/studio` and `/spaces` are bare reserved
+  words too and return above it untouched, and `/beta` still falls through as an
+  unclaimed space (its existing test still passes unchanged).
+- `ReservedAddressCard` answers the three that reach it — `make`, `light`, `projects`
+  — each naming what the word actually is, linking its wiki article, and making no
+  space lookup at all. Same card shell as `AuthGate`'s `ClosedDoorCard`, so the two
+  cannot drift.
+- `/light` on a local install still never reaches the SPA (serverXR answers it before
+  index.html; verified `https://local.thedi.studio/light` → 302 → 200 desk HTML). A
+  client-side navigation there hands the address back to the server rather than
+  explaining the desk away.
+
+**nginx is NOT involved on the `/light` path** and needs no deploy-side change:
+`location /` serves `index.html` from the static volume and never proxies, so
+serverXR's `requireLocalRuntime` 404 (`/serverXR/light` → 404 on prod, confirmed) is
+never on the wire a browser sees. The SPA is the only place that can answer a hosted
+`/light`, and a bare 404 page would say less than this card does.
+
+Guards, watched failing first: two cases in `RootApp.test.jsx` (both timed out at 5s
+against the old dispatch) plus `getBareReservedSegment` unit cases in
+`spaceRouting.test.js`. `AuthGate.test.jsx` lost its `/make` case — that address no
+longer reaches the gate; its mistyped-id case (`ghost`) is the one that still covers
+the card.
+
+Looked at both cards at 1440x900 and 390x844 on a production build served through a
+plain SPA catch-all.
+
 ## 2026-09-09 — the general case of the wcc tangle: four lists, no agreement, and docs nothing checks
 
 The `wcc` fix earlier tonight was one instance. Three parallel audits found the

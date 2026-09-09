@@ -13,7 +13,9 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the general case of the wcc tangle: four lists, no agreement, and docs nothing checks
+- one style, one bar, one way to pack the work
+- Beyond Form's 13 missing GLBs: found on prod, restored, and the blind spot closed
+- a bare reserved word is not a space id, and now says what it is
 
 Full detail: `PROGRESS.md`.
 
