@@ -1,5 +1,5 @@
 {
-  "note": "One entry per person in the network — all 52 who make di.iiii, not only the ones with rooms yet. `works` (shape: {url,title,line,space,project}) are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. Generated from network-directions/data/inventory.json (52-person roster) via the MIX build's lib/data.mjs, then committed here as static data. build.mjs turns this into pages/<slug>.html and one di-space.<slug>.json each, via room-template.mjs's renderRoom(). Two works (azd and br_id_ge) are shared by more than one person, which is what draws the lines in a room's field. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make.",
+  "note": "One entry per person in the network — all 58 who make di.iiii, not only the ones with rooms yet. `works` (shape: {url,title,line,space,project}) are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. Generated from network-directions/data/inventory.json (52-person roster) via the MIX build's lib/data.mjs, then committed here as static data. build.mjs turns this into pages/<slug>.html and one di-space.<slug>.json each, via room-template.mjs's renderRoom(). Two works (azd and br_id_ge) are shared by more than one person, which is what draws the lines in a room's field. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make.",
   "people": [
     {
       "slug": "gevorg-grigoryan",
@@ -1286,13 +1286,13 @@
     {
       "slug": "maria-matinyan",
       "name": "Maria Matinyan",
-      "role": "multimedia artist, curator",
-      "discipline": "multimedia artist, curator",
+      "role": "site-specific artist, curator",
+      "discipline": "site-specific artist, curator",
       "team": false,
       "section": "curators",
       "sectionLabel": "curators",
-      "city": null,
-      "bio": null,
+      "city": "Munich",
+      "bio": "Site-specific artist, art educator and curator — the artistic exploration of spaces, time and memory, especially the sound memories of particular places, people and events. Founder of the G.URBAN platform.",
       "works": [
         {
           "url": null,
@@ -1332,7 +1332,94 @@
           "label": "her own site",
           "href": "https://www.mariamatinyan.am/"
         }
-      ]
+      ],
+      "resume": {
+        "focus": [
+          "site-specific art",
+          "sound art",
+          "performance",
+          "lithography",
+          "curation",
+          "art education"
+        ],
+        "positions": [
+          {
+            "years": "2020 — now",
+            "role": "founder",
+            "org": "G.URBAN platform",
+            "place": "Munich, Germany / Gyumri, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "until 2022",
+            "role": "graduation, Examenspreis",
+            "org": "Akademie der Bildenden Künste",
+            "place": "Munich, Germany"
+          }
+        ],
+        "timeline": [
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Textile Zone",
+                "role": "sound work — homage to the workers of the Gyumri textile factory",
+                "place": "Blaues Rauschen Festival, Ruhrgebiet, Germany"
+              },
+              {
+                "title": "between traces",
+                "role": "three-colour print, lithography objects in the room"
+              },
+              {
+                "title": "Debütant*innen Ausstellung",
+                "role": "exhibition",
+                "place": "Halle 6, Munich, Germany"
+              },
+              {
+                "title": "Ground Book",
+                "role": "publishing in process",
+                "place": "SuperBooks 2023 · International Print Biennale Yerevan"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "Longing for a peaceful sleep",
+                "role": "ritual, performance, installation",
+                "place": "roof of AdBK Munich — graduation exhibition, Examenspreis"
+              },
+              {
+                "title": "somewhere something someone",
+                "role": "installation",
+                "place": "MARDS residency, Open Art Munich"
+              },
+              {
+                "title": "Kino Asyl",
+                "role": "film screenings",
+                "place": "Munich, Germany"
+              }
+            ]
+          },
+          {
+            "year": "2019",
+            "items": [
+              {
+                "title": "Summoning the Fountain",
+                "role": "sound exploration and performance",
+                "place": "Soundlab Gyumri, Armenia"
+              },
+              {
+                "title": "Listen",
+                "role": "sound performance with Ophelia Flassig",
+                "place": "the central market, Ground art fest, Gyumri, Armenia"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "slug": "carine-aroyan",
@@ -1531,12 +1618,12 @@
     {
       "slug": "lusine-mlke-galstyan",
       "name": "Lusine MLKE-Galstyan",
-      "role": "curator",
-      "discipline": "curator",
+      "role": "performer, musician",
+      "discipline": "performer, musician",
       "team": false,
-      "section": "curators",
-      "sectionLabel": "curators",
-      "city": null,
+      "section": "performers",
+      "sectionLabel": "performers",
+      "city": "Yerevan",
       "bio": null,
       "works": [
         {
@@ -1573,12 +1660,12 @@
     {
       "slug": "shoghakat-mlke-galstyan",
       "name": "Shoghakat MLKE-Galstyan",
-      "role": "curator",
-      "discipline": "curator",
+      "role": "choreographer, performer",
+      "discipline": "choreographer, performer",
       "team": false,
-      "section": "curators",
-      "sectionLabel": "curators",
-      "city": null,
+      "section": "performers",
+      "sectionLabel": "performers",
+      "city": "Yerevan",
       "bio": null,
       "works": [],
       "elsewhere": [],
@@ -3874,6 +3961,210 @@
       "sources": [
         {
           "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
+    },
+    {
+      "slug": "ani-khachatryan",
+      "name": "Ani Khachatryan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/azd",
+          "title": "ազդ | azd",
+          "line": "one of eight artists, Gyumri, April 2026",
+          "space": "azd",
+          "project": null
+        },
+        {
+          "url": "/wcc/ani-khachatryan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "ani-khachatryan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "053",
+      "order": 53,
+      "sources": [
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
+        }
+      ]
+    },
+    {
+      "slug": "nush-petrosyan",
+      "name": "Nush Petrosyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/azd",
+          "title": "ազդ | azd",
+          "line": "ՁԱՅՆ | VOICE — one of eight artists, Gyumri, April 2026",
+          "space": "azd",
+          "project": null
+        },
+        {
+          "url": "/wcc/nush-petrosyan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "nush-petrosyan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "054",
+      "order": 54,
+      "sources": [
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
+        }
+      ]
+    },
+    {
+      "slug": "jeny-gevorgyan",
+      "name": "Jeny Gevorgyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/azd",
+          "title": "ազդ | azd",
+          "line": "one of eight artists, Gyumri, April 2026",
+          "space": "azd",
+          "project": null
+        },
+        {
+          "url": "/wcc/jeny-gevorgyan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "jeny-gevorgyan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "055",
+      "order": 55,
+      "sources": [
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
+        }
+      ]
+    },
+    {
+      "slug": "meri-andreasyan",
+      "name": "Meri Andreasyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/wcc/meri-andreasyan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "meri-andreasyan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "056",
+      "order": 56,
+      "sources": [
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
+        }
+      ]
+    },
+    {
+      "slug": "alla-virabyan",
+      "name": "Alla Virabyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/wcc/alla-virabyan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "alla-virabyan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "057",
+      "order": 57,
+      "sources": [
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
+        }
+      ]
+    },
+    {
+      "slug": "margarita-ghazaryan",
+      "name": "Margarita Ghazaryan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/wcc/margarita-ghazaryan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "margarita-ghazaryan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "058",
+      "order": 58,
+      "sources": [
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
         }
       ]
     }

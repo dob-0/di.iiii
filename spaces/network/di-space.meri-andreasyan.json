@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-meri-andreasyan",
+  "slug": "meri-andreasyan",
+  "label": "Meri Andreasyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/meri-andreasyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

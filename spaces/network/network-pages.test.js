@@ -140,10 +140,22 @@ describe('visitor copy', () => {
         }
     })
 
+    // The number was pinned at fifty-two, which made the guard fail the day six
+    // people who already had work standing on di.iiii were added to the roster.
+    // What matters is that the sentence counts the same people the page lists —
+    // so the count is derived here too, and only the split is fixed by the owner.
     it('states no count the roster does not hold', () => {
         const html = read('code/index.html')
-        expect(html).toContain('Fifty-two people make di.iiii')
-        expect(people.length).toBe(52)
-        expect(people.filter((p) => p.team).length).toBe(5)
+        const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+            'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen']
+        const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety']
+        const words = (n) => n < 20 ? WORDS[n] : TENS[Math.floor(n / 10)] + (n % 10 ? '-' + WORDS[n % 10] : '')
+        const cap = (s) => s[0].toUpperCase() + s.slice(1)
+        const team = people.filter((p) => p.team).length
+
+        expect(html).toContain(`${cap(words(people.length))} people make di.iiii`)
+        expect(html).toContain(`${words(team)} run it`)
+        expect(html).toContain(`${words(people.length - team)} make with it`)
+        expect(team).toBe(5)   // the owner's line: the team is five
     })
 })
