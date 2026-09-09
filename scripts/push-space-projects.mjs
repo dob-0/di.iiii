@@ -1,20 +1,21 @@
 #!/usr/bin/env node
 /**
- * push-wcc-projects.mjs — push WCC project assets + documents to a live server.
+ * push-space-projects.mjs — push a space's project assets + documents to a
+ * live server.
  *
- * For each WCC artist project:
+ * For each project in the space:
  *   1. Upload any local assets not yet on the remote server (by SHA256 ID)
  *   2. PUT the local document.json to the remote server
  *
  * Usage:
- *   node scripts/push-wcc-projects.mjs [options]
+ *   node scripts/push-space-projects.mjs [options]
  *
  * Options:
  *   --to     <url>    Server API base (default: $LIVE_API_URL, else STAGING —
  *                     https://staging.di-studio.xyz/serverXR. Production pushes
  *                     must be explicit: --to https://di-studio.xyz/serverXR)
  *   --token  <token>  Bearer token (default: $LIVE_API_TOKEN)
- *   --space  <id>     Space ID (default: wcc)
+ *   --space  <id>     Space ID (REQUIRED — there is no default)
  *   --project <id>    Only push this one project
  *   --assets-only     Skip document push, only upload missing assets
  *   --docs-only       Skip asset upload, only push documents
@@ -38,7 +39,11 @@ const flag = (name) => argv.includes(`--${name}`)
 const opt = (name) => { const i = argv.indexOf(`--${name}`); return i !== -1 ? argv[i + 1] : null }
 
 const DRY_RUN = flag('dry-run')
-const SPACE_ID = opt('space') || 'wcc'
+const SPACE_ID = opt('space')
+if (!SPACE_ID) {
+    console.error('[push-space-projects] --space <id> is required.')
+    process.exit(1)
+}
 const PROJECT_FILTER = opt('project')
 const ASSETS_ONLY = flag('assets-only')
 const DOCS_ONLY = flag('docs-only')
@@ -63,7 +68,7 @@ const getEnv = (k) => process.env[k] || localEnv[k] || ''
 const BASE_URL = (opt('to') || getEnv('LIVE_API_URL') || DEFAULT_STAGING_URL).replace(/\/+$/, '')
 const TOKEN = opt('token') || getEnv('LIVE_API_TOKEN') || ''
 
-const WCC_PROJECTS_DIR = path.join(ROOT_DIR, 'serverXR', 'data', 'spaces', SPACE_ID, 'projects')
+const PROJECTS_DIR = path.join(ROOT_DIR, 'serverXR', 'data', 'spaces', SPACE_ID, 'projects')
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 function authHeaders(extra = {}) {
@@ -119,12 +124,12 @@ async function main() {
         return
     }
 
-    console.log(`[push-wcc-projects] space=${SPACE_ID} → ${BASE_URL}`)
+    console.log(`[push-space-projects] space=${SPACE_ID} → ${BASE_URL}`)
     if (DRY_RUN) console.log('[dry-run] No changes will be made.\n')
 
-    const projectDirs = fs.readdirSync(WCC_PROJECTS_DIR, { withFileTypes: true })
+    const projectDirs = fs.readdirSync(PROJECTS_DIR, { withFileTypes: true })
         .filter(e => e.isDirectory())
-        .map(e => path.join(WCC_PROJECTS_DIR, e.name))
+        .map(e => path.join(PROJECTS_DIR, e.name))
         .filter(d => !PROJECT_FILTER || path.basename(d) === PROJECT_FILTER)
 
     for (const projectDir of projectDirs) {

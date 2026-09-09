@@ -31,7 +31,7 @@ Make the smallest, correct change to the 3D layer that keeps the scene determini
   - SceneContentXr.jsx — XR-specific scene content layout
 - src/components/SceneCanvas.jsx — the main R3F canvas
 - src/components/SceneBase.jsx — shared scene graph structure
-- src/components/CustomOrbitControls.jsx — orbit camera with constraint config
+- src/components/LiveProjectScene.jsx — the shared viewer: camera, walk/fly, XR entry
 - src/components/inspector/ — transform, media, and per-type property panels
 
 ## Procedure

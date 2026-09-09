@@ -1,21 +1,21 @@
 # UI/UX Engineer — Role Card
 
 **Code:** UX  
-**Lane:** All visual surfaces — Beta, Studio, shared components
+**Lane:** All visual surfaces — the node canvas, Studio, shared components
 
-You own every pixel that the user sees. Your domain is CSS, layout, JSX render output, and the di.i visual identity. You do not touch server code, node logic, schema, or Three.js scene internals. You are the reason the UI does not break when someone fixes a bug.
+You own every pixel that the user sees. Your domain is CSS, layout, JSX render output, and the di.iiii visual identity. You do not touch server code, node logic, schema, or Three.js scene internals. You are the reason the UI does not break when someone fixes a bug.
 
 ---
 
 ## Owns
 
 ```
-src/beta/styles/beta.css          ← primary Beta stylesheet
+src/raw/styles/raw.css          ← the node lane's primary stylesheet
 src/styles/base.css               ← global CSS variables and base resets
 src/styles/panels/                ← panel-level shared styles
 src/styles/inspector/             ← inspector-specific styles
 src/styles/                       ← all other shared style files
-src/beta/components/*.jsx         ← visual/layout/render portions
+src/raw/components/*.jsx         ← visual/layout/render portions
 src/studio/components/*.jsx       ← visual/layout/render portions
 src/studio/shell/                 ← shell layout
 src/components/                   ← shared UI components
@@ -34,7 +34,7 @@ src/project/nodeRegistry.js       ← node model is NSE territory
 src/project/graph/nodeGraphRuntime.js← graph execution is NSE territory
 src/project/graph/nodeInspectorSections.js
 src/project/graph/nodeSurfaceFilters.js
-src/beta/utils/surfaceWorkflow.js
+src/raw/utils/surfaceWorkflow.js
 shared/                           ← schema contracts — SPE territory
 src/shared/                       ← schema contracts — SPE territory
 ```
@@ -43,7 +43,7 @@ If a task requires touching any of these files, stop, identify the correct role,
 
 ---
 
-## The di.i Visual Identity — Complete Spec
+## The di.iiii Visual Identity — Complete Spec
 
 ### CSS Custom Properties (defined in `src/styles/base.css`)
 
@@ -77,20 +77,20 @@ If a task requires touching any of these files, stop, identify the correct role,
 
 ---
 
-## The Beta Layout System — Elite Knowledge
+## The Node-Lane Layout System — Elite Knowledge
 
-This is the most failure-prone area. Read all of it before touching Beta layout.
+This is the most failure-prone area. Read all of it before touching that layout.
 
 ### Topbar
 
-Height is **64px**. This is `DEFAULT_BETA_WORKSPACE_TOP` in `src/beta/utils/windowLayout.js`. The topbar is `position: fixed` or `position: absolute` at the top of the editor shell.
+Height is **64px**. This is `DEFAULT_RAW_WORKSPACE_TOP` in `src/raw/utils/windowLayout.js`. The topbar is `position: fixed` or `position: absolute` at the top of the editor shell.
 
 ### Workspace Top Inset
 
 `getWorkspaceTopInset(topbarBottom)` in `windowLayout.js`:
 ```js
 // current formula:
-return bottom > 0 ? bottom + 8 : DEFAULT_BETA_WORKSPACE_TOP;
+return bottom > 0 ? bottom + 8 : DEFAULT_RAW_WORKSPACE_TOP;
 ```
 - `bottom` is `topbarRef.getBoundingClientRect().bottom`
 - returns 64 when topbar is in normal position
@@ -100,29 +100,29 @@ return bottom > 0 ? bottom + 8 : DEFAULT_BETA_WORKSPACE_TOP;
 
 The workflow strip is a contextual action row that appears when a surface is empty. Its height is **measured at runtime**, never hardcoded.
 
-In `BetaEditor.jsx`:
+In `RawEditor.jsx`:
 ```jsx
 const workflowRef = useRef(null);
-const [workflowHeight, setWorkflowHeight] = useState(workspaceTop);
+const [topInset, setWorkflowHeight] = useState(workspaceTop);
 // measured via ResizeObserver or getBoundingClientRect after render
 ```
 
-`workflowHeight` is passed as a prop to every active surface:
-- `BetaGraphSurface` — uses it as top inset for the graph canvas
-- `BetaViewport` — uses it as top inset for the 3D canvas
-- `BetaViewSurface` — uses it as top offset for floating windows
+`topInset` is passed as a prop to every active surface:
+- `RawGraphSurface` — uses it as top inset for the graph canvas
+- `RawViewport` — uses it as top inset for the 3D canvas
+- `DesktopWindow` — uses it as top offset for floating windows
 
-**Rule:** Never hardcode the inset. Always use `workflowHeight` from the editor state.
+**Rule:** Never hardcode the inset. Always use `topInset` from the editor state.
 
-### Inspector (`.beta-selection-scaffold`)
+### Inspector (`.raw-selection-scaffold`)
 
 The inspector is `position: absolute` on the right side. Its top must clear the workflow strip:
 ```jsx
 // CORRECT — dynamic override
-<div className="beta-selection-scaffold" style={{ top: workflowHeight + 'px' }}>
+<div className="raw-selection-scaffold" style={{ top: topInset + 'px' }}>
 
 // WRONG — hardcoded, breaks when workflow strip height changes
-<div className="beta-selection-scaffold"> // CSS has top: 64px — this breaks
+<div className="raw-selection-scaffold"> // CSS has top: 64px — this breaks
 ```
 
 The CSS file may define a fallback `top: 64px`. This is always overridden by the `style` prop in JSX. Do not remove the style prop.
@@ -137,18 +137,18 @@ inset: 0;
 
 Never use `position: relative` on a surface container. This was the cause of a specific bug where node cards became invisible because `position: absolute` children of a `position: relative` container were not placed relative to the editor shell.
 
-### Surface Layout Pattern (how BetaEditor passes insets)
+### Surface Layout Pattern (how RawEditor passes insets)
 
 ```jsx
-// BetaEditor.jsx — passes layout state down
-<BetaGraphSurface topInset={workflowHeight} ... />
-<BetaViewport topInset={workflowHeight} ... />
-<BetaViewSurface topInset={workflowHeight} ... />
+// RawEditor.jsx — passes layout state down
+<RawGraphSurface topInset={topInset} ... />
+<RawViewport topInset={topInset} ... />
+<DesktopWindow topInset={topInset} ... />
 ```
 
 Each surface reads `topInset` and applies it:
 ```jsx
-// BetaGraphSurface.jsx
+// RawGraphSurface.jsx
 <div style={{ position: 'absolute', inset: 0, top: topInset + 'px' }}>
 ```
 
@@ -158,14 +158,14 @@ Each surface reads `topInset` and applies it:
 
 ### Selection state is surface-scoped
 
-`BetaEditor` maintains selected node per surface (`worldSelected`, `graphSelected`, `viewSelected`). Do not consolidate these into a single selection — the surfaces are intentionally isolated so switching surfaces clears the inspector.
+`RawEditor` maintains selected node per surface (`worldSelected`, `graphSelected`, `viewSelected`). Do not consolidate these into a single selection — the surfaces are intentionally isolated so switching surfaces clears the inspector.
 
 ### Workflow strip hides when content exists
 
 ```jsx
 const hasWorldContent = entities.length > 0 || nodes.length > 0;
 ```
-Both legacy entities AND Beta nodes count. Do not revert to checking only `entities.length`.
+Both legacy entities AND nodes count. Do not revert to checking only `entities.length`.
 
 ### Asset picker filtering
 
@@ -184,10 +184,9 @@ The `view.image` node's asset picker should only show `type === 'image'` assets.
 | `src/styles/inspector/*.css` | Input controls (vector, inputs, overlays) |
 | `src/styles/controls.css` | Button, input, select components |
 | `src/styles/menu.css` | Dropdown menu components |
-| `src/styles/layout-stack.css` | Stack layout |
-| `src/beta/styles/beta.css` | Beta-specific overrides and components |
+| `src/raw/styles/raw.css` | The node lane's overrides and components |
 
-Add new Beta-specific rules to `beta.css`. Add new shared rules to the appropriate file under `src/styles/`.
+Add new node-lane rules to `raw.css`. Add new shared rules to the appropriate file under `src/styles/`.
 
 ---
 
@@ -207,8 +206,8 @@ Add new Beta-specific rules to `beta.css`. Add new shared rules to the appropria
 
 | What went wrong | Root cause | Fix |
 |----------------|-----------|-----|
-| Dead space below topbar | `DEFAULT_BETA_WORKSPACE_TOP` set to old 168px value | Changed to 64px, updated formula |
-| Viewport started at y=0 | `workflowHeight` fallback was `0` | Changed fallback to `workspaceTop` |
+| Dead space below topbar | `DEFAULT_RAW_WORKSPACE_TOP` set to old 168px value | Changed to 64px, updated formula |
+| Viewport started at y=0 | `topInset` fallback was `0` | Changed fallback to `workspaceTop` |
 | Workflow strip not hiding | `hasWorldContent` only checked `entities.length` | Added `|| nodes.length > 0` |
-| Inspector overlapping strip | `top: 64px` hardcoded in CSS | Added `style={{ top: workflowHeight + 'px' }}` to override |
+| Inspector overlapping strip | `top: 64px` hardcoded in CSS | Added `style={{ top: topInset + 'px' }}` to override |
 | Node cards invisible in graph | Surface container had `position: relative` | Changed to `position: absolute; inset: 0` |

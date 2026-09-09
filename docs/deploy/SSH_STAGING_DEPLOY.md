@@ -1,4 +1,14 @@
-# SSH Staging Deploy
+# SSH Staging Deploy — REMOVED
+
+> **This describes a workflow that no longer exists.** `.github/workflows/deploy-staging-ssh.yml`
+> was deleted for being broken (no SSH secrets were ever set). None of the secrets named below —
+> `ENABLE_SSH_STAGING_DEPLOY`, `STAGING_SSH_*`, `STAGING_WEB_ROOT`, `STAGING_RESTART_COMMAND` —
+> are read by anything in this repo.
+>
+> **The real staging path is `.github/workflows/deploy-vps-staging.yml`** — Docker Compose on the
+> VPS, using `VPS_HOST` / `VPS_SSH_USER` / `VPS_STAGING_DEPLOY_PATH`, not rsync and not PM2.
+> See `docs/deploy/VPS_DOCKER_DEPLOY.md`. Line 3 below also predates prod leaving cPanel
+> (2026-07-15). Kept only so the abandoned design is on the record.
 
 This workflow is the VPS-style staging deploy path. It is intentionally opt-in so it can live beside the current cPanel prebuilt flow until the SSH host is ready.
 

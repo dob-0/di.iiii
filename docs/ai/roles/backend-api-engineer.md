@@ -27,7 +27,7 @@ serverXR/Dockerfile                   ← container build (shared with IE)
 
 ```
 src/                                  ← frontend source — UX/NSE/VPE territory
-src/beta/                             ← Beta frontend
+src/raw/                             ← the node lane's frontend
 src/studio/                           ← Studio frontend
 src/components/                       ← shared UI components
 *.css                                 ← CSS — UX territory

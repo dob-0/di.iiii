@@ -11,7 +11,8 @@
  *   node scripts/promote-space-projects.mjs [options]
  *
  * Options:
- *   --space   <id>     Space ID (default: wcc)
+ *   --space   <id>     Space ID (REQUIRED — there is no default; the
+ *                      destination defaults to PRODUCTION)
  *   --project <id>     Only promote this one project
  *   --from    <url>    Source API base (default: $LIVE_API_URL — staging)
  *   --to      <url>    Destination API base (default: $PROD_API_URL)
@@ -33,7 +34,13 @@ const flag = (name) => argv.includes(`--${name}`)
 const opt = (name) => { const i = argv.indexOf(`--${name}`); return i !== -1 ? argv[i + 1] : null }
 
 const DRY_RUN = flag('dry-run')
-const SPACE_ID = opt('space') || 'wcc'
+// No default. This script's --to defaults to PRODUCTION, so a bare run used to
+// mean "push the wcc exhibition to the live site" — a sentence nobody typed.
+const SPACE_ID = opt('space')
+if (!SPACE_ID) {
+    console.error('[promote-space-projects] --space <id> is required (the destination defaults to production).')
+    process.exit(1)
+}
 const PROJECT_FILTER = opt('project')
 const ASSETS_ONLY = flag('assets-only')
 const DOCS_ONLY = flag('docs-only')

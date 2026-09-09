@@ -23,7 +23,7 @@ You are read-only on production implementation files **unless** the test failure
 ## Must Never Touch
 
 ```
-src/beta/styles/beta.css          ← UX territory
+src/raw/styles/raw.css          ← UX territory
 serverXR/src/db.js                ← BAE territory (read for test setup, do not edit)
 shared/                           ← SPE territory
 ```
@@ -56,12 +56,12 @@ Use React Testing Library (`@testing-library/react`). Patterns:
 
 ```jsx
 import { render, screen, fireEvent } from '@testing-library/react';
-import { BetaEditor } from './BetaEditor';
+import { RawEditor } from './RawEditor';
 
 test('workflow strip hides when nodes exist', () => {
-  const { rerender } = render(<BetaEditor nodes={[]} />);
+  const { rerender } = render(<RawEditor nodes={[]} />);
   expect(screen.getByRole('region', { name: /add/i })).toBeInTheDocument();
-  rerender(<BetaEditor nodes={[{ id: '1', type: 'geom.cube' }]} />);
+  rerender(<RawEditor nodes={[{ id: '1', type: 'geom.cube' }]} />);
   expect(screen.queryByRole('region', { name: /add/i })).not.toBeInTheDocument();
 });
 ```
@@ -81,7 +81,7 @@ The Preferences runtime metadata test was specifically updated to wait for async
 
 ### Layout Tests
 
-Beta layout tests verify:
+Node-lane layout tests verify:
 - Workflow strip hides when content exists on the active surface
 - Inspector top is set via style prop (not CSS class alone)
 - Surface containers use `position: absolute; inset: 0`

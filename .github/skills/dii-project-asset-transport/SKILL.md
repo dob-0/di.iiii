@@ -49,7 +49,7 @@ Make the smallest change that keeps the asset pipeline reliable: upload succeeds
 4. On failure, the ref is preserved but the asset is shown as unavailable.
 
 ## Project Import Flow
-- src/project/import/projectImportAssets.js handles asset extraction from archives
+- src/project/transfer/studioProjectBundle.js reads and writes the .zip bundle, assets included
 - src/project/import/importLegacyScene.js handles older scene format conversion
 - imports produce a normalized project document plus an asset manifest
 - after import, assets should be re-uploaded to the server if the project is being saved remotely
