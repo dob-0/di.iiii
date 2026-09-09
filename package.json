@@ -51,6 +51,7 @@
         "space:sync:vendor": "node scripts/space-sync-vendor.mjs",
         "space:sync:release": "node scripts/space-sync-vendor.mjs --release",
         "spaces:audit": "node scripts/spaces-audit.mjs",
+        "assets:audit": "node scripts/asset-refs-audit.mjs",
         "space:export": "node scripts/space-bundle.mjs export",
         "space:import": "node scripts/space-bundle.mjs import",
         "install:export": "node scripts/install-bundle.mjs export",

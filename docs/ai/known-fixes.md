@@ -21,6 +21,43 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## A code page's assets are invisible to `document.assets`, so transfers leave them behind
+
+`beyond-form/open-call` ("Beyond Form", the Gyumri exhibition) published a 1.4 MB
+document that referenced 13 GLBs. Production had all 13. The dev box and staging
+had **none** — five console 404s per view, the models never drawn, the space card
+on `/spaces` unable to paint. Nothing anywhere reported a fault.
+
+The cause is a manifest that is not the dependency list. `space-sync.mjs` uploads a
+code page's files and rewrites their names into
+`/serverXR/api/projects/<id>/assets/<sha256>` URLs **inside the built markup**; it
+never writes a row into `document.assets`. Every transfer script read the manifest
+alone — `project-pull.mjs` line 201, `const assetList = document.assets` — so for
+this project it printed `0 assets`, copied nothing, and exited 0. The document
+travelled tier to tier; the bytes never did.
+
+Note this is the second failure of the same shape as the asset-remap bug above it:
+a transfer that believes a document tells it the truth about its own assets.
+
+Fixes:
+
+1. `scripts/document-asset-refs.mjs` — `collectProjectAssetRefs(document, projectId)`
+   reads the ids off the document itself: manifest rows first, then every
+   64-hex asset URL anywhere in its strings. `project-pull.mjs` (and therefore
+   `local-mirror.mjs`) now uses it. Guard: `scripts/document-asset-refs.test.js`,
+   whose first case is a code page with an empty manifest.
+2. `scripts/asset-refs-audit.mjs` (`npm run assets:audit -- --tier staging`) walks a
+   tier and names every project referencing assets that tier does not hold, exiting
+   1 so it can gate a deploy. Guard: `scripts/asset-refs-audit.test.js`. Its first
+   real run found five more broken projects on the dev box (`open/front-room`,
+   `open/front-room-light`, `open/look-signal`, `open/look-night`, `open/look-paper`
+   — 76-78 assets each, all missing).
+
+Restoring bytes: the ids ARE the sha256 of the stored bytes, so a re-upload of the
+same file lands on the same id and the document needs no rewriting. All 13 were
+pulled from prod and pushed to local and staging; `sha256sum` of each downloaded
+file equals its id, and every upload answered with the id it was given.
+
 ## A fit that centres the content leaves the dead space where it hurts
 
 `/<space>/make/<project>` fits the camera so nothing is cropped. On a portrait
