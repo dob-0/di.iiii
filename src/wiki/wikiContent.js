@@ -94,15 +94,16 @@ export const WIKI_ARTICLES = [
     {
         id: 'spaces-map-view',
         category: 'Spaces & access',
-        title: 'Grid or Map: two ways to see your spaces',
-        summary: 'The Spaces page has a Grid/Map toggle — Map is a spatial, orbit-and-click view of your spaces and their projects.',
+        title: 'Grid, List or Map: three ways to see your spaces, and how to arrange them',
+        summary: 'The Spaces page has a Grid/List/Map toggle, plus Arrange and filter chips that decide the order and which spaces are shown.',
         body: [
-            'The Spaces page (/studio) has a Grid / Map toggle next to the page title whenever you have at least one space. Grid is the familiar card shelves; Map draws every space as a point you can orbit around and zoom into.',
+            'The Spaces page (/studio) has a Grid / List / Map toggle next to the page title whenever you have at least one space. Grid is the card shelves; List is one dense row per space — name, what opens in it, its state, and Open/Live — which stays readable when you have twenty of them; Map draws every space as a point you can orbit around and zoom into.',
+            'Under the title, once you have more than three spaces: Arrange orders them by Recent (what has something to show, then last touched), by Name, or by State. The chips beside it show only the spaces in one state, and each carries its count: Open to anyone (public, with something published), Only you (private — a visitor meets a login wall), and Needs a door (public, but nothing is published in it, so a visitor walks into an empty room).',
             'Click a space in Map view to open a side panel for it — rename, copy the live link, make public/private, delete, and manage its projects — the same actions as the grid, just reached from the map. Clicking the satellite projects around a selected space lets you rename them or set one live. Which space is "Main" (marked with a badge here and on the grid) is set in Ops Graph → Manage only.',
-            'Your choice of Grid or Map is remembered on this device for next time.'
+            'Your view, your arrangement and your filter are each remembered on this device for next time.'
         ],
-        tags: ['spaces', 'map', 'constellation', 'ui'],
-        updated: '2026-08-19'
+        tags: ['spaces', 'map', 'list', 'arrange', 'filter', 'constellation', 'ui'],
+        updated: '2026-09-09'
     },
     {
         id: 'guest-and-sandbox-modes',

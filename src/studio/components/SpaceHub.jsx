@@ -24,6 +24,9 @@ import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
+import {
+    ARRANGE_MODES, FILTER_MODES, applyView, countStates, normalizeArrange, normalizeFilter, spaceState,
+} from '../utils/spaceArrange.js'
 import { PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE } from '../../utils/previewMode.js'
 import '../styles/studio-space-hub.css'
 
@@ -236,12 +239,6 @@ function SpaceCardLive({ spaceId, label, onRelease }) {
 const OPEN_SPACE_HINT = 'everyone builds here, together'
 const SANDBOX_HINT = 'private scratch — only you see it'
 
-// A visitor's grid leads with the spaces that have something to show — a
-// cover image or a published project. Everything else keeps the server's
-// order behind them (Array.sort is stable), so this only ever demotes the
-// blank ones; it never hides a space.
-const hasSomethingToShow = (space) => Boolean(space.previewImageAssetId || space.publishedProjectId)
-
 export default function SpaceHub() {
     const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit, spaces: sessionScopes, openSpaceId, sandboxSpaceId } = useAuthSession()
     const [spaces, setSpaces] = useState([])
@@ -264,13 +261,36 @@ export default function SpaceHub() {
     // Spaces whose cover image failed to load — see the card preview below.
     const [brokenCovers, setBrokenCovers] = useState(() => new Set())
     const [copiedInviteId, setCopiedInviteId] = useState(null)
-    // 'grid' = the card shelves (default); 'map' = the spatial constellation lens.
+    // 'grid' = the card shelves (default); 'list' = one dense row per space, which
+    // is the only view that stays readable past ~20 spaces; 'map' = the spatial lens.
     const [viewMode, setViewMode] = useState(() => {
-        try { return localStorage.getItem('di_spaces_view') === 'map' ? 'map' : 'grid' } catch { return 'grid' }
+        try {
+            const saved = localStorage.getItem('di_spaces_view')
+            return saved === 'map' || saved === 'list' ? saved : 'grid'
+        } catch { return 'grid' }
     })
     const selectView = useCallback((mode) => {
         setViewMode(mode)
         try { localStorage.setItem('di_spaces_view', mode) } catch { /* private mode */ }
+    }, [])
+
+    // How the cards are ordered, and which of them are shown at all. Both are
+    // remembered per browser: the arrangement someone works in is theirs, and
+    // being dropped back into "everything, newest first" on every visit is what
+    // made the page feel unmanageable once it held twenty spaces.
+    const [arrange, setArrange] = useState(() => {
+        try { return normalizeArrange(localStorage.getItem('di_spaces_arrange')) } catch { return 'recent' }
+    })
+    const [filterMode, setFilterMode] = useState(() => {
+        try { return normalizeFilter(localStorage.getItem('di_spaces_filter')) } catch { return 'all' }
+    })
+    const selectArrange = useCallback((mode) => {
+        setArrange(normalizeArrange(mode))
+        try { localStorage.setItem('di_spaces_arrange', mode) } catch { /* private mode */ }
+    }, [])
+    const selectFilter = useCallback((mode) => {
+        setFilterMode(normalizeFilter(mode))
+        try { localStorage.setItem('di_spaces_filter', mode) } catch { /* private mode */ }
     }, [])
 
     // The one card currently running interactive in place, or null. At most
@@ -607,17 +627,29 @@ export default function SpaceHub() {
     // page's whole point the one thing you had to click to find. The private
     // sandbox is not one of the places to visit, so it leaves the grid and
     // becomes a quiet line underneath it.
-    const visitorSpaces = spaces
-        .filter(s => s !== sandboxCard)
-        .slice()
-        .sort((a, b) => Number(hasSomethingToShow(b)) - Number(hasSomethingToShow(a)))
+    // Everything the controls act on. A visitor never sees the private sandbox,
+    // so it is not one of the spaces being counted or filtered for them.
+    const arrangeable = isVisitor ? spaces.filter(s => s !== sandboxCard) : spaces
+    // The chips count the whole set, not the filtered one — a count that changed
+    // when you clicked it could never tell you what is behind the other chips.
+    const stateCounts = countStates(arrangeable)
+    const passesFilter = (space) => filterMode === 'all' || spaceState(space) === filterMode
+
+    const visitorSpaces = applyView(arrangeable, { arrange, filter: filterMode })
+    const arrangedRest = applyView(restSpaces, { arrange, filter: filterMode })
+    // The two pinned shelves obey the filter as well: leaving Open Space on
+    // screen under "needs a door" would make the filter a suggestion.
+    const openShelfCard = openSpaceCard && passesFilter(openSpaceCard) ? openSpaceCard : null
+    const sandboxShelfCard = sandboxCard && passesFilter(sandboxCard) ? sandboxCard : null
+    // The list is one flat run of rows, in the arranged order, pinned shelves included.
+    const listSpaces = applyView(arrangeable, { arrange, filter: filterMode })
 
     const shelves = isVisitor
         ? [visitorSpaces.length > 0 && { key: 'spaces', label: null, hint: null, items: visitorSpaces }].filter(Boolean)
         : [
-            openSpaceCard && { key: 'open', label: 'Open Space', hint: OPEN_SPACE_HINT, items: [openSpaceCard] },
-            sandboxCard && { key: 'sandbox', label: 'Your sandbox', hint: SANDBOX_HINT, items: [sandboxCard] },
-            restSpaces.length > 0 && { key: 'spaces', label: 'Your spaces', hint: null, items: restSpaces }
+            openShelfCard && { key: 'open', label: 'Open Space', hint: OPEN_SPACE_HINT, items: [openShelfCard] },
+            sandboxShelfCard && { key: 'sandbox', label: 'Your sandbox', hint: SANDBOX_HINT, items: [sandboxShelfCard] },
+            arrangedRest.length > 0 && { key: 'spaces', label: 'Your spaces', hint: null, items: arrangedRest }
         ].filter(Boolean)
 
     return (
@@ -632,6 +664,7 @@ export default function SpaceHub() {
                         {spaces.length > 0 && (
                             <div className="ssh-view-toggle" role="group" aria-label="Spaces view">
                                 <button type="button" className={viewMode === 'grid' ? 'on' : ''} onClick={() => selectView('grid')} aria-pressed={viewMode === 'grid'}>Grid</button>
+                                <button type="button" className={viewMode === 'list' ? 'on' : ''} onClick={() => selectView('list')} aria-pressed={viewMode === 'list'}>List</button>
                                 <button type="button" className={viewMode === 'map' ? 'on' : ''} onClick={() => selectView('map')} aria-pressed={viewMode === 'map'}>Map</button>
                             </div>
                         )}
@@ -729,6 +762,45 @@ export default function SpaceHub() {
                     </p>
                 )}
 
+                {/* Arrange and filter. Hidden on the map (which has its own spatial
+                    ordering) and while there are few enough spaces that the
+                    controls would be more work than the looking. */}
+                {viewMode !== 'map' && arrangeable.length > 3 && (
+                    <div className="ssh-arrange-bar">
+                        <div className="ssh-arrange" role="group" aria-label="Arrange spaces">
+                            <span className="ssh-arrange-label">Arrange</span>
+                            {ARRANGE_MODES.map(mode => (
+                                <button
+                                    key={mode.key}
+                                    type="button"
+                                    className={arrange === mode.key ? 'on' : ''}
+                                    aria-pressed={arrange === mode.key}
+                                    onClick={() => selectArrange(mode.key)}
+                                >{mode.label}</button>
+                            ))}
+                        </div>
+                        <div className="ssh-filter" role="group" aria-label="Show which spaces">
+                            {FILTER_MODES.map(mode => (
+                                <button
+                                    key={mode.key}
+                                    type="button"
+                                    className={filterMode === mode.key ? 'on' : ''}
+                                    aria-pressed={filterMode === mode.key}
+                                    disabled={stateCounts[mode.key] === 0 && mode.key !== 'all'}
+                                    onClick={() => selectFilter(mode.key)}
+                                >{mode.label}<span className="ssh-filter-count">{stateCounts[mode.key]}</span></button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {viewMode !== 'map' && arrangeable.length > 0 && listSpaces.length === 0 && (
+                    <p className="ssh-empty-filter">
+                        Nothing is in that state.{' '}
+                        <button type="button" className="ssh-link-btn" onClick={() => selectFilter('all')}>Show all {stateCounts.all}</button>
+                    </p>
+                )}
+
                 {viewMode === 'map' && spaces.length > 0 && (
                     <SpaceConstellation
                         spaces={spaces}
@@ -760,6 +832,48 @@ export default function SpaceHub() {
                     them on a wide screen. The rest/collapsed shelf always spans
                     both columns, sitting under the pair. Below 1024 all three
                     stack exactly as before (grid-template-columns: 1fr). */}
+                {/* The list. Same spaces, same order as the grid — one row each, so
+                    twenty-two of them can be read without scrolling past pictures.
+                    State is the word a visitor would use, not the flag name. */}
+                {viewMode === 'list' && listSpaces.length > 0 && (
+                    <div className="ssh-list">
+                        <div className="ssh-list-head" aria-hidden="true">
+                            <span>space</span><span>what opens</span><span>state</span><span></span>
+                        </div>
+                        {listSpaces.map(space => {
+                            const state = spaceState(space)
+                            const linkedTitle = space.publishedProjectId
+                                ? (projectTitles[space.publishedProjectId] || space.publishedProjectId)
+                                : null
+                            const stateWord = state === 'open' ? 'open to anyone'
+                                : state === 'nodoor' ? 'no door' : 'only you'
+                            return (
+                                <div
+                                    key={space.id}
+                                    className="ssh-list-row"
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => openCard(space)}
+                                    onKeyDown={e => e.key === 'Enter' && openCard(space)}
+                                >
+                                    <span className="ssh-list-name">
+                                        <b>{space.label || space.id}</b>
+                                        <span className="ssh-list-id">{space.kind === 'sandbox' ? 'sandbox' : space.id}</span>
+                                    </span>
+                                    <span className="ssh-list-project">{linkedTitle || <span className="ssh-list-none">nothing published</span>}</span>
+                                    <span className={`ssh-list-state ssh-list-state--${state}`}>{stateWord}</span>
+                                    <span className="ssh-list-acts" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                        <button type="button" className="ssh-card-btn" onClick={() => openCard(space)}>Open</button>
+                                        {space.isPublic && (
+                                            <a className="ssh-card-btn" href={buildAppSpacePath(space.id)} onClick={e => e.stopPropagation()}>Live</a>
+                                        )}
+                                    </span>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+
                 {viewMode === 'grid' && (
                 <div className="ssh-shelves-grid">
                 {shelves.map(({ key, label, hint, items }) => {

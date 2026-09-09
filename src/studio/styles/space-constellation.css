@@ -274,3 +274,130 @@
 @media (prefers-reduced-motion: reduce) {
     .scon-panel { animation: none; }
 }
+
+/* ── Arrange & filter ──────────────────────────────────────────────────────
+   The Spaces page holds twenty-odd rooms now. These two controls are what turn
+   a wall of cards back into something you can steer: order them by what you are
+   looking for, and show only the ones in that state. Both remember themselves
+   per browser (see SpaceHub). */
+.ssh-arrange-bar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin: 4px 0 20px;
+}
+.ssh-arrange, .ssh-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex-wrap: wrap;
+}
+.ssh-arrange-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--di-dim, #5f6b7a);
+    margin-right: 8px;
+}
+.ssh-arrange button, .ssh-filter button {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    padding: 6px 11px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 20px;
+    color: var(--di-dim, #5f6b7a);
+    cursor: pointer;
+    transition: 0.18s;
+}
+.ssh-arrange button:hover:not(:disabled), .ssh-filter button:hover:not(:disabled) {
+    color: var(--di-ink, #e6ecf2);
+    border-color: var(--di-line, #1b2634);
+}
+.ssh-arrange button.on, .ssh-filter button.on {
+    background: rgba(79, 214, 255, 0.14);
+    border-color: rgba(79, 214, 255, 0.4);
+    color: #4fd6ff;
+}
+.ssh-filter button:disabled { opacity: 0.35; cursor: default; }
+.ssh-filter-count {
+    margin-left: 7px;
+    opacity: 0.6;
+    font-size: 0.92em;
+}
+.ssh-empty-filter {
+    font-size: 0.85rem;
+    color: var(--di-dim, #5f6b7a);
+    margin: 0 0 22px;
+}
+.ssh-link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #4fd6ff;
+    cursor: pointer;
+    font: inherit;
+    text-decoration: underline;
+}
+
+/* ── The list view ─────────────────────────────────────────────────────────
+   One row per space. Four columns on a desktop; on a phone the row folds into
+   two lines and the head is dropped, because a four-column table at 390px is
+   the thing the grid was already better at. */
+.ssh-list {
+    border: 1px solid var(--di-line, #1b2634);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.ssh-list-head, .ssh-list-row {
+    display: grid;
+    /* The name gets the room; what opens sits beside it rather than adrift in
+       the middle of a wide screen, and the two right columns are fixed so every
+       row's state and buttons line up down the page. */
+    grid-template-columns: minmax(170px, 1.1fr) minmax(120px, 1fr) 130px 128px;
+    align-items: center;
+    gap: 18px;
+    padding: 9px 16px;
+}
+.ssh-list-head {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--di-dim, #5f6b7a);
+    border-bottom: 1px solid var(--di-line, #1b2634);
+}
+.ssh-list-row {
+    border-bottom: 1px solid var(--di-line, #1b2634);
+    cursor: pointer;
+    transition: background 0.18s;
+}
+.ssh-list-row:last-child { border-bottom: none; }
+.ssh-list-row:hover, .ssh-list-row:focus-visible { background: rgba(79, 214, 255, 0.05); }
+.ssh-list-name b { display: block; font-size: 0.92rem; font-weight: 600; line-height: 1.35; }
+.ssh-list-id, .ssh-list-project, .ssh-list-state {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+    color: var(--di-dim, #5f6b7a);
+}
+.ssh-list-project { font-size: 0.7rem; }
+.ssh-list-none { opacity: 0.55; }
+.ssh-list-state--open { color: #4fd6ff; }
+.ssh-list-state--nodoor { color: #f5b544; }
+.ssh-list-acts { display: flex; gap: 6px; justify-content: flex-end; }
+.ssh-list-acts .ssh-card-btn { text-decoration: none; }
+
+@media (max-width: 720px) {
+    .ssh-list-head { display: none; }
+    .ssh-list-row {
+        grid-template-columns: 1fr auto;
+        row-gap: 4px;
+    }
+    .ssh-list-project { grid-column: 1 / -1; }
+    .ssh-list-state { grid-column: 1; }
+    .ssh-list-acts { grid-column: 2; grid-row: 3; }
+}
