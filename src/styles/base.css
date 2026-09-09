@@ -53,6 +53,58 @@
     --di-success: #4df9c0;
     --di-warning: #ffb347;
 
+    /* ── the spine (2026-09-09) ──────────────────────────────────────────────
+       Owner: "make unique our style and never do nothing out of it". Four of
+       these names were already being USED across the Spaces and Map stylesheets
+       — --di-ink, --di-dim, --di-line, --di-bg — and declared in no :root
+       anywhere, so every one of them silently ran on its hardcoded fallback and
+       formed a second, invisible palette next to this one. They are declared
+       here now, pointing at the canonical values, which is what makes the
+       fallbacks stop being fiction.
+
+       Anything a surface needs that is not in this block is a bug in the
+       surface, not a missing token. src/styles/spine.test.js enforces that on
+       the files listed in SPINE_FILES. */
+    --di-ink: var(--di-text);
+    --di-dim: var(--di-text-muted);
+    /* A third level below --di-dim: an id, a count, a hint — present, never
+       competing. 2.9:1 on black, so it is for supporting text only, never for
+       anything a person has to read to act. */
+    --di-faint: rgba(255, 255, 255, 0.34);
+    --di-line: rgba(77, 249, 255, 0.12);
+    --di-bg: var(--di-black);
+
+    /* Corners: two values, not the nine that were live. Near-square for the
+       room itself, a full pill for a thing you press. Nothing in between. */
+    --di-radius: 2px;
+    --di-radius-pill: 999px;
+
+    /* The surface ladder. Four steps from the ground up, so a panel inside a
+       panel inside a modal stays legible without anyone inventing a fifth grey.
+       Each surface used to carry its own copy of this ladder in hex. */
+    --di-surface-2: #111114;
+    --di-surface-3: #17171b;
+    --di-surface-4: #1c1c21;
+    /* The accent's two tints: a line you can see, and a wash you can barely
+       see. Written out by hand as rgba(77, 249, 255, …) in five stylesheets. */
+    --di-cyan-wash: rgba(77, 249, 255, 0.06);
+    --di-cyan-line: rgba(77, 249, 255, 0.35);
+
+    /* Space: one rhythm. Every gap, padding and margin is one of these. */
+    --di-space-1: 6px;
+    --di-space-2: 12px;
+    --di-space-3: 22px;
+    --di-space-4: 44px;
+    --di-space-5: 76px;
+
+    /* Type: two families (above) and one scale. Labels are always mono,
+       uppercase and wide-spaced — that convention IS the platform's voice. */
+    --di-text-label: 0.66rem;
+    --di-text-body: 0.94rem;
+    --di-text-title: 1.7rem;
+    --di-text-display: 2.6rem;
+    --di-label-tracking: 0.16em;
+
     /* ── aliases for legacy panel/studio CSS ── */
     --ui-surface: var(--di-surface);
     --ui-surface-raised: #111;
@@ -151,6 +203,29 @@ select,
 textarea
 {
     font-family: inherit;
+}
+
+/* Keyboard focus. A ring that is visible on every ground the platform has, on
+   the elements a keyboard actually lands on — and only for keyboard, so a mouse
+   press does not leave a ring behind. Without this the browser default ring was
+   being erased by per-surface `outline: none` and never replaced. */
+:where(a, button, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--di-cyan);
+    outline-offset: 2px;
+    border-radius: var(--di-radius);
+}
+
+/* Someone who has asked their system for less motion gets less motion,
+   everywhere, once. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 /* links/images are natively draggable and spawn a snapshot ghost mid-drag;

@@ -6,8 +6,8 @@
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    background: var(--di-bg, #0a1118);
-    color: var(--di-text, #e8f4f8);
+    background: var(--di-bg);
+    color: var(--di-text);
 }
 
 /* ─── TOP ROW ──────────────────────────────────────────────── */
@@ -16,7 +16,7 @@
     align-items: baseline;
     justify-content: space-between;
     padding-bottom: 12px;
-    border-bottom: 1px solid var(--di-cyan-border, rgba(77,249,255,0.12));
+    border-bottom: 1px solid var(--di-cyan-border);
     margin-bottom: 20px;
     flex-wrap: wrap;
     gap: 12px;
@@ -28,14 +28,14 @@
     letter-spacing: 0.06em;
     /* the eyebrow reads "di.iiii" — the name is lowercase, always */
     text-transform: none;
-    color: var(--di-text-muted, rgba(200,230,240,0.45));
+    color: var(--di-text-muted);
 }
 
 .ssh-title {
     font-size: clamp(1.4rem, 3vw, 2rem);
     font-weight: 700;
     letter-spacing: -0.04em;
-    color: var(--di-text, #e8f4f8);
+    color: var(--di-text);
     margin: 0;
     line-height: 1;
 }
@@ -50,8 +50,8 @@
 .ssh-btn-create {
     font-size: 0.82rem;
     font-weight: 600;
-    background: var(--di-cyan, #4fd6ff);
-    color: #000;
+    background: var(--di-cyan);
+    color: var(--di-black);
     border: none;
     padding: 7px 18px;
     cursor: pointer;
@@ -61,7 +61,7 @@
     font-family: inherit;
 }
 
-.ssh-btn-create:hover { background: #fff; }
+.ssh-btn-create:hover { background: var(--di-ink); }
 .ssh-btn-create:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .ssh-quota {
@@ -81,8 +81,8 @@
     font-size: 0.82rem;
     font-weight: 500;
     background: transparent;
-    color: var(--di-cyan, #4fd6ff);
-    border: 1px solid var(--di-cyan-border, rgba(77,249,255,0.3));
+    color: var(--di-cyan);
+    border: 1px solid var(--di-cyan-border);
     padding: 6px 16px;
     cursor: pointer;
     font-family: inherit;
@@ -90,8 +90,8 @@
 }
 
 .ssh-btn-signin:hover {
-    border-color: var(--di-cyan, #4fd6ff);
-    color: #fff;
+    border-color: var(--di-cyan);
+    color: var(--di-ink);
 }
 
 .ssh-new-form {
@@ -103,21 +103,21 @@
 .ssh-new-input {
     font-size: 0.82rem;
     font-family: inherit;
-    background: rgba(77, 249, 255, 0.06);
-    border: 1px solid var(--di-cyan-border, rgba(77,249,255,0.2));
-    color: var(--di-text, #e8f4f8);
+    background: var(--di-cyan-wash);
+    border: 1px solid var(--di-cyan-border);
+    color: var(--di-text);
     padding: 6px 12px;
     outline: none;
     width: 200px;
 }
 
-.ssh-new-input:focus { border-color: rgba(77, 249, 255, 0.5); }
+.ssh-new-input:focus { border-color: color-mix(in srgb, var(--di-cyan) 50%, transparent); }
 
 .ssh-btn-cancel {
     font-size: 0.8rem;
     background: transparent;
     border: none;
-    color: var(--di-text-muted, rgba(200,230,240,0.45));
+    color: var(--di-text-muted);
     cursor: pointer;
     padding: 4px 6px;
     font-family: inherit;
@@ -129,11 +129,11 @@
 /* ─── STATUS ────────────────────────────────────────────────── */
 .ssh-status {
     font-size: 0.82rem;
-    color: var(--di-text-muted, rgba(200,230,240,0.45));
+    color: var(--di-text-muted);
     margin: 0 0 16px;
 }
 
-.ssh-status-error { color: #ff6b6b; }
+.ssh-status-error { color: var(--di-danger); }
 
 /* Single column by default — every shelf just stacks, exactly as before. */
 .ssh-shelves-grid {
@@ -165,11 +165,11 @@
     font-size: 0.78rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--di-cyan, #4df9ff);
+    color: var(--di-cyan);
 }
 
 .ssh-shelf-hint {
-    color: var(--di-text-muted, rgba(200,230,240,0.45));
+    color: var(--di-text-muted);
     text-transform: none;
     letter-spacing: normal;
 }
@@ -179,10 +179,10 @@
     align-items: center;
     gap: 10px;
     font-size: 0.82rem;
-    color: var(--di-text-muted, rgba(200,230,240,0.55));
+    color: var(--di-text-muted);
     padding: 8px 10px;
-    border: 1px dashed rgba(77,249,255,0.15);
-    border-radius: 2px;
+    border: 1px dashed color-mix(in srgb, var(--di-cyan) 15%, transparent);
+    border-radius: var(--di-radius);
     margin-top: 4px;
 }
 
@@ -195,7 +195,7 @@
     gap: 8px;
     margin: 4px 0 22px;
     font-size: 0.82rem;
-    color: var(--di-text-muted, rgba(200,230,240,0.45));
+    color: var(--di-text-muted);
 }
 
 .ssh-sandbox-link {
@@ -204,7 +204,7 @@
     background: none;
     border: none;
     font: inherit;
-    color: var(--di-cyan, #4df9ff);
+    color: var(--di-cyan);
     cursor: pointer;
     text-align: left;
 }
@@ -214,32 +214,32 @@
 }
 
 .ssh-sandbox-link:focus-visible {
-    outline: 2px solid rgba(77,249,255,0.5);
+    outline: 2px solid color-mix(in srgb, var(--di-cyan) 50%, transparent);
     outline-offset: 2px;
 }
 
 .ssh-space-tagline {
     margin: 2px 0 0;
     font-size: 0.85rem;
-    color: var(--di-text-muted, rgba(200,230,240,0.6));
+    color: var(--di-text-muted);
 }
 
 .ssh-guest-banner {
     font-size: 0.82rem;
-    color: var(--di-text-muted, rgba(200,230,240,0.55));
+    color: var(--di-text-muted);
     margin: 0 0 16px;
     padding: 8px 10px;
-    background: rgba(77,249,255,0.05);
-    border: 1px solid rgba(77,249,255,0.15);
-    border-radius: 2px;
+    background: color-mix(in srgb, var(--di-cyan) 5%, transparent);
+    border: 1px solid color-mix(in srgb, var(--di-cyan) 15%, transparent);
+    border-radius: var(--di-radius);
 }
 
 .ssh-github-panel {
     margin-top: 10px;
     padding: 10px;
     background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(77,249,255,0.1);
-    border-radius: 2px;
+    border: 1px solid var(--di-cyan-dim);
+    border-radius: var(--di-radius);
     cursor: default;
 }
 
@@ -277,7 +277,7 @@
 
 .ssh-space-card {
     background: rgba(255,255,255,0.03);
-    border: 1px solid var(--di-cyan-border, rgba(77,249,255,0.1));
+    border: 1px solid var(--di-cyan-border);
     padding: 18px 20px;
     cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
@@ -287,12 +287,12 @@
 
 .ssh-space-card:hover,
 .ssh-space-card:focus-visible {
-    border-color: rgba(77,249,255,0.35);
-    background: rgba(77,249,255,0.04);
+    border-color: var(--di-cyan-line);
+    background: color-mix(in srgb, var(--di-cyan) 4%, transparent);
 }
 
 .ssh-space-card:focus-visible {
-    outline: 2px solid rgba(77,249,255,0.5);
+    outline: 2px solid color-mix(in srgb, var(--di-cyan) 50%, transparent);
     outline-offset: -2px;
 }
 
@@ -305,8 +305,8 @@
 
 .ssh-space-id {
     font-size: 0.72rem;
-    font-family: monospace;
-    color: var(--di-text-muted, rgba(200,230,240,0.45));
+    font-family: var(--di-mono);
+    color: var(--di-text-muted);
     letter-spacing: 0.04em;
 }
 
@@ -318,32 +318,32 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     padding: 1px 6px;
-    border-radius: 2px;
+    border-radius: var(--di-radius);
 }
 
 .ssh-badge-viewonly {
-    background: rgba(200,230,240,0.06);
-    color: var(--di-text-muted, rgba(200,230,240,0.55));
-    border: 1px solid rgba(200,230,240,0.15);
+    background: color-mix(in srgb, var(--di-ink) 6%, transparent);
+    color: var(--di-text-muted);
+    border: 1px solid color-mix(in srgb, var(--di-ink) 15%, transparent);
 }
 
 .ssh-badge-demo {
-    background: rgba(77,249,255,0.12);
-    color: var(--di-cyan, #4fd6ff);
-    border: 1px solid rgba(77,249,255,0.2);
+    background: color-mix(in srgb, var(--di-cyan) 12%, transparent);
+    color: var(--di-cyan);
+    border: 1px solid color-mix(in srgb, var(--di-cyan) 20%, transparent);
 }
 
 .ssh-badge-live {
-    background: rgba(83,215,155,0.12);
-    color: #53d79b;
-    border: 1px solid rgba(83,215,155,0.2);
+    background: color-mix(in srgb, var(--di-success) 12%, transparent);
+    color: var(--di-success);
+    border: 1px solid color-mix(in srgb, var(--di-success) 20%, transparent);
 }
 
 .ssh-card-preview {
     margin: 0 0 10px;
     aspect-ratio: 16 / 9;
-    background: #05070a;
-    border: 1px solid var(--di-cyan-border, rgba(77,249,255,0.1));
+    background: var(--di-bg);
+    border: 1px solid var(--di-cyan-border);
     overflow: hidden;
     position: relative;
 }
@@ -378,11 +378,11 @@
 }
 
 .ssh-card-preview[role="button"]:hover {
-    border-color: rgba(77,249,255,0.35);
+    border-color: var(--di-cyan-line);
 }
 
 .ssh-card-preview[role="button"]:focus-visible {
-    outline: 2px solid rgba(77,249,255,0.6);
+    outline: 2px solid color-mix(in srgb, var(--di-cyan) 60%, transparent);
     outline-offset: 2px;
 }
 
@@ -408,7 +408,7 @@
     max-width: 80%;
     text-align: center;
     font-size: 0.85rem;
-    color: var(--di-text-muted, rgba(200,230,240,0.5));
+    color: var(--di-text-muted);
 }
 
 /* SpaceCardPreview's own root -- fills the .ssh-card-preview box its caller
@@ -465,7 +465,7 @@
 .ssh-card-live-label {
     font-size: 0.72rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--di-ink);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -475,21 +475,21 @@
     flex-shrink: 0;
     font-size: 0.7rem;
     font-family: inherit;
-    color: var(--di-cyan, #4fd6ff);
+    color: var(--di-cyan);
     text-decoration: none;
     padding: 2px 6px;
-    border: 1px solid rgba(77,249,255,0.3);
-    border-radius: 2px;
+    border: 1px solid color-mix(in srgb, var(--di-cyan) 30%, transparent);
+    border-radius: var(--di-radius);
     background: rgba(0,0,0,0.4);
 }
 
 .ssh-card-live-open:hover {
-    border-color: rgba(77,249,255,0.6);
-    color: #fff;
+    border-color: color-mix(in srgb, var(--di-cyan) 60%, transparent);
+    color: var(--di-ink);
 }
 
 .ssh-card-live-open:focus-visible {
-    outline: 2px solid rgba(77,249,255,0.6);
+    outline: 2px solid color-mix(in srgb, var(--di-cyan) 60%, transparent);
     outline-offset: 2px;
 }
 
@@ -497,14 +497,14 @@
     margin: 0 0 4px;
     font-size: 1rem;
     font-weight: 600;
-    color: var(--di-text, #e8f4f8);
+    color: var(--di-text);
     line-height: 1.2;
 }
 
 .ssh-space-desc {
     margin: 0;
     font-size: 0.78rem;
-    color: var(--di-text-muted, rgba(200,230,240,0.45));
+    color: var(--di-text-muted);
 }
 
 .ssh-live-link {
@@ -518,7 +518,7 @@
 .ssh-live-url {
     font-size: 0.7rem;
     font-family: var(--di-mono);
-    color: #53d79b;
+    color: var(--di-success);
     text-decoration: none;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -537,10 +537,10 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     padding: 1px 6px;
-    border-radius: 2px;
-    background: rgba(255,200,80,0.14);
-    color: #ffc850;
-    border: 1px solid rgba(255,200,80,0.28);
+    border-radius: var(--di-radius);
+    background: color-mix(in srgb, var(--di-warning) 14%, transparent);
+    color: var(--di-warning);
+    border: 1px solid color-mix(in srgb, var(--di-warning) 28%, transparent);
 }
 
 /* ─── CARD ACTIONS ──────────────────────────────────────── */
@@ -550,7 +550,7 @@
     gap: 4px;
     margin-top: 12px;
     padding-top: 10px;
-    border-top: 1px solid var(--di-cyan-border, rgba(77,249,255,0.08));
+    border-top: 1px solid var(--di-cyan-border);
 }
 
 .ssh-card-btn {
@@ -559,35 +559,35 @@
     font-weight: 500;
     letter-spacing: 0.03em;
     background: transparent;
-    border: 1px solid rgba(200,230,240,0.15);
-    color: var(--di-text-muted, rgba(200,230,240,0.55));
+    border: 1px solid color-mix(in srgb, var(--di-ink) 15%, transparent);
+    color: var(--di-text-muted);
     padding: 3px 8px;
     cursor: pointer;
-    border-radius: 2px;
+    border-radius: var(--di-radius);
     transition: border-color 0.1s, color 0.1s, background 0.1s;
     white-space: nowrap;
 }
 
 .ssh-card-btn:hover {
-    border-color: rgba(200,230,240,0.4);
-    color: var(--di-text, #e8f4f8);
-    background: rgba(200,230,240,0.06);
+    border-color: color-mix(in srgb, var(--di-ink) 40%, transparent);
+    color: var(--di-text);
+    background: color-mix(in srgb, var(--di-ink) 6%, transparent);
 }
 
 .ssh-card-btn--active {
-    border-color: rgba(83,215,155,0.35);
-    color: #53d79b;
+    border-color: color-mix(in srgb, var(--di-success) 35%, transparent);
+    color: var(--di-success);
 }
 
 .ssh-card-btn--active:hover {
-    background: rgba(83,215,155,0.08);
-    border-color: rgba(83,215,155,0.6);
+    background: color-mix(in srgb, var(--di-success) 8%, transparent);
+    border-color: color-mix(in srgb, var(--di-success) 60%, transparent);
 }
 
 .ssh-card-btn--danger:hover {
-    border-color: rgba(255,100,100,0.5);
-    color: #ff6b6b;
-    background: rgba(255,100,100,0.06);
+    border-color: color-mix(in srgb, var(--di-danger) 50%, transparent);
+    color: var(--di-danger);
+    background: color-mix(in srgb, var(--di-danger) 6%, transparent);
 }
 
 /* ─── PROJECT LINKER ────────────────────────────────────── */
@@ -595,17 +595,17 @@
     margin-top: 10px;
     padding: 10px;
     background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(77,249,255,0.1);
-    border-radius: 2px;
+    border: 1px solid var(--di-cyan-dim);
+    border-radius: var(--di-radius);
 }
 
 .ssh-linker-status {
     margin: 0 0 6px;
     font-size: 0.75rem;
-    color: var(--di-text-muted, rgba(200,230,240,0.45));
+    color: var(--di-text-muted);
 }
 
-.ssh-linker-error { color: #ff6b6b; }
+.ssh-linker-error { color: var(--di-danger); }
 
 .ssh-linker-list {
     display: flex;
@@ -618,13 +618,13 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    border: 1px solid rgba(200,230,240,0.1);
-    border-radius: 2px;
+    border: 1px solid color-mix(in srgb, var(--di-ink) 10%, transparent);
+    border-radius: var(--di-radius);
     overflow: hidden;
 }
 
 .ssh-linker-item.is-linked {
-    border-color: rgba(83,215,155,0.3);
+    border-color: color-mix(in srgb, var(--di-success) 30%, transparent);
 }
 
 .ssh-linker-select {
@@ -639,19 +639,19 @@
     font-family: inherit;
     background: transparent;
     border: none;
-    color: var(--di-text-muted, rgba(200,230,240,0.6));
+    color: var(--di-text-muted);
     cursor: pointer;
     text-align: left;
     transition: background 0.1s, color 0.1s;
 }
 
 .ssh-linker-select:hover {
-    background: rgba(77,249,255,0.05);
-    color: var(--di-text, #e8f4f8);
+    background: color-mix(in srgb, var(--di-cyan) 5%, transparent);
+    color: var(--di-text);
 }
 
 .is-linked .ssh-linker-select {
-    color: #53d79b;
+    color: var(--di-success);
 }
 
 .ssh-linker-rename-btn {
@@ -661,15 +661,15 @@
     font-family: inherit;
     background: transparent;
     border: none;
-    border-left: 1px solid rgba(200,230,240,0.1);
-    color: var(--di-text-muted, rgba(200,230,240,0.4));
+    border-left: 1px solid color-mix(in srgb, var(--di-ink) 10%, transparent);
+    color: var(--di-text-muted);
     cursor: pointer;
     transition: color 0.1s, background 0.1s;
 }
 
 .ssh-linker-rename-btn:hover {
-    color: var(--di-text, #e8f4f8);
-    background: rgba(200,230,240,0.06);
+    color: var(--di-text);
+    background: color-mix(in srgb, var(--di-ink) 6%, transparent);
 }
 
 .ssh-linker-label {
@@ -683,7 +683,7 @@
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #53d79b;
+    color: var(--di-success);
     flex-shrink: 0;
 }
 
@@ -700,15 +700,15 @@
     min-width: 0;
     font-size: 0.75rem;
     font-family: inherit;
-    background: rgba(77,249,255,0.06);
-    border: 1px solid rgba(77,249,255,0.2);
-    color: var(--di-text, #e8f4f8);
+    background: var(--di-cyan-wash);
+    border: 1px solid color-mix(in srgb, var(--di-cyan) 20%, transparent);
+    color: var(--di-text);
     padding: 3px 7px;
     outline: none;
 }
 
 .ssh-linker-rename-input:focus {
-    border-color: rgba(77,249,255,0.5);
+    border-color: color-mix(in srgb, var(--di-cyan) 50%, transparent);
 }
 
 .ssh-linker-footer {
@@ -720,14 +720,14 @@
 .ssh-space-project {
     margin: 4px 0 0;
     font-size: 0.75rem;
-    color: var(--di-cyan, #4fd6ff);
+    color: var(--di-cyan);
     opacity: 0.7;
 }
 
 .ssh-space-warning {
     margin-top: 4px;
     font-size: 0.75rem;
-    color: #f0a020;
+    color: var(--di-warning);
 }
 
 .ssh-space-warning .ssh-card-btn {
