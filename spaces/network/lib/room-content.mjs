@@ -63,9 +63,21 @@ export function resumeHTML(person) {
       }).join('') + '</div>'
     : '';
 
-  const cvHTML = r.cvUrl
-    ? '<p class="cv-link"><a class="plate" href="' + esc(r.cvUrl) + '" target="_blank" rel="noopener">' + esc(r.cvLabel || 'the full CV — PDF') + '</a></p>'
+  // Positions and study are the half of a CV the year-list never carried: the
+  // timeline says what was made, this says where the person stood while making
+  // it. Both are printed here, in the room, on our own paper — the rooms used
+  // to hand this over as a link to a file that also carried a date of birth,
+  // a mobile number and a private address.
+  const ledgerHTML = (rows, label) => (rows && rows.length)
+    ? '<div class="ledger-label">' + esc(label) + '</div><div class="ledger">' + rows.map((it) =>
+        '<div class="lg"><span class="lg-when">' + esc(it.years) + '</span>' +
+        '<span class="lg-what"><span class="lg-role">' + esc(it.role) + '</span>' +
+        (it.org ? '<span class="lg-org">' + esc(it.org) + '</span>' : '') +
+        (it.place ? '<span class="lg-place">' + esc(it.place) + '</span>' : '') +
+        '</span></div>').join('') + '</div>'
     : '';
 
-  return focusHTML + timelineHTML + cvHTML;
+  return focusHTML + timelineHTML +
+    ledgerHTML(r.positions, 'positions') +
+    ledgerHTML(r.education, 'education');
 }

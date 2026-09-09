@@ -10,7 +10,7 @@
       "section": "team",
       "sectionLabel": "team",
       "city": null,
-      "bio": "dob_ — interdisciplinary artist and director, in the digital and artistic realms since 2009. Founder of di. studio; theatre-trained, now building the platform itself.",
+      "bio": "dob_ — interdisciplinary artist and director, in the digital and artistic realms since 2012. Founder of di. studio; theatre-trained, now building the platform itself.",
       "works": [
         {
           "url": "/",
@@ -44,31 +44,47 @@
           "director",
           "new media artist",
           "multimedia artist",
+          "contemporary artist",
           "electronic art production",
           "digital art production",
           "audiovisual production",
           "curation",
+          "acting",
           "TouchDesigner",
-          "Blender"
+          "Blender",
+          "Resolume",
+          "Ableton Live",
+          "Python",
+          "Linux"
         ],
         "timeline": [
+          {
+            "year": "2026",
+            "items": [
+              {
+                "title": "br_id_ge",
+                "role": "director, developer",
+                "place": "Notations #2, State Philharmonia of Armenia, Yerevan"
+              }
+            ]
+          },
           {
             "year": "2025",
             "items": [
               {
                 "title": "RecordAR",
                 "role": "art director",
-                "place": "Munich, Germany"
+                "place": "educational programme, Munich, Germany"
               },
               {
                 "title": "Notations",
                 "role": "video art curator",
-                "place": "Yerevan, Armenia"
+                "place": "residency programme, hosq.co, Yerevan, Armenia"
               },
               {
                 "title": "Alter ego",
                 "role": "creative director",
-                "place": "Public TV Company of Armenia"
+                "place": "TV programme, Public TV Company of Armenia"
               },
               {
                 "title": "Game changers: Intro to game dev. (UNICEF)",
@@ -88,12 +104,12 @@
               {
                 "title": "OUT",
                 "role": "director",
-                "place": "NPAK, Armenia"
+                "place": "performance, NPAK, Armenia"
               },
               {
                 "title": "F33d6ack",
                 "role": "multimedia artist",
-                "place": "NPAK, Armenia"
+                "place": "installation, NPAK, Armenia"
               }
             ]
           },
@@ -101,29 +117,39 @@
             "year": "2023",
             "items": [
               {
-                "title": "ex: bkss",
-                "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
+                "title": "Bisetka: talk place",
+                "role": "director",
+                "place": "HochX Theater & Live Art, Munich, Germany"
               },
               {
-                "title": "bisetka v:2",
+                "title": "bisetka v:_2",
                 "role": "art director",
-                "place": "Pathos Theatre, Munich, Germany"
+                "place": "Pathos Theatre, Spielart festival, Munich, Germany"
+              },
+              {
+                "title": "ex: bkss",
+                "role": "multimedia artist",
+                "place": "installation, Gyumri, Armenia"
               },
               {
                 "title": "taking space: ex:no_map",
                 "role": "multimedia artist",
-                "place": "Yerevan, Armenia"
+                "place": "AR installation, Yerevan, Armenia"
               },
               {
                 "title": "Creative cognition: in_it",
                 "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
+                "place": "projection mapping, Gyumri, Armenia"
               },
               {
-                "title": "Bisetka: talk place",
-                "role": "director",
-                "place": "HochX Theater, Munich, Germany"
+                "title": "Fundamentals of game technology (Coca-Cola)",
+                "role": "soft skill trainer",
+                "place": "Gyumri Technology Center"
+              },
+              {
+                "title": "Game changers: Story telling (UNICEF)",
+                "role": "trainer",
+                "place": "Gyumri Technology Center"
               }
             ]
           },
@@ -131,34 +157,34 @@
             "year": "2022",
             "items": [
               {
+                "title": "di. studio",
+                "role": "founder",
+                "place": "Armenia"
+              },
+              {
                 "title": "SPCTR",
                 "role": "multimedia artist",
-                "place": "Yerevan, Armenia"
+                "place": "installation, Yerevan, Armenia"
               },
               {
                 "title": "Oda",
                 "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
+                "place": "AR installation, Gyumri, Armenia"
               },
               {
                 "title": "Galique",
                 "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
+                "place": "projection mapping, Gyumri, Armenia"
               },
               {
                 "title": "Mards",
                 "role": "project manager",
-                "place": "Munich, Germany"
+                "place": "projection mapping, Munich, Germany"
               },
               {
                 "title": "Dimensions: 004",
                 "role": "multimedia artist",
-                "place": "Munich, Germany"
-              },
-              {
-                "title": "di. studio",
-                "role": "founder",
-                "place": "Armenia"
+                "place": "AR installation, Munich, Germany"
               }
             ]
           },
@@ -183,52 +209,155 @@
               {
                 "title": "technoSapiens",
                 "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
+                "place": "audio-visual performance, Gyumri, Armenia"
               }
             ]
           },
           {
-            "year": "2016 – 2020",
+            "year": "2017 – 2021",
             "items": [
               {
                 "title": "Wedding in the Back",
                 "role": "actor",
-                "place": "Gyumri State Drama Theater"
+                "place": "Gyumri State Drama Theater, 2018 – 2021"
               },
               {
                 "title": "smileOmetr",
                 "role": "stage director",
-                "place": "Gyumri State Drama Theater"
+                "place": "Gyumri State Drama Theater, 2018 – 2020"
               },
               {
                 "title": "Three Little Pigs",
                 "role": "stage director",
-                "place": "Gyumri State Drama Theater"
-              }
-            ]
-          },
-          {
-            "year": "2012 – 2019",
-            "items": [
-              {
-                "title": "Aratta",
-                "role": "creative director / band"
+                "place": "Gyumri State Drama Theater, 2018 – 2020"
               },
               {
                 "title": "seenThat",
                 "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
+                "place": "installation, Gyumri, Armenia, 2019"
+              },
+              {
+                "title": "Backstage",
+                "role": "actor",
+                "place": "TV show, 2019"
+              },
+              {
+                "title": "Aratta",
+                "role": "creative director",
+                "place": "band, 2017 – 2020"
+              },
+              {
+                "title": "SOS",
+                "role": "creative director",
+                "place": "YouTube show, 2017 – 2018"
+              }
+            ]
+          },
+          {
+            "year": "2012 – 2016",
+            "items": [
+              {
+                "title": "King Lir",
+                "role": "assistant director, actor",
+                "place": "Gyumri State Drama Theater, 2016"
+              },
+              {
+                "title": "DeCore",
+                "role": "stage director",
+                "place": "Yerevan State Institute of Theatre and Cinematography, Gyumri, 2016"
+              },
+              {
+                "title": "Predators Feast",
+                "role": "actor",
+                "place": "Yerevan State Institute of Theatre and Cinematography, Gyumri, 2016"
+              },
+              {
+                "title": "Canterville Ghost",
+                "role": "stage director",
+                "place": "Yerevan State Institute of Theatre and Cinematography, Gyumri, 2015"
+              },
+              {
+                "title": "Լույս | Lumen",
+                "role": "film director",
+                "place": "short film, Gyumri, Armenia, 2015"
+              },
+              {
+                "title": "Mice Meeting",
+                "role": "stage director",
+                "place": "Yerevan State Institute of Theatre and Cinematography, Gyumri, 2014"
+              },
+              {
+                "title": "Love, Jazz, Devil",
+                "role": "actor",
+                "place": "Gyumri State Drama Theater, 2014"
+              },
+              {
+                "title": "Mesrop Mashtots",
+                "role": "actor",
+                "place": "Gyumri State Drama Theater, 2014"
+              },
+              {
+                "title": "Clowns saved the Christmas",
+                "role": "actor",
+                "place": "Yerevan State Institute of Theatre and Cinematography, Gyumri, 2013"
+              },
+              {
+                "title": "Duet Festival",
+                "role": "PR manager",
+                "place": "theatrical festival, Gyumri, Armenia, 2013"
+              },
+              {
+                "title": "Hey Khatabala!",
+                "role": "actor",
+                "place": "Petros Adamian's State Drama Theater, Yerevan, 2012"
               },
               {
                 "title": "PROF",
                 "role": "PR manager",
-                "place": "Gyumri, Armenia"
+                "place": "production, Gyumri, Armenia, 2012 – 2016"
               }
             ]
           }
         ],
-        "cvUrl": "https://docs.google.com/document/d/14xkyBRArc9t7BqbKm_-2FDpzrjn84lPGdiDnuP23xr4/edit",
-        "cvLabel": "the full CV"
+        "positions": [
+          {
+            "years": "2020 — now",
+            "role": "head of di.iiii",
+            "org": "di.iiii XR studio_network"
+          },
+          {
+            "years": "2021 — 2024",
+            "role": "art manager",
+            "org": "Gyumri State Symphony Orchestra",
+            "place": "Gyumri, Armenia"
+          },
+          {
+            "years": "2020 — 2021",
+            "role": "lecturer",
+            "org": "Yerevan State Institute of Theatre and Cinematography",
+            "place": "Gyumri, Armenia"
+          },
+          {
+            "years": "2016 — 2020",
+            "role": "actor, director",
+            "org": "Gyumri State Drama Theater",
+            "place": "Gyumri, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2017 — 2019",
+            "role": "MA, Theatre Art",
+            "org": "Yerevan State Institute of Theatre and Cinematography",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2012 — 2016",
+            "role": "BA, Directing",
+            "org": "Yerevan State Institute of Theatre and Cinematography",
+            "place": "Gyumri, Armenia"
+          }
+        ]
       }
     },
     {
@@ -290,6 +419,21 @@
           "Resolume Arena"
         ],
         "timeline": [
+          {
+            "year": "2026",
+            "items": [
+              {
+                "title": "algovrithm",
+                "role": "artist",
+                "place": "Notations #2, State Philharmonia of Armenia, Yerevan (KARATAV room) and Hayfilm, 1 Aug"
+              },
+              {
+                "title": "ազդ | azd",
+                "role": "artist",
+                "place": "a-1, Gyumri, Armenia"
+              }
+            ]
+          },
           {
             "year": "2024",
             "items": [
@@ -359,8 +503,32 @@
             ]
           }
         ],
-        "cvUrl": "https://drive.google.com/file/d/1AMSwsw7HOsf4u7v_IC6XSueuMMOZpiad/view",
-        "cvLabel": "the full CV — PDF"
+        "positions": [
+          {
+            "years": "2020 — now",
+            "role": "art director",
+            "org": "di.iiii XR studio_network"
+          },
+          {
+            "years": "2023 — 2024",
+            "role": "long-term volunteer",
+            "org": "University of Economy Bydgoszcz",
+            "place": "Bydgoszcz, Poland"
+          }
+        ],
+        "education": [
+          {
+            "years": "2022",
+            "role": "Extension programme",
+            "org": "American University of Armenia"
+          },
+          {
+            "years": "2019 — 2022",
+            "role": "college",
+            "org": "Gyumri High Academic College",
+            "place": "Gyumri, Armenia"
+          }
+        ]
       }
     },
     {
@@ -372,7 +540,7 @@
       "section": "team",
       "sectionLabel": "team",
       "city": "Gyumri",
-      "bio": "Curator based in Gyumri — MA in Art History and Theory. Co-founder of G.URBAN; curator for Gyumri Art Week; residencies and collaborations across Armenia and Germany.",
+      "bio": "Curator based in Gyumri — MA in Art History and Theory, State Academy of Fine Arts. Co-founder of G.URBAN; curator for Gyumri Art Week; residencies and collaborations across Armenia and Germany.",
       "works": [
         {
           "url": "/azd",
@@ -499,24 +667,73 @@
             "items": [
               {
                 "title": "Ground art festival",
-                "role": "organizer and curator",
-                "place": "Gyumri, Armenia"
+                "role": "organizer, curator",
+                "place": "Gyumri, Armenia, 2021"
               },
               {
-                "title": "With a Word",
-                "role": "curator and artist",
-                "place": "Gyumri, Armenia"
+                "title": "in Basen (Artworks For Peace)",
+                "role": "project manager",
+                "place": "Basen, Armenia, 2021"
+              },
+              {
+                "title": "SPCTR",
+                "role": "multimedia artist",
+                "place": "installation, Yerevan, Armenia, 2021"
+              },
+              {
+                "title": "Evaluating Performances #2: Stone to the Stone",
+                "role": "curator, artist",
+                "place": "Gyumri Textile, Gyumri, Armenia, 2019"
               },
               {
                 "title": "Anonymous",
                 "role": "curator",
-                "place": "Loft Gyumri"
+                "place": "Loft Gyumri, Armenia, 2017"
+              },
+              {
+                "title": "toDAY-2016",
+                "role": "participant",
+                "place": "20th Annual festival of alternative art, ACCEA, Yerevan, 2016"
+              },
+              {
+                "title": "With a Word",
+                "role": "curator, artist",
+                "place": "State Academy of Fine Arts · Aslamazyan Sisters Gallery · Style Gallery, Gyumri, 2015"
               }
             ]
           }
         ],
-        "cvUrl": "https://drive.google.com/file/d/1sg6ytFluP_37HQHKvO1Ski4y7FjDn4gk/view",
-        "cvLabel": "the full CV — PDF"
+        "positions": [
+          {
+            "years": "2022 — now",
+            "role": "curator",
+            "org": "di.iiii XR studio_network"
+          },
+          {
+            "years": "2021 — now",
+            "role": "co-founder",
+            "org": "G.URBAN platform",
+            "place": "Gyumri, Armenia / Munich, Germany"
+          },
+          {
+            "years": "2016 — 2017",
+            "role": "coach",
+            "org": "TUMO Gyumri",
+            "place": "Gyumri, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2018 — 2019",
+            "role": "MA, Art History and Theory",
+            "org": "State Academy of Fine Arts of Armenia"
+          },
+          {
+            "years": "2013 — 2017",
+            "role": "BA, Art History and Theory",
+            "org": "State Academy of Fine Arts of Armenia"
+          }
+        ]
       }
     },
     {
@@ -528,7 +745,7 @@
       "section": "team",
       "sectionLabel": "team",
       "city": null,
-      "bio": "Actor, lighting engineer and founder of SPCTR Lights — multimedia, audiovisual and music production, DJing.",
+      "bio": "Actor, lighting engineer, musician and DJ — co-founder of SPCTR Lights (2022–2023) and, since 2025, of Yokozo. Multimedia, audiovisual and music production.",
       "works": [],
       "elsewhere": [
         {
@@ -590,6 +807,21 @@
                 "title": "Versace — music for Versace",
                 "role": "music producer",
                 "place": "Milan, Italy"
+              },
+              {
+                "title": "NOH radio",
+                "role": "musician",
+                "place": "Istanbul, Turkey"
+              },
+              {
+                "title": "Fast and Furious (album)",
+                "role": "musician",
+                "place": "Buenos Aires, Argentina"
+              },
+              {
+                "title": "Neighborhood WATCH vol 5 (album)",
+                "role": "musician",
+                "place": "Bristol, UK"
               }
             ]
           },
@@ -610,6 +842,16 @@
                 "title": "MARDs residency",
                 "role": "visual artist",
                 "place": "Munich, Germany"
+              },
+              {
+                "title": "Acid Arab",
+                "role": "musician",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "YBAF Fashion",
+                "role": "lighting engineer",
+                "place": "Yerevan, Armenia"
               }
             ]
           },
@@ -633,8 +875,40 @@
             ]
           }
         ],
-        "cvUrl": "https://drive.google.com/file/d/1UzTrZuwg1Go7Nf1Tm0Dg8a7yt5Z1waIY/view",
-        "cvLabel": "the full CV — PDF"
+        "positions": [
+          {
+            "years": "2025 — now",
+            "role": "co-founder",
+            "org": "Yokozo",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2022 — 2023",
+            "role": "co-founder",
+            "org": "SPCTR Lights",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2020 — 2021",
+            "role": "lighting engineer",
+            "org": "Poligraf",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2016 — 2021",
+            "role": "actor",
+            "org": "Gyumri State Drama Theater",
+            "place": "Gyumri, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2015 — 2019",
+            "role": "BA, Acting",
+            "org": "Yerevan State Institute of Theatre and Cinematography",
+            "place": "Gyumri, Armenia"
+          }
+        ]
       }
     },
     {
@@ -646,7 +920,7 @@
       "section": "team",
       "sectionLabel": "team",
       "city": null,
-      "bio": "Set designer and production artist working with recycled materials — part of the art direction team renovating Hayfilm Studio into a new art venue.",
+      "bio": "Set designer and production artist working with recycled and reused materials — drawing, sculpting and 3D. Co-founder of Yokozo.",
       "works": [
         {
           "url": "/wcc/yeva-abgaryan",
@@ -682,6 +956,21 @@
           "Nomad Sculpt"
         ],
         "timeline": [
+          {
+            "year": "2026",
+            "items": [
+              {
+                "title": "WCC: Women Creating Change",
+                "role": "artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "ազդ | azd",
+                "role": "artist",
+                "place": "Faceless, Gyumri, Armenia"
+              }
+            ]
+          },
           {
             "year": "2023",
             "items": [
@@ -748,8 +1037,34 @@
             ]
           }
         ],
-        "cvUrl": "https://drive.google.com/file/d/1ncpODwX9HJ5Oa9X7kj1MBXN4-rGWa8f5/view",
-        "cvLabel": "the full CV — PDF"
+        "positions": [
+          {
+            "years": "2025 — now",
+            "role": "co-founder",
+            "org": "Yokozo",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2022 — 2023",
+            "role": "artist, art director",
+            "org": "SPCTR Lights",
+            "place": "Yerevan, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2018 — 2022",
+            "role": "Fine Arts",
+            "org": "Panos Terlemezian State College of Fine Arts",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2017 — 2019",
+            "role": "creative technologies",
+            "org": "TUMO Center for Creative Technologies",
+            "place": "Yerevan, Armenia"
+          }
+        ]
       }
     },
     {
@@ -814,7 +1129,7 @@
     },
     {
       "slug": "tatiana-vahani",
-      "name": "Tatiana Vahani",
+      "name": "Tatiana Vahan",
       "role": "curator",
       "discipline": "curator",
       "team": false,
@@ -849,7 +1164,7 @@
     },
     {
       "slug": "lusine-mlke-galstyan",
-      "name": "Lusine Mlke-Galstyan",
+      "name": "Lusine MLKE-Galstyan",
       "role": "curator",
       "discipline": "curator",
       "team": false,
@@ -864,6 +1179,13 @@
           "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
           "space": "br-id-ge",
           "project": "n2-between-silence-and-motion"
+        },
+        {
+          "url": null,
+          "title": "It's mi",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [],
@@ -872,7 +1194,7 @@
     },
     {
       "slug": "shoghakat-mlke-galstyan",
-      "name": "Shoghakat Mlke-Galstyan",
+      "name": "Shoghakat MLKE-Galstyan",
       "role": "curator",
       "discipline": "curator",
       "team": false,
@@ -907,7 +1229,7 @@
     },
     {
       "slug": "gnun-martirosyan",
-      "name": "Gnun Martirosyan",
+      "name": "Gnun Martirosian",
       "role": "performer",
       "discipline": "performer",
       "team": false,
@@ -999,7 +1321,7 @@
         {
           "url": null,
           "title": "Ambisonic Performances",
-          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-01",
+          "line": "Notations #2, curator — State Philharmonia of Armenia, 2026-08-01",
           "space": "br-id-ge",
           "project": "n2-ambisonic-performances"
         }
@@ -1457,12 +1779,7 @@
       "city": null,
       "bio": null,
       "works": [],
-      "elsewhere": [
-        {
-          "label": "Instagram",
-          "href": "https://www.instagram.com/kaiz.ok.u/"
-        }
-      ],
+      "elsewhere": [],
       "num": "042",
       "order": 42
     },
@@ -1477,12 +1794,7 @@
       "city": null,
       "bio": null,
       "works": [],
-      "elsewhere": [
-        {
-          "label": "Instagram",
-          "href": "https://www.instagram.com/_tadashii__/"
-        }
-      ],
+      "elsewhere": [],
       "num": "043",
       "order": 43
     },
@@ -1497,12 +1809,7 @@
       "city": null,
       "bio": null,
       "works": [],
-      "elsewhere": [
-        {
-          "label": "Instagram",
-          "href": "https://www.instagram.com/__21st_century_schizoid_man__/"
-        }
-      ],
+      "elsewhere": [],
       "num": "044",
       "order": 44
     },

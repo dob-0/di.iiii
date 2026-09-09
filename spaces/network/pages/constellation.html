@@ -133,7 +133,17 @@ a.row .made .arrow{opacity:.6;}
 .ti .ti-t{font-weight:600;color:var(--ink);}
 .ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
 .ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
-.cv-link{margin:20px 0 0 0;}
+.ledger-label{font-family:var(--mono);font-size:12px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);margin:30px 0 0 0;}
+.ledger{margin:10px 0 0 0;}
+.lg{display:grid;grid-template-columns:11ch 1fr;column-gap:22px;align-items:baseline;
+  padding:11px 2px;border-top:1px solid var(--rule);}
+.ledger .lg:last-child{border-bottom:1px solid var(--rule);}
+.lg-when{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;
+  white-space:nowrap;}
+.lg-role{font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.4;}
+.lg-org{display:block;font-size:14px;color:var(--ink-2);line-height:1.5;}
+.lg-place{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-top:2px;}
 
 .section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
   margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
@@ -200,6 +210,8 @@ a.row .made .arrow{opacity:.6;}
   .indexPane h1{font-size:27px;}
   .room-stage{padding-top:34px;}
   .door{flex:1 1 100%;min-height:112px;}
+  .lg{grid-template-columns:1fr;row-gap:3px;}
+  .lg-when{order:2;}
   .group{margin-top:34px;}
 }
 
@@ -270,12 +282,12 @@ a.row .made .arrow{opacity:.6;}
   <a href="/network/maria-matinyan" target="_top"><text class="c-name" x="764.04" y="351.37" text-anchor="start" dominant-baseline="middle" transform="rotate(-29.37 764.04 351.37)">Maria Matinyan</text></a>
   <a href="/network/carine-aroyan" target="_top"><text class="c-name" x="725.61" y="297.75" text-anchor="start" dominant-baseline="middle" transform="rotate(-41.87 725.61 297.75)">Carine Aroyan</text></a>
   <a href="/network/namor-votilav" target="_top"><text class="c-name" x="778.65" y="381" text-anchor="start" dominant-baseline="middle" transform="rotate(-23.12 778.65 381)">Namor Votilav</text></a>
-  <a href="/network/tatiana-vahani" target="_top"><text class="c-name" x="797.81" y="444.13" text-anchor="start" dominant-baseline="middle" transform="rotate(-10.62 797.81 444.13)">Tatiana Vahani</text></a>
+  <a href="/network/tatiana-vahani" target="_top"><text class="c-name" x="797.81" y="444.13" text-anchor="start" dominant-baseline="middle" transform="rotate(-10.62 797.81 444.13)">Tatiana Vahan</text></a>
   <a href="/network/artak-gevorgyan" target="_top"><text class="c-name" x="702.25" y="274.39" text-anchor="start" dominant-baseline="middle" transform="rotate(-48.12 702.25 274.39)">Artak Gevorgyan</text></a>
-  <a href="/network/lusine-mlke-galstyan" target="_top"><text class="c-name" x="746.29" y="323.51" text-anchor="start" dominant-baseline="middle" transform="rotate(-35.62 746.29 323.51)">Lusine Mlke-Galstyan</text></a>
-  <a href="/network/shoghakat-mlke-galstyan" target="_top"><text class="c-name" x="789.95" y="412.04" text-anchor="start" dominant-baseline="middle" transform="rotate(-16.87 789.95 412.04)">Shoghakat Mlke-Galstyan</text></a>
+  <a href="/network/lusine-mlke-galstyan" target="_top"><text class="c-name" x="746.29" y="323.51" text-anchor="start" dominant-baseline="middle" transform="rotate(-35.62 746.29 323.51)">Lusine MLKE-Galstyan</text></a>
+  <a href="/network/shoghakat-mlke-galstyan" target="_top"><text class="c-name" x="789.95" y="412.04" text-anchor="start" dominant-baseline="middle" transform="rotate(-16.87 789.95 412.04)">Shoghakat MLKE-Galstyan</text></a>
   <a href="/network/ani-khachikyan" target="_top"><text class="c-name" x="800.82" y="536.27" text-anchor="start" dominant-baseline="middle" transform="rotate(6.88 800.82 536.27)">Ani Khachikyan</text></a>
-  <a href="/network/gnun-martirosyan" target="_top"><text class="c-name" x="785.84" y="600.52" text-anchor="start" dominant-baseline="middle" transform="rotate(19.38 785.84 600.52)">Gnun Martirosyan</text></a>
+  <a href="/network/gnun-martirosyan" target="_top"><text class="c-name" x="785.84" y="600.52" text-anchor="start" dominant-baseline="middle" transform="rotate(19.38 785.84 600.52)">Gnun Martirosian</text></a>
   <a href="/network/meline-arshakyan" target="_top"><text class="c-name" x="773.2" y="631.04" text-anchor="start" dominant-baseline="middle" transform="rotate(25.63 773.2 631.04)">Meline Arshakyan</text></a>
   <a href="/network/arsen-miqayelyan" target="_top"><text class="c-name" x="795.08" y="568.8" text-anchor="start" dominant-baseline="middle" transform="rotate(13.13 795.08 568.8)">Arsen Miqayelyan</text></a>
   <a href="/network/alexandra-martini" target="_top"><text class="c-name" x="802.98" y="503.31" text-anchor="start" dominant-baseline="middle" transform="rotate(0.63 802.98 503.31)">Alexandra Martini</text></a>

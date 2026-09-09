@@ -54,6 +54,29 @@ describe('network pages are generated, not hand-kept', () => {
     })
 })
 
+describe('a room carries no one\'s private data', () => {
+    // The rooms used to link each of the five team CVs as a file on Google
+    // Drive. Four of those files opened for anyone with the URL and carried a
+    // date of birth, a personal mobile and a private e-mail address — the same
+    // pages that were cut out of the public repo in August for exactly that
+    // reason. The CV is printed here now, on our own paper, without them.
+    it('links no CV file, anywhere', () => {
+        for (const p of people) {
+            const html = renderRoom(p, people)
+            expect(html, p.slug).not.toMatch(/drive\.google\.com|docs\.google\.com/)
+        }
+    })
+
+    it('prints no date of birth, phone number or private e-mail', () => {
+        for (const p of people) {
+            const html = renderRoom(p, people)
+            expect(html, p.slug).not.toMatch(/date of birth/i)
+            expect(html, p.slug).not.toMatch(/\+\s*\(?374/)      // an Armenian mobile
+            expect(html, p.slug).not.toMatch(/[\w.]+@[\w.]+\.\w+/) // any e-mail at all
+        }
+    })
+})
+
 describe('one ground', () => {
     // The seam was two backgrounds. Every surface the shared CSS paints has
     // to be the paper, the accent tint, or a hairline — never a second world.
