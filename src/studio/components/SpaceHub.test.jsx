@@ -2,6 +2,7 @@ import React from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SpaceHub from './SpaceHub.jsx'
+import { WORKS } from '../../works/works.js'
 
 const listServerSpaces = vi.fn()
 const getServerConfig = vi.fn()
@@ -583,6 +584,69 @@ describe('SpaceHub', () => {
         fireEvent.click(previewFor('two'))
         expect(liveFrameFor('one')).toBeNull()
         expect(liveFrameFor('two')).not.toBeNull()
+    })
+
+    // A space whose bare segment a WORK has taken. `/{work}` is compiled code
+    // (src/wccSite, src/algoVrithm) and RootApp resolves it before the space
+    // router ever sees it, so a card built on the bare path could not open the
+    // rows the space holds — on an offline install, where the works are
+    // replaced by HostedPieceStub, it could only reach "not in this copy".
+    // The id comes from the registry: nothing here names a work.
+    const shadowedSpace = {
+        id: WORKS[0].id,
+        label: 'Shadowed by a work',
+        isOwner: true,
+        isPublic: true,
+        publishedProjectId: 'linked-project'
+    }
+
+    it('opens the SPACE from a card whose segment a work has taken, not the work', async () => {
+        everyCardVisible()
+        try {
+            listServerSpaces.mockResolvedValue([
+                shadowedSpace,
+                { id: 'plain', label: 'Plain', isOwner: true, isPublic: true, publishedProjectId: 'p9' }
+            ])
+
+            render(<SpaceHub />)
+
+            await screen.findByText(shadowedSpace.id)
+            const door = `/${shadowedSpace.id}/p/linked-project`
+
+            // the thumbnail
+            await waitFor(() => expect(frameIn(shadowedSpace.id)).not.toBeNull())
+            expect(frameIn(shadowedSpace.id).getAttribute('src')).toBe(`${door}?preview=1`)
+
+            // the picture made live, and its Open link
+            const preview = screen.getByText(shadowedSpace.id).closest('.ssh-space-card').querySelector('.ssh-card-preview')
+            fireEvent.click(preview)
+            const liveFrame = preview.querySelector('.ssh-card-live-frame iframe')
+            expect(liveFrame.getAttribute('src')).toBe(door)
+            expect(preview.querySelector('.ssh-card-live-open').getAttribute('href')).toBe(door)
+
+            // A space no work shadows is untouched.
+            await waitFor(() => expect(frameIn('plain')).not.toBeNull())
+            expect(frameIn('plain').getAttribute('src')).toBe('/plain?preview=1')
+        } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('gives the list row’s Live link the same door', async () => {
+        listServerSpaces.mockResolvedValue([
+            shadowedSpace,
+            { id: 'plain', label: 'Plain', isOwner: true, isPublic: true, publishedProjectId: 'p9' }
+        ])
+
+        render(<SpaceHub />)
+
+        await screen.findByText(shadowedSpace.id)
+        fireEvent.click(screen.getByRole('button', { name: /list/i }))
+
+        const rowLive = (id) => screen.getByText(id).closest('.ssh-list-row').querySelector('a.ssh-card-btn')
+        await waitFor(() => expect(rowLive(shadowedSpace.id)).not.toBeNull())
+        expect(rowLive(shadowedSpace.id).getAttribute('href')).toBe(`/${shadowedSpace.id}/p/linked-project`)
+        expect(rowLive('plain').getAttribute('href')).toBe('/plain')
     })
 
     it('shows admins a collapsed sandbox row with an expired sweep instead of sandbox cards', async () => {
