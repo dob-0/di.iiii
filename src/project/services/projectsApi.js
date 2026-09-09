@@ -77,6 +77,53 @@ export const deleteProject = async (projectId) => {
     })
 }
 
+// ── Shelves, state and the trash (2026-09-10) ───────────────────────────────
+// A collection is a shelf inside a space: the container that did not exist
+// between "a space" and "a project", which is why one space held 74 of them.
+
+export const listCollections = async (spaceId = DEFAULT_PROJECT_SPACE_ID) => {
+    const data = await apiFetch(`/api/spaces/${spaceId}/collections`)
+    return data.collections || []
+}
+
+export const createCollection = async (spaceId, label) => {
+    const data = await apiFetch(`/api/spaces/${spaceId}/collections`, { method: 'POST', body: { label } })
+    return data.collection
+}
+
+export const renameCollection = async (collectionId, label) => {
+    const data = await apiFetch(`/api/collections/${collectionId}`, { method: 'PATCH', body: { label } })
+    return data.collection
+}
+
+// Deleting a shelf never deletes the work on it; the answer says how much came
+// loose so a surface can say so out loud.
+export const deleteCollection = async (collectionId) =>
+    apiFetch(`/api/collections/${collectionId}`, { method: 'DELETE' })
+
+export const reorderCollections = async (spaceId, ids = []) =>
+    apiFetch(`/api/spaces/${spaceId}/collections/order`, { method: 'PUT', body: { ids } })
+
+export const reorderProjects = async (spaceId, ids = []) =>
+    apiFetch(`/api/spaces/${spaceId}/projects/order`, { method: 'PUT', body: { ids } })
+
+// One call for both, because they are one gesture: putting a thing somewhere,
+// and saying what it is.
+export const setProjectShelf = async (projectId, changes = {}) => {
+    const data = await apiFetch(`/api/projects/${projectId}/shelf`, { method: 'PATCH', body: changes })
+    return data.project
+}
+
+export const listTrash = async (spaceId = null) => {
+    const data = await apiFetch(`/api/trash${spaceId ? `?space=${encodeURIComponent(spaceId)}` : ''}`)
+    return { projects: data.projects || [], ttlMs: data.ttlMs || 0 }
+}
+
+export const restoreProject = async (projectId) => {
+    const data = await apiFetch(`/api/projects/${projectId}/restore`, { method: 'POST' })
+    return data.project
+}
+
 export const getProjectDocument = async (projectId) => {
     return apiFetch(`/api/projects/${projectId}/document`)
 }

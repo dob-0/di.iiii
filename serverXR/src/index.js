@@ -39,6 +39,15 @@ const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { initializeSocket } = require('./socketHandlers')
 const { initializeMesh } = require('./meshHub')
 const { loadReleaseInfo } = require('./releaseInfo')
+const {
+  listCollections,
+  getCollection,
+  createCollection,
+  renameCollection,
+  reorderCollections,
+  deleteCollection,
+  countProjectsIn,
+} = require('./collectionStore')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { createSpaceIdParam } = require('./routes/spaceIdParam')
@@ -97,6 +106,13 @@ const {
   appendProjectOps,
   buildProjectAssetMeta,
   deleteProject,
+  listTrashedProjects,
+  restoreProject,
+  purgeTrash,
+  reorderProjects,
+  setProjectShelf,
+  setProjectState,
+  TRASH_TTL_MS,
   ensureProject,
   findProjectById,
   findProjectBySlug,
@@ -1668,6 +1684,19 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   loadSpaceMeta,
   listSpaces,
   listProjectsInSpace,
+  listTrashedProjects,
+  restoreProject,
+  reorderProjects,
+  setProjectShelf,
+  setProjectState,
+  TRASH_TTL_MS,
+  listCollections,
+  getCollection,
+  createCollection,
+  renameCollection,
+  reorderCollections,
+  deleteCollection,
+  countProjectsIn,
   maxOpHistory: MAX_OP_HISTORY,
   maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeIncomingOps,
@@ -1953,6 +1982,19 @@ registerProjectRoutes(router, {
   isReservedProjectSlug,
   isValidAssetId: isValidProjectAssetId,
   listProjectsInSpace,
+  listTrashedProjects,
+  restoreProject,
+  reorderProjects,
+  setProjectShelf,
+  setProjectState,
+  TRASH_TTL_MS,
+  listCollections,
+  getCollection,
+  createCollection,
+  renameCollection,
+  reorderCollections,
+  deleteCollection,
+  countProjectsIn,
   maxOpHistory: MAX_OP_HISTORY,
   maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeIncomingOps,
@@ -2132,6 +2174,13 @@ initStorage()
     const sweep = () => {
       pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
       try { pruneLoginTokens() } catch (error) { logger.warn('Failed to prune login tokens', error) }
+      // The trash. Deleting marks the row and leaves the bytes; this is the
+      // only path that removes them, and only after TRASH_TTL_MS. Rides the
+      // same half-hour sweep — a deletion is not urgent, and its whole value
+      // is the delay.
+      purgeTrash(SPACES_DIR)
+        .then((purged) => { if (purged.length) logger.info(`[trash] purged ${purged.length} project(s) past the 30-day hold`) })
+        .catch((error) => logger.warn('Failed to purge the trash', error))
     }
     setInterval(sweep, 1000 * 60 * 30)
     // Daily snapshot of the open space — its scene and its project documents,

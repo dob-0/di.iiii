@@ -797,3 +797,172 @@ describe('project contracts', () => {
         expect(opsPayload.ops.filter((op) => op.opId === 'retry-op-fixed-id')).toHaveLength(1)
     })
 })
+
+// ── Shelves, states and the trash ────────────────────────────────────────────
+// Added 2026-09-10. Before this the only container was the space itself (one
+// space held 74 of 200 projects as flat siblings), the only archive was five
+// titles with "[archived]" typed in front, and delete removed the row and
+// rm -rf'd the directory in the same call with no undo anywhere in the product.
+describe('collections, state and the trash', () => {
+    const create = async (server, spaceId, title) => {
+        const res = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title })
+        })
+        expect(res.status).toBe(201)
+        return (await res.json()).project
+    }
+
+    const shelf = async (server, spaceId, label) => {
+        const res = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/collections`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label })
+        })
+        expect(res.status).toBe(201)
+        return (await res.json()).collection
+    }
+
+    it('groups work on a shelf inside a space, without the shelf becoming a place', async () => {
+        const server = await startServer()
+        const entries = await shelf(server, 'main', 'Open call 2026')
+        expect(entries.label).toBe('Open call 2026')
+        expect(entries.spaceId).toBe('main')
+
+        const project = await create(server, 'main', 'An entry')
+        expect(project.collectionId).toBeNull()
+
+        const filed = await fetch(`${server.baseUrl}/api/projects/${project.id}/shelf`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ collectionId: entries.id })
+        })
+        expect(filed.status).toBe(200)
+        expect((await filed.json()).project.collectionId).toBe(entries.id)
+
+        const listed = await (await fetch(`${server.baseUrl}/api/spaces/main/collections`)).json()
+        expect(listed.collections.map(c => c.id)).toContain(entries.id)
+    })
+
+    it('deleting a shelf never deletes the work on it — the work comes loose', async () => {
+        const server = await startServer()
+        const week = await shelf(server, 'main', 'Week one')
+        const project = await create(server, 'main', 'A room from week one')
+        await fetch(`${server.baseUrl}/api/projects/${project.id}/shelf`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ collectionId: week.id })
+        })
+
+        const removed = await fetch(`${server.baseUrl}/api/collections/${week.id}`, { method: 'DELETE' })
+        expect(removed.status).toBe(200)
+        expect((await removed.json()).loosened).toBe(1)
+
+        const projects = (await (await fetch(`${server.baseUrl}/api/spaces/main/projects`)).json()).projects
+        const still = projects.find(p => p.id === project.id)
+        expect(still).toBeTruthy()
+        expect(still.collectionId).toBeNull()
+    })
+
+    it('refuses to file a project on a shelf that belongs to another space', async () => {
+        const server = await startServer()
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: 'elsewhere', label: 'Elsewhere' })
+        })
+        const there = await shelf(server, 'elsewhere', 'Their shelf')
+        const here = await create(server, 'main', 'Mine')
+
+        const res = await fetch(`${server.baseUrl}/api/projects/${here.id}/shelf`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ collectionId: there.id })
+        })
+        expect(res.status).toBe(400)
+    })
+
+    it('a project is draft, live or archived — and nothing else', async () => {
+        const server = await startServer()
+        const project = await create(server, 'main', 'Something in progress')
+        expect(project.state).toBe('live')
+
+        const archived = await fetch(`${server.baseUrl}/api/projects/${project.id}/shelf`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state: 'archived' })
+        })
+        expect((await archived.json()).project.state).toBe('archived')
+
+        const nonsense = await fetch(`${server.baseUrl}/api/projects/${project.id}/shelf`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state: 'sort-of' })
+        })
+        expect(nonsense.status).toBe(400)
+    })
+
+    it('delete puts work in the trash and it can be brought back', async () => {
+        const server = await startServer()
+        const project = await create(server, 'main', 'Deleted by mistake')
+
+        const deleted = await fetch(`${server.baseUrl}/api/projects/${project.id}`, { method: 'DELETE' })
+        expect(deleted.status).toBe(200)
+        const receipt = await deleted.json()
+        expect(receipt.trashed).toBe(true)
+        expect(receipt.restorableUntil).toBeGreaterThan(Date.now())
+
+        // gone from the space…
+        const listed = (await (await fetch(`${server.baseUrl}/api/spaces/main/projects`)).json()).projects
+        expect(listed.find(p => p.id === project.id)).toBeUndefined()
+
+        // …and findable in the trash
+        const trash = await (await fetch(`${server.baseUrl}/api/trash?space=main`)).json()
+        expect(trash.projects.map(p => p.id)).toContain(project.id)
+        expect(trash.ttlMs).toBeGreaterThan(0)
+
+        const restored = await fetch(`${server.baseUrl}/api/projects/${project.id}/restore`, { method: 'POST' })
+        expect(restored.status).toBe(200)
+        const back = (await (await fetch(`${server.baseUrl}/api/spaces/main/projects`)).json()).projects
+        expect(back.find(p => p.id === project.id)).toBeTruthy()
+    })
+
+    it('the document survives the trash — restoring gives back the work, not an empty shell', async () => {
+        const server = await startServer()
+        const project = await create(server, 'main', 'Has something in it')
+        await fetch(`${server.baseUrl}/api/projects/${project.id}/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [{ type: 'createEntity', payload: { entity: { id: 'kept-entity', type: 'box', name: 'Kept' } } }]
+            })
+        })
+
+        await fetch(`${server.baseUrl}/api/projects/${project.id}`, { method: 'DELETE' })
+        await fetch(`${server.baseUrl}/api/projects/${project.id}/restore`, { method: 'POST' })
+
+        const document = await (await fetch(`${server.baseUrl}/api/projects/${project.id}/document`)).json()
+        const entities = document.document?.entities || document.entities || []
+        expect(JSON.stringify(entities)).toContain('kept-entity')
+    })
+
+    it('order is given whole, and a project that was never dragged keeps its place', async () => {
+        const server = await startServer()
+        const a = await create(server, 'main', 'Alpha ordering')
+        const b = await create(server, 'main', 'Beta ordering')
+        const c = await create(server, 'main', 'Gamma ordering')
+
+        const res = await fetch(`${server.baseUrl}/api/spaces/main/projects/order`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: [c.id, a.id, b.id] })
+        })
+        expect(res.status).toBe(200)
+
+        const projects = (await (await fetch(`${server.baseUrl}/api/spaces/main/projects`)).json()).projects
+        const seen = projects.filter(p => [a.id, b.id, c.id].includes(p.id)).map(p => p.id)
+        expect(seen).toEqual([c.id, a.id, b.id])
+    })
+})

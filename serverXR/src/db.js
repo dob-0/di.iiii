@@ -37,6 +37,21 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_projects_space ON projects(space_id);
 
+  -- A shelf inside a space. Until 2026-09-10 the only container was the space
+  -- itself, so anything that was a GROUP of works — an open call's entries, a
+  -- week of a camp, a roster — had to become either a whole space of its own or
+  -- a flat pile of siblings. One space held 74 of 200 projects for exactly that
+  -- reason. A collection groups without becoming a place.
+  CREATE TABLE IF NOT EXISTS collections (
+    id TEXT PRIMARY KEY,
+    space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_collections_space ON collections(space_id, position);
+
   CREATE TABLE IF NOT EXISTS project_ops (
     seq INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -334,6 +349,22 @@ function ensureColumn(db, table, column, definition) {
   db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
 }
 
+// The only archive the platform had was five project titles with "[archived] "
+// typed in front of them — plain text that filtered nothing, sorted nothing and
+// hid nothing. Now that `state` exists, those titles say what they meant: the
+// state becomes 'archived' and the prefix comes off the name. Runs once.
+function backfillArchivedTitles(db) {
+  const KEY = 'v3_archived_title_to_state'
+  if (db.prepare('SELECT 1 FROM migrations WHERE key = ?').get(KEY)) return
+  const rows = db.prepare("SELECT id, title FROM projects WHERE title LIKE '[archived]%'").all()
+  const update = db.prepare('UPDATE projects SET title = ?, state = ? WHERE id = ?')
+  for (const row of rows) {
+    const cleaned = String(row.title).replace(/^\s*\[archived\]\s*/i, '').trim() || row.title
+    update.run(cleaned, 'archived', row.id)
+  }
+  db.prepare('INSERT OR REPLACE INTO migrations (key, completed_at) VALUES (?, ?)').run(KEY, Date.now())
+}
+
 // Replace the legacy "spaces = JSON 'null' means unrestricted" convention with
 // an explicit is_unrestricted flag. Runs once (guarded by the migrations table).
 function backfillUserUnrestricted(db) {
@@ -408,6 +439,20 @@ function initDb(dbPath) {
   ensureColumn(db, 'spaces', 'open_inscriptions', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'spaces', 'slug', 'TEXT')
   ensureColumn(db, 'projects', 'slug', 'TEXT')
+  // Which shelf it sits on, where on the shelf, and what it IS to a visitor.
+  // `state` replaces the only archive the platform had: five titles with
+  // "[archived]" typed in front of them, which filtered nothing.
+  ensureColumn(db, 'projects', 'collection_id', 'TEXT')
+  ensureColumn(db, 'projects', 'position', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'projects', 'state', "TEXT NOT NULL DEFAULT 'live'")
+  // The trash. Delete used to remove the row and rm -rf the directory in the
+  // same breath, with no undo of any kind — the single most frightening thing
+  // in the product. Deleted work now waits out TRASH_TTL_MS before anything
+  // touches the bytes.
+  ensureColumn(db, 'projects', 'deleted_at', 'INTEGER')
+  ensureColumn(db, 'spaces', 'deleted_at', 'INTEGER')
+  ensureColumn(db, 'spaces', 'position', 'INTEGER NOT NULL DEFAULT 0')
+  db.exec('CREATE INDEX IF NOT EXISTS idx_projects_collection ON projects(collection_id, position)')
   ensureColumn(db, 'users', 'spaces', 'TEXT')
   ensureColumn(db, 'users', 'is_unrestricted', 'INTEGER NOT NULL DEFAULT 0')
   // Bumped on logout so already-issued session cookies stop verifying — they
@@ -415,6 +460,7 @@ function initDb(dbPath) {
   // cookie copied before logout still worked on every other device.
   ensureColumn(db, 'users', 'token_version', 'INTEGER NOT NULL DEFAULT 0')
   backfillUserUnrestricted(db)
+  backfillArchivedTitles(db)
   backfillGlobalSpace(db)
   dedupeAndUniqueOps(db)
   // Nullable, independently-renameable public handle distinct from the
@@ -442,4 +488,4 @@ function closeDb() {
   }
 }
 
-module.exports = { initDb, getDb, closeDb, SCHEMA_VERSION, readSchemaVersion }
+module.exports = { initDb, getDb, closeDb, SCHEMA_VERSION, readSchemaVersion, runArchiveBackfill: backfillArchivedTitles }

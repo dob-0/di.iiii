@@ -52,8 +52,23 @@ const rowToMeta = (row) => !row ? null : ({
   updatedAt: row.updated_at,
   lastTouchedAt: row.last_touched_at,
   documentVersion: row.document_version,
-  source: row.source
+  source: row.source,
+  // Which shelf, where on it, and what it is. See collectionStore.js.
+  collectionId: row.collection_id || null,
+  position: row.position ?? 0,
+  state: row.state || 'live',
+  deletedAt: row.deleted_at || null
 })
+
+// What a project can be. 'live' is the default and what every existing project
+// became on migration; nothing is hidden by this landing.
+const PROJECT_STATES = ['draft', 'live', 'archived']
+const isProjectState = (value) => PROJECT_STATES.includes(value)
+
+// How long deleted work waits before anything touches the bytes. Thirty days is
+// the same promise the sandbox sweep makes, and long enough that "I deleted the
+// wrong thing" is recoverable on the timescale a person actually notices.
+const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 const buildProjectMeta = (spaceId, projectId, overrides = {}) => {
   const now = Date.now()
@@ -66,7 +81,15 @@ const buildProjectMeta = (spaceId, projectId, overrides = {}) => {
     updatedAt: now,
     lastTouchedAt: now,
     documentVersion: Number.isFinite(Number(overrides.documentVersion)) ? Number(overrides.documentVersion) : 0,
-    source: overrides.source || 'project'
+    source: overrides.source || 'project',
+    // A new project is loose on no shelf, at the end of the order, and live —
+    // the same three answers rowToMeta gives for a row written before any of
+    // these columns existed, so a created project and a migrated one report
+    // themselves identically.
+    collectionId: overrides.collectionId || null,
+    position: Number.isFinite(Number(overrides.position)) ? Number(overrides.position) : 0,
+    state: isProjectState(overrides.state) ? overrides.state : 'live',
+    deletedAt: null
   }
 }
 
@@ -93,11 +116,26 @@ const s = () => {
   if (_s && _dbRef === db) return _s
   _dbRef = db
   _s = {
-    selectById:       db.prepare('SELECT * FROM projects WHERE id = ?'),
-    selectBySpace:    db.prepare('SELECT * FROM projects WHERE id = ? AND space_id = ?'),
-    selectBySpaceAll: db.prepare('SELECT * FROM projects WHERE space_id = ? ORDER BY updated_at DESC'),
+    selectById:       db.prepare('SELECT * FROM projects WHERE id = ? AND deleted_at IS NULL'),
+    selectBySpace:    db.prepare('SELECT * FROM projects WHERE id = ? AND space_id = ? AND deleted_at IS NULL'),
+    // The trash's own lookups deliberately see what the rest cannot.
+    selectAnyById:    db.prepare('SELECT * FROM projects WHERE id = ?'),
+    // Ordered by the shelf, then by hand, then by recency — a project that has
+    // never been dragged keeps exactly the order it had before collections.
+    selectBySpaceAll: db.prepare('SELECT * FROM projects WHERE space_id = ? AND deleted_at IS NULL ORDER BY position ASC, updated_at DESC'),
+    selectTrashed:    db.prepare('SELECT * FROM projects WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC'),
+    selectTrashedInSpace: db.prepare('SELECT * FROM projects WHERE space_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC'),
+    selectPurgeable:  db.prepare('SELECT * FROM projects WHERE deleted_at IS NOT NULL AND deleted_at < ?'),
+    softDelete:       db.prepare('UPDATE projects SET deleted_at = ?, updated_at = ? WHERE id = ?'),
+    restore:          db.prepare('UPDATE projects SET deleted_at = NULL, updated_at = ? WHERE id = ?'),
+    setShelf:         db.prepare('UPDATE projects SET collection_id = ?, updated_at = ? WHERE id = ?'),
+    setPosition:      db.prepare('UPDATE projects SET position = ?, updated_at = ? WHERE id = ?'),
+    setState:         db.prepare('UPDATE projects SET state = ?, updated_at = ? WHERE id = ?'),
     selectBySlug:     db.prepare('SELECT * FROM projects WHERE space_id = ? AND slug = ?'),
-    selectAllIndex:   db.prepare('SELECT id, space_id FROM projects'),
+    // The index is what resolves a project id to its space, so a trashed
+    // project must be absent from it — otherwise its url keeps working after it
+    // was deleted, which is the opposite of what delete means.
+    selectAllIndex:   db.prepare('SELECT id, space_id FROM projects WHERE deleted_at IS NULL'),
     insert:           db.prepare('INSERT INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
     upsert:           db.prepare('INSERT OR REPLACE INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
     update:           db.prepare('UPDATE projects SET slug=?, title=?, document_version=?, source=?, updated_at=?, last_touched_at=? WHERE id=?'),
@@ -125,10 +163,15 @@ const findProjectBySlug = async (spaceId, slug) => rowToMeta(s().selectBySlug.ge
 
 const upsertProjectMeta = async (spacesDir, spaceId, projectId, updates = {}) => {
   const db = getDb()
-  const { insert, update, selectById } = s()
+  const { insert, update, selectAnyById, restore } = s()
   const now = Date.now()
   return db.transaction(() => {
-    const row = selectById.get(projectId)
+    // selectAnyById, not selectById: a project sitting in the trash still owns
+    // its id. Writing to it — restoring a snapshot over it, or re-creating one
+    // by the same name — is a request for it to exist again, so it comes back
+    // rather than colliding with a row nobody can see.
+    const row = selectAnyById.get(projectId)
+    if (row?.deleted_at) restore.run(now, projectId)
     if (!row) {
       const meta = buildProjectMeta(spaceId, projectId, updates)
       insert.run(projectId, spaceId, meta.slug ?? null, meta.title, meta.documentVersion, meta.source, meta.createdAt, meta.updatedAt, meta.lastTouchedAt)
@@ -288,10 +331,56 @@ const findProjectById = async (spacesDir, projectId) => {
   }
 }
 
+// Delete is a promise to forget, not an instruction to shred. The row stays,
+// marked, and the files stay untouched until purgeTrash() passes TRASH_TTL_MS —
+// so "delete" and "gone" are two different days.
 const deleteProject = async (spacesDir, spaceId, projectId) => {
+  const now = Date.now()
+  s().softDelete.run(now, now, projectId)
+  return { deletedAt: now, restorableUntil: now + TRASH_TTL_MS }
+}
+
+const restoreProject = async (projectId) => {
+  s().restore.run(Date.now(), projectId)
+  return rowToMeta(s().selectAnyById.get(projectId))
+}
+
+const listTrashedProjects = async (spaceId = null) =>
+  (spaceId ? s().selectTrashedInSpace.all(spaceId) : s().selectTrashed.all()).map(rowToMeta)
+
+// The only path that actually removes bytes. Called by the sweep, and by an
+// explicit "empty the trash" — never by a delete.
+const purgeProject = async (spacesDir, spaceId, projectId) => {
   s().deleteById.run(projectId)
   const { projectDir } = getProjectPaths(spacesDir, spaceId, projectId)
   await fsp.rm(projectDir, { recursive: true, force: true })
+}
+
+const purgeTrash = async (spacesDir, { now = Date.now(), ttlMs = TRASH_TTL_MS } = {}) => {
+  const due = s().selectPurgeable.all(now - ttlMs)
+  for (const row of due) await purgeProject(spacesDir, row.space_id, row.id)
+  return due.map(row => row.id)
+}
+
+const setProjectShelf = async (projectId, collectionId) => {
+  s().setShelf.run(collectionId || null, Date.now(), projectId)
+  return rowToMeta(s().selectById.get(projectId))
+}
+
+const setProjectState = async (projectId, state) => {
+  if (!isProjectState(state)) throw Object.assign(new Error(`Unknown state "${state}".`), { status: 400 })
+  s().setState.run(state, Date.now(), projectId)
+  return rowToMeta(s().selectById.get(projectId))
+}
+
+// A drag is one intent: the whole order arrives at once. Applying it as a series
+// of pairwise swaps is how two people reordering at the same time end up with an
+// order neither of them asked for.
+const reorderProjects = async (spaceId, ids = []) => {
+  const known = new Map(s().selectBySpaceAll.all(spaceId).map(row => [row.id, row]))
+  const now = Date.now()
+  ids.filter(id => known.has(id)).forEach((id, index) => s().setPosition.run(index, now, id))
+  return (await listProjectsInSpace(null, spaceId))
 }
 
 const buildProjectAssetMeta = ({ assetId, file, source = 'server', width = 0, height = 0 }) => {
@@ -324,7 +413,17 @@ module.exports = {
   getProjectPaths,
   isReservedProjectSlug,
   isValidAssetId,
+  PROJECT_STATES,
+  TRASH_TTL_MS,
+  isProjectState,
   listProjectsInSpace,
+  listTrashedProjects,
+  restoreProject,
+  purgeProject,
+  purgeTrash,
+  setProjectShelf,
+  setProjectState,
+  reorderProjects,
   loadProjectMeta,
   normalizeProjectId,
   normalizeProjectSlug,

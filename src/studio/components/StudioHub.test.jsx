@@ -15,6 +15,11 @@ import { buildStudioDirectorPath } from '../utils/studioRouting.js'
 const createProject = vi.fn()
 const deleteProject = vi.fn()
 const listProjects = vi.fn()
+const listCollections = vi.fn(async () => [])
+const createCollection = vi.fn()
+const setProjectShelf = vi.fn()
+const listTrash = vi.fn(async () => ({ projects: [], ttlMs: 0 }))
+const restoreProject = vi.fn()
 const updateProjectDocument = vi.fn()
 const uploadProjectAsset = vi.fn()
 const getServerSpace = vi.fn()
@@ -27,6 +32,14 @@ vi.mock('../../project/services/projectsApi.js', () => ({
     createProject: (...args) => createProject(...args),
     deleteProject: (...args) => deleteProject(...args),
     listProjects: (...args) => listProjects(...args),
+    // Shelves and the trash: a space with neither is the default this suite
+    // asserts on, so they answer empty rather than being left undefined —
+    // calling an undefined export threw before the hub had rendered anything.
+    listCollections: (...args) => listCollections(...args),
+    createCollection: (...args) => createCollection(...args),
+    setProjectShelf: (...args) => setProjectShelf(...args),
+    listTrash: (...args) => listTrash(...args),
+    restoreProject: (...args) => restoreProject(...args),
     updateProjectDocument: (...args) => updateProjectDocument(...args),
     uploadProjectAsset: (...args) => uploadProjectAsset(...args),
     // GridFloorBackground (rendered by StudioHub) fetches its own live
@@ -271,5 +284,74 @@ describe('StudioHub', () => {
                 source: 'legacy-import-studio'
             })
         }))
+    })
+})
+
+// ── Shelves, state and the trash (2026-09-10) ───────────────────────────────
+// The container that did not exist between "a space" and "a project" — one
+// space held 74 of them as flat siblings — and the undo that did not exist for
+// delete.
+describe('shelves and the trash', () => {
+    it('a space with no shelves looks exactly as it did — one grid, no headings', async () => {
+        listProjects.mockResolvedValue([
+            { id: 'a', title: 'Alpha', updatedAt: Date.now(), source: 'project' },
+            { id: 'b', title: 'Beta', updatedAt: Date.now(), source: 'project' }
+        ])
+        listCollections.mockResolvedValue([])
+
+        render(<StudioHub spaceId="main" />)
+
+        await screen.findByText('Alpha')
+        expect(document.querySelectorAll('.sh-shelf').length).toBe(0)
+        expect(document.querySelectorAll('.sh-project-card').length).toBe(2)
+    })
+
+    it('groups by shelf the moment there is one, and gives whatever is loose a heading of its own', async () => {
+        listProjects.mockResolvedValue([
+            { id: 'a', title: 'Entry one', collectionId: 'call-2026', updatedAt: Date.now(), source: 'project' },
+            { id: 'b', title: 'Something else', collectionId: null, updatedAt: Date.now(), source: 'project' }
+        ])
+        listCollections.mockResolvedValue([{ id: 'call-2026', label: 'Open call 2026', spaceId: 'main', position: 0 }])
+
+        render(<StudioHub spaceId="main" />)
+
+        await screen.findByText('Entry one')
+        const headings = [...document.querySelectorAll('.sh-shelf-label')].map(el => el.textContent)
+        expect(headings).toEqual(['Open call 2026', 'Not on a shelf'])
+    })
+
+    it('an archived project is hidden until asked for, by its state and not by its title', async () => {
+        listProjects.mockResolvedValue([
+            { id: 'a', title: 'Still going', state: 'live', updatedAt: Date.now(), source: 'project' },
+            { id: 'b', title: 'ops board', state: 'archived', updatedAt: Date.now(), source: 'project' }
+        ])
+        listCollections.mockResolvedValue([])
+
+        render(<StudioHub spaceId="main" />)
+
+        await screen.findByText('Still going')
+        expect(screen.queryByText('ops board')).toBeNull()
+        fireEvent.click(screen.getByText('1 archived'))
+        expect(await screen.findByText('ops board')).toBeTruthy()
+    })
+
+    it('offers the trash with what is in it, and brings a project back', async () => {
+        const deletedAt = Date.now() - 60_000
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({
+            projects: [{ id: 'gone', title: 'Deleted by mistake', deletedAt, spaceId: 'main' }],
+            ttlMs: 30 * 24 * 60 * 60 * 1000
+        })
+        restoreProject.mockResolvedValue({ id: 'gone' })
+
+        render(<StudioHub spaceId="main" />)
+
+        const opener = await screen.findByText('Trash — 1')
+        fireEvent.click(opener)
+        expect(await screen.findByText('Deleted by mistake')).toBeTruthy()
+
+        fireEvent.click(screen.getByText('Bring it back'))
+        await waitFor(() => expect(restoreProject).toHaveBeenCalledWith('gone'))
     })
 })

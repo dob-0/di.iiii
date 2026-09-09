@@ -11,6 +11,11 @@ import {
     createProject,
     deleteProject,
     listProjects,
+    listCollections,
+    createCollection,
+    setProjectShelf,
+    listTrash,
+    restoreProject,
     updateProject,
     updateProjectDocument,
     uploadProjectAsset
@@ -41,7 +46,12 @@ const formatSource = (source = '') => {
     }
 }
 
+// Until 2026-09-10 the only archive was this: the word typed into the title.
+// A database that has been migrated has no such titles left, but a project
+// created on an older build and synced in can still arrive wearing one.
 const isArchivedTitle = (title = '') => title.trimStart().startsWith('[archived]')
+const projectState = (project) => project?.state || (isArchivedTitle(project?.title) ? 'archived' : 'live')
+const UNSHELVED = '__loose__'
 
 export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const { role, openSpaceId } = useAuthSession()
@@ -53,16 +63,41 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [renamingId, setRenamingId] = useState(null)
     const [renameValue, setRenameValue] = useState('')
     const [showArchived, setShowArchived] = useState(false)
+    // Shelves inside this space, the trash, and which card has its shelf menu
+    // open. See serverXR/src/collectionStore.js for what a collection is.
+    const [collections, setCollections] = useState([])
+    const [creatingShelf, setCreatingShelf] = useState(null)
+    const [trash, setTrash] = useState(null)
+    const [showTrash, setShowTrash] = useState(false)
 
     // Non-null when this space's scene is code rather than a project document.
     const codeSpace = useMemo(() => getCodeSpace(spaceId), [spaceId])
 
     const mostRecentProject = useMemo(() => projects[0] || null, [projects])
-    const archivedProjects = useMemo(() => projects.filter(p => isArchivedTitle(p.title)), [projects])
+    const archivedProjects = useMemo(() => projects.filter(p => projectState(p) === 'archived'), [projects])
     const visibleProjects = useMemo(
-        () => showArchived ? projects : projects.filter(p => !isArchivedTitle(p.title)),
+        () => showArchived ? projects : projects.filter(p => projectState(p) !== 'archived'),
         [projects, showArchived]
     )
+
+    // The shelves, in their order, each with what is on it — and everything
+    // else under one last heading. A space with no shelves renders exactly as
+    // it did before: one grid, no headings, nothing to learn.
+    const shelved = useMemo(() => {
+        if (!collections.length) return [{ id: UNSHELVED, label: null, items: visibleProjects }]
+        const byShelf = new Map(collections.map(c => [c.id, []]))
+        const loose = []
+        for (const project of visibleProjects) {
+            const bucket = project.collectionId && byShelf.has(project.collectionId)
+                ? byShelf.get(project.collectionId)
+                : loose
+            bucket.push(project)
+        }
+        return [
+            ...collections.map(c => ({ id: c.id, label: c.label, items: byShelf.get(c.id) || [] })),
+            ...(loose.length ? [{ id: UNSHELVED, label: 'Not on a shelf', items: loose }] : [])
+        ]
+    }, [collections, visibleProjects])
 
     useEffect(() => {
         setSpaceLabel(spaceId)
@@ -74,8 +109,14 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const loadProjects = useCallback(async () => {
         setStatus('loading...')
         try {
-            const next = await listProjects(spaceId)
+            const [next, shelves] = await Promise.all([
+                listProjects(spaceId),
+                // A space on an older server has no shelves and no endpoint for
+                // them; that is a space with no shelves, not an error to show.
+                listCollections(spaceId).catch(() => [])
+            ])
             setProjects(next)
+            setCollections(shelves)
             setStatus('')
         } catch (e) {
             setStatus(e.message || 'error loading projects')
@@ -83,6 +124,54 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     }, [spaceId])
 
     useEffect(() => { loadProjects() }, [loadProjects])
+
+    const loadTrash = useCallback(async () => {
+        try { setTrash(await listTrash(spaceId)) } catch { setTrash({ projects: [], ttlMs: 0 }) }
+    }, [spaceId])
+
+    // What is in the trash is worth knowing before anyone asks for it — the
+    // whole point is that a deletion is recoverable, and a count says so.
+    useEffect(() => { loadTrash() }, [loadTrash, projects])
+
+    const handleNewShelf = useCallback(async (event) => {
+        event.preventDefault()
+        const label = String(creatingShelf || '').trim()
+        if (!label) { setCreatingShelf(null); return }
+        try {
+            await createCollection(spaceId, label)
+            setCreatingShelf(null)
+            await loadProjects()
+        } catch (e) {
+            setStatus(e.message || 'could not make that shelf')
+        }
+    }, [creatingShelf, spaceId, loadProjects])
+
+    const handleShelve = useCallback(async (project, collectionId) => {
+        try {
+            await setProjectShelf(project.id, { collectionId: collectionId || null })
+            await loadProjects()
+        } catch (e) {
+            setStatus(e.message || 'could not move that')
+        }
+    }, [loadProjects])
+
+    const handleState = useCallback(async (project, state) => {
+        try {
+            await setProjectShelf(project.id, { state })
+            await loadProjects()
+        } catch (e) {
+            setStatus(e.message || 'could not change that')
+        }
+    }, [loadProjects])
+
+    const handleRestore = useCallback(async (project) => {
+        try {
+            await restoreProject(project.id)
+            await loadProjects()
+        } catch (e) {
+            setStatus(e.message || 'could not bring that back')
+        }
+    }, [loadProjects])
 
     // The open space is a door, not a lobby: forward straight into the shared
     // jam project so "step inside" lands in 3D. ?browse=1 keeps the project
@@ -193,6 +282,100 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         }
     }
 
+    // One card. Lifted out of the grid so the grid can be several grids — one
+    // per shelf — without the card being written three times.
+    const renderProjectCard = (project) => {
+        const isRenaming = renamingId === project.id
+        return (
+            <div
+                key={project.id}
+                className="sh-project-card"
+                onClick={() => !isRenaming && openProject(project.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => e.key === 'Enter' && !isRenaming && openProject(project.id)}
+            >
+                {isRenaming ? (
+                    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+                    <form
+                        className="sh-rename-form"
+                        onSubmit={e => submitRename(project.id, e)}
+                        onClick={e => e.stopPropagation()}
+                        onKeyDown={e => e.stopPropagation()}
+                    >
+                        <input
+                            className="sh-rename-input"
+                            ref={el => el?.focus()}
+                            value={renameValue}
+                            onChange={e => setRenameValue(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
+                            }}
+                        />
+                        <button className="sh-rename-save" type="submit">Save</button>
+                        <button className="sh-rename-cancel" type="button" onClick={() => { setRenamingId(null); setRenameValue('') }}>✕</button>
+                    </form>
+                ) : (
+                    <p
+                        className="sh-project-title"
+                        onDoubleClick={e => startRename(project, e)}
+                        title="Double-click to rename"
+                    >
+                        {project.title}
+                    </p>
+                )}
+                <div className="sh-project-meta">
+                    <span className="sh-meta-tag">{formatRelativeDate(project.updatedAt)}</span>
+                    <span className="sh-meta-tag">{formatSource(project.source)}</span>
+                    {projectState(project) !== 'live' && (
+                        <span className={`sh-state sh-state--${projectState(project)}`}>{projectState(project)}</span>
+                    )}
+                </div>
+                {!isRenaming && (
+                    <>
+                        <button
+                            className="sh-btn-rename"
+                            onClick={e => startRename(project, e)}
+                            title="Rename project"
+                        >Rename</button>
+                        <button
+                            className="sh-btn-delete"
+                            onClick={e => { e.stopPropagation(); handleDelete(project) }}
+                            aria-label="Delete"
+                            title="Delete — held in the trash for 30 days"
+                        >✕</button>
+                        {/* Where it sits and what it is. Two selects rather than
+                            a menu: both are one-tap on a phone, and both say
+                            their current answer without being opened. */}
+                        <div className="sh-card-filing" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                            {collections.length > 0 && (
+                                <select
+                                    className="sh-select"
+                                    aria-label="Shelf"
+                                    value={project.collectionId || ''}
+                                    onChange={e => handleShelve(project, e.target.value)}
+                                >
+                                    <option value="">no shelf</option>
+                                    {collections.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                                </select>
+                            )}
+                            <select
+                                className="sh-select"
+                                aria-label="State"
+                                value={projectState(project)}
+                                onChange={e => handleState(project, e.target.value)}
+                            >
+                                <option value="draft">draft</option>
+                                <option value="live">live</option>
+                                <option value="archived">archived</option>
+                            </select>
+                        </div>
+                    </>
+                )}
+            </div>
+        )
+    }
+
     return (
         <Box className="studio-shell-root studio-hub-root">
             <GridFloorBackground
@@ -242,7 +425,24 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
                 {/* Secondary actions */}
                 <div className="sh-secondary-row">
-                    <button className="sh-link" onClick={() => appNavigate(buildSpacesPath())}>← Spaces</button>
+                    <button className="sh-link" onClick={() => appNavigate(buildSpacesPath())}>Spaces</button>
+                    <span className="sh-sep">·</span>
+                    {creatingShelf === null ? (
+                        <button className="sh-link" type="button" onClick={() => setCreatingShelf('')}>+ Shelf</button>
+                    ) : (
+                        <form className="sh-shelf-form" onSubmit={handleNewShelf}>
+                            <input
+                                className="sh-rename-input"
+                                ref={el => el?.focus()}
+                                placeholder="Name this shelf"
+                                value={creatingShelf}
+                                onChange={e => setCreatingShelf(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Escape') setCreatingShelf(null) }}
+                            />
+                            <button className="sh-rename-save" type="submit">Make it</button>
+                            <button className="sh-rename-cancel" type="button" onClick={() => setCreatingShelf(null)}>✕</button>
+                        </form>
+                    )}
                     <span className="sh-sep">·</span>
                     <label className={`sh-link${isBusy ? ' sh-link-disabled' : ''}`}>
                         Import
@@ -313,6 +513,11 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     zero projects, and it shares the grid rather than sitting in
                     one of its own — it is one of this space's things, not a
                     separate category. See utils/codeSpaces.js. */}
+                {/* Shelves. A space with none renders exactly as it always did:
+                    one grid, no headings, nothing new to learn. The moment there
+                    is a shelf, the grid becomes one grid per shelf and whatever
+                    is loose gets a heading of its own — so nothing is ever
+                    hidden by the act of filing something else. */}
                 {(codeSpace || visibleProjects.length > 0) && (
                     <div className="sh-projects-grid">
                         {codeSpace && (
@@ -345,69 +550,47 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                 </div>
                             </div>
                         )}
-                        {visibleProjects.map((project) => {
-                            const isRenaming = renamingId === project.id
-                            return (
-                                <div
-                                    key={project.id}
-                                    className="sh-project-card"
-                                    onClick={() => !isRenaming && openProject(project.id)}
-                                    role="button"
-                                    tabIndex={0}
-                                    onKeyDown={e => e.key === 'Enter' && !isRenaming && openProject(project.id)}
-                                >
-                                    {isRenaming ? (
-                                        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-                                        <form
-                                            className="sh-rename-form"
-                                            onSubmit={e => submitRename(project.id, e)}
-                                            onClick={e => e.stopPropagation()}
-                                            onKeyDown={e => e.stopPropagation()}
-                                        >
-                                            <input
-                                                className="sh-rename-input"
-                                                ref={el => el?.focus()}
-                                                value={renameValue}
-                                                onChange={e => setRenameValue(e.target.value)}
-                                                onKeyDown={e => {
-                                                    if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
-                                                }}
-                                            />
-                                            <button className="sh-rename-save" type="submit">Save</button>
-                                            <button className="sh-rename-cancel" type="button" onClick={() => { setRenamingId(null); setRenameValue('') }}>✕</button>
-                                        </form>
-                                    ) : (
-                                        <p
-                                            className="sh-project-title"
-                                            onDoubleClick={e => startRename(project, e)}
-                                            title="Double-click to rename"
-                                        >
-                                            {project.title}
-                                        </p>
-                                    )}
-                                    <div className="sh-project-meta">
-                                        <span className="sh-meta-tag">{formatRelativeDate(project.updatedAt)}</span>
-                                        <span className="sh-meta-tag">{formatSource(project.source)}</span>
-                                    </div>
-                                    {!isRenaming && (
-                                        <>
-                                            <button
-                                                className="sh-btn-rename"
-                                                onClick={e => startRename(project, e)}
-                                                title="Rename project"
-                                            >Rename</button>
-                                            <button
-                                                className="sh-btn-delete"
-                                                onClick={e => { e.stopPropagation(); handleDelete(project) }}
-                                                aria-label="Delete"
-                                                title="Delete project"
-                                            >✕</button>
-                                        </>
-                                    )}
-                                </div>
-                            )
-                        })}
+                        {collections.length === 0 && visibleProjects.map(renderProjectCard)}
                     </div>
+                )}
+
+                {collections.length > 0 && shelved.map(group => (
+                    <section className="sh-shelf" key={group.id}>
+                        <header className="sh-shelf-head">
+                            <h2 className="sh-shelf-label">{group.label}</h2>
+                            <span className="sh-shelf-count">{group.items.length}</span>
+                        </header>
+                        {group.items.length === 0 ? (
+                            <p className="sh-shelf-empty">Nothing on this shelf yet.</p>
+                        ) : (
+                            <div className="sh-projects-grid">{group.items.map(renderProjectCard)}</div>
+                        )}
+                    </section>
+                ))}
+
+                {/* The trash. Delete used to remove the row and the files in the
+                    same breath; it holds for thirty days now, and this is where
+                    you see that it did. */}
+                {trash?.projects?.length > 0 && (
+                    <section className="sh-trash">
+                        <button className="sh-link" type="button" onClick={() => setShowTrash(v => !v)}>
+                            {showTrash ? 'Hide the trash' : `Trash — ${trash.projects.length}`}
+                        </button>
+                        {showTrash && (
+                            <ul className="sh-trash-list">
+                                {trash.projects.map(project => (
+                                    <li key={project.id} className="sh-trash-row">
+                                        <span className="sh-trash-title">{project.title}</span>
+                                        <span className="sh-trash-when">
+                                            deleted {formatRelativeDate(project.deletedAt)} · kept until{' '}
+                                            {new Date(project.deletedAt + (trash.ttlMs || 0)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                        </span>
+                                        <button className="sh-link" type="button" onClick={() => handleRestore(project)}>Bring it back</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </section>
                 )}
 
             </Container>

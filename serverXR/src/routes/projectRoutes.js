@@ -39,6 +39,19 @@ function registerProjectRoutes(router, {
   resolveProjectContext,
   spacesDir,
   spaceExists,
+  listTrashedProjects,
+  restoreProject,
+  reorderProjects,
+  setProjectShelf,
+  setProjectState,
+  TRASH_TTL_MS,
+  listCollections,
+  getCollection,
+  createCollection,
+  renameCollection,
+  reorderCollections,
+  deleteCollection,
+  countProjectsIn,
   upload,
   upsertProjectMeta,
   writeJson,
@@ -159,9 +172,140 @@ function registerProjectRoutes(router, {
         return res.status(404).json({ error: 'Project not found.' })
       }
       await ensureSpaceWritable(project.spaceId)
-      await deleteProjectWithIndex(project.spaceId, project.projectId)
-      res.json({ ok: true })
+      // Soft: the row is marked and the bytes are left alone until the trash
+      // sweep passes TRASH_TTL_MS. The response says when it stops being
+      // recoverable, so a client can offer the undo rather than inventing one.
+      const receipt = await deleteProjectWithIndex(project.spaceId, project.projectId)
+      res.json({ ok: true, trashed: true, ...(receipt || {}) })
     } catch (error) {
+      next(error)
+    }
+  })
+
+  // ── The trash ────────────────────────────────────────────────────────────
+  // Delete used to remove the row and rm -rf the directory in one call, with no
+  // undo anywhere in the product.
+  router.get('/api/trash', async (req, res, next) => {
+    try {
+      const spaceId = req.query.space ? normalizeSpaceId(req.query.space) : null
+      const projects = await listTrashedProjects(spaceId)
+      res.json({ projects, ttlMs: TRASH_TTL_MS })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.post('/api/projects/:projectId/restore', async (req, res, next) => {
+    try {
+      const projectId = normalizeProjectId(req.params.projectId)
+      const trashed = (await listTrashedProjects()).find(p => p.id === projectId)
+      if (!trashed) return res.status(404).json({ error: 'Nothing by that name is in the trash.' })
+      await ensureSpaceWritable(trashed.spaceId)
+      const project = await restoreProject(projectId)
+      res.json({ project })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // ── Shelves ──────────────────────────────────────────────────────────────
+  router.get('/api/spaces/:spaceId/collections', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      if (!(await spaceExists(spaceId))) return res.status(404).json({ error: 'Space not found.' })
+      res.json({ collections: listCollections(spaceId) })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.post('/api/spaces/:spaceId/collections', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      if (!(await spaceExists(spaceId))) return res.status(404).json({ error: 'Space not found.' })
+      await ensureSpaceWritable(spaceId)
+      res.status(201).json({ collection: createCollection(spaceId, req.body?.label) })
+    } catch (error) {
+      if (error.status === 400) return res.status(400).json({ error: error.message })
+      next(error)
+    }
+  })
+
+  router.patch('/api/collections/:collectionId', async (req, res, next) => {
+    try {
+      const existing = getCollection(req.params.collectionId)
+      if (!existing) return res.status(404).json({ error: 'Shelf not found.' })
+      await ensureSpaceWritable(existing.spaceId)
+      res.json({ collection: renameCollection(existing.id, req.body?.label) })
+    } catch (error) {
+      if (error.status === 400) return res.status(400).json({ error: error.message })
+      next(error)
+    }
+  })
+
+  // Deleting a shelf never deletes work: its projects come loose in the space.
+  router.delete('/api/collections/:collectionId', async (req, res, next) => {
+    try {
+      const existing = getCollection(req.params.collectionId)
+      if (!existing) return res.status(404).json({ error: 'Shelf not found.' })
+      await ensureSpaceWritable(existing.spaceId)
+      const loosened = countProjectsIn(existing.id)
+      deleteCollection(existing.id)
+      res.json({ ok: true, loosened })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.put('/api/spaces/:spaceId/collections/order', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      await ensureSpaceWritable(spaceId)
+      const ids = Array.isArray(req.body?.ids) ? req.body.ids : []
+      res.json({ collections: reorderCollections(spaceId, ids) })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.put('/api/spaces/:spaceId/projects/order', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      await ensureSpaceWritable(spaceId)
+      const ids = Array.isArray(req.body?.ids) ? req.body.ids : []
+      res.json({ projects: await reorderProjects(spaceId, ids) })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // Which shelf a work sits on, and what it is — draft, live or archived.
+  router.patch('/api/projects/:projectId/shelf', async (req, res, next) => {
+    try {
+      const project = await resolveProjectContext(req.params.projectId)
+      if (!project) return res.status(404).json({ error: 'Project not found.' })
+      await ensureSpaceWritable(project.spaceId)
+      const body = req.body || {}
+      let meta = null
+      if ('collectionId' in body) {
+        const target = body.collectionId ? getCollection(body.collectionId) : null
+        if (body.collectionId && !target) return res.status(404).json({ error: 'Shelf not found.' })
+        // A shelf belongs to one space; a project cannot be filed on a shelf in
+        // another one, or the shelf becomes a second, weaker kind of space.
+        if (target && target.spaceId !== project.spaceId) {
+          return res.status(400).json({ error: 'That shelf belongs to another space.' })
+        }
+        meta = await setProjectShelf(project.projectId, body.collectionId || null)
+      }
+      if ('state' in body) meta = await setProjectState(project.projectId, body.state)
+      if (!meta) return res.status(400).json({ error: 'Nothing to change.' })
+      res.json({ project: meta })
+    } catch (error) {
+      if (error.status === 400) return res.status(400).json({ error: error.message })
       next(error)
     }
   })

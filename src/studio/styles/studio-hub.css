@@ -345,3 +345,122 @@
     gap: 6px;
     padding-top: 4px;
 }
+
+/* ── Shelves, state and the trash (2026-09-10) ───────────────────────────────
+   A shelf is a heading and a grid, not a container with a border: the work is
+   the thing on screen, and a box around each group would make the furniture
+   louder than what it holds. */
+.sh-shelf {
+    margin: var(--di-space-4) 0 0;
+}
+
+.sh-shelf-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--di-space-2);
+    padding-bottom: var(--di-space-1);
+    margin-bottom: var(--di-space-2);
+    border-bottom: 1px solid var(--di-line);
+}
+
+.sh-shelf-label {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-label);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+    color: var(--di-cyan);
+    font-weight: 500;
+    margin: 0;
+}
+
+.sh-shelf-count,
+.sh-shelf-empty {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-label);
+    color: var(--di-faint);
+}
+
+.sh-shelf-empty { margin: 0 0 var(--di-space-2); }
+
+.sh-shelf-form {
+    display: inline-flex;
+    gap: var(--di-space-1);
+    align-items: center;
+}
+
+/* What a project IS, said only when it is not the ordinary answer — a badge on
+   every card reading "live" would be noise on 200 of them. */
+.sh-state {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: var(--di-radius);
+}
+
+.sh-state--draft {
+    color: var(--di-warning);
+    background: color-mix(in srgb, var(--di-warning) 12%, transparent);
+}
+
+.sh-state--archived {
+    color: var(--di-faint);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* Filing controls sit at the bottom of the card and stay quiet until hovered —
+   they are how you tidy, not what you came to look at. */
+.sh-card-filing {
+    display: flex;
+    gap: var(--di-space-1);
+    margin-top: var(--di-space-2);
+    opacity: 0.45;
+    transition: opacity var(--di-motion-base) ease;
+}
+
+.sh-project-card:hover .sh-card-filing,
+.sh-project-card:focus-within .sh-card-filing { opacity: 1; }
+
+.sh-select {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-label);
+    color: var(--di-dim);
+    background: transparent;
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    padding: 3px 5px;
+    max-width: 48%;
+}
+
+.sh-select:hover { color: var(--di-ink); border-color: var(--di-cyan); }
+
+.sh-trash {
+    margin: var(--di-space-4) 0 0;
+    padding-top: var(--di-space-2);
+    border-top: 1px solid var(--di-line);
+}
+
+.sh-trash-list {
+    list-style: none;
+    margin: var(--di-space-2) 0 0;
+    padding: 0;
+}
+
+.sh-trash-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--di-space-2);
+    flex-wrap: wrap;
+    padding: var(--di-space-1) 0;
+    border-bottom: 1px solid var(--di-line);
+}
+
+.sh-trash-title { color: var(--di-ink); }
+
+.sh-trash-when {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-label);
+    color: var(--di-faint);
+    margin-right: auto;
+}

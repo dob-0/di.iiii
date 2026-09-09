@@ -92,6 +92,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-01'
     },
     {
+        id: 'shelves-and-the-trash',
+        category: 'Editing',
+        title: 'Shelves, draft/live/archived, and the trash',
+        summary: 'A collection is a shelf inside a space; every project is draft, live or archived; and delete now holds for 30 days.',
+        body: [
+            'A SHELF (a collection) groups work inside a space without the group becoming a place of its own. Before this the only container was the space itself, so an open call\'s entries, a week of a camp or a roster had to become either a whole new space or a flat pile of siblings — one space ended up holding 74 projects. Make one from "+ Shelf" on a space\'s project page, then file a project onto it with the shelf menu at the bottom of its card.',
+            'A space with no shelves looks exactly as it always did: one grid, no headings. The moment there is one shelf, the page groups by shelf and whatever is not on one gets a heading of its own — filing something never hides anything else.',
+            'Deleting a shelf never deletes the work on it. Its projects come loose in the space and the page tells you how many.',
+            'Every project is DRAFT, LIVE or ARCHIVED. Live is the ordinary answer and the only one that is not stated on the card. Archived projects are hidden until you ask for them by name. (The five projects whose titles began with "[archived]" were converted to the real state, and the word was taken out of their names.)',
+            'DELETE NO LONGER MEANS GONE. A deleted project goes to the trash on its space\'s project page for 30 days — the row and every byte stay where they are — and "Bring it back" returns it whole, its document included. Only after 30 days does anything actually remove it.'
+        ],
+        tags: ['collections', 'shelves', 'archive', 'draft', 'trash', 'delete', 'undo', 'projects'],
+        updated: '2026-09-10'
+    },
+    {
         id: 'the-surface-bar',
         category: 'Getting started',
         title: 'The bar: where you are, and the way out',

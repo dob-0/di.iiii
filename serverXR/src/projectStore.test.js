@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { existsSync } from 'node:fs'
 import { mkdtemp, rm, stat } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import os from 'node:os'
@@ -13,6 +14,10 @@ const {
     ensureProject,
     findProjectById,
     getProjectPaths,
+    listTrashedProjects,
+    loadProjectMeta,
+    purgeTrash,
+    restoreProject,
     readJson,
     readProjectDocument,
     readProjectIndex,
@@ -67,13 +72,43 @@ describe('projectStore', () => {
         expect(await findProjectById(spacesDir, 'nonexistent')).toBeNull()
     })
 
-    it('deleteProject removes the project from the DB and disk', async () => {
+    it('deleteProject puts the project in the trash — the row and the bytes both stay until purge', async () => {
         const spacesDir = await createSpacesDir()
         await ensureProject(spacesDir, 'gallery', 'delete-me', { title: 'Delete Me' })
         expect(await findProjectById(spacesDir, 'delete-me')).not.toBeNull()
 
-        await deleteProject(spacesDir, 'gallery', 'delete-me')
+        const receipt = await deleteProject(spacesDir, 'gallery', 'delete-me')
+        // Gone from every ordinary lookup…
         expect(await findProjectById(spacesDir, 'delete-me')).toBeNull()
+        expect(await loadProjectMeta(spacesDir, 'gallery', 'delete-me')).toBeNull()
+        // …but the bytes are still on disk, and it says until when.
+        const { documentPath } = getProjectPaths(spacesDir, 'gallery', 'delete-me')
+        expect(existsSync(documentPath)).toBe(true)
+        expect(receipt.restorableUntil).toBeGreaterThan(Date.now())
+
+        // Brought back whole.
+        const restored = await restoreProject('delete-me')
+        expect(restored.title).toBe('Delete Me')
+        expect(await findProjectById(spacesDir, 'delete-me')).not.toBeNull()
+    })
+
+    it('purgeTrash removes only what has waited out the hold, and then really removes it', async () => {
+        const spacesDir = await createSpacesDir()
+        await ensureProject(spacesDir, 'gallery', 'old-regret', { title: 'Old' })
+        await ensureProject(spacesDir, 'gallery', 'fresh-regret', { title: 'Fresh' })
+        await deleteProject(spacesDir, 'gallery', 'old-regret')
+        await deleteProject(spacesDir, 'gallery', 'fresh-regret')
+
+        // A day later: nothing is due yet, and nothing is touched.
+        expect(await purgeTrash(spacesDir, { now: Date.now() + 24 * 60 * 60 * 1000 })).toEqual([])
+        expect((await listTrashedProjects('gallery')).map(p => p.id).sort()).toEqual(['fresh-regret', 'old-regret'])
+
+        // Thirty-one days later, only the one that waited that long goes.
+        const purged = await purgeTrash(spacesDir, { now: Date.now() + 31 * 24 * 60 * 60 * 1000, ttlMs: 30 * 24 * 60 * 60 * 1000 })
+        expect(purged.sort()).toEqual(['fresh-regret', 'old-regret'])
+        const { projectDir } = getProjectPaths(spacesDir, 'gallery', 'old-regret')
+        expect(existsSync(projectDir)).toBe(false)
+        expect(await listTrashedProjects('gallery')).toEqual([])
     })
 
     it('readProjectDocument does not rewrite an already-normalized document', async () => {
