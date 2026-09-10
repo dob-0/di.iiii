@@ -181,6 +181,17 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_space_chat_lines_space ON space_chat_lines (space_id);
 
+  -- One pinned line per room. Not a list: a wall of pins is a second unread
+  -- feed, and the whole use of a pin is that there is exactly one thing at the
+  -- top of the room everybody sees first.
+  CREATE TABLE IF NOT EXISTS space_chat_pins (
+    space_id TEXT PRIMARY KEY,
+    message_id TEXT NOT NULL,
+    pinned_by TEXT NOT NULL DEFAULT '',
+    pinned_by_name TEXT NOT NULL DEFAULT '',
+    ts INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS public_assets (
     asset_id TEXT PRIMARY KEY,
     space_id TEXT NOT NULL,
@@ -266,6 +277,39 @@ const SCHEMA = `
   -- and a chat message can be forwarded. Only the hash is stored, so the
   -- database is useless to anyone who reads it, and consumed_at is what makes
   -- a forwarded link worthless the moment the first person opens it.
+  -- The public half of a person's end-to-end keys, one row per DEVICE. A phone
+  -- and a desktop are two devices with two key pairs and no shared secret
+  -- between them; that is the cost of the server never holding a private key.
+  --
+  -- Nothing here is secret. Every row is a PUBLIC key, published deliberately,
+  -- and the private halves never leave the browsers that made them — which is
+  -- why a stolen copy of this database still cannot read one direct message.
+  CREATE TABLE IF NOT EXISTS dm_devices (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    public_key TEXT NOT NULL,
+    label TEXT,
+    created_at INTEGER NOT NULL,
+    last_seen_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_dm_devices_user ON dm_devices (user_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_devices_key ON dm_devices (user_id, public_key);
+
+  -- One table for the three one-shot links a first-party account needs:
+  -- verify an address, reset a password, sign in without one. They differ only
+  -- in kind, and keeping them together means the expiry sweep, the
+  -- single-use rule and the "only the hash is stored" rule are written once.
+  CREATE TABLE IF NOT EXISTS auth_tokens (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    token_hash TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    consumed_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_auth_tokens_user ON auth_tokens (user_id, kind);
+
   CREATE TABLE IF NOT EXISTS telegram_login_tokens (
     id TEXT PRIMARY KEY,
     secret_hash TEXT NOT NULL,
@@ -459,6 +503,29 @@ function initDb(dbPath) {
   // are self-contained and signature-valid until their TTL, so without this a
   // cookie copied before logout still worked on every other device.
   ensureColumn(db, 'users', 'token_version', 'INTEGER NOT NULL DEFAULT 0')
+  // First-party accounts (provider 'password'). Nullable for every existing
+  // row: a Google/GitHub/Telegram user has no password and never will, and a
+  // column that demanded one would make those accounts unrepresentable.
+  //
+  // `password_hash` holds the whole verifier — algorithm, parameters, salt and
+  // digest in one string — so the cost can be raised later without a migration
+  // and without guessing what an old row was hashed with.
+  ensureColumn(db, 'users', 'password_hash', 'TEXT')
+  ensureColumn(db, 'users', 'email_verified_at', 'INTEGER')
+  // The name someone types to sign in when there is no email at all — a camp
+  // laptop with no mail, the offline install. Unique where present.
+  ensureColumn(db, 'users', 'username', 'TEXT')
+  // A reply keeps its own COPY of what it answers, rather than a foreign key.
+  // The original can be removed by an admin, and when it is, the answer must
+  // still read as an answer instead of quoting a hole. Three flat columns for
+  // the same reason the message itself is flat: no join on the replay path.
+  // Who wrote it, as an ACCOUNT rather than as the label a browser chose for
+  // itself. It is what lets somebody delete their own line without being an
+  // admin: `user_id` is a claim, this is the session the server stamped.
+  ensureColumn(db, 'space_chat_lines', 'account_id', 'TEXT')
+  ensureColumn(db, 'space_chat_lines', 'reply_to_id', 'TEXT')
+  ensureColumn(db, 'space_chat_lines', 'reply_to_name', 'TEXT')
+  ensureColumn(db, 'space_chat_lines', 'reply_to_text', 'TEXT')
   backfillUserUnrestricted(db)
   backfillArchivedTitles(db)
   backfillGlobalSpace(db)

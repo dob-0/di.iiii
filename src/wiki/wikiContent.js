@@ -89,9 +89,10 @@ export const WIKI_ARTICLES = [
             'It is open on exactly the terms the space is. A public space’s contents are public; a private space’s contents stay behind the same sign-in as the space. Work that is not on show is never listed to anybody: a draft, an archived project and anything in the trash are absent, and that is enforced by the server, not by the page.',
             'Two ways in. Every card on /spaces carries an “Everything inside” line, and inside a public room a second corner mark next to “Made with di.iiii” opens the same list — it appears only when there is more than one thing in the space, because a room that is the whole of its space has nothing to send you to.',
             'A space holding one thing, and that thing being the front door, sends you to the room instead. A list whose only row is the room you would already be standing in says less than the room does.',
-            'Filing is somewhere else. Drafts, archived work, shelves and the trash live in Studio, at /<space>/studio, and this page only says so — to somebody who could already get in.'
+            'Filing is somewhere else. Drafts, archived work, shelves and the trash live in Studio, at /<space>/studio, and this page only says so — to somebody who could already get in.',
+            'A page that is code is listed too. Two of di.iiii’s own exhibitions have a front page written as code rather than made in the editor — the WCC landing at /wcc is one — so no database row exists for it and a list built by asking the server what a space holds could not see it. It is listed all the same, first, as the way in: the real page, not a copy of it. Being code is what it is, not where it hides — it opens like any other row, and it is changed by changing the code.'
         ],
-        tags: ['spaces', 'projects', 'contents', 'visitors', 'published', 'scene', 'page'],
+        tags: ['spaces', 'projects', 'contents', 'visitors', 'published', 'scene', 'page', 'code'],
         updated: '2026-09-10'
     },
     {
@@ -290,41 +291,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-21'
     },
     {
-        id: 'chat-in-a-space',
+        id: 'accounts-of-our-own',
         category: 'Spaces & access',
-        title: 'Talking to the others in a space',
-        summary: 'Two chat rooms behind one Chat button: everyone in the space, or only the people in this project.',
+        title: 'Signing in without Google, GitHub or Telegram',
+        summary: 'di.iiii has its own accounts now: an email and a password, a link in your mail, or a plain username where there is no mail at all.',
         body: [
-            'Chat opens on whichever room you were last reading. The tab named after the space reaches everyone in it, whatever project each of them has open — the room to use when you are working alone in your own project and want to say something to the others. The tab that says "This project" reaches only the people who have this project open, which is the older behaviour and is unchanged.',
-            'The badge on the Chat button counts both rooms together, so a message in the tab you are not looking at still gets your attention.',
+            'Until now every door into di.iiii belonged to somebody else — you signed in with Google, with GitHub, or with Telegram, which meant you had to already belong somewhere else first. There is a door of our own now.',
             { list: [
-                'The space room keeps its messages. Someone arriving an hour late, or reloading the page, reads what was said before they got there — the last 100 lines.',
-                'The project room does not keep anything. Close the tab and that conversation is gone, on purpose.',
-                'Both rooms are limited to 500 characters a message, and only people with access to the space can read or write either.'
+                '**An email and a password.** Register in the sign-in card. The password needs eight characters; there are no rules about capitals or digits, because those rules mostly produce worse passwords.',
+                '**A link in your mail instead.** "Email me a link instead" sends a one-time sign-in link, good for fifteen minutes. Nothing to remember, nothing to type.',
+                '**A username, where there is no mail.** An install running offline — a camp, a laptop in a room with no internet — can still make accounts. It comes with one honest limit: nobody can prove such an account is yours, so only an admin can get you back into it if the password goes.'
             ] },
-            'Your name in chat is the name this browser knows you by. Set it once and every message carries it; without one you appear as Guest-XXXX.',
-            'Moderation, plainly: a di.iiii admin — not a space owner, not an invited editor — can delete any message in the space room, and it disappears from everyone\'s screen at once, including the person who wrote it. Nobody can edit a message, nothing is filtered automatically, and the project room has no delete at all. If a space is being used by children, an adult with an admin account should be in it.'
+            'Creating an account gives you an account and nothing else: no role, and no space. You are somebody, and then somebody invites you somewhere. That is deliberate, and it is the same rule the Telegram sign-in follows.',
+            'A forgotten password is reset by a link in your mail, and the link works once. If the copy of di.iiii you are using cannot send mail, it says so rather than offering you a button that could never work.',
+            'What we hold: your address, a display name, and a verifier for your password — not the password. It is hashed with scrypt, which is one-way; nobody at the studio can read your password, and neither can anyone who steals the database.'
         ],
-        tags: ['chat', 'collaboration', 'space', 'project', 'presence', 'moderation', 'invite'],
-        updated: '2026-08-26'
-    },
-    {
-        id: 'chat-on-its-own',
-        category: 'Spaces & access',
-        title: 'The chat room at its own address',
-        summary: 'The space room, alone on a page, at /chat — and installable on a phone.',
-        body: [
-            'The room described above lives inside the editors: you open Studio or the node editor, then open a panel. That is the wrong amount of work for "say something to the others", so the same room also has an address of its own. /chat is the studio\u2019s room; /{space}/chat is any other space\u2019s.',
-            'It is the same room, not a copy. A line typed at /chat appears in the Chat panel of everyone working in that space, and a line typed in the panel appears here. The transcript, the 500-character limit and the admin\u2019s delete are all the ones described above.',
-            { list: [
-                'On a phone, the browser can add it to the home screen and it opens like an app, without browser chrome.',
-                'It carries no 3D and no editor, so it opens on a bad connection and stays open.',
-                'You must be in the space to read it. Somebody who is not gets a card telling them so, rather than an empty room.'
-            ] },
-            'Your name here is the name of the account you signed in with. Only a session with no account to speak of falls back to asking you for one.'
-        ],
-        tags: ['chat', 'space', 'phone', 'install', 'pwa', 'address'],
-        updated: '2026-09-10'
+        tags: ['account', 'sign in', 'register', 'password', 'email', 'offline', 'camp'],
+        updated: '2026-09-11'
     },
     {
         id: 'public-page-node',

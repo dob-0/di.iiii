@@ -257,6 +257,30 @@ export const loginApiSession = async (token) => apiFetch('/api/auth/session', {
 // given the file, not a fault.
 export const getEstateMap = async (opts = {}) => apiFetch('/api/estate/map', opts)
 
+// ── first-party accounts ──────────────────────────────────────────────────
+// An email and a password, no Google, no GitHub, no Telegram. Each of these
+// answers with the same session shape every other door does, so nothing on the
+// client has to know which one a person came through.
+export const registerApiAccount = async ({ email, username, password, displayName }) =>
+    apiFetch('/api/auth/password/register', {
+        method: 'POST',
+        body: { email, username, password, displayName }
+    })
+
+export const passwordSignIn = async ({ identifier, password }) =>
+    apiFetch('/api/auth/password/login', { method: 'POST', body: { identifier, password } })
+
+// Both of these deliberately answer the same whether or not the address is
+// known — the server will not say who has an account, so neither can we.
+export const requestPasswordReset = async (email) =>
+    apiFetch('/api/auth/password/forgot', { method: 'POST', body: { email } })
+
+export const requestMagicLink = async (email) =>
+    apiFetch('/api/auth/password/magic', { method: 'POST', body: { email } })
+
+export const setNewPassword = async ({ token, password }) =>
+    apiFetch('/api/auth/password/reset', { method: 'POST', body: { token, password } })
+
 export const logoutApiSession = async () => apiFetch('/api/auth/session', {
     method: 'DELETE',
     json: false

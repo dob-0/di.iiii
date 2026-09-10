@@ -5,6 +5,7 @@ const { Strategy: GoogleStrategy } = require('passport-google-oauth20')
 const { upsertUser, findUserByProvider } = require('../userStore')
 const { signLoginState, verifyLoginState, readLoginState, sanitizeReturnTo } = require('../loginState')
 const logger = require('../logger')
+const mailer = require('../mailer')
 
 // Derive a stable fallback secret from OAuth client secrets when no
 // AUTH_SESSION_SECRET/API_TOKEN is configured (e.g. REQUIRE_AUTH=false
@@ -325,6 +326,12 @@ const registerAuthRoutes = (router, {
       github: oauth.github.enabled,
       google: oauth.google.enabled,
       telegram: Boolean(telegram.enabled),
+      // First-party accounts are always on: they are the door that needs no
+      // other company's permission, and an install that offered no way in at
+      // all would be a locked building. `mail` says whether the two things
+      // that need delivery — a reset link, a sign-in link — can be offered.
+      password: true,
+      mail: mailer.isConfigured(),
       // Empty unless configured; a client uses it to name the bot on the
       // button and must cope with it being absent.
       ...(telegram.enabled && telegram.botUsername ? { telegramBot: telegram.botUsername } : {})

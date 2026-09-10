@@ -1,12 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Box, IconButton, InputBase, Stack, ThemeProvider, Tooltip, Typography } from '@mui/material'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Badge, Box, Button, IconButton, InputBase, Snackbar, Stack, ThemeProvider, Tooltip, Typography } from '@mui/material'
+import LockIcon from '@mui/icons-material/Lock'
 import CloseIcon from '@mui/icons-material/Close'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
+import IosShareIcon from '@mui/icons-material/IosShare'
+import PushPinIcon from '@mui/icons-material/PushPin'
 import { diFontTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpaceChat from './useSpaceChat.js'
+import { buildChatPath, buildPrivateChatPath } from './chatRouting.js'
+import { appNavigate } from '../utils/appNavigate.js'
+import ReplyQuote from './ReplyQuote.jsx'
+import MessageActions, { copyAction, linkAction, pinAction, removeAction, replyAction, useLongPress } from './MessageActions.jsx'
 
-// The studio's own room, at its own address, with nothing else on the screen.
+// `iiii` — the room, at its own address, with nothing else on the screen.
+// Named for the platform, not for a function: it is not "the studio chat", it is
+// the place, the way a room in a house is not called "the talking room".
 //
 // The transport for this has existed since space chat was added — persisted,
 // replayed on join, admin-erasable (serverXR/src/spaceChatStore.js). What did
@@ -14,8 +24,27 @@ import useSpaceChat from './useSpaceChat.js'
 // inside Raw's desk and the toybox's sheet, so "talk to the studio" meant
 // loading a 3D authoring surface and finding a panel. This is the same room,
 // alone, on a page a phone can install.
+//
+// THE TOOLS, and why these and not the others. Taken from what a chat is
+// actually used for in a working studio, which is a much shorter list than what
+// a chat app ships:
+//
+//   reply     — the one that makes a busy room readable at all
+//   pin       — ONE line at the top, so the address of the thing everybody
+//               needs is not scrolled away by lunch
+//   copy      — the text, or a link straight to that message
+//   share     — the room's own address, to the phone's share sheet
+//   delete    — your own line always; an admin's eraser over the whole room
+//   typing    — carried, never stored
+//   unread    — a way back down that says how much you missed
+//
+// Deliberately absent: reactions, forwarding, stickers, threads, read receipts,
+// message search, folders, edit-after-send. Each of them is a second mental
+// model for a room that has ten people in it.
 
 const TIME = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' })
+
+const HIGHLIGHT_MS = 1600
 
 const dayLabel = (ts) => {
     const date = new Date(ts)
@@ -27,14 +56,33 @@ const dayLabel = (ts) => {
     return date.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })
 }
 
+const typingLine = (names) => {
+    if (!names.length) return ''
+    if (names.length === 1) return `${names[0]} is typing…`
+    if (names.length === 2) return `${names[0]} and ${names[1]} are typing…`
+    return 'several people are typing…'
+}
+
 export default function StudioChatSurface({ spaceId = 'main' }) {
     const session = useAuthSession()
     const [nameDraft, setNameDraft] = useState('')
     const [draft, setDraft] = useState('')
+    const [replyTo, setReplyTo] = useState(null)
+    const [highlightId, setHighlightId] = useState('')
+    const [unread, setUnread] = useState(0)
+    const [notice, setNotice] = useState('')
     const listRef = useRef(null)
+    // One node per message, so a jump — from a pin, from a quote, from a link
+    // somebody pasted — can find the line rather than guess a scroll offset.
+    const nodesRef = useRef(new Map())
+    const atBottomRef = useRef(true)
+    const seenRef = useRef(0)
 
     const sessionName = String(session.label || '').trim()
-    const { connection, messages, people, canModerate, forbidden, send, remove, displayName } = useSpaceChat({
+    const {
+        connection, messages, people, canModerate, canPin, pinned, typingNames,
+        forbidden, send, remove, pin, unpin, notifyTyping, displayName
+    } = useSpaceChat({
         spaceId,
         displayName: sessionName || nameDraft
     })
@@ -43,12 +91,67 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
     // studio member never sees this row.
     const needsName = !session.loading && !sessionName && displayName.startsWith('Guest-')
 
-    useEffect(() => {
+    const scrollToBottom = useCallback((behavior = 'auto') => {
         const el = listRef.current
         if (!el) return
-        const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
-        if (nearBottom) el.scrollTop = el.scrollHeight
-    }, [messages.length])
+        el.scrollTo({ top: el.scrollHeight, behavior })
+        setUnread(0)
+    }, [])
+
+    const jumpTo = useCallback((id) => {
+        const node = nodesRef.current.get(id)
+        if (!node) {
+            // The line is older than the replay window. Say so instead of doing
+            // nothing, which reads as a broken button.
+            setNotice('That message is older than what this room keeps on screen.')
+            return
+        }
+        node.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        setHighlightId(id)
+        window.setTimeout(() => setHighlightId((current) => (current === id ? '' : current)), HIGHLIGHT_MS)
+    }, [])
+
+    // Follow the room only when already at the bottom. Somebody reading back
+    // through yesterday must not be yanked to the end every time a line lands —
+    // they get a count and a way down instead.
+    useEffect(() => {
+        const arrived = messages.length - seenRef.current
+        seenRef.current = messages.length
+        if (arrived <= 0) return
+        if (atBottomRef.current) {
+            scrollToBottom()
+            return
+        }
+        const last = messages[messages.length - 1]
+        if (last?.self) {
+            // My own line always pulls me down: I just wrote it.
+            scrollToBottom('smooth')
+            return
+        }
+        setUnread((current) => current + arrived)
+    }, [messages, scrollToBottom])
+
+    const onScroll = useCallback(() => {
+        const el = listRef.current
+        if (!el) return
+        const bottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60
+        atBottomRef.current = bottom
+        if (bottom) setUnread(0)
+    }, [])
+
+    // A link to one message: `?m=<id>`. Opened from a paste, it scrolls there
+    // and marks it, then the query is dropped so a reload does not do it again.
+    const deepLinked = useRef(false)
+    useEffect(() => {
+        if (deepLinked.current || !messages.length) return
+        const wanted = new URLSearchParams(window.location.search).get('m')
+        if (!wanted) return
+        deepLinked.current = true
+        window.setTimeout(() => jumpTo(wanted), 80)
+        const url = new URL(window.location.href)
+        url.searchParams.delete('m')
+        window.history.replaceState({}, '', url.pathname + url.search)
+    }, [messages.length, jumpTo])
 
     // What makes this page installable: a manifest and a worker, both claimed
     // HERE and nowhere else. They live under /chat-app/, NOT /chat/: a directory
@@ -89,7 +192,8 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
     }, [])
 
     // Consecutive lines from one person are one block: the name and the clock
-    // are said once, not stamped onto every sentence of a burst.
+    // are said once, not stamped onto every sentence of a burst. A line that
+    // answers something breaks the block — it starts a new thought.
     const blocks = useMemo(() => {
         const out = []
         messages.forEach((message) => {
@@ -99,6 +203,7 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
             const previous = out[out.length - 1]
             const sameAuthor = previous
                 && previous.userId === message.userId
+                && !message.replyTo
                 && ts - previous.lastAt < 5 * 60 * 1000
                 && dayLabel(previous.lastAt) === dayLabel(ts)
             if (sameAuthor) {
@@ -123,9 +228,64 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
     const submit = () => {
         const text = draft.trim()
         if (!text) return
-        send(text)
+        send(text, replyTo)
         setDraft('')
+        setReplyTo(null)
     }
+
+    const messageUrl = useCallback((id) => (
+        `${window.location.origin}${buildChatPath(spaceId)}?m=${encodeURIComponent(id)}`
+    ), [spaceId])
+
+    // The room's own address, to whatever the phone offers — and to the
+    // clipboard on a desktop, where there is no share sheet.
+    const shareRoom = async () => {
+        const url = `${window.location.origin}${buildChatPath(spaceId)}`
+        const title = spaceId === 'main' ? 'iiii' : `iiii · ${spaceId}`
+        if (navigator.share) {
+            try {
+                await navigator.share({ title, url })
+                return
+            } catch {
+                // A cancelled share sheet throws. It is not a failure and must
+                // not fall through to a "copied" that never happened.
+                return
+            }
+        }
+        try {
+            await navigator.clipboard.writeText(url)
+            setNotice('Link to this room copied')
+        } catch {
+            setNotice(url)
+        }
+    }
+
+    // A long press is the phone's right-click: it opens the same menu the ⋯
+    // button does, by pressing that button inside the row it was held on.
+    const longPress = useLongPress((row) => row?.querySelector?.('.dii-chat-actions')?.click())
+
+    const actionsFor = (line, block) => [
+        replyAction(() => setReplyTo({ id: line.id, userName: block.userName, text: line.text })),
+        copyAction(line.text, setNotice),
+        line.id && canPin ? pinAction(() => pin(line.id)) : null,
+        line.id ? linkAction(messageUrl(line.id), setNotice) : null,
+        // Your own line is yours to take back — the server checks the account it
+        // stamped when it was written, not the label the browser claims now.
+        line.id && (canModerate || line.self)
+            ? removeAction(() => remove(line.id), canModerate && !line.self ? 'Remove for everyone' : 'Delete')
+            : null
+    ]
+
+    // Everyone in the room who is a person rather than a browser, me excluded —
+    // and de-duplicated, because one person with two tabs open is one person.
+    const reachable = useMemo(() => {
+        const seen = new Map()
+        for (const person of people) {
+            if (!person?.accountId || person.accountId === session.subject) continue
+            if (!seen.has(person.accountId)) seen.set(person.accountId, person)
+        }
+        return [...seen.values()]
+    }, [people, session.subject])
 
     const here = people.length
     const status = forbidden
@@ -133,6 +293,8 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
         : connection === 'connected'
             ? (here > 1 ? `${here} here` : 'you are the only one here')
             : connection === 'connecting' ? 'connecting…' : 'offline — reconnecting'
+
+    const typing = typingLine(typingNames)
 
     return (
         <ThemeProvider theme={diFontTheme}>
@@ -147,7 +309,7 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                 <Stack
                     direction="row"
                     alignItems="center"
-                    spacing={1.5}
+                    spacing={1}
                     sx={{
                         px: 2,
                         py: 1.5,
@@ -157,12 +319,17 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                 >
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography sx={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em' }}>
-                            {spaceId === 'main' ? 'Studio chat' : `${spaceId} chat`}
+                            {spaceId === 'main' ? 'iiii' : `iiii · ${spaceId}`}
                         </Typography>
                         <Typography sx={{ fontSize: 12, color: forbidden ? 'var(--ui-danger)' : 'var(--ui-text-muted)' }}>
                             {status}
                         </Typography>
                     </Box>
+                    <Tooltip title="Share this room">
+                        <IconButton size="small" onClick={shareRoom} sx={{ color: 'var(--ui-text-muted)' }} aria-label="Share this room">
+                            <IosShareIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                    </Tooltip>
                     <Box sx={{
                         width: 8,
                         height: 8,
@@ -172,92 +339,217 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                     }} />
                 </Stack>
 
-                <Box
-                    ref={listRef}
-                    sx={{
-                        flex: 1,
-                        overflowY: 'auto',
-                        px: 2,
-                        py: 2,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2
-                    }}
-                >
-                    {blocks.length === 0 && (
-                        <Typography sx={{ color: 'var(--ui-text-muted)', fontSize: 13, m: 'auto', textAlign: 'center', maxWidth: 260 }}>
-                            Nobody has said anything here yet. What is written stays — a person
-                            arriving tomorrow reads it.
-                        </Typography>
-                    )}
-                    {blocks.map((block, index) => (
-                        <Box key={block.key}>
-                            {(index === 0 || blocks[index - 1].day !== block.day) && (
-                                <Typography sx={{
-                                    fontSize: 11,
-                                    color: 'var(--ui-text-muted)',
-                                    textAlign: 'center',
-                                    mb: 2,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.08em'
-                                }}>
-                                    {block.day}
-                                </Typography>
-                            )}
-                            <Stack direction="row" spacing={1} alignItems="baseline" sx={{ mb: 0.5 }}>
-                                <Typography sx={{
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    color: block.self ? 'var(--ui-accent)' : 'var(--ui-text-primary)'
-                                }}>
-                                    {block.userName}
-                                </Typography>
-                                <Typography sx={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
-                                    {TIME.format(new Date(block.firstAt))}
-                                </Typography>
-                            </Stack>
-                            <Stack spacing={0.25}>
-                                {block.lines.map((line) => (
-                                    <Stack
-                                        key={line.id || line.ts}
-                                        direction="row"
-                                        alignItems="flex-start"
-                                        spacing={0.5}
-                                        sx={{ '&:hover .dii-chat-erase': { opacity: 1 } }}
-                                    >
-                                        <Typography sx={{
-                                            fontSize: 14,
-                                            lineHeight: 1.45,
-                                            whiteSpace: 'pre-wrap',
-                                            wordBreak: 'break-word',
-                                            flex: 1
-                                        }}>
-                                            {line.text}
-                                        </Typography>
-                                        {canModerate && line.id && (
-                                            <Tooltip title="Remove this message">
-                                                <IconButton
-                                                    className="dii-chat-erase"
-                                                    size="small"
-                                                    onClick={() => remove(line.id)}
-                                                    sx={{
-                                                        opacity: 0,
-                                                        transition: 'opacity 120ms',
-                                                        color: 'var(--ui-text-muted)',
-                                                        // A touch screen has no hover: on a phone the
-                                                        // eraser is simply always visible.
-                                                        '@media (hover: none)': { opacity: 1 }
-                                                    }}
-                                                >
-                                                    <CloseIcon sx={{ fontSize: 14 }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                        )}
-                                    </Stack>
-                                ))}
-                            </Stack>
+                {/* One pinned line, under the header, where a room's standing
+                    fact belongs: the address, the time, the link everybody keeps
+                    asking for. One and not a list — a stack of pins is read by
+                    nobody, which is the same as having none. */}
+                {pinned?.message && (
+                    <Stack
+                        direction="row"
+                        alignItems="center"
+                        spacing={1}
+                        onClick={() => jumpTo(pinned.message.id)}
+                        sx={{
+                            px: 2,
+                            py: 1,
+                            cursor: 'pointer',
+                            borderBottom: '1px solid var(--ui-border)',
+                            background: 'color-mix(in srgb, var(--ui-accent) 8%, var(--ui-surface))'
+                        }}
+                    >
+                        <PushPinIcon sx={{ fontSize: 14, color: 'var(--ui-accent)', flexShrink: 0 }} />
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography sx={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ui-text-muted)' }}>
+                                Pinned
+                            </Typography>
+                            <Typography sx={{
+                                fontSize: 13,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                <Box component="span" sx={{ color: 'var(--ui-text-muted)', mr: 0.75 }}>
+                                    {pinned.message.userName || 'someone'}
+                                </Box>
+                                {pinned.message.text}
+                            </Typography>
                         </Box>
-                    ))}
+                        {canPin && (
+                            <IconButton
+                                size="small"
+                                aria-label="Unpin"
+                                onClick={(event) => { event.stopPropagation(); unpin() }}
+                                sx={{ color: 'var(--ui-text-muted)' }}
+                            >
+                                <CloseIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                        )}
+                    </Stack>
+                )}
+
+                {/* The way into a private conversation, and the only one: the
+                    people actually in the room. No directory, no search — the
+                    server refuses to introduce two people who share no space, so
+                    offering a name here that could not be reached would be a
+                    door drawn on a wall.
+
+                    Only people signed in with an ACCOUNT appear. A guest is a
+                    browser rather than somebody you can write to, which is the
+                    same reason the server will not carry a signal for one. */}
+                {reachable.length > 0 && (
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{ px: 2, py: 1, overflowX: 'auto', borderBottom: '1px solid var(--ui-border)' }}
+                    >
+                        {reachable.map((person) => (
+                            <Button
+                                key={person.accountId}
+                                size="small"
+                                onClick={() => appNavigate(buildPrivateChatPath(spaceId, person.accountId, person.userName))}
+                                startIcon={<LockIcon sx={{ fontSize: 12 }} />}
+                                sx={{
+                                    flexShrink: 0,
+                                    textTransform: 'none',
+                                    fontSize: 12,
+                                    color: 'var(--ui-text-muted)',
+                                    borderRadius: 4,
+                                    border: '1px solid var(--ui-border)',
+                                    px: 1.25,
+                                    '&:hover': { borderColor: 'var(--ui-accent)', color: 'var(--ui-text-primary)' }
+                                }}
+                            >
+                                {person.userName || 'someone'}
+                            </Button>
+                        ))}
+                    </Stack>
+                )}
+
+                <Box sx={{ position: 'relative', flex: 1, minHeight: 0 }}>
+                    <Box
+                        ref={listRef}
+                        onScroll={onScroll}
+                        sx={{
+                            position: 'absolute',
+                            inset: 0,
+                            overflowY: 'auto',
+                            px: 2,
+                            py: 2,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 2
+                        }}
+                    >
+                        {blocks.length === 0 && (
+                            <Typography sx={{ color: 'var(--ui-text-muted)', fontSize: 13, m: 'auto', textAlign: 'center', maxWidth: 260 }}>
+                                Nobody has said anything here yet. What is written stays — a person
+                                arriving tomorrow reads it.
+                            </Typography>
+                        )}
+                        {blocks.map((block, index) => (
+                            <Box key={block.key}>
+                                {(index === 0 || blocks[index - 1].day !== block.day) && (
+                                    <Typography sx={{
+                                        fontSize: 11,
+                                        color: 'var(--ui-text-muted)',
+                                        textAlign: 'center',
+                                        mb: 2,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.08em'
+                                    }}>
+                                        {block.day}
+                                    </Typography>
+                                )}
+                                <Stack direction="row" spacing={1} alignItems="baseline" sx={{ mb: 0.5 }}>
+                                    <Typography sx={{
+                                        fontSize: 13,
+                                        fontWeight: 700,
+                                        color: block.self ? 'var(--ui-accent)' : 'var(--ui-text-primary)'
+                                    }}>
+                                        {block.userName}
+                                    </Typography>
+                                    <Typography sx={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
+                                        {TIME.format(new Date(block.firstAt))}
+                                    </Typography>
+                                </Stack>
+                                <Stack spacing={0.25}>
+                                    {block.lines.map((line) => (
+                                        <Box
+                                            key={line.id || line.ts}
+                                            ref={(node) => {
+                                                if (!line.id) return
+                                                if (node) nodesRef.current.set(line.id, node)
+                                                else nodesRef.current.delete(line.id)
+                                            }}
+                                            {...longPress}
+                                            sx={{
+                                                borderRadius: 1,
+                                                mx: -0.75,
+                                                px: 0.75,
+                                                transition: 'background 400ms',
+                                                background: highlightId && highlightId === line.id
+                                                    ? 'color-mix(in srgb, var(--ui-accent) 18%, transparent)'
+                                                    : 'transparent',
+                                                '&:hover .dii-chat-actions': { opacity: 1 }
+                                            }}
+                                        >
+                                            {line.replyTo && (
+                                                <ReplyQuote
+                                                    dense
+                                                    name={line.replyTo.userName}
+                                                    text={line.replyTo.text}
+                                                    onOpen={() => jumpTo(line.replyTo.id)}
+                                                />
+                                            )}
+                                            <Stack direction="row" alignItems="flex-start" spacing={0.5}>
+                                                <Typography sx={{
+                                                    fontSize: 14,
+                                                    lineHeight: 1.45,
+                                                    whiteSpace: 'pre-wrap',
+                                                    wordBreak: 'break-word',
+                                                    flex: 1,
+                                                    py: 0.25
+                                                }}>
+                                                    {line.text}
+                                                </Typography>
+                                                <MessageActions actions={actionsFor(line, block)} label="More for this message" />
+                                            </Stack>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                            </Box>
+                        ))}
+                    </Box>
+
+                    {/* Reading back through the day, a line lands: the way down
+                        says how many, rather than moving the page under you. */}
+                    {unread > 0 && (
+                        <Badge
+                            badgeContent={unread}
+                            max={99}
+                            sx={{
+                                position: 'absolute',
+                                right: 16,
+                                bottom: 16,
+                                '& .MuiBadge-badge': { background: 'var(--ui-accent)', color: 'var(--ui-bg)', fontSize: 11 }
+                            }}
+                        >
+                            <IconButton
+                                onClick={() => scrollToBottom('smooth')}
+                                aria-label={`${unread} new — jump to the latest`}
+                                sx={{
+                                    width: 40,
+                                    height: 40,
+                                    background: 'var(--ui-surface)',
+                                    border: '1px solid var(--ui-border)',
+                                    color: 'var(--ui-text-primary)',
+                                    '&:hover': { background: 'var(--ui-surface)', borderColor: 'var(--ui-accent)' }
+                                }}
+                            >
+                                <ArrowDownwardIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                        </Badge>
+                    )}
                 </Box>
 
                 <Box sx={{
@@ -268,6 +560,20 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                     // The composer sits above the phone's home bar, not under it.
                     pb: 'calc(12px + env(safe-area-inset-bottom))'
                 }}>
+                    {/* Reserved whether or not anybody is typing: a line that
+                        appears and disappears would push the whole composer up
+                        and down under the thumb. */}
+                    <Typography sx={{ fontSize: 11, color: 'var(--ui-text-muted)', height: 14, mb: 0.25 }}>
+                        {typing}
+                    </Typography>
+                    {replyTo && (
+                        <ReplyQuote
+                            name={replyTo.userName}
+                            text={replyTo.text}
+                            onOpen={() => jumpTo(replyTo.id)}
+                            onClear={() => setReplyTo(null)}
+                        />
+                    )}
                     {needsName && (
                         <InputBase
                             value={nameDraft}
@@ -288,14 +594,24 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                     <Stack direction="row" spacing={1} alignItems="flex-end">
                         <InputBase
                             value={draft}
-                            onChange={(event) => setDraft(event.target.value.slice(0, 500))}
+                            onChange={(event) => {
+                                setDraft(event.target.value.slice(0, 500))
+                                notifyTyping()
+                            }}
                             onKeyDown={(event) => {
+                                if (event.key === 'Escape' && replyTo) {
+                                    event.preventDefault()
+                                    setReplyTo(null)
+                                    return
+                                }
                                 if (event.key === 'Enter' && !event.shiftKey) {
                                     event.preventDefault()
                                     submit()
                                 }
                             }}
-                            placeholder={forbidden ? 'This room is closed to you' : 'Say something to the studio…'}
+                            placeholder={forbidden
+                                ? 'This room is closed to you'
+                                : replyTo ? `Answering ${replyTo.userName || 'them'}…` : 'Say something to the studio…'}
                             disabled={Boolean(forbidden)}
                             multiline
                             maxRows={5}
@@ -313,6 +629,7 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                         <IconButton
                             onClick={submit}
                             disabled={!draft.trim() || Boolean(forbidden)}
+                            aria-label="Send"
                             sx={{
                                 width: 44,
                                 height: 44,
@@ -327,6 +644,15 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                         </IconButton>
                     </Stack>
                 </Box>
+
+                <Snackbar
+                    open={Boolean(notice)}
+                    autoHideDuration={2600}
+                    onClose={() => setNotice('')}
+                    message={notice}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                    sx={{ '& .MuiSnackbarContent-root': { fontSize: 13 } }}
+                />
             </Box>
         </ThemeProvider>
     )

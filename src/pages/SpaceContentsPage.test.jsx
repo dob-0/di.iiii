@@ -98,4 +98,41 @@ describe('a space\'s contents page', () => {
         render(<SpaceContentsPage spaceId="br_id_ge" />)
         expect(await screen.findByText(/Nothing is on show in this space yet/)).toBeTruthy()
     })
+    // The bug this page was reported for: the owner opened the WCC space,
+    // counted eleven artist rooms and asked where the landing page was. It is
+    // compiled React at /wcc with no row on any server, so a list built from
+    // the server alone could not show it — src/works/works.js is the other
+    // half of the answer, and the row is a row like any other.
+    it('shows a space whose front page is code, in line with the projects', async () => {
+        getServerSpaceMock.mockResolvedValue({ id: 'wcc', label: 'WCC Exhibition', publishedProjectId: 'main' })
+        listSpaceContentsMock.mockResolvedValue([
+            { id: 'main', slug: null, title: 'Main', mode: 'scene', updatedAt: Date.now() },
+            { id: 'arthur', slug: 'arthur', title: 'Arthur', mode: 'scene', updatedAt: Date.now() }
+        ])
+        render(<SpaceContentsPage spaceId="wcc" />)
+
+        // Named for what it IS. "WCC Exhibition" is the space's own name and
+        // the surface bar's — a row repeating it says nothing.
+        const landing = await screen.findByRole('link', { name: /Landing page/ })
+        expect(landing).toHaveAttribute('href', '/wcc')
+        expect(screen.getByText(/Everything in this space — 3 things/)).toBeTruthy()
+        expect(screen.getAllByText('Page')).toHaveLength(1)
+    })
+
+    // Two rows saying "the way in" is one row too many. Where a work shadows
+    // the space, the stored door is not the way in: the router hands /wcc to
+    // the code before any space route sees it, so `main` is reachable only at
+    // its own address and the code page is what a visitor actually meets.
+    it('gives "the way in" to the code page, not to the door the database names', async () => {
+        getServerSpaceMock.mockResolvedValue({ id: 'wcc', label: 'WCC Exhibition', publishedProjectId: 'main' })
+        listSpaceContentsMock.mockResolvedValue([
+            { id: 'main', slug: null, title: 'Main', mode: 'scene', updatedAt: Date.now() }
+        ])
+        render(<SpaceContentsPage spaceId="wcc" />)
+
+        await screen.findByRole('link', { name: /Landing page/ })
+        const marks = screen.getAllByText('the way in')
+        expect(marks).toHaveLength(1)
+        expect(marks[0].closest('a')).toHaveAttribute('href', '/wcc')
+    })
 })

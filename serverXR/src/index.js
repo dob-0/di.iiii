@@ -85,6 +85,8 @@ const { httpRequest } = require('./httpClient')
 const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
+const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
+const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { describeListen } = require('./listenInfo')
@@ -569,9 +571,51 @@ const readAuthSession = (req) => {
   }
 }
 
-const getAuthState = (req) => {
+// A session that is being USED does not expire. The cookie's life is fixed at
+// issue time, so a person who signs in and works all day was thrown out twelve
+// hours later to the minute and asked for Google again — which is the whole of
+// the "why do I have to sign in every time" complaint. Now: while more than
+// half the life has run, any authenticated request re-issues the cookie with a
+// fresh clock, so activity keeps you in and absence still signs you out.
+//
+// Only past halfway, so an ordinary page load does not re-sign a cookie on
+// every request; and only for real session cookies, never for the API-token or
+// sync-key identities, which have no cookie to refresh.
+const refreshSessionCookieIfStale = (req, res, state) => {
+  if (!state?.authenticated || state.type !== 'session') return
+  const session = state.session
+  const expiresAt = Number(session?.expiresAt || 0)
+  if (!expiresAt) return
+  const ttl = config.authSession.ttlMs
+  if (expiresAt - Date.now() > ttl / 2) return
+  // Headers are already gone once a response has started; a refresh is a
+  // convenience and must never become an ERR_HTTP_HEADERS_SENT on a route that
+  // has begun streaming.
+  if (res.headersSent) return
+  try {
+    const next = createAuthSessionValue({
+      secret: config.auth.sessionSecret,
+      ttlMs: ttl,
+      session: {
+        subject: session.subject,
+        label: session.label,
+        role: state.role,
+        spaces: state.spaces,
+        ...(state.isUnrestricted ? { isUnrestricted: true } : {}),
+        tokenVersion: session.tokenVersion
+      }
+    })
+    setAuthSessionCookie(res, next.value)
+  } catch {
+    // Not being able to extend a session is never a reason to fail the request
+    // the person actually made.
+  }
+}
+
+const getAuthState = (req, res = null) => {
   const sessionState = readAuthSession(req)
   if (sessionState.authenticated) {
+    if (res) refreshSessionCookieIfStale(req, res, sessionState)
     return sessionState
   }
   const token = normalizeAuthToken(readAuthToken(req))
@@ -620,7 +664,7 @@ const getAuthState = (req) => {
 // a request arriving over the loopback interface came from this machine, and
 // `di up` puts no proxy in front of itself. Everyone on the network arrives as
 // a guest, which is the entire point of the mode.
-const getPublicAuthState = (req) => {
+const getPublicAuthState = (req, res = null) => {
   if (config.requireAuth && isOwnerAtTheMachine(req)) {
     return buildAuthState({
       authenticated: true,
@@ -640,7 +684,7 @@ const getPublicAuthState = (req) => {
       label: 'Auth Disabled'
     })
   }
-  return getAuthState(req)
+  return getAuthState(req, res)
 }
 
 // The cookie's Max-Age must be the SAME ttl the session payload was minted
@@ -913,6 +957,46 @@ const trackEventLimiter = createRateLimiter({ windowMs: 60_000, max: 60, name: '
 // Covers the OAuth start + callback routes registered by registerAuthRoutes below.
 router.use(['/api/auth/github', '/api/auth/google'], authAttemptLimiter)
 
+// First-party accounts (an email and a password) issue exactly the same session
+// as every other door — same cookie, same shape, same guest-sandbox hand-off —
+// so nothing downstream can tell how somebody signed in, and nothing downstream
+// should be able to.
+const issueSessionForUser = async (req, res, user) => {
+  const keptSandbox = await promoteGuestSandbox(readAuthSession(req), user.id)
+  const session = createAuthSessionValue({
+    secret: config.auth.sessionSecret,
+    ttlMs: config.authSession.ttlMs,
+    session: {
+      subject: user.id,
+      label: user.display_name || user.email || user.username || user.id,
+      role: user.role,
+      spaces: Array.isArray(user.spaces) ? user.spaces : [],
+      ...(user.isUnrestricted ? { isUnrestricted: true } : {}),
+      tokenVersion: user.tokenVersion
+    }
+  })
+  setAuthSessionCookie(res, session.value)
+  return {
+    requireAuth: Boolean(config.requireAuth),
+    authenticated: true,
+    type: 'session',
+    role: user.role,
+    subject: user.id,
+    label: user.display_name || user.email || user.username || user.id,
+    spaces: Array.isArray(user.spaces) ? user.spaces : [],
+    isUnrestricted: Boolean(user.isUnrestricted),
+    emailVerified: Boolean(user.email_verified_at),
+    expiresAt: session.expiresAt,
+    keptSandbox
+  }
+}
+
+router.use('/api/auth/password', authAttemptLimiter)
+registerPasswordAuthRoutes(router, {
+  issueSessionForUser: (res, user) => issueSessionForUser(res.req, res, user),
+  frontendUrl: config.oauth.frontendUrl
+})
+
 registerAuthRoutes(router, {
   config,
   createAuthSessionValue,
@@ -926,7 +1010,12 @@ registerAuthRoutes(router, {
 
 router.get('/api/auth/session', async (req, res, next) => {
   try {
-    let state = req.authState || getPublicAuthState(req)
+    // `res`, deliberately. This route is registered ABOVE the middleware that
+    // refreshes the cookie for everything else, so without passing the response
+    // here the one endpoint an idle tab actually polls would be the only one
+    // that never extended the session — and an open tab doing nothing else
+    // would still be signed out on the twelve-hour mark.
+    let state = req.authState || getPublicAuthState(req, res)
 
     // Re-sync role/spaces from DB so admin patches take effect without re-login
     if (state.authenticated && state.type === 'session' && state.subject && config.auth.sessionSecret) {
@@ -1095,9 +1184,18 @@ router.use('/api', (req, res, next) => {
 })
 
 router.use((req, res, next) => {
-  req.authState = getPublicAuthState(req)
+  // `res` is passed HERE and nowhere else: this middleware runs once per
+  // request, before anything has been written, which is the only safe moment
+  // to extend the cookie. Every other caller reads the state without touching
+  // the response.
+  req.authState = getPublicAuthState(req, res)
   next()
 })
+
+// Private conversations: the public-key phone book. Registered here, after the
+// middleware above, because every handler reads `req.authState` — and the whole
+// access rule ("somebody you share a space with") is written in terms of it.
+registerDmRoutes(router, {})
 
 const sendRoleError = (res, status, requiredRole, currentRole = null, error = null) => {
   res.status(status).json({
