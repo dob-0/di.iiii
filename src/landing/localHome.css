@@ -5,12 +5,12 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 14px;
-    padding: 9px 16px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-2) var(--di-space-4);
     border-bottom: 1px solid var(--di-cyan-border);
     background: var(--di-scrim);
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.06em;
     color: var(--di-text-muted);
 }
@@ -31,7 +31,7 @@
 .lh-doors {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--di-space-3);
     margin-left: auto;
 }
 

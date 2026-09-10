@@ -10,12 +10,12 @@
 .sbar {
     display: flex;
     align-items: center;
-    gap: var(--di-space-2);
-    padding: 10px var(--di-space-3);
+    gap: var(--di-space-3);
+    padding: var(--di-space-3) var(--di-space-5);
     border-bottom: 1px solid var(--di-line);
     background: var(--di-bg);
     font-family: var(--di-mono);
-    font-size: var(--di-text-label);
+    font-size: var(--di-text-2);
     letter-spacing: 0.04em;
     /* Above a canvas, below a modal. The bar must never be the thing a dialog
        has to fight. */
@@ -47,7 +47,7 @@
 .sbar-links {
     display: flex;
     align-items: center;
-    gap: var(--di-space-3);
+    gap: var(--di-space-5);
     margin-left: auto;
 }
 
@@ -84,19 +84,19 @@
    work, and the touch targets stay a finger wide. */
 @media (max-width: 720px) {
     .sbar {
-        gap: var(--di-space-1);
-        padding: 8px var(--di-space-2);
+        gap: var(--di-space-2);
+        padding: var(--di-space-2) var(--di-space-3);
         overflow-x: auto;
         scrollbar-width: none;
     }
 
     .sbar::-webkit-scrollbar { display: none; }
 
-    .sbar-links { gap: var(--di-space-2); }
+    .sbar-links { gap: var(--di-space-3); }
 
     .sbar-link,
     .sbar-home {
-        padding: 6px 0;
+        padding: var(--di-space-2) 0;
         white-space: nowrap;
     }
 

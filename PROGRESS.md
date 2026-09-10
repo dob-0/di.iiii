@@ -5,6 +5,1001 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-10 — every page was black on any Chrome older than 122
+
+- Found while running the studio chat's APK on an emulator: a Pixel 6 with
+  Chrome 113 rendered NOTHING. `ReferenceError: Iterator is not defined`,
+  `#root` empty. Not the chat's fault and not staging's — `/`, `/spaces` and
+  **di-studio.xyz itself** all came back the same way.
+- pdf.js ships a polyfill for `Iterator.prototype.join` written as
+  `typeof Iterator.prototype.join !== 'function' && (…)`, which dereferences the
+  `Iterator` global before deciding whether it exists. `Iterator` is Chrome 122
+  (Feb 2024) and Safari 18.4. pdf.js is in the vendor chunk, so it runs on every
+  page rather than only where a PDF is imported, and it throws before React
+  mounts. This has been true since pdfjs went to 5 on 2026-09-06.
+- Six lines in the head of `src/index.html`, before the module: if `Iterator` is
+  missing, define it with the real %IteratorPrototype% — which is ancient and
+  reachable — so the polyfill patches the object an iterator actually looks at.
+- The first draft of that shim did nothing at all, because a `function Iterator`
+  declaration hoists a LOCAL binding and `typeof Iterator` then reads it instead
+  of the global. `src/oldBrowserFloor.test.js` caught it: it runs pdf.js's own
+  line in a realm with the global deleted, and fails without the shim.
+- **Seen**: the same emulator, same Chrome 113, against a build carrying the fix
+  — the page renders, `#root` has children, no page errors, and the chat's door
+  card reads correctly. Screenshot looked at.
+- Untouched deliberately: pdf.js is not pinned back, and nothing else is
+  polyfilled. This is one missing global, restored where the library expects it.
+
+## 2026-09-10 — the space chat gets its own address, and a phone can install it
+
+- `/chat` is the studio's room and `/{space}/chat` is any other space's: the space
+  chat on a page of its own, with nothing else on it. Until now that room could
+  only be reached by loading Raw or the toybox and opening a panel inside it.
+- Nothing was added to the transport. `spaceChatStore.js` already persisted the
+  room, replayed it on join, capped it at 500 characters and let an admin erase a
+  line; `useProjectPresence` already carried it. The new `useSpaceChat` exists
+  only because that hook refuses to connect without a `projectId`, and a chat
+  page has no project.
+- Verified by looking, on the BUILT app served by serverXR (not the dev server):
+  two browsers signed into the same space, desk and phone viewport, each saw the
+  other's line, and a reload brought the transcript back from the database.
+- The chat is behind the gate on its own space, and the gate learned a second
+  sentence: `outOfScopeMessage`. Its default is the editor's wording, unchanged
+  for every existing caller — "you can view this space but not edit it" is the
+  wrong refusal to hand somebody standing at a chat room.
+- Installable: `public/chat/manifest.webmanifest` and a network-first
+  `public/chat-sw.js` scoped to `/chat`, both claimed by the chat surface alone
+  and never site-wide — site-wide they would offer to install the platform under
+  the room's name and put a cache in front of the editor.
+- An Android APK wraps the same address (`xyz.distudio.chat`, signed, built with
+  bubblewrap as a Trusted Web Activity). Recipe, toolchain and traps:
+  `docs/deploy/STUDIO_CHAT_APK.md`. `public/.well-known/assetlinks.json` carries
+  its fingerprint, and serverXR grew a route for that one file because
+  `express.static` ignores any path with a dot segment.
+- `--ui-bg` was used by AuthGate, ReservedAddressCard and now the chat, and was
+  declared nowhere: those full-screen grounds painted transparent. Declared in
+  `base.css`.
+- **Not done, and it is the whole point:** the APK targets `di-studio.xyz`, where
+  `/chat` does not exist until this lands on prod. Until then the app opens a
+  not-found card. Promotion past staging is the owner's word.
+- **Not seen:** the APK has not been run. No phone was attached, and the emulator
+  image was still downloading.
+
+## 2026-09-10 — the icons were standing in the room's doorway
+
+- `public/chat/` — the manifest and the three icons — is a directory with the
+  same name as the ROUTE. That shadows it: nginx's `try_files $uri $uri/` reaches
+  for the directory before the SPA fallback, and `express.static` answers the bare
+  `/chat` with a redirect to `/chat/`. Renamed to `public/chat-app/`.
+- The redirect is also why the service worker could not replay the page with the
+  network off: a redirected response may not satisfy a navigation, so an offline
+  reload died as `ERR_FAILED` with the cache full and correct.
+- Guard: `reservedSegments.test.js` now fails if any directory in `public/` is
+  also an app route — the fifth claimant on a URL segment, and the one nothing
+  had ever checked. `wcc` stays the one hand-held exception it always was.
+- Two more things the worker was getting wrong, both found by looking at the
+  offline page rather than at the code: it cached only the HTML (the browser
+  fetches this build's JS and CSS before the worker exists, so they never pass a
+  fetch handler — the page rendered blank white), and `caches.match` was missing
+  everything it did hold because the server sends `Vary: Accept-Encoding`. The
+  page now hands the worker its own resource list, and matching ignores Vary.
+- **Seen**: with the network cut, the app loads and says "Backend unavailable —
+  Retry" in its own type. It does not show the conversation, and should not:
+  chat lines are never cached, because a cached copy of a conversation can be
+  wrong about who said what. The worker's header says exactly this now; it used
+  to claim the room came back.
+
+## 2026-09-10 — a local install carries the works, and slim becomes a flag
+
+The owner opened `https://local.thedi.studio/wcc` on his own machine and got "not in
+this copy — this piece lives on di-studio.xyz". `/wcc/logos/wcc.svg` 404'd there and
+200'd on both hosted tiers. His own exhibition was the one thing on his own disk he
+could not open, and the machine it was on is the one that goes to venues with no
+network. Asked to choose between carrying the works offline and staying small, he
+said: **we need full.**
+
+So `DI_PROFILE=local` now builds the program AND the works. The strip survives,
+unchanged and named: `DI_LOCAL_SLIM=1`.
+
+- `src/works/buildProfile.js` — new, and the whole seam. Plain data, no app imports,
+  same rule as `works.js` next door, because `vite.config.js` loads it at build time.
+  `resolveBuildProfile(process.env)` answers one question — which of the three shapes
+  is this — and returns what each half of the build needs: what to stub, what public
+  directories to copy, which works are in the artifact. It reads the registry; nothing
+  types a work's name.
+- `vite.config.js` — `localProfilePlugin()` (the stubbing one) is installed only under
+  `DI_LOCAL_SLIM=1`; `localPublicDirPlugin()` stays on for any local build and its
+  include-list now carries each work's `publicDirs` from the registry. New define
+  `__DI_WORKS__` — which works are in THIS artifact.
+- `dist/build-profile.json`, new, written by every build. The packer used to tell the
+  shapes apart by sniffing for `dist/wcc` and `.mp4`s, which only worked while a local
+  build was the one without them. It reads the marker now, refuses a mismatch, and
+  records `works` in `release.json` alongside `profile`.
+- `scripts/pack-runtime.mjs` — `--slim` added, `--full` unchanged, and the guard above.
+  `npm run di:pack` (what `release.yml` runs) is now the full artifact.
+- `src/landing/LandingPage.jsx` — the featured-exhibition row was hidden whole behind
+  `!isLocalInstall`, so a local install had no link to WCC anywhere on its front door.
+  Its own comment gave TWO reasons and only one of them expired: the works were absent
+  (no longer true), and `br_id_ge`/`beyond-form` are database rows a fresh install does
+  not have (still true). Split per chip: a work shows if `__DI_WORKS__` says it is in
+  this build, a space shows only on the hosted site. Exported as `featuredSpacesFor`.
+
+Measured on this machine, not estimated:
+
+| build | dist | tarball |
+| --- | --- | --- |
+| hosted (`npm run build`) | 133,113,755 B (128 MB) | — |
+| local, full (`DI_PROFILE=local`) | 132,968,887 B (128 MB) | 113.6 MB |
+| local, slim (`+ DI_LOCAL_SLIM=1`) | 14,608,565 B (15 MB) | 4.7 MB |
+
+The increase is two directories and nothing else: `dist/wcc` at 25 MB (the microsite's
+media, of which `artist-works-land` is 20 MB) and algovrithm's reels and scan inside
+`dist/assets`, which take it from 8.1 MB to 97 MB. Full-local is 144,868 B *smaller*
+than hosted — that difference is di-studio.xyz's furniture (`get.sh`, `og/`, the cPanel
+php shims, `robots.txt`, `sitemap.xml`), which the include-list still leaves out.
+
+Nothing in either work needs the network. `https://` in their source is three comments
+and one test constant; `public/wcc` references only github.com and babeljs.io inside
+vendored library error strings, and its React/Babel are vendored at
+`public/wcc/artist-works-land/vendor/`. The one third-party request WCC ever made —
+two `@import` lines to fonts.googleapis.com — was self-hosted away on 2026-07-29
+(`src/wccSite/landing/fonts.css` says so). An offline install can open both pieces.
+
+### Guards
+
+- `src/works/localProfile.test.js` — new. Loads `vite.config.js` three times under
+  different env and asserts the plugin list, plus `resolveBuildProfile` directly.
+  Before the change it said: `expected [ 'di-local-profile', …(13) ] to not include
+  'di-local-profile'` and `"undefined" is not valid JSON` for `__DI_WORKS__`.
+- `src/landing/featuredSpaces.test.jsx` — new. A local install keeps the works' chips
+  and still drops the spaces.
+- `scripts/packProfile.test.js` — updated to the new shape. Its size backstop now
+  applies to `local-slim` only and reads the marker; a full local build is *meant* to
+  be large.
+
+### Left alone deliberately
+
+- `src/studio/components/SpaceHub.jsx`, `src/utils/spaceRouting.js`,
+  `src/works/routes.jsx` — another agent is on `fix/space-card-door`. `SpaceHub.test.jsx`
+  carries one now-stale comment about the local profile stubbing a work's route; it is
+  a comment, in that agent's file, and can be swept later.
+- `PROGRESS.md` and the historical paragraphs in `golden_rules.md` — they are a record
+  of what happened, not a claim about today. Only the rule itself was amended.
+- `.github/workflows/install-matrix.yml` runs a bare `npm run di:pack` on every push
+  that touches the packer, so its CI job now builds and archives 113.6 MB instead of
+  4.7. It still passes; whether that job should pass `--slim` is a judgement about CI
+  time, not about the product, and is the owner's call.
+- Nothing installed, nothing pushed. `di update` / `di up` / `di down` untouched — a
+  peer agent is installing on the live tier.
+
+## 2026-09-10 — a space shows everything inside it
+
+### The gap, measured
+
+Counted on the owner's own tier before touching anything: **22 spaces, 201
+projects, 114 of them reachable by no click from anywhere.** Not junk — every
+one had content. 78 sat behind three front pages that nothing linked *to*:
+
+| front page | what it hides |
+| --- | --- |
+| `br-id-ge/n2-hub` — 116 objects, 63 doors | 63 projects (the whole Notations #2 hub) |
+| `wcc/main` — 20 objects, links all ten artists | 9 |
+| `dilijan/camp` — a page | 6 |
+
+The remaining ~111 were single leaves: `open/front-room` (163 objects),
+`main/di-landing`, `main/privacy`, `main/brand-guide`, `atlas/links` (1.2 MB),
+and so on.
+
+The cause is one line of schema: a space has **one** door,
+`spaces.publishedProjectId`, and that door was the entire public surface of a
+space. Everything else in it had no address a person would ever click.
+
+Owner, 2026-09-10: *"there are still open gaps by example some projects i cant
+see fully … we need full visibility of our every layer"*, then *"ok i want to
+fix that gap so go work"*. The shape he approved: **a space should show
+everything inside it, and each thing should say whether it is a scene or a
+page — using the setting di.iiii already has, instead of asking you to pick a
+kind at the moment you know least.**
+
+### The address
+
+**`/{space}/projects`.** No new word, no new reserved segment.
+
+That address already existed. It was added on 2026-08-21 as one of the "layered
+addresses", for exactly this reason — *a space's projects belong to the SPACE,
+not to whichever tool you happen to be holding* — and then it rendered Studio's
+own hub behind Studio's own gate. So the one address in the product that named
+what a space holds answered a visitor with a login wall, and it was the door
+that should have led to those 114 projects.
+
+Studio's hub keeps `/{space}/studio`, which is what every existing link already
+uses. `buildSpaceProjectsPath` keeps its name and its callers ("back to
+projects" out of both editors) — an author who leaves the editor now lands on
+the space's contents with one click into Studio, instead of on Studio's hub
+wearing the space's address.
+
+`/raw/projects` and `/studio/projects` are each lane's own space-less form and
+are untouched: the parser refuses a reserved first segment, so neither can ever
+be read as the contents of a space named after a tool.
+
+### What decides that something is a scene or a page
+
+`presentationState.mode` — `scene | fixed-camera | code` — which already exists
+and is what the published surface already obeys.
+
+**No `kind` column was added, and none should be.** A project document carries
+`entities[]` and `nodes[]` at the same time and nothing enforces either
+(vocabulary.md §"Out of scope", item 3), so a kind written down at creation is
+a claim the data cannot keep. The mode is the author's own setting, so the page
+reports rather than guesses.
+
+Two words, both already in the dictionary: **Scene** (the 3D place you can be
+inside) and **Page** (a published web page). `fixed-camera` is a scene you look
+at rather than walk, so it says Scene and adds *one view*.
+
+### Privacy — the constraint that outranked the feature
+
+The fix is about work the owner cannot **find**, never about work someone else
+should not **see**. Nothing was widened.
+
+- **Who may look at the space** is decided by the gate that already existed and
+  was not touched: `requireReadRole('viewer')` in `serverXR/src/index.js`, which
+  lets a public space through and refuses everything else. The client mirrors it
+  with the same `useSpacePublicFlag` hook `SpaceSurfaceRoute` and
+  `RawSurfaceRoute` already use, so "public" keeps meaning one thing.
+- **What is on show inside it** is a new, narrower filter in
+  `GET /api/spaces/:spaceId/contents`: `state === 'live'` only, so a **draft**
+  and an **archived** project are never listed, plus the pre-2026-09-10 legacy
+  form of archiving (a title starting `[archived]`), which StudioHub reads
+  client-side and a visitor's copy must not. Trashed rows never appear —
+  `listProjectsInSpace` already excludes them. A **sandbox** is never public, so
+  it is never reachable by a stranger at all.
+- The author's own `GET /api/spaces/:spaceId/projects` is **unchanged**: filing
+  needs every row, and that is what Studio is for.
+
+Both facts are guarded, and both guards were watched failing first — see below.
+
+### The two seams, and the one that is deliberately quiet
+
+- **The `/spaces` card**: one line under the space's name, *Everything inside*,
+  on every card the visitor is allowed into. `/spaces` was not redesigned.
+- **Inside a room**: a second corner mark beside *Made with di.iiii*, built out
+  of that badge's own stylesheet and obeying the owner's 2026-08-23 call about
+  it — a mark at rest (~14px, 44px tap target), the sentence on hover or
+  keyboard focus, because a published page is somebody's work and a way out must
+  not land on top of it. It renders **only when the space holds more than one
+  thing**: a room that is the whole of its space has nothing to send you to.
+- **`RoomTextLayer`** gains the same link as its last door. That layer is the one
+  part of a published page a crawler and a screen reader actually read, and it
+  named only the doors the author had placed — so a crawler that found a room
+  found nothing else in the space. This is how those 114 become indexable.
+
+### A space that holds one thing
+
+If the only project on show **is** the space's door, `/{space}/projects` hands
+the visitor the room instead (`replace`, so Back does not bounce). A list whose
+only row is the room you would already be standing in says less than the room
+does.
+
+One project that is **not** the door stays on the list: that is precisely the
+case this page exists for, because nothing else in the product links to it —
+`atlas/links` is exactly that shape.
+
+### Guards, and what they said before the fix
+
+`serverXR/src/httpContracts.test.js` → `describe("a space's contents")`, both
+against a server with `requireAuth` **on**, because a guard written against a
+local no-auth install proves nothing about the tier the audience is on:
+
+1. *shows a visitor every live project in a public space, and says what each one
+   is* — with the route removed: `expected 404 to be 200`.
+2. *never shows a visitor a draft, an archived project, or anything in a private
+   space* — with the route removed: `expected 404 to be 200`; and with the route
+   present but the state filter replaced by `filter(() => true)`:
+   `expected [ 'put-away', 'not-finished', 'older-still', 'on-show' ] to deeply
+   equal [ 'on-show' ]`. The private space answered 401 either way.
+
+`src/pages/SpaceContentsPage.test.jsx` — with `kindOf` pinned to one label and
+the pretty-link branch forced off: *makes every thing on show a link…* and *says
+whether each thing is a scene or a page* both failed.
+
+`src/utils/spaceRouting.test.js` — the address parses, round-trips, and never
+reads `raw`/`studio`/`spaces` as a space.
+
+### Reach, before and after
+
+Counted directly against the tier's own database on the day (the tier had
+drifted slightly from the brief's figures by then — 24 spaces, 201 projects not
+in the trash, **195** of them live and on show):
+
+| | reachable from a space page |
+| --- | --- |
+| before | **20** — one door per space, and nothing where no door was set |
+| after | **195** — every live project, two clicks from `/spaces` |
+
+The brief's "87 before" counted transitive reach as well (a door, plus whatever
+portals inside that room happened to point at). The 20 above is the stricter
+figure: what a page in di.iiii actually linked to. Either way the 114 that no
+click reached are now on a list.
+
+### Files
+
+| file | why |
+| --- | --- |
+| `serverXR/src/routes/projectRoutes.js` | `GET /api/spaces/:spaceId/contents` — live-only rows + the mode, cached on (project, version, updatedAt) |
+| `serverXR/src/httpContracts.test.js` | the two guards |
+| `src/pages/SpaceContentsPage.jsx` · `spaceContents.css` · `.test.jsx` | the page, its stylesheet, its guards |
+| `src/styles/spine.test.js` | the new stylesheet joins `SPINE_FILES` |
+| `src/utils/spaceRouting.js` · `.test.js` | `APP_PAGE_SPACE_CONTENTS`, the parser, the builder |
+| `src/studio/utils/studioRouting.js` · `.test.js` | Studio stops claiming `/{space}/projects` |
+| `src/RootApp.jsx` | `SpaceContentsRoute`, dispatched before Studio's |
+| `src/components/SpaceContentsBadge.jsx` · `madeWithBadge.css` | the corner mark in a room |
+| `src/hooks/useSpaceContentsCount.js` | the number that decides whether to offer it |
+| `src/project/components/PublicProjectViewer.jsx` · `RoomTextLayer.jsx` · `.test.jsx` | the seam inside a room, and the reader's door list |
+| `src/studio/components/SpaceHub.jsx` · `studio-space-hub.css` | the seam on the `/spaces` card |
+| `src/project/services/projectsApi.js` | `listSpaceContents` |
+| `src/wiki/wikiContent.js` | the new article, and `/{space}/projects` re-described |
+
+### Left open
+
+- The author's index `GET /api/spaces/:id/projects` still returns drafts and
+  archived rows to an **anonymous** visitor on a **public** space. Pre-existing,
+  untouched here on purpose — narrowing it is a contract change to an endpoint
+  the sync scripts also use — but it is the reason the contents page has its own
+  route rather than filtering the author's one in the browser.
+- `/spaces` still shows one card per space with no count on it. A count would
+  want the contents call per card; not worth it against twelve booting previews.
+
+### Looked at, not just tested
+
+A production build served from a throwaway serverXR on :5231, pointed at a
+**copy** of the local tier's data (the owner's own tier was never written to),
+`REQUIRE_AUTH=true`, driven by headless Chromium in a **clean context with no
+token and no cookie** — the weakest session that has to work. Desktop
+1440×900 @ DPR 2 and a Pixel 7. Shots in the session scratchpad's `shots/`:
+
+- `desk-wcc-contents.png` / `phone-wcc-contents.png` — all ten WCC artists
+  listed. Before this, `wcc/main` was the only one a click reached.
+- `desk-br-id-ge-mid.png` — 69 rows, Scene and Page rows side by side, the
+  door marked `THE WAY IN`.
+- `desk-atlas-private.png` — a private space, no token: the product's own
+  restricted card. No project name appears in the page or the response.
+- `desk-single-project-redirect.png` — `/beyond-form/projects` lands on
+  `/beyond-form`. The list of one never renders.
+- `desk-spaces-card-seam.png` — *Everything inside* on every card.
+- `desk-room-badges-rest.png` / `desk-room-badges-hover.png` — the two corner
+  marks at rest, and the second one unfolded to
+  "▤ Everything in this space — 23".
+- `phone-room-badges.png` / `phone-room-to-contents.png` — the tap target
+  measures exactly 44×44, and the tap lands on 23 rows.
+
+The reader's copy was checked in the DOM, not assumed: `.room-text-layer nav`
+ends with `Everything in this space` on `/open`, `/?room=1` and `/dilijan`.
+
+## A door to the lighting desk
+
+The owner could not find the lighting desk. It was not broken and it was not
+missing — nothing anywhere in di.iiii led to it. `/light/` could only be reached
+by typing the address, and the one link that exists (the mapper's `Light`
+action) is inside a tool you have to already be using.
+
+The spaces list is the page people open to find things, so the door goes there:
+one quiet line under the cards, above the sandbox row.
+
+    ON THIS MACHINE   Lights  — the lighting desk, for the rig in the room
+
+**Drawn from an answer, not a flag.** `probeLightingDesk()` in
+`src/map/lightingLink.js` already existed for the mapper and already knows the
+trap that matters: a hosted tier serves its own index.html for an address it
+does not know, so a 200 alone is not a desk and the probe insists on JSON. This
+reuses it rather than reading a tier flag, which means the row is right for
+every case a flag would get wrong — a dev build pointed at a local backend, an
+install serving the room over `--lan`.
+
+`SpaceHub` is embedded by `LocalHome`, so the same line appears on the front
+door of a di.iiii started with `di up`, which is where someone at a venue
+actually lands.
+
+Verified: the branch's dev server on :5199 against a real desk — the row
+renders, `Lights` points at `/light/`, no console errors, screenshot read.
+Two tests in `SpaceHub.test.jsx` cover both answers, desk and no desk.
+
+Not in this change: the desk at :4748 is a different program on a different
+port and cannot be probed from here; hosted `/light` still silently serves the
+ordinary page instead of saying "this only works on your own machine".
+
+## 2026-09-10 — the spine over every platform stylesheet
+
+The spine landed earlier the same day covering **4** stylesheets, and the debt
+list named five more. Both numbers flattered the truth: `src/` holds 56
+stylesheets and carried roughly **1,500** violations, 522 of them in `raw.css`
+alone. This pass finishes it.
+
+`base.css` grew only what conversion needed and could not invent:
+
+- the brand colours as channel triples — `--di-cyan-rgb`, `--di-danger-rgb`,
+  `--di-success-rgb`, `--di-warning-rgb` — so a surface picks its own alpha
+  without writing the colour's numbers by hand. `studio.css` alone had
+  seventeen different cyan alphas, each one a place a palette change would
+  miss. `rgba(var(--di-cyan-rgb), .2)` is the sanctioned form.
+- `--di-scrim` / `--di-scrim-strong`: the dark veil laid over a live room or a
+  3D background so text on it stays readable. It existed as five different
+  hand-picked near-blacks — `rgba(3,7,14,.74)` on the wiki, `rgba(4,6,14,.74)`
+  on the landing, `rgba(4,6,9,.9)` in Studio — the same intention, three
+  colours.
+- `--di-success-rgb` is the success token's own channels. The first draft used
+  a different green and would have made the triple lie about its own name.
+
+**46 stylesheets converted and locked; `NOT_YET` is empty.** What the conversion
+turned up: a second blue/teal/green palette living inside the inspector and the
+controls (`#00c6ff`, `#5ce3b3`, `#4ade80`, gradient buttons) next to a flat cyan
+platform; nine corner radiuses; three mono stacks.
+
+**Two written exceptions, in `BY_DESIGN` with the reason spelled out** — a
+surface that deliberately is not the dark chrome is a decision somebody made,
+and it has to be recorded or the next pass "fixes" it back:
+
+- `PresentationCanvas.css` — the presented page is paper. Cream ground, brown
+  ink, and the dark chrome around it is the frame, not the picture. Its two
+  floating toasts are platform chrome and were converted.
+- `make/makeSurface.css` — paper too, and bilingual. `--di-sans` carries no
+  Armenian glyphs, so rule 3 would drop every Armenian word on the kid-facing
+  toybox to whatever the phone happens to have; and line 578 of that file
+  records the device test where `--di-cyan` on a cream sheet meant a child
+  could not see there was a second room to tap. It joins the spine the day
+  `base.css` grows a light half and either an Armenian face inside `--di-sans`
+  or a sanctioned `--di-sans-hy`.
+
+Fixed on the way:
+
+- **Five Raw panel labels were invisible** — `var(--di-cyan-dim, #9fd7ff)` as a
+  text colour, where the token is declared as the accent at 0.1 alpha, so the
+  fallback never fired and the labels rendered at 10% cyan on near-black.
+- `spine.test.js` rejected 13 lines whose values were already correct, because
+  they carry `!important` to beat MUI's injected `MuiButtonBase` styles. The
+  test was wrong, not the CSS.
+- `contrast.test.js` demanded a literal `rgba` in `landing.css`, which "use the
+  token" had just made impossible. It follows the token into `base.css` now, so
+  both guards can be true at once.
+- five `--workspace-*` tokens nothing reads.
+
+**Seen, not assumed.** Packed as `0.4.8-spine.1`, installed on the local tier,
+and walked at 1440x900 DPR 2 and at phone width: the Spaces home, `/wiki`,
+`/tools`, `/raw` with a graph built, the Studio editor with Create, Objects and
+an object's inspector open, admin, a walked room, and the lighting desk. Each
+one shot against staging's pre-spine build in the same viewport — the pairs are
+visually identical, which is the result you want from a pass that was meant to
+change what the CSS *says*, not what it draws.
+
+One thing seen and NOT caused here: the lighting desk's header collides at
+1440px — "Blackout" sits over the title and the `output off` badge over
+"Art-Net Desk". That desk keeps its own stylesheet by decision and was not part
+of this pass.
+
+## 2026-09-10 — the rhythm, measured and enforced
+
+The owner's word was "the whole UI feels not comfortable." Measured why: 1,592
+hand-written padding/margin/gap literals and 647 hand-written font-sizes across
+the 48 platform stylesheets this pass owns (everything in `src/` except the two
+works, `base.css` itself, and `studio/styles/studio-space-hub.css` +
+`wiki/wiki.css`, which another agent owns). Against that: 20 uses of the old
+`--di-space-1..5` (6/12/22/44/76px) and 7 uses of `--di-text-label` — the only
+one of four declared type tokens anyone actually read. The tokens were invented
+without measuring, which is exactly why nothing used them.
+
+### The two ladders, derived not guessed
+
+Method: histogram every literal by its px-equivalent (rem → px at 16px root),
+then find the ≤8 (spacing) / ≤7 (type) points that cover the most weight where
+every covered value sits within 2px (spacing) / 1px (type) of its point — a
+weighted-interval DP, not eyeballing. An idealized 4/8/16/24/32/48/64 grid
+covers only 94.3% of the real spacing distribution; the ladder actually
+clustering in the product covers 98.9%.
+
+**Spacing** (`--di-space-1..8`, base.css):
+
+| step | px | rem-ish anchor |
+|---|---|---|
+| 1 | 3px | — |
+| 2 | 7px | — |
+| 3 | 12px | — |
+| 4 | 16px | 1rem |
+| 5 | 22px | — |
+| 6 | 30px | — |
+| 7 | 40px | — |
+| 8 | 48px | 3rem |
+
+**Type** (`--di-text-1..7`, base.css, kept in rem like the tokens they replace):
+
+| step | rem | px |
+|---|---|---|
+| 1 | 0.5rem | 8px |
+| 2 | 0.625rem | 10px |
+| 3 | 0.76rem | 12.16px |
+| 4 | 0.9rem | 14.4px |
+| 5 | 1.0625rem | 17px |
+| 6 | 1.25rem | 20px |
+| 7 | 1.4375rem | 23px |
+
+### The full mapping (every measured value → step, count, drift)
+
+Spacing (px value / uses / target / drift, `+` grows, `-` shrinks):
+
+```
+1    23  -> 3    +2      6    173 -> 7    +1      14    68  -> 12   -2      24   44  -> 22   -2
+2    87  -> 3    +1      6.4  3   -> 7    +0.6    14.4  5   -> 16   +1.6    28   13  -> 30   +2
+3    33  -> 3    0       7    43  -> 7    0       16    90  -> 16   0       30   3   -> 30   0
+3.2  1   -> 3    -0.2    7.2  2   -> 7    -0.2    17    1   -> 16   -1      32   12  -> 30   -2
+4    132 -> 3    -1      8    250 -> 7    -1      17.6  1   -> 16   -1.6    38   2   -> 40   +2
+4.8  1   -> 3    -1.8    8.8  1   -> 7    -1.8    18    45  -> 16   -2      40   11  -> 40   0
+5    48  -> 3    -2      9    25  -> 7    -2      20    32  -> 22   +2      48   8   -> 48   0
+5.6  2   -> 7    +1.4    10   195 -> 12   +2      22    19  -> 22   0
+                         11   6   -> 12   +1      22.4  1   -> 22   -0.4
+                         11.2 4   -> 12   +0.8
+                         12   179 -> 12   0
+                         12.8 2   -> 12   -0.8
+                         13   4   -> 12   -1
+                         13.6 4   -> 12   -1.6
+```
+98.9% of all measured spacing weight (1573/1590 positive, non-exception values)
+snaps inside the 2px budget. Full per-value table (63 rows) generated by the
+measurement script, not reproduced in full here — see the git history of this
+note's branch for the raw numbers if needed again.
+
+Type ladder: 97.2% of measured weight (629/647) snaps inside the 1px budget —
+full table in the same shape, e.g. `11px×121 -> 10px (-1)`, `12px×121 ->
+12.16px (+0.16)`, `13px×64 -> 12.16px (-0.84)`, `16px×23 -> 17px (+1)`,
+`20px×12 -> 20px (0)`.
+
+### Exceptions — named, not silent
+
+**Spacing**, left as literals (11 distinct values, ~24 uses):
+
+- `-1px`, `-2px`, `-4px` — negative trims/overlaps (loadingScreen.css,
+  roomTextLayer.css, director.css ×2, raw.css ×2, menu.css). A deliberate pull,
+  not a rhythm step.
+- `56px`, `64px`, `96px`, `120px` — large section-break paddings (landing.css,
+  legal.css, studio-hub.css `.sh-empty-state`). A beat bigger than the
+  ladder's own top rung (48px), by design.
+- `9.6px` (`0.6rem`, jamSurface.css ×4 `gap`) — sits almost exactly between
+  rung 2 (7px, Δ2.6) and rung 3 (12px, Δ2.4); neither clears the 2px budget.
+  Left as measured.
+- `--di-space-section-break: 44px` (was `--di-space-4`) — the shelf/trash
+  section-break top margin in studio-hub.css. 44 sits equidistant from rung 7
+  (40) and rung 8 (48), a 4px move either way. Given its own name in
+  `base.css` rather than forced onto the ladder or left as a bare literal.
+- the `raw-world-node-card` miniature (raw.css `gap`/`padding`/`margin-top`,
+  `calc(Npx * var(--card-scale))`): 5px, 14px, 6px left literal. Multiplying an
+  already-snapped literal by a live zoom-scale variable would multiply its
+  drift too, so the whole scaled cluster stays literal rather than
+  half-converted (the two *exact*-matching numbers in the same cluster, 16px
+  and 12px, were left with it for consistency, not because they needed to be).
+
+**Type**, left as literals (17 distinct values, ~24 uses):
+
+- `26px`…`160px` and `1.8rem`/`2rem`/`2.6rem`/etc — large display/heading and
+  icon-glyph sizes (makeSurface.css glyph keys, jamSurface.css emoji size,
+  raw.css topbar `h1` and a 68px icon button, landing.css step-numeral). The
+  7-rung ladder was measured from small dense UI text; it was never meant to
+  reach hero numerals.
+- `clamp(...)` fluid headings (landing.css ×3, legal.css, studio-hub.css,
+  preferences.css ×2, PresentationCanvas.css) — viewport-scaled display type,
+  a different, deliberate pattern from the fixed small-text ladder.
+- the same `--card-scale` cluster's font-sizes (24px, 13px, 11px) — same
+  reasoning as the spacing cluster above.
+- `0.85em` (legal.css inline `<code>`) and `0.92em` (space-constellation.css)
+  — intentionally relative to the surrounding running text, not a fixed size.
+- `16px` **twice**, explicitly locked, not merely "didn't fit": the iOS
+  no-zoom floor on `.raw-chat-input`/`.raw-node-palette-input`
+  (raw.css) and `.make-chat .raw-chat-input` (makeSurface.css). The nearest
+  rung (17px) would still clear the floor, but the comment already said "not
+  a style choice" — left exactly as measured and the comment updated to name
+  the exception rather than silently drift the number the comment describes.
+
+### Token migration — the 27 call sites that predate the ladder
+
+`--di-space-1..5` had 20 live `var()` reads (surfaceBar.css, liveProjectScene.css,
+studio-hub.css) and `--di-text-label` had 7 (same three files). Each was
+re-pointed to the step nearest its *old* value, not renumbered blindly:
+old `space-1` (6px, 5 uses) → new `space-2` (7px, Δ1); old `space-2` (12px, 11
+uses) → new `space-3` (12px, Δ0); old `space-3` (22px, 2 uses) → new `space-5`
+(22px, Δ0); old `space-4` (44px, 2 uses) → `--di-space-section-break` (see
+above); old `space-5` (76px) had zero call sites and was retired. Old
+`text-label` (0.66rem/10.56px, 7 uses) → new `text-2` (0.625rem/10px, Δ0.56).
+`--di-text-body`/`title`/`display` (0.94/1.7/2.6rem) had zero `var()` reads
+anywhere in `src/` and were retired outright.
+
+### What converted, what's debt
+
+**1,559 of 1,592 spacing literals and 614 of 647 font-sizes converted** across
+42 stylesheets (+ `base.css` for the tokens themselves) — 97–95%. What's left
+in those 42 files is the exceptions list above, named inline in
+`spine.test.js`'s `SPACE_EXCEPTIONS`/`FONT_EXCEPTIONS` maps, not silently
+exempted.
+
+**Untouched by this pass, debt with a name and a count**: `wiki/wiki.css` (29
+spacing + 11 font literals) and `studio/styles/studio-space-hub.css` (83
+spacing + 33 font literals) — both owned by another agent working in parallel,
+per the task's own boundary. `RHYTHM_FILES` in `spine.test.js` excludes them
+explicitly; nothing pretends they are clean.
+
+### Enforcement (`src/styles/spine.test.js`)
+
+Two new checks, same shape as the existing colour/font-family/radius ones:
+every `padding`/`margin`/`gap`/`font-size` in `RHYTHM_FILES` (= `SPINE_FILES`
+minus the two agent-owned files, plus the two `BY_DESIGN` chrome files —
+`PresentationCanvas.css` and `make/makeSurface.css` are off the spine for
+*colour*, not for rhythm) must be a ladder token, `0`, `auto`, a percentage, or
+one of the named exceptions above — checked by scanning every declaration's
+value for a bare `px`/`rem`/`em` literal, the same way the codemod that did
+the conversion found them, so the enforcement and the conversion agree on what
+counts as a violation. `calc()`/`clamp()` are not blanket-exempted: a literal
+inside either still has to be `0` or a named exception, which is what makes
+the additive `calc(Npx + env(safe-area-inset-*))` cases (makeSurface.css,
+jamSurface.css, studio-mobile.css, raw.css — 8 lines) show up as ordinary
+converted tokens now (`calc(var(--di-space-N) + env(...))`) instead of a
+separate category.
+
+### Seen, not assumed
+
+Built `dist/` twice — `origin/dev` (709f1a96, this branch's own base) and this
+branch — served on :5261/:5262 against the real local serverXR API
+(`https://local.thedi.studio/serverXR`, proxied). Walked both with headless
+Playwright at 1440×900 DPR2 and Pixel 7 (412×839, DPR 2.625): `/spaces`,
+`/tools`, `/open/projects` (a space's contents page), the Studio editor with
+Create+Objects+Tools panels open on a real project, `/raw` with a built
+example graph, and `/open/p/front-room` walked. Screenshots at
+`/tmp/claude-1000/-home-dob/829590b0-b787-4cab-b8ec-dcc311a81d3c/scratchpad/shots/rhythm-{before,after}-*.png`
+(20 pairs — 6 desktop, 4 also on Pixel 7).
+
+Honest result: `/spaces`, `/raw`, the Studio editor and the walked room are
+**pixel-identical** between before and after — every literal that moved,
+moved to a step at Δ0 or close enough that nothing visibly shifts. `/tools`
+shifts by a couple of px (the intro paragraph's line-wrap point moves one
+word) — a real, small, in-tolerance effect of consolidating that page's
+padding onto the ladder. `/open/projects` (the space contents list) shows the
+clearest visible change: rows breathe a little more (a few stacked
+paddings that each moved +1–2px add up down a list), the "THE WAY IN" pill
+grew slightly, and the intro paragraph wraps one word earlier. Nothing broke,
+nothing overlaps, and the list reads calmer, not looser — but it is the one
+surface where the rhythm pass is visible if you're looking for it, which is
+the honest answer to "does it look calmer": yes, and this is where you can
+point.
+
+### Verification
+
+- `npm run lint` — 0 errors (62 pre-existing warnings, none touched by this
+  pass).
+- `npm run build` — succeeds.
+- `npm run test` (vitest, full suite) — green after two fixes this pass
+  required: `src/landing/heroRows.test.js` asserted a literal `gap: Npx` on
+  `.lp-hero-space-row`/`.lp-hero-cta-row`, which the conversion correctly
+  replaced with a token — the test now accepts either form (it was guarding
+  against a *zero* gap, not a literal one). `docPaths.test.js` wanted this
+  file to exist, which it now does.
+- `npm run docs:ai:check` — passes with this note in place.
+
+### A note on the worktree
+
+Interactive testing against the shared local backend (clicking "Everything
+made here" to reach the Studio editor) briefly showed an "Untitled Project /
+Loading project..." transient in one screenshot — checked against
+`GET /api/spaces/main/projects` before and after: the project list is
+unchanged (still the same 8 projects, no new one created). It was the
+editor shell's own empty-state rendering before the real project hydrated,
+caught mid-load by a screenshot taken too early, not a write. Re-shot with a
+longer wait; the retake is what's in the shots directory. Per the task's own
+instruction, nothing was written to any tier by this branch.
+
+## 2026-09-10 — the WCC landing, standing in its own space as a project
+
+### The ask
+
+The owner opened `/wcc/studio`, counted eleven projects (`main` plus ten artists), and
+asked why the WCC **landing page** was not among them. It is not a project — it is
+compiled React at `src/wccSite/landing/`, mounted only at the bare `/wcc` route
+(`src/works/works.js`) — so the space's own list could never show it. Told a database
+copy becomes a second source of truth that can drift from the code, he chose the copy
+anyway: **"ok recreate and make it as a project."**
+
+### What exists now
+
+Two new `code` projects in the `wcc` space, **on the owner's LOCAL tier only**
+(`https://local.thedi.studio`) — nothing written to staging or production:
+
+- `landing-page-snapshot` — the landing, compiled through
+  `src/wccSite/landing/snapshotEntry.jsx` from the exact `LandingPage.jsx` the real
+  route renders. Not retyped.
+- `artists-works-page-snapshot` — `public/wcc/artist-works-land/index.html`, Emily's
+  hand-made page, currently reachable only inside the landing's iframe and nothing
+  else linking to it. Given its own row for the same reason `/wcc/projects` exists at
+  all: a space should show everything inside it, and a distinct authored page that
+  nothing links to is exactly the class of thing that page was built to surface.
+
+Both carry a visible **"Snapshot · taken 10 Sept 2026 · the live page is at ..."**
+mark (bottom-left, fixed) and the date in the title, per `docs/ai/vocabulary.md` — a
+copy that looks exactly like the live page forever is the drift risk wearing a
+disguise.
+
+Built by `scripts/wcc-page-snapshot.mjs` (`npm run wcc:page-snapshot -- --to <url>
+[--token <token>] [--only landing|artist-works] [--out <dir>] [--dry-run]`), which:
+
+- compiles the landing through a throwaway `vite build()` call (lib/iife mode, one
+  JS + one CSS file — a snapshot travels as strings in a JSON document, so a chunk
+  graph of URLs that don't exist is useless);
+- rehosts the artist-works HTML byte-for-byte, only absolutising its own
+  relative asset paths (`./x` and bare `x` alike — see the bug below);
+- writes the same document shape `scripts/space-code-push.mjs` and
+  `serverXR/src/spaceSyncPlan.js` write (`PUT .../document`, `entryView: 'code'`,
+  `codeFiles`), reusing that mechanism's lessons rather than reinventing them, but
+  going through `POST /api/spaces/:id/projects` first — `space-code-push.mjs` targets
+  a space's ONE existing/first project, which here would have overwritten an artist's
+  work.
+- refuses a default target the same way `space-code-push.mjs` does — no
+  `DEFAULT_LIVE_URL` that can push to prod by accident.
+
+Media is referenced, not inlined: every image the landing shows already lives under
+`/wcc/` on any tier that carries the work (a root-relative path resolves against
+whichever tier's origin is hosting the shell, `src/utils/presentationPreviewDocument.js`),
+so each project is a few hundred KB to 1.1 MB, not the 25 MB `public/wcc/` holds. Only
+the webfonts are inlined (vite-bundled, no stable public address).
+
+### Three real bugs, found only by opening the built snapshot in a browser
+
+Schema validation and a green test suite proved nothing here — see below for why each
+one was silent. All three are fixed on this branch, none are cosmetic:
+
+1. **`src/utils/codeFilesBundle.js`** — `inlineLocalCss`/`inlineLocalJs` passed the
+   inlined file content as a **string** to `String.replace()`, which gives `$&`,
+   `` $` ``, `$'`, `$$` and `$<n>` special meaning in a string replacement. A real
+   bundle (React, GSAP — anything with its own `.replace(/x/, '$1')` call buried
+   inside it) contains these by accident, not by construction: landing.js had 7
+   `` $` `` and 29 `$$`. `` $` `` alone spliced the ENTIRE preceding document back
+   into itself at that point, truncating the actual `<script>` tag — the built page
+   opened to a blank body with the rest of the 1.6 MB bundle sitting on the page as
+   plain visible text and `SyntaxError: Unexpected identifier 'object'` in the
+   console. Fix: pass a replacer **function** to `.replace()` — its return value is
+   inserted literally, no reinterpretation. Regression guard:
+   `src/utils/codeFilesBundle.test.js` (asserts `$`-bearing content round-trips
+   byte-for-byte; fails against the pre-fix code). This bug affects **any** code
+   project whose inlined JS/CSS happens to contain those sequences, not just this one.
+
+2. **`scripts/wcc-page-snapshot.mjs`'s vite build had no `process.env.NODE_ENV`
+   define.** The app's own `vite.config.js` never sets one either — it relies on the
+   vite CLI's own default mode wiring, which a hand-built `vite.build({ configFile:
+   false, ... })` call skips entirely. `process.env.NODE_ENV` survived into the
+   bundle as a literal; `process` doesn't exist in a browser, so React (and
+   everything else gated on it) threw `ReferenceError: process is not defined` the
+   instant it evaluated — the whole app never mounted, silently, leaving only the
+   snapshot banner on an otherwise blank page. Fix: `define: { 'process.env.NODE_ENV':
+   JSON.stringify('production') }` in that build call. Also shrank the bundle
+   1.6 MB → 1.1 MB, since dead `if (process.env.NODE_ENV !== 'production')` branches
+   could finally be eliminated.
+
+3. **`serverXR/src/index.js` `CODE_PAGE_READABLE`** did not include `wcc`. The
+   landing's "About" panel loads thirty `/wcc/process/*.jpeg` photos into WebGL
+   textures for its R3F scatter field (`ProcessField.jsx`) — a CORS-mode fetch, the
+   same class as the Draco decoder this allowlist already exists for — and the
+   sandboxed srcdoc iframe's origin is the literal string `"null"`. `/wcc` itself was
+   never sandboxed before (it's always the top-level page), so nothing had needed
+   this. Without it: 30 silent CORS errors and an empty gallery — the single part of
+   the landing flagged in the brief as "the obvious candidate that might not
+   survive." **It does survive** — this was the only thing standing between it and
+   working. Fixed by adding `wcc` to the same regex four other directories already
+   share. Guard: `src/codePageCors.test.js` (new case) and
+   `serverXR/src/httpContracts.test.js` (new case, actual HTTP behavior against a
+   real server). **Node-only.** `nginx.conf`'s equivalent allowlist for staging/prod
+   does NOT include `wcc` — left alone deliberately (out of scope: this session
+   writes to the local tier only, and nginx.conf's location-block ordering isn't
+   something to touch un-tested). The same gap will reproduce on staging/prod the day
+   this ever deploys there; whoever does that add one line to
+   `location ~ ^/(vendor|fonts|draco|basis|unicode-fonts)/` in `nginx.conf`.
+
+4. **`src/wccSite/landing/LandingPage.jsx`'s route-section open/close** called
+   `window.history.pushState`/`replaceState`/`back()` directly. Those throw a
+   `SecurityError` for ANY url in an opaque-origin document — even one that
+   round-trips to the same nominal path — because there's no concrete origin left to
+   compare against, and the sandboxed snapshot is exactly such a document. The panel
+   still opened (React's state update from the same click handler still commits),
+   but every open/close logged an uncaught `SecurityError` to the console — a real
+   defect, not cosmetic, and one that would hit the SAME component the day it's ever
+   embedded anywhere else opaque. Fixed with a small extracted helper,
+   `src/wccSite/landing/safeHistory.js` (`safeHistoryCall`, try/catch, same tradeoff
+   `presentationPreviewDocument.js` already makes for `localStorage`), tested in
+   isolation in `safeHistory.test.js`.
+
+### What did NOT carry across, and why nothing needed to be dropped
+
+Everything did. The R3F process-photo scatter field — flagged ahead of time as the
+part most likely to need cutting — renders correctly once bug 3 above is fixed:
+confirmed with a forced `prefers-reduced-motion: no-preference` context (the default
+headless profile reports reduced-motion, which correctly serves the CSS masonry
+fallback instead — also correct, also checked). The "Open works" panel's nested
+iframe correctly reaches the REAL, unsandboxed `/wcc/artist-works-land/index.html` —
+the landing was never changed to point at the snapshot copy of that page; that
+reference is independent of whether this session's second project exists at all.
+
+### One thing to know before opening it on the actual local install today
+
+The two rows and their `codeFiles` are live on the local tier's data right now. The
+THREE bugs above are fixed on this branch, not on whatever build the local install is
+currently running — none of them are data bugs, they are bugs in code that RENDERS
+the data (`codeFilesBundle.js`, the snapshot builder, `serverXR`'s CORS allowlist,
+`LandingPage.jsx`). Opening `/wcc/p/landing-page-snapshot` on the install as it stands
+right now reproduces bug 1 exactly (blank page, raw bundle text, console
+`SyntaxError`) — screenshotted for the record before ruling it out as "this session's
+fault" rather than "the install hasn't picked up the fix yet." Confirmed the reverse
+is also true: served the SAME data (a copy, never the owner's live data) from a
+throwaway `serverXR` built from this branch — `PORT=5242`, `DATA_ROOT=<copy>`,
+`CLIENT_DIR=dist` — and every symptom above disappeared.
+
+### Verified
+
+Headless Chromium via Playwright, `--use-angle=swiftshader --enable-unsafe-swiftshader`
+(WebGL needs real software rendering in headless, not just a browser that launches —
+`scripts/verify-capture.mjs` already carries the same flags for the same reason),
+1440×900 @ DPR 2, against the throwaway server above:
+
+- `/wcc/projects` lists both new rows as "Page" among the thirteen things in the space.
+- The landing opens to the real hero, unchanged from `/wcc`.
+- "Read about" opens the About panel — real prose, the process gallery (checked
+  BOTH as the reduced-motion CSS masonry and, forcing `no-preference`, as the R3F
+  WebGL scatter field), the sponsor logos.
+- "Open works" opens the real `/wcc/artist-works-land/index.html` in its nested
+  iframe, scrolled through several artist entries.
+- `artists-works-page-snapshot` opens standalone, scrolled through the same artists,
+  its own snapshot mark linking back to the live iframe URL.
+- `/wcc` itself: unchanged.
+- Zero console/page errors across the entire flow once all three fixes were in place.
+
+### Files
+
+| file | why |
+| --- | --- |
+| `scripts/wcc-page-snapshot.mjs` | the builder; `package.json` gained `wcc:page-snapshot` |
+| `src/wccSite/landing/snapshotEntry.jsx` | the standalone entry the builder compiles |
+| `src/wccSite/landing/safeHistory.js` + `.test.js` | swallow the opaque-origin history SecurityError |
+| `src/wccSite/landing/LandingPage.jsx` | uses `safeHistoryCall` for pushState/replaceState/back |
+| `src/utils/codeFilesBundle.js` + `.test.js` | replacer-function fix for the `$`-sequence corruption |
+| `serverXR/src/index.js` | `wcc` joins `CODE_PAGE_READABLE` |
+| `src/codePageCors.test.js` + `serverXR/src/httpContracts.test.js` | guards for the CORS fix |
+
+## 2026-09-10 — dev went red because source comments cited session notes
+
+- `dev`'s test job folds session notes in place (the `land` job cannot push:
+  branch protection rejects it, GH006), so any `docs/ai/sessions/*.md` path
+  written into a source comment is a dangling link by the time `docPaths.test.js`
+  runs. Four such citations landed on 2026-09-10 and every staging deploy since
+  has failed — spine-rhythm, network-cv-truth, wcc-landing-project and the
+  lighting door all stopped at the gate.
+- The four now cite `PROGRESS.md`, which is where the note's text ends up.
+- `docPaths.test.js` gained a second test: no source file may cite a session
+  note at all, so this fails on the branch that writes it instead of on `dev`.
+- Underneath is still the owner's call: give the github-actions app a bypass on
+  `dev`'s rules so the fold commit can land, or keep folding by hand.
+
+## 2026-09-10 — a room is silent until a visitor asks
+
+Owner: *"can you fix the sounds in spaces.. there are playing sound inside space
+make button and by def make it muted."*
+
+He was on `/spaces`. Every card there is a live room in an iframe, and an
+`audio` entity autoplays at volume 0.8 the moment its document resolves — so a
+page that looks like a list of pictures was playing a room's soundtrack at him,
+with no control anywhere. Cascade Club is the room that was singing; it is the
+only one of the 22 spaces on the local tier that holds a sound at all.
+
+The same fault made a room he actually opened unstoppable. `AudioObject` had no
+notion of a visitor: every renderer passed `audioPaused={false}`, and
+`VideoObject`'s `muted` was the author's setting and nothing else.
+
+**It had to be a gate, not a boolean.** The visitor's surface and the author's
+render through the SAME object components — a published room in orbit mode is
+`StudioViewport`, the very one the editor draws with — so "which component am I
+in" cannot answer "is a person authoring or visiting". So the page arms it:
+`useVisitorSoundGate()` in `PublicProjectViewer` while it is mounted, and until
+something arms it `isSoundAllowed()` is true and Studio and Raw behave exactly
+as they did. An author placing a sound still hears it, which is the one thing
+this change must not break.
+
+- Off by default, remembered per viewer in `localStorage`, and the read is
+  wrapped: private windows throw on ACCESS, not only on write, and silence is
+  the right answer to not knowing.
+- `?preview=1` — the card grid, the map's source view, the projection mapper's
+  sources — is locked silent and cannot be turned on even by a stored yes from
+  the real page. A thumbnail is a picture of a room, not the room.
+- The button appears only where `roomHasSound(entities)`: an `audio` entity, or
+  a `video` whose author unmuted it. A switch on a silent room is worse than no
+  switch — it promises a sound that is not there.
+- The arm is counted, not a flag, so a room inside a room does not disarm the
+  gate on the first unmount.
+
+**Seen, not assumed.** Packed `0.4.9-sound.2`, installed on the local tier, and
+instrumented `AudioBufferSourceNode.start` in a headless browser:
+`/cascade` opens with **zero** starts and a button reading "Sound off"; one
+click gives `buffer-start` and "Sound on"; `/cascade?preview=1` gives zero
+starts and no button. Screenshots of both states looked at.
+
+# 2026-09-10 — a space card's door opens the space
+
+On `/spaces` the WCC Exhibition card led nowhere useful. Its picture, its live
+frame and its Live link were all built with `buildAppSpacePath('wcc')` — the
+bare segment — and `/wcc` bare is not the space. It is a WORK: the coded
+microsite in `src/wccSite/`, mounted by `src/works/routes.jsx`, with no rows in
+any database. `RootApp.jsx`'s `isWorkSurface` branch resolves a one-segment path
+to the work before the space router is ever reached, so the card could only ever
+land on the piece.
+
+The `wcc` SPACE is real — eleven projects, `main` plus ten artists — and it
+answers at `/wcc/main`, `/wcc/mery-petrosyan` and so on. `src/works/works.js`
+states this two-meanings problem in its own header; nothing had acted on it.
+
+**What it cost, per tier.** On the owner's offline install `DI_PROFILE=local`
+replaces every work with `HostedPieceStub` and omits `public/wcc/` (25 MB), so
+the card drew "not in this copy — this piece lives on di-studio.xyz" over a
+space whose eleven projects were sitting in that very machine's database. He had
+no door to them from `/spaces` at all: `/wcc/main` renders perfectly, but only
+if you type it. On staging and prod the card opened the coded landing and the
+space's own `publishedProjectId` was never honoured.
+
+## The seam
+
+`buildSpaceDoorPath(space)` in `src/works/segments.js` — the works-boundary
+module, which already answers "which work owns this segment" and is the only
+sane place to ask "so where does the space go instead". Where a work shadows the
+id AND the space declares a `publishedProjectId`, the card addresses
+`/{space}/p/{projectId}`.
+
+- **The `/p/` form, not the vanity one.** `publishedProjectId` is a raw id, so
+  no resolve step is needed — and three segments is past `isWorkSurface` by
+  construction, which is what makes the door work at all.
+- **Nothing names a work.** The registry answers; `src/works/boundary.test.js`
+  keeps it that way. `algovrithm` is shadowed too, and gets the same treatment
+  the moment it publishes a project — today it declares none, so its card is
+  untouched.
+- **Every other space is exactly where it was.** The bare path is already its
+  door; the helper returns it unchanged.
+- **The stub keeps the case it was written for.** A shadowed space with nothing
+  published still falls back to the bare path, which is where "not in this copy"
+  belongs: a work's own page on an install that left the work out.
+- **`/wcc` bare is untouched.** The exhibition landing still serves there on the
+  hosted tiers. Only the CARD's door moved.
+
+Four call sites: the thumbnail, the made-live frame, that frame's Open ↗, and
+the list row's Live — plus `openCard`, which is the card's primary door for a
+visitor who cannot edit the space.
+
+## The guard
+
+`src/works/segments.test.js` (five cases, ids taken from `WORKS` so a renamed
+work moves the test with it) and two cases in `SpaceHub.test.jsx`. Watched them
+fail against the pre-fix source: `expected '/wcc?preview=1' to be
+'/wcc/p/linked-project?preview=1'` and `expected '/wcc' to be
+'/wcc/p/linked-project'`.
+
+## Seen, not assumed
+
+Packed `0.4.9-door.1`, installed it on the local tier, and opened
+`https://local.thedi.studio/spaces` headless at 1440x900, DPR 2:
+
+- the WCC card's thumbnail, its live frame and its Live link all read
+  `/wcc/p/main`;
+- the card paints the exhibition floor — the works and the artists' names —
+  where it used to draw the stub line;
+- `/wcc/p/main` opens WOMEN CREATING CHANGE with all ten artists;
+- nine other cards still read `/{space}?preview=1`, and the list's other Live
+  links still read `/{space}`.
+
+Screenshots opened, not merely saved.
+
+## Not fixed
+
+The card's copyable live URL (`getSpaceShareUrl`, the `https://…/wcc` line with
+the Copy button) still shows the bare address. On the hosted tiers that is
+arguably the right thing to hand out — `/wcc` IS the exhibition's public address
+— but on an offline install it now disagrees with the card's own buttons. The
+owner's call.
+
 ## 2026-09-10 — one style, one bar, one way to pack the work
 
 Five steps the owner approved from an audit page (`/what-we-have/p/shape`), after

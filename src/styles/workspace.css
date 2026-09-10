@@ -84,7 +84,7 @@
     align-items: center;
     gap: var(--workspace-space-3);
     min-height: var(--workspace-appbar-height);
-    padding: 8px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius) 0 var(--di-radius) var(--di-radius);
     border: 1px solid var(--workspace-border);
     border-right: none;
@@ -128,8 +128,8 @@
 .workspace-segmented {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px;
+    gap: var(--di-space-1);
+    padding: var(--di-space-1);
     border-radius: var(--di-radius);
     background: rgba(255, 255, 255, 0.018);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -138,14 +138,14 @@
 .workspace-command-button {
     min-height: var(--workspace-control-height);
     min-width: 0;
-    padding: 0 12px;
+    padding: 0 var(--di-space-3);
     border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: var(--workspace-surface-soft);
     box-shadow: none;
     color: var(--workspace-text-soft);
     letter-spacing: 0.01em;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-weight: 600;
     transition:
         background 0.16s ease,
@@ -204,14 +204,14 @@
 .workspace-status-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--di-space-2);
     min-height: 30px;
-    padding: 0 10px;
+    padding: 0 var(--di-space-3);
     border-radius: var(--di-radius-pill);
     background: rgba(255, 255, 255, 0.025);
     border: 1px solid var(--workspace-border);
     color: var(--workspace-text-soft);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     letter-spacing: 0.02em;
     max-width: 100%;
@@ -240,9 +240,9 @@
 }
 
 .workspace-command-hint {
-    margin-left: 6px;
+    margin-left: var(--di-space-2);
     color: var(--workspace-text-dim);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.04em;
 }
 
@@ -276,18 +276,18 @@
 
 .workspace-rail {
     width: var(--workspace-rail-width);
-    padding: 8px;
+    padding: var(--di-space-2);
     border-right: 1px solid rgba(255, 255, 255, 0.06);
     background: rgba(255, 255, 255, 0.012);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .workspace-rail-button {
     position: relative;
     min-height: 48px;
-    padding: 8px 6px;
+    padding: var(--di-space-2) var(--di-space-2);
     border-radius: var(--di-radius);
     border: 1px solid transparent;
     background: transparent;
@@ -297,7 +297,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: var(--di-space-1);
     cursor: pointer;
 }
 
@@ -307,7 +307,7 @@
 }
 
 .workspace-rail-label {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     letter-spacing: 0.02em;
 }
@@ -319,11 +319,11 @@
     justify-content: center;
     min-width: 16px;
     height: 16px;
-    padding: 0 5px;
+    padding: 0 var(--di-space-1);
     border-radius: var(--di-radius-pill);
     background: var(--di-line);
     color: var(--di-cyan);
-    font-size: 9px;
+    font-size: var(--di-text-1);
     font-weight: 700;
 }
 
@@ -345,7 +345,7 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--workspace-space-3);
-    padding: 10px 12px 8px;
+    padding: var(--di-space-3) var(--di-space-3) var(--di-space-2);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -358,7 +358,7 @@
 .workspace-section-title,
 .mobile-sheet-kicker,
 .preferences-inline-note {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -369,19 +369,19 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--di-space-3);
 }
 
 .workspace-drawer-title,
 .mobile-sheet-title {
-    font-size: 16px;
+    font-size: var(--di-text-5);
     font-weight: 700;
     color: var(--workspace-text);
 }
 
 .workspace-drawer-meta {
     flex-shrink: 0;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -392,19 +392,19 @@
 .mobile-sheet-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--di-space-2);
     flex-shrink: 0;
 }
 
 .workspace-header-button {
     min-height: 28px;
-    padding: 0 9px;
+    padding: 0 var(--di-space-2);
     border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.02);
     color: var(--workspace-text-soft);
     font: inherit;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     cursor: pointer;
 }
@@ -412,20 +412,20 @@
 .workspace-drawer-tabs,
 .mobile-sheet-tabs {
     display: flex;
-    gap: 6px;
-    padding: 0 12px 8px;
+    gap: var(--di-space-2);
+    padding: 0 var(--di-space-3) var(--di-space-2);
     overflow-x: auto;
 }
 
 .workspace-drawer-tab {
     min-height: 30px;
-    padding: 0 10px;
+    padding: 0 var(--di-space-3);
     border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: transparent;
     color: var(--workspace-text-soft);
     font: inherit;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
@@ -436,18 +436,18 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 0 12px 12px;
+    padding: 0 var(--di-space-3) var(--di-space-3);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--di-space-3);
     -webkit-overflow-scrolling: touch;
 }
 
 .workspace-section {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding-top: 12px;
+    gap: var(--di-space-2);
+    padding-top: var(--di-space-3);
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     background: transparent;
 }
@@ -461,47 +461,47 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--di-space-3);
 }
 
 .workspace-command-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .workspace-status-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--di-space-3);
 }
 
 .workspace-status-row {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .workspace-status-row-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--di-space-3);
 }
 
 .workspace-status-label {
-    font-size: 13px;
+    font-size: var(--di-text-3);
     font-weight: 600;
     color: var(--workspace-text);
 }
 
 .workspace-status-detail {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: var(--workspace-text-soft);
 }
 
 .workspace-empty-state {
-    padding: 12px;
+    padding: var(--di-space-3);
     border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.015);
@@ -509,14 +509,14 @@
 }
 
 .workspace-empty-title {
-    margin-bottom: 4px;
-    font-size: 13px;
+    margin-bottom: var(--di-space-1);
+    font-size: var(--di-text-3);
     font-weight: 700;
     color: var(--workspace-text);
 }
 
 .workspace-empty-copy {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     line-height: 1.45;
 }
 
@@ -524,7 +524,7 @@
     display: flex;
     align-items: center;
     min-height: 40px;
-    padding: 0 14px;
+    padding: 0 var(--di-space-3);
     border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.03);
@@ -554,7 +554,7 @@
 .dock-panel .panel-content,
 .sheet-panel .panel-content {
     padding: 0 !important;
-    gap: 10px;
+    gap: var(--di-space-3);
     background: transparent;
     overflow-x: hidden;
 }
@@ -580,7 +580,7 @@
 .sheet-panel .view-panel-section,
 .dock-panel .gizmo-section,
 .sheet-panel .gizmo-section {
-    padding: 12px;
+    padding: var(--di-space-3);
     border-radius: var(--di-radius);
 }
 
@@ -590,7 +590,7 @@
 .sheet-panel .asset-actions,
 .dock-panel .spaces-panel-actions,
 .sheet-panel .spaces-panel-actions {
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .dock-panel .asset-action-button,
@@ -661,8 +661,8 @@
 
 .workspace-appbar-mobile {
     grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 8px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2);
     min-height: auto;
     border-radius: var(--di-radius);
     border-right: 1px solid var(--workspace-border);
@@ -672,7 +672,7 @@
 .workspace-appbar-mobile .workspace-appbar-center {
     flex-wrap: wrap;
     justify-content: stretch;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .workspace-appbar-mobile .workspace-space-pill {
@@ -734,19 +734,19 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 10px 12px 8px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-3) var(--di-space-3) var(--di-space-2);
 }
 
 .mobile-workbench-heading {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--di-space-1);
     min-width: 0;
 }
 
 .mobile-workbench-kicker {
-    font-size: 10px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -754,7 +754,7 @@
 }
 
 .mobile-workbench-title {
-    font-size: 14px;
+    font-size: var(--di-text-4);
     font-weight: 700;
     color: var(--workspace-text);
 }
@@ -762,12 +762,12 @@
 .mobile-workbench-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--di-space-2);
     flex-shrink: 0;
 }
 
 .mobile-workbench-tabs {
-    padding: 0 12px 8px;
+    padding: 0 var(--di-space-3) var(--di-space-2);
 }
 
 .mobile-workbench-body {
@@ -775,10 +775,10 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 0 12px 12px;
+    padding: 0 var(--di-space-3) var(--di-space-3);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--di-space-3);
     -webkit-overflow-scrolling: touch;
 }
 
@@ -789,8 +789,8 @@
 .mobile-xr-launcher {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
-    gap: 6px;
-    padding: 8px 8px 0;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-2) 0;
 }
 
 .mobile-xr-button {
@@ -811,8 +811,8 @@
 .mobile-workbench-nav {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-    padding: 8px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2);
 }
 
 .mobile-workbench.is-compact-open .mobile-workbench-nav,
@@ -824,19 +824,19 @@
     position: relative;
     min-height: 46px;
     min-width: 0;
-    padding: 0 10px;
+    padding: 0 var(--di-space-3);
     border-radius: var(--di-radius);
     border: 1px solid transparent;
     background: transparent;
     color: var(--workspace-text-soft);
     font: inherit;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     display: inline-flex;
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .mobile-nav-label {
@@ -846,18 +846,18 @@
 }
 
 .mobile-workbench .workspace-empty-state-inline {
-    padding: 10px 12px;
-    margin: 2px 0 0;
+    padding: var(--di-space-3) var(--di-space-3);
+    margin: var(--di-space-1) 0 0;
     border-radius: var(--di-radius);
 }
 
 .mobile-workbench .workspace-empty-title {
-    margin-bottom: 3px;
+    margin-bottom: var(--di-space-1);
 }
 
 .mobile-workbench .workspace-section {
-    gap: 8px;
-    padding-top: 10px;
+    gap: var(--di-space-2);
+    padding-top: var(--di-space-3);
 }
 
 .mobile-workbench .workspace-section:first-child {
@@ -913,7 +913,7 @@
 }
 
 .mobile-workbench .sheet-panel .gizmo-controls .vec3-axis input {
-    font-size: 11px;
+    font-size: var(--di-text-2);
 }
 
 @media (max-width: 1180px) {
@@ -948,8 +948,8 @@
     }
 
     .mobile-editor-shell.is-compact .workspace-appbar-mobile {
-        padding: 7px;
-        gap: 7px;
+        padding: var(--di-space-2);
+        gap: var(--di-space-2);
         border-radius: var(--di-radius);
     }
 
@@ -969,25 +969,25 @@
     }
 
     .mobile-editor-shell.is-compact .mobile-workbench-header {
-        padding: 9px 10px 7px;
+        padding: var(--di-space-2) var(--di-space-3) var(--di-space-2);
     }
 
     .mobile-editor-shell.is-compact .mobile-workbench-tabs {
-        padding: 0 10px 7px;
+        padding: 0 var(--di-space-3) var(--di-space-2);
     }
 
     .mobile-editor-shell.is-compact .mobile-workbench-body {
-        padding: 0 10px 10px;
+        padding: 0 var(--di-space-3) var(--di-space-3);
     }
 
     .mobile-editor-shell.is-compact .mobile-workbench-nav {
-        gap: 4px;
-        padding: 6px;
+        gap: var(--di-space-1);
+        padding: var(--di-space-2);
     }
 
     .mobile-editor-shell.is-compact .mobile-xr-launcher {
-        gap: 4px;
-        padding: 6px 6px 0;
+        gap: var(--di-space-1);
+        padding: var(--di-space-2) var(--di-space-2) 0;
     }
 
     .mobile-editor-shell.is-compact .mobile-xr-button {
@@ -996,26 +996,26 @@
 
     .mobile-editor-shell.is-compact .mobile-nav-button {
         min-height: 42px;
-        padding: 0 8px;
-        font-size: 10px;
+        padding: 0 var(--di-space-2);
+        font-size: var(--di-text-2);
     }
 
     .mobile-editor-shell.is-compact .mobile-nav-badge {
         min-width: 14px;
         height: 14px;
-        padding: 0 4px;
-        font-size: 8px;
+        padding: 0 var(--di-space-1);
+        font-size: var(--di-text-1);
     }
 
     .mobile-editor-shell.is-compact .workspace-command-button,
     .mobile-editor-shell.is-compact .workspace-drawer-tab,
     .mobile-editor-shell.is-compact .workspace-header-button {
-        font-size: 10px;
+        font-size: var(--di-text-2);
     }
 
     .mobile-editor-shell.is-compact .workspace-segmented-mobile .workspace-command-button {
         min-height: 34px;
-        padding: 0 8px;
+        padding: 0 var(--di-space-2);
     }
 
     .mobile-editor-shell.is-compact .workspace-command-list {

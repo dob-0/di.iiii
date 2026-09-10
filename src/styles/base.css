@@ -109,22 +109,53 @@
     --di-scrim: rgba(4, 6, 14, 0.74);
     --di-scrim-strong: rgba(4, 6, 14, 0.9);
 
-    /* Space: one rhythm. Every gap, padding and margin is one of these. */
-    --di-space-1: 6px;
-    --di-space-2: 12px;
-    --di-space-3: 22px;
-    --di-space-4: 44px;
-    --di-space-5: 76px;
+    /* Space: one rhythm, measured, not invented. 2026-09-10: the platform
+       carried 1,704 hand-written padding/margin/gap literals across 51
+       stylesheets against 20 uses of the old --di-space-1..5 (6/12/22/44/76 —
+       nobody's measurement, which is exactly why nothing read them). The
+       8 rungs below are the real distribution's own clusters, chosen so that
+       every literal that snaps to one moves by at most 2px; see
+       PROGRESS.md (2026-09-10) for the full mapping and the
+       values that do not snap and stayed literal instead. */
+    --di-space-1: 3px;
+    --di-space-2: 7px;
+    --di-space-3: 12px;
+    --di-space-4: 16px;
+    --di-space-5: 22px;
+    --di-space-6: 30px;
+    --di-space-7: 40px;
+    --di-space-8: 48px;
 
-    /* Type: two families (above) and one scale. Labels are always mono,
-       uppercase and wide-spaced — that convention IS the platform's voice. */
-    --di-text-label: 0.66rem;
-    --di-text-body: 0.94rem;
-    --di-text-title: 1.7rem;
-    --di-text-display: 2.6rem;
+    /* One value the ladder doesn't reach: the shelf/trash section-break top
+       margin in studio-hub.css (was --di-space-4/44px). 44 sits exactly
+       between rung 7 (40) and rung 8 (48) — a 4px move either way, over the
+       2px budget — and it is doing real work: a beat larger than the ladder's
+       own top rung, marking a section break, not a rhythm step. Kept as its
+       own named constant rather than forced onto the ladder or left as a
+       bare literal outside base.css. */
+    --di-space-section-break: 44px;
+
+    /* Type: two families (above) and one scale, same measurement. 679 literal
+       font-sizes across the same stylesheets against 7 uses of the old
+       --di-text-label (the only one of the four declared type tokens anyone
+       actually read — body/title/display were declared and never consumed).
+       7 rungs, same 2026-09-10 measurement, same rule: nothing snaps here by
+       more than 1px. Large fluid headings (clamp() display type) are their
+       own thing and are not on this ladder — see the session doc. */
+    --di-text-1: 0.5rem;      /* 8px */
+    --di-text-2: 0.625rem;    /* 10px */
+    --di-text-3: 0.76rem;     /* 12.16px */
+    --di-text-4: 0.9rem;      /* 14.4px */
+    --di-text-5: 1.0625rem;   /* 17px */
+    --di-text-6: 1.25rem;     /* 20px */
+    --di-text-7: 1.4375rem;   /* 23px */
     --di-label-tracking: 0.16em;
 
     /* ── aliases for legacy panel/studio CSS ── */
+    /* --ui-bg was used by AuthGate, ReservedAddressCard and the chat
+       surface and declared nowhere, so those full-screen grounds painted
+       transparent and borrowed whatever was behind them. */
+    --ui-bg: var(--di-black);
     --ui-surface: var(--di-surface);
     --ui-surface-raised: #111;
     --ui-surface-muted: #111;

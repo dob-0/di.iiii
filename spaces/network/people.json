@@ -1,5 +1,5 @@
 {
-  "note": "One entry per person in the network — all 58 who make di.iiii, not only the ones with rooms yet. `works` (shape: {url,title,line,space,project}) are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. Generated from network-directions/data/inventory.json (52-person roster) via the MIX build's lib/data.mjs, then committed here as static data. build.mjs turns this into pages/<slug>.html and one di-space.<slug>.json each, via room-template.mjs's renderRoom(). Two works (azd and br_id_ge) are shared by more than one person, which is what draws the lines in a room's field. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make.",
+  "note": "One entry per person in the network — all 65 who make di.iiii, not only the ones with rooms yet. `works` (shape: {url,title,line,space,project}) are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. Generated from network-directions/data/inventory.json (52-person roster) via the MIX build's lib/data.mjs, then committed here as static data. build.mjs turns this into pages/<slug>.html and one di-space.<slug>.json each, via room-template.mjs's renderRoom(). Two works (azd and br_id_ge) are shared by more than one person, which is what draws the lines in a room's field. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make.",
   "people": [
     {
       "slug": "gevorg-grigoryan",
@@ -4411,6 +4411,399 @@
           "href": "https://di-studio.xyz/wcc"
         }
       ]
+    },
+    {
+      "team": false,
+      "city": null,
+      "bio": "Graphic artist with an MFA from the Gyumri branch of the Yerevan State Academy of Fine Arts — installations shown at the Gyumri Biennial and in Berlin.",
+      "elsewhere": [],
+      "works": [
+        {
+          "url": null,
+          "title": "taking space — di.ex: no_map",
+          "line": "concept artist — Kunsthouse, Yerevan, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
+      "resume": {
+        "focus": [
+          "graphics",
+          "installation",
+          "fine art"
+        ],
+        "positions": [],
+        "education": [
+          {
+            "years": "2012 — 2014",
+            "role": "MFA",
+            "org": "Yerevan State Academy of Fine Arts",
+            "place": "Gyumri branch"
+          },
+          {
+            "years": "2008 — 2012",
+            "role": "Faculty of Graphics",
+            "org": "Yerevan State Academy of Fine Arts",
+            "place": "Gyumri branch"
+          }
+        ],
+        "timeline": [
+          {
+            "year": "2021",
+            "items": [
+              {
+                "title": "Dehumanizing the Scales",
+                "role": "installation",
+                "place": "Gurban Festival, Gyumri Market, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2017 – 2018",
+            "items": [
+              {
+                "title": "Symbol as a Language",
+                "role": "exhibition, both editions",
+                "place": "Gallery 25, Berlin Art Hotel"
+              }
+            ]
+          },
+          {
+            "year": "2010 – 2014",
+            "items": [
+              {
+                "title": "Youm Change",
+                "role": "project",
+                "place": "Germany, 2014"
+              },
+              {
+                "title": "Metamorphosis of Information",
+                "role": "installation",
+                "place": "8th International Biennial, Gyumri, Armenia, 2010"
+              }
+            ]
+          }
+        ]
+      },
+      "slug": "hovhannes-smoyan",
+      "name": "Hovhannes Smoyan",
+      "role": "graphic artist",
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "sources": [
+        {
+          "label": "their bio in the studio archive — held, not published"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ],
+      "discipline": "graphic artist",
+      "num": "059",
+      "order": 59
+    },
+    {
+      "team": false,
+      "city": null,
+      "bio": null,
+      "elsewhere": [],
+      "works": [
+        {
+          "url": null,
+          "title": "OUT",
+          "line": "playwright — performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, May 2024",
+          "space": null,
+          "project": null
+        }
+      ],
+      "resume": null,
+      "slug": "sara-nalbandyan",
+      "name": "Sara Nalbandyan",
+      "role": "playwright",
+      "section": "production",
+      "sectionLabel": "writing · production",
+      "sources": [
+        {
+          "label": "the project files in the studio archive — held, not published"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        }
+      ],
+      "discipline": "playwright",
+      "num": "060",
+      "order": 60
+    },
+    {
+      "team": false,
+      "city": null,
+      "bio": "TV, digital and theatre producer — three years at Public TV of Armenia, founder of its “New Channel”, and producer of OUT.",
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/anushik.kherunts/"
+        }
+      ],
+      "works": [
+        {
+          "url": null,
+          "title": "OUT",
+          "line": "producer — performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, May 2024",
+          "space": null,
+          "project": null
+        }
+      ],
+      "resume": {
+        "focus": [
+          "producing",
+          "art management",
+          "TV production",
+          "content development"
+        ],
+        "positions": [
+          {
+            "years": "2023 — now",
+            "role": "producer",
+            "org": "“New Channel”",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2021 — 2023",
+            "role": "assistant to the executive director",
+            "org": "Public TV of Armenia",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2020 — 2023",
+            "role": "producer",
+            "org": "Public Ambassadors Program",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2016 — 2018",
+            "role": "actress",
+            "org": "Youth Theater",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2014 — 2016",
+            "role": "host, manager, actor, director",
+            "org": "Yerevan Municipality",
+            "place": "Yerevan, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2008 — 2014",
+            "role": "music",
+            "org": "Romanos Melikyan Musical College",
+            "place": "Yerevan, Armenia"
+          }
+        ],
+        "timeline": [
+          {
+            "year": "2023 – now",
+            "items": [
+              {
+                "title": "OUT",
+                "role": "producer",
+                "place": "Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2020 – 2022",
+            "items": [
+              {
+                "title": "Junior Eurovision Song Contest",
+                "role": "project manager",
+                "place": "Yerevan, Armenia, 2022"
+              },
+              {
+                "title": "The Hero of Our Time",
+                "role": "head of coordinators",
+                "place": "Yerevan, Armenia, 2020"
+              }
+            ]
+          }
+        ]
+      },
+      "slug": "anushik-kherunts",
+      "name": "Anushik Kherunts",
+      "role": "producer",
+      "section": "production",
+      "sectionLabel": "writing · production",
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        }
+      ],
+      "discipline": "producer",
+      "num": "061",
+      "order": 61
+    },
+    {
+      "team": false,
+      "city": null,
+      "bio": "Marketing, PR and brand manager — omni-channel campaigns, brand positioning and the copy that carries them.",
+      "elsewhere": [
+        {
+          "label": "LinkedIn",
+          "href": "https://linkedin.com/in/aramemartirosyan"
+        }
+      ],
+      "works": [],
+      "resume": {
+        "focus": [
+          "campaign strategy",
+          "creative direction",
+          "copywriting",
+          "brand positioning",
+          "UX mapping",
+          "trend research",
+          "editing"
+        ],
+        "positions": [
+          {
+            "years": "2023 — 2024",
+            "role": "communications manager",
+            "org": "TUMO Center for Creative Technologies",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2020 — 2023",
+            "role": "team lead, senior copywriter",
+            "org": "ZUCK Independent Agency",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2019 — 2020",
+            "role": "digital marketing specialist, copywriter",
+            "org": "Ministry of Foreign Affairs",
+            "place": "Yerevan, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2016 — 2022",
+            "role": "BA, English and Communications",
+            "org": "American University of Armenia"
+          }
+        ],
+        "timeline": []
+      },
+      "slug": "arame-martirosyan",
+      "name": "Arame Martirosyan",
+      "role": "brand and communications",
+      "section": "production",
+      "sectionLabel": "writing · production",
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        }
+      ],
+      "discipline": "brand and communications",
+      "num": "062",
+      "order": 62
+    },
+    {
+      "team": false,
+      "city": null,
+      "bio": null,
+      "elsewhere": [],
+      "works": [
+        {
+          "url": null,
+          "title": "echo/4",
+          "line": "co-organiser and presenter — Shushanik Kurghinyan's house, Gyumri, Dec 2024",
+          "space": null,
+          "project": null
+        }
+      ],
+      "resume": null,
+      "slug": "lilit-muradyan",
+      "name": "Lilit Muradyan",
+      "role": "social worker, co-organiser",
+      "section": "production",
+      "sectionLabel": "writing · production",
+      "sources": [
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ],
+      "discipline": "social worker, co-organiser",
+      "num": "063",
+      "order": 63
+    },
+    {
+      "team": false,
+      "city": null,
+      "bio": null,
+      "elsewhere": [],
+      "works": [
+        {
+          "url": null,
+          "title": "OUT",
+          "line": "performer — performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, May 2024",
+          "space": null,
+          "project": null
+        }
+      ],
+      "resume": null,
+      "slug": "parush-sahakyan",
+      "name": "Parush Sahakyan",
+      "role": "performer",
+      "section": "performers",
+      "sectionLabel": "performers",
+      "sources": [
+        {
+          "label": "the project files in the studio archive — held, not published"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        }
+      ],
+      "discipline": "performer",
+      "num": "064",
+      "order": 64
+    },
+    {
+      "team": false,
+      "city": null,
+      "bio": null,
+      "elsewhere": [],
+      "works": [
+        {
+          "url": null,
+          "title": "f33d6ack — Beyond Data",
+          "line": "curator — AGBU Katapult, NPAK, Yerevan, 2024",
+          "space": null,
+          "project": null
+        }
+      ],
+      "resume": null,
+      "slug": "anna-gargarian",
+      "name": "Anna Gargarian",
+      "role": "curator",
+      "section": "curators",
+      "sectionLabel": "curators",
+      "sources": [
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ],
+      "discipline": "curator",
+      "num": "065",
+      "order": 65
     }
   ]
 }

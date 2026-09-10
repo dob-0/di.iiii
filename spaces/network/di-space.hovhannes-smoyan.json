@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-hovhannes-smoyan",
+  "slug": "hovhannes-smoyan",
+  "label": "Hovhannes Smoyan",
+  "mode": "code",
+  "entry": "spaces/network/pages/hovhannes-smoyan.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

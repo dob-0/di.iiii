@@ -31,6 +31,7 @@ import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
 import {
     ARRANGE_MODES, FILTER_MODES, applyView, countStates, normalizeArrange, normalizeFilter, spaceState,
 } from '../utils/spaceArrange.js'
+import { lightingDeskPath, probeLightingDesk } from '../../map/lightingLink.js'
 import { PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE } from '../../utils/previewMode.js'
 import '../styles/studio-space-hub.css'
 
@@ -248,6 +249,7 @@ export default function SpaceHub() {
     const [spaces, setSpaces] = useState([])
     const [sandboxSummary, setSandboxSummary] = useState(null)
     const [isPurging, setIsPurging] = useState(false)
+    const [lightingHere, setLightingHere] = useState(false)
     const [status, setStatus] = useState('loading...')
     const [creatingTitle, setCreatingTitle] = useState(null)
     const [isBusy, setIsBusy] = useState(false)
@@ -346,6 +348,22 @@ export default function SpaceHub() {
     }, [])
 
     useEffect(() => { loadSpaces() }, [loadSpaces])
+
+    // The lighting desk is the one tool that lives beside the spaces rather
+    // than inside one, and until now nothing anywhere led to it: it could only
+    // be reached by typing its address. It exists on a di.iiii running on the
+    // artist's own machine and nowhere else, so the row is not drawn from a
+    // flag about which tier this is — it is drawn because the desk answered.
+    // Asking is also the only honest test: a hosted tier hands back its own
+    // index.html for an address it does not know, which is why the probe
+    // insists on JSON.
+    useEffect(() => {
+        const stop = new AbortController()
+        probeLightingDesk({ signal: stop.signal })
+            .then((here) => { if (!stop.signal.aborted) setLightingHere(here) })
+            .catch(() => {})
+        return () => stop.abort()
+    }, [])
 
     const openSpace = (spaceId) =>
         navigateToStudioPath(buildStudioHubPath(spaceId))
@@ -1247,6 +1265,16 @@ export default function SpaceHub() {
                             Your private sandbox
                         </button>
                         <span className="ssh-sandbox-line-hint">— only you see it</span>
+                    </p>
+                )}
+
+                {lightingHere && (
+                    <p className="ssh-tools-line">
+                        <span className="ssh-tools-label">On this machine</span>
+                        <a className="ssh-tools-link" href={lightingDeskPath()} target="_blank" rel="noreferrer">
+                            Lights
+                        </a>
+                        <span className="ssh-tools-hint">— the lighting desk, for the rig in the room</span>
                     </p>
                 )}
 

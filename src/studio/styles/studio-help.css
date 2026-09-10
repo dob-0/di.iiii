@@ -9,7 +9,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: var(--di-space-5);
 }
 
 .sh-help-scrim {
@@ -32,21 +32,21 @@
     border: 1px solid rgba(var(--di-cyan-rgb), 0.25);
     border-radius: var(--di-radius);
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
-    padding: 24px 28px 16px;
+    padding: var(--di-space-5) var(--di-space-6) var(--di-space-4);
     color: var(--di-text);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--di-space-4);
 }
 
 .sh-help-header {
     display: flex;
     align-items: flex-start;
-    gap: 14px;
+    gap: var(--di-space-3);
 }
 
 .sh-help-mark {
-    font-size: 22px;
+    font-size: var(--di-text-7);
     color: var(--di-cyan);
     line-height: 1.2;
 }
@@ -56,15 +56,15 @@
 }
 
 .sh-help-header-text h3 {
-    margin: 0 0 2px;
-    font-size: 16px;
+    margin: 0 0 var(--di-space-1);
+    font-size: var(--di-text-5);
     font-weight: 700;
     letter-spacing: 0.02em;
 }
 
 .sh-help-header-text p {
     margin: 0;
-    font-size: 12.5px;
+    font-size: var(--di-text-3);
     color: rgba(255, 255, 255, 0.45);
 }
 
@@ -73,9 +73,9 @@
     border: none;
     color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
-    font-size: 20px;
+    font-size: var(--di-text-6);
     line-height: 1;
-    padding: 0 4px;
+    padding: 0 var(--di-space-1);
 }
 
 .sh-help-close:hover { color: var(--di-text); }
@@ -83,7 +83,7 @@
 .sh-help-mode-tabs,
 .sh-help-section-tabs {
     display: flex;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .sh-help-mode-tabs button,
@@ -93,10 +93,10 @@
     border: 1px solid rgba(var(--di-cyan-rgb), 0.2);
     border-radius: var(--di-radius-pill);
     color: rgba(255, 255, 255, 0.55);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 5px 14px;
+    padding: var(--di-space-1) var(--di-space-3);
     cursor: pointer;
     transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
@@ -111,7 +111,7 @@
 .sh-help-body {
     display: grid;
     grid-template-columns: 1.4fr 1fr;
-    gap: 18px;
+    gap: var(--di-space-4);
 }
 
 @media (max-width: 640px) {
@@ -123,7 +123,7 @@
 .sh-help-stage {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--di-space-3);
 }
 
 .sh-help-diagram {
@@ -201,7 +201,7 @@
     left: calc(50% + 30px);
     top: calc(52% - 34px);
     color: var(--di-cyan);
-    font-size: 18px;
+    font-size: var(--di-text-5);
     font-weight: 600;
     animation: sh-help-pulse 2.4s ease-in-out infinite;
 }
@@ -212,8 +212,8 @@
     top: 12px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    padding: 7px;
+    gap: var(--di-space-1);
+    padding: var(--di-space-2);
     border: 1px solid var(--di-cyan-border);
     border-radius: var(--di-radius);
     background: var(--di-surface-3);
@@ -259,12 +259,12 @@
     position: absolute;
     right: 12px;
     bottom: 12px;
-    padding: 3px 10px;
+    padding: var(--di-space-1) var(--di-space-3);
     border: 1px solid var(--di-cyan);
     border-radius: var(--di-radius-pill);
     color: var(--di-cyan);
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
 }
 
 @keyframes sh-help-pulse {
@@ -281,32 +281,32 @@
 .sh-help-callouts {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .sh-help-callout {
     border: 1px solid rgba(var(--di-cyan-rgb), 0.15);
     border-radius: var(--di-radius);
-    padding: 8px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     background: var(--di-surface-3);
 }
 
 .sh-help-callout-icon {
     display: block;
     color: var(--di-cyan);
-    font-size: 14px;
-    margin-bottom: 4px;
+    font-size: var(--di-text-4);
+    margin-bottom: var(--di-space-1);
 }
 
 .sh-help-callout strong {
     display: block;
-    font-size: 11.5px;
-    margin-bottom: 2px;
+    font-size: var(--di-text-3);
+    margin-bottom: var(--di-space-1);
 }
 
 .sh-help-callout p {
     margin: 0;
-    font-size: 10.5px;
+    font-size: var(--di-text-2);
     line-height: 1.4;
     color: rgba(255, 255, 255, 0.45);
 }
@@ -317,16 +317,16 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .sh-help-steps li {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--di-space-3);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.15);
     border-radius: var(--di-radius);
-    padding: 9px 12px;
+    padding: var(--di-space-2) var(--di-space-3);
     background: var(--di-surface-3);
 }
 
@@ -339,13 +339,13 @@
     border: 1px solid var(--di-cyan);
     border-radius: 50%;
     color: var(--di-cyan);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
 }
 
 .sh-help-steps li p {
     margin: 0;
-    font-size: 12.5px;
+    font-size: var(--di-text-3);
 }
 
 /* ---- shortcuts mode ---- */
@@ -353,7 +353,7 @@
 .sh-help-shortcuts {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 20px 28px;
+    gap: var(--di-space-5) var(--di-space-6);
 }
 
 @media (max-width: 640px) {
@@ -362,19 +362,19 @@
 
 .sh-help-shortcut-title {
     color: rgba(var(--di-cyan-rgb), 0.7);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    margin-bottom: 10px;
+    margin-bottom: var(--di-space-3);
 }
 
 .sh-help-shortcut-row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: 12px;
-    margin-bottom: 7px;
+    gap: var(--di-space-3);
+    margin-bottom: var(--di-space-2);
 }
 
 .sh-help-shortcut-row code {
@@ -382,22 +382,22 @@
     background: var(--di-cyan-dim);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.2);
     border-radius: var(--di-radius);
-    padding: 1px 6px;
-    font-size: 11px;
+    padding: var(--di-space-1) var(--di-space-2);
+    font-size: var(--di-text-2);
     white-space: nowrap;
     font-family: var(--di-mono);
 }
 
 .sh-help-shortcut-row span {
     color: rgba(255, 255, 255, 0.8);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     text-align: right;
 }
 
 .sh-help-footer {
     border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding-top: 12px;
+    padding-top: var(--di-space-3);
     text-align: center;
     color: rgba(255, 255, 255, 0.3);
-    font-size: 11px;
+    font-size: var(--di-text-2);
 }

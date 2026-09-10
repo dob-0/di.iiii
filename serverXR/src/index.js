@@ -448,7 +448,14 @@ app.use((req, res, next) => {
 // which shows as a card that never paints its model rather than as an error
 // anyone would see. Same reasoning as the other two: public static files the
 // site already serves to anyone.
-const CODE_PAGE_READABLE = /^\/(vendor|fonts|draco|basis|unicode-fonts)\//
+//
+// wcc/ joined 2026-09-10, standing up the WCC landing as a `code` project in
+// its own space (PROGRESS.md, 2026-09-10): its process
+// gallery loads thirty /wcc/process/*.jpeg photos into WebGL textures
+// (ProcessField.jsx useTexture), and a texture load is a CORS-mode fetch same
+// as the Draco decoder above — the /wcc route itself is not sandboxed and
+// never hit this, so nothing had needed it before.
+const CODE_PAGE_READABLE = /^\/(vendor|fonts|draco|basis|unicode-fonts|wcc)\//
 // express.static calls setHeaders(res, filePath, stat) — there is no request
 // argument. An earlier version took a third parameter as the request, read the
 // stat object instead, fell through to the absolute file path and matched
@@ -2082,6 +2089,24 @@ mountTargets.forEach((targetPath) => {
 const CLIENT_DIR = config.directories.clientDir
 if (CLIENT_DIR) {
   app.use(express.static(CLIENT_DIR, { setHeaders: allowNullOrigin }))
+
+  // Digital asset links — how Android decides that the installed studio-chat
+  // app is allowed to open this origin without a browser address bar over it.
+  // express.static refuses it: `dotfiles` defaults to 'ignore', and every
+  // segment counts, so `/.well-known/anything` is invisible to the line above.
+  // nginx serves it from dist/ on the hosted tiers without any of this; this is
+  // the same file reaching a `di` install, where serverXR IS the web server.
+  app.get('/.well-known/assetlinks.json', (req, res, next) => {
+    res.sendFile('.well-known/assetlinks.json', {
+      root: CLIENT_DIR,
+      dotfiles: 'allow',
+      headers: { 'Content-Type': 'application/json' }
+    }, (error) => {
+      // A build without the file is not an error worth a 500 — it is a 404,
+      // the same answer nginx gives.
+      if (error) next()
+    })
+  })
 
   app.get(/.*/, (req, res, next) => {
     // Anything the API owns is not ours, even unmatched — a wrong URL under the

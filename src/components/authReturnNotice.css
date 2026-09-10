@@ -6,13 +6,13 @@
     z-index: 10000;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 9px 14px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius-pill);
     border: 1px solid var(--di-cyan-border);
     background: var(--di-scrim-strong);
     color: var(--di-text);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -35,9 +35,9 @@
     border: none;
     color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
-    font-size: 15px;
+    font-size: var(--di-text-4);
     line-height: 1;
-    padding: 0 2px;
+    padding: 0 var(--di-space-1);
 }
 
 .auth-return-notice button:hover {

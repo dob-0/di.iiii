@@ -11,6 +11,36 @@
     <meta name="description" content="Make a space, hand out the address — a link while it runs, a file when it ends. A space is an address with a guest list, and what you build in it is exactly what a visitor opens. No app, no store, nothing to install.">
     <meta name="theme-color" content="#000000">
 
+    <!-- Every page of this site rendered BLACK on any Chrome older than 122,
+         and had done since pdf.js was upgraded to 5. Measured on a Pixel 6 with
+         Chrome 113: `ReferenceError: Iterator is not defined`, `#root` empty, on
+         `/`, `/spaces` and the live site as well as staging.
+
+         pdf.js ships its own polyfill for `Iterator.prototype.join` and writes
+         it as `typeof Iterator.prototype.join !== 'function' && (…)` — which
+         dereferences the `Iterator` global before deciding whether it exists.
+         It is in the vendor chunk, so it runs on every page, not only where a
+         PDF is imported, and it throws before React mounts.
+
+         `Iterator` is a Chrome 122 / Safari 18.4 global. %IteratorPrototype%
+         itself is ancient and reachable, so this hands the polyfill the real
+         object to patch. Inline and before the module, because it must run
+         before the bundle parses. -->
+    <script>
+        (function () {
+            if (typeof Iterator !== 'undefined') return
+            var proto = Object.getPrototypeOf(Object.getPrototypeOf([][Symbol.iterator]()))
+            // NOT named `Iterator`: a function declaration by that name hoists a
+            // local binding, `typeof Iterator` above then reads it instead of
+            // the global, and the shim returns before doing anything. Caught by
+            // oldBrowserFloor.test.js, which runs pdf.js's own line in a realm
+            // with the global taken away.
+            function IteratorShim() { throw new TypeError('Iterator is abstract') }
+            IteratorShim.prototype = proto
+            Object.defineProperty(globalThis, 'Iterator', { value: IteratorShim, writable: true, configurable: true })
+        })()
+    </script>
+
     <link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/jetbrains-mono-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
 

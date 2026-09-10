@@ -141,13 +141,100 @@ const linesOf = (css, re) => {
 
 const ALLOWED_RADII = new Set(['0', '0px', '50%', 'inherit', 'unset', 'var(--di-radius)', 'var(--di-radius-pill)'])
 
+/* ── Rhythm: spacing and type size, enforced the same way (2026-09-10) ──────
+ *
+ * Measured before it was enforced: 1,592 hand-written padding/margin/gap
+ * literals and 647 hand-written font-sizes across these same files, against
+ * 20 uses of the old --di-space-1..5 (6/12/22/44/76 — invented, never
+ * measured) and 7 uses of --di-text-label (the only one of four declared
+ * type tokens anyone actually read). The ladders in base.css are the real
+ * distribution's own clusters, snapped so nothing moves by more than 2px
+ * (spacing) or 1px (type) — see PROGRESS.md (2026-09-10) for the
+ * full derivation and mapping table.
+ *
+ * 1,559 spacing literals and 614 font-sizes convert to the ladder here. What
+ * doesn't is named below, the same way BY_DESIGN names a deliberate colour
+ * exception: a negative trim, a fluid clamp()'s own endpoints, a section
+ * break a beat larger than the ladder's own top rung, a hairline subtracted
+ * from a token, a large display/icon size the small-UI ladder was never
+ * meant to reach, or raw.css's --card-scale miniature (multiplying an
+ * already-snapped literal would multiply its drift too, so the whole cluster
+ * stays literal rather than half-converted).
+ */
+const RHYTHM_FILES = SPINE_FILES
+    .filter((f) => f !== 'wiki/wiki.css' && f !== 'studio/styles/studio-space-hub.css')
+    .concat(BY_DESIGN)
+
+const SPACING_PROP_SRC = '(?:padding|margin)(?:-(?:top|right|bottom|left|inline(?:-(?:start|end))?|block(?:-(?:start|end))?))?|(?:row-|column-)?gap'
+const FONT_PROP_SRC = 'font-size'
+
+const SPACE_EXCEPTIONS = {
+    'components/loadingScreen.css': ['-1px'],
+    'components/liveProjectScene.css': ['18px', '48px'],
+    'landing/landing.css': ['96px', '56px', '120px', '64px'],
+    'pages/legal.css': ['64px'],
+    'project/components/jamSurface.css': ['0.6rem'],
+    'project/components/roomTextLayer.css': ['-1px'],
+    'raw/director/director.css': ['-4px', '-2px'],
+    'raw/styles/raw.css': ['-4px', '-1px', '5px', '16px', '14px', '6px', '12px'],
+    'studio/components/studioCodeSpaceDirector.css': ['1rem', '2rem', '1.4rem', '3rem'],
+    'studio/styles/studio-hub.css': ['56px'],
+    'styles/inspector-controls.css': ['1px'],
+    'styles/menu.css': ['-2px'],
+}
+
+const FONT_EXCEPTIONS = {
+    'landing/landing.css': ['1.8rem', '2.6rem', '5rem', '10rem', '0.95rem', '1.1rem'],
+    'make/makeSurface.css': ['30px', '34px', '40px', '16px', '27px', '26px'],
+    'pages/legal.css': ['1.7rem', '2.4rem', '0.85em'],
+    'PresentationCanvas.css': ['26px', '42px'],
+    'project/components/jamSurface.css': ['2rem'],
+    'raw/styles/raw.css': ['24px', '13px', '10px', '11px', '30px', '16px'],
+    'studio/styles/space-constellation.css': ['0.92em'],
+    'studio/styles/studio-hub.css': ['1.4rem', '2rem'],
+    'styles/preferences.css': ['1.1rem', '1.4rem', '1rem', '1.25rem'],
+}
+
+const NUM_LITERAL_RE = /-?\d*\.?\d+(?:px|rem|em)\b/g
+const isZero = (lit) => /^-?0(?:\.0+)?(?:px|rem|em)?$/.test(lit)
+
+// Same idea as withoutComments, but blanks in place (comment characters
+// become spaces, not nothing) so byte offsets — and therefore line numbers —
+// still line up with the original file.
+const blankComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+
+// A literal number in a padding/margin/gap/font-size value is fine only if it
+// is 0, or named above for this file. Anything else should be a rhythm
+// token, auto, a percentage, or a calc()/clamp() built from tokens — this
+// also catches a literal hiding inside calc()/clamp(), which a token check
+// alone would miss.
+const badLiterals = (raw, propSrc, exceptions) => {
+    const blanked = blankComments(raw)
+    const re = new RegExp(`(?:^|[{;\\s])(?:${propSrc})\\s*:\\s*([^;{}]+);`, 'g')
+    const bad = []
+    let m
+    while ((m = re.exec(blanked))) {
+        const literals = m[1].match(NUM_LITERAL_RE) || []
+        const offenders = literals.filter((lit) => !isZero(lit) && !exceptions.includes(lit))
+        if (offenders.length) {
+            const lineNo = blanked.slice(0, m.index).split('\n').length
+            bad.push(`${lineNo}: ${raw.split('\n')[lineNo - 1].trim()}`)
+        }
+    }
+    return bad
+}
+
 describe('the spine', () => {
     it('declares every token the surfaces read', () => {
         const base = read('styles/base.css')
         for (const token of [
             '--di-ink', '--di-dim', '--di-line', '--di-bg',
             '--di-radius', '--di-radius-pill',
-            '--di-space-1', '--di-space-2', '--di-space-3', '--di-space-4', '--di-space-5',
+            '--di-space-1', '--di-space-2', '--di-space-3', '--di-space-4',
+            '--di-space-5', '--di-space-6', '--di-space-7', '--di-space-8',
+            '--di-space-section-break',
+            '--di-text-1', '--di-text-2', '--di-text-3', '--di-text-4',
+            '--di-text-5', '--di-text-6', '--di-text-7',
         ]) {
             expect(base, `${token} is used by the surfaces and must be declared here`).toContain(`${token}:`)
         }
@@ -187,6 +274,16 @@ describe('the spine', () => {
     it.each(SPINE_FILES)('%s reads no token with a hardcoded fallback', (rel) => {
         const fallbacks = linesOf(read(rel), /var\(\s*--[a-z0-9-]+\s*,/i)
         expect(fallbacks, `a fallback is a second palette nobody chose:\n${fallbacks.join('\n')}`).toEqual([])
+    })
+
+    it.each(RHYTHM_FILES)('%s keeps its padding, margin and gap on the rhythm ladder', (rel) => {
+        const bad = badLiterals(read(rel), SPACING_PROP_SRC, SPACE_EXCEPTIONS[rel] || [])
+        expect(bad, `a rhythm token, 0, auto, a percentage, calc() of tokens, or a named exception:\n${bad.join('\n')}`).toEqual([])
+    })
+
+    it.each(RHYTHM_FILES)('%s keeps its font-size on the type ladder', (rel) => {
+        const bad = badLiterals(read(rel), FONT_PROP_SRC, FONT_EXCEPTIONS[rel] || [])
+        expect(bad, `a type token, inherit, clamp() of tokens, or a named exception:\n${bad.join('\n')}`).toEqual([])
     })
 
     it.each(BY_DESIGN)('%s is a deliberate exception, and still exists', (rel) => {

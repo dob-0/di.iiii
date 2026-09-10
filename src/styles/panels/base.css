@@ -13,7 +13,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 12px;
+    padding: var(--di-space-3) var(--di-space-3);
     background: transparent;
     border-bottom: 1px solid var(--di-cyan-border);
 }
@@ -44,7 +44,7 @@
 }
 .floating-panel .panel-header h3 {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     font-weight: 600;
     letter-spacing: 0.04em;
     color: rgba(255,255,255,0.85);
@@ -53,21 +53,21 @@
 .floating-panel .close-button {
     border: none;
     background: none;
-    font-size: 18px;
+    font-size: var(--di-text-5);
     font-weight: 400;
     color: rgba(255,255,255,0.55);
     cursor: pointer;
-    padding: 0 4px;
+    padding: 0 var(--di-space-1);
 }
 .floating-panel .close-button:hover,
 .floating-panel .close-button:focus-visible {
     color: var(--di-text);
 }
 .floating-panel .panel-content {
-    padding: 12px;
+    padding: var(--di-space-3);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--di-space-2);
     background: transparent;
     flex: 1;
     min-height: 0;
@@ -77,15 +77,15 @@
 .floating-panel .prop-row-stacked {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    font-size: 12px;
+    gap: var(--di-space-1);
+    font-size: var(--di-text-3);
     color: var(--ui-text-primary);
 }
 .floating-panel .prop-row {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 .floating-panel .prop-row label,
 .floating-panel .prop-row .prop-label,
@@ -93,7 +93,7 @@
 .floating-panel .prop-row-stacked .prop-label,
 .floating-panel .prop-label-stacked {
     font-weight: 600;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--ui-text-muted);
@@ -112,12 +112,12 @@
 .floating-panel .text-input {
     width: 100%;
     box-sizing: border-box;
-    padding: 4px 6px;
+    padding: var(--di-space-1) var(--di-space-2);
     border-radius: 0;
     border: 1px solid var(--di-cyan-border);
     background: var(--di-scrim);
     color: var(--ui-text-primary);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-family: var(--di-sans);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
@@ -151,8 +151,8 @@
     box-shadow: 0 0 0 2px rgba(0,0,0,0.4);
 }
 .floating-panel .toggle-button-small {
-    padding: 5px 10px;
-    font-size: 11px;
+    padding: var(--di-space-1) var(--di-space-3);
+    font-size: var(--di-text-2);
     font-weight: 600;
     color: var(--ui-text-primary);
     background: linear-gradient(140deg, rgba(255,255,255,0.03), rgba(0,0,0,0.25));
@@ -171,7 +171,7 @@
 }
 .floating-panel .panel-subtext {
     margin: 0;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: rgba(255,255,255,0.6);
 }
 .floating-panel .panel-subtext.panel-subtext-error {
@@ -186,13 +186,13 @@
     height: 1px;
     background: var(--ui-border);
     opacity: 0.5;
-    margin: 14px 0;
+    margin: var(--di-space-3) 0;
 }
 
 .panel-subheading {
-    font-size: 13px;
+    font-size: var(--di-text-3);
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--ui-text-muted);
-    margin: 0 0 8px 0;
+    margin: 0 0 var(--di-space-2) 0;
 }

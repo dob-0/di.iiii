@@ -36,7 +36,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    padding-top: 48px;
+    padding-top: var(--di-space-8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -47,7 +47,7 @@
     text-align: center;
     color: rgba(255, 255, 255, 0.2);
     font-family: var(--di-mono);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     letter-spacing: 0.18em;
     text-transform: lowercase;
     -webkit-user-select: none;
@@ -142,14 +142,14 @@
 }
 
 .raw-printer-profile-actions {
-    margin-top: 12px;
-    padding: 10px;
+    margin-top: var(--di-space-3);
+    padding: var(--di-space-3);
     border-radius: 0;
     border: 1px solid var(--di-cyan-border);
     background: var(--di-surface);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .raw-printer-profile-actions button {
@@ -159,8 +159,8 @@
     background: var(--di-line);
     color: var(--di-text);
     border-radius: 0;
-    padding: 7px 10px;
-    font-size: 12px;
+    padding: var(--di-space-2) var(--di-space-3);
+    font-size: var(--di-text-3);
     cursor: pointer;
 }
 
@@ -170,7 +170,7 @@
 }
 
 .raw-printer-profile-actions span {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: rgba(255, 255, 255, 0.5);
     font-family: var(--di-mono);
 }
@@ -199,7 +199,7 @@
 }
 
 .raw-node-palette-input-row {
-    padding: 10px 12px;
+    padding: var(--di-space-3) var(--di-space-3);
     border-bottom: 1px solid var(--di-cyan-border);
 }
 
@@ -209,7 +209,7 @@
     border: none;
     outline: none;
     color: var(--di-text);
-    font-size: 14px;
+    font-size: var(--di-text-4);
     font-family: var(--di-mono);
     letter-spacing: 0.03em;
     caret-color: var(--di-cyan);
@@ -222,9 +222,9 @@
 .raw-node-palette-list {
     list-style: none;
     margin: 0;
-    padding: 6px;
+    padding: var(--di-space-2);
     display: grid;
-    gap: 2px;
+    gap: var(--di-space-1);
     max-height: 280px;
     overflow-y: auto;
     /* The graph surface behind the palette claims touch-action: none; the
@@ -249,22 +249,22 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 9px 10px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-2) var(--di-space-3);
     border: none;
     background: transparent;
     border-radius: 0;
     color: var(--di-text);
     cursor: pointer;
     text-align: left;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     transition: background 0.08s;
 }
 
 .raw-node-palette-item-title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--di-space-3);
     min-width: 0;
     /* The row is 280px wide. Without this the title pushed the tag past the
        palette's right edge and "PANEL" rendered as "PAN" — the hint truncates
@@ -285,7 +285,7 @@
 
 .raw-node-palette-item-title span {
     color: rgba(255, 255, 255, 0.36);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-family: var(--di-mono);
     white-space: nowrap;
 }
@@ -304,20 +304,20 @@
 
 .raw-node-palette-tag {
     flex-shrink: 0;
-    padding: 2px 6px;
+    padding: var(--di-space-1) var(--di-space-2);
     border-radius: var(--di-radius);
     background: rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.4);
-    font-size: 9.5px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.02em;
     text-transform: uppercase;
     white-space: nowrap;
 }
 
 .raw-node-palette-empty {
-    padding: 12px 14px;
+    padding: var(--di-space-3) var(--di-space-3);
     color: rgba(255, 255, 255, 0.32);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-family: var(--di-mono);
     letter-spacing: 0.08em;
 }
@@ -332,10 +332,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 7px 10px 5px;
+    padding: var(--di-space-2) var(--di-space-3) var(--di-space-1);
     background: var(--di-surface);
     color: rgba(255, 255, 255, 0.55);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     font-family: var(--di-mono);
     letter-spacing: 0.15em;
     text-transform: lowercase;
@@ -370,11 +370,11 @@
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    gap: 24px;
+    gap: var(--di-space-5);
 }
 
 .raw-world-type-label {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-family: var(--di-mono);
     letter-spacing: 0.16em;
     text-transform: lowercase;
@@ -385,7 +385,7 @@
 
 .raw-world-type-cards {
     display: flex;
-    gap: 16px;
+    gap: var(--di-space-4);
     padding: 0;
     align-items: stretch;
 }
@@ -395,7 +395,7 @@
     appearance: none;
     width: 220px;
     min-height: 200px;
-    padding: 28px 24px;
+    padding: var(--di-space-6) var(--di-space-5);
     background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
     border-radius: 0;
@@ -404,7 +404,7 @@
     text-align: left;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--di-space-3);
     transition: border-color 0.15s, background 0.15s;
     font-family: var(--di-sans);
 
@@ -416,21 +416,21 @@
 }
 
 .raw-world-type-icon {
-    font-size: 24px;
+    font-size: var(--di-text-7);
     line-height: 1;
     opacity: 0.7;
 }
 
 .raw-world-type-card strong {
     display: block;
-    font-size: 15px;
+    font-size: var(--di-text-4);
     font-weight: 600;
     letter-spacing: -0.01em;
 }
 
 .raw-world-type-card p {
     color: rgba(255, 255, 255, 0.44);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     margin: 0;
     line-height: 1.55;
 }
@@ -444,7 +444,7 @@
     align-items: flex-start;
     justify-content: center;
     overflow-y: auto;
-    padding: 48px 24px 32px;
+    padding: var(--di-space-8) var(--di-space-5) var(--di-space-6);
 }
 
 .raw-hub-layout {
@@ -456,12 +456,12 @@
 }
 
 .raw-hub-header {
-    padding-bottom: 24px;
+    padding-bottom: var(--di-space-5);
 }
 
 .raw-hub-title {
-    margin: 16px 0 6px;
-    font-size: 22px;
+    margin: var(--di-space-4) 0 var(--di-space-2);
+    font-size: var(--di-text-7);
     font-weight: 700;
     letter-spacing: -0.01em;
     color: var(--di-text);
@@ -469,13 +469,13 @@
 
 .raw-hub-onboarding {
     display: grid;
-    gap: 16px;
-    padding: 0 0 20px;
+    gap: var(--di-space-4);
+    padding: 0 0 var(--di-space-5);
 }
 
 .raw-hub-onboarding-copy h2 {
-    margin: 8px 0 6px;
-    font-size: 22px;
+    margin: var(--di-space-2) 0 var(--di-space-2);
+    font-size: var(--di-text-7);
     line-height: 1.15;
 }
 
@@ -488,13 +488,13 @@
 .raw-hub-onboarding-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: var(--di-space-3);
 }
 
 .raw-hub-onboarding-card {
     display: grid;
-    gap: 10px;
-    padding: 16px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-4);
     border: 1px solid var(--di-cyan-border);
     background: var(--di-surface);
 }
@@ -506,7 +506,7 @@
     height: 34px;
     border: 1px solid var(--di-cyan-border);
     color: var(--di-cyan);
-    font-size: 18px;
+    font-size: var(--di-text-5);
     background: rgba(var(--di-cyan-rgb), 0.05);
 }
 
@@ -516,35 +516,35 @@
 
 .raw-hub-onboarding-card h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: var(--di-text-5);
     line-height: 1.2;
 }
 
 .raw-hub-onboarding-chip-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .raw-hub-onboarding-chip {
     display: inline-flex;
     align-items: center;
-    padding: 5px 8px;
+    padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid var(--di-cyan-border);
     color: rgba(255, 255, 255, 0.75);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-family: var(--di-mono);
     background: rgba(var(--di-cyan-rgb), 0.04);
 }
 
 .raw-hub-onboarding-steps {
     display: grid;
-    gap: 5px;
+    gap: var(--di-space-1);
     margin: 0;
-    padding-left: 18px;
+    padding-left: var(--di-space-4);
     color: rgba(255, 255, 255, 0.84);
     line-height: 1.4;
-    font-size: 12px;
+    font-size: var(--di-text-3);
 }
 
 .raw-hub-onboarding-card button {
@@ -554,7 +554,7 @@
     border: 1px solid var(--di-cyan-border);
     background: rgba(var(--di-cyan-rgb), 0.08);
     color: var(--di-text);
-    padding: 10px 14px;
+    padding: var(--di-space-3) var(--di-space-3);
     cursor: pointer;
 }
 
@@ -568,7 +568,7 @@
     display: flex;
     gap: 0;
     border: 1px solid var(--di-cyan-border);
-    margin-bottom: 1px;
+    margin-bottom: var(--di-space-1);
 }
 
 .raw-hub-title-input {
@@ -577,8 +577,8 @@
     border: none;
     outline: none;
     color: var(--di-text);
-    padding: 12px 14px;
-    font-size: 13px;
+    padding: var(--di-space-3) var(--di-space-3);
+    font-size: var(--di-text-3);
     font-family: var(--di-mono);
     letter-spacing: 0.03em;
     min-width: 0;
@@ -596,8 +596,8 @@
     border-left: 1px solid var(--di-cyan-border);
     background: transparent;
     color: var(--di-text-muted);
-    padding: 12px 16px;
-    font-size: 12px;
+    padding: var(--di-space-3) var(--di-space-4);
+    font-size: var(--di-text-3);
     font-family: var(--di-mono);
     letter-spacing: 0.06em;
     cursor: pointer;
@@ -631,9 +631,9 @@
 }
 
 .raw-hub-empty {
-    padding: 20px 14px;
+    padding: var(--di-space-5) var(--di-space-3);
     margin: 0;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-family: var(--di-mono);
     color: var(--di-text-muted);
     letter-spacing: 0.04em;
@@ -651,8 +651,8 @@
 
 .space-sync-msg {
     flex: 1;
-    padding: 10px 14px;
-    font-size: 11px;
+    padding: var(--di-space-3) var(--di-space-3);
+    font-size: var(--di-text-2);
     font-family: var(--di-mono);
     color: var(--di-text-muted);
     letter-spacing: 0.04em;
@@ -670,7 +670,7 @@
 }
 
 .space-sync-side + .space-sync-side {
-    margin-left: 14px;
+    margin-left: var(--di-space-3);
 }
 
 @media (max-width: 560px) {
@@ -682,7 +682,7 @@
         white-space: normal;
         display: flex;
         flex-wrap: wrap;
-        gap: 2px 14px;
+        gap: var(--di-space-1) var(--di-space-3);
         border-bottom: 1px solid var(--di-cyan-border);
     }
     .space-sync-side + .space-sync-side {
@@ -706,8 +706,8 @@
     border-left: 1px solid var(--di-cyan-border);
     background: transparent;
     color: var(--di-text-muted);
-    padding: 10px 14px;
-    font-size: 11px;
+    padding: var(--di-space-3) var(--di-space-3);
+    font-size: var(--di-text-2);
     font-family: var(--di-mono);
     letter-spacing: 0.06em;
     cursor: pointer;
@@ -740,8 +740,8 @@
     border-right: 1px solid var(--di-cyan-border);
     background: transparent;
     color: var(--di-text-muted);
-    padding: 10px 16px;
-    font-size: 11px;
+    padding: var(--di-space-3) var(--di-space-4);
+    font-size: var(--di-text-2);
     font-family: var(--di-mono);
     letter-spacing: 0.06em;
     cursor: pointer;
@@ -760,8 +760,8 @@
 .raw-hub-warnings {
     border: 1px solid rgba(var(--di-danger-rgb), 0.3);
     border-top: none;
-    padding: 12px 14px;
-    font-size: 12px;
+    padding: var(--di-space-3) var(--di-space-3);
+    font-size: var(--di-text-3);
     font-family: var(--di-mono);
     color: var(--di-danger);
 }
@@ -776,10 +776,10 @@
 .raw-selection-pill {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: 0;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     font-family: var(--di-mono);
@@ -811,13 +811,13 @@
 .raw-primitive-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: var(--di-space-3);
 }
 
 .raw-hub-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
+    gap: var(--di-space-4);
 }
 
 .raw-inline-list,
@@ -827,7 +827,7 @@
     padding: 0;
     margin: 0;
     display: grid;
-    gap: 10px;
+    gap: var(--di-space-3);
 }
 
 .raw-project-list li {
@@ -845,14 +845,14 @@
     text-align: left;
     background: transparent;
     border: none;
-    padding: 12px 14px;
+    padding: var(--di-space-3) var(--di-space-3);
     color: var(--di-text);
     cursor: pointer;
     transition: background 0.1s;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--di-space-1);
 }
 
 .raw-project-list li > button:first-child:hover {
@@ -866,8 +866,8 @@
     border-left: 1px solid var(--di-cyan-border);
     background: transparent;
     color: var(--di-text-muted);
-    padding: 12px 16px;
-    font-size: 16px;
+    padding: var(--di-space-3) var(--di-space-4);
+    font-size: var(--di-text-5);
     line-height: 1;
     cursor: pointer;
     transition: color 0.1s, background 0.1s;
@@ -886,13 +886,13 @@
     background: transparent;
     border: 1px solid var(--di-cyan-border);
     border-radius: 0;
-    padding: 10px 12px;
+    padding: var(--di-space-3) var(--di-space-3);
     color: var(--di-text);
     transition: border-color 0.1s, background 0.1s;
     display: grid;
     grid-template-columns: 8px 1fr;
     grid-template-rows: auto auto;
-    column-gap: 10px;
+    column-gap: var(--di-space-3);
     align-items: center;
 }
 
@@ -931,7 +931,7 @@
     border-radius: 0;
     background: transparent;
     color: var(--di-text);
-    padding: 10px 14px;
+    padding: var(--di-space-3) var(--di-space-3);
     cursor: pointer;
     font-weight: 600;
     transition: border-color 0.1s, background 0.1s, color 0.1s;
@@ -961,11 +961,11 @@
     background: transparent;
     color: rgba(255, 255, 255, 0.42);
     font-family: inherit;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-weight: 500;
     min-height: 44px;
     min-width: 44px;
-    padding: 0 10px;
+    padding: 0 var(--di-space-3);
     cursor: pointer;
     transition: color 0.1s, background 0.1s;
 }
@@ -1002,8 +1002,8 @@
     left: 0;
     right: 0;
     z-index: 1600;
-    padding: 10px 16px;
-    font-size: 13px;
+    padding: var(--di-space-3) var(--di-space-4);
+    font-size: var(--di-text-3);
     font-weight: 600;
     color: var(--di-black);
     background: var(--di-warning);
@@ -1026,7 +1026,7 @@
     z-index: 1400;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--di-space-2);
     height: 0;
     padding: 0;
     overflow: hidden;
@@ -1039,7 +1039,7 @@
 
 .raw-topbar.is-seeded {
     height: 48px;
-    padding: 0 16px;
+    padding: 0 var(--di-space-4);
     /* Furniture (see the window rule). */
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     pointer-events: auto;
@@ -1055,7 +1055,7 @@
 .raw-topbar-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--di-space-3);
     min-width: 0;
     flex-shrink: 0;
 }
@@ -1067,9 +1067,9 @@
     border-radius: 0;
     background: transparent;
     color: rgba(255, 255, 255, 0.52);
-    padding: 6px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-weight: 500;
     white-space: nowrap;
     flex-shrink: 0;
@@ -1081,7 +1081,7 @@
 }
 
 .raw-topbar-name {
-    font-size: 13px;
+    font-size: var(--di-text-3);
     font-weight: 600;
     color: rgba(255, 255, 255, 0.72);
     overflow: hidden;
@@ -1093,7 +1093,7 @@
 .raw-topbar-center {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--di-space-3);
     min-width: 0;
     flex: 1;
     justify-content: center;
@@ -1104,11 +1104,11 @@
     display: inline-flex;
     align-items: center;
     height: 28px;
-    padding: 0 10px;
+    padding: 0 var(--di-space-3);
     border: 1px solid var(--di-cyan-border);
     background: rgba(var(--di-cyan-rgb), 0.04);
     color: rgba(255, 255, 255, 0.74);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     font-family: var(--di-mono);
@@ -1135,7 +1135,7 @@
 .raw-topbar-breadcrumb {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: var(--di-space-1);
     min-width: 0;
     overflow: hidden;
 }
@@ -1143,15 +1143,15 @@
 .raw-topbar-crumb-group {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: var(--di-space-1);
     min-width: 0;
 }
 
 .raw-topbar-crumb-sep {
     color: rgba(255, 255, 255, 0.25);
-    font-size: 14px;
+    font-size: var(--di-text-4);
     line-height: 1;
-    padding: 0 2px;
+    padding: 0 var(--di-space-1);
 }
 
 .raw-topbar-crumb {
@@ -1160,9 +1160,9 @@
     border: none;
     background: transparent;
     color: rgba(255, 255, 255, 0.45);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-family: var(--di-mono);
-    padding: 4px 8px;
+    padding: var(--di-space-1) var(--di-space-2);
     border-radius: var(--di-radius);
     cursor: pointer;
     white-space: nowrap;
@@ -1193,7 +1193,7 @@
 .raw-topbar-surfaces {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: var(--di-space-1);
     flex: 1;
     justify-content: center;
 }
@@ -1205,9 +1205,9 @@
     border-radius: 0;
     background: transparent;
     color: var(--di-text-muted);
-    padding: 6px 14px;
+    padding: var(--di-space-2) var(--di-space-3);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     font-weight: 500;
     transition: color 0.1s;
 }
@@ -1224,7 +1224,7 @@
 .raw-topbar-right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--di-space-2);
     flex-shrink: 0;
     margin-left: auto;
 }
@@ -1236,8 +1236,8 @@
     border-radius: 0;
     background: var(--di-cyan-dim);
     color: var(--di-text);
-    padding: 7px 12px;
-    font-size: 12px;
+    padding: var(--di-space-2) var(--di-space-3);
+    font-size: var(--di-text-3);
     font-weight: 600;
     cursor: pointer;
     transition: background 0.12s, border-color 0.12s, color 0.12s;
@@ -1257,8 +1257,8 @@
     border-radius: 0;
     background: transparent;
     color: var(--di-cyan);
-    padding: 7px 12px;
-    font-size: 12px;
+    padding: var(--di-space-2) var(--di-space-3);
+    font-size: var(--di-text-3);
     font-weight: 600;
     font-family: var(--di-mono);
     letter-spacing: 0.06em;
@@ -1274,14 +1274,14 @@
 .raw-topbar-scale-control {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: 0;
     background: rgba(var(--di-cyan-rgb), 0.04);
 }
 
 .raw-topbar-scale-control label {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: rgba(255, 255, 255, 0.56);
     font-family: var(--di-mono);
     letter-spacing: 0.02em;
@@ -1295,8 +1295,8 @@
     /* Was a blue-violet nobody else in the lane uses — a hue with no job. */
     background: rgba(255, 255, 255, 0.06);
     color: var(--di-text);
-    padding: 4px 8px;
-    font-size: 11px;
+    padding: var(--di-space-1) var(--di-space-2);
+    font-size: var(--di-text-2);
     font-family: var(--di-mono);
     cursor: pointer;
     border: 1px solid rgba(var(--di-cyan-rgb), 0.28);
@@ -1313,9 +1313,9 @@
     appearance: none;
     border: none;
     background: transparent;
-    padding: 0 4px;
+    padding: 0 var(--di-space-1);
     cursor: pointer;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: rgba(255, 255, 255, 0.36);
     font-family: var(--di-mono);
     letter-spacing: 0.04em;
@@ -1335,7 +1335,7 @@
 .raw-topbar-windows {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: var(--di-space-1);
     flex: 1;
     justify-content: center;
 }
@@ -1347,9 +1347,9 @@
     border-radius: 0;
     background: transparent;
     color: var(--di-text-muted);
-    padding: 6px 14px;
+    padding: var(--di-space-2) var(--di-space-3);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     font-weight: 500;
     transition: color 0.1s, background 0.1s;
     height: 48px;
@@ -1373,9 +1373,9 @@
     border-radius: 0;
     background: transparent;
     color: rgba(255, 255, 255, 0.48);
-    padding: 6px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     cursor: pointer;
-    font-size: 16px;
+    font-size: var(--di-text-5);
     line-height: 1;
 }
 
@@ -1393,9 +1393,9 @@
     border-radius: 0;
     background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
-    padding: 6px;
+    padding: var(--di-space-2);
     display: grid;
-    gap: 2px;
+    gap: var(--di-space-1);
     z-index: 1500;
 }
 
@@ -1406,9 +1406,9 @@
     border-radius: 0;
     background: transparent;
     color: rgba(255, 255, 255, 0.72);
-    padding: 9px 12px;
+    padding: var(--di-space-2) var(--di-space-3);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     font-weight: 500;
     text-align: left;
     width: 100%;
@@ -1446,9 +1446,9 @@
     border-radius: 0;
     background: rgba(var(--di-danger-rgb), 0.1);
     color: var(--di-danger);
-    padding: 10px 18px;
+    padding: var(--di-space-3) var(--di-space-4);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     font-weight: 600;
 
 }
@@ -1493,8 +1493,8 @@
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 12px;
-    padding: 8px 10px 8px 13px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-2) var(--di-space-3) var(--di-space-2) var(--di-space-3);
     cursor: grab;
     border-bottom: 1px solid rgba(255, 255, 255, 0.09);
     background: rgba(255, 255, 255, 0.025);
@@ -1509,7 +1509,7 @@
 .raw-window.is-pinned .raw-window-header::after {
     content: 'pinned';
     font-family: var(--di-mono);
-    font-size: 9px;
+    font-size: var(--di-text-1);
     letter-spacing: 0.16em;
     color: rgba(255, 255, 255, 0.3);
     order: 3;
@@ -1533,7 +1533,7 @@
    whispered at 12px. */
 .raw-window-header h3 {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     font-weight: 700;
     letter-spacing: 0.01em;
     line-height: 1.25;
@@ -1565,7 +1565,7 @@
     color: inherit;
     border: 1px solid rgba(var(--di-cyan-rgb), 0.45);
     border-radius: var(--di-radius);
-    padding: 2px 6px;
+    padding: var(--di-space-1) var(--di-space-2);
 }
 
 /* Says the family, in the family's colour — "the room", not UNIVERSE.WORLD.
@@ -1574,7 +1574,7 @@
    because that is how the palette and the cards write these words. */
 .raw-window-kicker {
     display: block;
-    font-size: 10px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.14em;
     color: var(--window-accent);
     font-family: var(--di-mono);
@@ -1583,7 +1583,7 @@
 .raw-window-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--di-space-2);
     justify-content: flex-end;
 }
 
@@ -1696,7 +1696,7 @@
        "i can't change size" of the room window (2026-08-20). */
     right: 34px;
     display: flex;
-    gap: 6px;
+    gap: var(--di-space-2);
     z-index: 10;
 }
 
@@ -1712,7 +1712,7 @@
     width: 28px;
     height: 28px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--di-text-4);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1815,9 +1815,9 @@
     justify-self: center;
     align-self: center;
     display: grid;
-    gap: 10px;
+    gap: var(--di-space-3);
     width: min(320px, calc(100vw - 80px));
-    padding: 18px;
+    padding: var(--di-space-4);
     border: 1px solid var(--di-cyan-border);
     background: var(--di-scrim-strong);
     box-shadow: 0 0 0 1px var(--di-cyan-wash);
@@ -1825,7 +1825,7 @@
 }
 
 .raw-viewport-empty-panel strong {
-    font-size: 20px;
+    font-size: var(--di-text-6);
     line-height: 1.2;
     color: var(--di-text);
 }
@@ -1843,7 +1843,7 @@
     border: 1px solid var(--di-cyan-border);
     background: rgba(var(--di-cyan-rgb), 0.08);
     color: var(--di-text);
-    padding: 10px 14px;
+    padding: var(--di-space-3) var(--di-space-3);
     cursor: pointer;
 }
 
@@ -1876,8 +1876,8 @@
     background: var(--di-surface);
     color: var(--di-text);
     border-radius: 0;
-    padding: 4px 10px;
-    font-size: 11px;
+    padding: var(--di-space-1) var(--di-space-3);
+    font-size: var(--di-text-2);
 }
 
 .raw-selection-pill {
@@ -1898,20 +1898,20 @@
 }
 
 .raw-property-sheet-header {
-    padding: 16px 18px 12px;
+    padding: var(--di-space-4) var(--di-space-4) var(--di-space-3);
     border-bottom: 1px solid var(--di-cyan-border);
     flex-shrink: 0;
 }
 
 .raw-property-sheet-header h4 {
-    font-size: 15px;
+    font-size: var(--di-text-4);
     font-weight: 600;
     color: var(--di-text);
-    margin: 0 0 3px;
+    margin: 0 0 var(--di-space-1);
 }
 
 .raw-property-sheet-header p {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: rgba(255, 255, 255, 0.4);
     font-family: var(--di-mono);
     letter-spacing: 0.04em;
@@ -1921,13 +1921,13 @@
 .raw-property-sections-scroll {
     flex: 1;
     overflow-y: auto;
-    padding: 12px 18px 18px;
+    padding: var(--di-space-3) var(--di-space-4) var(--di-space-4);
 }
 
 .raw-property-section {
-    padding-top: 12px;
+    padding-top: var(--di-space-3);
     border-top: 1px solid var(--di-cyan-border);
-    margin-top: 12px;
+    margin-top: var(--di-space-3);
 }
 
 .raw-property-section:first-child {
@@ -1937,29 +1937,29 @@
 }
 
 .raw-property-section h5 {
-    font-size: 10px;
+    font-size: var(--di-text-2);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: rgba(255, 255, 255, 0.36);
     font-family: var(--di-mono);
-    margin: 0 0 10px;
+    margin: 0 0 var(--di-space-3);
 }
 
 .raw-property-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .raw-property-field {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    font-size: 12px;
+    gap: var(--di-space-1);
+    font-size: var(--di-text-3);
 }
 
 .raw-property-field > span {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: rgba(255, 255, 255, 0.45);
     letter-spacing: 0.02em;
     font-family: var(--di-mono);
@@ -1971,9 +1971,9 @@
 /* A port with a wire into it: the box stays, greyed, and the label says why.
    Hiding the field instead made a landed wire look like a lost setting. */
 .raw-property-wired {
-    margin-left: 6px;
+    margin-left: var(--di-space-2);
     font-style: normal;
-    font-size: 9px;
+    font-size: var(--di-text-1);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--di-cyan);
@@ -2007,8 +2007,8 @@
     border: 1px solid var(--di-cyan-border);
     background: rgba(var(--di-cyan-rgb), 0.04);
     color: var(--di-text);
-    padding: 7px 10px;
-    font-size: 12px;
+    padding: var(--di-space-2) var(--di-space-3);
+    font-size: var(--di-text-3);
     font-family: inherit;
     -webkit-appearance: none;
     appearance: none;
@@ -2038,7 +2038,7 @@
     border-radius: 0;
     border: 1px solid var(--di-cyan-border);
     background: rgba(var(--di-cyan-rgb), 0.04);
-    padding: 3px 6px;
+    padding: var(--di-space-1) var(--di-space-2);
     cursor: pointer;
 }
 
@@ -2057,38 +2057,38 @@
 .raw-window-stack {
     height: 100%;
     overflow: auto;
-    padding: 16px;
+    padding: var(--di-space-4);
 }
 
 /* view.library — Studio's Create window as a panel node. */
 .raw-create-section + .raw-create-section {
-    margin-top: 18px;
+    margin-top: var(--di-space-4);
 }
 
 .raw-create-label {
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--di-text-muted);
-    margin-bottom: 8px;
+    margin-bottom: var(--di-space-2);
 }
 
 .raw-create-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .raw-create-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: var(--di-space-1);
     /* 44px is the one-finger floor this project holds every control to; a
        shape grid is exactly where a phone visitor taps first. */
     min-height: 56px;
-    padding: 8px 4px;
+    padding: var(--di-space-2) var(--di-space-1);
     background: transparent;
     /* Neutral at rest, cyan under the pointer — the same rule the windows, the
        zoom cluster and the viewport buttons follow. Fifteen permanently-cyan
@@ -2096,7 +2096,7 @@
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 0;
     color: rgba(255, 255, 255, 0.78);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     cursor: pointer;
     transition: border-color 0.1s, background 0.1s, color 0.1s;
 }
@@ -2109,7 +2109,7 @@
 }
 
 .raw-create-icon {
-    font-size: 17px;
+    font-size: var(--di-text-5);
     line-height: 1;
 }
 
@@ -2117,37 +2117,37 @@
    Create panel: neutral at rest, cyan only for the chosen state, 44px floor on
    anything a finger lands on, radius 0. */
 .raw-publish-section + .raw-publish-section {
-    margin-top: 20px;
-    padding-top: 16px;
+    margin-top: var(--di-space-5);
+    padding-top: var(--di-space-4);
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .raw-publish-heading {
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     font-weight: 500;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--di-text-muted);
-    margin: 0 0 8px;
+    margin: 0 0 var(--di-space-2);
 }
 
 .raw-publish-choices {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .raw-publish-choice {
     flex: 1 1 auto;
     min-height: 44px;
-    padding: 8px 12px;
+    padding: var(--di-space-2) var(--di-space-3);
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 0;
     color: rgba(255, 255, 255, 0.78);
     font-family: inherit;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     cursor: pointer;
     transition: border-color 0.1s, background 0.1s, color 0.1s;
 }
@@ -2166,8 +2166,8 @@
 }
 
 .raw-publish-hint {
-    margin: 8px 0 0;
-    font-size: 11px;
+    margin: var(--di-space-2) 0 0;
+    font-size: var(--di-text-2);
     line-height: 1.5;
     color: var(--di-text-muted);
 }
@@ -2175,10 +2175,10 @@
 .raw-publish-toggle {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--di-space-3);
     min-height: 44px;
     color: rgba(255, 255, 255, 0.82);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     cursor: pointer;
 }
 
@@ -2190,22 +2190,22 @@
 }
 
 .raw-publish-url {
-    margin: 0 0 8px;
+    margin: 0 0 var(--di-space-2);
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: rgba(255, 255, 255, 0.82);
     word-break: break-all;
 }
 
 .raw-publish-copy {
     min-height: 44px;
-    padding: 8px 14px;
+    padding: var(--di-space-2) var(--di-space-3);
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 0;
     color: rgba(255, 255, 255, 0.78);
     font-family: inherit;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     cursor: pointer;
     transition: border-color 0.1s, background 0.1s, color 0.1s;
 }
@@ -2218,8 +2218,8 @@
 }
 
 .raw-publish-status {
-    margin: 12px 0 0;
-    font-size: 11px;
+    margin: var(--di-space-3) 0 0;
+    font-size: var(--di-text-2);
     line-height: 1.5;
     color: var(--di-text-muted);
 }
@@ -2235,7 +2235,7 @@
 
 .raw-text-panel-content {
     margin: 0;
-    font-size: 20px;
+    font-size: var(--di-text-6);
     line-height: 1.5;
     color: var(--di-text);
     white-space: pre-wrap;
@@ -2260,7 +2260,7 @@
     background: transparent;
     resize: none;
     font: inherit;
-    font-size: 20px;
+    font-size: var(--di-text-6);
     line-height: 1.5;
     color: var(--di-text);
     overflow-wrap: anywhere;
@@ -2276,8 +2276,8 @@
 }
 
 .raw-text-panel-driven {
-    margin: 12px 0 0;
-    font-size: 13px;
+    margin: var(--di-space-3) 0 0;
+    font-size: var(--di-text-3);
     color: rgba(255, 255, 255, 0.55);
 }
 
@@ -2287,7 +2287,7 @@
 @media (max-width: 640px) {
     .raw-text-panel-content,
     .raw-text-panel-input {
-        font-size: 17px;
+        font-size: var(--di-text-5);
         line-height: 1.45;
     }
 }
@@ -2313,9 +2313,9 @@
     /* 40px+ of height on a phone: this is the control that decides which room
        you are talking into, and a mis-tap sends a private line to the wrong
        four people. */
-    padding: 11px 8px;
+    padding: var(--di-space-3) var(--di-space-2);
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--di-text-muted);
@@ -2333,20 +2333,20 @@
 .raw-chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 12px;
+    padding: var(--di-space-3);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--di-space-3);
 }
 
 .raw-chat-message {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--di-space-1);
 }
 
 .raw-chat-message-author {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--di-text-muted);
@@ -2356,7 +2356,7 @@
 .raw-chat-message-author {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .raw-chat-message.is-self .raw-chat-message-author {
@@ -2370,9 +2370,9 @@
     border: 0;
     color: var(--di-text-muted);
     cursor: pointer;
-    font-size: 15px;
+    font-size: var(--di-text-4);
     line-height: 1;
-    padding: 4px 8px;
+    padding: var(--di-space-1) var(--di-space-2);
     margin: -4px 0;
 }
 
@@ -2382,7 +2382,7 @@
 
 .raw-chat-message-text {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--di-text-4);
     line-height: 1.4;
     color: var(--di-text);
     white-space: pre-wrap;
@@ -2391,10 +2391,10 @@
 
 .raw-chat-input-row {
     display: flex;
-    gap: 8px;
+    gap: var(--di-space-2);
     /* right padding clears the 16px window resize handle at bottom-right —
        it paints and hit-tests over the Send button's corner otherwise */
-    padding: 10px 28px 10px 12px;
+    padding: var(--di-space-3) var(--di-space-6) var(--di-space-3) var(--di-space-3);
     border-top: 1px solid var(--di-cyan-border);
 }
 
@@ -2411,8 +2411,8 @@
     border: 1px solid var(--di-cyan-border);
     outline: none;
     color: var(--di-text);
-    padding: 8px 10px;
-    font-size: 13px;
+    padding: var(--di-space-2) var(--di-space-3);
+    font-size: var(--di-text-3);
     font-family: var(--di-mono);
 }
 
@@ -2443,7 +2443,7 @@
     margin: 0;
     color: rgba(255, 255, 255, 0.52);
     font-family: var(--di-mono);
-    font-size: 12px;
+    font-size: var(--di-text-3);
 }
 
 .raw-image-panel-media {
@@ -2457,26 +2457,26 @@
 .raw-assets-list,
 .raw-activity-list {
     display: grid;
-    gap: 10px;
+    gap: var(--di-space-3);
 }
 
 .raw-asset-row,
 .raw-activity-row {
     display: grid;
-    gap: 4px;
+    gap: var(--di-space-1);
 }
 
 .raw-activity-row strong,
 .raw-asset-row strong,
 .raw-outliner strong {
     font-family: var(--di-mono);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     text-transform: uppercase;
 }
 
 .raw-empty-state,
 .raw-overlay-message {
-    padding: 18px;
+    padding: var(--di-space-4);
     border-radius: 0;
     background: var(--di-surface);
     color: rgba(255, 255, 255, 0.48);
@@ -2496,27 +2496,27 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: var(--di-space-3);
     text-align: center;
     font-family: var(--di-sans);
 }
 
 .raw-empty-state p {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--di-text-3);
 }
 
 .raw-empty-state button {
     -webkit-appearance: none;
     appearance: none;
     min-height: 44px;
-    padding: 0 20px;
+    padding: 0 var(--di-space-5);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.5);
     border-radius: var(--di-radius-pill);
     background: var(--di-line);
     color: var(--di-cyan);
     font-family: inherit;
-    font-size: 14px;
+    font-size: var(--di-text-4);
     cursor: pointer;
     touch-action: manipulation;
 }
@@ -2567,8 +2567,8 @@
     z-index: 10;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-2);
     border: 1px solid var(--di-cyan-border);
     background: var(--di-scrim-strong);
 }
@@ -2580,21 +2580,21 @@
     background: var(--di-black);
     color: var(--di-text);
     cursor: pointer;
-    font-size: 16px;
+    font-size: var(--di-text-5);
 }
 
 .raw-view-zoom-controls span {
     min-width: 44px;
     text-align: center;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: var(--di-text);
 }
 
 .raw-empty-view-state,
 .raw-graph-surface-header {
     max-width: 34rem;
-    margin: 32px;
-    padding: 24px;
+    margin: var(--di-space-6);
+    padding: var(--di-space-5);
     border-radius: 0;
     border: 1px solid var(--di-cyan-border);
     background: var(--di-surface);
@@ -2603,7 +2603,7 @@
 
 .raw-empty-view-state h2,
 .raw-graph-surface-header h2 {
-    margin: 0 0 8px;
+    margin: 0 0 var(--di-space-2);
 }
 
 .raw-empty-view-state p,
@@ -2619,13 +2619,13 @@
 }
 
 .raw-surface-workflow {
-    margin: 12px 16px 0;
+    margin: var(--di-space-3) var(--di-space-4) 0;
     z-index: 4;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
-    padding: 14px 16px;
+    gap: var(--di-space-4);
+    padding: var(--di-space-3) var(--di-space-4);
     border: 1px solid var(--di-cyan-border);
     background: var(--di-scrim-strong);
     -webkit-backdrop-filter: blur(8px);
@@ -2638,8 +2638,8 @@
 
 .raw-surface-workflow-copy strong {
     display: block;
-    margin: 0 0 4px;
-    font-size: 13px;
+    margin: 0 0 var(--di-space-1);
+    font-size: var(--di-text-3);
     color: var(--di-text);
     letter-spacing: 0.02em;
 }
@@ -2647,7 +2647,7 @@
 .raw-surface-workflow-copy p {
     margin: 0;
     color: rgba(255, 255, 255, 0.62);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     line-height: 1.45;
 }
 
@@ -2655,7 +2655,7 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .raw-surface-workflow-actions button {
@@ -2665,8 +2665,8 @@
     border-radius: 0;
     background: rgba(var(--di-cyan-rgb), 0.08);
     color: var(--di-text);
-    padding: 8px 12px;
-    font-size: 12px;
+    padding: var(--di-space-2) var(--di-space-3);
+    font-size: var(--di-text-3);
     cursor: pointer;
     transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
@@ -2686,8 +2686,8 @@
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: rgba(255, 255, 255, 0.04);
     color: rgba(255, 255, 255, 0.72);
-    padding: 10px 14px;
-    font-size: 12px;
+    padding: var(--di-space-3) var(--di-space-3);
+    font-size: var(--di-text-3);
     cursor: pointer;
     transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
@@ -2700,7 +2700,7 @@
 
 @media (max-width: 900px) {
     .raw-hub {
-        padding: 32px 16px 24px;
+        padding: var(--di-space-6) var(--di-space-4) var(--di-space-5);
     }
 
     .raw-hub-onboarding-grid {
@@ -2731,7 +2731,7 @@
 
 .raw-hub-wordmark {
     display: flex;
-    gap: 5px;
+    gap: var(--di-space-1);
     align-items: center;
 }
 
@@ -2744,7 +2744,7 @@
 }
 
 .raw-hub-tagline {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: var(--di-text-muted);
     font-family: var(--di-mono);
     margin: 0;
@@ -2752,14 +2752,14 @@
 }
 
 .raw-topbar h1 {
-    margin: 8px 0 4px;
+    margin: var(--di-space-2) 0 var(--di-space-1);
     font-size: 30px;
 }
 
 .raw-topbar-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: var(--di-space-3);
     justify-content: flex-end;
 }
 
@@ -2846,8 +2846,8 @@
     width: fit-content;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-2);
     /* Furniture (see the window rule): the zoom cluster is a tool for looking
        at the work, not part of it. */
     border: 1px solid rgba(255, 255, 255, 0.14);
@@ -2875,14 +2875,14 @@
     text-align: center;
     color: var(--di-text-muted);
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
 }
 
 .raw-graph-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
-    padding: 0 32px 32px;
+    gap: var(--di-space-4);
+    padding: 0 var(--di-space-6) var(--di-space-6);
 }
 
 /* The card's edge is its FAMILY, not the lane's accent. `--card-family` is set
@@ -2898,7 +2898,7 @@
     border-radius: 0;
     color: var(--di-text);
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     touch-action: none;
     -webkit-user-select: none;
     user-select: none;
@@ -2944,7 +2944,7 @@
     border: none;
     background: transparent;
     color: rgba(255, 255, 255, 0.22);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     line-height: 16px;
     text-align: center;
     cursor: pointer;
@@ -2961,8 +2961,8 @@
 .raw-graph-node-header {
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 6px 10px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-3);
     border-bottom: 1px solid var(--di-cyan-border);
     height: 44px;
     box-sizing: border-box;
@@ -2970,7 +2970,7 @@
 
 .raw-graph-node-label {
     font-weight: 700;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2979,7 +2979,7 @@
 }
 
 .raw-graph-node-category {
-    font-size: 10px;
+    font-size: var(--di-text-2);
     color: var(--di-text-muted);
     white-space: nowrap;
     flex-shrink: 0;
@@ -3014,9 +3014,9 @@
     transform: translateY(-50%);
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--di-space-1);
     min-height: 22px;
-    padding: 3px 5px;
+    padding: var(--di-space-1) var(--di-space-1);
     border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: var(--di-radius);
     background: var(--di-scrim-strong);
@@ -3024,7 +3024,7 @@
        floor for a non-text control. */
     color: rgba(255, 255, 255, 0.62);
     font-family: inherit;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     line-height: 1;
     white-space: nowrap;
     cursor: pointer;
@@ -3051,7 +3051,7 @@
 }
 
 .raw-graph-node-child-count {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     line-height: 1;
 }
@@ -3091,13 +3091,13 @@
 
 .raw-graph-port-row--in {
     left: 0;
-    padding-left: 12px;
+    padding-left: var(--di-space-3);
 }
 
 .raw-graph-port-row--out {
     right: 0;
     justify-content: flex-end;
-    padding-right: 12px;
+    padding-right: var(--di-space-3);
 }
 
 .raw-graph-port-dot {
@@ -3203,9 +3203,9 @@
     background: var(--di-scrim-strong);
     color: var(--di-text-muted);
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     min-height: 32px;
-    padding: 0 12px;
+    padding: 0 var(--di-space-3);
     cursor: pointer;
 }
 
@@ -3222,7 +3222,7 @@
 }
 
 .raw-graph-port-label {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: var(--di-text-muted);
     white-space: nowrap;
     overflow: hidden;
@@ -3236,7 +3236,7 @@
     z-index: 1500;
     display: grid;
     place-items: center;
-    padding: 24px;
+    padding: var(--di-space-5);
     background: rgba(0, 0, 0, 0.5);
 }
 
@@ -3269,8 +3269,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 18px 22px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-4) var(--di-space-5);
     border-bottom: 1px solid var(--di-cyan-border);
 }
 
@@ -3281,8 +3281,8 @@
 
 .raw-op-create-toolbar {
     display: grid;
-    gap: 12px;
-    padding: 18px 22px 0;
+    gap: var(--di-space-3);
+    padding: var(--di-space-4) var(--di-space-5) 0;
 }
 
 .raw-op-search {
@@ -3291,13 +3291,13 @@
     border: 1px solid var(--di-cyan-border);
     background: rgba(var(--di-cyan-rgb), 0.04);
     color: var(--di-text);
-    padding: 10px 12px;
+    padding: var(--di-space-3) var(--di-space-3);
 }
 
 .raw-op-family-tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .raw-op-family-tabs button,
@@ -3312,7 +3312,7 @@
     cursor: pointer;
     border-radius: 0;
     background: rgba(var(--di-cyan-rgb), 0.04);
-    padding: 10px 12px;
+    padding: var(--di-space-3) var(--di-space-3);
     color: var(--di-text);
     font-weight: 600;
 }
@@ -3327,27 +3327,27 @@
 .raw-op-create-body {
     display: grid;
     grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
-    gap: 22px;
-    padding: 22px;
+    gap: var(--di-space-5);
+    padding: var(--di-space-5);
     overflow: auto;
 }
 
 .raw-op-list {
     display: grid;
-    gap: 10px;
+    gap: var(--di-space-3);
     align-content: start;
 }
 
 .raw-op-list button {
     display: grid;
-    gap: 4px;
+    gap: var(--di-space-1);
     text-align: left;
 }
 
 .raw-op-list button span,
 .raw-op-preview-browser-bar code {
     color: rgba(255, 255, 255, 0.44);
-    font-size: 12px;
+    font-size: var(--di-text-3);
 }
 
 .raw-help-backdrop {
@@ -3356,7 +3356,7 @@
     z-index: 1550;
     display: grid;
     place-items: center;
-    padding: 24px;
+    padding: var(--di-space-5);
     background: rgba(0, 0, 0, 0.56);
 }
 
@@ -3387,8 +3387,8 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
-    padding: 18px 22px;
+    gap: var(--di-space-4);
+    padding: var(--di-space-4) var(--di-space-5);
     border-bottom: 1px solid var(--di-cyan-border);
 }
 
@@ -3400,13 +3400,13 @@
     flex: 0 0 auto;
     border: 1px solid var(--di-cyan-border);
     color: var(--di-cyan);
-    font-size: 20px;
+    font-size: var(--di-text-6);
     background: rgba(var(--di-cyan-rgb), 0.05);
 }
 
 .raw-help-header h3 {
-    margin: 4px 0 8px;
-    font-size: 20px;
+    margin: var(--di-space-1) 0 var(--di-space-2);
+    font-size: var(--di-text-6);
 }
 
 .raw-help-header p {
@@ -3419,8 +3419,8 @@
 .raw-help-tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    padding: 18px 22px 0;
+    gap: var(--di-space-2);
+    padding: var(--di-space-4) var(--di-space-5) 0;
 }
 
 .raw-help-mode-tabs button,
@@ -3430,7 +3430,7 @@
     border: 1px solid var(--di-cyan-border);
     background: rgba(var(--di-cyan-rgb), 0.04);
     color: var(--di-text);
-    padding: 10px 12px;
+    padding: var(--di-space-3) var(--di-space-3);
     cursor: pointer;
 }
 
@@ -3442,8 +3442,8 @@
 .raw-help-body {
     display: grid;
     grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.95fr);
-    gap: 22px;
-    padding: 22px;
+    gap: var(--di-space-5);
+    padding: var(--di-space-5);
     overflow: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--di-cyan-border) rgba(var(--di-cyan-rgb), 0.04);
@@ -3471,7 +3471,7 @@
 .raw-help-side {
     border: 1px solid var(--di-cyan-border);
     background: rgba(var(--di-cyan-rgb), 0.03);
-    padding: 18px;
+    padding: var(--di-space-4);
 }
 
 .raw-help-visual-stage {
@@ -3490,17 +3490,17 @@
     position: absolute;
     left: 18px;
     bottom: 18px;
-    padding: 4px 8px;
+    padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid var(--di-cyan-border);
     color: rgba(255, 255, 255, 0.75);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-family: var(--di-mono);
 }
 
 .raw-help-diagram-start {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
+    gap: var(--di-space-4);
 }
 
 .raw-help-diagram-start-col {
@@ -3517,7 +3517,7 @@
     display: block;
     width: 56%;
     height: 56%;
-    margin: 24px auto 0;
+    margin: var(--di-space-5) auto 0;
     border: 1px solid rgba(var(--di-cyan-rgb), 0.26);
 }
 
@@ -3558,9 +3558,9 @@
     position: absolute;
     border: 1px solid var(--di-cyan-border);
     background: var(--di-cyan-wash);
-    padding: 12px;
+    padding: var(--di-space-3);
     display: grid;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .raw-help-diagram-window span {
@@ -3630,7 +3630,7 @@
 .raw-help-callout-row {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
+    gap: var(--di-space-3);
     min-height: 240px;
     align-items: center;
 }
@@ -3638,7 +3638,7 @@
 .raw-help-callout {
     display: grid;
     justify-items: center;
-    gap: 10px;
+    gap: var(--di-space-3);
     text-align: center;
     position: relative;
     z-index: 1;
@@ -3656,7 +3656,7 @@
 }
 
 .raw-help-callout strong {
-    font-size: 22px;
+    font-size: var(--di-text-7);
     font-weight: 600;
 }
 
@@ -3669,20 +3669,20 @@
 .raw-help-side {
     display: grid;
     align-content: start;
-    gap: 16px;
+    gap: var(--di-space-4);
 }
 
 .raw-help-step-grid {
     display: grid;
-    gap: 10px;
+    gap: var(--di-space-3);
 }
 
 .raw-help-step-card {
     display: grid;
     grid-template-columns: 28px 1fr;
-    gap: 10px;
+    gap: var(--di-space-3);
     align-items: start;
-    padding: 10px 12px;
+    padding: var(--di-space-3) var(--di-space-3);
     border: 1px solid var(--di-cyan-border);
     background: rgba(var(--di-cyan-rgb), 0.02);
 }
@@ -3695,34 +3695,34 @@
     color: var(--di-cyan);
     border: 1px solid var(--di-cyan-border);
     font-family: var(--di-mono);
-    font-size: 12px;
+    font-size: var(--di-text-3);
 }
 
 .raw-help-step-card p {
-    margin: 4px 0 0;
+    margin: var(--di-space-1) 0 0;
     color: rgba(255, 255, 255, 0.84);
     line-height: 1.45;
 }
 
 .raw-help-tip-list {
     display: grid;
-    gap: 8px;
+    gap: var(--di-space-2);
     margin: 0;
-    padding-left: 18px;
+    padding-left: var(--di-space-4);
     color: rgba(255, 255, 255, 0.82);
     line-height: 1.5;
 }
 
 .raw-help-controls-list {
     display: grid;
-    gap: 10px;
+    gap: var(--di-space-3);
 }
 
 .raw-help-control-row {
     display: grid;
     grid-template-columns: 110px minmax(0, 1fr);
-    gap: 14px;
-    padding: 10px 0;
+    gap: var(--di-space-3);
+    padding: var(--di-space-3) 0;
     border-bottom: 1px solid var(--di-line);
 }
 
@@ -3733,7 +3733,7 @@
 .raw-help-control-row span {
     color: rgba(255, 255, 255, 0.58);
     font-family: var(--di-mono);
-    font-size: 12px;
+    font-size: var(--di-text-3);
 }
 
 .raw-help-control-row strong {
@@ -3745,16 +3745,16 @@
 .raw-help-chip-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .raw-help-chip {
     display: inline-flex;
     align-items: center;
-    padding: 5px 8px;
+    padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid var(--di-cyan-border);
     color: rgba(255, 255, 255, 0.75);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-family: var(--di-mono);
     background: rgba(var(--di-cyan-rgb), 0.04);
 }
@@ -3768,7 +3768,7 @@
 .raw-help-footer span {
     color: rgba(255, 255, 255, 0.56);
     font-family: var(--di-mono);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     word-break: break-word;
 }
 
@@ -3779,7 +3779,7 @@
     .raw-help-footer {
         flex-direction: column;
         align-items: stretch;
-        gap: 10px;
+        gap: var(--di-space-3);
     }
 
     .raw-help-footer button {
@@ -3789,14 +3789,14 @@
 
 .raw-help-audiences {
     display: grid;
-    gap: 12px;
-    margin-top: 18px;
+    gap: var(--di-space-3);
+    margin-top: var(--di-space-4);
 }
 
 .raw-help-audience-card {
     display: grid;
-    gap: 10px;
-    padding: 14px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-3);
     border: 1px solid var(--di-cyan-border);
     background: rgba(var(--di-cyan-rgb), 0.03);
 }
@@ -3804,7 +3804,7 @@
 .raw-help-audience-head {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .raw-help-audience-glyph {
@@ -3819,20 +3819,20 @@
 
 .raw-help-audience-card h4 {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--di-text-5);
 }
 
 .raw-help-audience-steps {
     margin: 0;
-    padding-left: 18px;
+    padding-left: var(--di-space-4);
     color: rgba(255, 255, 255, 0.82);
     line-height: 1.45;
-    font-size: 13px;
+    font-size: var(--di-text-3);
 }
 
 .raw-op-details {
     display: grid;
-    gap: 18px;
+    gap: var(--di-space-4);
     align-content: start;
 }
 
@@ -3849,8 +3849,8 @@
     min-height: 220px;
     display: grid;
     place-items: center;
-    gap: 12px;
-    padding: 18px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-4);
 }
 
 .raw-op-preview-cube-shell {
@@ -3883,8 +3883,8 @@
 .raw-browser-panel-bar,
 .raw-world-browser-node-bar {
     display: grid;
-    gap: 4px;
-    padding: 12px 14px;
+    gap: var(--di-space-1);
+    padding: var(--di-space-3) var(--di-space-3);
     border-bottom: 1px solid var(--di-cyan-border);
     background: rgba(var(--di-cyan-rgb), 0.04);
 }
@@ -3892,7 +3892,7 @@
 .raw-op-param-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: var(--di-space-3);
 }
 
 .raw-browser-panel-window,
@@ -3933,9 +3933,9 @@
     inset: 0;
     display: grid;
     place-items: center;
-    padding: 16px;
+    padding: var(--di-space-4);
     text-align: center;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     line-height: 1.4;
     /* was var(--di-cyan-dim, #9fd7ff): the token is declared as cyan at 0.1
        alpha, so this label has been ~invisible on its near-black panel since
@@ -3951,7 +3951,7 @@
     background: var(--di-surface);
     display: grid;
     place-items: center;
-    padding: 0 20px;
+    padding: 0 var(--di-space-5);
 }
 
 .raw-mic-panel-meter {
@@ -3979,12 +3979,12 @@
     height: 100%;
     box-sizing: border-box;
     background: var(--di-surface);
-    padding: 12px;
+    padding: var(--di-space-3);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--di-space-2);
     overflow-y: auto;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     line-height: 1.45;
     /* was var(--di-cyan-dim, #9fd7ff): the token is declared as cyan at 0.1
        alpha, so this label has been ~invisible on its near-black panel since
@@ -3993,7 +3993,7 @@
 }
 
 .raw-midi-panel-status {
-    padding: 8px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius);
     background: rgba(var(--di-cyan-rgb), 0.07);
     border: 1px solid var(--di-cyan-border);
@@ -4002,11 +4002,11 @@
 .raw-midi-panel-field {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--di-space-1);
 }
 
 .raw-midi-panel-label {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     opacity: 0.7;
@@ -4017,7 +4017,7 @@
     box-sizing: border-box;
     /* Touch target — one finger has to be able to change the channel. */
     min-height: 34px;
-    padding: 6px 8px;
+    padding: var(--di-space-2) var(--di-space-2);
     font: inherit;
     color: var(--di-text);
     background: var(--di-cyan-wash);
@@ -4032,7 +4032,7 @@
 
 .raw-midi-panel-last {
     margin-top: auto;
-    padding: 8px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     color: var(--di-text);
     background: var(--di-scrim);
     border: 1px solid var(--di-cyan-border);
@@ -4051,12 +4051,12 @@
        content in a 368px window, clipped at the right edge on a phone. */
     box-sizing: border-box;
     background: var(--di-surface);
-    padding: 12px;
+    padding: var(--di-space-3);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--di-space-2);
     overflow-y: auto;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     line-height: 1.45;
     /* was var(--di-cyan-dim, #9fd7ff): the token is declared as cyan at 0.1
        alpha, so this label has been ~invisible on its near-black panel since
@@ -4067,17 +4067,17 @@
 .raw-keeper-panel-field {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--di-space-1);
 }
 
 .raw-keeper-panel-setup {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .raw-keeper-panel-label {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     opacity: 0.7;
@@ -4087,7 +4087,7 @@
     width: 100%;
     box-sizing: border-box;
     resize: vertical;
-    padding: 7px 9px;
+    padding: var(--di-space-2) var(--di-space-2);
     font: inherit;
     color: var(--di-text);
     background: var(--di-cyan-wash);
@@ -4108,11 +4108,11 @@
 .raw-keeper-panel-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--di-space-3);
 }
 
 .raw-keeper-panel-ask {
-    padding: 6px 14px;
+    padding: var(--di-space-2) var(--di-space-3);
     font: inherit;
     color: var(--di-black);
     background: var(--di-cyan);
@@ -4136,7 +4136,7 @@
 }
 
 .raw-keeper-panel-state {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     opacity: 0.75;
@@ -4156,7 +4156,7 @@
 /* Not absolutely positioned like the capture family's overlay: the keeper's
    messages sit in the flow so a reply and an error can be read together. */
 .raw-keeper-panel-status {
-    padding: 8px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius);
     background: rgba(var(--di-cyan-rgb), 0.07);
     border: 1px solid var(--di-cyan-border);
@@ -4169,8 +4169,8 @@
 }
 
 .raw-keeper-panel-status code {
-    font-size: 12px;
-    padding: 1px 4px;
+    font-size: var(--di-text-3);
+    padding: var(--di-space-1) var(--di-space-1);
     border-radius: var(--di-radius);
     background: var(--di-scrim);
     /* A URL is one unbreakable token and the panel is narrow — without this it
@@ -4181,7 +4181,7 @@
 .raw-keeper-panel-reply {
     flex: 1;
     min-height: 0;
-    padding: 9px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     color: var(--di-text);
     background: var(--di-scrim);
     border: 1px solid var(--di-cyan-border);
@@ -4191,7 +4191,7 @@
 }
 
 .raw-keeper-panel-note {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     opacity: 0.65;
 }
 
@@ -4219,7 +4219,7 @@
     }
 
     .raw-topbar-right {
-        gap: 4px;
+        gap: var(--di-space-1);
     }
 }
 
@@ -4244,12 +4244,12 @@
     height: 100%;
     box-sizing: border-box;
     background: var(--di-surface);
-    padding: 12px;
+    padding: var(--di-space-3);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--di-space-2);
     overflow-y: auto;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     line-height: 1.45;
     /* was var(--di-cyan-dim, #9fd7ff): the token is declared as cyan at 0.1
        alpha, so this label has been ~invisible on its near-black panel since
@@ -4258,7 +4258,7 @@
 }
 
 .raw-dmx-panel-setup {
-    padding: 8px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius);
     background: rgba(var(--di-cyan-rgb), 0.07);
     border: 1px solid var(--di-cyan-border);
@@ -4267,11 +4267,11 @@
 .raw-dmx-panel-field {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--di-space-1);
 }
 
 .raw-dmx-panel-label {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     opacity: 0.7;
@@ -4280,7 +4280,7 @@
 .raw-dmx-panel-input {
     width: 100%;
     box-sizing: border-box;
-    padding: 7px 9px;
+    padding: var(--di-space-2) var(--di-space-2);
     font: inherit;
     color: var(--di-text);
     background: var(--di-cyan-wash);
@@ -4303,7 +4303,7 @@
 .raw-dmx-panel-link:hover { text-decoration: underline; }
 
 .raw-dmx-panel-status {
-    padding: 8px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius);
     background: var(--di-scrim);
     border: 1px solid var(--di-cyan-border);
@@ -4324,13 +4324,15 @@
        message. 16px is the no-zoom floor, not a style choice. */
     .raw-chat-input,
     .raw-node-palette-input {
+        /* Exception: locked to exactly 16px, not the nearest rung (17px) —
+           the no-zoom floor is a browser threshold, not a rhythm choice. */
         font-size: 16px;
     }
 
     /* breadcrumbs live inside a horizontal scroller here — a ~20px target
        loses most taps to the scroll gesture. Grow them to a finger size. */
     .raw-topbar-crumb {
-        padding: 10px 12px;
+        padding: var(--di-space-3) var(--di-space-3);
     }
 
     .raw-topbar.is-seeded {
@@ -4338,8 +4340,8 @@
         overflow-y: hidden;
         scrollbar-width: none;
         justify-content: flex-start;
-        padding-left: calc(12px + env(safe-area-inset-left));
-        padding-right: calc(12px + env(safe-area-inset-right));
+        padding-left: calc(var(--di-space-3) + env(safe-area-inset-left));
+        padding-right: calc(var(--di-space-3) + env(safe-area-inset-right));
     }
 
     .raw-topbar.is-seeded::-webkit-scrollbar {
@@ -4423,7 +4425,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 12px;
+    padding: 0 var(--di-space-3);
     background: var(--di-surface-2);
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
     flex-shrink: 0;
@@ -4431,7 +4433,7 @@
 }
 
 .raw-system-window-title {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-weight: 600;
     letter-spacing: 0.04em;
     color: var(--di-text-muted);
@@ -4445,9 +4447,9 @@
     border: none;
     color: var(--di-text-muted);
     cursor: pointer;
-    font-size: 20px;
+    font-size: var(--di-text-6);
     line-height: 1;
-    padding: 0 2px;
+    padding: 0 var(--di-space-1);
     opacity: 0.6;
     transition: opacity 0.1s;
 }
@@ -4469,8 +4471,8 @@
     height: 100%;
     overflow-y: auto;
     background: var(--di-surface);
-    padding: 12px 16px;
-    font-size: 12px;
+    padding: var(--di-space-3) var(--di-space-4);
+    font-size: var(--di-text-3);
     color: var(--di-text);
 }
 
@@ -4479,7 +4481,7 @@
     display: grid;
     place-items: center;
     height: 100%;
-    padding: 16px;
+    padding: var(--di-space-4);
     text-align: center;
     /* was var(--di-cyan-dim, #9fd7ff): the token is declared as cyan at 0.1
        alpha, so this label has been ~invisible on its near-black panel since
@@ -4488,12 +4490,12 @@
 }
 
 .raw-work-status-section {
-    margin-bottom: 14px;
+    margin-bottom: var(--di-space-3);
 }
 
 .raw-work-status-section h4 {
-    margin: 0 0 4px;
-    font-size: 11px;
+    margin: 0 0 var(--di-space-1);
+    font-size: var(--di-text-2);
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -4506,7 +4508,7 @@
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--di-space-1);
 }
 
 .raw-work-status-empty {
@@ -4528,8 +4530,8 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 12px 16px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-3) var(--di-space-4);
     background: var(--di-surface);
 }
 
@@ -4542,17 +4544,17 @@
     border-radius: var(--di-radius);
     color: var(--di-text);
     font: inherit;
-    padding: 8px;
+    padding: var(--di-space-2);
 }
 
 .raw-agent-run-panel-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .raw-agent-run-panel-status {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--di-text-muted);
@@ -4573,7 +4575,7 @@
 
 .raw-agent-run-panel-error {
     color: var(--di-danger);
-    font-size: 12px;
+    font-size: var(--di-text-3);
 }
 
 .raw-agent-run-panel-output {
@@ -4582,15 +4584,15 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .raw-agent-run-panel-message {
     margin: 0;
-    padding: 6px 8px;
+    padding: var(--di-space-2) var(--di-space-2);
     background: rgba(var(--di-cyan-rgb), 0.04);
     border-radius: var(--di-radius);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     line-height: 1.4;
     white-space: pre-wrap;
     word-break: break-word;
@@ -4598,9 +4600,9 @@
 
 .raw-agent-run-panel-result {
     margin: 0;
-    padding: 6px 8px;
+    padding: var(--di-space-2) var(--di-space-2);
     border-radius: var(--di-radius);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     line-height: 1.4;
     font-weight: 600;
     color: var(--di-success);
@@ -4620,23 +4622,23 @@
 }
 
 .raw-agent-run-panel-raw {
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: var(--di-text-muted);
 }
 
 .raw-agent-run-panel-raw summary {
     cursor: pointer;
-    padding: 4px 0;
+    padding: var(--di-space-1) 0;
 }
 
 .raw-agent-run-panel-tail {
     margin: 0;
-    padding: 8px;
+    padding: var(--di-space-2);
     max-height: 200px;
     overflow: auto;
     background: rgba(255, 255, 255, 0.03);
     border-radius: var(--di-radius);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     line-height: 1.4;
     white-space: pre-wrap;
     word-break: break-word;
@@ -4652,15 +4654,15 @@
     background: var(--di-surface);
     color: var(--di-text);
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     overflow: hidden;
 }
 
 .raw-timeline-bar {
     display: flex;
     align-items: baseline;
-    gap: 12px;
-    padding: 8px 12px 6px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-2) var(--di-space-3) var(--di-space-2);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -4675,9 +4677,9 @@
     border-radius: var(--di-radius);
     color: var(--di-cyan);
     cursor: pointer;
-    font-size: 10px;
+    font-size: var(--di-text-2);
     line-height: 1;
-    padding: 4px 8px;
+    padding: var(--di-space-1) var(--di-space-2);
 }
 
 .raw-timeline-transport:hover {
@@ -4706,7 +4708,7 @@
     top: 2px;
     transform: translateX(-50%);
     color: rgba(255, 255, 255, 0.38);
-    font-size: 9px;
+    font-size: var(--di-text-1);
     white-space: nowrap;
     pointer-events: none;
 }
@@ -4721,7 +4723,7 @@
     position: relative;
     flex: 1;
     min-height: 56px;
-    margin: 10px 0;
+    margin: var(--di-space-3) 0;
     background: var(--di-surface);
     cursor: text;
     touch-action: none;
@@ -4734,7 +4736,7 @@
     display: flex;
     align-items: center;
     box-sizing: border-box;
-    padding: 0 6px;
+    padding: 0 var(--di-space-2);
     background: rgba(var(--di-cyan-rgb), 0.16);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.5);
     border-radius: var(--di-radius);
@@ -4753,7 +4755,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     pointer-events: none;
-    font-size: 10px;
+    font-size: var(--di-text-2);
 }
 
 .raw-timeline-handle {
@@ -4823,8 +4825,8 @@
 .raw-timeline-tools {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px 10px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-3) var(--di-space-3);
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     flex-wrap: wrap;
 }
@@ -4834,9 +4836,9 @@
     color: var(--di-text);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: var(--di-radius);
-    padding: 3px 9px;
+    padding: var(--di-space-1) var(--di-space-2);
     font-family: inherit;
-    font-size: 10px;
+    font-size: var(--di-text-2);
     cursor: pointer;
 }
 
@@ -4858,9 +4860,9 @@
 .raw-timeline-speed {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--di-space-2);
     color: rgba(255, 255, 255, 0.62);
-    font-size: 10px;
+    font-size: var(--di-text-2);
 }
 
 .raw-timeline-speed input {
@@ -4877,7 +4879,7 @@
 .raw-timeline-status {
     margin-left: auto;
     color: rgba(255, 255, 255, 0.52);
-    font-size: 10px;
+    font-size: var(--di-text-2);
 }
 
 /* --- Director window (view.director) — hosts the algovrithm editor --- */
@@ -4893,11 +4895,11 @@
 
 .raw-director-note {
     flex: none;
-    padding: 6px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.52);
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     line-height: 1.5;
 }
 
@@ -4931,7 +4933,7 @@
     transform: translateX(-50%);
     font-family: var(--di-sans);
     font-weight: 800;
-    font-size: 15px;
+    font-size: var(--di-text-4);
     letter-spacing: -0.02em;
     color: rgba(255, 255, 255, 0.28);
     user-select: none;
@@ -4972,14 +4974,14 @@
         top: calc(env(safe-area-inset-top, 0px) + 12px);
         left: calc(env(safe-area-inset-left, 0px) + 14px);
         transform: none;
-        font-size: 14px;
+        font-size: var(--di-text-4);
         /* It can still pass over a card up here, so it carries just enough
            ground to stay readable when it does — and a real finger's worth of
            target, which the bare text (29px tall) was not. */
         display: inline-flex;
         align-items: center;
         min-height: 44px;
-        padding: 0 12px;
+        padding: 0 var(--di-space-3);
         border-radius: var(--di-radius);
         background: var(--di-scrim);
         color: rgba(255, 255, 255, 0.44);
@@ -5004,13 +5006,13 @@
 .raw-drop-veil span {
     font-family: var(--di-sans);
     font-weight: 700;
-    font-size: 15px;
+    font-size: var(--di-text-4);
     letter-spacing: 0.02em;
     color: var(--di-text);
     background: var(--di-scrim-strong);
     border: 1px solid var(--di-cyan);
     border-radius: var(--di-radius-pill);
-    padding: 10px 18px;
+    padding: var(--di-space-3) var(--di-space-4);
 }
 
 .raw-drop-notice {
@@ -5020,14 +5022,14 @@
     transform: translateX(-50%);
     max-width: min(520px, calc(100vw - 32px));
     font-family: var(--di-sans);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     line-height: 1.45;
     text-align: center;
     color: rgba(255, 255, 255, 0.92);
     background: var(--di-scrim-strong);
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: var(--di-radius);
-    padding: 10px 16px;
+    padding: var(--di-space-3) var(--di-space-4);
     pointer-events: none;
     z-index: 1260;
 }
@@ -5048,21 +5050,21 @@
     left: 14px;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--di-space-1);
     max-width: min(420px, calc(100vw - 24px));
     font-family: var(--di-sans);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: rgba(255, 255, 255, 0.78);
     background: var(--di-scrim-strong);
     border: 1px solid var(--di-cyan-line);
     border-radius: var(--di-radius-pill);
-    padding: 2px 4px 2px 2px;
+    padding: var(--di-space-1) var(--di-space-1) var(--di-space-1) var(--di-space-1);
     z-index: 1400;
     pointer-events: auto;
 }
 
 .raw-scope-marker-label {
-    padding: 0 8px 0 2px;
+    padding: 0 var(--di-space-2) 0 var(--di-space-1);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -5090,7 +5092,7 @@
     border-radius: var(--di-radius-pill);
     background: rgba(var(--di-cyan-rgb), 0.14);
     color: var(--di-cyan);
-    font-size: 15px;
+    font-size: var(--di-text-4);
     line-height: 1;
     cursor: pointer;
     touch-action: manipulation;
@@ -5104,7 +5106,7 @@
 .raw-inspector-asset-field {
     display: flex;
     align-items: stretch;
-    gap: 6px;
+    gap: var(--di-space-2);
     min-width: 0;
 }
 
@@ -5127,7 +5129,7 @@
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: var(--di-radius);
-    font-size: 16px;
+    font-size: var(--di-text-5);
     line-height: 1;
 }
 
@@ -5160,8 +5162,8 @@
     min-width: 208px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 6px;
+    gap: var(--di-space-1);
+    padding: var(--di-space-2);
     background: var(--di-scrim-strong);
     border: 1px solid var(--di-cyan-line);
     border-radius: var(--di-radius);
@@ -5170,8 +5172,8 @@
 
 .raw-graph-port-menu-title {
     margin: 0;
-    padding: 4px 10px 6px;
-    font-size: 11px;
+    padding: var(--di-space-1) var(--di-space-3) var(--di-space-2);
+    font-size: var(--di-text-2);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.5);
@@ -5183,14 +5185,14 @@
     /* A finger's target: this menu is opened by a long press, which is a touch
        gesture before it is anything else. */
     min-height: 44px;
-    padding: 0 12px;
+    padding: 0 var(--di-space-3);
     text-align: left;
     border: none;
     border-radius: var(--di-radius);
     background: transparent;
     color: rgba(255, 255, 255, 0.92);
     font-family: inherit;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     cursor: pointer;
     touch-action: manipulation;
 }
@@ -5212,11 +5214,11 @@
     z-index: 1350;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--di-space-2);
     max-width: min(520px, calc(100vw - 32px));
-    padding: 4px 4px 4px 14px;
+    padding: var(--di-space-1) var(--di-space-1) var(--di-space-1) var(--di-space-3);
     font-family: var(--di-sans);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     color: rgba(255, 255, 255, 0.9);
     background: var(--di-scrim-strong);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.4);
@@ -5233,13 +5235,13 @@
     appearance: none;
     min-height: 44px;
     min-width: 44px;
-    padding: 0 14px;
+    padding: 0 var(--di-space-3);
     border: none;
     border-radius: var(--di-radius-pill);
     background: rgba(var(--di-cyan-rgb), 0.16);
     color: var(--di-cyan);
     font-family: inherit;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     white-space: nowrap;
     cursor: pointer;
     touch-action: manipulation;
@@ -5250,7 +5252,7 @@
 }
 
 .raw-promoted-notice-close {
-    font-size: 17px;
+    font-size: var(--di-text-5);
     padding: 0 !important;
     background: transparent !important;
     color: rgba(255, 255, 255, 0.55) !important;
@@ -5271,30 +5273,30 @@
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    padding: 14px 16px 20px;
+    padding: var(--di-space-3) var(--di-space-4) var(--di-space-5);
     font-family: var(--di-sans);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     line-height: 1.55;
     color: rgba(255, 255, 255, 0.72);
 }
 
 .raw-anatomy-banner {
-    margin: 0 0 12px;
-    padding: 8px 10px;
+    margin: 0 0 var(--di-space-3);
+    padding: var(--di-space-2) var(--di-space-3);
     border-left: 2px solid var(--di-warning);
     background: rgba(var(--di-warning-rgb), 0.08);
     color: rgba(var(--di-warning-rgb), 0.92);
 }
 
 .raw-anatomy-lede {
-    margin: 0 0 16px;
+    margin: 0 0 var(--di-space-4);
     color: rgba(255, 255, 255, 0.86);
 }
 
 .raw-anatomy-lede strong { color: var(--di-text); }
 
 .raw-anatomy-slot {
-    padding: 14px 0;
+    padding: var(--di-space-3) 0;
     border-top: 1px solid rgba(255, 255, 255, 0.09);
 }
 
@@ -5302,10 +5304,10 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 10px;
-    margin: 0 0 8px;
+    gap: var(--di-space-3);
+    margin: 0 0 var(--di-space-2);
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -5317,16 +5319,16 @@
    of a node from, so it gets the node's own family hue rather than a neutral. */
 .raw-anatomy-badge {
     flex: 0 0 auto;
-    font-size: 10px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.08em;
     text-transform: none;
     color: var(--window-accent);
 }
 
 .raw-anatomy-slot h5 {
-    margin: 12px 0 6px;
+    margin: var(--di-space-3) 0 var(--di-space-2);
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     font-weight: 400;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -5342,27 +5344,27 @@
 }
 
 .raw-anatomy-port {
-    padding: 7px 0 8px 10px;
+    padding: var(--di-space-2) 0 var(--di-space-2) var(--di-space-3);
     border-left: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.raw-anatomy-port + .raw-anatomy-port { margin-top: 2px; }
+.raw-anatomy-port + .raw-anatomy-port { margin-top: var(--di-space-1); }
 
 .raw-anatomy-port-head {
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .raw-anatomy-port-head strong {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-weight: 600;
     color: var(--di-text);
 }
 
 .raw-anatomy-port-head em {
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     font-style: normal;
     letter-spacing: 0.06em;
     color: rgba(255, 255, 255, 0.36);
@@ -5371,10 +5373,10 @@
 .raw-anatomy-value {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 2px;
+    gap: var(--di-space-2);
+    margin-top: var(--di-space-1);
     font-family: var(--di-mono);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: var(--di-text);
     /* A vector or a long string must not push the window wider than the screen;
        it wraps, because a horizontal scrollbar on a value is worse than a
@@ -5400,8 +5402,8 @@
 .raw-anatomy-origin,
 .raw-anatomy-door {
     display: block;
-    margin-top: 2px;
-    font-size: 11px;
+    margin-top: var(--di-space-1);
+    font-size: var(--di-text-2);
     color: rgba(255, 255, 255, 0.46);
 }
 
@@ -5413,13 +5415,13 @@
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    margin-left: 6px;
-    padding: 0 8px;
+    margin-left: var(--di-space-2);
+    padding: 0 var(--di-space-2);
     border: 0;
     background: none;
     color: rgba(255, 255, 255, 0.6);
     font-family: inherit;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     cursor: pointer;
     touch-action: manipulation;
 }
@@ -5430,17 +5432,17 @@
 .raw-anatomy-none,
 .raw-anatomy-foot {
     margin: 0;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: rgba(255, 255, 255, 0.4);
 }
 
-.raw-anatomy-foot { margin-top: 10px; }
+.raw-anatomy-foot { margin-top: var(--di-space-3); }
 
 .raw-anatomy-close {
-    margin: 16px 0 0;
-    padding-top: 12px;
+    margin: var(--di-space-4) 0 0;
+    padding-top: var(--di-space-3);
     border-top: 1px solid rgba(255, 255, 255, 0.09);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: rgba(255, 255, 255, 0.4);
 }
 
@@ -5452,15 +5454,15 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: var(--di-space-3);
 }
 
 @media (max-width: 640px) {
-    .raw-anatomy { padding: 12px 12px 18px; }
+    .raw-anatomy { padding: var(--di-space-3) var(--di-space-3) var(--di-space-4); }
     /* The window is the full width of the phone here, so the value column has
        nowhere to overflow to; the port block loses its indent to buy the text
        back the ten pixels. */
-    .raw-anatomy-port { padding-left: 8px; }
+    .raw-anatomy-port { padding-left: var(--di-space-2); }
 }
 
 /* "what is it made of", on the scope marker. Text rather than a glyph: ‹ and ◈
@@ -5473,13 +5475,13 @@
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    padding: 0 14px;
+    padding: 0 var(--di-space-3);
     border: none;
     border-radius: var(--di-radius-pill);
     background: var(--di-cyan-dim);
     color: var(--di-cyan);
     font-family: inherit;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     line-height: 1;
     white-space: nowrap;
     cursor: pointer;
@@ -5497,12 +5499,12 @@
 .raw-empty-state p { line-height: 1.55; }
 
 /* Where the code lives, and — behind one press — the lines themselves. */
-.raw-anatomy-place { margin-top: 8px; }
+.raw-anatomy-place { margin-top: var(--di-space-2); }
 
 .raw-anatomy-loc {
     display: inline-block;
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: rgba(255, 255, 255, 0.5);
 }
 
@@ -5512,13 +5514,13 @@
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    margin-left: 4px;
-    padding: 0 10px;
+    margin-left: var(--di-space-1);
+    padding: 0 var(--di-space-3);
     border: 0;
     background: none;
     color: rgba(255, 255, 255, 0.6);
     font-family: inherit;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     cursor: pointer;
     touch-action: manipulation;
 }
@@ -5527,20 +5529,20 @@
 .raw-anatomy-disclosure:focus-visible { color: var(--di-cyan); }
 
 .raw-anatomy-code-note {
-    margin: 4px 0 0;
-    font-size: 11px;
+    margin: var(--di-space-1) 0 0;
+    font-size: var(--di-text-2);
     color: rgba(255, 255, 255, 0.4);
 }
 
 .raw-anatomy-code-note.is-refusal { color: var(--di-warning); }
 
 .raw-anatomy-code {
-    margin: 6px 0 0;
-    padding: 10px 12px;
+    margin: var(--di-space-2) 0 0;
+    padding: var(--di-space-3) var(--di-space-3);
     background: var(--di-surface);
     border-left: 2px solid rgba(255, 255, 255, 0.14);
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     line-height: 1.5;
     color: rgba(255, 255, 255, 0.78);
     /* Sideways inside its own box, never wrapped: wrapped code lies about
@@ -5566,13 +5568,13 @@
     left: 14px;
     z-index: 5;
     min-height: 44px;
-    padding: 8px 18px;
+    padding: var(--di-space-2) var(--di-space-4);
     background: var(--di-scrim);
     color: rgba(var(--di-cyan-rgb), 0.92);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.45);
     border-radius: var(--di-radius);
     font-family: var(--di-mono);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     letter-spacing: 0.06em;
     cursor: pointer;
 }
@@ -5594,7 +5596,7 @@
     display: grid;
     place-items: center;
     color: rgba(255, 255, 255, 0.55);
-    font-size: 14px;
+    font-size: var(--di-text-4);
 }
 
 /* The Monitor: a window that watches a texture wire. The canvas letterboxes
@@ -5614,8 +5616,8 @@
 
 .raw-monitor-panel.is-empty p {
     color: rgba(255, 255, 255, 0.45);
-    font-size: 13px;
-    padding: 0 18px;
+    font-size: var(--di-text-3);
+    padding: 0 var(--di-space-4);
     text-align: center;
 }
 
@@ -5640,9 +5642,9 @@
 .raw-button-panel {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--di-space-2);
     height: 100%;
-    padding: 12px;
+    padding: var(--di-space-3);
     box-sizing: border-box;
 }
 
@@ -5653,7 +5655,7 @@
     border-radius: var(--di-radius);
     background: rgba(var(--di-success-rgb), 0.1);
     color: var(--di-success);
-    font-size: 18px;
+    font-size: var(--di-text-5);
     font-weight: 700;
     letter-spacing: 0.06em;
     cursor: pointer;
@@ -5667,7 +5669,7 @@
 
 .raw-button-panel-count {
     color: rgba(255, 255, 255, 0.55);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     text-align: center;
 }
 
@@ -5679,8 +5681,8 @@
     border: 1px solid rgba(var(--di-danger-rgb), 0.55);
     color: var(--di-danger);
     font-family: var(--di-mono);
-    font-size: 12px;
-    padding: 6px 10px;
+    font-size: var(--di-text-3);
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius);
     pointer-events: none;
     z-index: 60;
@@ -5707,27 +5709,27 @@
 .raw-list-panel {
     display: flex;
     flex-direction: column;
-    gap: 22px;
+    gap: var(--di-space-5);
 }
 
 .raw-list-group-head {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--di-space-3);
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-    padding-bottom: 6px;
-    margin-bottom: 10px;
+    padding-bottom: var(--di-space-2);
+    margin-bottom: var(--di-space-3);
 }
 
 .raw-list-group-name {
     flex: 1;
     min-width: 0;
     margin: 0;
-    padding: 4px 0;
+    padding: var(--di-space-1) 0;
     border: 0;
     background: transparent;
     font: inherit;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -5735,7 +5737,7 @@
 }
 
 .raw-list-count {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-variant-numeric: tabular-nums;
     color: rgba(255, 255, 255, 0.4);
 }
@@ -5746,25 +5748,25 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .raw-list-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--di-space-2);
     min-height: 44px;
 }
 
 .raw-list-text {
     flex: 1;
     min-width: 0;
-    padding: 8px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     border: 1px solid transparent;
     border-radius: 0;
     background: rgba(255, 255, 255, 0.04);
     font: inherit;
-    font-size: 16px;
+    font-size: var(--di-text-5);
     color: var(--di-text);
 }
 
@@ -5776,7 +5778,7 @@
 .raw-list-row-controls {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--di-space-1);
     flex: none;
 }
 
@@ -5787,7 +5789,7 @@
     border-radius: 0;
     background: transparent;
     color: rgba(255, 255, 255, 0.78);
-    font-size: 15px;
+    font-size: var(--di-text-4);
     line-height: 1;
     cursor: pointer;
 }
@@ -5799,28 +5801,28 @@
 .raw-list-move {
     height: 44px;
     max-width: 118px;
-    padding: 0 8px;
+    padding: 0 var(--di-space-2);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 0;
     background: transparent;
     color: rgba(255, 255, 255, 0.78);
     font: inherit;
-    font-size: 13px;
+    font-size: var(--di-text-3);
 }
 
 .raw-list-move option { background: var(--di-surface); color: var(--di-text) }
 
 .raw-list-add {
     align-self: flex-start;
-    margin-top: 8px;
+    margin-top: var(--di-space-2);
     min-height: 44px;
-    padding: 0 14px;
+    padding: 0 var(--di-space-3);
     border: 1px dashed rgba(255, 255, 255, 0.24);
     border-radius: 0;
     background: transparent;
     color: rgba(255, 255, 255, 0.62);
     font: inherit;
-    font-size: 14px;
+    font-size: var(--di-text-4);
     cursor: pointer;
 }
 
@@ -5855,7 +5857,7 @@
     position: absolute;
     inset: 0 10px auto 10px;
     top: 4px;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     line-height: 14px;
     white-space: nowrap;
     overflow: hidden;

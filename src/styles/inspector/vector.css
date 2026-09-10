@@ -1,19 +1,19 @@
 .vector-grid {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--di-space-3);
     border: 1px solid rgba(255,255,255,0.05);
     border-radius: var(--di-radius);
-    padding: 6px;
+    padding: var(--di-space-2);
     background: var(--di-scrim);
     min-width: 0;
 }
 .vector-grid .prop-row-stacked {
-    padding: 4px 6px 6px;
+    padding: var(--di-space-1) var(--di-space-2) var(--di-space-2);
     border-radius: var(--di-radius);
     background: rgba(255,255,255,0.015);
     border: 1px solid rgba(255,255,255,0.04);
-    gap: 4px;
+    gap: var(--di-space-1);
     min-width: 0;
 }
 .vector-grid .prop-row-stacked:last-child {
@@ -24,14 +24,14 @@
 .gizmo-controls .vec3-control {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 3px;
+    gap: var(--di-space-1);
     min-width: 0;
 }
 .gizmo-controls .vec3-axis {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 6px 6px 5px;
+    gap: var(--di-space-1);
+    padding: var(--di-space-2) var(--di-space-2) var(--di-space-1);
     border-radius: var(--di-radius);
     background: var(--di-scrim-strong);
     border: 1px solid rgba(255,255,255,0.07);
@@ -42,7 +42,7 @@
     align-items: center;
     justify-content: center;
     min-height: 14px;
-    font-size: 9px;
+    font-size: var(--di-text-1);
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -60,13 +60,13 @@
 .gizmo-controls .vec3-axis input {
     width: 100%;
     min-width: 0;
-    padding: 4px 6px;
+    padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid rgba(255,255,255,0.18);
     border-radius: var(--di-radius);
     background: var(--di-scrim-strong);
     color: var(--ui-text-primary);
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
     box-sizing: border-box;

@@ -67,3 +67,11 @@ dist-runtime/
 # generated page bundle — see spaces/the-light-put-back/README.md. Hand-written
 # pages (spaces/network/code) are source and stay tracked.
 spaces/the-light-put-back/code/index.html
+
+# Generated Trusted Web Activity project for the studio chat APK
+# (docs/deploy/STUDIO_CHAT_APK.md): a Gradle tree, a downloaded toolchain's
+# output and signed artifacts, none of which belong in the repo. Its INPUT does
+# — without twa-manifest.json the next APK is a guess at what this one was.
+android-twa/*
+!android-twa/twa-manifest.json
+android-twa-staging/

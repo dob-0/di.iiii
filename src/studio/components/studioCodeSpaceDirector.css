@@ -16,9 +16,9 @@
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--di-space-4);
     flex-wrap: wrap;
-    padding: 1.1rem clamp(1rem, 3vw, 2rem) 0.9rem;
+    padding: var(--di-space-4) clamp(1rem, 3vw, 2rem) var(--di-space-4);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -29,7 +29,7 @@
 .scsd-links {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--di-space-2);
 }
 
 /* The host for the embedded piece. Positioned, because `.algo-vrithm-root
@@ -48,8 +48,8 @@
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
-    gap: 0.9rem;
+    gap: var(--di-space-4);
     padding: clamp(1.4rem, 5vw, 3rem);
     color: rgba(255, 255, 255, 0.62);
-    font-size: 0.92rem;
+    font-size: var(--di-text-4);
 }

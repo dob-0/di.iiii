@@ -6,7 +6,7 @@
     z-index: 100;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: var(--di-space-3);
     max-width: 320px;
     justify-content: flex-end;
 }
@@ -15,12 +15,12 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
+    gap: var(--di-space-1);
     min-width: 100%;
 }
 
 .cluster-label {
-    font-size: 9px;
+    font-size: var(--di-text-1);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: rgba(255,255,255,0.75);
@@ -30,20 +30,20 @@
 .control-buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--di-space-2);
     width: 100%;
     justify-content: flex-end;
 }
 
 .control-buttons .toggle-button {
     min-width: 82px;
-    padding: 5px 9px;
+    padding: var(--di-space-1) var(--di-space-2);
 }
 
 .toggle-button .button-hint {
     display: inline-flex;
-    margin-left: 6px;
-    font-size: 9px;
+    margin-left: var(--di-space-2);
+    font-size: var(--di-text-1);
     letter-spacing: 0.08em;
     color: rgba(255,255,255,0.65);
 }
@@ -58,7 +58,7 @@
 .slider-cluster .slider-row {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--di-space-2);
     min-width: 200px;
 }
 
@@ -68,7 +68,7 @@
 }
 
 .slider-cluster span {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: var(--ui-text-primary);
 }
 
@@ -88,10 +88,10 @@
     position: relative;
     top: auto;
     right: auto;
-    padding: 6px 12px;
+    padding: var(--di-space-2) var(--di-space-3);
     min-width: 92px;
     font-family: var(--di-sans);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-weight: 600;
     letter-spacing: 0.04em;
     color: var(--ui-text-primary);
@@ -134,7 +134,7 @@
 .admin-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .hidden-ui-xr-controls {
@@ -144,7 +144,7 @@
     z-index: 105;
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
+    gap: var(--di-space-2);
     pointer-events: auto;
 }
 
@@ -161,7 +161,7 @@
 
 .hidden-ui-xr-button {
     min-width: 96px;
-    padding: 7px 14px;
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius);
     background: var(--di-surface-3);
     border-color: rgba(255, 255, 255, 0.12);
@@ -194,7 +194,7 @@
     transform: translate(-50%, -50%);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .collaboration-cursor-dot {
@@ -207,12 +207,12 @@
 }
 
 .collaboration-cursor-label {
-    padding: 4px 8px;
+    padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: var(--di-radius-pill);
     background: var(--di-scrim-strong);
     color: var(--ui-text-primary);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 600;
     letter-spacing: 0.03em;
     white-space: nowrap;

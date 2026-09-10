@@ -48,16 +48,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
-    padding: calc(env(safe-area-inset-top, 0px) + 0.7rem) 0.9rem 0.7rem;
+    gap: var(--di-space-3);
+    padding: calc(env(safe-area-inset-top, 0px) + var(--di-space-3)) var(--di-space-4) var(--di-space-3);
     background: linear-gradient(to bottom, var(--di-scrim), transparent);
 }
 
 .jam-count {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
-    font-size: 0.85rem;
+    gap: var(--di-space-2);
+    font-size: var(--di-text-4);
     font-weight: 600;
     letter-spacing: -0.01em;
 }
@@ -77,11 +77,11 @@
 }
 
 .jam-exit {
-    font-size: 0.78rem;
+    font-size: var(--di-text-3);
     font-weight: 600;
     color: rgba(255, 255, 255, 0.72);
     text-decoration: none;
-    padding: 0.45rem 0.7rem;
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius-pill);
     border: 1px solid rgba(255, 255, 255, 0.18);
     background: var(--di-scrim);
@@ -126,8 +126,8 @@
     background: var(--di-scrim);
     color: rgba(255, 255, 255, 0.78);
     border-radius: var(--di-radius-pill);
-    padding: 0.35rem 0.8rem;
-    font-size: 0.75rem;
+    padding: var(--di-space-2) var(--di-space-3);
+    font-size: var(--di-text-3);
     font-weight: 600;
     cursor: pointer;
 }
@@ -143,7 +143,7 @@
     background: var(--di-scrim-strong);
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--di-radius) var(--di-radius) 0 0;
-    padding: 0.9rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    padding: var(--di-space-4) var(--di-space-4) calc(env(safe-area-inset-bottom, 0px) + var(--di-space-4));
     box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.55);
     max-height: 72dvh;
     overflow-y: auto;
@@ -155,19 +155,19 @@
     height: 0.25rem;
     border-radius: var(--di-radius-pill);
     background: rgba(255, 255, 255, 0.24);
-    margin: 0 auto 0.85rem;
+    margin: 0 auto var(--di-space-3);
 }
 
 .jam-sheet-head {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 0.85rem;
+    gap: var(--di-space-3);
+    margin-bottom: var(--di-space-3);
 }
 
 .jam-sheet-title {
-    font-size: 0.95rem;
+    font-size: var(--di-text-4);
     font-weight: 600;
     letter-spacing: -0.01em;
 }
@@ -176,9 +176,9 @@
     background: none;
     border: none;
     color: rgba(255, 255, 255, 0.6);
-    font-size: 0.85rem;
+    font-size: var(--di-text-4);
     font-weight: 600;
-    padding: 0.3rem 0.4rem;
+    padding: var(--di-space-1) var(--di-space-2);
     cursor: pointer;
 }
 
@@ -194,13 +194,13 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
+    gap: var(--di-space-2);
     min-height: 4.6rem;
     border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: rgba(255, 255, 255, 0.05);
     color: var(--di-text);
-    font-size: 0.75rem;
+    font-size: var(--di-text-3);
     font-weight: 600;
     cursor: pointer;
 }
@@ -211,7 +211,7 @@
 }
 
 .jam-shape-icon {
-    font-size: 1.5rem;
+    font-size: var(--di-text-7);
     line-height: 1;
 }
 
@@ -226,17 +226,17 @@
 /* --- editing your own object ------------------------------------------- */
 
 .jam-field {
-    margin-bottom: 0.85rem;
+    margin-bottom: var(--di-space-3);
 }
 
 .jam-label {
     display: block;
-    font-size: 0.72rem;
+    font-size: var(--di-text-3);
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--di-text-muted);
-    margin-bottom: 0.4rem;
+    margin-bottom: var(--di-space-2);
 }
 
 .jam-input {
@@ -246,16 +246,16 @@
     border: 1px solid rgba(255, 255, 255, 0.16);
     background: rgba(255, 255, 255, 0.05);
     color: var(--di-text);
-    padding: 0.7rem 0.75rem;
+    padding: var(--di-space-3) var(--di-space-3);
     font: inherit;
-    font-size: 1rem;
+    font-size: var(--di-text-5);
     resize: vertical;
 }
 
 .jam-colours {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.55rem;
+    gap: var(--di-space-2);
 }
 
 .jam-colour {
@@ -283,7 +283,7 @@
     border: 1px solid rgba(255, 255, 255, 0.16);
     background: rgba(255, 255, 255, 0.05);
     color: var(--di-text);
-    font-size: 0.85rem;
+    font-size: var(--di-text-4);
     font-weight: 600;
     cursor: pointer;
 }
@@ -300,7 +300,7 @@
 .jam-mine-list {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--di-space-2);
 }
 
 .jam-mine-item {
@@ -308,12 +308,12 @@
     align-items: center;
     gap: 0.6rem;
     min-height: 3rem;
-    padding: 0 0.85rem;
+    padding: 0 var(--di-space-3);
     border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: rgba(255, 255, 255, 0.05);
     color: var(--di-text);
-    font-size: 0.85rem;
+    font-size: var(--di-text-4);
     font-weight: 600;
     text-align: left;
     cursor: pointer;
@@ -328,10 +328,10 @@
 }
 
 .jam-note {
-    font-size: 0.78rem;
+    font-size: var(--di-text-3);
     line-height: 1.5;
     color: rgba(255, 255, 255, 0.55);
-    margin: 0.2rem 0 0;
+    margin: var(--di-space-1) 0 0;
 }
 
 .jam-status {
@@ -339,11 +339,11 @@
     left: 50%;
     transform: translateX(-50%);
     top: calc(env(safe-area-inset-top, 0px) + 3.2rem);
-    padding: 0.4rem 0.8rem;
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius-pill);
     background: var(--di-scrim);
     border: 1px solid rgba(255, 255, 255, 0.16);
-    font-size: 0.76rem;
+    font-size: var(--di-text-3);
     font-weight: 600;
     white-space: nowrap;
 }

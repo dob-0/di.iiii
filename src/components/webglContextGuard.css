@@ -6,22 +6,22 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: var(--di-space-3);
     background: var(--di-scrim);
     color: var(--di-text);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     text-align: center;
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
 }
 
 .webgl-context-lost button {
-    padding: 8px 16px;
+    padding: var(--di-space-2) var(--di-space-4);
     border-radius: var(--di-radius-pill);
     border: 1px solid var(--di-cyan-border);
     background: var(--di-scrim-strong);
     color: var(--di-cyan);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     cursor: pointer;
 }
 

@@ -35,19 +35,19 @@
     width: 100%;
     max-width: 1060px;
     margin: 0 auto;
-    padding: 40px 24px 48px;
+    padding: var(--di-space-7) var(--di-space-5) var(--di-space-8);
 }
 
 .sc-title {
-    font-size: 20px;
+    font-size: var(--di-text-6);
     font-weight: 600;
     letter-spacing: -0.2px;
     margin: 0;
 }
 
 .sc-lede {
-    margin: 8px 0 0;
-    font-size: 13px;
+    margin: var(--di-space-2) 0 0;
+    font-size: var(--di-text-3);
     line-height: 1.5;
     color: var(--sc-text-2);
     max-width: 62ch;
@@ -58,7 +58,7 @@
    down is the difference between a directory and a pile. */
 .sc-list {
     list-style: none;
-    margin: 32px 0 0;
+    margin: var(--di-space-6) 0 0;
     padding: 0;
     border-top: 1px solid var(--sc-hairline);
 }
@@ -67,8 +67,8 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) 150px 110px;
     align-items: baseline;
-    gap: 16px;
-    padding: 14px 12px;
+    gap: var(--di-space-4);
+    padding: var(--di-space-3) var(--di-space-3);
     border-bottom: 1px solid var(--sc-hairline);
     color: inherit;
     text-decoration: none;
@@ -81,7 +81,7 @@
 .sc-row:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: -2px; }
 
 .sc-row-name {
-    font-size: 15px;
+    font-size: var(--di-text-4);
     font-weight: 500;
     letter-spacing: -0.1px;
     min-width: 0;
@@ -96,13 +96,13 @@
    arrived through the front door should be able to see which row that was. */
 .sc-row-door {
     display: inline-block;
-    margin-left: 10px;
-    padding: 2px 8px;
+    margin-left: var(--di-space-3);
+    padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid var(--di-cyan-border);
     border-radius: var(--di-radius-pill);
     color: var(--di-cyan);
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -112,23 +112,23 @@
 /* Scene or Page — the whole point of the row, so it is a word and not a badge
    the eye has to decode. The second line says what kind of looking it expects. */
 .sc-row-kind {
-    font-size: 13px;
+    font-size: var(--di-text-3);
     color: var(--sc-text-2);
     white-space: nowrap;
 }
 
 .sc-row-hint {
     display: block;
-    margin-top: 2px;
+    margin-top: var(--di-space-1);
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.06em;
     color: var(--sc-text-3);
 }
 
 .sc-row-when {
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: var(--sc-text-3);
     font-variant-numeric: tabular-nums;
     text-align: right;
@@ -136,8 +136,8 @@
 }
 
 .sc-aside {
-    margin: 28px 0 0;
-    font-size: 12px;
+    margin: var(--di-space-6) 0 0;
+    font-size: var(--di-text-3);
     line-height: 1.6;
     color: var(--sc-text-3);
 }
@@ -146,10 +146,10 @@
 .sc-aside-link:hover { text-decoration: underline; }
 
 @media (max-width: 600px) {
-    .sc-page { padding: 28px 16px 40px; }
+    .sc-page { padding: var(--di-space-6) var(--di-space-4) var(--di-space-7); }
     /* On a phone the date is the first thing to go: it is the least of the
        three facts and it is the one that costs a wrap. */
-    .sc-row { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 13px 4px; }
+    .sc-row { grid-template-columns: minmax(0, 1fr) auto; gap: var(--di-space-3); padding: var(--di-space-3) var(--di-space-1); }
     .sc-row-when { display: none; }
-    .sc-list { margin-top: 24px; }
+    .sc-list { margin-top: var(--di-space-5); }
 }

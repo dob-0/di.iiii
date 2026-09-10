@@ -3,11 +3,11 @@
 }
 
 .asset-panel .panel-content {
-    gap: 12px;
+    gap: var(--di-space-3);
 }
 
 .asset-panel-content {
-    padding-bottom: 10px;
+    padding-bottom: var(--di-space-3);
     max-height: 460px;
     overflow-y: auto;
 }
@@ -15,22 +15,22 @@
 .asset-toolbar {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .asset-workspace-summary {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    font-size: 12px;
+    gap: var(--di-space-1);
+    font-size: var(--di-text-3);
     color: rgba(255,255,255,0.72);
 }
 
 .asset-drive-panel {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-3);
     border: 1px solid var(--ui-border);
     border-radius: var(--di-radius);
     background: var(--di-scrim);
@@ -38,14 +38,14 @@
 
 .asset-drive-account {
     display: flex;
-    gap: 8px;
+    gap: var(--di-space-2);
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
 }
 
 .asset-drive-account-label {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: rgba(255,255,255,0.72);
     flex: 1;
     min-width: 140px;
@@ -63,9 +63,9 @@
 .asset-drive-file {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    font-size: 12px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-2);
+    font-size: var(--di-text-3);
     color: rgba(255,255,255,0.86);
     cursor: pointer;
     border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -89,15 +89,15 @@
 
 .asset-drive-import {
     display: flex;
-    gap: 8px;
+    gap: var(--di-space-2);
     align-items: center;
 }
 
 .asset-drive-input {
     flex: 1;
     min-width: 0;
-    padding: 7px 10px;
-    font-size: 12px;
+    padding: var(--di-space-2) var(--di-space-3);
+    font-size: var(--di-text-3);
     color: var(--di-text);
     background: var(--di-scrim-strong);
     border: 1px solid var(--ui-border);
@@ -110,7 +110,7 @@
 }
 
 .asset-drive-notice {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: rgba(255,255,255,0.72);
 }
 
@@ -125,14 +125,14 @@
 .asset-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--di-space-3);
 }
 
 .asset-row {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-3);
     border: 1px solid var(--ui-border);
     border-radius: var(--di-radius);
     background: var(--di-surface-2);
@@ -148,13 +148,13 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 12px;
+    gap: var(--di-space-3);
 }
 
 .asset-title-block {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: var(--di-space-1);
     min-width: 0;
 }
 
@@ -165,14 +165,14 @@
 }
 
 .asset-subtitle {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: rgba(255,255,255,0.62);
     word-break: break-word;
 }
 
 .asset-tag {
-    font-size: 11px;
-    padding: 2px 7px;
+    font-size: var(--di-text-2);
+    padding: var(--di-space-1) var(--di-space-2);
     border-radius: var(--di-radius-pill);
     border: 1px solid rgba(255,255,255,0.2);
     color: rgba(255,255,255,0.72);
@@ -183,36 +183,36 @@
 .asset-variant-summary {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    font-size: 12px;
+    gap: var(--di-space-3);
+    font-size: var(--di-text-3);
     color: rgba(255,255,255,0.75);
 }
 
 .asset-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .asset-secondary-actions {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding-top: 2px;
+    gap: var(--di-space-2);
+    padding-top: var(--di-space-1);
     border-top: 1px solid rgba(255,255,255,0.06);
 }
 
 .asset-variant-actions {
-    padding-top: 2px;
+    padding-top: var(--di-space-1);
 }
 
 .asset-action-button {
-    padding: 6px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.28);
     background: rgba(var(--di-cyan-rgb), 0.12);
     color: var(--ui-text-primary);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;

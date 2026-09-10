@@ -45,11 +45,11 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
-    padding: 12px 24px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-3) var(--di-space-5);
     border-bottom: 1px solid var(--tr-hairline);
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.06em;
     color: var(--tr-text-3);
 }
@@ -62,34 +62,34 @@
 
 /* ── page ── */
 
-.tr-page { flex: 1; width: 100%; max-width: 1060px; margin: 0 auto; padding: 40px 24px 48px; }
+.tr-page { flex: 1; width: 100%; max-width: 1060px; margin: 0 auto; padding: var(--di-space-7) var(--di-space-5) var(--di-space-8); }
 
-.tr-title { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; margin: 0; }
-.tr-lede { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--tr-text-2); max-width: 62ch; }
+.tr-title { font-size: var(--di-text-6); font-weight: 600; letter-spacing: -0.2px; margin: 0; }
+.tr-lede { margin: var(--di-space-2) 0 0; font-size: var(--di-text-3); line-height: 1.5; color: var(--tr-text-2); max-width: 62ch; }
 
 /* Three columns of one kind of work each, so the whole set is one screen with
    nothing below the fold — a bounded set of destinations is not a library. */
 .tr-groups {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 32px;
-    margin-top: 32px;
+    gap: var(--di-space-6);
+    margin-top: var(--di-space-6);
     align-items: start;
 }
 
 .tr-group-label {
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--tr-text-3);
-    margin: 0 0 12px;
+    margin: 0 0 var(--di-space-3);
 }
 
 .tr-grid {
     display: grid;
-    gap: 16px;
+    gap: var(--di-space-4);
     grid-template-columns: minmax(0, 1fr);
 }
 
@@ -131,17 +131,17 @@
 .tr-foot {
     display: flex;
     align-items: baseline;
-    gap: 8px;
-    padding: 12px 16px 14px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-3) var(--di-space-4) var(--di-space-3);
     border-top: 1px solid var(--tr-hairline);
 }
 
-.tr-tile-name { font-size: 14px; font-weight: 500; letter-spacing: -0.1px; }
+.tr-tile-name { font-size: var(--di-text-4); font-weight: 500; letter-spacing: -0.1px; }
 
 .tr-tile-meta {
     margin-left: auto;
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: var(--tr-text-3);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -152,9 +152,9 @@
 .tr-tile.is-muted .tr-tile-name { color: var(--tr-text-2); }
 
 .tr-version {
-    margin-top: 40px;
+    margin-top: var(--di-space-7);
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.08em;
     color: rgba(255, 255, 255, 0.22);
 }
@@ -168,7 +168,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: var(--di-space-5);
     z-index: 20;
 }
 
@@ -183,18 +183,18 @@
     overflow: hidden;
 }
 
-.tr-dialog-head { padding: 16px 20px 12px; border-bottom: 1px solid var(--tr-hairline); }
-.tr-dialog-title { font-size: 16px; font-weight: 500; letter-spacing: -0.1px; }
-.tr-dialog-say { margin: 6px 0 0; font-size: 12px; line-height: 1.5; color: var(--tr-text-2); }
+.tr-dialog-head { padding: var(--di-space-4) var(--di-space-5) var(--di-space-3); border-bottom: 1px solid var(--tr-hairline); }
+.tr-dialog-title { font-size: var(--di-text-5); font-weight: 500; letter-spacing: -0.1px; }
+.tr-dialog-say { margin: var(--di-space-2) 0 0; font-size: var(--di-text-3); line-height: 1.5; color: var(--tr-text-2); }
 
 .tr-crumbs {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-3) var(--di-space-5);
     border-bottom: 1px solid var(--tr-hairline);
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: var(--tr-text-3);
 }
 
@@ -206,15 +206,15 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 16px;
+    gap: var(--di-space-4);
     width: 100%;
-    padding: 11px 20px;
+    padding: var(--di-space-3) var(--di-space-5);
     background: none;
     border: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     color: var(--tr-text);
     font-family: var(--di-sans);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     text-align: left;
     text-decoration: none;
     cursor: pointer;
@@ -225,22 +225,22 @@
 
 .tr-row-id {
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: var(--tr-text-3);
 }
 
-.tr-empty { padding: 16px 20px; font-size: 12px; color: var(--tr-text-3); }
+.tr-empty { padding: var(--di-space-4) var(--di-space-5); font-size: var(--di-text-3); color: var(--tr-text-3); }
 
-.tr-dialog-foot { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--tr-hairline); }
+.tr-dialog-foot { display: flex; gap: var(--di-space-2); padding: var(--di-space-3) var(--di-space-5); border-top: 1px solid var(--tr-hairline); }
 
 .tr-quiet {
     background: none;
     border: 1px solid var(--tr-hairline);
     border-radius: var(--di-radius);
-    padding: 7px 14px;
+    padding: var(--di-space-2) var(--di-space-3);
     color: var(--tr-text-2);
     font-family: var(--di-sans);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     text-decoration: none;
     cursor: pointer;
 }
@@ -250,14 +250,14 @@
 .tr-dialog-foot .tr-spacer { margin-left: auto; }
 
 @media (max-width: 900px) {
-    .tr-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+    .tr-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--di-space-5); }
 }
 
 @media (max-width: 600px) {
     /* the host belongs to a desk, not a phone held in a room */
     .tr-bar .tr-host, .tr-bar .tr-host-sep { display: none; }
-    .tr-page { padding: 28px 16px 40px; }
-    .tr-groups { grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 24px; }
-    .tr-grid { gap: 12px; }
-    .tr-bar { padding: 10px 16px; }
+    .tr-page { padding: var(--di-space-6) var(--di-space-4) var(--di-space-7); }
+    .tr-groups { grid-template-columns: minmax(0, 1fr); gap: var(--di-space-5); margin-top: var(--di-space-5); }
+    .tr-grid { gap: var(--di-space-3); }
+    .tr-bar { padding: var(--di-space-3) var(--di-space-4); }
 }

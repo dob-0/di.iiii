@@ -91,7 +91,7 @@ body.is-make .account-btn-wrapper {
 
 .make-word-hy {
     display: block;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     letter-spacing: 0.01em;
     line-height: 1.15;
@@ -99,8 +99,8 @@ body.is-make .account-btn-wrapper {
 
 .make-word-en {
     display: block;
-    margin-top: 2px;
-    font-size: 9.5px;
+    margin-top: var(--di-space-1);
+    font-size: var(--di-text-2);
     font-weight: 500;
     letter-spacing: 0.1em;
     text-transform: lowercase;
@@ -141,9 +141,9 @@ body.is-make .account-btn-wrapper {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 7px;
+    gap: var(--di-space-2);
     margin: 0;
-    padding: 0 4px;
+    padding: 0 var(--di-space-1);
     border: 0;
     background: transparent;
     color: var(--make-ink);
@@ -170,7 +170,7 @@ body.is-make .account-btn-wrapper {
 .make-key--photo {
     grid-column: 1 / -1;
     flex-direction: row;
-    gap: 14px;
+    gap: var(--di-space-3);
     background: var(--make-ink);
     color: var(--make-paper);
 }
@@ -190,13 +190,13 @@ body.is-make .account-btn-wrapper {
 }
 
 .make-key--photo .make-word-hy {
-    font-size: 17px;
+    font-size: var(--di-text-5);
     letter-spacing: 0.02em;
 }
 
 .make-key--photo .make-word-en {
     color: rgba(251, 248, 243, 0.62);
-    font-size: 11px;
+    font-size: var(--di-text-2);
 }
 
 /* The hairline dividers belong to the row of three, not to the picture. */
@@ -224,11 +224,11 @@ body.is-make .account-btn-wrapper {
     left: calc(50% + 12px);
     min-width: 19px;
     height: 19px;
-    padding: 0 5px;
+    padding: 0 var(--di-space-1);
     border-radius: 10px;
     background: #EE8866;
     color: #fff;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     line-height: 19px;
     text-align: center;
@@ -246,14 +246,14 @@ body.is-make .account-btn-wrapper {
     right: 0;
     z-index: 14;
     margin: 0;
-    padding: 0 22px;
+    padding: 0 var(--di-space-5);
     text-align: center;
     pointer-events: none;
 }
 
 .make-room-name-hy {
     display: block;
-    font-size: 19px;
+    font-size: var(--di-text-6);
     font-weight: 700;
     letter-spacing: 0.01em;
     line-height: 1.1;
@@ -262,8 +262,8 @@ body.is-make .account-btn-wrapper {
 
 .make-room-name-en {
     display: block;
-    margin-top: 3px;
-    font-size: 11px;
+    margin-top: var(--di-space-1);
+    font-size: var(--di-text-2);
     font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: lowercase;
@@ -280,11 +280,11 @@ body.is-make .account-btn-wrapper {
     z-index: 15;
     transform: translateX(-50%);
     margin: 0;
-    padding: 9px 18px;
+    padding: var(--di-space-2) var(--di-space-4);
     border-radius: 999px;
     background: rgba(251, 248, 243, 0.94);
     color: var(--make-ink);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     font-weight: 600;
     box-shadow: 0 6px 20px rgba(38, 30, 18, 0.14);
     pointer-events: none;
@@ -297,7 +297,7 @@ body.is-make .account-btn-wrapper {
     z-index: 15;
     transform: translateX(-50%);
     margin: 0;
-    padding: 14px 22px 10px;
+    padding: var(--di-space-3) var(--di-space-5) var(--di-space-3);
     border-radius: 20px;
     background: rgba(251, 248, 243, 0.92);
     text-align: center;
@@ -305,13 +305,13 @@ body.is-make .account-btn-wrapper {
     pointer-events: none;
 }
 
-.make-empty .make-word-hy { font-size: 14px; }
-.make-empty .make-word-en { font-size: 11px; }
+.make-empty .make-word-hy { font-size: var(--di-text-4); }
+.make-empty .make-word-en { font-size: var(--di-text-2); }
 
 .make-empty-arrow {
     display: block;
-    margin-top: 4px;
-    font-size: 17px;
+    margin-top: var(--di-space-1);
+    font-size: var(--di-text-5);
     line-height: 1;
     color: var(--make-ink-soft);
 }
@@ -338,7 +338,7 @@ body.is-make .account-btn-wrapper {
     display: flex;
     flex-direction: column;
     max-height: 78vh;
-    padding: 4px 18px calc(20px + var(--make-safe));
+    padding: var(--di-space-1) var(--di-space-4) calc(var(--di-space-6) + var(--make-safe));
     border-radius: 26px 26px 0 0;
     background: var(--make-paper);
     box-shadow: var(--make-shadow);
@@ -365,12 +365,12 @@ body.is-make .account-btn-wrapper {
     align-items: center;
     justify-content: space-between;
     flex: 0 0 auto;
-    padding: 14px 0 12px;
+    padding: var(--di-space-3) 0 var(--di-space-3);
 }
 
 .make-sheet--talk .make-sheet-head {
-    padding-left: 18px;
-    padding-right: 18px;
+    padding-left: var(--di-space-4);
+    padding-right: var(--di-space-4);
 }
 
 /* The grab handle, drawn on the header rather than added as an element. */
@@ -386,8 +386,8 @@ body.is-make .account-btn-wrapper {
     background: var(--make-line);
 }
 
-.make-sheet-title .make-word-hy { font-size: 15px; }
-.make-sheet-title .make-word-en { font-size: 10px; }
+.make-sheet-title .make-word-hy { font-size: var(--di-text-4); }
+.make-sheet-title .make-word-en { font-size: var(--di-text-2); }
 
 .make-sheet-close {
     display: flex;
@@ -401,7 +401,7 @@ body.is-make .account-btn-wrapper {
     border-radius: 22px;
     background: rgba(38, 36, 31, 0.06);
     color: var(--make-ink);
-    font-size: 15px;
+    font-size: var(--di-text-4);
     line-height: 1;
     cursor: pointer;
 }
@@ -411,8 +411,8 @@ body.is-make .account-btn-wrapper {
 .make-tiles {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    padding-bottom: 4px;
+    gap: var(--di-space-3);
+    padding-bottom: var(--di-space-1);
     overflow-y: auto;
 }
 
@@ -421,10 +421,10 @@ body.is-make .account-btn-wrapper {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: var(--di-space-3);
     min-height: 108px;
     margin: 0;
-    padding: 14px 6px 12px;
+    padding: var(--di-space-3) var(--di-space-2) var(--di-space-3);
     border: 1px solid var(--make-line);
     border-radius: 20px;
     background: var(--make-card);
@@ -440,21 +440,21 @@ body.is-make .account-btn-wrapper {
     background: #F4EFE6;
 }
 
-.make-tile .make-word-hy { font-size: 11.5px; }
-.make-tile .make-word-en { font-size: 9.5px; }
+.make-tile .make-word-hy { font-size: var(--di-text-3); }
+.make-tile .make-word-en { font-size: var(--di-text-2); }
 
 /* --- colours ------------------------------------------------------------- */
 
 .make-hint {
-    margin: 0 0 10px;
-    padding: 10px 16px;
+    margin: 0 0 var(--di-space-3);
+    padding: var(--di-space-3) var(--di-space-4);
     border-radius: 14px;
     background: rgba(238, 136, 102, 0.13);
     text-align: center;
 }
 
-.make-hint .make-word-hy { font-size: 13px; }
-.make-hint .make-word-en { font-size: 10px; }
+.make-hint .make-word-hy { font-size: var(--di-text-3); }
+.make-hint .make-word-en { font-size: var(--di-text-2); }
 
 /* A ROW, not a grid — and the row is why this drawer is short.
  *
@@ -476,8 +476,8 @@ body.is-make .account-btn-wrapper {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     justify-items: center;
-    gap: 14px 12px;
-    padding: 4px 0 10px;
+    gap: var(--di-space-3) var(--di-space-3);
+    padding: var(--di-space-1) 0 var(--di-space-3);
     transition: opacity 140ms ease;
 }
 
@@ -547,9 +547,9 @@ body.is-make .account-btn-wrapper {
 }
 
 .make-chat .raw-chat-tab {
-    padding: 13px 8px;
+    padding: var(--di-space-3) var(--di-space-2);
     font-family: var(--make-sans);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--make-ink-soft);
@@ -561,26 +561,26 @@ body.is-make .account-btn-wrapper {
 }
 
 .make-chat .raw-chat-messages {
-    padding: 4px 18px 12px;
-    gap: 14px;
+    padding: var(--di-space-1) var(--di-space-4) var(--di-space-3);
+    gap: var(--di-space-3);
 }
 
 /* raw.css paints this one on a near-black card for a near-black studio; on
    paper it read as a black brick across the middle of an empty conversation. */
 .make-chat .raw-empty-state {
     margin: auto 0;
-    padding: 20px 0;
+    padding: var(--di-space-5) 0;
     border: 0;
     background: transparent;
     color: var(--make-ink-soft);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     line-height: 1.5;
     text-align: center;
 }
 
 .make-chat .raw-chat-message-author {
     font-family: var(--make-sans);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: none;
@@ -594,12 +594,12 @@ body.is-make .account-btn-wrapper {
 .make-chat .raw-chat-message-text {
     align-self: flex-start;
     max-width: 88%;
-    padding: 10px 14px;
+    padding: var(--di-space-3) var(--di-space-3);
     border-radius: 16px 16px 16px 4px;
     background: var(--make-card);
     box-shadow: inset 0 0 0 1px var(--make-line);
     color: var(--make-ink);
-    font-size: 15px;
+    font-size: var(--di-text-4);
 }
 
 .make-chat .raw-chat-message.is-self .raw-chat-message-text {
@@ -614,8 +614,8 @@ body.is-make .account-btn-wrapper {
 }
 
 .make-chat .raw-chat-input-row {
-    gap: 10px;
-    padding: 12px 18px calc(4px + var(--make-safe));
+    gap: var(--di-space-3);
+    padding: var(--di-space-3) var(--di-space-4) calc(var(--di-space-1) + var(--make-safe));
     border-top: 1px solid var(--make-line);
 }
 
@@ -625,12 +625,14 @@ body.is-make .account-btn-wrapper {
        390px phone leaves it, so it pushed the send button off the right edge
        and the platform clipped its corner. Seen on staging, 2026-08-27. */
     min-width: 0;
-    padding: 13px 16px;
+    padding: var(--di-space-3) var(--di-space-4);
     border: 1px solid var(--make-line);
     border-radius: 22px;
     background: var(--make-card);
     color: var(--make-ink);
-    /* 16px or iOS zooms the whole surface on focus and the room is gone. */
+    /* Exception: locked to exactly 16px, not the nearest rung (17px) — iOS
+       zooms the whole surface on focus below this floor, and the room is
+       gone. Not a style choice. */
     font-size: 16px;
     font-family: var(--make-sans);
 }
@@ -641,13 +643,13 @@ body.is-make .account-btn-wrapper {
 
 .make-chat .raw-chat-input-row button {
     min-width: 76px;
-    padding: 0 18px;
+    padding: 0 var(--di-space-4);
     border: 0;
     border-radius: 22px;
     background: var(--make-ink);
     color: var(--make-paper);
     font-family: var(--make-sans);
-    font-size: 14px;
+    font-size: var(--di-text-4);
     font-weight: 700;
 }
 
@@ -661,12 +663,12 @@ body.is-make .account-btn-wrapper {
  * scoped, additive, and the only feedback a child has for "this one". */
 
 .make-surface .raw-selection-pill {
-    padding: 7px 14px;
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: 999px;
     background: var(--make-ink);
     color: var(--make-paper);
     font-family: var(--make-sans);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-weight: 700;
     letter-spacing: 0.01em;
     text-transform: none;
@@ -687,7 +689,7 @@ body.is-make .account-btn-wrapper {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: var(--di-space-5);
     background: var(--make-paper);
 }
 
@@ -707,8 +709,8 @@ body.is-make .account-btn-wrapper {
 }
 
 .make-name-en {
-    margin: 8px 0 30px;
-    font-size: 14px;
+    margin: var(--di-space-2) 0 var(--di-space-6);
+    font-size: var(--di-text-4);
     font-weight: 500;
     letter-spacing: 0.04em;
     color: var(--make-ink-soft);
@@ -717,13 +719,13 @@ body.is-make .account-btn-wrapper {
 .make-name-input {
     width: 100%;
     box-sizing: border-box;
-    padding: 18px 20px;
+    padding: var(--di-space-4) var(--di-space-5);
     border: 1px solid var(--make-line);
     border-radius: 20px;
     background: var(--make-card);
     color: var(--make-ink);
     /* 16px minimum, or iOS zooms on focus. */
-    font-size: 19px;
+    font-size: var(--di-text-6);
     font-family: inherit;
     font-weight: 600;
     text-align: center;
@@ -741,8 +743,8 @@ body.is-make .account-btn-wrapper {
 
 .make-name-go {
     width: 100%;
-    margin-top: 14px;
-    padding: 16px;
+    margin-top: var(--di-space-3);
+    padding: var(--di-space-4);
     border: 0;
     border-radius: 20px;
     background: var(--make-ink);
@@ -751,7 +753,7 @@ body.is-make .account-btn-wrapper {
     cursor: pointer;
 }
 
-.make-name-go .make-word-hy { font-size: 14px; }
+.make-name-go .make-word-hy { font-size: var(--di-text-4); }
 .make-name-go .make-word-en { color: rgba(251, 248, 243, 0.6); }
 
 .make-name-go:disabled {
@@ -767,8 +769,8 @@ body.is-make .account-btn-wrapper {
    type their name still gets into the room. */
 .make-name-skip {
     width: 100%;
-    margin: 4px 0 0;
-    padding: 16px;
+    margin: var(--di-space-1) 0 0;
+    padding: var(--di-space-4);
     border: 0;
     border-radius: 20px;
     background: transparent;
@@ -777,7 +779,7 @@ body.is-make .account-btn-wrapper {
     cursor: pointer;
 }
 
-.make-name-skip .make-word-hy { font-size: 13px; font-weight: 600; }
+.make-name-skip .make-word-hy { font-size: var(--di-text-3); font-weight: 600; }
 
 /* A mentor's laptop lands here too. Nothing changes shape — the four words just
    stop being the full width of a desk.
@@ -853,7 +855,7 @@ body.is-make .account-btn-wrapper {
     .make-key--photo {
         grid-column: auto;
         flex-direction: column;
-        gap: 5px;
+        gap: var(--di-space-1);
     }
 
     .make-key--photo .make-glyph {
@@ -866,11 +868,11 @@ body.is-make .account-btn-wrapper {
     }
 
     .make-key--photo .make-word-hy {
-        font-size: 12px;
+        font-size: var(--di-text-3);
     }
 
     .make-key--photo .make-word-en {
-        font-size: 9.5px;
+        font-size: var(--di-text-2);
     }
 
     .make-key--photo + .make-key {
@@ -889,6 +891,6 @@ body.is-make .account-btn-wrapper {
         top: calc(10px + env(safe-area-inset-top, 0px));
     }
 
-    .make-room-name-hy { font-size: 16px; }
-    .make-room-name-en { font-size: 10px; }
+    .make-room-name-hy { font-size: var(--di-text-5); }
+    .make-room-name-en { font-size: var(--di-text-2); }
 }

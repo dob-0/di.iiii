@@ -24,7 +24,7 @@
     z-index: 60;
     width: auto;
     height: auto;
-    padding: 0.5rem 0.9rem;
+    padding: var(--di-space-2) var(--di-space-4);
     clip: auto;
     clip-path: none;
     background: var(--di-scrim-strong);
