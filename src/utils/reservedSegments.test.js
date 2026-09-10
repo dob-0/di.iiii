@@ -60,6 +60,23 @@ describe('reserved segments', () => {
         }
     })
 
+    // The fifth claimant, found the hard way on 2026-09-10: a directory in
+    // public/ whose name is also an APP ROUTE shadows the route itself. nginx's
+    // `try_files $uri $uri/ /index.html` matches the directory before the SPA
+    // fallback, and express.static answers the bare path with a redirect to the
+    // trailing slash — which is also why a service worker could not replay the
+    // page offline (a redirected response may not satisfy a navigation). The
+    // chat's icons and manifest lived in `public/chat/` for exactly one commit.
+    it('no directory in public/ shadows an app route', () => {
+        const dirs = readdirSync(path.join(ROOT, 'public'), { withFileTypes: true })
+            .filter(entry => entry.isDirectory())
+            .map(entry => entry.name)
+            .filter(name => !HAND_HELD_COLLISIONS.has(name))
+        for (const dir of dirs) {
+            expect(shared.APP_SEGMENTS).not.toContain(dir)
+        }
+    })
+
     it('the static words are not claimed as project slugs', () => {
         // They only ever shadow the top level; a project lives one deeper, so
         // reserving them there would refuse names for no reason.

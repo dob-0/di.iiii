@@ -13,8 +13,8 @@
   "backgroundColor": "#000000",
   "enableNotifications": false,
   "startUrl": "/chat",
-  "iconUrl": "http://localhost:4010/chat/icon-512.png",
-  "maskableIconUrl": "http://localhost:4010/chat/icon-maskable-512.png",
+  "iconUrl": "http://localhost:4010/chat-app/icon-512.png",
+  "maskableIconUrl": "http://localhost:4010/chat-app/icon-maskable-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "/home/dob/di-backups/keystores/dii-studio-chat.keystore",
@@ -24,7 +24,7 @@
   "appVersionCode": 1,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "http://localhost:4010/chat/manifest.webmanifest",
+  "webManifestUrl": "http://localhost:4010/chat-app/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
   "alphaDependencies": {
