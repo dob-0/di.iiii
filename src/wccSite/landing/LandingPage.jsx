@@ -6,6 +6,7 @@ import { appNavigate } from '../../utils/appNavigate.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { useKeyboardPageScroll } from '../../hooks/useKeyboardPageScroll.js'
 import { landingContent } from './content.js'
+import { safeHistoryCall } from './safeHistory.js'
 import './landing.css'
 
 /* Lazy: the field is the only thing on this page that needs react-three-fiber, and
@@ -631,17 +632,19 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
         if (!routeSectionIds.has(sectionId)) return
         setOpenSection(sectionId)
         if (typeof window === 'undefined') return
-        window.history.pushState({ wccSection: sectionId }, '', buildSectionPath(sectionId))
+        // Sandboxed (opaque-origin) snapshot: see safeHistory.js for why this
+        // can throw and why the throw must not reach the caller.
+        safeHistoryCall(() => window.history.pushState({ wccSection: sectionId }, '', buildSectionPath(sectionId)))
     }
 
     const closeRouteSection = () => {
         setOpenSection(null)
         if (typeof window === 'undefined') return
         if (window.history.state?.wccSection) {
-            window.history.back()
+            safeHistoryCall(() => window.history.back())
             return
         }
-        window.history.replaceState(window.history.state, '', buildSectionPath(null))
+        safeHistoryCall(() => window.history.replaceState(window.history.state, '', buildSectionPath(null)))
     }
 
     const scrollLanding = () => {
