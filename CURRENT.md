@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the space chat gets its own address, and a phone can install it
+- every page was black on any Chrome older than 122
 
 Full detail: `PROGRESS.md`.
 
