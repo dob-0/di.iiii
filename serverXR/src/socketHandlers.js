@@ -3,6 +3,7 @@ const { Server } = require('socket.io')
 const {
   canAccessSpace,
   hasRequiredAuthRole,
+  isGuestSubject,
   normalizeAuthRole,
   normalizeAuthScopeSpaces
 } = require('./authAccess')
@@ -13,6 +14,11 @@ const logger = require('./logger')
 const spaceChatStore = require('./spaceChatStore')
 
 // Store active connections
+// Who is reachable for a direct conversation, right now. Subject → socket ids.
+// In memory ONLY: it is a fact about this moment, and a fact about this moment
+// written to disk becomes a lie the next time the process restarts.
+const dmSockets = new Map()
+
 const spaceConnections = new Map()
 const projectConnections = new Map()
 
@@ -133,6 +139,26 @@ const applyFreshDbIdentity = (authState, config) => {
 // connection's cached authState, so a live socket picks up a DB-side role or
 // scope change within the same 60s cache window HTTP requests get, instead
 // of only at the socket's next reconnect.
+// Two people may open a private channel when they already share a room. Without
+// this the platform would carry a directory anyone could use to reach any
+// stranger who ever signed up — which is a different product, and a worse one.
+//
+// An unrestricted account (the owner) is in every space by definition, so it
+// shares one with everybody; that is the same rule the rest of the platform
+// applies, not an exception carved for this.
+const sharesASpaceWith = (authState, otherSubject, config) => {
+  if (!authState?.subject || !otherSubject) return false
+  if (authState.isUnrestricted) return true
+  const theirs = typeof config?.getFreshDbIdentity === 'function'
+    ? config.getFreshDbIdentity(String(otherSubject))
+    : null
+  if (!theirs) return false
+  if (theirs.isUnrestricted || theirs.dbUnrestricted) return true
+  const mine = new Set(Array.isArray(authState.spaces) ? authState.spaces : [])
+  const others = Array.isArray(theirs.dbSpaces) ? theirs.dbSpaces : (Array.isArray(theirs.spaces) ? theirs.spaces : [])
+  return others.some((spaceId) => mine.has(spaceId))
+}
+
 const refreshSocketAuthState = (socket, config) => {
   const current = socket.data?.authState
   if (!current || current.type !== 'session') return current
@@ -291,7 +317,13 @@ function initializeSocket(httpServer, config) {
     joinedEvent,
     listEvent,
     userId,
-    userName
+    userName,
+    // The ACCOUNT, stamped by the server from the session — never taken from
+    // the client, which is the whole difference between it and `userId`. That
+    // one is a label a browser made up for itself; this one is who the person
+    // actually is, and a private conversation can only be opened against it.
+    // Absent for a guest, which is correct: there is nobody there to write to.
+    accountId = null
   }) => {
     if (!bucketMap.has(bucketId)) {
       bucketMap.set(bucketId, new Map())
@@ -300,12 +332,14 @@ function initializeSocket(httpServer, config) {
     bucketMap.get(bucketId).set(socket.id, {
       userId,
       userName,
+      ...(accountId ? { accountId } : {}),
       socketId: socket.id,
       joinedAt: Date.now()
     })
     socket.to(`${roomPrefix}-${bucketId}`).emit(joinedEvent, {
       userId,
       userName,
+      ...(accountId ? { accountId } : {}),
       socketId: socket.id,
       timestamp: Date.now()
     })
@@ -352,6 +386,7 @@ function initializeSocket(httpServer, config) {
       }
 
       logger.info(`[Socket] ${userName} joined space: ${spaceId}`)
+      const joiningAuth = refreshSocketAuthState(socket, config) || socket.data?.authState || {}
       joinConnectionBucket({
         bucketMap: spaceConnections,
         bucketId: spaceId,
@@ -360,7 +395,10 @@ function initializeSocket(httpServer, config) {
         joinedEvent: 'user-joined',
         listEvent: 'users-in-space',
         userId,
-        userName
+        userName,
+        accountId: (joiningAuth.type === 'session' && joiningAuth.subject && !isGuestSubject(joiningAuth.subject))
+          ? joiningAuth.subject
+          : null
       })
 
       // Opt-in: the scene-collaboration client (useSpaceSocket) joins this same
@@ -539,6 +577,65 @@ function initializeSocket(httpServer, config) {
       })
     })
 
+    // ── direct, end-to-end, between two people ──────────────────────────
+    //
+    // The server's entire part in a private conversation is this: carry the
+    // introduction. WebRTC's offer, answer and ICE candidates pass through
+    // here verbatim and are never stored; the words themselves never come this
+    // way at all, because they travel browser-to-browser and are sealed with a
+    // key this process has never seen (src/chat/p2pCrypto.js).
+    //
+    // Two refusals hold the whole thing up:
+    //
+    //   · only a real account may signal. A guest identity is per-browser and
+    //     disposable, so "who am I talking to" would mean nothing.
+    //   · you may only reach somebody you SHARE A SPACE with. Without that the
+    //     platform would have a directory anyone could use to open a channel to
+    //     any stranger who ever signed up.
+    socket.on('dm-signal', (data) => {
+      const authState = refreshSocketAuthState(socket, config) || socket.data?.authState || {}
+      const from = authState.subject
+      const { to, signal } = data || {}
+      if (!from || !to || !signal) return
+      if (authState.type !== 'session' || isGuestSubject(from)) {
+        socket.emit('dm-forbidden', { message: 'Sign in with an account to talk privately.' })
+        return
+      }
+      if (String(to) === String(from)) return
+
+      if (!sharesASpaceWith(authState, to, config)) {
+        // Deliberately the same answer as "that person has no device here":
+        // whether somebody exists is not a question this endpoint should let
+        // a stranger ask.
+        socket.emit('dm-unreachable', { to })
+        return
+      }
+
+      const targets = dmSockets.get(String(to))
+      if (!targets || targets.size === 0) {
+        // Nobody is holding the other end. This is the honest cost of a
+        // conversation with no server in it: there is no mailbox to leave it
+        // in, so the answer is "they are not here", not a silent drop.
+        socket.emit('dm-unreachable', { to })
+        return
+      }
+      for (const targetId of targets) {
+        io.to(targetId).emit('dm-signal', { from, signal })
+      }
+    })
+
+    // A person announces they are reachable for direct conversations. Kept in
+    // memory only — it is a fact about right now, and a fact about right now
+    // that outlives the connection is a lie.
+    socket.on('dm-here', () => {
+      const authState = refreshSocketAuthState(socket, config) || socket.data?.authState || {}
+      const subject = authState.subject
+      if (!subject || authState.type !== 'session' || isGuestSubject(subject)) return
+      if (!dmSockets.has(String(subject))) dmSockets.set(String(subject), new Set())
+      dmSockets.get(String(subject)).add(socket.id)
+      socket.data.dmSubject = String(subject)
+    })
+
     // Space-wide chat — the same shape, cap, rate budget and scope check as
     // project chat above, one room wider: everyone in the space hears it no
     // matter which project they have open. Unlike project chat it IS persisted
@@ -652,6 +749,15 @@ function initializeSocket(httpServer, config) {
     // Disconnect
     socket.on('disconnect', () => {
       logger.info(`[Socket] Disconnected: ${socket.id}`)
+
+      // Stop offering this socket as a way to reach a person. A stale entry
+      // here is worse than none: the sender is told the message went somewhere.
+      const dmSubject = socket.data?.dmSubject
+      if (dmSubject && dmSockets.has(dmSubject)) {
+        const set = dmSockets.get(dmSubject)
+        set.delete(socket.id)
+        if (set.size === 0) dmSockets.delete(dmSubject)
+      }
 
       // Remove from all spaces
       for (const [spaceId] of spaceConnections.entries()) {

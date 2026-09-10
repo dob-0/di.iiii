@@ -23,7 +23,7 @@ import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from
 import { getJamLocationState, isJamLocation } from './project/routing/jamRouting.js'
 import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
-import { getChatLocationState } from './chat/chatRouting.js'
+import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
 import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
@@ -40,6 +40,9 @@ const MakeSurface = lazy(() => import('./make/MakeSurface.jsx'))
 // the page a phone installs and opens on a bad connection, and it must never
 // pull three.js to show a list of sentences.
 const StudioChatSurface = lazy(() => import('./chat/StudioChatSurface.jsx'))
+// A private conversation carries WebRTC and the crypto, which the room itself
+// has no use for — its own chunk, loaded only when somebody opens one.
+const PrivateChatSurface = lazy(() => import('./chat/PrivateChatSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
@@ -318,6 +321,7 @@ function AppRouter() {
     const makeState = getMakeLocationState(location)
     const mapState = getMapLocationState(location)
     const chatState = getChatLocationState(location)
+    const privateChatWith = getPrivateChatTarget(location)
     const appState = getAppLocationState(location)
     const bareReserved = getBareReservedSegment(location)
 
@@ -391,7 +395,15 @@ function AppRouter() {
                 outOfScopeMessage={`This room belongs to “${chatState.spaceId}”. Sign in with an account that is in it to read what was said and to say anything.`}
             >
                 <Suspense fallback={<RouteSurfaceFallback label="Loading the chat" detail="" />}>
-                    <StudioChatSurface spaceId={chatState.spaceId} />
+                    {privateChatWith
+                        ? (
+                            <PrivateChatSurface
+                                withUserId={privateChatWith}
+                                withName={new URLSearchParams(location.search).get('who')}
+                                spaceId={chatState.spaceId}
+                            />
+                        )
+                        : <StudioChatSurface spaceId={chatState.spaceId} />}
                 </Suspense>
             </ProtectedSurface>
         )
