@@ -48,17 +48,22 @@ export function getWorkspaceTopInset({ topbarRect = null, padding = 8 } = {}) {
 // they start killing the oldest, which the context guard answers by remounting,
 // which kills another, and the tab freezes. So: only panels in the current
 // scope, and none at all behind a fullscreen world that covers them anyway.
+// `frameOf` is how the caller hands over the frame a person actually sees —
+// their own arrangement over the document's seed (utils/workspaceLayout.js).
+// Without it a window closed on this device would stay mounted, because the
+// document still says it is open.
 export function selectMountedPanelNodes({
     nodes = [],
     isPanel = () => false,
     currentScopeId = null,
-    isWorldFullscreen = false
+    isWorldFullscreen = false,
+    frameOf = (node) => node?.values?.frame
 } = {}) {
     if (isWorldFullscreen) return []
     return nodes.filter((node) => (
         isPanel(node)
         && (node.parentId || null) === (currentScopeId || null)
-        && node.values?.frame?.visible !== false
+        && frameOf(node)?.visible !== false
     ))
 }
 
