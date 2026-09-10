@@ -19,11 +19,17 @@ projectors), phones, and other artists' local installs all reachable without
 leaving the building. Live control and co-presence happen at this distance —
 one desk driving five stages is a LAN story, never a cloud story.
 
-**The world.** thedi.studio — which is not a different product. **Hosted is
+**The world.** diiii.xyz — which is not a different product. **Hosted is
 our local that happens to be public.** It is the square: where works are
 shared, spaces are handed out as addresses, and a phone can open a space, take
 it home, and install a local of its own. Sync passes through here when the
 internet exists; the show never depends on it.
+
+The address moved 2026-09-11: the platform is `diiii.xyz`, `thedi.studio` is
+the studio's own address on it, and `di-studio.xyz` keeps serving the same
+square forever — the QR hanging in the room and the `curl .../get | sh` line on
+the workshop handouts both name it, so it is never redirected and never
+repurposed. Second tier: `dev.diiii.xyz` (also `staging.di-studio.xyz`).
 
 ## Why the walls we hit are actually the architecture
 
