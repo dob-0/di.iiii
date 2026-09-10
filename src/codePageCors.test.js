@@ -48,7 +48,7 @@ describe('a code page can read /vendor/ and /fonts/ from its null origin', () =>
 
     it('the node path sets the same header, so local dev and offline `di` installs match the tiers', () => {
         const server = read('serverXR/src/index.js')
-        expect(server).toMatch(/CODE_PAGE_READABLE\s*=\s*\/\^\\\/\(vendor\|fonts\|draco\|basis\|unicode-fonts\)\\\/\//)
+        expect(server).toMatch(/CODE_PAGE_READABLE\s*=\s*\/\^\\\/\(vendor\|fonts\|draco\|basis\|unicode-fonts\|wcc\)\\\/\//)
         expect(server).toContain("res.setHeader('Access-Control-Allow-Origin', '*')")
         // both static mounts, or an offline install serves the font and never the header
         const mounts = server.match(/express\.static\([^)]*setHeaders: allowNullOrigin[^)]*\)/g) || []
@@ -75,6 +75,20 @@ describe('a code page can read /vendor/ and /fonts/ from its null origin', () =>
             expect(location).toContain(dir)
             expect(server).toContain(dir)
         }
+    })
+
+    // Added 2026-09-10 standing up the WCC landing as a `code` project
+    // (docs/ai/sessions/feat-wcc-landing-project.md): its process gallery
+    // loads /wcc/process/*.jpeg into WebGL textures, the same CORS-mode
+    // fetch class as the Draco decoder above. Node-only on purpose — the
+    // `local`/offline `di` install is what this session needed fixed, and
+    // is what serverXR/src/index.js:CODE_PAGE_READABLE actually governs;
+    // nginx.conf carries the equivalent allowance for staging/prod and does
+    // NOT yet include wcc, so the same gap still applies there until someone
+    // adds it (see the session note).
+    it('also covers wcc\'s own public assets, on the node path', () => {
+        const server = read('serverXR/src/index.js')
+        expect(server).toContain('wcc')
     })
 
     it('does not open the whole site — the allowance is scoped to those paths', () => {
