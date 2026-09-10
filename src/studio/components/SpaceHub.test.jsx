@@ -42,6 +42,15 @@ vi.mock('../../services/serverSpaces.js', () => ({
     listGithubRepos: () => Promise.resolve({ repos: [] })
 }))
 
+const probeLightingDesk = vi.fn()
+
+// The lighting desk only exists on an install running on the artist's own
+// machine, so the row that leads to it is drawn from an answer, not a flag.
+vi.mock('../../map/lightingLink.js', () => ({
+    lightingDeskPath: () => '/light/',
+    probeLightingDesk: (...args) => probeLightingDesk(...args)
+}))
+
 vi.mock('../../project/services/projectsApi.js', () => ({
     listProjects: () => Promise.resolve([]),
     getProject: () => Promise.resolve(null),
@@ -99,6 +108,8 @@ describe('SpaceHub', () => {
         updateServerSpace.mockReset()
         uploadServerAsset.mockReset()
         purgeStaleSandboxes.mockReset()
+        probeLightingDesk.mockReset()
+        probeLightingDesk.mockResolvedValue(false)
         sandboxSummary = null
         localStorage.clear()
         authState = {
@@ -109,6 +120,27 @@ describe('SpaceHub', () => {
             ownedSpaceCount: 1,
             spaceLimit: 3
         }
+    })
+
+    it('leads to the lighting desk only when a desk on this machine answers', async () => {
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+        probeLightingDesk.mockResolvedValue(true)
+
+        render(<SpaceHub />)
+
+        const link = await screen.findByText('Lights')
+        expect(link.getAttribute('href')).toBe('/light/')
+        expect(screen.getByText('On this machine')).toBeTruthy()
+    })
+
+    it('says nothing about lights on a tier with no desk', async () => {
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+
+        render(<SpaceHub />)
+
+        await screen.findByText('mine')
+        expect(screen.queryByText('Lights')).toBeNull()
+        expect(screen.queryByText('On this machine')).toBeNull()
     })
 
     it('shows management actions only on spaces the account owns', async () => {
