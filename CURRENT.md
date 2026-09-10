@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- every page was black on any Chrome older than 122
+- di.bo can finally say which spaces are yours
 
 Full detail: `PROGRESS.md`.
 

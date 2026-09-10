@@ -2,7 +2,7 @@ const crypto = require('node:crypto')
 const passport = require('passport')
 const { Strategy: GitHubStrategy } = require('passport-github2')
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20')
-const { upsertUser } = require('../userStore')
+const { upsertUser, findUserByProvider } = require('../userStore')
 const { signLoginState, verifyLoginState, readLoginState, sanitizeReturnTo } = require('../loginState')
 const logger = require('../logger')
 
@@ -31,7 +31,15 @@ const registerAuthRoutes = (router, {
   config,
   createAuthSessionValue,
   setAuthSessionCookie,
-  onSessionUpgrade = null
+  onSessionUpgrade = null,
+  // Space metadata, for the bot's read-only "what am I signed in to" answer.
+  // Passed in rather than required here: this module knows about identity, and
+  // giving it the space store would let a later edit reach much further than
+  // identity ever should.
+  listSpaces = null,
+  // Injected for the same reason the session helpers are: a route that reaches
+  // into a module-level database cannot be exercised without one.
+  findUser = findUserByProvider
 }) => {
   const frontendUrl = config.oauth.frontendUrl
   const { oauth } = config
@@ -231,6 +239,58 @@ const registerAuthRoutes = (router, {
           url: `${base}/api/auth/telegram/callback?token=${encodeURIComponent(token)}`,
           expiresAt,
           note: 'Single use, and it expires. Mint a new one rather than resending this.'
+        })
+      } catch (error) { next(error) }
+    })
+
+    // "Who am I, and what can I open?" — bot-only, and a READ. The bot asks on
+    // behalf of a Telegram person and gets back that person's own name and the
+    // spaces their account already reaches. No token is minted, nothing is
+    // written, and the answer is exactly the scope the person's own session
+    // would carry, never more.
+    //
+    // This is the floor under a Telegram person doing anything in di.iiii: the
+    // bot could not previously tell whether a chat belonged to an account at
+    // all, so every answer it gave about "your spaces" was a guess or a
+    // question. It deliberately stops here — a lookup is not a login, and any
+    // WRITE from a chat needs its own decision, not this endpoint quietly
+    // growing one.
+    router.post('/api/auth/telegram/whoami', async (req, res, next) => {
+      try {
+        if (!secretMatches(req.get('x-telegram-login-secret'))) {
+          return res.status(401).json({ error: 'auth_required' })
+        }
+        const telegramId = String(req.body?.telegramId || '').trim()
+        if (!/^\d{1,20}$/.test(telegramId)) {
+          return res.status(400).json({ error: 'A numeric Telegram id is required.' })
+        }
+        const user = findUser('telegram', telegramId)
+        // Not an error, and not a 404: "nobody has signed in from this chat" is
+        // a true, ordinary answer, and the bot's reply to it is /login.
+        if (!user) return res.json({ bound: false })
+
+        const scoped = Array.isArray(user.spaces) ? user.spaces : []
+        let spaces = scoped.map((id) => ({ id, label: null }))
+        // An unrestricted account reaches everything, which is a list nobody
+        // wants in a chat message. Say so instead of printing an estate.
+        const everything = Boolean(user.isUnrestricted)
+        if (typeof listSpaces === 'function') {
+          try {
+            const all = await listSpaces()
+            const byId = new Map((all || []).map((meta) => [meta.id, meta]))
+            spaces = everything
+              ? []
+              : spaces.map(({ id }) => ({ id, label: byId.get(id)?.label || null }))
+          } catch {
+            // A label is a nicety; the ids are the answer.
+          }
+        }
+        res.json({
+          bound: true,
+          label: user.display_name || user.id,
+          role: user.role,
+          everything,
+          spaces
         })
       } catch (error) { next(error) }
     })
