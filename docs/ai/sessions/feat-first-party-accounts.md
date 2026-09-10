@@ -39,3 +39,33 @@
   the sign-in card; there is no route of its own yet. No SMTP is configured on
   any tier, so the mail half is untested against a real server — only against a
   stub. That is the first thing to do before this is offered to anybody.
+
+## 2026-09-11 — and the session stops throwing you out mid-afternoon
+
+- The owner's complaint, in his words: *"about the sign to not every time google
+  lala bla bla."* Measured rather than guessed — prod runs the default
+  `AUTH_SESSION_TTL_MS`, **twelve hours**, fixed at issue time. Sign in at nine,
+  get asked for Google again at nine that evening, every day.
+- A session that is being USED no longer expires: past halfway through its life,
+  any authenticated request re-issues the cookie with a fresh clock. Activity
+  keeps you in; absence still signs you out, which is the point.
+- Only past halfway (an ordinary page load must not re-sign a cookie on every
+  request), only for real session cookies (an API token has none), and never
+  once a response has started — a convenience must not become an
+  ERR_HTTP_HEADERS_SENT on a streaming route.
+- **`GET /api/auth/session` needed it passed in by hand.** That route is
+  registered ABOVE the middleware that refreshes everything else, so the one
+  endpoint an idle tab actually polls would have been the only one that never
+  extended a session. Measured both ways: `/api/spaces` re-signs, and the
+  session endpoint did not until it was threaded through.
+- **Seen**, against the running server with the TTL turned down to six seconds:
+  no `Set-Cookie` at four seconds into a twelve-hour session (correct — still
+  fresh), and a new one at four seconds into a six-second session.
+- The app's name is `iiii` now, in both manifests — the Android launcher label
+  and the web manifest, or a browser install would still have said "Studio chat"
+  under the same icon. The mark is unchanged.
+- `scripts/build-chat-apk.mjs` is the recipe as one command: it refuses to build
+  without the signing key, raises the version code with `--bump` (an APK that
+  repeats a code cannot install over the one people have), checks the built APK
+  actually carries the version asked for, and `--deliver` copies it to the host
+  di.net hands it out from.
