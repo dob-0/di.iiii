@@ -6,7 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { io: ioClient } = require('socket.io-client')
-const { getSocketPath, applyFreshDbIdentity, initializeSocket } = require('./socketHandlers.js')
+const { getSocketPath, applyFreshDbIdentity, initializeSocket, wroteSpaceChatLine } = require('./socketHandlers.js')
 const { initDb, closeDb } = require('./db.js')
 
 describe('getSocketPath', () => {
@@ -183,5 +183,141 @@ describe('space-chat-message disk guard', () => {
         } finally {
             closeDb()
         }
+    })
+})
+
+// Reply, pin and "delete my own line" are the three things the room's tools
+// added to this wire. Each of them changes who may do what, so each is tested
+// against the wire rather than against the store it happens to call.
+describe('the room tools on the wire', () => {
+    let httpServer
+
+    const startServer = (config) => new Promise((resolve) => {
+        httpServer = http.createServer()
+        initializeSocket(httpServer, config)
+        httpServer.listen(0, '127.0.0.1', () => resolve(httpServer.address().port))
+    })
+
+    const connectClient = (port) => new Promise((resolve, reject) => {
+        const client = ioClient(`http://127.0.0.1:${port}`, {
+            path: getSocketPath(''), transports: ['websocket'], reconnection: false
+        })
+        const timeout = setTimeout(() => reject(new Error('client did not connect')), 2000)
+        client.on('connect', () => { clearTimeout(timeout); resolve(client) })
+        client.on('connect_error', (error) => { clearTimeout(timeout); reject(error) })
+    })
+
+    const waitForEvent = (socket, event, timeoutMs) => new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error(`timed out waiting for ${event}`)), timeoutMs)
+        socket.once(event, (payload) => { clearTimeout(timeout); resolve(payload) })
+    })
+
+    const ROOM_CONFIG = {
+        requireAuth: false,
+        minFreeDiskBytes: 0,
+        directories: { dataDir: '/tmp' },
+        diskStatfs: async () => ({ bavail: 10 * 1024 * 1024, bsize: 4096 })
+    }
+
+    const openRoom = async (spaceId) => {
+        const port = await startServer(ROOM_CONFIG)
+        const a = await connectClient(port)
+        const b = await connectClient(port)
+        a.emit('join-space', { spaceId, userId: 'writer', userName: 'Writer', chat: true })
+        b.emit('join-space', { spaceId, userId: 'other', userName: 'Other', chat: true })
+        await new Promise((r) => setTimeout(r, 80))
+        return { a, b }
+    }
+
+    afterEach(async () => {
+        if (httpServer) await new Promise((r) => httpServer.close(r))
+        httpServer = null
+        closeDb()
+    })
+
+    it('carries a reply with its quote, and cuts the quote to a quote', async () => {
+        initDb(':memory:')
+        const { a, b } = await openRoom('tools-reply')
+        a.emit('space-chat-message', {
+            spaceId: 'tools-reply', id: 'm1', userId: 'writer', userName: 'Writer', text: 'the door code is 4417'
+        })
+        await waitForEvent(b, 'space-chat-message', 1000)
+
+        b.emit('space-chat-message', {
+            spaceId: 'tools-reply',
+            id: 'm2',
+            userId: 'other',
+            userName: 'Other',
+            text: 'got it',
+            replyTo: { id: 'm1', userName: 'Writer', text: 'x'.repeat(500) }
+        })
+        const answer = await waitForEvent(a, 'space-chat-message', 1000)
+        expect(answer.replyTo.id).toBe('m1')
+        expect(answer.replyTo.text.length).toBe(160)
+        a.close()
+        b.close()
+    })
+
+    it('will not let a guest pin one line at the top of the room for everybody', async () => {
+        initDb(':memory:')
+        const { a, b } = await openRoom('tools-pin')
+        a.emit('space-chat-message', {
+            spaceId: 'tools-pin', id: 'p1', userId: 'writer', userName: 'Writer', text: 'read this first'
+        })
+        await waitForEvent(b, 'space-chat-message', 1000)
+
+        a.emit('space-chat-pin', { spaceId: 'tools-pin', id: 'p1' })
+        const refusal = await waitForEvent(a, 'space-chat-forbidden', 1000)
+        expect(refusal.message).toMatch(/sign in/i)
+        await expect(waitForEvent(b, 'space-chat-pinned', 300)).rejects.toThrow()
+        a.close()
+        b.close()
+    })
+
+    it('says on join whether this browser may pin, and what is pinned', async () => {
+        initDb(':memory:')
+        const port = await startServer(ROOM_CONFIG)
+        const client = await connectClient(port)
+        client.emit('join-space', { spaceId: 'tools-history', userId: 'writer', userName: 'Writer', chat: true })
+        const history = await waitForEvent(client, 'space-chat-history', 1000)
+        expect(history.canPin).toBe(false)
+        expect(history.pinned).toBeNull()
+        client.close()
+    })
+})
+
+// The rule behind "you can delete your own message". Read it here rather than
+// through a socket: with auth turned off every connection is an admin, so a
+// server-level test of the refusal would only be testing the admin path.
+describe('who wrote this line', () => {
+    const line = (extra = {}) => ({ id: 'm1', userId: 'chat-user-7', accountId: null, ...extra })
+
+    it('an account owns the line it is stamped on, and no other', () => {
+        expect(wroteSpaceChatLine({ line: line({ accountId: 'a1' }), accountId: 'a1' })).toBe(true)
+        expect(wroteSpaceChatLine({ line: line({ accountId: 'a1' }), accountId: 'a2' })).toBe(false)
+    })
+
+    it('a signed-in person does not own a guest line that happens to share a label', () => {
+        expect(wroteSpaceChatLine({
+            line: line(), accountId: 'a1', socketUserId: 'chat-user-7'
+        })).toBe(false)
+    })
+
+    it('a guest owns its own line by the label its socket joined with', () => {
+        expect(wroteSpaceChatLine({ line: line(), socketUserId: 'chat-user-7' })).toBe(true)
+        expect(wroteSpaceChatLine({ line: line(), socketUserId: 'chat-user-8' })).toBe(false)
+    })
+
+    // The one that matters: a guest must not be able to reach an account's
+    // line by claiming that account's display id.
+    it('a guest never owns a line written by an account', () => {
+        expect(wroteSpaceChatLine({
+            line: line({ accountId: 'a1' }), socketUserId: 'chat-user-7'
+        })).toBe(false)
+    })
+
+    it('owns nothing when there is no line, and nothing when there is no identity', () => {
+        expect(wroteSpaceChatLine({ line: null, accountId: 'a1' })).toBe(false)
+        expect(wroteSpaceChatLine({ line: line() })).toBe(false)
     })
 })

@@ -33,6 +33,12 @@ const CHAT_IDENTITY_MAX_LENGTH = 64
 // megabyte at every reconnect.
 const SPACE_CHAT_KEEP = 500
 const SPACE_CHAT_REPLAY = 100
+// A quote is a reminder of what is being answered, not a second copy of it.
+const SPACE_CHAT_REPLY_QUOTE_MAX = 160
+// "Someone is typing" repeats while a sentence is written; once a second is
+// plenty for a person to see it, and it keeps a long message from becoming a
+// hundred broadcasts.
+const SPACE_CHAT_TYPING_MIN_INTERVAL_MS = 1000
 
 // The sender picks the id so its optimistic local copy and the persisted row
 // are the same message — without that, an admin removing a line clears it for
@@ -303,6 +309,40 @@ function initializeSocket(httpServer, config) {
 
   // Guests redeeming a camp invite are `editor`, so editor cannot be the bar
   // for deleting other children's messages — this is deliberately admin-only.
+  // The account behind this socket, or null for a guest. Read from the SESSION
+  // every time rather than from anything the client sent, which is what makes
+  // it usable as the "this is my own line" check.
+  const socketAccountId = (socket) => {
+    const authState = refreshSocketAuthState(socket, config) || socket.data?.authState || {}
+    return (authState.type === 'session' && authState.subject && !isGuestSubject(authState.subject))
+      ? authState.subject
+      : null
+  }
+
+  const readSpacePin = (spaceId) => {
+    try {
+      return spaceChatStore.getPin(spaceId)
+    } catch (error) {
+      logger.error(`[Socket] Could not read the pin for ${spaceId}:`, error)
+      return null
+    }
+  }
+
+  const ownsSpaceChatLine = (socket, spaceId, id) => {
+    let line = null
+    try {
+      line = spaceChatStore.getMessage(spaceId, id)
+    } catch (error) {
+      logger.error(`[Socket] Could not read space chat line ${id} in ${spaceId}:`, error)
+      return false
+    }
+    return wroteSpaceChatLine({
+      line,
+      accountId: socketAccountId(socket),
+      socketUserId: socket.data?.chatUserId || ''
+    })
+  }
+
   const canModerateSpaceChat = (socket) => {
     const authState = refreshSocketAuthState(socket, config) || socket.data?.authState || {}
     return hasRequiredAuthRole(authState.role, 'admin')
@@ -386,7 +426,10 @@ function initializeSocket(httpServer, config) {
       }
 
       logger.info(`[Socket] ${userName} joined space: ${spaceId}`)
-      const joiningAuth = refreshSocketAuthState(socket, config) || socket.data?.authState || {}
+      // Kept on the socket so a later `space-chat-remove` can tell whether the
+      // line belongs to this browser without trusting the id it sends back.
+      socket.data.chatUserId = normalizeChatIdentity(userId, socket.id)
+      socket.data.chatUserName = normalizeChatIdentity(userName)
       joinConnectionBucket({
         bucketMap: spaceConnections,
         bucketId: spaceId,
@@ -396,9 +439,7 @@ function initializeSocket(httpServer, config) {
         listEvent: 'users-in-space',
         userId,
         userName,
-        accountId: (joiningAuth.type === 'session' && joiningAuth.subject && !isGuestSubject(joiningAuth.subject))
-          ? joiningAuth.subject
-          : null
+        accountId: socketAccountId(socket)
       })
 
       // Opt-in: the scene-collaboration client (useSpaceSocket) joins this same
@@ -408,7 +449,12 @@ function initializeSocket(httpServer, config) {
         socket.emit('space-chat-history', {
           spaceId,
           messages: readSpaceChatHistory(spaceId),
-          canModerate: canModerateSpaceChat(socket)
+          canModerate: canModerateSpaceChat(socket),
+          // Pinning is for people the room can name. A guest is a browser that
+          // will be gone tomorrow, and one line at the top of the room for
+          // everybody is not a thing an anonymous visitor gets to set.
+          canPin: Boolean(socketAccountId(socket)),
+          pinned: readSpacePin(spaceId)
         })
       }
     })
@@ -641,7 +687,7 @@ function initializeSocket(httpServer, config) {
     // matter which project they have open. Unlike project chat it IS persisted
     // (spaceChatStore), so somebody arriving late reads what they missed.
     socket.on('space-chat-message', async (data) => {
-      const { spaceId, text, userId, userName, id } = data || {}
+      const { spaceId, text, userId, userName, id, replyTo } = data || {}
       if (!spaceId) return
       const trimmed = String(text || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH)
       if (!trimmed) return
@@ -672,13 +718,26 @@ function initializeSocket(httpServer, config) {
         }
       }
 
+      // A reply quotes what it answers, and the quote is normalised HERE
+      // rather than trusted: the client sends what it had on screen, and what
+      // it had on screen is not something the server should repeat to a room
+      // unchecked. The id is the anchor; the two strings are only a label.
+      const quoted = replyTo?.id
+        ? {
+          id: normalizeChatMessageId(replyTo.id),
+          userName: normalizeChatIdentity(replyTo.userName),
+          text: String(replyTo.text || '').trim().slice(0, SPACE_CHAT_REPLY_QUOTE_MAX)
+        }
+        : null
+
       const message = {
         id: normalizeChatMessageId(id),
         userId: normalizeChatIdentity(userId, socket.id),
         userName: normalizeChatIdentity(userName),
         socketId: socket.id,
         text: trimmed,
-        timestamp: now
+        timestamp: now,
+        ...(quoted ? { replyTo: quoted } : {})
       }
 
       try {
@@ -687,8 +746,10 @@ function initializeSocket(httpServer, config) {
           spaceId,
           userId: message.userId,
           userName: message.userName,
+          accountId: socketAccountId(socket),
           text: trimmed,
-          ts: now
+          ts: now,
+          replyTo: quoted
         }, { keep: SPACE_CHAT_KEEP })
       } catch (error) {
         // Live delivery is the promise; the transcript is the bonus. Losing
@@ -712,10 +773,17 @@ function initializeSocket(httpServer, config) {
         })
         return
       }
-      if (!canModerateSpaceChat(socket)) {
+      // Two ways to be allowed: it is your own line, or you are the adult with
+      // the eraser. "Your own" means the ACCOUNT the server stamped on the row
+      // when it was written — for a signed-in person that is a real boundary.
+      // A guest has no account, so the fallback is the label this socket joined
+      // with, which is a courtesy rather than a wall: anybody already inside
+      // the room could claim it. The wall that matters is the admin one, and it
+      // is unchanged.
+      if (!canModerateSpaceChat(socket) && !ownsSpaceChatLine(socket, spaceId, id)) {
         socket.emit('space-chat-forbidden', {
           spaceId,
-          message: 'Only an admin can remove chat messages.'
+          message: 'You can remove your own messages; an admin can remove any.'
         })
         return
       }
@@ -731,6 +799,70 @@ function initializeSocket(httpServer, config) {
       }
       logger.info(`[Socket] Space chat line ${id} removed from ${spaceId} by ${socket.id}`)
       io.to(`space-${spaceId}`).emit('space-chat-removed', { spaceId, id: String(id) })
+    })
+
+    // One line at the top of the room. Telegram's pin, minus the list of them:
+    // a room with nine pins has none, because nobody reads a stack.
+    socket.on('space-chat-pin', (data) => {
+      const { spaceId, id } = data || {}
+      if (!spaceId || !id) return
+      if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) {
+        socket.emit('space-forbidden', { spaceId, message: 'Space access denied.' })
+        return
+      }
+      if (!socketAccountId(socket)) {
+        socket.emit('space-chat-forbidden', {
+          spaceId,
+          message: 'Sign in to pin a message for the room.'
+        })
+        return
+      }
+      let pinned = null
+      try {
+        pinned = spaceChatStore.setPin(spaceId, {
+          messageId: String(id),
+          pinnedBy: socketAccountId(socket),
+          pinnedByName: socket.data?.chatUserName || ''
+        })
+      } catch (error) {
+        logger.error(`[Socket] Could not pin ${id} in ${spaceId}:`, error)
+        return
+      }
+      if (!pinned) return
+      io.to(`space-${spaceId}`).emit('space-chat-pinned', { spaceId, pinned })
+    })
+
+    socket.on('space-chat-unpin', (data) => {
+      const { spaceId } = data || {}
+      if (!spaceId) return
+      if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) return
+      if (!socketAccountId(socket)) return
+      try {
+        spaceChatStore.clearPin(spaceId)
+      } catch (error) {
+        logger.error(`[Socket] Could not unpin in ${spaceId}:`, error)
+        return
+      }
+      io.to(`space-${spaceId}`).emit('space-chat-pinned', { spaceId, pinned: null })
+    })
+
+    // Typing is the one live signal worth carrying and the one that must never
+    // be written down: it is relayed to whoever is in the room at this instant
+    // and stored nowhere. It also stays inside the flood budget's spirit by
+    // being cheap — no disk, no history, no fan-out beyond the room.
+    socket.on('space-chat-typing', (data) => {
+      const { spaceId } = data || {}
+      if (!spaceId) return
+      if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) return
+      const now = Date.now()
+      if (now - (socket.data.lastTypingAt || 0) < SPACE_CHAT_TYPING_MIN_INTERVAL_MS) return
+      socket.data.lastTypingAt = now
+      socket.to(`space-${spaceId}`).emit('space-chat-typing', {
+        spaceId,
+        userId: socket.data?.chatUserId || socket.id,
+        userName: socket.data?.chatUserName || '',
+        timestamp: now
+      })
     })
 
     // Selection changes
@@ -790,10 +922,28 @@ function initializeSocket(httpServer, config) {
   return io
 }
 
+// Whether the person on this socket wrote this line. Pure, and exported, so the
+// rule can be read and tested without a server: it is the difference between
+// "delete my own message" and "delete anybody's".
+//
+// An ACCOUNT is a real answer — the server stamped it when the line was written
+// and re-reads it from the session now. A guest has none, and falls back to the
+// label its socket joined with, which is a courtesy: anybody already inside the
+// room could claim it. That is why a line written by an account is never
+// removable by a guest, however the guest labels itself, and why the admin
+// eraser is the check that actually holds.
+const wroteSpaceChatLine = ({ line, accountId = null, socketUserId = '' }) => {
+  if (!line) return false
+  if (accountId) return line.accountId === accountId
+  if (line.accountId) return false
+  return Boolean(socketUserId) && line.userId === socketUserId
+}
+
 module.exports = {
   initializeSocket,
   spaceConnections,
   projectConnections,
   getSocketPath,
-  applyFreshDbIdentity
+  applyFreshDbIdentity,
+  wroteSpaceChatLine
 }

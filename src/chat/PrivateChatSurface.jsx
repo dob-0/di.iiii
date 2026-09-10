@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Box, IconButton, InputBase, Stack, ThemeProvider, Tooltip, Typography } from '@mui/material'
+import { Box, IconButton, InputBase, Snackbar, Stack, ThemeProvider, Tooltip, Typography } from '@mui/material'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import LockIcon from '@mui/icons-material/Lock'
@@ -8,6 +8,8 @@ import useAuthSession from '../hooks/useAuthSession.js'
 import useP2PChat from './useP2PChat.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { buildChatPath } from './chatRouting.js'
+import ReplyQuote from './ReplyQuote.jsx'
+import MessageActions, { copyAction, removeAction, replyAction, useLongPress } from './MessageActions.jsx'
 
 // One conversation, two people, nothing in between.
 //
@@ -38,8 +40,10 @@ const STATE_TEXT = {
 export default function PrivateChatSurface({ withUserId, withName = null, spaceId = 'main' }) {
     const session = useAuthSession()
     const [draft, setDraft] = useState('')
+    const [replyTo, setReplyTo] = useState(null)
+    const [notice, setNotice] = useState('')
     const listRef = useRef(null)
-    const { state, words, messages, problem, send, forget } = useP2PChat({
+    const { state, words, messages, problem, send, forget, forgetOne } = useP2PChat({
         withUserId,
         myAccountId: session.subject
     })
@@ -54,9 +58,17 @@ export default function PrivateChatSurface({ withUserId, withName = null, spaceI
     const submit = async () => {
         const text = draft.trim()
         if (!text) return
-        const went = await send(text)
-        if (went) setDraft('')
+        const went = await send(text, replyTo)
+        if (went) {
+            setDraft('')
+            setReplyTo(null)
+        }
     }
+
+    // The same long press as the room, for the same reason: a thumb has no
+    // hover. Fewer tools here — there is no pin in a conversation of two, and
+    // no link to copy to something that lives in one browser.
+    const longPress = useLongPress((row) => row?.querySelector?.('.dii-chat-actions')?.click())
 
     const live = state === 'open'
 
@@ -123,6 +135,7 @@ export default function PrivateChatSurface({ withUserId, withName = null, spaceI
                     {messages.map((message) => (
                         <Box
                             key={message.id}
+                            {...longPress}
                             sx={{
                                 alignSelf: message.mine ? 'flex-end' : 'flex-start',
                                 maxWidth: '78%',
@@ -130,9 +143,13 @@ export default function PrivateChatSurface({ withUserId, withName = null, spaceI
                                 py: 1,
                                 borderRadius: 2,
                                 border: '1px solid var(--ui-border)',
-                                background: message.mine ? 'var(--ui-surface)' : 'transparent'
+                                background: message.mine ? 'var(--ui-surface)' : 'transparent',
+                                '&:hover .dii-chat-actions': { opacity: 1 }
                             }}
                         >
+                            {message.replyTo && (
+                                <ReplyQuote dense name={message.replyTo.name} text={message.replyTo.text} />
+                            )}
                             <Typography sx={{
                                 fontSize: 14,
                                 lineHeight: 1.45,
@@ -145,9 +162,23 @@ export default function PrivateChatSurface({ withUserId, withName = null, spaceI
                                     thing the person needs to know arrived. */}
                                 {message.text === null ? 'a message that could not be opened' : message.text}
                             </Typography>
-                            <Typography sx={{ fontSize: 10, color: 'var(--ui-text-muted)', mt: 0.25 }}>
-                                {TIME.format(new Date(message.at))}
-                            </Typography>
+                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                <Typography sx={{ fontSize: 10, color: 'var(--ui-text-muted)', flex: 1 }}>
+                                    {TIME.format(new Date(message.at))}
+                                </Typography>
+                                <MessageActions
+                                    label="More for this message"
+                                    actions={[
+                                        message.text ? replyAction(() => setReplyTo({
+                                            id: message.id,
+                                            name: message.mine ? 'you' : (withName || 'them'),
+                                            text: message.text
+                                        })) : null,
+                                        message.text ? copyAction(message.text, setNotice) : null,
+                                        removeAction(() => forgetOne(message.id), 'Remove from this device')
+                                    ]}
+                                />
+                            </Stack>
                         </Box>
                     ))}
                 </Box>
@@ -158,11 +189,15 @@ export default function PrivateChatSurface({ withUserId, withName = null, spaceI
                     px: 2, py: 1.5,
                     pb: 'calc(12px + env(safe-area-inset-bottom))'
                 }}>
+                    {replyTo && (
+                        <ReplyQuote name={replyTo.name} text={replyTo.text} onClear={() => setReplyTo(null)} />
+                    )}
                     <Stack direction="row" spacing={1} alignItems="flex-end">
                         <InputBase
                             value={draft}
                             onChange={(event) => setDraft(event.target.value.slice(0, 2000))}
                             onKeyDown={(event) => {
+                                if (event.key === 'Escape' && replyTo) { event.preventDefault(); setReplyTo(null); return }
                                 if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submit() }
                             }}
                             placeholder={live ? 'Only they can read this…' : 'Not connected yet'}
@@ -202,6 +237,15 @@ export default function PrivateChatSurface({ withUserId, withName = null, spaceI
                         </Typography>
                     )}
                 </Box>
+
+                <Snackbar
+                    open={Boolean(notice)}
+                    autoHideDuration={2600}
+                    onClose={() => setNotice('')}
+                    message={notice}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                    sx={{ '& .MuiSnackbarContent-root': { fontSize: 13 } }}
+                />
             </Box>
         </ThemeProvider>
     )
