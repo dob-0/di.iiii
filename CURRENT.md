@@ -13,10 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the room got the six tools a room actually uses
-- di.iiii gets accounts of its own
-- the ground under a private, end-to-end conversation
-- the WCC landing page is listed in its own space, as itself
+- the app opens on a list, not inside one room
+- where a window sits belongs to the person, and windows can fill the canvas
 
 Full detail: `PROGRESS.md`.
 
