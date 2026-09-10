@@ -63,9 +63,36 @@ export function resumeHTML(person) {
       }).join('') + '</div>'
     : '';
 
-  const cvHTML = r.cvUrl
-    ? '<p class="cv-link"><a class="plate" href="' + esc(r.cvUrl) + '" target="_blank" rel="noopener">' + esc(r.cvLabel || 'the full CV — PDF') + '</a></p>'
+  // Positions and study are the half of a CV the year-list never carried: the
+  // timeline says what was made, this says where the person stood while making
+  // it. Both are printed here, in the room, on our own paper — the rooms used
+  // to hand this over as a link to a file that also carried a date of birth,
+  // a mobile number and a private address.
+  const ledgerHTML = (rows, label) => (rows && rows.length)
+    ? '<div class="ledger-label">' + esc(label) + '</div><div class="ledger">' + rows.map((it) =>
+        '<div class="lg"><span class="lg-when">' + esc(it.years) + '</span>' +
+        '<span class="lg-what"><span class="lg-role">' + esc(it.role) + '</span>' +
+        (it.org ? '<span class="lg-org">' + esc(it.org) + '</span>' : '') +
+        (it.place ? '<span class="lg-place">' + esc(it.place) + '</span>' : '') +
+        '</span></div>').join('') + '</div>'
     : '';
 
-  return focusHTML + timelineHTML + cvHTML;
+  return focusHTML + timelineHTML +
+    ledgerHTML(r.positions, 'positions') +
+    ledgerHTML(r.education, 'education');
+}
+
+// Where a room's facts came from. A roster is only worth reading if a reader
+// can see what it stands on, and the answer differs per person: some of this
+// is public and linkable (a festival's credit page, the person's own site),
+// some is the studio's own archive, which is named but never linked — those
+// documents carry dates of birth and private addresses and must stay closed.
+export function sourcesHTML(person) {
+  const src = person.sources;
+  if (!src || !src.length) return '';
+  return '<div class="section-label">where this comes from</div><ul class="sources">' +
+    src.map((s) => '<li>' + (s.href
+      ? '<a href="' + esc(s.href) + '" target="_blank" rel="noopener">' + esc(s.label) + '</a>'
+      : '<span class="src-closed">' + esc(s.label) + '</span>') + '</li>').join('') +
+    '</ul><p class="src-note">Assembled from those sources with AI, so a detail may be wrong — tell us and it is fixed.</p>';
 }

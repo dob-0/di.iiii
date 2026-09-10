@@ -133,7 +133,17 @@ a.row .made .arrow{opacity:.6;}
 .ti .ti-t{font-weight:600;color:var(--ink);}
 .ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
 .ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
-.cv-link{margin:20px 0 0 0;}
+.ledger-label{font-family:var(--mono);font-size:12px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);margin:30px 0 0 0;}
+.ledger{margin:10px 0 0 0;}
+.lg{display:grid;grid-template-columns:11ch 1fr;column-gap:22px;align-items:baseline;
+  padding:11px 2px;border-top:1px solid var(--rule);}
+.ledger .lg:last-child{border-bottom:1px solid var(--rule);}
+.lg-when{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;
+  white-space:nowrap;}
+.lg-role{font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.4;}
+.lg-org{display:block;font-size:14px;color:var(--ink-2);line-height:1.5;}
+.lg-place{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-top:2px;}
 
 .section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
   margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
@@ -164,6 +174,17 @@ a.row .made .arrow{opacity:.6;}
 .neighbours a{font-size:14.5px;color:var(--ink-2);text-decoration:none;padding:5px 0;
   border-bottom:1px solid transparent;}
 .neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
+
+ul.sources{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;}
+ul.sources li{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  padding-left:15px;position:relative;}
+ul.sources li::before{content:'';position:absolute;left:0;top:.55em;width:5px;height:1px;background:var(--accent);}
+ul.sources a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+ul.sources a:hover,ul.sources a:focus-visible{border-bottom-color:var(--accent);}
+/* Named, not linked: the studio's own files are closed on purpose. */
+.src-closed{color:var(--ink-3);}
+.src-note{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  margin:14px 0 0 0;max-width:62ch;}
 
 .room-foot{max-width:var(--room);padding:44px var(--pad) 72px var(--pad);}
 .room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
@@ -200,6 +221,8 @@ a.row .made .arrow{opacity:.6;}
   .indexPane h1{font-size:27px;}
   .room-stage{padding-top:34px;}
   .door{flex:1 1 100%;min-height:112px;}
+  .lg{grid-template-columns:1fr;row-gap:3px;}
+  .lg-when{order:2;}
   .group{margin-top:34px;}
 }
 
@@ -218,13 +241,14 @@ a.row .made .arrow{opacity:.6;}
   <h1>Yeva Abgaryan</h1>
   <p class="role">set design, 3D</p>
   
-  <p class="bio">Set designer and production artist working with recycled materials — part of the art direction team renovating Hayfilm Studio into a new art venue.</p>
-  <div class="section-label">the journey</div><div class="focus-chips"><span class="chip">drawing</span><span class="chip">sculpting</span><span class="chip">piercing art</span><span class="chip">tattoo art</span><span class="chip">digital art production</span><span class="chip">Blender</span><span class="chip">Nomad Sculpt</span></div><div class="timeline"><details open><summary><span class="yr">2023</span><span class="ct">2 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">PACT Zollverein residency</span> <span class="ti-r">artist</span><span class="ti-p">Essen, Germany</span></div><div class="ti"><span class="ti-t">SeenThat Ruins</span> <span class="ti-r">artist, designer</span><span class="ti-p">Yerevan, Armenia</span></div></div></details><details><summary><span class="yr">2022</span><span class="ct">4 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">SPCTR</span> <span class="ti-r">art director, artist</span><span class="ti-p">Yerevan, Armenia</span></div><div class="ti"><span class="ti-t">Mards residency</span> <span class="ti-r">artist</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">Recycling Lamp</span> <span class="ti-r">concept artist, designer</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">Artbox Armenia</span> <span class="ti-r">incubator alumna</span><span class="ti-p">Yerevan, Armenia</span></div></div></details><details><summary><span class="yr">2021</span><span class="ct">2 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Ground art festival</span> <span class="ti-r">artist</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">MOCT Yerevan</span> <span class="ti-r">artist, volunteer</span><span class="ti-p">Yerevan, Armenia</span></div></div></details><details><summary><span class="yr">2019</span><span class="ct">1 credit</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">SeenThat</span> <span class="ti-r">designer, visual artist</span><span class="ti-p">Gyumri, Armenia</span></div></div></details></div><p class="cv-link"><a class="plate" href="https://drive.google.com/file/d/1ncpODwX9HJ5Oa9X7kj1MBXN4-rGWa8f5/view" target="_blank" rel="noopener">the full CV — PDF</a></p>
+  <p class="bio">Set designer and production artist working with recycled and reused materials — drawing, sculpting and 3D. Co-founder of Yokozo.</p>
+  <div class="section-label">the journey</div><div class="focus-chips"><span class="chip">drawing</span><span class="chip">sculpting</span><span class="chip">piercing art</span><span class="chip">tattoo art</span><span class="chip">digital art production</span><span class="chip">Blender</span><span class="chip">Nomad Sculpt</span></div><div class="timeline"><details open><summary><span class="yr">2026</span><span class="ct">2 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">WCC: Women Creating Change</span> <span class="ti-r">artist</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">ազդ | azd</span> <span class="ti-r">artist</span><span class="ti-p">Faceless, Gyumri, Armenia</span></div></div></details><details><summary><span class="yr">2023</span><span class="ct">2 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">PACT Zollverein residency</span> <span class="ti-r">artist</span><span class="ti-p">Essen, Germany</span></div><div class="ti"><span class="ti-t">SeenThat Ruins</span> <span class="ti-r">artist, designer</span><span class="ti-p">Yerevan, Armenia</span></div></div></details><details><summary><span class="yr">2022</span><span class="ct">4 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">SPCTR</span> <span class="ti-r">art director, artist</span><span class="ti-p">Yerevan, Armenia</span></div><div class="ti"><span class="ti-t">Mards residency</span> <span class="ti-r">artist</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">Recycling Lamp</span> <span class="ti-r">concept artist, designer</span><span class="ti-p">Munich, Germany</span></div><div class="ti"><span class="ti-t">Artbox Armenia</span> <span class="ti-r">incubator alumna</span><span class="ti-p">Yerevan, Armenia</span></div></div></details><details><summary><span class="yr">2021</span><span class="ct">2 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Ground art festival</span> <span class="ti-r">artist</span><span class="ti-p">Gyumri, Armenia</span></div><div class="ti"><span class="ti-t">MOCT Yerevan</span> <span class="ti-r">artist, volunteer</span><span class="ti-p">Yerevan, Armenia</span></div></div></details><details><summary><span class="yr">2019</span><span class="ct">1 credit</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">SeenThat</span> <span class="ti-r">designer, visual artist</span><span class="ti-p">Gyumri, Armenia</span></div></div></details></div><div class="ledger-label">positions</div><div class="ledger"><div class="lg"><span class="lg-when">2025 — now</span><span class="lg-what"><span class="lg-role">co-founder</span><span class="lg-org">Yokozo</span><span class="lg-place">Yerevan, Armenia</span></span></div><div class="lg"><span class="lg-when">2022 — 2023</span><span class="lg-what"><span class="lg-role">artist, art director</span><span class="lg-org">SPCTR Lights</span><span class="lg-place">Yerevan, Armenia</span></span></div></div><div class="ledger-label">education</div><div class="ledger"><div class="lg"><span class="lg-when">2018 — 2022</span><span class="lg-what"><span class="lg-role">Fine Arts</span><span class="lg-org">Panos Terlemezian State College of Fine Arts</span><span class="lg-place">Yerevan, Armenia</span></span></div><div class="lg"><span class="lg-when">2017 — 2019</span><span class="lg-what"><span class="lg-role">creative technologies</span><span class="lg-org">TUMO Center for Creative Technologies</span><span class="lg-place">Yerevan, Armenia</span></span></div></div>
   <div class="section-label">on di.iiii</div>
-  <div class="doors"><a class="door" href="/wcc/yeva-abgaryan" target="_top"><span class="t">WCC Exhibition</span><span class="l">her room</span></a><a class="door" href="/azd" target="_top"><span class="t">ազդ | azd</span><span class="l">Faceless</span></a></div>
+  <div class="doors"><a class="door" href="/wcc/yeva-abgaryan" target="_top"><span class="t">WCC Exhibition</span><span class="l">her room</span></a><a class="door" href="/azd" target="_top"><span class="t">ազդ | azd</span><span class="l">Faceless</span></a><div class="door door--unlinked"><span class="t">BISETKA: talk_place</span><span class="l">G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023 · no link yet</span></div><a class="door" href="/platform-recordar" target="_top"><span class="t">RecordAR</span><span class="l">mentor — Import Export, Munich, Oct 2025</span></a><div class="door door--unlinked"><span class="t">Cascade Club</span><span class="l">character designer — Yerevan's 1990s Cascade rebuilt in VR, 2025 · no link yet</span></div></div>
   <div class="section-label">elsewhere</div><div class="elsewhere"><a class="plate" href="https://www.instagram.com/6addreams/" target="_blank" rel="noopener">Instagram</a></div>
   <div class="section-label">made things with</div>
-    <nav class="neighbours"><a href="/network/emilya-nikoghosyan" target="_top">Emilya Nikoghosyan</a><a href="/network/syuzi-ginosyan" target="_top">Syuzi Ginosyan</a><a href="/network/greta-grigoryan" target="_top">Greta Grigoryan</a><a href="/network/shahane-harutyunyan" target="_top">Shahane Harutyunyan</a></nav>
+    <nav class="neighbours"><a href="/network/gevorg-grigoryan" target="_top">Gevorg Aram Grigoryan</a><a href="/network/emilya-nikoghosyan" target="_top">Emilya Nikoghosyan</a><a href="/network/syuzi-ginosyan" target="_top">Syuzi Ginosyan</a><a href="/network/taron-grigoryan" target="_top">Taron Grigoryan</a><a href="/network/maria-matinyan" target="_top">Maria Matinyan</a><a href="/network/ani-khachikyan" target="_top">Ani Khachikyan</a><a href="/network/kay-khachatryan" target="_top">Kay Khachatryan</a><a href="/network/vera-vishnevaya" target="_top">Vera Vishnevaya</a><a href="/network/adam-adamyan" target="_top">Adam Adamyan</a><a href="/network/artush-koshtoyan" target="_top">Artush Koshtoyan</a></nav>
+  <div class="section-label">where this comes from</div><ul class="sources"><li><span class="src-closed">their CV page in the studio network deck, April 2026 — held, not published</span></li><li><span class="src-closed">their CV, studio archive — held, not published</span></li><li><span class="src-closed">RecordAR exhibition credits, studio archive — held, not published</span></li><li><span class="src-closed">Cascade Club team list, studio archive — held, not published</span></li><li><span class="src-closed">azd artist statements and project report, studio archive — held, not published</span></li><li><a href="https://ritagrechen.de/project.php?id=bisetka%3A-talk_place" target="_blank" rel="noopener">BISETKA: talk_place credits, fachbetrieb rita grechen</a></li></ul><p class="src-note">Assembled from those sources with AI, so a detail may be wrong — tell us and it is fixed.</p>
 </main>
 <footer class="room-foot">
   <p>A room in the <a href="/network" target="_top">network</a> — one for each person who makes di.iiii. It is theirs to fill.</p>

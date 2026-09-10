@@ -2501,6 +2501,25 @@ describe('open-call application contracts', () => {
         expect(other.headers.get('access-control-allow-origin')).toBeNull()
     })
 
+    // Regression guard for feat/wcc-landing-project: the WCC landing became a
+    // `code` project living in a sandboxed (opaque-origin) srcdoc iframe, and
+    // its process gallery loads /wcc/process/*.jpeg into WebGL textures — a
+    // CORS-mode fetch, same class as the font case above. Without this, the
+    // gallery silently renders nothing and logs a CORS error nobody watching
+    // the page would see.
+    it('lets a sandboxed code page read wcc\'s public assets', async () => {
+        const clientDir = await mkdtemp(path.join(os.tmpdir(), 'dii-client-'))
+        await mkdir(path.join(clientDir, 'wcc', 'process'), { recursive: true })
+        await writeFile(path.join(clientDir, 'index.html'), '<!doctype html><title>x</title>')
+        await writeFile(path.join(clientDir, 'wcc', 'process', 'process-01.jpeg'), 'not-really-a-jpeg')
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CLIENT_DIR: clientDir, CORS_ORIGINS: 'https://di-studio.xyz' } })
+        const origin = new URL(server.baseUrl).origin
+
+        const photo = await fetch(`${origin}/wcc/process/process-01.jpeg`, { headers: { Origin: 'null' } })
+        expect(photo.status).toBe(200)
+        expect(photo.headers.get('access-control-allow-origin')).toBe('*')
+    })
+
     it('serves project asset reads with permissive CORS for sandboxed iframes', async () => {
         const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
 

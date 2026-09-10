@@ -3,7 +3,7 @@
   "spaceId": "network",
   "projectId": "network-shoghakat-mlke-galstyan",
   "slug": "shoghakat-mlke-galstyan",
-  "label": "Shoghakat Mlke-Galstyan",
+  "label": "Shoghakat MLKE-Galstyan",
   "mode": "code",
   "entry": "spaces/network/pages/shoghakat-mlke-galstyan.html",
   "include": [],

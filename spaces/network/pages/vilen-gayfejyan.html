@@ -133,7 +133,17 @@ a.row .made .arrow{opacity:.6;}
 .ti .ti-t{font-weight:600;color:var(--ink);}
 .ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
 .ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
-.cv-link{margin:20px 0 0 0;}
+.ledger-label{font-family:var(--mono);font-size:12px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);margin:30px 0 0 0;}
+.ledger{margin:10px 0 0 0;}
+.lg{display:grid;grid-template-columns:11ch 1fr;column-gap:22px;align-items:baseline;
+  padding:11px 2px;border-top:1px solid var(--rule);}
+.ledger .lg:last-child{border-bottom:1px solid var(--rule);}
+.lg-when{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;
+  white-space:nowrap;}
+.lg-role{font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.4;}
+.lg-org{display:block;font-size:14px;color:var(--ink-2);line-height:1.5;}
+.lg-place{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-top:2px;}
 
 .section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
   margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
@@ -164,6 +174,17 @@ a.row .made .arrow{opacity:.6;}
 .neighbours a{font-size:14.5px;color:var(--ink-2);text-decoration:none;padding:5px 0;
   border-bottom:1px solid transparent;}
 .neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
+
+ul.sources{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;}
+ul.sources li{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  padding-left:15px;position:relative;}
+ul.sources li::before{content:'';position:absolute;left:0;top:.55em;width:5px;height:1px;background:var(--accent);}
+ul.sources a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+ul.sources a:hover,ul.sources a:focus-visible{border-bottom-color:var(--accent);}
+/* Named, not linked: the studio's own files are closed on purpose. */
+.src-closed{color:var(--ink-3);}
+.src-note{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  margin:14px 0 0 0;max-width:62ch;}
 
 .room-foot{max-width:var(--room);padding:44px var(--pad) 72px var(--pad);}
 .room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
@@ -200,6 +221,8 @@ a.row .made .arrow{opacity:.6;}
   .indexPane h1{font-size:27px;}
   .room-stage{padding-top:34px;}
   .door{flex:1 1 100%;min-height:112px;}
+  .lg{grid-template-columns:1fr;row-gap:3px;}
+  .lg-when{order:2;}
   .group{margin-top:34px;}
 }
 
@@ -218,13 +241,14 @@ a.row .made .arrow{opacity:.6;}
   <h1>Vilen Gayfejyan</h1>
   <p class="role">multimedia artist</p>
   
-  
-  
+  <p class="bio">Graphic designer, motion designer and 3D artist in Yerevan — a scenic designer for the state theatres before the screen, and a lead actor in the SOS show for five years.</p>
+  <div class="section-label">the journey</div><div class="focus-chips"><span class="chip">graphic design</span><span class="chip">motion design</span><span class="chip">3D art</span><span class="chip">scenic design</span><span class="chip">digital art production</span><span class="chip">acting</span><span class="chip">Blender</span><span class="chip">TouchDesigner</span><span class="chip">Adobe Creative Suite</span></div><div class="timeline"><details open><summary><span class="yr">2015 – 2022</span><span class="ct">3 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">SOS</span> <span class="ti-r">leading actor</span><span class="ti-p">YouTube show, SOS TV, 2015 – 2020</span></div><div class="ti"><span class="ti-t">Yerevan Municipality</span> <span class="ti-r">council member</span><span class="ti-p">2018 – 2022</span></div><div class="ti"><span class="ti-t">Chipolino</span> <span class="ti-r">scenic designer</span><span class="ti-p">Yerevan State Theatre of Choreography, 2015</span></div></div></details><details><summary><span class="yr">2009 – 2014</span><span class="ct">3 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Maugli</span> <span class="ti-r">scenic designer</span><span class="ti-p">Yerevan State Theatre of Choreography, 2014</span></div><div class="ti"><span class="ti-t">The Little Prince</span> <span class="ti-r">scenic designer</span><span class="ti-p">Yerevan State Marionettes Theatre, 2010</span></div><div class="ti"><span class="ti-t">Hansel and Gretel</span> <span class="ti-r">scenic designer</span><span class="ti-p">Yerevan State Marionettes Theatre, 2009</span></div></div></details></div><div class="ledger-label">positions</div><div class="ledger"><div class="lg"><span class="lg-when">2024 — now</span><span class="lg-what"><span class="lg-role">graphic designer</span><span class="lg-org">“Be the change” branding agency</span><span class="lg-place">Yerevan, Armenia</span></span></div><div class="lg"><span class="lg-when">2023 — now</span><span class="lg-what"><span class="lg-role">freelance 3D artist</span><span class="lg-org">Microsoft Flight Simulator</span></span></div><div class="lg"><span class="lg-when">2022 — 2023</span><span class="lg-what"><span class="lg-role">motion designer</span><span class="lg-org">Armenian Public Television</span><span class="lg-place">Yerevan, Armenia</span></span></div><div class="lg"><span class="lg-when">2017 — 2018</span><span class="lg-what"><span class="lg-role">graphic designer</span><span class="lg-org">BetConstruct</span><span class="lg-place">Yerevan, Armenia</span></span></div><div class="lg"><span class="lg-when">2010 — 2015</span><span class="lg-what"><span class="lg-role">scenic designer</span><span class="lg-org">Yerevan State Theatre of Choreography</span><span class="lg-place">Yerevan, Armenia</span></span></div></div><div class="ledger-label">education</div><div class="ledger"><div class="lg"><span class="lg-when">2010 — 2014</span><span class="lg-what"><span class="lg-role">Graphic Design</span><span class="lg-org">YSUAC</span><span class="lg-place">Yerevan, Armenia</span></span></div></div>
   <div class="section-label">on di.iiii</div>
-  <p class="empty-note">Nothing stands here yet — this room is theirs to fill.</p>
-  <div class="section-label">elsewhere</div><div class="elsewhere"><a class="plate" href="https://www.instagram.com/vilengaifejyan/" target="_blank" rel="noopener">Instagram</a></div>
-  <div class="section-label">also in visual · multimedia</div>
-    <nav class="neighbours"><a href="/network/adam-adamyan" target="_top">Adam Adamyan</a><a href="/network/artush-koshtoyan" target="_top">Artush Koshtoyan</a><a href="/network/greta-grigoryan" target="_top">Greta Grigoryan</a><a href="/network/mane-meloyan" target="_top">Mane Meloyan</a><a href="/network/mery-petrosyan" target="_top">Mery Petrosyan</a><a href="/network/polina-vever" target="_top">Polina Vever</a><a href="/network/shahane-harutyunyan" target="_top">Shahane Harutyunyan</a><a href="/network/gor-muradyan" target="_top">Gor Muradyan</a><a href="/network/luiza-khechoyan" target="_top">Luiza Khechoyan</a><a href="/network/egor-lazensky" target="_top">Egor Lazensky</a></nav>
+  <div class="doors"><a class="door" href="/platform-recordar" target="_top"><span class="t">RecordAR</span><span class="l">mentor — Import Export, Munich, Oct 2025</span></a><div class="door door--unlinked"><span class="t">Cascade Club</span><span class="l">level designer — Yerevan's 1990s Cascade rebuilt in VR, 2025 · no link yet</span></div></div>
+  <div class="section-label">elsewhere</div><div class="elsewhere"><a class="plate" href="https://www.instagram.com/vilengaifejyan/" target="_blank" rel="noopener">Instagram</a><a class="plate" href="https://www.behance.net/vilengayfejyan" target="_blank" rel="noopener">Behance</a></div>
+  <div class="section-label">made things with</div>
+    <nav class="neighbours"><a href="/network/gevorg-grigoryan" target="_top">Gevorg Aram Grigoryan</a><a href="/network/emilya-nikoghosyan" target="_top">Emilya Nikoghosyan</a><a href="/network/syuzi-ginosyan" target="_top">Syuzi Ginosyan</a><a href="/network/taron-grigoryan" target="_top">Taron Grigoryan</a><a href="/network/yeva-abgaryan" target="_top">Yeva Abgaryan</a><a href="/network/maria-matinyan" target="_top">Maria Matinyan</a><a href="/network/adam-adamyan" target="_top">Adam Adamyan</a><a href="/network/artush-koshtoyan" target="_top">Artush Koshtoyan</a><a href="/network/greta-grigoryan" target="_top">Greta Grigoryan</a><a href="/network/polina-vever" target="_top">Polina Vever</a></nav>
+  <div class="section-label">where this comes from</div><ul class="sources"><li><span class="src-closed">their CV, studio archive — held, not published</span></li><li><span class="src-closed">RecordAR exhibition credits, studio archive — held, not published</span></li><li><span class="src-closed">Cascade Club team list, studio archive — held, not published</span></li></ul><p class="src-note">Assembled from those sources with AI, so a detail may be wrong — tell us and it is fixed.</p>
 </main>
 <footer class="room-foot">
   <p>A room in the <a href="/network" target="_top">network</a> — one for each person who makes di.iiii. It is theirs to fill.</p>

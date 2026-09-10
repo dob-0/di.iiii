@@ -1,0 +1,12 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.schema.json",
+  "spaceId": "network",
+  "projectId": "network-anna-gargarian",
+  "slug": "anna-gargarian",
+  "label": "Anna Gargarian",
+  "mode": "code",
+  "entry": "spaces/network/pages/anna-gargarian.html",
+  "include": [],
+  "assets": [],
+  "publish": false
+}

@@ -3,7 +3,7 @@
   "spaceId": "network",
   "projectId": "network-mane-meloyan",
   "slug": "mane-meloyan",
-  "label": "Mane Meloyan",
+  "label": "Mané Meloian",
   "mode": "code",
   "entry": "spaces/network/pages/mane-meloyan.html",
   "include": [],

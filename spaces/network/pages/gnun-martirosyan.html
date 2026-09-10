@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gnun Martirosyan — di.iiii network</title>
+<title>Gnun Martirosian — di.iiii network</title>
 <style>
 :root{
   --paper:#f7f7f5; --paper-2:#efefec;
@@ -133,7 +133,17 @@ a.row .made .arrow{opacity:.6;}
 .ti .ti-t{font-weight:600;color:var(--ink);}
 .ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
 .ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
-.cv-link{margin:20px 0 0 0;}
+.ledger-label{font-family:var(--mono);font-size:12px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);margin:30px 0 0 0;}
+.ledger{margin:10px 0 0 0;}
+.lg{display:grid;grid-template-columns:11ch 1fr;column-gap:22px;align-items:baseline;
+  padding:11px 2px;border-top:1px solid var(--rule);}
+.ledger .lg:last-child{border-bottom:1px solid var(--rule);}
+.lg-when{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;
+  white-space:nowrap;}
+.lg-role{font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.4;}
+.lg-org{display:block;font-size:14px;color:var(--ink-2);line-height:1.5;}
+.lg-place{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-top:2px;}
 
 .section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
   margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
@@ -164,6 +174,17 @@ a.row .made .arrow{opacity:.6;}
 .neighbours a{font-size:14.5px;color:var(--ink-2);text-decoration:none;padding:5px 0;
   border-bottom:1px solid transparent;}
 .neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
+
+ul.sources{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;}
+ul.sources li{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  padding-left:15px;position:relative;}
+ul.sources li::before{content:'';position:absolute;left:0;top:.55em;width:5px;height:1px;background:var(--accent);}
+ul.sources a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+ul.sources a:hover,ul.sources a:focus-visible{border-bottom-color:var(--accent);}
+/* Named, not linked: the studio's own files are closed on purpose. */
+.src-closed{color:var(--ink-3);}
+.src-note{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  margin:14px 0 0 0;max-width:62ch;}
 
 .room-foot{max-width:var(--room);padding:44px var(--pad) 72px var(--pad);}
 .room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
@@ -200,6 +221,8 @@ a.row .made .arrow{opacity:.6;}
   .indexPane h1{font-size:27px;}
   .room-stage{padding-top:34px;}
   .door{flex:1 1 100%;min-height:112px;}
+  .lg{grid-template-columns:1fr;row-gap:3px;}
+  .lg-when{order:2;}
   .group{margin-top:34px;}
 }
 
@@ -215,16 +238,17 @@ a.row .made .arrow{opacity:.6;}
   <div class="eyebrow">di<span class="dot">.</span>iiii · network · performers</div>
 </header>
 <main class="room-stage">
-  <h1>Gnun Martirosyan</h1>
-  <p class="role">performer</p>
+  <h1>Gnun Martirosian</h1>
+  <p class="role">theatre actor</p>
   
   
-  
+  <div class="section-label">the journey</div><div class="focus-chips"><span class="chip">acting</span><span class="chip">character development</span><span class="chip">movement and body language</span><span class="chip">contemporary art</span><span class="chip">collaboration</span></div><div class="timeline"><details open><summary><span class="yr">2024</span><span class="ct">2 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Out</span> <span class="ti-r">by Sara Nalbandian</span><span class="ti-p">Yerevan, Armenia</span></div><div class="ti"><span class="ti-t">The Actors are tired</span> <span class="ti-r">by Éric Assous</span><span class="ti-p">Lyon, France</span></div></div></details><details><summary><span class="yr">2022 – 2023</span><span class="ct">3 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Extraordinary and Mysterious</span> <span class="ti-r">by Martin Bellemare</span><span class="ti-p">Gyumri, Armenia, 2023</span></div><div class="ti"><span class="ti-t">Charlie and the Chocolate Factory</span> <span class="ti-r">by Roald Dahl</span><span class="ti-p">Yerevan State Young Theatre, 2022</span></div><div class="ti"><span class="ti-t">Hamlet</span> <span class="ti-r">by William Shakespeare</span><span class="ti-p">Yerevan State Institute of Theatre and Cinematography, 2022</span></div></div></details><details><summary><span class="yr">2017 – 2019</span><span class="ct">3 credits</span></summary><div class="yr-items"><div class="ti"><span class="ti-t">Oedipus the King</span> <span class="ti-r">by Sophocles</span><span class="ti-p">Moscow, Russia, 2019</span></div><div class="ti"><span class="ti-t">Experimental animals</span> <span class="ti-r">by Henri Troyat</span><span class="ti-p">Yerevan State Institute of Theatre and Cinematography, 2019</span></div><div class="ti"><span class="ti-t">The Seagull · Uncle Vanya</span> <span class="ti-r">by Anton Chekhov</span><span class="ti-p">Yerevan State Institute of Theatre and Cinematography, 2017</span></div></div></details></div><div class="ledger-label">education</div><div class="ledger"><div class="lg"><span class="lg-when">2016 — 2022</span><span class="lg-what"><span class="lg-role">BA, Actor's Mastership</span><span class="lg-org">Yerevan State Institute of Theater and Cinema</span></span></div><div class="lg"><span class="lg-when">2022 — 2023</span><span class="lg-what"><span class="lg-role">programme</span><span class="lg-org">Atelier d'Art Dramatique</span><span class="lg-place">Yerevan / Paris</span></span></div><div class="lg"><span class="lg-when">2019</span><span class="lg-what"><span class="lg-role">festival</span><span class="lg-org">BRICS Theatre Festival</span><span class="lg-place">Moscow</span></span></div></div>
   <div class="section-label">on di.iiii</div>
-  <p class="empty-note">Nothing stands here yet — this room is theirs to fill.</p>
+  <div class="doors"><div class="door door--unlinked"><span class="t">OUT</span><span class="l">performer — performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, May 2024 · no link yet</span></div></div>
   <div class="section-label">elsewhere</div><div class="elsewhere"><a class="plate" href="https://www.instagram.com/gnun_m/" target="_blank" rel="noopener">Instagram</a></div>
-  <div class="section-label">also in performers</div>
-    <nav class="neighbours"><a href="/network/ani-khachikyan" target="_top">Ani Khachikyan</a><a href="/network/meline-arshakyan" target="_top">Meline Arshakyan</a><a href="/network/arsen-miqayelyan" target="_top">Arsen Miqayelyan</a><a href="/network/alexandra-martini" target="_top">Alexandra Martini</a></nav>
+  <div class="section-label">made things with</div>
+    <nav class="neighbours"><a href="/network/gevorg-grigoryan" target="_top">Gevorg Aram Grigoryan</a><a href="/network/meline-arshakyan" target="_top">Meline Arshakyan</a><a href="/network/kay-khachatryan" target="_top">Kay Khachatryan</a><a href="/network/artush-koshtoyan" target="_top">Artush Koshtoyan</a><a href="/network/alvie-starr" target="_top">Alvie Starr</a><a href="/network/nyusha-terbalyan" target="_top">Nyusha Terbalyan</a><a href="/network/sara-nalbandyan" target="_top">Sara Nalbandyan</a><a href="/network/anushik-kherunts" target="_top">Anushik Kherunts</a><a href="/network/parush-sahakyan" target="_top">Parush Sahakyan</a></nav>
+  <div class="section-label">where this comes from</div><ul class="sources"><li><span class="src-closed">their CV, studio archive — held, not published</span></li><li><a href="https://www.accea.info/oui/" target="_blank" rel="noopener">“OUT”, NPAK / ACCEA Yerevan</a></li><li><span class="src-closed">the project files in the studio archive — held, not published</span></li></ul><p class="src-note">Assembled from those sources with AI, so a detail may be wrong — tell us and it is fixed.</p>
 </main>
 <footer class="room-foot">
   <p>A room in the <a href="/network" target="_top">network</a> — one for each person who makes di.iiii. It is theirs to fill.</p>

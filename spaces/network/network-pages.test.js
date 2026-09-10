@@ -54,6 +54,29 @@ describe('network pages are generated, not hand-kept', () => {
     })
 })
 
+describe('a room carries no one\'s private data', () => {
+    // The rooms used to link each of the five team CVs as a file on Google
+    // Drive. Four of those files opened for anyone with the URL and carried a
+    // date of birth, a personal mobile and a private e-mail address — the same
+    // pages that were cut out of the public repo in August for exactly that
+    // reason. The CV is printed here now, on our own paper, without them.
+    it('links no CV file, anywhere', () => {
+        for (const p of people) {
+            const html = renderRoom(p, people)
+            expect(html, p.slug).not.toMatch(/drive\.google\.com|docs\.google\.com/)
+        }
+    })
+
+    it('prints no date of birth, phone number or private e-mail', () => {
+        for (const p of people) {
+            const html = renderRoom(p, people)
+            expect(html, p.slug).not.toMatch(/date of birth/i)
+            expect(html, p.slug).not.toMatch(/\+\s*\(?374/)      // an Armenian mobile
+            expect(html, p.slug).not.toMatch(/[\w.]+@[\w.]+\.\w+/) // any e-mail at all
+        }
+    })
+})
+
 describe('one ground', () => {
     // The seam was two backgrounds. Every surface the shared CSS paints has
     // to be the paper, the accent tint, or a hairline — never a second world.
@@ -117,10 +140,22 @@ describe('visitor copy', () => {
         }
     })
 
+    // The number was pinned at fifty-two, which made the guard fail the day six
+    // people who already had work standing on di.iiii were added to the roster.
+    // What matters is that the sentence counts the same people the page lists —
+    // so the count is derived here too, and only the split is fixed by the owner.
     it('states no count the roster does not hold', () => {
         const html = read('code/index.html')
-        expect(html).toContain('Fifty-two people make di.iiii')
-        expect(people.length).toBe(52)
-        expect(people.filter((p) => p.team).length).toBe(5)
+        const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+            'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen']
+        const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety']
+        const words = (n) => n < 20 ? WORDS[n] : TENS[Math.floor(n / 10)] + (n % 10 ? '-' + WORDS[n % 10] : '')
+        const cap = (s) => s[0].toUpperCase() + s.slice(1)
+        const team = people.filter((p) => p.team).length
+
+        expect(html).toContain(`${cap(words(people.length))} people make di.iiii`)
+        expect(html).toContain(`${words(team)} run it`)
+        expect(html).toContain(`${words(people.length - team)} make with it`)
+        expect(team).toBe(5)   // the owner's line: the team is five
     })
 })

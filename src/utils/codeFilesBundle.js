@@ -19,6 +19,15 @@ export const normalizeFileName = (name) => name.replace(/[^\w.\-/]/g, '_').repla
 
 export const fileLanguage = (name) => inferLanguage(name)
 
+// The replacement is passed as a FUNCTION, never as a string. String.replace
+// gives a string replacement special meaning for `$&`, `` $` ``, `$'`, `$$`
+// and `$<n>` — and a real bundled file is code, which routinely contains
+// those sequences on purpose (a `.replace(/x/, '$1')` call sitting inside a
+// vendored library is enough). A minified React+GSAP bundle hit this: `` $` ``
+// alone spliced the entire preceding document back into itself at that point,
+// which truncated the actual <script> tag and spilled the rest of the bundle
+// onto the page as visible text. A function's return value is inserted
+// literally, with no reinterpretation.
 const inlineLocalCss = (html, files) => {
     const cssFiles = files.filter((f) => f.name.endsWith('.css'))
     let result = html
@@ -27,7 +36,7 @@ const inlineLocalCss = (html, files) => {
             `<link[^>]*href=["']${escapeForRegex(file.name)}["'][^>]*/?>`,
             'gi'
         )
-        result = result.replace(pattern, `<style>/* ${file.name} */\n${file.content}</style>`)
+        result = result.replace(pattern, () => `<style>/* ${file.name} */\n${file.content}</style>`)
     }
     return result
 }
@@ -42,7 +51,7 @@ const inlineLocalJs = (html, files) => {
         )
         result = result.replace(
             pattern,
-            `<script$1$2>/* ${file.name} */\n${file.content}</script>`
+            (_match, pre, post) => `<script${pre}${post}>/* ${file.name} */\n${file.content}</script>`
         )
     }
     return result
