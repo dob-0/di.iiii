@@ -2,7 +2,7 @@
     "id": "/chat",
     "name": "iiii",
     "short_name": "iiii",
-    "description": "The studio's room. One place, everybody in the space, and what is written stays.",
+    "description": "The room. One place, everybody in the space, and what is written stays.",
     "start_url": "/chat",
     "scope": "/chat",
     "display": "standalone",

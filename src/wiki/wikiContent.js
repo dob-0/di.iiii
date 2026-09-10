@@ -331,10 +331,10 @@ export const WIKI_ARTICLES = [
     {
         id: 'chat-on-its-own',
         category: 'Spaces & access',
-        title: 'The chat room at its own address',
-        summary: 'The space room, alone on a page, at /chat — and installable on a phone.',
+        title: 'iiii — the room at its own address',
+        summary: 'The space room, alone on a page at /chat, installable on a phone, and called iiii.',
         body: [
-            'The room described above lives inside the editors: you open Studio or the node editor, then open a panel. That is the wrong amount of work for "say something to the others", so the same room also has an address of its own. /chat is the studio\u2019s room; /{space}/chat is any other space\u2019s.',
+            'The room described above lives inside the editors: you open Studio or the node editor, then open a panel. That is the wrong amount of work for "say something to the others", so the same room also has an address of its own, and a name: **iiii**. /chat is the platform\u2019s own room; /{space}/chat is any other space\u2019s.',
             'It is the same room, not a copy. A line typed at /chat appears in the Chat panel of everyone working in that space, and a line typed in the panel appears here. The transcript, the 500-character limit and the admin\u2019s delete are all the ones described above.',
             { list: [
                 'On a phone, the browser can add it to the home screen and it opens like an app, without browser chrome.',

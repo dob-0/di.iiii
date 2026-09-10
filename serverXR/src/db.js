@@ -266,6 +266,24 @@ const SCHEMA = `
   -- and a chat message can be forwarded. Only the hash is stored, so the
   -- database is useless to anyone who reads it, and consumed_at is what makes
   -- a forwarded link worthless the moment the first person opens it.
+  -- The public half of a person's end-to-end keys, one row per DEVICE. A phone
+  -- and a desktop are two devices with two key pairs and no shared secret
+  -- between them; that is the cost of the server never holding a private key.
+  --
+  -- Nothing here is secret. Every row is a PUBLIC key, published deliberately,
+  -- and the private halves never leave the browsers that made them — which is
+  -- why a stolen copy of this database still cannot read one direct message.
+  CREATE TABLE IF NOT EXISTS dm_devices (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    public_key TEXT NOT NULL,
+    label TEXT,
+    created_at INTEGER NOT NULL,
+    last_seen_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_dm_devices_user ON dm_devices (user_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_devices_key ON dm_devices (user_id, public_key);
+
   -- One table for the three one-shot links a first-party account needs:
   -- verify an address, reset a password, sign in without one. They differ only
   -- in kind, and keeping them together means the expiry sweep, the

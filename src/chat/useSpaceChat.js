@@ -44,8 +44,8 @@ const getOrCreateUserId = () => {
 
 export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
     const localUserId = useMemo(() => getOrCreateUserId(), [])
-    // The signed-in label wins. A studio chat where everyone is Guest-C1B3 is
-    // not a studio chat, and the session already knows who this is.
+    // The signed-in label wins. A room where everyone is Guest-C1B3 is not a
+    // room anybody can talk in, and the session already knows who this is.
     const resolvedName = useMemo(() => {
         const explicit = String(displayName || '').trim()
         if (explicit) return explicit

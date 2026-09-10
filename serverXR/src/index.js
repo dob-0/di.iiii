@@ -86,6 +86,7 @@ const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
+const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { describeListen } = require('./listenInfo')
@@ -1190,6 +1191,11 @@ router.use((req, res, next) => {
   req.authState = getPublicAuthState(req, res)
   next()
 })
+
+// Private conversations: the public-key phone book. Registered here, after the
+// middleware above, because every handler reads `req.authState` — and the whole
+// access rule ("somebody you share a space with") is written in terms of it.
+registerDmRoutes(router, {})
 
 const sendRoleError = (res, status, requiredRole, currentRole = null, error = null) => {
   res.status(status).json({

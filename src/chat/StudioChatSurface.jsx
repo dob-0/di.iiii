@@ -6,7 +6,9 @@ import { diFontTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpaceChat from './useSpaceChat.js'
 
-// The studio's own room, at its own address, with nothing else on the screen.
+// `iiii` — the room, at its own address, with nothing else on the screen.
+// Named for the platform, not for a function: it is not "the studio chat", it is
+// the place, the way a room in a house is not called "the talking room".
 //
 // The transport for this has existed since space chat was added — persisted,
 // replayed on join, admin-erasable (serverXR/src/spaceChatStore.js). What did
@@ -157,7 +159,7 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                 >
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography sx={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em' }}>
-                            {spaceId === 'main' ? 'Studio chat' : `${spaceId} chat`}
+                            {spaceId === 'main' ? 'iiii' : `iiii \u00b7 ${spaceId}`}
                         </Typography>
                         <Typography sx={{ fontSize: 12, color: forbidden ? 'var(--ui-danger)' : 'var(--ui-text-muted)' }}>
                             {status}
