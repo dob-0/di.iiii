@@ -9,6 +9,7 @@ import { appNavigate } from '../utils/appNavigate.js'
 import { startOAuth } from '../utils/oauthNavigate.js'
 import { buildAppSpacePath, buildWikiPath } from '../utils/spaceRouting.js'
 import { telegramSignInUrl } from '../utils/telegramSignIn.js'
+import PasswordSignIn from './PasswordSignIn.jsx'
 import AccountButton from './AccountButton.jsx'
 import { OUT_OF_SCOPE_EXPLAIN, OUT_OF_SCOPE_REDIRECT } from './authGateScope.js'
 import LoadingScreen from './LoadingScreen.jsx'
@@ -16,6 +17,17 @@ import LoadingScreen from './LoadingScreen.jsx'
 const readInviteTokenFromUrl = () => {
     if (typeof window === 'undefined') return null
     try { return new URLSearchParams(window.location.search).get('invite') || null } catch { return null }
+}
+
+// A reset link lands on the site as `?auth=reset&token=…` — the server hands the
+// browser the form rather than spending the token itself, so that a mail client
+// which pre-fetches links cannot burn somebody's reset before they see it.
+const readResetTokenFromUrl = () => {
+    if (typeof window === 'undefined') return null
+    try {
+        const params = new URLSearchParams(window.location.search)
+        return params.get('auth') === 'reset' ? (params.get('token') || null) : null
+    } catch { return null }
 }
 
 // The one pair of OAuth buttons, shared by the sign-in card and the
@@ -30,16 +42,39 @@ const ProviderSignInButtons = ({ providers, refresh }) => {
         return () => clearInterval(t)
     }, [waitingForTab, refresh])
     const telegramUrl = telegramSignInUrl(providers)
-    if (!providers?.github && !providers?.google && !telegramUrl) return null
+    const hasOAuth = Boolean(providers?.github || providers?.google || telegramUrl)
+    // `password !== false` rather than `password === true`: an older server does
+    // not report the field at all, and the door it cannot describe is the one
+    // this client has always been able to open.
+    const hasPassword = providers?.password !== false
+    // `providers` is null while the fetch is in flight. It used to be safe to
+    // read it unguarded because the early return below caught null first — but
+    // the password door renders even with no OAuth at all, so null now reaches
+    // the JSX and every `providers.x` in it must survive it.
+    if (!hasOAuth && !hasPassword) return null
     const start = (provider) => { if (startOAuth(getOAuthUrl(provider))) setWaitingForTab(true) }
     return (
         <>
+            {hasPassword && (
+                <>
+                    {/* First, and not in the row of logos: a person who has no
+                        Google account has nothing to read in a row of provider
+                        buttons, and this is the door that asks them to belong
+                        nowhere else first. */}
+                    <PasswordSignIn onSignedIn={() => refresh?.()} resetToken={readResetTokenFromUrl()} canMail={providers?.mail !== false} />
+                    {hasOAuth && (
+                        <Typography variant="caption" sx={{ color: 'var(--ui-text-muted)', textAlign: 'center' }}>
+                            or continue with an account you already have
+                        </Typography>
+                    )}
+                </>
+            )}
             {waitingForTab && (
                 <Typography variant="body2" sx={{ color: 'var(--ui-text-secondary)' }}>
                     Signing in continues in the new tab. This view opens as soon as you are in.
                 </Typography>
             )}
-            {providers.github && (
+            {providers?.github && (
                 <Button
                     fullWidth
                     variant="outlined"
@@ -57,7 +92,7 @@ const ProviderSignInButtons = ({ providers, refresh }) => {
                     Continue with GitHub
                 </Button>
             )}
-            {providers.google && (
+            {providers?.google && (
                 <Button
                     fullWidth
                     variant="outlined"
