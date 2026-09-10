@@ -13,15 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a local install carries the works, and slim becomes a flag
-- a space shows everything inside it
-- A door to the lighting desk
-- the spine over every platform stylesheet
-- the rhythm, measured and enforced
-- the WCC landing, standing in its own space as a project
-- dev went red because source comments cited session notes
-- a room is silent until a visitor asks
-- The seam
+- the space chat gets its own address, and a phone can install it
 
 Full detail: `PROGRESS.md`.
 
