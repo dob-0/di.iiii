@@ -66,7 +66,20 @@ export const WORKS = [
         // Copied wholesale by vite from public/, so the local profile has to
         // know the name to leave it out. 25 MB.
         publicDirs: ['wcc'],
-        assetDirs: []
+        assetDirs: [],
+        // The landing at /wcc is compiled React, so the `wcc` space's own list
+        // showed eleven artist rooms and no front page — the owner opened it,
+        // counted, and asked where the landing page was (2026-09-10). This
+        // block is the answer the platform already had for algovrithm: the
+        // REAL page, listed with the projects, rather than a copy of it in the
+        // database that goes stale the first time the code moves.
+        codeSpace: {
+            title: 'Landing page',
+            blurb: 'The front page of the exhibition — what a visitor meets at /wcc. Built from code, not a project document, so it is edited in src/wccSite/ rather than in the editor.',
+            kind: 'code',
+            sceneLabel: 'The ring',
+            scenePath: '/wcc/scene'
+        }
     },
     {
         id: 'algovrithm',
