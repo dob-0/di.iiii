@@ -4,14 +4,16 @@ import LockIcon from '@mui/icons-material/Lock'
 import CloseIcon from '@mui/icons-material/Close'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import IosShareIcon from '@mui/icons-material/IosShare'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import { diFontTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpaceChat from './useSpaceChat.js'
-import { buildChatPath, buildPrivateChatPath } from './chatRouting.js'
+import { buildChatHomePath, buildChatPath, buildPrivateChatPath } from './chatRouting.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import ReplyQuote from './ReplyQuote.jsx'
+import { markRoomSeen } from './privateChatIndex.js'
 import MessageActions, { copyAction, linkAction, pinAction, removeAction, replyAction, useLongPress } from './MessageActions.jsx'
 
 // `iiii` — the room, at its own address, with nothing else on the screen.
@@ -294,6 +296,13 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
             ? (here > 1 ? `${here} here` : 'you are the only one here')
             : connection === 'connecting' ? 'connecting…' : 'offline — reconnecting'
 
+    // Being here IS reading it: the list's unread mark is "something arrived
+    // since this device last had the room open", and the room is open now.
+    useEffect(() => {
+        markRoomSeen(spaceId)
+        return () => markRoomSeen(spaceId)
+    }, [spaceId, messages.length])
+
     const typing = typingLine(typingNames)
 
     return (
@@ -317,6 +326,18 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                         background: 'var(--ui-surface)'
                     }}
                 >
+                    {/* The way back to the list. The room used to BE the app,
+                        so there was nowhere to go back to; now it is one of
+                        several places and a door that only opens inwards is a
+                        room you are stuck in. */}
+                    <IconButton
+                        size="small"
+                        onClick={() => appNavigate(buildChatHomePath())}
+                        aria-label="Back to your chats"
+                        sx={{ color: 'var(--ui-text-muted)', ml: -0.5 }}
+                    >
+                        <ArrowBackIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography sx={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em' }}>
                             {spaceId === 'main' ? 'iiii' : `iiii · ${spaceId}`}
@@ -406,7 +427,7 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                             <Button
                                 key={person.accountId}
                                 size="small"
-                                onClick={() => appNavigate(buildPrivateChatPath(spaceId, person.accountId, person.userName))}
+                                onClick={() => appNavigate(buildPrivateChatPath(person.accountId, person.userName))}
                                 startIcon={<LockIcon sx={{ fontSize: 12 }} />}
                                 sx={{
                                     flexShrink: 0,

@@ -2,7 +2,7 @@
     "id": "/chat",
     "name": "iiii",
     "short_name": "iiii",
-    "description": "The room. One place, everybody in the space, and what is written stays.",
+    "description": "Your rooms and your private conversations, in one place.",
     "start_url": "/chat",
     "scope": "/chat",
     "display": "standalone",
