@@ -5,6 +5,239 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-11 — the room got the six tools a room actually uses
+
+The owner asked for the chat's UI and UX, naming the tools he wanted — *"pin,
+sent, share"* — and how to choose the rest: *"look to what telegram have take
+the good one's not the fancy things"*. So the list was cut before it was built.
+
+**In:** reply, pin, copy (text or a link to one message), share the room,
+delete, "someone is typing", and a way back down that says how much you missed.
+**Out, deliberately:** reactions, forwarding, stickers, threads, read receipts,
+message search, folders, edit-after-send. Each of them is a second mental model
+for a room that has ten people in it.
+
+- **Reply** — `space_chat_lines` grew `reply_to_id/name/text`. The quote is a
+  COPY, not a foreign key: an admin can erase the original, and an answer that
+  then reads as an answer to nothing is worse than one that still shows what it
+  answered. Capped at 160 characters, or a chain of replies carries the whole
+  conversation inside its last line. In the private p2p chat the quote rides
+  INSIDE the sealed body — a reply in the clear would put the answered words
+  back on the wire, which is the one thing that file exists to prevent.
+- **Pin** — one per room (`space_chat_pins`), not a list: a stack of pins is
+  read by nobody, which is the same as having none. Stored as an id and resolved
+  on read, so removing the message takes the pin with it rather than leaving a
+  bar over nothing. Only accounts may pin; a guest is a browser that will be
+  gone tomorrow.
+- **Delete your own line** — until now only an admin could remove anything.
+  `space_chat_lines.account_id` is stamped by the SERVER from the session when
+  the line is written, and `wroteSpaceChatLine()` (exported and unit-tested, so
+  the rule can be read without a server) is what "my own" means. A guest falls
+  back to the label its socket joined with — a courtesy, not a wall, and stated
+  as such in the code — but a line written by an account is never removable by a
+  guest, however that guest labels itself.
+- **Typing** — relayed to whoever is in the room at this instant and written
+  down nowhere. Throttled on both sides; expired by a sweep on the client, since
+  there is no "stopped typing" event and there should not be one.
+- **Copy link** — `/chat?m=<id>` scrolls to the message, marks it for a moment
+  and drops the query so a reload does not do it again.
+- **One trigger, two hands** — the ⋯ menu appears on hover with a mouse, is
+  simply always there on a touch screen, and a long press anywhere on the line
+  opens the same menu. A menu reachable only by aiming at a 20px target is a
+  menu a thumb does not have.
+- **A bug the two-browser run found:** the private conversation showed
+  *"Waiting for them to open this conversation"* in red while it was plainly
+  connected and carrying messages — the waiting text was set while looking for
+  their key and nothing cleared it when the channel opened. In known-fixes.
+
+**Seen, not assumed:** two signed-in accounts in two browser contexts, desktop
+and Pixel 7 — messages both ways, a reply quoting the right line, the pinned bar,
+the unread badge reading 3 while scrolled up, the ⋯ menu open on somebody else's
+line (no Delete) and on my own (Delete), the line gone from BOTH browsers after
+deleting it, and the private conversation with its fingerprint words and its
+reply. Screenshots read, not just taken.
+
+**Not done:** the wiki is untouched on purpose — the owner asked for the chat to
+be kept out of the public wiki, and it stays out.
+
+## 2026-09-11 — di.iiii gets accounts of its own
+
+- Every door into the platform belonged to somebody else — Google, GitHub,
+  Telegram — so a person had to already belong somewhere to belong here. Now:
+  an email and a password, a one-time link in your mail instead of a password,
+  or a plain username on an install with no mail at all.
+- The username case is not a lesser mode, it is the camp: a laptop with no mail
+  and five kids. It ships with its honest limit said out loud, in the UI and in
+  the API answer — nobody can prove such an account is theirs, so only an admin
+  can recover it.
+- `passwordHash.js` — scrypt at N=2^16 (~64 MB per hash), the whole verifier in
+  one string so the cost can be raised later without a migration, and a
+  `needsRehash` that quietly rewrites an old row on the next sign-in.
+  **Its test caught a real hole the day it was written:** `scrypt$$$$$` parsed
+  into six parts, `Number('')` is 0 and therefore finite, and the empty-vs-empty
+  comparison made that row accept EVERY password. Parameters must be positive
+  and salt and hash non-empty.
+- `authTokenStore.js` — verify, reset and magic in one table, holding the three
+  rules that make a token in an inbox safe: only the SHA-256 is stored, verify
+  and consume are one step, and every failure answers null so unknown, expired,
+  spent and forged cannot be told apart.
+- The refusals are the substance: registration never grants a role or a space;
+  "is this address registered?" is unanswerable (forgot and magic answer the
+  same either way, and a taken address is refused in the same words as an
+  invalid one); a wrong password and an unknown account take the same path,
+  hash cost included, so the clock says nothing either.
+- `mailer.js` — nodemailer over SMTP, and **unconfigured is a first-class
+  state**. `/api/auth/providers` reports `mail: false`, the UI stops offering
+  the two doors that end in an email, and the endpoints refuse honestly instead
+  of promising a message that can never arrive.
+- **Seen**, against the built app on the local server: registered, signed in,
+  duplicate address refused without admitting it was taken, wrong password and
+  unknown person answered identically, a username-only account created with its
+  note. Screenshots of both modes of the card looked at, phone width.
+- Two things the looking caught that the tests could not: a disabled submit
+  button that read as broken on the near-black ground, and "email me a link"
+  offered on an install with no mailer.
+- **Not done:** the reset form is reached by `?auth=reset` and renders inside
+  the sign-in card; there is no route of its own yet. No SMTP is configured on
+  any tier, so the mail half is untested against a real server — only against a
+  stub. That is the first thing to do before this is offered to anybody.
+
+## 2026-09-11 — and the session stops throwing you out mid-afternoon
+
+- The owner's complaint, in his words: *"about the sign to not every time google
+  lala bla bla."* Measured rather than guessed — prod runs the default
+  `AUTH_SESSION_TTL_MS`, **twelve hours**, fixed at issue time. Sign in at nine,
+  get asked for Google again at nine that evening, every day.
+- A session that is being USED no longer expires: past halfway through its life,
+  any authenticated request re-issues the cookie with a fresh clock. Activity
+  keeps you in; absence still signs you out, which is the point.
+- Only past halfway (an ordinary page load must not re-sign a cookie on every
+  request), only for real session cookies (an API token has none), and never
+  once a response has started — a convenience must not become an
+  ERR_HTTP_HEADERS_SENT on a streaming route.
+- **`GET /api/auth/session` needed it passed in by hand.** That route is
+  registered ABOVE the middleware that refreshes everything else, so the one
+  endpoint an idle tab actually polls would have been the only one that never
+  extended a session. Measured both ways: `/api/spaces` re-signs, and the
+  session endpoint did not until it was threaded through.
+- **Seen**, against the running server with the TTL turned down to six seconds:
+  no `Set-Cookie` at four seconds into a twelve-hour session (correct — still
+  fresh), and a new one at four seconds into a six-second session.
+- The app's name is `iiii` now, in both manifests — the Android launcher label
+  and the web manifest, or a browser install would still have said "Studio chat"
+  under the same icon. The mark is unchanged.
+- `scripts/build-chat-apk.mjs` is the recipe as one command: it refuses to build
+  without the signing key, raises the version code with `--bump` (an APK that
+  repeats a code cannot install over the one people have), checks the built APK
+  actually carries the version asked for, and `--deliver` copies it to the host
+  di.net hands it out from.
+
+## 2026-09-11 — the ground under a private, end-to-end conversation
+
+The owner asked for private p2p chats and, asked which kind, answered
+*"actually peer to peer"*. So: the words travel browser to browser, sealed with
+a key di.iiii has never seen. This is the half that had to be right first.
+
+- `src/chat/p2pCrypto.js` — WebCrypto's own P-256 ECDH and AES-GCM, no
+  dependency to audit. A fresh IV per message (a repeated IV under one key is
+  not "weaker", it is broken), `decrypt` answers null rather than throwing
+  because an unreadable message is an ordinary event on this wire, and
+  `fingerprint()` gives two people six short words to read to each other — the
+  only defence against a server that hands you the wrong key.
+- **What it does NOT do, written in the file rather than left to be assumed:**
+  no forward secrecy (one long-lived key per device), no authentication of the
+  other person by itself, and no key escrow — a lost device is lost history.
+  Do not describe this as Signal.
+- `serverXR/src/dmDeviceStore.js` + `dm_devices` — a phone book of PUBLIC keys,
+  one row per device, capped at twelve with the least-used dropped. A stolen
+  copy of that table starts a conversation; it cannot read one.
+- `routes/dmRoutes.js` — publish mine, list mine, forget mine, and look up
+  somebody **I already share a space with**. A stranger and a person who does
+  not exist get the same 404, so this cannot be used to ask whether an account
+  exists.
+- `socketHandlers.js` — `dm-signal` carries WebRTC offers, answers and ICE
+  verbatim and stores nothing; `dm-here` marks a socket reachable, in memory
+  only, because a fact about right now that outlives the connection is a lie.
+  Guests may not signal (a disposable identity cannot be somebody you talk to),
+  and an unreachable person is said out loud rather than dropped silently.
+- **An hour lost to a stale process, now in known-fixes:** the routes returned
+  404 while every check said they were registered. A dead `node --watch` was
+  holding the port with pre-change code; each restart died on `EADDRINUSE`,
+  logged it where nobody looked, and left the old server answering. Ask who is
+  on the port before believing a route is missing.
+- **Not done:** the client. No UI, no peer connection, no key stored in a
+  browser yet — so nobody can hold a private conversation with this alone. That
+  is the next piece, and the honest limits go in the interface with it: both
+  people must be online at the same time, and a conversation cannot follow you
+  to another device.
+
+## 2026-09-11 — and it actually works, two browsers, no server between them
+
+- `useP2PChat.js` + `PrivateChatSurface.jsx` + `/chat?with=<account>`. A query,
+  not a path: a private conversation must never look like a shareable address.
+- The way in is the room's own people — no directory, no search. The server
+  refuses to introduce two people who share no space, so offering a name that
+  could not be reached would be a door drawn on a wall. Guests do not appear:
+  a guest is a browser, not somebody you can write to.
+- **Seen**: two browsers, two accounts, a real message delivered. Then the claim
+  checked rather than asserted — every table of the database and the whole
+  server log searched for the sentence. Zero rows, zero lines.
+- **The two-browser run caught a real flaw first**, which is the entire reason
+  for running it: both sides connected and their fingerprints DID NOT MATCH. I
+  was deriving the key from whichever device the registry listed first, and a
+  person with an older row gets encrypted to a device that is not in the
+  conversation. The key is now the one the peer PRESENTS on the connection —
+  the registry says a person has a device, it does not say which one is on the
+  other end. Matching words on both sides now.
+- Second thing the run caught: whoever opens the conversation first arrives
+  before the other has published a key. That is the ordinary case, and the first
+  version treated it as a dead end. It waits and looks again, and starts the
+  moment a signal proves they are there.
+- `accountId` on space presence is stamped by the SERVER from the session, never
+  taken from the client — `userId` is a label a browser made up for itself, and
+  a private conversation can only be keyed on who somebody actually is.
+- **The chat is off the public wiki**, at the owner's word: both articles cut.
+  What is left is the Claude agent node, which is a different thing.
+
+## 2026-09-10 — the WCC landing page is listed in its own space, as itself
+
+The owner opened the WCC space, saw eleven artist rooms and asked where the
+landing page was. A previous session answered it by compiling the page into a
+`code` project (`scripts/wcc-page-snapshot.mjs`) — visible, but dated, labelled
+"Snapshot", and a second source of truth. He said plainly he meant the real
+page: "i mean landing page — this page", pointing at `di-studio.xyz/wcc`.
+
+The platform already had the right shape for this and it was not being used for
+wcc: `works.js`'s `codeSpace` block, which is how algovrithm's code scene shows
+up in Studio instead of "No projects yet".
+
+- `src/works/works.js` — the wcc entry gained a `codeSpace` block: `title`
+  ("Landing page" — "WCC Exhibition" is the space's own name and says nothing as
+  a row), `kind: 'code'`, a blurb, and `sceneLabel`/`scenePath` for the ring at
+  `/wcc/scene`. No `director`: wcc has no piece descriptor.
+- `src/studio/utils/codeSpaces.js` — the director half is now derived only for a
+  work with `director: true`, so a work without one gets no button to a surface
+  that renders its own "nothing here". Added `title` and `kind`.
+- `src/studio/components/StudioHub.jsx` — Director and the scene action are each
+  rendered only when the registry gives them.
+- `src/pages/SpaceContentsPage.jsx` — asks the registry as well as the server, so
+  a code page is listed in line with the projects. It carries "the way in", and
+  the stored `publishedProjectId` does not: where a work shadows a space the
+  router hands `/wcc` to the code before any space route sees it, so the door the
+  database names is reachable only at its own address.
+
+Nothing about the route changed — `/wcc` is still the compiled microsite, and
+removing it would have broken thirteen concrete things (asset paths, `/wcc/scene`,
+the sitemap, the CORS allow-list, five test files). The landing is still edited in
+`src/wccSite/`, not in the editor; the list says so on the card.
+
+Still open, for the owner to say: the two snapshot projects
+(`landing-page-snapshot`, `artists-works-page-snapshot`) now sit in the list
+beside the real page. They exist on the LOCAL tier only. The landing snapshot is
+a duplicate of the row above it and should probably go; the artists-works one is
+the only listing of a page that is otherwise reachable only inside the landing's
+second panel.
+
 ## 2026-09-10 — di.bo can finally say which spaces are yours
 
 - `POST /api/auth/telegram/whoami` — bot-only (the same shared secret and the

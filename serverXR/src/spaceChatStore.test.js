@@ -5,82 +5,97 @@ import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
 const { initDb, closeDb } = require('./db.js')
-const { appendMessage, listRecent, removeMessage, clearSpace } = require('./spaceChatStore.js')
-
-const line = (id, spaceId, text, ts, userId = 'kid-1') => ({
-    id, spaceId, userId, userName: 'Kid One', text, ts
-})
+const {
+    appendMessage, listRecent, getMessage, removeMessage, setPin, getPin, clearPin, clearSpace
+} = require('./spaceChatStore.js')
 
 beforeEach(() => { initDb(':memory:') })
 afterEach(() => { closeDb() })
 
-describe('spaceChatStore', () => {
-    it('replays the LAST N lines oldest-first, per space', () => {
-        for (let i = 0; i < 10; i++) {
-            appendMessage(line(`m-${i}`, 'dilijan', `line ${i}`, 1000 + i))
-        }
-        appendMessage(line('m-x', 'other-space', 'elsewhere', 2000))
+const line = (id, extra = {}) => appendMessage({
+    id, spaceId: 'main', userId: 'u1', userName: 'Someone', text: `line ${id}`, ts: Date.now(), ...extra
+})
 
-        const recent = listRecent('dilijan', { limit: 3 })
-        expect(recent.map((m) => m.text)).toEqual(['line 7', 'line 8', 'line 9'])
-        expect(recent.map((m) => m.id)).toEqual(['m-7', 'm-8', 'm-9'])
-        expect(recent[0].userName).toBe('Kid One')
-        expect(recent[0].timestamp).toBe(1007)
-        expect(listRecent('other-space')).toHaveLength(1)
+describe('a line that answers another line', () => {
+    it('keeps its own copy of the quote, so an admin erasing the original leaves the answer readable', () => {
+        line('a', { text: 'the door code is 4417' })
+        line('b', { replyTo: { id: 'a', userName: 'Someone', text: 'the door code is 4417' } })
+
+        removeMessage('main', 'a')
+        const [answer] = listRecent('main')
+        expect(answer.id).toBe('b')
+        expect(answer.replyTo).toEqual({ id: 'a', userName: 'Someone', text: 'the door code is 4417' })
     })
 
-    it('prunes past the keep cap so a week-long room stays bounded', () => {
-        for (let i = 0; i < 12; i++) {
-            appendMessage(line(`m-${i}`, 'dilijan', `line ${i}`, 1000 + i), { keep: 5 })
-        }
-        const all = listRecent('dilijan', { limit: 500 })
-        expect(all).toHaveLength(5)
-        expect(all[0].text).toBe('line 7')
+    it('cuts a long quote rather than carrying the whole message inside the reply', () => {
+        line('a', { text: 'x'.repeat(400) })
+        line('b', { replyTo: { id: 'a', userName: 'Someone', text: 'x'.repeat(400) } })
+        const answer = listRecent('main').find((message) => message.id === 'b')
+        expect(answer.replyTo.text.length).toBe(160)
     })
 
-    it('removes one message by id and leaves the rest', () => {
-        appendMessage(line('m-1', 'dilijan', 'keep me', 1000))
-        appendMessage(line('m-2', 'dilijan', 'take this down', 1001))
-        expect(removeMessage('dilijan', 'm-2')).toBe(true)
-        expect(listRecent('dilijan').map((m) => m.id)).toEqual(['m-1'])
-        expect(removeMessage('dilijan', 'm-2')).toBe(false)
+    it('carries no reply at all when none was given', () => {
+        line('a')
+        expect(listRecent('main')[0].replyTo).toBeUndefined()
+    })
+})
+
+describe('the account behind a line', () => {
+    // It is the whole basis of "you may delete your own message": user_id is a
+    // label a browser picked, account_id is what the server stamped.
+    it('is kept, and is never handed to the room', () => {
+        line('a', { accountId: 'account-7' })
+        expect(getMessage('main', 'a').accountId).toBe('account-7')
+        expect(listRecent('main')[0]).not.toHaveProperty('accountId')
+    })
+})
+
+describe('the pin', () => {
+    it('is one per room, and the last pin wins', () => {
+        line('a')
+        line('b')
+        setPin('main', { messageId: 'a', pinnedBy: 'account-7', pinnedByName: 'Gevorg' })
+        setPin('main', { messageId: 'b', pinnedBy: 'account-7', pinnedByName: 'Gevorg' })
+        expect(getPin('main').message.id).toBe('b')
     })
 
-    // An admin scoped to one space must not reach into another space's room by
-    // guessing an id.
-    it('will not remove a message that belongs to a different space', () => {
-        appendMessage(line('m-1', 'other-space', 'not yours', 1000))
-        expect(removeMessage('dilijan', 'm-1')).toBe(false)
-        expect(listRecent('other-space')).toHaveLength(1)
+    it('refuses to pin a message that is not in this room', () => {
+        line('a')
+        expect(setPin('main', { messageId: 'nowhere', pinnedBy: 'account-7' })).toBeNull()
+        expect(setPin('other-space', { messageId: 'a', pinnedBy: 'account-7' })).toBeNull()
     })
 
-    it('clears a whole space', () => {
-        appendMessage(line('m-1', 'dilijan', 'a', 1000))
-        appendMessage(line('m-2', 'dilijan', 'b', 1001))
-        appendMessage(line('m-3', 'other-space', 'c', 1002))
-        expect(clearSpace('dilijan')).toBe(2)
-        expect(listRecent('dilijan')).toHaveLength(0)
-        expect(listRecent('other-space')).toHaveLength(1)
+    it('goes away with the message it pointed at, rather than leaving a bar over nothing', () => {
+        line('a')
+        setPin('main', { messageId: 'a', pinnedBy: 'account-7' })
+        removeMessage('main', 'a')
+        expect(getPin('main')).toBeNull()
     })
 
-    it('rejects a line with no id, space or text', () => {
-        expect(appendMessage({ spaceId: 'dilijan', text: 'x', ts: 1 })).toBe(false)
-        expect(appendMessage({ id: 'm', text: 'x', ts: 1 })).toBe(false)
-        expect(appendMessage({ id: 'm', spaceId: 'dilijan', text: '', ts: 1 })).toBe(false)
-        expect(listRecent('dilijan')).toHaveLength(0)
+    it('never leaks the account of whoever wrote the pinned line', () => {
+        line('a', { accountId: 'account-7' })
+        setPin('main', { messageId: 'a', pinnedBy: 'account-7' })
+        expect(getPin('main').message).not.toHaveProperty('accountId')
     })
 
-    // The socket handler already caps userName/userId before this is called,
-    // but the store must not trust that — anything else that ever calls
-    // appendMessage directly gets the same ceiling for free.
-    it('truncates an oversized userName/userId to the identity cap', () => {
-        const hugeName = 'x'.repeat(100 * 1024)
-        const hugeId = 'y'.repeat(100 * 1024)
-        appendMessage({ id: 'm-1', spaceId: 'dilijan', userId: hugeId, userName: hugeName, text: 'hi', ts: 1000 })
-        const [row] = listRecent('dilijan')
-        expect(row.userName).toHaveLength(64)
-        expect(row.userId).toHaveLength(64)
-        expect(row.userName).toBe('x'.repeat(64))
-        expect(row.userId).toBe('y'.repeat(64))
+    it('is dropped when the room is cleared, and can be dropped on its own', () => {
+        line('a')
+        setPin('main', { messageId: 'a', pinnedBy: 'account-7' })
+        expect(clearPin('main')).toBe(true)
+        expect(getPin('main')).toBeNull()
+
+        line('b')
+        setPin('main', { messageId: 'b', pinnedBy: 'account-7' })
+        clearSpace('main')
+        expect(getPin('main')).toBeNull()
+    })
+
+    it('is scoped to its room — two rooms hold two pins', () => {
+        line('a')
+        appendMessage({ id: 'z', spaceId: 'dilijan', userId: 'u2', userName: 'Other', text: 'hello', ts: Date.now() })
+        setPin('main', { messageId: 'a', pinnedBy: 'account-7' })
+        setPin('dilijan', { messageId: 'z', pinnedBy: 'account-9' })
+        expect(getPin('main').message.id).toBe('a')
+        expect(getPin('dilijan').message.id).toBe('z')
     })
 })

@@ -1,4 +1,4 @@
-/* The studio chat's service worker.
+/* iiii's service worker.
  *
  * It lives at the ROOT so it can claim the scope `/chat` — a worker served from
  * `/chat/sw.js` may only claim `/chat/`, and `/chat` is not inside `/chat/`.
