@@ -36,3 +36,31 @@ a key di.iiii has never seen. This is the half that had to be right first.
   is the next piece, and the honest limits go in the interface with it: both
   people must be online at the same time, and a conversation cannot follow you
   to another device.
+
+## 2026-09-11 — and it actually works, two browsers, no server between them
+
+- `useP2PChat.js` + `PrivateChatSurface.jsx` + `/chat?with=<account>`. A query,
+  not a path: a private conversation must never look like a shareable address.
+- The way in is the room's own people — no directory, no search. The server
+  refuses to introduce two people who share no space, so offering a name that
+  could not be reached would be a door drawn on a wall. Guests do not appear:
+  a guest is a browser, not somebody you can write to.
+- **Seen**: two browsers, two accounts, a real message delivered. Then the claim
+  checked rather than asserted — every table of the database and the whole
+  server log searched for the sentence. Zero rows, zero lines.
+- **The two-browser run caught a real flaw first**, which is the entire reason
+  for running it: both sides connected and their fingerprints DID NOT MATCH. I
+  was deriving the key from whichever device the registry listed first, and a
+  person with an older row gets encrypted to a device that is not in the
+  conversation. The key is now the one the peer PRESENTS on the connection —
+  the registry says a person has a device, it does not say which one is on the
+  other end. Matching words on both sides now.
+- Second thing the run caught: whoever opens the conversation first arrives
+  before the other has published a key. That is the ordinary case, and the first
+  version treated it as a dead end. It waits and looks again, and starts the
+  moment a signal proves they are there.
+- `accountId` on space presence is stamped by the SERVER from the session, never
+  taken from the client — `userId` is a label a browser made up for itself, and
+  a private conversation can only be keyed on who somebody actually is.
+- **The chat is off the public wiki**, at the owner's word: both articles cut.
+  What is left is the Claude agent node, which is a different thing.

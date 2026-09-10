@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Box, IconButton, InputBase, Stack, ThemeProvider, Tooltip, Typography } from '@mui/material'
+import { Box, Button, IconButton, InputBase, Stack, ThemeProvider, Tooltip, Typography } from '@mui/material'
+import LockIcon from '@mui/icons-material/Lock'
 import CloseIcon from '@mui/icons-material/Close'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import { diFontTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpaceChat from './useSpaceChat.js'
+import { buildPrivateChatPath } from './chatRouting.js'
+import { appNavigate } from '../utils/appNavigate.js'
 
 // `iiii` — the room, at its own address, with nothing else on the screen.
 // Named for the platform, not for a function: it is not "the studio chat", it is
@@ -129,6 +132,17 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
         setDraft('')
     }
 
+    // Everyone in the room who is a person rather than a browser, me excluded —
+    // and de-duplicated, because one person with two tabs open is one person.
+    const reachable = useMemo(() => {
+        const seen = new Map()
+        for (const person of people) {
+            if (!person?.accountId || person.accountId === session.subject) continue
+            if (!seen.has(person.accountId)) seen.set(person.accountId, person)
+        }
+        return [...seen.values()]
+    }, [people, session.subject])
+
     const here = people.length
     const status = forbidden
         ? forbidden
@@ -174,6 +188,43 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                     }} />
                 </Stack>
 
+                {/* The way into a private conversation, and the only one: the
+                    people actually in the room. No directory, no search — the
+                    server refuses to introduce two people who share no space, so
+                    offering a name here that could not be reached would be a
+                    door drawn on a wall.
+
+                    Only people signed in with an ACCOUNT appear. A guest is a
+                    browser rather than somebody you can write to, which is the
+                    same reason the server will not carry a signal for one. */}
+                {reachable.length > 0 && (
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{ px: 2, py: 1, overflowX: 'auto', borderBottom: '1px solid var(--ui-border)' }}
+                    >
+                        {reachable.map((person) => (
+                            <Button
+                                key={person.accountId}
+                                size="small"
+                                onClick={() => appNavigate(buildPrivateChatPath(spaceId, person.accountId, person.userName))}
+                                startIcon={<LockIcon sx={{ fontSize: 12 }} />}
+                                sx={{
+                                    flexShrink: 0,
+                                    textTransform: 'none',
+                                    fontSize: 12,
+                                    color: 'var(--ui-text-muted)',
+                                    borderRadius: 4,
+                                    border: '1px solid var(--ui-border)',
+                                    px: 1.25,
+                                    '&:hover': { borderColor: 'var(--ui-accent)', color: 'var(--ui-text-primary)' }
+                                }}
+                            >
+                                {person.userName || 'someone'}
+                            </Button>
+                        ))}
+                    </Stack>
+                )}
                 <Box
                     ref={listRef}
                     sx={{

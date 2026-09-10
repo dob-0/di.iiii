@@ -317,7 +317,13 @@ function initializeSocket(httpServer, config) {
     joinedEvent,
     listEvent,
     userId,
-    userName
+    userName,
+    // The ACCOUNT, stamped by the server from the session — never taken from
+    // the client, which is the whole difference between it and `userId`. That
+    // one is a label a browser made up for itself; this one is who the person
+    // actually is, and a private conversation can only be opened against it.
+    // Absent for a guest, which is correct: there is nobody there to write to.
+    accountId = null
   }) => {
     if (!bucketMap.has(bucketId)) {
       bucketMap.set(bucketId, new Map())
@@ -326,12 +332,14 @@ function initializeSocket(httpServer, config) {
     bucketMap.get(bucketId).set(socket.id, {
       userId,
       userName,
+      ...(accountId ? { accountId } : {}),
       socketId: socket.id,
       joinedAt: Date.now()
     })
     socket.to(`${roomPrefix}-${bucketId}`).emit(joinedEvent, {
       userId,
       userName,
+      ...(accountId ? { accountId } : {}),
       socketId: socket.id,
       timestamp: Date.now()
     })
@@ -378,6 +386,7 @@ function initializeSocket(httpServer, config) {
       }
 
       logger.info(`[Socket] ${userName} joined space: ${spaceId}`)
+      const joiningAuth = refreshSocketAuthState(socket, config) || socket.data?.authState || {}
       joinConnectionBucket({
         bucketMap: spaceConnections,
         bucketId: spaceId,
@@ -386,7 +395,10 @@ function initializeSocket(httpServer, config) {
         joinedEvent: 'user-joined',
         listEvent: 'users-in-space',
         userId,
-        userName
+        userName,
+        accountId: (joiningAuth.type === 'session' && joiningAuth.subject && !isGuestSubject(joiningAuth.subject))
+          ? joiningAuth.subject
+          : null
       })
 
       // Opt-in: the scene-collaboration client (useSpaceSocket) joins this same

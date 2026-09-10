@@ -291,25 +291,6 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-21'
     },
     {
-        id: 'chat-in-a-space',
-        category: 'Spaces & access',
-        title: 'Talking to the others in a space',
-        summary: 'Two chat rooms behind one Chat button: everyone in the space, or only the people in this project.',
-        body: [
-            'Chat opens on whichever room you were last reading. The tab named after the space reaches everyone in it, whatever project each of them has open — the room to use when you are working alone in your own project and want to say something to the others. The tab that says "This project" reaches only the people who have this project open, which is the older behaviour and is unchanged.',
-            'The badge on the Chat button counts both rooms together, so a message in the tab you are not looking at still gets your attention.',
-            { list: [
-                'The space room keeps its messages. Someone arriving an hour late, or reloading the page, reads what was said before they got there — the last 100 lines.',
-                'The project room does not keep anything. Close the tab and that conversation is gone, on purpose.',
-                'Both rooms are limited to 500 characters a message, and only people with access to the space can read or write either.'
-            ] },
-            'Your name in chat is the name this browser knows you by. Set it once and every message carries it; without one you appear as Guest-XXXX.',
-            'Moderation, plainly: a di.iiii admin — not a space owner, not an invited editor — can delete any message in the space room, and it disappears from everyone\'s screen at once, including the person who wrote it. Nobody can edit a message, nothing is filtered automatically, and the project room has no delete at all. If a space is being used by children, an adult with an admin account should be in it.'
-        ],
-        tags: ['chat', 'collaboration', 'space', 'project', 'presence', 'moderation', 'invite'],
-        updated: '2026-08-26'
-    },
-    {
         id: 'accounts-of-our-own',
         category: 'Spaces & access',
         title: 'Signing in without Google, GitHub or Telegram',
@@ -327,24 +308,6 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['account', 'sign in', 'register', 'password', 'email', 'offline', 'camp'],
         updated: '2026-09-11'
-    },
-    {
-        id: 'chat-on-its-own',
-        category: 'Spaces & access',
-        title: 'iiii — the room at its own address',
-        summary: 'The space room, alone on a page at /chat, installable on a phone, and called iiii.',
-        body: [
-            'The room described above lives inside the editors: you open Studio or the node editor, then open a panel. That is the wrong amount of work for "say something to the others", so the same room also has an address of its own, and a name: **iiii**. /chat is the platform\u2019s own room; /{space}/chat is any other space\u2019s.',
-            'It is the same room, not a copy. A line typed at /chat appears in the Chat panel of everyone working in that space, and a line typed in the panel appears here. The transcript, the 500-character limit and the admin\u2019s delete are all the ones described above.',
-            { list: [
-                'On a phone, the browser can add it to the home screen and it opens like an app, without browser chrome.',
-                'It carries no 3D and no editor, so it opens on a bad connection and stays open.',
-                'You must be in the space to read it. Somebody who is not gets a card telling them so, rather than an empty room.'
-            ] },
-            'Your name here is the name of the account you signed in with. Only a session with no account to speak of falls back to asking you for one.'
-        ],
-        tags: ['chat', 'space', 'phone', 'install', 'pwa', 'address'],
-        updated: '2026-09-10'
     },
     {
         id: 'public-page-node',
