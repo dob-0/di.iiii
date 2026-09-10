@@ -13,12 +13,12 @@
 // know each other"; this borrows it rather than inventing a friends list.
 
 const { publishDevice, listDevices, forgetDevice, forgetAllDevices } = require('../dmDeviceStore')
-const { findUserById } = require('../userStore')
+const { findUserById, listUsers } = require('../userStore')
 const { isGuestSubject } = require('../authAccess')
 
 const registerDmRoutes = (router, { requireSession = null, deps = {} } = {}) => {
   const store = { publishDevice, listDevices, forgetDevice, forgetAllDevices, ...deps.store }
-  const users = { findUserById, ...deps.users }
+  const users = { findUserById, listUsers, ...deps.users }
 
   // A guest identity is per-browser and disposable. "Who am I talking to"
   // cannot mean anything against one, so private conversations are for
@@ -74,6 +74,32 @@ const registerDmRoutes = (router, { requireSession = null, deps = {} } = {}) => 
     if (!me) return res.status(401).json({ error: 'Sign in with an account to talk privately.' })
     const count = store.forgetAllDevices(me.subject)
     return res.json({ forgotten: count })
+  })
+
+  // Who you can start a conversation with. The SAME rule as the lookup below —
+  // people you already share a space with — because a list of names you cannot
+  // actually reach is a worse answer than a short list.
+  //
+  // This is what the app calls "new chat", and it is deliberately not an
+  // address book: di.iiii has no such thing, and inventing a global directory
+  // of everyone who ever signed up would be a different product. Sharing a room
+  // is this platform's existing meaning of "these two people know each other".
+  router.get('/api/dm/people', ...guard, (req, res) => {
+    const me = accountOf(req)
+    if (!me) return res.status(401).json({ error: 'Sign in with an account to talk privately.' })
+    const people = users.listUsers()
+      .filter((person) => String(person.id) !== String(me.subject))
+      .filter((person) => sharesASpace(me, { spaces: person.spaces, isUnrestricted: person.isUnrestricted }))
+      .map((person) => ({
+        userId: person.id,
+        label: person.display_name || person.username || 'someone',
+        // Whether they have ever opened a private conversation anywhere. A
+        // person with no device cannot be reached yet, and saying so beats a
+        // name that leads to a spinner.
+        reachable: store.listDevices(person.id).length > 0
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+    return res.json({ people })
   })
 
   // Somebody else's, if you already share a room with them.

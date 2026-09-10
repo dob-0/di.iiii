@@ -1,16 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { buildChatPath, getChatLocationState } from './chatRouting.js'
+import { buildChatHomePath, buildChatPath, buildPrivateChatPath, getChatLocationState, getPrivateChatTarget } from './chatRouting.js'
 import { isReservedAppSegment } from '../utils/spaceRouting.js'
 import { RESERVED_PROJECT_SLUGS, RESERVED_SPACE_SLUGS } from '../../shared/reservedSegments.cjs'
 
 describe('chat routing', () => {
-    it('reads /chat as the studio room', () => {
-        expect(getChatLocationState({ pathname: '/chat' })).toEqual({ isChat: true, spaceId: 'main' })
-        expect(getChatLocationState({ pathname: '/chat/' })).toEqual({ isChat: true, spaceId: 'main' })
+    it('reads /chat as the list, not as a room', () => {
+        expect(getChatLocationState({ pathname: '/chat' })).toEqual({ isChat: true, isHome: true, spaceId: '' })
+        expect(getChatLocationState({ pathname: '/chat/' })).toEqual({ isChat: true, isHome: true, spaceId: '' })
     })
 
-    it('reads /{space}/chat as that space’s room', () => {
-        expect(getChatLocationState({ pathname: '/dilijan/chat' })).toEqual({ isChat: true, spaceId: 'dilijan' })
+    it('reads /chat/{space} as that space’s room', () => {
+        expect(getChatLocationState({ pathname: '/chat/main' })).toEqual({ isChat: true, isHome: false, spaceId: 'main' })
+        expect(getChatLocationState({ pathname: '/chat/dilijan' })).toEqual({ isChat: true, isHome: false, spaceId: 'dilijan' })
+    })
+
+    // The address the room had before the list existed. Links to it are out
+    // there — in the wiki's history, in somebody's messages — and a link that
+    // used to open a room must not start opening nothing.
+    it('still reads the old /{space}/chat as the same room', () => {
+        expect(getChatLocationState({ pathname: '/dilijan/chat' })).toEqual({ isChat: true, isHome: false, spaceId: 'dilijan' })
     })
 
     it('claims neither a deeper path nor a project called chat-something', () => {
@@ -19,10 +27,23 @@ describe('chat routing', () => {
         expect(getChatLocationState({ pathname: '/' }).isChat).toBe(false)
     })
 
-    it('builds the address the room is installed at', () => {
-        expect(buildChatPath()).toBe('/chat')
-        expect(buildChatPath('main')).toBe('/chat')
-        expect(buildChatPath('dilijan')).toBe('/dilijan/chat')
+    // The room lives UNDER /chat because the service worker's scope is `/chat`,
+    // and a scope does not cover `/main/chat`. An installed app whose rooms sit
+    // outside its own scope has no worker on the page people actually use.
+    it('builds room addresses inside the installed scope', () => {
+        expect(buildChatHomePath()).toBe('/chat')
+        expect(buildChatPath()).toBe('/chat/main')
+        expect(buildChatPath('main')).toBe('/chat/main')
+        expect(buildChatPath('dilijan')).toBe('/chat/dilijan')
+        expect(buildChatPath('dilijan').startsWith(buildChatHomePath())).toBe(true)
+    })
+
+    it('keeps a private conversation a query on the list, never a shareable path', () => {
+        const path = buildPrivateChatPath('account-7', 'Emilya')
+        expect(path.startsWith('/chat?')).toBe(true)
+        expect(getChatLocationState({ pathname: '/chat' }).isHome).toBe(true)
+        expect(getPrivateChatTarget({ search: path.slice(path.indexOf('?')) })).toBe('account-7')
+        expect(getPrivateChatTarget({ search: '' })).toBeNull()
     })
 
     // The word has to be reserved in all four claimants or a space named `chat`

@@ -7,7 +7,8 @@ import { diFontTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useP2PChat from './useP2PChat.js'
 import { appNavigate } from '../utils/appNavigate.js'
-import { buildChatPath } from './chatRouting.js'
+import { buildChatHomePath } from './chatRouting.js'
+import { rememberConversationName, forgetConversationName } from './privateChatIndex.js'
 import ReplyQuote from './ReplyQuote.jsx'
 import MessageActions, { copyAction, removeAction, replyAction, useLongPress } from './MessageActions.jsx'
 
@@ -37,7 +38,7 @@ const STATE_TEXT = {
     unreachable: 'not reachable'
 }
 
-export default function PrivateChatSurface({ withUserId, withName = null, spaceId = 'main' }) {
+export default function PrivateChatSurface({ withUserId, withName = null }) {
     const session = useAuthSession()
     const [draft, setDraft] = useState('')
     const [replyTo, setReplyTo] = useState(null)
@@ -47,6 +48,13 @@ export default function PrivateChatSurface({ withUserId, withName = null, spaceI
         withUserId,
         myAccountId: session.subject
     })
+
+    // The name goes in this browser's own index so the list can say who this
+    // conversation is with. A label, never an identity — the account id is what
+    // the connection and the key are keyed on.
+    useEffect(() => {
+        if (withUserId && withName) rememberConversationName(withUserId, withName)
+    }, [withUserId, withName])
 
     useEffect(() => {
         const el = listRef.current
@@ -87,9 +95,9 @@ export default function PrivateChatSurface({ withUserId, withName = null, spaceI
                 }}>
                     <IconButton
                         size="small"
-                        onClick={() => appNavigate(buildChatPath(spaceId))}
+                        onClick={() => appNavigate(buildChatHomePath())}
                         sx={{ color: 'var(--ui-text-muted)' }}
-                        aria-label="Back to the room"
+                        aria-label="Back to your chats"
                     >
                         <ArrowBackIcon sx={{ fontSize: 18 }} />
                     </IconButton>
@@ -225,7 +233,7 @@ export default function PrivateChatSurface({ withUserId, withName = null, spaceI
                     {messages.length > 0 && (
                         <Typography
                             component="button"
-                            onClick={forget}
+                            onClick={() => { forget(); forgetConversationName(withUserId) }}
                             sx={{
                                 mt: 1, background: 'none', border: 0, p: 0, cursor: 'pointer',
                                 fontSize: 11, color: 'var(--ui-text-muted)', textDecoration: 'underline'
