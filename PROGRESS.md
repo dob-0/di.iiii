@@ -5,6 +5,100 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-11 — the app opens on a list, not inside one room
+
+The owner installed `iiii`, opened it, and said the thing that mattered:
+*"still limited when i open app it just the same ui where is the conntacts
+create new chat and etc."* He was right. Everything built so far was one room
+and a set of tools for being inside it. There was no way to see another room, no
+way to start a conversation with somebody who was not standing in that room at
+that moment, and no way back out. One room is not a place with rooms in it.
+
+- **`/chat` is now the list** — rooms first, private conversations under them,
+  each with its last line, the time, and a dot when something arrived since this
+  device last had it open. `/chat/{space}` is the room; `/{space}/chat` still
+  works because links to it exist.
+- **Rooms moved UNDER `/chat` for a concrete reason:** the service worker's scope
+  is `/chat`, and a scope does not cover `/main/chat`. The room's canonical
+  address had to be inside the installed app's own scope or the page people
+  actually use has no worker on it.
+- **`GET /api/chat/rooms`** (`serverXR/src/routes/chatRoutes.js`) — one call
+  draws the whole list. Opening ten sockets to render ten rows is how a chat app
+  becomes slow on a phone. Scope is asked per space via `canAccessSpace` rather
+  than read off the session's array, so an unrestricted account is right without
+  every space being written against it. Sandboxes are never listed.
+- **`GET /api/dm/people`** — the "new chat" picker. The SAME rule the key lookup
+  already enforces: people you share a space with. Not an address book, and not
+  a directory of everyone who ever signed up — that is a different product. Each
+  row says whether that person has ever opened a private conversation, because a
+  name that leads to a spinner is worse than a name marked as not ready.
+- **The list of private conversations is assembled in the BROWSER**
+  (`src/chat/privateChatIndex.js`), from the histories that are already there
+  plus a local map of names. A server-side list of who talks to whom is the
+  metadata end-to-end encryption is largely for: the words would stay sealed and
+  di.iiii would still know that these two people spoke, when, and how often.
+  Building that to draw a nicer list would give away the thing being protected.
+  The cost is stated in the interface: clearing this browser clears the list.
+- **Read marks are local too** — "unread" means something arrived since THIS
+  device last had the room open. A server that knew when you read something is a
+  server that knows when you are awake.
+- The room grew a back arrow. It used to BE the app, so there was nowhere to go
+  back to; a door that only opens inwards is a room you are stuck in.
+- The staging APK stopped calling itself "studio chat".
+
+**Seen, not assumed:** two accounts, two browsers, desktop and Pixel 7 — the
+list with a room's last line and its unread dot, the ✚ picker listing five real
+people with their reachability, tapping a room and coming back, and a private
+conversation appearing under PRIVATE with the lock, the name and its last words
+after being held in that same browser.
+
+**Not done:** no push notification, so a message that arrives while the app is
+closed is read when it is next opened. That is the next honest gap.
+
+## 2026-09-11 — where a window sits belongs to the person, and windows can fill the canvas
+
+First stage of the connected workspace the owner asked for ("max pro level
+working space"). No new capability, no second window system — Raw already has
+the desk; this is the part of `docs/architecture/RAW_WORKSPACE.md` §5.3 that was
+written in August and never built.
+
+Window geometry lived in `node.values.frame`, inside the collaborative document.
+So moving your window moved it for everyone in the project, and for you on your
+phone, and pushed an undo entry. Now:
+
+- `src/raw/utils/workspaceLayout.js` — the pure half: scope key (space, project,
+  narrow/wide), `mergeFrame` (local over the document's seed, field by field),
+  `pruneLayout`, `maximiseFrame`/`restoreFrame`, `cycleFocus`.
+- `src/raw/utils/workspaceLayoutStorage.js` — a versioned envelope in
+  localStorage, every read and write wrapped.
+- `src/raw/utils/useWorkspaceLayout.js` — `frameOf(node)` is now the one place
+  anything asks where a window is; writes are debounced and flushed on unmount.
+- `RawEditor` — drag, resize, focus, minimise, pin, close and reopen all write
+  local state. The document is read as the SEED and never written by an
+  arrangement, so an untouched project opens exactly as it did and the projector
+  (`RawOutSurface`) is unaffected.
+- `DesktopWindow` — a fourth header control: Maximize/Restore. It fills the
+  canvas, not the page (topbar and the reserved bottom band respected), pins
+  while maximised (a pan would otherwise slide "full screen" off the screen),
+  comes to the front, and restores to where the person left the window rather
+  than to the document's seed.
+- `Ctrl+\`` walks the pile of windows top to bottom; Shift walks back.
+
+Guards: `workspaceLayout.test.js` (14), plus RawEditor cases asserting that
+dragging/minimising/closing a window emits NO `updateNode` op, that an untouched
+project opens on the document's frame, that an arrangement survives a reload
+while the document does not change, and that maximise raises and restores
+losslessly. `selectMountedPanelNodes` takes a `frameOf` so a window closed on
+this device stops being mounted.
+
+Looked at: local canvas at 1440x900 and on a phone (Galaxy S9+) — maximise fills
+the canvas clear of the topbar and the zoom controls, the arrangement survives a
+reload, and the phone gets its own layout slot rather than inheriting the
+desktop's.
+
+Not in this stage, and next: every tool as a window (`view.surface`), the code
+window, named layouts.
+
 ## 2026-09-11 — the room got the six tools a room actually uses
 
 The owner asked for the chat's UI and UX, naming the tools he wanted — *"pin,
