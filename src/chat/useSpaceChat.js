@@ -16,6 +16,12 @@ import { generateId } from '../shared/projectSchema.js'
 const DISPLAY_NAME_STORAGE_KEY = 'dii.chat.displayName'
 const USER_ID_STORAGE_KEY = 'dii.chat.userId'
 const MAX_CHAT_MESSAGES = 200
+const REPLY_QUOTE_MAX = 160
+const TYPING_SEND_INTERVAL_MS = 2000
+// How long a typing signal is believed. Longer than the send interval, so a
+// steady typist never flickers; short enough that somebody who walked away
+// stops being announced.
+const TYPING_TTL_MS = 5000
 
 const readStored = (key) => {
     try {
@@ -55,10 +61,18 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
     }, [displayName, localUserId])
 
     const socketRef = useRef(null)
+    const lastTypingSentRef = useRef(0)
     const [connection, setConnection] = useState('connecting')
     const [messages, setMessages] = useState([])
     const [people, setPeople] = useState([])
     const [canModerate, setCanModerate] = useState(false)
+    const [canPin, setCanPin] = useState(false)
+    const [pinned, setPinned] = useState(null)
+    // Who is mid-sentence, and when we last heard so. A typing signal has no
+    // "stopped" event on purpose — the sender may close the tab mid-word — so
+    // it expires on a clock here instead of waiting for a message that may
+    // never come.
+    const [typingAt, setTypingAt] = useState({})
     const [forbidden, setForbidden] = useState('')
 
     useEffect(() => {
@@ -70,6 +84,9 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
         setMessages([])
         setPeople([])
         setCanModerate(false)
+        setCanPin(false)
+        setPinned(null)
+        setTypingAt({})
         setForbidden('')
 
         const hasWindow = typeof window !== 'undefined'
@@ -109,6 +126,20 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
                 self: message.userId === localUserId
             })).slice(-MAX_CHAT_MESSAGES))
             setCanModerate(Boolean(payload?.canModerate))
+            setCanPin(Boolean(payload?.canPin))
+            setPinned(payload?.pinned || null)
+        })
+
+        socket.on('space-chat-pinned', (payload) => {
+            setPinned(payload?.pinned || null)
+        })
+
+        socket.on('space-chat-typing', (payload) => {
+            if (!payload?.userId || payload.userId === localUserId) return
+            setTypingAt((current) => ({
+                ...current,
+                [payload.userId]: { name: payload.userName || 'Someone', at: Date.now() }
+            }))
         })
 
         socket.on('space-chat-message', (payload) => {
@@ -121,6 +152,10 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
         socket.on('space-chat-removed', (payload) => {
             if (!payload?.id) return
             setMessages((current) => current.filter((message) => message.id !== payload.id))
+            // A removed line takes the pin with it — the server already dropped
+            // the row, and a bar quoting a message nobody can find is worse than
+            // no bar.
+            setPinned((current) => (current?.message?.id === payload.id ? null : current))
         })
 
         // The server sends the roster as a bare array on `users-in-space`, and
@@ -163,32 +198,92 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
         }
     }, [localUserId, resolvedName, spaceId])
 
-    const send = useCallback((text) => {
+    const send = useCallback((text, replyTo = null) => {
         const trimmed = String(text || '').trim()
         if (!trimmed || !spaceId || !socketRef.current?.connected) return
         const id = generateId('space-chat')
+        const quoted = replyTo?.id
+            ? { id: replyTo.id, userName: replyTo.userName || '', text: String(replyTo.text || '').slice(0, REPLY_QUOTE_MAX) }
+            : null
         socketRef.current.emit('space-chat-message', {
             spaceId,
             id,
             userId: localUserId,
             userName: resolvedName,
-            text: trimmed
+            text: trimmed,
+            ...(quoted ? { replyTo: quoted } : {})
         })
         setMessages((current) => [...current, {
             id,
             userId: localUserId,
             userName: resolvedName,
             text: trimmed,
+            ...(quoted ? { replyTo: quoted } : {}),
             timestamp: Date.now(),
             receivedAt: Date.now(),
             self: true
         }].slice(-MAX_CHAT_MESSAGES))
     }, [localUserId, resolvedName, spaceId])
 
+    const pin = useCallback((id) => {
+        if (!id || !spaceId || !socketRef.current?.connected) return
+        socketRef.current.emit('space-chat-pin', { spaceId, id })
+    }, [spaceId])
+
+    const unpin = useCallback(() => {
+        if (!spaceId || !socketRef.current?.connected) return
+        socketRef.current.emit('space-chat-unpin', { spaceId })
+    }, [spaceId])
+
+    // Called on every keystroke; the throttle is here so the socket is not, and
+    // the server throttles again because a client is not to be trusted with it.
+    const notifyTyping = useCallback(() => {
+        if (!spaceId || !socketRef.current?.connected) return
+        const now = Date.now()
+        if (now - lastTypingSentRef.current < TYPING_SEND_INTERVAL_MS) return
+        lastTypingSentRef.current = now
+        socketRef.current.emit('space-chat-typing', { spaceId })
+    }, [spaceId])
+
+    // Expiry is a SWEEP rather than a filter at read time: one interval for the
+    // whole room, running only while somebody is actually typing, and the list
+    // stays something the render can read without asking what time it is.
+    useEffect(() => {
+        if (!Object.keys(typingAt).length) return undefined
+        const timer = setInterval(() => {
+            const now = Date.now()
+            setTypingAt((current) => {
+                const kept = Object.fromEntries(
+                    Object.entries(current).filter(([, entry]) => now - entry.at < TYPING_TTL_MS)
+                )
+                return Object.keys(kept).length === Object.keys(current).length ? current : kept
+            })
+        }, 1000)
+        return () => clearInterval(timer)
+    }, [typingAt])
+
+    const typingNames = useMemo(() => Object.values(typingAt).map((entry) => entry.name), [typingAt])
+
     const remove = useCallback((id) => {
         if (!id || !spaceId || !socketRef.current?.connected) return
         socketRef.current.emit('space-chat-remove', { spaceId, id })
     }, [spaceId])
 
-    return { connection, messages, people, canModerate, forbidden, send, remove, displayName: resolvedName, localUserId }
+    return {
+        connection,
+        messages,
+        people,
+        canModerate,
+        canPin,
+        pinned,
+        typingNames,
+        forbidden,
+        send,
+        remove,
+        pin,
+        unpin,
+        notifyTyping,
+        displayName: resolvedName,
+        localUserId
+    }
 }

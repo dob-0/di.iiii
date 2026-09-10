@@ -181,6 +181,17 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_space_chat_lines_space ON space_chat_lines (space_id);
 
+  -- One pinned line per room. Not a list: a wall of pins is a second unread
+  -- feed, and the whole use of a pin is that there is exactly one thing at the
+  -- top of the room everybody sees first.
+  CREATE TABLE IF NOT EXISTS space_chat_pins (
+    space_id TEXT PRIMARY KEY,
+    message_id TEXT NOT NULL,
+    pinned_by TEXT NOT NULL DEFAULT '',
+    pinned_by_name TEXT NOT NULL DEFAULT '',
+    ts INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS public_assets (
     asset_id TEXT PRIMARY KEY,
     space_id TEXT NOT NULL,
@@ -504,6 +515,17 @@ function initDb(dbPath) {
   // The name someone types to sign in when there is no email at all — a camp
   // laptop with no mail, the offline install. Unique where present.
   ensureColumn(db, 'users', 'username', 'TEXT')
+  // A reply keeps its own COPY of what it answers, rather than a foreign key.
+  // The original can be removed by an admin, and when it is, the answer must
+  // still read as an answer instead of quoting a hole. Three flat columns for
+  // the same reason the message itself is flat: no join on the replay path.
+  // Who wrote it, as an ACCOUNT rather than as the label a browser chose for
+  // itself. It is what lets somebody delete their own line without being an
+  // admin: `user_id` is a claim, this is the session the server stamped.
+  ensureColumn(db, 'space_chat_lines', 'account_id', 'TEXT')
+  ensureColumn(db, 'space_chat_lines', 'reply_to_id', 'TEXT')
+  ensureColumn(db, 'space_chat_lines', 'reply_to_name', 'TEXT')
+  ensureColumn(db, 'space_chat_lines', 'reply_to_text', 'TEXT')
   backfillUserUnrestricted(db)
   backfillArchivedTitles(db)
   backfillGlobalSpace(db)

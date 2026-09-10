@@ -44,6 +44,24 @@ const iceServers = () => {
     return configured.split(',').map((url) => ({ urls: url.trim() })).filter((s) => s.urls)
 }
 
+// The plaintext is JSON so a reply can carry what it answers. Anything that
+// does not parse to that shape is read as a plain sentence — a peer on an older
+// build, or a body this one did not write.
+const writeBody = (text, replyTo) => JSON.stringify(
+    replyTo?.id ? { t: text, r: { id: replyTo.id, name: replyTo.name || '', text: String(replyTo.text || '').slice(0, 160) } } : { t: text }
+)
+
+const readBody = (opened) => {
+    if (opened === null) return { text: null, replyTo: null }
+    try {
+        const parsed = JSON.parse(opened)
+        if (parsed && typeof parsed.t === 'string') {
+            return { text: parsed.t, replyTo: parsed.r?.id ? parsed.r : null }
+        }
+    } catch { /* not a body this build wrote — read it as it came */ }
+    return { text: opened, replyTo: null }
+}
+
 const readStored = (key) => {
     try { return JSON.parse(window.localStorage.getItem(key) || 'null') } catch { return null }
 }
@@ -110,13 +128,15 @@ export default function useP2PChat({ withUserId, myAccountId }) {
     const receive = useCallback(async (raw) => {
         try {
             const sealed = JSON.parse(raw)
-            const text = keyRef.current ? await decrypt(keyRef.current, sealed) : null
+            const opened = keyRef.current ? await decrypt(keyRef.current, sealed) : null
+            const { text, replyTo } = readBody(opened)
             remember({
                 id: sealed.id || `in-${Date.now()}`,
                 mine: false,
                 // A message that will not open is SHOWN as such rather than
                 // dropped: silence would look like nothing was sent.
-                text: text === null ? null : text,
+                text,
+                ...(replyTo ? { replyTo } : {}),
                 at: Date.now()
             })
         } catch {
@@ -126,7 +146,14 @@ export default function useP2PChat({ withUserId, myAccountId }) {
 
     const attachChannel = useCallback((channel) => {
         channelRef.current = channel
-        channel.onopen = () => setState('open')
+        channel.onopen = () => {
+            setState('open')
+            // The waiting message outlives the wait unless it is cleared here:
+            // it was set while looking for their key, and the connection opening
+            // is the answer to it. Seen on the first two-browser run — the room
+            // was plainly working under a red line saying it was not.
+            setProblem(null)
+        }
         channel.onclose = () => setState('closed')
         channel.onmessage = (event) => receive(event.data)
     }, [receive])
@@ -275,17 +302,32 @@ export default function useP2PChat({ withUserId, myAccountId }) {
         }
     }, [withUserId, identity, myAccountId, myPublicKey, attachChannel])
 
-    const send = useCallback(async (text) => {
+    const send = useCallback(async (text, replyTo = null) => {
         const trimmed = String(text || '').trim()
         if (!trimmed || !keyRef.current) return false
         const channel = channelRef.current
         if (!channel || channel.readyState !== 'open') return false
-        const sealed = await encrypt(keyRef.current, trimmed)
+        // The quote goes INSIDE the sealed body, not beside it. A reply that
+        // rode in the clear would put the words of the message being answered
+        // back on the wire, which is the one thing this whole file exists to
+        // prevent.
+        const sealed = await encrypt(keyRef.current, writeBody(trimmed, replyTo))
         const id = `out-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
         channel.send(JSON.stringify({ ...sealed, id }))
-        remember({ id, mine: true, text: trimmed, at: Date.now() })
+        remember({ id, mine: true, text: trimmed, ...(replyTo ? { replyTo } : {}), at: Date.now() })
         return true
     }, [remember])
+
+    // One line, gone from HERE. There is no second half to this: reaching into
+    // the other person's browser is not a power that exists, and saying it did
+    // would be the lie.
+    const forgetOne = useCallback((id) => {
+        setMessages((current) => {
+            const next = current.filter((entry) => entry.id !== id)
+            writeStored(historyKey, next)
+            return next
+        })
+    }, [historyKey])
 
     // Their half of "this conversation is gone" is their own to do: there is no
     // command that reaches into somebody else's browser, and there should not be.
@@ -294,5 +336,5 @@ export default function useP2PChat({ withUserId, myAccountId }) {
         setMessages([])
     }, [historyKey])
 
-    return { state, words, messages, problem, send, forget, myPublicKey }
+    return { state, words, messages, problem, send, forget, forgetOne, myPublicKey }
 }
