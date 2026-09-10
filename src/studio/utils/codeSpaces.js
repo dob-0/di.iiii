@@ -25,9 +25,20 @@ export const CODE_SPACES = WORKS
     .map((work) => ({
         spaceId: work.id,
         label: work.label,
+        // What the THING is called where a space lists its things. The work's
+        // own label names the whole work ("WCC Exhibition"), which next to the
+        // space of the same name says nothing; the page gets to be called what
+        // it is. Defaults to the label, which is right for a work that IS one
+        // piece rather than a page in front of one.
+        title: work.codeSpace.title ?? work.label,
         path: work.path,
         // Shown on the card. Say what the thing IS, not that it is unusual.
         blurb: work.codeSpace.blurb,
+        // What kind of thing the card opens, in the same two words the rest of
+        // the product uses (SpaceContentsPage's KIND): a page you read, or a
+        // scene you are inside. A work that does not say is a scene, which is
+        // what a code space was until one of them turned out to be a page.
+        kind: work.codeSpace.kind === 'code' ? 'code' : 'scene',
         // The authoring surface for a code space, inside Studio — the piece's
         // own timeline panel, under Studio's chrome, reached from the Spaces
         // list like any other editor.
@@ -37,9 +48,17 @@ export const CODE_SPACES = WORKS
         // and no way to reach one. Silent, too — the landing ignores a query
         // param it does not read, so the button did navigate, to the wrong
         // half of a route that had been split under it.
-        directorPath: buildStudioDirectorPath(work.id),
-        directorLabel: work.codeSpace.directorLabel,
-        scenePath: work.codeSpace.scenePath
+        //
+        // Only a work that HAS a director gets the button. wcc does not, and a
+        // button to a director that does not exist is a dead end wearing a
+        // label — StudioCodeSpaceDirector renders its own "nothing here" for a
+        // space with no piece descriptor, which no one should be able to reach.
+        directorPath: work.director ? buildStudioDirectorPath(work.id) : null,
+        directorLabel: work.director ? work.codeSpace.directorLabel : null,
+        // The second half of a work that is a landing page in front of a scene:
+        // the card opens the page, this goes to the place itself.
+        sceneLabel: work.codeSpace.sceneLabel ?? null,
+        scenePath: work.codeSpace.scenePath ?? null
     }))
 
 export const getCodeSpace = (spaceId) =>

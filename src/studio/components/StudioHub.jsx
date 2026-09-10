@@ -539,14 +539,30 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                     >
                                         Open
                                     </button>
-                                    <span className="sh-sep">·</span>
-                                    <button
-                                        className="sh-link"
-                                        type="button"
-                                        onClick={e => { e.stopPropagation(); appNavigate(codeSpace.directorPath) }}
-                                    >
-                                        {codeSpace.directorLabel}
-                                    </button>
+                                    {codeSpace.directorPath && (
+                                        <>
+                                            <span className="sh-sep">·</span>
+                                            <button
+                                                className="sh-link"
+                                                type="button"
+                                                onClick={e => { e.stopPropagation(); appNavigate(codeSpace.directorPath) }}
+                                            >
+                                                {codeSpace.directorLabel}
+                                            </button>
+                                        </>
+                                    )}
+                                    {codeSpace.scenePath && codeSpace.sceneLabel && (
+                                        <>
+                                            <span className="sh-sep">·</span>
+                                            <button
+                                                className="sh-link"
+                                                type="button"
+                                                onClick={e => { e.stopPropagation(); appNavigate(codeSpace.scenePath) }}
+                                            >
+                                                {codeSpace.sceneLabel}
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         )}

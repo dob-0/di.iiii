@@ -89,9 +89,10 @@ export const WIKI_ARTICLES = [
             'It is open on exactly the terms the space is. A public space’s contents are public; a private space’s contents stay behind the same sign-in as the space. Work that is not on show is never listed to anybody: a draft, an archived project and anything in the trash are absent, and that is enforced by the server, not by the page.',
             'Two ways in. Every card on /spaces carries an “Everything inside” line, and inside a public room a second corner mark next to “Made with di.iiii” opens the same list — it appears only when there is more than one thing in the space, because a room that is the whole of its space has nothing to send you to.',
             'A space holding one thing, and that thing being the front door, sends you to the room instead. A list whose only row is the room you would already be standing in says less than the room does.',
-            'Filing is somewhere else. Drafts, archived work, shelves and the trash live in Studio, at /<space>/studio, and this page only says so — to somebody who could already get in.'
+            'Filing is somewhere else. Drafts, archived work, shelves and the trash live in Studio, at /<space>/studio, and this page only says so — to somebody who could already get in.',
+            'A page that is code is listed too. Two of di.iiii’s own exhibitions have a front page written as code rather than made in the editor — the WCC landing at /wcc is one — so no database row exists for it and a list built by asking the server what a space holds could not see it. It is listed all the same, first, as the way in: the real page, not a copy of it. Being code is what it is, not where it hides — it opens like any other row, and it is changed by changing the code.'
         ],
-        tags: ['spaces', 'projects', 'contents', 'visitors', 'published', 'scene', 'page'],
+        tags: ['spaces', 'projects', 'contents', 'visitors', 'published', 'scene', 'page', 'code'],
         updated: '2026-09-10'
     },
     {
