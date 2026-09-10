@@ -29,6 +29,9 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **page** | A published web page (HTML/CSS/JS), never a project. |
 | **Studio** | The one you walk into for the four editing panels. A node, not a lane. |
 | **di.iiii** | The whole thing. Spaces live in it. |
+| **place** | A real room in the world: walls, a rig, an audience, a date. A space may be its twin; it can never *be* it. |
+| **production** | A place, a client, a work and a run. What the studio makes. It uses di.iiii; it does not live in it. |
+| **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
 
 Two words that are already right and must not drift: **port** (where a wire attaches to a node)
 and **wire** (what runs between two ports). They are the node model's own vocabulary, they are
@@ -50,7 +53,7 @@ used consistently, and every node tool a visitor might arrive from uses one or t
 | `chrome` (the UI) | Developer jargon. | **toolbar** |
 | `linked space` · `code space` | Implementation notes. A visitor sees a space. | **space** |
 | `Universe` | Promised a world, delivered a toolbar switch. | **Kiosk** (see below) |
-| `di.i` | The retired name. | **di.iiii** |
+| `di.i` *(inside the product)* | The studio's signature, not the product's name. Correct on a byline, a deck, thedi.studio; a slip in product copy, which names the product. | **di.iiii** |
 
 `raw` in its ordinary English sense (*unparsed, unformatted*) is fine in code, but never in a
 user-visible string where it can be mistaken for the lane — rewrite those.
@@ -124,6 +127,45 @@ These are architecture, not wording, and each needs its own decision:
    only reason "space" can still honestly mean "a 3D scene". Retiring it is a schema decision.
 3. `entities[]` and `nodes[]` are two content models in one document that never reference each
    other. Reconciling them is the load-bearing unknown in the URL spec's §7.
+
+## Amended 2026-09-11 — the studio, the place, and the production
+
+Three words were missing and one was doing two jobs. Settled after four audits of what exists
+(every address, every space, every audience, and this project's own written words) and one
+judgement over the top of them.
+
+**The studio signs `di.i`. The platform ships `di.iiii`.** `di-brand/NAMING.md` said so on
+2026-09-02; this file said "retired" and the guard enforced the retirement, so the two documents
+contradicted each other for nine days. This file is the one that was wrong — it governs the
+*product*, and inside the product `di.i` really is a slip. Outside it — a byline, the deck,
+thedi.studio — `di.i` is the correct and only signature. The guard is unchanged, because it only
+ever read `src/`. Applying this file's own rule: an overloaded word is not banned, it is given
+exactly one meaning.
+
+**`place` and `production` are new, and `production` is the important one.** The studio makes
+work for real rooms — proposal, site check, scan, a virtual copy, then connect it to the real
+rig. Nothing in this vocabulary had a noun for that, so the sentence kept being written with
+platform words that do not fit: a production is not a space, not a project and not a work. It
+uses di.iiii the way a show uses a lighting desk.
+
+**`work` and `project` are one object from two sides** — project backstage, work out front. The
+visitor never reads "project"; the operator never needs "work". This also closes the estate's
+open question "what is a part?" (`di-atlas/CONCEPTS.md`): the piece met in the wild is a **work**,
+made of **scenes**. No new noun.
+
+**Studio, the editing surface, gives the word up.** It becomes **Editor** — the word Unity,
+Unreal and Blender all use, and the word MANIFESTO already uses: "the visit is the product; the
+editor is backstage." The reason is the section below: "studio" cannot mean the practice, the
+domain and a surface inside the product at once, and the practice is the one that cannot rename
+itself. Decision recorded here; the UI copy follows in its own change, and `/studio` keeps
+answering forever like any printed link.
+
+**The world is `diiii.xyz`.** MANIFESTO's three distances named thedi.studio as the public
+distance. The public distance is the platform, and the platform's address is now `diiii.xyz`
+(live 2026-09-11). `thedi.studio` is the studio's own address on it — one space, eventually
+served under its own domain. `di-studio.xyz` keeps serving, unchanged and forever: it is the
+name printed on the QR in the room and on the workshop handouts, and its job is never to mean
+anything new again.
 
 ## One open product call
 
