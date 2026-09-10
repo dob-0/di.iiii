@@ -152,6 +152,10 @@
     --di-label-tracking: 0.16em;
 
     /* ── aliases for legacy panel/studio CSS ── */
+    /* --ui-bg was used by AuthGate, ReservedAddressCard and the chat
+       surface and declared nowhere, so those full-screen grounds painted
+       transparent and borrowed whatever was behind them. */
+    --ui-bg: var(--di-black);
     --ui-surface: var(--di-surface);
     --ui-surface-raised: #111;
     --ui-surface-muted: #111;

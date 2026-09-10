@@ -196,7 +196,14 @@ function AuthGateInner({
     children,
     requiredSpaceId = null,
     showAccountButton = true,
-    outOfScopeBehavior = OUT_OF_SCOPE_REDIRECT
+    outOfScopeBehavior = OUT_OF_SCOPE_REDIRECT,
+    // What the out-of-scope card says. The default is the editor's sentence,
+    // which every existing caller keeps byte-for-byte — but the chat room is
+    // behind this same gate and authors nothing, so telling somebody they may
+    // "view but not edit" a page with no edit in it explains the wrong refusal.
+    // Same shape as ChatPanelWindow's three strings: a prop with the exact
+    // wording it has always had, overridden only where the words are wrong.
+    outOfScopeMessage = null
 }) {
     const authSession = useAuthSession()
     const { requireAuth, authenticated, loading, error, refresh, login } = authSession
@@ -354,8 +361,10 @@ function AuthGateInner({
                                 di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                             </Typography>
                             <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
-                                Sign in to open the editor for &ldquo;{requiredSpaceId}&rdquo;. Your current
-                                session can view this space, but not edit it.
+                                {outOfScopeMessage || <>
+                                    Sign in to open the editor for &ldquo;{requiredSpaceId}&rdquo;. Your current
+                                    session can view this space, but not edit it.
+                                </>}
                             </Typography>
                             <ProviderSignInButtons providers={providers} refresh={refresh} />
                             <Button

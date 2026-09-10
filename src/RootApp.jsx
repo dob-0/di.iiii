@@ -23,6 +23,7 @@ import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from
 import { getJamLocationState, isJamLocation } from './project/routing/jamRouting.js'
 import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
+import { getChatLocationState } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
 import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
@@ -35,6 +36,10 @@ const JamSurface = lazy(() => import('./project/components/JamSurface.jsx'))
 // The toybox. Its own chunk for the same reason the jam has one: it reaches
 // three.js through RawViewport, and no other route should pay for that.
 const MakeSurface = lazy(() => import('./make/MakeSurface.jsx'))
+// The studio's chat room. Its own chunk, and a small one on purpose: this is
+// the page a phone installs and opens on a bad connection, and it must never
+// pull three.js to show a list of sentences.
+const StudioChatSurface = lazy(() => import('./chat/StudioChatSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
@@ -64,10 +69,15 @@ const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
 import { OUT_OF_SCOPE_EXPLAIN } from './components/authGateScope.js'
 const AuthGate = lazy(() => import('./components/AuthGate.jsx'))
 
-function ProtectedSurface({ children, requiredSpaceId = null, showAccountButton = true, outOfScopeBehavior }) {
+function ProtectedSurface({ children, requiredSpaceId = null, showAccountButton = true, outOfScopeBehavior, outOfScopeMessage = null }) {
     return (
         <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-            <AuthGate requiredSpaceId={requiredSpaceId} showAccountButton={showAccountButton} outOfScopeBehavior={outOfScopeBehavior}>{children}</AuthGate>
+            <AuthGate
+                requiredSpaceId={requiredSpaceId}
+                showAccountButton={showAccountButton}
+                outOfScopeBehavior={outOfScopeBehavior}
+                outOfScopeMessage={outOfScopeMessage}
+            >{children}</AuthGate>
         </Suspense>
     )
 }
@@ -307,6 +317,7 @@ function AppRouter() {
     const jamState = getJamLocationState(location)
     const makeState = getMakeLocationState(location)
     const mapState = getMapLocationState(location)
+    const chatState = getChatLocationState(location)
     const appState = getAppLocationState(location)
     const bareReserved = getBareReservedSegment(location)
 
@@ -353,6 +364,37 @@ function AppRouter() {
 
     if (isBareHomeSpacePath) {
         return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+
+    // `/chat` — the studio's room, and `/{space}/chat` for anybody else's.
+    //
+    // Claimed here, with the other lane words, because the generic
+    // /{space}/{projectSlug} rule further down would otherwise read "chat" as
+    // the name of a project. The transport underneath is the space chat that
+    // has existed since spaceChatStore.js: persisted, replayed on join,
+    // admin-erasable. What is new is only the address — until now the room
+    // could only be reached by loading an authoring surface and opening a
+    // panel inside it.
+    //
+    // Behind the gate on the space, like the lanes, because the socket refuses a
+    // line from outside that scope anyway (`canAccessSpace` → `space-forbidden`).
+    // Without the gate a guest — scoped to `open` and their own sandbox, never
+    // to the studio's room — got the room drawn in full with one red line in the
+    // header, which reads as a broken chat rather than as somebody else's door.
+    // The gate's own words are the editor's, so the room says its own.
+    if (chatState.isChat) {
+        return (
+            <ProtectedSurface
+                requiredSpaceId={chatState.spaceId}
+                showAccountButton={false}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                outOfScopeMessage={`This room belongs to “${chatState.spaceId}”. Sign in with an account that is in it to read what was said and to say anything.`}
+            >
+                <Suspense fallback={<RouteSurfaceFallback label="Loading the chat" detail="" />}>
+                    <StudioChatSurface spaceId={chatState.spaceId} />
+                </Suspense>
+            </ProtectedSurface>
+        )
     }
 
 

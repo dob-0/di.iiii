@@ -2090,6 +2090,24 @@ const CLIENT_DIR = config.directories.clientDir
 if (CLIENT_DIR) {
   app.use(express.static(CLIENT_DIR, { setHeaders: allowNullOrigin }))
 
+  // Digital asset links — how Android decides that the installed studio-chat
+  // app is allowed to open this origin without a browser address bar over it.
+  // express.static refuses it: `dotfiles` defaults to 'ignore', and every
+  // segment counts, so `/.well-known/anything` is invisible to the line above.
+  // nginx serves it from dist/ on the hosted tiers without any of this; this is
+  // the same file reaching a `di` install, where serverXR IS the web server.
+  app.get('/.well-known/assetlinks.json', (req, res, next) => {
+    res.sendFile('.well-known/assetlinks.json', {
+      root: CLIENT_DIR,
+      dotfiles: 'allow',
+      headers: { 'Content-Type': 'application/json' }
+    }, (error) => {
+      // A build without the file is not an error worth a 500 — it is a 404,
+      // the same answer nginx gives.
+      if (error) next()
+    })
+  })
+
   app.get(/.*/, (req, res, next) => {
     // Anything the API owns is not ours, even unmatched — a wrong URL under the
     // API must 404 as an API, not hand back an HTML page a fetch() can't parse.

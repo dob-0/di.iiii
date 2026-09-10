@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "xyz.distudio.chat",
+      "sha256_cert_fingerprints": [
+        "F0:F8:3F:E2:23:4F:FD:27:8C:03:78:F7:E8:74:0C:D9:5E:9F:C2:77:E4:5B:1B:E2:EA:CB:B4:C3:33:83:FC:F8"
+      ]
+    }
+  }
+]

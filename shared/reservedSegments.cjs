@@ -29,7 +29,7 @@ const APP_SEGMENTS = [
     'admin', 'preferences', 'prefrenaces', 'preferances',
     'wiki', 'privacy', 'terms', 'tools',
     'beta', 'raw', 'seed', 'open_jam', 'studio', 'make', 'light',
-    'spaces', 'projects'
+    'spaces', 'projects', 'chat'
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served
@@ -42,7 +42,14 @@ const APP_SEGMENTS = [
 // exception is the cost of the collision — see src/works/works.js.
 const STATIC_SEGMENTS = [
     'assets', 'basis', 'brand', 'draco', 'fonts', 'get', 'og',
-    'serverXR', 'suite', 'unicode-fonts', 'vendor'
+    'serverXR', 'suite', 'unicode-fonts', 'vendor',
+    // Android reads /.well-known/assetlinks.json to decide whether the studio
+    // chat's APK may open this origin without a browser bar over it
+    // (docs/deploy/STUDIO_CHAT_APK.md). A slug can never contain a dot, so no
+    // space could take the word anyway — it is listed because the contract is
+    // "every directory in public/ is spoken for", and an unlisted one is
+    // indistinguishable from an oversight.
+    '.well-known'
 ]
 
 // `p` is the explicit project shape /{space}/p/{project}; it can never be a
