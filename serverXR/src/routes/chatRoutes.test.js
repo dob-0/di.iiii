@@ -27,7 +27,8 @@ const SPACES = [
 
 const LINES = {
     main: [{ text: 'the door code is 4417', userName: 'Gevorg', timestamp: 3000 }],
-    dilijan: [{ text: 'x'.repeat(400), userName: 'Emilya', timestamp: 9000 }]
+    dilijan: [{ text: 'x'.repeat(400), userName: 'Emilya', timestamp: 9000 }],
+    'main#staff': [{ text: 'do not put the code in the open room', userName: 'Gevorg', timestamp: 5000 }]
 }
 
 const setup = () => {
@@ -106,5 +107,23 @@ describe('the list the app opens on', () => {
 
     it('will not register without a way to list spaces', () => {
         expect(() => registerChatRoutes(makeRouter(), {})).toThrow(/listSpaces/)
+    })
+})
+
+
+describe('the staff room in the list', () => {
+    it('is not listed for somebody who could not open it', async () => {
+        const res = await call(setup().routes['get /api/chat/rooms'], account(['main']))
+        expect(res.body.rooms.every((room) => room.channel === 'room')).toBe(true)
+    })
+
+    it('is listed beside each room for an admin, with its own last line', async () => {
+        const res = await call(setup().routes['get /api/chat/rooms'], account(['main'], { role: 'admin' }))
+        const staff = res.body.rooms.find((room) => room.channel === 'staff' && room.spaceId === 'main')
+        expect(staff).toBeTruthy()
+        expect(staff.lastText).toBe('do not put the code in the open room')
+        // …and it is a DIFFERENT room, not the same lines under another name.
+        const open = res.body.rooms.find((room) => room.channel === 'room' && room.spaceId === 'main')
+        expect(open.lastText).toBe('the door code is 4417')
     })
 })

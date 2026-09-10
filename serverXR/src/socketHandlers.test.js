@@ -6,7 +6,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { io: ioClient } = require('socket.io-client')
-const { getSocketPath, applyFreshDbIdentity, initializeSocket, wroteSpaceChatLine } = require('./socketHandlers.js')
+const {
+    getSocketPath, applyFreshDbIdentity, initializeSocket, wroteSpaceChatLine,
+    chatChannelOf, chatStoreKey, chatSocketRoom, STAFF_CHANNEL
+} = require('./socketHandlers.js')
 const { initDb, closeDb } = require('./db.js')
 
 describe('getSocketPath', () => {
@@ -319,5 +322,42 @@ describe('who wrote this line', () => {
     it('owns nothing when there is no line, and nothing when there is no identity', () => {
         expect(wroteSpaceChatLine({ line: null, accountId: 'a1' })).toBe(false)
         expect(wroteSpaceChatLine({ line: line() })).toBe(false)
+    })
+})
+
+
+// A space has two rooms. They are the same machinery with one key between them,
+// and the whole safety of that rests on the key: a staff room that could be
+// addressed as a space, or that shared a socket room with the open one, would
+// be a private room in name only.
+describe('the space\'s two rooms', () => {
+    it('reads anything that is not the staff word as the open room', () => {
+        expect(chatChannelOf('staff')).toBe(STAFF_CHANNEL)
+        expect(chatChannelOf('room')).toBe('room')
+        expect(chatChannelOf('Staff')).toBe('room')
+        expect(chatChannelOf(undefined)).toBe('room')
+        expect(chatChannelOf('../main')).toBe('room')
+    })
+
+    // A space id is /^[a-z0-9-]{3,48}$/ (spaceStore.SLUG_REGEX), so `#` cannot
+    // appear in one — which is what makes this key unreachable by naming a
+    // space after it.
+    it('keys the staff room where no space id can ever reach', () => {
+        expect(chatStoreKey('main', 'staff')).toBe('main#staff')
+        expect(chatStoreKey('main', 'room')).toBe('main')
+        expect(chatStoreKey('main', 'staff')).not.toMatch(/^[a-z0-9-]+$/)
+    })
+
+    it('puts the two rooms in different socket rooms, so nothing is merely hidden', () => {
+        expect(chatSocketRoom('main', 'staff')).toBe('staff-main')
+        expect(chatSocketRoom('main', 'room')).toBe('space-main')
+        expect(chatSocketRoom('main', 'staff')).not.toBe(chatSocketRoom('main', 'room'))
+    })
+
+    // The trap this guards: a space literally named `staff-main` must not land
+    // in another space's staff room.
+    it('cannot be reached by naming a space after the staff room', () => {
+        expect(chatSocketRoom('staff-main', 'room')).toBe('space-staff-main')
+        expect(chatSocketRoom('staff-main', 'room')).not.toBe(chatSocketRoom('main', 'staff'))
     })
 })

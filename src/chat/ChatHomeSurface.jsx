@@ -7,6 +7,7 @@ import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import LockIcon from '@mui/icons-material/Lock'
 import GroupsIcon from '@mui/icons-material/Groups'
+import ShieldIcon from '@mui/icons-material/ShieldOutlined'
 import { diFontTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import { appNavigate } from '../utils/appNavigate.js'
@@ -235,18 +236,26 @@ export default function ChatHomeSurface() {
 
                     <List disablePadding>
                         {!loading && rooms.map((room) => {
-                            const unread = Boolean(room.lastAt) && room.lastAt > readRoomSeen(room.spaceId)
+                            const staff = room.channel === 'staff'
+                            const seenKey = staff ? `${room.spaceId}#staff` : room.spaceId
+                            const unread = Boolean(room.lastAt) && room.lastAt > readRoomSeen(seenKey)
                             return (
                                 <Row
-                                    key={room.spaceId}
-                                    onClick={() => appNavigate(buildChatPath(room.spaceId))}
-                                    avatar={<Avatar label={room.label}><GroupsIcon sx={{ fontSize: 18 }} /></Avatar>}
-                                    title={room.label}
+                                    key={`${room.spaceId}:${room.channel || 'room'}`}
+                                    onClick={() => appNavigate(buildChatPath(room.spaceId, room.channel))}
+                                    avatar={(
+                                        <Avatar label={room.label} tone={staff ? 'var(--ui-accent)' : 'var(--ui-border)'}>
+                                            {staff
+                                                ? <ShieldIcon sx={{ fontSize: 18 }} />
+                                                : <GroupsIcon sx={{ fontSize: 18 }} />}
+                                        </Avatar>
+                                    )}
+                                    title={staff ? `${room.label} · staff` : room.label}
                                     meta={when(room.lastAt)}
                                     unread={unread}
                                     subtitle={room.lastText
                                         ? `${room.lastBy ? `${room.lastBy}: ` : ''}${room.lastText}`
-                                        : 'nothing said here yet'}
+                                        : staff ? 'admins of this space only' : 'nothing said here yet'}
                                 />
                             )
                         })}
