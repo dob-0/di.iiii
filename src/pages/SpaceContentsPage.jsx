@@ -8,6 +8,7 @@ import { getServerSpace } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } from '../utils/spaceRouting.js'
 import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
+import { getCodeSpace } from '../studio/utils/codeSpaces.js'
 import './spaceContents.css'
 
 /**
@@ -98,9 +99,23 @@ export default function SpaceContentsPage({ spaceId }) {
         return () => { alive = false }
     }, [spaceId])
 
-    const doorId = state.space?.publishedProjectId || null
     const label = state.space?.label || spaceId
     const projects = state.projects
+
+    // A page that is CODE has no row on any server, so a list built by asking
+    // the server what a space holds cannot see it. That is the whole of why the
+    // WCC landing page was missing from the WCC space: it is compiled React at
+    // /wcc, not a document. src/works/works.js knows about it, so ask there too
+    // and show it in line with the rest — to a visitor it is one more thing the
+    // space holds, not a category.
+    const codeSpace = getCodeSpace(spaceId)
+    const thingCount = projects.length + (codeSpace ? 1 : 0)
+
+    // Only one row can say "the way in", and where a work shadows the space the
+    // stored door is not it: the router hands `/wcc` to the code before any
+    // space route ever sees it (src/RootApp.jsx, workForSegment), so the
+    // project the database calls the door is reachable only at its own address.
+    const doorId = codeSpace ? null : (state.space?.publishedProjectId || null)
 
     // A space that holds one thing must not grow a page that says less than the
     // thing does. If the only project on show is the space's own door, this list
@@ -147,14 +162,29 @@ export default function SpaceContentsPage({ spaceId }) {
                     <p className="sc-lede">{state.error}</p>
                 ) : (
                     <p className="sc-lede">
-                        {projects.length === 0
+                        {thingCount === 0
                             ? 'Nothing is on show in this space yet.'
-                            : `Everything in this space — ${projects.length} ${projects.length === 1 ? 'thing' : 'things'}, each one a scene you can be inside or a page you can read.`}
+                            : `Everything in this space — ${thingCount} ${thingCount === 1 ? 'thing' : 'things'}, each one a scene you can be inside or a page you can read.`}
                     </p>
                 )}
 
-                {projects.length > 0 && (
+                {thingCount > 0 && (
                     <ul className="sc-list">
+                        {codeSpace && (
+                            <li key={`code-${codeSpace.spaceId}`}>
+                                <a className="sc-row" href={codeSpace.path}>
+                                    <span className="sc-row-name">
+                                        {codeSpace.title}
+                                        <span className="sc-row-door" title="What this space opens on">the way in</span>
+                                    </span>
+                                    <span className="sc-row-kind">
+                                        {kindOf(codeSpace.kind).label}
+                                        <span className="sc-row-hint">{kindOf(codeSpace.kind).hint}</span>
+                                    </span>
+                                    <span className="sc-row-when" />
+                                </a>
+                            </li>
+                        )}
                         {projects.map((project) => {
                             const kind = kindOf(project.mode)
                             const href = contentsHref(spaceId, project)

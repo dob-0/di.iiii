@@ -216,6 +216,23 @@ describe('StudioHub', () => {
             expect(navigate).not.toHaveBeenCalledWith(`${ALGO_VRITHM_SCENE_PATH}?director`, expect.anything())
         })
 
+        // WCC's code space is a landing PAGE with a scene behind it, and it
+        // has no director. A "Director" button on a work with no piece
+        // descriptor leads to a surface that renders its own "nothing here" —
+        // a dead end wearing a label, which is worse than no button.
+        it('offers the scene, and no director, for a work that has none', async () => {
+            listProjects.mockResolvedValue([])
+
+            render(<StudioHub spaceId="wcc" />)
+
+            expect(await screen.findByText('built from code')).toBeTruthy()
+            expect(screen.queryByRole('button', { name: 'Director' })).toBeNull()
+
+            fireEvent.click(screen.getByRole('button', { name: 'The ring' }))
+            expect(navigate).toHaveBeenCalledTimes(1)
+            expect(navigate).toHaveBeenCalledWith('/wcc/scene', { replace: false })
+        })
+
         it('leaves an ordinary empty space alone', async () => {
             listProjects.mockResolvedValue([])
 
