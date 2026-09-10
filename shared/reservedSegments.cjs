@@ -43,6 +43,11 @@ const APP_SEGMENTS = [
 const STATIC_SEGMENTS = [
     'assets', 'basis', 'brand', 'draco', 'fonts', 'get', 'og',
     'serverXR', 'suite', 'unicode-fonts', 'vendor',
+    // The studio chat's manifest and icons. Named `chat-app` and not `chat`
+    // ON PURPOSE: a directory that matches the ROUTE shadows it — nginx serves
+    // the directory before the SPA fallback and express.static redirects the
+    // bare path to a trailing slash. See reservedSegments.test.js.
+    'chat-app',
     // Android reads /.well-known/assetlinks.json to decide whether the studio
     // chat's APK may open this origin without a browser bar over it
     // (docs/deploy/STUDIO_CHAT_APK.md). A slug can never contain a dot, so no

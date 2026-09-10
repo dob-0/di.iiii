@@ -51,19 +51,38 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
     }, [messages.length])
 
     // What makes this page installable: a manifest and a worker, both claimed
-    // HERE and nowhere else. Site-wide they would offer to install the whole
+    // HERE and nowhere else. They live under /chat-app/, NOT /chat/: a directory
+    // in public/ with the same name as a route is the `wcc` collision again —
+    // nginx's `try_files $uri $uri/` matches the directory before the SPA
+    // fallback, and express.static answers /chat with a redirect to /chat/. The
+    // redirect is what a service worker cannot replay offline (a redirected
+    // response may not satisfy a navigation), and the directory is what makes
+    // the address itself unreliable. Site-wide they would offer to install the whole
     // platform under this room's name, and put a cache in front of the editor.
     // The link is added at runtime for the same reason — src/index.html is one
     // document shared by every route.
     useEffect(() => {
         const link = document.createElement('link')
         link.rel = 'manifest'
-        link.href = '/chat/manifest.webmanifest'
+        link.href = '/chat-app/manifest.webmanifest'
         document.head.appendChild(link)
         // The worker is only registered on a secure origin; on plain http a dev
         // server is exempt (localhost), a LAN address is not, and the failure
         // is silent and correct.
-        navigator.serviceWorker?.register('/chat-sw.js', { scope: '/chat' }).catch(() => {})
+        navigator.serviceWorker?.register('/chat-sw.js', { scope: '/chat' }).then(async (registration) => {
+            if (!registration) return
+            // Hand the worker this build's real asset list. It cannot collect
+            // one itself: the browser fetched the JS and CSS before the worker
+            // existed, so those requests never reached a fetch handler, and a
+            // cache holding only the HTML renders a blank page offline.
+            const worker = await navigator.serviceWorker.ready.then((ready) => ready.active).catch(() => null)
+            if (!worker) return
+            const urls = performance.getEntriesByType('resource')
+                .map((entry) => entry.name)
+                .filter((name) => name.startsWith(window.location.origin))
+                .filter((name) => /\/(assets|fonts|chat-app)\//.test(name))
+            if (urls.length) worker.postMessage({ type: 'dii-chat-warm', urls })
+        }).catch(() => {})
         return () => {
             link.remove()
         }

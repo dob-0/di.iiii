@@ -32,3 +32,27 @@
   not-found card. Promotion past staging is the owner's word.
 - **Not seen:** the APK has not been run. No phone was attached, and the emulator
   image was still downloading.
+
+## 2026-09-10 — the icons were standing in the room's doorway
+
+- `public/chat/` — the manifest and the three icons — is a directory with the
+  same name as the ROUTE. That shadows it: nginx's `try_files $uri $uri/` reaches
+  for the directory before the SPA fallback, and `express.static` answers the bare
+  `/chat` with a redirect to `/chat/`. Renamed to `public/chat-app/`.
+- The redirect is also why the service worker could not replay the page with the
+  network off: a redirected response may not satisfy a navigation, so an offline
+  reload died as `ERR_FAILED` with the cache full and correct.
+- Guard: `reservedSegments.test.js` now fails if any directory in `public/` is
+  also an app route — the fifth claimant on a URL segment, and the one nothing
+  had ever checked. `wcc` stays the one hand-held exception it always was.
+- Two more things the worker was getting wrong, both found by looking at the
+  offline page rather than at the code: it cached only the HTML (the browser
+  fetches this build's JS and CSS before the worker exists, so they never pass a
+  fetch handler — the page rendered blank white), and `caches.match` was missing
+  everything it did hold because the server sends `Vary: Accept-Encoding`. The
+  page now hands the worker its own resource list, and matching ignores Vary.
+- **Seen**: with the network cut, the app loads and says "Backend unavailable —
+  Retry" in its own type. It does not show the conversation, and should not:
+  chat lines are never cached, because a cached copy of a conversation can be
+  wrong about who said what. The worker's header says exactly this now; it used
+  to claim the room came back.
