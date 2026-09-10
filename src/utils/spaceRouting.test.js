@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
     APP_PAGE_PREFERENCES,
+    APP_PAGE_SPACE_CONTENTS,
+    buildSpaceContentsPath,
     buildPreferencesPath,
     buildPublicProjectPath,
     buildProjectToolPath,
@@ -200,5 +202,42 @@ describe('getBareReservedSegment', () => {
     it('says nothing once the word has something after it', () => {
         expect(getBareReservedSegment(at('/gallery/make/proj'))).toBeNull()
         expect(getBareReservedSegment(at('/make/proj'))).toBeNull()
+    })
+})
+
+// `/{space}/projects` — everything a space holds. The address existed since
+// 2026-08-21 and rendered Studio's hub behind Studio's gate, so the one word
+// that names a space's contents answered a visitor with a login wall.
+describe('a space\'s contents address', () => {
+    const at = (pathname) => new URL(`https://example.com${pathname}`)
+
+    it('parses /{space}/projects as the space\'s own contents', () => {
+        expect(getAppLocationState(at('/wcc/projects'))).toEqual({
+            page: APP_PAGE_SPACE_CONTENTS,
+            spaceId: 'wcc'
+        })
+        expect(getAppLocationState(at('/br_id_ge/projects')).spaceId).toBe('br_id_ge')
+    })
+
+    it('builds the address it parses', () => {
+        expect(buildSpaceContentsPath('wcc')).toBe('/wcc/projects')
+        expect(getAppLocationState(at(buildSpaceContentsPath('open'))).page).toBe(APP_PAGE_SPACE_CONTENTS)
+    })
+
+    // A tool is not a space. `/raw/projects` and `/studio/projects` are each
+    // lane's own space-less form; reading them as the contents of a space named
+    // after the tool would take an address away from a lane and hand it to a
+    // space that can never exist.
+    it('never reads a lane word as a space', () => {
+        expect(getAppLocationState(at('/raw/projects')).page).not.toBe(APP_PAGE_SPACE_CONTENTS)
+        expect(getAppLocationState(at('/studio/projects')).page).not.toBe(APP_PAGE_SPACE_CONTENTS)
+        expect(getAppLocationState(at('/spaces/projects')).page).not.toBe(APP_PAGE_SPACE_CONTENTS)
+    })
+
+    // Deeper paths keep belonging to whoever owned them: the editor's own
+    // address is /{space}/studio/projects/{id} and must not be swallowed here.
+    it('claims the two-segment shape only', () => {
+        expect(getAppLocationState(at('/wcc/projects/alla')).page).not.toBe(APP_PAGE_SPACE_CONTENTS)
+        expect(getAppLocationState(at('/wcc/studio/projects/alla')).page).not.toBe(APP_PAGE_SPACE_CONTENTS)
     })
 })

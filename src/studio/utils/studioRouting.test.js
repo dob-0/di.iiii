@@ -121,12 +121,17 @@ describe('studioRouting', () => {
         expect(buildSpacesPath()).toBe('/spaces')
     })
 
-    it('parses /{space}/projects as that space\'s project list', () => {
+    // Since 2026-09-10 /{space}/projects is the SPACE's own contents page
+    // (src/pages/SpaceContentsPage.jsx), open to whoever the space is open to,
+    // and Studio must not claim it — claiming it is what put a login wall on
+    // the one address that names what a space holds. Studio's hub is
+    // /{space}/studio, and every link already uses that.
+    it('does not claim /{space}/projects — the space owns that address', () => {
         expect(getStudioLocationState(new URL('https://example.com/wcc/projects'))).toEqual({
-            isStudio: true,
-            page: STUDIO_PAGE_HUB,
+            isStudio: false,
+            page: null,
             projectId: null,
-            spaceId: 'wcc'
+            spaceId: null
         })
     })
 
@@ -139,8 +144,7 @@ describe('studioRouting', () => {
         })
     })
 
-    it('round-trips both layered builders through the parser', () => {
-        expect(getStudioLocationState(new URL(`https://example.com${buildSpaceProjectsPath('br_id_ge')}`)).spaceId).toBe('br_id_ge')
+    it('round-trips the spaces builder through the parser', () => {
         expect(getStudioLocationState(new URL(`https://example.com${buildSpacesPath()}`)).page).toBe(STUDIO_PAGE_SPACES)
     })
 

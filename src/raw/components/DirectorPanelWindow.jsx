@@ -66,7 +66,7 @@ export default function DirectorPanelWindow({ node }) {
     }
 
     // No descriptor for this id — an unregistered piece, or a build that
-    // carries no works at all (DI_PROFILE=local). Both are true statements
+    // carries no works at all (DI_LOCAL_SLIM=1). Both are true statements
     // about this build rather than an error.
     if (!piece) {
         return (

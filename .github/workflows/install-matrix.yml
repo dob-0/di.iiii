@@ -41,7 +41,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run di:pack
+      # --slim on purpose. This job proves the PACKER works and that the
+      # installer can open what it makes; it is not a rehearsal of the
+      # download. Since 2026-09-10 a plain local build carries the works, so a
+      # bare `di:pack` here would build and archive 113 MB on every push that
+      # touches the packer, to test 4.7 MB worth of behaviour. The release
+      # workflow packs the real thing.
+      - run: npm run di:pack -- --slim
       - uses: actions/upload-artifact@v7
         with:
           name: di-runtime

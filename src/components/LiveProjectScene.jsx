@@ -31,6 +31,8 @@ import ImageObject from '../objectComponents/ImageObject.jsx'
 import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
 import AudioObject from '../objectComponents/AudioObject.jsx'
+import useRoomSound from '../hooks/useRoomSound.js'
+import { roomHasSound } from '../utils/roomSound.js'
 import Text2DObject from '../objectComponents/Text2DObject.jsx'
 import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject, { portalHref } from '../project/viewport/PortalObject.jsx'
@@ -1626,6 +1628,9 @@ export default function LiveProjectScene({
     // any public/live viewer (landing page, WCC, etc.), not just Studio.
     const assetMap = useMemo(() => buildAssetMap(doc, projectId), [doc, projectId])
     const gateEntity = useMemo(() => entities.find(isGateEntity) || null, [entities])
+    const hasSound = useMemo(() => roomHasSound(entities), [entities])
+    const { soundOn: sceneSoundOn, locked: soundLocked, toggleSound: toggleSceneSound } = useRoomSound()
+
     // Grouped children carry parent-relative transforms — render the hierarchy
     // (roots only at the top level), matching the editor and portal embeds.
     const entityChildMap = useMemo(() => {
@@ -1974,7 +1979,20 @@ export default function LiveProjectScene({
                                 <span className="live-scene-nearest"> · {nearestLabel}</span>
                             ) : null}
                         </span>
-                        <MadeWithBadge variant="chrome" spaceId={spaceId} />
+                        <span className="live-scene-chrome-right">
+                            {hasSound && !soundLocked ? (
+                                <button
+                                    type="button"
+                                    className={`live-scene-sound${sceneSoundOn ? ' is-on' : ''}`}
+                                    onClick={toggleSceneSound}
+                                    aria-pressed={sceneSoundOn}
+                                    title={sceneSoundOn ? 'Turn the sound off' : 'This room has sound'}
+                                >
+                                    {sceneSoundOn ? 'Sound on' : 'Sound off'}
+                                </button>
+                            ) : null}
+                            <MadeWithBadge variant="chrome" spaceId={spaceId} />
+                        </span>
                     </header>
 
                     {walking && !isMobile && !isLocked && (

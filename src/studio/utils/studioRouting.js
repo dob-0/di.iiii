@@ -1,5 +1,4 @@
 import { createBasePathHelpers, joinPath } from '../../project/routing/laneBasePath.js'
-import { RESERVED_APP_SEGMENTS } from '../../utils/spaceRouting.js'
 
 export const STUDIO_PAGE_SPACES = 'spaces'
 export const STUDIO_PAGE_HUB = 'hub'
@@ -46,8 +45,11 @@ export const buildStudioSpacesPath = () => {
     return joinPath(prefix, STUDIO_RESERVED_SEGMENT)
 }
 
-// The address of a space's projects. Prefer this over buildStudioHubPath for any
-// control whose label says "Projects" — it names the level it goes to.
+// The address of a space's contents. Prefer this over buildStudioHubPath for any
+// control whose label says "Projects" — it names the level it goes to, and since
+// 2026-09-10 it is a page a visitor can actually open (src/pages/SpaceContentsPage.jsx).
+// Kept here, under the name every call site already imports; the parser for it
+// lives in spaceRouting.js with the rest of the app's own addresses.
 export const buildSpaceProjectsPath = (spaceId) => {
     const prefix = getBasePrefix()
     if (!spaceId) return joinPath(prefix, SPACES_SEGMENT)
@@ -113,20 +115,18 @@ export const getStudioLocationState = (
         return { isStudio: true, page: STUDIO_PAGE_SPACES, projectId: null, spaceId: null }
     }
 
-    // …and the first segment has to be a space, not a tool. Without this guard
-    // `/raw/projects` parses as the hub of a space called "raw" — a space that
-    // can never exist, because the word is reserved — so the lane's own
-    // space-less form ("/raw/projects means the default space") was unreachable
-    // and both it and `/studio/projects` rendered "Nothing lives at raw". Both
-    // are documented addresses in the wiki.
-    if (
-        segments[0]
-        && !RESERVED_APP_SEGMENTS.includes(segments[0])
-        && segments[1] === PROJECTS_SEGMENT
-        && segments.length === 2
-    ) {
-        return { isStudio: true, page: STUDIO_PAGE_HUB, projectId: null, spaceId: segments[0] }
-    }
+    // `/{space}/projects` used to return Studio's hub from here. It does not any
+    // more: since 2026-09-10 that address is the SPACE's own contents, open to
+    // whoever the space is open to (src/pages/SpaceContentsPage.jsx), parsed by
+    // getAppLocationState and dispatched in RootApp ahead of this function.
+    //
+    // The 2026-08-21 reason for the address is unchanged and is why it moved
+    // rather than why it was taken away: the list belongs to the space, not to
+    // whichever tool you happen to be holding. Putting Studio's own hub there
+    // made the one address that names a space's contents answer a visitor with a
+    // login wall — 114 projects on the owner's copy were reachable by no click
+    // from anywhere, and this was the door that should have led to them.
+    // Studio's hub keeps `/{space}/studio`, which every existing link uses.
 
     // `/studio/projects` is Studio's own space-less form: the default space's
     // project list, the sibling of `/raw/projects`.

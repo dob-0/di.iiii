@@ -58,7 +58,7 @@ export const WIKI_ARTICLES = [
             'A project is one thing you make inside a space. A space can hold many projects, and one of them can be marked as the space’s published (live) project.',
             'The address of a project always begins with its space. The editor addresses put the tool first for historical reasons, which is why the shortcut below exists — it is the one that reads the way the product is actually arranged:',
             { list: [
-                '/<space>/projects — the space’s projects. This is the one to use: the list belongs to the space, not to whichever tool you are holding.',
+                '/<space>/projects — everything in a space, listed, each thing saying whether it is a scene or a page. Open to whoever the space is open to: on a public space no sign-in is needed. This is the one to use — the list belongs to the space, not to whichever tool you are holding.',
                 '/spaces — all of your spaces',
                 '/<space>/studio — the same list, in Studio’s older address',
                 '/<space>/raw/projects — the same projects, in the node editor’s older address',
@@ -68,8 +68,31 @@ export const WIKI_ARTICLES = [
                 '/<space>/p/<id> — the public viewer for any single project (on a public space, no login needed — share a draft or a second project without moving the published pointer)'
             ] }
         ],
-        tags: ['spaces', 'projects', 'basics'],
-        updated: '2026-08-21'
+        tags: ['spaces', 'projects', 'basics', 'contents'],
+        updated: '2026-09-10'
+    },
+    {
+        id: 'everything-in-a-space',
+        category: 'Getting started',
+        title: 'Everything in a space',
+        summary: 'A space shows all of its work at /<space>/projects, and each thing says whether it is a scene or a page.',
+        body: [
+            'A space has one published project — the thing its address opens on. That is the front door, and until 2026-09-10 it was also the only way in: a visitor could reach the published project and nothing else, however much else the space held.',
+            'On this copy that meant 114 projects with real work in them that no click reached from anywhere. Most were not stray — they sat behind front pages that themselves had no address anybody linked to.',
+            '/<space>/projects is now the space’s own contents. One list, in one order, one line each:',
+            { list: [
+                'the name, as a link straight to the work',
+                'Scene or Page — read from the project’s own presentation setting, not guessed. A scene is the 3D place you can be inside; a page is a published web page. A scene set to one fixed view still says Scene, and adds “one view”.',
+                'when it was last touched',
+                'and the one row marked “the way in”, which is the project the space’s bare address opens on'
+            ] },
+            'It is open on exactly the terms the space is. A public space’s contents are public; a private space’s contents stay behind the same sign-in as the space. Work that is not on show is never listed to anybody: a draft, an archived project and anything in the trash are absent, and that is enforced by the server, not by the page.',
+            'Two ways in. Every card on /spaces carries an “Everything inside” line, and inside a public room a second corner mark next to “Made with di.iiii” opens the same list — it appears only when there is more than one thing in the space, because a room that is the whole of its space has nothing to send you to.',
+            'A space holding one thing, and that thing being the front door, sends you to the room instead. A list whose only row is the room you would already be standing in says less than the room does.',
+            'Filing is somewhere else. Drafts, archived work, shelves and the trash live in Studio, at /<space>/studio, and this page only says so — to somebody who could already get in.'
+        ],
+        tags: ['spaces', 'projects', 'contents', 'visitors', 'published', 'scene', 'page'],
+        updated: '2026-09-10'
     },
     {
         id: 'the-front-door',
@@ -104,6 +127,21 @@ export const WIKI_ARTICLES = [
             'DELETE NO LONGER MEANS GONE. A deleted project goes to the trash on its space\'s project page for 30 days — the row and every byte stay where they are — and "Bring it back" returns it whole, its document included. Only after 30 days does anything actually remove it.'
         ],
         tags: ['collections', 'shelves', 'archive', 'draft', 'trash', 'delete', 'undo', 'projects'],
+        updated: '2026-09-10'
+    },
+    {
+        id: 'sound-in-a-room',
+        category: 'Spaces & access',
+        title: 'Sound in a room, and the switch that starts off',
+        summary: 'A room with sound in it stays silent until a visitor asks. The switch is in the room, and a space card never makes a noise.',
+        body: [
+            'A room can hold sound — an AUDIO object always makes noise, and a VIDEO does when its author turns its sound on. Until 2026-09-10 both simply started playing the moment the room resolved, which meant the Spaces page — where every card is a live room in miniature — could have several soundtracks going at once from a page that looks like a list of pictures.',
+            'Now sound is something a visitor asks for. A room you open is silent, and if there is anything to hear it carries a SOUND OFF button beside Walk / Fly. Press it and the room plays; the answer is remembered on that machine, so you are only asked once.',
+            'The button is only there when the room actually holds a sound. A switch on a silent room would promise something that is not there.',
+            'A space card, a map source and a projection source never make a noise and have no button — they are pictures of a room, not the room.',
+            'Nothing changes for the author: inside Studio and inside Nodes a sound plays as it always did, because someone placing a sound has to be able to hear it.'
+        ],
+        tags: ['sound', 'audio', 'video', 'mute', 'spaces', 'rooms', 'visitor'],
         updated: '2026-09-10'
     },
     {
@@ -395,6 +433,7 @@ export const WIKI_ARTICLES = [
             'Each space has a public URL at /<space>. Set a space’s published project, then mark the space Public to let anyone view it without signing in.',
             'If you own the space you do all of this yourself on the Spaces page (/studio): Rename, Public/Private, Link project, GitHub sync, and Delete sit on each of your space cards. No admin needed.',
             'Public spaces show their live link right on the card (and in the editor’s Spaces panel) with one-click Copy — that link is what visitors open. Public spaces you can’t edit are marked “View live”, and clicking their card takes you straight to the live view — one click, no login wall.',
+            'A few spaces share their address with a piece that is part of di-studio.xyz itself — /wcc is the WCC exhibition’s own landing page, and the wcc SPACE, with its eleven artist projects, lives one step deeper. Where that happens, the space card no longer points at the piece: its picture, its live frame and its Live link all open the space’s published project, so the card is always a door to the space it names. The piece keeps its own address; nothing about /wcc itself changed. On an offline copy of di.iiii, where those pieces are left out to keep the download small, such a card used to say “not in this copy” even though every project it holds was sitting on the machine — now it opens them.',
             'Live space cards on the Spaces page also show a live preview — a real miniature of the published project, streamed from the live route and always up to date. Previews only load while their card is on screen, so a long spaces list stays fast.',
             'Owners manage the card preview from the Preview button on the card: keep the live miniature or upload a custom cover image (Replace image / Use live preview to switch back anytime). A cover image also works on spaces that aren’t public yet.',
             'The editor’s Spaces panel has the same self-serve Make Public / Make Private toggle as the Spaces page.',
@@ -409,8 +448,8 @@ export const WIKI_ARTICLES = [
             'Published code pages can read the URL’s query string — /<space>/<slug>?just=bkyi — through window.diiPageQuery (already parsed for you as window.diiPageParams). A published page is rendered inside a frame with no URL of its own, so location.search there is always empty; read new URLSearchParams(window.diiPageQuery || location.search) and the same code keeps working when you open the file locally. This is what lets one published page hand over to another with state — “open the field, on the core I just made”.',
             'Add ?embed=1 to any published link and the viewer becomes glass: no dark shell of its own, no “Made with di.iiii” badge, no Walk/Fly button, no loading screen. Use it when the page is a window inside another page rather than somewhere you send people — put it in an iframe and whatever your host page draws shows through behind it. Your page keeps its own background, so make that transparent too if you want the host to show through.'
         ],
-        tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access', 'query', 'url parameters', 'embed', 'iframe', 'transparent', 'storage', 'localstorage'],
-        updated: '2026-09-01'
+        tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access', 'query', 'url parameters', 'embed', 'iframe', 'transparent', 'storage', 'localstorage', 'space card', 'wcc'],
+        updated: '2026-09-10'
     },
     {
         id: 'invite-links',
@@ -1063,7 +1102,7 @@ export const WIKI_ARTICLES = [
             'Your work is files. `di save my-show` writes one file — my-show.diiii — holding everything that space is made of: the scene, every edit ever made to it, the projects inside it, the images and models. Copy it to a stick, email it, keep it for ten years; `di open my-show.diiii` puts it back, on this machine or anyone else’s. It is the same idea as a Blender file, with one difference worth knowing: a space is live, so there is nothing to lose by forgetting to save — di.iiii is already keeping it. Saving is how you get a copy you can carry, not how the work survives.',
             'You do not need the terminal for this. Every space on the Spaces page has a Save to file button, and Open a file sits next to + Create — the same file, either way. If a space of that name is already there, di.iiii asks what to call this one instead of refusing.',
             'A file remembers which di.iiii wrote it. An older file opens normally. A file written by a NEWER di.iiii is refused, with the reason, rather than opened halfway — because a half-opened file does not look broken, it looks fine and is quietly wrong.',
-            'What arrives is di.iiii itself and nothing else — about a 3 MB download. The exhibitions and pieces that live on di-studio.xyz are not part of it: they are work made with di.iiii, not part of the tool, and carrying them would have made the download forty times larger for things you did not ask for. Your copy starts empty and fills with your own.',
+            'What arrives is di.iiii itself, plus the two exhibitions that live inside it — WCC at /wcc and algovrithm at /algovrithm — so they open on your machine with no internet, exactly as they do online. That is most of the download: di.iiii the program is about 15 MB, their video and photogrammetry are the rest. Your own spaces start empty and fill with your work; theirs are simply there to walk into.',
             'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one. Nothing is sent anywhere: the one outbound request is a version check, at most once a day, which gives up after three seconds and never blocks anything — and the page loads no fonts or scripts from anywhere else, down to the 3D text labels, whose font ships with the install.',
             'A local di.iiii wears a green border and a small LOCAL badge in the corner, with the address it is answering on. staging.di-studio.xyz wears an amber one. The live site wears nothing — so if there is no border, you are on di-studio.xyz and anyone can see what you do next. It is there because two di.iiii that look identical are two di.iiii you will eventually confuse.',
             'Your work lives in a folder called .di in your home directory, deliberately kept apart from the app itself — so updating, rolling back, or removing di.iiii cannot touch it. di uninstall says as much, and leaves your spaces where they are.',
@@ -1089,7 +1128,7 @@ export const WIKI_ARTICLES = [
             'If you own a domain, an install can answer on a name of your own with a real certificate: put the certificate at ~/.di/tls/cert.pem and its key beside it, and di up serves https on the name written in the certificate. That padlock is what a browser wants before it will give a page the camera, the microphone, Web MIDI or XR — none of which a phone gets over plain http, however local the machine is.'
         ],
         tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate'],
-        updated: '2026-09-09'
+        updated: '2026-09-10'
     },
     {
         id: 'tools-room',

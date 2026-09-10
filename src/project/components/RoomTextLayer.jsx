@@ -18,7 +18,7 @@ import { portalHref } from '../viewport/portalHref.js'
 // assistive tech and discounted by crawlers, whereas the clip-rect idiom keeps
 // it in the accessibility tree and in the DOM. Anchors stay keyboard-reachable
 // on focus, which is also the only way to leave this room without a mouse.
-export default function RoomTextLayer({ title, spaceId, entities = [] }) {
+export default function RoomTextLayer({ title, spaceId, entities = [], contentsHref = null }) {
     const doors = useMemo(() => (entities || [])
         .filter((entity) => entity?.type === 'portal')
         .map((entity) => {
@@ -40,12 +40,21 @@ export default function RoomTextLayer({ title, spaceId, entities = [] }) {
         <div className="room-text-layer">
             <h1>{title}</h1>
             {lines.map((line, index) => <p key={`${line}-${index}`}>{line}</p>)}
-            {doors.length ? (
+            {(doors.length || contentsHref) ? (
                 <nav aria-label="Doors in this room">
                     <ul>
                         {doors.map((door) => (
                             <li key={door.id}><a href={door.href}>{door.label}</a></li>
                         ))}
+                        {/* The last door is the rest of the space. A room used
+                            to be the end of the line for anything that reads
+                            rather than looks: the space's other work had no
+                            address in this document at all, so a crawler that
+                            found the room found nothing else, and a visitor
+                            tabbing through it had nowhere to go but back. */}
+                        {contentsHref ? (
+                            <li key="space-contents"><a href={contentsHref}>Everything in this space</a></li>
+                        ) : null}
                     </ul>
                 </nav>
             ) : null}

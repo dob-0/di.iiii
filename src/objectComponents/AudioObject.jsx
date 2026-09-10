@@ -1,6 +1,7 @@
 import React from 'react'
 import { PositionalAudio, Sphere } from '@react-three/drei'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
+import useRoomSound from '../hooks/useRoomSound.js'
 
 // What HTMLMediaElement.src will read back for a given url — always absolute.
 export const resolveAudioSrc = (url = '') => {
@@ -34,7 +35,14 @@ export default function AudioObject({
     const distance = Number.isFinite(audioDistance) ? audioDistance : 8
     const loop = typeof audioLoop === 'boolean' ? audioLoop : true
     const autoplay = typeof audioAutoplay === 'boolean' ? audioAutoplay : true
-    const paused = typeof audioPaused === 'boolean' ? audioPaused : false
+    // The visitor's sound switch. On an ungated page (Studio's viewport, Raw)
+    // `soundAllowed` is always true, so an author still hears what they place;
+    // on a visitor's surface it is off until they ask, and a `?preview=1`
+    // thumbnail can never turn it on. Folded into `paused` deliberately: the
+    // pause path already stops both the positional and the HTMLAudio fallback,
+    // so there is one way to be silent rather than two.
+    const { soundAllowed } = useRoomSound()
+    const paused = (typeof audioPaused === 'boolean' ? audioPaused : false) || !soundAllowed
 
     React.useEffect(() => {
         let cancelled = false

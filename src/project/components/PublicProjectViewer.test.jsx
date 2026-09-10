@@ -30,8 +30,15 @@ vi.mock('../services/projectSyncService.js', () => ({
 vi.mock('../services/projectsApi.js', () => ({
     getProjectDocument: (...args) => getProjectDocumentMock(...args),
     listProjectOps: (...args) => listProjectOpsMock(...args),
-    buildProjectEventsUrl: (...args) => buildProjectEventsUrlMock(...args)
+    buildProjectEventsUrl: (...args) => buildProjectEventsUrlMock(...args),
+    // The viewer asks how many things are on show in this space, to decide
+    // whether there is a rest of the space worth offering a way to. One room
+    // by default: these cases are about the room, not about its neighbours.
+    listSpaceContents: (...args) => listSpaceContentsMock(...args),
+    DEFAULT_PROJECT_SPACE_ID: 'main'
 }))
+
+const listSpaceContentsMock = vi.fn(async () => [{ id: 'p', slug: null, title: 'p', mode: 'scene', updatedAt: 0 }])
 
 vi.mock('../../hooks/useXrAr.js', () => ({
     default: () => ({

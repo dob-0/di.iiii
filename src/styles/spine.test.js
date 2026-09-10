@@ -72,6 +72,7 @@ const SPINE_FILES = [
     'components/liveProjectScene.css',
     'components/confirmDeleteDialog.css',
     'raw/styles/raw.css',
+    'pages/spaceContents.css',
 ]
 
 // Not yet converted, and honest about it. Each line is a debt, not an

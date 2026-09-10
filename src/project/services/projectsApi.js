@@ -53,6 +53,16 @@ export const listProjects = async (spaceId = DEFAULT_PROJECT_SPACE_ID) => {
     return data.projects || []
 }
 
+// What a space holds, for whoever is allowed to look. The visitor's sibling of
+// listProjects above: only the work that is on show, and each row says whether
+// it is a scene or a page (serverXR/src/routes/projectRoutes.js). Never
+// auto-provisions — a visitor asking about a space that is not there gets the
+// error, not a new empty space created in their name.
+export const listSpaceContents = async (spaceId) => {
+    const data = await apiFetch(`/api/spaces/${spaceId}/contents`)
+    return data.projects || []
+}
+
 export const createProject = async (spaceId = DEFAULT_PROJECT_SPACE_ID, payload = {}) => {
     return withAutoProvisionedSpace(spaceId, () => apiFetch(`/api/spaces/${spaceId}/projects`, {
         method: 'POST',
