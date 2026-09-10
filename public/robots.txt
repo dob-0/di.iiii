@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /preferences
 
-Sitemap: https://di-studio.xyz/sitemap.xml
+Sitemap: https://diiii.xyz/sitemap.xml
