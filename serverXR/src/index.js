@@ -85,6 +85,7 @@ const { httpRequest } = require('./httpClient')
 const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
+const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { describeListen } = require('./listenInfo')
@@ -912,6 +913,46 @@ const trackEventLimiter = createRateLimiter({ windowMs: 60_000, max: 60, name: '
 
 // Covers the OAuth start + callback routes registered by registerAuthRoutes below.
 router.use(['/api/auth/github', '/api/auth/google'], authAttemptLimiter)
+
+// First-party accounts (an email and a password) issue exactly the same session
+// as every other door — same cookie, same shape, same guest-sandbox hand-off —
+// so nothing downstream can tell how somebody signed in, and nothing downstream
+// should be able to.
+const issueSessionForUser = async (req, res, user) => {
+  const keptSandbox = await promoteGuestSandbox(readAuthSession(req), user.id)
+  const session = createAuthSessionValue({
+    secret: config.auth.sessionSecret,
+    ttlMs: config.authSession.ttlMs,
+    session: {
+      subject: user.id,
+      label: user.display_name || user.email || user.username || user.id,
+      role: user.role,
+      spaces: Array.isArray(user.spaces) ? user.spaces : [],
+      ...(user.isUnrestricted ? { isUnrestricted: true } : {}),
+      tokenVersion: user.tokenVersion
+    }
+  })
+  setAuthSessionCookie(res, session.value)
+  return {
+    requireAuth: Boolean(config.requireAuth),
+    authenticated: true,
+    type: 'session',
+    role: user.role,
+    subject: user.id,
+    label: user.display_name || user.email || user.username || user.id,
+    spaces: Array.isArray(user.spaces) ? user.spaces : [],
+    isUnrestricted: Boolean(user.isUnrestricted),
+    emailVerified: Boolean(user.email_verified_at),
+    expiresAt: session.expiresAt,
+    keptSandbox
+  }
+}
+
+router.use('/api/auth/password', authAttemptLimiter)
+registerPasswordAuthRoutes(router, {
+  issueSessionForUser: (res, user) => issueSessionForUser(res.req, res, user),
+  frontendUrl: config.oauth.frontendUrl
+})
 
 registerAuthRoutes(router, {
   config,

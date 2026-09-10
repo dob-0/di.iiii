@@ -309,6 +309,25 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-26'
     },
     {
+        id: 'accounts-of-our-own',
+        category: 'Spaces & access',
+        title: 'Signing in without Google, GitHub or Telegram',
+        summary: 'di.iiii has its own accounts now: an email and a password, a link in your mail, or a plain username where there is no mail at all.',
+        body: [
+            'Until now every door into di.iiii belonged to somebody else — you signed in with Google, with GitHub, or with Telegram, which meant you had to already belong somewhere else first. There is a door of our own now.',
+            { list: [
+                '**An email and a password.** Register in the sign-in card. The password needs eight characters; there are no rules about capitals or digits, because those rules mostly produce worse passwords.',
+                '**A link in your mail instead.** "Email me a link instead" sends a one-time sign-in link, good for fifteen minutes. Nothing to remember, nothing to type.',
+                '**A username, where there is no mail.** An install running offline — a camp, a laptop in a room with no internet — can still make accounts. It comes with one honest limit: nobody can prove such an account is yours, so only an admin can get you back into it if the password goes.'
+            ] },
+            'Creating an account gives you an account and nothing else: no role, and no space. You are somebody, and then somebody invites you somewhere. That is deliberate, and it is the same rule the Telegram sign-in follows.',
+            'A forgotten password is reset by a link in your mail, and the link works once. If the copy of di.iiii you are using cannot send mail, it says so rather than offering you a button that could never work.',
+            'What we hold: your address, a display name, and a verifier for your password — not the password. It is hashed with scrypt, which is one-way; nobody at the studio can read your password, and neither can anyone who steals the database.'
+        ],
+        tags: ['account', 'sign in', 'register', 'password', 'email', 'offline', 'camp'],
+        updated: '2026-09-11'
+    },
+    {
         id: 'chat-on-its-own',
         category: 'Spaces & access',
         title: 'The chat room at its own address',
