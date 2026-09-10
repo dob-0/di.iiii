@@ -149,7 +149,7 @@ const ALLOWED_RADII = new Set(['0', '0px', '50%', 'inherit', 'unset', 'var(--di-
  * measured) and 7 uses of --di-text-label (the only one of four declared
  * type tokens anyone actually read). The ladders in base.css are the real
  * distribution's own clusters, snapped so nothing moves by more than 2px
- * (spacing) or 1px (type) — see docs/ai/sessions/feat-spine-rhythm.md for the
+ * (spacing) or 1px (type) — see PROGRESS.md (2026-09-10) for the
  * full derivation and mapping table.
  *
  * 1,559 spacing literals and 614 font-sizes convert to the ladder here. What

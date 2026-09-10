@@ -78,7 +78,7 @@ describe('a code page can read /vendor/ and /fonts/ from its null origin', () =>
     })
 
     // Added 2026-09-10 standing up the WCC landing as a `code` project
-    // (docs/ai/sessions/feat-wcc-landing-project.md): its process gallery
+    // (PROGRESS.md, 2026-09-10): its process gallery
     // loads /wcc/process/*.jpeg into WebGL textures, the same CORS-mode
     // fetch class as the Draco decoder above. Node-only on purpose — the
     // `local`/offline `di` install is what this session needed fixed, and
