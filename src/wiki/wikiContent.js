@@ -309,6 +309,24 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-26'
     },
     {
+        id: 'chat-on-its-own',
+        category: 'Spaces & access',
+        title: 'The chat room at its own address',
+        summary: 'The space room, alone on a page, at /chat — and installable on a phone.',
+        body: [
+            'The room described above lives inside the editors: you open Studio or the node editor, then open a panel. That is the wrong amount of work for "say something to the others", so the same room also has an address of its own. /chat is the studio\u2019s room; /{space}/chat is any other space\u2019s.',
+            'It is the same room, not a copy. A line typed at /chat appears in the Chat panel of everyone working in that space, and a line typed in the panel appears here. The transcript, the 500-character limit and the admin\u2019s delete are all the ones described above.',
+            { list: [
+                'On a phone, the browser can add it to the home screen and it opens like an app, without browser chrome.',
+                'It carries no 3D and no editor, so it opens on a bad connection and stays open.',
+                'You must be in the space to read it. Somebody who is not gets a card telling them so, rather than an empty room.'
+            ] },
+            'Your name here is the name of the account you signed in with. Only a session with no account to speak of falls back to asking you for one.'
+        ],
+        tags: ['chat', 'space', 'phone', 'install', 'pwa', 'address'],
+        updated: '2026-09-10'
+    },
+    {
         id: 'public-page-node',
         category: 'Editing',
         title: 'The Public page window',
