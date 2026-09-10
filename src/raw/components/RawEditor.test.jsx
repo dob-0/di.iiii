@@ -83,7 +83,7 @@ const makeNodeZero = () => ({
 // every later test in the file.
 afterEach(() => {
     for (const key of Object.keys(window.localStorage)) {
-        if (key.startsWith('dii.raw.zen.')) window.localStorage.removeItem(key)
+        if (key.startsWith('dii.raw.zen.') || key.startsWith('dii.rawLayout.')) window.localStorage.removeItem(key)
     }
 })
 
@@ -379,6 +379,107 @@ describe('RawEditor delete/reset confirmations', () => {
             .flat()
             .some((op) => op.type === 'deleteNode' && op.payload.nodeId === 'c1')
         expect(deletedCube).toBe(true)
+    })
+})
+
+// Where a window sits is a fact about the person looking at it, not about the
+// work. It used to be an op — so moving your window moved it for everyone in
+// the project, on every device, and pushed an undo entry. See
+// utils/workspaceLayout.js.
+describe('RawEditor — arranging windows is the person\'s, not the project\'s', () => {
+    const KEY = 'test-window-arrangement'
+    const withTextWindow = (frame = { visible: true, x: 40, y: 120, width: 200, height: 120 }) => JSON.stringify({
+        nodes: [{ id: 't1', typeId: 'view.text', label: 'Note', values: { frame } }],
+        edges: [],
+        workspaceState: {}
+    })
+
+    afterEach(() => {
+        // Unmount FIRST: the layout is written on unmount as well as on a
+        // debounce, so clearing before the editor has gone leaves the previous
+        // test's arrangement in the slot.
+        cleanup()
+        window.localStorage.removeItem(KEY)
+        for (const key of Object.keys(window.localStorage)) {
+            if (key.startsWith('dii.rawLayout.')) window.localStorage.removeItem(key)
+        }
+        mockApplyLocalOps.mockClear()
+    })
+
+    const dragTheHeader = (container) => {
+        const header = container.querySelector('.raw-window-header')
+        fireEvent.pointerDown(header, { clientX: 100, clientY: 100 })
+        fireEvent.pointerMove(window, { clientX: 220, clientY: 180 })
+        fireEvent.pointerUp(window)
+    }
+
+    it('writes no op when a window is dragged, focused, minimized or closed', () => {
+        window.localStorage.setItem(KEY, withTextWindow())
+        const { container } = render(<RawEditor localStorageKey={KEY} />)
+        mockApplyLocalOps.mockClear()
+
+        dragTheHeader(container)
+        fireEvent.click(screen.getByRole('button', { name: 'Minimize' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+        const frameOps = mockApplyLocalOps.mock.calls
+            .flat()
+            .filter((op) => op?.type === 'updateNode' && op?.payload?.patch?.values?.frame)
+        expect(frameOps).toEqual([])
+    })
+
+    // The document's frame is the arrangement the project OPENS on, and the one
+    // the projector renders from. An untouched project must look exactly as it
+    // did before any of this existed.
+    it('opens on the document\'s frame until the person moves something', () => {
+        window.localStorage.setItem(KEY, withTextWindow({ visible: true, x: 300, y: 220, width: 240, height: 160 }))
+        const { container } = render(<RawEditor localStorageKey={KEY} />)
+        expect(container.querySelector('.raw-window').style.transform).toBe('translate(300px, 220px)')
+    })
+
+    it('remembers the arrangement across a reload, without the document changing', () => {
+        window.localStorage.setItem(KEY, withTextWindow())
+        const first = render(<RawEditor localStorageKey={KEY} />)
+        dragTheHeader(first.container)
+        const moved = first.container.querySelector('.raw-window').style.transform
+        expect(moved).not.toBe('translate(40px, 120px)')
+        cleanup()
+
+        const second = render(<RawEditor localStorageKey={KEY} />)
+        expect(second.container.querySelector('.raw-window').style.transform).toBe(moved)
+        // The document still says what it always said.
+        expect(JSON.parse(window.localStorage.getItem(KEY)).nodes[0].values.frame.x).toBe(40)
+    })
+
+    // Filling the workspace and sitting under another window is not filling
+    // the workspace.
+    it('brings a maximized window to the front', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [
+                { id: 't1', typeId: 'view.text', label: 'Note', values: { frame: { visible: true, x: 40, y: 120, width: 200, height: 120, zIndex: 6 } } },
+                { id: 't2', typeId: 'view.text', label: 'Other', values: { frame: { visible: true, x: 300, y: 120, width: 200, height: 120, zIndex: 40 } } }
+            ],
+            edges: [],
+            workspaceState: {}
+        }))
+        const { container } = render(<RawEditor localStorageKey={KEY} />)
+        fireEvent.click(screen.getAllByRole('button', { name: 'Maximize' })[0])
+        const maximized = container.querySelector('.raw-window.is-maximized')
+        const other = [...container.querySelectorAll('.raw-window')].find((el) => el !== maximized)
+        expect(Number(maximized.style.zIndex)).toBeGreaterThan(Number(other.style.zIndex))
+    })
+
+    it('maximizes into the workspace and restores to where the person left it', () => {
+        window.localStorage.setItem(KEY, withTextWindow())
+        const { container } = render(<RawEditor localStorageKey={KEY} />)
+        const before = container.querySelector('.raw-window').style.transform
+
+        fireEvent.click(screen.getByRole('button', { name: 'Maximize' }))
+        expect(container.querySelector('.raw-window').classList.contains('is-maximized')).toBe(true)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Restore' }))
+        expect(container.querySelector('.raw-window').classList.contains('is-maximized')).toBe(false)
+        expect(container.querySelector('.raw-window').style.transform).toBe(before)
     })
 })
 

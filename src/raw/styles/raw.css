@@ -1520,6 +1520,18 @@
     border-bottom-color: transparent;
 }
 
+/* A maximised window is holding the whole workspace, so its edge stops being
+   furniture and becomes the frame of what you are working on: the shadow that
+   lifted it off the canvas has nothing left to lift it off. */
+.raw-window.is-maximized {
+    box-shadow: none;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.raw-window.is-maximized .raw-window-header::after {
+    content: none;
+}
+
 /* A window placed in the world is scaled with the canvas — the whole window,
    from its own top-left, so it shrinks toward where it stands rather than
    toward the page corner. */

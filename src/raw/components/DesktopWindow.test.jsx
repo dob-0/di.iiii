@@ -116,6 +116,35 @@ describe('DesktopWindow', () => {
         expect(onEnter).toHaveBeenCalledTimes(1)
     })
 
+    // Maximise is the fourth control, and it only exists where the workspace
+    // can say how big it is — DesktopWindow itself knows nothing about the
+    // topbar or the reserved bottom band.
+    it('offers Maximize only when the workspace hands it a handler', () => {
+        const onToggleMaximize = vi.fn()
+        const { rerender } = render(
+            <DesktopWindow windowState={windowState} title="Scene">content</DesktopWindow>
+        )
+        expect(screen.queryByRole('button', { name: 'Maximize' })).toBeNull()
+
+        rerender(
+            <DesktopWindow windowState={windowState} title="Scene" onToggleMaximize={onToggleMaximize}>content</DesktopWindow>
+        )
+        fireEvent.click(screen.getByRole('button', { name: 'Maximize' }))
+        expect(onToggleMaximize).toHaveBeenCalledTimes(1)
+    })
+
+    it('says Restore, and marks the window, once it is maximized', () => {
+        const { container } = render(
+            <DesktopWindow
+                windowState={{ ...windowState, maximized: true }}
+                title="Scene"
+                onToggleMaximize={() => {}}
+            >content</DesktopWindow>
+        )
+        expect(screen.getByRole('button', { name: 'Restore' })).toBeTruthy()
+        expect(container.querySelector('.raw-window').classList.contains('is-maximized')).toBe(true)
+    })
+
     it('omits the Enter button when onEnter is not provided', () => {
         render(
             <DesktopWindow windowState={windowState} title="World">

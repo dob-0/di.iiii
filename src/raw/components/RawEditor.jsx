@@ -69,7 +69,7 @@ import { describeRootEmptyCanvas } from '../utils/emptyCanvasHint.js'
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
-import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { getCardBox } from '../utils/cardGeometry.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen } from '../utils/zenMode.js'
 import {
@@ -77,6 +77,8 @@ import {
     readLocalWorkspaceDocument,
     writeLocalWorkspaceDocument
 } from '../utils/localWorkspaceStorage.js'
+import useWorkspaceLayout from '../utils/useWorkspaceLayout.js'
+import { cycleFocus, isMaximised, maximiseFrame, restoreFrame } from '../utils/workspaceLayout.js'
 import { peekRawEnterNode, clearRawEnterNode } from '../utils/rawEnterNodeHandoff.js'
 import {
     detectDeviceType,
@@ -118,9 +120,12 @@ export const WINDOW_DEFAULT_POSITIONS = {
 
 const ACTIVE_MARKER_TYPE_IDS = ['world.light', 'world.environment', 'world.background', 'world.grid', 'world.camera']
 
-const buildWindowStateFromNode = (node, index = 0, graphContext = null) => {
+// `frame` is passed in rather than read off the node: where a window sits is
+// the person's own arrangement laid over the document's seed, and only the
+// editor holds both halves. See utils/workspaceLayout.js.
+const buildWindowStateFromNode = (node, index = 0, graphContext = null, windowFrame = null) => {
     const def = WINDOW_DEFAULT_POSITIONS[node.typeId] || { x: 96, y: 140, width: 360, height: 280 }
-    const frame = node.values?.frame || {}
+    const frame = windowFrame || node.values?.frame || {}
     const hasSavedPos = frame.x != null && frame.y != null
     // Cascade unpositioned windows by a STABLE per-node offset, not the list
     // index — index shifts when a sibling closes, which made every later
@@ -144,7 +149,8 @@ const buildWindowStateFromNode = (node, index = 0, graphContext = null) => {
         zIndex: frame.zIndex || 6,
         visible: frame.visible !== false,
         minimized: Boolean(frame.minimized),
-        pinned: Boolean(frame.pinned)
+        pinned: Boolean(frame.pinned),
+        maximized: Boolean(frame.maximized)
     }
 }
 
@@ -207,6 +213,17 @@ export default function RawEditor({
     const [chatFrame, setChatFrame] = useState({ x: 24, y: 432, width: 280, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [readChatCount, setReadChatCount] = useState(0)
     const [readSpaceChatCount, setReadSpaceChatCount] = useState(0)
+    // Where the windows are, for this person, on this device. The document
+    // keeps the seed; this keeps the arrangement. utils/workspaceLayout.js.
+    const {
+        frameOf,
+        setLocalFrame,
+        forgetNodes: forgetWindowFrames
+    } = useWorkspaceLayout({
+        spaceId,
+        projectId: projectId || localStorageKey || null,
+        viewportWidth: typeof window === 'undefined' ? 1280 : window.innerWidth
+    })
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
     // Bumped after inserting a whole graph at once — tells the surface this
     // is the one moment a forced re-fit is a kindness, not a yank.
@@ -336,13 +353,24 @@ export default function RawEditor({
             nodes,
             isPanel: isPanelNode,
             currentScopeId,
-            isWorldFullscreen
+            isWorldFullscreen,
+            frameOf
         }),
-        [nodes, currentScopeId, isWorldFullscreen]
+        [nodes, currentScopeId, isWorldFullscreen, frameOf]
     )
+    // A layout outlives the windows it describes. Prune against what the
+    // document actually holds, so a deleted node cannot keep a slot forever.
+    const panelNodeIds = useMemo(
+        () => nodes.filter((node) => isPanelNode(node)).map((node) => node.id).join(','),
+        [nodes]
+    )
+    useEffect(() => {
+        forgetWindowFrames(panelNodeIds ? panelNodeIds.split(',') : [])
+    }, [panelNodeIds, forgetWindowFrames])
+
     const topZIndex = useMemo(
-        () => Math.max(6, ...visibleViewNodes.map((node) => node.values?.frame?.zIndex || 1)),
-        [visibleViewNodes]
+        () => Math.max(6, ...visibleViewNodes.map((node) => frameOf(node).zIndex || 1)),
+        [visibleViewNodes, frameOf]
     )
     // Selection is visible only where it STANDS. The old filter was by node
     // TYPE against a retired World/View/Graph axis — with activeSurface
@@ -600,11 +628,8 @@ export default function RawEditor({
         // frame.visible=false and nothing ever set it back) — entering the
         // node's graph card now reopens its window instead of entering an
         // empty scope.
-        if (getNodeRender(node) === 'panel-2d' && node.values?.frame?.visible === false) {
-            applyLocalOps({
-                type: 'updateNode',
-                payload: { nodeId, patch: { values: { frame: { ...(node.values?.frame || {}), visible: true } } } }
-            })
+        if (getNodeRender(node) === 'panel-2d' && frameOf(node).visible === false) {
+            setLocalFrame(nodeId, { visible: true })
             return
         }
         if (node.typeId === 'universe.world') setIsWorldFullscreen(true)
@@ -614,7 +639,7 @@ export default function RawEditor({
         // travelling in the shared workspace state at all.
         if (workspaceState.selectedNodeId || selectedEntity) clearSelection()
         scopeEnterNode(nodeId)
-    }, [authoredNodes, scopeEnterNode, applyLocalOps, workspaceState.selectedNodeId, selectedEntity, clearSelection])
+    }, [authoredNodes, scopeEnterNode, frameOf, setLocalFrame, workspaceState.selectedNodeId, selectedEntity, clearSelection])
 
     const handleNavigateToScope = useCallback((targetIndex) => {
         // Fullscreen SURVIVES scope navigation now: walking through a door
@@ -1839,6 +1864,22 @@ export default function RawEditor({
                 setIsWorldFullscreen(false)
                 return
             }
+            // Walk the pile of windows the way the eye does. Ctrl+` is the
+            // one binding no browser and no editor has already taken, and it
+            // is what a person coming from any other window manager reaches
+            // for. Shift walks back.
+            if (event.ctrlKey && event.key === '`') {
+                const order = [...visibleViewNodes]
+                    .filter((node) => frameOf(node).minimized !== true)
+                    .sort((a, b) => (frameOf(b).zIndex || 6) - (frameOf(a).zIndex || 6))
+                    .map((node) => node.id)
+                const nextId = cycleFocus(order, workspaceState.selectedNodeId, event.shiftKey ? -1 : 1)
+                if (!nextId) return
+                event.preventDefault()
+                selectNode(nextId)
+                setLocalFrame(nextId, { zIndex: topZIndex + 1 })
+                return
+            }
             if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
                 // Browsers bookmark on Ctrl+D; duplicating the selected node
                 // is what a person arranging a scene means by it here.
@@ -1862,7 +1903,7 @@ export default function RawEditor({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo, isWorldFullscreen])
+    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo, isWorldFullscreen, visibleViewNodes, frameOf, setLocalFrame, selectNode, topZIndex, workspaceState.selectedNodeId])
 
     const handleMoveWorldNode = (nodeId, nextPosition) => {
         applyLocalOps({
@@ -1877,7 +1918,7 @@ export default function RawEditor({
     // hidden is listed generically, so a node type added later is summonable
     // without touching this list.
     const hiddenPanelNodes = authoredNodes.filter(
-        (node) => isPanelNode(node) && node.values?.frame?.visible === false
+        (node) => isPanelNode(node) && frameOf(node).visible === false
     )
     const paletteCommands = [
         {
@@ -1896,15 +1937,9 @@ export default function RawEditor({
         { id: 'outliner', label: 'Outliner', hint: 'every node in the project', run: () => setOutlinerOpen(true) },
         ...hiddenPanelNodes.map((node) => ({
             id: `window:${node.id}`,
-            label: node.values?.frame?.title || node.label || getNodeType(node.typeId)?.label || 'Panel',
+            label: frameOf(node).title || node.label || getNodeType(node.typeId)?.label || 'Panel',
             hint: `open — ${node.typeId}`,
-            run: () => applyLocalOps({
-                type: 'updateNode',
-                payload: {
-                    nodeId: node.id,
-                    patch: { values: { frame: { ...(node.values?.frame || {}), visible: true } } }
-                }
-            })
+            run: () => setLocalFrame(node.id, { visible: true })
         }))
     ]
 
@@ -1925,9 +1960,9 @@ export default function RawEditor({
     const worldWindowBounds = narrowViewport
         ? []
         : visibleViewNodes
-            .filter((node) => !node.values?.frame?.pinned)
+            .filter((node) => !frameOf(node).pinned)
             .map((node) => {
-                const state = buildWindowStateFromNode(node, 0, graphContext)
+                const state = buildWindowStateFromNode(node, 0, graphContext, frameOf(node))
                 return { x: state.x, y: state.y, width: state.width, height: state.minimized ? RAW_WINDOW_MINIMIZED_HEIGHT : state.height }
             })
     const graphContentInsets = getGraphEdgeInsets({
@@ -1940,10 +1975,9 @@ export default function RawEditor({
             // unpinned window lives in the world with the cards — it is
             // content the fit frames, not chrome the fit dodges.
             ...visibleViewNodes
-                .filter((node) => node.values?.frame?.minimized !== true)
-                .filter((node) => windowSpaceFor(node.values?.frame) === 'screen')
-                .map((node) => node.values?.frame)
-                .filter(Boolean)
+                .map((node) => frameOf(node))
+                .filter((frame) => frame.minimized !== true)
+                .filter((frame) => windowSpaceFor(frame) === 'screen')
         ]
             .map((frame) => clampWindowFrame(frame, {
                 allowOverflowLeft: true,
@@ -2293,8 +2327,9 @@ export default function RawEditor({
                     desk. Pinned, it is fixed to the screen the old way; on a
                     phone every window is, because the clamp is the layout. */}
                 {visibleViewNodes.map((node, index) => {
-                    const windowState = buildWindowStateFromNode(node, index, graphContext)
-                    const space = windowSpaceFor(node.values?.frame)
+                    const frame = frameOf(node)
+                    const windowState = buildWindowStateFromNode(node, index, graphContext, frame)
+                    const space = windowSpaceFor(frame)
                     // The family, not the type id: the cards say "the room" and
                     // the windows used to say UNIVERSE.WORLD. Same node, two
                     // vocabularies — and the colour is what ties the window to
@@ -2314,46 +2349,38 @@ export default function RawEditor({
                             onFocus={() => {
                                 selectNode(node.id)
                                 // already topmost → no op. Unconditional bumps
-                                // inflated zIndex forever AND pushed a real
-                                // undo entry per title-bar click, so Ctrl+Z
-                                // undid a focus instead of the last edit.
-                                if ((node.values?.frame?.zIndex || 6) >= topZIndex) return
-                                applyLocalOps({
-                                    type: 'updateNode',
-                                    payload: {
-                                        nodeId: node.id,
-                                        patch: { values: { frame: { ...(node.values?.frame || {}), zIndex: topZIndex + 1 } } }
-                                    }
-                                })
+                                // inflated zIndex forever, and back when this
+                                // was an op it pushed a real undo entry per
+                                // title-bar click, so Ctrl+Z undid a focus
+                                // instead of the last edit.
+                                if ((frame.zIndex || 6) >= topZIndex) return
+                                setLocalFrame(node.id, { zIndex: topZIndex + 1 })
                             }}
-                            onPatch={(patch) => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), ...patch } } }
-                                }
-                            })}
-                            onClose={() => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), visible: false } } }
-                                }
-                            })}
-                            onToggleMinimize={() => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), minimized: !node.values?.frame?.minimized } } }
-                                }
-                            })}
+                            onPatch={(patch) => setLocalFrame(node.id, patch)}
+                            onClose={() => setLocalFrame(node.id, { visible: false })}
+                            onToggleMinimize={() => setLocalFrame(node.id, { minimized: !frame.minimized })}
+                            // Maximise fills the workspace, never the page —
+                            // a window over the topbar hides the way out, and
+                            // one at the true bottom edge lands under the
+                            // sign-in button. Restore returns the frame the
+                            // person left, not the project's seed.
+                            onToggleMaximize={() => setLocalFrame(node.id, isMaximised(frame)
+                                ? restoreFrame(frame)
+                                // Filling the workspace and sitting under
+                                // another window is not filling the workspace.
+                                : maximiseFrame({ ...frame, zIndex: topZIndex + 1 }, {
+                                    left: RAW_WINDOW_PADDING,
+                                    top: graphTopInset + RAW_WINDOW_PADDING,
+                                    width: (typeof window === 'undefined' ? 1280 : window.innerWidth) - RAW_WINDOW_PADDING * 2,
+                                    height: (typeof window === 'undefined' ? 800 : window.innerHeight)
+                                        - graphTopInset - RAW_WINDOW_PADDING * 2 - getBottomReserve(typeof window === 'undefined' ? 1280 : window.innerWidth)
+                                }))}
                             // Pinning changes the frame's coordinate space, so
                             // the numbers are converted through the viewport at
                             // that moment and the window stays exactly where the
                             // eye left it: pin = world → screen pixels, unpin =
                             // screen pixels → world units.
                             onTogglePin={() => {
-                                const frame = node.values?.frame || {}
                                 const pinned = !frame.pinned
                                 const vp = graphViewport
                                 const converted = (!vp || narrowViewport) ? {} : pinned
@@ -2369,13 +2396,7 @@ export default function RawEditor({
                                         width: windowState.width / vp.zoom,
                                         height: windowState.height / vp.zoom
                                     }
-                                applyLocalOps({
-                                    type: 'updateNode',
-                                    payload: {
-                                        nodeId: node.id,
-                                        patch: { values: { frame: { ...frame, ...converted, pinned } } }
-                                    }
-                                })
+                                setLocalFrame(node.id, { ...converted, pinned })
                             }}
                             onEnter={() => handleEnterNode(node.id)}
                         >
