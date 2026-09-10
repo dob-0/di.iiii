@@ -4,6 +4,7 @@ import useAuthSession from '../hooks/useAuthSession.js'
 import { WIKI_ARTICLES, WIKI_CATEGORIES } from './wikiContent.js'
 import './wiki.css'
 import SurfaceBar from '../components/SurfaceBar.jsx'
+import { isEmbedRequest } from '../utils/previewMode.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 
 // Lazy, not static — same fix as LandingPage.jsx: a plain import ships the
@@ -35,6 +36,7 @@ export default function WikiPage() {
     // The lighting desk only exists where di.iiii is actually running, so the
     // bar offers it only there.
     const localInstall = useLocalInstall()
+    const isEmbed = isEmbedRequest()
 
     useEffect(() => {
         document.body.classList.add('is-landing')
@@ -86,7 +88,7 @@ export default function WikiPage() {
                 sections and linked to none of them; its own way home was a
                 fourth name ("← Home") for the screen three other surfaces
                 already called three other things. One bar, one set of names. */}
-            <SurfaceBar here="wiki" isLocalInstall={localInstall.isLocal}>
+            <SurfaceBar here="wiki" isLocalInstall={localInstall.isLocal} hidden={isEmbed}>
                 {role === 'admin' && <a className="sbar-link" href="/admin">Admin</a>}
             </SurfaceBar>
 

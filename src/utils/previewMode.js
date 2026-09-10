@@ -11,6 +11,24 @@ export function isPreviewRequest(search) {
     return new URLSearchParams(raw).get('preview') === '1'
 }
 
+// `?embed=1` — this page is a WINDOW inside somebody else's page, not a
+// destination. Every lane reads the same flag, so a surface rendered in a pane
+// looks the same whichever lane it is.
+//
+// The contract, and it is narrow on purpose: embed hides NAVIGATION CHROME and
+// nothing else. Never auth — an embedded page signs you in exactly as a tab
+// does. Never what is saved — an edit made in a pane is the same edit. Never
+// what data is shown — nothing is withheld from a window that a tab would get.
+// A pane and a tab are the same program; only the way out is drawn differently,
+// because the host page already owns the frame around it.
+export function isEmbedRequest(search) {
+    const raw = typeof search === 'string'
+        ? search
+        : (typeof window !== 'undefined' ? window.location.search : '')
+    if (!raw) return false
+    return new URLSearchParams(raw).get('embed') === '1'
+}
+
 // The message a preview iframe posts to its host once it has PIXELS on it.
 // Both sides import this name so the string can never drift apart.
 export const PREVIEW_READY_MESSAGE = 'dii:preview-ready'

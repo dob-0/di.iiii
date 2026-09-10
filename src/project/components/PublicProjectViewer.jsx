@@ -28,6 +28,7 @@ import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 import { consumeArriveWalking } from '../../components/arriveWalking.js'
 import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
+import { isEmbedRequest } from '../../utils/previewMode.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -75,10 +76,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // result on the live site was a rectangle pasted across the ending, with
     // the shared body and the visitor's own mark hidden behind it. A window
     // the host cannot see through is a box; only the viewer itself can open it.
-    const [isEmbed] = useState(() => (
-        typeof window !== 'undefined'
-        && new URLSearchParams(window.location.search).get('embed') === '1'
-    ))
+    const [isEmbed] = useState(() => isEmbedRequest())
     // The DOCUMENT, not just this component's own shell: html/body/#root carry
     // --di-black from base.css, which sat under a "transparent" viewer and left
     // an embedded page a black box when viewed on its own. Toggled rather than
