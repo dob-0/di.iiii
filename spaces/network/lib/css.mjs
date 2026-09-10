@@ -139,7 +139,17 @@ a.row .made .arrow{opacity:.6;}
 .ti .ti-t{font-weight:600;color:var(--ink);}
 .ti .ti-r{color:var(--accent-ink);font-family:var(--mono);font-size:12px;margin-left:8px;}
 .ti .ti-p{display:block;color:var(--ink-3);font-size:12px;font-family:var(--mono);margin-top:2px;}
-.cv-link{margin:20px 0 0 0;}
+.ledger-label{font-family:var(--mono);font-size:12px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);margin:30px 0 0 0;}
+.ledger{margin:10px 0 0 0;}
+.lg{display:grid;grid-template-columns:11ch 1fr;column-gap:22px;align-items:baseline;
+  padding:11px 2px;border-top:1px solid var(--rule);}
+.ledger .lg:last-child{border-bottom:1px solid var(--rule);}
+.lg-when{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;
+  white-space:nowrap;}
+.lg-role{font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.4;}
+.lg-org{display:block;font-size:14px;color:var(--ink-2);line-height:1.5;}
+.lg-place{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-top:2px;}
 
 .section-label{font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink);
   margin:46px 0 16px 0;display:flex;align-items:baseline;gap:12px;}
@@ -170,6 +180,17 @@ a.row .made .arrow{opacity:.6;}
 .neighbours a{font-size:14.5px;color:var(--ink-2);text-decoration:none;padding:5px 0;
   border-bottom:1px solid transparent;}
 .neighbours a:hover,.neighbours a:focus-visible{color:var(--accent-ink);border-bottom-color:var(--accent-rule);}
+
+ul.sources{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;}
+ul.sources li{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  padding-left:15px;position:relative;}
+ul.sources li::before{content:'';position:absolute;left:0;top:.55em;width:5px;height:1px;background:var(--accent);}
+ul.sources a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-rule);}
+ul.sources a:hover,ul.sources a:focus-visible{border-bottom-color:var(--accent);}
+/* Named, not linked: the studio's own files are closed on purpose. */
+.src-closed{color:var(--ink-3);}
+.src-note{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-3);
+  margin:14px 0 0 0;max-width:62ch;}
 
 .room-foot{max-width:var(--room);padding:44px var(--pad) 72px var(--pad);}
 .room-foot p{font-size:14px;color:var(--ink-2);line-height:1.65;max-width:58ch;margin:0;
@@ -206,6 +227,8 @@ a.row .made .arrow{opacity:.6;}
   .indexPane h1{font-size:27px;}
   .room-stage{padding-top:34px;}
   .door{flex:1 1 100%;min-height:112px;}
+  .lg{grid-template-columns:1fr;row-gap:3px;}
+  .lg-when{order:2;}
   .group{margin-top:34px;}
 }
 

@@ -3,7 +3,7 @@
   "spaceId": "network",
   "projectId": "network-lusine-mlke-galstyan",
   "slug": "lusine-mlke-galstyan",
-  "label": "Lusine Mlke-Galstyan",
+  "label": "Lusine MLKE-Galstyan",
   "mode": "code",
   "entry": "spaces/network/pages/lusine-mlke-galstyan.html",
   "include": [],

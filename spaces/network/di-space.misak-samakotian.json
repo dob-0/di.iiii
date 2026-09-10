@@ -3,7 +3,7 @@
   "spaceId": "network",
   "projectId": "network-misak-samakotian",
   "slug": "misak-samakotian",
-  "label": "Misak Samakotian",
+  "label": "Misak Samokatyan",
   "mode": "code",
   "entry": "spaces/network/pages/misak-samakotian.html",
   "include": [],

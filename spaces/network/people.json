@@ -1,5 +1,5 @@
 {
-  "note": "One entry per person in the network — all 52 who make di.iiii, not only the ones with rooms yet. `works` (shape: {url,title,line,space,project}) are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. Generated from network-directions/data/inventory.json (52-person roster) via the MIX build's lib/data.mjs, then committed here as static data. build.mjs turns this into pages/<slug>.html and one di-space.<slug>.json each, via room-template.mjs's renderRoom(). Two works (azd and br_id_ge) are shared by more than one person, which is what draws the lines in a room's field. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make.",
+  "note": "One entry per person in the network — all 58 who make di.iiii, not only the ones with rooms yet. `works` (shape: {url,title,line,space,project}) are addresses on di.iiii where their work already stands; `elsewhere` is the handle the roster used to point at. Generated from network-directions/data/inventory.json (52-person roster) via the MIX build's lib/data.mjs, then committed here as static data. build.mjs turns this into pages/<slug>.html and one di-space.<slug>.json each, via room-template.mjs's renderRoom(). Two works (azd and br_id_ge) are shared by more than one person, which is what draws the lines in a room's field. When a person takes their room over in Studio, remove their manifest from di-space.space.json `projects` — the engine never deletes, and a declared page would overwrite what they make.",
   "people": [
     {
       "slug": "gevorg-grigoryan",
@@ -10,7 +10,7 @@
       "section": "team",
       "sectionLabel": "team",
       "city": null,
-      "bio": "dob_ — interdisciplinary artist and director, in the digital and artistic realms since 2009. Founder of di. studio; theatre-trained, now building the platform itself.",
+      "bio": "dob_ — interdisciplinary artist and director, in the digital and artistic realms since 2012. Founder of di. studio; theatre-trained, now building the platform itself.",
       "works": [
         {
           "url": "/",
@@ -25,6 +25,62 @@
           "line": "Notations #2 — curated and developed",
           "space": "br-id-ge",
           "project": "landing"
+        },
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "art director — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "OUT",
+          "line": "director — performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, May 2024",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "WIDS Armenia — Creative Cognition",
+          "line": "director, digital artist — Gyumri Technology Center, June 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "f33d6ack — Beyond Data",
+          "line": "artist — AGBU Katapult, NPAK, Yerevan, 2024",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "taking space — di.ex: no_map",
+          "line": "digital artist — Kunsthouse, Yerevan, 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Generator",
+          "line": "multimedia artist, directing — residency with G.URBAN, Munich, Sept 2024",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -35,40 +91,71 @@
         {
           "label": "GitHub",
           "href": "https://github.com/dob-0"
+        },
+        {
+          "label": "YouTube",
+          "href": "https://www.youtube.com/@gevorg_aram1"
+        },
+        {
+          "label": "Telegram",
+          "href": "https://t.me/dob_0"
         }
       ],
       "num": "01",
       "order": 1,
       "resume": {
         "focus": [
-          "director",
-          "new media artist",
-          "multimedia artist",
-          "electronic art production",
-          "digital art production",
-          "audiovisual production",
+          "directing",
+          "new media",
           "curation",
+          "audiovisual production",
+          "projection mapping",
+          "XR",
           "TouchDesigner",
-          "Blender"
+          "Blender",
+          "Resolume",
+          "Ableton Live",
+          "Python",
+          "Linux"
         ],
         "timeline": [
+          {
+            "year": "2026",
+            "items": [
+              {
+                "title": "Notations #2",
+                "role": "curator, Video Art programme",
+                "place": "hosq, State Philharmonia of Armenia · National Gallery · Hayfilm Cluster, Yerevan, 1–2 Aug"
+              },
+              {
+                "title": "br_id_ge",
+                "role": "director, developer",
+                "place": "Notations #2, State Philharmonia of Armenia, Yerevan"
+              }
+            ]
+          },
           {
             "year": "2025",
             "items": [
               {
-                "title": "RecordAR",
-                "role": "art director",
-                "place": "Munich, Germany"
+                "title": "Notations #1 — XR.001",
+                "role": "curator",
+                "place": "hosq, Yerevan, Armenia"
               },
               {
-                "title": "Notations",
-                "role": "video art curator",
-                "place": "Yerevan, Armenia"
+                "title": "RecordAR: Analog and Digital Identities",
+                "role": "art director",
+                "place": "educational programme, Munich, Germany"
+              },
+              {
+                "title": "RecordAR",
+                "role": "XR exhibition",
+                "place": "BYOB Interactive Installations, Yerevan, 7 Nov · Interaktiv Tagung, JFF Media Center, Munich, 20 Nov"
               },
               {
                 "title": "Alter ego",
                 "role": "creative director",
-                "place": "Public TV Company of Armenia"
+                "place": "TV programme, Public TV Company of Armenia"
               },
               {
                 "title": "Game changers: Intro to game dev. (UNICEF)",
@@ -88,12 +175,12 @@
               {
                 "title": "OUT",
                 "role": "director",
-                "place": "NPAK, Armenia"
+                "place": "performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, 25 May"
               },
               {
                 "title": "F33d6ack",
                 "role": "multimedia artist",
-                "place": "NPAK, Armenia"
+                "place": "installation, NPAK, Armenia"
               }
             ]
           },
@@ -101,29 +188,44 @@
             "year": "2023",
             "items": [
               {
-                "title": "ex: bkss",
-                "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
-              },
-              {
-                "title": "bisetka v:2",
-                "role": "art director",
-                "place": "Pathos Theatre, Munich, Germany"
-              },
-              {
-                "title": "taking space: ex:no_map",
-                "role": "multimedia artist",
-                "place": "Yerevan, Armenia"
-              },
-              {
-                "title": "Creative cognition: in_it",
-                "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
+                "title": "HochX ResidenXies",
+                "role": "artist in residence",
+                "place": "HochX Theater & Live Art, Munich, Germany, July"
               },
               {
                 "title": "Bisetka: talk place",
                 "role": "director",
-                "place": "HochX Theater, Munich, Germany"
+                "place": "HochX Theater & Live Art, Munich, Germany"
+              },
+              {
+                "title": "bisetka v:_2",
+                "role": "art director",
+                "place": "Pathos Theatre, Spielart festival, Munich, Germany"
+              },
+              {
+                "title": "ex: bkss",
+                "role": "multimedia artist",
+                "place": "installation, Gyumri, Armenia"
+              },
+              {
+                "title": "taking space: ex:no_map",
+                "role": "multimedia artist",
+                "place": "AR installation, Yerevan, Armenia"
+              },
+              {
+                "title": "Creative cognition: in_it",
+                "role": "multimedia artist",
+                "place": "projection mapping, Gyumri, Armenia"
+              },
+              {
+                "title": "Fundamentals of game technology (Coca-Cola)",
+                "role": "soft skill trainer",
+                "place": "Gyumri Technology Center"
+              },
+              {
+                "title": "Game changers: Story telling (UNICEF)",
+                "role": "trainer",
+                "place": "Gyumri Technology Center"
               }
             ]
           },
@@ -131,34 +233,34 @@
             "year": "2022",
             "items": [
               {
+                "title": "di. studio",
+                "role": "founder",
+                "place": "Armenia"
+              },
+              {
                 "title": "SPCTR",
                 "role": "multimedia artist",
-                "place": "Yerevan, Armenia"
+                "place": "installation, Yerevan, Armenia"
               },
               {
                 "title": "Oda",
                 "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
+                "place": "AR installation, Gyumri, Armenia"
               },
               {
                 "title": "Galique",
                 "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
+                "place": "projection mapping, Gyumri, Armenia"
               },
               {
                 "title": "Mards",
                 "role": "project manager",
-                "place": "Munich, Germany"
+                "place": "projection mapping, Munich, Germany"
               },
               {
                 "title": "Dimensions: 004",
                 "role": "multimedia artist",
-                "place": "Munich, Germany"
-              },
-              {
-                "title": "di. studio",
-                "role": "founder",
-                "place": "Armenia"
+                "place": "AR installation, Munich, Germany"
               }
             ]
           },
@@ -183,53 +285,189 @@
               {
                 "title": "technoSapiens",
                 "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
+                "place": "audio-visual performance, Gyumri, Armenia"
               }
             ]
           },
           {
-            "year": "2016 – 2020",
+            "year": "2017 – 2021",
             "items": [
               {
                 "title": "Wedding in the Back",
                 "role": "actor",
-                "place": "Gyumri State Drama Theater"
+                "place": "Gyumri State Drama Theater, 2018 – 2021"
               },
               {
                 "title": "smileOmetr",
                 "role": "stage director",
-                "place": "Gyumri State Drama Theater"
+                "place": "Gyumri State Drama Theater, 2018 – 2020"
               },
               {
                 "title": "Three Little Pigs",
                 "role": "stage director",
-                "place": "Gyumri State Drama Theater"
-              }
-            ]
-          },
-          {
-            "year": "2012 – 2019",
-            "items": [
-              {
-                "title": "Aratta",
-                "role": "creative director / band"
+                "place": "Gyumri State Drama Theater, 2018 – 2020"
               },
               {
                 "title": "seenThat",
                 "role": "multimedia artist",
-                "place": "Gyumri, Armenia"
+                "place": "installation, Gyumri, Armenia, 2019"
+              },
+              {
+                "title": "Backstage",
+                "role": "actor",
+                "place": "TV show, 2019"
+              },
+              {
+                "title": "Aratta",
+                "role": "creative director",
+                "place": "band, 2017 – 2020"
+              },
+              {
+                "title": "SOS",
+                "role": "creative director",
+                "place": "YouTube show, 2017 – 2018"
+              }
+            ]
+          },
+          {
+            "year": "2012 – 2016",
+            "items": [
+              {
+                "title": "King Lir",
+                "role": "assistant director, actor",
+                "place": "Gyumri State Drama Theater, 2016"
+              },
+              {
+                "title": "DeCore",
+                "role": "stage director",
+                "place": "Yerevan State Institute of Theatre and Cinematography, Gyumri, 2016"
+              },
+              {
+                "title": "Predators Feast",
+                "role": "actor",
+                "place": "Yerevan State Institute of Theatre and Cinematography, Gyumri, 2016"
+              },
+              {
+                "title": "Canterville Ghost",
+                "role": "stage director",
+                "place": "Yerevan State Institute of Theatre and Cinematography, Gyumri, 2015"
+              },
+              {
+                "title": "Լույս | Lumen",
+                "role": "film director",
+                "place": "short film, Gyumri, Armenia, 2015"
+              },
+              {
+                "title": "Mice Meeting",
+                "role": "stage director",
+                "place": "Yerevan State Institute of Theatre and Cinematography, Gyumri, 2014"
+              },
+              {
+                "title": "Love, Jazz, Devil",
+                "role": "actor",
+                "place": "Gyumri State Drama Theater, 2014"
+              },
+              {
+                "title": "Mesrop Mashtots",
+                "role": "actor",
+                "place": "Gyumri State Drama Theater, 2014"
+              },
+              {
+                "title": "Clowns saved the Christmas",
+                "role": "actor",
+                "place": "Yerevan State Institute of Theatre and Cinematography, Gyumri, 2013"
+              },
+              {
+                "title": "Duet Festival",
+                "role": "PR manager",
+                "place": "theatrical festival, Gyumri, Armenia, 2013"
+              },
+              {
+                "title": "Hey Khatabala!",
+                "role": "actor",
+                "place": "Petros Adamian's State Drama Theater, Yerevan, 2012"
               },
               {
                 "title": "PROF",
                 "role": "PR manager",
-                "place": "Gyumri, Armenia"
+                "place": "production, Gyumri, Armenia, 2012 – 2016"
               }
             ]
           }
         ],
-        "cvUrl": "https://docs.google.com/document/d/14xkyBRArc9t7BqbKm_-2FDpzrjn84lPGdiDnuP23xr4/edit",
-        "cvLabel": "the full CV"
-      }
+        "positions": [
+          {
+            "years": "2020 — now",
+            "role": "head of di.iiii",
+            "org": "di.iiii XR studio_network"
+          },
+          {
+            "years": "2021 — 2024",
+            "role": "art manager",
+            "org": "Gyumri State Symphony Orchestra",
+            "place": "Gyumri, Armenia"
+          },
+          {
+            "years": "2020 — 2021",
+            "role": "lecturer",
+            "org": "Yerevan State Institute of Theatre and Cinematography",
+            "place": "Gyumri, Armenia"
+          },
+          {
+            "years": "2016 — 2020",
+            "role": "actor, director",
+            "org": "Gyumri State Drama Theater",
+            "place": "Gyumri, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2017 — 2019",
+            "role": "MA, Theatre Art",
+            "org": "Yerevan State Institute of Theatre and Cinematography",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2012 — 2016",
+            "role": "BA, Directing",
+            "org": "Yerevan State Institute of Theatre and Cinematography",
+            "place": "Gyumri, Armenia"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "Notations #2, hosq",
+          "href": "https://hosq.co/notations-festival"
+        },
+        {
+          "label": "Notations #1, hosq",
+          "href": "http://hosq.co/notations-01-festival"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "emilya-nikoghosyan",
@@ -269,6 +507,48 @@
           "line": "Notations #2 — team",
           "space": "br-id-ge",
           "project": "landing"
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "project coordinator — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "WIDS Armenia — Creative Cognition",
+          "line": "project manager — Gyumri Technology Center, June 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "f33d6ack — Beyond Data",
+          "line": "artist — AGBU Katapult, NPAK, Yerevan, 2024",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "taking space — di.ex: no_map",
+          "line": "art coordinator — Kunsthouse, Yerevan, 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "echo/4",
+          "line": "co-organiser and artist — Shushanik Kurghinyan's house, Gyumri, Dec 2024",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -290,6 +570,21 @@
           "Resolume Arena"
         ],
         "timeline": [
+          {
+            "year": "2026",
+            "items": [
+              {
+                "title": "algovrithm",
+                "role": "artist",
+                "place": "Notations #2, State Philharmonia of Armenia, Yerevan (KARATAV room) and Hayfilm, 1 Aug"
+              },
+              {
+                "title": "ազդ | azd",
+                "role": "artist",
+                "place": "a-1, Gyumri, Armenia"
+              }
+            ]
+          },
           {
             "year": "2024",
             "items": [
@@ -359,9 +654,56 @@
             ]
           }
         ],
-        "cvUrl": "https://drive.google.com/file/d/1AMSwsw7HOsf4u7v_IC6XSueuMMOZpiad/view",
-        "cvLabel": "the full CV — PDF"
-      }
+        "positions": [
+          {
+            "years": "2020 — now",
+            "role": "art director",
+            "org": "di.iiii XR studio_network"
+          },
+          {
+            "years": "2023 — 2024",
+            "role": "long-term volunteer",
+            "org": "University of Economy Bydgoszcz",
+            "place": "Bydgoszcz, Poland"
+          }
+        ],
+        "education": [
+          {
+            "years": "2022",
+            "role": "Extension programme",
+            "org": "American University of Armenia"
+          },
+          {
+            "years": "2019 — 2022",
+            "role": "college",
+            "org": "Gyumri High Academic College",
+            "place": "Gyumri, Armenia"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        },
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "syuzi-ginosyan",
@@ -372,7 +714,7 @@
       "section": "team",
       "sectionLabel": "team",
       "city": "Gyumri",
-      "bio": "Curator based in Gyumri — MA in Art History and Theory. Co-founder of G.URBAN; curator for Gyumri Art Week; residencies and collaborations across Armenia and Germany.",
+      "bio": "Curator based in Gyumri — MA in Art History and Theory, State Academy of Fine Arts. Co-founder of G.URBAN; curator for Gyumri Art Week; residencies and collaborations across Armenia and Germany.",
       "works": [
         {
           "url": "/azd",
@@ -394,6 +736,20 @@
           "line": "Notations #2 — team",
           "space": "br-id-ge",
           "project": "landing"
+        },
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
         }
       ],
       "elsewhere": [
@@ -499,25 +855,99 @@
             "items": [
               {
                 "title": "Ground art festival",
-                "role": "organizer and curator",
-                "place": "Gyumri, Armenia"
+                "role": "organizer, curator",
+                "place": "Gyumri, Armenia, 2021"
               },
               {
-                "title": "With a Word",
-                "role": "curator and artist",
-                "place": "Gyumri, Armenia"
+                "title": "in Basen (Artworks For Peace)",
+                "role": "project manager",
+                "place": "Basen, Armenia, 2021"
+              },
+              {
+                "title": "SPCTR",
+                "role": "multimedia artist",
+                "place": "installation, Yerevan, Armenia, 2021"
+              },
+              {
+                "title": "Evaluating Performances #2: Stone to the Stone",
+                "role": "curator, artist",
+                "place": "Gyumri Textile, Gyumri, Armenia, 2019"
               },
               {
                 "title": "Anonymous",
                 "role": "curator",
-                "place": "Loft Gyumri"
+                "place": "Loft Gyumri, Armenia, 2017"
+              },
+              {
+                "title": "toDAY-2016",
+                "role": "participant",
+                "place": "20th Annual festival of alternative art, ACCEA, Yerevan, 2016"
+              },
+              {
+                "title": "With a Word",
+                "role": "curator, artist",
+                "place": "State Academy of Fine Arts · Aslamazyan Sisters Gallery · Style Gallery, Gyumri, 2015"
               }
             ]
           }
         ],
-        "cvUrl": "https://drive.google.com/file/d/1sg6ytFluP_37HQHKvO1Ski4y7FjDn4gk/view",
-        "cvLabel": "the full CV — PDF"
-      }
+        "positions": [
+          {
+            "years": "2022 — now",
+            "role": "curator",
+            "org": "di.iiii XR studio_network"
+          },
+          {
+            "years": "2021 — now",
+            "role": "co-founder",
+            "org": "G.URBAN platform",
+            "place": "Gyumri, Armenia / Munich, Germany"
+          },
+          {
+            "years": "2016 — 2017",
+            "role": "coach",
+            "org": "TUMO Gyumri",
+            "place": "Gyumri, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2018 — 2019",
+            "role": "MA, Art History and Theory",
+            "org": "State Academy of Fine Arts of Armenia"
+          },
+          {
+            "years": "2013 — 2017",
+            "role": "BA, Art History and Theory",
+            "org": "State Academy of Fine Arts of Armenia"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "G.URBAN platform",
+          "href": "https://www.gurbanplatform.com/page/community.html"
+        }
+      ]
     },
     {
       "slug": "taron-grigoryan",
@@ -528,8 +958,30 @@
       "section": "team",
       "sectionLabel": "team",
       "city": null,
-      "bio": "Actor, lighting engineer and founder of SPCTR Lights — multimedia, audiovisual and music production, DJing.",
-      "works": [],
+      "bio": "Actor, lighting engineer, musician and DJ — co-founder of SPCTR Lights (2022–2023) and, since 2025, of Yokozo. Multimedia, audiovisual and music production.",
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "WIDS Armenia — Creative Cognition",
+          "line": "artist — Gyumri Technology Center, June 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -590,6 +1042,21 @@
                 "title": "Versace — music for Versace",
                 "role": "music producer",
                 "place": "Milan, Italy"
+              },
+              {
+                "title": "NOH radio",
+                "role": "musician",
+                "place": "Istanbul, Turkey"
+              },
+              {
+                "title": "Fast and Furious (album)",
+                "role": "musician",
+                "place": "Buenos Aires, Argentina"
+              },
+              {
+                "title": "Neighborhood WATCH vol 5 (album)",
+                "role": "musician",
+                "place": "Bristol, UK"
               }
             ]
           },
@@ -610,6 +1077,16 @@
                 "title": "MARDs residency",
                 "role": "visual artist",
                 "place": "Munich, Germany"
+              },
+              {
+                "title": "Acid Arab",
+                "role": "musician",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "YBAF Fashion",
+                "role": "lighting engineer",
+                "place": "Yerevan, Armenia"
               }
             ]
           },
@@ -633,9 +1110,59 @@
             ]
           }
         ],
-        "cvUrl": "https://drive.google.com/file/d/1UzTrZuwg1Go7Nf1Tm0Dg8a7yt5Z1waIY/view",
-        "cvLabel": "the full CV — PDF"
-      }
+        "positions": [
+          {
+            "years": "2025 — now",
+            "role": "co-founder",
+            "org": "Yokozo",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2022 — 2023",
+            "role": "co-founder",
+            "org": "SPCTR Lights",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2020 — 2021",
+            "role": "lighting engineer",
+            "org": "Poligraf",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2016 — 2021",
+            "role": "actor",
+            "org": "Gyumri State Drama Theater",
+            "place": "Gyumri, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2015 — 2019",
+            "role": "BA, Acting",
+            "org": "Yerevan State Institute of Theatre and Cinematography",
+            "place": "Gyumri, Armenia"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "yeva-abgaryan",
@@ -646,7 +1173,7 @@
       "section": "team",
       "sectionLabel": "team",
       "city": null,
-      "bio": "Set designer and production artist working with recycled materials — part of the art direction team renovating Hayfilm Studio into a new art venue.",
+      "bio": "Set designer and production artist working with recycled and reused materials — drawing, sculpting and 3D. Co-founder of Yokozo.",
       "works": [
         {
           "url": "/wcc/yeva-abgaryan",
@@ -661,6 +1188,27 @@
           "line": "Faceless",
           "space": "azd",
           "project": "azd"
+        },
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "character designer — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -682,6 +1230,21 @@
           "Nomad Sculpt"
         ],
         "timeline": [
+          {
+            "year": "2026",
+            "items": [
+              {
+                "title": "WCC: Women Creating Change",
+                "role": "artist",
+                "place": "Gyumri, Armenia"
+              },
+              {
+                "title": "ազդ | azd",
+                "role": "artist",
+                "place": "Faceless, Gyumri, Armenia"
+              }
+            ]
+          },
           {
             "year": "2023",
             "items": [
@@ -748,21 +1311,90 @@
             ]
           }
         ],
-        "cvUrl": "https://drive.google.com/file/d/1ncpODwX9HJ5Oa9X7kj1MBXN4-rGWa8f5/view",
-        "cvLabel": "the full CV — PDF"
-      }
+        "positions": [
+          {
+            "years": "2025 — now",
+            "role": "co-founder",
+            "org": "Yokozo",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2022 — 2023",
+            "role": "artist, art director",
+            "org": "SPCTR Lights",
+            "place": "Yerevan, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2018 — 2022",
+            "role": "Fine Arts",
+            "org": "Panos Terlemezian State College of Fine Arts",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2017 — 2019",
+            "role": "creative technologies",
+            "org": "TUMO Center for Creative Technologies",
+            "place": "Yerevan, Armenia"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        },
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        }
+      ]
     },
     {
       "slug": "maria-matinyan",
       "name": "Maria Matinyan",
-      "role": "multimedia artist, curator",
-      "discipline": "multimedia artist, curator",
+      "role": "site-specific artist, curator",
+      "discipline": "site-specific artist, curator",
       "team": false,
       "section": "curators",
       "sectionLabel": "curators",
-      "city": null,
-      "bio": null,
-      "works": [],
+      "city": "Munich",
+      "bio": "Site-specific artist, art educator and curator — the artistic exploration of spaces, time and memory, especially the sound memories of particular places, people and events. Founder of the G.URBAN platform.",
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Generator",
+          "line": "networking programme — residency with G.URBAN, Munich, Sept 2024",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -770,7 +1402,113 @@
         }
       ],
       "num": "006",
-      "order": 6
+      "order": 6,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "her own site",
+          "href": "https://www.mariamatinyan.am/"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ],
+      "resume": {
+        "focus": [
+          "site-specific art",
+          "sound art",
+          "performance",
+          "lithography",
+          "curation",
+          "art education"
+        ],
+        "positions": [
+          {
+            "years": "2020 — now",
+            "role": "founder",
+            "org": "G.URBAN platform",
+            "place": "Munich, Germany / Gyumri, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "until 2022",
+            "role": "graduation, Examenspreis",
+            "org": "Akademie der Bildenden Künste",
+            "place": "Munich, Germany"
+          }
+        ],
+        "timeline": [
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Textile Zone",
+                "role": "sound work — homage to the workers of the Gyumri textile factory",
+                "place": "Blaues Rauschen Festival, Ruhrgebiet, Germany"
+              },
+              {
+                "title": "between traces",
+                "role": "three-colour print, lithography objects in the room"
+              },
+              {
+                "title": "Debütant*innen Ausstellung",
+                "role": "exhibition",
+                "place": "Halle 6, Munich, Germany"
+              },
+              {
+                "title": "Ground Book",
+                "role": "publishing in process",
+                "place": "SuperBooks 2023 · International Print Biennale Yerevan"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "Longing for a peaceful sleep",
+                "role": "ritual, performance, installation",
+                "place": "roof of AdBK Munich — graduation exhibition, Examenspreis"
+              },
+              {
+                "title": "somewhere something someone",
+                "role": "installation",
+                "place": "MARDS residency, Open Art Munich"
+              },
+              {
+                "title": "Kino Asyl",
+                "role": "film screenings",
+                "place": "Munich, Germany"
+              }
+            ]
+          },
+          {
+            "year": "2019",
+            "items": [
+              {
+                "title": "Summoning the Fountain",
+                "role": "sound exploration and performance",
+                "place": "Soundlab Gyumri, Armenia"
+              },
+              {
+                "title": "Listen",
+                "role": "sound performance with Ophelia Flassig",
+                "place": "the central market, Ground art fest, Gyumri, Armenia"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "slug": "carine-aroyan",
@@ -790,19 +1528,36 @@
         }
       ],
       "num": "007",
-      "order": 7
+      "order": 7,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "her own site",
+          "href": "https://carinearoyan.com/"
+        }
+      ]
     },
     {
       "slug": "namor-votilav",
       "name": "Namor Votilav",
-      "role": "curator, multimedia artist",
-      "discipline": "curator, multimedia artist",
+      "role": "curator, media artist",
+      "discipline": "curator, media artist",
       "team": false,
       "section": "curators",
       "sectionLabel": "curators",
       "city": null,
-      "bio": null,
-      "works": [],
+      "bio": "Curator, media artist and community coach — interactive media installations and data art, about communication and the difficulty of exchanging thoughts between people. Founder of the Klopovnik centre for contemporary art.",
+      "works": [
+        {
+          "url": null,
+          "title": "taking space — di.ex: no_map",
+          "line": "curator of the host exhibition — Kunsthouse, Yerevan, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -810,11 +1565,110 @@
         }
       ],
       "num": "008",
-      "order": 8
+      "order": 8,
+      "resume": {
+        "focus": [
+          "curation",
+          "new media art",
+          "interactive installation",
+          "data visualisation",
+          "community coaching",
+          "conceptual art",
+          "graphic design",
+          "UI and UX design"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "Hopeless Everlasting",
+                "role": "group exhibition",
+                "place": "ACCEA, Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Taking Space",
+                "role": "curator",
+                "place": "group exhibition of performances, Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "Elevator",
+                "role": "curator",
+                "place": "educational programme for the self-promotion of artists"
+              },
+              {
+                "title": "Pushkin's Workshop",
+                "role": "curator",
+                "place": "public art exhibition, Chelyabinsk"
+              },
+              {
+                "title": "Art residence «Дарвин»",
+                "role": "building a tipi with children and teenagers"
+              }
+            ]
+          },
+          {
+            "year": "2020 – 2021",
+            "items": [
+              {
+                "title": "Opus One",
+                "role": "curator",
+                "place": "solo exhibition of the photographer Andrey Femhel, 2021"
+              },
+              {
+                "title": "I love Chelyabinsk and I believe in it",
+                "role": "interactive exhibition-performance",
+                "place": "Конфест city festival, 2021"
+              },
+              {
+                "title": "Chelyabinsk underground, Part 1: Street · Part 2: Home",
+                "role": "curator",
+                "place": "2020"
+              }
+            ]
+          }
+        ],
+        "positions": [
+          {
+            "years": "2019 — now",
+            "role": "curator",
+            "org": "‘Klopovnik’ Center for Contemporary Art"
+          }
+        ],
+        "education": [
+          {
+            "years": "2011 — 2015",
+            "role": "BA, Analytics of Information",
+            "org": "Chelyabinsk State Academy of Culture and Arts"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/Namor"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "tatiana-vahani",
-      "name": "Tatiana Vahani",
+      "name": "Tatiana Vahan",
       "role": "curator",
       "discipline": "curator",
       "team": false,
@@ -822,7 +1676,15 @@
       "sectionLabel": "curators",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "f33d6ack — Beyond Data",
+          "line": "curator — AGBU Katapult, NPAK, Yerevan, 2024",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -830,7 +1692,19 @@
         }
       ],
       "num": "009",
-      "order": 9
+      "order": 9,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "her own site",
+          "href": "https://www.tatianavahan.com/"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "artak-gevorgyan",
@@ -845,17 +1719,22 @@
       "works": [],
       "elsewhere": [],
       "num": "010",
-      "order": 10
+      "order": 10,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "lusine-mlke-galstyan",
-      "name": "Lusine Mlke-Galstyan",
-      "role": "curator",
-      "discipline": "curator",
+      "name": "Lusine MLKE-Galstyan",
+      "role": "performer, musician",
+      "discipline": "performer, musician",
       "team": false,
-      "section": "curators",
-      "sectionLabel": "curators",
-      "city": null,
+      "section": "performers",
+      "sectionLabel": "performers",
+      "city": "Yerevan",
       "bio": null,
       "works": [
         {
@@ -864,26 +1743,54 @@
           "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
           "space": "br-id-ge",
           "project": "n2-between-silence-and-motion"
+        },
+        {
+          "url": null,
+          "title": "It's mi",
+          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-02",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [],
       "num": "011",
-      "order": 11
+      "order": 11,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        },
+        {
+          "label": "MIHR Theatre",
+          "href": "https://mihrtheatre.com/about"
+        }
+      ]
     },
     {
       "slug": "shoghakat-mlke-galstyan",
-      "name": "Shoghakat Mlke-Galstyan",
-      "role": "curator",
-      "discipline": "curator",
+      "name": "Shoghakat MLKE-Galstyan",
+      "role": "choreographer, performer",
+      "discipline": "choreographer, performer",
       "team": false,
-      "section": "curators",
-      "sectionLabel": "curators",
-      "city": null,
+      "section": "performers",
+      "sectionLabel": "performers",
+      "city": "Yerevan",
       "bio": null,
       "works": [],
       "elsewhere": [],
       "num": "012",
-      "order": 12
+      "order": 12,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "MIHR Theatre",
+          "href": "https://mihrtheatre.com/about"
+        }
+      ]
     },
     {
       "slug": "ani-khachikyan",
@@ -895,7 +1802,15 @@
       "sectionLabel": "performers",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -903,19 +1818,36 @@
         }
       ],
       "num": "013",
-      "order": 13
+      "order": 13,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        }
+      ]
     },
     {
       "slug": "gnun-martirosyan",
-      "name": "Gnun Martirosyan",
-      "role": "performer",
-      "discipline": "performer",
+      "name": "Gnun Martirosian",
+      "role": "theatre actor",
+      "discipline": "theatre actor",
       "team": false,
       "section": "performers",
       "sectionLabel": "performers",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "OUT",
+          "line": "performer — performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, May 2024",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -923,19 +1855,125 @@
         }
       ],
       "num": "014",
-      "order": 14
+      "order": 14,
+      "resume": {
+        "focus": [
+          "acting",
+          "character development",
+          "movement and body language",
+          "contemporary art",
+          "collaboration"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "Out",
+                "role": "by Sara Nalbandian",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "The Actors are tired",
+                "role": "by Éric Assous",
+                "place": "Lyon, France"
+              }
+            ]
+          },
+          {
+            "year": "2022 – 2023",
+            "items": [
+              {
+                "title": "Extraordinary and Mysterious",
+                "role": "by Martin Bellemare",
+                "place": "Gyumri, Armenia, 2023"
+              },
+              {
+                "title": "Charlie and the Chocolate Factory",
+                "role": "by Roald Dahl",
+                "place": "Yerevan State Young Theatre, 2022"
+              },
+              {
+                "title": "Hamlet",
+                "role": "by William Shakespeare",
+                "place": "Yerevan State Institute of Theatre and Cinematography, 2022"
+              }
+            ]
+          },
+          {
+            "year": "2017 – 2019",
+            "items": [
+              {
+                "title": "Oedipus the King",
+                "role": "by Sophocles",
+                "place": "Moscow, Russia, 2019"
+              },
+              {
+                "title": "Experimental animals",
+                "role": "by Henri Troyat",
+                "place": "Yerevan State Institute of Theatre and Cinematography, 2019"
+              },
+              {
+                "title": "The Seagull · Uncle Vanya",
+                "role": "by Anton Chekhov",
+                "place": "Yerevan State Institute of Theatre and Cinematography, 2017"
+              }
+            ]
+          }
+        ],
+        "positions": [],
+        "education": [
+          {
+            "years": "2016 — 2022",
+            "role": "BA, Actor's Mastership",
+            "org": "Yerevan State Institute of Theater and Cinema"
+          },
+          {
+            "years": "2022 — 2023",
+            "role": "programme",
+            "org": "Atelier d'Art Dramatique",
+            "place": "Yerevan / Paris"
+          },
+          {
+            "years": "2019",
+            "role": "festival",
+            "org": "BRICS Theatre Festival",
+            "place": "Moscow"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "meline-arshakyan",
       "name": "Meline Arshakyan",
-      "role": "performer, dancer",
-      "discipline": "performer, dancer",
+      "role": "contemporary dancer",
+      "discipline": "contemporary dancer",
       "team": false,
       "section": "performers",
       "sectionLabel": "performers",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "OUT",
+          "line": "performer — performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, May 2024",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -943,7 +1981,102 @@
         }
       ],
       "num": "015",
-      "order": 15
+      "order": 15,
+      "resume": {
+        "focus": [
+          "contemporary dance",
+          "choreography",
+          "traditional Armenian dance",
+          "acting",
+          "collaboration"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "out",
+                "role": "contemporary performance",
+                "place": "Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "By Your Own Rules",
+                "role": "performance",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Girl and Sea",
+                "role": "choreographer",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Closed Broken",
+                "role": "performance by Valeria Kasparova",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Enigma",
+                "role": "performance by Valeria Kasparova",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Manchus",
+                "role": "performance",
+                "place": "Yerevan State Institute of Theatre and Cinematography, Yerevan"
+              },
+              {
+                "title": "SUMMEET 3rd International Dance Festival",
+                "role": "dancer",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Masterclasses",
+                "role": "Gaspard and Dancers (NY) · Igor Kirov (MK) · Kanon Dance Theatre (St Petersburg) · Jo Strømgren (NO)",
+                "place": "Yerevan, Armenia"
+              }
+            ]
+          }
+        ],
+        "positions": [
+          {
+            "years": "2024 — now",
+            "role": "dancer",
+            "org": "“Levita” studio of ballet",
+            "place": "Yerevan, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2023 — now",
+            "role": "dance",
+            "org": "Balmanukyan Dance Project",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2012 — 2023",
+            "role": "dance",
+            "org": "Armenian Dance Ensemble",
+            "place": "Yerevan, Armenia"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "arsen-miqayelyan",
@@ -963,18 +2096,23 @@
         }
       ],
       "num": "016",
-      "order": 16
+      "order": 16,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "alexandra-martini",
       "name": "Alexandra Martini",
-      "role": "performer",
-      "discipline": "performer",
+      "role": "radio and theatre performer",
+      "discipline": "radio and theatre performer",
       "team": false,
       "section": "performers",
       "sectionLabel": "performers",
       "city": null,
-      "bio": null,
+      "bio": "Radio journalist and theatre performer in Munich — presenter and author of radio documentaries on feminism, migration, pop culture and social justice; clown, and founder of a feminist clown network.",
       "works": [],
       "elsewhere": [
         {
@@ -983,13 +2121,122 @@
         }
       ],
       "num": "017",
-      "order": 17
+      "order": 17,
+      "resume": {
+        "focus": [
+          "performing",
+          "clown",
+          "radio documentary",
+          "presenting",
+          "collective authorship",
+          "direction"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "The Lost Cabaret",
+                "role": "curator and host",
+                "place": "FLINTA Cabaret Night, Import Export, Munich"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Skin Care — Body Borders",
+                "role": "performative residency",
+                "place": "HochX Theater, Munich, with Alyona Tokovenko and Masako Ohta"
+              },
+              {
+                "title": "Life's A Pitch",
+                "role": "solo clown show",
+                "place": "premiere at Edinburgh Fringe, UK"
+              },
+              {
+                "title": "Aquiver",
+                "role": "performance with Caroline Kretschmer",
+                "place": "AdbK München"
+              },
+              {
+                "title": "US artist residency",
+                "role": "with Deanna Fleysher",
+                "place": "Lookout Arts Quarry, Bellingham, USA"
+              }
+            ]
+          },
+          {
+            "year": "2020 – 2022",
+            "items": [
+              {
+                "title": "Feminist Alliance of Idiots",
+                "role": "a feminist clown network",
+                "place": "Munich, since 2022 — City of Munich scholarship 2023"
+              },
+              {
+                "title": "Der Sanifaire Code",
+                "role": "digital live theatre",
+                "place": "HochX, raststättentheater, 2021"
+              },
+              {
+                "title": "Take Care",
+                "role": "research grant",
+                "place": "Fonds Darstellende Künste, 2020"
+              }
+            ]
+          },
+          {
+            "year": "2018 – 2019",
+            "items": [
+              {
+                "title": "Silicon Delphi",
+                "role": "collective authorship, direction, performance",
+                "place": "HochX Theater, Munich, 2019"
+              },
+              {
+                "title": "Auf dem Mond gibt es keine Lohnarbeit",
+                "role": "collective authorship, direction, performance",
+                "place": "Import Export, Munich, 2018"
+              }
+            ]
+          }
+        ],
+        "positions": [
+          {
+            "years": "2016 — now",
+            "role": "journalist and presenter",
+            "org": "Bayerischer Rundfunk · Bayern2",
+            "place": "Munich, Germany"
+          }
+        ],
+        "education": [
+          {
+            "years": "2010 — 2014",
+            "role": "Diploma, Drama Studies",
+            "org": "HfS “Ernst Busch”",
+            "place": "Berlin, Germany"
+          },
+          {
+            "years": "2015",
+            "role": "masterclass, clown and theatre",
+            "org": "École Philippe Gaulier",
+            "place": "Paris, France"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "kay-khachatryan",
       "name": "Kay Khachatryan",
-      "role": "audio artist",
-      "discipline": "audio artist",
+      "role": "sound artist",
+      "discipline": "sound artist",
       "team": false,
       "section": "sound",
       "sectionLabel": "sound",
@@ -999,9 +2246,23 @@
         {
           "url": null,
           "title": "Ambisonic Performances",
-          "line": "Notations #2, State Philharmonia of Armenia, 2026-08-01",
+          "line": "Notations #2, curator — State Philharmonia of Armenia, 2026-08-01",
           "space": "br-id-ge",
           "project": "n2-ambisonic-performances"
+        },
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "OUT",
+          "line": "sound artist — performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, May 2024",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -1011,7 +2272,187 @@
         }
       ],
       "num": "018",
-      "order": 18
+      "order": 18,
+      "resume": {
+        "focus": [
+          "sound art",
+          "electro-acoustic",
+          "music production",
+          "composing",
+          "sound engineering",
+          "sound design",
+          "teaching music",
+          "Ableton Live",
+          "Logic Pro",
+          "Max MSP",
+          "VVVV"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "Out",
+                "role": "performance"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Bisetka talking space",
+                "role": "sound",
+                "place": "HochX Theater, Munich, Germany"
+              },
+              {
+                "title": "The Key to Home",
+                "role": "sound",
+                "place": "Pathos Theater, Munich, Germany"
+              },
+              {
+                "title": "Prepared Surroundings",
+                "role": "festival",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "Lacuna",
+                "role": "festival",
+                "place": "Arzni, Armenia"
+              },
+              {
+                "title": "blame.lab",
+                "role": "festival",
+                "place": "Tbilisi, Georgia"
+              }
+            ]
+          },
+          {
+            "year": "2019 – 2022",
+            "items": [
+              {
+                "title": "Sonic Utopias · Festivable?",
+                "role": "festivals",
+                "place": "Yerevan, Armenia, 2022"
+              },
+              {
+                "title": "Bohemnots Radio",
+                "role": "festival",
+                "place": "Composers' Union, Dilijan, Armenia, 2021"
+              },
+              {
+                "title": "Panopticon",
+                "role": "festival",
+                "place": "Yerevan, Armenia, 2020"
+              },
+              {
+                "title": "Mush 1",
+                "role": "sound installation",
+                "place": "Gyumri, Armenia, 2019"
+              },
+              {
+                "title": "Codecs",
+                "role": "sound performance",
+                "place": "2019"
+              },
+              {
+                "title": "Urvakan Fest · Platforma",
+                "role": "as n y s t a g m u s",
+                "place": "Yerevan · Nalchik, 2019"
+              }
+            ]
+          },
+          {
+            "year": "2011 – 2018",
+            "items": [
+              {
+                "title": "Unsound Dislocation",
+                "role": "live as n y s t a g m u s",
+                "place": "Yerevan, 2018"
+              },
+              {
+                "title": "Caucasus All Frequency Fest",
+                "role": "festival",
+                "place": "Yerevan, 2018"
+              },
+              {
+                "title": "Opera Squid — War and Ingredients Tomato Paste",
+                "role": "performance",
+                "place": "2017"
+              },
+              {
+                "title": "Spectrum",
+                "role": "electronic audio-visual project",
+                "place": "2016 – 2018"
+              },
+              {
+                "title": "Kay&Gur",
+                "role": "electric guitar project",
+                "place": "2016 – 2018"
+              },
+              {
+                "title": "toDAY-2016 · VOTERIS · Explosive etc.",
+                "role": "sound performances",
+                "place": "Yerevan, 2016"
+              },
+              {
+                "title": "Zangezi",
+                "role": "experimental music band",
+                "place": "2011 – 2013"
+              }
+            ]
+          }
+        ],
+        "positions": [
+          {
+            "years": "2021 — now",
+            "role": "sound director",
+            "org": "“Boon” Foundation"
+          },
+          {
+            "years": "current",
+            "role": "host",
+            "org": "All Caucasus Frequency podcast"
+          },
+          {
+            "years": "2014 — 2019",
+            "role": "head of the recording studio, electronic music and recording trainer",
+            "org": "“Mkhitar Sebastatsi” Educational Complex",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2013 — 2014",
+            "role": "sound director",
+            "org": "Armenian Second TV Channel"
+          }
+        ],
+        "education": [
+          {
+            "years": "2012 — 2013",
+            "role": "sound engineering",
+            "org": "“METLEX” course"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "the Notations #2 programme record (esora credits)"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "areg-aydinyan",
@@ -1026,7 +2467,12 @@
       "works": [],
       "elsewhere": [],
       "num": "019",
-      "order": 19
+      "order": 19,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "sasha-lenivec",
@@ -1038,10 +2484,26 @@
       "sectionLabel": "sound",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "WIDS Armenia — Creative Cognition",
+          "line": "artist — Gyumri Technology Center, June 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [],
       "num": "020",
-      "order": 20
+      "order": 20,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "vahagn-martirosyan",
@@ -1056,7 +2518,12 @@
       "works": [],
       "elsewhere": [],
       "num": "021",
-      "order": 21
+      "order": 21,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "vera-vishnevaya",
@@ -1068,10 +2535,27 @@
       "sectionLabel": "sound",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [],
       "num": "022",
-      "order": 22
+      "order": 22,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        }
+      ]
     },
     {
       "slug": "nikita-maksimenko",
@@ -1086,7 +2570,12 @@
       "works": [],
       "elsewhere": [],
       "num": "023",
-      "order": 23
+      "order": 23,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "adam-adamyan",
@@ -1098,15 +2587,36 @@
       "sectionLabel": "visual · multimedia",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "printing artist, lithography and riso — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
           "href": "https://www.instagram.com/adam___adamyan/"
+        },
+        {
+          "label": "Website",
+          "href": "https://adamadamyan.com"
         }
       ],
       "num": "024",
-      "order": 24
+      "order": 24,
+      "sources": [
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "his own site",
+          "href": "https://adamadamyan.com"
+        }
+      ]
     },
     {
       "slug": "artush-koshtoyan",
@@ -1118,7 +2628,50 @@
       "sectionLabel": "visual · multimedia",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "graphic designer — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "OUT",
+          "line": "stage designer — performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, May 2024",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "WIDS Armenia — Creative Cognition",
+          "line": "visual artist — Gyumri Technology Center, June 2023",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "f33d6ack — Beyond Data",
+          "line": "artist — AGBU Katapult, NPAK, Yerevan, 2024",
+          "space": null,
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "taking space — di.ex: no_map",
+          "line": "visual artist — Kunsthouse, Yerevan, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1126,7 +2679,26 @@
         }
       ],
       "num": "025",
-      "order": 25
+      "order": 25,
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "greta-grigoryan",
@@ -1152,6 +2724,13 @@
           "line": "a.004",
           "space": "platform-recordar",
           "project": "platform-recordar-dii-project"
+        },
+        {
+          "url": null,
+          "title": "WIDS Armenia — Creative Cognition",
+          "line": "“in_it” installation — hand-drawn and AI — Gyumri Technology Center, June 2023",
+          "space": null,
+          "project": null
         }
       ],
       "elsewhere": [
@@ -1161,11 +2740,25 @@
         }
       ],
       "num": "026",
-      "order": 26
+      "order": 26,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "mane-meloyan",
-      "name": "Mane Meloyan",
+      "name": "Mané Meloian",
       "role": "visual artist",
       "discipline": "visual artist",
       "team": false,
@@ -1181,7 +2774,12 @@
         }
       ],
       "num": "027",
-      "order": 27
+      "order": 27,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "mery-petrosyan",
@@ -1204,7 +2802,15 @@
       ],
       "elsewhere": [],
       "num": "028",
-      "order": 28
+      "order": 28,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "polina-vever",
@@ -1216,7 +2822,15 @@
       "sectionLabel": "visual · multimedia",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "creative lead — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1224,7 +2838,15 @@
         }
       ],
       "num": "029",
-      "order": 29
+      "order": 29,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "shahane-harutyunyan",
@@ -1250,11 +2872,29 @@
           "line": "open call, part 2",
           "space": "beyond-form",
           "project": "open-call"
+        },
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "“under the gaze” — linography and AR, Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
         }
       ],
       "elsewhere": [],
       "num": "030",
-      "order": 30
+      "order": 30,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "gor-muradyan",
@@ -1271,10 +2911,23 @@
         {
           "label": "Instagram",
           "href": "https://www.instagram.com/gorgeooos/"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/gormooradyan"
         }
       ],
       "num": "031",
-      "order": 31
+      "order": 31,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/gormooradyan"
+        }
+      ]
     },
     {
       "slug": "luiza-khechoyan",
@@ -1287,9 +2940,27 @@
       "city": null,
       "bio": null,
       "works": [],
-      "elsewhere": [],
+      "elsewhere": [
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/pirojochekkk/"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/luizadreamer"
+        }
+      ],
       "num": "032",
-      "order": 32
+      "order": 32,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/luizadreamer"
+        }
+      ]
     },
     {
       "slug": "egor-lazensky",
@@ -1309,7 +2980,12 @@
         }
       ],
       "num": "033",
-      "order": 33
+      "order": 33,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "alvie-starr",
@@ -1321,10 +2997,30 @@
       "sectionLabel": "visual · multimedia",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "OUT",
+          "line": "visual artist — performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, May 2024",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [],
       "num": "034",
-      "order": 34
+      "order": 34,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "ani-rubenyan",
@@ -1336,10 +3032,26 @@
       "sectionLabel": "visual · multimedia",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "WIDS Armenia — Creative Cognition",
+          "line": "artist — Gyumri Technology Center, June 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [],
       "num": "035",
-      "order": 35
+      "order": 35,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "anna-khlechyan",
@@ -1354,11 +3066,16 @@
       "works": [],
       "elsewhere": [],
       "num": "036",
-      "order": 36
+      "order": 36,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "misak-samakotian",
-      "name": "Misak Samakotian",
+      "name": "Misak Samokatyan",
       "role": "multimedia artist",
       "discipline": "multimedia artist",
       "team": false,
@@ -1367,9 +3084,23 @@
       "city": null,
       "bio": null,
       "works": [],
-      "elsewhere": [],
+      "elsewhere": [
+        {
+          "label": "YouTube",
+          "href": "https://www.youtube.com/@MisakSamokatyan"
+        }
+      ],
       "num": "037",
-      "order": 37
+      "order": 37,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "his own channel",
+          "href": "https://www.youtube.com/@MisakSamokatyan"
+        }
+      ]
     },
     {
       "slug": "nino-giorgadze",
@@ -1382,9 +3113,23 @@
       "city": null,
       "bio": null,
       "works": [],
-      "elsewhere": [],
+      "elsewhere": [
+        {
+          "label": "Website",
+          "href": "https://himikolostsun.art"
+        }
+      ],
       "num": "038",
-      "order": 38
+      "order": 38,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "her own site",
+          "href": "https://himikolostsun.art"
+        }
+      ]
     },
     {
       "slug": "vilen-gayfejyan",
@@ -1395,16 +3140,140 @@
       "section": "visual",
       "sectionLabel": "visual · multimedia",
       "city": null,
-      "bio": null,
-      "works": [],
+      "bio": "Graphic designer, motion designer and 3D artist in Yerevan — a scenic designer for the state theatres before the screen, and a lead actor in the SOS show for five years.",
+      "works": [
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "mentor — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        },
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "level designer — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
           "href": "https://www.instagram.com/vilengaifejyan/"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/vilengayfejyan"
         }
       ],
       "num": "039",
-      "order": 39
+      "order": 39,
+      "resume": {
+        "focus": [
+          "graphic design",
+          "motion design",
+          "3D art",
+          "scenic design",
+          "digital art production",
+          "acting",
+          "Blender",
+          "TouchDesigner",
+          "Adobe Creative Suite"
+        ],
+        "timeline": [
+          {
+            "year": "2015 – 2022",
+            "items": [
+              {
+                "title": "SOS",
+                "role": "leading actor",
+                "place": "YouTube show, SOS TV, 2015 – 2020"
+              },
+              {
+                "title": "Yerevan Municipality",
+                "role": "council member",
+                "place": "2018 – 2022"
+              },
+              {
+                "title": "Chipolino",
+                "role": "scenic designer",
+                "place": "Yerevan State Theatre of Choreography, 2015"
+              }
+            ]
+          },
+          {
+            "year": "2009 – 2014",
+            "items": [
+              {
+                "title": "Maugli",
+                "role": "scenic designer",
+                "place": "Yerevan State Theatre of Choreography, 2014"
+              },
+              {
+                "title": "The Little Prince",
+                "role": "scenic designer",
+                "place": "Yerevan State Marionettes Theatre, 2010"
+              },
+              {
+                "title": "Hansel and Gretel",
+                "role": "scenic designer",
+                "place": "Yerevan State Marionettes Theatre, 2009"
+              }
+            ]
+          }
+        ],
+        "positions": [
+          {
+            "years": "2024 — now",
+            "role": "graphic designer",
+            "org": "“Be the change” branding agency",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2023 — now",
+            "role": "freelance 3D artist",
+            "org": "Microsoft Flight Simulator"
+          },
+          {
+            "years": "2022 — 2023",
+            "role": "motion designer",
+            "org": "Armenian Public Television",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2017 — 2018",
+            "role": "graphic designer",
+            "org": "BetConstruct",
+            "place": "Yerevan, Armenia"
+          },
+          {
+            "years": "2010 — 2015",
+            "role": "scenic designer",
+            "org": "Yerevan State Theatre of Choreography",
+            "place": "Yerevan, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2010 — 2014",
+            "role": "Graphic Design",
+            "org": "YSUAC",
+            "place": "Yerevan, Armenia"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "yulia-stepanova",
@@ -1424,7 +3293,12 @@
         }
       ],
       "num": "040",
-      "order": 40
+      "order": 40,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "sergey-virabyan",
@@ -1444,7 +3318,71 @@
         }
       ],
       "num": "041",
-      "order": 41
+      "order": 41,
+      "resume": {
+        "focus": [
+          "media art",
+          "animation",
+          "digital art",
+          "electronic music production",
+          "technical support",
+          "Blender",
+          "Ableton Live",
+          "C#",
+          "Adobe Creative Suite"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "di_vision;000",
+                "role": "light artist",
+                "place": "group exhibition of installations, Hayfilm, Yerevan, Armenia"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Sense_sense",
+                "role": "artist",
+                "place": "creative event, Gyumri, Armenia"
+              },
+              {
+                "title": "OUT",
+                "role": "technical assistance",
+                "place": "performance, Yerevan, Armenia"
+              },
+              {
+                "title": "WIDS",
+                "role": "technical assistance",
+                "place": "conference, Gyumri, Armenia"
+              }
+            ]
+          }
+        ],
+        "positions": [
+          {
+            "years": "2023",
+            "role": "technical assistance",
+            "org": "Gyumri Technology Center by EIF"
+          }
+        ],
+        "education": [
+          {
+            "years": "2016 — 2020",
+            "role": "creative technologies",
+            "org": "TUMO Center for Creative Technologies"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "albert-avetisyan",
@@ -1457,14 +3395,14 @@
       "city": null,
       "bio": null,
       "works": [],
-      "elsewhere": [
-        {
-          "label": "Instagram",
-          "href": "https://www.instagram.com/kaiz.ok.u/"
-        }
-      ],
+      "elsewhere": [],
       "num": "042",
-      "order": 42
+      "order": 42,
+      "sources": [
+        {
+          "label": "their CV page in the studio network deck, April 2026 — held, not published"
+        }
+      ]
     },
     {
       "slug": "gor-movsisyan",
@@ -1476,15 +3414,26 @@
       "sectionLabel": "3d · code · games",
       "city": null,
       "bio": null,
-      "works": [],
-      "elsewhere": [
+      "works": [
         {
-          "label": "Instagram",
-          "href": "https://www.instagram.com/_tadashii__/"
+          "url": null,
+          "title": "Cascade Club",
+          "line": "3D artist — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
         }
       ],
+      "elsewhere": [],
       "num": "043",
-      "order": 43
+      "order": 43,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "varujan-movsisyan",
@@ -1497,26 +3446,34 @@
       "city": null,
       "bio": null,
       "works": [],
-      "elsewhere": [
-        {
-          "label": "Instagram",
-          "href": "https://www.instagram.com/__21st_century_schizoid_man__/"
-        }
-      ],
+      "elsewhere": [],
       "num": "044",
-      "order": 44
+      "order": 44,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "levon-avetisyan",
       "name": "Levon Avetisyan",
-      "role": "programmer",
-      "discipline": "programmer",
+      "role": "programmer, media artist",
+      "discipline": "programmer, media artist",
       "team": false,
       "section": "3d",
       "sectionLabel": "3d · code · games",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": "/platform-recordar",
+          "title": "RecordAR",
+          "line": "VR film shot with Shahane Harutyunyan in Gyumri — Import Export, Munich, Oct 2025",
+          "space": "platform-recordar",
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1524,18 +3481,99 @@
         }
       ],
       "num": "045",
-      "order": 45
+      "order": 45,
+      "resume": {
+        "focus": [
+          "programming",
+          "new media",
+          "2D and 3D modelling",
+          "interactive installations",
+          "TouchDesigner",
+          "Python",
+          "Fusion 360",
+          "Photoshop"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "Out",
+                "role": "performance",
+                "place": "Yerevan, Armenia"
+              },
+              {
+                "title": "feed_back",
+                "role": "interactive installation",
+                "place": "di. studio"
+              },
+              {
+                "title": "A_8",
+                "role": "di. studio"
+              }
+            ]
+          },
+          {
+            "year": "2022 – 2024",
+            "items": [
+              {
+                "title": "Gyumri Technology Center",
+                "role": "volunteer",
+                "place": "2023 – 2024"
+              },
+              {
+                "title": "Yandex Academy",
+                "role": "student",
+                "place": "2022 – 2023"
+              }
+            ]
+          }
+        ],
+        "positions": [
+          {
+            "years": "2024 — now",
+            "role": "2D artist",
+            "org": "ooOo studio"
+          },
+          {
+            "years": "2023 — now",
+            "role": "artist, developer",
+            "org": "di. studio"
+          },
+          {
+            "years": "2023 — now",
+            "role": "3D modeller",
+            "org": "SPCTR Art"
+          }
+        ],
+        "education": [
+          {
+            "years": "2023 — now",
+            "role": "engineering",
+            "org": "National Polytechnic University of Armenia",
+            "place": "Gyumri branch"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "RecordAR exhibition credits, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "slavik-avetisyan",
       "name": "Slavik Avetisyan",
-      "role": "unity developer",
-      "discipline": "unity developer",
+      "role": "programmer, game developer",
+      "discipline": "programmer, game developer",
       "team": false,
       "section": "3d",
       "sectionLabel": "3d · code · games",
       "city": null,
-      "bio": null,
+      "bio": "Programmer and game developer — co-founder of ooOo studio in Gyumri, working across game and motion design.",
       "works": [],
       "elsewhere": [
         {
@@ -1544,19 +3582,115 @@
         }
       ],
       "num": "046",
-      "order": 46
+      "order": 46,
+      "resume": {
+        "focus": [
+          "game development",
+          "game design",
+          "motion design",
+          "Unity",
+          "Unreal Engine",
+          "C++, C#, Java",
+          "Maya",
+          "Blender",
+          "After Effects"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "The key to your work",
+                "role": "contest — won"
+              },
+              {
+                "title": "Making FPS in 4 days",
+                "role": "workshop — won"
+              }
+            ]
+          },
+          {
+            "year": "2022 – 2023",
+            "items": [
+              {
+                "title": "Basics of game technology",
+                "role": "won with team DEDSEC",
+                "place": "2023"
+              },
+              {
+                "title": "Doors of Gyumri",
+                "role": "motion design workshop",
+                "place": "TUMO, 2023"
+              },
+              {
+                "title": "Arduino Smart Systems",
+                "role": "workshop",
+                "place": "TUMO, 2023"
+              },
+              {
+                "title": "Programming with VVVV · Control your 3D character with a smart suit",
+                "role": "workshops",
+                "place": "TUMO, 2022"
+              },
+              {
+                "title": "Gyumri in Motion",
+                "role": "motion design",
+                "place": "TUMO, 2022"
+              },
+              {
+                "title": "TUMO Camp Dilijan",
+                "role": "participant",
+                "place": "2022"
+              }
+            ]
+          }
+        ],
+        "positions": [
+          {
+            "years": "2024 — now",
+            "role": "co-founder, game designer",
+            "org": "ooOo studio",
+            "place": "Gyumri, Armenia"
+          },
+          {
+            "years": "2022 — now",
+            "role": "editor, photographer",
+            "org": "MP studio"
+          }
+        ],
+        "education": [
+          {
+            "years": "2021 — now",
+            "role": "Artistic digital graphics",
+            "org": "National Polytechnic College"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "ruben-melikyan",
       "name": "Ruben Melikyan",
-      "role": "game designer",
-      "discipline": "game designer",
+      "role": "game designer, motion designer",
+      "discipline": "game designer, motion designer",
       "team": false,
       "section": "3d",
       "sectionLabel": "3d · code · games",
       "city": null,
-      "bio": null,
-      "works": [],
+      "bio": "Game designer, editor and motion designer — co-founder of ooOo studio in Gyumri.",
+      "works": [
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "developer — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1564,19 +3698,98 @@
         }
       ],
       "num": "047",
-      "order": 47
+      "order": 47,
+      "resume": {
+        "focus": [
+          "game design",
+          "motion design",
+          "video editing",
+          "Unity",
+          "Unreal Engine",
+          "Adobe Ps, Ai, Pr, Ae, Lr"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "GGC",
+                "role": "responsible for the VR game and VR installations"
+              },
+              {
+                "title": "Hack2Check",
+                "role": "third place",
+                "place": "hackathon"
+              }
+            ]
+          },
+          {
+            "year": "2022 – 2023",
+            "items": [
+              {
+                "title": "Fundamentals of Game Technology",
+                "role": "GTC, EIF and AWDA, 2023"
+              },
+              {
+                "title": "Doors of Gyumri",
+                "role": "motion design lab",
+                "place": "TUMO, 2023"
+              },
+              {
+                "title": "Gyumri in Motion",
+                "role": "motion design lab",
+                "place": "TUMO, 2022"
+              },
+              {
+                "title": "David Bilemjian's game development lab",
+                "role": "TUMO, 2022"
+              }
+            ]
+          }
+        ],
+        "positions": [
+          {
+            "years": "2024 — now",
+            "role": "co-founder, game designer",
+            "org": "ooOo studio",
+            "place": "Gyumri, Armenia"
+          },
+          {
+            "years": "2022 — now",
+            "role": "editor, photographer",
+            "org": "MP studio"
+          }
+        ],
+        "education": []
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "grig-gevorgyan",
       "name": "Grig Gevorgyan",
-      "role": "game developer",
-      "discipline": "game developer",
+      "role": "game developer, product manager",
+      "discipline": "game developer, product manager",
       "team": false,
       "section": "3d",
       "sectionLabel": "3d · code · games",
       "city": null,
-      "bio": null,
-      "works": [],
+      "bio": "Game developer and product manager — co-founder and CTO of MIND LabZ, and a mathematician finishing a PhD in algebra and group theory. With di. studio since 2024, for the installations, workshops and AI art.",
+      "works": [
+        {
+          "url": null,
+          "title": "Cascade Club",
+          "line": "tech lead, Unity developer — Yerevan's 1990s Cascade rebuilt in VR, 2025",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1584,7 +3797,142 @@
         }
       ],
       "num": "048",
-      "order": 48
+      "order": 48,
+      "resume": {
+        "focus": [
+          "game development",
+          "game design",
+          "game sound design",
+          "product management",
+          "music production",
+          "video editing",
+          "Unity",
+          "C#",
+          "Python",
+          "Ableton",
+          "DaVinci Resolve"
+        ],
+        "timeline": [
+          {
+            "year": "games",
+            "items": [
+              {
+                "title": "Shape Wars: Strategy Game",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "Cube Stacks 3D",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "Arrow Master Run",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "Berserker",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "Batoot",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "Color.io",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "BallUp",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "Balloon Run",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "TapBeat",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "Mooods",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "ROBA: Roll the Ball",
+                "role": "MIND LabZ"
+              }
+            ]
+          },
+          {
+            "year": "AR",
+            "items": [
+              {
+                "title": "EYP AR",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "YELL Park Birthday",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "Workfront New Year AR",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "ConQuest AR",
+                "role": "MIND LabZ"
+              },
+              {
+                "title": "HOL AR",
+                "role": "MIND LabZ"
+              }
+            ]
+          }
+        ],
+        "positions": [
+          {
+            "years": "2024 — now",
+            "role": "product manager",
+            "org": "di. studio"
+          },
+          {
+            "years": "2017 — now",
+            "role": "CTO and co-founder",
+            "org": "MIND LabZ",
+            "place": "Yerevan, Armenia — founded as M.In.D, rebranded 2020"
+          },
+          {
+            "years": "2022 — now",
+            "role": "teaching assistant",
+            "org": "American University of Armenia",
+            "place": "Yerevan, Armenia"
+          }
+        ],
+        "education": [
+          {
+            "years": "2022 — now",
+            "role": "PhD, Mathematics",
+            "org": "Yerevan State University"
+          },
+          {
+            "years": "2020 — 2022",
+            "role": "MA, Mathematics and applications",
+            "org": "Yerevan State University"
+          },
+          {
+            "years": "2016 — 2020",
+            "role": "BA, Mathematics",
+            "org": "Yerevan State University"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "Cascade Club team list, studio archive — held, not published"
+        }
+      ]
     },
     {
       "slug": "avetis-grigoryan",
@@ -1599,7 +3947,12 @@
       "works": [],
       "elsewhere": [],
       "num": "049",
-      "order": 49
+      "order": 49,
+      "sources": [
+        {
+          "label": "the studio network roster sheet — held, not published"
+        }
+      ]
     },
     {
       "slug": "hannes-kopke",
@@ -1611,7 +3964,15 @@
       "sectionLabel": "stage · costume · design",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1619,19 +3980,40 @@
         }
       ],
       "num": "050",
-      "order": 50
+      "order": 50,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/"
+        }
+      ]
     },
     {
       "slug": "olivia-rosendorfer",
       "name": "Olivia Rosendorfer",
-      "role": "costume designer",
-      "discipline": "costume designer",
+      "role": "set and costume designer, performer",
+      "discipline": "set and costume designer, performer",
       "team": false,
       "section": "stage",
       "sectionLabel": "stage · costume · design",
       "city": null,
-      "bio": null,
-      "works": [],
+      "bio": "Set designer, costume designer and performer (all pronouns) — spatial stages built on the interaction of architecture and sound, and costume images that cross haute couture, pop culture and historical dress. Co-founder of the music theatre collective fachbetrieb rita grechen.",
+      "works": [
+        {
+          "url": null,
+          "title": "BISETKA: talk_place",
+          "line": "G.URBAN · di. studio · fachbetrieb rita grechen — HochX and PATHOS, Spielart Festival, Munich, 2023",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
@@ -1639,7 +4021,157 @@
         }
       ],
       "num": "051",
-      "order": 51
+      "order": 51,
+      "resume": {
+        "focus": [
+          "stage design",
+          "costume design",
+          "performance",
+          "music theatre",
+          "fashion illustration"
+        ],
+        "timeline": [
+          {
+            "year": "2024",
+            "items": [
+              {
+                "title": "The Great Gatsby",
+                "role": "drama",
+                "place": "Theater Osnabrück"
+              },
+              {
+                "title": "Self Care Beach Command",
+                "role": "music theatre",
+                "place": "HELLERAU — European Center for the Arts, Dresden"
+              },
+              {
+                "title": "Agnus Dei",
+                "role": "durational performance",
+                "place": "Societaetstheater, Dresden"
+              },
+              {
+                "title": "Annette — A Heroine Epic",
+                "role": "music theatre",
+                "place": "Landestheater Tübingen"
+              }
+            ]
+          },
+          {
+            "year": "2023",
+            "items": [
+              {
+                "title": "Bisetka: Talk_Place",
+                "role": "residency, showing, recorded installation",
+                "place": "Variety Festival, PATHOS, HochX, DJ Bike, Munich"
+              },
+              {
+                "title": "Pride and Prejudice (*or something)",
+                "role": "drama",
+                "place": "Braunschweig State Theater"
+              },
+              {
+                "title": "Covered table-bench construction",
+                "role": "research funding",
+                "place": "Performing Arts Fund, Munich"
+              }
+            ]
+          },
+          {
+            "year": "2022",
+            "items": [
+              {
+                "title": "Techno, Fashion, Chess",
+                "role": "research trip",
+                "place": "Bayern Innovativ — Armenia, Georgia"
+              },
+              {
+                "title": "Society Intact",
+                "role": "performance",
+                "place": "Ballhaus Ost, Berlin"
+              },
+              {
+                "title": "thirst trap",
+                "role": "residency",
+                "place": "HELLERAU, Dresden"
+              }
+            ]
+          },
+          {
+            "year": "2016 – 2021",
+            "items": [
+              {
+                "title": "What is more too much than everything",
+                "role": "music theatre",
+                "place": "HELLERAU, Dresden, 2019"
+              },
+              {
+                "title": "piece of silence",
+                "role": "installation",
+                "place": "Kunstraum D21, Leipzig, 2019"
+              },
+              {
+                "title": "Vertigo Years",
+                "role": "music theatre",
+                "place": "Einstein Kultur, Variety Festival, Munich, 2019"
+              },
+              {
+                "title": "Where the beautiful trumpets blow",
+                "role": "music theatre",
+                "place": "LOFFT Theater, Leipzig, 2019"
+              },
+              {
+                "title": "Il Farnace",
+                "role": "opera",
+                "place": "Aschaffenburg City Theater, 2017"
+              },
+              {
+                "title": "Under the weather",
+                "role": "musical theatre",
+                "place": "Norwegian Theatre Academy, Fredrikstad, 2017"
+              }
+            ]
+          }
+        ],
+        "positions": [
+          {
+            "years": "2018 — now",
+            "role": "co-founder",
+            "org": "fachbetrieb rita grechen",
+            "place": "interdisciplinary music theatre collective"
+          },
+          {
+            "years": "ongoing",
+            "role": "set and costume designer",
+            "org": "Stuttgart, Saarland, Braunschweig and Darmstadt state theatres"
+          },
+          {
+            "years": "ongoing",
+            "role": "fashion illustration and lifestyle products",
+            "org": "NO SPEED NO LIMIT"
+          }
+        ],
+        "education": [
+          {
+            "years": "2018",
+            "role": "Diploma, Stage and Costume Design",
+            "org": "HfBK Dresden",
+            "place": "Dresden, Germany"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "label": "their CV, studio archive — held, not published"
+        },
+        {
+          "label": "BISETKA: talk_place credits, fachbetrieb rita grechen",
+          "href": "https://ritagrechen.de/project.php?id=bisetka%3A-talk_place"
+        },
+        {
+          "label": "her own vita",
+          "href": "https://www.olivia-rosendorfer.de/vita"
+        }
+      ]
     },
     {
       "slug": "nyusha-terbalyan",
@@ -1651,10 +4183,234 @@
       "sectionLabel": "stage · costume · design",
       "city": null,
       "bio": null,
-      "works": [],
+      "works": [
+        {
+          "url": null,
+          "title": "OUT",
+          "line": "costume designer — performance by Sara Nalbandyan, NPAK / ACCEA, Yerevan, May 2024",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [],
       "num": "052",
-      "order": 52
+      "order": 52,
+      "sources": [
+        {
+          "label": "the studio network deck, April 2026 — held, not published"
+        },
+        {
+          "label": "“OUT”, NPAK / ACCEA Yerevan",
+          "href": "https://www.accea.info/oui/"
+        },
+        {
+          "label": "the project files in the studio archive — held, not published"
+        }
+      ]
+    },
+    {
+      "slug": "ani-khachatryan",
+      "name": "Ani Khachatryan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/azd",
+          "title": "ազդ | azd",
+          "line": "one of eight artists, Gyumri, April 2026",
+          "space": "azd",
+          "project": null
+        },
+        {
+          "url": "/wcc/ani-khachatryan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "ani-khachatryan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "053",
+      "order": 53,
+      "sources": [
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
+        }
+      ]
+    },
+    {
+      "slug": "nush-petrosyan",
+      "name": "Nush Petrosyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/azd",
+          "title": "ազդ | azd",
+          "line": "ՁԱՅՆ | VOICE — one of eight artists, Gyumri, April 2026",
+          "space": "azd",
+          "project": null
+        },
+        {
+          "url": "/wcc/nush-petrosyan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "nush-petrosyan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "054",
+      "order": 54,
+      "sources": [
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
+        }
+      ]
+    },
+    {
+      "slug": "jeny-gevorgyan",
+      "name": "Jeny Gevorgyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/azd",
+          "title": "ազդ | azd",
+          "line": "one of eight artists, Gyumri, April 2026",
+          "space": "azd",
+          "project": null
+        },
+        {
+          "url": "/wcc/jeny-gevorgyan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "jeny-gevorgyan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "055",
+      "order": 55,
+      "sources": [
+        {
+          "label": "azd artist statements and project report, studio archive — held, not published"
+        },
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
+        }
+      ]
+    },
+    {
+      "slug": "meri-andreasyan",
+      "name": "Meri Andreasyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/wcc/meri-andreasyan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "meri-andreasyan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "056",
+      "order": 56,
+      "sources": [
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
+        }
+      ]
+    },
+    {
+      "slug": "alla-virabyan",
+      "name": "Alla Virabyan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/wcc/alla-virabyan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "alla-virabyan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "057",
+      "order": 57,
+      "sources": [
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
+        }
+      ]
+    },
+    {
+      "slug": "margarita-ghazaryan",
+      "name": "Margarita Ghazaryan",
+      "role": "artist",
+      "discipline": "artist",
+      "team": false,
+      "section": "visual",
+      "sectionLabel": "visual · multimedia",
+      "city": null,
+      "bio": null,
+      "works": [
+        {
+          "url": "/wcc/margarita-ghazaryan",
+          "title": "WCC Exhibition",
+          "line": "her room — Women Creating Change, Gyumri, 2026",
+          "space": "wcc",
+          "project": "margarita-ghazaryan"
+        }
+      ],
+      "elsewhere": [],
+      "num": "058",
+      "order": 58,
+      "sources": [
+        {
+          "label": "their room in the WCC exhibition on di.iiii",
+          "href": "https://di-studio.xyz/wcc"
+        }
+      ]
     }
   ]
 }

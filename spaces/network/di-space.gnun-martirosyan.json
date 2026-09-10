@@ -3,7 +3,7 @@
   "spaceId": "network",
   "projectId": "network-gnun-martirosyan",
   "slug": "gnun-martirosyan",
-  "label": "Gnun Martirosyan",
+  "label": "Gnun Martirosian",
   "mode": "code",
   "entry": "spaces/network/pages/gnun-martirosyan.html",
   "include": [],
