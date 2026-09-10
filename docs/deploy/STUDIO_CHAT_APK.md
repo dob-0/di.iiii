@@ -76,6 +76,15 @@ Bumping the version is `appVersionName` / `appVersionCode` in
 `twa-manifest.json` — raise the code by one for every build people install over.
 Answer its prompts by hand; piping `yes` into it writes "y" into the version name.
 
+### The staging twin
+
+`assetlinks.json` lists a second package, `xyz.distudio.chat.staging`, signed with
+the same key. It exists because an APK is host-locked: the only way to see the
+finished thing — no address bar, the real room, a real phone — before it reaches
+the live site is to build the same app against `staging.di-studio.xyz` and run
+that. Its project is `android-twa-staging/` (git-ignored whole; it is the prod
+manifest with four fields changed). Delete the entry if the twin is ever retired.
+
 ### Traps
 
 - **The icons are fetched over HTTP at build time.** `iconUrl` and
