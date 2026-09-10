@@ -64,7 +64,7 @@
         "preview": "vite preview",
         "lint": "eslint src serverXR scripts sdk shared vite.config.js eslint.config.js",
         "test": "vitest run",
-        "test:raw": "vitest run raw/ project/ studio/ algoVrithm/editListSourceOnThisPiece nodeLabelVocabulary copyVocabulary ../scripts/nodeAnatomy.test.js",
+        "test:raw": "vitest run raw/ project/ studio/ components/surfaceBar.embed algoVrithm/editListSourceOnThisPiece nodeLabelVocabulary copyVocabulary ../scripts/nodeAnatomy.test.js",
         "di": "node scripts/di/cli.mjs",
         "di:pack": "node scripts/pack-runtime.mjs",
         "check:works": "node scripts/works-boundary.mjs",
