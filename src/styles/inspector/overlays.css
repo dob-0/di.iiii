@@ -1,6 +1,6 @@
 /* --- Style for 2D HTML Text --- */
 .html-text {
-    font-size: 20px; 
+    font-size: var(--di-text-6); 
     white-space: nowrap; 
     user-select: none; 
 }
@@ -16,18 +16,18 @@
 }
 
 .loading-overlay .loading-panel {
-    padding: 20px 30px;
+    padding: var(--di-space-5) var(--di-space-6);
     background: var(--ui-surface-raised);
     border: 1px solid var(--ui-border);
     border-radius: var(--di-radius);
     font-family: var(--di-sans);
-    font-size: 16px;
+    font-size: var(--di-text-5);
     color: var(--ui-text-primary);
     box-shadow: var(--ui-shadow);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: var(--di-space-3);
 }
 
 .loading-spinner {
@@ -56,12 +56,12 @@
 }
 
 .drop-overlay .drop-panel {
-    padding: 18px 28px;
+    padding: var(--di-space-4) var(--di-space-6);
     background: var(--ui-surface-raised);
     border: 2px dashed var(--ui-border-strong);
     border-radius: var(--di-radius);
     font-family: var(--di-sans);
-    font-size: 16px;
+    font-size: var(--di-text-5);
     color: var(--ui-text-primary);
     box-shadow: var(--ui-shadow);
 }
@@ -76,12 +76,12 @@
 }
 
 .upload-progress-panel {
-    padding: 12px 18px;
+    padding: var(--di-space-3) var(--di-space-4);
     background: var(--ui-surface-raised);
     border-radius: var(--di-radius);
     border: 1px solid var(--ui-border);
     font-family: var(--di-sans);
-    font-size: 14px;
+    font-size: var(--di-text-4);
     color: var(--ui-text-primary);
     box-shadow: var(--ui-shadow);
     min-width: 260px;
@@ -92,7 +92,7 @@
     height: 6px;
     background: rgba(255,255,255,0.12);
     border-radius: var(--di-radius);
-    margin-top: 8px;
+    margin-top: var(--di-space-2);
     overflow: hidden;
 }
 

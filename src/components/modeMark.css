@@ -36,13 +36,13 @@
     bottom: calc(10px + env(safe-area-inset-bottom, 0px));
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 4px 9px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid var(--mode-color);
     background: var(--di-scrim-strong);
     color: var(--mode-color);
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.12em;
     line-height: 1;
     white-space: nowrap;

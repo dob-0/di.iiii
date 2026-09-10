@@ -6,7 +6,7 @@
     border-radius: var(--di-radius);
     overflow: hidden;
     font-family: var(--di-sans);
-    font-size: 13px;
+    font-size: var(--di-text-3);
     background: var(--di-scrim-strong);
     border: 1px solid rgba(255,255,255,0.08);
     box-shadow: 0 18px 45px rgba(0,0,0,0.55);
@@ -18,13 +18,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 12px;
+    padding: var(--di-space-3) var(--di-space-3);
     background: rgba(255,255,255,0.02);
     border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 .upload-menu .menu-header h4 {
     margin: 0;
-    font-size: 12px;
+    font-size: var(--di-text-3);
     letter-spacing: 0.08em;
     color: var(--ui-text-muted);
     text-transform: uppercase;
@@ -32,26 +32,26 @@
 .upload-menu .close-button {
     border: none;
     background: none;
-    font-size: 18px;
+    font-size: var(--di-text-5);
     font-weight: 400;
     color: rgba(255,255,255,0.55);
     cursor: pointer;
-    padding: 0 2px;
+    padding: 0 var(--di-space-1);
 }
 .upload-menu .close-button:hover,
 .upload-menu .close-button:focus-visible {
     color: var(--di-text);
 }
 .upload-menu .menu-content {
-    padding: 10px 12px;
+    padding: var(--di-space-3) var(--di-space-3);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 .menu-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 5px;
+    gap: var(--di-space-1);
 }
 .menu-grid.compact button,
 .menu-action {
@@ -59,7 +59,7 @@
     border-radius: var(--di-radius);
     background: linear-gradient(140deg, rgba(255,255,255,0.03), rgba(0,0,0,0.25));
     color: var(--ui-text-primary);
-    padding: 7px;
+    padding: var(--di-space-2);
     font-weight: 500;
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;
@@ -80,41 +80,41 @@
 }
 .menu-hint {
     margin: -2px 0 0;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: rgba(255,255,255,0.55);
 }
 .upload-menu-compact .menu-snaps {
-    padding-top: 12px;
+    padding-top: var(--di-space-3);
 }
 
 .menu-snaps {
     border-top: 1px solid rgba(255,255,255,0.05);
-    padding: 10px 12px 12px;
+    padding: var(--di-space-3) var(--di-space-3) var(--di-space-3);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--di-space-2);
     background: rgba(255,255,255,0.01);
 }
 .menu-snaps-header {
     font-weight: 600;
     color: var(--ui-text-primary);
-    margin-bottom: 2px;
-    font-size: 12px;
+    margin-bottom: var(--di-space-1);
+    font-size: var(--di-text-3);
 }
 .menu-snaps label {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: var(--ui-text-muted);
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: var(--di-space-1);
 }
 .menu-snaps input[type="number"] {
     width: 100%;
     box-sizing: border-box;
-    padding: 5px 6px;
+    padding: var(--di-space-1) var(--di-space-2);
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: var(--di-radius);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     background: rgba(0,0,0,0.35);
     color: var(--ui-text-primary);
     font-family: var(--di-mono);

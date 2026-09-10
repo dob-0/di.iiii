@@ -1,15 +1,15 @@
 .made-with-di {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 2px 1px;
+    gap: var(--di-space-1);
+    padding: var(--di-space-1) var(--di-space-1);
     /* Solid color + mix-blend-mode:difference inverts against whatever sits
        behind it, so one badge stays legibly minimal on a light brutalist
        site and a dark one alike, instead of a fixed cyan pill that only
        suited the platform's own dark theme. */
     color: rgba(255, 255, 255, 0.85);
     font-family: var(--di-mono);
-    font-size: 0.65rem;
+    font-size: var(--di-text-2);
     letter-spacing: 0.03em;
     text-decoration: none;
     white-space: nowrap;
@@ -43,7 +43,7 @@
     z-index: 20;
     /* The mark lands where it always did; the padding is transparent and exists
        only so the tap target clears 44px, which a bare 14px glyph never would. */
-    padding: 12px;
+    padding: var(--di-space-3);
     gap: 0;
     /* border-box, or the 44px floor lands OUTSIDE the padding and the mark
        claims 68px of an exhibition's corner instead of the 44 it asked for. */
@@ -66,7 +66,7 @@
 .made-with-di--floating:focus-visible .made-with-di-text,
 .made-with-di--floating:focus-visible .made-with-di-cta {
     max-width: 14rem;
-    margin-left: 5px;
+    margin-left: var(--di-space-1);
     opacity: 1;
 }
 

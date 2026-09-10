@@ -41,8 +41,8 @@
     background: var(--di-cyan) !important;
     color: var(--di-black) !important;
     font-weight: 700 !important;
-    font-size: 0.9rem !important;
-    padding: 11px 24px !important;
+    font-size: var(--di-text-4) !important;
+    padding: var(--di-space-3) var(--di-space-5) !important;
     border-radius: 0 !important;
     border: none !important;
     text-decoration: none !important;
@@ -72,8 +72,8 @@
     background: transparent !important;
     color: rgba(255, 255, 255, 0.82) !important;
     font-weight: 500 !important;
-    font-size: 0.9rem !important;
-    padding: 10px 24px !important;
+    font-size: var(--di-text-4) !important;
+    padding: var(--di-space-3) var(--di-space-5) !important;
     border-radius: 0 !important;
     border: 1px solid var(--di-cyan-border) !important;
     text-decoration: none !important;
@@ -110,8 +110,8 @@
     background: var(--di-cyan-dim) !important;
     color: var(--di-cyan) !important;
     font-weight: 700 !important;
-    font-size: 0.9rem !important;
-    padding: 11px 24px !important;
+    font-size: var(--di-text-4) !important;
+    padding: var(--di-space-3) var(--di-space-5) !important;
     border-radius: 0 !important;
     border: 1.5px solid var(--di-cyan) !important;
     text-decoration: none !important;
@@ -160,9 +160,9 @@
 
 .lp-btn-link {
     color: var(--di-text-muted) !important;
-    font-size: 0.82rem !important;
+    font-size: var(--di-text-3) !important;
     text-transform: none !important;
-    padding: 10px 14px !important;
+    padding: var(--di-space-3) var(--di-space-3) !important;
     border-radius: 0 !important;
     text-decoration: none !important;
     letter-spacing: 0.02em !important;
@@ -186,12 +186,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 24px;
+    padding: 0 var(--di-space-5);
     flex-shrink: 0;
 }
 
 .lp-nav-logo {
-    font-size: 1rem;
+    font-size: var(--di-text-5);
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--di-text);
@@ -204,7 +204,7 @@
 .lp-nav-links {
     display: flex;
     align-items: center;
-    gap: 28px;
+    gap: var(--di-space-6);
 }
 
 /* The page's third tier — the ways back for someone who already has work here.
@@ -212,7 +212,7 @@
    beside them, which is most of why the top bar read as a scatter of grey with
    a single bright thing in it. Legible, still plainly below the door. */
 .lp-nav-link {
-    font-size: 0.82rem;
+    font-size: var(--di-text-3);
     color: rgba(255, 255, 255, 0.72);
     text-decoration: none;
     letter-spacing: 0.01em;
@@ -222,12 +222,12 @@
 .lp-nav-link:hover { color: var(--di-text); }
 
 .lp-nav-cta {
-    font-size: 0.8rem;
+    font-size: var(--di-text-3);
     font-weight: 600;
     color: var(--di-cyan);
     text-decoration: none;
     border: 1px solid var(--di-cyan-border);
-    padding: 6px 16px;
+    padding: var(--di-space-2) var(--di-space-4);
     letter-spacing: 0.02em;
     transition: background 0.15s, border-color 0.15s;
 }
@@ -245,7 +245,7 @@ body.is-landing .account-btn-wrapper {
 .lp-section {
     position: relative;
     z-index: 1;
-    padding: 96px 24px;
+    padding: 96px var(--di-space-5);
     border-top: 1px solid var(--di-cyan-border);
     background: var(--di-black);
 }
@@ -256,12 +256,12 @@ body.is-landing .account-btn-wrapper {
 }
 
 .lp-section-eyebrow {
-    font-size: 0.75rem !important;
+    font-size: var(--di-text-3) !important;
     font-weight: 600 !important;
     letter-spacing: 0.2em !important;
     text-transform: uppercase !important;
     color: var(--di-cyan) !important;
-    margin: 0 0 14px !important;
+    margin: 0 0 var(--di-space-3) !important;
     opacity: 0.85;
     font-family: var(--di-mono) !important;
 }
@@ -271,12 +271,12 @@ body.is-landing .account-btn-wrapper {
     font-weight: 700 !important;
     letter-spacing: -0.03em !important;
     color: var(--di-text) !important;
-    margin: 0 0 20px !important;
+    margin: 0 0 var(--di-space-5) !important;
     line-height: 1.15 !important;
 }
 
 .lp-section-body {
-    font-size: 1rem !important;
+    font-size: var(--di-text-5) !important;
     color: var(--di-text-muted) !important;
     line-height: 1.75 !important;
     max-width: 600px;
@@ -292,7 +292,7 @@ body.is-landing .account-btn-wrapper {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    padding: 48px 24px 40px;
+    padding: var(--di-space-8) var(--di-space-5) var(--di-space-7);
     border-bottom: 1px solid var(--di-cyan-border);
     background: var(--di-black);
 
@@ -380,9 +380,9 @@ body.is-landing .account-btn-wrapper {
     background: rgba(0, 0, 0, 0.55);
     color: var(--di-text);
     font: inherit;
-    font-size: 0.82rem;
+    font-size: var(--di-text-3);
     letter-spacing: 0.02em;
-    padding: 9px 16px;
+    padding: var(--di-space-2) var(--di-space-4);
     cursor: pointer;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
@@ -407,7 +407,7 @@ body.is-landing .account-btn-wrapper {
     transform: translateX(-50%);
     z-index: 50;
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--di-text-3);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     /* Was --di-text-muted at a further 0.6 opacity — 2.46:1, under the 4.5:1
@@ -418,12 +418,12 @@ body.is-landing .account-btn-wrapper {
 }
 
 .lp-eyebrow {
-    font-size: 0.75rem !important;
+    font-size: var(--di-text-3) !important;
     font-weight: 600 !important;
     letter-spacing: 0.2em !important;
     text-transform: uppercase !important;
     color: var(--di-cyan) !important;
-    margin: 0 0 24px !important;
+    margin: 0 0 var(--di-space-5) !important;
     opacity: 0.7;
     font-family: var(--di-mono) !important;
 }
@@ -434,7 +434,7 @@ body.is-landing .account-btn-wrapper {
     letter-spacing: -0.05em !important;
     line-height: 1 !important;
     color: var(--di-text) !important;
-    margin: 0 0 28px !important;
+    margin: 0 0 var(--di-space-6) !important;
 }
 
 .lp-dot {
@@ -451,14 +451,14 @@ body.is-landing .account-btn-wrapper {
     color: rgba(255, 255, 255, 0.92) !important;
     line-height: 1.65 !important;
     max-width: 440px;
-    margin: 0 0 40px !important;
+    margin: 0 0 var(--di-space-7) !important;
 }
 
 /* The line under the three routes. Deliberately quieter than .lp-tagline:
    the hierarchy is the three buttons above it, and a line as loud as the
    tagline would be a fourth thing competing with them. */
 .lp-cta-sub {
-    font-size: 0.82rem !important;
+    font-size: var(--di-text-3) !important;
     /* NOT --di-text-muted: this line carries the second real destination.
        0.55 cleared the floor over the near-black this page used to have; over
        the room it measured 5.1:1 on the average backdrop and far less where a
@@ -466,7 +466,7 @@ body.is-landing .account-btn-wrapper {
     color: rgba(255, 255, 255, 0.72) !important;
     line-height: 1.9 !important;
     max-width: 400px;
-    margin: 0 0 20px !important;
+    margin: 0 0 var(--di-space-5) !important;
     text-align: center;
 }
 
@@ -474,12 +474,12 @@ body.is-landing .account-btn-wrapper {
    fourth route — so it never reads as competing with Step inside / Spaces /
    Open Jam above it. */
 .lp-hero-featured-label {
-    font-size: 0.68rem !important;
+    font-size: var(--di-text-2) !important;
     font-weight: 600 !important;
     letter-spacing: 0.16em !important;
     text-transform: uppercase !important;
     color: var(--di-text-muted) !important;
-    margin: 0 0 12px !important;
+    margin: 0 0 var(--di-space-3) !important;
     text-align: center;
 }
 
@@ -487,7 +487,7 @@ body.is-landing .account-btn-wrapper {
     color: var(--di-text);
     text-decoration: none;
     border-bottom: 1px solid var(--di-cyan-border);
-    padding-bottom: 1px;
+    padding-bottom: var(--di-space-1);
     transition: color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -504,11 +504,11 @@ body.is-landing .account-btn-wrapper {
    into one another and each line landing at a different indent — live on
    production since the row shipped. Real flex gap, and the margins off. */
 .lp-hero-cta-row {
-    gap: 16px;
+    gap: var(--di-space-4);
 }
 
 .lp-hero-space-row {
-    gap: 12px;
+    gap: var(--di-space-3);
 }
 
 .lp-hero-cta-row > *,
@@ -528,7 +528,7 @@ body.is-landing .account-btn-wrapper {
     z-index: 1;
     border-top: 1px solid var(--di-cyan-border);
     background: var(--di-black);
-    padding: 22px 24px;
+    padding: var(--di-space-5) var(--di-space-5);
 }
 
 .lp-room-tags {
@@ -539,30 +539,30 @@ body.is-landing .account-btn-wrapper {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 10px 32px;
+    gap: var(--di-space-3) var(--di-space-6);
 }
 
 .lp-room-tag {
     font-family: var(--di-mono);
-    font-size: 0.78rem;
+    font-size: var(--di-text-3);
     line-height: 1.5;
     color: var(--di-text-muted);
     border-left: 2px solid var(--di-cyan-border);
-    padding: 2px 0 2px 10px;
+    padding: var(--di-space-1) 0 var(--di-space-1) var(--di-space-3);
 }
 
 .lp-room-tag-n {
     display: inline-block;
     color: var(--di-cyan);
     font-weight: 700;
-    margin-right: 6px;
+    margin-right: var(--di-space-2);
 }
 
 @media (max-width: 640px) {
     .lp-room-tags {
         flex-direction: column;
         align-items: flex-start;
-        gap: 10px;
+        gap: var(--di-space-3);
         max-width: 340px;
     }
 }
@@ -593,21 +593,21 @@ body.is-landing .account-btn-wrapper {
 .lp-example-frame {
     border: 1px solid var(--di-cyan-border);
     background: var(--di-cyan-dim);
-    padding: 22px 24px;
+    padding: var(--di-space-5) var(--di-space-5);
     max-width: 640px;
 }
 
 .lp-example-cap {
     font-family: var(--di-mono) !important;
-    font-size: 0.75rem !important;
+    font-size: var(--di-text-3) !important;
     letter-spacing: 0.12em !important;
     text-transform: uppercase !important;
     color: var(--di-cyan) !important;
-    margin: 0 0 10px !important;
+    margin: 0 0 var(--di-space-3) !important;
 }
 
 .lp-example-body {
-    font-size: 0.95rem !important;
+    font-size: var(--di-text-4) !important;
     color: var(--di-text) !important;
     line-height: 1.65 !important;
     margin: 0 !important;
@@ -618,14 +618,14 @@ body.is-landing .account-btn-wrapper {
     display: flex;
     flex-direction: column;
     border-top: 1px solid var(--di-cyan-border);
-    margin-bottom: 24px;
+    margin-bottom: var(--di-space-5);
 }
 
 .lp-step {
     display: flex;
-    gap: 20px;
+    gap: var(--di-space-5);
     align-items: flex-start;
-    padding: 20px 4px;
+    padding: var(--di-space-5) var(--di-space-1);
     border-bottom: 1px solid var(--di-cyan-border);
 }
 
@@ -643,14 +643,14 @@ body.is-landing .account-btn-wrapper {
 }
 
 .lp-step-title {
-    font-size: 0.95rem !important;
+    font-size: var(--di-text-4) !important;
     font-weight: 600 !important;
     color: var(--di-text) !important;
-    margin: 0 0 8px !important;
+    margin: 0 0 var(--di-space-2) !important;
 }
 
 .lp-step-body {
-    font-size: 0.85rem !important;
+    font-size: var(--di-text-4) !important;
     color: var(--di-text-muted) !important;
     line-height: 1.65 !important;
     margin: 0 !important;
@@ -659,26 +659,26 @@ body.is-landing .account-btn-wrapper {
 .lp-tip {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
+    gap: var(--di-space-3);
     background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
-    padding: 14px 18px;
-    font-size: 0.85rem;
+    padding: var(--di-space-3) var(--di-space-4);
+    font-size: var(--di-text-4);
     color: var(--di-text-muted);
     line-height: 1.6;
-    margin-top: 24px;
+    margin-top: var(--di-space-5);
 }
 
 .lp-tip-icon {
     color: var(--di-cyan) !important;
     font-weight: 700;
     flex-shrink: 0;
-    margin-top: 1px;
+    margin-top: var(--di-space-1);
     font-family: var(--di-mono);
 }
 
 .lp-tip-text {
-    font-size: 0.85rem !important;
+    font-size: var(--di-text-4) !important;
     color: var(--di-text-muted) !important;
     line-height: 1.6 !important;
 }
@@ -686,9 +686,9 @@ body.is-landing .account-btn-wrapper {
 .lp-tip kbd {
     background: transparent;
     border: 1px solid var(--di-cyan-border);
-    padding: 1px 6px;
+    padding: var(--di-space-1) var(--di-space-2);
     font-family: var(--di-mono);
-    font-size: 0.8rem;
+    font-size: var(--di-text-3);
     color: var(--di-cyan);
 }
 
@@ -703,26 +703,26 @@ body.is-landing .account-btn-wrapper {
 
 .lp-audience-card {
     background: var(--di-surface);
-    padding: 28px 24px;
+    padding: var(--di-space-6) var(--di-space-5);
 }
 
 .lp-audience-icon {
     width: 28px;
     height: 28px;
     color: var(--di-cyan);
-    margin-bottom: 14px;
+    margin-bottom: var(--di-space-3);
     opacity: 0.7;
 }
 
 .lp-audience-label {
-    font-size: 0.95rem !important;
+    font-size: var(--di-text-4) !important;
     font-weight: 600 !important;
     color: var(--di-text) !important;
-    margin: 0 0 10px !important;
+    margin: 0 0 var(--di-space-3) !important;
 }
 
 .lp-audience-desc {
-    font-size: 0.85rem !important;
+    font-size: var(--di-text-4) !important;
     color: var(--di-text-muted) !important;
     line-height: 1.65 !important;
     margin: 0 !important;
@@ -739,7 +739,7 @@ body.is-landing .account-btn-wrapper {
 
 .lp-feature-card {
     background: var(--di-surface);
-    padding: 24px 20px;
+    padding: var(--di-space-5) var(--di-space-5);
 }
 
 /* The only card in this grid that is also a real link — the plain feature
@@ -759,30 +759,30 @@ body.is-landing .account-btn-wrapper {
 
 .lp-wiki-card-more {
     display: block;
-    margin-top: 12px;
+    margin-top: var(--di-space-3);
     color: var(--di-cyan);
-    font-size: 0.82rem;
+    font-size: var(--di-text-3);
     letter-spacing: 0.02em;
 }
 
 .lp-feature-icon {
-    font-size: 1.3rem !important;
+    font-size: var(--di-text-6) !important;
     color: var(--di-cyan) !important;
     opacity: 0.7;
     display: block !important;
-    margin-bottom: 12px !important;
+    margin-bottom: var(--di-space-3) !important;
     line-height: 1 !important;
 }
 
 .lp-feature-title {
-    font-size: 0.9rem !important;
+    font-size: var(--di-text-4) !important;
     font-weight: 600 !important;
     color: var(--di-text) !important;
-    margin: 0 0 8px !important;
+    margin: 0 0 var(--di-space-2) !important;
 }
 
 .lp-feature-desc {
-    font-size: 0.82rem !important;
+    font-size: var(--di-text-3) !important;
     color: var(--di-text-muted) !important;
     line-height: 1.6 !important;
     margin: 0 !important;
@@ -799,27 +799,27 @@ body.is-landing .account-btn-wrapper {
     gap: 0;
     border-top: 1px solid var(--di-cyan-border);
     border-left: 1px solid var(--di-cyan-border);
-    margin-bottom: 1px;
+    margin-bottom: var(--di-space-1);
 }
 
 .lp-ai-block {
     background: var(--di-surface);
-    padding: 24px;
+    padding: var(--di-space-5);
 }
 
 .lp-ai-caps {
     background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
-    padding: 24px;
+    padding: var(--di-space-5);
 }
 
 .lp-ai-block-title {
-    font-size: 0.75rem !important;
+    font-size: var(--di-text-3) !important;
     font-weight: 600 !important;
     letter-spacing: 0.14em !important;
     text-transform: uppercase !important;
     color: var(--di-cyan) !important;
-    margin: 0 0 16px !important;
+    margin: 0 0 var(--di-space-4) !important;
     font-family: var(--di-mono) !important;
     opacity: 0.8;
 }
@@ -827,11 +827,11 @@ body.is-landing .account-btn-wrapper {
 .lp-code-block {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .lp-code-line {
-    font-size: 0.82rem;
+    font-size: var(--di-text-3);
     font-family: var(--di-mono);
     line-height: 1.5;
 }
@@ -839,13 +839,13 @@ body.is-landing .account-btn-wrapper {
 .lp-code-key {
     color: var(--di-text-muted) !important;
     font-family: var(--di-mono) !important;
-    font-size: 0.82rem !important;
+    font-size: var(--di-text-3) !important;
 }
 
 .lp-code-val {
     color: var(--di-cyan) !important;
     font-family: var(--di-mono) !important;
-    font-size: 0.82rem !important;
+    font-size: var(--di-text-3) !important;
 }
 
 .lp-route-list {
@@ -857,50 +857,50 @@ body.is-landing .account-btn-wrapper {
 .lp-route-row {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 8px 0;
+    gap: var(--di-space-1);
+    padding: var(--di-space-2) 0;
     border-bottom: 1px solid var(--di-cyan-border);
 }
 
 .lp-route-row:last-child { border-bottom: none; }
 
 .lp-route-path {
-    font-size: 0.8rem !important;
+    font-size: var(--di-text-3) !important;
     font-family: var(--di-mono) !important;
     color: var(--di-cyan) !important;
     background: none !important;
 }
 
 .lp-route-label {
-    font-size: 0.75rem !important;
+    font-size: var(--di-text-3) !important;
     color: var(--di-text-muted) !important;
 }
 
 .lp-caps-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-top: 16px;
+    gap: var(--di-space-3);
+    margin-top: var(--di-space-4);
 }
 
 .lp-cap-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 0.85rem;
+    gap: var(--di-space-3);
+    font-size: var(--di-text-4);
     color: var(--di-text-muted);
 }
 
 .lp-cap-check {
     color: var(--di-cyan) !important;
-    font-size: 0.85rem !important;
+    font-size: var(--di-text-4) !important;
     flex-shrink: 0;
     font-family: var(--di-mono);
     opacity: 0.7;
 }
 
 .lp-cap-text {
-    font-size: 0.85rem !important;
+    font-size: var(--di-text-4) !important;
     color: var(--di-text-muted) !important;
 }
 
@@ -919,15 +919,15 @@ body.is-landing .account-btn-wrapper {
 }
 
 .lp-enter-body {
-    font-size: 0.95rem !important;
+    font-size: var(--di-text-4) !important;
     color: var(--di-text-muted) !important;
     line-height: 1.7 !important;
     max-width: 480px;
-    margin: 0 0 40px !important;
+    margin: 0 0 var(--di-space-7) !important;
 }
 
 .lp-enter-note {
-    font-size: 0.75rem !important;
+    font-size: var(--di-text-3) !important;
     /* Was 0.2 — 1.66:1, and it carries a real link (thedi.studio). A whisper is
        a legitimate choice for a credit line; an unreadable link is not, and no
        alpha below ~0.46 clears the floor. It stays quieter than body copy by
@@ -959,13 +959,13 @@ body.is-landing .account-btn-wrapper {
 
 @media (max-width: 640px) {
     .lp-nav-links { display: none; }
-    .lp-footer-inner { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .lp-footer-inner { flex-direction: column; align-items: flex-start; gap: var(--di-space-3); }
 }
 
 @media (max-width: 520px) {
 
     .lp-section {
-        padding: 64px 20px;
+        padding: 64px var(--di-space-5);
     }
 
     /* No 3D room mounts below 520px (the isSmallScreen gate — three.js is
@@ -974,7 +974,7 @@ body.is-landing .account-btn-wrapper {
        nothing a visitor could act on. Plain black instead: the same ground
        the rest of the page stands on, and the type does the work. */
     .lp-hero {
-        padding: 32px 20px 40px;
+        padding: var(--di-space-6) var(--di-space-5) var(--di-space-7);
     }
 
     .lp-feature-grid {
@@ -985,7 +985,7 @@ body.is-landing .account-btn-wrapper {
 /* ─── FOOTER ─────────────────────────────────────────────── */
 .lp-footer {
     border-top: 1px solid var(--di-cyan-border);
-    padding: 28px 24px;
+    padding: var(--di-space-6) var(--di-space-5);
 }
 
 .lp-footer-inner {
@@ -995,11 +995,11 @@ body.is-landing .account-btn-wrapper {
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: var(--di-space-4);
 }
 
 .lp-footer-brand {
-    font-size: 0.88rem;
+    font-size: var(--di-text-4);
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--di-text-muted);
@@ -1009,7 +1009,7 @@ body.is-landing .account-btn-wrapper {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 4px 20px;
+    gap: var(--di-space-1) var(--di-space-5);
 }
 
 /* Was --di-text-muted at a further 0.7 opacity — 3.01:1, under the 4.5:1
@@ -1021,7 +1021,7 @@ body.is-landing .account-btn-wrapper {
     display: inline-flex;
     align-items: center;
     min-height: 40px;
-    font-size: 0.78rem;
+    font-size: var(--di-text-3);
     color: var(--di-text-muted);
     text-decoration: none;
     transition: color 0.15s;
@@ -1034,7 +1034,7 @@ body.is-landing .account-btn-wrapper {
 /* Was --di-text-muted at a further 0.35 opacity — 1.52:1 — around a real
    link (thedi.studio). See the same fix on .lp-enter-note above. */
 .lp-footer-note {
-    font-size: 0.75rem;
+    font-size: var(--di-text-3);
     color: var(--di-text-muted);
     font-family: var(--di-mono);
     letter-spacing: 0.06em;

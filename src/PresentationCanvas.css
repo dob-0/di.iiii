@@ -28,17 +28,17 @@
     bottom: 20px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--di-space-3);
 }
 
 .presentation-frame-note,
 .presentation-frame-status {
     max-width: 320px;
-    padding: 10px 12px;
+    padding: var(--di-space-3) var(--di-space-3);
     border-radius: var(--di-radius);
     background: var(--di-scrim-strong);
     color: rgba(255,255,255,0.82);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     line-height: 1.45;
     box-shadow: 0 14px 30px rgba(0,0,0,0.18);
 }
@@ -52,7 +52,7 @@
 .presentation-empty-state {
     max-width: 540px;
     margin: auto;
-    padding: 28px 30px;
+    padding: var(--di-space-6) var(--di-space-6);
     border-radius: 24px;
     background: rgba(255,255,255,0.84);
     box-shadow: 0 28px 70px rgba(52, 39, 16, 0.16);
@@ -62,31 +62,31 @@
 }
 
 .presentation-empty-eyebrow {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: #8a6a2b;
-    margin-bottom: 10px;
+    margin-bottom: var(--di-space-3);
 }
 
 .presentation-empty-state h2 {
-    margin: 0 0 12px;
+    margin: 0 0 var(--di-space-3);
     font-size: clamp(26px, 4vw, 42px);
     line-height: 1.05;
 }
 
 .presentation-empty-state p {
     margin: 0;
-    font-size: 15px;
+    font-size: var(--di-text-4);
     line-height: 1.65;
     color: #5f4930;
 }
 
 @media (max-width: 720px) {
     .presentation-empty-state {
-        margin: auto 16px 22px;
-        padding: 22px 20px;
+        margin: auto var(--di-space-4) var(--di-space-5);
+        padding: var(--di-space-5) var(--di-space-5);
         border-radius: 20px;
     }
 

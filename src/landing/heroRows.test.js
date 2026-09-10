@@ -29,7 +29,9 @@ const declarations = (selector) => {
 // and it has to switch MUI's margin back off, or one of the two silently wins.
 describe('the hero rows wrap without piling up', () => {
     it.each(['.lp-hero-space-row', '.lp-hero-cta-row'])('%s declares a real flex gap', (selector) => {
-        expect(declarations(selector)).toMatch(/\bgap:\s*\d+px/)
+        // A literal px or a rhythm token both count as "real" — 0/unset is the
+        // only thing this guards against.
+        expect(declarations(selector)).toMatch(/\bgap:\s*(\d+px|var\(--di-space-\d\))/)
     })
 
     it('turns off the margin-left MUI puts on the wrapped children', () => {

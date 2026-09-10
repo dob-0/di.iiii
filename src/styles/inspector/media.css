@@ -1,16 +1,16 @@
 .gizmo-controls .media-variant-section {
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 .media-variant-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--di-space-1);
 }
 .media-variant-button {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    padding: 8px 10px;
+    padding: var(--di-space-2) var(--di-space-3);
     border: 1px solid var(--ui-border);
     border-radius: var(--di-radius);
     background: var(--ui-surface);
@@ -28,26 +28,26 @@
 }
 .media-variant-button .media-variant-title {
     font-weight: 700;
-    font-size: 13px;
+    font-size: var(--di-text-3);
     color: var(--di-text);
 }
 .media-variant-button .media-variant-meta {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: var(--ui-text-muted);
 }
 .media-variant-hint {
-    font-size: 12px;
+    font-size: var(--di-text-3);
     color: var(--ui-text-muted);
     margin: 0;
 }
 .media-variant-optimize {
-    margin-top: 6px;
-    padding: 6px 10px;
+    margin-top: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.4);
     background: rgba(var(--di-cyan-rgb), 0.18);
     color: var(--ui-text-primary);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     font-weight: 600;
     cursor: pointer;
     transition: opacity 0.15s ease, background 0.15s ease;

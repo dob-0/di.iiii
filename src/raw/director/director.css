@@ -18,13 +18,13 @@
     z-index: 5;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 14px 18px 16px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-3) var(--di-space-4) var(--di-space-4);
     background: var(--di-scrim-strong);
     border-top: 1px solid var(--di-cyan-line);
     backdrop-filter: blur(6px);
     font-family: var(--di-mono);
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: rgba(255, 255, 255, 0.72);
     user-select: none;
 }
@@ -32,7 +32,7 @@
 .di-director-head {
     display: flex;
     align-items: baseline;
-    gap: 14px;
+    gap: var(--di-space-3);
     flex-wrap: wrap;
 }
 
@@ -44,7 +44,7 @@
 }
 
 .di-director-time {
-    font-size: 14px;
+    font-size: var(--di-text-4);
     font-variant-numeric: tabular-nums;
     color: var(--di-text);
 }
@@ -56,18 +56,18 @@
 .di-director-transport {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--di-space-2);
     flex-wrap: wrap;
 }
 
 .di-director button {
     font-family: inherit;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: var(--di-cyan);
     background: rgba(var(--di-cyan-rgb), 0.08);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.4);
     border-radius: var(--di-radius);
-    padding: 4px 9px;
+    padding: var(--di-space-1) var(--di-space-2);
     cursor: pointer;
 }
 
@@ -82,8 +82,8 @@
 
 .di-director-rates {
     display: flex;
-    gap: 4px;
-    margin-left: 6px;
+    gap: var(--di-space-1);
+    margin-left: var(--di-space-2);
 }
 
 .di-director-hint {
@@ -95,7 +95,7 @@
 
 .di-director-track {
     position: relative;
-    padding-top: 16px;
+    padding-top: var(--di-space-4);
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--di-radius);
@@ -120,17 +120,17 @@
 .di-director-tick {
     position: absolute;
     top: -14px;
-    font-size: 9px;
+    font-size: var(--di-text-1);
     color: rgba(255, 255, 255, 0.35);
     border-left: 1px solid rgba(255, 255, 255, 0.12);
-    padding-left: 3px;
+    padding-left: var(--di-space-1);
     white-space: nowrap;
 }
 
 .di-director-row {
     position: relative;
     height: 26px;
-    margin: 3px 0;
+    margin: var(--di-space-1) 0;
 }
 
 .di-director-clip {
@@ -172,8 +172,8 @@
     flex: 1;
     display: flex;
     align-items: baseline;
-    gap: 8px;
-    padding: 0 8px;
+    gap: var(--di-space-2);
+    padding: 0 var(--di-space-2);
     color: var(--di-text);
     white-space: nowrap;
     overflow: hidden;
@@ -236,9 +236,9 @@
 .di-director-inspector-head {
     display: flex;
     align-items: baseline;
-    gap: 8px;
-    margin: 10px 0 6px;
-    font-size: 11px;
+    gap: var(--di-space-2);
+    margin: var(--di-space-3) 0 var(--di-space-2);
+    font-size: var(--di-text-2);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--di-text);
@@ -246,7 +246,7 @@
 
 .di-director-inspector-head em {
     font-style: normal;
-    font-size: 10px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.02em;
     text-transform: none;
     color: rgba(255, 255, 255, 0.45);
@@ -258,20 +258,20 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: var(--di-space-1);
 }
 
 .di-director-rows li {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--di-space-2);
     flex-wrap: wrap;
 }
 
 .di-director-pair {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--di-space-1);
     color: rgba(255, 255, 255, 0.4);
 }
 
@@ -283,13 +283,13 @@
 .di-director-field {
     width: 62px;
     font-family: inherit;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     font-variant-numeric: tabular-nums;
     color: var(--di-text);
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: var(--di-radius);
-    padding: 3px 6px;
+    padding: var(--di-space-1) var(--di-space-2);
 }
 
 .di-director-field:focus {
@@ -299,7 +299,7 @@
 
 .di-director-ripple {
     display: flex;
-    gap: 4px;
+    gap: var(--di-space-1);
 }
 
 /* Collapsed: keep the timecode and transport, drop everything else. Done in
@@ -314,7 +314,7 @@
 }
 
 .di-director-collapse {
-    padding: 2px 7px !important;
+    padding: var(--di-space-1) var(--di-space-2) !important;
 }
 
 /* ---- media bin ---- */
@@ -322,21 +322,21 @@
 .di-director-bin {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--di-space-2);
     flex-wrap: wrap;
-    padding-top: 2px;
+    padding-top: var(--di-space-1);
     border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .di-director-chip {
     display: inline-flex;
     align-items: baseline;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .di-director-chip em {
     font-style: normal;
-    font-size: 9px;
+    font-size: var(--di-text-1);
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.35);
@@ -381,7 +381,7 @@
 .di-director-foot {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--di-space-3);
     flex-wrap: wrap;
 }
 
@@ -411,12 +411,12 @@
     width: 100%;
     height: 160px;
     font-family: inherit;
-    font-size: 11px;
+    font-size: var(--di-text-2);
     color: var(--di-text);
     background: rgba(0, 0, 0, 0.6);
     border: 1px solid var(--di-cyan-line);
     border-radius: var(--di-radius);
-    padding: 8px;
+    padding: var(--di-space-2);
     resize: vertical;
 }
 
@@ -471,17 +471,17 @@
     max-height: 34vh;
     overflow-y: auto;
     /* Room for the scrollbar so it never sits on top of a number field. */
-    padding-right: 4px;
+    padding-right: var(--di-space-1);
 }
 
 /* Own line under the timing boxes, quiet enough to ignore once it is learned.
    Full width so it never squeezes a number field onto a second row. */
 .di-director-rowhint {
     width: 100%;
-    font-size: 10px;
+    font-size: var(--di-text-2);
     line-height: 1.5;
     color: rgba(255, 255, 255, 0.38);
-    padding-left: 2px;
+    padding-left: var(--di-space-1);
 }
 
 .di-director-rowhint b {
@@ -495,8 +495,8 @@
     width: 100%;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 14px;
-    padding-left: 2px;
+    gap: var(--di-space-2) var(--di-space-3);
+    padding-left: var(--di-space-1);
 }
 
 .di-director-section-toggle {
@@ -505,7 +505,7 @@
     background: transparent !important;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    font-size: 9px;
+    font-size: var(--di-text-1);
 }
 
 .di-director-section.is-open .di-director-section-toggle {
@@ -516,9 +516,9 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px 10px;
-    margin-top: 5px;
-    padding: 7px 9px;
+    gap: var(--di-space-2) var(--di-space-3);
+    margin-top: var(--di-space-1);
+    padding: var(--di-space-2) var(--di-space-2);
     border-left: 1px solid rgba(var(--di-cyan-rgb), 0.28);
     background: rgba(255, 255, 255, 0.03);
 }
@@ -530,12 +530,12 @@
 .di-director-custom {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--di-space-1);
 }
 
 .di-director-color-choice {
     flex-wrap: wrap;
-    gap: 4px 8px;
+    gap: var(--di-space-1) var(--di-space-2);
 }
 
 /* Wraps, and aligns to the top: the eight light swatches do not fit one line
@@ -544,7 +544,7 @@
 .di-director-swatches {
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: 7px 5px;
+    gap: var(--di-space-2) var(--di-space-1);
 }
 
 /* A swatch is a chip PLUS its name, stacked.
@@ -564,7 +564,7 @@
     display: inline-flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
+    gap: var(--di-space-1);
     /* Bounded so a long name ("tunnel wall (s01 only)") cannot stretch one
        column far wider than its neighbours and break the grid's rhythm. */
     max-width: 62px;
@@ -572,7 +572,7 @@
 
 .di-director-swatch-name {
     font-style: normal;
-    font-size: 8px;
+    font-size: var(--di-text-1);
     line-height: 1.25;
     letter-spacing: 0.04em;
     text-align: center;
@@ -611,7 +611,7 @@
 }
 
 .di-director-custom-toggle {
-    font-size: 9px;
+    font-size: var(--di-text-1);
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
@@ -652,7 +652,7 @@
 .di-director-warning {
     flex-basis: 100%;
     font-style: normal;
-    font-size: 10px;
+    font-size: var(--di-text-2);
     line-height: 1.45;
     color: var(--di-warning);
 }
@@ -660,7 +660,7 @@
 /* ---- lights ---- */
 
 .di-director-add-light {
-    font-size: 10px;
+    font-size: var(--di-text-2);
 }
 
 .di-director-light {
@@ -668,8 +668,8 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 5px 9px;
-    padding-top: 6px;
+    gap: var(--di-space-1) var(--di-space-2);
+    padding-top: var(--di-space-2);
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -681,19 +681,19 @@
 .di-director-light-head {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--di-space-2);
     flex-basis: 100%;
 }
 
 .di-director-kinds,
 .di-director-stops {
     display: inline-flex;
-    gap: 3px;
+    gap: var(--di-space-1);
 }
 
 .di-director-kind,
 .di-director-stop {
-    font-size: 9px;
+    font-size: var(--di-text-1);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.42) !important;
@@ -731,14 +731,14 @@
    same bottom stack and inherits its typography. */
 .di-dispersion {
     font-family: var(--di-mono);
-    font-size: 10px;
+    font-size: var(--di-text-2);
     letter-spacing: 0.08em;
     color: rgba(255, 255, 255, 0.72);
     background: var(--di-scrim);
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: var(--di-radius);
-    padding: 10px 12px;
-    margin-bottom: 8px;
+    padding: var(--di-space-3) var(--di-space-3);
+    margin-bottom: var(--di-space-2);
     backdrop-filter: blur(6px);
 }
 
@@ -749,12 +749,12 @@
     text-transform: uppercase;
     letter-spacing: 0.16em;
     opacity: 0.75;
-    margin-bottom: 8px;
+    margin-bottom: var(--di-space-2);
 }
 
 .di-dispersion-actions {
     display: flex;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 
 .di-dispersion-actions button {
@@ -765,7 +765,7 @@
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: var(--di-radius-pill);
-    padding: 3px 10px;
+    padding: var(--di-space-1) var(--di-space-3);
     cursor: pointer;
 }
 
@@ -787,7 +787,7 @@
 .di-dispersion-collapse {
     background: none;
     border: none;
-    padding: 0 6px 0 0;
+    padding: 0 var(--di-space-2) 0 0;
     cursor: pointer;
     color: inherit;
     font: inherit;
@@ -802,14 +802,14 @@
 .di-dispersion-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    gap: 4px 18px;
+    gap: var(--di-space-1) var(--di-space-4);
 }
 
 .di-dispersion-row {
     display: grid;
     grid-template-columns: 92px 1fr 38px;
     align-items: center;
-    gap: 8px;
+    gap: var(--di-space-2);
 }
 
 .di-dispersion-name {
@@ -839,9 +839,9 @@
    squeezing the slider. */
 .di-dispersion-hint {
     grid-column: 1 / -1;
-    font-size: 9px;
+    font-size: var(--di-text-1);
     line-height: 1.4;
     opacity: 0.42;
     letter-spacing: 0.04em;
-    margin: -2px 0 4px;
+    margin: -2px 0 var(--di-space-1);
 }

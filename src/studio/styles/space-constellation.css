@@ -31,7 +31,7 @@
     text-overflow: ellipsis;
     transform: translateY(-4px);
     font-family: var(--di-sans);
-    font-size: 0.78rem;
+    font-size: var(--di-text-3);
     font-weight: 500;
     letter-spacing: -0.01em;
     color: var(--di-ink);
@@ -47,7 +47,7 @@
     background: rgba(0, 0, 0, 0.6);
     border: none;
     border-radius: var(--di-radius);
-    padding: 2px 7px;
+    padding: var(--di-space-1) var(--di-space-2);
     font: inherit;
 }
 .scon-label--on { opacity: 1; }
@@ -55,7 +55,7 @@
 
 .scon-sat-label {
     font-family: var(--di-mono);
-    font-size: 0.52rem;
+    font-size: var(--di-text-1);
     letter-spacing: 0.08em;
     color: var(--di-dim);
     white-space: nowrap;
@@ -64,7 +64,7 @@
     pointer-events: none;
     background: rgba(0, 0, 0, 0.55);
     border-radius: var(--di-radius);
-    padding: 1px 5px;
+    padding: var(--di-space-1) var(--di-space-1);
 }
 .scon-sat-label--live { color: var(--di-cyan); opacity: 1; }
 
@@ -90,18 +90,18 @@
     bottom: 12px;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    font-size: 0.58rem;
+    gap: var(--di-space-3);
+    font-size: var(--di-text-2);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--di-dim);
     pointer-events: none;
 }
-.scon-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.scon-legend span { display: inline-flex; align-items: center; gap: var(--di-space-1); }
 /* The two notes explain what the picture is actually made of — size and glow —
    which the legend never mentioned while both dominated the screen. */
 .scon-legend-note { color: var(--di-faint); }
-.scon-legend-note::before { content: "—"; margin-right: 5px; opacity: 0.6; }
+.scon-legend-note::before { content: "—"; margin-right: var(--di-space-1); opacity: 0.6; }
 .scon-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
 .scon-hint {
@@ -109,7 +109,7 @@
     z-index: 2;
     right: 14px;
     bottom: 12px;
-    font-size: 0.58rem;
+    font-size: var(--di-text-2);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--di-dim);
@@ -126,8 +126,8 @@
     width: min(340px, 88%);
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    padding: 16px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-4);
     background: rgba(0, 0, 0, 0.92);
     border: 1px solid var(--di-line);
     border-radius: var(--di-radius);
@@ -148,10 +148,10 @@
 }
 .scon-badge {
     font-family: var(--di-mono);
-    font-size: 0.56rem;
+    font-size: var(--di-text-1);
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    padding: 3px 8px;
+    padding: var(--di-space-1) var(--di-space-2);
     border-radius: var(--di-radius);
     border: 1px solid currentColor;
 }
@@ -165,32 +165,32 @@
     background: none;
     border: none;
     color: var(--di-dim);
-    font-size: 0.9rem;
+    font-size: var(--di-text-4);
     cursor: pointer;
-    padding: 2px 6px;
+    padding: var(--di-space-1) var(--di-space-2);
     line-height: 1;
 }
 .scon-x:hover { color: var(--di-ink); }
 
-.scon-static { color: var(--di-ink); font-size: 0.95rem; padding: 6px 0; }
+.scon-static { color: var(--di-ink); font-size: var(--di-text-4); padding: var(--di-space-2) 0; }
 .scon-subid {
-    font-size: 0.56rem;
+    font-size: var(--di-text-1);
     letter-spacing: 0.14em;
     color: var(--di-dim);
-    margin-top: 4px;
+    margin-top: var(--di-space-1);
 }
 
 .scon-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--di-space-2);
 }
 .scon-btn {
     font-family: var(--di-mono);
-    font-size: 0.6rem;
+    font-size: var(--di-text-2);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    padding: 7px 11px;
+    padding: var(--di-space-2) var(--di-space-3);
     border-radius: var(--di-radius);
     border: 1px solid var(--di-line);
     background: rgba(0, 0, 0, 0.7);
@@ -205,25 +205,25 @@
 
 .scon-projects {
     border-top: 1px solid var(--di-line);
-    padding-top: 10px;
+    padding-top: var(--di-space-3);
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--di-space-1);
 }
 .scon-projects-head {
-    font-size: 0.56rem;
+    font-size: var(--di-text-1);
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--di-dim);
-    margin-bottom: 4px;
+    margin-bottom: var(--di-space-1);
 }
-.scon-muted { font-size: 0.6rem; color: var(--di-dim); letter-spacing: 0.08em; }
+.scon-muted { font-size: var(--di-text-2); color: var(--di-dim); letter-spacing: 0.08em; }
 
 .scon-prow {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 6px;
+    gap: var(--di-space-2);
+    padding: var(--di-space-1) var(--di-space-2);
     border-radius: var(--di-radius);
 }
 .scon-prow:hover { background: rgba(255, 255, 255, 0.03); }
@@ -235,23 +235,23 @@
     border: none;
     color: var(--di-dim);
     font-family: var(--di-sans);
-    font-size: 0.82rem;
+    font-size: var(--di-text-3);
     cursor: pointer;
-    padding: 2px 0;
+    padding: var(--di-space-1) 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .scon-prow-name:hover { color: var(--di-ink); }
-.scon-prow-input { flex: 1; font-size: 0.82rem; }
+.scon-prow-input { flex: 1; font-size: var(--di-text-3); }
 .scon-prow-live {
-    font-size: 0.52rem;
+    font-size: var(--di-text-1);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--di-cyan);
 }
 .scon-prow-set {
-    font-size: 0.52rem;
+    font-size: var(--di-text-1);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--di-dim);
@@ -267,14 +267,14 @@
     border: 1px solid var(--di-line);
     border-radius: var(--di-radius);
     overflow: hidden;
-    margin-right: 10px;
+    margin-right: var(--di-space-3);
 }
 .ssh-view-toggle button {
     font-family: var(--di-mono);
-    font-size: 0.6rem;
+    font-size: var(--di-text-2);
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    padding: 7px 12px;
+    padding: var(--di-space-2) var(--di-space-3);
     background: transparent;
     border: none;
     color: var(--di-dim);
@@ -295,29 +295,29 @@
 .ssh-arrange-bar {
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: var(--di-space-4);
     flex-wrap: wrap;
-    margin: 4px 0 20px;
+    margin: var(--di-space-1) 0 var(--di-space-5);
 }
 .ssh-arrange, .ssh-filter {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
+    gap: var(--di-space-1);
     flex-wrap: wrap;
 }
 .ssh-arrange-label {
     font-family: var(--di-mono);
-    font-size: 0.58rem;
+    font-size: var(--di-text-2);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--di-dim);
-    margin-right: 8px;
+    margin-right: var(--di-space-2);
 }
 .ssh-arrange button, .ssh-filter button {
     font-family: var(--di-mono);
-    font-size: 0.6rem;
+    font-size: var(--di-text-2);
     letter-spacing: 0.08em;
-    padding: 6px 11px;
+    padding: var(--di-space-2) var(--di-space-3);
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--di-radius);
@@ -336,14 +336,14 @@
 }
 .ssh-filter button:disabled { opacity: 0.35; cursor: default; }
 .ssh-filter-count {
-    margin-left: 7px;
+    margin-left: var(--di-space-2);
     opacity: 0.6;
     font-size: 0.92em;
 }
 .ssh-empty-filter {
-    font-size: 0.85rem;
+    font-size: var(--di-text-4);
     color: var(--di-dim);
-    margin: 0 0 22px;
+    margin: 0 0 var(--di-space-5);
 }
 .ssh-link-btn {
     background: none;
@@ -371,12 +371,12 @@
        row's state and buttons line up down the page. */
     grid-template-columns: minmax(170px, 1.1fr) minmax(120px, 1fr) 130px 128px;
     align-items: center;
-    gap: 18px;
-    padding: 9px 16px;
+    gap: var(--di-space-4);
+    padding: var(--di-space-2) var(--di-space-4);
 }
 .ssh-list-head {
     font-family: var(--di-mono);
-    font-size: 0.55rem;
+    font-size: var(--di-text-1);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--di-dim);
@@ -389,25 +389,25 @@
 }
 .ssh-list-row:last-child { border-bottom: none; }
 .ssh-list-row:hover, .ssh-list-row:focus-visible { background: color-mix(in srgb, var(--di-cyan) 0.05%, transparent); }
-.ssh-list-name b { display: block; font-size: 0.92rem; font-weight: 600; line-height: 1.35; }
+.ssh-list-name b { display: block; font-size: var(--di-text-4); font-weight: 600; line-height: 1.35; }
 .ssh-list-id, .ssh-list-project, .ssh-list-state {
     font-family: var(--di-mono);
-    font-size: 0.62rem;
+    font-size: var(--di-text-2);
     letter-spacing: 0.04em;
     color: var(--di-dim);
 }
-.ssh-list-project { font-size: 0.7rem; }
+.ssh-list-project { font-size: var(--di-text-3); }
 .ssh-list-none { opacity: 0.55; }
 .ssh-list-state--open { color: var(--di-cyan); }
 .ssh-list-state--nodoor { color: var(--di-warning); }
-.ssh-list-acts { display: flex; gap: 6px; justify-content: flex-end; }
+.ssh-list-acts { display: flex; gap: var(--di-space-2); justify-content: flex-end; }
 .ssh-list-acts .ssh-card-btn { text-decoration: none; }
 
 @media (max-width: 720px) {
     .ssh-list-head { display: none; }
     .ssh-list-row {
         grid-template-columns: 1fr auto;
-        row-gap: 4px;
+        row-gap: var(--di-space-1);
     }
     .ssh-list-project { grid-column: 1 / -1; }
     .ssh-list-state { grid-column: 1; }
@@ -419,14 +419,14 @@
    near the edge stays mostly inside the frame instead of hanging off it. */
 @media (max-width: 720px) {
     .scon-label {
-        font-size: 0.62rem;
+        font-size: var(--di-text-2);
         max-width: 24vw;
-        padding: 2px 5px;
+        padding: var(--di-space-1) var(--di-space-1);
     }
 
     .scon-legend {
-        gap: 8px 10px;
-        font-size: 0.5rem;
+        gap: var(--di-space-2) var(--di-space-3);
+        font-size: var(--di-text-1);
     }
 
     /* `.scon-legend span` sets display, so the note needs the same weight to

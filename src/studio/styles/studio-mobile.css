@@ -13,8 +13,8 @@
     left: 0;
     right: 0;
     z-index: 2600;
-    padding: 10px 16px;
-    font-size: 13px;
+    padding: var(--di-space-3) var(--di-space-4);
+    font-size: var(--di-text-3);
     font-weight: 600;
     color: var(--di-black);
     background: var(--di-warning);
@@ -35,8 +35,8 @@
     z-index: 60;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
+    gap: var(--di-space-3);
+    padding: calc(var(--di-space-2) + env(safe-area-inset-top)) var(--di-space-3) var(--di-space-2);
     background: linear-gradient(var(--di-scrim-strong), rgba(0, 0, 0, 0));
     pointer-events: none;
 }
@@ -49,7 +49,7 @@
     flex: 1;
     text-align: center;
     color: rgba(255, 255, 255, 0.75);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     letter-spacing: 0.06em;
     white-space: nowrap;
     overflow: hidden;
@@ -62,8 +62,8 @@
     background: var(--di-scrim);
     color: rgba(255, 255, 255, 0.8);
     border-radius: var(--di-radius-pill);
-    font-size: 13px;
-    padding: 6px 12px;
+    font-size: var(--di-text-3);
+    padding: var(--di-space-2) var(--di-space-3);
     cursor: pointer;
 }
 
@@ -80,8 +80,8 @@
     right: 0;
     z-index: 60;
     display: flex;
-    gap: 4px;
-    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    gap: var(--di-space-1);
+    padding: var(--di-space-2) var(--di-space-3) calc(var(--di-space-2) + env(safe-area-inset-bottom));
     background: var(--di-scrim-strong);
     border-top: 1px solid rgba(var(--di-cyan-rgb), 0.2);
     -webkit-backdrop-filter: blur(10px);
@@ -94,9 +94,9 @@
     border: 1px solid transparent;
     background: none;
     color: rgba(255, 255, 255, 0.55);
-    font-size: 11.5px;
+    font-size: var(--di-text-3);
     letter-spacing: 0.05em;
-    padding: 9px 2px;
+    padding: var(--di-space-2) var(--di-space-1);
     border-radius: var(--di-radius);
     cursor: pointer;
 }
@@ -126,9 +126,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 16px 8px;
+    padding: var(--di-space-3) var(--di-space-4) var(--di-space-2);
     color: var(--di-cyan);
-    font-size: 12px;
+    font-size: var(--di-text-3);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     border-bottom: 1px solid var(--di-line);
@@ -139,15 +139,15 @@
     background: none;
     border: none;
     color: rgba(255, 255, 255, 0.5);
-    font-size: 20px;
+    font-size: var(--di-text-6);
     line-height: 1;
     cursor: pointer;
-    padding: 0 4px;
+    padding: 0 var(--di-space-1);
 }
 
 .smb-sheet-body {
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 8px;
+    padding-bottom: var(--di-space-2);
 }
