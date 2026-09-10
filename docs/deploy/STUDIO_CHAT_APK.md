@@ -16,6 +16,8 @@ Nothing here is a second copy of the chat. Both routes open
 | `public/chat-sw.js` | network-first worker, scope `/chat` only |
 | `public/.well-known/assetlinks.json` | lets the APK own this origin — no address bar |
 
+The APK itself is deliberately absent from that list — see **Where the file lives**.
+
 The manifest link and the worker are registered by `src/chat/StudioChatSurface.jsx`
 and nowhere else. **Do not move either into `src/index.html`.** Site-wide, the
 browser would offer to install the whole platform under the chat's name, and the
@@ -75,6 +77,26 @@ Output: `app-release-signed.apk` (the file to hand out) and
 Bumping the version is `appVersionName` / `appVersionCode` in
 `twa-manifest.json` — raise the code by one for every build people install over.
 Answer its prompts by hand; piping `yes` into it writes "y" into the version name.
+
+### Where the file lives — NOT in public/
+
+For about an hour on 2026-09-10 the signed APK was tracked at
+`public/chat-app/di-studio-chat.apk`, which made it downloadable by anyone who
+guessed the path. The owner's correction: **the studio's app is not for
+everyone.** It is not in the repo and not on the web at all.
+
+The file lives on the console's host, at `CHAT_APK_PATH`
+(default `/var/lib/di-inner/di-studio-chat.apk`), and the inner console bot
+(`@the_di_studio_bot`, "di.net") uploads it to whoever asks — which, since the
+console answers the owner alone, means the owner. He forwards it to the people
+who should have it; in Telegram that is one tap, and it costs no second copy.
+
+```bash
+scp android-twa/app-release-signed.apk dii-vps:/var/lib/di-inner/di-studio-chat.apk
+```
+
+The manifest and icons under `public/chat-app/` stay public, because installing
+from the browser needs them and neither is the app.
 
 ### The staging twin
 
