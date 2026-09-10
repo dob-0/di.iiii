@@ -115,7 +115,7 @@
        nobody's measurement, which is exactly why nothing read them). The
        8 rungs below are the real distribution's own clusters, chosen so that
        every literal that snaps to one moves by at most 2px; see
-       docs/ai/sessions/feat-spine-rhythm.md for the full mapping and the
+       PROGRESS.md (2026-09-10) for the full mapping and the
        values that do not snap and stayed literal instead. */
     --di-space-1: 3px;
     --di-space-2: 7px;

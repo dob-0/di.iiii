@@ -450,7 +450,7 @@ app.use((req, res, next) => {
 // site already serves to anyone.
 //
 // wcc/ joined 2026-09-10, standing up the WCC landing as a `code` project in
-// its own space (docs/ai/sessions/feat-wcc-landing-project.md): its process
+// its own space (PROGRESS.md, 2026-09-10): its process
 // gallery loads thirty /wcc/process/*.jpeg photos into WebGL textures
 // (ProcessField.jsx useTexture), and a texture load is a CORS-mode fetch same
 // as the Draco decoder above — the /wcc route itself is not sandboxed and
