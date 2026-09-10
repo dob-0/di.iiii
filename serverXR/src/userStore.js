@@ -58,6 +58,15 @@ const findUserById = (id) => {
   return rowToUser(getDb().prepare('SELECT * FROM users WHERE id = ?').get(id))
 }
 
+// The same pair `upsertUser` keys on, read rather than written. Telegram's bot
+// half needs it to answer "is this person signed in, and to what" without
+// minting anything — a lookup is not a login.
+const findUserByProvider = (provider, providerId) => {
+  return rowToUser(getDb().prepare(
+    'SELECT * FROM users WHERE provider = ? AND provider_id = ?'
+  ).get(String(provider || ''), String(providerId || '')))
+}
+
 const listUsers = () => {
   return getDb().prepare('SELECT * FROM users ORDER BY created_at DESC').all().map(rowToUser)
 }
@@ -101,6 +110,7 @@ const bumpUserTokenVersion = (id) => {
 module.exports = {
   upsertUser,
   findUserById,
+  findUserByProvider,
   listUsers,
   setUserSpaces,
   setUserUnrestricted,

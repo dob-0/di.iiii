@@ -188,3 +188,94 @@ describe('registerAuthRoutes post-login redirect', () => {
     expect(await runCallback('/', null)).toBe('/?auth=ok')
   })
 })
+
+// ── the bot's read-only "who is this chat" ────────────────────────────────
+//
+// The floor under a Telegram person doing anything in di.iiii. It must answer
+// with the person's OWN scope and never mint anything — the whole reason the
+// bot can be trusted with it is that there is nothing here to steal.
+describe('POST /api/auth/telegram/whoami', () => {
+    const telegramConfig = (overrides = {}) => ({
+        ...baseConfig,
+        oauth: {
+            ...baseConfig.oauth,
+            telegram: { enabled: true, loginSecret: 'bot-secret', botUsername: 'diiii111bot', ...overrides }
+        }
+    })
+
+    function makePostRouter() {
+        const routes = {}
+        const record = (method) => (path, ...handlers) => { routes[`${method} ${path}`] = handlers }
+        return { routes, get: record('get'), post: record('post'), use: () => {} }
+    }
+
+    const handlerFor = ({ listSpaces, findUser } = {}) => {
+        const router = makePostRouter()
+        registerAuthRoutes(router, {
+            config: telegramConfig(),
+            createAuthSessionValue: vi.fn(),
+            setAuthSessionCookie: vi.fn(),
+            listSpaces,
+            findUser
+        })
+        return router.routes['post /api/auth/telegram/whoami'][0]
+    }
+
+    const call = async (handler, { secret = 'bot-secret', body = {} } = {}) => {
+        const res = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this }, json(payload) { this.body = payload; return this } }
+        await handler({ get: (name) => (name === 'x-telegram-login-secret' ? secret : undefined), body }, res, (e) => { throw e })
+        return res
+    }
+
+    it('refuses without the bot secret', async () => {
+        const res = await call(handlerFor(), { secret: 'wrong', body: { telegramId: '207260649' } })
+        expect(res.statusCode).toBe(401)
+    })
+
+    it('refuses a telegram id that is not a number', async () => {
+        // A caller inventing a provider_id is the one thing this boundary exists
+        // to stop; the login-link route refuses the same shape.
+        const res = await call(handlerFor(), { body: { telegramId: "1; drop" } })
+        expect(res.statusCode).toBe(400)
+    })
+
+    it('answers "not signed in" plainly, rather than as an error', async () => {
+        const res = await call(handlerFor({ findUser: () => null }), { body: { telegramId: '404404404' } })
+        expect(res.statusCode).toBe(200)
+        expect(res.body).toEqual({ bound: false })
+    })
+
+    it('answers with the person\u2019s own scope, and no credential', async () => {
+        const handler = handlerFor({
+            findUser: () => ({ id: 'u1', display_name: 'Gevorg', role: 'editor', spaces: ['dilijan', 'main'], isUnrestricted: false }),
+            listSpaces: async () => [{ id: 'dilijan', label: 'Dilijan' }, { id: 'main', label: 'The front room' }, { id: 'secret', label: 'Not theirs' }]
+        })
+        const res = await call(handler, { body: { telegramId: '207260649' } })
+        expect(res.body.bound).toBe(true)
+        expect(res.body.label).toBe('Gevorg')
+        expect(res.body.spaces.map((s) => s.id)).toEqual(['dilijan', 'main'])
+        expect(res.body.spaces[0].label).toBe('Dilijan')
+        // The whole point: nothing here can be used to act as this person.
+        expect(JSON.stringify(res.body)).not.toMatch(/token|secret|session/i)
+    })
+
+    it('does not print an estate for an unrestricted account', async () => {
+        const handler = handlerFor({
+            findUser: () => ({ id: 'u2', display_name: 'Owner', role: 'admin', spaces: [], isUnrestricted: true }),
+            listSpaces: async () => Array.from({ length: 40 }, (_, i) => ({ id: `s${i}`, label: `Space ${i}` }))
+        })
+        const res = await call(handler, { body: { telegramId: '1' } })
+        expect(res.body.everything).toBe(true)
+        expect(res.body.spaces).toEqual([])
+    })
+
+    it('still answers when the space store cannot be read', async () => {
+        // A label is a nicety; the ids are the answer.
+        const handler = handlerFor({
+            findUser: () => ({ id: 'u3', display_name: 'Someone', role: 'editor', spaces: ['dilijan'], isUnrestricted: false }),
+            listSpaces: async () => { throw new Error('disk gone') }
+        })
+        const res = await call(handler, { body: { telegramId: '2' } })
+        expect(res.body.spaces).toEqual([{ id: 'dilijan', label: null }])
+    })
+})

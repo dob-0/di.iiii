@@ -919,7 +919,9 @@ registerAuthRoutes(router, {
   setAuthSessionCookie,
   // OAuth callback = session upgrade: the old guest cookie is still on the
   // request, so the guest's sandbox can follow them (keep the room).
-  onSessionUpgrade: (req, user) => promoteGuestSandbox(readAuthSession(req), user.id)
+  onSessionUpgrade: (req, user) => promoteGuestSandbox(readAuthSession(req), user.id),
+  // Read-only, for the Telegram bot's "what can I open" answer.
+  listSpaces
 })
 
 router.get('/api/auth/session', async (req, res, next) => {
