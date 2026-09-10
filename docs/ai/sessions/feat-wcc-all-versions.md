@@ -143,3 +143,51 @@ clearly distinct from the live black `main` (white void, black/red beacon,
 same artist content) — not a near-duplicate of anything else in the space.
 `assets:audit --space wcc` — every referenced asset present on every project,
 including the two made this session.
+
+### A second pass, same brief, same worktree (appended, not overwritten)
+
+A second agent (this one) was working the *original* four-lead brief in this
+exact worktree/branch concurrently, without the "rooms" course-correction
+above — found this note already written, mid-session, via a duplicate
+`dob0-hub-portal-ring`/`prod-main-white-variant` pair it had built
+independently. Spot-verified the rooms conclusion above rather than repeating
+it: `gh pr view 310` confirms the merge commit and timestamp exactly; local
+and staging `/api/trash?space=wcc` both return `{"projects":[]}`; `git log
+--all -p` on the wcc paths turns up "room" only in unrelated commit-message
+prose and one SVG's base64 blob, never in an actual diff. Agrees: nothing
+recoverable survives for that lead.
+
+Rather than leave two redundant pairs, resolved what could be resolved
+unilaterally (own work only, nothing of the peer's touched or deleted):
+
+- **Trashed my own `prod-main-white-variant`** — a byte-for-byte-equivalent
+  copy of prod's document to `main-prod-white-variant` above; no way for one
+  to be more "correct" than the other, so keeping both added nothing.
+- **Kept and extended my own `dob0-hub-portal-ring` instead of trashing it**
+  — it now recreates *both* rings the source file actually had, not one:
+  the near `ZonePortal` ring (radius 23, click-to-enter `portal`/`gateway`
+  markers with billboarded artist names — matches the ring geometry, colour
+  and label styling in `ZonePortal`/`HubMarker` exactly) **and** the far
+  `ZoneGroup` ring (radius 38, `portal`/`embed` entities pulling in each
+  artist's real live content at the position their content actually rendered
+  at). `dob0-hub-and-ring` (the peer's) only has the far ring in embed mode;
+  mine is a strict superset. Screenshotted both — recommend keeping
+  `dob0-hub-portal-ring` and trashing `dob0-hub-and-ring`, but left the
+  peer's project untouched since it may still be in use.
+- Original PR #310/rooms git-history angle: also ran an independent, narrower
+  git sweep (every commit touching `src/wcc*`/`public/wcc*`/`spaces/wcc*` on
+  every reachable ref, plus `--diff-filter=D` for deletions) looking for any
+  DISTINCT visual version neither this note nor the two pre-existing Emily
+  projects cover. See the outer report for that sweep's result — nothing
+  beyond what's already named in this file and the two pre-existing Emily
+  projects.
+
+Current `wcc` project list after this pass (unchanged from the peer's,
+minus the one self-trashed duplicate): `main`, `emily-v1-framed-entry`,
+`emily-v2-arc-of-panels`, `dob0-hub-and-ring`, `dob0-hub-portal-ring`,
+`main-prod-white-variant`, plus the ten live artist projects and two
+landing/page snapshots from an unrelated concurrent session
+(`artists-works-page-snapshot`, `landing-page-snapshot`). `npm run lint` /
+`build` / `test` / `docs:ai:check` re-run clean after `npm ci` in both
+`.` and `serverXR/` (neither had `node_modules` in this worktree at session
+start).
