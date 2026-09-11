@@ -10,7 +10,7 @@
 // rather than assumed from the session's array — an unrestricted account reaches
 // every space without any of them being written down against it.
 
-const { canAccessSpace } = require('../authAccess')
+const { canAccessSpace, hasRequiredAuthRole } = require('../authAccess')
 const spaceChatStore = require('../spaceChatStore')
 
 const PREVIEW_MAX_LENGTH = 140
@@ -38,25 +38,36 @@ const registerChatRoutes = (router, { deps = {} } = {}) => {
         .filter((space) => space.kind !== 'sandbox')
         .filter((space) => canAccessSpace(authState, space.id))
 
-      const rooms = mine.map((space) => {
+      // An admin sees a second row per space: the staff room. It is listed only
+      // for somebody who can actually open it — a row that answers "the staff
+      // room is for admins" when tapped would be worse than no row.
+      const staffToo = hasRequiredAuthRole(authState.role, 'admin')
+
+      const rowFor = (space, channel) => {
         // One line each. `listRecent` is the same window the room replays from,
         // asked for its tail — no second table, no denormalised "last message"
         // column to keep in step with the one that already exists.
+        const storeKey = channel === 'staff' ? `${space.id}#staff` : space.id
         let last = null
         try {
-          last = store.listRecent(space.id, { limit: 1 })[0] || null
+          last = store.listRecent(storeKey, { limit: 1 })[0] || null
         } catch {
           // A room whose history cannot be read is still a room you can open.
           last = null
         }
         return {
           spaceId: space.id,
+          channel,
           label: space.label || space.id,
           lastText: last ? String(last.text || '').slice(0, PREVIEW_MAX_LENGTH) : null,
           lastBy: last ? last.userName || null : null,
           lastAt: last ? Number(last.timestamp) || null : null
         }
-      })
+      }
+
+      const rooms = mine.flatMap((space) => (
+        staffToo ? [rowFor(space, 'room'), rowFor(space, 'staff')] : [rowFor(space, 'room')]
+      ))
 
       // Rooms that have been spoken in first, most recent at the top; the silent
       // ones keep their own order underneath. A list sorted purely by name puts

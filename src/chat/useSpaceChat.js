@@ -48,7 +48,7 @@ const getOrCreateUserId = () => {
     return next
 }
 
-export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
+export default function useSpaceChat({ spaceId, displayName = '', channel = 'room' } = {}) {
     const localUserId = useMemo(() => getOrCreateUserId(), [])
     // The signed-in label wins. A room where everyone is Guest-C1B3 is not a
     // room anybody can talk in, and the session already knows who this is.
@@ -66,6 +66,13 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
     const [messages, setMessages] = useState([])
     const [people, setPeople] = useState([])
     const [canModerate, setCanModerate] = useState(false)
+    // Whether the SERVER has said yet. `canModerate` starts false because it
+    // has to start somewhere, and "not yet asked" is indistinguishable from
+    // "no" unless it is tracked separately — a distinction that cost the staff
+    // room its whole point on the first two-browser run: the surface demoted an
+    // admin back to the open room before the answer arrived, and a line meant
+    // for staff was written where everybody could read it.
+    const [moderationKnown, setModerationKnown] = useState(false)
     const [canPin, setCanPin] = useState(false)
     const [pinned, setPinned] = useState(null)
     // Who is mid-sentence, and when we last heard so. A typing signal has no
@@ -73,6 +80,7 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
     // it expires on a clock here instead of waiting for a message that may
     // never come.
     const [typingAt, setTypingAt] = useState({})
+    const [cleared, setCleared] = useState('')
     const [forbidden, setForbidden] = useState('')
 
     useEffect(() => {
@@ -84,9 +92,11 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
         setMessages([])
         setPeople([])
         setCanModerate(false)
+        setModerationKnown(false)
         setCanPin(false)
         setPinned(null)
         setTypingAt({})
+        setCleared('')
         setForbidden('')
 
         const hasWindow = typeof window !== 'undefined'
@@ -110,7 +120,8 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
                 spaceId,
                 userId: localUserId,
                 userName: resolvedName,
-                chat: true
+                chat: true,
+                channel
             })
         })
 
@@ -126,6 +137,7 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
                 self: message.userId === localUserId
             })).slice(-MAX_CHAT_MESSAGES))
             setCanModerate(Boolean(payload?.canModerate))
+            setModerationKnown(true)
             setCanPin(Boolean(payload?.canPin))
             setPinned(payload?.pinned || null)
         })
@@ -147,6 +159,12 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
                 if (payload?.id && current.some((message) => message.id === payload.id)) return current
                 return [...current, { ...payload, receivedAt: Date.now() }].slice(-MAX_CHAT_MESSAGES)
             })
+        })
+
+        socket.on('space-chat-cleared', (payload) => {
+            setMessages([])
+            setPinned(null)
+            setCleared(payload?.by ? `${payload.by} emptied this room` : 'this room was emptied')
         })
 
         socket.on('space-chat-removed', (payload) => {
@@ -187,7 +205,11 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
         socket.on('space-forbidden', (payload) => {
             setForbidden(payload?.message || 'This room is not open to you.')
         })
+        // A refusal is also an answer: it is the server saying no to this
+        // channel, and the surface must be free to act on it rather than wait
+        // for a history that will never come.
         socket.on('space-chat-forbidden', (payload) => {
+            setModerationKnown(true)
             setForbidden(payload?.message || 'Only an admin can remove messages.')
         })
 
@@ -196,7 +218,14 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
             socketRef.current = null
             socket.disconnect()
         }
-    }, [localUserId, resolvedName, spaceId])
+    }, [localUserId, resolvedName, spaceId, channel])
+
+    // Emptying the room. Admin only on the server; the interface asks for the
+    // space's name to be typed first, so it cannot happen by tapping a menu.
+    const clear = useCallback(() => {
+        if (!spaceId || !socketRef.current?.connected) return
+        socketRef.current.emit('space-chat-clear', { spaceId, channel })
+    }, [spaceId, channel])
 
     const send = useCallback((text, replyTo = null) => {
         const trimmed = String(text || '').trim()
@@ -207,6 +236,7 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
             : null
         socketRef.current.emit('space-chat-message', {
             spaceId,
+            channel,
             id,
             userId: localUserId,
             userName: resolvedName,
@@ -223,17 +253,17 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
             receivedAt: Date.now(),
             self: true
         }].slice(-MAX_CHAT_MESSAGES))
-    }, [localUserId, resolvedName, spaceId])
+    }, [localUserId, resolvedName, spaceId, channel])
 
     const pin = useCallback((id) => {
         if (!id || !spaceId || !socketRef.current?.connected) return
-        socketRef.current.emit('space-chat-pin', { spaceId, id })
-    }, [spaceId])
+        socketRef.current.emit('space-chat-pin', { spaceId, channel, id })
+    }, [spaceId, channel])
 
     const unpin = useCallback(() => {
         if (!spaceId || !socketRef.current?.connected) return
-        socketRef.current.emit('space-chat-unpin', { spaceId })
-    }, [spaceId])
+        socketRef.current.emit('space-chat-unpin', { spaceId, channel })
+    }, [spaceId, channel])
 
     // Called on every keystroke; the throttle is here so the socket is not, and
     // the server throttles again because a client is not to be trusted with it.
@@ -242,8 +272,8 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
         const now = Date.now()
         if (now - lastTypingSentRef.current < TYPING_SEND_INTERVAL_MS) return
         lastTypingSentRef.current = now
-        socketRef.current.emit('space-chat-typing', { spaceId })
-    }, [spaceId])
+        socketRef.current.emit('space-chat-typing', { spaceId, channel })
+    }, [spaceId, channel])
 
     // Expiry is a SWEEP rather than a filter at read time: one interval for the
     // whole room, running only while somebody is actually typing, and the list
@@ -266,20 +296,23 @@ export default function useSpaceChat({ spaceId, displayName = '' } = {}) {
 
     const remove = useCallback((id) => {
         if (!id || !spaceId || !socketRef.current?.connected) return
-        socketRef.current.emit('space-chat-remove', { spaceId, id })
-    }, [spaceId])
+        socketRef.current.emit('space-chat-remove', { spaceId, channel, id })
+    }, [spaceId, channel])
 
     return {
         connection,
         messages,
         people,
         canModerate,
+        moderationKnown,
         canPin,
         pinned,
+        cleared,
         typingNames,
         forbidden,
         send,
         remove,
+        clear,
         pin,
         unpin,
         notifyTyping,

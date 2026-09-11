@@ -57,9 +57,13 @@ export const getPrivateChatTarget = (location = null) => {
 
 export const buildChatHomePath = () => `/${CHAT_SEGMENT}`
 
-export const buildChatPath = (spaceId = '') => (
-    `/${CHAT_SEGMENT}/${spaceId || CHAT_HOME_SPACE_ID}`
-)
+export const buildChatPath = (spaceId = '', channel = 'room') => {
+    const base = `/${CHAT_SEGMENT}/${spaceId || CHAT_HOME_SPACE_ID}`
+    // The staff room is a QUERY on the room's address, not an address of its
+    // own: it is the same room's machinery with a different key, and a path
+    // that looked separate would invite somebody to share it as if it were.
+    return channel === 'staff' ? `${base}?c=staff` : base
+}
 
 export const buildPrivateChatPath = (userId, name = null) => {
     const params = new URLSearchParams({ with: String(userId) })
