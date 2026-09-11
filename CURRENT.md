@@ -13,8 +13,9 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the app opens on a list, not inside one room
-- where a window sits belongs to the person, and windows can fill the canvas
+- a skill that can actually drive this thing, gate and all
+- a space has two rooms, and an admin can empty either
+- walked iiii's private conversations as two people, and as a guest
 
 Full detail: `PROGRESS.md`.
 
