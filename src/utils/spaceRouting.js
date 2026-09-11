@@ -56,8 +56,24 @@ export const RESERVED_APP_SEGMENTS = [
     // installs to its phones. Checked before reserving: /serverXR/api/spaces/chat
     // answers 404 on prod and on staging, and a PRIVATE space would answer 401,
     // so nothing holds the word on either tier.
-    'chat'
+    'chat',
+    // The sign-in page — /login (SignInSurface in AuthGate.jsx). It was not a
+    // route at all: the address a teammate is sent to fell through to the space
+    // lookup and answered "Nothing lives at “login”" above a working form.
+    // Checked before reserving: /serverXR/api/spaces/login 404s on prod,
+    // staging and diiii.xyz.
+    'login'
 ]
+
+// /login, and only /login: a single segment, so a space called something else
+// can still have a page under it without being read as the sign-in page.
+export const SIGN_IN_SEGMENT = 'login'
+
+export const isSignInPath = (locationLike = null) => {
+    const pathname = stripAppBasePath(locationLike?.pathname || '/')
+    const segments = pathname.replace(/^\/+/, '').replace(/\/+$/, '').split('/').filter(Boolean)
+    return segments.length === 1 && segments[0] === SIGN_IN_SEGMENT
+}
 
 const getAppBasePrefix = () => (APP_BASE_PATH === '/' ? '' : APP_BASE_PATH)
 
