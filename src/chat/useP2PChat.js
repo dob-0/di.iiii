@@ -76,6 +76,11 @@ export default function useP2PChat({ withUserId, myAccountId }) {
     const [words, setWords] = useState(null)
     const [messages, setMessages] = useState([])
     const [problem, setProblem] = useState(null)
+    // Bumping this tears the whole connection down and builds a new one. A
+    // dropped conversation had no way back at all: the effect below only ever
+    // ran again when the PERSON changed, so "the connection dropped" was a
+    // dead end you could only leave by reloading the page.
+    const [attempt, setAttempt] = useState(0)
 
     const socketRef = useRef(null)
     const peerRef = useRef(null)
@@ -204,7 +209,12 @@ export default function useP2PChat({ withUserId, myAccountId }) {
             try {
                 const answer = await fetch(`/serverXR/api/dm/devices/${encodeURIComponent(withUserId)}`, { credentials: 'include' })
                 if (!answer.ok) {
-                    setProblem('That person cannot be reached from here — you may not share a space.')
+                    // 401 and 404 are different sentences. A guest following a
+                    // link was told they shared no space with the person, which
+                    // is not the reason and names no way forward.
+                    setProblem(answer.status === 401
+                        ? 'Sign in with an account to talk privately.'
+                        : 'That person cannot be reached from here — you may not share a space.')
                     setState('unreachable')
                     return
                 }
@@ -300,7 +310,26 @@ export default function useP2PChat({ withUserId, myAccountId }) {
             peerRef.current = null
             channelRef.current = null
         }
-    }, [withUserId, identity, myAccountId, myPublicKey, attachChannel])
+    }, [withUserId, identity, myAccountId, myPublicKey, attachChannel, attempt])
+
+    // Once, on its own, and then it is the person's call. The common case is
+    // that they refreshed or their laptop slept, and that repairs itself four
+    // seconds later; the rest of the time an endless retry would only redraw
+    // "finding them…" forever over a room nobody is in.
+    const autoRetried = useRef(false)
+    useEffect(() => { autoRetried.current = false }, [withUserId])
+    useEffect(() => {
+        if (!['closed', 'lost'].includes(state) || autoRetried.current) return undefined
+        autoRetried.current = true
+        const timer = setTimeout(() => setAttempt((n) => n + 1), 4000)
+        return () => clearTimeout(timer)
+    }, [state])
+
+    const retry = useCallback(() => {
+        autoRetried.current = true
+        setProblem(null)
+        setAttempt((n) => n + 1)
+    }, [])
 
     const send = useCallback(async (text, replyTo = null) => {
         const trimmed = String(text || '').trim()
@@ -336,5 +365,5 @@ export default function useP2PChat({ withUserId, myAccountId }) {
         setMessages([])
     }, [historyKey])
 
-    return { state, words, messages, problem, send, forget, forgetOne, myPublicKey }
+    return { state, words, messages, problem, send, forget, forgetOne, retry, myPublicKey }
 }

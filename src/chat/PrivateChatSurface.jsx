@@ -44,7 +44,7 @@ export default function PrivateChatSurface({ withUserId, withName = null }) {
     const [replyTo, setReplyTo] = useState(null)
     const [notice, setNotice] = useState('')
     const listRef = useRef(null)
-    const { state, words, messages, problem, send, forget, forgetOne } = useP2PChat({
+    const { state, words, messages, problem, send, forget, forgetOne, retry } = useP2PChat({
         withUserId,
         myAccountId: session.subject
     })
@@ -200,6 +200,23 @@ export default function PrivateChatSurface({ withUserId, withName = null }) {
                     {replyTo && (
                         <ReplyQuote name={replyTo.name} text={replyTo.text} onClear={() => setReplyTo(null)} />
                     )}
+                    {['closed', 'lost'].includes(state) && (
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                            {/* The header above already says which way it ended.
+                                Saying it twice reads as a stutter; what is missing
+                                from the header is the way back. */}
+                            <Typography
+                                component="button"
+                                onClick={retry}
+                                sx={{
+                                    background: 'none', border: '1px solid var(--ui-border)', borderRadius: 2,
+                                    px: 1.25, py: 0.5, cursor: 'pointer', fontSize: 12, color: 'var(--ui-accent)'
+                                }}
+                            >
+                                Try again
+                            </Typography>
+                        </Stack>
+                    )}
                     <Stack direction="row" spacing={1} alignItems="flex-end">
                         <InputBase
                             value={draft}
@@ -214,7 +231,16 @@ export default function PrivateChatSurface({ withUserId, withName = null }) {
                             maxRows={5}
                             sx={{
                                 flex: 1, px: 1.75, py: 1, fontSize: 14, borderRadius: 3,
-                                border: '1px solid var(--ui-border)', background: 'var(--ui-bg)', color: 'var(--ui-text-primary)'
+                                border: '1px solid var(--ui-border)', background: 'var(--ui-bg)', color: 'var(--ui-text-primary)',
+                                // A disabled field is painted with the browser's own
+                                // near-black disabled colour, which on this background is
+                                // no colour at all: the box read as broken rather than as
+                                // waiting, and the one line explaining why was invisible.
+                                '& .MuiInputBase-input::placeholder': { color: 'var(--ui-text-muted)', opacity: 1 },
+                                '& .MuiInputBase-input.Mui-disabled': {
+                                    WebkitTextFillColor: 'var(--ui-text-muted)',
+                                    opacity: 1
+                                }
                             }}
                         />
                         <IconButton

@@ -122,6 +122,7 @@ export default function ChatHomeSurface() {
     const [problem, setProblem] = useState('')
     const [picking, setPicking] = useState(false)
     const [people, setPeople] = useState(null)
+    const [peopleProblem, setPeopleProblem] = useState('')
     const [filter, setFilter] = useState('')
 
     const conversations = useMemo(() => listRememberedConversations(), [])
@@ -146,7 +147,12 @@ export default function ChatHomeSurface() {
         if (people) return
         try {
             const answer = await fetch('/serverXR/api/dm/people', { credentials: 'include' })
-            const body = answer.ok ? await answer.json() : { people: [] }
+            const body = await answer.json().catch(() => ({}))
+            // A guest asking this gets 401 with the real reason. Dropping it on
+            // the floor drew "nobody shares a space with you" over what is
+            // actually "you are not signed in" — the wrong door, and no way to
+            // guess the right one.
+            if (!answer.ok) setPeopleProblem(body.error || 'That list cannot be read right now.')
             setPeople(Array.isArray(body.people) ? body.people : [])
         } catch {
             setPeople([])
@@ -321,7 +327,7 @@ export default function ChatHomeSurface() {
                                     the same rule the server enforces on the key
                                     lookup. A name here that could not be reached
                                     would be a door drawn on a wall. */}
-                                Nobody yet. You can write to people who share a space with you.
+                                {peopleProblem || 'Nobody yet. You can write to people who share a space with you.'}
                             </Typography>
                         )}
                         {shown.map((person) => (
