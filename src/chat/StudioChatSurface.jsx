@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Badge, Box, Button, IconButton, InputBase, Snackbar, Stack, ThemeProvider, Tooltip, Typography } from '@mui/material'
+import { Badge, Box, Button, Dialog, IconButton, InputBase, Snackbar, Stack, ThemeProvider, Tooltip, Typography } from '@mui/material'
 import LockIcon from '@mui/icons-material/Lock'
 import CloseIcon from '@mui/icons-material/Close'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
 import IosShareIcon from '@mui/icons-material/IosShare'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import { diFontTheme } from '../styles/muiTheme.js'
@@ -67,6 +68,17 @@ const typingLine = (names) => {
 
 export default function StudioChatSurface({ spaceId = 'main' }) {
     const session = useAuthSession()
+    // Which of the space's two rooms. Kept in the address so a reload does not
+    // drop an admin back into the room everybody can read.
+    const [channel, setChannel] = useState(() => {
+        try {
+            return new URLSearchParams(window.location.search).get('c') === 'staff' ? 'staff' : 'room'
+        } catch {
+            return 'room'
+        }
+    })
+    const [emptying, setEmptying] = useState(false)
+    const [confirmWord, setConfirmWord] = useState('')
     const [nameDraft, setNameDraft] = useState('')
     const [draft, setDraft] = useState('')
     const [replyTo, setReplyTo] = useState(null)
@@ -82,12 +94,33 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
 
     const sessionName = String(session.label || '').trim()
     const {
-        connection, messages, people, canModerate, canPin, pinned, typingNames,
-        forbidden, send, remove, pin, unpin, notifyTyping, displayName
+        connection, messages, people, canModerate, moderationKnown, canPin, pinned, typingNames,
+        forbidden, cleared, send, remove, clear, pin, unpin, notifyTyping, displayName
     } = useSpaceChat({
         spaceId,
+        channel,
         displayName: sessionName || nameDraft
     })
+
+    const goToChannel = useCallback((next) => {
+        setChannel(next)
+        try {
+            const url = new URL(window.location.href)
+            if (next === 'staff') url.searchParams.set('c', 'staff')
+            else url.searchParams.delete('c')
+            window.history.replaceState({}, '', url.pathname + url.search)
+        } catch { /* an address that will not update still leaves the room right */ }
+    }, [])
+
+    // An admin who leaves a space stops being one; the staff room must not stay
+    // on screen because this tab was opened while they still were.
+    //
+    // Only once the SERVER has answered. `canModerate` is false until the first
+    // history lands, and acting on that false is what put a staff line in the
+    // open room the first time this was run with two browsers.
+    useEffect(() => {
+        if (channel === 'staff' && moderationKnown && !canModerate) goToChannel('room')
+    }, [channel, canModerate, moderationKnown, goToChannel])
 
     // Only ask for a name when the server does not already know one. A signed-in
     // studio member never sees this row.
@@ -299,9 +332,10 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
     // Being here IS reading it: the list's unread mark is "something arrived
     // since this device last had the room open", and the room is open now.
     useEffect(() => {
-        markRoomSeen(spaceId)
-        return () => markRoomSeen(spaceId)
-    }, [spaceId, messages.length])
+        const key = channel === 'staff' ? `${spaceId}#staff` : spaceId
+        markRoomSeen(key)
+        return () => markRoomSeen(key)
+    }, [spaceId, channel, messages.length])
 
     const typing = typingLine(typingNames)
 
@@ -341,11 +375,49 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography sx={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em' }}>
                             {spaceId === 'main' ? 'iiii' : `iiii · ${spaceId}`}
+                            {channel === 'staff' && (
+                                <Box component="span" sx={{ color: 'var(--ui-accent)', ml: 0.75, fontSize: 12 }}>staff</Box>
+                            )}
                         </Typography>
                         <Typography sx={{ fontSize: 12, color: forbidden ? 'var(--ui-danger)' : 'var(--ui-text-muted)' }}>
-                            {status}
+                            {cleared || status}
                         </Typography>
                     </Box>
+                    {/* Two rooms in one space, and the switch only exists for
+                        somebody who has both. The staff one is not hidden by
+                        the interface alone — the server never puts a
+                        non-admin's socket in it. */}
+                    {canModerate && (
+                        <Stack direction="row" sx={{ borderRadius: 4, border: '1px solid var(--ui-border)', overflow: 'hidden', mr: 0.5 }}>
+                            {[['room', 'Room'], ['staff', 'Staff']].map(([key, label]) => (
+                                <Box
+                                    key={key}
+                                    component="button"
+                                    onClick={() => goToChannel(key)}
+                                    sx={{
+                                        px: 1.25, py: 0.5, border: 0, cursor: 'pointer',
+                                        fontSize: 11, fontFamily: 'inherit',
+                                        background: channel === key ? 'var(--ui-accent)' : 'transparent',
+                                        color: channel === key ? 'var(--ui-bg)' : 'var(--ui-text-muted)'
+                                    }}
+                                >
+                                    {label}
+                                </Box>
+                            ))}
+                        </Stack>
+                    )}
+                    {canModerate && (
+                        <Tooltip title="Empty this room">
+                            <IconButton
+                                size="small"
+                                onClick={() => { setConfirmWord(''); setEmptying(true) }}
+                                aria-label="Empty this room"
+                                sx={{ color: 'var(--ui-text-muted)' }}
+                            >
+                                <DeleteSweepIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                        </Tooltip>
+                    )}
                     <Tooltip title="Share this room">
                         <IconButton size="small" onClick={shareRoom} sx={{ color: 'var(--ui-text-muted)' }} aria-label="Share this room">
                             <IosShareIcon sx={{ fontSize: 18 }} />
@@ -665,6 +737,53 @@ export default function StudioChatSurface({ spaceId = 'main' }) {
                         </IconButton>
                     </Stack>
                 </Box>
+
+                {/* Typing the space's own name is not security — a crafted
+                    client skips it — it is there so nobody empties a room by
+                    tapping the wrong line of a menu. There is no undo for this
+                    anywhere in the stack, and it takes everybody's words, not
+                    just the asker's. */}
+                <Dialog
+                    open={emptying}
+                    onClose={() => setEmptying(false)}
+                    fullWidth
+                    maxWidth="xs"
+                    slotProps={{ paper: { sx: { background: 'var(--ui-surface)', border: '1px solid var(--ui-border)', borderRadius: 3, p: 2 } } }}
+                >
+                    <Typography sx={{ fontSize: 15, fontWeight: 700, color: 'var(--ui-text-primary)', mb: 1 }}>
+                        Empty {channel === 'staff' ? 'the staff room' : 'this room'}?
+                    </Typography>
+                    <Typography sx={{ fontSize: 13, color: 'var(--ui-text-muted)', mb: 2 }}>
+                        Every line goes, for everybody, and nothing brings it back. Type
+                        <Box component="span" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700 }}> {spaceId} </Box>
+                        to confirm.
+                    </Typography>
+                    <InputBase
+                        value={confirmWord}
+                        onChange={(event) => setConfirmWord(event.target.value)}
+                        placeholder={spaceId}
+                        sx={{
+                            width: '100%', px: 1.5, py: 0.75, mb: 2, fontSize: 13, borderRadius: 2,
+                            border: '1px solid var(--ui-border)', color: 'var(--ui-text-primary)'
+                        }}
+                    />
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Button onClick={() => setEmptying(false)} sx={{ textTransform: 'none', color: 'var(--ui-text-muted)' }}>
+                            Keep it
+                        </Button>
+                        <Button
+                            disabled={confirmWord.trim() !== spaceId}
+                            onClick={() => { clear(); setEmptying(false) }}
+                            sx={{
+                                textTransform: 'none',
+                                color: 'var(--ui-danger)',
+                                '&.Mui-disabled': { color: 'var(--ui-border)' }
+                            }}
+                        >
+                            Empty it
+                        </Button>
+                    </Stack>
+                </Dialog>
 
                 <Snackbar
                     open={Boolean(notice)}

@@ -26,7 +26,7 @@ import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
-import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 import ReservedAddressCard, { hasReservedAddressCard } from './components/ReservedAddressCard.jsx'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
@@ -72,6 +72,7 @@ const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
 // their eager bundle (2026-07-17 perf audit).
 import { OUT_OF_SCOPE_EXPLAIN } from './components/authGateScope.js'
 const AuthGate = lazy(() => import('./components/AuthGate.jsx'))
+const SignInSurface = lazy(() => import('./components/AuthGate.jsx').then((m) => ({ default: m.SignInSurface })))
 
 function ProtectedSurface({ children, requiredSpaceId = null, showAccountButton = true, outOfScopeBehavior, outOfScopeMessage = null }) {
     return (
@@ -387,6 +388,15 @@ function AppRouter() {
     // to the studio's room — got the room drawn in full with one red line in the
     // header, which reads as a broken chat rather than as somebody else's door.
     // The gate's own words are the editor's, so the room says its own.
+    // `/login` is a place, not a mistyped space. See SignInSurface.
+    if (isSignInPath(location)) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <SignInSurface />
+            </Suspense>
+        )
+    }
+
     if (chatState.isChat) {
         // The list and a private conversation are BOTH at /chat, and neither
         // belongs to one space — the list draws whatever rooms this account

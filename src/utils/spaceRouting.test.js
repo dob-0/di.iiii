@@ -10,7 +10,8 @@ import {
     getAppLocationState,
     getBareReservedSegment,
     isProjectToolSegment,
-    isReservedAppSegment
+    isReservedAppSegment,
+    isSignInPath
 } from './spaceRouting.js'
 
 describe('spaceRouting', () => {
@@ -239,5 +240,27 @@ describe('a space\'s contents address', () => {
     it('claims the two-segment shape only', () => {
         expect(getAppLocationState(at('/wcc/projects/alla')).page).not.toBe(APP_PAGE_SPACE_CONTENTS)
         expect(getAppLocationState(at('/wcc/studio/projects/alla')).page).not.toBe(APP_PAGE_SPACE_CONTENTS)
+    })
+})
+
+// `/login` was never a route: the address a teammate is SENT to fell through to
+// the space lookup and answered "Nothing lives at “login” — there is no space
+// with that address" above a sign-in form that worked. Walked as a guest,
+// 2026-09-11.
+describe('the sign-in address', () => {
+    it('claims /login, with or without a trailing slash', () => {
+        expect(isSignInPath({ pathname: '/login' })).toBe(true)
+        expect(isSignInPath({ pathname: '/login/' })).toBe(true)
+    })
+
+    it('claims nothing else — a space may still have a page under that word', () => {
+        expect(isSignInPath({ pathname: '/' })).toBe(false)
+        expect(isSignInPath({ pathname: '/main/login' })).toBe(false)
+        expect(isSignInPath({ pathname: '/login/extra' })).toBe(false)
+        expect(isSignInPath({ pathname: '/logins' })).toBe(false)
+    })
+
+    it('is reserved, so no space or project can shadow it', () => {
+        expect(isReservedAppSegment('login')).toBe(true)
     })
 })

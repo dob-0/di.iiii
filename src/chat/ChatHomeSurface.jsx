@@ -7,6 +7,7 @@ import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import LockIcon from '@mui/icons-material/Lock'
 import GroupsIcon from '@mui/icons-material/Groups'
+import ShieldIcon from '@mui/icons-material/ShieldOutlined'
 import { diFontTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import { appNavigate } from '../utils/appNavigate.js'
@@ -121,6 +122,7 @@ export default function ChatHomeSurface() {
     const [problem, setProblem] = useState('')
     const [picking, setPicking] = useState(false)
     const [people, setPeople] = useState(null)
+    const [peopleProblem, setPeopleProblem] = useState('')
     const [filter, setFilter] = useState('')
 
     const conversations = useMemo(() => listRememberedConversations(), [])
@@ -145,7 +147,12 @@ export default function ChatHomeSurface() {
         if (people) return
         try {
             const answer = await fetch('/serverXR/api/dm/people', { credentials: 'include' })
-            const body = answer.ok ? await answer.json() : { people: [] }
+            const body = await answer.json().catch(() => ({}))
+            // A guest asking this gets 401 with the real reason. Dropping it on
+            // the floor drew "nobody shares a space with you" over what is
+            // actually "you are not signed in" — the wrong door, and no way to
+            // guess the right one.
+            if (!answer.ok) setPeopleProblem(body.error || 'That list cannot be read right now.')
             setPeople(Array.isArray(body.people) ? body.people : [])
         } catch {
             setPeople([])
@@ -235,18 +242,26 @@ export default function ChatHomeSurface() {
 
                     <List disablePadding>
                         {!loading && rooms.map((room) => {
-                            const unread = Boolean(room.lastAt) && room.lastAt > readRoomSeen(room.spaceId)
+                            const staff = room.channel === 'staff'
+                            const seenKey = staff ? `${room.spaceId}#staff` : room.spaceId
+                            const unread = Boolean(room.lastAt) && room.lastAt > readRoomSeen(seenKey)
                             return (
                                 <Row
-                                    key={room.spaceId}
-                                    onClick={() => appNavigate(buildChatPath(room.spaceId))}
-                                    avatar={<Avatar label={room.label}><GroupsIcon sx={{ fontSize: 18 }} /></Avatar>}
-                                    title={room.label}
+                                    key={`${room.spaceId}:${room.channel || 'room'}`}
+                                    onClick={() => appNavigate(buildChatPath(room.spaceId, room.channel))}
+                                    avatar={(
+                                        <Avatar label={room.label} tone={staff ? 'var(--ui-accent)' : 'var(--ui-border)'}>
+                                            {staff
+                                                ? <ShieldIcon sx={{ fontSize: 18 }} />
+                                                : <GroupsIcon sx={{ fontSize: 18 }} />}
+                                        </Avatar>
+                                    )}
+                                    title={staff ? `${room.label} · staff` : room.label}
                                     meta={when(room.lastAt)}
                                     unread={unread}
                                     subtitle={room.lastText
                                         ? `${room.lastBy ? `${room.lastBy}: ` : ''}${room.lastText}`
-                                        : 'nothing said here yet'}
+                                        : staff ? 'admins of this space only' : 'nothing said here yet'}
                                 />
                             )
                         })}
@@ -312,7 +327,7 @@ export default function ChatHomeSurface() {
                                     the same rule the server enforces on the key
                                     lookup. A name here that could not be reached
                                     would be a door drawn on a wall. */}
-                                Nobody yet. You can write to people who share a space with you.
+                                {peopleProblem || 'Nobody yet. You can write to people who share a space with you.'}
                             </Typography>
                         )}
                         {shown.map((person) => (

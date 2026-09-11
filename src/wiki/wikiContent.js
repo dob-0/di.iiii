@@ -415,15 +415,16 @@ export const WIKI_ARTICLES = [
         body: [
             'Add an agent node from the palette. It opens as a chat window: type, and Claude answers in a live stream, right there on the canvas. Conversations are saved to your account — reopen the node and the chat is still there.',
             'On your own machine — meaning a di.iiii you run locally (`di up` in its ordinary mode, or the dev server), not the hosted site and not the docker container, which cannot see programs on the host — if Claude Code is installed and logged in (a Claude Pro/Max subscription), the node just works — no API key at all: di.iiii talks to your local Claude, and conversations continue across sessions. Otherwise it runs on the Claude API key connected to your account, and the node itself asks for it: paste the key straight into the panel (or sign in first, if you are a guest) — no detour through settings. Keys stay on the server: the browser never talks to Anthropic directly, and nobody else can use yours.',
-            'No internet at all — a festival, a venue with power and nothing else? If the local install names a model on the same machine (LLM_BASE_URL in ~/.di/di.env pointing at a llama.cpp or Ollama server, LLM_MODEL naming the model), the node answers from that model when no key is connected, and switches to it mid-conversation when Claude cannot be reached. The panel names the model that answered.',
+            'No internet at all — a festival, a venue with power and nothing else? Run `di keeper get` once, while you still have wifi: it fetches a small model (granite-4.0-h-1b, about 900 MB, Apache-2.0) and the llama.cpp build that runs it, onto your own machine. After that the node answers from that model when no key is connected, and switches to it mid-conversation when Claude cannot be reached. The panel names the model that answered. If you would rather run your own model, point LLM_BASE_URL in ~/.di/di.env at any llama.cpp, LM Studio or Ollama server instead — di.iiii asks whatever is named there.',
+            'The keeper is deliberately small. It answers a question in a couple of seconds on a laptop with no GPU, and it knows nothing about your spaces or about di.iiii itself — it is the model that is THERE, not the model that writes your show.',
             { list: [
                 'Each agent node holds its own conversation — place several for parallel topics.',
                 'Replies stream token by token; usage (tokens in/out) is recorded per turn on your account.',
                 'With a key connected, costs go to your own Anthropic account, with a per-reply cap and a rate limit as guardrails. A local Claude runs on its subscription, and a model on the box costs nothing and needs no key — it costs the machine instead, so a small model on a laptop is slow rather than free.'
             ] }
         ],
-        tags: ['ai', 'claude', 'chat', 'raw', 'agent', 'node', 'local', 'offline'],
-        updated: '2026-09-06'
+        tags: ['ai', 'claude', 'chat', 'raw', 'agent', 'node', 'local', 'offline', 'keeper'],
+        updated: '2026-09-11'
     },
     {
         id: 'publishing',
@@ -1105,7 +1106,7 @@ export const WIKI_ARTICLES = [
             'A file remembers which di.iiii wrote it. An older file opens normally. A file written by a NEWER di.iiii is refused, with the reason, rather than opened halfway — because a half-opened file does not look broken, it looks fine and is quietly wrong.',
             'What arrives is di.iiii itself, plus the two exhibitions that live inside it — WCC at /wcc and algovrithm at /algovrithm — so they open on your machine with no internet, exactly as they do online. That is most of the download: di.iiii the program is about 15 MB, their video and photogrammetry are the rest. Your own spaces start empty and fill with your work; theirs are simply there to walk into.',
             'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one. Nothing is sent anywhere: the one outbound request is a version check, at most once a day, which gives up after three seconds and never blocks anything — and the page loads no fonts or scripts from anywhere else, down to the 3D text labels, whose font ships with the install.',
-            'A local di.iiii wears a green border and a small LOCAL badge in the corner, with the address it is answering on. staging.di-studio.xyz wears an amber one. The live site wears nothing — so if there is no border, you are on di-studio.xyz and anyone can see what you do next. It is there because two di.iiii that look identical are two di.iiii you will eventually confuse.',
+            'A local di.iiii wears a green border and a small LOCAL badge in the corner, with the address it is answering on. The second tier wears an amber one — DEV at dev.diiii.xyz, STAGING at staging.di-studio.xyz, the same tier under either name. The live site wears nothing — so if there is no border, you are on diiii.xyz and anyone can see what you do next. It is there because two di.iiii that look identical are two di.iiii you will eventually confuse.',
             'Your work lives in a folder called .di in your home directory, deliberately kept apart from the app itself — so updating, rolling back, or removing di.iiii cannot touch it. di uninstall says as much, and leaves your spaces where they are.',
             { list: [
                 'di new NAME — start a new space',
@@ -1184,7 +1185,7 @@ export const WIKI_ARTICLES = [
             'Add a Keeper from the palette (category Agent) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
             'The Keeper is pointed at an endpoint rather than signed in to an account. You give it a URL and a model name; nothing runs as you, and no key is stored. That means it works with a model on your own machine, and it works with no internet at all — which is the situation it was built for.',
             { list: [
-                'Endpoint — a chat URL. A bare host is enough: http://127.0.0.1:8090 is where llama.cpp and LM Studio answer, http://localhost:11434 is Ollama, and the node completes either for you — Ollama\'s chat path is tried first and the OpenAI-style one second, so you never have to know which kind of box it is. Anything with a path is used as given.',
+                'Endpoint — a chat URL. A bare host is enough: http://127.0.0.1:8099 is the keeper that `di keeper get` puts on this machine, http://127.0.0.1:8090 is where a llama.cpp or LM Studio you started yourself answers, http://localhost:11434 is Ollama, and the node completes either for you — Ollama\'s chat path is tried first and the OpenAI-style one second, so you never have to know which kind of box it is. Anything with a path is used as given.',
                 'Model — the model name that server knows, for example qwen3.',
                 'System — an optional instruction that shapes every answer.'
             ] },
@@ -1193,7 +1194,7 @@ export const WIKI_ARTICLES = [
             'If the keeper cannot be reached the node says so. A browser will also refuse a call to a local model that has not been told to allow this page, so a model box may need its allowed origins set before it will answer.'
         ],
         tags: ['raw', 'nodes', 'keeper', 'agent', 'llm', 'local', 'offline', 'ollama', 'llama.cpp'],
-        updated: '2026-09-06'
+        updated: '2026-09-11'
     },
     {
         id: 'the-toybox',

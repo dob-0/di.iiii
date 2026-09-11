@@ -33,6 +33,24 @@ const CHAT_IDENTITY_MAX_LENGTH = 64
 // megabyte at every reconnect.
 const SPACE_CHAT_KEEP = 500
 const SPACE_CHAT_REPLAY = 100
+// A space has two rooms: the one everybody in it can open, and a staff room only
+// an admin can. They are the SAME machinery — same store, same tools, same
+// caps — separated by one key, because two chat implementations is how the two
+// slowly stop behaving the same way.
+//
+// The staff room's key can never collide with a real space id: `#` is not a
+// legal character in one (see normalizeSpaceId), so `main#staff` is reachable
+// only through this code path.
+const STAFF_CHANNEL = 'staff'
+const chatChannelOf = (value) => (String(value || '') === STAFF_CHANNEL ? STAFF_CHANNEL : 'room')
+const chatStoreKey = (spaceId, channel) => (
+  chatChannelOf(channel) === STAFF_CHANNEL ? `${spaceId}#${STAFF_CHANNEL}` : String(spaceId)
+)
+// Two socket rooms, so a message in the staff room is not merely hidden by the
+// interface — it is never sent to a socket that has no business receiving it.
+const chatSocketRoom = (spaceId, channel) => (
+  chatChannelOf(channel) === STAFF_CHANNEL ? `staff-${spaceId}` : `space-${spaceId}`
+)
 // A quote is a reminder of what is being answered, not a second copy of it.
 const SPACE_CHAT_REPLY_QUOTE_MAX = 160
 // "Someone is typing" repeats while a sentence is written; once a second is
@@ -298,11 +316,11 @@ function initializeSocket(httpServer, config) {
   // Chat history is a convenience, never a precondition: a server whose DB is
   // not open (unit harnesses, a half-booted install) must still carry live
   // messages exactly the way project chat does, rather than refusing to join.
-  const readSpaceChatHistory = (spaceId) => {
+  const readSpaceChatHistory = (storeKey) => {
     try {
-      return spaceChatStore.listRecent(spaceId, { limit: SPACE_CHAT_REPLAY })
+      return spaceChatStore.listRecent(storeKey, { limit: SPACE_CHAT_REPLAY })
     } catch (error) {
-      logger.error(`[Socket] Could not read space chat history for ${spaceId}:`, error)
+      logger.error(`[Socket] Could not read space chat history for ${storeKey}:`, error)
       return []
     }
   }
@@ -415,7 +433,7 @@ function initializeSocket(httpServer, config) {
 
     // User joins a space
     socket.on('join-space', (data) => {
-      const { spaceId, userId, userName, chat } = data || {}
+      const { spaceId, userId, userName, chat, channel } = data || {}
       if (!spaceId) return
       if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) {
         socket.emit('space-forbidden', {
@@ -446,15 +464,28 @@ function initializeSocket(httpServer, config) {
       // room for ops and cursors and has no use for a hundred chat lines on
       // every reconnect. Only a client that says `chat: true` gets the replay.
       if (chat) {
+        const wanted = chatChannelOf(channel)
+        // The staff room is not merely hidden from a non-admin: the socket is
+        // never put in it, so nothing said there can reach this connection even
+        // if the client asks for it by name.
+        if (wanted === STAFF_CHANNEL && !canModerateSpaceChat(socket)) {
+          socket.emit('space-chat-forbidden', {
+            spaceId,
+            message: 'The staff room is for admins of this space.'
+          })
+          return
+        }
+        if (wanted === STAFF_CHANNEL) socket.join(chatSocketRoom(spaceId, STAFF_CHANNEL))
         socket.emit('space-chat-history', {
           spaceId,
-          messages: readSpaceChatHistory(spaceId),
+          channel: wanted,
+          messages: readSpaceChatHistory(chatStoreKey(spaceId, wanted)),
           canModerate: canModerateSpaceChat(socket),
           // Pinning is for people the room can name. A guest is a browser that
           // will be gone tomorrow, and one line at the top of the room for
           // everybody is not a thing an anonymous visitor gets to set.
           canPin: Boolean(socketAccountId(socket)),
-          pinned: readSpacePin(spaceId)
+          pinned: readSpacePin(chatStoreKey(spaceId, wanted))
         })
       }
     })
@@ -687,10 +718,19 @@ function initializeSocket(httpServer, config) {
     // matter which project they have open. Unlike project chat it IS persisted
     // (spaceChatStore), so somebody arriving late reads what they missed.
     socket.on('space-chat-message', async (data) => {
-      const { spaceId, text, userId, userName, id, replyTo } = data || {}
+      const { spaceId, text, userId, userName, id, replyTo, channel } = data || {}
       if (!spaceId) return
       const trimmed = String(text || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH)
       if (!trimmed) return
+
+      const wanted = chatChannelOf(channel)
+      if (wanted === STAFF_CHANNEL && !canModerateSpaceChat(socket)) {
+        socket.emit('space-chat-forbidden', {
+          spaceId,
+          message: 'The staff room is for admins of this space.'
+        })
+        return
+      }
 
       // One flood budget per socket, shared with project chat: the limit is on
       // the person, not on which of the two boxes they type into.
@@ -737,13 +777,14 @@ function initializeSocket(httpServer, config) {
         socketId: socket.id,
         text: trimmed,
         timestamp: now,
+        channel: wanted,
         ...(quoted ? { replyTo: quoted } : {})
       }
 
       try {
         spaceChatStore.appendMessage({
           id: message.id,
-          spaceId,
+          spaceId: chatStoreKey(spaceId, wanted),
           userId: message.userId,
           userName: message.userName,
           accountId: socketAccountId(socket),
@@ -757,14 +798,14 @@ function initializeSocket(httpServer, config) {
         logger.error(`[Socket] Could not persist space chat line for ${spaceId}:`, error)
       }
 
-      socket.to(`space-${spaceId}`).emit('space-chat-message', { ...message, spaceId })
+      socket.to(chatSocketRoom(spaceId, wanted)).emit('space-chat-message', { ...message, spaceId })
     })
 
     // The adult's eraser. Admin-only on purpose (camp guests are editors), and
     // it goes to the whole room INCLUDING the sender so every open screen drops
     // the line at once, not just on next reload.
     socket.on('space-chat-remove', (data) => {
-      const { spaceId, id } = data || {}
+      const { spaceId, id, channel } = data || {}
       if (!spaceId || !id) return
       if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) {
         socket.emit('space-forbidden', {
@@ -780,7 +821,8 @@ function initializeSocket(httpServer, config) {
       // with, which is a courtesy rather than a wall: anybody already inside
       // the room could claim it. The wall that matters is the admin one, and it
       // is unchanged.
-      if (!canModerateSpaceChat(socket) && !ownsSpaceChatLine(socket, spaceId, id)) {
+      const removingFrom = chatStoreKey(spaceId, channel)
+      if (!canModerateSpaceChat(socket) && !ownsSpaceChatLine(socket, removingFrom, id)) {
         socket.emit('space-chat-forbidden', {
           spaceId,
           message: 'You can remove your own messages; an admin can remove any.'
@@ -788,7 +830,7 @@ function initializeSocket(httpServer, config) {
         return
       }
       try {
-        spaceChatStore.removeMessage(spaceId, id)
+        spaceChatStore.removeMessage(removingFrom, id)
       } catch (error) {
         logger.error(`[Socket] Could not remove space chat line ${id} in ${spaceId}:`, error)
         socket.emit('server-error', {
@@ -798,13 +840,15 @@ function initializeSocket(httpServer, config) {
         return
       }
       logger.info(`[Socket] Space chat line ${id} removed from ${spaceId} by ${socket.id}`)
-      io.to(`space-${spaceId}`).emit('space-chat-removed', { spaceId, id: String(id) })
+      io.to(chatSocketRoom(spaceId, channel)).emit('space-chat-removed', {
+        spaceId, channel: chatChannelOf(channel), id: String(id)
+      })
     })
 
     // One line at the top of the room. Telegram's pin, minus the list of them:
     // a room with nine pins has none, because nobody reads a stack.
     socket.on('space-chat-pin', (data) => {
-      const { spaceId, id } = data || {}
+      const { spaceId, id, channel } = data || {}
       if (!spaceId || !id) return
       if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) {
         socket.emit('space-forbidden', { spaceId, message: 'Space access denied.' })
@@ -819,7 +863,7 @@ function initializeSocket(httpServer, config) {
       }
       let pinned = null
       try {
-        pinned = spaceChatStore.setPin(spaceId, {
+        pinned = spaceChatStore.setPin(chatStoreKey(spaceId, channel), {
           messageId: String(id),
           pinnedBy: socketAccountId(socket),
           pinnedByName: socket.data?.chatUserName || ''
@@ -829,21 +873,25 @@ function initializeSocket(httpServer, config) {
         return
       }
       if (!pinned) return
-      io.to(`space-${spaceId}`).emit('space-chat-pinned', { spaceId, pinned })
+      io.to(chatSocketRoom(spaceId, channel)).emit('space-chat-pinned', {
+        spaceId, channel: chatChannelOf(channel), pinned
+      })
     })
 
     socket.on('space-chat-unpin', (data) => {
-      const { spaceId } = data || {}
+      const { spaceId, channel } = data || {}
       if (!spaceId) return
       if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) return
       if (!socketAccountId(socket)) return
       try {
-        spaceChatStore.clearPin(spaceId)
+        spaceChatStore.clearPin(chatStoreKey(spaceId, channel))
       } catch (error) {
         logger.error(`[Socket] Could not unpin in ${spaceId}:`, error)
         return
       }
-      io.to(`space-${spaceId}`).emit('space-chat-pinned', { spaceId, pinned: null })
+      io.to(chatSocketRoom(spaceId, channel)).emit('space-chat-pinned', {
+        spaceId, channel: chatChannelOf(channel), pinned: null
+      })
     })
 
     // Typing is the one live signal worth carrying and the one that must never
@@ -851,17 +899,58 @@ function initializeSocket(httpServer, config) {
     // and stored nowhere. It also stays inside the flood budget's spirit by
     // being cheap — no disk, no history, no fan-out beyond the room.
     socket.on('space-chat-typing', (data) => {
-      const { spaceId } = data || {}
+      const { spaceId, channel } = data || {}
       if (!spaceId) return
       if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) return
       const now = Date.now()
       if (now - (socket.data.lastTypingAt || 0) < SPACE_CHAT_TYPING_MIN_INTERVAL_MS) return
       socket.data.lastTypingAt = now
-      socket.to(`space-${spaceId}`).emit('space-chat-typing', {
+      socket.to(chatSocketRoom(spaceId, channel)).emit('space-chat-typing', {
         spaceId,
+        channel: chatChannelOf(channel),
         userId: socket.data?.chatUserId || socket.id,
         userName: socket.data?.chatUserName || '',
         timestamp: now
+      })
+    })
+
+    // Emptying a room. The end of a camp, the end of a job — a real need, and
+    // the most destructive thing this wire carries: it takes everybody's words,
+    // not just the asker's, and there is no undo anywhere in the stack.
+    //
+    // So: admin only, said out loud to the whole room rather than done quietly,
+    // and the client asks for the space's own id to be typed before it will
+    // send this. That last part is not security — a crafted client skips it —
+    // it is there so nobody empties a room by tapping the wrong line of a menu.
+    socket.on('space-chat-clear', (data) => {
+      const { spaceId, channel } = data || {}
+      if (!spaceId) return
+      if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) {
+        socket.emit('space-forbidden', { spaceId, message: 'Space access denied.' })
+        return
+      }
+      if (!canModerateSpaceChat(socket)) {
+        socket.emit('space-chat-forbidden', {
+          spaceId,
+          message: 'Only an admin can empty a room.'
+        })
+        return
+      }
+      const storeKey = chatStoreKey(spaceId, channel)
+      let removed = 0
+      try {
+        removed = spaceChatStore.clearSpace(storeKey)
+      } catch (error) {
+        logger.error(`[Socket] Could not clear the room ${storeKey}:`, error)
+        socket.emit('server-error', { spaceId, message: 'Unable to empty that room.' })
+        return
+      }
+      logger.warn(`[Socket] Room ${storeKey} emptied by ${socket.id} — ${removed} lines gone`)
+      io.to(chatSocketRoom(spaceId, channel)).emit('space-chat-cleared', {
+        spaceId,
+        channel: chatChannelOf(channel),
+        removed,
+        by: socket.data?.chatUserName || 'an admin'
       })
     })
 
@@ -945,5 +1034,9 @@ module.exports = {
   projectConnections,
   getSocketPath,
   applyFreshDbIdentity,
-  wroteSpaceChatLine
+  wroteSpaceChatLine,
+  chatChannelOf,
+  chatStoreKey,
+  chatSocketRoom,
+  STAFF_CHANNEL
 }

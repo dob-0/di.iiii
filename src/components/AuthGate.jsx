@@ -1,5 +1,5 @@
 import { Box, Button, CircularProgress, Divider, Link, Stack, TextField, ThemeProvider, Typography } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { diFontTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpacePublicFlag from '../hooks/useSpacePublicFlag.js'
@@ -551,6 +551,85 @@ function AuthGateInner({
                 ) : null}
             </Stack>
         </Box>
+    )
+}
+
+// `/login` — the address a person is SENT to, by a teammate or by the bot.
+//
+// It was never a route. It fell through to the space lookup, found no space
+// called "login", and answered "Nothing lives at “login” — there is no space
+// with that address" with the sign-in form underneath it. The form worked; the
+// sentence above it told you that you were in the wrong place, which is the
+// one thing a sign-in page must never say.
+//
+// Its own surface rather than a branch inside the gate, because nothing here is
+// being gated: there is no space to be in scope for, and a person who is
+// already signed in has simply arrived somewhere they do not need.
+function SignInSurfaceInner() {
+    const authSession = useAuthSession()
+    const { refresh, loading, type } = authSession
+    const [providers, setProviders] = useState(null)
+
+    useEffect(() => {
+        getApiAuthProviders()
+            .then(setProviders)
+            .catch(() => setProviders({ github: false, google: false }))
+    }, [])
+
+    const signedIn = authSession.authenticated && type !== 'guest'
+
+    // Arriving already signed in and signing in HERE are different moments. The
+    // first is somebody following a link they did not need, and a redirect would
+    // yank them out of it; the second is a person who has just typed a password
+    // and is owed the door, not a second button.
+    //
+    // Keyed on "a door on THIS page was used", not on watching the session flip:
+    // the session resolves a beat after the first render, so watching it reads
+    // every arrival as a fresh sign-in — measured, it redirected on load.
+    const triedHere = useRef(false)
+    const afterAttempt = useCallback(() => { triedHere.current = true; refresh?.() }, [refresh])
+    useEffect(() => {
+        if (!loading && signedIn && triedHere.current) appNavigate('/')
+    }, [loading, signedIn])
+
+    if (loading) return <LoadingScreen label="Loading" detail="Checking your session" />
+
+    return (
+        <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
+            <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
+                <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
+                    di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
+                </Typography>
+                {signedIn ? (
+                    <>
+                        <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                            You are signed in as {authSession.label || 'yourself'}.
+                        </Typography>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => appNavigate('/')}
+                            sx={{ textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)' }}
+                        >
+                            Go in
+                        </Button>
+                        <AccountButton authState={authSession} onLogout={refresh} />
+                    </>
+                ) : (
+                    // The form titles itself "Sign in"; a sentence above saying
+                    // the same thing is the third line in a row that does.
+                    <ProviderSignInButtons providers={providers} refresh={afterAttempt} />
+                )}
+            </Stack>
+        </Box>
+    )
+}
+
+export function SignInSurface() {
+    return (
+        <ThemeProvider theme={diFontTheme}>
+            <SignInSurfaceInner />
+        </ThemeProvider>
     )
 }
 

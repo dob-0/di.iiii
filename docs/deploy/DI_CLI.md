@@ -28,8 +28,45 @@ di spaces      what is in this di.iiii
 di backup      write your whole di.iiii to one file
 di update      get the newest — never touches your work
 di doctor      what this machine can and cannot do
+di keeper get  a small model on this machine — works with no internet
 di help        the rest
 ```
+
+## The keeper — a model that comes with it
+
+`di keeper get` fetches **granite-4.0-h-1b** (Q4_K_M, 901 MB, Apache-2.0) and
+llama.cpp's own CPU build for this platform (11–17 MB), puts both under
+`~/.di/keeper/`, and writes `LLM_BASE_URL=http://127.0.0.1:8099` into `di.env`.
+After that, the agent node answers from the machine when no Claude key is
+connected and when the internet is gone — which at a venue is most of the time.
+`di up` starts it whenever it is present, loopback-only even under `--lan`;
+`di down` stops it; `di keeper status` says whether it is answering;
+`di keeper remove` takes it off.
+
+**Nothing is downloaded until that command is typed.** 901 MB is not something
+a CLI helps itself to, and the promise at the top of this file — one outbound
+request a day, for the version check — is the reason.
+
+Why that model: benched on CPU against eight candidates ≤2B on 2026-09-11
+(twelve requests routed into one JSON action, two of which must route to
+nothing, one in Armenian, free-form and grammar-constrained). granite-4.0-h-1b
+was the only one right twelve times out of twelve in both modes. LFM2-1.2B —
+the earlier pick from a two-prompt bench — got seven, and its licence (LFM Open
+License v1.0, Apache's text plus a $10M revenue ceiling on commercial use) bars
+an open platform from handing it to everyone who installs it anyway.
+
+It is small on purpose. It answers in about two seconds on four threads, it
+knows nothing about di.iiii or about your spaces, and it will invent a menu item
+if you ask it how to do something — it is the model that is THERE, not the model
+that writes the show.
+
+Both downloads are checked against a checksum published by a different endpoint
+than the bytes: HuggingFace's LFS pointer for the weights, the GitHub API's
+asset digest for the binary. A mismatch is refused and nothing is left on disk.
+The llama.cpp build is pinned (`LLAMA_BUILD` in `scripts/di/keeper.mjs`) rather
+than following the tip — that project cuts several releases a day, and an
+install nobody can reproduce is not one you want at a venue. `--build TAG`
+overrides it.
 
 ## Work as files
 
@@ -109,12 +146,17 @@ venue with no wifi runs exactly the same as one at a desk.
   current -> versions/<v>    symlink (junction on Windows)
   previous -> versions/<v>   what --rollback returns to
   data/                      YOUR WORK — di.db, spaces/, uploads/
+  keeper/                    the small model and llama.cpp, if `di keeper get` ran
   di.env  state.json  logs/  run/
 ```
 
 `data/` sits outside every `versions/` directory, so update, rollback and
 uninstall physically cannot reach it. `di uninstall` removes the app and keeps
-your work; `di uninstall --with-data` is the only thing that deletes it.
+your work; `di uninstall --with-data` is the only thing that deletes it. The
+keeper goes with the app: fetched weights are a component like the vendored
+node, not the artist's work, and leaving 901 MB behind after an uninstall is
+not a kindness. `di backup` does not carry it either — it is a download, and a
+backup of your work should not be a gigabyte of somebody else's weights.
 
 A 113.6 MB download, most of which is the studio's two pieces: algovrithm's
 31 reels and photogrammetry scan (88 MB) and the wcc exhibition microsite

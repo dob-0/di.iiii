@@ -5,6 +5,150 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-11 — the small model that comes with di.iiii, fetched by one command
+
+The owner's 2026-09-06 ask ("the smallest model which can rule and direct", for every VJ,
+working with no internet) had a recommendation attached to it since 09-06 and no code. He
+said yes on 09-11 and asked for tests before taking anything, so the pick was re-benched
+first and then built.
+
+**The pick changed.** Twelve routing cases into one JSON action — two that must route to
+nothing, one written in Armenian — run free-form and under a grammar, on CPU, against eight
+candidates ≤2B. `granite-4.0-h-1b` got twelve out of twelve in both modes and was the only
+model that filled every field unprompted. `LFM2-1.2B`, the earlier recommendation from a
+two-prompt bench, got seven and collapsed half of everything onto one action. Its licence
+settles it anyway: LFM Open License v1.0 is Apache's text plus a $10M revenue ceiling on
+commercial use, read from the LICENSE itself — redistributable, but not something an open
+platform hands to everyone who installs it. Granite is Apache-2.0 with nothing attached.
+The harness and the numbers are in the owner's `~/llm/bench-2026-09-11/`.
+
+**What shipped:** `di keeper get` fetches the weights (901 MB) and llama.cpp's own CPU build
+for the platform (11–17 MB) into `~/.di/keeper/`, verifies both against a checksum published
+by a different endpoint than the bytes, and writes the one line of env
+(`LLM_BASE_URL=http://127.0.0.1:8099`) that the server already knew how to read. `di up`
+starts it when it is present — loopback-only, even under `--lan` — `di down` stops it,
+`di doctor` says whether it is answering, `di keeper remove` takes it off, and `di uninstall`
+takes it with the app. Nothing downloads until the command is typed: the CLI's standing
+promise is one unsolicited request a day, and 901 MB would break it.
+
+Seen end to end, not inferred: a slim release installed into a scratch `DI_HOME`, `di up`
+with `claude` removed from PATH (a VJ's laptop), `/api/ai/providers` reporting
+`keyConnected: false, localClaude: false, localModel: granite-4.0-h-1b`, and the agent
+endpoint streaming a real answer token by token from the machine.
+
+**What was deliberately NOT built, and why.** The routing half of the ask — the model
+*directing* things: install a bigger model, install Claude, run `di doctor` — is the part
+`docs/architecture/RAW_WORKSPACE.md` refuses in writing: *"Blocked on a decision: whose
+credentials, and what the agent is allowed to touch… Do not build this without answering
+that."* Nothing in the codebase lets a model trigger an action today, and this change does
+not become the first. The bench proves the model can route; the gate is the owner's to open.
+
+Also true and worth saying plainly: this model knows nothing about di.iiii. Asked for help
+rather than routing it will invent a menu item. The help side needs the wiki text handed to
+it, and that is a separate change.
+
+## 2026-09-11 — a skill that can actually drive this thing, gate and all
+
+`npm run verify:surfaces` sweeps the public surfaces of a tier and signs in as
+nobody, so everything behind the gate — the editor, Raw, a space's room, a private
+conversation — has never had a harness at all, and neither has anything that needs
+two people in it at once. `.claude/skills/run-di-iiii/` is that harness plus its
+man page: `driver.mjs` makes accounts, scopes them to spaces, signs browsers in as
+them, and holds two of them open side by side; `SKILL.md` is everything I had to
+learn to write it.
+
+Written by doing it, on a deliberately clean tree — deps reinstalled from nothing,
+`npx playwright install chromium`, the stack started with no env files at all to
+see what a fresh clone gets.
+
+**What a fresh clone gets is a stack that will not start.** `serverXR/.env` and
+`.env.local` are both gitignored, `serverXR`'s dev script watches both by name, and
+`node --watch-path=.env` throws `ENOENT` and kills the run before anything prints
+about a server. `cp serverXR/.env.example serverXR/.env && touch
+serverXR/.env.local` fixes it and is now step one of Setup. Worth fixing in the dev
+script rather than only documenting — left alone here on purpose, since this branch
+is a skill and not a change to how the server boots.
+
+The Gotchas section is the rest of what cost time: a dead `node --watch` holding
+the port while serving yesterday's code (already a known-fixes row, now with the
+two-processes detail), `networkidle` never settling because socket.io holds a
+connection open, MUI's hidden second textarea, two controls called "Sign in" on the
+sign-in card, a refused sign-in leaving you on a working guest session with nothing
+but a console 401 to say so, and usernames being 3–32 characters.
+
+Verified by following SKILL.md line by line in a fresh shell.
+
+## 2026-09-11 — a space has two rooms, and an admin can empty either
+
+The owner asked for *"normal chat and admin chat clear"*. So: every space now has
+the room everybody in it can open and a **staff room** only an admin can, and an
+admin can **empty** either one.
+
+- **One machinery, one key.** Both rooms are the same store, the same tools, the
+  same caps, separated by `chatStoreKey()` — `main` and `main#staff`. Two chat
+  implementations is how the two slowly stop behaving the same way. The `#` is
+  what makes the key unreachable by naming a space: a space id is
+  `/^[a-z0-9-]{3,48}$/`, so no space can ever be called `main#staff`.
+- **Not hidden — absent.** `chatSocketRoom()` puts the two in different socket
+  rooms, so a staff line is never delivered to a socket with no business
+  receiving it. The interface hiding a tab would not be a private room.
+- **Emptying a room** is the most destructive thing this wire carries: it takes
+  everybody's words, not just the asker's, and there is no undo anywhere in the
+  stack. Admin only, announced to the whole room rather than done quietly, and
+  the interface makes you type the space's own name first. That last part is not
+  security — a crafted client skips it — it is there so nobody empties a room by
+  tapping the wrong line of a menu.
+- The list shows a staff row per space, for admins only. A row that answers
+  "the staff room is for admins" when tapped is worse than no row.
+
+**The bug this found, and it is the kind that only shows up in two browsers:**
+the surface demoted an admin out of the staff room *before the server had
+answered*, because `canModerate` starts `false` and "not asked yet" looked
+exactly like "no". The socket then joined the open channel, and a line written
+in what looked like the staff room went where everybody could read it. Found by
+reading the database after the run, not by any test. Fixed by tracking whether
+the answer has arrived separately from what it was; in `known-fixes.md` as a
+general rule about permission flags in flight.
+
+**Seen, not assumed:** the admin's list with staff rows, the staff room with its
+own history and the Room/Staff switch, a non-admin who asks for `?c=staff` by
+name landing in the open room instead, the confirm dialog refusing to arm until
+the space's name is typed, and — after emptying the staff room — 0 rows under
+`main#staff` with the open room's 20 lines untouched.
+
+## 2026-09-11 — walked iiii's private conversations as two people, and as a guest
+
+Two accounts, two browsers, phone and desktop viewports, on the local tier. What the
+feature does was confirmed by doing it: the two sides connect, both print the SAME
+fingerprint, words cross in about a second, a reply carries its quote through the
+sealed body, history survives a reload, and the conversation appears in the list
+afterwards. Four things were wrong around the edges of that, all found by looking
+rather than by a test, and all fixed here.
+
+- **A dropped conversation had no way back.** The connection lives in one effect keyed
+  on the other person, so `closed`/`lost` were terminal — the only exit was reloading
+  the page, and nothing on screen said so. Now: one automatic retry four seconds after
+  the drop, then a "Try again" button. Bounded on purpose; an endless retry would draw
+  "finding them…" forever over a room nobody is in.
+- **The composer explained itself in an invisible colour.** MUI paints a disabled input
+  with the browser's own near-black disabled fill, so "Not connected yet" was in the DOM
+  and unreadable on the black field — a dead box with no reason. Measured with
+  `getComputedStyle`, not guessed.
+- **A guest was told the wrong reason, twice.** The people picker said "nobody shares a
+  space with you" and a private link said "you may not share a space", when the server
+  had answered 401 "Sign in with an account to talk privately." in both cases. Both call
+  sites now keep the server's own words.
+- **`/login` answered "Nothing lives at “login”".** It was never a route: the address a
+  teammate is sent to fell through to the space lookup, above a sign-in form that worked
+  perfectly. It is a real surface now, and the word is reserved on both sides (checked
+  first — no space answers to it on prod, staging or diiii.xyz).
+
+Guards: `PrivateChatSurface.test.jsx` (4), `ChatHomeSurface.test.jsx` (2),
+`spaceRouting.test.js` (3). Four rows added to `docs/ai/known-fixes.md`.
+
+Not done, and deliberately: the six-word fingerprint sits in the header with no label,
+so nobody unprompted knows what it is for — the tooltip only exists for a mouse.
+
 ## 2026-09-11 — the app opens on a list, not inside one room
 
 The owner installed `iiii`, opened it, and said the thing that mattered:
