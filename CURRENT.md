@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the small model that comes with di.iiii, fetched by one command
+- the second tier wears a mark at dev.diiii.xyz
 
 Full detail: `PROGRESS.md`.
 
