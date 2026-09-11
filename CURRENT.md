@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the second tier wears a mark at dev.diiii.xyz
+- a leak closed, a page cut to an eighth, and the mark the second tier was missing
 
 Full detail: `PROGRESS.md`.
 
