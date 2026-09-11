@@ -28,6 +28,8 @@ import { chromium } from 'playwright'
 import { DatabaseSync } from 'node:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { execSync } from 'node:child_process'
 
 const REPO = process.cwd()
 const PASSWORD = 'driver-passphrase-9x'
@@ -166,16 +168,44 @@ const report = async (page, label) => {
     return page.problems.length
 }
 
+// ── stopping it ─────────────────────────────────────────────────────────────
+// `npm run dev` is FOUR processes: the npm wrapper, scripts/dev-stack.mjs, a
+// `node --watch` supervisor, and the server it respawns — plus vite. Killing
+// whatever holds the port only kills the last one, and the supervisor puts a
+// new one back within seconds, which reads as "the port will not free". Killing
+// the supervisor alone leaves the child holding the port serving old code.
+//
+// Done here rather than in a shell line on purpose: every `pgrep -f dev-stack`
+// also matches the shell command containing that string, and killing that is
+// killing your own session (measured — it ends with exit code 144).
+export const stop = () => {
+    const listing = execSync('ps -eo pid=,args=', { encoding: 'utf8' }).split('\n')
+    const mine = listing
+        .map((line) => line.trim())
+        .filter((line) => /dev-stack\.mjs|watch-path=src|node_modules\/\.bin\/vite|[ /]src\/index\.js/.test(line))
+        .filter((line) => !/\bps -eo\b|bash -c/.test(line))
+        .map((line) => Number(line.split(/\s+/)[0]))
+        .filter((pid) => Number.isInteger(pid) && pid !== process.pid)
+    // Supervisors first, so nothing respawns behind the kill.
+    for (const pid of mine) { try { process.kill(pid, 'SIGKILL') } catch { /* already gone */ } }
+    return mine
+}
+
 // ── the three commands ──────────────────────────────────────────────────────
 // Positionals are what is left once every --flag and the value after it is
 // taken out. Written the long way because the short way (filter on `--`) eats
 // the command whenever a flag's value happens to look like one.
+// Flags that take no value have to be named, or the parser reads the token
+// after them as their argument: `look --phone /chat` would drop the path and
+// quietly open `/` instead.
+const BOOLEAN_FLAGS = new Set(['phone', 'desktop'])
 const positionals = (() => {
     const out = []
     const argv = process.argv.slice(2)
     for (let i = 0; i < argv.length; i += 1) {
         if (argv[i].startsWith('--')) {
-            if (argv[i + 1] && !argv[i + 1].startsWith('--')) i += 1
+            const name = argv[i].slice(2)
+            if (!BOOLEAN_FLAGS.has(name) && argv[i + 1] && !argv[i + 1].startsWith('--')) i += 1
             continue
         }
         out.push(argv[i])
@@ -185,6 +215,12 @@ const positionals = (() => {
 const [command, target] = positionals
 
 const main = async () => {
+    if (command === 'stop') {
+        const killed = stop()
+        console.log(killed.length ? `stopped ${killed.length} process(es): ${killed.join(', ')}` : 'nothing was running')
+        return 0
+    }
+
     if (command === 'account') {
         const spaces = String(arg('spaces', '') || '').split(',').map((s) => s.trim()).filter(Boolean)
         const made = await account(target, spaces)
@@ -215,13 +251,16 @@ const main = async () => {
   node .claude/skills/run-di-iiii/driver.mjs account <name> [--spaces main]
   node .claude/skills/run-di-iiii/driver.mjs look <path> [--as <name>] [--phone] [--wait ms]
   node .claude/skills/run-di-iiii/driver.mjs pair <path> --as <a>,<b> [--phone]
+  node .claude/skills/run-di-iiii/driver.mjs stop
 
   --base ${BASE}   --api ${API}   --out ${OUT}`)
     return 2
 }
 
-// Imported for a flow of your own? Then do nothing on load.
-if (process.argv[1] && process.argv[1].endsWith('driver.mjs')) {
+// Imported for a flow of your own? Then do nothing on load. Compared exactly,
+// not by filename: a script of your own called driver.mjs would otherwise run
+// this file's command parser on its arguments.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
     main().then((code) => process.exit(code)).catch((error) => {
         console.error(error.message)
         process.exit(1)

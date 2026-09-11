@@ -30,8 +30,9 @@ node --version     # v22.23.2 on this machine
 npx playwright install chromium
 ```
 
-The system libraries Chromium needs were already present here; if it fails to
-launch on a bare box, `npx playwright install --with-deps chromium` is the fix.
+The system libraries Chromium needs were already present here, so no `apt-get`
+was needed. On a bare box `npx playwright install --with-deps chromium` is the
+documented fix — not run here.
 
 ## Setup
 
@@ -78,11 +79,21 @@ happily answers with code from some previous day; 5173 is the source you just
 edited. On 4000 the API also lives under `/serverXR` — a bare `/api/...` there
 returns Express's own 404 HTML, which reads exactly like a dead server.
 
-Stop it by the ports, not by name:
+Stop it with the driver:
 
 ```bash
-for p in 4000 5173; do lsof -ti:$p -sTCP:LISTEN | xargs -r kill -9; done
+node .claude/skills/run-di-iiii/driver.mjs stop
 ```
+
+`npm run dev` is four processes — the npm wrapper, `scripts/dev-stack.mjs`, a
+`node --watch` supervisor and the server it respawns — plus vite. Killing
+whatever holds the port kills only the last one and the supervisor puts a new
+one back within seconds, which reads as "the port will not free"; killing the
+supervisor alone leaves the child on the port serving the old code. Measured
+both ways. And do NOT reach for `pgrep -f dev-stack` in a shell: the pattern
+matches the shell command that contains it, so you kill your own session (it
+ends with exit code 144). The driver does the matching from node, where that
+cannot happen.
 
 ### The driver
 
@@ -97,10 +108,22 @@ node .claude/skills/run-di-iiii/driver.mjs pair /chat --as ann,bob --phone
 | `account <name> [--spaces a,b]` | registers the account (re-running is fine — a taken name is not an error), scopes it to those spaces, prints its id and password |
 | `look <path> [--as <name>]` | opens one page as that person, screenshots it, prints what is on screen and any console/page errors. Exits non-zero if anything threw |
 | `pair <path> --as <a>,<b>` | the same, twice, in two independent browsers — for anything that needs two people |
+| `stop` | kills the whole dev stack, supervisors first, and says what it killed |
 
 Flags: `--phone` (390×844 at DPR 3, which is the phone this platform is actually
 opened on) or the default desktop (1440×900 at DPR 2); `--wait <ms>` before the
-screenshot; `--base`, `--api`, `--out` (default `/tmp/di-iiii-shots`).
+screenshot; `--base`, `--api`, `--out` (default `/tmp/di-iiii-shots`). Flag
+order does not matter — `look --phone /chat` and `look /chat --phone` are the
+same command.
+
+`--base` points it at any tier, and then no local stack is needed at all:
+
+```bash
+node .claude/skills/run-di-iiii/driver.mjs look /login --base https://staging.di-studio.xyz
+```
+
+Without `--as` that is a plain signed-out visitor, which is the session worth
+checking first — see `docs/ai/verification-charter.md`.
 
 Screenshots land in `/tmp/di-iiii-shots/`. **Open them.** The driver reports
 console errors, not whether the thing you changed is legible, and this repo's
