@@ -13,8 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the app opens on a list, not inside one room
-- where a window sits belongs to the person, and windows can fill the canvas
+- the small model that comes with di.iiii, fetched by one command
 
 Full detail: `PROGRESS.md`.
 
