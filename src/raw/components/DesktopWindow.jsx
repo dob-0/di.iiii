@@ -55,6 +55,7 @@ export default function DesktopWindow({
     onPatch,
     onClose,
     onToggleMinimize,
+    onToggleMaximize,
     onTogglePin,
     onEnter,
     minTop = undefined,
@@ -265,7 +266,7 @@ export default function DesktopWindow({
 
     return (
         <section
-            className={`raw-window ${windowState.minimized ? 'is-minimized' : ''} ${windowState.pinned ? 'is-pinned' : ''} ${inWorld ? 'is-world' : ''}`}
+            className={`raw-window ${windowState.minimized ? 'is-minimized' : ''} ${windowState.pinned ? 'is-pinned' : ''} ${windowState.maximized ? 'is-maximized' : ''} ${inWorld ? 'is-world' : ''}`}
             role="dialog"
             aria-label={title}
             tabIndex={-1}
@@ -326,6 +327,21 @@ export default function DesktopWindow({
                     >
                         ⌖
                     </button>
+                    {/* Maximise sits next to Pin because it IS a pin: a
+                        window filling the workspace is measured in screen
+                        pixels, or a pan would slide "full screen" off the
+                        screen. */}
+                    {onToggleMaximize && (
+                        <button
+                            type="button"
+                            className={windowState.maximized ? 'is-active' : ''}
+                            aria-label={windowState.maximized ? 'Restore' : 'Maximize'}
+                            title={windowState.maximized ? 'Restore: put it back where it was' : 'Maximize: fill the canvas'}
+                            onClick={(event) => { event.stopPropagation(); onToggleMaximize() }}
+                        >
+                            {windowState.maximized ? '⧉' : '□'}
+                        </button>
+                    )}
                     <button
                         type="button"
                         aria-label={windowState.minimized ? 'Expand' : 'Minimize'}

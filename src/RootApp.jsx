@@ -43,6 +43,7 @@ const StudioChatSurface = lazy(() => import('./chat/StudioChatSurface.jsx'))
 // A private conversation carries WebRTC and the crypto, which the room itself
 // has no use for — its own chunk, loaded only when somebody opens one.
 const PrivateChatSurface = lazy(() => import('./chat/PrivateChatSurface.jsx'))
+const ChatHomeSurface = lazy(() => import('./chat/ChatHomeSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
@@ -387,6 +388,30 @@ function AppRouter() {
     // header, which reads as a broken chat rather than as somebody else's door.
     // The gate's own words are the editor's, so the room says its own.
     if (chatState.isChat) {
+        // The list and a private conversation are BOTH at /chat, and neither
+        // belongs to one space — the list draws whatever rooms this account
+        // reaches, and a private conversation has no space at all. Scoping
+        // either of them to `main` would shut somebody out of their own
+        // conversations for not being in the studio's room.
+        if (chatState.isHome) {
+            return (
+                <ProtectedSurface
+                    showAccountButton={false}
+                    outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                >
+                    <Suspense fallback={<RouteSurfaceFallback label="Loading your chats" detail="" />}>
+                        {privateChatWith
+                            ? (
+                                <PrivateChatSurface
+                                    withUserId={privateChatWith}
+                                    withName={new URLSearchParams(location.search).get('who')}
+                                />
+                            )
+                            : <ChatHomeSurface />}
+                    </Suspense>
+                </ProtectedSurface>
+            )
+        }
         return (
             <ProtectedSurface
                 requiredSpaceId={chatState.spaceId}
@@ -395,15 +420,7 @@ function AppRouter() {
                 outOfScopeMessage={`This room belongs to “${chatState.spaceId}”. Sign in with an account that is in it to read what was said and to say anything.`}
             >
                 <Suspense fallback={<RouteSurfaceFallback label="Loading the chat" detail="" />}>
-                    {privateChatWith
-                        ? (
-                            <PrivateChatSurface
-                                withUserId={privateChatWith}
-                                withName={new URLSearchParams(location.search).get('who')}
-                                spaceId={chatState.spaceId}
-                            />
-                        )
-                        : <StudioChatSurface spaceId={chatState.spaceId} />}
+                    <StudioChatSurface spaceId={chatState.spaceId} />
                 </Suspense>
             </ProtectedSurface>
         )

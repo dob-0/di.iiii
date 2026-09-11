@@ -25,7 +25,10 @@ const setup = ({ people = {}, devices = {} } = {}) => {
     const router = makeRouter()
     registerDmRoutes(router, {
         deps: {
-            users: { findUserById: (id) => people[id] || null },
+            users: {
+                findUserById: (id) => people[id] || null,
+                listUsers: () => Object.values(people)
+            },
             store: {
                 publishDevice: vi.fn(({ userId, publicKey }) => (
                     /^[A-Za-z0-9+/]{86,90}={0,2}$/.test(publicKey)
@@ -148,5 +151,51 @@ describe('taking a device back', () => {
         expect(one.statusCode).toBe(204)
         const all = await call(router.routes['delete /api/dm/devices'], { authState: account('u1') })
         expect(all.body.forgotten).toBe(2)
+    })
+})
+
+
+// The "new chat" list. It answers the same question the key lookup does — who
+// can I actually reach — so it must not answer it more generously.
+describe('who I can start a conversation with', () => {
+    const people = {
+        u1: { id: 'u1', display_name: 'Me', spaces: ['dilijan'], isUnrestricted: false },
+        u2: { id: 'u2', display_name: 'Someone', spaces: ['dilijan'], isUnrestricted: false },
+        u3: { id: 'u3', display_name: 'A stranger', spaces: ['elsewhere'], isUnrestricted: false }
+    }
+    const devices = { u2: [{ id: 'd2', publicKey: KEY }] }
+
+    it('lists the people I share a space with, and not the ones I do not', async () => {
+        const router = setup({ people, devices })
+        const res = await call(router.routes['get /api/dm/people'], { authState: account('u1', ['dilijan']) })
+        expect(res.statusCode).toBe(200)
+        expect(res.body.people.map((p) => p.userId)).toEqual(['u2'])
+    })
+
+    it('never lists me back to myself', async () => {
+        const router = setup({ people, devices })
+        const res = await call(router.routes['get /api/dm/people'], { authState: account('u1', ['dilijan']) })
+        expect(res.body.people.some((p) => p.userId === 'u1')).toBe(false)
+    })
+
+    // A name that leads to a spinner is worse than a name marked as not ready.
+    it('says whether somebody has ever opened a private conversation', async () => {
+        const router = setup({ people: { ...people, u4: { id: 'u4', display_name: 'New', spaces: ['dilijan'] } }, devices })
+        const res = await call(router.routes['get /api/dm/people'], { authState: account('u1', ['dilijan']) })
+        expect(res.body.people.find((p) => p.userId === 'u2').reachable).toBe(true)
+        expect(res.body.people.find((p) => p.userId === 'u4').reachable).toBe(false)
+    })
+
+    it('refuses a guest — the same bar as everything else here', async () => {
+        const router = setup({ people, devices })
+        const res = await call(router.routes['get /api/dm/people'], { authState: account('guest:abc') })
+        expect(res.statusCode).toBe(401)
+    })
+
+    it('hands over a label and nothing else about the person', async () => {
+        const router = setup({ people, devices })
+        const res = await call(router.routes['get /api/dm/people'], { authState: account('u1', ['dilijan']) })
+        expect(Object.keys(res.body.people[0]).sort()).toEqual(['label', 'reachable', 'userId'])
+        expect(JSON.stringify(res.body)).not.toMatch(/email|password|token|spaces/i)
     })
 })
