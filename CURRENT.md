@@ -13,8 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the app opens on a list, not inside one room
-- where a window sits belongs to the person, and windows can fill the canvas
+- a space has two rooms, and an admin can empty either
 
 Full detail: `PROGRESS.md`.
 
@@ -25,7 +24,8 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
-- **prod carries the 2026-09-10/11 run** — accounts, rolling sessions, the `iiii` room and its tools, private p2p. Promoted on the owner's word, 2026-09-11. aylmo runs a branch build (`0.4.7-shelves.2`) at https://local.thedi.studio; port 443 comes from setcap on the node binary, which a Node upgrade wipes.
+- **prod carries the 2026-09-10/11 run** — accounts, rolling sessions, the `iiii` room and its tools, private p2p, and (promoted 2026-09-11) the **list the app opens on**: rooms, private conversations, a `＋` that starts one. The APK is a window on the live site, so a prod deploy IS the update — no reinstall. aylmo runs a branch build (`0.4.7-shelves.2`) at https://local.thedi.studio; port 443 comes from setcap on the node binary, which a Node upgrade wipes.
+- **`iiii` still owes three of the four tools the owner picked** — photos and files (it is text-only, 500 chars, and this is the biggest gap), push notifications, ad-hoc groups. Clearing and the staff room landed on dev 2026-09-11 and have NOT been promoted. A bot that grants camp/workshop people a space is designed and unbuilt: it waits on the owner's yes.
 - **Five projects reference assets no tier holds** — `open/front-room`, `front-room-light`, `look-signal`, `look-night`, `look-paper`, 76–78 each, uuid ids from before content addressing. Found by `npm run assets:audit`, which now gates this class; nobody had ever been told. Beyond Form's 13 are restored (prod had them whole).
 - **Two spaces wait on one word** — `algovrithm` is public, empty and can never open (`src/algoVrithm/` owns that url before any space lookup, so the row is unreachable by construction: the row goes, or the work becomes a space); `the-light-put-back` is LIVE on staging but PRIVATE (Davit Nersisyan's 14 laser photographs, and its 4.3 MB inlined page wants re-cutting before prod).
 - **Follow (one space on two installs) carries NO assets yet** — a followed scene shows a grey wall where an image or model is; no warning when op retention drops something uncarried; the internet case is untested and needs a throwaway space — owner's call.
