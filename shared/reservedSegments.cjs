@@ -29,7 +29,7 @@ const APP_SEGMENTS = [
     'admin', 'preferences', 'prefrenaces', 'preferances',
     'wiki', 'privacy', 'terms', 'tools',
     'beta', 'raw', 'seed', 'open_jam', 'studio', 'make', 'light',
-    'spaces', 'projects', 'chat'
+    'spaces', 'projects', 'chat', 'login'
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served
