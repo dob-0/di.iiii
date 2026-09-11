@@ -18,6 +18,7 @@ export const parseArgs = (argv) => {
         if (name === 'as') { args.flags.as = argv[++i]; continue }
         if (name === 'remote') { args.flags.remote = argv[++i]; continue }
         if (name === 'key') { args.flags.key = argv[++i]; continue }
+        if (name === 'build') { args.flags.build = argv[++i]; continue }
         args.flags[name] = true
     }
     return args
