@@ -53,8 +53,24 @@ export function resolveDeployMode({ hostname = '', local = null } = {}) {
     if (isPrivateHost(host)) return MODE_LOCAL
     // First label, so staging.di-studio.xyz and staging-2.di-studio.xyz both
     // count and my-staging-notes.example.com does not.
-    if (host.split('.')[0].startsWith('staging')) return MODE_STAGING
+    const first = host.split('.')[0]
+    if (first.startsWith('staging')) return MODE_STAGING
+    // The same second tier answers to dev.diiii.xyz since the addresses were
+    // settled, and that name knew nothing here: the rehearsal tier reached by
+    // its new name wore no mark at all and was pixel-identical to the live
+    // site. Exact match, not a prefix — `developers.example.com` is a website.
+    if (first === 'dev') return MODE_STAGING
     return MODE_HOSTED
 }
 
-export const deployModeMark = (mode) => MODE_MARKS[mode] || null
+// One tier, two names, and the chip prints the one you actually typed. Telling
+// a visitor "STAGING" while the address bar says dev.diiii.xyz makes the mark
+// argue with the address, which is the one thing it exists not to do.
+const secondTierLabel = (hostname) =>
+    (String(hostname || '').toLowerCase().replace(/^\[/, '').split('.')[0] === 'dev' ? 'DEV' : 'STAGING')
+
+export const deployModeMark = (mode, hostname = '') => {
+    const mark = MODE_MARKS[mode] || null
+    if (!mark || mode !== MODE_STAGING) return mark
+    return { ...mark, label: secondTierLabel(hostname) }
+}

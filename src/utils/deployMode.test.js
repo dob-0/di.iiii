@@ -19,6 +19,12 @@ describe('resolveDeployMode', () => {
         ['172.32.0.4', MODE_HOSTED],
         ['staging.di-studio.xyz', MODE_STAGING],
         ['staging-2.di-studio.xyz', MODE_STAGING],
+        // The same tier, reached by the name the addresses settled on.
+        ['dev.diiii.xyz', MODE_STAGING],
+        ['dev.di-studio.xyz', MODE_STAGING],
+        // Exact first label only — these are somebody's website.
+        ['developers.example.com', MODE_HOSTED],
+        ['dev-notes.example.com', MODE_HOSTED],
         ['di-studio.xyz', MODE_HOSTED],
         // Only the FIRST label counts, or any domain with the word in it
         // would wear the rehearsal colour.
@@ -73,5 +79,14 @@ describe('deployModeMark', () => {
         expect(deployModeMark(MODE_STAGING)).toMatchObject({ label: 'STAGING', color: '#ffb347' })
         // The audience must see exactly what it saw before this existed.
         expect(deployModeMark(MODE_HOSTED)).toBeNull()
+    })
+
+    // The chip must never argue with the address bar: one second tier, and it
+    // prints whichever of its two names you actually typed.
+    it('prints DEV on the tier\u2019s dev name and STAGING on its old one', () => {
+        expect(deployModeMark(MODE_STAGING, 'dev.diiii.xyz')).toMatchObject({ label: 'DEV', color: '#ffb347' })
+        expect(deployModeMark(MODE_STAGING, 'staging.di-studio.xyz')).toMatchObject({ label: 'STAGING' })
+        expect(deployModeMark(MODE_STAGING)).toMatchObject({ label: 'STAGING' })
+        expect(deployModeMark(MODE_LOCAL, 'dev.diiii.xyz')).toMatchObject({ label: 'LOCAL' })
     })
 })

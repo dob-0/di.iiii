@@ -56,7 +56,7 @@ export default function ModeMark() {
     if (isPreviewRequest() || window.self !== window.top) return null
 
     const mode = resolveDeployMode({ hostname: window.location.hostname, local: serverLocal })
-    const mark = deployModeMark(mode)
+    const mark = deployModeMark(mode, window.location.hostname)
     if (!mark) return null
 
     return (
