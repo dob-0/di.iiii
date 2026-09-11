@@ -1,4 +1,4 @@
-# The second tier wears a mark at dev.diiii.xyz
+## 2026-09-11 — the second tier wears a mark at dev.diiii.xyz
 
 The addresses were settled on 2026-09-11 and the tier mark was not told. It
 matched a first label of `staging*` and nothing else, so the rehearsal tier
@@ -35,7 +35,7 @@ bottom-left. A unit test would have passed either way.
 The wiki passage describing the mark named only `staging.di-studio.xyz` and
 `di-studio.xyz`. It names both tiers and the platform's current address now.
 
-## The other half: a sync that renamed the space
+### The other half: a sync that renamed the space
 
 `spaces/network/di-space.space.json` carried `"label": "network"` — the bare id —
 so every `--all` run rewrote the space label from whatever a human had set. Prod
