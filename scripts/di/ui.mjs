@@ -388,7 +388,62 @@ export const ui = {
         'DI_MCP_ALLOW_PUBLIC=1, and each one still has to carry confirm: true.'
     ].join('\n'),
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage() })[name]?.() || null,
+    // ── the keeper ──────────────────────────────────────────────────────
+    // Plain about size and about what it cannot do. A person deciding whether
+    // to spend 859 MiB on a thing should be told what they get for it in the
+    // same breath, and told that this small model is not the one that writes.
+    keeperGetting: (model, build) => [
+        `fetching the keeper — ${model.name}, ${(model.bytes / 1e6).toFixed(0)} MB, ${model.licence}`,
+        style.dim(`and llama.cpp ${build} to run it. once. then it is yours, offline, forever.`)
+    ].join('\n'),
+
+    keeperAlreadyHere: (name, root) => `${name} is already here — ${root}`,
+
+    keeperReady: (name, port, installed) => [
+        `${name} is answering on ${port}.`,
+        installed
+            ? style.dim('di.iiii will use it whenever there is no Claude key and no internet.')
+            : style.dim(`install di.iiii and it will use this — ${CMD} up`)
+    ].join('\n'),
+
+    keeperRunning: (name, port) => style.dim(`keeper: ${name} on ${port}`),
+
+    keeperRemoved: () => 'the keeper is gone. your work is untouched.',
+
+    keeperStatus: (status, model) => {
+        if (!status.installed) {
+            return [
+                `no keeper on this machine.`,
+                style.dim(`${CMD} keeper get   ${model.name}, ${(model.bytes / 1e6).toFixed(0)} MB, ${model.licence} — answers with no internet and no account`)
+            ].join('\n')
+        }
+        return [
+            `${status.model}${status.modelComplete ? '' : style.dim(' — INCOMPLETE, run keeper get again')}`,
+            `  ${status.running ? `answering on ${status.port}` : 'not running'}`,
+            `  ${status.wired ? 'di.iiii is pointed at it' : style.dim('di.iiii is pointed somewhere else — check LLM_BASE_URL')}`,
+            style.dim(`  ${status.root}`)
+        ].join('\n')
+    },
+
+    keeperUsage: () => [
+        style.bold(`${CMD} keeper`) + style.dim(' — the small model that comes with di.iiii'),
+        '',
+        'a model on your own machine. no account, no key, and no internet after the',
+        'first fetch. di.iiii uses it when there is no Claude key, or when the',
+        'internet is gone — which at a venue is most of the time.',
+        '',
+        `  ${CMD} keeper get      fetch it and start it (about 920 MB, once)`,
+        `  ${CMD} keeper status   whether it is here, and whether it is answering`,
+        `  ${CMD} keeper remove   take it off this machine`,
+        '',
+        style.dim('  --force         fetch it again even if it is already here'),
+        style.dim('  --build TAG     a different llama.cpp release than the pinned one'),
+        '',
+        'it is small on purpose: it answers a question and it routes a request. it is',
+        'not the model that writes your show — that is what a Claude key is for.'
+    ].join('\n'),
+
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
@@ -407,6 +462,7 @@ export const ui = {
         `  ${CMD} restore --snapshot   the copies taken automatically before an update`,
         '',
         `  ${CMD} mcp           hand this di.iiii to Claude, or any agent that speaks MCP`,
+        `  ${CMD} keeper get    a small model on this machine — works with no internet`,
         '',
         `  ${CMD} link SPACE --remote URL   connect one space to an online di.iiii`,
         `  ${CMD} sync SPACE    compare it with its online copy — writes nothing`,
@@ -418,7 +474,7 @@ export const ui = {
         `  ${CMD} where         the three paths that matter`,
         `  ${CMD} uninstall     remove it, keep your work`,
         `  ${CMD} version       which di.iiii this is (also --version, -v)`,
-        `  ${CMD} help mcp      more on one command (also ${CMD} mcp --help)`,
+        `  ${CMD} help mcp      more on one command (also ${CMD} mcp --help, ${CMD} help keeper)`,
         '',
         style.dim('  --port N     run somewhere other than 4000'),
         style.dim('  --lan        answer on this wifi too, for phones in the room — anyone on it can edit'),

@@ -44,6 +44,7 @@ import {
 import { isWindows, paths } from './paths.mjs'
 import { probeAll, probeCanPublishName, probeHealth, probeLanAddresses, probeListen, probePrettyLocalName } from './probe.mjs'
 import { publishName, stopName, updateRoomName } from './name.mjs'
+import { getKeeper, keeperPaths, keeperStatus, removeKeeper, startKeeper, stopKeeper, KEEPER_PORT, LLAMA_BUILD, MODEL } from './keeper.mjs'
 import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
@@ -197,6 +198,13 @@ const cmdUp = async (args) => {
     }
     await writeEnv(home, { PORT: String(port) })
 
+    // Presence is the switch, like the certificate and the dns hook: a machine
+    // that has fetched the keeper starts it, a machine that has not never hears
+    // about it. Loopback only, always — the model answers the person at this
+    // laptop and nobody on tonight's wifi, even under --lan.
+    const keeper = await startKeeper(home)
+    if (keeper?.running) say(ui.keeperRunning(MODEL.name, keeper.port))
+
     // A certificate outranks every other name: it is the only one that gets a
     // padlock, and the padlock is what a browser wants before it hands over a
     // camera, a microphone, MIDI or XR. Its name is the address.
@@ -298,6 +306,7 @@ const cmdDown = async () => {
     const runner = runnerFor(home)
     const was = await runner.stop({ home })
     await stopName(home)
+    await stopKeeper(home)
     say(was ? ui.stopped(runner.describe(home).dataDir) : ui.notRunning())
 }
 
@@ -564,6 +573,7 @@ const cmdWhere = async () => {
 const cmdDoctor = async () => {
     const home = HOME()
     const probes = await probeAll({ home })
+    const keeper = await keeperStatus(home)
     const decision = decideMode(probes)
     const tick = (ok) => (ok ? style.cyan('ok  ') : style.dim('--  '))
 
@@ -575,6 +585,7 @@ const cmdDoctor = async () => {
         `${tick(probes.canReachNodeOrg)}nodejs.org    ${probes.canReachNodeOrg ? 'reachable' : 'unreachable'}`,
         '',
         `${tick(isInstalled(home))}installed     ${installedVersion(home) || 'no'}`,
+        `${tick(keeper.installed)}keeper        ${keeper.installed ? `${MODEL.name}${keeper.running ? ` — answering on ${keeper.port}` : ' — not running'}` : `not fetched — ${CMD} keeper get`}`,
         `${tick(true)}home          ${home}`,
         '',
         decision.mode === 'none'
@@ -676,7 +687,10 @@ const cmdUninstall = async (args) => {
 
     // credentials.json holds live editor keys — secrets are not "your work"
     // and must not outlive the install that minted their links
-    for (const target of [p.versions, p.current, p.previous, p.bin, p.runtime, p.run, p.state, p.env, p.credentials]) {
+    // The keeper goes with it: a fetched model is a component like the node
+    // runtime, not the artist's work, and leaving 859 MiB behind after an
+    // uninstall is not a kindness.
+    for (const target of [p.versions, p.current, p.previous, p.bin, p.runtime, p.run, p.state, p.env, p.credentials, keeperPaths(home).root]) {
         await fsp.rm(target, { recursive: true, force: true })
     }
     if (args.flags['with-data']) {
@@ -1026,6 +1040,74 @@ const cmdUnfollow = async (args) => {
     say(removed ? ui.unfollowed(spaceId) : ui.notFollowing(spaceId))
 }
 
+/**
+ * The small model that comes with di.iiii, and the one command that fetches it.
+ *
+ * Nothing is downloaded until this is typed: 859 MiB is not something a CLI
+ * helps itself to, and the install's promise is that the only outbound request
+ * nobody asked for is the daily version check.
+ */
+const cmdKeeper = async (args) => {
+    const home = HOME()
+    const what = args._[1] || 'status'
+
+    if (what === 'status') {
+        const status = await keeperStatus(home)
+        say(ui.keeperStatus(status, MODEL))
+        return
+    }
+
+    if (what === 'get') {
+        const before = await keeperStatus(home)
+        if (before.installed && before.modelComplete && !args.flags.force) {
+            say(ui.keeperAlreadyHere(MODEL.name, before.root))
+        } else {
+            say(ui.keeperGetting(MODEL, LLAMA_BUILD))
+            try {
+                await getKeeper(home, {
+                    build: String(args.flags.build || LLAMA_BUILD),
+                    onStep: (line) => say(style.dim(`  ${line}`)),
+                    onProgress: progressLine()
+                })
+            } catch (error) {
+                fail(String(error.message || error))
+                process.exitCode = 1
+                return
+            }
+        }
+        // Starting it here rather than waiting for the next `di up`: somebody
+        // who just waited out a 859 MiB download is owed the thing working,
+        // not a second command to discover.
+        const started = await startKeeper(home)
+        say(ui.keeperReady(MODEL.name, started?.port ?? KEEPER_PORT, isInstalled(home)))
+        return
+    }
+
+    if (what === 'remove') {
+        await removeKeeper(home)
+        say(ui.keeperRemoved())
+        return
+    }
+
+    fail(`${CMD} keeper get | status | remove`)
+    process.exitCode = 1
+}
+
+// One line, rewritten in place, and only when stdout is a terminal — a
+// progress bar redirected into a log file is thousands of useless lines.
+const progressLine = () => {
+    if (!process.stdout.isTTY) return null
+    let last = 0
+    return (seen, total) => {
+        const now = Date.now()
+        if (now - last < 250 && seen !== total) return
+        last = now
+        const mb = (seen / 1e6).toFixed(0)
+        const all = total ? ` / ${(total / 1e6).toFixed(0)} MB` : ' MB'
+        process.stdout.write(`\r  ${mb}${all}${total && seen >= total ? '\n' : ''}`)
+    }
+}
+
 const COMMANDS = {
     up: cmdUp,
     invite: cmdInvite,
@@ -1049,6 +1131,7 @@ const COMMANDS = {
     update: cmdUpdate,
     uninstall: cmdUninstall,
     version: cmdVersion,
+    keeper: cmdKeeper,
     mcp: cmdMcp,
     help: (args) => say(ui.usageFor(args._[1]) || ui.help())
 }

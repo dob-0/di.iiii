@@ -131,6 +131,39 @@ describe('help for one command', () => {
     })
 })
 
+// `di keeper get` downloads most of a gigabyte. The one thing routing has to
+// guarantee is that it NEVER happens by accident: a bare `di keeper`, a typo
+// after it, and `di keeper --help` must all be inert.
+describe('the keeper command', () => {
+    it('is a command', () => {
+        expect(Object.keys(COMMANDS)).toContain('keeper')
+    })
+
+    it('reports rather than downloads when no sub-word is given', () => {
+        const result = di(emptyHome(), ['keeper'])
+        expect(result.code).toBe(0)
+        expect(result.out).toContain('no keeper on this machine')
+    })
+
+    it('refuses a sub-word it does not know instead of guessing', () => {
+        const result = di(emptyHome(), ['keeper', 'fetch'])
+        expect(result.code).toBe(1)
+        expect(`${result.out}${result.err}`).toContain('keeper get | status | remove')
+    })
+
+    it('has a page of its own, reachable both ways', () => {
+        const a = di(emptyHome(), ['keeper', '--help'])
+        const b = di(emptyHome(), ['help', 'keeper'])
+        expect(a.out).toContain('the small model that comes with di.iiii')
+        expect(b.out).toBe(a.out)
+    })
+
+    it('says the size out loud before anybody types get', () => {
+        const result = di(emptyHome(), ['help', 'keeper'])
+        expect(result.out).toMatch(/\d+ MB/)
+    })
+})
+
 describe('reached through the shim', () => {
     it('runs when invoked through the `current` symlink, as the shim does', () => {
         // Node reports the main module by its real path; the shim names it
