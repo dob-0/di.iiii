@@ -165,7 +165,7 @@ fi
 
 # Prune oldest local copies. Deliberately keeps more than the VPS's 14 days —
 # off-box retention is the whole reason this exists, and local disk is cheap.
-mapfile -t LOCAL_ARCHIVES < <(find "$DEST" -maxdepth 1 -name 'dii-backup-*.tar.gz' | sort)
+mapfile -t LOCAL_ARCHIVES < <(find "$DEST/" -maxdepth 1 -name 'dii-backup-*.tar.gz' | sort)
 LOCAL_COUNT=${#LOCAL_ARCHIVES[@]}
 if [ "$LOCAL_COUNT" -gt "$KEEP" ]; then
   PRUNE=$(( LOCAL_COUNT - KEEP ))
@@ -176,8 +176,8 @@ if [ "$LOCAL_COUNT" -gt "$KEEP" ]; then
   done
 fi
 
-TOTAL=$(du -sh "$DEST" 2>/dev/null | cut -f1)
-log "done — $(find "$DEST" -maxdepth 1 -name 'dii-backup-*.tar.gz' | wc -l | tr -d ' ') archive(s) held locally, $TOTAL"
+TOTAL=$(du -sh "$DEST/" 2>/dev/null | cut -f1)
+log "done — $(find "$DEST/" -maxdepth 1 -name 'dii-backup-*.tar.gz' | wc -l | tr -d ' ') archive(s) held locally, $TOTAL"
 
 [ "$STALE" -eq 0 ] || exit 4
 exit 0
