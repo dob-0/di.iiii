@@ -147,6 +147,42 @@ const installShim = async ({ home, names, versionDir }) => {
     return { written, hint: onPath(p.bin) ? null : ui.pathHint(p.bin) }
 }
 
+/**
+ * Place the certificate a release carries, if it carries one.
+ *
+ * `local.thedi.studio` is pinned at 127.0.0.1 in public DNS, so every install
+ * resolves that name to itself - no record of its own, no host file, no sudo,
+ * and nothing that can go stale. A certificate for it is what turns https on,
+ * and https is what a browser wants before it hands a page the camera, the
+ * microphone, MIDI or XR (see the tls note in paths.mjs).
+ *
+ * Never overwrites. An owner who has put their own certificate here - for a
+ * name that reaches their machine across a room, like room.thedi.studio -
+ * keeps it, through every update.
+ *
+ * This reaches the machine it runs on and nothing else. A second device needs
+ * a name that resolves to the LAN address, which is the dns-update hook.
+ */
+const placeReleaseCertificate = async (releaseDir, p) => {
+    const from = path.join(releaseDir, 'tls')
+    try {
+        await fsp.access(path.join(from, 'cert.pem'))
+        await fsp.access(path.join(from, 'key.pem'))
+    } catch {
+        return // this release carries none; the install speaks http
+    }
+    await fsp.mkdir(p.tls, { recursive: true })
+    for (const file of ['cert.pem', 'key.pem']) {
+        const to = path.join(p.tls, file)
+        try {
+            await fsp.access(to)
+            continue // already there: the owner's, and not ours to replace
+        } catch { /* nothing there - place the release copy */ }
+        await fsp.copyFile(path.join(from, file), to)
+        await fsp.chmod(to, 0o600).catch(() => {})
+    }
+}
+
 const main = async () => {
     const home = paths().home
     const staged = arg('staged')
@@ -179,6 +215,7 @@ const main = async () => {
     await unlinkLink(p.current)
     await fsp.symlink(finalDir, p.current, isWindows ? 'junction' : 'dir')
     await fsp.mkdir(p.data, { recursive: true })
+    await placeReleaseCertificate(finalDir, p)
 
     const probes = await probeAll({ home })
     const decision = decideMode(probes)
