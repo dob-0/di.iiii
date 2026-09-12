@@ -51,6 +51,13 @@ fail() { log "ERROR: $*" >&2; }
 
 mkdir -p "$DEST"
 
+# DEST may be a symlink — on the Arch install ~/di-backups points into the old
+# home's mount. `find` and `du` do not follow a symlink handed to them as their
+# starting path, so the prune below counted 0 archives and never fired, and the
+# summary line reported 4.0K next to a 22G directory. Resolve to the physical
+# directory once, here, rather than teaching every later caller about the link.
+DEST=$(cd "$DEST" && pwd -P)
+
 # One run at a time. Two concurrent pulls of a 700 MB archive would fight over
 # the same partial file; a timer firing while a slow run is still going is the
 # normal way that happens.
