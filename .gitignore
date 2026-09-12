@@ -18,6 +18,8 @@ tmp/
 .env.*.local
 .env.local
 *.local
+# Copies of a local env kept before a change (.env.local.before-shared-tier)
+.env.local.*
 
 # Logs
 npm-debug.log*
@@ -37,6 +39,7 @@ scene examples/
 /*.png
 CLAUDE.local.md
 **/CLAUDE.local.md
+.claude/settings.local.json
 *.dii-project.zip
 *.scene.zip
 docs/checkpoints/
