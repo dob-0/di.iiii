@@ -49,6 +49,10 @@ serverXR/data/
 serverXR/uploads/
 serverXR/.env
 serverXR/.env.local
+# and every hand-made backup of it. `.env.*.local` does not match
+# `.env.local.before-shared-tier`, which sat here untracked and
+# un-ignored with a live GITHUB_CLIENT_SECRET in it (found 2026-09-12).
+serverXR/.env.local.*
 # Local-only data roots for isolated worktrees (see serverXR/.env DATA_ROOT)
 serverXR/.data-*
 
@@ -75,3 +79,6 @@ spaces/the-light-put-back/code/index.html
 android-twa/*
 !android-twa/twa-manifest.json
 android-twa-staging/
+
+# Claude Code's per-machine settings — local by definition
+.claude/settings.local.json
