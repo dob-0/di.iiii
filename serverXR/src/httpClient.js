@@ -6,12 +6,15 @@
 const http = require('node:http')
 const https = require('node:https')
 
-const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs = 20000, signal = null } = {}) =>
+const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs = 20000, signal = null, servername = null } = {}) =>
   new Promise((resolve, reject) => {
     let u
     try { u = new URL(url) } catch (e) { return reject(e) }
     const lib = u.protocol === 'https:' ? https : http
-    const req = lib.request(u, { method, headers }, (res) => {
+    // `servername`: connect to one address, check the certificate against a
+    // name — how a server with a certificate for its own name reaches itself
+    // on loopback without trusting whatever DNS says that name is tonight.
+    const req = lib.request(u, { method, headers, ...(servername ? { servername } : {}) }, (res) => {
       const chunks = []
       res.on('data', (c) => chunks.push(c))
       res.on('end', () => {

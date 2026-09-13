@@ -2291,6 +2291,18 @@ app.use((err, req, res, next) => {
  * Read a certificate pair, or null. Never throws: a missing or half-written
  * pair means "no https today", not "no di.iiii today".
  */
+/** The DNS name a certificate is for — the first subjectAltName, else CN. */
+const certificateName = (certPem) => {
+  try {
+    const x509 = new crypto.X509Certificate(certPem)
+    const alt = String(x509.subjectAltName || '').split(',').map(s => s.trim()).find(s => s.startsWith('DNS:'))
+    if (alt) return alt.slice(4)
+    return /CN=([^\n,]+)/.exec(x509.subject || '')?.[1] || null
+  } catch {
+    return null
+  }
+}
+
 const readTlsFiles = (certPath, keyPath) => {
   if (!certPath || !keyPath) return null
   try {
@@ -2402,6 +2414,7 @@ initStorage()
           port: PORT,
           basePath: config.basePath || '/serverXR',
           selfToken: config.internalApiToken || null,
+          tlsName: tlsFiles ? certificateName(tlsFiles.cert) : null,
           // A followed space must exist here before anything can land in it.
           // `di follow` makes it when the install is running; a follow written
           // while it was down, or carried in on a backup, arrives without one.
@@ -2421,6 +2434,10 @@ initStorage()
 
     httpServer.listen(PORT, config.host, () => {
       startFollowsWhenUp()
+      // `di follow` / `di unfollow` write follows.json while this runs. Polled
+      // stat, not fs.watch: the file is replaced by a write and inotify loses
+      // it, and two seconds is well inside what the CLI promises.
+      fs.watchFile(path.join(config.directories.dataDir, 'follows.json'), { interval: 2000 }, startFollowsWhenUp).unref?.()
       pushEvent('server-started', {
         port: PORT,
         host: config.host,

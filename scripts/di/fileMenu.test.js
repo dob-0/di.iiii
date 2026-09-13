@@ -72,7 +72,7 @@ describe('opening a file is not a server-management task', () => {
         // Found on the festival machine: `di open FILE` stopped and restarted
         // the server for everyone on it, while the browser's Open a file went
         // through the API in place. Two doors, two behaviours.
-        expect(cli).toContain("fetch(`${localUrl(port)}/serverXR/api/spaces/bundle`, { method: 'POST', body: form })")
+        expect(cli).toContain("fetch(`${apiBase(home, port)}/api/spaces/bundle`, { method: 'POST', body: form })")
         expect(cli).toContain("form.append('bundle', await fs.openAsBlob(file), path.basename(file))")
         const ask = open.indexOf('await openThroughServer({ home, port, file: resolved, as: args.flags.as })')
         const stop = open.indexOf('if (wasRunning) { try { await runnerFor(home).stop({ home }) }')
