@@ -175,3 +175,20 @@ describe('machine hub routing', () => {
         expect(hub.listPeers(SPACE).map(peer => peer.peerId)).toEqual(['here'])
     })
 })
+
+describe('what a machine has', () => {
+    it('keeps a plain, capped device list and drops anything it does not know', () => {
+        const { cleanDevices } = require('./hub')
+        const devices = cleanDevices([
+            { kind: 'camera', id: 'abc', label: 'USB2.0 HD UVC WebCam', secret: 'x' },
+            { kind: 'screen', id: 'screen-0', label: 'Screen', width: 1366.4, height: 768 },
+            { kind: 'toaster', id: 'nope' },
+            null
+        ])
+        expect(devices).toEqual([
+            { kind: 'camera', id: 'abc', label: 'USB2.0 HD UVC WebCam' },
+            { kind: 'screen', id: 'screen-0', label: 'Screen', width: 1366, height: 768 }
+        ])
+        expect(cleanDevices(Array.from({ length: 50 }, (_, i) => ({ kind: 'mic', id: `m${i}` })))).toHaveLength(32)
+    })
+})

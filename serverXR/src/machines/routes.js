@@ -111,8 +111,8 @@ function registerMachineRoutes(router, {
     router.post('/api/spaces/:spaceId/machines/hello', requireSpaceEditor, (req, res) => {
         const spaceId = req.machineSpaceId
         const me = machine()
-        const { peerId, role = null } = req.body || {}
-        const result = hub.hello(spaceId, { peerId, role, machine: me })
+        const { peerId, role = null, devices = [] } = req.body || {}
+        const result = hub.hello(spaceId, { peerId, role, devices, machine: me })
         if (result.error) return res.status(result.status).json({ error: result.error })
         res.json({ machine: me, peers: hub.listPeers(spaceId) })
     })

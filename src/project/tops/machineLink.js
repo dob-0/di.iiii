@@ -35,6 +35,7 @@ export const createMachineLink = ({ spaceId, role = 'runner' }) => {
     const peerListeners = new Set()
     let machine = null
     let peers = []
+    let devices = []
     let stopped = false
     let helloTimer = null
     let controller = null
@@ -46,7 +47,7 @@ export const createMachineLink = ({ spaceId, role = 'runner' }) => {
 
     const hello = async () => {
         try {
-            const answer = await apiFetch(`${base}/machines/hello`, { method: 'POST', body: { peerId, role } })
+            const answer = await apiFetch(`${base}/machines/hello`, { method: 'POST', body: { peerId, role, devices } })
             machine = answer?.machine || machine
             setPeers(answer?.peers)
         } catch {
@@ -80,12 +81,45 @@ export const createMachineLink = ({ spaceId, role = 'runner' }) => {
         send: (to, payload) => apiFetch(`${base}/signal`, { method: 'POST', body: { from: peerId, to, payload } }).catch(() => null),
         onMessage: (listener) => { listeners.add(listener); return () => listeners.delete(listener) },
         onPeers: (listener) => { peerListeners.add(listener); listener(peers, machine); return () => peerListeners.delete(listener) },
+        /** What this machine has; told to the others on the next hello, which is now. */
+        setDevices: (next) => { devices = Array.isArray(next) ? next : []; hello() },
         stop() {
             stopped = true
             clearInterval(helloTimer)
             controller?.abort()
             listeners.clear()
             peerListeners.clear()
+        }
+    }
+}
+
+// One link per space per page. The editor's runner, the Desk panel and the
+// projector page all ask for it; one peer answers for the page, so the other
+// machines see one page, not three.
+const shared = new Map()
+export const acquireMachineLink = (spaceId) => {
+    let entry = shared.get(spaceId)
+    if (!entry) {
+        entry = { link: createMachineLink({ spaceId, role: 'runner' }), count: 0 }
+        shared.set(spaceId, entry)
+    }
+    entry.count += 1
+    let released = false
+    return {
+        link: entry.link,
+        release() {
+            if (released) return
+            released = true
+            entry.count -= 1
+            if (entry.count > 0) return
+            // A moment's grace: a component that remounts (a route change, a
+            // strict-mode double effect) keeps the same peer instead of leaving
+            // a ghost page on the other machine for thirty seconds.
+            setTimeout(() => {
+                if (entry.count > 0 || shared.get(spaceId) !== entry) return
+                entry.link.stop()
+                shared.delete(spaceId)
+            }, 1500)
         }
     }
 }
@@ -98,12 +132,23 @@ export const runnerOn = (peers, machineId, selfPeerId = null) => (
 )
 
 /** Every machine a space can see, this one first, each once. */
-export const machinesIn = (peers, self) => {
+export const machinesIn = (peers, self, selfDevices = []) => {
     const byId = new Map()
-    if (self?.id) byId.set(self.id, { id: self.id, name: self.name || 'this machine', self: true })
+    if (self?.id) byId.set(self.id, { id: self.id, name: self.name || 'this machine', self: true, devices: selfDevices, pages: 1 })
     for (const peer of peers || []) {
-        if (!peer.machineId || byId.has(peer.machineId)) continue
-        byId.set(peer.machineId, { id: peer.machineId, name: peer.machineName || peer.machineId.slice(0, 8), self: false })
+        if (!peer.machineId) continue
+        const known = byId.get(peer.machineId)
+        if (known) {
+            if (known.self) continue
+            known.pages += 1
+            // Two pages on one machine may see different things (a camera
+            // unplugged between them); the union is what the machine has.
+            for (const device of peer.devices || []) {
+                if (!known.devices.some((d) => d.kind === device.kind && (d.id === device.id || (d.label && d.label === device.label)))) known.devices.push(device)
+            }
+            continue
+        }
+        byId.set(peer.machineId, { id: peer.machineId, name: peer.machineName || peer.machineId.slice(0, 8), self: false, devices: [...(peer.devices || [])], pages: 1 })
     }
     return [...byId.values()]
 }

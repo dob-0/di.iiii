@@ -167,6 +167,7 @@ export const FAMILY_BY_TYPE = {
     'view.timeline': 'watch',
     'view.director': 'watch',
     'stream.monitor': 'watch',
+    'view.desk': 'watch',
     // send out — leave the browser: MIDI/OSC out, streams, recordings
     // Publish sits with the things that leave the browser: what this panel
     // changes is what a stranger receives, not what the graph makes.
@@ -876,6 +877,22 @@ export const NODE_TYPES = {
             { id: 'filePattern', type: 'string', label: 'File Pattern' },
         ],
         render: 'hidden',
+    },
+
+    'view.desk': {
+        id: 'view.desk',
+        label: 'Desk',
+        category: 'view',
+        runtime: 'web',
+        singleton: false,
+        // Every machine linked into this space and what it has — cameras,
+        // microphones, speakers, screens — with a button that places the
+        // operator for a device, already set to run on its machine.
+        keywords: ['desk', 'machines', 'devices', 'cameras', 'screens', 'projector', 'network', 'computers'],
+        inputs: [],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
     },
 
     'stream.monitor': {

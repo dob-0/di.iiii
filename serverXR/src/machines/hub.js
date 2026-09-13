@@ -37,6 +37,22 @@ const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/
 const isPeerId = (value) => typeof value === 'string' && ID_PATTERN.test(value)
 const cleanText = (value, max) => (typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null)
 
+// What a page says its machine has: cameras, microphones, speakers, screens.
+// Shown to the other machines on the desk, so it is capped and plain — a
+// label and an id, never whatever a browser happened to put in the object.
+const DEVICE_KINDS = new Set(['camera', 'mic', 'speaker', 'screen', 'midi-in', 'midi-out'])
+const MAX_DEVICES = 32
+const cleanDevices = (list) => (Array.isArray(list) ? list : [])
+    .filter(device => device && DEVICE_KINDS.has(device.kind))
+    .slice(0, MAX_DEVICES)
+    .map(device => ({
+        kind: device.kind,
+        id: cleanText(device.id, 200) || '',
+        label: cleanText(device.label, 80) || '',
+        ...(Number.isFinite(device.width) ? { width: Math.round(device.width) } : {}),
+        ...(Number.isFinite(device.height) ? { height: Math.round(device.height) } : {})
+    }))
+
 const viaFollower = (machineId) => `${FOLLOWER_VIA}${machineId}`
 const viaLink = (remoteBase) => `${LINK_VIA}${remoteBase}`
 const serverKey = (machineId) => `server:${machineId}`
@@ -96,6 +112,7 @@ const createMachineHub = ({
         machineId: peer.machineId,
         machineName: peer.machineName,
         role: peer.role,
+        devices: peer.devices || [],
         seenAt: peer.seenAt,
         via: peer.via
     })
@@ -104,7 +121,7 @@ const createMachineHub = ({
      * A tab on this server says it is here. Refreshes a peer that already is.
      * @returns {{ peer } | { error, status }}
      */
-    const hello = (spaceId, { peerId, role = null, machine }) => {
+    const hello = (spaceId, { peerId, role = null, devices = [], machine }) => {
         if (!isPeerId(peerId)) return { error: 'peerId must be 1-128 letters, digits, _ . : -', status: 400 }
         prune(spaceId)
         const space = spaceFor(spaceId, true)
@@ -116,6 +133,7 @@ const createMachineHub = ({
             machineId: machine.id,
             machineName: machine.name,
             role: cleanText(role, 40),
+            devices: cleanDevices(devices),
             seenAt: now(),
             via: LOCAL
         }
@@ -174,6 +192,7 @@ const createMachineHub = ({
                 machineId: raw.machineId,
                 machineName: cleanText(raw.machineName, 80) || raw.machineId,
                 role: cleanText(raw.role, 40),
+                devices: cleanDevices(raw.devices),
                 seenAt: now(),
                 via
             })
@@ -278,6 +297,7 @@ const createMachineHub = ({
 }
 
 module.exports = {
+    cleanDevices,
     createMachineHub,
     isPeerId,
     viaFollower,

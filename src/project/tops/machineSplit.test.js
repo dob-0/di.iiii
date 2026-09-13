@@ -51,6 +51,6 @@ describe('a patch across machines', () => {
             [{ machineId: 'asuz', machineName: 'asuz' }, { machineId: 'asuz', machineName: 'asuz' }, { machineId: 'pc', machineName: 'aylmo' }],
             { id: 'pc', name: 'aylmo' }
         )
-        expect(list).toEqual([{ id: 'pc', name: 'aylmo', self: true }, { id: 'asuz', name: 'asuz', self: false }])
+        expect(list.map(({ id, name, self, pages }) => ({ id, name, self, pages }))).toEqual([{ id: 'pc', name: 'aylmo', self: true, pages: 1 }, { id: 'asuz', name: 'asuz', self: false, pages: 2 }])
     })
 })

@@ -31,6 +31,11 @@ export const TOP_OPERATORS = {
         // `source` operators are fed by the engine from a <video>; the shader
         // only flips the camera's top-down rows and applies nothing else.
         source: 'camera',
+        // Which camera on its machine. Chosen from the Desk, or in the
+        // inspector from the cameras that machine reported; empty is the
+        // machine's default camera. The label is kept beside the id because a
+        // camera's id differs between two pages of the same machine.
+        pickDevice: 'camera',
         params: [toggle('mirror', 'Mirror')],
         fragment: `
 uniform sampler2D source;
@@ -230,6 +235,13 @@ const RUNS_ON = {
     options: [{ value: RUNS_ON_ANYWHERE, label: 'Where the page is open' }]
 }
 
+const PICK_CAMERA = {
+    id: 'device',
+    type: 'string',
+    label: 'Camera',
+    options: [{ value: '', label: 'Its default camera' }]
+}
+
 /** Does THIS machine compute the operator? Unknown machine → only anywhere-operators. */
 export const runsHere = (values, machineId) => {
     const target = values?.machine || RUNS_ON_ANYWHERE
@@ -260,9 +272,10 @@ export const buildTopNodeTypes = () => Object.fromEntries(Object.entries(TOP_OPE
     ],
     defaultValues: {
         machine: '',
+        ...(operator.pickDevice ? { device: '', deviceLabel: '' } : {}),
         ...Object.fromEntries(operator.params.map((p) => [p.name, p.toggle ? Boolean(p.value) : (p.options ? String(p.value) : p.value)]))
     },
-    configInputs: [RUNS_ON, ...operator.params.map((p) => (
+    configInputs: [RUNS_ON, ...(operator.pickDevice ? [PICK_CAMERA] : []), ...operator.params.map((p) => (
         p.toggle
             ? { id: p.name, type: 'boolean', label: p.label }
             : p.options

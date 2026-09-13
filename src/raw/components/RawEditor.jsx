@@ -18,8 +18,9 @@ import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import VideoFrameFeed from './VideoFrameFeed.jsx'
 import TopNetworkFeed from './TopNetworkFeed.jsx'
+import DeskPanelWindow from './DeskPanelWindow.jsx'
 import { isTopType } from '../../project/tops/topOperators.js'
-import { useKnownMachines } from '../../project/tops/useTopNetwork.js'
+import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
 import MidiOutFeed from './MidiOutFeed.jsx'
@@ -865,13 +866,25 @@ export default function RawEditor({
         : []
     // A picture operator's Runs on lists the machines this space can see right
     // now; the registry only knows "where the page is open".
-    const knownMachines = useKnownMachines()
+    // Presence only on a desk that uses it: picture operators or a Desk panel.
+    const usesDesk = nodes.some((node) => isTopType(node.typeId) || node.typeId === 'view.desk')
+    const { machines: knownMachines } = useMachinePresence(usesDesk ? resolvedSpaceId : '')
     const withMachines = (sections) => (isTopType(scopedSelectedNode?.typeId)
         ? sections.map((section) => ({
             ...section,
-            fields: section.fields.map((field) => (field.path?.[0] === 'machine'
-                ? { ...field, options: [...field.options, ...knownMachines.map((machine) => ({ value: machine.id, label: machine.self ? `${machine.name} (this one)` : machine.name }))] }
-                : field))
+            fields: section.fields.map((field) => {
+                if (field.path?.[0] === 'machine') {
+                    return { ...field, options: [...field.options, ...knownMachines.map((machine) => ({ value: machine.id, label: machine.self ? `${machine.name} (this one)` : machine.name }))] }
+                }
+                if (field.path?.[0] === 'device') {
+                    // The cameras of the machine this operator runs on.
+                    const owner = knownMachines.find((machine) => machine.id === scopedSelectedNode.values?.machine)
+                        || knownMachines.find((machine) => machine.self)
+                    const cameras = (owner?.devices || []).filter((device) => device.kind === 'camera')
+                    return { ...field, options: [...field.options, ...cameras.map((device) => ({ value: device.id, label: device.label }))] }
+                }
+                return field
+            })
         }))
         : sections)
     const inspectorSections = scopedSelectedNode
@@ -1611,6 +1624,18 @@ export default function RawEditor({
         }
         if (node.typeId === 'stream.monitor') {
             return <MonitorPanelWindow node={node} values={resolvedValues} />
+        }
+        if (node.typeId === 'view.desk') {
+            return (
+                <DeskPanelWindow
+                    spaceId={resolvedSpaceId}
+                    onPlace={(typeId, params) => handlePaletteCreate({
+                        definition: getNodeType(typeId),
+                        params,
+                        placement: { graphX: (node.graphX ?? 0) + 320, graphY: (node.graphY ?? 0) + 40 }
+                    })}
+                />
+            )
         }
         if (node.typeId === 'source.webcam') {
             return <WebcamSourcePanel node={node} onFrameChange={handleFrameOutputChange} />

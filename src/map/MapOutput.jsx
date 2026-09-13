@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import MapStage from './MapStage.jsx'
 import { useMapDocument, useMapChannelListener } from './useMapDocument.js'
 import { toTopNetwork } from '../project/tops/useTopNetwork.js'
+import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import './mapSurface.css'
 
 // THE SIGNAL.
@@ -19,6 +20,18 @@ export default function MapOutput({ projectId, spaceId }) {
     const { store, mapping, document: doc } = useMapDocument(projectId, { role: 'out' })
     // The project's picture operators, for a surface whose source is Pictures.
     const network = useMemo(() => toTopNetwork(doc), [doc])
+    // This page is its machine on the desk: a kiosk with a camera and a
+    // projector is exactly what the other machines need to see.
+    const { machine } = useMachinePresence(spaceId)
+    // Nothing mapped yet, but a Picture Out runs on this machine: the screen
+    // shows it, whole. Mapping corners is a refinement, not a precondition.
+    const ownOut = useMemo(() => {
+        if (!machine?.id || (mapping?.surfaces || []).length) return null
+        return network.nodes.find((node) => node.type === 'top.out' && node.values?.machine === machine.id)?.id || null
+    }, [machine, mapping, network])
+    const fallbackMapping = useMemo(() => (ownOut
+        ? { ...(mapping || {}), surfaces: [{ id: 'desk-out', name: '', enabled: true, corners: [[0, 0], [1, 0], [1, 1], [0, 1]], mask: [], source: { kind: 'network', ref: ownOut }, resolution: [1280, 720], opacity: 1, brightness: 1, contrast: 1, saturation: 1, hue: 0, blend: 'normal' }] }
+        : mapping), [ownOut, mapping])
     useMapChannelListener(projectId, store)
 
     const [viewport, setViewport] = useState(() => ({
@@ -63,7 +76,7 @@ export default function MapOutput({ projectId, spaceId }) {
     return (
         <div className={`map-output${idle ? ' is-idle' : ''}`}>
             {stage.width > 0 ? (
-                <MapStage mapping={mapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} live />
+                <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} live />
             ) : null}
             <MapOutputControls />
         </div>

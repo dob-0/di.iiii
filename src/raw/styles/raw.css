@@ -5613,6 +5613,86 @@
 
 /* The Monitor: a window that watches a texture wire. The canvas letterboxes
    inside whatever frame the window is dragged to. */
+/* The desk: machines and their devices (DeskPanelWindow). */
+.raw-desk-panel {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+    padding: var(--di-space-3);
+    display: grid;
+    gap: var(--di-space-3);
+    align-content: start;
+    background: var(--di-surface);
+    box-sizing: border-box;
+}
+
+.raw-desk-panel.is-empty,
+.raw-desk-hint {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: var(--di-text-3);
+}
+
+.raw-desk-machine {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: var(--di-space-2) var(--di-space-3);
+}
+
+.raw-desk-machine.is-self {
+    border-color: rgba(80, 250, 123, 0.45);
+}
+
+.raw-desk-machine header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--di-space-2);
+}
+
+.raw-desk-machine header span,
+.raw-desk-group h4 {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: var(--di-text-2);
+    font-weight: normal;
+    margin: 0;
+}
+
+.raw-desk-group {
+    margin-top: var(--di-space-2);
+}
+
+.raw-desk-group ul {
+    list-style: none;
+    margin: var(--di-space-1) 0 0;
+    padding: 0;
+    display: grid;
+    gap: var(--di-space-1);
+}
+
+.raw-desk-group li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--di-space-2);
+    font-size: var(--di-text-3);
+}
+
+.raw-desk-group li span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.raw-desk-group button {
+    flex: 0 0 auto;
+    min-height: 32px;
+    padding: 0 var(--di-space-2);
+    background: transparent;
+    color: inherit;
+    border: 1px solid rgba(80, 250, 123, 0.5);
+    cursor: pointer;
+}
+
 .raw-monitor-panel {
     position: absolute;
     inset: 0;

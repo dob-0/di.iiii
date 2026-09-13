@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createTopEngine } from './topEngine.js'
 import { TOP_OPERATORS, isTopType, runsHere } from './topOperators.js'
 import { topThumbnailTargets } from './topThumbnails.js'
-import { createMachineLink, machinesIn, runnerOn } from './machineLink.js'
+import { acquireMachineLink, machinesIn, runnerOn } from './machineLink.js'
 import { createPicturePeers } from './picturePeers.js'
 
 // The picture operators of a project document, as the engine reads them.
@@ -96,15 +96,15 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
     // --- the link to the other machines, while there is a network to share
     useEffect(() => {
         if (!spaceId || !hasNodes) return undefined
-        const created = createMachineLink({ spaceId, role: 'runner' })
-        const off = created.onPeers((peers, machine) => {
+        const { link: shared, release } = acquireMachineLink(spaceId)
+        const off = shared.onPeers((peers, machine) => {
             setLinkView({ machine, peers })
             publishMachines(machinesIn(peers, machine))
         })
-        setLink(created)
+        setLink(shared)
         return () => {
             off()
-            created.stop()
+            release()
             setLink(null)
         }
     }, [spaceId, hasNodes])
@@ -210,19 +210,36 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
     }, [split, network, hasNodes, canvas])
 
     // --- one camera stream per Camera In that runs HERE
-    const cameraIds = useMemo(
-        () => split.local.filter((node) => TOP_OPERATORS[node.type].source === 'camera').map((node) => node.id).join(','),
+    const cameraKey = useMemo(
+        () => JSON.stringify(split.local
+            .filter((node) => TOP_OPERATORS[node.type].source === 'camera')
+            .map((node) => [node.id, node.values.device || '', node.values.deviceLabel || ''])),
         [split]
     )
     useEffect(() => {
-        const ids = cameraIds ? cameraIds.split(',') : []
+        const cameras = JSON.parse(cameraKey)
+        const ids = cameras.map(([id]) => id)
         if (!ids.length) return undefined
         const media = globalThis.navigator?.mediaDevices
         if (!media?.getUserMedia) { setError('no camera access in this browser'); return undefined }
         const streams = []
         let cancelled = false
-        for (const id of ids) {
-            media.getUserMedia({ video: true, audio: false })
+        // A camera's id is per page: the Desk on another page of this machine
+        // may have recorded a different one. The label is the fallback, and the
+        // machine's default camera the last word.
+        const resolveCamera = async (deviceId, label) => {
+            if (!deviceId && !label) return true
+            try {
+                const list = (await media.enumerateDevices()).filter((device) => device.kind === 'videoinput')
+                const found = list.find((device) => device.deviceId === deviceId) || list.find((device) => label && device.label === label)
+                return found ? { deviceId: { exact: found.deviceId } } : true
+            } catch {
+                return true
+            }
+        }
+        for (const [id, deviceId, label] of cameras) {
+            resolveCamera(deviceId, label)
+                .then((video) => media.getUserMedia({ video, audio: false }))
                 .then((stream) => {
                     if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return }
                     streams.push(stream)
@@ -242,7 +259,7 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
             for (const id of ids) engineRef.current?.setVideo(id, null)
             streams.forEach((stream) => stream.getTracks().forEach((track) => track.stop()))
         }
-    }, [cameraIds, hasNodes, canvas])
+    }, [cameraKey, hasNodes, canvas])
 
     return { error, machine: linkView.machine, peers: linkView.peers }
 }

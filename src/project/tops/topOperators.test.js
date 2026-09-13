@@ -44,7 +44,7 @@ describe('picture operators', () => {
             expect(type.render, id).toBe('hidden')
             expect(type.outputs[0], id).toEqual({ id: 'out', type: 'texture', label: 'Picture' })
             expect(type.inputs.every((port) => port.type === 'texture'), id).toBe(true)
-            expect(type.configInputs.map((field) => field.id), id).toEqual(['machine', ...TOP_OPERATORS[id].params.map((p) => p.name)])
+            expect(type.configInputs.map((field) => field.id), id).toEqual(['machine', ...(TOP_OPERATORS[id].pickDevice ? ['device'] : []), ...TOP_OPERATORS[id].params.map((p) => p.name)])
         }
         expect(types['top.analyze'].outputs.map((port) => port.id)).toEqual(['out', 'brightness', 'amount', 'x', 'y'])
     })
