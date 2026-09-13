@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import MapStage from './MapStage.jsx'
 import { useMapDocument, useMapChannelListener } from './useMapDocument.js'
+import { toTopNetwork } from '../project/tops/useTopNetwork.js'
 import './mapSurface.css'
 
 // THE SIGNAL.
@@ -15,7 +16,9 @@ import './mapSurface.css'
 const IDLE_CURSOR_MS = 2000
 
 export default function MapOutput({ projectId, spaceId }) {
-    const { store, mapping } = useMapDocument(projectId, { role: 'out' })
+    const { store, mapping, document: doc } = useMapDocument(projectId, { role: 'out' })
+    // The project's picture operators, for a surface whose source is Pictures.
+    const network = useMemo(() => toTopNetwork(doc), [doc])
     useMapChannelListener(projectId, store)
 
     const [viewport, setViewport] = useState(() => ({
@@ -60,7 +63,7 @@ export default function MapOutput({ projectId, spaceId }) {
     return (
         <div className={`map-output${idle ? ' is-idle' : ''}`}>
             {stage.width > 0 ? (
-                <MapStage mapping={mapping} spaceId={spaceId} width={stage.width} height={stage.height} live />
+                <MapStage mapping={mapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} live />
             ) : null}
             <MapOutputControls />
         </div>

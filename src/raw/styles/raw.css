@@ -5865,6 +5865,16 @@
 /* The one line a portless card can afford. Clipped rather than wrapped: the
    body is a single 22px row and its height is the geometry the wires are
    drawn from, so this must never push it taller. */
+/* A picture operator's live picture, under its port rows (TopThumbnail). */
+.raw-top-picture {
+    position: absolute;
+    left: 8px;
+    box-sizing: border-box;
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+}
+
 .raw-graph-node-summary {
     position: absolute;
     inset: 0 10px auto 10px;

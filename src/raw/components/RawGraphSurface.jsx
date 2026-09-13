@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, cardHeight } from '../utils/cardGeometry.js'
+import { isTopType } from '../../project/tops/topOperators.js'
+import TopThumbnail from './TopThumbnail.jsx'
 import {
     arePortsCompatible,
     getNodeCardSummary,
@@ -1450,6 +1452,12 @@ export default function RawGraphSurface({
                                         it can never collide with a port row. */}
                                     {showPorts && !inputs.length && !outputs.length && getNodeCardSummary(node) ? (
                                         <span className="raw-graph-node-summary">{getNodeCardSummary(node)}</span>
+                                    ) : null}
+                                    {showPorts && isTopType(node.typeId) ? (
+                                        <TopThumbnail
+                                            nodeId={node.id}
+                                            top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
+                                        />
                                     ) : null}
                                     {tier === 'header' ? (
                                         // Too small for ports, but the wires still land here,

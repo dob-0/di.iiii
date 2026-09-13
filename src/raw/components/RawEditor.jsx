@@ -17,6 +17,8 @@ import ChatPanelWindow from './ChatPanelWindow.jsx'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import VideoFrameFeed from './VideoFrameFeed.jsx'
+import TopNetworkFeed from './TopNetworkFeed.jsx'
+import { isTopType } from '../../project/tops/topOperators.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
 import MidiOutFeed from './MidiOutFeed.jsx'
@@ -2493,6 +2495,11 @@ export default function RawEditor({
                     )}
                 </div>
             )}
+
+            {/* The picture operators run while any exist — see TopNetworkFeed. */}
+            {nodes.some((node) => isTopType(node.typeId)) ? (
+                <TopNetworkFeed document={document} onLiveOutputChange={handleLiveOutputChange} />
+            ) : null}
 
             {/* One invisible feed per playing Video node, so a Frame wire
                 carries the picture even while the room isn't on screen —
