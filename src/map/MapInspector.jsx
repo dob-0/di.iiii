@@ -240,18 +240,7 @@ function MapSlider({ label, value, min, max, step, onChange }) {
 function MapEffectFields({ effect, onChange }) {
     const kind = effect?.kind || 'none'
     const slider = (key, label, min, max, step) => (
-        <label className="map-field map-field-inline" key={key}>
-            <span>{label}</span>
-            <input
-                type="range"
-                min={min}
-                max={max}
-                step={step}
-                value={effect[key]}
-                onChange={(event) => onChange({ [key]: Number(event.target.value) })}
-            />
-            <span className="map-field-value">{Number(effect[key]).toFixed(2)}</span>
-        </label>
+        <MapSlider key={key} label={label} value={effect[key]} min={min} max={max} step={step} onChange={(value) => onChange({ [key]: value })} />
     )
     return (
         <>
