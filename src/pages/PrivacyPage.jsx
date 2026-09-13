@@ -37,7 +37,7 @@ export default function PrivacyPage() {
             </header>
 
             <main className="legal-content">
-                <p className="legal-updated">updated 2026-08-18 · audited against the codebase 2026-07-28</p>
+                <p className="legal-updated">updated 2026-09-13 · audited against the codebase 2026-07-28</p>
 
                 <section className="legal-section">
                     <h2>the session cookie</h2>
@@ -129,6 +129,13 @@ export default function PrivacyPage() {
                         no cookie, no IP address, no browser fingerprint, no user id, nothing that
                         links two visits together. It answers &quot;how many, from where&quot; and
                         cannot answer &quot;who&quot;.
+                    </p>
+                    <p>
+                        Programs that call our API — apps, crawlers, scripts — are counted the same
+                        way: per day, by the name they give in their User-Agent header, plus the
+                        contact an app chose to publish there. No IP address, no pages read, and a
+                        browser is only ever part of one daily total. Kept 90 days. How programs are
+                        asked to identify: <a href="/for-apps">/for-apps</a>.
                     </p>
                     <p>
                         Exceptions: the Google APIs script loads only if you open the Drive import,

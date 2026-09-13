@@ -24,6 +24,23 @@ import { currentVersionDir, writeState } from './state.mjs'
 
 const REPO = 'dob-0/di.iiii'
 
+/**
+ * npm lives next to the node running this file, which on a machine where di
+ * downloaded its own node is NOT on PATH — that machine may have no npm at all.
+ * And npm is a node script (`#!/usr/bin/env node`), so the sibling alone still
+ * dies unless its node is on PATH too. The first install always did both, in
+ * bootstrap.mjs; `di update` did neither and failed on exactly the machines
+ * that needed it, with `spawn npm ENOENT`. One helper, so the two cannot drift.
+ */
+export const npmInvocation = ({ execPath = process.execPath, env = process.env } = {}) => {
+    const dir = path.dirname(execPath)
+    const sibling = path.join(dir, isWindows ? 'npm.cmd' : 'npm')
+    return {
+        command: fs.existsSync(sibling) ? sibling : (isWindows ? 'npm.cmd' : 'npm'),
+        env: { ...env, PATH: `${dir}${path.delimiter}${env.PATH || ''}` }
+    }
+}
+
 const run = (command, args, options = {}) => new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: options.verbose ? 'inherit' : 'ignore', ...options })
     child.on('error', reject)
@@ -187,10 +204,12 @@ export const stageVersion = async ({ home, release, verbose = false }) => {
         // serverXR only, and production deps only. The artist never needs Vite
         // or the root dependency tree — dist/ arrived already built.
         const layout = versionLayout(partialDir)
-        await run(isWindows ? 'npm.cmd' : 'npm', ['ci', '--omit=dev'], {
+        const npm = npmInvocation()
+        await run(npm.command, ['ci', '--omit=dev'], {
             cwd: layout.server,
             verbose,
-            shell: isWindows
+            shell: isWindows,
+            env: npm.env
         })
     } finally {
         await fsp.rm(tmp, { recursive: true, force: true })

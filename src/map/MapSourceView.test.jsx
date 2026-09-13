@@ -54,4 +54,12 @@ describe('what a surface draws', () => {
         render(<MapSourceView surface={surfaceOf({ kind: 'url', ref: 'https://example.test' })} live={false} label="ԳՈՌ" />)
         expect(screen.getByText('https://example.test')).toBeTruthy()
     })
+
+    it('says so on the surface when motion glow has no WebGL to run on', async () => {
+        // A black rectangle again would read as a mapping mistake. jsdom has no
+        // WebGL, which is exactly the machine this sentence is for.
+        render(<MapSourceView surface={surfaceOf({ kind: 'camera', ref: '' }, { effect: { kind: 'motion' } })} label="ԳՈՌ" />)
+        expect(await screen.findByText('no WebGL on this machine')).toBeTruthy()
+    })
 })
+

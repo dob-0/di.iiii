@@ -1448,6 +1448,68 @@ describe('server write contracts', () => {
         expect(adminPatchMissing.status).toBe(404)
     })
 
+    // The guest book and its bouncer (appVisitors.js), end to end through the real
+    // middleware order. Callers are sent "through the proxies" with an
+    // X-Forwarded-For — a bare loopback caller is the machine itself and is never
+    // counted, which is also why every other test in this file is unaffected.
+    it('sorts programs by User-Agent: anonymous reads throttled with a hint, apps listed with their contact, blocked names turned away', async () => {
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' }
+        })
+        const fromOutside = (userAgent, address) => ({ 'X-Forwarded-For': `${address}, 10.0.0.1`, 'User-Agent': userAgent })
+        const healthUrl = `${server.baseUrl}/api/health`
+        const statuses = async (headers, count) => {
+            const seen = []
+            for (let i = 0; i < count; i += 1) {
+                const response = await fetch(healthUrl, { headers })
+                seen.push(response.status)
+                if (i < count - 1) await response.arrayBuffer()
+                else return { seen, last: response }
+            }
+            return { seen }
+        }
+
+        const anonymous = await statuses(fromOutside('curl/8.9.1', '203.0.113.1'), 31)
+        expect(anonymous.seen.slice(0, 30).every((status) => status === 200)).toBe(true)
+        expect(anonymous.last.status).toBe(429)
+        const throttled = await anonymous.last.json()
+        expect(throttled.hint).toContain('/for-apps')
+
+        const app = await statuses(fromOutside('SpaceMirror/1.4 ( ops@example.org )', '203.0.113.2'), 40)
+        expect(app.seen.every((status) => status === 200)).toBe(true)
+        await app.last.arrayBuffer()
+        const browser = await statuses(fromOutside('Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0', '203.0.113.3'), 40)
+        expect(browser.seen.every((status) => status === 200)).toBe(true)
+        await browser.last.arrayBuffer()
+
+        expect((await fetch(`${server.baseUrl}/api/admin/app-visitors`)).status).toBe(401)
+        const book = await fetch(`${server.baseUrl}/api/admin/app-visitors`, { headers: withAuth(server.apiToken) })
+        expect(book.status).toBe(200)
+        const { agents } = await book.json()
+        expect(agents).toContainEqual(expect.objectContaining({ agent: 'curl', kind: 'anonymous', today: 31 }))
+        expect(agents).toContainEqual(expect.objectContaining({ agent: 'spacemirror', kind: 'app', contact: 'ops@example.org' }))
+        expect(agents).toContainEqual(expect.objectContaining({ agent: 'browser', kind: 'browser', today: 40, firstSeen: null }))
+        // The admin's own requests came over loopback: not a visitor.
+        expect(agents.every((entry) => entry.agent !== 'node')).toBe(true)
+
+        const block = await fetch(`${server.baseUrl}/api/admin/app-visitors/blocks/spacemirror`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ blocked: true })
+        })
+        expect(block.status).toBe(200)
+        const refused = await fetch(healthUrl, { headers: fromOutside('SpaceMirror/1.4 ( ops@example.org )', '203.0.113.2') })
+        expect(refused.status).toBe(403)
+        await expect(refused.json()).resolves.toMatchObject({ see: '/for-apps' })
+
+        // A caller who proved who they are is never a stranger, whatever it is called.
+        const known = await fetch(healthUrl, {
+            headers: { ...fromOutside('SpaceMirror/1.4 ( ops@example.org )', '203.0.113.2'), ...withAuth(server.apiToken) }
+        })
+        expect(known.status).toBe(200)
+    })
+
     it('allows writes outside production when REQUIRE_AUTH is unset', async () => {
         const server = await startServer({ nodeEnv: 'test' })
 

@@ -122,6 +122,15 @@ const publicUrl = (home, port) => {
     return cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : localUrl(port)
 }
 
+/**
+ * Where this CLI talks to its own server. Not `localUrl(port)`: an install with
+ * a certificate answers https on its name and nothing else, and on 443 the
+ * loopback URL has no port in it at all — so every request went to :80, which
+ * is either nothing ("could not ask this di.iiii") or some other server that
+ * answers 200 to anything (`di follow` then believed every space existed).
+ */
+const apiBase = (home, port) => `${publicUrl(home, port)}/serverXR`
+
 /** How this install talks to ITSELF: always loopback, never the pretty name. */
 const spaceNames = async (port) => (await spaceSummary(port)).names
 
@@ -423,7 +432,7 @@ const openThroughServer = async ({ home, port, file, as }) => {
     form.append('bundle', await fs.openAsBlob(file), path.basename(file))
     if (as) form.append('as', as)
     try {
-        const response = await fetch(`${localUrl(port)}/serverXR/api/spaces/bundle`, { method: 'POST', body: form })
+        const response = await fetch(`${apiBase(home, port)}/api/spaces/bundle`, { method: 'POST', body: form })
         const body = await response.json().catch(() => ({}))
         if (response.ok) return { ok: true, spaceId: body?.spaceId || null }
         if (response.status === 413) return { ok: false, tooLarge: true }
@@ -506,7 +515,7 @@ const cmdNew = async (args) => {
     const port = resolvePort(home)
     if (!(await alive(home, port))) await cmdUp({ _: [], flags: { 'no-open': true } })
     try {
-        const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`, {
+        const response = await fetch(`${apiBase(home, port)}/api/spaces`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ label: name, permanent: true })
@@ -527,7 +536,7 @@ const cmdSpaces = async () => {
     const port = resolvePort(home)
     if (!(await alive(home, port))) { say(ui.notRunning()); return }
     try {
-        const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`)
+        const response = await fetch(`${apiBase(home, port)}/api/spaces`)
         const body = await response.json()
         const spaces = (body?.spaces || []).map((space) => space.id)
         say(spaces.length ? ui.spacesHere(spaces) : ui.noSpacesYet())
@@ -665,7 +674,7 @@ const cmdRestore = async (args) => {
     // Out of the way first, like the snapshot path above. A running lighting
     // desk holds its show in memory and writes it back on the next change, so
     // a show restored underneath it would last until the first fader move.
-    const wasRunning = await probeHealth(resolvePort(home))
+    const wasRunning = await alive(home, resolvePort(home))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
@@ -797,7 +806,7 @@ const cmdUpdate = async (args) => {
     }
 
     const runner = runnerFor(home)
-    const wasRunning = await probeHealth(resolvePort(home))
+    const wasRunning = await alive(home, resolvePort(home))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     try { await runner.stop({ home }) } catch { /* already down */ }
 
@@ -927,7 +936,7 @@ const cmdInvite = async (args) => {
 
     const port = resolvePort(home)
     const cert = readCert(home)
-    const base = `${cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : localUrl(port)}/serverXR`
+    const base = apiBase(home, port)
     if (!await probeHealth(port, cert ? cert.name : '127.0.0.1', '/serverXR', cert ? 'https' : 'http')) {
         fail(`${CMD} is not running — start it first: ${CMD} up --lan`)
         process.exitCode = 1
@@ -956,7 +965,14 @@ const cmdInvite = async (args) => {
         process.exitCode = 1
         return
     }
-    say(ui.invited(spaceId, base.replace(/\/serverXR$/, ''), minted.key))
+    // The line is typed on ANOTHER machine, so it must name an address that
+    // machine can reach. The certificate's name is one; `localhost` never is —
+    // under --lan without a certificate, print tonight's first LAN address.
+    const reach = cert ? null : await probeReach(home, port)
+    const from = reach?.lan && reach.addresses[0]
+        ? lanUrl(reach.addresses[0], port)
+        : base.replace(/\/serverXR$/, '')
+    say(ui.invited(spaceId, from, minted.key))
 }
 
 /**
@@ -988,7 +1004,7 @@ const cmdFollow = async (args) => {
     if (!check.ok) { fail(ui.followRefused(check.reason, from)); process.exitCode = 1; return }
 
     const port = resolvePort(home)
-    const selfBase = `${localUrl(port)}/serverXR`
+    const selfBase = apiBase(home, port)
     const running = await alive(home, port)
 
     // Following yourself is a loop with no second person in it: the same server
@@ -1024,7 +1040,7 @@ const cmdFollows = async () => {
     if (!requireInstalled(home)) return
     const follows = readFollows(paths(home).data)
     const port = resolvePort(home)
-    const live = await fetch(`${localUrl(port)}/serverXR/api/follows`)
+    const live = await fetch(`${apiBase(home, port)}/api/follows`)
         .then(response => (response.ok ? response.json() : null))
         .catch(() => null)
     say(ui.followList(follows, live?.follows || []))

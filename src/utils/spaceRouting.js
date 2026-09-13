@@ -23,12 +23,19 @@ export const APP_PAGE_TERMS = 'terms'
 // The workshop — /tools (src/tools/ToolsRoom.jsx). The one address that leads to
 // every other tool, so it must not be takeable by a space.
 export const APP_PAGE_TOOLS = 'tools'
+// The door sign for programs — /for-apps (src/pages/ForAppsPage.jsx): how an
+// app, a script or an AI should identify itself, and the limits it meets. The
+// server's 429 and 403 answers point here, so no space may take the word.
+export const APP_PAGE_FOR_APPS = 'for-apps'
 export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
     APP_PAGE_WIKI,
     APP_PAGE_PRIVACY,
     APP_PAGE_TERMS,
     APP_PAGE_TOOLS,
+    // Checked before reserving: /serverXR/api/spaces/for-apps 404s on prod and
+    // on staging (2026-09-13), so nothing holds the word.
+    APP_PAGE_FOR_APPS,
     'beta',
     'raw',
     'seed',
@@ -168,6 +175,7 @@ export const isWikiPageSegment = (value = '') => (value || '').trim().toLowerCas
 export const isPrivacyPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_PRIVACY
 export const isTermsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TERMS
 export const isToolsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TOOLS
+export const isForAppsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_FOR_APPS
 export const isSpaceContentsSegment = (value = '') => (value || '').trim().toLowerCase() === SPACE_CONTENTS_SEGMENT
 
 export const buildSpaceContentsPath = (spaceId) => {
@@ -228,6 +236,12 @@ export const getAppLocationState = (locationLike = null) => {
         if (isToolsPageSegment(segment)) {
             return {
                 page: APP_PAGE_TOOLS,
+                spaceId: null
+            }
+        }
+        if (isForAppsPageSegment(segment)) {
+            return {
+                page: APP_PAGE_FOR_APPS,
                 spaceId: null
             }
         }

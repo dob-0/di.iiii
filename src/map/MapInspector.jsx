@@ -73,7 +73,10 @@ export default function MapInspector({
             ) : null}
 
             {surface.source.kind === 'camera' ? (
-                <MapCameraPicker value={surface.source.ref} onChange={(deviceId) => setSource('camera', deviceId)} />
+                <>
+                    <MapCameraPicker value={surface.source.ref} onChange={(deviceId) => setSource('camera', deviceId)} />
+                    <MapEffectFields effect={surface.effect} onChange={(patch) => onUpdate(surface.id, { effect: { ...surface.effect, ...patch } })} />
+                </>
             ) : null}
 
             {['url', 'video', 'image'].includes(surface.source.kind) ? (
@@ -227,5 +230,32 @@ function MapSlider({ label, value, min, max, step, onChange }) {
             <input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} />
             <output>{Number(value).toFixed(step < 1 ? 2 : 0)}</output>
         </label>
+    )
+}
+
+// What the camera picture goes through before the wall sees it. The sliders
+// change a running effect in place, and the change travels to every desk and
+// output following this project — tune it from another machine while the
+// projector keeps playing.
+function MapEffectFields({ effect, onChange }) {
+    const kind = effect?.kind || 'none'
+    const slider = (key, label, min, max, step) => (
+        <MapSlider key={key} label={label} value={effect[key]} min={min} max={max} step={step} onChange={(value) => onChange({ [key]: value })} />
+    )
+    return (
+        <>
+            <label className="map-field">
+                <span>Analysis</span>
+                <select value={kind} onChange={(event) => onChange({ kind: event.target.value })}>
+                    <option value="none">None — the camera as it is</option>
+                    <option value="motion">Motion glow — only what moves</option>
+                </select>
+            </label>
+            {kind === 'motion' ? [
+                slider('threshold', 'Ignore below', 0, 0.5, 0.01),
+                slider('trail', 'Trail', 0, 0.99, 0.01),
+                slider('gain', 'Glow', 0.5, 20, 0.5)
+            ] : null}
+        </>
     )
 }

@@ -26,7 +26,7 @@ import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
-import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 import ReservedAddressCard, { hasReservedAddressCard } from './components/ReservedAddressCard.jsx'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
@@ -67,6 +67,7 @@ const WikiPage = lazy(() => import('./wiki/WikiPage.jsx'))
 const SpaceContentsPage = lazy(() => import('./pages/SpaceContentsPage.jsx'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'))
 const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
+const ForAppsPage = lazy(() => import('./pages/ForAppsPage.jsx'))
 // AuthGate pulls in MUI + AccountButton -- lazy so public routes (landing,
 // wiki, any public space) that never render a gate don't pay for MUI in
 // their eager bundle (2026-07-17 perf audit).
@@ -587,12 +588,22 @@ function AppRouter() {
         )
     }
 
+    // `/for-apps` — the door sign for programs, a plain page like /terms.
+    if (appState.page === APP_PAGE_FOR_APPS) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <ForAppsPage />
+            </Suspense>
+        )
+    }
+
     const isRootLanding = !appState.spaceId
         && appState.page !== APP_PAGE_PREFERENCES
         && appState.page !== APP_PAGE_WIKI
         && appState.page !== APP_PAGE_PRIVACY
         && appState.page !== APP_PAGE_TERMS
         && appState.page !== APP_PAGE_TOOLS
+        && appState.page !== APP_PAGE_FOR_APPS
 
     if (isRootLanding) {
         // ?tour=1 keeps the landing reachable on a local install, where `/` is

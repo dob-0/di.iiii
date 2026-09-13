@@ -178,6 +178,8 @@
 .map-stage-surface > * { display: block; width: 100%; height: 100%; border: 0; }
 .map-source-fill { width: 100%; height: 100%; }
 .map-source-media { width: 100%; height: 100%; object-fit: fill; }
+/* Playing but unseen: display:none would let the browser stop decoding it. */
+.map-source-hidden-video { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .map-source-frame { width: 100%; height: 100%; border: 0; background: var(--di-black); }
 .map-source-svg { width: 100%; height: 100%; display: block; }
 
