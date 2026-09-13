@@ -221,7 +221,12 @@ export const defaultMappingSurface = {
     contrast: 1,
     saturation: 1,
     hue: 0,
-    blend: 'normal'
+    blend: 'normal',
+    // What is done to the picture before it is drawn. Camera surfaces only, for
+    // now. 'motion' keeps only what MOVES: the difference between two frames,
+    // above `threshold`, multiplied by `gain`, fading by `trail` each frame —
+    // stillness goes black and a moving body leaves a glowing wake.
+    effect: { kind: 'none', threshold: 0.08, trail: 0.88, gain: 4 }
 }
 
 export const defaultMappingCue = {
@@ -841,6 +846,22 @@ export const normalizeShowState = (show = {}) => {
 
 const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera']
 const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
+export const MAPPING_EFFECT_KINDS = ['none', 'motion']
+
+const clampNumber = (value, fallback, min, max) => Math.min(max, Math.max(min, ensureNumber(value, fallback)))
+
+export const normalizeMappingEffect = (effect = {}) => {
+    const source = effect && typeof effect === 'object' ? effect : {}
+    const fallback = defaultMappingSurface.effect
+    const kind = ensureString(source.kind, fallback.kind)
+    return {
+        kind: MAPPING_EFFECT_KINDS.includes(kind) ? kind : fallback.kind,
+        threshold: clampNumber(source.threshold, fallback.threshold, 0, 1),
+        // Below 1 always: a trail of exactly 1 never fades, and the wall fills.
+        trail: clampNumber(source.trail, fallback.trail, 0, 0.99),
+        gain: clampNumber(source.gain, fallback.gain, 0, 20)
+    }
+}
 
 const normalizePoint = (point, fallback = [0, 0]) => {
     if (!Array.isArray(point)) return [...fallback]
@@ -892,7 +913,8 @@ export const normalizeMappingSurface = (surface = {}) => {
         contrast: Math.max(0, ensureNumber(source.contrast, defaultMappingSurface.contrast)),
         saturation: Math.max(0, ensureNumber(source.saturation, defaultMappingSurface.saturation)),
         hue: ensureNumber(source.hue, defaultMappingSurface.hue),
-        blend: MAPPING_BLEND_MODES.includes(blend) ? blend : defaultMappingSurface.blend
+        blend: MAPPING_BLEND_MODES.includes(blend) ? blend : defaultMappingSurface.blend,
+        effect: normalizeMappingEffect(source.effect)
     }
 }
 
