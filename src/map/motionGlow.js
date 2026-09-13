@@ -25,11 +25,16 @@ uniform sampler2D glow;
 uniform float threshold;
 uniform float trail;
 uniform float gain;
+uniform float exposureShift;
 float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
 void main() {
     // Camera images arrive top-down; the buffers are bottom-up.
     vec2 cam = vec2(uv.x, 1.0 - uv.y);
-    float difference = abs(luma(texture2D(current, cam).rgb) - luma(texture2D(previous, cam).rgb));
+    // Take away what changed EVERYWHERE — the webcam re-exposing, or the
+    // projector's own light filling the room it is filming. Measured on the
+    // wall at asuz: without this, every exposure step lit 62% of the picture
+    // for half a second, and the projector's flash then fed the next one.
+    float difference = abs(luma(texture2D(current, cam).rgb) - luma(texture2D(previous, cam).rgb) - exposureShift);
     float moved = clamp((difference - threshold) * gain, 0.0, 1.0);
     // The 1/255 step matters: an 8-bit value times 0.88 rounds back up to
     // itself below about 4/255, and the wake would never quite leave.
@@ -113,6 +118,24 @@ export const startMotionGlow = ({ canvas, video, params }) => {
     let glowWrite = target(gl, width, height)
     let hasBefore = false
 
+    // The whole picture's brightness, from a thumbnail on the CPU: 32x18 is
+    // 576 pixels, nothing even for a 2012 laptop, and it is a mean, which is
+    // all the shader needs.
+    const probe = document.createElement('canvas')
+    probe.width = 32
+    probe.height = 18
+    const probeContext = probe.getContext('2d', { willReadFrequently: true })
+    let meanNow = null
+    let meanBefore = null
+    const meanLuma = () => {
+        if (!probeContext) return null
+        probeContext.drawImage(video, 0, 0, probe.width, probe.height)
+        const pixels = probeContext.getImageData(0, 0, probe.width, probe.height).data
+        let sum = 0
+        for (let i = 0; i < pixels.length; i += 4) sum += 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]
+        return sum / (pixels.length / 4) / 255
+    }
+
     const bind = (prog, name, unit, tex) => {
         gl.activeTexture(gl.TEXTURE0 + unit)
         gl.bindTexture(gl.TEXTURE_2D, tex)
@@ -133,6 +156,8 @@ export const startMotionGlow = ({ canvas, video, params }) => {
         ;[frameNow, frameBefore] = [frameBefore, frameNow]
         gl.bindTexture(gl.TEXTURE_2D, frameNow)
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video)
+        meanBefore = meanNow
+        meanNow = meanLuma()
         if (!hasBefore) { hasBefore = true; return }
 
         gl.viewport(0, 0, width, height)
@@ -144,6 +169,7 @@ export const startMotionGlow = ({ canvas, video, params }) => {
         gl.uniform1f(gl.getUniformLocation(accumulate, 'threshold'), current.threshold)
         gl.uniform1f(gl.getUniformLocation(accumulate, 'trail'), current.trail)
         gl.uniform1f(gl.getUniformLocation(accumulate, 'gain'), current.gain)
+        gl.uniform1f(gl.getUniformLocation(accumulate, 'exposureShift'), meanNow !== null && meanBefore !== null ? meanNow - meanBefore : 0)
         gl.drawArrays(gl.TRIANGLES, 0, 3)
         ;[glowRead, glowWrite] = [glowWrite, glowRead]
 
