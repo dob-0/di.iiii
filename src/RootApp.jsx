@@ -110,21 +110,33 @@ function RawSurfaceRoute({ rawState, spaceId }) {
     )
 }
 
+// Where a space's address becomes its identity. The first URL segment is a
+// NAME — it can be the space's id or its renameable public slug — and the
+// server answers to either. Everything below this line wants the one real id:
+// the scope check in AuthGate, the API paths, the socket room, the local
+// scene cache. So the lookup that this route already had to make (is the
+// space public?) hands back `id` too, and that id — never the raw segment —
+// travels down. The URL bar is not touched: the visitor keeps the address
+// they typed. docs/architecture/SPEC_space_urls_and_portability.md.
 function SpaceSurfaceRoute({ appState }) {
     const canBePublic = appState.page !== APP_PAGE_PREFERENCES
-    const { isPublic, loading } = useSpacePublicFlag(canBePublic ? appState.spaceId : null)
+    const { isPublic, loading, id } = useSpacePublicFlag(appState.spaceId)
+    // Unresolved (offline build, or a space this session may not read) falls
+    // back to the segment, exactly as before this resolve existed.
+    const spaceId = id || appState.spaceId
+    const routeState = spaceId === appState.spaceId ? appState : { ...appState, spaceId }
 
-    if (canBePublic && loading) {
+    if (loading) {
         return <RouteSurfaceFallback label="Loading" detail="" />
     }
 
     if (canBePublic && isPublic) {
-        return <SpaceSurfaceApp routeState={appState} />
+        return <SpaceSurfaceApp routeState={routeState} />
     }
 
     return (
-        <ProtectedSurface requiredSpaceId={appState.spaceId}>
-            <SpaceSurfaceApp routeState={appState} />
+        <ProtectedSurface requiredSpaceId={spaceId}>
+            <SpaceSurfaceApp routeState={routeState} />
         </ProtectedSurface>
     )
 }

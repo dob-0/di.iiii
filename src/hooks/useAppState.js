@@ -43,9 +43,14 @@ const LEGACY_DEFAULT_SCENE_BASE = ''
 const LIVE_SYNC_FEATURE_ENABLED = true
 const DEFAULT_SPACE_ID = 'main'
 
-export function useAppState() {
+// `spaceId` is the resolved, real space id handed down by SpaceSurfaceApp (the
+// URL segment may have been the space's public slug). Everything keyed on the
+// space below — permissions, API paths, the socket room, the local scene cache
+// — takes it from here, so id and slug open one space and not two.
+export function useAppState({ spaceId: resolvedSpaceId = null } = {}) {
     const { route, navigateToEditor, navigateToPreferences } = useAppRoute({
-        defaultSpaceId: DEFAULT_SPACE_ID
+        defaultSpaceId: DEFAULT_SPACE_ID,
+        spaceId: resolvedSpaceId
     })
     const spaceId = route.spaceId || DEFAULT_SPACE_ID
     const isPreferencesPage = route.page === APP_PAGE_PREFERENCES

@@ -11,7 +11,7 @@ import {
     RefsContext
 } from './contexts/AppContexts.js'
 
-function AppInner() {
+function AppInner({ spaceId }) {
     const {
         sceneStore,
         uiState,
@@ -25,7 +25,7 @@ function AppInner() {
         navigateToEditor,
         editorLayoutProps,
         deleteConfirm
-    } = useAppState()
+    } = useAppState({ spaceId })
 
     return (
         <SceneContext.Provider value={sceneStore}>
@@ -53,6 +53,10 @@ function AppInner() {
     )
 }
 
-export default function App() {
-    return <AppInner />
+// `spaceId` is the space's REAL id, resolved by the route above from a URL
+// segment that may have been either of the space's two addresses (id or
+// public slug). Passed in rather than re-read from the URL: identity is
+// decided once, at the surface that already fetched the space.
+export default function App({ spaceId = null }) {
+    return <AppInner spaceId={spaceId} />
 }

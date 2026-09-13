@@ -107,14 +107,24 @@ export default function AuthGate({
 
     // Out-of-scope sessions get sent to the space's public live view instead of
     // a dead end — but only when the space is actually public (flag fails closed).
+    //
+    // A session's scopes are real space ids, and `requiredSpaceId` may have
+    // arrived as the space's public slug — a second address for the same room.
+    // So a miss here is only a QUESTION: the lookup this branch already makes
+    // answers it (`liveSpaceId` is the real id), and a session scoped to the id
+    // is in scope however the visitor typed the address. Cheap by construction
+    // — the lookup only runs on the path that was about to refuse.
     const sessionSpaces = authSession.spaces
-    const outOfScope = Boolean(
+    const segmentOutOfScope = Boolean(
         requiredSpaceId
         && authenticated
         && Array.isArray(sessionSpaces)
         && !sessionSpaces.includes(requiredSpaceId)
     )
-    const { isPublic: liveIsPublic, exists: liveExists, loading: liveLoading } = useSpacePublicFlag(outOfScope ? requiredSpaceId : null)
+    const { isPublic: liveIsPublic, exists: liveExists, loading: liveLoading, id: liveSpaceId } = useSpacePublicFlag(segmentOutOfScope ? requiredSpaceId : null)
+    const scopedSpaceId = liveSpaceId || requiredSpaceId
+    const outOfScope = segmentOutOfScope
+        && !(Array.isArray(sessionSpaces) && sessionSpaces.includes(scopedSpaceId))
     const invitePending = inviteStatus === 'pending'
 
     useEffect(() => {
@@ -204,7 +214,9 @@ export default function AuthGate({
 
     if (authenticated) {
         const { spaces } = authSession
-        const inScope = !requiredSpaceId || !Array.isArray(spaces) || spaces.includes(requiredSpaceId)
+        // scopedSpaceId, not the URL segment: a space answers to its id and to
+        // its public slug, and the session's scopes are ids.
+        const inScope = !requiredSpaceId || !Array.isArray(spaces) || spaces.includes(scopedSpaceId)
         if (!inScope) {
             // Editor lanes stop here and say why. The redirect below is right for
             // a visitor following a shared link, but on an editor it fires as a

@@ -9,28 +9,40 @@ import {
 } from '../utils/spaceRouting.js'
 import { appNavigate } from '../utils/appNavigate.js'
 
-export function useAppRoute({ defaultSpaceId } = {}) {
+// `spaceId` (optional) is the space's real id, already resolved from the URL
+// segment by the route that mounted this surface. The segment is only a name —
+// a space answers to its id AND to its renameable public slug — so the route's
+// answer wins for identity, and the segment is kept for building addresses so
+// the bar goes on saying what the visitor typed.
+export function useAppRoute({ defaultSpaceId, spaceId: resolvedSpaceId = null } = {}) {
     const location = useLocation()
 
     const route = useMemo(() => {
         const appState = getAppLocationState(location)
+        const spaceSegment = appState.spaceId || defaultSpaceId
         return {
             page: appState.page || APP_PAGE_EDITOR,
-            spaceId: appState.spaceId || defaultSpaceId
+            spaceId: resolvedSpaceId || spaceSegment,
+            spaceSegment
         }
-    }, [location, defaultSpaceId])
+    }, [location, defaultSpaceId, resolvedSpaceId])
 
     const navigate = useCallback((nextRoute, { replace = false } = {}) => {
         const normalizedRoute = {
             page: nextRoute?.page || APP_PAGE_EDITOR,
             spaceId: nextRoute?.spaceId || defaultSpaceId
         }
+        // Moving between this space's own pages keeps the address the visitor
+        // arrived on — a slug in the bar must survive /admin and back.
+        const pathSpaceId = normalizedRoute.spaceId === route.spaceId
+            ? route.spaceSegment
+            : normalizedRoute.spaceId
         const nextPath = normalizedRoute.page === APP_PAGE_PREFERENCES
-            ? buildPreferencesPath(normalizedRoute.spaceId)
-            : buildAppSpacePath(normalizedRoute.spaceId)
+            ? buildPreferencesPath(pathSpaceId)
+            : buildAppSpacePath(pathSpaceId)
         window.scrollTo(0, 0)
         appNavigate(nextPath, { replace })
-    }, [defaultSpaceId])
+    }, [defaultSpaceId, route.spaceId, route.spaceSegment])
 
     const navigateToEditor = useCallback((spaceId = route.spaceId) => {
         navigate({ page: APP_PAGE_EDITOR, spaceId })

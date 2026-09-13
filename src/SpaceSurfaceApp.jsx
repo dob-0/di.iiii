@@ -81,6 +81,10 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     const publishedProjectId = surfaceState.space?.publishedProjectId || null
     const routeProjectId = routeState?.projectId || null
+    // The space's real id, whichever of its two addresses the visitor typed —
+    // the route above resolves it, and the fetched space is the second witness.
+    // Everything below is keyed on identity, not on the name in the bar.
+    const canonicalSpaceId = surfaceState.space?.id || spaceId
 
     if (isLocalRootWorkspace) {
         return (
@@ -104,10 +108,10 @@ export default function SpaceSurfaceApp({ routeState }) {
         return (
             <Suspense fallback={<LoadingScreen label="Loading project" />}>
                 <PublicProjectViewer
-                    key={`${spaceId}:${routeProjectId}`}
-                    spaceId={spaceId}
+                    key={`${canonicalSpaceId}:${routeProjectId}`}
+                    spaceId={canonicalSpaceId}
                     projectId={routeProjectId}
-                    spaceLabel={surfaceState.space?.label || spaceId}
+                    spaceLabel={surfaceState.space?.label || canonicalSpaceId}
                 />
             </Suspense>
         )
@@ -117,18 +121,22 @@ export default function SpaceSurfaceApp({ routeState }) {
         return (
             <Suspense fallback={<LoadingScreen label="Loading space" />}>
                 <PublicProjectViewer
-                    key={`${spaceId}:${publishedProjectId}`}
-                    spaceId={spaceId}
+                    key={`${canonicalSpaceId}:${publishedProjectId}`}
+                    spaceId={canonicalSpaceId}
                     projectId={publishedProjectId}
-                    spaceLabel={surfaceState.space?.label || spaceId}
+                    spaceLabel={surfaceState.space?.label || canonicalSpaceId}
                 />
             </Suspense>
         )
     }
 
+    // App reads the URL for itself (useAppRoute), so the resolved id has to be
+    // handed to it explicitly — otherwise the editor keys its permissions,
+    // socket room and local cache on the segment and a locked space reached by
+    // slug reads as editable.
     if (page === APP_PAGE_PREFERENCES) {
-        return <Suspense fallback={<LoadingScreen label="Loading the admin console" />}><App /></Suspense>
+        return <Suspense fallback={<LoadingScreen label="Loading the admin console" />}><App spaceId={canonicalSpaceId} /></Suspense>
     }
 
-    return <Suspense fallback={<LoadingScreen label="Loading space" />}><App /></Suspense>
+    return <Suspense fallback={<LoadingScreen label="Loading space" />}><App spaceId={canonicalSpaceId} /></Suspense>
 }
