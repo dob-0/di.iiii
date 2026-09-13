@@ -170,10 +170,11 @@ export const WIKI_ARTICLES = [
             'Every surface in di.iiii carries one bar along the top. On the left is the di.iiii wordmark, which always leads to Spaces, and — when the surface belongs to a space — the name of that space, which leads to it. On the right are the destinations, always the same six in the same order: Spaces, Studio, Nodes, Tools, Light, Wiki. The one you are on is stated in cyan and is not a link.',
             'Standing inside a space, Studio and Nodes mean THAT space\'s studio and node canvas, not the general hub — so moving between the ways of working never loses the space you were in.',
             'Light only appears where di.iiii is actually running on the machine you are using, because the lighting desk talks to fixtures on the local network. The lighting desk itself keeps its own denser, squarer look — it is read at arm\'s length in a dark booth — but it now carries a di.iiii link home, which it did not before.',
-            'The bar hides itself in a presentation: an embedded window, a preview thumbnail, and a headset are showing the work, not the tool.'
+            'The bar hides itself in a presentation: an embedded window, a preview thumbnail, and a headset are showing the work, not the tool.',
+            'Add ?embed=1 to any address and that is what you get: /tools, the wiki, a space’s contents list, the node canvas and a published room all drop the bar, because the page you have put them inside already carries the way out. The flag hides that navigation and nothing else — you are signed in exactly as you would be in a tab, edits save the same, and nothing is held back from a window that a tab would be given.'
         ],
-        tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw'],
-        updated: '2026-09-09'
+        tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw', 'embed', 'iframe'],
+        updated: '2026-09-11'
     },
     {
         id: 'spaces-map-view',
@@ -682,7 +683,7 @@ export const WIKI_ARTICLES = [
         summary: 'Ops Graph, at /admin, is admins-only; your own spaces are managed from /studio.',
         body: [
             'Ops Graph is di.iiii’s console. It lives at /admin and is visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
-            'Admins manage everything from Ops Graph → Manage: a directory tree of spaces, each expanding to its projects. The console keeps three admin sections (Manage, Open Call, Agents) and four diagnostics sections (Overview, Inspect, System, Estate); the header shows counts for the work at hand instead of 3D telemetry while you administer.',
+            'Admins manage everything from Ops Graph → Manage: a directory tree of spaces, each expanding to its projects. The console keeps four admin sections (Manage, Open Call, Agents, Visitors — the programs that called the API, with a block toggle) and four diagnostics sections (Overview, Inspect, System, Estate); the header shows counts for the work at hand instead of 3D telemetry while you administer.',
             { list: [
                 'Create / rename / delete spaces and projects inline.',
                 'Edit a space or project’s public link (slug) separately from its rename — the id underneath never changes, so old links stay valid.',
@@ -691,7 +692,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['admin', 'manage', 'access', 'slug', 'ops graph'],
-        updated: '2026-08-19'
+        updated: '2026-09-13'
     },
     {
         id: 'admin-estate',
@@ -790,10 +791,31 @@ export const WIKI_ARTICLES = [
             'Two pages disclose how di.iiii treats you: /privacy describes exactly what is collected (the session cookie, OAuth profile fields, uploads, retention) and what is deliberately not (no third-party analytics, no stored IP addresses, no tracking that links visits together) — including the parts that are not built yet, named as gaps rather than hidden.',
             '/terms covers the AGPL-3.0 license, the 3-free-spaces limit, and the append-only nature of anonymous inscriptions.',
             'Visits are counted anonymously first-party: one event per page load with path, time, and referring site — no cookie, no IP, nothing identifying.',
+            'Programs that call the API (apps, crawlers, scripts) are counted per day by the name they give and, for apps that publish one, the contact in their User-Agent — never an address or a page. See the Apps, scripts and AIs article.',
             'For anything the pages do not answer, or to request account or data removal by hand: info@thedi.studio.'
         ],
         tags: ['privacy', 'terms', 'legal', 'data', 'contact'],
-        updated: '2026-08-18'
+        updated: '2026-09-13'
+    },
+    {
+        id: 'for-apps',
+        category: 'For developers',
+        title: 'Apps, scripts and AIs',
+        summary: 'Programs are welcome to read public di.iiii. Name yourself in the User-Agent and you get more room — /for-apps has the rules.',
+        body: [
+            'Anything a visitor without an account can open — public spaces, published pages, /spaces, this wiki, and the API reads behind them — is open to programs too: apps, scripts, search engines and AI crawlers, for answering and for training alike. robots.txt welcomes them all, and /llms.txt describes di.iiii for language models.',
+            'Say who you are with a User-Agent carrying your program’s name, version and a contact in parentheses, the way MusicBrainz asks: “SpaceMirror/1.4 ( ops@example.org )” or “my-bot/0.2 (+https://example.org/bot)”.',
+            { list: [
+                'Identified apps and crawlers: 300 API reads a minute from one address.',
+                'Anonymous programs (curl, python-requests, no User-Agent at all…): 30 a minute, and the 429 says how to identify.',
+                'People in a browser, and anyone signed in with an account or a token, are not counted against either.',
+                'Off-limits: /admin, /preferences, private spaces, anything behind sign-in, and sending forms automatically.'
+            ] },
+            'A name is only what a program claims, so the per-address limits hold whatever the header says. di.iiii keeps a count per day per program name and the contact it published — no addresses, no pages read — for 90 days. Admins see that guest book in Ops Graph → Visitors, and can turn a program away by name; it then gets a 403 pointing back to /for-apps. Nothing is counted on a local install.',
+            'For a higher allowance or a block you think is a mistake: info@thedi.studio.'
+        ],
+        tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'robots.txt', 'developers'],
+        updated: '2026-09-13'
     },
     {
         id: 'github-sync',

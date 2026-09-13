@@ -72,13 +72,33 @@ rate limiter's per-IP key is in-memory only. `signup` events fire on every OAuth
 return, so they overcount returning logins (known limitation). Aggregates:
 admin-only `GET /serverXR/api/stats`. Disclosed on `/privacy`.
 
+**Program guest book** (added 2026-09-13): `app_visitor_days` and
+`app_visitor_blocks` tables (`serverXR/src/db.js`), written by
+`serverXR/src/appVisitorStore.js` from the recorder in `serverXR/src/appVisitors.js`,
+which reads each API request's **User-Agent header in memory** and sorts it into
+browser / crawler / identified app / anonymous program. Stored per UTC day × agent
+name × kind: a request count, first/last-seen timestamps for that name, and — for
+identified apps only — the contact string (email or URL) the app itself published
+in its User-Agent. **No IP, no URL or path, no query string, no cookie, no
+user/session id, and never the raw User-Agent** — only the normalised product name
+(lowercase, `[a-z0-9._-]`, ≤64 chars). Browsers are one `browser` row per day with
+a count and no timestamps. Bounded at 500 names per day (the rest fold into
+`(other)`) and pruned after 90 days. Not recorded at all on `di up` installs
+(`DI_LOCAL=1`) or for loopback callers that did not come through the proxies.
+`app_visitor_blocks` holds only blocked names and when they were blocked. Admin-only
+`GET /serverXR/api/admin/app-visitors` and `PUT …/blocks/:agent`; shown in Ops
+Graph → Visitors. Disclosed on `/privacy` and `/for-apps`. Note the contact is
+personal data when a person puts their own email in their script's header — it is
+published by them, for exactly this purpose, and expires with the 90-day window.
+
 **Local storage.** ~15 first-party keys set without consent, incl.
 `dii.project.userId` (persistent pseudonymous id), display names, and full
 workspace documents. Enumerated in the audit; surfaced to users at
 `src/components/PreferencesPage.jsx:550`.
 
 **Retention that exists.** Spaces 30 d, guest sandboxes 7 d, account sandboxes
-180 d then archived (`config.js:274-281`). Op history capped at 500/doc.
+180 d then archived (`config.js:274-281`). Op history capped at 500/doc. Program
+guest-book rows 90 d (`appVisitorStore.js`).
 
 **Backups.** Nightly `VACUUM INTO` snapshot + tar of uploads/spaces/snapshots to
 `/root/backups/` on the VPS, 14-day retention (`deploy/vps-backup.sh:24-42`).

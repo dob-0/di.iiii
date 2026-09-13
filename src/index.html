@@ -49,17 +49,39 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/suite/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/suite/icon-512.png" />
 
-    <link rel="canonical" href="https://di-studio.xyz/">
+    <!-- Host-relative on purpose. This shell is served from every address the
+         platform answers on — diiii.xyz, di-studio.xyz, dev.diiii.xyz, a `di`
+         install on a laptop — and a canonical hardcoded to one of them told a
+         search engine that every page on all the others was a copy of the live
+         site. Relative resolves against whatever host actually served it, and
+         crawlers that do not run scripts already get the absolute, host-derived
+         card from serverXR's /og route (nginx forks them there). -->
+    <script>
+      // Set here rather than written into the tag: this shell is served from
+      // every address the platform answers on — diiii.xyz, di-studio.xyz,
+      // dev.diiii.xyz, a `di` install on a laptop — and a canonical hardcoded
+      // to one of them told search engines that every page on all the others
+      // was a copy of the live site. A relative href cannot do the job either:
+      // the bundler resolves link[href] as an asset at build time. Crawlers
+      // that do not run scripts already receive the absolute, host-derived
+      // card from serverXR's /og route, which nginx forks them to.
+      (function () {
+        var l = document.createElement('link')
+        l.rel = 'canonical'
+        l.href = location.origin + location.pathname
+        document.head.appendChild(l)
+      })()
+    </script>
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="di.iiii — public spaces on the open web">
     <meta property="og:description" content="Make a space, hand out the address — a link while it runs, a file when it ends. No app, no store, nothing to install; it opens in a browser, or in a headset.">
-    <meta property="og:image" content="https://di-studio.xyz/suite/og-image.png">
-    <meta property="og:url" content="https://di-studio.xyz">
+    <meta property="og:image" content="/suite/og-image.png">
+    <meta property="og:url" content="/">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="di.iiii — public spaces on the open web">
     <meta name="twitter:description" content="Make a space, hand out the address — a link while it runs, a file when it ends. No app, no store, nothing to install; it opens in a browser, or in a headset.">
-    <meta name="twitter:image" content="https://di-studio.xyz/suite/og-image.png">
+    <meta name="twitter:image" content="/suite/og-image.png">
 </head>
 <body>
     <div id="root"></div>

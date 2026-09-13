@@ -10,7 +10,7 @@ const fs = require('node:fs')
 const { isOwnerAtTheMachine } = require('./localOwner')
 const path = require('node:path')
 const crypto = require('node:crypto')
-const { initDb } = require('./db')
+const { initDb, getDb } = require('./db')
 const { migrateFromFilesystem } = require('./migrate')
 const logger = require('./logger')
 const {
@@ -66,6 +66,9 @@ const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const { registerEstateRoutes } = require('./routes/estateRoutes')
 const { registerTrackRoutes } = require('./routes/trackRoutes')
+const { registerAppVisitorRoutes } = require('./routes/appVisitorRoutes')
+const { createVisitorRecorder, createVisitorBouncer } = require('./appVisitors')
+const { createGuestBook } = require('./appVisitorStore')
 const openCallStore = require('./openCallStore')
 const {
   listUsers,
@@ -474,6 +477,14 @@ const allowNullOrigin = (res) => {
 }
 
 const router = express.Router()
+// The guest book (appVisitors.js): sort every request that reaches the API into
+// browser / crawler / identified app / anonymous program and count it, as a
+// daily aggregate with no address and no URL. First on the router so a request
+// is sorted once, before anything can answer it; the bouncer that acts on the
+// answer sits after the auth-state middleware further down, because a signed-in
+// caller's script is never a stranger. Neither does anything on `di up`.
+const guestBook = createGuestBook({ getDb, log: logger })
+router.use(createVisitorRecorder({ guestBook, log: logger }))
 router.use(express.static(PUBLIC_DIR, { setHeaders: allowNullOrigin }))
 
 // `di up` sets DI_LOCAL=1. Read at request time rather than at boot so tests
@@ -1196,6 +1207,20 @@ router.use((req, res, next) => {
   next()
 })
 
+// The bouncer: a blocked program name gets a 403 pointing at /for-apps, and an
+// anonymous program gets a smaller allowance on API reads than an identified app
+// or a crawler (limits and the honour-system caveat in appVisitors.js). Browsers
+// pass untouched, and so does anyone who already proved who they are — an
+// account, an API token, a sync key — whatever their User-Agent says. Guests and
+// the auth-disabled sentinel are not proof of anything.
+const isKnownCaller = (req) => {
+  const state = req.authState
+  return Boolean(state?.authenticated)
+    && ['session', 'token', 'sync-key'].includes(state.type)
+    && !isGuestSubject(state.subject)
+}
+router.use(createVisitorBouncer({ guestBook, isKnownCaller, log: logger }))
+
 // Private conversations: the public-key phone book. Registered here, after the
 // middleware above, because every handler reads `req.authState` — and the whole
 // access rule ("somebody you share a space with") is written in terms of it.
@@ -1736,6 +1761,12 @@ registerAiConnectionRoutes(router)
 registerAgentBoardRoutes(router)
 
 registerAiChatRoutes(router)
+
+registerAppVisitorRoutes(router, {
+  requireAdminAlways,
+  guestBook,
+  isEnabled: () => !isLocalInstall()
+})
 
 registerEstateRoutes(router, {
   requireAdminAlways,
@@ -2326,6 +2357,9 @@ initStorage()
       if (recovered) logger.info(`[approvalGate] recovered ${recovered} approved-but-unexecuted action(s)`)
     }
     approvalGate.startSweepLoop()
+    // Buffered guest-book counts land every 30s; the timer is unref'd, so it
+    // never holds the process open.
+    guestBook.start()
     pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
     // Spent and expired Telegram sign-in tokens. They are already worthless —
     // consumed_at is what makes them so — this only stops the table growing

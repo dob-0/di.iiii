@@ -69,6 +69,19 @@ describe('createRateLimiter', () => {
         expect(blocked.body.error).toContain('Too many uploads from this session')
     })
 
+    // The anonymous-program allowance (appVisitors.js) tells a throttled
+    // program how to identify; every other limiter's body stays exactly as it was.
+    it('adds a hint to the 429 only when one was given', () => {
+        const hinted = createRateLimiter({ windowMs: 60_000, max: 0, hint: 'say who you are' })
+        const plain = createRateLimiter({ windowMs: 60_000, max: 0 })
+        const a = makeRes()
+        const b = makeRes()
+        hinted(makeReq(), a, () => {})
+        plain(makeReq(), b, () => {})
+        expect(a.body.hint).toBe('say who you are')
+        expect(Object.keys(b.body)).toEqual(['error'])
+    })
+
     it('resets the bucket after the window elapses', () => {
         vi.useFakeTimers()
         try {
