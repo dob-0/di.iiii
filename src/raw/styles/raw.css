@@ -5622,6 +5622,9 @@
     display: grid;
     gap: var(--di-space-3);
     align-content: start;
+    /* One column that may shrink: a long device name must ellipsise, not
+       widen the grid past its window and push the buttons out of sight. */
+    grid-template-columns: minmax(0, 1fr);
     background: var(--di-surface);
     box-sizing: border-box;
 }
@@ -5633,6 +5636,8 @@
 }
 
 .raw-desk-machine {
+    min-width: 0;
+    box-sizing: border-box;
     border: 1px solid rgba(255, 255, 255, 0.12);
     padding: var(--di-space-2) var(--di-space-3);
 }
@@ -5646,6 +5651,17 @@
     justify-content: space-between;
     align-items: baseline;
     gap: var(--di-space-2);
+}
+
+.raw-desk-machine header strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.raw-desk-machine header span {
+    flex: 0 0 auto;
 }
 
 .raw-desk-machine header span,

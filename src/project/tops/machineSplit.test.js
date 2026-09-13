@@ -54,3 +54,20 @@ describe('a patch across machines', () => {
         expect(list.map(({ id, name, self, pages }) => ({ id, name, self, pages }))).toEqual([{ id: 'pc', name: 'aylmo', self: true, pages: 1 }, { id: 'asuz', name: 'asuz', self: false, pages: 2 }])
     })
 })
+
+describe('what a machine has, as a person reads it', async () => {
+    const { tidyDevices } = await import('./machineDevices.js')
+    it('lists one sound chip once, and every camera as itself', () => {
+        const tidy = tidyDevices([
+            { kind: 'mic', id: '1', label: 'HDA Intel PCH, ALC269VB Analog-Direct hardware device without any conversions' },
+            { kind: 'mic', id: '2', label: 'HDA Intel PCH, ALC269VB Analog-Default Audio Device' },
+            { kind: 'speaker', id: '3', label: 'HDA Intel PCH, Optoma 1080P-Hardware device with all software conversions' },
+            { kind: 'camera', id: '4', label: 'USB2.0 HD UVC WebCam' }
+        ])
+        expect(tidy.map((device) => `${device.kind}: ${device.label}`)).toEqual([
+            'mic: HDA Intel PCH, ALC269VB Analog',
+            'speaker: HDA Intel PCH, Optoma 1080P',
+            'camera: USB2.0 HD UVC WebCam'
+        ])
+    })
+})

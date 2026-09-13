@@ -44,5 +44,24 @@ export const readMachineDevices = async () => {
     if (!screens && globalThis.screen) {
         screens = [{ kind: 'screen', id: 'screen-0', label: 'Screen', width: globalThis.screen.width, height: globalThis.screen.height }]
     }
-    return [...devices, ...(screens || [])]
+    return [...tidyDevices(devices), ...(screens || [])]
+}
+
+/**
+ * One line per real device. Linux lists every ALSA route of one sound chip as
+ * its own input — "HDA Intel PCH, ALC269VB Analog-Direct hardware device…",
+ * "…-Default Audio Device", five times over on asuz. The part before the dash is
+ * the device; the rest is plumbing a person does not choose between.
+ */
+export const tidyDevices = (devices) => {
+    const seen = new Set()
+    const out = []
+    for (const device of devices) {
+        const plain = device.kind === 'camera' ? device.label : device.label.replace(/^(.+?, .+?)-.*$/, '$1')
+        const key = `${device.kind}:${plain}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        out.push({ ...device, label: plain })
+    }
+    return out
 }
