@@ -1,24 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- The sitemap protocol requires absolute URLs, so this file is the one place
+     that must name a single host. It names diiii.xyz — the platform's address
+     since 2026-09-11. di-studio.xyz serves the same pages and is not listed:
+     naming both would offer a search engine two copies of everything. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    <url>
-        <loc>https://di-studio.xyz/</loc>
-    </url>
-    <url>
-        <loc>https://di-studio.xyz/suite</loc>
-    </url>
-    <url>
-        <loc>https://di-studio.xyz/wiki</loc>
-    </url>
-    <url>
-        <loc>https://di-studio.xyz/wcc</loc>
-    </url>
-    <url>
-        <loc>https://di-studio.xyz/br_id_ge</loc>
-    </url>
-    <url>
-        <loc>https://di-studio.xyz/beyond-form</loc>
-    </url>
-    <url>
-        <loc>https://di-studio.xyz/algovrithm</loc>
-    </url>
+    <url><loc>https://diiii.xyz/</loc></url>
+    <url><loc>https://diiii.xyz/spaces</loc></url>
+    <url><loc>https://diiii.xyz/open</loc></url>
+    <url><loc>https://diiii.xyz/network</loc></url>
+    <url><loc>https://diiii.xyz/wiki</loc></url>
+    <url><loc>https://diiii.xyz/suite</loc></url>
+    <url><loc>https://diiii.xyz/wcc</loc></url>
+    <url><loc>https://diiii.xyz/br_id_ge</loc></url>
+    <url><loc>https://diiii.xyz/beyond-form</loc></url>
+    <url><loc>https://diiii.xyz/algovrithm</loc></url>
+    <url><loc>https://diiii.xyz/dilijan</loc></url>
+    <url><loc>https://diiii.xyz/azd</loc></url>
+    <url><loc>https://diiii.xyz/platform-recordar</loc></url>
+    <url><loc>https://diiii.xyz/cascade</loc></url>
+    <url><loc>https://diiii.xyz/the-light-put-back</loc></url>
 </urlset>
