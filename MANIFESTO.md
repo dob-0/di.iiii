@@ -29,7 +29,7 @@ This is the "heritage collection for future generations" direction. A scene publ
 
 The current architecture (SQLite, session cookies, Socket.IO) is the right foundation to ship from now. Each decision should be a step toward the decentralized direction, not away from it.
 
-**The shape this takes for a person in a venue — one product at three distances** (owner, 2026-08-31): *this machine* (the local install: the show runs here, offline), *this network* (the festival LAN: stages, rigs, phones, other locals — live control lives here), *the world* (thedi.studio — our local that happens to be public; the square where works sync and are shared). The internet is for sharing, never in the signal path of a running show. Full statement and the sync design: [docs/architecture/THREE_DISTANCES.md](docs/architecture/THREE_DISTANCES.md).
+**The shape this takes for a person in a venue — one product at three distances** (owner, 2026-08-31): *this machine* (the local install: the show runs here, offline), *this network* (the festival LAN: stages, rigs, phones, other locals — live control lives here), *the world* (diiii.xyz — our local that happens to be public; the square where works sync and are shared. thedi.studio is the studio's own address on it, and di-studio.xyz keeps answering forever for everything already printed). The internet is for sharing, never in the signal path of a running show. Full statement and the sync design: [docs/architecture/THREE_DISTANCES.md](docs/architecture/THREE_DISTANCES.md).
 
 ---
 
