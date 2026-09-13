@@ -3284,12 +3284,28 @@
       "section": "visual",
       "sectionLabel": "visual · multimedia",
       "city": null,
-      "bio": null,
-      "works": [],
+      "bio": "Media artist and music producer in Gyumri, working in TouchDesigner and Ableton — she publishes as night_editor.",
+      "works": [
+        {
+          "url": null,
+          "title": "Interactive AV installation",
+          "line": "with di. studio — TouchDesigner and Ableton, Gyumri Technology Center, April 2024",
+          "space": null,
+          "project": null
+        }
+      ],
       "elsewhere": [
         {
           "label": "Instagram",
           "href": "https://www.instagram.com/night_editor_music/"
+        },
+        {
+          "label": "Behance",
+          "href": "https://www.behance.net/night_editor"
+        },
+        {
+          "label": "SoundCloud",
+          "href": "https://soundcloud.com/night_editor"
         }
       ],
       "num": "040",
@@ -3297,6 +3313,10 @@
       "sources": [
         {
           "label": "the studio network roster sheet — held, not published"
+        },
+        {
+          "label": "her Behance, as Yulia Gadalova",
+          "href": "https://www.behance.net/night_editor"
         }
       ]
     },
