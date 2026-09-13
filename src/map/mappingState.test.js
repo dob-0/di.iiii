@@ -252,3 +252,19 @@ describe('creating a surface from another one', () => {
         expect(after.mappingState.surfaces[1].name).toBe('a copy')
     })
 })
+
+describe('motion glow on a surface', () => {
+    it('is off on a surface that never asked for it, and survives an edit to one knob', () => {
+        let document = withSurfaces(['cam'])
+        expect(document.mappingState.surfaces[0].effect).toEqual({ kind: 'none', threshold: 0.08, trail: 0.88, gain: 4 })
+        document = applyProjectOps(document, [{ type: 'setMappingSurface', payload: { surfaceId: 'cam', patch: { effect: { kind: 'motion' } } } }])
+        document = applyProjectOps(document, [{ type: 'setMappingSurface', payload: { surfaceId: 'cam', patch: { effect: { trail: 0.5 } } } }])
+        expect(document.mappingState.surfaces[0].effect).toEqual({ kind: 'motion', threshold: 0.08, trail: 0.5, gain: 4 })
+    })
+
+    it('refuses a trail that never fades and an effect it does not know', () => {
+        const state = normalizeMappingState({ surfaces: [{ id: 'cam', effect: { kind: 'sparkles', trail: 1, gain: 99, threshold: -1 } }] })
+        expect(state.surfaces[0].effect).toEqual({ kind: 'none', threshold: 0, trail: 0.99, gain: 20 })
+    })
+})
+

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import MapTestPattern from './mapTestPattern.jsx'
+import { startMotionGlow } from './motionGlow.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
 import { PREVIEW_READY_MESSAGE } from '../utils/previewMode.js'
@@ -47,7 +48,7 @@ export default function MapSourceView({ surface, spaceId = '', live = true, labe
     }
 
     if (kind === 'camera') {
-        return <MapCameraSource deviceId={ref} label={label} width={width} height={height} />
+        return <MapCameraSource deviceId={ref} effect={surface.effect} label={label} width={width} height={height} />
     }
 
     // Only the kinds that are MEANINGLESS without a reference fall back to a
@@ -114,9 +115,12 @@ export default function MapSourceView({ surface, spaceId = '', live = true, labe
 // track is stopped on unmount. A refused or missing camera shows the reason on
 // the surface instead of going black, because a black rectangle on a wall is
 // indistinguishable from a mapping mistake.
-function MapCameraSource({ deviceId, label, width, height }) {
+function MapCameraSource({ deviceId, effect = null, label, width, height }) {
     const videoRef = useRef(null)
+    const canvasRef = useRef(null)
+    const glowRef = useRef(null)
     const [problem, setProblem] = useState('')
+    const motion = effect?.kind === 'motion'
 
     useEffect(() => {
         let stream = null
@@ -148,8 +152,47 @@ function MapCameraSource({ deviceId, label, width, height }) {
         }
     }, [deviceId])
 
+    // The glow runs while the effect is on; its knobs change without restarting
+    // it, so dragging a slider on the desk never blinks the wall.
+    useEffect(() => {
+        if (!motion || !canvasRef.current || !videoRef.current) return undefined
+        try {
+            glowRef.current = startMotionGlow({ canvas: canvasRef.current, video: videoRef.current, params: effect })
+        } catch (error) {
+            setProblem(String(error?.message || error))
+            return undefined
+        }
+        return () => {
+            glowRef.current?.stop()
+            glowRef.current = null
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [motion, width, height])
+
+    useEffect(() => {
+        glowRef.current?.setParams({ threshold: effect?.threshold, trail: effect?.trail, gain: effect?.gain })
+    }, [effect?.threshold, effect?.trail, effect?.gain])
+
     if (problem) return <MapSourcePlaceholder label={label} detail={problem} width={width} height={height} />
-    return <video className="map-source-media" ref={videoRef} autoPlay muted playsInline />
+    // One <video> in the same place either way: switching the effect on must
+    // not remount it, or it loses the stream the effect above attached. With
+    // the glow on it still has to PLAY for its frames to reach the GPU — it is
+    // just not what the wall sees. Processed at up to 640 wide; the corner-pin
+    // scales the result, and an old laptop keeps its frame rate.
+    const scale = Math.min(1, 640 / width)
+    return (
+        <>
+            <video className={motion ? 'map-source-hidden-video' : 'map-source-media'} ref={videoRef} autoPlay muted playsInline />
+            {motion ? (
+                <canvas
+                    className="map-source-media"
+                    ref={canvasRef}
+                    width={Math.max(1, Math.round(width * scale))}
+                    height={Math.max(1, Math.round(height * scale))}
+                />
+            ) : null}
+        </>
+    )
 }
 
 // One page surface: waits for a boot slot, then mounts its iframe.
