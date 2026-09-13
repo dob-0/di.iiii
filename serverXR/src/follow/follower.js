@@ -57,13 +57,14 @@ const rememberSeen = (seen, ops = []) => {
 // parser OOMs under the memory limits of the shared hosting the live site runs
 // on, and that bug class has shipped here twice. httpContracts.test.js keeps it
 // at zero, and this file is no exception for being new.
-const request = async (url, { method = 'GET', token = null, body = null, timeoutMs = TIMEOUT_MS, signal = null } = {}) => {
+const request = async (url, { method = 'GET', token = null, body = null, timeoutMs = TIMEOUT_MS, signal = null, servername = null } = {}) => {
     const payloadBody = body ? JSON.stringify(body) : null
     try {
         const response = await httpRequest(url, {
             method,
             timeoutMs,
             signal,
+            servername,
             headers: {
                 Accept: 'application/json',
                 ...(payloadBody ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payloadBody) } : {}),
@@ -81,10 +82,11 @@ const request = async (url, { method = 'GET', token = null, body = null, timeout
  * One side of a followed space, addressed the same way whether it is across the
  * room or across the internet: a base URL, a space id, and a token.
  */
-const side = ({ base, spaceId, token = null }) => ({
+const side = ({ base, spaceId, token = null, servername = null }) => ({
     base: String(base || '').replace(/\/$/, ''),
     spaceId,
     token,
+    servername,
     url(path) { return `${this.base}${path}` },
     opsUrl(stream, since) {
         const url = this.url(stream.opsPath)
@@ -109,6 +111,7 @@ const readOps = async (from, stream, since, { waitSeconds = 0, signal = null } =
         : plain
     const answer = await request(url, {
         token: from.token,
+        servername: from.servername,
         timeoutMs: (waitSeconds ? waitSeconds * 1000 : 0) + TIMEOUT_MS,
         signal
     })
@@ -129,7 +132,7 @@ const carry = async ({ to, stream, ops, seen, targetVersion }) => {
     const plan = planDirection({ ops, seen, targetVersion })
     if (!plan) return { wrote: 0, targetVersion, moved: false }
 
-    const answer = await request(to.writeUrl(stream), { method: 'POST', token: to.token, body: plan })
+    const answer = await request(to.writeUrl(stream), { method: 'POST', token: to.token, servername: to.servername, body: plan })
     if (answer.ok) {
         rememberSeen(seen, plan.ops)
         const newVersion = Number.isFinite(answer.payload?.newVersion) ? answer.payload.newVersion : targetVersion
@@ -196,8 +199,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
     const refreshStreams = async () => {
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
         const [here, there] = await Promise.all([
-            request(local.url(path), { token: local.token }),
-            request(remote.url(path), { token: remote.token })
+            request(local.url(path), { token: local.token, servername: local.servername }),
+            request(remote.url(path), { token: remote.token, servername: remote.servername })
         ])
         const localProjects = projectIdsFrom(here.payload)
         const remoteProjects = projectIdsFrom(there.payload)
@@ -209,7 +212,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
         for (const projectId of remoteProjects) {
             if (localProjects.includes(projectId)) continue
             const made = await request(local.url(path), {
-                method: 'POST', token: local.token, body: { slug: projectId, title: projectId }
+                method: 'POST', token: local.token, servername: local.servername, body: { slug: projectId, title: projectId }
             })
             if (!made.ok && made.status !== 409) {
                 log.warn?.(`[follow] ${local.spaceId}: could not make room for ${projectId} (${made.status})`)
