@@ -674,7 +674,7 @@ const cmdRestore = async (args) => {
     // Out of the way first, like the snapshot path above. A running lighting
     // desk holds its show in memory and writes it back on the next change, so
     // a show restored underneath it would last until the first fader move.
-    const wasRunning = await probeHealth(resolvePort(home))
+    const wasRunning = await alive(home, resolvePort(home))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
@@ -806,7 +806,7 @@ const cmdUpdate = async (args) => {
     }
 
     const runner = runnerFor(home)
-    const wasRunning = await probeHealth(resolvePort(home))
+    const wasRunning = await alive(home, resolvePort(home))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     try { await runner.stop({ home }) } catch { /* already down */ }
 
