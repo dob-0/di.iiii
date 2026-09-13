@@ -4,6 +4,7 @@ import { hasServerApi } from '../services/apiClient.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { deployModeMark, resolveDeployMode } from '../utils/deployMode.js'
 import { isPreviewRequest } from '../utils/previewMode.js'
+import { getMapLocationState } from '../map/mapRouting.js'
 
 // Renders on every surface (mounted once in RootApp) — Studio, Raw, a space,
 // the landing page, the wiki. The whole value is that there is nowhere in
@@ -54,6 +55,10 @@ export default function ModeMark() {
     // a published page can be embedded in someone else's site. A frame drawn
     // around either is chrome inside a picture, not an answer to a question.
     if (isPreviewRequest() || window.self !== window.top) return null
+    // A projector's output is a picture too, and a large one: the frame would
+    // be thrown onto the wall around the work. The desk beside it still says
+    // where you are.
+    if (getMapLocationState().isOutput) return null
 
     const mode = resolveDeployMode({ hostname: window.location.hostname, local: serverLocal })
     const mark = deployModeMark(mode, window.location.hostname)

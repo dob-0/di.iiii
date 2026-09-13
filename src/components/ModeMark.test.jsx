@@ -59,6 +59,19 @@ describe('ModeMark', () => {
         expect(container.firstChild).toBeNull()
     })
 
+    // A projector output is thrown onto a wall; a frame around it would be
+    // projected around the work. Found on asuz driving an Optoma, 2026-09-13.
+    it('stays off a projection-mapping output, and stays on its desk', async () => {
+        atHost('localhost:4000')
+        window.location.pathname = '/stage/map/wall/out'
+        const { container } = render(<ModeMark />)
+        expect(container.firstChild).toBeNull()
+
+        window.location.pathname = '/stage/map/wall'
+        render(<ModeMark />)
+        expect(await screen.findByText('LOCAL')).toBeInTheDocument()
+    })
+
     it('never mints a session to find out where it is', async () => {
         atHost('localhost:4000')
         render(<ModeMark />)
