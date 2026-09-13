@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import './toolsRoom.css'
 import SurfaceBar from '../components/SurfaceBar.jsx'
+import { isEmbedRequest } from '../utils/previewMode.js'
 import { DeskMark, LightMark, MapperMark, RawMark, StudioMark } from './toolMarks.jsx'
 import { listProjects } from '../project/services/projectsApi.js'
 import { listServerSpaces } from '../services/serverSpaces.js'
@@ -30,6 +31,7 @@ import { listServerSpaces } from '../services/serverSpaces.js'
 const DESK_URL = 'http://localhost:4748'
 
 export default function ToolsRoom({ isLocalInstall = false }) {
+    const isEmbed = isEmbedRequest()
     const [spaces, setSpaces] = useState(null)
     const [picking, setPicking] = useState(null)   // key of the tool asking for a project
     const [inSpace, setInSpace] = useState(null)   // space chosen inside that dialog
@@ -140,7 +142,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
 
     return (
         <div className="tr">
-            <SurfaceBar here="tools" isLocalInstall={isLocalInstall} />
+            <SurfaceBar here="tools" isLocalInstall={isLocalInstall} hidden={isEmbed} />
 
             <div className="tr-page">
                 <h1 className="tr-title">Tools</h1>

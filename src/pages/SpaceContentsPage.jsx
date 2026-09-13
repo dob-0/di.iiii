@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import SurfaceBar from '../components/SurfaceBar.jsx'
+import { isEmbedRequest } from '../utils/previewMode.js'
 import RouteSurfaceFallback from '../components/RouteSurfaceFallback.jsx'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
@@ -76,6 +77,7 @@ export const contentsHref = (spaceId, project) => (project.slug
 export default function SpaceContentsPage({ spaceId }) {
     const { role, spaces: sessionScopes, openSpaceId, sandboxSpaceId, requireAuth } = useAuthSession()
     const localInstall = useLocalInstall()
+    const isEmbed = isEmbedRequest()
     const [state, setState] = useState({ status: 'loading', projects: [], space: null, error: null })
 
     useEffect(() => {
@@ -154,6 +156,7 @@ export default function SpaceContentsPage({ spaceId }) {
                 space={spaceId}
                 spaceLabel={label}
                 isLocalInstall={localInstall.isLocal}
+                hidden={isEmbed}
             />
 
             <div className="sc-page">
