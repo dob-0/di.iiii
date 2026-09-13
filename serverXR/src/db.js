@@ -269,6 +269,31 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_page_events_type_created ON page_events(event_type, created_at);
 
+  -- The guest book: programs that reached the API, as daily aggregates. One row
+  -- per UTC day x agent name x kind (browser | crawler | app | anonymous). No IP,
+  -- no URL, no cookie, no user id. Browsers are a single 'browser' row per day
+  -- with no timestamps. contact is only what an identified app published about
+  -- itself in its own User-Agent. Capped per day, pruned after 90 days — see
+  -- appVisitorStore.js and docs/ai/privacy-data-inventory.md.
+  CREATE TABLE IF NOT EXISTS app_visitor_days (
+    day TEXT NOT NULL,
+    agent TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    requests INTEGER NOT NULL DEFAULT 0,
+    contact TEXT,
+    first_seen INTEGER,
+    last_seen INTEGER,
+    PRIMARY KEY (day, agent, kind)
+  );
+  CREATE INDEX IF NOT EXISTS idx_app_visitor_days_agent ON app_visitor_days(agent, kind, day);
+
+  -- Program names the admin turned away (403 + a pointer to /for-apps). Keyed by
+  -- the normalised name the guest book prints, nothing else.
+  CREATE TABLE IF NOT EXISTS app_visitor_blocks (
+    agent TEXT PRIMARY KEY,
+    blocked_at INTEGER NOT NULL
+  );
+
   -- Telegram sign-in hand-offs. di.bo mints one of these for a person who is
   -- already proven to it (Telegram delivered the message), and the person
   -- follows the link to become a signed-in account here.

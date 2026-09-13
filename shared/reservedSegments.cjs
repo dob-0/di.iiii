@@ -27,7 +27,7 @@
 // Top-level app routes. Mirrors src/utils/spaceRouting.js RESERVED_APP_SEGMENTS.
 const APP_SEGMENTS = [
     'admin', 'preferences', 'prefrenaces', 'preferances',
-    'wiki', 'privacy', 'terms', 'tools',
+    'wiki', 'privacy', 'terms', 'tools', 'for-apps',
     'beta', 'raw', 'seed', 'open_jam', 'studio', 'make', 'light',
     'spaces', 'projects', 'chat', 'login'
 ]

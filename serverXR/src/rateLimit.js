@@ -45,7 +45,11 @@ const isUncounted = (req) => {
 // a limiter given a keyFn that counts something else (a session subject,
 // say) must say so, or it tells a throttled person their whole building is
 // to blame when only they are.
-function createRateLimiter({ windowMs = 60_000, max = 30, name = 'requests', keyFn = clientKey, scope = 'from this address' } = {}) {
+//
+// `hint` is an optional second sentence for the caller who can do something
+// about it — the anonymous-program allowance (appVisitors.js) uses it to say
+// how to identify. Absent, the 429 body is exactly what it always was.
+function createRateLimiter({ windowMs = 60_000, max = 30, name = 'requests', keyFn = clientKey, scope = 'from this address', hint = null } = {}) {
   const buckets = new Map()
   let lastSweep = Date.now()
 
@@ -72,7 +76,8 @@ function createRateLimiter({ windowMs = 60_000, max = 30, name = 'requests', key
       const retryAfterSeconds = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))
       res.set('Retry-After', String(retryAfterSeconds))
       return res.status(429).json({
-        error: `Too many ${name} ${scope} — retry in ${retryAfterSeconds}s.`
+        error: `Too many ${name} ${scope} — retry in ${retryAfterSeconds}s.`,
+        ...(hint ? { hint } : {})
       })
     }
     next()

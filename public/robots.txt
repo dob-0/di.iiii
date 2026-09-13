@@ -1,3 +1,14 @@
+# di.iiii welcomes crawlers — search engines and AI alike, for answering and
+# for training. GPTBot, ChatGPT-User, OAI-SearchBot, ClaudeBot, Claude-User,
+# anthropic-ai, PerplexityBot, Google-Extended, CCBot, Applebot-Extended,
+# Bytespider, Amazonbot, meta-externalagent and every other agent: the rule
+# below is for you too. Nothing public is withheld.
+#
+# Programs of any kind: please identify with a User-Agent carrying your name,
+# version and a contact — "YourBot/1.0 (+https://example.com/bot)". The limits
+# and what is off-limits: https://diiii.xyz/for-apps
+# What di.iiii is, for language models: https://diiii.xyz/llms.txt
+
 User-agent: *
 Allow: /
 Disallow: /admin
