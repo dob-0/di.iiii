@@ -8,7 +8,12 @@
 // A network is plain data, the same shape wherever it comes from:
 //   nodes: [{ id, type, values }]          type is a key of TOP_OPERATORS
 //   wires: [{ from, to, port }]            port is the input name, 'a' or 'b'
+//   remote: [nodeId]                       operators that run on ANOTHER machine
 // so the Raw editor, the projector page and a test all drive it identically.
+//
+// A remote operator is not computed here. Its picture arrives as video (see
+// setRemoteVideo) and every wire out of it reads that — which is how a patch
+// spans two machines: asuz's Camera In, analysed on the PC, back to asuz.
 //
 // Nothing here knows about React, the project document or the network sync.
 
@@ -156,6 +161,14 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
 
     const slotFor = (node) => {
         let slot = slots.get(node.id)
+        if (node.type === '__remote') {
+            if (!slot || slot.type !== '__remote') {
+                if (slot) { freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history); if (slot.source) gl.deleteTexture(slot.source) }
+                slot = { type: '__remote', now: { texture: makeTexture(gl, 2, 2) }, before: null, history: null, source: null, lastVideoTime: -1 }
+                slots.set(node.id, slot)
+            }
+            return slot
+        }
         if (!slot || slot.type !== node.type) {
             if (slot) { freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history); if (slot.source) gl.deleteTexture(slot.source) }
             slot = { type: node.type, now: makeTarget(gl, width, height), before: makeTarget(gl, width, height), history: null, source: null, lastMeasure: 0, mean: null, meanBefore: null, lastVideoTime: -1 }
@@ -166,11 +179,17 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         return slot
     }
 
+    const remoteVideos = new Map()
+    let remoteIds = new Set()
+
     const setNetwork = (next) => {
-        const nodes = (next?.nodes || []).filter(node => node?.id && isTopType(node.type))
+        remoteIds = new Set((next?.remote || []).filter(Boolean))
+        const nodes = (next?.nodes || []).filter(node => node?.id && isTopType(node.type) && !remoteIds.has(node.id))
+        // A remote operator still needs a slot, so wires can read its picture.
+        const remoteNodes = [...remoteIds].map(id => ({ id, type: '__remote', values: {} }))
         const wires = (next?.wires || []).filter(wire => wire?.from && wire?.to)
-        network = { nodes, wires }
-        byId = new Map(nodes.map(node => [node.id, node]))
+        network = { nodes, wires, remote: [...remoteIds] }
+        byId = new Map([...nodes, ...remoteNodes].map(node => [node.id, node]))
         order = orderNetwork(nodes, wires)
         inputsFor = new Map(nodes.map(node => [node.id, {}]))
         for (const wire of wires) {
@@ -179,6 +198,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         }
         for (const [id, slot] of slots) {
             if (byId.has(id)) continue
+            if (slot.type === '__remote') { gl.deleteTexture(slot.now.texture); slots.delete(id); continue }
             freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history)
             if (slot.source) gl.deleteTexture(slot.source)
             slots.delete(id)
@@ -219,7 +239,24 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
     // holds its last frame. Either way it is the right thing to read.
     const latest = (id) => slots.get(id)?.now.texture || null
 
+    // Remote pictures first: every local operator this frame reads the newest.
+    // Uploaded flipped, because video rows run top-down and every buffer here
+    // runs bottom-up.
+    const pullRemotes = () => {
+        for (const id of remoteIds) {
+            const slot = slotFor({ id, type: '__remote' })
+            const video = remoteVideos.get(id)
+            if (!video || video.readyState < 2 || video.currentTime === slot.lastVideoTime) continue
+            slot.lastVideoTime = video.currentTime
+            gl.bindTexture(gl.TEXTURE_2D, slot.now.texture)
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video)
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
+        }
+    }
+
     const frame = (now = performance.now()) => {
+        pullRemotes()
         for (let index = 0; index < order.length; index += 1) {
             const node = byId.get(order[index])
             const operator = TOP_OPERATORS[node.type]
@@ -328,13 +365,17 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         height,
         setNetwork,
         setVideo: (nodeId, video) => { if (video) videos.set(nodeId, video); else videos.delete(nodeId) },
+        setRemoteVideo: (nodeId, video) => { if (video) remoteVideos.set(nodeId, video); else remoteVideos.delete(nodeId) },
         frame,
         show,
         thumbnails,
         errorFor: (nodeId) => errors.get(nodeId) || null,
+        /** Is there a picture for this operator on this machine (computed or received)? */
+        has: (nodeId) => slots.has(nodeId),
         get network() { return network },
         dispose() {
             for (const slot of slots.values()) {
+                if (slot.type === '__remote') { gl.deleteTexture(slot.now.texture); continue }
                 freeTarget(gl, slot.now); freeTarget(gl, slot.before); freeTarget(gl, slot.history)
                 if (slot.source) gl.deleteTexture(slot.source)
             }

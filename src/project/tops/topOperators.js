@@ -217,6 +217,24 @@ void main() { gl_FragColor = vec4(texture2D(a, uv).rgb, 1.0); }`
 export const TOP_TYPE_IDS = Object.keys(TOP_OPERATORS)
 
 const INPUT_LABELS = { a: 'In', b: 'In B' }
+
+// Which machine computes this operator. Empty is "wherever the page is open" —
+// every machine runs its own copy, the way a patch behaves on one laptop. The
+// editor fills in the machines it can see in the space (machineLink.js); the
+// registry only knows the one choice that is always true.
+export const RUNS_ON_ANYWHERE = ''
+const RUNS_ON = {
+    id: 'machine',
+    type: 'string',
+    label: 'Runs on',
+    options: [{ value: RUNS_ON_ANYWHERE, label: 'Where the page is open' }]
+}
+
+/** Does THIS machine compute the operator? Unknown machine → only anywhere-operators. */
+export const runsHere = (values, machineId) => {
+    const target = values?.machine || RUNS_ON_ANYWHERE
+    return target === RUNS_ON_ANYWHERE || (Boolean(machineId) && target === machineId)
+}
 const MEASURE_LABELS = { brightness: 'Brightness', amount: 'Amount', x: 'Centre X', y: 'Centre Y' }
 
 /**
@@ -240,14 +258,17 @@ export const buildTopNodeTypes = () => Object.fromEntries(Object.entries(TOP_OPE
         { id: 'out', type: 'texture', label: 'Picture' },
         ...(operator.measure || []).map((name) => ({ id: name, type: 'number', label: MEASURE_LABELS[name] || name }))
     ],
-    defaultValues: Object.fromEntries(operator.params.map((p) => [p.name, p.toggle ? Boolean(p.value) : (p.options ? String(p.value) : p.value)])),
-    configInputs: operator.params.map((p) => (
+    defaultValues: {
+        machine: '',
+        ...Object.fromEntries(operator.params.map((p) => [p.name, p.toggle ? Boolean(p.value) : (p.options ? String(p.value) : p.value)]))
+    },
+    configInputs: [RUNS_ON, ...operator.params.map((p) => (
         p.toggle
             ? { id: p.name, type: 'boolean', label: p.label }
             : p.options
                 ? { id: p.name, type: 'string', label: p.label, options: p.options.map((label, index) => ({ value: String(index), label })) }
                 : { id: p.name, type: 'number', label: p.label, min: p.min, max: p.max, step: p.step }
-    )),
+    ))],
     // A card with a picture on it; no window, nothing in the room.
     render: 'hidden'
 }]))

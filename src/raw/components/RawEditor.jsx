@@ -19,6 +19,7 @@ import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import VideoFrameFeed from './VideoFrameFeed.jsx'
 import TopNetworkFeed from './TopNetworkFeed.jsx'
 import { isTopType } from '../../project/tops/topOperators.js'
+import { useKnownMachines } from '../../project/tops/useTopNetwork.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
 import MidiOutFeed from './MidiOutFeed.jsx'
@@ -862,8 +863,19 @@ export default function RawEditor({
             .filter((edge) => edge.toNodeId === scopedSelectedNode.id)
             .map((edge) => edge.toPort)
         : []
+    // A picture operator's Runs on lists the machines this space can see right
+    // now; the registry only knows "where the page is open".
+    const knownMachines = useKnownMachines()
+    const withMachines = (sections) => (isTopType(scopedSelectedNode?.typeId)
+        ? sections.map((section) => ({
+            ...section,
+            fields: section.fields.map((field) => (field.path?.[0] === 'machine'
+                ? { ...field, options: [...field.options, ...knownMachines.map((machine) => ({ value: machine.id, label: machine.self ? `${machine.name} (this one)` : machine.name }))] }
+                : field))
+        }))
+        : sections)
     const inspectorSections = scopedSelectedNode
-        ? deriveNodeInspectorSections(scopedSelectedNode, { wiredPortIds })
+        ? withMachines(deriveNodeInspectorSections(scopedSelectedNode, { wiredPortIds }))
         : (scopedSelectedEntity
             ? getInspectorSections(scopedSelectedEntity)
             : [
@@ -2498,7 +2510,7 @@ export default function RawEditor({
 
             {/* The picture operators run while any exist — see TopNetworkFeed. */}
             {nodes.some((node) => isTopType(node.typeId)) ? (
-                <TopNetworkFeed document={document} onLiveOutputChange={handleLiveOutputChange} />
+                <TopNetworkFeed document={document} spaceId={resolvedSpaceId} onLiveOutputChange={handleLiveOutputChange} />
             ) : null}
 
             {/* One invisible feed per playing Video node, so a Frame wire

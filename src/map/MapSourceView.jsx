@@ -53,7 +53,7 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
         // Off the output, a network runs only when Live is on — the desk and
         // the wall would otherwise each open the camera and run every operator.
         if (!live) return <MapSourcePlaceholder label={label} detail="pictures — turn Live on to run them here" width={width} height={height} />
-        return <MapNetworkSource network={network} outNodeId={ref} label={label} width={width} height={height} />
+        return <MapNetworkSource network={network} spaceId={spaceId} outNodeId={ref} label={label} width={width} height={height} />
     }
 
     if (kind === 'camera') {
@@ -209,14 +209,14 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
 // the result onto the wall.
 const NO_NETWORK = { nodes: [], wires: [] }
 
-function MapNetworkSource({ network, outNodeId, label, width, height }) {
+function MapNetworkSource({ network, spaceId, outNodeId, label, width, height }) {
     const [canvas, setCanvas] = useState(null)
     const scale = Math.min(1, 640 / width)
     const w = Math.max(1, Math.round(width * scale))
     const h = Math.max(1, Math.round(height * scale))
     const present = Boolean(network?.nodes?.some((node) => node.id === outNodeId))
     // Nothing to show → nothing to run; an empty network starts no engine.
-    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, canvas, show: outNodeId, width: w, height: h })
+    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, canvas, show: outNodeId, width: w, height: h })
     if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out is gone" width={width} height={height} />
     if (error) return <MapSourcePlaceholder label={label} detail={error} width={width} height={height} />
     return <canvas className="map-source-media" ref={setCanvas} width={w} height={h} />

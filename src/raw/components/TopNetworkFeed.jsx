@@ -10,7 +10,7 @@ import { toTopNetwork, useTopNetwork } from '../../project/tops/useTopNetwork.js
 // whole editor, and a still room would otherwise do that ten times a second.
 const MOVED = 0.004
 
-export default function TopNetworkFeed({ document, onLiveOutputChange }) {
+export default function TopNetworkFeed({ document, spaceId = '', onLiveOutputChange }) {
     const network = useMemo(() => toTopNetwork(document), [document])
     const published = useRef(new Map())
     const onMeasure = useCallback((nodeId, numbers) => {
@@ -22,6 +22,6 @@ export default function TopNetworkFeed({ document, onLiveOutputChange }) {
             onLiveOutputChange(nodeId, portId, value)
         }
     }, [onLiveOutputChange])
-    useTopNetwork({ network, thumbnails: true, onMeasure })
+    useTopNetwork({ network, spaceId, thumbnails: true, onMeasure })
     return null
 }

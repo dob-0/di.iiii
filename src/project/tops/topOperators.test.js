@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TOP_OPERATORS, TOP_TYPE_IDS, buildTopNodeTypes, measurePixels, resolveTopParams } from './topOperators.js'
+import { TOP_OPERATORS, TOP_TYPE_IDS, buildTopNodeTypes, measurePixels, resolveTopParams, runsHere } from './topOperators.js'
 import { orderNetwork } from './topEngine.js'
 import { toTopNetwork } from './useTopNetwork.js'
 import { cardHeight } from '../../raw/utils/cardGeometry.js'
@@ -44,7 +44,7 @@ describe('picture operators', () => {
             expect(type.render, id).toBe('hidden')
             expect(type.outputs[0], id).toEqual({ id: 'out', type: 'texture', label: 'Picture' })
             expect(type.inputs.every((port) => port.type === 'texture'), id).toBe(true)
-            expect(type.configInputs.map((field) => field.id), id).toEqual(TOP_OPERATORS[id].params.map((p) => p.name))
+            expect(type.configInputs.map((field) => field.id), id).toEqual(['machine', ...TOP_OPERATORS[id].params.map((p) => p.name)])
         }
         expect(types['top.analyze'].outputs.map((port) => port.id)).toEqual(['out', 'brightness', 'amount', 'x', 'y'])
     })
@@ -71,4 +71,15 @@ describe('picture operators', () => {
         expect(cardHeight(level)).toBeGreaterThan(cardHeight({ ...level, typeId: 'math.round' }))
         expect(cardHeight(plain)).toBe(cardHeight({ ...plain }))
     })
+
+    it('runs an operator here only when it belongs to anywhere or to this machine', () => {
+        expect(runsHere({ machine: '' }, 'aylmo-id')).toBe(true)
+        expect(runsHere({}, null)).toBe(true)
+        expect(runsHere({ machine: 'aylmo-id' }, 'aylmo-id')).toBe(true)
+        expect(runsHere({ machine: 'asuz-id' }, 'aylmo-id')).toBe(false)
+        // Before this page knows which machine it is on, a pinned operator waits
+        // rather than opening the wrong camera.
+        expect(runsHere({ machine: 'asuz-id' }, null)).toBe(false)
+    })
 })
+
