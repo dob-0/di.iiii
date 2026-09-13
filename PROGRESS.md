@@ -5,6 +5,126 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-11 — the studio signs di.i, the platform ships di.iiii, and a production is a word we did not have
+
+Copy only. No behaviour, no routes, no UI strings changed.
+
+- Four audits ran first — every address and route, every space on all three tiers, every
+  audience, and this project's own written words — then one judgement over them. The page the
+  owner reads is in his own di.iiii at `/what-we-have/p/names`.
+- **`docs/ai/vocabulary.md`**: `place`, `production` and `work` added to the dictionary;
+  the `di.i` row changed from "the retired name" to what it actually is — the studio's
+  signature, a slip only inside the product. That contradiction with `di-brand/NAMING.md`
+  had stood for nine days. The guard is untouched: it only ever read `src/`.
+- `work` and `project` are recorded as one object from two sides, which also closes
+  `di-atlas/CONCEPTS.md`'s open "what is a part?" — the piece met in the wild is a **work**,
+  made of **scenes**.
+- **Studio → Editor** recorded as decided. "Studio" cannot name the practice, the domain and
+  a surface at once, and the practice cannot rename itself. UI copy follows separately;
+  `/studio` keeps answering.
+- **MANIFESTO.md** and **THREE_DISTANCES.md**: the world distance is `diiii.xyz` (live
+  2026-09-11), `thedi.studio` is the studio's address on it, `di-studio.xyz` serves forever
+  because the QR in the room and the handout install line both name it.
+- Addresses added the same day, outside this change: `diiii.xyz` + `www.` (prod) and
+  `dev.diiii.xyz` (second tier), both with certificates, both verified as a guest.
+
+## 2026-09-13 — programs sign the guest book: /for-apps, llms.txt, and a bouncer for anonymous scripts
+
+- The owner's ask: "if someone searches about di.iiii — some app or AI — they will also fill the mail, so we know who reaches us, and protect us." Modelled on MusicBrainz's etiquette: a program names itself and a contact in its User-Agent.
+- Door sign: `/for-apps` (React page on the legal shell, reserved segment — `/serverXR/api/spaces/for-apps` 404s on prod and staging), `public/llms.txt` (nginx gets an exact-match block like robots.txt), and robots.txt now says in words that every crawler, AI training included, is welcome. No Disallow added.
+- Guest book: `serverXR/src/appVisitors.js` sorts every request that reaches the router into browser / crawler / app / anonymous; `appVisitorStore.js` keeps daily aggregates only (no IP, no URL), buffered and flushed every 30 s, 500 names a day, 90 days. Ops Graph → Visitors lists them with a block toggle.
+- Bouncer: API reads (GET/HEAD) from anonymous programs get 30 a minute per address, identified apps and crawlers 300; browsers and signed-in callers (session, token, sync key) untouched. The 429 carries a `hint` on how to identify (new optional `hint` on `createRateLimiter`; every existing limiter's body is unchanged). Blocked names get 403 pointing at /for-apps.
+- Skipped entirely on `di up` (`DI_LOCAL=1`) and for loopback callers with no X-Forwarded-For (healthcheck, contract tests).
+- The User-Agent is honour-system: it can be faked, so this is courtesy and a list, not a wall. The per-address limiters stay the real floor.
+- Not covered: routes registered before the auth-state middleware (`/api/auth/*`, password sign-in, logout) are counted but not bounced — they already carry their own limiters.
+
+## 2026-09-11 — ?embed=1 becomes one contract every lane keeps
+
+`?embed=1` had been honoured by exactly one surface, the published viewer, since
+br_id_ge started passing it. `SurfaceBar` has carried an unused `hidden` prop
+since it was written. This joins them, because a lane rendered inside a window
+wearing a full-page navigation bar reads as a page stuffed into a hole.
+
+- `src/utils/previewMode.js` — `isEmbedRequest(search)` beside `isPreviewRequest`,
+  and the contract stated where the helper lives: embed hides NAVIGATION CHROME
+  and nothing else. Never auth, never what is saved, never what is shown. A pane
+  and a tab are the same program.
+- `PublicProjectViewer` now calls the helper instead of parsing the query itself.
+- Four lanes pass `hidden`: `/tools`, `/wiki`, `/<space>/projects`, and the blank
+  node canvas. Those are all the lanes that actually draw a bar — StudioHub,
+  RawHub and the chat surface do not render one, and adding bars to them would be
+  adding chrome, not hiding it. They are named in the test file as owing the
+  table a row if they ever grow one.
+- `src/components/surfaceBar.embed.test.jsx` — table-driven over every lane that
+  draws a bar plus the viewer, with and without the flag. The table IS the
+  contract: a lane added later fails until it joins.
+- `wikiContent.js` — one paragraph in "The bar", which already claimed the bar
+  hid itself in an embedded window; that was only true of the viewer until now.
+
+Looked at: `/tools` and `/wcc/projects` with and without the flag — one bar, then
+none, content otherwise identical and no layout break.
+
+This is what lets the next stage put a lane in a window without it looking like a
+page in a hole.
+
+## 2026-09-13 — backup-pull could not see its own archives through a symlinked destination
+
+- On aylmo `~/di-backups` is a symlink into `/mnt/nobara-home`. `find "$DEST"` and `du -sh "$DEST"`
+  do not follow a symlink given as the start point, so the pull logged `0 archive(s) held locally, 4.0K`
+  while 30 archives (22G) were there.
+- The same `find` feeds the prune list, so pruning to `DII_KEEP` (30) silently never ran: the local
+  chain would have grown without bound. The pull and integrity check were unaffected (they use `"$DEST/"`
+  or a glob).
+- Fix: `"$DEST/"` in all three places. Checked against the real directory: old form 0 / 4.0K, new form 30 / 22G.
+
+## 2026-09-11 — a page stops claiming to be di-studio.xyz when it is not
+
+- `diiii.xyz` went live 2026-09-11 and serves the same app, but `src/index.html`
+  hardcoded `canonical`, `og:url`, `og:image` and `twitter:image` to
+  `https://di-studio.xyz`. Every page on the new address — and on `dev.diiii.xyz`,
+  and on every `di` install — told search engines it was a copy of the live site.
+- Link previews were NOT affected and never were: nginx forks crawlers to
+  serverXR's `/og` route, which derives the host. Checked with a Telegram UA
+  before changing anything — `og:url https://diiii.xyz` came back correct.
+- `canonical` is now created at runtime from `location.origin + location.pathname`.
+  It cannot be a relative `href`: the bundler resolves `link[href]` as an asset at
+  build time, and `href="/"` fails the build with `EISDIR`. Proven in a preview
+  build served on a different host.
+- `og:url` and the two images are relative in the shell now. The absolute,
+  host-correct versions still come from the `/og` route for anything that reads
+  rather than renders.
+- `public/sitemap.xml` names `diiii.xyz` (the protocol requires absolute URLs, so
+  it is the one file that must pick a host) and lists 15 URLs instead of 7 — the
+  eight public spaces that were invisible to search are in it, including the two
+  that reached prod today. `robots.txt`'s Sitemap line follows.
+
+## Also settled this session (not in this branch's diff)
+
+- **`diiii.xyz` is the platform's address**, live and certificated; `dev.diiii.xyz` is the
+  second tier (it stays — the owner asked to delete it and then said he needs it).
+  `di-studio.xyz` and `staging.di-studio.xyz` both keep answering. Caddy takes a comma list
+  in `SITE_DOMAIN` / `STAGING_DOMAIN`, so a new name is an `.env` edit; DNS first or the
+  certificate never issues.
+- **Nothing exists only on the second tier any more.** `cascade` and `the-light-put-back`
+  were pushed to prod from di-spaces snapshots and seen as a guest; prod went 10 → 12
+  spaces. The publish PATCH fails first time with a stale `previewImageAssetId` — prod
+  re-encodes uploads into new ids; clear it in the snapshot and re-run.
+- A full **1.1 GB backup of the second tier** is at
+  `~/di-backups/staging-final-2026-09-11.tgz`, verified (1793 entries, di.db + uploads).
+- **WCC's front door on prod** published one artist's project instead of the exhibition;
+  the space now publishes `main`.
+
+## Left open
+
+- `/{space}/projects` renders a "Landing page — THE WAY IN" row for `wcc` that the API does
+  not return: the contents page and the server disagree about what the space holds.
+- `thedi.studio` cannot be pointed at the VPS until there is a studio page to serve — it
+  would otherwise show the platform's front door under the studio's name. Its DNS also
+  carries the Google Workspace MX/SPF/DKIM for `info@thedi.studio`; do not touch those.
+- Creating a space id `thedi` on the local install answers **409 "Space already exists"**
+  while the id appears in neither the listing nor `spaces` in `di.db`. Unexplained; the
+  studio page is blocked behind it.
+
 ## 2026-09-11 — a leak closed, a page cut to an eighth, and the mark the second tier was missing
 
 Four things were audited and fixed one at a time. None of the four was what the

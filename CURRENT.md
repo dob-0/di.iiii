@@ -13,7 +13,11 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a leak closed, a page cut to an eighth, and the mark the second tier was missing
+- the studio signs di.i, the platform ships di.iiii, and a production is a word we did not have
+- programs sign the guest book: /for-apps, llms.txt, and a bouncer for anonymous scripts
+- ?embed=1 becomes one contract every lane keeps
+- backup-pull could not see its own archives through a symlinked destination
+- a page stops claiming to be di-studio.xyz when it is not
 
 Full detail: `PROGRESS.md`.
 
