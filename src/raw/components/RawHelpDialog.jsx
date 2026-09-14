@@ -22,7 +22,12 @@ function GuideDiagram() {
 
 export default function RawHelpDialog({
     open,
-    onClose
+    onClose,
+    // Design audit C7: the Start section's first step read "The canvas
+    // starts empty" even when opened over a full canvas — the one line in
+    // this dialog that could be flatly wrong about what the person was
+    // looking at. Pass whether the canvas already holds work.
+    hasNodes = false
 }) {
     const [activeSectionId, setActiveSectionId] = useState('start')
     const [activeMode, setActiveMode] = useState('basics')
@@ -46,7 +51,18 @@ export default function RawHelpDialog({
 
     if (!open) return null
 
-    const activeSection = GUIDE_SECTIONS.find((section) => section.id === activeSectionId) || suggestedSection
+    const rawSection = GUIDE_SECTIONS.find((section) => section.id === activeSectionId) || suggestedSection
+    // Design audit C7: worded for the state the canvas is actually in,
+    // rather than always assuming a fresh one.
+    const activeSection = rawSection.id === 'start'
+        ? {
+            ...rawSection,
+            steps: [
+                hasNodes ? 'This canvas already has work in it.' : 'The canvas starts empty.',
+                ...rawSection.steps.slice(1)
+            ]
+        }
+        : rawSection
 
     return (
         <div className="raw-help-backdrop">

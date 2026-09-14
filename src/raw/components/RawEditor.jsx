@@ -75,7 +75,7 @@ import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadP
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
-import { getCardBox } from '../utils/cardGeometry.js'
+import { CARD_WIDTH, getCardBox } from '../utils/cardGeometry.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
@@ -128,27 +128,50 @@ const ACTIVE_MARKER_TYPE_IDS = ['world.light', 'world.environment', 'world.backg
 // `frame` is passed in rather than read off the node: where a window sits is
 // the person's own arrangement laid over the document's seed, and only the
 // editor holds both halves. See utils/workspaceLayout.js.
-const buildWindowStateFromNode = (node, index = 0, graphContext = null, windowFrame = null) => {
+// isWorldSpace: whether THIS window will render in graph units (unpinned, on
+// a wide-enough viewport — see panelWindowSpace/windowSpaceFor). Screen-space
+// windows interpret x/y as viewport pixels, so a card's graph position is not
+// a valid offset for them; only a world-space window gets the card-anchored
+// placement below.
+const buildWindowStateFromNode = (node, index = 0, graphContext = null, windowFrame = null, isWorldSpace = false) => {
     const def = WINDOW_DEFAULT_POSITIONS[node.typeId] || { x: 96, y: 140, width: 360, height: 280 }
     const frame = windowFrame || node.values?.frame || {}
     const hasSavedPos = frame.x != null && frame.y != null
-    // Cascade unpositioned windows by a STABLE per-node offset, not the list
-    // index — index shifts when a sibling closes, which made every later
-    // unpositioned window hop 32px.
-    // …and spread in TWO dimensions over 16 slots: the old 8-slot 32px
-    // staircase left concurrently-open windows ~90% overlapped whenever two
-    // ids hashed near each other (audit 08-21, desk-07: three windows, one
-    // pile). Still the stable per-node hash — never the list index.
-    const cascadeSlot = hasSavedPos
-        ? 0
-        : Array.from(String(node.id)).reduce((sum, ch) => sum + ch.charCodeAt(0), index) % 16
-    const cascadeX = hasSavedPos ? 0 : (cascadeSlot % 4) * 72
-    const cascadeY = hasSavedPos ? 0 : Math.floor(cascadeSlot / 4) * 56
+    // Design audit A5: an unpositioned window used to cascade from the SAME
+    // shared corner every panel type starts at (def.x/def.y) with only a
+    // hash-based 16-slot nudge to spread it — which piled a whole document's
+    // worth of frameless windows (the API, an import, an example, an agent)
+    // into that one corner, on top of whatever cards were already there.
+    // A world-space window with a real card anchors to it instead: clear,
+    // to the right, in the SAME graph units the card itself uses — stable
+    // under pan/zoom (unlike re-deriving a screen position from the live
+    // viewport every render), and never on top of the card it belongs to.
+    // Screen-space windows (pinned, or a narrow/phone viewport where the
+    // clamp is the whole layout) keep the original per-id cascade.
+    let anchorX = def.x
+    let anchorY = def.y
+    let cascadeX = 0
+    let cascadeY = 0
+    if (!hasSavedPos && isWorldSpace && Number.isFinite(node.graphX) && Number.isFinite(node.graphY)) {
+        anchorX = node.graphX + CARD_WIDTH + 24
+        anchorY = node.graphY
+    } else if (!hasSavedPos) {
+        // Cascade unpositioned windows by a STABLE per-node offset, not the
+        // list index — index shifts when a sibling closes, which made every
+        // later unpositioned window hop 32px.
+        // …and spread in TWO dimensions over 16 slots: the old 8-slot 32px
+        // staircase left concurrently-open windows ~90% overlapped whenever
+        // two ids hashed near each other (audit 08-21, desk-07: three
+        // windows, one pile). Still the stable per-node hash — never index.
+        const cascadeSlot = Array.from(String(node.id)).reduce((sum, ch) => sum + ch.charCodeAt(0), index) % 16
+        cascadeX = (cascadeSlot % 4) * 72
+        cascadeY = Math.floor(cascadeSlot / 4) * 56
+    }
     return {
         id: node.id,
         title: frame.title || evaluateNodeInput(node, 'title', graphContext) || node.label,
-        x: (frame.x ?? def.x) + cascadeX,
-        y: (frame.y ?? def.y) + cascadeY,
+        x: (frame.x ?? anchorX) + cascadeX,
+        y: (frame.y ?? anchorY) + cascadeY,
         width: frame.width || def.width,
         height: frame.height || def.height,
         zIndex: frame.zIndex || 6,
@@ -195,6 +218,7 @@ export default function RawEditor({
         placement: null
     })
     const [overflowOpen, setOverflowOpen] = useState(false)
+    const overflowRef = useRef(null)
     const [helpOpen, setHelpOpen] = useState(false)
     // Zen: nothing resident on the workspace. Read once, from this device's
     // preference, defaulting to on only for a workspace with no work in it —
@@ -1892,6 +1916,31 @@ export default function RawEditor({
         return () => window.removeEventListener('keydown', handler)
     }, [handleDeleteSelected, scopedSelectedEntity])
 
+    // Design audit C4: the ⋯ menu ignored Escape and an outside click —
+    // measured staying open under Help and through zooming. Capture phase so
+    // this runs before the scope-Escape handler just below it, and
+    // stopImmediatePropagation so the same Escape press that closes the menu
+    // does not also pop the node scope in the same keystroke.
+    useEffect(() => {
+        if (!overflowOpen) return undefined
+        const handleKeyDown = (event) => {
+            if (event.key !== 'Escape') return
+            event.preventDefault()
+            event.stopImmediatePropagation()
+            setOverflowOpen(false)
+        }
+        const handlePointerDown = (event) => {
+            if (overflowRef.current?.contains(event.target)) return
+            setOverflowOpen(false)
+        }
+        window.addEventListener('keydown', handleKeyDown, true)
+        window.addEventListener('pointerdown', handlePointerDown, true)
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown, true)
+            window.removeEventListener('pointerdown', handlePointerDown, true)
+        }
+    }, [overflowOpen])
+
     useEffect(() => {
         const handler = (event) => {
             const tag = event.target?.tagName?.toLowerCase?.()
@@ -2008,7 +2057,7 @@ export default function RawEditor({
         : visibleViewNodes
             .filter((node) => !frameOf(node).pinned)
             .map((node) => {
-                const state = buildWindowStateFromNode(node, 0, graphContext, frameOf(node))
+                const state = buildWindowStateFromNode(node, 0, graphContext, frameOf(node), true)
                 return { x: state.x, y: state.y, width: state.width, height: state.minimized ? RAW_WINDOW_MINIMIZED_HEIGHT : state.height }
             })
     const graphContentInsets = getGraphEdgeInsets({
@@ -2087,6 +2136,19 @@ export default function RawEditor({
                         <div className="raw-topbar-center">
                             {navStack.length > 1 ? (
                                 <nav className="raw-topbar-breadcrumb" aria-label="Node scope">
+                                    {/* Design audit B6: the floating scope marker's
+                                        Leave (‹) is the control most reached for —
+                                        put it where the breadcrumb already lives so
+                                        it is not a second piece of chrome to find. */}
+                                    <button
+                                        type="button"
+                                        className="raw-topbar-crumb raw-topbar-crumb-back"
+                                        onClick={() => handleNavigateToScope(navStack.length - 2)}
+                                        aria-label="Leave — back one level"
+                                        title="Leave"
+                                    >
+                                        ‹
+                                    </button>
                                     <button type="button" className="raw-topbar-crumb" onClick={() => handleNavigateToScope(0)}>◈</button>
                                     {navStack.slice(1).map((scopeId, i) => {
                                         const crumbNode = authoredNodes.find((n) => n.id === scopeId)
@@ -2109,7 +2171,11 @@ export default function RawEditor({
                             ) : showEmptyHint ? (
                                 <span className="raw-topbar-location" aria-live="polite">{topbarLocationText}</span>
                             ) : null}
-                            <div className="raw-topbar-windows">
+                            {/* Design audit A1: at 600px and below this button,
+                                Help, the node count and Chat move into the ⋯
+                                menu (see the phone-only group there) so the
+                                bar fits without becoming a side-scroller. */}
+                            <div className="raw-topbar-windows raw-topbar-hide-narrow">
                                 <button
                                     type="button"
                                     className={isWorldFullscreen ? 'is-active' : ''}
@@ -2134,13 +2200,13 @@ export default function RawEditor({
                             </div>
                         </div>
                         <div className="raw-topbar-right">
-                            <button type="button" className="raw-topbar-help-action" onClick={() => setHelpOpen(true)}>
+                            <button type="button" className="raw-topbar-help-action raw-topbar-hide-narrow" onClick={() => setHelpOpen(true)}>
                                 Help
                             </button>
                             {nodeCount > 0 && (
                                 <button
                                     type="button"
-                                    className={`raw-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
+                                    className={`raw-topbar-node-count raw-topbar-hide-narrow${outlinerOpen ? ' is-active' : ''}`}
                                     onClick={() => setOutlinerOpen((v) => !v)}
                                     title="Toggle outliner"
                                     aria-label={`${nodeCount} nodes`}
@@ -2158,7 +2224,7 @@ export default function RawEditor({
                             {(!isLocalWorkspace || presence.users.length > 0 || unreadChatCount > 0) && (
                                 <button
                                     type="button"
-                                    className={`raw-topbar-node-count${chatOpen ? ' is-active' : ''}`}
+                                    className={`raw-topbar-node-count raw-topbar-hide-narrow${chatOpen ? ' is-active' : ''}`}
                                     onClick={() => setChatOpen((v) => !v)}
                                     title="Toggle chat"
                                     aria-label="Toggle chat"
@@ -2166,23 +2232,43 @@ export default function RawEditor({
                                     Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
                                 </button>
                             )}
-                            <div className="raw-topbar-overflow">
-                                <button type="button" className="raw-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
+                            <div className="raw-topbar-overflow" ref={overflowRef}>
+                                <button
+                                    type="button"
+                                    className="raw-topbar-overflow-btn"
+                                    onClick={() => setOverflowOpen((v) => !v)}
+                                    aria-label="More"
+                                    aria-haspopup="true"
+                                    aria-expanded={overflowOpen}
+                                >
+                                    ⋯
+                                </button>
                                 {overflowOpen && (
-                                    <div className="raw-topbar-overflow-menu">
-                                        <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
+                                    <div className="raw-topbar-overflow-menu" role="menu" aria-label="More">
+                                        {/* Design audit C4: navigation, view
+                                            settings and help used to sit in one
+                                            unsorted list. Three groups, named
+                                            for what they do rather than what
+                                            they are made of. */}
+                                        <span className="raw-topbar-overflow-group-label">Project</span>
+                                        <button type="button" role="menuitem" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
                                         {/* One project, two editors — this is the
                                             way across. The local canvas has no
-                                            Studio twin, so no link there. */}
+                                            Editor twin, so no link there.
+                                            "Editor" not "Studio": Studio is one
+                                            place inside the product, not the
+                                            product (docs/ai/vocabulary.md,
+                                            2026-09-11). */}
                                         {!isLocalWorkspace && projectId && (
                                             <button
                                                 type="button"
+                                                role="menuitem"
                                                 onClick={() => {
                                                     setOverflowOpen(false)
                                                     navigateToRawPath(buildStudioProjectPath(projectId, resolvedSpaceId))
                                                 }}
                                             >
-                                                Open in Studio
+                                                Open in Editor
                                             </button>
                                         )}
                                         {/* The projector cable had zero inbound
@@ -2191,6 +2277,7 @@ export default function RawEditor({
                                         {!isLocalWorkspace && projectId && (
                                             <button
                                                 type="button"
+                                                role="menuitem"
                                                 onClick={async () => {
                                                     setOverflowOpen(false)
                                                     const url = `${window.location.origin}${buildRawOutPath(projectId, resolvedSpaceId)}`
@@ -2212,6 +2299,7 @@ export default function RawEditor({
                                         {isLocalWorkspace && (
                                             <button
                                                 type="button"
+                                                role="menuitem"
                                                 disabled={isSavingToSpace}
                                                 onClick={() => { setOverflowOpen(false); handleSaveCanvasToSpace() }}
                                             >
@@ -2220,8 +2308,52 @@ export default function RawEditor({
                                         )}
                                         {/* The exits back to di.iiii — the canvas was a
                                             sealed room before the doors audit. */}
-                                        <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildSpacesPath()) }}>Spaces</button>
-                                        <button type="button" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildWikiPath()) }}>Wiki</button>
+                                        <button type="button" role="menuitem" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildSpacesPath()) }}>Spaces</button>
+                                        {isLocalWorkspace && (
+                                            <button type="button" role="menuitem" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Clear the canvas</button>
+                                        )}
+
+                                        <span className="raw-topbar-overflow-group-label">View</span>
+                                        {/* Design audit A1: at 600px and below,
+                                            the Scene toggle, the node count
+                                            (outliner) and Chat drop off the bar
+                                            itself (raw-topbar-hide-narrow) and
+                                            live here instead — shown only at
+                                            that width (raw-topbar-overflow-
+                                            narrow-only in raw.css) so the menu
+                                            does not carry duplicate controls on
+                                            a desktop where the bar already has
+                                            room for them. */}
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            className="raw-topbar-overflow-narrow-only"
+                                            onClick={() => { setOverflowOpen(false); setIsWorldFullscreen((current) => !current) }}
+                                        >
+                                            {isWorldFullscreen
+                                                ? 'Back to the graph'
+                                                : roomCount > 0 ? `Scene · ${roomCount}` : 'Scene'}
+                                        </button>
+                                        {nodeCount > 0 && (
+                                            <button
+                                                type="button"
+                                                role="menuitem"
+                                                className="raw-topbar-overflow-narrow-only"
+                                                onClick={() => { setOverflowOpen(false); setOutlinerOpen((v) => !v) }}
+                                            >
+                                                {nodeCount} {nodeCount === 1 ? 'node' : 'nodes'}
+                                            </button>
+                                        )}
+                                        {(!isLocalWorkspace || presence.users.length > 0 || unreadChatCount > 0) && (
+                                            <button
+                                                type="button"
+                                                role="menuitem"
+                                                className="raw-topbar-overflow-narrow-only"
+                                                onClick={() => { setOverflowOpen(false); setChatOpen((v) => !v) }}
+                                            >
+                                                Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
+                                            </button>
+                                        )}
                                         {/* Configuration, not work — the ⋯ is
                                             where the audit sent it. */}
                                         <div className="raw-topbar-scale-control">
@@ -2239,16 +2371,30 @@ export default function RawEditor({
                                                 ))}
                                             </select>
                                         </div>
-                                        <button type="button" onClick={() => { handleCreateSceneExample(); setOverflowOpen(false) }}>Build an example</button>
-                                        <button type="button" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
-                                        {isLocalWorkspace && (
-                                            <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Clear the canvas</button>
+                                        <button type="button" role="menuitem" onClick={() => { handleCreateSceneExample(); setOverflowOpen(false) }}>Build an example</button>
+                                        <button type="button" role="menuitem" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
+
+                                        <span className="raw-topbar-overflow-group-label">Help</span>
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            className="raw-topbar-overflow-narrow-only"
+                                            onClick={() => { setOverflowOpen(false); setHelpOpen(true) }}
+                                        >
+                                            Help
+                                        </button>
+                                        <button type="button" role="menuitem" onClick={() => { setOverflowOpen(false); navigateToRawPath(buildWikiPath()) }}>Wiki</button>
+
+                                        {presence.users.length > 0 && (
+                                            <>
+                                                <span className="raw-topbar-overflow-group-label">Here now</span>
+                                                {presence.users.map((user) => (
+                                                    <span key={user.socketId || user.userId} className="raw-user-pill">
+                                                        {user.userName}
+                                                    </span>
+                                                ))}
+                                            </>
                                         )}
-                                        {presence.users.length > 0 && presence.users.map((user) => (
-                                            <span key={user.socketId || user.userId} className="raw-user-pill">
-                                                {user.userName}
-                                            </span>
-                                        ))}
                                     </div>
                                 )}
                             </div>
@@ -2360,9 +2506,14 @@ export default function RawEditor({
                     It became the way home in the 2026-08-21 doors audit: the
                     canvas was a sealed room (no nav, no path back to
                     di.iiii), and a wordmark that links home is the one exit
-                    that adds no furniture. Same resting look, quiet hover. */}
+                    that adds no furniture. Same resting look, quiet hover.
+                    Design audit B10/#18: it used to draw over TopInsidePanel's
+                    own fields (measured: over Exposure, over Focus) since the
+                    panel carries no z-index of its own — hidden while that
+                    panel is mounted, same condition TopInsidePanel itself
+                    renders on. */}
                 <a
-                    className="raw-surface-wordmark"
+                    className={`raw-surface-wordmark${isTopType(scopeNode?.typeId) ? ' is-hidden' : ''}`}
                     href="/"
                     aria-label="di.iiii — home"
                     onClick={(e) => { e.preventDefault(); navigateToRawPath('/') }}
@@ -2384,8 +2535,24 @@ export default function RawEditor({
                     phone every window is, because the clamp is the layout. */}
                 {visibleViewNodes.map((node, index) => {
                     const frame = frameOf(node)
-                    const windowState = buildWindowStateFromNode(node, index, graphContext, frame)
+                    // Design audit A5: a node made with no frame at all — the
+                    // API, an import, an example, an agent — used to cascade
+                    // by a hash of its id alone, which knows nothing about
+                    // where the node's own card sits and piled every such
+                    // window into the same top-left corner (and onto each
+                    // other, sharing that one corner). placeNewWindowFrame
+                    // (the palette's own placement) was tried here first, but
+                    // it reads the LIVE pan/zoom every call — fine for a
+                    // frame that gets saved once at creation, wrong for one
+                    // that is recomputed on every render, since panning would
+                    // then drag the window along behind a card it is not
+                    // pinned to. buildWindowStateFromNode's fallback below
+                    // anchors to the card's own GRAPH position instead —
+                    // stable under pan/zoom, and still clear of the card
+                    // rather than centred on the old shared corner. A frame
+                    // someone has actually dragged is never touched.
                     const space = windowSpaceFor(frame)
+                    const windowState = buildWindowStateFromNode(node, index, graphContext, frame, space === 'world')
                     // The family, not the type id: the cards say "the room" and
                     // the windows used to say UNIVERSE.WORLD. Same node, two
                     // vocabularies — and the colour is what ties the window to
@@ -2517,6 +2684,15 @@ export default function RawEditor({
                     >
                         ‹
                     </button>
+                    {/* Design audit B6: "where am I" was said three times —
+                        this label, the topbar breadcrumb chip, and the centre
+                        sentence. Always rendered (this marker is the one
+                        thing that must never be hidden — see above), but
+                        raw.css hides the text wherever the breadcrumb is
+                        both present AND legible: chrome on, and wide enough
+                        that A1's fix has not dropped the crumb chip. Narrow
+                        enough that the chip is gone, or chrome off entirely,
+                        and this is the only place the name is said. */}
                     <span className="raw-scope-marker-label">
                         inside <strong>{scopeNode?.label || 'a node'}</strong>
                     </span>
@@ -2706,6 +2882,7 @@ export default function RawEditor({
             <RawHelpDialog
                 open={helpOpen}
                 onClose={() => setHelpOpen(false)}
+                hasNodes={hasAnyNodes}
             />
 
             {visibleSelection ? hostInspector : null}

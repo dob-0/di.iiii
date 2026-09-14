@@ -54,6 +54,18 @@ vi.mock('./RawGraphSurface.jsx', () => ({
                     drop-wire
                 </button>
             )}
+            {/* graphViewport starts null (real pan/zoom only arrives once the
+                real surface has measured itself), which is why panels stay
+                'screen' space and the A5 card-anchor path below never fires
+                in a test that does not press this. */}
+            {props.onViewportChange && (
+                <button
+                    type="button"
+                    onClick={() => props.onViewportChange({ zoom: 1, panX: 0, panY: 0, originLeft: 0, originTop: 0 })}
+                >
+                    set-viewport
+                </button>
+            )}
         </div>
     )
 }))
@@ -341,13 +353,16 @@ describe('RawEditor delete/reset confirmations', () => {
     })
 
     // Doors audit 2026-08-21: one project, two editors, and no door between
-    // them — "Open in Studio" is the Raw side of that door. The local canvas
-    // has no Studio twin, so the entry must not appear there.
-    it('offers Open in Studio for a server project, never for the local canvas', () => {
+    // them — "Open in Editor" is the Raw side of that door. The local canvas
+    // has no Editor twin, so the entry must not appear there.
+    // Design audit C4, 2026-09-14: renamed from "Open in Studio" — Studio is
+    // one place inside the product, not the product's name for the editing
+    // surface (docs/ai/vocabulary.md, "Studio gives the word up").
+    it('offers Open in Editor for a server project, never for the local canvas', () => {
         seedSelectedNodeZero()
         const { unmount } = render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
         fireEvent.click(screen.getByText('⋯'))
-        expect(screen.queryByText('Open in Studio')).toBeNull()
+        expect(screen.queryByText('Open in Editor')).toBeNull()
         expect(screen.queryByText('Copy projector link')).toBeNull()
         unmount()
 
@@ -356,7 +371,7 @@ describe('RawEditor delete/reset confirmations', () => {
         window.localStorage.setItem('dii.raw.zen.p1', 'off')
         render(<RawEditor projectId="p1" spaceId="gallery" />)
         fireEvent.click(screen.getByText('⋯'))
-        expect(screen.getByText('Open in Studio')).toBeInTheDocument()
+        expect(screen.getByText('Open in Editor')).toBeInTheDocument()
         expect(screen.getByText('Copy projector link')).toBeInTheDocument()
     })
 
@@ -369,6 +384,42 @@ describe('RawEditor delete/reset confirmations', () => {
         fireEvent.click(screen.getByText('Clear the canvas'))
 
         expect(screen.queryByText('Node 0')).toBeNull()
+    })
+
+    // Design audit C4: the ⋯ menu ignored Escape and an outside click,
+    // measured staying open under Help and through zooming.
+    it('closes the ⋯ menu on Escape', () => {
+        seedSelectedNodeZero()
+        render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'More' }))
+        expect(screen.getByText('Spaces')).toBeInTheDocument()
+
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(screen.queryByText('Spaces')).toBeNull()
+    })
+
+    it('closes the ⋯ menu on an outside click', () => {
+        seedSelectedNodeZero()
+        render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'More' }))
+        expect(screen.getByText('Spaces')).toBeInTheDocument()
+
+        fireEvent.pointerDown(document.body)
+        expect(screen.queryByText('Spaces')).toBeNull()
+    })
+
+    // Design audit C4: navigation, view settings and help used to sit in one
+    // unsorted list.
+    it('groups the ⋯ menu into Project · View · Help', () => {
+        seedSelectedNodeZero()
+        render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'More' }))
+        const menu = screen.getByRole('menu', { name: 'More' })
+        const labels = [...menu.querySelectorAll('.raw-topbar-overflow-group-label')].map((el) => el.textContent)
+        expect(labels).toEqual(['Project', 'View', 'Help'])
     })
 
     it('asks the same once for a normal (non-root) node — no extra question for Node 0', () => {
@@ -495,6 +546,26 @@ describe('RawEditor — arranging windows is the person\'s, not the project\'s',
         fireEvent.click(screen.getByRole('button', { name: 'Restore' }))
         expect(container.querySelector('.raw-window').classList.contains('is-maximized')).toBe(false)
         expect(container.querySelector('.raw-window').style.transform).toBe(before)
+    })
+
+    // Design audit A5: a node made with no frame at all — the API, an
+    // import, an example, an agent — used to cascade from the same shared
+    // corner every panel type starts at (WINDOW_DEFAULT_POSITIONS), which is
+    // exactly what piled a whole document's worth of frameless windows on
+    // top of each other and the cards under them. A world-space window (one
+    // whose viewport is known and is not pinned/narrow) with a real card
+    // anchors next to that card instead.
+    it('places an unpositioned world-space window next to its own card, not the shared corner', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [{ id: 't1', typeId: 'view.text', label: 'Note', graphX: 500, graphY: 300, values: {} }],
+            edges: [],
+            workspaceState: {}
+        }))
+        const { container } = render(<RawEditor localStorageKey={KEY} />)
+        fireEvent.click(screen.getByText('set-viewport'))
+        // CARD_WIDTH (200) + a 24px gap, same y as the card. A world window
+        // also carries the viewport's own scale (1, at the mocked zoom).
+        expect(container.querySelector('.raw-window').style.transform).toBe('translate(724px, 300px) scale(1)')
     })
 })
 
@@ -666,7 +737,9 @@ describe('RawEditor chrome sweep (plan PR 1.6)', () => {
             { id: 'c-1', typeId: 'geom.cube', label: 'Cube', values: {} }
         ]))
         render(<RawEditor localStorageKey={KEY} />)
-        fireEvent.click(screen.getByRole('button', { name: '⋯' }))
+        // Design audit C3: ⋯ was the only unnamed button in the bar — it now
+        // carries aria-label="More" alongside its glyph.
+        fireEvent.click(screen.getByRole('button', { name: 'More' }))
         expect(screen.queryByRole('button', { name: 'Streaming Prototype' })).toBeNull()
     })
 
@@ -729,6 +802,22 @@ describe('RawEditor hardware Back (mobile finding #3)', () => {
         expect(screen.getByText(/inside/)).toBeTruthy()
         act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
         expect(screen.queryByText(/inside/)).toBeNull()
+    })
+
+    // Design audit B10/#18: the wordmark used to draw over TopInsidePanel's
+    // own fields (measured: over Exposure, over Focus on Camera In) — it has
+    // no z-index of its own to lose to. Hidden while that panel is mounted.
+    it('hides the wordmark while inside a picture operator (TopInsidePanel is showing)', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [{ id: 'cam', typeId: 'top.camera', label: 'Camera In', values: {} }],
+            edges: [], workspaceState: {}
+        }))
+        render(<RawEditor localStorageKey={KEY} />)
+        expect(screen.getByRole('link', { name: 'di.iiii — home' }).className).not.toMatch(/is-hidden/)
+
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+
+        expect(screen.getByRole('link', { name: 'di.iiii — home' }).className).toMatch(/is-hidden/)
     })
 })
 
@@ -1117,7 +1206,7 @@ describe('RawEditor world scope entry', () => {
 
         expect(screen.queryByRole('navigation', { name: 'Node scope' })).toBeNull()
 
-        fireEvent.click(screen.getByText('Enter ›'))
+        fireEvent.click(screen.getByRole('button', { name: 'Enter — go inside Scene' }))
 
         expect(screen.getByRole('navigation', { name: 'Node scope' })).toBeTruthy()
     })
@@ -1132,7 +1221,7 @@ describe('RawEditor world scope entry', () => {
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={ENTER_STORAGE_KEY} />)
 
-        fireEvent.click(screen.getByText('Enter ›'))
+        fireEvent.click(screen.getByRole('button', { name: 'Enter — go inside Scene' }))
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
         fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Cube' } })
         fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })

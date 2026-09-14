@@ -303,21 +303,30 @@ export default function DesktopWindow({
                     <h3>{title}</h3>
                 </div>
                 <div className="raw-window-actions">
+                    {/* Design audit B9/#13: "Enter ›" was the one title-bar
+                        button still spelling itself out — a whole extra word
+                        beside Pin/Maximize/Minimize/Close's glyphs, and part
+                        of why a header could wrap to two rows on a narrow
+                        window. Every node is enterable now (the unified
+                        inside view), so this stays on every window; it just
+                        joins the others as a glyph with an accessible name
+                        rather than a sentence. */}
                     {onEnter && (
                         <button
                             type="button"
+                            className="raw-window-enter"
+                            aria-label={`Enter — go inside ${title}`}
                             title="Go inside this node to put things in it"
                             onClick={(event) => { event.stopPropagation(); onEnter() }}
                         >
-                            Enter ›
+                            ›
                         </button>
                     )}
                     {/* Glyphs, not words. Four words per title bar — and a
                         full extra 390px row per window on a phone — for three
                         actions every windowing system on earth spells with
-                        symbols. Enter › above keeps its word: it is the one
-                        action a first-timer must find. Accessible names carry
-                        the words the glyphs dropped. */}
+                        symbols. Accessible names carry the words the glyphs
+                        dropped. */}
                     <button
                         type="button"
                         className={windowState.pinned ? 'is-active' : ''}
