@@ -20,7 +20,10 @@ vi.mock('../services/serverSpaces.js', () => ({
     supportsServerSpaces: true,
     // 'ghost' plays the mistyped id: the server 404s for a space that was
     // never created, and the card must say so instead of talking scope.
-    getServerSpace: (spaceId) => (spaceId === 'ghost'
+    // 'spaces' plays a RESERVED word (RESERVED_APP_SEGMENTS) that fell
+    // through routing as if it were a space id — no real space can ever be
+    // named 'spaces', so the server 404s it too, same as 'ghost'.
+    getServerSpace: (spaceId) => (spaceId === 'ghost' || spaceId === 'spaces'
         ? Promise.reject(Object.assign(new Error('Space not found.'), { status: 404 }))
         : Promise.resolve({ id: spaceId, isPublic: spaceId === 'pub' }))
 }))
@@ -131,6 +134,61 @@ describe('AuthGate restricted card doors', () => {
         // the same doors are still on the card
         expect(screen.getByRole('button', { name: 'Open Space' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Your private sandbox' })).toBeInTheDocument()
+    })
+})
+
+// visiting /spaces/nope used to answer "Nothing lives at 'spaces'" — the
+// FIRST path segment, which is a real reserved address (RESERVED_APP_SEGMENTS),
+// not the part the visitor actually got wrong — inside the same card as a
+// full sign-in form (PasswordSignIn + OAuth). Neither is right: a reserved
+// word can never be the missing thing, and nobody can sign into an address
+// that never existed. This is the third time this exact message has named
+// the wrong thing (see RootApp.test.jsx's 'RootApp bare reserved addresses'
+// comment for the first two, /login and /make).
+describe('AuthGate not-found card', () => {
+    afterEach(() => {
+        window.history.replaceState({}, '', '/')
+        providersState.current = { github: false, google: false }
+    })
+
+    it('names the part of the address that is actually missing when the required id is itself reserved', async () => {
+        window.history.pushState({}, '', '/spaces/nope')
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
+        render(<AuthGate requiredSpaceId="spaces">editor</AuthGate>)
+
+        expect(await screen.findByText(/Nothing lives at “nope”/)).toBeInTheDocument()
+        expect(screen.queryByText(/Nothing lives at “spaces”/)).not.toBeInTheDocument()
+    })
+
+    it('leaves an ordinary mistyped space id named exactly as typed', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+
+        expect(await screen.findByText(/Nothing lives at “ghost”/)).toBeInTheDocument()
+    })
+
+    it('shows no sign-in form on the not-found card, even with OAuth providers on', async () => {
+        providersState.current = { github: true, google: true }
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+
+        await screen.findByText(/Nothing lives at/)
+        expect(screen.queryByRole('button', { name: /Continue with GitHub/ })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /Continue with Google/ })).not.toBeInTheDocument()
+        expect(screen.queryByPlaceholderText('Password')).not.toBeInTheDocument()
+        expect(screen.queryByText('Create one')).not.toBeInTheDocument()
+        // The doors onward are still on the card — a not-found address is
+        // not a dead end, only signing in to it is nonsense.
+        expect(screen.getByRole('button', { name: 'Open Space' })).toBeInTheDocument()
+    })
+
+    it('keeps the sign-in form when the space is real and merely out of reach', async () => {
+        providersState.current = { github: true, google: true }
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
+        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
+
+        expect(await screen.findByText(/Access restricted/)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /Continue with GitHub/ })).toBeInTheDocument()
     })
 })
 
