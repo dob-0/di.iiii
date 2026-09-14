@@ -102,18 +102,19 @@ export const WIKI_ARTICLES = [
         summary: 'di.iiii\u2019s own page is the room it describes \u2014 pressing Step inside moves the camera rather than loading anything.',
         body: [
             'The page at the bare address is a page you read and scroll like any other. It is also the room. The wordmark, the line under it, the buttons and the sections are laid out in the room\u2019s own space, each at its own distance, and the view starts square on to them \u2014 which is why it looks flat.',
-            'Press Step inside and nothing loads. The room is already on screen behind the page, so the door is a camera move \u2014 and at that moment the page stops being a page. Every part of it becomes a real thing in the room, with weight: the wordmark, the line, the buttons all fall, turn over, and come to rest flat on the floor, where the doors stand in front of them and the far ones go soft in the room\u2019s haze. You walk in as it lands. It is one continuous shot, not a page change, and the address does not move.',
+            'Press Step inside and nothing loads. The room is already on screen behind the page, so the door is a camera move \u2014 and at that moment the page stops being a page. Every part of it becomes a real thing in the room, with weight: the wordmark, the line, the buttons all fall and turn over, the doors pass in front of them and the far ones go soft in the room\u2019s haze. As you arrive the fallen page is cleared away \u2014 it fades and sinks into the floor \u2014 so you are left standing in the room with the doors in view, and nothing lying across them. On a phone held upright you arrive a few steps further back, far enough that all of the doors fit on the screen. It is one continuous shot, not a page change, and the address does not move.',
             { list: [
                 '/ \u2014 the front door: the page, with the room behind it.',
                 '/?room=1 \u2014 the room on its own, without the page. For anyone who wants the space and not the door.',
                 '/main \u2014 the old address of that same room. It still resolves and always will, and it still opens the room; the name just never reaches the address bar.'
             ] },
-            'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. The destination is never different, only the journey.',
+            'Going through a door \u2014 a door in the room, one of the featured exhibitions, or a card on the Spaces page \u2014 is one move too. The room you are leaving stays on screen until the place you are going to has drawn its first frame, and then that place comes up in its stead. There is no black screen with a spinner in between.',
+            'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. Going through a door is a short plain fade. The destination is never different, only the journey.',
             'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.',
             'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.'
         ],
         tags: ['landing', 'basics', 'navigation', 'room', 'walk'],
-        updated: '2026-09-01'
+        updated: '2026-09-14'
     },
     {
         id: 'shelves-and-the-trash',

@@ -51,7 +51,10 @@ import {
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
 import { createPortalWalkThrough } from './portalWalkThrough.js'
-import { appNavigate } from '../utils/appNavigate.js'
+import { doorsOf, fitArrivalToDoors as fitArrivalToDoors_ } from './arrivalFraming.js'
+import { getViewportAspect } from '../utils/cameraFraming.js'
+import { enterDestination, isEntryInProgress } from './entryTransition/entryTransition.js'
+import { captureRendererFrame } from './entryTransition/EntryGlide.jsx'
 import { markArriveWalking } from './arriveWalking.js'
 import './liveProjectScene.css'
 
@@ -766,7 +769,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         }
     }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef, isArActive, arTouchElRef])
 
-    useFrame((_, delta) => {
+    useFrame((frameState, delta) => {
         const player = playerRef.current
 
         // Above the isPresenting return deliberately: this reads the pose and
@@ -775,7 +778,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         // way, which is the only way they can, having no cursor to click it with.
         if (onPortalReachedRef.current) {
             const reached = portalWalk.step(entities, player.x, player.z)
-            if (reached) onPortalReachedRef.current(reached)
+            if (reached) onPortalReachedRef.current(reached, frameState)
         }
 
         // XrLocomotion owns movement + camera during a session.
@@ -1501,7 +1504,12 @@ export default function LiveProjectScene({
     // `sceneExtras`: three.js children rendered inside this component's Canvas,
     // after the project's own objects. The jam draws a marker where each other
     // person is standing, and a marker in the scene has to be IN the scene.
-    sceneExtras = null
+    sceneExtras = null,
+    // `fitArrivalToDoors`: on a portrait screen, step the arrival back along
+    // its own view until the room's doors are in frame (arrivalFraming.js).
+    // The landing's front room opts in; an authored room elsewhere keeps its
+    // spawn exactly as composed.
+    fitArrivalToDoors = false
 }) {
     const fetched = useLiveProjectDocument(providedDocument ? null : projectId)
     const doc = providedDocument || fetched.doc
@@ -1559,6 +1567,10 @@ export default function LiveProjectScene({
         return () => { walkerRef.current = null }
     }, [walkerRef])
 
+    const arrivalFor = useCallback((pose, forDoc) => (fitArrivalToDoors
+        ? fitArrivalToDoors_(pose, doorsOf(forDoc?.entities || []), getViewportAspect(1))
+        : pose), [fitArrivalToDoors])
+
     // Data-driven arrival: a project can author worldState.spawn to place/aim the
     // visitor on entry (otherwise the default above). Applied once per project load.
     const spawnAppliedRef = useRef(null)
@@ -1573,22 +1585,28 @@ export default function LiveProjectScene({
         // the camera's useFrame read the new one, so yaw/pitch changed (visible
         // in ?inputdebug=1) but the view never rotated. WASD still worked
         // because its useFrame reads playerRef.current fresh every frame.
-        Object.assign(playerRef.current, {
+        Object.assign(playerRef.current, arrivalFor({
             x: s.x ?? 0, z: s.z ?? 0, yaw: s.yaw ?? 0,
             pitch: s.pitch ?? 0, altY: s.altY ?? EYE_HEIGHT
-        })
-    }, [doc, projectId])
+        }, doc))
+    }, [doc, projectId, arrivalFor])
 
     // Publish that arrival, spawn or default, in the camera's own terms.
     useEffect(() => {
         if (!onArrivalPose || !doc) return
         const spawn = doc.worldState?.spawn
-        const pose = {
-            x: spawn?.x ?? playerRef.current.x,
-            z: spawn?.z ?? playerRef.current.z,
-            yaw: spawn?.yaw ?? playerRef.current.yaw,
-            pitch: spawn?.pitch ?? 0,
-            altY: spawn?.altY ?? EYE_HEIGHT
+        const pose = spawn ? arrivalFor({
+            x: spawn.x ?? 0,
+            z: spawn.z ?? 0,
+            yaw: spawn.yaw ?? 0,
+            pitch: spawn.pitch ?? 0,
+            altY: spawn.altY ?? EYE_HEIGHT
+        }, doc) : {
+            x: playerRef.current.x,
+            z: playerRef.current.z,
+            yaw: playerRef.current.yaw,
+            pitch: 0,
+            altY: EYE_HEIGHT
         }
         const look = 20
         onArrivalPose({
@@ -1599,7 +1617,7 @@ export default function LiveProjectScene({
                 pose.z + Math.cos(pose.yaw) * Math.cos(pose.pitch) * look
             ]
         })
-    }, [doc, onArrivalPose])
+    }, [doc, onArrivalPose, arrivalFor])
 
     // The library only toggles display:block/none on this element -- it has
     // no inherent size/position, so anything portaled into it (the touch
@@ -1721,13 +1739,21 @@ export default function LiveProjectScene({
     // Walking into a portal goes where clicking it goes: same portalHref, same
     // SPA navigation. Only the verb changes, and only in walk mode -- Walker is
     // the one place this is wired, and Walker only exists when `interactive`.
-    const handlePortalReached = useCallback((entity) => {
+    // It goes through the same entry transition as the click, minus the
+    // glide: the visitor is already standing in the ring, the walk WAS the
+    // approach. The frame they are looking at is what the curtain holds.
+    const handlePortalReached = useCallback((entity, frameState = null) => {
         const reference = entity?.components?.reference || {}
         const href = portalHref(reference.spaceId, reference.projectId)
-        if (href) {
-            markArriveWalking()
-            appNavigate(href)
-        }
+        if (!href || isEntryInProgress()) return
+        markArriveWalking()
+        const three = frameState && frameState.gl ? frameState : null
+        enterDestination(href, {
+            source: {
+                color: entity?.components?.appearance?.color || null,
+                capture: three ? () => captureRendererFrame(three) : null
+            }
+        })
     }, [])
 
     const worldState = doc?.worldState || {}
