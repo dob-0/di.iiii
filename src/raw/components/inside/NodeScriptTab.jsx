@@ -42,7 +42,7 @@ export default function NodeScriptTab({
     const apply = async () => {
         setBusy(true)
         try {
-            const result = await onApply(draft)
+            const result = await onApply(draft, node?.id)
             if (result?.ok) {
                 setError(null)
                 onPatchValues?.({ __script: draft })

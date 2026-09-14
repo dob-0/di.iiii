@@ -44,7 +44,7 @@ import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSe
 import { readNode } from '../../project/graph/nodeReading.js'
 import { wireOps } from '../../project/graph/insideReading.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs, evaluateNodeOutput } from '../../project/graph/nodeGraphRuntime.js'
-import { useNodeScripts } from '../../project/graph/nodeScripts.js'
+import { SCRIPTS_BLOCKED_MESSAGE, SCRIPT_EXAMPLE_COMPUTE, applyNodeScript, useNodeScriptStatus, useNodeScripts } from '../../project/graph/nodeScripts.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode } from '../../project/graph/useGraphClock.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
@@ -174,6 +174,14 @@ function BrowserPanelWindow({ node }) {
             />
         </div>
     )
+}
+
+// Stable, so the inside view's Script tab never re-renders for a new object.
+const NODE_SCRIPT_PROPS = {
+    useStatus: useNodeScriptStatus,
+    onApply: (text, nodeId) => applyNodeScript(nodeId, text),
+    example: SCRIPT_EXAMPLE_COMPUTE,
+    blockedMessage: SCRIPTS_BLOCKED_MESSAGE
 }
 
 export default function RawEditor({
@@ -2302,6 +2310,9 @@ export default function RawEditor({
                         renderWindow={renderViewNodeContent}
                         onChangeValue={handleInsideChangeValue}
                         onPatchValues={handleInsidePatchValues}
+                        // Every node's Script tab runs through the one worker
+                        // (nodeScripts.js); picture operators keep their own.
+                        scriptProps={NODE_SCRIPT_PROPS}
                         onRename={handleInsideRename}
                         onLeave={() => handleNavigateToScope(navStack.length - 2)}
                         onLeaveAll={() => handleNavigateToScope(0)}
