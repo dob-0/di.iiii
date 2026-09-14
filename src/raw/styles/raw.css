@@ -186,9 +186,19 @@
 /* Furniture, like the windows: the palette is summoned, used and dismissed —
    it is never the work. Its family accent bars on the rows carry the colour
    here, so its frame does not need to. */
+/* Design audit C6: NodePalette.jsx's own placement math corrects for the
+   box's MEASURED height after mount, but only against a fixed 280px guess —
+   on a short viewport (a phone keyboard up, a laptop lid low) the real box
+   can still be taller than that guess and run past the bottom edge before
+   the correction lands. A flex column with its own max-height is the floor
+   under that JS: the list gives up space to the input row and scrolls
+   instead of pushing the box past the viewport, at any height. */
 .raw-node-palette {
     position: fixed;
+    display: flex;
+    flex-direction: column;
     width: 280px;
+    max-height: min(420px, calc(100dvh - 32px));
     border-radius: 0;
     background: var(--di-surface-2);
     border: 1px solid rgba(255, 255, 255, 0.14);
@@ -199,6 +209,7 @@
 }
 
 .raw-node-palette-input-row {
+    flex: 0 0 auto;
     padding: var(--di-space-3) var(--di-space-3);
     border-bottom: 1px solid var(--di-cyan-border);
 }
@@ -216,7 +227,7 @@
 }
 
 .raw-node-palette-input::placeholder {
-    color: rgba(255, 255, 255, 0.28);
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .raw-node-palette-list {
@@ -225,7 +236,11 @@
     padding: var(--di-space-2);
     display: grid;
     gap: var(--di-space-1);
-    max-height: 280px;
+    /* Was a flat 280px: now whatever the flex column above has left after
+       the input row, so the list itself can never be what pushes the palette
+       past the bottom of a short viewport. */
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     /* The graph surface behind the palette claims touch-action: none; the
        list is its own scroller, so it must SAY pan-y or a fingertip can't
@@ -284,8 +299,8 @@
 }
 
 .raw-node-palette-item-title span {
-    color: rgba(255, 255, 255, 0.36);
-    font-size: var(--di-text-2);
+    color: var(--di-text-muted);
+    font-size: var(--di-text-3);
     font-family: var(--di-mono);
     white-space: nowrap;
 }
@@ -1060,13 +1075,20 @@
     flex-shrink: 0;
 }
 
+/* Design audit C3: the top bar wore three button styles in one row — Help
+   boxed, the node count and Chat bare mono text, ⋯ its own glyph-only shape.
+   One ghost style now, shared by every action here (.raw-topbar-back,
+   .raw-topbar-help-action, .raw-topbar-node-count, .raw-topbar-overflow-btn):
+   transparent at rest, the same muted ink, cyan wash + cyan ink on hover —
+   see the shared rule after .raw-topbar-overflow-btn below, and the 44px
+   coarse-pointer floor near the end of the topbar block. */
 .raw-topbar-back {
     -webkit-appearance: none;
     appearance: none;
     border: none;
     border-radius: 0;
     background: transparent;
-    color: rgba(255, 255, 255, 0.52);
+    color: rgba(255, 255, 255, 0.68);
     padding: var(--di-space-2) var(--di-space-3);
     cursor: pointer;
     font-size: var(--di-text-3);
@@ -1313,18 +1335,19 @@
     appearance: none;
     border: none;
     background: transparent;
-    padding: 0 var(--di-space-1);
+    padding: var(--di-space-2) var(--di-space-2);
     cursor: pointer;
-    font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.36);
+    font-size: var(--di-text-3);
+    color: var(--di-text-muted);
     font-family: var(--di-mono);
     letter-spacing: 0.04em;
-    transition: color 0.1s;
+    transition: background 0.1s, color 0.1s;
 }
 
 .raw-topbar-node-count:hover,
 .raw-topbar-node-count.is-active {
-    color: rgba(255, 255, 255, 0.8);
+    background: var(--di-cyan-dim);
+    color: var(--di-cyan);
 }
 
 .raw-topbar-overflow {
@@ -1369,10 +1392,13 @@
 .raw-topbar-overflow-btn {
     -webkit-appearance: none;
     appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     border-radius: 0;
     background: transparent;
-    color: rgba(255, 255, 255, 0.48);
+    color: rgba(255, 255, 255, 0.68);
     padding: var(--di-space-2) var(--di-space-3);
     cursor: pointer;
     font-size: var(--di-text-5);
@@ -1381,7 +1407,19 @@
 
 .raw-topbar-overflow-btn:hover {
     background: var(--di-cyan-dim);
-    color: var(--di-text);
+    color: var(--di-cyan);
+}
+
+/* C3: every topbar action a real one-finger target, on every pointer —
+   .raw-window-actions button sets the same precedent unconditionally rather
+   than gating it to (hover: none) (measured: back 34x29, Chat 32x13, ⋯
+   41x31 on a phone). The topbar is 48px tall, so this never grows the bar. */
+.raw-topbar-back,
+.raw-topbar-help-action,
+.raw-topbar-node-count,
+.raw-topbar-overflow-btn {
+    min-height: 44px;
+    min-width: 44px;
 }
 
 /* ── Overflow dropdown menu ── */
@@ -1412,6 +1450,9 @@
     font-weight: 500;
     text-align: left;
     width: 100%;
+    /* C3/C4: a real one-finger target, same precedent as .raw-window-actions
+       button — unconditional, not gated to (hover: none). */
+    min-height: 44px;
 }
 
 .raw-topbar-overflow-menu button:hover {
@@ -1419,12 +1460,29 @@
     color: var(--di-cyan);
 }
 
-/* At phone widths the seeded topbar becomes a horizontal scroller
-   (overflow-x:auto below), and an absolutely-positioned menu inside a
-   scroller is CLIPPED by it: measured at 390x844, the ⋯ menu's own centre
-   hit-tested to <html> — Home, Spaces, Wiki, Save to space, Clear the canvas
-   and node scale were all unreachable on a phone. Fixed to the viewport, it
-   escapes the scroller; the top is the topbar's height plus the gap. */
+/* Design audit C4: "Go to / View / Help" instead of one unsorted list. A
+   label, not a divider — the menu is already narrow, and a rule per group
+   would read as more chrome than three words do. */
+.raw-topbar-overflow-group-label {
+    display: block;
+    padding: var(--di-space-2) var(--di-space-3) 0;
+    font-size: var(--di-text-3);
+    font-family: var(--di-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+}
+
+.raw-topbar-overflow-group-label:first-child {
+    padding-top: 0;
+}
+
+/* The topbar no longer scrolls at phone widths (design audit A1), but the
+   menu still switches to position:fixed here: an absolutely-positioned menu
+   measures itself against the topbar, which is exactly as tall as its own
+   content, so the menu could still run past the bottom of a short screen.
+   Fixed to the viewport with its own max-height + scroll is the safer
+   contract regardless. */
 @media (max-width: 640px) {
     .raw-topbar-overflow-menu {
         position: fixed;
@@ -1433,6 +1491,17 @@
         max-height: calc(100dvh - 72px);
         overflow-y: auto;
     }
+
+    /* Design audit A1: Scene, the node count/outliner, Chat and Help move
+       into ⋯ at this width instead of sitting on the bar or scrolling off
+       it — see raw-topbar-hide-narrow in the media query above. */
+    .raw-topbar-overflow-narrow-only {
+        display: block;
+    }
+}
+
+.raw-topbar-overflow-narrow-only {
+    display: none;
 }
 
 .raw-delete-fab {
@@ -1487,12 +1556,17 @@
     overflow: hidden;
 }
 
+/* Design audit B9/#13: flex-wrap let the title drop to a second row the
+   moment it and the action glyphs didn't both fit — measured at 94px on a
+   267px-wide window. One line, always: the title truncates instead (see the
+   next two rules), and Enter joining the other actions as a glyph (above)
+   already bought back most of the room that wrap was covering for. */
 .raw-window-header {
     display: flex;
     flex: 0 0 auto;
+    flex-wrap: nowrap;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
     gap: var(--di-space-3);
     padding: var(--di-space-2) var(--di-space-3) var(--di-space-2) var(--di-space-3);
     cursor: grab;
@@ -1503,13 +1577,18 @@
     user-select: none;
 }
 
+.raw-window-header > div {
+    min-width: 0;
+    overflow: hidden;
+}
+
 /* Both classes have been on the markup since windows existed and neither had
    a single rule, so a pinned window looked exactly like an unpinned one and a
    minimized one kept a divider under a body that was no longer there. */
 .raw-window.is-pinned .raw-window-header::after {
     content: 'pinned';
     font-family: var(--di-mono);
-    font-size: var(--di-text-1);
+    font-size: var(--di-text-3);
     letter-spacing: 0.16em;
     color: rgba(255, 255, 255, 0.3);
     order: 3;
@@ -1549,6 +1628,9 @@
     font-weight: 700;
     letter-spacing: 0.01em;
     line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .raw-property-sheet-header h4 {
@@ -1586,15 +1668,19 @@
    because that is how the palette and the cards write these words. */
 .raw-window-kicker {
     display: block;
-    font-size: var(--di-text-2);
+    font-size: var(--di-text-3);
     letter-spacing: 0.14em;
     color: var(--window-accent);
     font-family: var(--di-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .raw-window-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
     gap: var(--di-space-2);
     justify-content: flex-end;
 }
@@ -1923,8 +2009,8 @@
 }
 
 .raw-property-sheet-header p {
-    font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.4);
+    font-size: var(--di-text-3);
+    color: var(--di-text-muted);
     font-family: var(--di-mono);
     letter-spacing: 0.04em;
     margin: 0;
@@ -1949,10 +2035,10 @@
 }
 
 .raw-property-section h5 {
-    font-size: var(--di-text-2);
+    font-size: var(--di-text-3);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: rgba(255, 255, 255, 0.36);
+    color: var(--di-text-muted);
     font-family: var(--di-mono);
     margin: 0 0 var(--di-space-3);
 }
@@ -1971,8 +2057,8 @@
 }
 
 .raw-property-field > span {
-    font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.45);
+    font-size: var(--di-text-3);
+    color: var(--di-text-muted);
     letter-spacing: 0.02em;
     font-family: var(--di-mono);
     white-space: nowrap;
@@ -1985,7 +2071,7 @@
 .raw-property-wired {
     margin-left: var(--di-space-2);
     font-style: normal;
-    font-size: var(--di-text-1);
+    font-size: var(--di-text-3);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--di-cyan);
@@ -2692,21 +2778,22 @@
 .raw-topbar-help-action {
     -webkit-appearance: none;
     appearance: none;
-    /* Furniture at rest, cyan only under the pointer (see the window rule):
-       a topbar button that is permanently accent-coloured competes with the
-       selected node for the eye and wins, which is exactly backwards. */
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.04);
-    color: rgba(255, 255, 255, 0.72);
-    padding: var(--di-space-3) var(--di-space-3);
+    /* Was its own boxed button (border + fill) beside two bare-text ones and
+       a glyph — the audit's "three styles in one row". Ghost, like the rest
+       of the bar: furniture at rest, cyan only under the pointer. */
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.68);
+    padding: var(--di-space-2) var(--di-space-3);
     font-size: var(--di-text-3);
+    font-weight: 500;
     cursor: pointer;
-    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    transition: background 0.12s, color 0.12s;
 }
 
 .raw-topbar-help-action:hover {
-    background: rgba(var(--di-cyan-rgb), 0.16);
-    border-color: var(--di-cyan);
+    background: var(--di-cyan-dim);
     color: var(--di-cyan);
 }
 
@@ -3234,7 +3321,7 @@
 }
 
 .raw-graph-port-label {
-    font-size: var(--di-text-2);
+    font-size: var(--di-text-3);
     color: var(--di-text-muted);
     white-space: nowrap;
     overflow: hidden;
@@ -4323,13 +4410,17 @@
     overflow-wrap: anywhere;
 }
 
-/* Phones. The topbar is a fixed-height single flex row holding the back button,
-   breadcrumb, surface toggles, window list, scale select, node count, chat and
-   overflow — at 390px that overflowed with no wrap and no collapse, and
-   `overflow: hidden` on the seeded state made the overflowing controls
-   unreachable rather than merely cramped. Nothing is removed here (the same
-   controls stay available); the row is simply allowed to scroll, and the fixed
-   chrome is pulled clear of the notch and the home indicator. */
+/* Phones. Design audit A1: the topbar used to turn into a horizontal
+   scroller here with its scrollbar hidden, so Chat and ⋯ sat off screen with
+   nothing to show they were there — and ⋯ is the only route on a phone to
+   "Save to <space>", Spaces, Wiki and Home. Nothing is scrollable any more:
+   the row fits by moving its lowest-priority controls into ⋯ instead
+   (raw-topbar-hide-narrow / raw-topbar-overflow-narrow-only, set on the
+   JSX side in RawEditor.jsx) and dropping the breadcrumb's crumb chips — the
+   scope marker's own label already says "inside X" at this width (see the
+   min-width:641px rule above .raw-scope-marker-label). ⋯ itself keeps its
+   fixed 44px+ size and never shrinks, so it is always the last thing to give
+   ground. */
 @media (max-width: 640px) {
     /* below 16px, mobile Safari auto-zooms the page on input focus — with
        fixed-position windows that strands the user mid-window after every
@@ -4341,43 +4432,39 @@
         font-size: 16px;
     }
 
-    /* breadcrumbs live inside a horizontal scroller here — a ~20px target
-       loses most taps to the scroll gesture. Grow them to a finger size. */
-    .raw-topbar-crumb {
-        padding: var(--di-space-3) var(--di-space-3);
-    }
-
     .raw-topbar.is-seeded {
-        overflow-x: auto;
-        overflow-y: hidden;
-        scrollbar-width: none;
-        justify-content: flex-start;
+        overflow: visible;
         padding-left: calc(var(--di-space-3) + env(safe-area-inset-left));
         padding-right: calc(var(--di-space-3) + env(safe-area-inset-right));
     }
 
-    .raw-topbar.is-seeded::-webkit-scrollbar {
+    /* The crumb chip is the one thing genuinely dropped, not relocated: the
+       scope marker under the bar already carries "inside X" at this width,
+       and its own Leave (‹) reaches the same one-level-up action as the
+       breadcrumb's back arrow. */
+    .raw-topbar-breadcrumb {
         display: none;
     }
 
-    /* Every cluster keeps its intrinsic width so the row scrolls as one strip
-       instead of squashing the controls into unreadable slivers.
-       .raw-topbar-center needs the full `flex` shorthand, not just
-       flex-shrink: its base rule is `flex: 1`, i.e. flex-basis 0 — with the
-       right-hand cluster already 279px wide on a 393px screen there is no free
-       space to grow into, so the centre collapsed to width 0 while its 299px
-       location chip kept its intrinsic size and spilled to x:-51, painting on
-       top of the back button on one side and the Help/Size controls on the
-       other. Overflow scrolling cannot fix a child escaping a zero-width
-       parent; the parent has to be allowed to measure its content. */
+    .raw-topbar-hide-narrow {
+        display: none;
+    }
+
     .raw-topbar-left,
     .raw-topbar-right {
         flex-shrink: 0;
     }
 
     .raw-topbar-center {
-        flex: 0 0 auto;
+        flex: 1 1 auto;
+        min-width: 0;
         justify-content: flex-start;
+    }
+
+    /* ⋯ is the one control that must never lose ground to its neighbours —
+       it is the only route left to Home, Spaces, Wiki and Save on a phone. */
+    .raw-topbar-overflow {
+        flex-shrink: 0;
     }
 
     .raw-topbar-location {
@@ -4720,7 +4807,7 @@
     top: 2px;
     transform: translateX(-50%);
     color: rgba(255, 255, 255, 0.38);
-    font-size: var(--di-text-1);
+    font-size: var(--di-text-3);
     white-space: nowrap;
     pointer-events: none;
 }
@@ -4947,7 +5034,7 @@
     font-weight: 800;
     font-size: var(--di-text-4);
     letter-spacing: -0.02em;
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
     user-select: none;
     z-index: 1200;
     text-decoration: none;
@@ -4966,6 +5053,14 @@
 .raw-surface-wordmark span {
     color: var(--di-cyan);
     opacity: 0.75;
+}
+
+/* Design audit B10/#18: canvas chrome never draws over an overlay/panel.
+   Two classes beats the base rule's one regardless of source order or
+   viewport, so this wins at every width without fighting the phone block
+   below it. */
+.raw-surface-wordmark.is-hidden {
+    display: none;
 }
 
 /* Phone. At the bottom centre it sat on top of the cards (measured in the
@@ -5080,6 +5175,19 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Design audit B6: "where am I" was said three times — this label, the
+   topbar breadcrumb chip, and the centre sentence. Above 640px (A1's own
+   breakpoint) the breadcrumb chip is present and legible, so the words drop
+   here; the marker keeps only the controls the breadcrumb cannot reach
+   without chrome. At 640px and below the breadcrumb's crumb chip is gone
+   (A1) and with chrome off there is no breadcrumb at all, so this is the
+   only place left that says the name — never hidden there. */
+@media (min-width: 641px) {
+    .raw-topbar.is-seeded ~ .raw-scope-marker .raw-scope-marker-label {
+        display: none;
+    }
 }
 
 .raw-scope-marker-label strong {
@@ -5643,7 +5751,7 @@
 }
 
 .raw-desk-machine.is-self {
-    border-color: rgba(80, 250, 123, 0.45);
+    border-color: rgba(var(--di-online-rgb), 0.45);
 }
 
 .raw-desk-machine header {
@@ -5705,7 +5813,7 @@
     padding: 0 var(--di-space-2);
     background: transparent;
     color: inherit;
-    border: 1px solid rgba(80, 250, 123, 0.5);
+    border: 1px solid rgba(var(--di-online-rgb), 0.5);
     cursor: pointer;
 }
 
@@ -5966,7 +6074,7 @@
     position: absolute;
     left: 8px;
     box-sizing: border-box;
-    background: #000;
+    background: var(--di-black);
     border: 1px solid rgba(255, 255, 255, 0.08);
     pointer-events: none;
 }

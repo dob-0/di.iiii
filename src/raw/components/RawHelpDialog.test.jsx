@@ -22,6 +22,21 @@ describe('RawHelpDialog', () => {
         expect(screen.getAllByText(/Double-click or double-tap/).length).toBeGreaterThan(0)
     })
 
+    // Design audit C7: "The canvas starts empty" was wrong the moment it was
+    // opened over a full canvas.
+    it('does not claim an empty canvas when the canvas already has work in it', () => {
+        render(<RawHelpDialog open hasNodes onClose={() => {}} />)
+
+        expect(screen.queryByText('The canvas starts empty.')).toBeNull()
+        expect(screen.getByText('This canvas already has work in it.')).toBeTruthy()
+    })
+
+    it('still says the canvas starts empty when it does', () => {
+        render(<RawHelpDialog open hasNodes={false} onClose={() => {}} />)
+
+        expect(screen.getByText('The canvas starts empty.')).toBeTruthy()
+    })
+
     it('closes when escape is pressed', () => {
         const onClose = vi.fn()
         render(<RawHelpDialog open onClose={onClose} />)

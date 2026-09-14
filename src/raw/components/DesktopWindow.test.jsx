@@ -112,7 +112,9 @@ describe('DesktopWindow', () => {
             </DesktopWindow>
         )
 
-        fireEvent.click(screen.getByText('Enter ›'))
+        // Design audit B9/#13: Enter joined Pin/Maximize/Minimize/Close as a
+        // glyph with an accessible name, rather than spelling itself out.
+        fireEvent.click(screen.getByRole('button', { name: 'Enter — go inside World' }))
         expect(onEnter).toHaveBeenCalledTimes(1)
     })
 
@@ -152,7 +154,7 @@ describe('DesktopWindow', () => {
             </DesktopWindow>
         )
 
-        expect(screen.queryByText('Enter ›')).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /^Enter —/ })).not.toBeInTheDocument()
     })
 })
 

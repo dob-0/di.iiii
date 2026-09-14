@@ -1443,6 +1443,17 @@ export const WIKI_ARTICLES = [
             'The registry\'s own worked portrait of the WHOLE node set — one graph touching every type at once — lives separately as the "All nodes" preset in the node editor\'s ⋯ menu. It exists to be looked at on one screen, not to teach one node\'s use; for that, read the per-node examples above.'
         ],
         tags: ['nodes', 'examples', 'registry', 'reference', 'ai', 'graph', 'ports', 'wires', 'developers'],
+        id: 'raw-topbar-and-window-cleanup',
+        category: 'Editing',
+        title: 'The top bar on a phone, and a window that says one thing',
+        summary: 'The ⋯ menu is grouped and closes properly; a phone keeps the whole bar in reach instead of turning it into a side-scroller; a window\'s header is always one line.',
+        body: [
+            'The ⋯ menu now reads as three groups instead of one long list: Project (Home, Editor, the projector link, Save, Spaces, Clear the canvas), View (the Scene toggle, node scale, the example builders), and Help (Wiki). It also closes the way every other menu on the machine does — press Escape, or click anywhere outside it — and the button that opens it has a name a screen reader can say: "More".',
+            '"Open in Studio" is now "Open in Editor". Studio is one place inside di.iiii, not the product\'s name for the editing surface it opens — the same naming the rest of the product settled on.',
+            'On a phone (390px and narrower) the top bar used to turn into a horizontal scroller once a project name and a few controls filled it — the ⋯ button itself could scroll out of view, which mattered because on a phone ⋯ is the only route to Save, Spaces, Wiki and Home. The bar no longer scrolls. Help, the node count and Chat move into ⋯ at this width; the breadcrumb\'s trail of node names drops too, since the small pill under the bar already says which node you are inside. ⋯ itself never gives up its place — it is always the last thing to lose room, never the first.',
+            'A window\'s title bar is always one line now. It used to wrap to a second row the moment a long title met the action buttons; the title and the small family label truncate with an ellipsis instead. "Enter ›" — the button that steps inside a node — joined Pin, Maximize, Minimize and Close as a plain glyph with a name a screen reader can read, rather than being the one button on the bar still spelling itself out.'
+        ],
+        tags: ['raw', 'topbar', 'phone', 'mobile', 'menu', 'windows', 'accessibility', 'design'],
         updated: '2026-09-14'
     }
 ]

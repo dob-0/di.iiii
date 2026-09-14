@@ -100,6 +100,11 @@
     --di-danger-rgb: 242, 95, 92;
     --di-success-rgb: 77, 249, 192;
     --di-warning-rgb: 255, 179, 71;
+    /* "this machine, on the Desk" — a spring green distinct from --di-success
+       (that one means an operation succeeded; this one marks the row that is
+       YOU among other devices on the network). raw.css carried its numbers
+       twice by hand (rgba(80, 250, 123, …)); one token, read both places. */
+    --di-online-rgb: 80, 250, 123;
 
     /* A scrim: the dark veil laid over a live room or a 3D background so text
        on top of it stays readable whatever moves underneath. Two weights, and
