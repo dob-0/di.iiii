@@ -46,6 +46,7 @@ import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode, o
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { readNode } from '../../project/graph/nodeReading.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { useNodeScripts } from '../../project/graph/nodeScripts.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode } from '../../project/graph/useGraphClock.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
@@ -1536,9 +1537,12 @@ export default function RawEditor({
     // never React state, dropped whole when the document changes.
     const [frameMemory] = useState(() => createFrameMemory())
     useEffect(() => { frameMemory.clear() }, [frameMemory, projectId])
+    // Node scripts run in a worker on machines that allow desk scripts; their
+    // last answers ride into this pass (and the room's) — nodeScripts.js.
+    const scriptResults = useNodeScripts(document, { liveOutputs })
     const graphContext = useMemo(
-        () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
-        [document, clockNow, liveOutputs, frameMemory]
+        () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory, scriptResults }),
+        [document, clockNow, liveOutputs, frameMemory, scriptResults]
     )
 
     // The sheet's own context, built from the SAME three inputs as the one the
@@ -2637,6 +2641,7 @@ export default function RawEditor({
                         scopeId={currentScopeId}
                         worldNode={worldNode}
                         liveOutputs={liveOutputs}
+                        scriptResults={scriptResults}
                     />
                 </div>
             )}

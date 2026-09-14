@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import RawViewport from './RawViewport.jsx'
+import { useNodeScripts } from '../../project/graph/nodeScripts.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { readLocalWorkspaceDocument } from '../utils/localWorkspaceStorage.js'
@@ -71,6 +72,7 @@ export default function RawOutSurface({ projectId = null, localStorageKey = '', 
     }, [])
 
     const doc = state.document
+    const scriptResults = useNodeScripts(doc)
     const worldNode = useMemo(
         () => resolveScopeWorldNode(doc.nodes, scopeId, doc.workspaceState?.liveWorldNodeIdByScope),
         [doc.nodes, scopeId, doc.workspaceState?.liveWorldNodeIdByScope]
@@ -92,6 +94,10 @@ export default function RawOutSurface({ projectId = null, localStorageKey = '', 
                     scopeId={scopeId || null}
                     worldNode={worldNode}
                     liveOutputs={null}
+                    // The projector runs node scripts too (its own worker, its
+                    // own machine's DI_DESK_SCRIPTS), or it would show the
+                    // built-in while the editor shows the script.
+                    scriptResults={scriptResults}
                     // Not just "handlers not passed": OrbitControls mounts its
                     // own DOM listeners, so without this the audience could
                     // orbit and zoom the projector image (measured).

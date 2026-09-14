@@ -93,7 +93,9 @@ const buildEdgesByTarget = (edges) => {
 // reads) makes remembering nodes answer as if every frame were their first.
 export const createFrameMemory = () => new Map()
 
-export const createNodeGraphContext = (document = {}, { now = 0, liveOutputs = null, frameMemory = null } = {}) => {
+// scriptResults: nodeId -> { portId: value }, the LAST answers of node scripts
+// (nodeScripts.js, run in a worker). null = scripts off, the pure default.
+export const createNodeGraphContext = (document = {}, { now = 0, liveOutputs = null, frameMemory = null, scriptResults = null } = {}) => {
     const edges = document.edges || []
     const nodes = document.nodes || []
     // Every `Out` door, by the container it makes a hole in. Built once per pass
@@ -113,7 +115,8 @@ export const createNodeGraphContext = (document = {}, { now = 0, liveOutputs = n
         outputCache: new Map(),
         now: Number.isFinite(now) ? now : 0,
         liveOutputs,
-        frameMemory
+        frameMemory,
+        scriptResults
     }
 }
 
@@ -180,6 +183,13 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
     // and because a doorway's id can never collide with a declared port id.
     const door = context?.doorwayOutByParent?.get(node.id)?.get(portId)
     if (door) return evaluateNodeInput(door, 'value', context, nextStack)
+
+    // --- node scripts (workstream 7, nodeScripts.js) — the ONE hook ---------
+    // A node's script ran in a worker and left its last answer here; a port it
+    // returned overrides the built-in, every other port falls through to it.
+    // One frame late by design: nothing here waits, evaluates or runs code.
+    const scripted = context?.scriptResults?.get(node.id)
+    if (scripted && Object.prototype.hasOwnProperty.call(scripted, portId)) return scripted[portId]
 
     // Colocated runtimes first (src/project/nodes/) — the switch below is the
     // legacy home and shrinks as types migrate out; a type never lives in both.
