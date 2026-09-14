@@ -74,7 +74,9 @@ export function insideGeometry({ width, height, top = 0, seeOpen = true, madeOfO
     const centre = Math.max(0, width - left - right)
     const available = Math.max(0, height - top - INSIDE_HEAD_HEIGHT)
     const seePicture = seeFills
-        ? Math.round(available * (layout === 'phone' ? 0.5 : 0.62))
+        // On a phone the grid IS the instrument: at half the height the header
+        // left a sliver of one layer row (walked 09-14).
+        ? Math.round(available * (layout === 'phone' ? 0.74 : 0.62))
         : Math.round(Math.min(available * (layout === 'phone' ? 0.3 : 0.36), (centre * 9) / 16))
     const see = BAR_HEIGHT + (seeOpen ? seePicture : 0)
     const madeOf = layout === 'phone' ? 0 : (madeOfOpen ? Math.round(available * 0.42) : BAR_HEIGHT)

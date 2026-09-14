@@ -20,7 +20,7 @@ import { useLiveOutputs } from '../utils/useLiveOutputs.js'
 import DeskPanelWindow from './DeskPanelWindow.jsx'
 import InsideView from './inside/InsideView.jsx'
 import { withMachineOptions } from './inside/topMachineOptions.js'
-import { isPictureType } from '../../project/tops/vjDeck.js'
+import { DECK_INPUTS, VJ_DECK_TYPE, isPictureType, masterNodeId } from '../../project/tops/vjDeck.js'
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
@@ -1763,6 +1763,14 @@ export default function RawEditor({
                     node={node}
                     placement={placement}
                     assets={document.assets || []}
+                    // Which node feeds each input, so a playing input tile can
+                    // show that node's picture. A deck feeding a deck shows its master.
+                    inputSources={Object.fromEntries((document.edges || [])
+                        .filter((edge) => edge?.toNodeId === node.id && DECK_INPUTS.includes(edge.toPort) && edge.fromNodeId)
+                        .map((edge) => {
+                            const from = (document.nodes || []).find((candidate) => candidate.id === edge.fromNodeId)
+                            return [edge.toPort, from?.typeId === VJ_DECK_TYPE ? masterNodeId(from.id) : edge.fromNodeId]
+                        }))}
                     onPatchValues={(patch) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId: node.id, patch: { values: { ...node.values, ...patch } } }

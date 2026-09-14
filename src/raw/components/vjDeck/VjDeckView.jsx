@@ -34,7 +34,12 @@ import './vjDeck.css'
 //
 // Pictures: the deck registers card-thumbnail canvases under the ids its
 // expansion gives the playing clips and the master (tops/vjDeck.js). Whatever
-// network runner is live fills them; until then the tile shows its name.
+// network runner is live fills them; until then the tile shows its name. A
+// playing INPUT tile shows the node wired into that input (`inputSources`).
+//
+// A tap only plays. Settings open from the selected-clip line under the grid,
+// never on the tap itself: on a phone the panel would cover the grid and every
+// next tap would need a Close first.
 
 const PLACEMENTS = new Set(['window', 'inside', 'perform'])
 
@@ -50,11 +55,12 @@ function DeckPicture({ nodeId, className, label }) {
 const inputLabel = (input) => `In ${DECK_INPUTS.indexOf(input) + 1}`
 const percent = (value) => `${Math.round(value * 100)}`
 
-export default function VjDeckView({ node, onPatchValues = null, assets = [], placement = 'window', onUploadFile = null, now = () => Date.now() }) {
+export default function VjDeckView({ node, onPatchValues = null, assets = [], inputSources = {}, placement = 'window', onUploadFile = null, now = () => Date.now() }) {
     const deck = useMemo(() => normalizeDeck(node?.values?.deck), [node?.values?.deck])
     const deckId = node?.id || ''
     const editable = typeof onPatchValues === 'function'
     const [selected, setSelected] = useState(null) // { layer, column }
+    const [editing, setEditing] = useState(false) // the selected clip's settings are open
     const [picking, setPicking] = useState(null) // { layer, column }
     const [uploading, setUploading] = useState('')
     const [notice, setNotice] = useState('')
@@ -93,6 +99,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], pl
             return
         }
         setSelected({ layer: layerIndex, column })
+        setEditing(false)
         write(trigger(deck, layerIndex, column))
     }
 
@@ -101,6 +108,8 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], pl
         const next = setClip(deck, picking.layer, picking.column, { speed: 1, mode: '0', in: 0, out: 1, ...clip })
         write(next)
         setSelected({ layer: picking.layer, column: picking.column })
+        // A clip just placed wants its in/out and speed set: open them once.
+        setEditing(true)
         setPicking(null)
     }
 
@@ -233,6 +242,9 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], pl
                                         {playing && clip.kind === 'asset'
                                             ? <DeckPicture nodeId={clipNodeId(deckId, index)} className="vj-deck-tile-picture" label={name} />
                                             : null}
+                                        {playing && clip.kind === 'input' && inputSources?.[clip.input]
+                                            ? <DeckPicture nodeId={inputSources[clip.input]} className="vj-deck-tile-picture" label={name} />
+                                            : null}
                                         <span className="vj-deck-tile-name">{clip ? name : '+'}</span>
                                     </button>
                                 )
@@ -279,7 +291,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], pl
                         </div>
                     </div>
                 </section>
-            ) : selectedClip ? (
+            ) : selectedClip && editing ? (
                 <ClipSettings
                     key={`${selected.layer}:${selected.column}`}
                     clip={selectedClip}
@@ -288,8 +300,16 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], pl
                     editable={editable}
                     onChange={(patch) => write(updateClip(deck, selected.layer, selected.column, patch))}
                     onRemove={() => write(setClip(deck, selected.layer, selected.column, null))}
-                    onClose={() => setSelected(null)}
+                    onClose={() => setEditing(false)}
                 />
+            ) : selectedClip ? (
+                <div className="vj-deck-selected" role="group" aria-label="Selected clip">
+                    <span className="vj-deck-label">{deck.layers[selected.layer].name}, slot {selected.column + 1}</span>
+                    <span className="vj-deck-clip-name">
+                        {selectedClip.label || (selectedClip.kind === 'input' ? inputLabel(selectedClip.input) : assetName(selectedClip.asset))}
+                    </span>
+                    <button type="button" className="vj-deck-button" onClick={() => setEditing(true)}>Settings</button>
+                </div>
             ) : (
                 <p className="vj-deck-hint">Tap a clip to play it on its layer. Tap an empty slot to add one.</p>
             )}
