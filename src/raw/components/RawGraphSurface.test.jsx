@@ -934,6 +934,20 @@ describe('the way into what a node is made of', () => {
         fireEvent.click(container.querySelector('.raw-empty-state-actions button'))
         expect(onExplainScope).toHaveBeenCalledTimes(1)
     })
+
+    // The inside frame's own "+" for an empty node canvas (2026-09-14 polish
+    // — docs/ai/audits/2026-09-14-raw-inside.md: "shrinks to a single short
+    // row … with a + button that opens the palette scoped inside"). Additive
+    // and optional, like every other empty-state handler here.
+    it('offers a "Place a node" button when onAddFirstNode is given, and nothing when it is not', () => {
+        const onAddFirstNode = vi.fn()
+        const { container, rerender } = emptyScope({ onAddFirstNode })
+        const button = screen.getByRole('button', { name: 'Place a node here' })
+        fireEvent.click(button)
+        expect(onAddFirstNode).toHaveBeenCalledTimes(1)
+        rerender(<RawGraphSurface nodes={[]} edges={[]} emptyHint="A cube is made of code, not of other nodes." />)
+        expect(container.querySelector('.raw-empty-add')).toBeNull()
+    })
 })
 
 describe('wheel policy', () => {

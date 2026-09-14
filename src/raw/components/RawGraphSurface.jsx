@@ -172,6 +172,12 @@ export default function RawGraphSurface({
     // read-only and offers nothing.
     onMakeScene = null,
     onOpenRoom = null,
+    // Opens the palette scoped to this canvas — the inside frame's own "+"
+    // for an empty node canvas (docs/ai/audits/2026-09-14-raw-inside.md
+    // §2.1: "shrinks to a single short row … with a + button that opens the
+    // palette scoped inside"). Optional and additive: nothing renders it
+    // unless a caller passes it.
+    onAddFirstNode = null,
     onCreateEdge,
     onDeleteEdge,
     onDeleteNode,
@@ -1349,6 +1355,11 @@ export default function RawGraphSurface({
                         ) : null}
                         {onMakeScene ? (
                             <button type="button" onClick={onMakeScene}>Build an example</button>
+                        ) : null}
+                        {onAddFirstNode ? (
+                            <button type="button" className="raw-empty-add" onClick={onAddFirstNode} aria-label="Place a node here">
+                                <span aria-hidden="true">+</span> Place a node
+                            </button>
                         ) : null}
                     </div>
                 </div>

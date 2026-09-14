@@ -1116,10 +1116,13 @@ export default function RawEditor({
         // non-spatial code node (a colour, a math step) genuinely has no room.
         // Every node has an inside now: its canvas is where you place nodes
         // and wire them into it through the IN side of the frame around it.
+        // The frame's HEAD already says "Inside X" — repeating it here was the
+        // sentence stacked on top of the header, on a canvas the owner asked
+        // to stay out of the way until it actually holds something.
         if (isNodeMadeOfCode(scopeNode?.typeId)) {
-            return `Inside ${label}. Place a node here, then wire it into ${label} on the In side.`
+            return `Place a node here and wire it into ${label}.`
         }
-        return `Inside ${label}. ${pointerVerb} to place the first node in it.`
+        return `${pointerVerb} to place the first node.`
     }, [currentScopeId, entities.length, isLocalWorkspace, pointerVerb, scopeNode])
 
 
@@ -2438,7 +2441,8 @@ export default function RawEditor({
                 className={`raw-surface-shell${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
                 style={activeInsideInsets ? {
                     '--raw-inside-canvas-left': `${activeInsideInsets.left}px`,
-                    '--raw-inside-canvas-bottom': `${activeInsideInsets.bottom}px`
+                    '--raw-inside-canvas-bottom': `${activeInsideInsets.bottom}px`,
+                    '--raw-inside-canvas-top': `${activeInsideInsets.top}px`
                 } : undefined}
                 onDragEnter={handleSurfaceDragEnter}
                 onDragOver={handleSurfaceDragOver}
@@ -2487,6 +2491,14 @@ export default function RawEditor({
                         ? () => setIsWorldFullscreen(true)
                         : null}
                     emptyHint={scopeEmptyHint}
+                    // Standing inside any node: the canvas is empty until you
+                    // add something to it, so its own "+" opens the palette
+                    // scoped to right here rather than leaving only the
+                    // double-click gesture as the way in.
+                    onAddFirstNode={currentScopeId ? () => openPalette({
+                        clientX: Math.round(window.innerWidth / 2) - 140,
+                        clientY: Math.round(window.innerHeight / 3)
+                    }) : null}
                     edges={graphCardEdges}
                     selectedNodeId={localSelectedNodeId}
                     onEnterNode={handleEnterNode}
