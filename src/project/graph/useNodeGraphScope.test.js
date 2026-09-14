@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { isNodeInScope, useNodeGraphScope } from './useNodeGraphScope.js'
+import { isNodeInScope, scopePathForNode, useNodeGraphScope } from './useNodeGraphScope.js'
 
 const ROOT_TYPE = 'universe.node0'
 
@@ -133,5 +133,40 @@ describe('isNodeInScope — the one predicate selection visibility hangs off', (
     it('no node is in no scope', () => {
         expect(isNodeInScope(null, null)).toBe(false)
         expect(isNodeInScope(undefined, 'geo')).toBe(false)
+    })
+})
+
+describe('goToNode — standing where a node lives', () => {
+    const nodes = [
+        { id: 'a', typeId: 'geom.geo' },
+        { id: 'b', typeId: 'geom.geo', parentId: 'a' },
+        { id: 'c', typeId: 'geom.geo', parentId: 'b' },
+        { id: 'leaf', typeId: 'geom.cube', parentId: 'c' },
+        { id: 'top', typeId: 'value.number' }
+    ]
+
+    it('builds the ancestor chain for depth 0, 1 and 3', () => {
+        expect(scopePathForNode('top', nodes)).toEqual([null])
+        expect(scopePathForNode('b', nodes)).toEqual([null, 'a'])
+        expect(scopePathForNode('leaf', nodes)).toEqual([null, 'a', 'b', 'c'])
+    })
+
+    it('answers null for a node that does not exist, and survives a parent cycle', () => {
+        expect(scopePathForNode('ghost', nodes)).toBeNull()
+        const loop = [{ id: 'x', parentId: 'y' }, { id: 'y', parentId: 'x' }]
+        expect(scopePathForNode('x', loop)).toEqual([null, 'y'])
+    })
+
+    it('rebuilds the whole stack from wherever you stand', () => {
+        const { result } = renderHook(() => useNodeGraphScope({ nodes }))
+        act(() => { result.current.enterNode('top') })
+        expect(result.current.navStack).toEqual([null, 'top'])
+        let moved
+        act(() => { moved = result.current.goToNode('leaf') })
+        expect(moved).toBe(true)
+        expect(result.current.navStack).toEqual([null, 'a', 'b', 'c'])
+        act(() => { moved = result.current.goToNode('ghost') })
+        expect(moved).toBe(false)
+        expect(result.current.navStack).toEqual([null, 'a', 'b', 'c'])
     })
 })

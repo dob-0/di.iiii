@@ -57,31 +57,10 @@ const portToInspectorField = (port, node = null) => {
     return { label, path, type: 'text', portType: port.type || 'any' }
 }
 
-// Every node type — not just node.null — gets this section, so any brick can
-// optionally be viewed/edited "as code" (product decision 2026-07-19). Stored
-// under a reserved values.__code key so it never collides with node.null's
-// real values.body (that stays load-bearing, read by getNodeInputs/
-// getNodeOutputs) or any future type's own body-named port. Stays fully
-// inert — nothing reads or executes values.__code anywhere; it's storage and
-// display only.
-//
-// `component: 'values'` (section AND field) is required, not decorative: the
-// inspector's values map only ever has one top-level `values` key for a
-// node, so a section with its own distinct `id` (needed as a stable React
-// key, and to render as its own labeled block) must explicitly route reads
-// (section.component, the id-lookup fallback) and writes (field.component)
-// back to that shared object — same pattern the World section already uses
-// for its own fields.
-const CODE_SECTION = {
-    id: 'code',
-    // The label says what the box actually does: nothing executes this yet.
-    // Before, an editable "Code / Body" with no caveat was the whole
-    // inspector for input-less nodes — the single most dishonest surface the
-    // 2026-08-18 node truth audit found.
-    label: 'Code — stored, not run',
-    component: 'values',
-    fields: [{ label: 'Body', path: ['__code'], type: 'textarea', portType: 'string', component: 'values' }]
-}
+// The "Code — stored, not run" section is gone (2026-09-14). It was a
+// textarea nothing ever read; the inside of a node now shows the code that
+// really runs (MADE OF), and where a script can run, that is where it is
+// written. values.__code in old documents stays as harmless data.
 
 // An input port with a wire into it reads the wire, not the stored value —
 // the sheet used to offer the box anyway and a typed value was silently
@@ -114,8 +93,7 @@ export const deriveNodeInspectorSections = (node, { wiredPortIds = [] } = {}) =>
                     { label: 'Body', path: ['body'], type: 'textarea', portType: 'string' },
                     ...dynamicPorts
                 ], wiredPortIds)
-            },
-            CODE_SECTION
+            }
         ]
     }
 
@@ -171,14 +149,5 @@ export const deriveNodeInspectorSections = (node, { wiredPortIds = [] } = {}) =>
     const sections = fields.length
         ? [{ id: 'values', label: operations ? 'Operation and ports' : 'Ports', fields: markWiredFields(fields, wiredPortIds) }]
         : []
-    // Only when there IS stored code. The section used to ship on every node —
-    // a dead "Code — stored, not run" textarea under every Cube and Sphere,
-    // which the UX audit named the one systemic clutter generator ("useless
-    // infos", in the owner's words). A node.null keeps it unconditionally
-    // above: code is that type's whole identity. Anything else earns the box
-    // by actually carrying something in it.
-    if (typeof node.values?.__code === 'string' && node.values.__code.trim()) {
-        sections.push(CODE_SECTION)
-    }
     return sections
 }
