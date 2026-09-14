@@ -1,0 +1,57 @@
+/* Scrub-style numeric field (ScrubNumberInput). Layers drag/touch
+   affordances on top of the existing .raw-property-field input look defined
+   in raw.css — this file must never restyle the inspector itself, only add
+   what a scrub field needs on top: a drag-position fill, the resize cursor,
+   and a bigger touch target on coarse pointers. Do not edit raw.css. */
+
+.scrub-number-field {
+    position: relative;
+    display: block;
+    width: 100%;
+    min-width: 0;
+}
+
+.scrub-number-fill {
+    position: absolute;
+    left: 1px;
+    top: 1px;
+    bottom: 1px;
+    max-width: calc(100% - 2px);
+    background: rgba(var(--di-cyan-rgb), 0.14);
+    pointer-events: none;
+    transition: background 0.12s;
+}
+
+.scrub-number-field.is-dragging .scrub-number-fill {
+    background: rgba(var(--di-cyan-rgb), 0.26);
+}
+
+/* Higher specificity than raw.css's `.raw-property-field input[type='text']`
+   (which paints its own background) so the drag-position fill above shows
+   through instead of being hidden underneath it. */
+.raw-property-field .scrub-number-field input.scrub-number-input {
+    position: relative;
+    z-index: 1;
+    background: transparent;
+}
+
+.scrub-number-input {
+    cursor: ew-resize;
+    touch-action: none;
+    user-select: none;
+}
+
+.scrub-number-input:focus {
+    cursor: text;
+    user-select: text;
+}
+
+.scrub-number-field.is-disabled .scrub-number-input {
+    cursor: not-allowed;
+}
+
+@media (pointer: coarse) {
+    .scrub-number-input {
+        min-height: 44px;
+    }
+}
