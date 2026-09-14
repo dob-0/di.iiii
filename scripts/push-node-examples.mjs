@@ -1,31 +1,61 @@
 #!/usr/bin/env node
 /**
  * push-node-examples.mjs — put the per-node examples into a real di.iiii,
- * one project per family (e.g. "examples · numbers").
+ * one project per family (e.g. "examples · numbers"), laid out as a
+ * readable grid rather than one vertical tower.
  *
  * Uses the same APIs the app itself uses (src/project/services/projectsApi.js):
- *   POST /api/spaces/:space/projects        {slug, title}   — create the project
- *   POST /api/projects/:project/ops         {baseVersion, ops} — place every node/edge
+ *   GET  /api/health                          — reachability probe (normalizeBase)
+ *   POST /api/spaces/:space/projects           {slug, title}        — create the project
+ *   POST /api/projects/:project/ops             {baseVersion, ops}   — place every node/edge
+ *
+ * Layout (docs/ai/audits/2026-09-14-raw-fix-plan.md round 2, "examples wave"):
+ * a family's examples used to stack in ONE column BLOCK_HEIGHT apart — for a
+ * 38-example family (numbers, 126 nodes) that is a tower the canvas cannot
+ * fit: at minimum zoom you see three examples and no text is readable
+ * (docs/ai/audits/raw-audit-2026-09-14/walk/d-numbers.png). The actual grid
+ * math (chunking, cell sizing off cardGeometry.js, the caption label) lives
+ * in src/project/graph/examples/nodes/layout.js — pure and unit-tested
+ * (layout.test.js) — because it has to be re-derivable without a server:
+ *   - examples fill a grid, GRID_COLS per row (default 4), left-to-right,
+ *     top-to-bottom, in the family file's own order (already authored most-
+ *     basic-first — see numbers.js's header comment);
+ *   - each cell is sized to that example's OWN bounding box, measured with
+ *     cardGeometry.js's real getCardBox/cardHeight (the same box the canvas
+ *     actually draws — previews, viewers and all), not a guess;
+ *   - a family bigger than MAX_EXAMPLES_PER_PROJECT splits into several
+ *     projects ("examples · numbers 1/4", "2/4", …) instead of one tower;
+ *   - each example's first card (top-left by reading order) gets a plain-
+ *     language label "<Node> — <what it shows>" derived from the example's
+ *     own `title`/`story`, so the grid is self-explanatory without opening
+ *     anything. There is no note/comment node in the registry, and a Text
+ *     panel's content only shows once its window is opened (it is not a
+ *     'numbers'-family card-viewer type — src/raw/components/cardViewers/
+ *     viewerKind.js), so a caption card would itself be an opened window
+ *     sitting over the grid. The story lives in full in docs/nodes/*.md
+ *     (generated from these same examples) and, short, in this label.
  *
  * Idempotent: every example's node/edge ids are deterministic
  * (src/project/graph/examples/nodes/helpers.js — `ex_<typeId>_<key>`), and
- * each op's `opId` IS that node/edge id, so submitting the same family twice
- * creates nothing twice — serverXR's own idempotency guard
- * (serverXR/src/routes/projectRoutes.js, "existingOpIds") drops ops it has
- * already applied. Re-running this script after an example changes UPDATES
- * the existing nodes in place via `updateNode`/`updateEdge`... except it
- * doesn't yet (see "known limit" below) — a changed example currently needs
- * the family's project deleted and recreated.
- *
- * Known limit: this script only ever CREATES. If an example's build()
- * changes shape after a first push (a different port wired, a moved card),
- * re-running submits createNode/createEdge for the (now different) ids that
- * already exist server-side unmodified, or — for ids that stayed the same —
- * gets silently dropped by the idempotency guard, leaving the OLD graph in
- * place. Delete the family's project first if you need a clean re-push.
+ * each createNode/createEdge op's `opId` IS that node/edge id, so
+ * submitting the same family twice creates nothing twice — serverXR's own
+ * idempotency guard (serverXR/src/routes/projectRoutes.js,
+ * "existingOpIds") drops any op whose opId it has already applied,
+ * regardless of op type. A re-run whose layout changed (an example's
+ * build() grew a card, GRID_COLS changed, a family got re-split) ALSO sends
+ * one `updateNode` per node, opId content-addressed on that node's target
+ * graphX/graphY/label (moveOpId, below) — unchanged since last push, that
+ * opId already exists and is dropped (no duplicate history entry, no-op);
+ * changed, it is a NEW opId, so the guard lets it through and the node is
+ * MOVED to its new cell rather than left in its old spot or duplicated.
  *
  * Usage:
- *   node scripts/push-node-examples.mjs --base <url> --space <id> [--token <token>] [--family <id>] [--dry-run]
+ *   node scripts/push-node-examples.mjs --base <url> --space <id> [--token <token>]
+ *       [--family <id>] [--cols <n>] [--dry-run]
+ *
+ *   --base accepts either a site root or a root already carrying
+ *   /serverXR — normalizeBase probes /serverXR/api/health first, then
+ *   /api/health, and uses whichever answers (see normalizeBase below).
  *
  * This script is NEVER run against a live install from an agent session —
  * only the lead runs it, against a real space, after review.
@@ -33,53 +63,54 @@
 import process from 'node:process'
 
 import { NODE_EXAMPLE_FAMILIES } from '../src/project/graph/examples/nodes/index.js'
+import { GRID_COLS, chunkFamily, buildChunkOps, slugFor, titleFor } from '../src/project/graph/examples/nodes/layout.js'
 
 const parseArgs = (argv) => {
-    const args = { base: null, space: null, token: null, family: null, dryRun: false }
+    const args = { base: null, space: null, token: null, family: null, cols: null, dryRun: false }
     for (let i = 0; i < argv.length; i += 1) {
         const arg = argv[i]
         if (arg === '--base') { args.base = argv[++i]; continue }
         if (arg === '--space') { args.space = argv[++i]; continue }
         if (arg === '--token') { args.token = argv[++i]; continue }
         if (arg === '--family') { args.family = argv[++i]; continue }
+        if (arg === '--cols') { args.cols = Number(argv[++i]); continue }
         if (arg === '--dry-run') { args.dryRun = true; continue }
     }
     return args
 }
 
-/** The project this family lands in — a stable, predictable slug. */
-export const slugFor = (family) => `examples-${family.id}`
-export const titleFor = (family) => `examples · ${family.label}`
+// Grid layout (chunking, cell sizing, captions) lives in layout.js, pure
+// and unit-tested (layout.test.js) — imported above.
 
-// Every example in a family, laid out in its OWN small grid (COL/ROW,
-// helpers.js) starting at (0, WORKSPACE_TOP) — fine alone, but stacking
-// EIGHT-ish of them into one project without an offset would draw every
-// example's cards on top of each other. BLOCK_HEIGHT is generous: the
-// tallest single-example graph seen (a picture-family chain with a live
-// preview card) is well under 1000 graph units tall.
-const BLOCK_HEIGHT = 1000
+// --- base URL normalisation ---------------------------------------------
 
-const offsetNode = (node, dy) => ({ ...node, graphY: node.graphY + dy })
+const probeHealth = async (base, fetchImpl) => {
+    try {
+        const response = await fetchImpl(`${base}/api/health`)
+        return response.ok
+    } catch {
+        return false
+    }
+}
 
 /**
- * Every createNode/createEdge op for one family, offset so its examples
- * stack top-to-bottom without overlapping. opId === the node/edge's own id
- * — the idempotency key.
+ * Accept `--base` with or without a trailing `/serverXR`. Try
+ * `<base>/serverXR/api/health` first; if that answers, the API root is
+ * `<base>/serverXR`. Otherwise try `<base>/api/health`; if that answers,
+ * `<base>` IS already the API root (this also covers a `--base` that
+ * already ends in `/serverXR` — the first probe becomes `.../serverXR/
+ * serverXR/api/health`, 404s, and the second probe finds it). Neither
+ * answering is a hard error: no guessing which one the caller meant.
  */
-export const buildFamilyOps = (family) => {
-    const ops = []
-    family.examples.forEach((example, index) => {
-        const dy = index * BLOCK_HEIGHT
-        const { nodes, edges } = example.build()
-        for (const node of nodes) {
-            ops.push({ opId: node.id, type: 'createNode', payload: { node: offsetNode(node, dy) } })
-        }
-        for (const edge of edges) {
-            ops.push({ opId: edge.id, type: 'createEdge', payload: { edge } })
-        }
-    })
-    return ops
+export const normalizeBase = async (rawBase, { fetchImpl = fetch } = {}) => {
+    const trimmed = rawBase.replace(/\/+$/, '')
+    const withServerXR = `${trimmed}/serverXR`
+    if (await probeHealth(withServerXR, fetchImpl)) return withServerXR
+    if (await probeHealth(trimmed, fetchImpl)) return trimmed
+    throw new Error(`Could not reach di.iiii's API from "${trimmed}" — tried ${withServerXR}/api/health and ${trimmed}/api/health`)
 }
+
+// --- push ----------------------------------------------------------------
 
 const buildHeaders = (token) => {
     const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
@@ -93,25 +124,26 @@ const apiFetch = async (url, options = {}) => {
     return { ok: response.ok, status: response.status, body }
 }
 
-/** Create the family's project, or find it if it already exists (409). */
-const ensureProject = async (base, spaceId, family, headers) => {
-    const slug = slugFor(family)
+/** Create a chunk's project, or find it if it already exists (409). */
+const ensureProject = async (base, spaceId, chunk, headers) => {
+    const slug = slugFor(chunk)
     const created = await apiFetch(`${base}/api/spaces/${spaceId}/projects`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ slug, title: titleFor(family) })
+        body: JSON.stringify({ slug, title: titleFor(chunk) })
     })
     if (created.ok) return slug
     if (created.status === 409) return slug // already exists — same slug, same id
     throw new Error(`create project "${slug}" failed: HTTP ${created.status} ${JSON.stringify(created.body).slice(0, 200)}`)
 }
 
-const pushFamily = async (base, spaceId, family, headers, { dryRun }) => {
-    const ops = buildFamilyOps(family)
-    console.log(`  [${family.id}] ${family.examples.length} examples, ${ops.length} ops`)
+const pushChunk = async (base, spaceId, chunk, headers, { dryRun, cols }) => {
+    const ops = buildChunkOps(chunk, { cols })
+    const label = titleFor(chunk)
+    console.log(`  [${chunk.familyId}${chunk.total > 1 ? ` ${chunk.index}/${chunk.total}` : ''}] ${chunk.examples.length} examples, ${ops.length} ops -> "${label}"`)
     if (dryRun) return
 
-    const projectId = await ensureProject(base, spaceId, family, headers)
+    const projectId = await ensureProject(base, spaceId, chunk, headers)
 
     const doc = await apiFetch(`${base}/api/projects/${projectId}/document`, { headers })
     if (!doc.ok) throw new Error(`read "${projectId}" failed: HTTP ${doc.status}`)
@@ -127,7 +159,7 @@ const pushFamily = async (base, spaceId, family, headers, { dryRun }) => {
             body: JSON.stringify({ baseVersion, ops })
         })
         if (result.ok) {
-            console.log(`  [${family.id}] -> ${projectId} @ v${result.body?.newVersion}`)
+            console.log(`  [${chunk.familyId}] -> ${projectId} @ v${result.body?.newVersion}`)
             return
         }
         if (result.status === 409 && attempt === 0) {
@@ -141,12 +173,10 @@ const pushFamily = async (base, spaceId, family, headers, { dryRun }) => {
 const main = async () => {
     const args = parseArgs(process.argv.slice(2))
     if (!args.base || !args.space) {
-        console.error('Usage: node scripts/push-node-examples.mjs --base <url> --space <id> [--token <token>] [--family <id>] [--dry-run]')
+        console.error('Usage: node scripts/push-node-examples.mjs --base <url> --space <id> [--token <token>] [--family <id>] [--cols <n>] [--dry-run]')
         process.exitCode = 1
         return
     }
-    const base = args.base.replace(/\/+$/, '')
-    const headers = buildHeaders(args.token)
     const families = args.family
         ? NODE_EXAMPLE_FAMILIES.filter((family) => family.id === args.family)
         : NODE_EXAMPLE_FAMILIES
@@ -155,10 +185,16 @@ const main = async () => {
         process.exitCode = 1
         return
     }
+    const cols = Number.isFinite(args.cols) && args.cols > 0 ? args.cols : GRID_COLS
+
+    const base = await normalizeBase(args.base)
+    const headers = buildHeaders(args.token)
 
     console.log(`[push-node-examples] space=${args.space} -> ${base}${args.dryRun ? ' (dry-run)' : ''}`)
     for (const family of families) {
-        await pushFamily(base, args.space, family, headers, { dryRun: args.dryRun })
+        for (const chunk of chunkFamily(family)) {
+            await pushChunk(base, args.space, chunk, headers, { dryRun: args.dryRun, cols })
+        }
     }
     console.log('[done]')
 }

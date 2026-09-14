@@ -1458,6 +1458,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-14'
     },
     {
+        id: 'node-examples-grid',
+        category: 'For developers',
+        title: 'The examples page is a grid now, not a tower',
+        summary: 'A family\'s worked examples used to stack in one tall column — 126 nodes deep for numbers — so fit zoom showed three of them and no text. They fill a grid instead, and a big family splits across several readable pages.',
+        body: [
+            'Every family\'s examples project (`examples · numbers`, `examples · make`, …) used to lay its worked graphs one below another in a single column, offset by a fixed block height. For a small family that was fine; for numbers — 38 examples, 126 nodes — it made a tower so tall that fitting the whole thing on screen left every label unreadable and only three examples in view at once.',
+            'The push script now lays a family out as a grid: examples fill rows left to right, four per row by default (`--cols` to change it), each column and row sized to the REAL cards in it — measured the same way the canvas itself measures them, not guessed. A family too big to read comfortably on one canvas splits into several projects instead of growing the wall further: "examples · numbers 1/4", "2/4", "3/4", "4/4", twelve examples each. Every example\'s first card carries a short label naming the node and what the example shows, so the grid explains itself at a glance, before opening a single window.',
+            'Re-running the push is still exactly as safe as before: an unchanged example is a no-op, and an example that moved to a new cell (a re-split, a wider or narrower `--cols`) is moved there rather than duplicated or left behind — the same content-addressed idempotency the per-node examples already relied on, extended to cover a node\'s position and label as well as its existence.',
+            'The grid math itself lives apart from the network code that pushes it, in `src/project/graph/examples/nodes/layout.js`, and is unit-tested on its own: no two cards ever overlap, the same family always lays out the same way, and a family\'s split sizes are exactly what the numbers say they should be.'
+        ],
+        tags: ['nodes', 'examples', 'grid', 'layout', 'raw', 'developers', 'push-node-examples'],
+        updated: '2026-09-14'
+    },
+    {
         id: 'raw-topbar-and-window-cleanup',
         category: 'Editing',
         title: 'The top bar on a phone, and a window that says one thing',
