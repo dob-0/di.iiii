@@ -4,6 +4,7 @@ import { isEmbedRequest } from '../utils/previewMode.js'
 import RouteSurfaceFallback from '../components/RouteSurfaceFallback.jsx'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { listSpaceContents } from '../project/services/projectsApi.js'
 import { getServerSpace } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
@@ -103,6 +104,13 @@ export default function SpaceContentsPage({ spaceId }) {
 
     const label = state.space?.label || spaceId
     const projects = state.projects
+
+    // The tab says the space's name, the same one the heading below and the
+    // /{space} tab say (docs/ai/vocabulary.md, "One name per space") — it was
+    // the index.html default on every space's list. 'main' is skipped for the
+    // reason SpaceSurfaceApp skips it: its name is di.iiii, which the default
+    // already says.
+    useDocumentTitle(state.status === 'ready' && spaceId !== 'main' ? `${label} — di.iiii` : null)
 
     // A page that is CODE has no row on any server, so a list built by asking
     // the server what a space holds cannot see it. That is the whole of why the

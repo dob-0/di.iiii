@@ -51,9 +51,12 @@ vi.mock('../../map/lightingLink.js', () => ({
     probeLightingDesk: (...args) => probeLightingDesk(...args)
 }))
 
+// Door project titles, by id. Empty unless a test sets them.
+let projectTitlesById = {}
+
 vi.mock('../../project/services/projectsApi.js', () => ({
     listProjects: () => Promise.resolve([]),
-    getProject: () => Promise.resolve(null),
+    getProject: (id) => Promise.resolve(projectTitlesById[id] ? { project: { id, title: projectTitlesById[id] } } : null),
     updateProject: vi.fn()
 }))
 
@@ -91,15 +94,25 @@ vi.mock('./SpaceConstellation.jsx', () => ({
     )
 }))
 
+// A card is found by the space it belongs to, not by printed text: since the
+// one-name rule (utils/spaceNames.js) a card no longer prints its id at all.
+const cardOf = (spaceId) => document.querySelector(`.ssh-space-card[data-space-id="${spaceId}"]`)
+const rowOf = (spaceId) => document.querySelector(`.ssh-list-row[data-space-id="${spaceId}"]`)
+const findCard = (spaceId) => waitFor(() => {
+    const card = cardOf(spaceId)
+    if (!card) throw new Error(`no card for ${spaceId}`)
+    return card
+})
+
 const cardActionsFor = (spaceId) => {
-    const card = screen.getByText(spaceId).closest('.ssh-space-card')
+    const card = cardOf(spaceId)
     return [...card.querySelectorAll('.ssh-card-btn')].map((btn) => btn.textContent)
 }
 
 // A resting card shows one button ("Manage"); the management row is behind it.
 // Open it first, the way a person does, then read the actions.
 const openManageFor = (spaceId) => {
-    const card = screen.getByText(spaceId).closest('.ssh-space-card')
+    const card = cardOf(spaceId)
     const toggle = [...card.querySelectorAll('.ssh-card-btn')].find((b) => b.textContent === 'Manage')
     if (toggle) fireEvent.click(toggle)
     return card
@@ -119,6 +132,7 @@ describe('SpaceHub', () => {
         probeLightingDesk.mockReset()
         probeLightingDesk.mockResolvedValue(false)
         sandboxSummary = null
+        projectTitlesById = {}
         localStorage.clear()
         authState = {
             authenticated: true,
@@ -155,7 +169,7 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('mine')
+        await findCard('mine')
         expect(screen.queryByText('Lights')).toBeNull()
         expect(screen.queryByText('On this machine')).toBeNull()
     })
@@ -168,7 +182,7 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('mine')
+        await findCard('mine')
         // Resting, an owned card offers only Manage — the eight actions are behind it.
         expect(cardActionsFor('mine')).toEqual(['Manage'])
         openManageFor('mine')
@@ -207,12 +221,12 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('showroom')
+        await findCard('showroom')
         const liveLink = screen.getByRole('link', { name: /\/showroom$/ })
         expect(liveLink.getAttribute('target')).toBe('_blank')
         expect(screen.getByText('Live')).toBeTruthy()
 
-        const draftsCard = screen.getByText('drafts').closest('.ssh-space-card')
+        const draftsCard = cardOf('drafts')
         expect(draftsCard.querySelector('.ssh-live-link')).toBeNull()
     })
 
@@ -233,14 +247,13 @@ describe('SpaceHub', () => {
 
             render(<SpaceHub />)
 
-            await screen.findByText('showroom')
+            await findCard('showroom')
             // The iframe is two settles behind the card: the IntersectionObserver
             // callback sets `visible`, and only the effect that runs after that
             // render asks requestPreviewBoot for a slot and sets `booted`. A
             // synchronous query here wins that race on an idle machine and loses
             // it under load -- which is exactly how this test flaked.
-            const frameIn = (spaceId) => screen.getByText(spaceId)
-                .closest('.ssh-space-card')
+            const frameIn = (spaceId) => cardOf(spaceId)
                 .querySelector('.ssh-card-preview iframe')
             await waitFor(() => expect(frameIn('showroom')).not.toBeNull())
             const previewFrame = frameIn('showroom')
@@ -261,7 +274,7 @@ describe('SpaceHub', () => {
             expect(frameIn('bare').getAttribute('src')).toBe('/bare?preview=1')
 
             // private → still no preview, which is the condition that matters
-            expect(screen.getByText('drafts').closest('.ssh-space-card').querySelector('.ssh-card-preview')).toBeNull()
+            expect(cardOf('drafts').querySelector('.ssh-card-preview')).toBeNull()
         } finally {
             vi.unstubAllGlobals()
         }
@@ -284,8 +297,7 @@ describe('SpaceHub', () => {
         disconnect() {}
     })
 
-    const frameIn = (spaceId) => screen.getByText(spaceId)
-        .closest('.ssh-space-card')
+    const frameIn = (spaceId) => cardOf(spaceId)
         .querySelector('.ssh-card-preview iframe')
 
     it('frees a card’s boot slot when the preview says it has PAINTED, not when its html loads', async () => {
@@ -295,7 +307,7 @@ describe('SpaceHub', () => {
 
             render(<SpaceHub />)
 
-            await screen.findByText('s0')
+            await findCard('s0')
             await waitFor(() => expect(frameIn('s0')).not.toBeNull())
             expect(frameIn('s11')).not.toBeNull()
             expect(frameIn('s12')).toBeNull()
@@ -329,7 +341,7 @@ describe('SpaceHub', () => {
 
             render(<SpaceHub />)
 
-            await screen.findByText('s0')
+            await findCard('s0')
             await waitFor(() => expect(frameIn('s0')).not.toBeNull())
 
             fireEvent(window, new MessageEvent('message', {
@@ -357,7 +369,7 @@ describe('SpaceHub', () => {
 
             render(<SpaceHub />)
 
-            await screen.findByText('s0')
+            await findCard('s0')
             await waitFor(() => expect(frameIn('s0')).not.toBeNull())
             expect(frameIn('s12')).toBeNull()
 
@@ -376,7 +388,7 @@ describe('SpaceHub', () => {
 
             render(<SpaceHub />)
 
-            await screen.findByText('s0')
+            await findCard('s0')
             // The default 1s waitFor is the machine's budget, not this
             // behaviour's: twelve card frames mount before s0 reports, and on a
             // loaded CI runner that crossed 1s and failed here while passing
@@ -396,13 +408,13 @@ describe('SpaceHub', () => {
             // the slot is freed like a paint would free it
             await waitFor(() => expect(frameIn('s12')).not.toBeNull(), { timeout: 8000 })
             // and the card draws its own line in place of the scaled-down frame
-            const card = screen.getByText('s0').closest('.ssh-space-card')
+            const card = cardOf('s0')
             expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
             expect(card.querySelector('.ssh-card-preview-fill--stub')).not.toBeNull()
             expect(card.textContent).toContain('not in this copy')
             // every other card paints exactly as before
             expect(frameIn('s1')).not.toBeNull()
-            expect(screen.getByText('s1').closest('.ssh-space-card').textContent).not.toContain('not in this copy')
+            expect(cardOf('s1').textContent).not.toContain('not in this copy')
         } finally {
             vi.unstubAllGlobals()
         }
@@ -415,8 +427,8 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('gallery')
-        const card = screen.getByText('gallery').closest('.ssh-space-card')
+        await findCard('gallery')
+        const card = cardOf('gallery')
         const image = card.querySelector('.ssh-card-preview img')
         expect(image).not.toBeNull()
         expect(image.getAttribute('src')).toBe('/serverXR/api/spaces/gallery/assets/cover123')
@@ -430,8 +442,8 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('gallery')
-        const card = () => screen.getByText('gallery').closest('.ssh-space-card')
+        await findCard('gallery')
+        const card = () => cardOf('gallery')
         fireEvent.error(card().querySelector('.ssh-card-preview img'))
         await waitFor(() => expect(card().querySelector('.ssh-card-preview img')).toBeNull())
         expect(card().querySelector('.ssh-card-preview')).not.toBeNull()
@@ -446,7 +458,7 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('mine')
+        await findCard('mine')
         openManageFor('mine')
         fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
         const fileInput = screen.getByText('Upload image').querySelector('input[type="file"]')
@@ -465,7 +477,7 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('anyones')
+        await findCard('anyones')
         openManageFor('anyones')
         expect(cardActionsFor('anyones')).toEqual(
             expect.arrayContaining(['Rename', 'Delete'])
@@ -482,7 +494,7 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('wcc')
+        await findCard('wcc')
         expect(screen.getByText(/step into any space here/i)).toBeTruthy()
         expect(cardActionsFor('wcc')).toEqual(['Copy'])
         expect(screen.getByRole('button', { name: 'Sign in to create' })).toBeTruthy()
@@ -515,7 +527,7 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('mine')
+        await findCard('mine')
         const shelfLabels = [...document.querySelectorAll('.ssh-shelf-label')].map((el) => el.textContent)
         expect(shelfLabels[0]).toMatch(/^Open Space/)
         expect(shelfLabels[1]).toMatch(/^Your sandbox/)
@@ -523,7 +535,7 @@ describe('SpaceHub', () => {
 
         // The open space is public but everyone can enter it — the card opens
         // the editor, never the read-only live view.
-        fireEvent.click(screen.getByText('open'))
+        fireEvent.click(cardOf('open'))
         expect(mockEnter).toHaveBeenCalledWith('/open/studio')
         expect(mockEnter).toHaveBeenCalledTimes(1)
     })
@@ -554,9 +566,9 @@ describe('SpaceHub', () => {
 
         // Every listed space is on the page, Open Space among them — the page
         // is the spaces, not one card plus a folded shelf.
-        await screen.findByText('open')
+        await findCard('open')
         for (const id of ['bare', 'net', 'azd']) {
-            expect(screen.getByText(id)).toBeTruthy()
+            expect(cardOf(id)).toBeTruthy()
         }
         expect(screen.queryByRole('button', { name: /other space/ })).toBeNull()
         expect(screen.queryByRole('button', { name: 'Hide' })).toBeNull()
@@ -575,8 +587,8 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('open')
-        const ids = [...document.querySelectorAll('.ssh-space-id')].map((el) => el.textContent)
+        await findCard('open')
+        const ids = [...document.querySelectorAll('.ssh-space-card')].map((el) => el.dataset.spaceId)
         expect(ids).toEqual(['open', 'net', 'azd', 'bare'])
     })
 
@@ -586,7 +598,7 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('open')
+        await findCard('open')
         // Not a card in the grid, and no "nothing in it yet" empty frame.
         expect(screen.queryByText('Sandbox')).toBeNull()
         expect(screen.queryByText(/nothing in it yet/i)).toBeNull()
@@ -604,8 +616,8 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('mine')
-        expect(screen.getByText('mine-2')).toBeTruthy()
+        await findCard('mine')
+        expect(cardOf('mine-2')).toBeTruthy()
         expect(screen.queryByRole('button', { name: /other space/ })).toBeNull()
     })
 
@@ -617,8 +629,8 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('one')
-        const previewFor = (id) => screen.getByText(id).closest('.ssh-space-card').querySelector('.ssh-card-preview')
+        await findCard('one')
+        const previewFor = (id) => cardOf(id).querySelector('.ssh-card-preview')
         const liveFrameFor = (id) => previewFor(id).querySelector('.ssh-card-live-frame')
 
         expect(liveFrameFor('one')).toBeNull()
@@ -656,7 +668,7 @@ describe('SpaceHub', () => {
 
             render(<SpaceHub />)
 
-            await screen.findByText(shadowedSpace.id)
+            await findCard(shadowedSpace.id)
             const door = `/${shadowedSpace.id}/p/linked-project`
 
             // the thumbnail
@@ -664,7 +676,7 @@ describe('SpaceHub', () => {
             expect(frameIn(shadowedSpace.id).getAttribute('src')).toBe(`${door}?preview=1`)
 
             // the picture made live, and its Open link
-            const preview = screen.getByText(shadowedSpace.id).closest('.ssh-space-card').querySelector('.ssh-card-preview')
+            const preview = cardOf(shadowedSpace.id).querySelector('.ssh-card-preview')
             fireEvent.click(preview)
             const liveFrame = preview.querySelector('.ssh-card-live-frame iframe')
             expect(liveFrame.getAttribute('src')).toBe(door)
@@ -686,10 +698,10 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText(shadowedSpace.id)
+        await findCard(shadowedSpace.id)
         fireEvent.click(screen.getByRole('button', { name: /list/i }))
 
-        const rowLive = (id) => screen.getByText(id).closest('.ssh-list-row').querySelector('a.ssh-card-btn')
+        const rowLive = (id) => rowOf(id).querySelector('a.ssh-card-btn')
         await waitFor(() => expect(rowLive(shadowedSpace.id)).not.toBeNull())
         expect(rowLive(shadowedSpace.id).getAttribute('href')).toBe(`/${shadowedSpace.id}/p/linked-project`)
         expect(rowLive('plain').getAttribute('href')).toBe('/plain')
@@ -759,12 +771,71 @@ describe('SpaceHub', () => {
         expect(mediaBlock).toMatch(/\.ssh-shelf--spaces\s*\{\s*grid-column:\s*1\s*\/\s*-1;\s*grid-row:\s*2;\s*\}/)
     })
 
+    // One name per space (owner, 2026-09-14). Dev printed the same words three
+    // times on six of thirteen cards — "drum-rhythms" / "Drum Rhythms" /
+    // "Project: Drum Rhythms" — and a mismatched door on the rest ("WCC
+    // Exhibition" / "Project: Main").
+    const namedSpaces = () => ([
+        { id: 'drum-rhythms', label: 'Drum Rhythms', isOwner: true, isPublic: true, publishedProjectId: 'rhythms' },
+        { id: 'wcc-space', label: 'WCC Exhibition', isOwner: true, isPublic: true, publishedProjectId: 'main' },
+        { id: 'algo', label: 'algo', isOwner: true, isPublic: true }
+    ])
+
+    it('shows a visitor each space by its name once, with no project line', async () => {
+        asGuest()
+        projectTitlesById = { rhythms: 'Drum Rhythms', main: 'Main' }
+        listServerSpaces.mockResolvedValue(namedSpaces().map(s => ({ ...s, isOwner: false })))
+
+        render(<SpaceHub />)
+        const drums = await findCard('drum-rhythms')
+        await waitFor(() => expect(cardOf('wcc-space')).toBeTruthy())
+
+        for (const id of ['drum-rhythms', 'wcc-space', 'algo']) {
+            const card = cardOf(id)
+            // No project line of any wording, and the id is not printed as a
+            // second name in the header (the live-link row still carries the
+            // address, as an address).
+            expect(card.querySelector('.ssh-space-project')).toBeNull()
+            expect(card.querySelector('.ssh-space-id')).toBeNull()
+            expect(card.textContent).not.toMatch(/Project:|Opens on/)
+            expect(card.querySelectorAll('.ssh-space-label').length).toBe(1)
+        }
+        expect(drums.querySelector('.ssh-space-label').textContent).toBe('Drum Rhythms')
+        expect(drums.querySelector('.ssh-card-header').textContent).toBe('Live')
+    })
+
+    it('tells an owner the door only where its title is not the space’s name', async () => {
+        projectTitlesById = { rhythms: 'Drum Rhythms', main: 'Main' }
+        listServerSpaces.mockResolvedValue(namedSpaces())
+
+        render(<SpaceHub />)
+        await findCard('drum-rhythms')
+
+        await waitFor(() => expect(cardOf('wcc-space').querySelector('.ssh-space-project')?.textContent).toBe('Opens on: Main'))
+        expect(cardOf('drum-rhythms').querySelector('.ssh-space-project')).toBeNull()
+        expect(cardOf('algo').querySelector('.ssh-space-project')).toBeNull()
+    })
+
+    it('names each list row once and says what opens by the same rule', async () => {
+        projectTitlesById = { rhythms: 'Drum Rhythms', main: 'Main' }
+        listServerSpaces.mockResolvedValue(namedSpaces())
+
+        render(<SpaceHub />)
+        await findCard('drum-rhythms')
+        fireEvent.click(screen.getByRole('button', { name: /list/i }))
+
+        await waitFor(() => expect(rowOf('wcc-space').querySelector('.ssh-list-project').textContent).toBe('Main'))
+        expect(rowOf('drum-rhythms').querySelector('.ssh-list-name').textContent).toBe('Drum Rhythms')
+        expect(rowOf('drum-rhythms').querySelector('.ssh-list-project').textContent).toBe('the space itself')
+        expect(rowOf('algo').querySelector('.ssh-list-project').textContent).toBe('nothing published')
+    })
+
     it('the Grid/Map toggle still works — Map is given every space, the sandbox included', async () => {
         asGuest()
         listServerSpaces.mockResolvedValue(visitorSpaces())
 
         render(<SpaceHub />)
-        await screen.findByText('open')
+        await findCard('open')
 
         // Map is handed the full spaces list — the same list SpaceHub loaded,
         // not the visitor grid's list (which leaves the sandbox out).

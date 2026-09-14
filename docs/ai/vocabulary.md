@@ -238,6 +238,25 @@ Guard: `src/nodeLabelVocabulary.test.js` — labels must carry no banned word, n
 parenthetical, no leading article, and stay within two words. The prose guard
 (`src/copyVocabulary.test.js`) already covers every string a person reads.
 
+## One name per space (owner, 2026-09-14)
+
+A **space's** own name — its label, set with Rename — is the one name a visitor sees for that
+space anywhere in di.iiii's own furniture: the `/spaces` card, the list row, the map star, the
+`/{space}/projects` heading, the surface bar, the browser tab, the link preview, and the room's
+heading for screen readers and crawlers. A **project's** title shows only where the URL names
+that project (`/{space}/p/{project}` or its vanity form). A space that opens straight into one
+piece shows no "Project: …" line on its card; an account's own card says "Opens on: …" only when
+the door's title differs from the space's name.
+
+What this does not reach: a published page's own content is the artist's. The WCC landing's
+"WCC: Women Creating Change" heading and anything inside a page's iframe are the work, not the
+furniture. Where a stored name is simply wrong (a space labelled "di.iiii", a door project titled
+"Main"), the fix is data, not a code carve-out.
+
+Code: `src/studio/utils/spaceNames.js` (the card rule), `src/hooks/useDocumentTitle.js` (tabs),
+`PublicProjectViewer`'s `viewerTitle` (headings). Guards: `spaceNames.test.js`,
+`SpaceHub.test.jsx`, `PublicProjectViewer.test.jsx`.
+
 ## The rule for anything new
 
 Before adding a word to the product, check it here. If it is not in the dictionary and not
