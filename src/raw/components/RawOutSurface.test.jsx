@@ -10,11 +10,17 @@ vi.mock('./RawViewport.jsx', () => ({
         return <div data-testid="mock-out-viewport">{(props.document?.nodes || []).length} nodes</div>
     }
 }))
+const feedProps = []
+vi.mock('./LiveFeeds.jsx', async (importOriginal) => ({
+    ...(await importOriginal()),
+    default: (props) => { feedProps.push(props); return null }
+}))
 vi.mock('../../project/hooks/useProjectDocumentSync.js', () => ({
     useProjectDocumentSync: () => ({ applyLocalOps: vi.fn(), replaceDocument: vi.fn() })
 }))
 
 import RawOutSurface from './RawOutSurface.jsx'
+import { OUTPUT_FEEDS } from './LiveFeeds.jsx'
 
 const KEY = 'dii.localNodeWorkspace.test-out'
 const writeDoc = (nodes) => window.localStorage.setItem(KEY, JSON.stringify({ nodes, edges: [], workspaceState: {} }))
@@ -25,6 +31,18 @@ afterEach(() => {
 })
 
 describe('RawOutSurface', () => {
+    // Raw fix wave 2026-09-14 (graph #6): /out handed the room liveOutputs={null},
+    // so a Webcam on a Plane or a picture on a Monitor was dark on the projector.
+    it('runs its own listening feeds and hands the room their live outputs', () => {
+        writeDoc([{ id: 'cam', typeId: 'source.webcam', label: 'Webcam', values: {} }])
+        render(<RawOutSurface localStorageKey={KEY} />)
+        expect(viewportProps.at(-1).liveOutputs).toBeInstanceOf(Map)
+        expect(feedProps.at(-1).allow).toBe(OUTPUT_FEEDS)
+        expect(feedProps.at(-1).document.nodes.map((node) => node.id)).toEqual(['cam'])
+        act(() => { feedProps.at(-1).onLiveOutputChange('cam', 'frame', { isTexture: true }) })
+        expect(viewportProps.at(-1).liveOutputs.get('cam:frame')).toEqual({ isTexture: true })
+    })
+
     it('renders the room read-only: no selection, no cursors, no edit handlers', () => {
         writeDoc([{ id: 'c1', typeId: 'geom.cube', label: 'Cube', values: {} }])
         render(<RawOutSurface localStorageKey={KEY} />)

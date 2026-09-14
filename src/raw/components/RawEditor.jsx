@@ -17,6 +17,7 @@ import ChatPanelWindow from './ChatPanelWindow.jsx'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import LiveFeeds from './LiveFeeds.jsx'
+import { useLiveOutputs } from '../utils/useLiveOutputs.js'
 import DeskPanelWindow from './DeskPanelWindow.jsx'
 import TopInsidePanel from './topInside/TopInsidePanel.jsx'
 import { isTopType } from '../../project/tops/topOperators.js'
@@ -1368,24 +1369,7 @@ export default function RawEditor({
     }, [hasShowClock, showClockEpoch, applyLocalOps])
     // Live, non-serializable node outputs (a captured webcam's VideoTexture)
     // that can't live in node.values — see createNodeGraphContext's liveOutputs.
-    const [liveOutputs, setLiveOutputs] = useState(() => new Map())
-    const handleLiveOutputChange = useCallback((nodeId, portId, value) => {
-        setLiveOutputs((prev) => {
-            const key = `${nodeId}:${portId}`
-            // null/undefined clears the port (unmount, capture failed); any
-            // other value — including 0, an empty array — is set as-is, so a
-            // real "silent microphone" reading doesn't get treated as unset.
-            const clear = value === null || value === undefined
-            if (clear && !prev.has(key)) return prev
-            // identical value re-reported (mic at a steady level, the same
-            // texture instance) must not re-render the whole editor
-            if (!clear && prev.get(key) === value) return prev
-            const next = new Map(prev)
-            if (clear) next.delete(key)
-            else next.set(key, value)
-            return next
-        })
-    }, [])
+    const [liveOutputs, handleLiveOutputChange] = useLiveOutputs()
     // A Button press is a live event, never a document op (a cue in the undo
     // history made Ctrl+Z un-press the show). Counted per window, published
     // through the side channel; view.button's runtime adds any stored count.

@@ -1,5 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import RawViewport from './RawViewport.jsx'
+import LiveFeeds, { OUTPUT_FEEDS } from './LiveFeeds.jsx'
+import { useLiveOutputs } from '../utils/useLiveOutputs.js'
+import { createFrameMemory, createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
+import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { readLocalWorkspaceDocument } from '../utils/localWorkspaceStorage.js'
@@ -71,6 +75,20 @@ export default function RawOutSurface({ projectId = null, localStorageKey = '', 
     }, [])
 
     const doc = state.document
+
+    // The house sees what the desk hears: a Webcam on the Plane, the Mic
+    // moving a Sphere, MIDI firing a cue, a picture operator on a Monitor —
+    // /out runs its own feeds (it may be the only page open on the projector
+    // machine). Senders (DMX Out, MIDI Out, Keeper) stay the editor's: two
+    // pages driving one rig would double every cue.
+    const [liveOutputs, onLiveOutputChange] = useLiveOutputs()
+    const clockNow = useDocumentClock(doc)
+    const [frameMemory] = useState(() => createFrameMemory())
+    const graphContext = useMemo(
+        () => createNodeGraphContext(doc, { now: clockNow, liveOutputs, frameMemory }),
+        [doc, clockNow, liveOutputs, frameMemory]
+    )
+
     const worldNode = useMemo(
         () => resolveScopeWorldNode(doc.nodes, scopeId, doc.workspaceState?.liveWorldNodeIdByScope),
         [doc.nodes, scopeId, doc.workspaceState?.liveWorldNodeIdByScope]
@@ -91,11 +109,21 @@ export default function RawOutSurface({ projectId = null, localStorageKey = '', 
                     showEmptyHint={false}
                     scopeId={scopeId || null}
                     worldNode={worldNode}
-                    liveOutputs={null}
+                    liveOutputs={liveOutputs}
                     // Not just "handlers not passed": OrbitControls mounts its
                     // own DOM listeners, so without this the audience could
                     // orbit and zoom the projector image (measured).
                     interactive={false}
+                />
+            )}
+            {state.loadError ? null : (
+                <LiveFeeds
+                    document={doc}
+                    graphContext={graphContext}
+                    liveOutputs={liveOutputs}
+                    spaceId={doc.projectMeta?.spaceId || ''}
+                    onLiveOutputChange={onLiveOutputChange}
+                    allow={OUTPUT_FEEDS}
                 />
             )}
         </div>

@@ -1,6 +1,10 @@
 import './styles/raw.css'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import RawViewport from './components/RawViewport.jsx'
+import LiveFeeds, { PUBLIC_FEEDS } from './components/LiveFeeds.jsx'
+import { useLiveOutputs } from './utils/useLiveOutputs.js'
+import { createFrameMemory, createNodeGraphContext } from '../project/graph/nodeGraphRuntime.js'
+import { useDocumentClock } from '../project/graph/useDocumentClock.js'
 import { resolveScopeWorldNode } from './utils/viewportWorldState.js'
 
 // The node lane's room, mounted OUTSIDE the node lane — on the published page.
@@ -20,7 +24,19 @@ import { resolveScopeWorldNode } from './utils/viewportWorldState.js'
 //
 // The wrapper also owns the box rather than trusting the host's layout, which
 // is what `.raw-out-surface` does for the projector view.
-export default function PublicGraphSurface({ document, interactive = true }) {
+//
+// Live data, where it asks nothing of the visitor: video frames, sound levels,
+// the keyboard and picture operators that open no camera (PUBLIC_FEEDS). A
+// Webcam, Mic or MIDI node never prompts a visitor who did not ask — those
+// wires stay dark here. `live` false (a card thumbnail) runs no feeds at all.
+export default function PublicGraphSurface({ document, interactive = true, live = true }) {
+    const [liveOutputs, onLiveOutputChange] = useLiveOutputs()
+    const clockNow = useDocumentClock(document)
+    const [frameMemory] = useState(() => createFrameMemory())
+    const graphContext = useMemo(
+        () => (live ? createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }) : null),
+        [live, document, clockNow, liveOutputs, frameMemory]
+    )
     const worldNode = useMemo(
         () => resolveScopeWorldNode(document.nodes, null, document.workspaceState?.liveWorldNodeIdByScope),
         [document.nodes, document.workspaceState?.liveWorldNodeIdByScope]
@@ -42,10 +58,19 @@ export default function PublicGraphSurface({ document, interactive = true }) {
                 showEmptyHint={false}
                 scopeId={null}
                 worldNode={worldNode}
-                liveOutputs={null}
+                liveOutputs={live ? liveOutputs : null}
                 showSelectionPills={false}
                 interactive={interactive}
             />
+            {live ? (
+                <LiveFeeds
+                    document={document}
+                    graphContext={graphContext}
+                    liveOutputs={liveOutputs}
+                    onLiveOutputChange={onLiveOutputChange}
+                    allow={PUBLIC_FEEDS}
+                />
+            ) : null}
         </div>
     )
 }

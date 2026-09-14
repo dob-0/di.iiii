@@ -28,7 +28,11 @@ export const EDITOR_FEEDS = Object.freeze({
     pictures: true, cameras: true, video: true, sound: true, keyboard: true,
     webcam: true, mic: true, midiIn: true, midiOut: true, dmx: true, keeper: true
 })
-export const OUTPUT_FEEDS = EDITOR_FEEDS
+// /out: everything that LISTENS, nothing that sends — the editor already
+// drives the rig, and two pages sending would double every cue.
+export const OUTPUT_FEEDS = Object.freeze({
+    ...EDITOR_FEEDS, midiOut: false, dmx: false, keeper: false
+})
 export const PUBLIC_FEEDS = Object.freeze({
     pictures: true, cameras: false, video: true, sound: true, keyboard: true,
     webcam: false, mic: false, midiIn: false, midiOut: false, dmx: false, keeper: false

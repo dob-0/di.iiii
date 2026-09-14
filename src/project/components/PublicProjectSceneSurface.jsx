@@ -161,6 +161,7 @@ export default function PublicProjectSceneSurface({
                 <PublicGraphSurface
                     document={document}
                     interactive={!caged && !isPreview}
+                    live={!isPreview}
                 />
             ) : (
                 <StudioViewport
