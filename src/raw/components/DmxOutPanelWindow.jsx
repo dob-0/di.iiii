@@ -22,6 +22,8 @@ import {
     sendRigCommand,
     toDmxByte,
 } from '../utils/dmxRigClient.js'
+import { clearFeedReport, reportFeed, useFeedReport } from '../utils/feedReports.js'
+import { toBoolean } from '../../project/graph/wireCoercion.js'
 
 const POLL_MS = 3000
 
@@ -36,11 +38,14 @@ const defaultFetch = (...args) => fetch(...args)
 // project's rig lives) or a vizzz node on the LAN. The MIDI Out contract, worn
 // by DMX: levels go out when a number CHANGES, nothing is sent for a value
 // that merely keeps being itself, and Status is the honest meter.
-export default function DmxOutPanelWindow({
+//
+// This is the FEED: mounted for as long as the DMX Out node exists, so a
+// closed window, a fullscreen room or another scope never stops the lights
+// following the graph. The window (DmxOutPanelWindow below) only shows it.
+export function DmxOutFeed({
     node,
     values,
     onStatus,
-    onConfigChange,
     fetchImpl = defaultFetch,
     pageProtocol = typeof window !== 'undefined' ? window.location.protocol : 'http:',
     pageOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost',
@@ -208,8 +213,10 @@ export default function DmxOutPanelWindow({
         const was = lastBlackout.current
         lastBlackout.current = blackout
         if (!live) return
-        const now = Boolean(blackout)
-        if (now === Boolean(was)) return
+        // "0", "false" typed into the field are OFF (wireCoercion's toBoolean);
+        // Boolean() read them as truthy words and blacked the rig out.
+        const now = toBoolean(blackout)
+        if (now === toBoolean(was)) return
         if (now) {
             send.current.master.cancel()
             send.current.level.cancel()
@@ -252,6 +259,31 @@ export default function DmxOutPanelWindow({
         && desk.status === DESK_STATUS.ANSWERING
         && !desk.summary?.output?.enabled
 
+    useEffect(() => {
+        reportFeed(node.id, { statusText, outputOff })
+    }, [node.id, statusText, outputOff])
+    useEffect(() => () => clearFeedReport(node.id), [node.id])
+
+    return null
+}
+
+// The DMX Out window: which rig, and what the feed says about it. Sends nothing.
+export default function DmxOutPanelWindow({
+    node,
+    values,
+    onConfigChange,
+    pageOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost',
+}) {
+    const report = useFeedReport(node.id)
+    // The rig is this window's own setting (a typed field must not lag behind
+    // the feed); what the rig SAYS comes from the feed.
+    const host = values?.host ?? node.values?.host ?? ''
+    const rigKind = resolveRigKind({ rig: values?.rig ?? node.values?.rig, host })
+    const deskMode = rigKind === RIG_KINDS.DESK
+    const statusText = report.statusText ?? ''
+    const outputOff = deskMode && Boolean(report.outputOff)
+    const unset = !deskMode && !String(host).trim()
+
     return (
         <div className="raw-dmx-panel">
             {deskMode && (
@@ -259,7 +291,7 @@ export default function DmxOutPanelWindow({
                     This di.iiii&rsquo;s own lighting desk &mdash; its rig, its scenes, its effects.
                 </div>
             )}
-            {!deskMode && rig.status === RIG_STATUS.UNSET && (
+            {unset && (
                 <div className="raw-dmx-panel-setup">
                     Name the rig to light &mdash; a vizzz node on this network.
                 </div>

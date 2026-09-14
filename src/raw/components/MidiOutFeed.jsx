@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { MIDI_STATUS, useMidiOutput } from '../utils/midiCapture.js'
+import { toBoolean } from '../../project/graph/wireCoercion.js'
 
 const STATUS_TEXT = {
     [MIDI_STATUS.REQUESTING]: 'Asking for MIDI access…',
@@ -46,8 +47,9 @@ export default function MidiOutFeed({ node, inputs, onStatus }) {
     useEffect(() => {
         const was = lastTrigger.current
         lastTrigger.current = trigger
-        const on = Boolean(trigger)
-        const wasOn = Boolean(was)
+        // toBoolean, not Boolean: "0" / "false" typed into Trigger are off.
+        const on = toBoolean(trigger)
+        const wasOn = toBoolean(was)
         const restrike = on && wasOn && trigger !== was
         if ((on && !wasOn) || restrike) {
             if (held.current) send([0x80 | (held.current.channel - 1), held.current.note, 0])

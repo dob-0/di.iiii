@@ -1,6 +1,15 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import MidiInputPanel, { noteName } from './MidiInputPanel.jsx'
+import MidiInputView, { MidiInputFeed, noteName } from './MidiInputPanel.jsx'
+
+// The feed listens for as long as the node exists; the window only looks.
+// Side by side here, the way RawEditor mounts them.
+const MidiInputPanel = (props) => (
+    <>
+        <MidiInputFeed {...props} />
+        <MidiInputView {...props} />
+    </>
+)
 
 const node = { id: 'midi-1', typeId: 'device.midi.in', values: {} }
 
@@ -105,6 +114,20 @@ describe('MidiInputPanel', () => {
         access.onstatechange()
 
         await waitFor(() => expect(screen.getByText('Late Controller')).toBeInTheDocument())
+    })
+
+    it('keeps publishing while the WINDOW is closed — only the feed unmounting clears the ports', async () => {
+        const midi = fakeMidi()
+        const onSignalChange = vi.fn()
+        render(<MidiInputFeed node={node} values={{ channel: 0 }} onSignalChange={onSignalChange} />)
+        const view = render(<MidiInputView node={node} values={{ channel: 0 }} />)
+        await waitFor(() => expect(midi.ports[0].onmidimessage).toBeTypeOf('function'))
+        view.unmount()
+
+        midi.send(new Uint8Array([0x90, 64, 80]))
+        await waitFor(() => expect(onSignalChange).toHaveBeenCalledWith('midi-1', { note: 64, velocity: 80, trigger: 1 }))
+        expect(onSignalChange).not.toHaveBeenCalledWith('midi-1', null)
+        expect(navigator.requestMIDIAccess).toHaveBeenCalledTimes(1)
     })
 
     it('clears every port on unmount', async () => {

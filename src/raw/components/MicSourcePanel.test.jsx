@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import MicSourcePanel from './MicSourcePanel.jsx'
+import MicSourcePanel, { MicFeed } from './MicSourcePanel.jsx'
 
 let pendingFrame = null
 class FakeAnalyser {
@@ -27,9 +27,9 @@ const stepFrame = async () => {
     await act(async () => { cb?.() })
 }
 
-describe('MicSourcePanel', () => {
+describe('MicFeed + MicSourcePanel', () => {
     it('shows an unavailable status instead of sitting blank when there is no microphone', async () => {
-        await act(async () => { render(<MicSourcePanel node={{ id: 'mic-1' }} />) })
+        await act(async () => { render(<><MicFeed node={{ id: 'mic-1' }} /><MicSourcePanel node={{ id: 'mic-1' }} /></>) })
         expect(screen.getByRole('status').textContent).toMatch(/no microphone/i)
     })
 
@@ -44,13 +44,13 @@ describe('MicSourcePanel', () => {
         }
         const onLevelsChange = vi.fn()
 
-        await act(async () => { render(<MicSourcePanel node={{ id: 'mic-1' }} onLevelsChange={onLevelsChange} />) })
+        await act(async () => { render(<><MicFeed node={{ id: 'mic-2' }} onLevelsChange={onLevelsChange} /><MicSourcePanel node={{ id: 'mic-2' }} /></>) })
 
         expect(screen.getByRole('status').textContent).toMatch(/denied/i)
-        expect(onLevelsChange).not.toHaveBeenCalledWith('mic-1', expect.any(Number), expect.anything())
+        expect(onLevelsChange).not.toHaveBeenCalledWith('mic-2', expect.any(Number), expect.anything())
     })
 
-    it('reports levels up to the caller once active, and clears them on unmount', async () => {
+    it('reports levels while the window is closed, and clears them only when the feed goes', async () => {
         const track = { stop: vi.fn() }
         navigator.mediaDevices = { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [track] }) }
         window.AudioContext = function FakeAudioContext() {
@@ -60,21 +60,25 @@ describe('MicSourcePanel', () => {
         }
         const onLevelsChange = vi.fn()
 
-        let view
+        let feed
         await act(async () => {
-            view = render(<MicSourcePanel node={{ id: 'mic-1' }} onLevelsChange={onLevelsChange} />)
+            feed = render(<MicFeed node={{ id: 'mic-3' }} onLevelsChange={onLevelsChange} />)
         })
         await stepFrame()
 
-        expect(screen.queryByRole('status')).toBeNull()
         expect(onLevelsChange).toHaveBeenCalled()
         const [nodeId, volume, frequency] = onLevelsChange.mock.calls[0]
-        expect(nodeId).toBe('mic-1')
+        expect(nodeId).toBe('mic-3')
         expect(volume).toBeGreaterThan(0)
         expect(Array.from(frequency)).toEqual(Array(512).fill(9))
 
-        view.unmount()
-        expect(onLevelsChange).toHaveBeenLastCalledWith('mic-1', null, null)
+        // The window is a meter over Volume; opening it asks nothing.
+        await act(async () => { render(<MicSourcePanel node={{ id: 'mic-3' }} volume={volume} />) })
+        expect(screen.queryByRole('status')).toBeNull()
+        expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1)
+
+        feed.unmount()
+        expect(onLevelsChange).toHaveBeenLastCalledWith('mic-3', null, null)
         expect(track.stop).toHaveBeenCalled()
     })
 })

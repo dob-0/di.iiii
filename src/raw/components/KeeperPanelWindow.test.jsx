@@ -1,6 +1,15 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import KeeperPanelWindow from './KeeperPanelWindow.jsx'
+import KeeperView, { KeeperFeed } from './KeeperPanelWindow.jsx'
+
+// The feed holds the conversation for as long as the node exists; the window
+// asks through it. Side by side here, the way RawEditor mounts them.
+const KeeperPanelWindow = (props) => (
+    <>
+        <KeeperFeed {...props} />
+        <KeeperView {...props} />
+    </>
+)
 import { KEEPER_STATUS } from '../utils/keeperClient.js'
 
 const node = { id: 'keeper-1', typeId: 'agent.keeper', values: {} }
@@ -118,13 +127,33 @@ describe('KeeperPanelWindow', () => {
         await waitFor(() => expect(screen.getByText('The door keeps itself.')).toBeInTheDocument())
     })
 
-    it('clears both live ports on unmount so a closed window stops feeding the graph', () => {
+    it('clears both live ports when the NODE goes (its feed unmounts)', () => {
         const onReplyChange = vi.fn()
         const { unmount } = render(
             <KeeperPanelWindow node={node} values={configured} onReplyChange={onReplyChange} />
         )
         unmount()
         expect(onReplyChange).toHaveBeenCalledWith('keeper-1', null, null)
+    })
+
+    it('a window closed mid-answer still delivers the reply into the graph', async () => {
+        let resolveAsk
+        const askImpl = vi.fn(() => new Promise((resolve) => { resolveAsk = resolve }))
+        const onReplyChange = vi.fn()
+        render(<KeeperFeed node={node} values={configured} onReplyChange={onReplyChange} askImpl={askImpl} />)
+        const view = render(<KeeperView node={node} values={configured} />)
+        fireEvent.change(screen.getByPlaceholderText(/ask the keeper/i), { target: { value: 'hello' } })
+        fireEvent.click(screen.getByRole('button', { name: /ask/i }))
+        await waitFor(() => expect(askImpl).toHaveBeenCalled())
+
+        view.unmount()
+        resolveAsk({ status: KEEPER_STATUS.ANSWERED, text: 'Still here.' })
+        await waitFor(() => expect(onReplyChange).toHaveBeenLastCalledWith('keeper-1', 'Still here.', false))
+        expect(onReplyChange).not.toHaveBeenCalledWith('keeper-1', null, null)
+
+        // Re-opened, the window shows the answer the feed kept.
+        render(<KeeperView node={node} values={configured} />)
+        expect(screen.getByText('Still here.')).toBeInTheDocument()
     })
 
     it('warns when the answer was cut off rather than presenting a fragment as whole', async () => {

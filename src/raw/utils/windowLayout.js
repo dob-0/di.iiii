@@ -67,6 +67,20 @@ export function selectMountedPanelNodes({
     ))
 }
 
+// Per-universe chrome control (product decision 2026-07-17): walk up from
+// the current scope to the nearest ancestor universe.space and read its Show
+// toolbar. `readShowChrome(node)` resolves the value THROUGH the graph — a
+// Boolean (or a number above 0.5) wired into Show toolbar hides the chrome;
+// reading node.values alone made that wire draw and do nothing. Zen wins.
+export function resolveChromeVisible({ zen = false, navStack = [], nodes = [], readShowChrome = (node) => node?.values?.showChrome } = {}) {
+    if (zen) return false
+    for (let i = navStack.length - 1; i >= 1; i -= 1) {
+        const scopeNode = nodes.find((node) => node.id === navStack[i])
+        if (scopeNode?.typeId === 'universe.space') return readShowChrome(scopeNode) !== false
+    }
+    return true
+}
+
 export function clampWindowFrame(frame = {}, bounds = {}) {
     const minTop = Number.isFinite(bounds.minTop) ? bounds.minTop : DEFAULT_RAW_WORKSPACE_TOP
     const allowOverflowLeft = bounds.allowOverflowLeft === true

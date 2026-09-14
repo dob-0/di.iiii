@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { KEEPER_STATUS, askKeeper } from '../utils/keeperClient.js'
+import { clearFeedReport, reportFeed, useFeedReport } from '../utils/feedReports.js'
 
 const STATUS_LABEL = {
     [KEEPER_STATUS.IDLE]: 'Ready',
@@ -9,43 +10,42 @@ const STATUS_LABEL = {
     [KEEPER_STATUS.ERROR]: 'Error'
 }
 
-export default function KeeperPanelWindow({ node, values, onReplyChange, onConfigChange, askImpl = askKeeper }) {
+// The keeper's conversation, held for as long as the Keeper NODE exists. A
+// question asked and a window closed mid-answer still lands: the reply keeps
+// feeding the graph wherever the window is. The window (below) asks through
+// the feed's ask() and shows what it reports.
+export function KeeperFeed({ node, values, onReplyChange, askImpl = askKeeper }) {
     const endpoint = values?.endpoint ?? node.values?.endpoint ?? ''
     const model = values?.model ?? node.values?.model ?? ''
     const system = values?.system ?? node.values?.system ?? ''
-    // A wired `prompt` port wins over what was typed, so a graph can drive the
-    // keeper; the box is the fallback when nothing is connected.
-    const wiredPrompt = values?.prompt ?? ''
 
-    const [typedPrompt, setTypedPrompt] = useState('')
     const [status, setStatus] = useState(KEEPER_STATUS.IDLE)
     const [reply, setReply] = useState('')
     const [message, setMessage] = useState('')
     const [truncated, setTruncated] = useState(false)
     const abortRef = useRef(null)
 
-    const prompt = wiredPrompt || typedPrompt
-    const configured = Boolean(String(endpoint).trim() && String(model).trim())
-
-    // Held in a ref, and the cleanup below depends only on node.id. The parent
-    // passes this as an inline arrow, so its identity changes on every render of
-    // the editor; with it in the dependency list the cleanup ran on every one of
-    // those renders, aborting whatever request was in flight. The panel then sat
-    // on "Asking…" for ever, because the aborted branch returns before it can
-    // set a status. Unit tests could not see it — it needs a parent that
-    // re-renders.
+    // Held in refs: the parent passes inline arrows, and with their identity in
+    // an effect's dependencies every editor render aborted the request in
+    // flight and left the keeper on "Asking…" for ever.
     const onReplyChangeRef = useRef(onReplyChange)
-    useEffect(() => { onReplyChangeRef.current = onReplyChange })
+    const latest = useRef({ endpoint, model, system, reply, askImpl })
+    useEffect(() => {
+        onReplyChangeRef.current = onReplyChange
+        latest.current = { endpoint, model, system, reply, askImpl }
+    })
 
-    // Clear this node's live ports on unmount, exactly as the capture panels do
-    // — a stale reply must not keep feeding the graph after the window closes.
+    // Cleared when the NODE goes (the feed unmounts) — a stale reply must not
+    // keep feeding the graph after the keeper is deleted.
     useEffect(() => () => {
         abortRef.current?.abort()
         onReplyChangeRef.current?.(node.id, null, null)
+        clearFeedReport(node.id)
     }, [node.id])
 
-    const ask = useCallback(async () => {
-        if (!configured || !String(prompt).trim()) return
+    const ask = useCallback(async (prompt) => {
+        const { endpoint: to, model: using, system: brief, reply: before, askImpl: asking } = latest.current
+        if (!String(to).trim() || !String(using).trim() || !String(prompt ?? '').trim()) return
         abortRef.current?.abort()
         const controller = typeof AbortController === 'function' ? new AbortController() : null
         abortRef.current = controller
@@ -56,9 +56,9 @@ export default function KeeperPanelWindow({ node, values, onReplyChange, onConfi
         // The last answer is still the last answer while a new one is in
         // flight; `busy` is what tells downstream that a fresher one is coming.
         // Passing null here would clear the port (see handleLiveOutputChange).
-        onReplyChangeRef.current?.(node.id, reply || null, true)
+        onReplyChangeRef.current?.(node.id, before || null, true)
 
-        const result = await askImpl({ endpoint, model, system, prompt, signal: controller?.signal })
+        const result = await asking({ endpoint: to, model: using, system: brief, prompt, signal: controller?.signal })
 
         // A superseded request must not overwrite the reply that replaced it.
         if (controller && controller.signal.aborted) return
@@ -77,7 +77,29 @@ export default function KeeperPanelWindow({ node, values, onReplyChange, onConfi
             setReply('')
             onReplyChangeRef.current?.(node.id, null, false)
         }
-    }, [askImpl, configured, endpoint, model, node.id, prompt, reply, system])
+    }, [node.id])
+
+    useEffect(() => {
+        reportFeed(node.id, { status, reply, message, truncated, ask })
+    }, [node.id, status, reply, message, truncated, ask])
+
+    return null
+}
+
+// The Keeper window: set it up, type a question, read the answer — all of it
+// through the feed above, so closing the window loses nothing.
+export default function KeeperPanelWindow({ node, values, onConfigChange }) {
+    const endpoint = values?.endpoint ?? node.values?.endpoint ?? ''
+    const model = values?.model ?? node.values?.model ?? ''
+    // A wired `prompt` port wins over what was typed, so a graph can drive the
+    // keeper; the box is the fallback when nothing is connected.
+    const wiredPrompt = values?.prompt ?? ''
+
+    const [typedPrompt, setTypedPrompt] = useState('')
+    const { status = KEEPER_STATUS.IDLE, reply = '', message = '', truncated = false, ask = null } = useFeedReport(node.id)
+
+    const prompt = wiredPrompt || typedPrompt
+    const configured = Boolean(String(endpoint).trim() && String(model).trim())
 
     const busy = status === KEEPER_STATUS.ASKING
 
@@ -136,8 +158,8 @@ export default function KeeperPanelWindow({ node, values, onReplyChange, onConfi
                 <button
                     type="button"
                     className="raw-keeper-panel-ask"
-                    onClick={ask}
-                    disabled={busy || !configured || !String(prompt).trim()}
+                    onClick={() => ask?.(prompt)}
+                    disabled={busy || !ask || !configured || !String(prompt).trim()}
                 >
                     {busy ? 'Asking…' : 'Ask'}
                 </button>

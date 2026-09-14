@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { createEdge, createNode } from '../../project/nodeRegistry.js'
+import { createNodeGraphContext, evaluateNodeInput } from '../../project/graph/nodeGraphRuntime.js'
 import {
+    resolveChromeVisible,
     clampWindowFrame,
     getGraphEdgeInsets,
     getWorkspaceTopInset,
@@ -569,5 +572,28 @@ describe('placeNewWindowFrame', () => {
         expectInside(onScreen(frame, viewport, 'screen'), desktop)
         expect(frame.zIndex).toBe(7)
         expect(frame.visible).toBe(true)
+    })
+})
+
+describe('resolveChromeVisible', () => {
+    const kiosk = createNode('universe.space', { id: 'kiosk', values: { showChrome: true } })
+    const off = createNode('value.boolean', { id: 'off', values: { value: false } })
+
+    it('a Boolean WIRED into the Kiosk\'s Show toolbar hides the chrome (the wire used to do nothing)', () => {
+        const document = { nodes: [kiosk, off], edges: [createEdge('off', 'out', 'kiosk', 'showChrome')] }
+        const context = createNodeGraphContext(document)
+        expect(resolveChromeVisible({
+            navStack: [null, 'kiosk'],
+            nodes: document.nodes,
+            readShowChrome: (node) => evaluateNodeInput(node, 'showChrome', context)
+        })).toBe(false)
+    })
+
+    it('an unwired Kiosk still reads its typed value; zen always hides; no kiosk shows', () => {
+        const hidden = { ...kiosk, values: { showChrome: false } }
+        expect(resolveChromeVisible({ navStack: [null, 'kiosk'], nodes: [hidden] })).toBe(false)
+        expect(resolveChromeVisible({ navStack: [null, 'kiosk'], nodes: [kiosk] })).toBe(true)
+        expect(resolveChromeVisible({ zen: true, navStack: [null], nodes: [] })).toBe(false)
+        expect(resolveChromeVisible({ navStack: [null], nodes: [] })).toBe(true)
     })
 })

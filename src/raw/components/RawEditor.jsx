@@ -16,15 +16,11 @@ import PublishPanelWindow from './PublishPanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
-import VideoFrameFeed from './VideoFrameFeed.jsx'
-import TopNetworkFeed from './TopNetworkFeed.jsx'
+import LiveFeeds from './LiveFeeds.jsx'
 import DeskPanelWindow from './DeskPanelWindow.jsx'
 import TopInsidePanel from './topInside/TopInsidePanel.jsx'
 import { isTopType } from '../../project/tops/topOperators.js'
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
-import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
-import KeyboardFeed from './KeyboardFeed.jsx'
-import MidiOutFeed from './MidiOutFeed.jsx'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
@@ -45,7 +41,7 @@ import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode, operationLabelPatch } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { readNode } from '../../project/graph/nodeReading.js'
-import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs, evaluateNodeOutput } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode } from '../../project/graph/useGraphClock.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
@@ -74,7 +70,7 @@ import { describeRootEmptyCanvas } from '../utils/emptyCanvasHint.js'
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
-import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, resolveChromeVisible, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { getCardBox } from '../utils/cardGeometry.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen } from '../utils/zenMode.js'
 import {
@@ -485,19 +481,19 @@ export default function RawEditor({
     // inside a non-universe container with no universe ancestor) always
     // shows chrome. Esc already pops the scope stack unconditionally
     // (existing handler below), so chromeless scopes are never a dead end.
+    // Zen wins over the scope rule: a scope that would show chrome still
+    // shows none while the workspace is zen. The palette is the way back,
+    // and Esc still pops the scope stack, so this is never a dead end. The
+    // Kiosk's Show toolbar is read through its wire (resolveChromeVisible).
     const chromeVisible = useMemo(() => {
-        // Zen wins over the scope rule: a scope that would show chrome still
-        // shows none while the workspace is zen. The palette is the way back,
-        // and Esc still pops the scope stack, so this is never a dead end.
-        if (zen) return false
-        for (let i = navStack.length - 1; i >= 1; i--) {
-            const scopeNode = authoredNodes.find((n) => n.id === navStack[i])
-            if (scopeNode?.typeId === 'universe.space') {
-                return scopeNode.values?.showChrome !== false
-            }
-        }
-        return true
-    }, [zen, navStack, authoredNodes])
+        const context = createNodeGraphContext(document)
+        return resolveChromeVisible({
+            zen,
+            navStack,
+            nodes: authoredNodes,
+            readShowChrome: (scopeNode) => evaluateNodeInput(scopeNode, 'showChrome', context)
+        })
+    }, [zen, navStack, authoredNodes, document])
     // Computed once: pointer type doesn't change mid-session on the devices this
     // matters for, and re-checking on every render would just be wasted work.
     const [pointerVerb] = useState(() => (
@@ -1390,31 +1386,17 @@ export default function RawEditor({
             return next
         })
     }, [])
-    // Stable per-port wrappers for the capture panels. These MUST NOT be
-    // inline lambdas at the call site: the panels' effects depend on the
-    // callback identity, and a fresh lambda per render makes cleanup fire
-    // every render — with a live capture that is set→delete→set on
-    // liveOutputs, an infinite update loop (hit with an active webcam,
-    // 2026-08-08).
-    const handleFrameOutputChange = useCallback((nodeId, texture) => {
-        handleLiveOutputChange(nodeId, 'frame', texture)
+    // A Button press is a live event, never a document op (a cue in the undo
+    // history made Ctrl+Z un-press the show). Counted per window, published
+    // through the side channel; view.button's runtime adds any stored count.
+    const pressCountsRef = useRef(new Map())
+    const handleButtonPress = useCallback((nodeId) => {
+        const next = (pressCountsRef.current.get(nodeId) || 0) + 1
+        pressCountsRef.current.set(nodeId, next)
+        handleLiveOutputChange(nodeId, 'presses', next)
     }, [handleLiveOutputChange])
-    const handleKeyState = useCallback((nodeId, pressed, count) => {
-        handleLiveOutputChange(nodeId, 'pressed', pressed)
-        handleLiveOutputChange(nodeId, 'count', count)
-    }, [handleLiveOutputChange])
-    const handleMidiOutStatus = useCallback((nodeId, status) => {
-        handleLiveOutputChange(nodeId, 'status', status)
-    }, [handleLiveOutputChange])
-    const handleSoundOutputChange = useCallback((nodeId, levels) => {
-        handleLiveOutputChange(nodeId, 'volume', levels?.volume ?? null)
-        handleLiveOutputChange(nodeId, 'low', levels?.low ?? null)
-        handleLiveOutputChange(nodeId, 'mid', levels?.mid ?? null)
-        handleLiveOutputChange(nodeId, 'high', levels?.high ?? null)
-    }, [handleLiveOutputChange])
-    const handleMicOutputChange = useCallback((nodeId, volume, frequency) => {
-        handleLiveOutputChange(nodeId, 'volume', volume)
-        handleLiveOutputChange(nodeId, 'frequency', frequency)
+    const handleButtonHeld = useCallback((nodeId, held) => {
+        handleLiveOutputChange(nodeId, 'pressed', held)
     }, [handleLiveOutputChange])
     // Stable graph-surface callbacks: as inline lambdas these re-registered
     // RawGraphSurface's window-level drag/key listeners on every parent
@@ -1645,25 +1627,17 @@ export default function RawEditor({
             )
         }
         if (node.typeId === 'source.webcam') {
-            return <WebcamSourcePanel node={node} onFrameChange={handleFrameOutputChange} />
+            // A view of the feed LiveFeeds holds — closing it stops nothing.
+            return <WebcamSourcePanel node={node} texture={liveOutputs.get(`${node.id}:frame`) ?? null} />
         }
         if (node.typeId === 'source.mic') {
-            return <MicSourcePanel node={node} onLevelsChange={handleMicOutputChange} />
+            return <MicSourcePanel node={node} volume={liveOutputs.get(`${node.id}:volume`) ?? 0} />
         }
         if (node.typeId === 'device.midi.in') {
             return (
                 <MidiInputPanel
                     node={node}
                     values={resolvedValues}
-                    onSignalChange={(nodeId, ports) => {
-                        // null clears every port at once (unmount). Otherwise
-                        // only the ports this message carries are written, so a
-                        // CC does not wipe the last note and vice versa.
-                        for (const portId of ['note', 'velocity', 'cc', 'value', 'trigger']) {
-                            if (ports === null) handleLiveOutputChange(nodeId, portId, null)
-                            else if (ports[portId] !== undefined) handleLiveOutputChange(nodeId, portId, ports[portId])
-                        }
-                    }}
                     onConfigChange={(nodeId, patch) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
@@ -1689,10 +1663,6 @@ export default function RawEditor({
                 <KeeperPanelWindow
                     node={node}
                     values={resolvedValues}
-                    onReplyChange={(nodeId, reply, busy) => {
-                        handleLiveOutputChange(nodeId, 'reply', reply)
-                        handleLiveOutputChange(nodeId, 'busy', busy)
-                    }}
                     // Endpoint and model are settable in the window itself, not
                     // only in the inspector: a node the palette can place must be
                     // usable where it lands, without also placing an inspector.
@@ -1708,7 +1678,6 @@ export default function RawEditor({
                 <DmxOutPanelWindow
                     node={node}
                     values={resolvedValues}
-                    onStatus={handleMidiOutStatus}
                     // Host is settable in the window itself, not only in the
                     // inspector — a node the palette can place must be usable
                     // where it lands.
@@ -1727,11 +1696,9 @@ export default function RawEditor({
                 <ButtonPanelWindow
                     node={node}
                     values={resolvedValues}
-                    onHeld={(nodeId, held) => handleLiveOutputChange(nodeId, 'pressed', held)}
-                    onPress={(nodeId) => applyLocalOps({
-                        type: 'updateNode',
-                        payload: { nodeId, patch: { values: { ...node.values, presses: (Number(node.values?.presses) || 0) + 1 } } }
-                    })}
+                    presses={evaluateNodeOutput(node, 'presses', graphContext)}
+                    onHeld={handleButtonHeld}
+                    onPress={handleButtonPress}
                 />
             )
         }
@@ -2550,49 +2517,16 @@ export default function RawEditor({
                 </div>
             )}
 
-            {/* The picture operators run while any exist — see TopNetworkFeed. */}
-            {nodes.some((node) => isTopType(node.typeId)) ? (
-                <TopNetworkFeed document={document} spaceId={resolvedSpaceId} onLiveOutputChange={handleLiveOutputChange} />
-            ) : null}
-
-            {/* One invisible feed per playing Video node, so a Frame wire
-                carries the picture even while the room isn't on screen —
-                see VideoFrameFeed for why this lives here. */}
-            {nodes
-                .filter((node) => node.typeId === 'media.video' && node.values?.src && assetMap.has(node.values.src))
-                .map((node) => (
-                    <VideoFrameFeed
-                        key={node.id}
-                        node={node}
-                        asset={assetMap.get(node.values.src)}
-                        onFrameChange={handleFrameOutputChange}
-                    />
-                ))}
-            {nodes
-                .filter((node) => node.typeId === 'media.audio' && node.values?.src && assetMap.has(node.values.src))
-                .map((node) => (
-                    <SoundAnalysisFeed
-                        key={node.id}
-                        node={node}
-                        asset={assetMap.get(node.values.src)}
-                        onLevelsChange={handleSoundOutputChange}
-                    />
-                ))}
-            {nodes
-                .filter((node) => node.typeId === 'device.keyboard')
-                .map((node) => (
-                    <KeyboardFeed key={node.id} node={node} onKeyState={handleKeyState} />
-                ))}
-            {nodes
-                .filter((node) => node.typeId === 'device.midi.out')
-                .map((node) => (
-                    <MidiOutFeed
-                        key={node.id}
-                        node={node}
-                        inputs={evaluateNodeInputs(node, graphContext)}
-                        onStatus={handleMidiOutStatus}
-                    />
-                ))}
+            {/* Every live feed, for as long as its node exists — a window is
+                only a view of it. See LiveFeeds. */}
+            <LiveFeeds
+                document={document}
+                graphContext={graphContext}
+                liveOutputs={liveOutputs}
+                assetMap={assetMap}
+                spaceId={resolvedSpaceId}
+                onLiveOutputChange={handleLiveOutputChange}
+            />
 
             {/* Fullscreen room — takes over the full viewport. Any scope,
                 not only Worlds: the room you are standing in IS the thing

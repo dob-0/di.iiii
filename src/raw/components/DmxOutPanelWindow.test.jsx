@@ -1,6 +1,15 @@
 import { render, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
+import DmxOutView, { DmxOutFeed } from './DmxOutPanelWindow.jsx'
+
+// The feed sends for as long as the node exists; the window only shows it.
+// Side by side here, the way RawEditor mounts them.
+const DmxOutPanelWindow = (props) => (
+    <>
+        <DmxOutFeed {...props} />
+        <DmxOutView {...props} />
+    </>
+)
 
 const node = (values = {}) => ({ id: 'dmx-1', typeId: 'device.dmx.out', values })
 
@@ -90,6 +99,34 @@ describe('DmxOutPanelWindow', () => {
             <DmxOutPanelWindow node={node({ host: 'rig' })} values={{ blackout: 1 }} fetchImpl={fetchImpl} pageProtocol="http:" />
         )
         await waitFor(() => expect(commands.filter((c) => c.url === 'http://rig/blackout')).toHaveLength(1))
+    })
+
+    it('"false" and "0" typed into Blackout are off — the rig is not blacked out by a word', async () => {
+        const { fetchImpl, commands } = fakeRig()
+        const view = render(
+            <DmxOutPanelWindow node={node({ host: 'rig' })} values={{ blackout: '' }} fetchImpl={fetchImpl} pageProtocol="http:" />
+        )
+        view.rerender(<DmxOutPanelWindow node={node({ host: 'rig' })} values={{ blackout: 'false' }} fetchImpl={fetchImpl} pageProtocol="http:" />)
+        view.rerender(<DmxOutPanelWindow node={node({ host: 'rig' })} values={{ blackout: '0' }} fetchImpl={fetchImpl} pageProtocol="http:" />)
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        expect(commands.filter((c) => c.url === 'http://rig/blackout')).toHaveLength(0)
+        view.rerender(<DmxOutPanelWindow node={node({ host: 'rig' })} values={{ blackout: 'true' }} fetchImpl={fetchImpl} pageProtocol="http:" />)
+        await waitFor(() => expect(commands.filter((c) => c.url === 'http://rig/blackout')).toHaveLength(1))
+    })
+
+    it('keeps sending with its WINDOW closed — the feed, not the window, holds the rig', async () => {
+        const { fetchImpl, commands } = fakeRig()
+        const feed = render(<DmxOutFeed node={node({ host: 'rig' })} values={{ channel: 2, value: 0 }} fetchImpl={fetchImpl} pageProtocol="http:" />)
+        // No window mounted at all.
+        feed.rerender(<DmxOutFeed node={node({ host: 'rig' })} values={{ channel: 2, value: 1 }} fetchImpl={fetchImpl} pageProtocol="http:" />)
+        await waitFor(() => expect(commands.some((c) => c.url === 'http://rig/set?ch=2&v=255')).toBe(true))
+    })
+
+    it('the window alone sends nothing and polls nothing', async () => {
+        const { fetchImpl } = fakeRig()
+        render(<DmxOutView node={node({ host: 'rig' })} values={{ value: 1 }} fetchImpl={fetchImpl} pageProtocol="http:" />)
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        expect(fetchImpl).not.toHaveBeenCalled()
     })
 
     it('settles on the answer under a parent that re-renders with inline arrows', async () => {

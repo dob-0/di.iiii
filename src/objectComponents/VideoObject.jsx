@@ -38,8 +38,12 @@ const videoCache = new Map()
 // routed into Web Audio only ONCE, so two objects that collapsed onto one
 // element would leave the second with no panner — audible, but flat and in the
 // wrong place, which is worse than the cost of its own decoder.
+//
+// A muted element's volume is never heard (attachVideoSound zeroes it), so
+// muted requests share one element whatever volume they carry — the Raw
+// frame feed and a muted room Video at volume 0.4 are one decoder, not two.
 const cacheKey = (src, muted, volume, loop, exclusive) =>
-    `${src}|${muted ? 1 : 0}|${volume}|${loop === false ? 0 : 1}|${exclusive || 'shared'}`
+    `${src}|${muted ? 1 : 0}|${muted ? 'silent' : volume}|${loop === false ? 0 : 1}|${exclusive || 'shared'}`
 
 let exclusiveSeq = 0
 export const nextExclusiveToken = () => `exclusive-${exclusiveSeq += 1}`

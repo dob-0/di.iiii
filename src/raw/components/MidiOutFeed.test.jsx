@@ -53,6 +53,20 @@ describe('MidiOutFeed', () => {
         expect(midi.sent).not.toContainEqual([0x80, 64, 0])
     })
 
+    it('"false" and "0" typed into Trigger are off — a word never strikes a note', async () => {
+        const midi = fakeMidiOut()
+        const { rerender } = render(
+            <MidiOutFeed node={node} inputs={{ trigger: '', note: 60, velocity: 100, channel: 1 }} />
+        )
+        await waitFor(() => expect(navigator.requestMIDIAccess).toHaveBeenCalled())
+        rerender(<MidiOutFeed node={node} inputs={{ trigger: 'false', note: 60, velocity: 100, channel: 1 }} />)
+        rerender(<MidiOutFeed node={node} inputs={{ trigger: '0', note: 60, velocity: 100, channel: 1 }} />)
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        expect(midi.sent).not.toContainEqual([0x90, 60, 100])
+        rerender(<MidiOutFeed node={node} inputs={{ trigger: 'true', note: 60, velocity: 100, channel: 1 }} />)
+        await waitFor(() => expect(midi.sent).toContainEqual([0x90, 60, 100]))
+    })
+
     it('a trigger that stays truthy but changes re-strikes — the rising-count idiom', async () => {
         const midi = fakeMidiOut()
         const { rerender } = render(

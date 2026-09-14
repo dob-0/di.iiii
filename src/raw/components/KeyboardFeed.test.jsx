@@ -30,4 +30,13 @@ describe('KeyboardFeed', () => {
         fireEvent.keyDown(window, { code: 'KeyG', key: 'G' })
         expect(onKeyState).toHaveBeenCalledWith('k1', true, 1)
     })
+
+    it('a key wired into Key wins over the stored one', () => {
+        const onKeyState = vi.fn()
+        render(<KeyboardFeed node={node} keyValue="x" onKeyState={onKeyState} />)
+        fireEvent.keyDown(window, { code: 'Space', key: ' ' })
+        expect(onKeyState).not.toHaveBeenCalled()
+        fireEvent.keyDown(window, { code: 'KeyX', key: 'x' })
+        expect(onKeyState).toHaveBeenCalledWith('k1', true, 1)
+    })
 })

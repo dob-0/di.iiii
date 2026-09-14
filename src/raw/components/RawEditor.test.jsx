@@ -68,10 +68,16 @@ vi.mock('../../project/hooks/useProjectPresence.js', () => ({
 // Captures the onFrameChange prop each render so the stable-identity
 // regression below can compare references across re-renders.
 const webcamPanelProps = []
+const webcamFeedProps = []
 vi.mock('./WebcamSourcePanel.jsx', () => ({
     default: (props) => {
         webcamPanelProps.push(props)
         return <div data-testid="mock-webcam-panel" />
+    },
+    // The capture lives in the feed (LiveFeeds), not the window.
+    WebcamFeed: (props) => {
+        webcamFeedProps.push(props)
+        return null
     }
 }))
 
@@ -1212,21 +1218,45 @@ describe('RawEditor capture panel callback stability', () => {
                 { id: 'cam-1', typeId: 'source.webcam', label: 'Webcam', parentId: null, values: {} }
             ])
         )
-        webcamPanelProps.length = 0
+        webcamFeedProps.length = 0
         render(<RawEditor localStorageKey={WEBCAM_STORAGE_KEY} />)
-        expect(webcamPanelProps.length).toBeGreaterThan(0)
-        const first = webcamPanelProps[0].onFrameChange
+        expect(webcamFeedProps.length).toBeGreaterThan(0)
+        const first = webcamFeedProps[0].onFrameChange
 
-        // what the real panel does with a live camera: report a frame — this
+        // what the real feed does with a live camera: report a frame — this
         // mutates liveOutputs and re-renders the editor
         act(() => { first('cam-1', { isTexture: true }) })
 
-        const last = webcamPanelProps.at(-1).onFrameChange
-        expect(webcamPanelProps.length).toBeGreaterThan(1)
+        const last = webcamFeedProps.at(-1).onFrameChange
+        expect(webcamFeedProps.length).toBeGreaterThan(1)
         expect(last).toBe(first)
     })
-})
 
+    // Raw fix wave 2026-09-14 (graph #2): the camera belonged to its window, so
+    // a closed window, fullscreen or another scope blacked every Plane it fed.
+    it('keeps the webcam feed mounted with its window closed, and hands the window the frame', () => {
+        window.localStorage.setItem(
+            WEBCAM_STORAGE_KEY,
+            makeWorkspaceDoc([
+                { id: 'cam-open', typeId: 'source.webcam', label: 'Webcam', parentId: null, values: {} },
+                { id: 'cam-shut', typeId: 'source.webcam', label: 'Webcam 2', parentId: null, values: { frame: { x: 0, y: 0, width: 200, height: 150, visible: false } } }
+            ])
+        )
+        webcamFeedProps.length = 0
+        webcamPanelProps.length = 0
+        render(<RawEditor localStorageKey={WEBCAM_STORAGE_KEY} />)
+        const fed = new Set(webcamFeedProps.map((props) => props.node.id))
+        expect(fed.has('cam-open')).toBe(true)
+        expect(fed.has('cam-shut')).toBe(true)
+
+        const texture = { isTexture: true, image: {} }
+        act(() => { webcamFeedProps[0].onFrameChange('cam-open', texture) })
+        const windows = webcamPanelProps.filter((props) => props.node.id === 'cam-open')
+        expect(windows.length).toBeGreaterThan(0)
+        expect(windows.at(-1).texture).toBe(texture)
+        expect(webcamPanelProps.some((props) => props.node.id === 'cam-shut')).toBe(false)
+    })
+})
 
 // A document built to catch ONE wiring mistake, because nothing simpler can.
 //

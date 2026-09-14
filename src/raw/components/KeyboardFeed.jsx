@@ -17,8 +17,11 @@ const eventMatches = (event, wanted) => {
 // node (the VideoFrameFeed shape). Ignores keys typed into fields: the
 // spacebar that fires the show must not fire while naming a node. Repeat
 // events don't recount — a held key is one event, the Counter convention.
-export default function KeyboardFeed({ node, onKeyState }) {
-    const wanted = normaliseKey(node.values?.key)
+//
+// `keyValue` is the RESOLVED key — a String wired into Key picks the key; the
+// stored field is only the fallback (it used to be the only thing read).
+export default function KeyboardFeed({ node, keyValue, onKeyState }) {
+    const wanted = normaliseKey(typeof keyValue === 'string' ? keyValue : node.values?.key)
 
     useEffect(() => {
         let count = 0

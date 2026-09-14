@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { MIDI_STATUS, useMidiInput } from '../utils/midiCapture.js'
+import { clearFeedReport, reportFeed, useFeedReport } from '../utils/feedReports.js'
 
 const STATUS_MESSAGE = {
     [MIDI_STATUS.REQUESTING]: 'Asking for MIDI access…',
@@ -13,24 +14,27 @@ const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 
 // Middle C = note 60 = C4 in the convention most controllers print on the case.
 export const noteName = (note) => `${NOTE_NAMES[note % 12]}${Math.floor(note / 12) - 1}`
 
-export default function MidiInputPanel({ node, values, onSignalChange, onConfigChange }) {
+// The MIDI port, listened to for as long as the MIDI In NODE exists — the
+// window can close and Note, CC and Trigger keep driving the graph. One
+// listener per node, here only.
+export function MidiInputFeed({ node, values, onSignalChange }) {
     const deviceId = values?.deviceId ?? node.values?.deviceId ?? ''
     const channel = Number(values?.channel ?? node.values?.channel ?? 0)
 
-    const [last, setLast] = useState(null)
-    // The trigger port is declared `signal`. The runtime never computes signal
-    // outputs, so this follows the one idiom that works here (see time.beat): a
-    // monotonically rising count, where a consumer detects an event by the
-    // number changing rather than by catching a pulse between frames.
+    // The trigger port is declared `signal`: a monotonically rising count, where
+    // a consumer detects an event by the number changing rather than by
+    // catching a pulse between frames (see wireCoercion.js).
     const triggerRef = useRef(0)
+    const onSignalChangeRef = useRef(onSignalChange)
+    useEffect(() => { onSignalChangeRef.current = onSignalChange })
 
     const handleMessage = useCallback((message) => {
         triggerRef.current += 1
-        setLast(message)
+        reportFeed(node.id, { last: message })
         if (message.kind === 'cc') {
-            onSignalChange?.(node.id, { cc: message.cc, value: message.value, trigger: triggerRef.current })
+            onSignalChangeRef.current?.(node.id, { cc: message.cc, value: message.value, trigger: triggerRef.current })
         } else {
-            onSignalChange?.(node.id, {
+            onSignalChangeRef.current?.(node.id, {
                 note: message.note,
                 // A note-off reports velocity 0 rather than clearing the port:
                 // downstream reads a number that fell to zero, which is what a
@@ -39,11 +43,24 @@ export default function MidiInputPanel({ node, values, onSignalChange, onConfigC
                 trigger: triggerRef.current
             })
         }
-    }, [node.id, onSignalChange])
+    }, [node.id])
 
     const { status, devices, errorMessage } = useMidiInput({ deviceId, channel, onMessage: handleMessage })
 
-    useEffect(() => () => onSignalChange?.(node.id, null), [node.id, onSignalChange])
+    useEffect(() => { reportFeed(node.id, { status, devices, errorMessage }) }, [node.id, status, devices, errorMessage])
+    useEffect(() => () => {
+        onSignalChangeRef.current?.(node.id, null)
+        clearFeedReport(node.id)
+    }, [node.id])
+
+    return null
+}
+
+// The MIDI In window: device and channel pickers over the feed's report.
+export default function MidiInputPanel({ node, values, onConfigChange }) {
+    const deviceId = values?.deviceId ?? node.values?.deviceId ?? ''
+    const channel = Number(values?.channel ?? node.values?.channel ?? 0)
+    const { status = MIDI_STATUS.REQUESTING, devices = [], errorMessage = '', last = null } = useFeedReport(node.id)
 
     const showStatus = status !== MIDI_STATUS.ACTIVE
 
