@@ -1366,6 +1366,21 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'ui', 'colour', 'families', 'windows', 'nodes', 'reading', 'design', 'canvas'],
         updated: '2026-08-19'
+    },
+    {
+        id: 'node-examples',
+        category: 'For developers',
+        title: 'A worked example for every node',
+        summary: 'Every node the palette can place has one small, tested graph showing its real use — and a generated reference an AI can read to build with the node editor.',
+        body: [
+            'The node editor has around 95 node types. For each one there is now exactly one small example graph (two to six nodes) that wires it the way it is actually used — a Number driving a Sphere\'s radius, a Webcam feeding a Plane\'s texture, a Compare card opening a Gate. Source: `src/project/graph/examples/nodes/`, one file per family (make, numbers, the scene, watch, bring in, send out, agents, pictures).',
+            'Every example is honest about what does not work yet, in plain words, right where the node is shown. Random draws once per Variant rather than wandering (that is Noise); a wire into Show the toolbar is accepted but currently ignored; a picture operator\'s Picture Out never carries a value in the graph itself — its picture lives on the GPU. Nothing here claims more than the node actually does.',
+            'A test proves each example: every wire lands on a port that really exists and really accepts that type, no card sits on top of another, and each output the story claims either computes to a real value (checked at more than one moment on the clock for anything time-driven) or is proven to read back a live device/browser feed correctly, without needing an actual camera, controller or network in the test run.',
+            'A generated reference — `docs/nodes/README.md`, plus one file per family — turns the registry and these examples into something an AI (or a person) can read to build a new graph: every real port, its type, default and bounds, and the example\'s graph as JSON to copy outright. `npm run docs:nodes` regenerates it from source; it is never hand-edited.',
+            'The registry\'s own worked portrait of the WHOLE node set — one graph touching every type at once — lives separately as the "All nodes" preset in the node editor\'s ⋯ menu. It exists to be looked at on one screen, not to teach one node\'s use; for that, read the per-node examples above.'
+        ],
+        tags: ['nodes', 'examples', 'registry', 'reference', 'ai', 'graph', 'ports', 'wires', 'developers'],
+        updated: '2026-09-14'
     }
 ]
 

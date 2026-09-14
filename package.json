@@ -25,6 +25,8 @@
         "land": "node scripts/session-land.mjs",
         "check:fallback-patterns": "node scripts/check-fallback-patterns.mjs",
         "docs:wiki:check": "node scripts/check-wiki-sync.mjs",
+        "docs:nodes": "node scripts/generate-node-reference.mjs",
+        "docs:nodes:check": "node scripts/check-node-reference.mjs",
         "deploy": "node scripts/deploy.mjs",
         "deploy:status": "node scripts/deploy.mjs status",
         "deploy:dev": "node scripts/deploy.mjs dev",
