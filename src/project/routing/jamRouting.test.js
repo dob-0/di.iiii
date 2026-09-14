@@ -40,7 +40,7 @@ describe('the jam surface address', () => {
     // "Live" button, and what a stranger is actually given. Before this branch
     // it fell through to the generic published-space viewer: same document, a
     // read-only shell with no presence and no way to add anything. See
-    // docs/ai/sessions/fix-open-jam-one-room.md.
+    // the "/open" row in docs/ai/known-fixes.md.
     it('answers at bare /open too — the same room, not a second one', () => {
         const state = at('/open')
         expect(isJamLocation(state)).toBe(true)

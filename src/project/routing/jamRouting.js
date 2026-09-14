@@ -49,8 +49,8 @@ export const buildJamEditorPath = () => joinPath(
  * a stranger is actually given — and until now it fell through to the
  * generic published-space viewer instead: same document, a read-only Walk/Fly
  * shell with no presence and no way to add anything. Two components drawing
- * one room is the bug this branch fixes (see
- * docs/ai/sessions/fix-open-jam-one-room.md); an address that resolves to a
+ * one room was the bug (see the "/open" row in
+ * docs/ai/known-fixes.md); an address that resolves to a
  * different EXPERIENCE than its sibling is not a routing nuance, it is the
  * same room lying about itself.
  *
