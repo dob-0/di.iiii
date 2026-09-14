@@ -11,6 +11,17 @@
 // — nginx routes known crawler user-agents here (see nginx.conf). A human never
 // reaches it, but it carries a redirect anyway, because "never" is a strong word
 // and a share-link that dead-ends is worse than one that is merely plain.
+//
+// 2026-09-14: this only ever resolved the first path segment as a SPACE. Every
+// other reserved top-level page — /login, /terms, /privacy, /for-apps,
+// /spaces, /wiki — is not a space, so `loadSpaceMeta` found nothing for any of
+// them and they all fell to the FRONT_DOOR card, same as a genuinely unknown
+// address. And a project a link named explicitly — /{space}/p/{project}, or
+// the vanity /{space}/{projectSlug} form — was read only as far as the space:
+// sharing one project's page previewed as the whole space, telling a reader
+// nothing about the one thing they were sent to look at.
+const { RESERVED_PROJECT_SLUGS } = require('../../../shared/reservedSegments.cjs')
+
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ESCAPES[c])
 
@@ -33,6 +44,43 @@ const SPACE_CARDS = {
   'br-id-ge': '/og/br-id-ge.png',
 }
 const cardFor = (handle) => SPACE_CARDS[String(handle).replace(/_/g, '-').toLowerCase()] || DEFAULT_IMAGE
+
+// Reserved top-level pages that are never spaces (shared/reservedSegments.cjs
+// APP_SEGMENTS) but each have a real, public page of their own worth
+// previewing. A reserved word with no page of its own — /raw, /studio,
+// /make, a stray /tools link — keeps the FRONT_DOOR fallback below, which is
+// the honest answer for an address with nothing to show.
+//
+// Titles carry the "— di.iiii" suffix a space's own card does not: a space's
+// card leaves that to og:site_name (see ogHtml) because the space's OWN name
+// is the whole point of that card, but these pages are the platform's own —
+// there is no second name to protect from repeating "di.iiii" twice.
+const STATIC_PAGES = {
+  login: {
+    title: 'Sign in — di.iiii',
+    description: 'Sign in to di.iiii.',
+  },
+  terms: {
+    title: 'Terms — di.iiii',
+    description: 'Short and factual: the code is open (AGPL-3.0), your content is yours, and the few real limits are listed here.',
+  },
+  privacy: {
+    title: 'Privacy — di.iiii',
+    description: 'What di.iiii actually collects, keeps, and doesn’t — written from a code audit, not a template.',
+  },
+  'for-apps': {
+    title: 'For apps — di.iiii',
+    description: 'Programs are welcome to read what di.iiii shows the public. Say who you are, and you get more room.',
+  },
+  spaces: {
+    title: 'Spaces — di.iiii',
+    description: 'Every space on di.iiii — make one, hand out the address, or step into someone else’s.',
+  },
+  wiki: {
+    title: 'Wiki — di.iiii',
+    description: 'How di.iiii works, written down: spaces, access, editing, and the API.',
+  },
+}
 
 // The public address of this tier, which is NOT what the request says on its
 // own. nginx proxies the crawler path to `http://server:4000`, so `req.get(
@@ -78,7 +126,7 @@ function ogHtml({ url, title, description, image }) {
 </head><body><a href="${u}">${t}</a></body></html>`
 }
 
-function registerOgRoutes(router, { loadSpaceMeta, siteOrigin }) {
+function registerOgRoutes(router, { loadSpaceMeta, resolveProject = null, siteOrigin }) {
   // Express 5's router (path-to-regexp v8) rejects a bare '*' — it throws at
   // REGISTRATION, so this would not have failed a request, it would have stopped
   // serverXR from booting at all. Named wildcard, and params.splat is an array.
@@ -101,9 +149,25 @@ function registerOgRoutes(router, { loadSpaceMeta, siteOrigin }) {
     try {
       const splat = req.params.splat
       const path = String(Array.isArray(splat) ? splat.join('/') : (splat || '')).replace(/^\/+/, '')
-      const handle = path.split('/')[0] || ''
+      const segments = path.split('/').filter(Boolean)
+      const handle = segments[0] || ''
       const origin = publicOrigin(req, siteOrigin)
       const url = `${origin}/${path}`
+
+      // A reserved top-level page — checked before any space lookup, since
+      // none of these words can ever BE a space (RESERVED_PROJECT_SLUGS /
+      // reservedSegments.cjs) and asking would only cost a round trip to
+      // learn what is already known.
+      const staticPage = STATIC_PAGES[handle.toLowerCase()]
+      if (staticPage) {
+        return res.type('html').send(ogHtml({
+          url: origin ? `${origin}/${handle}` : undefined,
+          title: staticPage.title,
+          description: staticPage.description,
+          image: origin ? origin + DEFAULT_IMAGE : undefined,
+        }))
+      }
+
       // No handle, or a handle nothing answers to: still return a valid card
       // rather than a 404. A crawler that gets a 404 shows the bare URL, which
       // is uglier than the platform tile and tells the reader nothing.
@@ -135,9 +199,38 @@ function registerOgRoutes(router, { loadSpaceMeta, siteOrigin }) {
       // `main` is the space `/` opens on and is labelled after the platform
       // itself, so the generic line would read "di.iiii — a space on di.iiii."
       const own = (meta.id || handle) === 'main'
+      const spaceTitle = meta.ogTitle || meta.label || handle
+
+      // A project the URL itself names — /{space}/p/{project} (the explicit
+      // shape) or /{space}/{projectSlug} (the vanity form; every other
+      // reserved word is claimed above or by RESERVED_PROJECT_SLUGS, so a
+      // lone second segment that survives both can only be a project slug or
+      // a miss). Resolved only now that the SPACE is confirmed public: doing
+      // it earlier would let a private space's project title leak through the
+      // one door that skips the ordinary read gate.
+      const rest = segments.slice(1)
+      const projectSegment = rest[0] === 'p' && rest[1]
+        ? rest[1]
+        : (rest.length === 1 && rest[0] && !RESERVED_PROJECT_SLUGS.has(rest[0]) ? rest[0] : null)
+      const project = (projectSegment && typeof resolveProject === 'function')
+        ? await resolveProject(meta.id || handle, projectSegment).catch(() => null)
+        : null
+
+      if (project) {
+        return res.type('html').send(ogHtml({
+          url,
+          // No "— di.iiii" here either, for the same reason the space's own
+          // card next door does not carry one: og:site_name already says it.
+          title: `${project.title} — ${spaceTitle}`,
+          description: project.ogDescription
+            || `${project.title} — a project in ${meta.label || handle} on di.iiii.`,
+          image: origin + cardFor(handle),
+        }))
+      }
+
       res.type('html').send(ogHtml({
         url,
-        title: meta.ogTitle || meta.label || handle,
+        title: spaceTitle,
         description: meta.ogDescription || meta.description
           || (own ? FRONT_DOOR.description : `${meta.label || handle} — a space on di.iiii.`),
         image: origin + cardFor(handle),

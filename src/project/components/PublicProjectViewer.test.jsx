@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PublicProjectViewer from './PublicProjectViewer.jsx'
 import { PREVIEW_ENTER_EXHIBITION_KIND, PREVIEW_HOST_MESSAGE_TYPE } from '../../utils/presentationPreviewDocument.js'
 
@@ -691,5 +691,77 @@ describe('arrive walking', () => {
             expect(screen.getByText('← View mode')).toBeInTheDocument()
         })
         expect(window.sessionStorage.getItem('dii:arrive-walking')).toBe(null)
+    })
+})
+
+// The naming rule (docs/ai/vocabulary.md): a space's own name is what a
+// visitor sees for it; a project's name shows only when the URL named that
+// project. This page renders both shapes — the bare space's published front
+// page, and the explicit /{space}/p/{project} link — and only the caller
+// (SpaceSurfaceApp.jsx) knows which one a given render is.
+describe('document title', () => {
+    beforeEach(() => {
+        document.title = 'di.iiii — public spaces on the open web'
+    })
+    afterEach(() => {
+        document.title = 'di.iiii — public spaces on the open web'
+    })
+
+    it('names the space when the URL did not name a project', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'front-page', title: 'Front Page' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="dilijan" projectId="front-page" spaceLabel="Dilijan Camp" />)
+
+        await waitFor(() => expect(document.title).toBe('Dilijan Camp — di.iiii'))
+        // the project's own title never leaks into the tab on this branch
+        expect(document.title).not.toContain('Front Page')
+    })
+
+    it('names the project, then the space, when the URL named the project', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'mery-petrosyan', title: 'Mery Petrosyan' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(
+            <PublicProjectViewer
+                spaceId="wcc"
+                projectId="mery-petrosyan"
+                spaceLabel="WCC Exhibition"
+                showProjectInTitle
+            />
+        )
+
+        await waitFor(() => expect(document.title).toBe('Mery Petrosyan — WCC Exhibition — di.iiii'))
+    })
+
+    it('leaves the tab title alone for the platform’s own space', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'room', title: 'The Room' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="main" projectId="room" spaceLabel="di.iiii" showProjectInTitle />)
+
+        await screen.findByText('viewer-scene:scene')
+        expect(document.title).toBe('di.iiii — public spaces on the open web')
     })
 })

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import useAuthSession from '../hooks/useAuthSession.js'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { WIKI_ARTICLES, WIKI_CATEGORIES } from './wikiContent.js'
 import './wiki.css'
 import SurfaceBar from '../components/SurfaceBar.jsx'
@@ -37,6 +38,18 @@ export default function WikiPage() {
     // bar offers it only there.
     const localInstall = useLocalInstall()
     const isEmbed = isEmbedRequest()
+
+    // /wiki is one long scroller, not per-article routes, so the article that
+    // opened it — /wiki#the-front-door — is the only "current article" this
+    // page can honestly name. Read once, on arrival, the same way the
+    // deep-link scroll below reads it once — not a scroll-spy that renames
+    // the tab as you read past each section.
+    const openedOnArticle = useMemo(() => {
+        if (typeof window === 'undefined') return null
+        const id = window.location.hash.replace('#', '')
+        return id ? WIKI_ARTICLES.find((a) => a.id === id) || null : null
+    }, [])
+    useDocumentTitle(openedOnArticle ? `${openedOnArticle.title} — Wiki — di.iiii` : 'Wiki — di.iiii')
 
     useEffect(() => {
         document.body.classList.add('is-landing')

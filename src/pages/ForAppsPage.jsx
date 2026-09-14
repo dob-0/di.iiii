@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import './legal.css'
 
 // The door sign for programs — apps, scripts, crawlers and AIs. The server's 429
@@ -18,11 +19,9 @@ export default function ForAppsPage() {
     const rootRef = useRef(null)
     useKeyboardPageScroll(rootRef)
 
-    useEffect(() => {
-        const previous = document.title
-        document.title = 'for apps — di.iiii'
-        return () => { document.title = previous }
-    }, [])
+    // Sentence case for the page word, not the lowercase the page used to
+    // carry — see docs/ai/vocabulary.md's naming rule.
+    useDocumentTitle('For apps — di.iiii')
 
     return (
         <div className="legal-root" data-page="for-apps" ref={rootRef}>

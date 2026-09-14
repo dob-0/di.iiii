@@ -206,29 +206,35 @@ describe('RootApp', () => {
         expect(await screen.findByText('studio-app:project:gallery')).toBeInTheDocument()
     })
 
-    it('routes /wcc and /wcc/scene to the WCC experience', async () => {
+    it('routes /wcc and /wcc/scene to the WCC experience, named in the tab', async () => {
         window.history.pushState({}, '', '/wcc')
         const { unmount } = render(<RootApp />)
         expect(await screen.findByText('wcc-experience:landing')).toBeInTheDocument()
+        // A work is a real space (works.js) and names itself the same way one
+        // does — the naming rule in docs/ai/vocabulary.md.
+        expect(document.title).toBe('WCC Exhibition — di.iiii')
         unmount()
 
         window.history.pushState({}, '', '/wcc/scene')
         render(<RootApp />)
         expect(await screen.findByText('wcc-experience:scene')).toBeInTheDocument()
+        expect(document.title).toBe('WCC Exhibition — di.iiii')
     })
 
-    it('routes /algovrithm to the landing page and /algovrithm/scene to the piece', async () => {
+    it('routes /algovrithm to the landing page and /algovrithm/scene to the piece, named in the tab', async () => {
         // The split is load-bearing: entering costs three.js and a strobing
         // piece, so the bare URL must never mount the experience.
         window.history.pushState({}, '', '/algovrithm')
         const { unmount } = render(<RootApp />)
         expect(await screen.findByText('algovrithm-landing')).toBeInTheDocument()
         expect(screen.queryByText('algovrithm-experience')).not.toBeInTheDocument()
+        expect(document.title).toBe('algovrithm — di.iiii')
         unmount()
 
         window.history.pushState({}, '', '/algovrithm/scene')
         render(<RootApp />)
         expect(await screen.findByText('algovrithm-experience')).toBeInTheDocument()
+        expect(document.title).toBe('algovrithm — di.iiii')
     })
 
     it('keeps legacy routes intact, and retired Beta URLs fall through like any unclaimed space', async () => {

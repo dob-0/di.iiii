@@ -1675,6 +1675,18 @@ const sharedSpaceOpsLock = createKeyedLock()
 registerOgRoutes(router, {
   loadSpaceMeta: async (segment) =>
     (await findSpaceBySlug(segment)) || (await loadSpaceMeta(normalizeSpaceId(segment) || segment)),
+  // Same slug-then-id resolution the /api/resolve/:spaceSegment/:projectSegment
+  // route above uses for a project — a link a crawler follows and a link the
+  // client resolves are the same address, and must find the same project.
+  // Draft and archived work never reach a visitor (RootApp.jsx's
+  // SlugProjectRoute comment, SpaceContentsPage's own listing) — a crawler is
+  // exactly such a visitor, so only a 'live' project previews as itself.
+  resolveProject: async (spaceId, projectSegment) => {
+    const project = (await findProjectBySlug(spaceId, projectSegment)) ||
+      (await loadProjectMeta(SPACES_DIR, spaceId, normalizeProjectId(projectSegment) || projectSegment))
+    if (!project || project.spaceId !== spaceId || project.state !== 'live' || project.deletedAt) return null
+    return project
+  },
   siteOrigin: process.env.SITE_ORIGIN || '',
 })
 
