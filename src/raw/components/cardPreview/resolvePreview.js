@@ -49,14 +49,71 @@ const shapeOf = (node, nodes, context) => {
     return isGeometryDescriptor(value) ? value : null
 }
 
+// A light coercion, matching the handful of port types a card preview's
+// values ever carry (cube size, sphere colour, light intensity…) — not the
+// full evaluateNodeInput ladder, just enough to refuse a value that plainly
+// isn't this port's shape so a stale/malformed live read cannot ever draw
+// something worse than the static baseline underneath it.
+const coerceForPort = (value, portType) => {
+    if (value === undefined || value === null) return undefined
+    switch (portType) {
+        case 'number': {
+            const n = Number(value)
+            return Number.isFinite(n) ? n : undefined
+        }
+        case 'boolean':
+            return Boolean(value)
+        case 'vec3':
+            return Array.isArray(value) ? value : undefined
+        case 'color':
+        case 'string':
+            return typeof value === 'string' ? value : undefined
+        default:
+            return value
+    }
+}
+
+// Overlays REAL live values onto the static baseline `evaluateNodeInputs`
+// already computed — build task 2: "card previews use the real clock and
+// live inputs". `readOutput` is the editor's own live graph context, read
+// one node/port at a time (see RawEditor.jsx's readOutput and
+// RawGraphSurface's `readOutput` prop) — a wired Time or LFO node answers
+// its REAL current value here instead of its value at t=0. Layered rather
+// than replacing evaluateNodeInputs outright: every default, coercion and
+// unwired value it already gets right stays exactly as it was, and a read
+// that comes back the wrong shape for the port (coerceForPort) or simply
+// undefined (the source node's own graph does not evaluate outside this
+// preview's smaller node set) leaves the static baseline standing.
+const liveNodeInputs = (node, staticValues, edges, readOutput) => {
+    const type = getNodeType(node?.typeId)
+    const edgeByTarget = new Map()
+    for (const edge of edges || []) {
+        if (edge) edgeByTarget.set(`${edge.toNodeId}:${edge.toPort}`, edge)
+    }
+    const values = { ...staticValues }
+    for (const port of type?.inputs || []) {
+        const edge = edgeByTarget.get(`${node.id}:${port.id}`)
+        if (!edge) continue
+        const live = coerceForPort(readOutput(edge.fromNodeId, edge.fromPort), port.type)
+        if (live !== undefined) values[port.id] = live
+    }
+    return values
+}
+
 /**
- * @param node   the card's node
- * @param nodes  EVERY node the surface knows (portScopeNodes when given) — a
- *               Geo's children and a Constructor's doors live in another scope
- * @param edges  the wires the surface knows
+ * @param node       the card's node
+ * @param nodes      EVERY node the surface knows (portScopeNodes when given)
+ *                    — a Geo's children and a Constructor's doors live in
+ *                    another scope
+ * @param edges      the wires the surface knows
+ * @param readOutput optional: `(nodeId, portId) => value`, the editor's real
+ *                    graph context (real clock, real liveOutputs) exposed one
+ *                    read at a time — see RawGraphSurface's `readOutput`
+ *                    prop. Omitted in Studio's read-only wrapper and in
+ *                    tests, where the preview falls back to its old t=0 still.
  * @returns { payload, fingerprint, spin } or null for a type with no preview
  */
-export const resolveCardPreview = (node, { nodes = [], edges = [] } = {}) => {
+export const resolveCardPreview = (node, { nodes = [], edges = [], readOutput = null } = {}) => {
     const kind = cardPreviewKind(node?.typeId)
     if (!kind) return null
     const allNodes = Array.isArray(nodes) && nodes.some((other) => other?.id === node.id)
@@ -68,6 +125,20 @@ export const resolveCardPreview = (node, { nodes = [], edges = [] } = {}) => {
         const context = previewGraphContext(allNodes, edges)
         values = evaluateNodeInputs(node, context)
         if (kind === 'shape') descriptor = shapeOf(node, allNodes, context)
+        if (typeof readOutput === 'function') {
+            values = liveNodeInputs(node, values, edges, readOutput)
+            // Constructor shapes are worn from nested doorway/child nodes
+            // (constructorGeometry.js's own context threading) and keep the
+            // static baseline above; every other shape carrier's own
+            // geometry output is one direct read, same as any other port.
+            if (kind === 'shape' && node.typeId !== 'geom.constructor') {
+                const port = (getNodeType(node.typeId)?.outputs || []).find((entry) => entry.type === 'geometry')
+                if (port) {
+                    const live = readOutput(node.id, port.id)
+                    if (isGeometryDescriptor(live)) descriptor = live
+                }
+            }
+        }
     } catch {
         // A graph that cannot be evaluated (a cycle the runtime refuses, a
         // half-written node) previews as nothing rather than breaking the card.

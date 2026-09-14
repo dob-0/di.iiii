@@ -1475,6 +1475,17 @@ export default function RawEditor({
         [document, clockNow, liveOutputs, frameMemory, scriptResults]
     )
 
+    // The one door RawGraphSurface's cards get into a live value — a node id
+    // and a port id in, this frame's real answer out, read through the SAME
+    // graphContext the room itself draws with (real clock, real liveOutputs).
+    // Feeds CardValueViewer and CardPreview's live overlay. authoredNodes, not
+    // graphCardNodes: a wired source can live outside the current scope.
+    const readOutput = useCallback((nodeId, portId) => {
+        const sourceNode = authoredNodes.find((candidate) => candidate.id === nodeId)
+        if (!sourceNode) return undefined
+        return evaluateNodeOutput(sourceNode, portId, graphContext)
+    }, [authoredNodes, graphContext])
+
     // Walk to wherever a node lives and select it — the far end of a wire
     // named on the inside's IN or OUT side, one scope out, two in, or next
     // door. The node you are standing IN is selected by standing in it.
@@ -2267,6 +2278,7 @@ export default function RawEditor({
                     activeMarkerTypeIds={activeMarkerTypeIds}
                     onViewportChange={handleViewportChange}
                     extraBounds={worldWindowBounds}
+                    readOutput={readOutput}
                 />
                 {/* Inside ANY node: the same workshop around its canvas —
                     see it working, its settings and inputs, what it gives and

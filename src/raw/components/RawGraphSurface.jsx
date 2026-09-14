@@ -6,13 +6,14 @@ import { isTopType } from '../../project/tops/topOperators.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
 import { hasCardPreview } from './cardPreview/previewTypes.js'
+import CardValueViewer from './cardViewers/CardValueViewer.jsx'
+import { cardViewerKind, cardViewerPort } from './cardViewers/viewerKind.js'
 import {
     arePortsCompatible,
     getNodeCardSummary,
     getNodeFamily,
     getNodeInputs,
     getNodeOutputs,
-    getNodeType,
     getPortType
 } from '../../project/nodeRegistry.js'
 
@@ -192,10 +193,34 @@ export default function RawGraphSurface({
     onViewportChange = null,
     // Graph-space rectangles that count as content for fit-all, so a world
     // window parked away from the cards is framed too. [{ x, y, width, height }]
-    extraBounds = []
+    extraBounds = [],
+    // The one door into the editor's real live values (build task: "cards
+    // show themselves"): `(nodeId, portId) => value`, reading the SAME graph
+    // context the room draws with — real clock, real liveOutputs. Feeds both
+    // CardValueViewer (a number/lamp/swatch on a card that has no picture)
+    // and CardPreview's live overlay. Optional: Studio's read-only wrapper
+    // and every test that does not pass it get the old static behaviour.
+    readOutput = null
 }) {
     const { requestDelete, deleteConfirm } = useDeleteConfirm()
     const containerRef = useRef(null)
+    // Fold unwired inputs (build task 3): which cards a person has chosen to
+    // expand, past the "+N" row. Per-viewer UI state, not saved in the
+    // document — a fresh mount always starts folded.
+    const [expandedFoldNodeIds, setExpandedFoldNodeIds] = useState(() => new Set())
+    const toggleFold = (nodeId) => setExpandedFoldNodeIds((prev) => {
+        const next = new Set(prev)
+        if (next.has(nodeId)) next.delete(nodeId)
+        else next.add(nodeId)
+        return next
+    })
+    // One tab stop per card (build task 4 / design audit C5): a roving
+    // tabindex across the cards, not one per card plus one per door. Only
+    // `focusedNodeId` (defaulting to the first card) is a Tab stop; arrow
+    // keys move it, Enter enters the card the door used to need its own tab
+    // stop for.
+    const [focusedNodeId, setFocusedNodeId] = useState(null)
+    const nodeCardRefs = useRef(new Map())
     const [pendingWire, setPendingWire] = useState(null)
     const [draggingNodeId, setDraggingNodeId] = useState(null)
     const [isPanning, setIsPanning] = useState(false)
@@ -1090,6 +1115,15 @@ export default function RawGraphSurface({
         return out
     }, [edges, nodeById])
 
+    // Which input ports carry a wire — `${nodeId}:${portId}`. Build task 3's
+    // fold: a card shows its wired inputs, and collapses the rest into one
+    // "+N" row. Keyed the same way edgesByTarget is in nodeGraphRuntime.js.
+    const wiredInputKeys = useMemo(() => {
+        const set = new Set()
+        for (const edge of edges) set.add(`${edge.toNodeId}:${edge.toPort}`)
+        return set
+    }, [edges])
+
     const pendingFromPos = pendingWire ? outputPortCenter(nodeById.get(pendingWire.fromNodeId) || {}, pendingWire.fromPort, portScopeNodes) : null
 
     const handleSectionDoubleClick = (event) => {
@@ -1182,8 +1216,57 @@ export default function RawGraphSurface({
         })
     }
 
+    // Arrow-key roving between cards (design audit C5 / build task 4): only
+    // the focused card is a Tab stop, so moving between cards has to be a
+    // keyboard gesture of its own. Nearest neighbour in the pressed
+    // direction, weighted toward staying on-axis so pressing Right several
+    // times tracks a row instead of zig-zagging onto whatever is closest as
+    // the crow flies.
+    const NODE_NAV_AXES = {
+        ArrowRight: (dx) => dx > 0,
+        ArrowLeft: (dx) => dx < 0,
+        ArrowDown: (dx, dy) => dy > 0,
+        ArrowUp: (dx, dy) => dy < 0
+    }
+    const findNodeNeighbor = (fromNode, key) => {
+        const test = NODE_NAV_AXES[key]
+        if (!test || !fromNode) return null
+        const horizontal = key === 'ArrowLeft' || key === 'ArrowRight'
+        let best = null
+        let bestScore = Infinity
+        for (const other of nodes) {
+            if (other.id === fromNode.id) continue
+            const dx = (other.graphX ?? 0) - (fromNode.graphX ?? 0)
+            const dy = (other.graphY ?? 0) - (fromNode.graphY ?? 0)
+            if (!test(dx, dy)) continue
+            const primary = horizontal ? Math.abs(dx) : Math.abs(dy)
+            const secondary = horizontal ? Math.abs(dy) : Math.abs(dx)
+            const score = primary + secondary * 3
+            if (score < bestScore) { bestScore = score; best = other }
+        }
+        return best
+    }
+
     const handleNodeKeyDown = (event, nodeId) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return
+        if (event.key in NODE_NAV_AXES) {
+            const neighbor = findNodeNeighbor(nodeById.get(nodeId), event.key)
+            if (!neighbor) return
+            event.preventDefault()
+            setFocusedNodeId(neighbor.id)
+            nodeCardRefs.current.get(neighbor.id)?.focus()
+            return
+        }
+        if (event.key === 'Enter') {
+            // The door's job, from the keyboard — no separate tab stop for
+            // it needed (build task 4: "one tab stop per card"). Selects
+            // first, same as the two clicks a mouse double-click delivers on
+            // its way to entering.
+            event.preventDefault()
+            onSelectNode?.(nodeId)
+            if (onEnterNode) onEnterNode(nodeId)
+            return
+        }
+        if (event.key !== ' ') return
         event.preventDefault()
         onSelectNode?.(nodeId)
     }
@@ -1329,12 +1412,39 @@ export default function RawGraphSurface({
                         // only decides what is drawn inside this box.
                         const h = cardHeight(node, portScopeNodes)
                         const isSelected = node.id === selectedNodeId
-                        const typeDef = getNodeType(node.typeId)
                         const showPorts = tier === 'full' || tier === 'compact'
                         const showPortLabels = tier === 'full'
+                        // TouchDesigner-style value viewer (build task 1): at
+                        // most one per card, and only on a card with no picture
+                        // of its own (cardViewerKind already refuses top types
+                        // and hasCardPreview types — see cardViewers/viewerKind.js).
+                        const viewerKind = cardViewerKind(node, portScopeNodes)
+                        const viewerPort = viewerKind ? cardViewerPort(node, portScopeNodes) : null
+                        // Fold unwired inputs (build task 3): which of this
+                        // card's declared inputs actually carry a wire. While a
+                        // wire is being dragged every input has to show, wired
+                        // or not, so the drop target stays visible to aim at.
+                        const unwiredInputs = inputs.filter((port) => !wiredInputKeys.has(`${node.id}:${port.id}`))
+                        const isNodeExpanded = expandedFoldNodeIds.has(node.id)
+                        const isFolded = unwiredInputs.length > 0 && !isDraggingWire && !isNodeExpanded
+                        const firstUnwiredIndex = unwiredInputs.length
+                            ? inputs.findIndex((port) => unwiredInputs.includes(port))
+                            : -1
+                        // Build task 4 / design audit C5: "<label>, <n> inputs,
+                        // <m> outputs" — the accessible name replaces reading the
+                        // header's text nodes run together ("›ColournumbersColour").
+                        const cardAccessibleName = `${node.label}, ${inputs.length} input${inputs.length === 1 ? '' : 's'}, ${outputs.length} output${outputs.length === 1 ? '' : 's'}`
+                        // Roving tabindex: exactly one card is a Tab stop. Falls
+                        // back to the first card so a graph nobody has touched
+                        // yet is still reachable in one Tab press.
+                        const isRovingFocus = (focusedNodeId ?? nodes[0]?.id) === node.id
                         return (
                             <div
                                 key={node.id}
+                                ref={(el) => {
+                                    if (el) nodeCardRefs.current.set(node.id, el)
+                                    else nodeCardRefs.current.delete(node.id)
+                                }}
                                 className={`raw-graph-node-card is-lod-${tier}${isSelected ? ' is-selected' : ''}`}
                                 style={{
                                     position: 'absolute',
@@ -1352,7 +1462,9 @@ export default function RawGraphSurface({
                                         : {})
                                 }}
                                 role="button"
-                                tabIndex={0}
+                                tabIndex={isRovingFocus ? 0 : -1}
+                                aria-label={cardAccessibleName}
+                                onFocus={() => setFocusedNodeId(node.id)}
                                 onClick={() => onSelectNode?.(node.id)}
                                 onPointerDown={(event) => {
                                     if (event.button !== 0) return
@@ -1405,6 +1517,15 @@ export default function RawGraphSurface({
                                             aria-label={childCount > 0
                                                 ? `Enter ${node.label}, holds ${childCount} node${childCount === 1 ? '' : 's'}`
                                                 : `Enter ${node.label}`}
+                                            // Not a second Tab stop (build task 4 /
+                                            // design audit C5: "one tab stop per
+                                            // card"): a button nested inside the
+                                            // card's own role="button" is invalid
+                                            // interactive nesting, and Enter on the
+                                            // focused card already does this
+                                            // (handleNodeKeyDown). Still a normal
+                                            // mouse/touch target.
+                                            tabIndex={-1}
                                             onPointerDown={(event) => event.stopPropagation()}
                                             // The card's own dblclick also enters; without this
                                             // a double-tap on the door pushes the same scope
@@ -1425,26 +1546,23 @@ export default function RawGraphSurface({
                                             type="button"
                                             className={`raw-graph-node-active-toggle${isNodeActive(node) ? ' is-active' : ''}`}
                                             title={isNodeActive(node) ? 'Active here' : 'Make this the active one'}
+                                            // See the door's tabIndex above: one tab
+                                            // stop per card, not one per control.
+                                            tabIndex={-1}
                                             onPointerDown={(event) => event.stopPropagation()}
                                             onClick={(event) => { event.stopPropagation(); onSetActive(node) }}
                                         >
                                             ●
                                         </button>
                                     )}
+                                    {/* The family word used to sit here as text ("numbers",
+                                        "the scene") — removed (design audit B1 / build task 4):
+                                        the icon already carries the family through
+                                        --card-family, set above, and raw.css's colouring of
+                                        .raw-graph-node-icon. Naming it twice was the noise. */}
                                     <span className="raw-graph-node-icon" />
                                     {tier !== 'block' ? (
                                         <span className="raw-graph-node-label">{node.label}</span>
-                                    ) : null}
-                                    {tier === 'full' ? (
-                                        // The family, not the category: a studio card used to
-                                        // say "universe" here — the raw code taxonomy leaking
-                                        // onto the canvas. One vocabulary with the palette.
-                                        <span
-                                            className="raw-graph-node-category"
-                                            style={{ color: getNodeFamily(node.typeId)?.color || undefined }}
-                                        >
-                                            {getNodeFamily(node.typeId)?.label || typeDef?.category || ''}
-                                        </span>
                                     ) : null}
                                     {/* Entering a node used to be double-click only, cued by a
                                         hover-revealed chevron — so on a phone there was no
@@ -1489,6 +1607,20 @@ export default function RawGraphSurface({
                                             nodes={portScopeNodes || nodes}
                                             edges={edges}
                                             top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
+                                            readOutput={readOutput}
+                                        />
+                                    ) : null}
+                                    {/* The number/lamp/swatch/sparkline strip — same slot and
+                                        geometry rule as the picture above: below the ports, so no
+                                        port or wire moves. "Cards show no values" was cross-cutting
+                                        defect #1 in the 2026-09-14 node audit. */}
+                                    {showPorts && viewerKind ? (
+                                        <CardValueViewer
+                                            node={node}
+                                            port={viewerPort}
+                                            kind={viewerKind}
+                                            top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
+                                            readOutput={readOutput}
                                         />
                                     ) : null}
                                     {tier === 'header' ? (
@@ -1507,35 +1639,79 @@ export default function RawGraphSurface({
                                                 />
                                             ))
                                     ) : null}
-                                    {showPorts ? inputs.map((port, idx) => (
-                                        <div
-                                            key={`in-${port.id}`}
-                                            className="raw-graph-port-row raw-graph-port-row--in"
-                                            style={{ top: idx * PORT_ROW_HEIGHT }}
-                                        >
-                                            <span
-                                                // While a wire is being dragged, every input dot
-                                                // says whether it can take it — before this, an
-                                                // incompatible drop was pure silence and the only
-                                                // feedback was nothing happening.
-                                                className={`raw-graph-port-dot raw-graph-port-dot--in${pendingWire ? (arePortsCompatible(pendingWire.fromPortType, port.type) ? ' is-compatible' : ' is-incompatible') : ''}`}
-                                                data-node-id={node.id}
-                                                data-port-id={port.id}
-                                                onPointerDown={(event) => armLongPress(event, node, port, 'in')}
-                                                onContextMenu={(event) => {
-                                                    if (!onPromotePort) return
-                                                    event.preventDefault()
-                                                    event.stopPropagation()
-                                                    openPortMenu({ node, port, dir: 'in', clientX: event.clientX, clientY: event.clientY })
-                                                }}
-                                                style={{ background: getPortType(port.type).color, left: -PORT_DOT_RADIUS }}
-                                                title={`${port.label || port.id} (${port.type})${onPromotePort ? ' — hold to expose on the container' : ''}`}
-                                            />
-                                            {showPortLabels ? (
-                                                <span className="raw-graph-port-label">{port.label || port.id}</span>
-                                            ) : null}
-                                        </div>
-                                    )) : null}
+                                    {/* Fold unwired inputs (build task 3 / design audit B4:
+                                        "every unwired port listed on cards"). Every declared
+                                        port keeps its row, its dot and its title — CSS visually
+                                        folds the unwired ones (raw-graph-port-row--folded), it
+                                        never removes them from the DOM. Three things depend on
+                                        that: a port's row never moves (cardGeometry stays the
+                                        single source of truth for anchors — graphGeometry.test.jsx),
+                                        a wire drop is resolved purely in graph space
+                                        (resolveWireDrop) so a folded target still takes a wire,
+                                        and every existing port-by-title/data-port-id query in this
+                                        codebase's tests keeps finding what it always found. */}
+                                    {showPorts ? inputs.map((port, idx) => {
+                                        const isWired = wiredInputKeys.has(`${node.id}:${port.id}`)
+                                        const folded = isFolded && !isWired
+                                        return (
+                                            <div
+                                                key={`in-${port.id}`}
+                                                className={`raw-graph-port-row raw-graph-port-row--in${folded ? ' raw-graph-port-row--folded' : ''}`}
+                                                style={{ top: idx * PORT_ROW_HEIGHT }}
+                                            >
+                                                <span
+                                                    // While a wire is being dragged, every input dot
+                                                    // says whether it can take it — before this, an
+                                                    // incompatible drop was pure silence and the only
+                                                    // feedback was nothing happening.
+                                                    className={`raw-graph-port-dot raw-graph-port-dot--in${pendingWire ? (arePortsCompatible(pendingWire.fromPortType, port.type) ? ' is-compatible' : ' is-incompatible') : ''}`}
+                                                    data-node-id={node.id}
+                                                    data-port-id={port.id}
+                                                    onPointerDown={(event) => armLongPress(event, node, port, 'in')}
+                                                    onContextMenu={(event) => {
+                                                        if (!onPromotePort) return
+                                                        event.preventDefault()
+                                                        event.stopPropagation()
+                                                        openPortMenu({ node, port, dir: 'in', clientX: event.clientX, clientY: event.clientY })
+                                                    }}
+                                                    style={{ background: getPortType(port.type).color, left: -PORT_DOT_RADIUS }}
+                                                    title={`${port.label || port.id} (${port.type})${onPromotePort ? ' — hold to expose on the container' : ''}`}
+                                                />
+                                                {showPortLabels && !folded ? (
+                                                    <span className="raw-graph-port-label">{port.label || port.id}</span>
+                                                ) : null}
+                                                {/* One "+N" badge, drawn OVER the first folded row —
+                                                    a sibling, not a replacement, so the dot underneath
+                                                    stays exactly where cardGeometry says it is. */}
+                                                {isFolded && idx === firstUnwiredIndex && showPortLabels ? (
+                                                    <button
+                                                        type="button"
+                                                        className="raw-graph-port-fold-toggle"
+                                                        tabIndex={-1}
+                                                        aria-expanded="false"
+                                                        aria-label={`Show ${unwiredInputs.length} more input${unwiredInputs.length === 1 ? '' : 's'}`}
+                                                        onPointerDown={(event) => event.stopPropagation()}
+                                                        onClick={(event) => { event.stopPropagation(); toggleFold(node.id) }}
+                                                    >
+                                                        +{unwiredInputs.length}
+                                                    </button>
+                                                ) : null}
+                                                {!isFolded && !isWired && idx === firstUnwiredIndex && isNodeExpanded && showPortLabels ? (
+                                                    <button
+                                                        type="button"
+                                                        className="raw-graph-port-fold-toggle raw-graph-port-fold-toggle--collapse"
+                                                        tabIndex={-1}
+                                                        aria-expanded="true"
+                                                        aria-label="Hide unwired inputs"
+                                                        onPointerDown={(event) => event.stopPropagation()}
+                                                        onClick={(event) => { event.stopPropagation(); toggleFold(node.id) }}
+                                                    >
+                                                        −
+                                                    </button>
+                                                ) : null}
+                                            </div>
+                                        )
+                                    }) : null}
                                     {showPorts ? outputs.map((port, idx) => (
                                         <div
                                             key={`out-${port.id}`}

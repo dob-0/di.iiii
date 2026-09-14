@@ -8,9 +8,11 @@ import {
     HEADER_HEIGHT,
     PORT_ROW_HEIGHT,
     TOP_PICTURE_HEIGHT,
+    VALUE_VIEWER_HEIGHT,
     cardHeight
 } from '../../utils/cardGeometry.js'
 import { cardPreviewKind, hasCardPreview } from './previewTypes.js'
+import { hasCardViewer } from '../cardViewers/viewerKind.js'
 import { resolveCardPreview } from './resolvePreview.js'
 import { createPreviewScheduler, PREVIEW_FPS } from './previewScheduler.js'
 
@@ -53,10 +55,15 @@ describe('which cards carry a preview', () => {
 })
 
 describe('card geometry with previews', () => {
-    it('grows a previewed card by exactly one picture, and no other card at all', () => {
+    it('grows a previewed card by exactly one picture or one value viewer, never both', () => {
         for (const typeId of Object.keys(NODE_TYPES)) {
             const node = makeNode(typeId, { id: `n-${typeId}` })
-            const grown = hasCardPreview(typeId) ? TOP_PICTURE_HEIGHT + 4 : 0
+            // Mutually exclusive by construction (cardGeometry.hasCardViewerSlot,
+            // cardViewers/viewerKind.js): a type with a picture never also gets
+            // the value-viewer strip, so at most one of these is non-zero.
+            const grown = hasCardPreview(typeId)
+                ? TOP_PICTURE_HEIGHT + 4
+                : (hasCardViewer(node) ? VALUE_VIEWER_HEIGHT + 4 : 0)
             expect(cardHeight(node), typeId).toBe(legacyHeight(node) + grown)
         }
     })

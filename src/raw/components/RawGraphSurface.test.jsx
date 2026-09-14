@@ -961,3 +961,110 @@ describe('wheel policy', () => {
         expect(readZoom()).not.toBe(mid)
     })
 })
+
+// Build task 4 / design audit C5: accessible name, one tab stop per card,
+// arrow-key roving between cards, no separate tab stop for the door.
+describe('card accessibility', () => {
+    it('gives every card an accessible name of "<label>, <n> inputs, <m> outputs"', () => {
+        const cube = makeNode('geom.cube', { id: 'cube-1', label: 'Cube' })
+        const { container } = render(<RawGraphSurface nodes={[cube]} edges={[]} initialZoom={1} />)
+        const card = container.querySelector('.raw-graph-node-card')
+        const inputs = card.querySelectorAll('.raw-graph-port-row--in').length
+        const outputs = card.querySelectorAll('.raw-graph-port-row--out').length
+        expect(card.getAttribute('aria-label')).toBe(`Cube, ${inputs} inputs, ${outputs} outputs`)
+    })
+
+    it('singularises "0 inputs, 1 output"', () => {
+        const number = makeNode('value.number', { id: 'num-1', label: 'Number' })
+        const { container } = render(<RawGraphSurface nodes={[number]} edges={[]} initialZoom={1} />)
+        const name = container.querySelector('.raw-graph-node-card').getAttribute('aria-label')
+        expect(name).toBe('Number, 0 inputs, 1 output')
+    })
+
+    it('is exactly one Tab stop per card: the door and the active-marker toggle are not separate stops', () => {
+        const color = makeNode('value.color', { id: 'color-1' })
+        const cube = makeNode('geom.cube', { id: 'cube-1', graphX: 320 })
+        const { container } = render(<RawGraphSurface nodes={[color, cube]} edges={[]} initialZoom={1} onEnterNode={() => {}} />)
+        const cards = [...container.querySelectorAll('.raw-graph-node-card')]
+        expect(cards).toHaveLength(2)
+        for (const card of cards) {
+            expect(card.getAttribute('role')).toBe('button')
+            const door = card.querySelector('.raw-graph-node-door')
+            if (door) expect(door.tabIndex).toBe(-1)
+        }
+        // Only one card is a Tab stop at a time (roving tabindex).
+        const tabbable = cards.filter((card) => card.tabIndex === 0)
+        expect(tabbable).toHaveLength(1)
+    })
+
+    it('moves the roving Tab stop with the arrow keys', () => {
+        const left = makeNode('value.color', { id: 'left', graphX: 0, graphY: 0 })
+        const right = makeNode('geom.cube', { id: 'right', graphX: 400, graphY: 0 })
+        const { container } = render(<RawGraphSurface nodes={[left, right]} edges={[]} initialZoom={1} />)
+        const cards = () => [...container.querySelectorAll('.raw-graph-node-card')]
+        const firstCard = cards()[0]
+        expect(firstCard.tabIndex).toBe(0)
+        firstCard.focus()
+        fireEvent.keyDown(firstCard, { key: 'ArrowRight' })
+        const after = cards()
+        expect(after[0].tabIndex).toBe(-1)
+        expect(after[1].tabIndex).toBe(0)
+    })
+
+    it('Enter on the focused card enters it, selecting first — the door’s job, from the keyboard', () => {
+        const cube = makeNode('geom.cube', { id: 'cube-1' })
+        const onEnterNode = vi.fn()
+        const onSelectNode = vi.fn()
+        const { container } = render(
+            <RawGraphSurface nodes={[cube]} edges={[]} initialZoom={1} onEnterNode={onEnterNode} onSelectNode={onSelectNode} />
+        )
+        const card = container.querySelector('.raw-graph-node-card')
+        fireEvent.keyDown(card, { key: 'Enter' })
+        expect(onSelectNode).toHaveBeenCalledWith('cube-1')
+        expect(onEnterNode).toHaveBeenCalledWith('cube-1')
+    })
+})
+
+// Build task 3: fold unwired inputs into a "+N" row that expands on
+// click/tap; every port stays in the DOM at its declared row (cardGeometry
+// stays the single source of truth for anchors) — folding only changes
+// what is visible, never a port's position.
+describe('folding unwired inputs', () => {
+    it('folds every unwired input behind one "+N" row, and expands it on click', () => {
+        const op = makeNode('math.op', { id: 'op-1', graphX: 0, graphY: 0 })
+        const { container } = render(<RawGraphSurface nodes={[op]} edges={[]} initialZoom={1} />)
+        const rows = () => [...container.querySelectorAll('.raw-graph-port-row--in')]
+        // Both of math.op's inputs (A, B) are unwired.
+        expect(rows().filter((row) => row.classList.contains('raw-graph-port-row--folded'))).toHaveLength(2)
+        const toggle = container.querySelector('.raw-graph-port-fold-toggle')
+        expect(toggle.textContent).toBe('+2')
+        expect(toggle.getAttribute('aria-expanded')).toBe('false')
+        fireEvent.click(toggle)
+        expect(rows().filter((row) => row.classList.contains('raw-graph-port-row--folded'))).toHaveLength(0)
+    })
+
+    it('never folds a wired input, and folding never moves any port row', () => {
+        const color = makeNode('value.color', { id: 'color-1', graphX: 0, graphY: 0 })
+        const cube = makeNode('geom.cube', { id: 'cube-1', graphX: 320, graphY: 0 })
+        const edges = [{ id: 'e1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'cube-1', toPort: 'color' }]
+        const { container } = render(<RawGraphSurface nodes={[color, cube]} edges={edges} initialZoom={1} />)
+        const cubeCard = container.querySelector('.raw-graph-node-card:nth-of-type(2)')
+        const colorRow = cubeCard.querySelector('.raw-graph-port-row--in')
+        // The wired Colour input (declared first on geom.cube) is never folded…
+        expect(colorRow.classList.contains('raw-graph-port-row--folded')).toBe(false)
+        // …and every input row, folded or not, still sits at its declared
+        // index * PORT_ROW_HEIGHT — the same arithmetic wires are drawn from.
+        const rows = [...cubeCard.querySelectorAll('.raw-graph-port-row--in')]
+        rows.forEach((row, idx) => expect(row.style.top).toBe(`${idx * 22}px`))
+    })
+
+    it('unfolds every input while a wire is being dragged, so a folded target still shows as a drop target', () => {
+        const color = makeNode('value.color', { id: 'color-1', graphX: 0, graphY: 0 })
+        const cube = makeNode('geom.cube', { id: 'cube-1', graphX: 320, graphY: 0 })
+        const { container } = render(<RawGraphSurface nodes={[color, cube]} edges={[]} initialZoom={1} />)
+        const outputDot = container.querySelector('.raw-graph-node-card:nth-of-type(1) span[title*="(color)"]')
+        fireEvent.pointerDown(outputDot, { button: 0, clientX: 0, clientY: 0 })
+        const cubeCard = container.querySelector('.raw-graph-node-card:nth-of-type(2)')
+        expect(cubeCard.querySelectorAll('.raw-graph-port-row--folded')).toHaveLength(0)
+    })
+})

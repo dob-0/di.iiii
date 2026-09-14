@@ -1,0 +1,149 @@
+/* A card's live-value viewer — the strip below the ports (see cardGeometry.js
+   VALUE_VIEWER_HEIGHT and cardViewers/viewerKind.js for which cards get one).
+   Its own file, its own tokens: raw.css carries no colour literal
+   (src/styles/spine.test.js), and this file follows the same discipline even
+   though it is not yet on that list — everything below reads a base.css
+   token, nothing is written out by hand. */
+.raw-card-value-viewer {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    color: var(--di-text);
+    line-height: 1.2;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.raw-card-viewer-value {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.raw-card-viewer-sparkline {
+    flex: 1;
+    min-width: 0;
+    overflow: visible;
+}
+
+.raw-card-viewer-sparkline polyline {
+    stroke: var(--di-cyan);
+}
+
+.raw-card-viewer-lamp {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    color: var(--di-text-muted);
+}
+
+.raw-card-viewer-lamp.is-on {
+    color: var(--di-success);
+}
+
+.raw-card-viewer-lamp-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--di-radius-pill);
+    background: var(--di-text-muted);
+}
+
+.raw-card-viewer-lamp.is-on .raw-card-viewer-lamp-dot {
+    background: var(--di-success);
+}
+
+.raw-card-viewer-pulse {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-2);
+}
+
+.raw-card-viewer-pulse-tick {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--di-radius-pill);
+    background: var(--di-cyan);
+}
+
+.raw-card-viewer-swatch-row {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-2);
+}
+
+.raw-card-viewer-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: var(--di-radius);
+    border: 1px solid var(--di-cyan-border);
+    flex: none;
+}
+
+.raw-card-viewer-swatch-value {
+    color: var(--di-text-muted);
+    white-space: nowrap;
+}
+
+.raw-card-viewer-vec3 {
+    display: flex;
+    gap: var(--di-space-3);
+}
+
+.raw-card-viewer-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--di-text-muted);
+}
+
+.raw-card-viewer-device {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--di-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .raw-card-viewer-pulse-tick {
+        transition: none;
+    }
+}
+
+/* Fold unwired inputs (build task 3) — the "+N" row and its collapse
+   counterpart. Sits inside .raw-graph-port-row--in (raw.css), which already
+   places and sizes the row; this only styles the control itself. */
+.raw-graph-port-fold-toggle {
+    pointer-events: auto;
+    background: none;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+    color: var(--di-text-muted);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    line-height: 1;
+    padding: var(--di-space-1) var(--di-space-2);
+    cursor: pointer;
+}
+
+.raw-graph-port-fold-toggle:hover,
+.raw-graph-port-fold-toggle:focus-visible {
+    color: var(--di-text);
+    border-color: var(--di-cyan);
+}
+
+.raw-graph-port-fold-toggle--collapse {
+    margin-left: var(--di-space-2);
+}
+
+/* The dot itself stays in the DOM when its row is folded (RawGraphSurface.jsx
+   explains why) — this only hides it from sight and touch so the "+N" badge
+   drawn beside it reads as the row's one control. */
+.raw-graph-port-row--folded .raw-graph-port-dot {
+    opacity: 0;
+    pointer-events: none;
+}
