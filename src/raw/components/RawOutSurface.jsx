@@ -4,6 +4,7 @@ import LiveFeeds, { OUTPUT_FEEDS } from './LiveFeeds.jsx'
 import { useLiveOutputs } from '../utils/useLiveOutputs.js'
 import { createFrameMemory, createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
+import { useNodeScripts } from '../../project/graph/nodeScripts.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { readLocalWorkspaceDocument } from '../utils/localWorkspaceStorage.js'
@@ -84,11 +85,13 @@ export default function RawOutSurface({ projectId = null, localStorageKey = '', 
     const [liveOutputs, onLiveOutputChange] = useLiveOutputs()
     const clockNow = useDocumentClock(doc)
     const [frameMemory] = useState(() => createFrameMemory())
+    // The projector runs node scripts too (its own worker, its own machine's
+    // DI_DESK_SCRIPTS), or it would show the built-in while the editor shows the script.
+    const scriptResults = useNodeScripts(doc, { liveOutputs })
     const graphContext = useMemo(
-        () => createNodeGraphContext(doc, { now: clockNow, liveOutputs, frameMemory }),
-        [doc, clockNow, liveOutputs, frameMemory]
+        () => createNodeGraphContext(doc, { now: clockNow, liveOutputs, frameMemory, scriptResults }),
+        [doc, clockNow, liveOutputs, frameMemory, scriptResults]
     )
-
     const worldNode = useMemo(
         () => resolveScopeWorldNode(doc.nodes, scopeId, doc.workspaceState?.liveWorldNodeIdByScope),
         [doc.nodes, scopeId, doc.workspaceState?.liveWorldNodeIdByScope]
@@ -110,6 +113,7 @@ export default function RawOutSurface({ projectId = null, localStorageKey = '', 
                     scopeId={scopeId || null}
                     worldNode={worldNode}
                     liveOutputs={liveOutputs}
+                    scriptResults={scriptResults}
                     // Not just "handlers not passed": OrbitControls mounts its
                     // own DOM listeners, so without this the audience could
                     // orbit and zoom the projector image (measured).

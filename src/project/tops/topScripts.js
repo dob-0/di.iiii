@@ -15,6 +15,28 @@
 
 const cache = new Map()
 
+// frame() runs on the page, inside the render loop, so nothing can interrupt
+// it. What CAN be done: a frame() that took longer than this throws once it
+// returns, and useTopNetwork's catch stops it until the code changes (its
+// failedScripts set). A true infinite loop still never returns — node scripts
+// (src/project/graph/nodeScripts.js) run in a worker for exactly that reason.
+export const TOP_FRAME_BUDGET_MS = 20
+
+const clock = () => globalThis.performance?.now?.() ?? Date.now()
+
+export const guardFrame = (frame, { budgetMs = TOP_FRAME_BUDGET_MS, now = clock } = {}) => {
+    if (typeof frame !== 'function') return undefined
+    return (...args) => {
+        const began = now()
+        const out = frame(...args)
+        const took = now() - began
+        if (took > budgetMs) {
+            throw new Error(`stopped: frame() took ${Math.round(took)} ms (the limit is ${budgetMs} ms) — change the script to run it again`)
+        }
+        return out
+    }
+}
+
 /** @returns {{ frame?: Function, open?: Function, error?: string }} */
 export const compileTopScript = (source) => {
     const text = String(source || '').trim()
@@ -26,7 +48,8 @@ export const compileTopScript = (source) => {
             frame: typeof frame === 'function' ? frame : undefined,
             open: typeof open === 'function' ? open : undefined
         }`)
-        result = factory()
+        const made = factory()
+        result = { frame: guardFrame(made.frame), open: made.open }
     } catch (error) {
         result = { error: String(error?.message || error) }
     }

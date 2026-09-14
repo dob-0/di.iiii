@@ -1381,6 +1381,18 @@ export const WIKI_ARTICLES = [
             'The output page and a published room get live data too. /out runs every listening device, like the webcam, mic, MIDI In and picture operators, but never the senders. The editor already drives DMX and MIDI Out, and a second page sending would repeat every cue. A visitor to a published room gets only what needs no permission, like video frames and sound levels, and is never asked for a camera, a microphone or MIDI.'
         ],
         tags: ['raw', 'nodes', 'wires', 'pictures', 'picture operators', 'webcam', 'midi', 'dmx', 'devices', 'out', 'performance'],
+        id: 'scripts-in-every-node',
+        category: 'Editing',
+        title: 'A script in any node, that can never freeze the show',
+        summary: 'Any node can carry a few lines of JavaScript that change what it gives out. Scripts run beside the page, not in it: a mistake stops that one script, never the editor or the projector.',
+        body: [
+            'WHAT IT IS. Inside a node, its Script holds one function: compute({ inputs, time, values, memory }). inputs are the node\'s inputs as they arrive, time is seconds on the show clock, values are its own settings, and memory is an object that is still there next frame (for counting, smoothing, remembering). Return the outputs you want to change — { out: inputs.a * 2 } — and every output you do not return keeps working as built.',
+            'IT RUNS BESIDE THE PAGE. Every script of the page runs in one background worker, about once a frame, and the node gives out its last answer. So a scripted output is a frame late, the same as a camera or a MIDI knob. Pictures and shapes do not travel to a script; it sees them as empty.',
+            'MISTAKES STOP ONE SCRIPT. A script that throws shows its message and the node falls back to its built-in output until you change the text. A script that takes longer than a quarter of a second — an endless loop — is stopped: the worker is restarted without it, the other scripts carry on (their memory starts again), and the node says "stopped: took too long". The editor and a projector\'s /out never wait for it.',
+            'WHERE THEY RUN. Only on a machine whose own di.env says DI_DESK_SCRIPTS=1 — the same switch as picture operator scripts, because a script saved on one machine runs on every machine that opens the space. Elsewhere the node keeps its built-in outputs and says "this machine does not run desk scripts". Card previews always show the built-in.',
+            'PICTURE OPERATORS. Their frame() scripts still run on the page, as before, but a frame() that takes longer than 20 ms is now stopped until the code changes, so a slow script cannot drag the picture down.'
+        ],
+        tags: ['raw', 'nodes', 'script', 'javascript', 'compute', 'worker', 'safety', 'projector', 'DI_DESK_SCRIPTS'],
         updated: '2026-09-14'
     }
 ]

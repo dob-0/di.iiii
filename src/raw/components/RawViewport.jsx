@@ -698,6 +698,8 @@ function SceneContent({
     scopeId,
     worldNode,
     liveOutputs = null,
+    // Node scripts' last answers (project/graph/nodeScripts.js); null = built-ins.
+    scriptResults = null,
     showSelectionPills = true,
     // false = a pure LOOK: no picking, no dragging, no double-click placing.
     // The /out projector view passes false — "handlers simply not passed" was
@@ -719,8 +721,8 @@ function SceneContent({
     const [frameMemory] = useState(() => createFrameMemory())
     useEffect(() => { frameMemory.clear() }, [frameMemory, document.projectMeta?.id])
     const graphContext = useMemo(
-        () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory }),
-        [document, clockNow, liveOutputs, frameMemory]
+        () => createNodeGraphContext(document, { now: clockNow, liveOutputs, frameMemory, scriptResults }),
+        [document, clockNow, liveOutputs, frameMemory, scriptResults]
     )
     // scopeId undefined = unscoped, matches the old document-wide behavior; a real
     // scope (including root, `null`) only renders/uses siblings of that scope — see
@@ -1153,6 +1155,7 @@ export default function RawViewport({
     scopeId,
     worldNode,
     liveOutputs = null,
+    scriptResults = null,
     // In the backdrop the graph card IS the selection feedback; a floating
     // name pill duplicated it in the room's sky, detached from its object
     // (the "GEO" chip the audit photographed). Fullscreen keeps pills — the
@@ -1312,6 +1315,7 @@ export default function RawViewport({
                     scopeId={scopeId}
                     worldNode={worldNode}
                     liveOutputs={liveOutputs}
+                    scriptResults={scriptResults}
                 />
             </Canvas>
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
