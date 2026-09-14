@@ -33,7 +33,7 @@ const getAssetOptionsForField = (field, assetOptions = []) => {
 // `disabled` is the wired case: the port reads its wire, so the box shows the
 // stored value but takes nothing — the input is disabled rather than hidden,
 // because a field that vanishes when a wire lands reads as a bug.
-function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetFile = null, disabled = false }) {
+export function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetFile = null, disabled = false }) {
     if (field.type === 'textarea') {
         return <textarea value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} rows={4} />
     }
