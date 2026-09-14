@@ -26,8 +26,9 @@ const VIDEO_FPS = 30
  * @param {(nodeId: string, video: HTMLVideoElement|null) => void} options.onVideo
  * @param {(nodeId: string, blob: Blob) => void} options.onPreview
  * @param {(nodeId: string, numbers: object) => void} options.onNumbers
+ * @param {(nodeId: string, report: object) => void} [options.onReport]  what an operator's machine says about it
  */
-export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbers }) => {
+export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbers, onReport = null }) => {
     const connections = new Map()
     // peerId → { video: [nodeId], preview: [nodeId] } — what THIS page wants from each
     let wants = new Map()
@@ -100,6 +101,7 @@ export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbe
                 let message
                 try { message = JSON.parse(data) } catch { return }
                 if (message.kind === 'numbers') onNumbers(message.nodeId, message.numbers)
+                if (message.kind === 'report') onReport?.(message.nodeId, message.report)
                 if (message.kind === 'preview-of') c.nextPreviewNode = message.nodeId
                 return
             }
@@ -219,6 +221,13 @@ export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbe
         }
     }, PREVIEW_EVERY_MS)
 
+    const sendReport = (nodeId, report) => {
+        const text = JSON.stringify({ kind: 'report', nodeId, report })
+        for (const c of connections.values()) {
+            if (c.channel?.readyState === 'open') c.channel.send(text)
+        }
+    }
+
     const sendNumbers = (nodeId, numbers) => {
         const text = JSON.stringify({ kind: 'numbers', nodeId, numbers })
         for (const c of connections.values()) {
@@ -280,6 +289,7 @@ export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbe
     return {
         pump,
         sendNumbers,
+        sendReport,
         setWants(next) {
             const before = JSON.stringify([...wants])
             wants = next instanceof Map ? next : new Map()

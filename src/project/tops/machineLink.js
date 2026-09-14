@@ -153,7 +153,7 @@ export const runnerOn = (peers, machineId, selfPeerId = null) => (
 /** Every machine a space can see, this one first, each once. */
 export const machinesIn = (peers, self, selfDevices = []) => {
     const byId = new Map()
-    if (self?.id) byId.set(self.id, { id: self.id, name: self.name || 'this machine', self: true, devices: selfDevices, pages: 1 })
+    if (self?.id) byId.set(self.id, { id: self.id, name: self.name || 'this machine', self: true, scripts: self.scripts === true, devices: selfDevices, pages: 1 })
     for (const peer of peers || []) {
         if (!peer.machineId) continue
         const known = byId.get(peer.machineId)
@@ -167,7 +167,7 @@ export const machinesIn = (peers, self, selfDevices = []) => {
             }
             continue
         }
-        byId.set(peer.machineId, { id: peer.machineId, name: peer.machineName || peer.machineId.slice(0, 8), self: false, devices: [...(peer.devices || [])], pages: 1 })
+        byId.set(peer.machineId, { id: peer.machineId, name: peer.machineName || peer.machineId.slice(0, 8), self: false, scripts: peer.scripts === true, devices: [...(peer.devices || [])], pages: 1 })
     }
     return [...byId.values()]
 }

@@ -112,6 +112,7 @@ const createMachineHub = ({
         machineId: peer.machineId,
         machineName: peer.machineName,
         role: peer.role,
+        scripts: peer.scripts === true,
         devices: peer.devices || [],
         seenAt: peer.seenAt,
         via: peer.via
@@ -133,6 +134,7 @@ const createMachineHub = ({
             machineId: machine.id,
             machineName: machine.name,
             role: cleanText(role, 40),
+            scripts: machine.scripts === true,
             devices: cleanDevices(devices),
             seenAt: now(),
             via: LOCAL
@@ -192,6 +194,7 @@ const createMachineHub = ({
                 machineId: raw.machineId,
                 machineName: cleanText(raw.machineName, 80) || raw.machineId,
                 role: cleanText(raw.role, 40),
+                scripts: raw.scripts === true,
                 devices: cleanDevices(raw.devices),
                 seenAt: now(),
                 via

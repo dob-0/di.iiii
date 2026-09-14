@@ -38,6 +38,41 @@ uniform vec2 texel;
 const PRESENT = `${PREAMBLE}
 void main() { gl_FragColor = vec4(texture2D(a, uv).rgb, 1.0); }`
 
+/** The shader an operator is made of, as the engine compiles it — what "inside" shows. */
+export const shaderSourceFor = (type, values = {}) => {
+    const custom = typeof values?.__shader === 'string' ? values.__shader.trim() : ''
+    return custom || TOP_OPERATORS[type]?.fragment?.trim() || ''
+}
+
+/** The lines every operator's shader is compiled with, above its own code. */
+export const SHADER_PREAMBLE = PREAMBLE.trim()
+
+/**
+ * Compile a fragment shader the way the engine would, and say what is wrong.
+ * For the editor: a mistake is shown while typing, on the machine typing it,
+ * before it travels to the machine that runs it.
+ * @returns {string|null} the compiler's message, or null when it compiles
+ */
+export const checkShader = (fragment) => {
+    const canvas = globalThis.document?.createElement('canvas')
+    const gl = canvas?.getContext('webgl')
+    if (!gl) return null
+    try {
+        link(gl, `${PREAMBLE}${fragment}`)
+        return null
+    } catch (error) {
+        return String(error?.message || error).trim()
+    } finally {
+        gl.getExtension('WEBGL_lose_context')?.loseContext()
+    }
+}
+
+const hashText = (text) => {
+    let h = 5381
+    for (let i = 0; i < text.length; i += 1) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0
+    return h.toString(36)
+}
+
 const MEASURE_W = 32
 const MEASURE_H = 18
 // Readback stalls the GPU a little; numbers do not need 60 a second.
@@ -125,7 +160,7 @@ const freeTarget = (gl, target) => {
  * @param {number} options.height
  * @param {(nodeId: string, numbers: object) => void} [options.onMeasure]  Analyze results
  */
-export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure = null } = {}) => {
+export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure = null, resolveParams = null } = {}) => {
     const gl = canvas.getContext('webgl', { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: false })
     if (!gl) throw new Error('no WebGL on this machine')
 
@@ -145,6 +180,37 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         return programs.get(type)
     }
     const present = programFor('__present')
+
+    // An operator's own shader, when someone has written one inside it. A
+    // shader that does not compile never blacks the picture: the operator keeps
+    // the last program that did (its own earlier code, or the original), and
+    // the compiler's words wait in errors for whoever is looking inside.
+    const lastGood = new Map()
+    const programForNode = (node) => {
+        const custom = typeof node.values?.__shader === 'string' ? node.values.__shader.trim() : ''
+        if (!custom) {
+            errors.delete(node.id)
+            const compiled = programFor(node.type)
+            lastGood.set(node.id, compiled)
+            return compiled
+        }
+        const key = `custom:${node.type}:${hashText(custom)}`
+        if (!programs.has(key)) {
+            try {
+                programs.set(key, link(gl, `${PREAMBLE}${custom}`))
+            } catch (error) {
+                programs.set(key, { failed: String(error?.message || error).trim() })
+            }
+        }
+        const compiled = programs.get(key)
+        if (compiled.failed) {
+            errors.set(node.id, compiled.failed)
+            return lastGood.get(node.id) || programFor(node.type)
+        }
+        errors.delete(node.id)
+        lastGood.set(node.id, compiled)
+        return compiled
+    }
 
     // Per operator: its output now and last frame, plus what the kinds that
     // need more keep (camera source texture, difference history).
@@ -266,8 +332,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
 
             let compiled
             try {
-                compiled = programFor(node.type)
-                errors.delete(node.id)
+                compiled = programForNode(node)
             } catch (error) {
                 errors.set(node.id, String(error?.message || error))
                 continue
@@ -286,7 +351,12 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             const inputs = inputsFor.get(node.id) || {}
             const readA = inputs.a ? latest(inputs.a) : null
             const readB = inputs.b ? latest(inputs.b) : null
-            const params = resolveTopParams(node.type, node.values)
+            let params = resolveTopParams(node.type, node.values)
+            if (resolveParams) {
+                try {
+                    params = { ...params, ...(resolveParams(node, params, now) || {}) }
+                } catch { /* a script's fault is reported by the script runner, not here */ }
+            }
 
             bindTexture(compiled, 'a', 0, readA)
             bindTexture(compiled, 'b', 1, readB)
@@ -381,7 +451,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             }
             slots.clear()
             freeTarget(gl, measureTarget)
-            for (const compiled of programs.values()) gl.deleteProgram(compiled.program)
+            for (const compiled of programs.values()) if (compiled.program) gl.deleteProgram(compiled.program)
             gl.getExtension('WEBGL_lose_context')?.loseContext()
         }
     }

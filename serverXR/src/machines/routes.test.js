@@ -158,9 +158,14 @@ describe('machine identity', () => {
 
         forgetMachines()
         await writeFile(path.join(dir, 'machine.json'), JSON.stringify({ ...stored, name: 'asuz' }))
-        expect(getMachine(dir)).toEqual({ id: first.id, name: 'asuz' })
+        delete process.env.DI_DESK_SCRIPTS
+        expect(getMachine(dir)).toEqual({ id: first.id, name: 'asuz', scripts: false })
         process.env.DI_MACHINE_NAME = 'stage-left'
-        expect(getMachine(dir)).toEqual({ id: first.id, name: 'stage-left' })
+        expect(getMachine(dir)).toEqual({ id: first.id, name: 'stage-left', scripts: false })
+        // Running desk scripts is the machine owner's word in di.env, and only that.
+        process.env.DI_DESK_SCRIPTS = '1'
+        expect(getMachine(dir).scripts).toBe(true)
+        delete process.env.DI_DESK_SCRIPTS
     })
 
     it('regenerates from a corrupt file instead of throwing', async () => {

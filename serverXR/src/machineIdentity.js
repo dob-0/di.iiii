@@ -63,7 +63,11 @@ const getMachine = (dataDir) => {
   }
   const envName = String(process.env.DI_MACHINE_NAME || '').trim()
   const storedName = typeof stored.name === 'string' ? stored.name.trim() : ''
-  return { id: stored.id, name: envName || storedName || hostName() }
+  // Whether pages on this machine run JavaScript written on the desk — code
+  // saved on another machine, running here. Off unless the machine's owner
+  // says so in its own di.env (DI_DESK_SCRIPTS=1); never switchable from a page.
+  const scripts = String(process.env.DI_DESK_SCRIPTS || '').trim() === '1'
+  return { id: stored.id, name: envName || storedName || hostName(), scripts }
 }
 
 /** Tests only: forget what was read, so a changed file is read again. */

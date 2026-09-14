@@ -4,6 +4,17 @@ import { TOP_OPERATORS, isTopType, runsHere } from './topOperators.js'
 import { topThumbnailTargets } from './topThumbnails.js'
 import { acquireMachineLink, machinesIn, runnerOn } from './machineLink.js'
 import { createPicturePeers } from './picturePeers.js'
+import { readTopReport, reportTop, useInspectedTop } from './topReports.js'
+import { compileTopScript } from './topScripts.js'
+
+// A camera's capabilities hold functions and odd objects on some browsers;
+// what crosses the network is plain numbers, strings and ranges.
+const plainCapabilities = (track) => {
+    try { return JSON.parse(JSON.stringify(track?.getCapabilities?.() || {})) } catch { return {} }
+}
+const plainSettings = (track) => {
+    try { return JSON.parse(JSON.stringify(track?.getSettings?.() || {})) } catch { return {} }
+}
 
 // The picture operators of a project document, as the engine reads them.
 // Only wires from a Picture output into a picture input count; a number wired
@@ -82,6 +93,10 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
     const [linkView, setLinkView] = useState({ machine: null, peers: [] })
     const engineRef = useRef(null)
     const peersRef = useRef(null)
+    const tracksRef = useRef(new Map())
+    const numbersRef = useRef({})
+    const failedScripts = useRef(new Set())
+    const inspected = useInspectedTop()
     const onMeasureRef = useRef(onMeasure)
     const showRef = useRef(show)
     useEffect(() => {
@@ -91,6 +106,9 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
 
     const hasNodes = network.nodes.length > 0
     const machineId = linkView.machine?.id || null
+    const scriptsAllowed = linkView.machine?.scripts === true
+    const scriptsAllowedRef = useRef(scriptsAllowed)
+    useEffect(() => { scriptsAllowedRef.current = scriptsAllowed }, [scriptsAllowed])
     const split = useMemo(() => splitNetwork(network, machineId), [network, machineId])
 
     // --- the link to the other machines, while there is a network to share
@@ -122,8 +140,32 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
                 width,
                 height,
                 onMeasure: (id, numbers) => {
+                    numbersRef.current[id] = numbers
                     onMeasureRef.current?.(id, numbers)
                     peersRef.current?.sendNumbers(id, numbers)
+                },
+                // A script inside an operator, every frame, on this machine only.
+                resolveParams: (node, params, now) => {
+                    const source = node.values?.__script
+                    if (!source) return null
+                    if (!scriptsAllowedRef.current) {
+                        reportTop(node.id, { script: 'this machine does not run desk scripts — DI_DESK_SCRIPTS=1 in its di.env turns them on' })
+                        return null
+                    }
+                    const compiled = compileTopScript(source)
+                    if (compiled.error) { reportTop(node.id, { script: compiled.error }); return null }
+                    if (!compiled.frame || failedScripts.current.has(source)) return null
+                    try {
+                        const out = compiled.frame({ time: now, params, numbers: numbersRef.current })
+                        reportTop(node.id, { script: null })
+                        return out && typeof out === 'object' ? out : null
+                    } catch (error) {
+                        // One throw stops it until the code changes: a script that
+                        // throws sixty times a second would bury the page.
+                        failedScripts.current.add(source)
+                        reportTop(node.id, { script: String(error?.message || error) })
+                        return null
+                    }
                 }
             })
         } catch (caught) {
@@ -147,6 +189,12 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
             }
             peersRef.current?.pump()
             if (showRef.current) engine.show(showRef.current)
+            // Shader compile results, for whoever is looking inside.
+            if (count % 30 === 0) {
+                for (const node of engine.network.nodes) {
+                    if (node.values?.__shader !== undefined) reportTop(node.id, { shader: engine.errorFor(node.id) })
+                }
+            }
         }
         raf = requestAnimationFrame(loop)
         return () => {
@@ -176,7 +224,8 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
                     bitmap.close?.()
                 }).catch(() => {})
             },
-            onNumbers: (nodeId, numbers) => onMeasureRef.current?.(nodeId, numbers)
+            onNumbers: (nodeId, numbers) => onMeasureRef.current?.(nodeId, numbers),
+            onReport: (nodeId, report) => reportTop(nodeId, report)
         })
         peersRef.current = peers
         return () => {
@@ -196,13 +245,28 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
             if (!runner) continue
             const want = wants.get(runner.peerId) || { video: [], preview: [] }
             for (const nodeId of nodeIds) {
-                if (remote.has(nodeId)) want.video.push(nodeId)
+                if (remote.has(nodeId) || nodeId === inspected) want.video.push(nodeId)
                 else if (thumbnails) want.preview.push(nodeId)
             }
             wants.set(runner.peerId, want)
         }
         peers.setWants(wants)
-    }, [split, linkView, link, thumbnails])
+    }, [split, linkView, link, thumbnails, inspected])
+
+    // What this machine knows about its own operators goes to the pages looking
+    // at them, every couple of seconds — a page that connects late still hears.
+    useEffect(() => {
+        if (!hasNodes) return undefined
+        const timer = setInterval(() => {
+            const peers = peersRef.current
+            if (!peers) return
+            for (const node of split.local) {
+                const report = readTopReport(node.id)
+                if (Object.keys(report).length) peers.sendReport(node.id, report)
+            }
+        }, 2000)
+        return () => clearInterval(timer)
+    }, [split, hasNodes])
 
     // --- a parameter drag or a new wire changes the network, not the engine
     useEffect(() => {
@@ -213,9 +277,32 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
     const cameraKey = useMemo(
         () => JSON.stringify(split.local
             .filter((node) => TOP_OPERATORS[node.type].source === 'camera')
-            .map((node) => [node.id, node.values.device || '', node.values.deviceLabel || ''])),
+            .map((node) => [node.id, node.values.device || '', node.values.deviceLabel || '', scriptsAllowed ? (node.values.__script || '') : ''])),
+        [split, scriptsAllowed]
+    )
+    // Constraints change a running camera in place — no re-open, no black frame.
+    const constraintsKey = useMemo(
+        () => JSON.stringify(split.local
+            .filter((node) => TOP_OPERATORS[node.type].source === 'camera')
+            .map((node) => [node.id, node.values.__constraints || null])),
         [split]
     )
+    const constraintsFor = (nodeId) => {
+        const node = split.local.find((n) => n.id === nodeId)
+        const value = node?.values?.__constraints
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+    }
+    const constraintsForRef = useRef(constraintsFor)
+    useEffect(() => { constraintsForRef.current = constraintsFor })
+    useEffect(() => {
+        for (const [nodeId, constraints] of JSON.parse(constraintsKey)) {
+            const track = tracksRef.current.get(nodeId)
+            if (!track || !constraints) continue
+            track.applyConstraints(constraints)
+                .then(() => reportTop(nodeId, { camera: { label: track.label, capabilities: plainCapabilities(track), settings: plainSettings(track), error: null } }))
+                .catch((error) => reportTop(nodeId, { camera: { ...(readTopReport(nodeId).camera || {}), error: String(error?.message || error?.name || error) } }))
+        }
+    }, [constraintsKey])
     useEffect(() => {
         const cameras = JSON.parse(cameraKey)
         const ids = cameras.map(([id]) => id)
@@ -223,6 +310,7 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
         const media = globalThis.navigator?.mediaDevices
         if (!media?.getUserMedia) { setError('no camera access in this browser'); return undefined }
         const streams = []
+        const tracks = tracksRef.current
         let cancelled = false
         // A camera's id is per page: the Desk on another page of this machine
         // may have recorded a different one. The label is the fallback, and the
@@ -237,12 +325,30 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
                 return true
             }
         }
-        for (const [id, deviceId, label] of cameras) {
+        for (const [id, deviceId, label, script] of cameras) {
             resolveCamera(deviceId, label)
-                .then((video) => media.getUserMedia({ video, audio: false }))
+                .then(async (video) => {
+                    const constraints = { ...(video === true ? {} : video), ...constraintsForRef.current(id) }
+                    const compiled = script ? compileTopScript(script) : {}
+                    if (compiled.open) {
+                        try {
+                            const stream = await compiled.open({ constraints, deviceId: video?.deviceId?.exact || null, mediaDevices: media })
+                            reportTop(id, { script: null })
+                            return stream
+                        } catch (error) {
+                            reportTop(id, { script: String(error?.message || error) })
+                        }
+                    }
+                    return media.getUserMedia({ video: Object.keys(constraints).length ? constraints : true, audio: false })
+                })
                 .then((stream) => {
                     if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return }
                     streams.push(stream)
+                    const track = stream.getVideoTracks()[0]
+                    if (track) {
+                        tracksRef.current.set(id, track)
+                        reportTop(id, { camera: { label: track.label, capabilities: plainCapabilities(track), settings: plainSettings(track), error: null } })
+                    }
                     const video = globalThis.document.createElement('video')
                     video.muted = true
                     video.playsInline = true
@@ -256,7 +362,7 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
         }
         return () => {
             cancelled = true
-            for (const id of ids) engineRef.current?.setVideo(id, null)
+            for (const id of ids) { engineRef.current?.setVideo(id, null); tracks.delete(id) }
             streams.forEach((stream) => stream.getTracks().forEach((track) => track.stop()))
         }
     }, [cameraKey, hasNodes, canvas])

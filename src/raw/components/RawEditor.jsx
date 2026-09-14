@@ -19,6 +19,7 @@ import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import VideoFrameFeed from './VideoFrameFeed.jsx'
 import TopNetworkFeed from './TopNetworkFeed.jsx'
 import DeskPanelWindow from './DeskPanelWindow.jsx'
+import TopInsidePanel from './topInside/TopInsidePanel.jsx'
 import { isTopType } from '../../project/tops/topOperators.js'
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
@@ -1418,9 +1419,15 @@ export default function RawEditor({
     // Stable graph-surface callbacks: as inline lambdas these re-registered
     // RawGraphSurface's window-level drag/key listeners on every parent
     // render, and a teardown mid-drag dropped the queued final frame.
+    // RawGraphSurface's wire-drop handler reports a bare
+    // {fromNodeId, fromPort, toNodeId, toPort} — it never minted an id, so
+    // this used to forward the payload straight through as the edge and the
+    // server's findIdlessCreateOp (serverXR/src/opValidation.js) rejected
+    // the whole op batch with op_missing_id. Mint the id here, at the one
+    // place a raw wire-drop payload becomes an edge op.
     const handleCreateEdge = useCallback((payload) => applyLocalOps({
         type: 'createEdge',
-        payload: { edge: payload }
+        payload: { edge: createEdge(payload.fromNodeId, payload.fromPort, payload.toNodeId, payload.toPort) }
     }), [applyLocalOps])
     // Put an interior port on the container's face: place the doorway node and
     // its wire in ONE op batch, so a single undo takes both away and no
@@ -2338,6 +2345,15 @@ export default function RawEditor({
                     onViewportChange={handleViewportChange}
                     extraBounds={worldWindowBounds}
                 />
+                {/* Inside a picture operator: what it is made of, live and
+                    changeable — the camera, the shader, the script. */}
+                {isTopType(scopeNode?.typeId) ? (
+                    <TopInsidePanel
+                        node={scopeNode}
+                        machines={knownMachines}
+                        onPatchValues={(values) => applyLocalOps({ type: 'updateNode', payload: { nodeId: scopeNode.id, patch: { values } } })}
+                    />
+                ) : null}
                 {/* Zen's three residents are surface, nodes, wordmark — this is
                     the wordmark. Ambient, kept when the toolbar is summoned too.
                     It became the way home in the 2026-08-21 doors audit: the
