@@ -1,14 +1,13 @@
-import { useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useEffect, useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { registerFrameSource } from './entryTransition.js'
 
 // The room's half of going through a door: the camera travels, and the last
 // frame it sees is handed to the curtain (entryTransition.js), which holds it
 // while the destination loads. Lives inside whatever <Canvas> the door is
 // drawn in, so it needs no cooperation from the controller that was driving
 // the camera — see the priority note below.
-
-const scratch = new THREE.Vector3()
 
 // The frame on screen, copied out. `gl.render` then `drawImage` in the same
 // task is the one moment a WebGL canvas without preserveDrawingBuffer still
@@ -32,58 +31,17 @@ export function captureRendererFrame({ gl, scene, camera }, maxWidth = 2880) {
     }
 }
 
-// Where an object sits on the page, in CSS pixels: the eight corners of its
-// world box, projected and bounded. The expanding panel starts exactly here.
-export function projectObjectRect(object, camera, canvas) {
-    if (!object?.isObject3D || !camera?.isCamera || !canvas?.getBoundingClientRect) return null
-    const box = new THREE.Box3().setFromObject(object)
-    if (box.isEmpty()) return null
-    const bounds = canvas.getBoundingClientRect()
-    let minX = Infinity
-    let minY = Infinity
-    let maxX = -Infinity
-    let maxY = -Infinity
-    for (let i = 0; i < 8; i += 1) {
-        scratch.set(
-            i & 1 ? box.max.x : box.min.x,
-            i & 2 ? box.max.y : box.min.y,
-            i & 4 ? box.max.z : box.min.z
-        ).project(camera)
-        const x = bounds.left + ((scratch.x + 1) / 2) * bounds.width
-        const y = bounds.top + ((1 - scratch.y) / 2) * bounds.height
-        minX = Math.min(minX, x)
-        maxX = Math.max(maxX, x)
-        minY = Math.min(minY, y)
-        maxY = Math.max(maxY, y)
-    }
-    if (!Number.isFinite(minX + minY + maxX + maxY)) return null
-    return { left: minX, top: minY, width: maxX - minX, height: maxY - minY }
-}
-
-// A door's opening on the page, as a circle in CSS pixels: its centre
-// projected, its radius from the ring's own size at that distance. Computed
-// from the ring rather than from a world-aligned box, which for a ring seen at
-// an angle is a loose rectangle that sits off the opening it is meant to be.
-export function projectRingCircle(object, camera, canvas) {
-    if (!object?.isObject3D || !camera?.isCamera || !canvas?.getBoundingClientRect) return null
-    const bounds = canvas.getBoundingClientRect()
-    const centre = object.getWorldPosition(new THREE.Vector3())
-    const worldScale = object.getWorldScale(new THREE.Vector3())
-    const params = object.geometry?.parameters || {}
-    // The OPENING, inside the tube: the panel grows out of the hole, and the
-    // ring stays visible round it for the first frames of the move.
-    const local = Number.isFinite(params.radius) ? params.radius - (params.tube || 0) : 1
-    const radius = local * Math.max(Math.abs(worldScale.x), Math.abs(worldScale.y), Math.abs(worldScale.z))
-    const view = centre.clone().applyMatrix4(camera.matrixWorldInverse)
-    const depth = -view.z
-    if (!(depth > 0.01)) return null
-    scratch.copy(centre).project(camera)
-    const focal = (bounds.height / 2) / Math.tan(THREE.MathUtils.degToRad((camera.fov || 60) / 2))
-    return {
-        x: bounds.left + ((scratch.x + 1) / 2) * bounds.width,
-        y: bounds.top + ((1 - scratch.y) / 2) * bounds.height,
-        r: (radius * focal) / depth
-    }
+/**
+ * Lets the page this scene sits in be held through a door with no room behind
+ * it (a front-page button): the curtain's copy of the page asks for this
+ * canvas's current frame, and only the scene can re-render it in the same
+ * task to hand one over. Mount inside the <Canvas>.
+ */
+export function FrameSource() {
+    const gl = useThree((state) => state.gl)
+    const get = useThree((state) => state.get)
+    useEffect(() => registerFrameSource(gl?.domElement, () => captureRendererFrame(get())), [gl, get])
+    return null
 }
 
 // Accelerates out of rest and is still moving when it ends: the held frame

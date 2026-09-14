@@ -6,37 +6,28 @@
 // a hard cut. The register asked for is a film one: one continuous eased move,
 // the whole field, restrained, and never a glitch.
 //
-// Three candidates stand side by side for him to choose between, selected
-// with `?entry=a|b|c` (a when absent). Everything that is a DECISION lives
-// here, pure, so it can be asserted on without a canvas or a timer:
+// Three candidates stood side by side (a glide, a dissolve through the
+// door's colour, a panel opening out of the door) and the owner found them
+// "the same" (2026-09-15). There is ONE entering move now, the glide:
 //
-//   a  glide     the camera travels into the door; the last frame holds and
-//                keeps drifting forward until the destination has painted,
-//                then the destination fades up in its place.
-//   b  dissolve  the whole field dissolves through the door's own colour,
-//                then the destination settles in slowly out of it.
-//   c  expand    the door (or the card) opens out to fill the screen and
-//                that panel is what the destination fades up inside.
+//   the camera travels into the door; the last frame holds and keeps
+//   drifting forward until the destination has painted, then the destination
+//   fades up in its place. A door with no room behind it (a button on the
+//   front page, a card on /spaces) pushes the view gently toward the thing
+//   pressed instead.
 //
-// A visitor who asked the system for less motion gets none of the three —
-// a short plain fade, and the same destination.
+// Everything that is a DECISION lives here, pure, so it can be asserted on
+// without a canvas or a timer. A visitor who asked the system for less motion
+// gets a short plain fade, and the same destination.
 
-export const ENTRY_VARIANTS = Object.freeze(['a', 'b', 'c'])
-export const DEFAULT_ENTRY_VARIANT = 'a'
-
-// The ground of the brand. A card has no colour of its own to dissolve
-// through, and a door's colour at full strength is a flash, not a dissolve.
+// The ground of the brand. A card has no colour of its own, and a door's
+// colour at full strength is a flash, not a field.
 export const ENTRY_GROUND = '#05070a'
 
 const readSearch = (search) => {
     if (typeof search === 'string') return search
     if (typeof window === 'undefined') return ''
     return window.location.search || ''
-}
-
-export const resolveEntryVariant = (search) => {
-    const asked = String(new URLSearchParams(readSearch(search)).get('entry') || '').trim().toLowerCase()
-    return ENTRY_VARIANTS.includes(asked) ? asked : DEFAULT_ENTRY_VARIANT
 }
 
 // `?entryslow=<factor>` stretches every authored duration so a move can be
@@ -59,66 +50,42 @@ const varied = (ms, random, spread = 0.08) => ms * (1 + (random() * 2 - 1) * spr
 
 /**
  * @param {object}  options
- * @param {string}  options.variant       'a' | 'b' | 'c'
  * @param {boolean} [options.reducedMotion]
  * @param {boolean} [options.hasScene]    the source is a door in a live 3D room
  * @param {number}  [options.slow]        ?entryslow factor
  * @param {Function}[options.random]
  */
-export const planEntry = ({ variant = DEFAULT_ENTRY_VARIANT, reducedMotion = false, hasScene = false, slow = 1, random = Math.random } = {}) => {
+export const planEntry = ({ reducedMotion = false, hasScene = false, slow = 1, random = Math.random } = {}) => {
     const s = Number.isFinite(slow) && slow >= 1 ? slow : 1
     if (reducedMotion) {
         return {
             kind: 'fade',
-            variant,
             glideMs: 0,
             glideReach: 0,
             coverMs: hasScene ? 0 : Math.round(160 * s),
+            leadMs: 0,
             revealMs: Math.round(240 * s),
             driftScale: 1,
-            settleFrom: 1,
-            settleMs: 0
-        }
-    }
-    const v = ENTRY_VARIANTS.includes(variant) ? variant : DEFAULT_ENTRY_VARIANT
-    if (v === 'b') {
-        return {
-            kind: 'dissolve',
-            variant: v,
-            // A short lean toward the door while the colour rises, so the
-            // field is moving when it dissolves rather than freezing first.
-            glideMs: hasScene ? Math.round(varied(900, random) * s) : 0,
-            glideReach: hasScene ? 0.28 : 0,
-            coverMs: Math.round(varied(720, random) * s),
-            revealMs: Math.round(varied(1250, random) * s),
-            driftScale: 1,
-            settleFrom: 1.03 + random() * 0.01,
-            settleMs: Math.round(varied(1700, random) * s)
-        }
-    }
-    if (v === 'c') {
-        return {
-            kind: 'expand',
-            variant: v,
-            glideMs: 0,
-            glideReach: 0,
-            coverMs: Math.round(varied(820, random) * s),
-            revealMs: Math.round(varied(820, random) * s),
-            driftScale: 1,
+            driftMs: 0,
             settleFrom: 1,
             settleMs: 0
         }
     }
     return {
         kind: 'glide',
-        variant: 'a',
         glideMs: hasScene ? Math.round(varied(1150, random) * s) : 0,
         glideReach: hasScene ? 1 : 0,
-        // Without a room to travel through (a card, a button) the page itself
-        // is pushed toward the thing pressed while the ground comes up.
+        // Without a room to travel through and without a picture of the page
+        // to hold (a card), the page itself is pushed toward the thing pressed
+        // while the ground comes up.
         coverMs: hasScene ? 0 : Math.round(varied(640, random) * s),
+        // Holding a picture of the page instead (a front-page button), the push
+        // is already under way when the route changes, and the destination is
+        // not let up before the push has read as a move rather than a flicker.
+        leadMs: hasScene ? 0 : Math.round(varied(560, random) * s),
         revealMs: Math.round(varied(900, random) * s),
         driftScale: 1.07 + random() * 0.03,
+        driftMs: Math.round(2600 * s),
         settleFrom: 1.035 + random() * 0.01,
         settleMs: Math.round(varied(1400, random) * s)
     }
@@ -147,11 +114,33 @@ export const entryTone = (hex, strength = 0.32) => {
 // the page being left behind has canvases and iframes of its own (the landing
 // room, the space cards' previews), and counting those would reveal a frame
 // of the old page over nothing.
+//
+// Two ways a surface can be there and still show nothing yet:
+//   - a room's loading veil stays in the DOM once the room has loaded, faded
+//     to opacity 0 — present is not the same as showing;
+//   - a room's canvas draws its first frames before its document arrives, in
+//     the default dark and with nothing in it. A scene marks itself
+//     `data-entry-pending` until then, and a surface inside that mark does
+//     not count (seen on /open_jam/scene: its white room came up out of a
+//     dark empty frame).
+export const ENTRY_PENDING_ATTR = 'data-entry-pending'
+
+export const isShowing = (el) => {
+    const view = el.ownerDocument?.defaultView
+    if (!view?.getComputedStyle) return true
+    const style = view.getComputedStyle(el)
+    if (style.display === 'none' || style.visibility === 'hidden') return false
+    const opacity = Number.parseFloat(style.opacity)
+    return !(Number.isFinite(opacity) && opacity <= 0.05)
+}
+
 export const isDestinationPainted = (doc, { before = new Set(), curtain = null } = {}) => {
     if (!doc) return false
-    if (doc.querySelector('.loading-screen, .live-scene-loading')) return false
+    const loading = Array.from(doc.querySelectorAll('.loading-screen, .live-scene-loading'))
+        .filter((el) => !(curtain && curtain.contains(el)))
+    if (loading.some(isShowing)) return false
     const drawn = Array.from(doc.querySelectorAll('canvas, iframe'))
-        .filter((el) => !before.has(el) && !(curtain && curtain.contains(el)))
+        .filter((el) => !before.has(el) && !(curtain && curtain.contains(el)) && !el.closest(`[${ENTRY_PENDING_ATTR}]`))
     return drawn.length > 0
 }
 

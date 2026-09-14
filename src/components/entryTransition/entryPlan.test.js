@@ -1,36 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import {
-    DEFAULT_ENTRY_VARIANT,
+import * as plan from './entryPlan.js'
+
+const {
     ENTRY_GROUND,
     entryTone,
     isDestinationPainted,
     planEntry,
     prefersReducedMotion,
-    resolveEntrySlowdown,
-    resolveEntryVariant
-} from './entryPlan.js'
+    resolveEntrySlowdown
+} = plan
 
 const fixed = (value) => () => value
 
 describe('which entry plays', () => {
-    it('is a when nothing is asked for', () => {
-        expect(DEFAULT_ENTRY_VARIANT).toBe('a')
-        expect(resolveEntryVariant('')).toBe('a')
-        expect(resolveEntryVariant('?tour=1')).toBe('a')
-    })
-
-    it('is the one named by ?entry, in either case', () => {
-        expect(resolveEntryVariant('?entry=b')).toBe('b')
-        expect(resolveEntryVariant('?entry=C')).toBe('c')
-        expect(resolveEntryVariant('?room=1&entry=a')).toBe('a')
-    })
-
-    // A typo in a review link must still play something professional, not
-    // nothing — and never a fourth, unreviewed move.
-    it('falls back to a for anything it does not know', () => {
-        expect(resolveEntryVariant('?entry=d')).toBe('a')
-        expect(resolveEntryVariant('?entry=')).toBe('a')
-        expect(resolveEntryVariant('?entry=crack')).toBe('a')
+    // Three candidates were reviewed and found "the same" (2026-09-15); the
+    // glide is the one move. No address can ask for another.
+    it('is always the glide, whatever the address says', () => {
+        expect(plan.ENTRY_VARIANTS).toBeUndefined()
+        expect(plan.resolveEntryVariant).toBeUndefined()
+        expect(planEntry({ variant: 'b', hasScene: true }).kind).toBe('glide')
+        expect(planEntry({ variant: 'c', hasScene: false }).kind).toBe('glide')
     })
 
     it('only slows down inside a sane range', () => {
@@ -48,63 +37,58 @@ describe('reduced motion', () => {
         expect(prefersReducedMotion(null)).toBe(false)
     })
 
-    // Whatever variant is under review, a visitor who asked for less motion
-    // gets a short plain fade: no glide, no drift, no settle, no expanding panel.
-    it.each(['a', 'b', 'c'])('turns variant %s into a short plain fade', (variant) => {
-        const plan = planEntry({ variant, reducedMotion: true, hasScene: true })
-        expect(plan.kind).toBe('fade')
-        expect(plan.glideMs).toBe(0)
-        expect(plan.driftScale).toBe(1)
-        expect(plan.settleFrom).toBe(1)
-        expect(plan.revealMs).toBeLessThanOrEqual(300)
+    // A visitor who asked for less motion gets a short plain fade: no glide,
+    // no drift, no settle, no push — from a room or from a page.
+    it.each([true, false])('turns the move into a short plain fade (room: %s)', (hasScene) => {
+        const p = planEntry({ reducedMotion: true, hasScene })
+        expect(p.kind).toBe('fade')
+        expect(p.glideMs).toBe(0)
+        expect(p.leadMs).toBe(0)
+        expect(p.driftScale).toBe(1)
+        expect(p.settleFrom).toBe(1)
+        expect(p.revealMs).toBeLessThanOrEqual(300)
     })
 })
 
-describe('the three moves', () => {
-    it('a glides the camera all the way in when there is a room to travel through', () => {
-        const plan = planEntry({ variant: 'a', hasScene: true, random: fixed(0.5) })
-        expect(plan.kind).toBe('glide')
-        expect(plan.glideReach).toBe(1)
-        expect(plan.glideMs).toBe(1150)
-        expect(plan.coverMs).toBe(0)
-        expect(plan.driftScale).toBeGreaterThan(1)
+describe('the glide', () => {
+    it('glides the camera all the way in when there is a room to travel through', () => {
+        const p = planEntry({ hasScene: true, random: fixed(0.5) })
+        expect(p.kind).toBe('glide')
+        expect(p.glideReach).toBe(1)
+        expect(p.glideMs).toBe(1150)
+        expect(p.coverMs).toBe(0)
+        expect(p.leadMs).toBe(0)
+        expect(p.driftScale).toBeGreaterThan(1)
     })
 
-    it('a pushes the page instead when the door is a card', () => {
-        const plan = planEntry({ variant: 'a', hasScene: false, random: fixed(0.5) })
-        expect(plan.glideMs).toBe(0)
-        expect(plan.coverMs).toBeGreaterThan(0)
-    })
-
-    it('b leans only part of the way while the colour rises, then settles slowly', () => {
-        const plan = planEntry({ variant: 'b', hasScene: true, random: fixed(0.5) })
-        expect(plan.kind).toBe('dissolve')
-        expect(plan.glideReach).toBeGreaterThan(0)
-        expect(plan.glideReach).toBeLessThan(0.5)
-        expect(plan.settleMs).toBeGreaterThan(plan.revealMs)
-    })
-
-    it('c expands without a camera move', () => {
-        const plan = planEntry({ variant: 'c', hasScene: true, random: fixed(0.5) })
-        expect(plan.kind).toBe('expand')
-        expect(plan.glideMs).toBe(0)
-        expect(plan.coverMs).toBeGreaterThan(0)
+    // A front-page button: the page is held and pushed in, and the
+    // destination may not come up before the push has read as a move.
+    it('pushes the page in, for long enough to read as a move, when the door has no room behind it', () => {
+        const p = planEntry({ hasScene: false, random: fixed(0.5) })
+        expect(p.glideMs).toBe(0)
+        expect(p.coverMs).toBeGreaterThan(0)
+        expect(p.leadMs).toBeGreaterThanOrEqual(400)
+        expect(p.driftMs).toBeGreaterThan(p.leadMs + p.revealMs)
+        // Restrained: a push, not a zoom.
+        expect(p.driftScale).toBeLessThan(1.12)
     })
 
     // Never the same play twice — but only a few percent apart, never a
     // different kind of move.
     it('varies timing subtly between visits', () => {
-        const low = planEntry({ variant: 'a', hasScene: true, random: fixed(0) })
-        const high = planEntry({ variant: 'a', hasScene: true, random: fixed(0.999) })
+        const low = planEntry({ hasScene: true, random: fixed(0) })
+        const high = planEntry({ hasScene: true, random: fixed(0.999) })
         expect(low.glideMs).not.toBe(high.glideMs)
         expect(low.kind).toBe(high.kind)
         expect(high.glideMs / low.glideMs).toBeLessThan(1.2)
     })
 
     it('stretches every authored duration by the review slowdown', () => {
-        const normal = planEntry({ variant: 'b', hasScene: true, random: fixed(0.5) })
-        const slow = planEntry({ variant: 'b', hasScene: true, random: fixed(0.5), slow: 10 })
+        const normal = planEntry({ hasScene: false, random: fixed(0.5) })
+        const slow = planEntry({ hasScene: false, random: fixed(0.5), slow: 10 })
         expect(slow.coverMs).toBe(normal.coverMs * 10)
+        expect(slow.leadMs).toBe(normal.leadMs * 10)
+        expect(slow.driftMs).toBe(normal.driftMs * 10)
     })
 })
 
@@ -157,5 +141,37 @@ describe('isDestinationPainted', () => {
         curtain.appendChild(doc.createElement('canvas'))
         doc.body.appendChild(curtain)
         expect(isDestinationPainted(doc, { curtain })).toBe(false)
+    })
+})
+
+describe('isDestinationPainted, what does not count yet', () => {
+    // A room's loading veil stays in the DOM once loaded, faded to 0.
+    it('does not wait on a loading veil that has faded out', () => {
+        const veil = document.createElement('div')
+        veil.className = 'live-scene-loading'
+        veil.style.opacity = '0'
+        const canvas = document.createElement('canvas')
+        document.body.append(veil, canvas)
+        try {
+            expect(isDestinationPainted(document)).toBe(true)
+            veil.style.opacity = '1'
+            expect(isDestinationPainted(document)).toBe(false)
+        } finally {
+            veil.remove()
+            canvas.remove()
+        }
+    })
+
+    // /open_jam/scene: the canvas drew a dark empty room before its document
+    // arrived, and the curtain let go onto it.
+    it('does not count a room that is still waiting for its document', () => {
+        const doc = document.implementation.createHTMLDocument('t')
+        const wrapper = doc.createElement('div')
+        wrapper.setAttribute(plan.ENTRY_PENDING_ATTR, 'document')
+        wrapper.appendChild(doc.createElement('canvas'))
+        doc.body.appendChild(wrapper)
+        expect(isDestinationPainted(doc)).toBe(false)
+        wrapper.removeAttribute(plan.ENTRY_PENDING_ATTR)
+        expect(isDestinationPainted(doc)).toBe(true)
     })
 })
