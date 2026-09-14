@@ -1006,7 +1006,7 @@ describe('RawEditor stream.monitor panel', () => {
         )
         render(<RawEditor localStorageKey={MONITOR_STORAGE_KEY} />)
 
-        expect(screen.getByText(/Wire a texture into Source/)).toBeInTheDocument()
+        expect(screen.getByText(/Wire a picture into Source/)).toBeInTheDocument()
         expect(screen.queryByText('This panel is ready for authored UI.')).toBeNull()
     })
 })

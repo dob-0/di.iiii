@@ -17,17 +17,40 @@ const plainSettings = (track) => {
 }
 
 // The picture operators of a project document, as the engine reads them.
-// Only wires from a Picture output into a picture input count; a number wired
-// into an operator is the rest of the graph's business.
+// Only wires into a picture input count; a number wired into an operator's
+// setting is the rest of the graph's business.
+//
+// Pictures cross the wall both ways:
+//   feeds    a picture from the REST of the graph (a Webcam's or a Video's
+//            Frame) wired into an operator's A/B. The engine reads it like a
+//            remote operator's video — see useTopNetwork's feedMedia.
+//   exports  operators whose Picture is wired OUT to the rest of the graph
+//            (a Monitor, a Plane's texture, an Image). Only these pay for a
+//            copy the room can use — see useTopNetwork's onPicture.
 export const toTopNetwork = (document) => {
     const nodes = (document?.nodes || [])
         .filter((node) => isTopType(node.typeId))
         .map((node) => ({ id: node.id, type: node.typeId, values: node.values || {} }))
     const ids = new Set(nodes.map((node) => node.id))
-    const wires = (document?.edges || [])
-        .filter((edge) => ids.has(edge.fromNodeId) && ids.has(edge.toNodeId) && edge.fromPort === 'out' && ['a', 'b'].includes(edge.toPort))
-        .map((edge) => ({ from: edge.fromNodeId, to: edge.toNodeId, port: edge.toPort }))
-    return { nodes, wires }
+    const known = new Set((document?.nodes || []).map((node) => node.id))
+    const wires = []
+    const feeds = []
+    const exports = new Set()
+    for (const edge of document?.edges || []) {
+        if (!edge) continue
+        const intoPicture = ids.has(edge.toNodeId) && ['a', 'b'].includes(edge.toPort)
+        if (intoPicture && ids.has(edge.fromNodeId) && edge.fromPort === 'out') {
+            wires.push({ from: edge.fromNodeId, to: edge.toNodeId, port: edge.toPort })
+        } else if (intoPicture && known.has(edge.fromNodeId) && !ids.has(edge.fromNodeId)) {
+            wires.push({ from: edge.fromNodeId, to: edge.toNodeId, port: edge.toPort })
+            if (!feeds.some((feed) => feed.id === edge.fromNodeId && feed.port === edge.fromPort)) {
+                feeds.push({ id: edge.fromNodeId, port: edge.fromPort })
+            }
+        } else if (ids.has(edge.fromNodeId) && edge.fromPort === 'out' && known.has(edge.toNodeId) && !ids.has(edge.toNodeId)) {
+            exports.add(edge.fromNodeId)
+        }
+    }
+    return { nodes, wires, feeds, exports: [...exports] }
 }
 
 /**
@@ -41,7 +64,12 @@ export const splitNetwork = (network, machineId) => {
     const local = network.nodes.filter((node) => runsHere(node.values, machineId))
     const localIds = new Set(local.map((node) => node.id))
     const elsewhere = network.nodes.filter((node) => !localIds.has(node.id))
-    const remote = new Set(network.wires.filter((wire) => localIds.has(wire.to) && !localIds.has(wire.from)).map((wire) => wire.from))
+    const feedIds = new Set((network.feeds || []).map((feed) => feed.id))
+    const remote = new Set(network.wires.filter((wire) => localIds.has(wire.to) && !localIds.has(wire.from) && !feedIds.has(wire.from)).map((wire) => wire.from))
+    // A picture the rest of THIS page's graph shows, computed elsewhere, has to
+    // arrive as video too — a Monitor here cannot watch a thumbnail.
+    const elsewhereIds = new Set(elsewhere.map((node) => node.id))
+    for (const id of network.exports || []) if (elsewhereIds.has(id)) remote.add(id)
     const byMachine = new Map()
     for (const node of elsewhere) {
         const list = byMachine.get(node.values.machine) || []
@@ -74,6 +102,10 @@ export function useKnownMachines() {
 }
 
 const THUMBNAIL_EVERY = 3
+// An exported picture: enough for a Monitor or a Plane in the room, cheap to
+// copy out of the GPU on a 2012 laptop (every THUMBNAIL_EVERY frames).
+const PICTURE_W = 320
+const PICTURE_H = 180
 const EMPTY = { nodes: [], wires: [] }
 
 /**
@@ -86,8 +118,18 @@ const EMPTY = { nodes: [], wires: [] }
  * @param {string|null} [options.show]        node id whose picture the canvas shows (a Picture Out)
  * @param {boolean} [options.thumbnails]      feed the cards' pictures
  * @param {(nodeId, numbers) => void} [options.onMeasure]  Analyze readings, local and remote
+ * @param {(nodeId, port) => (HTMLVideoElement|HTMLCanvasElement|null)} [options.feedMedia]
+ *        the picture a non-operator node hands an operator (network.feeds)
+ * @param {(nodeId, canvas|null) => void} [options.onPicture]  an exported operator's
+ *        picture canvas (network.exports), once when it appears and null when it goes
+ * @param {(nodeIds: string[]) => void} [options.onPicturesDrawn]  those canvases were redrawn
+ * @param {boolean} [options.cameras]  may this page open cameras (false on a public page)
  */
-export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, show = null, thumbnails = false, onMeasure = null, width = 640, height = 360 }) {
+export function useTopNetwork({
+    network = EMPTY, spaceId = '', canvas = null, show = null, thumbnails = false, onMeasure = null,
+    feedMedia = null, onPicture = null, onPicturesDrawn = null, cameras = true,
+    width = 640, height = 360
+}) {
     const [error, setError] = useState('')
     const [link, setLink] = useState(null)
     const [linkView, setLinkView] = useState({ machine: null, peers: [] })
@@ -99,10 +141,21 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
     const inspected = useInspectedTop()
     const onMeasureRef = useRef(onMeasure)
     const showRef = useRef(show)
+    const feedMediaRef = useRef(feedMedia)
+    const onPictureRef = useRef(onPicture)
+    const onPicturesDrawnRef = useRef(onPicturesDrawn)
+    const networkRef = useRef(network)
     useEffect(() => {
         onMeasureRef.current = onMeasure
         showRef.current = show
+        feedMediaRef.current = feedMedia
+        onPictureRef.current = onPicture
+        onPicturesDrawnRef.current = onPicturesDrawn
+        networkRef.current = network
     })
+    // One small canvas per exported operator: what a Monitor, a Plane or an
+    // Image downstream actually draws. Created when the wire appears.
+    const picturesRef = useRef(new Map())
 
     const hasNodes = network.nodes.length > 0
     const machineId = linkView.machine?.id || null
@@ -178,13 +231,29 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
         let count = 0
         const loop = (now) => {
             raf = requestAnimationFrame(loop)
+            // Pictures from the rest of the graph, into the slots operators read.
+            const current = networkRef.current
+            if (current.feeds?.length && feedMediaRef.current) {
+                for (const feed of current.feeds) engine.setRemoteVideo(feed.id, feedMediaRef.current(feed.id, feed.port) || null)
+            }
             engine.frame(now)
             count += 1
-            if (thumbnails && count % THUMBNAIL_EVERY === 0) {
-                const targets = topThumbnailTargets()
-                if (targets.size) {
-                    const mine = new Map([...targets].filter(([nodeId]) => engine.has(nodeId)))
-                    if (mine.size) engine.thumbnails(mine)
+            if (count % THUMBNAIL_EVERY === 0) {
+                if (thumbnails) {
+                    const targets = topThumbnailTargets()
+                    if (targets.size) {
+                        const mine = new Map([...targets].filter(([nodeId]) => engine.has(nodeId)))
+                        if (mine.size) engine.thumbnails(mine)
+                    }
+                }
+                // Exported pictures: one GPU copy each into its own canvas.
+                if (picturesRef.current.size) {
+                    const exported = new Map()
+                    for (const [nodeId, picture] of picturesRef.current) if (engine.has(nodeId)) exported.set(nodeId, picture.context)
+                    if (exported.size) {
+                        engine.thumbnails(exported)
+                        onPicturesDrawnRef.current?.([...exported.keys()])
+                    }
                 }
             }
             peersRef.current?.pump()
@@ -273,19 +342,49 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
     // too — it needs a slot to land in even though nothing here is wired to it.
     const remoteIds = useMemo(() => {
         const ids = new Set(split.remote)
+        // A picture fed in from the rest of the graph lands in a slot like a
+        // remote operator's video does.
+        for (const feed of network.feeds || []) ids.add(feed.id)
         if (inspected && split.byMachine && [...split.byMachine.values()].some((list) => list.includes(inspected))) ids.add(inspected)
         return [...ids]
-    }, [split, inspected])
+    }, [split, inspected, network])
     useEffect(() => {
         engineRef.current?.setNetwork({ nodes: split.local, wires: network.wires, remote: remoteIds })
     }, [split, network, hasNodes, canvas, remoteIds])
 
-    // --- one camera stream per Camera In that runs HERE
+    // --- an exported operator's picture canvas appears with its wire and goes with it
+    const exportsKey = (network.exports || []).join('|')
+    useEffect(() => {
+        const wanted = new Set(exportsKey ? exportsKey.split('|') : [])
+        const pictures = picturesRef.current
+        for (const [nodeId] of pictures) {
+            if (wanted.has(nodeId)) continue
+            pictures.delete(nodeId)
+            onPictureRef.current?.(nodeId, null)
+        }
+        for (const nodeId of wanted) {
+            if (pictures.has(nodeId)) continue
+            const pictureCanvas = globalThis.document?.createElement('canvas')
+            const context = pictureCanvas?.getContext?.('2d')
+            if (!context) continue
+            pictureCanvas.width = PICTURE_W
+            pictureCanvas.height = PICTURE_H
+            pictures.set(nodeId, { canvas: pictureCanvas, context })
+            onPictureRef.current?.(nodeId, pictureCanvas)
+        }
+    }, [exportsKey])
+    useEffect(() => () => {
+        for (const [nodeId] of picturesRef.current) onPictureRef.current?.(nodeId, null)
+        picturesRef.current.clear()
+    }, [])
+
+    // --- one camera stream per Camera In that runs HERE (never on a page that may not ask)
     const cameraKey = useMemo(
         () => JSON.stringify(split.local
+            .filter(() => cameras)
             .filter((node) => TOP_OPERATORS[node.type].source === 'camera')
             .map((node) => [node.id, node.values.device || '', node.values.deviceLabel || '', scriptsAllowed ? (node.values.__script || '') : ''])),
-        [split, scriptsAllowed]
+        [split, scriptsAllowed, cameras]
     )
     // Constraints change a running camera in place — no re-open, no black frame.
     const constraintsKey = useMemo(
