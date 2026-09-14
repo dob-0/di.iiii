@@ -328,10 +328,18 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         }
     }, [applyIncomingOps, isPreview, projectId, reloadDocument])
 
+    // The name this surface gives itself in di.iiii's own furniture: the room's
+    // heading for a screen reader and a crawler, the walk-mode header, the
+    // iframe's accessible name. Naming rule (docs/ai/vocabulary.md, "One name
+    // per space"): the SPACE's name, unless the URL named the project. It used
+    // to be the project's title everywhere, so /dilijan announced itself as
+    // "Welcome", /network as "who makes di.iiii" and /br-id-ge as "the landing —
+    // the door" while its tab, card and list all said the space's name.
     const viewerTitle = useMemo(() => {
-        if (!document?.projectMeta?.title) return spaceLabel || resolvedRouteSpaceId
-        return document.projectMeta.title
-    }, [document?.projectMeta?.title, resolvedRouteSpaceId, spaceLabel])
+        const spaceName = spaceLabel || resolvedRouteSpaceId
+        if (showProjectInTitle && document?.projectMeta?.title) return document.projectMeta.title
+        return spaceName || document?.projectMeta?.title || ''
+    }, [document?.projectMeta?.title, resolvedRouteSpaceId, showProjectInTitle, spaceLabel])
 
     // The tab title. Naming rule (docs/ai/vocabulary.md): a space's own name
     // is what a visitor sees for it; a project's name shows only when the URL

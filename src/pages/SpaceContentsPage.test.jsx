@@ -67,6 +67,20 @@ describe('a space\'s contents page', () => {
         expect(screen.getByText('one view')).toBeTruthy()
     })
 
+    // One name per space: the list's tab was the index.html default on every
+    // space, while its heading and the /{space} tab said the space's name.
+    it('names the tab after the space, the same as its heading', async () => {
+        getServerSpaceMock.mockResolvedValue({ id: 'network', label: 'The network', publishedProjectId: 'network' })
+        listSpaceContentsMock.mockResolvedValue(contents)
+        const before = document.title
+        const { unmount } = render(<SpaceContentsPage spaceId="network" />)
+
+        expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('The network')
+        await waitFor(() => expect(document.title).toBe('The network — di.iiii'))
+        unmount()
+        expect(document.title).toBe(before)
+    })
+
     it('names the one project the space opens on', async () => {
         listSpaceContentsMock.mockResolvedValue(contents)
         render(<SpaceContentsPage spaceId="br_id_ge" />)

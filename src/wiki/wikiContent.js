@@ -171,10 +171,11 @@ export const WIKI_ARTICLES = [
             'Under the title, once you have more than three spaces: Arrange orders them by Recent (what has something to show, then last touched), by Name, or by State. The chips beside it show only the spaces in one state, and each carries its count: Open to anyone (public, with something published), Only you (private — a visitor meets a login wall), and Needs a door (public, but nothing is published in it, so a visitor walks into an empty room).',
             'In Map view each space is one star: its SIZE is how much is in it, its colour is who can open it (the legend names all five), and the glow breathes on a space that is live. The view opens framed on the whole estate — it works out how far back to stand from the spaces you actually have and the shape of your window, so nothing is cropped on a phone or on a wide screen.',
             'Click a space in Map view to open a side panel for it — rename, copy the live link, make public/private, delete, and manage its projects — the same actions as the grid, just reached from the map. Clicking the satellite projects around a selected space lets you rename them or set one live. Which space is "Main" (marked with a badge here and on the grid) is set in Ops Graph → Manage only.',
-            'Your view, your arrangement and your filter are each remembered on this device for next time.'
+            'Your view, your arrangement and your filter are each remembered on this device for next time.',
+            'A space goes by one name everywhere: its card, its row in the list, its star on the map, the heading on the page that lists what it holds, and the browser tab. The name is the space’s own — the one you set with Rename. What the space opens on is called by its own title only once you are inside it. So a visitor’s card says the name once and nothing more about the project behind the door. Your own cards add an “Opens on:” line only when the project that opens has a different title from the space, which is the one fact worth checking at a glance; the List view’s “what opens” column follows the same rule, and says “the space itself” otherwise.'
         ],
-        tags: ['spaces', 'map', 'list', 'arrange', 'filter', 'constellation', 'ui'],
-        updated: '2026-09-09'
+        tags: ['spaces', 'map', 'list', 'arrange', 'filter', 'constellation', 'ui', 'name', 'title', 'project line'],
+        updated: '2026-09-15'
     },
     {
         id: 'guest-and-sandbox-modes',

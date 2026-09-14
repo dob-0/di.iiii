@@ -23,6 +23,7 @@ import SpaceConstellation from './SpaceConstellation.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { enterFromElement } from '../../components/entryTransition/entryTransition.js'
 import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
+import { doorTitleForCard, spaceName } from '../utils/spaceNames.js'
 // The card's door. A space whose bare segment a work has taken (`/wcc`) is
 // addressed through its published project instead, so the picture, the frame
 // and the links all open the SPACE and not the code sharing its name.
@@ -884,14 +885,16 @@ export default function SpaceHub() {
                         </div>
                         {listSpaces.map(space => {
                             const state = spaceState(space)
-                            const linkedTitle = space.publishedProjectId
-                                ? (projectTitles[space.publishedProjectId] || space.publishedProjectId)
-                                : null
+                            // One name per space (utils/spaceNames.js): the row
+                            // names the space once, and says the door's title only
+                            // to an account, only where it differs from the name.
+                            const doorTitle = doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
                             const stateWord = state === 'open' ? 'open to anyone'
                                 : state === 'nodoor' ? 'no door' : 'only you'
                             return (
                                 <div
                                     key={space.id}
+                                    data-space-id={space.id}
                                     className="ssh-list-row"
                                     role="button"
                                     tabIndex={0}
@@ -899,10 +902,21 @@ export default function SpaceHub() {
                                     onKeyDown={e => e.key === 'Enter' && openCard(space, e.currentTarget)}
                                 >
                                     <span className="ssh-list-name">
-                                        <b>{space.label || space.id}</b>
-                                        <span className="ssh-list-id">{space.kind === 'sandbox' ? 'sandbox' : space.id}</span>
+                                        <b>{spaceName(space)}</b>
+                                        {/* The id was a second copy of the name on
+                                            almost every row ("Drum Rhythms" over
+                                            "drum-rhythms"). The map dropped it first;
+                                            the address is one click away on Live. A
+                                            sandbox keeps its word: that is its kind,
+                                            not its name. */}
+                                        {space.kind === 'sandbox' && <span className="ssh-list-id">sandbox</span>}
                                     </span>
-                                    <span className="ssh-list-project">{linkedTitle || <span className="ssh-list-none">nothing published</span>}</span>
+                                    <span className="ssh-list-project">
+                                        {doorTitle
+                                            || (space.publishedProjectId
+                                                ? <span className="ssh-list-none">the space itself</span>
+                                                : <span className="ssh-list-none">nothing published</span>)}
+                                    </span>
                                     <span className={`ssh-list-state ssh-list-state--${state}`}>{stateWord}</span>
                                     <span className="ssh-list-acts" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                                         <button type="button" className="ssh-card-btn" onClick={() => openCard(space)}>Open</button>
@@ -933,29 +947,38 @@ export default function SpaceHub() {
                         {items.map((space) => {
                             const isMain = space.id === defaultSpaceId
                             const isLinking = linker?.spaceId === space.id
-                            const linkedTitle = space.publishedProjectId
-                                ? (projectTitles[space.publishedProjectId] || space.publishedProjectId)
-                                : null
+                            const doorTitle = doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
+                            const showViewOnly = space.isPublic && !canEnter(space) && !isVisitor
 
                             return (
                                 <div
                                     key={space.id}
+                                    data-space-id={space.id}
                                     className="ssh-space-card"
                                     onClick={(event) => openCard(space, event.currentTarget)}
                                     role="button"
                                     tabIndex={0}
                                     onKeyDown={e => e.key === 'Enter' && openCard(space, e.currentTarget)}
                                 >
-                                    <div className="ssh-card-header">
-                                        <span className="ssh-space-id">{space.kind === 'sandbox' ? 'sandbox' : space.id}</span>
-                                        {isMain && <span className="ssh-badge-main">Main</span>}
-                                        {space.isPublic && <span className="ssh-badge-live">Live</span>}
-                                        {/* "View live" tells an account which of the spaces on
-                                            its page it cannot edit. On a visitor's page that is
-                                            every card, so it says nothing and wraps the header
-                                            onto two lines — Live alone carries it there. */}
-                                        {space.isPublic && !canEnter(space) && !isVisitor && <span className="ssh-badge-viewonly">View live</span>}
-                                    </div>
+                                    {/* One name per space (utils/spaceNames.js). The header
+                                        used to open with the id in mono — "drum-rhythms"
+                                        above "Drum Rhythms" above "Project: Drum Rhythms",
+                                        the same words three times on six of thirteen cards.
+                                        The name below is the one name; the address is
+                                        printed, as an address, on the live-link row. A
+                                        sandbox keeps its word, which is a kind, not a name. */}
+                                    {(space.kind === 'sandbox' || isMain || space.isPublic || showViewOnly) && (
+                                        <div className="ssh-card-header">
+                                            {space.kind === 'sandbox' && <span className="ssh-space-id">sandbox</span>}
+                                            {isMain && <span className="ssh-badge-main">Main</span>}
+                                            {space.isPublic && <span className="ssh-badge-live">Live</span>}
+                                            {/* "View live" tells an account which of the spaces on
+                                                its page it cannot edit. On a visitor's page that is
+                                                every card, so it says nothing and wraps the header
+                                                onto two lines — Live alone carries it there. */}
+                                            {showViewOnly && <span className="ssh-badge-viewonly">View live</span>}
+                                        </div>
+                                    )}
                                     {(() => {
                                         const isLive = liveSpaceId === space.id
                                         // isPublic alone, NOT isPublic && publishedProjectId.
@@ -1021,7 +1044,7 @@ export default function SpaceHub() {
                                             </div>
                                         )
                                     })()}
-                                    <p className="ssh-space-label">{space.label || space.id}</p>
+                                    <p className="ssh-space-label">{spaceName(space)}</p>
                                     {/* In a visitor's single grid the Open Space is one card
                                         among the others, so it carries its own line instead of
                                         a shelf heading above it. */}
@@ -1030,8 +1053,13 @@ export default function SpaceHub() {
                                             {featured ? hint : (space.kind === 'sandbox' ? SANDBOX_HINT : OPEN_SPACE_HINT)}
                                         </p>
                                     ) : null}
-                                    {linkedTitle && (
-                                        <p className="ssh-space-project">Project: {linkedTitle}</p>
+                                    {/* The door's title, to its owner, only where it is
+                                        not the space's name again. A visitor never sees
+                                        it: a card is the way into the SPACE, and a space
+                                        that opens straight into one piece has nothing to
+                                        add by naming the piece. */}
+                                    {doorTitle && (
+                                        <p className="ssh-space-project">Opens on: {doorTitle}</p>
                                     )}
                                     {/* A card opens the space's one door. Everything
                                         else the space holds had no address anybody

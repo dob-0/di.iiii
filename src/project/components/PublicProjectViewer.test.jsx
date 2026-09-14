@@ -176,6 +176,46 @@ describe('PublicProjectViewer', () => {
         expect(screen.queryByText(/^viewer-scene:/)).toBeNull()
     })
 
+    // One name per space (owner, 2026-09-14). /dilijan announced itself as
+    // "Welcome", /network as "who makes di.iiii", /br-id-ge as "the landing —
+    // the door": the door project's title, in the heading a screen reader and a
+    // crawler read and in the page frame's accessible name, while the tab, the
+    // card and the list all said the space's name.
+    describe('names itself after the space unless the URL named the project', () => {
+        const codeDoor = () => {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'landing', title: 'the landing — the door' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>door</main>' },
+                    entities: []
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+        }
+
+        it('the space\'s own door carries the space\'s name', async () => {
+            codeDoor()
+            const { container } = render(
+                <PublicProjectViewer spaceId="br-id-ge" projectId="landing" spaceLabel="br_id_ge" />
+            )
+            await waitFor(() => expect(container.querySelector('.room-text-layer h1')).not.toBeNull())
+            expect(container.querySelector('.room-text-layer h1').textContent).toBe('br_id_ge')
+            expect(container.querySelector('iframe').getAttribute('title')).toBe('br_id_ge')
+            expect(container.textContent).not.toContain('the landing — the door')
+        })
+
+        it('a project link keeps the project\'s own title', async () => {
+            codeDoor()
+            const { container } = render(
+                <PublicProjectViewer spaceId="br-id-ge" projectId="landing" spaceLabel="br_id_ge" showProjectInTitle />
+            )
+            await waitFor(() => expect(container.querySelector('.room-text-layer h1')).not.toBeNull())
+            expect(container.querySelector('.room-text-layer h1').textContent).toBe('the landing — the door')
+            expect(container.querySelector('iframe').getAttribute('title')).toBe('the landing — the door')
+        })
+    })
+
     it('grants a real origin (allow-same-origin) only when the owner opts into deviceAccess', async () => {
         getProjectDocumentMock.mockResolvedValue({
             version: 1,
@@ -332,7 +372,9 @@ describe('PublicProjectViewer', () => {
 
             const { container } = render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
 
-            const frame = await screen.findByTitle('Live Project')
+            // Named after the SPACE: this is the space's own door, not a URL
+            // that named the project (docs/ai/vocabulary.md, one name per space).
+            const frame = await screen.findByTitle('Main Space')
             expect(frame.style.background).toBe('transparent')
             expect(container.querySelector('main').style.background).toBe('transparent')
         } finally {
