@@ -103,6 +103,7 @@ export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbe
                 return
             }
             if (c.nextPreviewNode) {
+                c.previewsIn = (c.previewsIn || 0) + 1
                 onPreview(c.nextPreviewNode, new Blob([data], { type: 'image/jpeg' }))
                 c.nextPreviewNode = null
             }
@@ -203,6 +204,7 @@ export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbe
                         if (channel.readyState !== 'open') return
                         channel.send(JSON.stringify({ kind: 'preview-of', nodeId }))
                         channel.send(buffer)
+                        c.previewsOut = (c.previewsOut || 0) + 1
                     })
                 }, 'image/jpeg', 0.6)
             }
@@ -232,6 +234,27 @@ export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbe
     }
     const wantTimer = setInterval(announceWants, WANT_EVERY_MS)
 
+    // What the connections are doing, readable from a console on either machine:
+    // globalThis.__diPictures(). A picture that does not arrive is otherwise
+    // invisible — both pages are fine, and nothing says where it stopped.
+    const inspect = () => [...connections.values()].map((c) => ({
+        peer: c.peerId,
+        polite: c.polite,
+        connection: c.pc.connectionState,
+        ice: c.pc.iceConnectionState,
+        signaling: c.pc.signalingState,
+        channel: c.channel?.readyState || null,
+        theyWantVideo: [...c.theirVideo],
+        theyWantPreview: [...c.theirPreview],
+        sending: [...c.outgoing.keys()],
+        receiving: [...c.incomingVideo.keys()],
+        previewsIn: c.previewsIn || 0,
+        previewsOut: c.previewsOut || 0
+    }))
+    const inspectors = (globalThis.__diPictureInspectors ||= new Set())
+    inspectors.add(inspect)
+    globalThis.__diPictures = () => ({ wants: [...wants], connections: [...inspectors].flatMap((fn) => fn()) })
+
     return {
         pump,
         sendNumbers,
@@ -241,6 +264,7 @@ export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbe
             if (JSON.stringify([...wants]) !== before) announceWants()
         },
         stop() {
+            inspectors.delete(inspect)
             clearInterval(previewTimer)
             clearInterval(wantTimer)
             offMessage()
