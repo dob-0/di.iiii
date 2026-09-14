@@ -13,11 +13,10 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the studio signs di.i, the platform ships di.iiii, and a production is a word we did not have
-- programs sign the guest book: /for-apps, llms.txt, and a bouncer for anonymous scripts
-- ?embed=1 becomes one contract every lane keeps
-- backup-pull could not see its own archives through a symlinked destination
-- a page stops claiming to be di-studio.xyz when it is not
+- Going through a door is one move now: three pro entry variants for review, the fallen page leaves, the phone sees the doors
+- the not-found card names the right thing and stops asking you to sign in
+- /open and /open_jam/scene are now the same room
+- every page names itself, in the tab and in a link preview
 
 Full detail: `PROGRESS.md`.
 
