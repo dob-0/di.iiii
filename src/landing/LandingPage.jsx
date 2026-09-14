@@ -10,6 +10,7 @@ import { buildSpacesPath } from '../studio/utils/studioRouting.js'
 import { flyInside, REST_POSE } from './enterFlight.js'
 import { crackAway } from './crackTransition.js'
 import PageDebris from './PageDebris.jsx'
+import { enterFromElement } from '../components/entryTransition/entryTransition.js'
 import { buildJamScenePath } from '../project/routing/jamRouting.js'
 import { WORK_IDS } from '../works/works.js'
 
@@ -244,6 +245,16 @@ function LandingPageInner() {
     // The page once it has stopped being a page: real meshes in the room's
     // scene, falling. Held in state because the scene has to render them.
     const [pieces, setPieces] = useState([])
+    // Once the visitor is nearly there, the fallen page is struck from the
+    // room (PageDebris fades and sinks it) and then dropped from the scene.
+    const [piecesLeaving, setPiecesLeaving] = useState(false)
+    const dropPieces = useCallback(() => {
+        setPieces((current) => {
+            current.forEach((piece) => piece.texture?.dispose?.())
+            return []
+        })
+        setPiecesLeaving(false)
+    }, [])
     // Walk/fly and the orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to
     // the orbit view once you'd moved was a full Exit + Enter Space round
@@ -305,8 +316,8 @@ function LandingPageInner() {
         setRoomSpeaks(false)
         setViewMode(false)
         setEntered(false)
-        setPieces([])
-    }, [])
+        dropPieces()
+    }, [dropPieces])
 
     const openDoor = (event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
@@ -322,6 +333,7 @@ function LandingPageInner() {
                 reducedMotion: typeof window !== 'undefined'
                     && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
                 onPieces: setPieces,
+                onPageLeaves: () => setPiecesLeaving(true),
                 onDone: () => {
                     cancelFlightRef.current = null
                     setEntered(true)
@@ -431,8 +443,9 @@ function LandingPageInner() {
                                 cameraPoseRef={cameraPoseRef}
                                 hideEntityTypes={roomSpeaks ? null : HERO_ECHO_TYPES}
                                 onArrivalPose={handleArrivalPose}
+                                fitArrivalToDoors
                                 sceneExtras={pieces.length
-                                    ? <PageDebris pieces={pieces} cameraPose={REST_POSE} />
+                                    ? <PageDebris pieces={pieces} cameraPose={REST_POSE} leaving={piecesLeaving} onGone={dropPieces} />
                                     : null}
                             />
                         </Suspense>
@@ -507,6 +520,7 @@ function LandingPageInner() {
                                         variant="outlined"
                                         size="small"
                                         href={space.href}
+                                        onClick={(event) => enterFromElement(event, space.href)}
                                     >
                                         {space.label}
                                     </Button>

@@ -199,3 +199,34 @@ describe('flyInside', () => {
         expect(REST_POSE.fov).toBe(WALK_POSE.fov)
     })
 })
+
+describe('the fallen page leaving', () => {
+    // It has to start leaving before the visitor stands still, or they arrive
+    // looking at a strip of warped page text lying across the doors.
+    it('is told to leave part-way through the flight, once', async () => {
+        const { PAGE_LEAVES_AT } = await import('./enterFlight.js')
+        expect(PAGE_LEAVES_AT).toBeGreaterThan(0.3)
+        expect(PAGE_LEAVES_AT).toBeLessThan(1)
+
+        const frames = []
+        vi.stubGlobal('requestAnimationFrame', (cb) => { frames.push(cb); return frames.length })
+        vi.stubGlobal('cancelAnimationFrame', () => {})
+        const root = window.document.createElement('div')
+        window.document.body.appendChild(root)
+        const onPageLeaves = vi.fn()
+        const onDone = vi.fn()
+        const start = performance.now()
+        flyInside({ root, cameraPoseRef: { current: null }, onDone, onPageLeaves })
+        // Walk the flight by hand: early, past the mark, the end.
+        frames.shift()(start + 100)
+        expect(onPageLeaves).not.toHaveBeenCalled()
+        frames.shift()(start + 2200 * 0.8)
+        expect(onPageLeaves).toHaveBeenCalledTimes(1)
+        frames.shift()(start + 60000)
+        expect(onPageLeaves).toHaveBeenCalledTimes(1)
+        expect(onDone).toHaveBeenCalled()
+        vi.unstubAllGlobals()
+        window.document.body.innerHTML = ''
+    })
+})
+

@@ -106,7 +106,12 @@ export const visibleLayers = (root, viewportHeight, viewportWidth = Infinity) =>
  * @param {boolean}  [options.reducedMotion]
  * @returns {Function} cancel
  */
-export const flyInside = ({ root, cameraPoseRef, onDone, onPieces, reducedMotion = false, endPose = null }) => {
+// How far through the flight the fallen page starts to leave the room. Late
+// enough that the fall is seen; early enough that it is gone by the time the
+// visitor is standing still and looking at the doors.
+export const PAGE_LEAVES_AT = 0.62
+
+export const flyInside = ({ root, cameraPoseRef, onDone, onPieces, onPageLeaves, reducedMotion = false, endPose = null }) => {
     // The room's own arrival if it reported one, the default if it did not.
     const destination = endPose?.position && endPose?.target
         ? { position: endPose.position, target: endPose.target, fov: WALK_FOV }
@@ -155,6 +160,7 @@ export const flyInside = ({ root, cameraPoseRef, onDone, onPieces, reducedMotion
 
     let frame = 0
     let settling = 0
+    let pageLeaving = false
     const duration = flightDuration()
     const started = performance.now()
 
@@ -165,6 +171,10 @@ export const flyInside = ({ root, cameraPoseRef, onDone, onPieces, reducedMotion
             position: lerp3(REST_POSE.position, destination.position, eased),
             target: lerp3(REST_POSE.target, destination.target, eased),
             fov: REST_POSE.fov + (WALK_FOV - REST_POSE.fov) * eased
+        }
+        if (!pageLeaving && t >= PAGE_LEAVES_AT) {
+            pageLeaving = true
+            onPageLeaves?.()
         }
         if (t < 1) {
             frame = requestAnimationFrame(tick)

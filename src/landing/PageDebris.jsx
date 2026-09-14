@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
@@ -81,8 +81,27 @@ const initialVelocity = (piece, forward, right, seed) => {
         .add(new THREE.Vector3(0, 1.0 + jitter(seed, 3) * 0.6, 0))
 }
 
-export default function PageDebris({ pieces, cameraPose }) {
+// Once the visitor has arrived, the page LEAVES the room. It used to stay
+// there for good: a dark tilted strip of tiny warped nav text lying across the
+// doors, which read as debris left behind rather than as a page that was put
+// down (owner, 2026-09-14: "too cracky and DIY"). It goes the way a stage
+// piece is struck — a slow fade while it sinks a hand's width into the floor
+// — and then it is gone from the scene altogether.
+export const DEBRIS_LEAVE_MS = 1100
+const DEBRIS_SINK = 0.35
+
+export const debrisLeaveState = (elapsedMs, durationMs = DEBRIS_LEAVE_MS) => {
+    const t = Math.min(1, Math.max(0, elapsedMs / Math.max(1, durationMs)))
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
+    return { opacity: 1 - eased, sink: DEBRIS_SINK * eased, done: t >= 1 }
+}
+
+export default function PageDebris({ pieces, cameraPose, leaving = false, onGone = null }) {
     const groupRef = useRef(null)
+    const leaveStartRef = useRef(null)
+    const goneRef = useRef(false)
+    const onGoneRef = useRef(onGone)
+    useEffect(() => { onGoneRef.current = onGone }, [onGone])
     const bodies = useMemo(() => {
         const from = new THREE.Vector3(...(cameraPose?.position || [0, 0, 0]))
         const to = new THREE.Vector3(...(cameraPose?.target || [0, 0, -1]))
@@ -128,6 +147,19 @@ export default function PageDebris({ pieces, cameraPose }) {
         // which would teleport every piece through the floor on one frame.
         const delta = Math.min(rawDelta, 1 / 20)
 
+        let leave = null
+        if (leaving) {
+            const now = state.clock.getElapsedTime() * 1000
+            if (leaveStartRef.current === null) leaveStartRef.current = now
+            leave = debrisLeaveState(now - leaveStartRef.current)
+            if (leave.done && !goneRef.current) {
+                goneRef.current = true
+                group.visible = false
+                onGoneRef.current?.()
+                return
+            }
+        }
+
         bodies.forEach((body, index) => {
             const mesh = group.children[index]
             if (!mesh) return
@@ -162,6 +194,10 @@ export default function PageDebris({ pieces, cameraPose }) {
 
             mesh.position.copy(body.position)
             mesh.quaternion.copy(body.quaternion)
+            if (leave) {
+                mesh.position.y -= leave.sink
+                if (mesh.material) mesh.material.opacity = leave.opacity
+            }
         })
     })
 

@@ -21,7 +21,7 @@ import { listProjects, getProject, updateProject } from '../../project/services/
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
 import SpaceConstellation from './SpaceConstellation.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
-import { appNavigate } from '../../utils/appNavigate.js'
+import { enterFromElement } from '../../components/entryTransition/entryTransition.js'
 import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 // The card's door. A space whose bare segment a work has taken (`/wcc`) is
 // addressed through its published project instead, so the picture, the frame
@@ -368,9 +368,6 @@ export default function SpaceHub() {
         return () => stop.abort()
     }, [])
 
-    const openSpace = (spaceId) =>
-        navigateToStudioPath(buildStudioHubPath(spaceId))
-
     // A card opens the editor only when the session can actually work there.
     // The Open Space and your own sandbox are always enterable (the server
     // grants them implicitly, outside the cookie scope). Public spaces you
@@ -381,12 +378,18 @@ export default function SpaceHub() {
         || space.kind === 'sandbox'
         || (Array.isArray(sessionScopes) && sessionScopes.includes(space.id))
 
-    const openCard = (space) => {
-        if (!canEnter(space) && space.isPublic) {
-            appNavigate(buildSpaceDoorPath(space))
-            return
-        }
-        openSpace(space.id)
+    // Both routes out of a card go through the entry transition: the card is
+    // the thing that opens out (or that the page pushes toward), and the page
+    // holds until the destination has painted instead of cutting to black.
+    const openCard = (space, element = null) => {
+        const href = !canEnter(space) && space.isPublic
+            ? buildSpaceDoorPath(space)
+            : buildStudioHubPath(space.id)
+        const coverAssetId = brokenCovers.has(space.id) ? null : space.previewImageAssetId
+        enterFromElement(null, href, {
+            element: element?.querySelector?.('.ssh-card-preview') || element,
+            image: coverAssetId ? getServerSpaceAssetUrl(space.id, coverAssetId, { width: 480 }) : null
+        })
     }
 
     const submitCreate = async (title) => {
@@ -892,8 +895,8 @@ export default function SpaceHub() {
                                     className="ssh-list-row"
                                     role="button"
                                     tabIndex={0}
-                                    onClick={() => openCard(space)}
-                                    onKeyDown={e => e.key === 'Enter' && openCard(space)}
+                                    onClick={(event) => openCard(space, event.currentTarget)}
+                                    onKeyDown={e => e.key === 'Enter' && openCard(space, e.currentTarget)}
                                 >
                                     <span className="ssh-list-name">
                                         <b>{space.label || space.id}</b>
@@ -938,10 +941,10 @@ export default function SpaceHub() {
                                 <div
                                     key={space.id}
                                     className="ssh-space-card"
-                                    onClick={() => openCard(space)}
+                                    onClick={(event) => openCard(space, event.currentTarget)}
                                     role="button"
                                     tabIndex={0}
-                                    onKeyDown={e => e.key === 'Enter' && openCard(space)}
+                                    onKeyDown={e => e.key === 'Enter' && openCard(space, e.currentTarget)}
                                 >
                                     <div className="ssh-card-header">
                                         <span className="ssh-space-id">{space.kind === 'sandbox' ? 'sandbox' : space.id}</span>
