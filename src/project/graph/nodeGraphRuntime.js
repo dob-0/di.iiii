@@ -211,7 +211,11 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
             break
         case 'geom.cube':
             if (portId === 'bounds') {
+                // The box the room actually draws: RawViewport takes each
+                // axis's magnitude, clamped 0.001..100, so a [0,1,0] size is
+                // a thin sliver there and must be the same sliver here.
                 return asVec3(evaluateNodeInput(node, 'size', context, nextStack), [1, 1, 1])
+                    .map((axis) => Math.min(100, Math.max(0.001, Math.abs(axis))))
             }
             // The shape as a VALUE — see geometryDescriptor.js. Read through
             // evaluateNodeInput, never off node.values: a colour wired into

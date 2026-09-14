@@ -13,7 +13,7 @@ import AudioObject from '../../objectComponents/AudioObject.jsx'
 import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
-import { getNodeType } from '../../project/nodeRegistry.js'
+import { getNodeType, getTypeInputDefault } from '../../project/nodeRegistry.js'
 import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
@@ -355,7 +355,7 @@ export function renderNodeBody(node, values, assetMap = null) {
             return (
                 <SphereObject
                     color={values.color || '#5fa8ff'}
-                    sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, 0.6))))}
+                    sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.radius, getTypeInputDefault('geom.sphere', 'radius')))))}
                     opacity={asFiniteNumber(values.opacity, 1)}
                     material={{ roughness: asFiniteNumber(values.roughness, 1), metalness: asFiniteNumber(values.metalness, 0), emissive: values.emissive }}
                 />
@@ -419,8 +419,10 @@ export function renderNodeBody(node, values, assetMap = null) {
                 </mesh>
             )
         case 'geom.plane': {
-            const w = Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.width, 1))))
-            const h = Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.height, 1))))
+            // Fallbacks from the registry, never literals: the renderer used 1 and
+            // the registry 2, so a plane with a cleared field changed size.
+            const w = Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.width, getTypeInputDefault('geom.plane', 'width')))))
+            const h = Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.height, getTypeInputDefault('geom.plane', 'height')))))
             // A live texture (source.webcam.frame etc.) wins over textureUrl —
             // it's a THREE.Texture instance from the graph's liveOutputs, not
             // a loadable URL, so it renders directly instead of via useTexture.
@@ -447,7 +449,7 @@ export function renderNodeBody(node, values, assetMap = null) {
                 <mesh>
                     <planeGeometry args={[w, h]} />
                     <PrimitiveMaterial
-                        color={asColor(values.color, '#5fa8ff')}
+                        color={asColor(values.color, getTypeInputDefault('geom.plane', 'color'))}
                         opacity={asFiniteNumber(values.opacity, 1)}
                         roughness={asFiniteNumber(values.roughness, 1)}
                         metalness={asFiniteNumber(values.metalness, 0)}

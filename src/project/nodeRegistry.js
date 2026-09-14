@@ -2825,6 +2825,13 @@ export const getNodeType = (typeId) => NODE_TYPES[typeId] || null
 
 export const getPortType = (typeId) => PORT_TYPES[typeId] || PORT_TYPES.any
 
+// A type's declared default for one input — what a renderer or a runtime
+// falls back to when the value is missing. One source, so the room, a wire
+// and the inspector never disagree about a cleared field.
+export const getTypeInputDefault = (typeId, portId) => (
+    getNodeType(typeId)?.inputs?.find((port) => port.id === portId)?.default
+)
+
 // Two ports are compatible if their types can be connected.
 // 'any' connects to anything. color <-> vec3 are interchangeable.
 // A number or a signal switches a boolean — Time's beat and MIDI's trigger
