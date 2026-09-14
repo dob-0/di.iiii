@@ -16,7 +16,7 @@ A file the person brought in, standing in space — Scale is wired here. No `src
 - `rotation` (vec3) — Rotation — default [0,0,0]
 - `scale` (vec3) — Scale — default [1,1,1]
 - `playAnimations` (boolean) — Play — default true
-- `animationSpeed` (number) — Speed — default 1, step 0.1
+- `animationSpeed` (number) — Speed — default 1, min 0, max 5, step 0.1
 - `animationClip` (string) — Clip — default ""
 
 **Outputs:** none

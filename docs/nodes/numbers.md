@@ -314,7 +314,7 @@ A line of text, wired into a Text panel so it reads what the String says.
 The document clock. Its Sin swings -1..1 once a second (bpm 60); remapped through Range, it drives a lamp's brightness up and down.
 
 **Inputs:**
-- `bpm` (number) — BPM — default 120
+- `bpm` (number) — BPM — default 120, min 20, max 300, step 1
 
 **Outputs:**
 - `elapsed` (number) — Elapsed (s)
@@ -505,7 +505,7 @@ Crossfades two colours by Factor — wired ports lerp correctly; typed straight 
 **Inputs:**
 - `a` (any) — A — default 0
 - `b` (any) — B — default 0
-- `t` (number) — Factor — default 0.5
+- `t` (number) — Factor — default 0.5, min 0, max 1, step 0.01
 
 **Outputs:**
 - `out` (any) — Result
@@ -908,7 +908,7 @@ Chases a target instead of jumping to it — a Number that steps from 0 to 1 arr
 
 **Inputs:**
 - `in` (number) — Value — default 0
-- `lag` (number) — Lag (s) — default 0.5
+- `lag` (number) — Lag (s) — default 0.5, min 0, max 10, step 0.05
 
 **Outputs:**
 - `out` (number) — Result
@@ -989,7 +989,7 @@ Chases a target instead of jumping to it — a Number that steps from 0 to 1 arr
 A smooth wander -1..1 over the document clock — every window sees the same drift, driving a lamp's intensity here.
 
 **Inputs:**
-- `speed` (number) — Speed — default 1
+- `speed` (number) — Speed — default 1, min 0, max 20, step 0.01
 - `variant` (number) — Variant — default 0
 
 **Outputs:**
@@ -1133,8 +1133,8 @@ Remaps a number from one span into another — a Number measured 0..100 answers 
 Four waveforms of one phase, all -1..1 — the Triangle output here drives a lamp's intensity up and down every second.
 
 **Inputs:**
-- `frequency` (number) — Frequency — default 1
-- `phase` (number) — Phase — default 0
+- `frequency` (number) — Frequency — default 1, min 0.01, max 20, step 0.01
+- `phase` (number) — Phase — default 0, min 0, max 1, step 0.01
 
 **Outputs:**
 - `sine` (number) — Sine
@@ -1742,7 +1742,7 @@ Answers what Value was Delay seconds ago — a young Delay is late, never silent
 
 **Inputs:**
 - `value` (number) — Value — default 0
-- `delay` (number) — Delay (s) — default 0.5
+- `delay` (number) — Delay (s) — default 0.5, min 0, max 60, step 0.05
 
 **Outputs:**
 - `out` (number) — Later
@@ -1824,7 +1824,7 @@ A cued stopwatch — a rising edge on Start begins it, Progress climbs 0..1 over
 
 **Inputs:**
 - `start` (boolean) — Start — default false
-- `length` (number) — Length (s) — default 5
+- `length` (number) — Length (s) — default 5, min 0, max 600, step 0.5
 
 **Outputs:**
 - `elapsed` (number) — Elapsed (s)
@@ -1899,9 +1899,9 @@ Shapes a firing into an attack-hold-release envelope, 0 to 1 and back — a Butt
 
 **Inputs:**
 - `fire` (boolean) — Fire — default false
-- `attack` (number) — Attack (s) — default 0.1
-- `hold` (number) — Hold (s) — default 0.2
-- `release` (number) — Release (s) — default 0.5
+- `attack` (number) — Attack (s) — default 0.1, min 0, max 10, step 0.01
+- `hold` (number) — Hold (s) — default 0.2, min 0, max 10, step 0.01
+- `release` (number) — Release (s) — default 0.5, min 0, max 10, step 0.01
 
 **Outputs:**
 - `out` (number) — Envelope
@@ -2945,7 +2945,7 @@ Spins a vector around an Axis by an Angle (degrees) — wired into a Cube's Posi
 **Inputs:**
 - `vector` (vec3) — Vector — default [0,0,0]
 - `axis` (vec3) — Axis — default [0,1,0]
-- `angle` (number) — Angle — default 0
+- `angle` (number) — Angle — default 0, min -360, max 360, step 1
 
 **Outputs:**
 - `out` (vec3) — Result
@@ -3280,7 +3280,7 @@ One fixed draw between Least and Greatest per Variant — change Variant to draw
 A three-stop gradient read at Position — 0 is A, half is B, 1 is C — wired into a Cube's colour so it reads a journey along the ramp.
 
 **Inputs:**
-- `position` (number) — Position — default 0
+- `position` (number) — Position — default 0, min 0, max 1, step 0.01
 - `a` (color) — A — default "#000000"
 - `b` (color) — B — default "#5fa8ff"
 - `c` (color) — C — default "#ffffff"

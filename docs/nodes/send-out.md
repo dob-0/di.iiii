@@ -67,9 +67,9 @@ What a visitor to the public page gets — Title is wired; the space-level switc
 A channel on the lighting desk's rig — Master, Channel, Value and Blackout all come from real wires here (a wired Boolean is safe; typing "0"/"false" straight into Blackout's free-text field is a documented trap). Status reports the rig's own reply.
 
 **Inputs:**
-- `master` (number) — Master
-- `channel` (number) — Channel — default 1
-- `value` (number) — Value
+- `master` (number) — Master — min 0, max 1, step 0.01
+- `channel` (number) — Channel — default 1, min 1, max 512, step 1
+- `value` (number) — Value — min 0, max 1, step 0.01
 - `blackout` (any) — Blackout
 - `scene` (string) — Scene
 
@@ -181,12 +181,12 @@ A channel on the lighting desk's rig — Master, Channel, Value and Blackout all
 Sends a note out over Web MIDI — Trigger holds the note, a changed Value goes out as CC. Status reports the feed's own reply.
 
 **Inputs:**
-- `note` (number) — Note — default 60
-- `velocity` (number) — Velocity — default 100
-- `cc` (number) — CC — default 1
-- `value` (number) — Value — default 0
+- `note` (number) — Note — default 60, min 0, max 127, step 1
+- `velocity` (number) — Velocity — default 100, min 0, max 127, step 1
+- `cc` (number) — CC — default 1, min 0, max 127, step 1
+- `value` (number) — Value — default 0, min 0, max 127, step 1
 - `trigger` (any) — Trigger
-- `channel` (number) — Channel — default 1
+- `channel` (number) — Channel — default 1, min 1, max 16, step 1
 
 **Outputs:**
 - `status` (string) — Status
@@ -237,7 +237,8 @@ Sends a note out over Web MIDI — Trigger holds the note, a changed Value goes 
         "velocity": 100,
         "cc": 1,
         "value": 0,
-        "channel": 1
+        "channel": 1,
+        "deviceId": ""
       }
     }
   ],

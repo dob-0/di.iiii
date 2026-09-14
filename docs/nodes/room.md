@@ -161,9 +161,9 @@ The scene's ambient wash and one sun — Ambient Colour and Sun Intensity come f
 
 **Inputs:**
 - `ambientColor` (color) — Ambient Colour — default "#ffffff"
-- `ambientIntensity` (number) — Ambient Intensity — default 0.8
+- `ambientIntensity` (number) — Ambient Intensity — default 0.8, min 0, max 5, step 0.01
 - `directionalColor` (color) — Sun Colour — default "#fff7ea"
-- `directionalIntensity` (number) — Sun Intensity — default 1.05
+- `directionalIntensity` (number) — Sun Intensity — default 1.05, min 0, max 5, step 0.01
 - `directionalPosition` (vec3) — Sun Position — default [8,12,4]
 
 **Outputs:** none
@@ -237,7 +237,7 @@ A lamp standing where you put it — Colour, Intensity and Position all come fro
 
 **Inputs:**
 - `color` (color) — Colour — default "#ffe9c4"
-- `intensity` (number) — Intensity — default 6
+- `intensity` (number) — Intensity — default 6, min 0, max 50, step 0.1
 - `position` (vec3) — Position — default [0,1.6,0]
 
 **Outputs:** none
@@ -310,7 +310,7 @@ An authored eye — Position and Look At come from wires. Standing in the room i
 **Inputs:**
 - `position` (vec3) — Position — default [0,2.4,6.5]
 - `lookAt` (vec3) — Look At — default [0,0.75,0]
-- `fov` (number) — FOV — default 50
+- `fov` (number) — FOV — default 50, min 10, max 170, step 1
 
 **Outputs:** none
 
@@ -440,7 +440,7 @@ The floor grid — Visible, Size and Colour all come from wires, so a Boolean ca
 
 **Inputs:**
 - `visible` (boolean) — Visible — default true
-- `size` (number) — Size — default 24
+- `size` (number) — Size — default 24, min 1, max 200, step 1
 - `color` (color) — Colour — default "#333333"
 
 **Outputs:** none

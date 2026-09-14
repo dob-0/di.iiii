@@ -13,10 +13,10 @@ The plain box — Colour and Size come from wires here, not the [0,1,0] "invisib
 **Inputs:**
 - `color` (color) — Colour — default "#5fa8ff"
 - `size` (vec3) — Size — default [1,1,1]
-- `roughness` (number) — Roughness — default 1
-- `metalness` (number) — Metalness — default 0
+- `roughness` (number) — Roughness — default 1, min 0, max 1, step 0.01
+- `metalness` (number) — Metalness — default 0, min 0, max 1, step 0.01
 - `emissive` (color) — Emission — default "#000000"
-- `opacity` (number) — Opacity — default 1
+- `opacity` (number) — Opacity — default 1, min 0, max 1, step 0.01
 - `position` (vec3) — Position — default [0,0.5,0]
 - `rotation` (vec3) — Rotation — default [0,0,0]
 
@@ -108,11 +108,11 @@ A ball whose Radius and Colour are both wired — grow it by changing the Number
 
 **Inputs:**
 - `color` (color) — Colour — default "#5fa8ff"
-- `radius` (number) — Radius — default 0.5
-- `roughness` (number) — Roughness — default 1
-- `metalness` (number) — Metalness — default 0
+- `radius` (number) — Radius — default 0.5, min 0.01, max 50, step 0.01
+- `roughness` (number) — Roughness — default 1, min 0, max 1, step 0.01
+- `metalness` (number) — Metalness — default 0, min 0, max 1, step 0.01
 - `emissive` (color) — Emission — default "#000000"
-- `opacity` (number) — Opacity — default 1
+- `opacity` (number) — Opacity — default 1, min 0, max 1, step 0.01
 - `position` (vec3) — Position — default [0,0.5,0]
 - `rotation` (vec3) — Rotation — default [0,0,0]
 
@@ -195,14 +195,14 @@ A flat panel — Width, Height and Colour come from wires. A Webcam wired into T
 
 **Inputs:**
 - `color` (color) — Colour — default "#ffffff"
-- `width` (number) — Width — default 2
-- `height` (number) — Height — default 2
+- `width` (number) — Width — default 2, min 0.01, max 50, step 0.01
+- `height` (number) — Height — default 2, min 0.01, max 50, step 0.01
 - `textureUrl` (string) — Texture URL — default ""
 - `texture` (texture) — Texture
-- `roughness` (number) — Roughness — default 1
-- `metalness` (number) — Metalness — default 0
+- `roughness` (number) — Roughness — default 1, min 0, max 1, step 0.01
+- `metalness` (number) — Metalness — default 0, min 0, max 1, step 0.01
 - `emissive` (color) — Emission — default "#000000"
-- `opacity` (number) — Opacity — default 1
+- `opacity` (number) — Opacity — default 1, min 0, max 1, step 0.01
 - `position` (vec3) — Position — default [0,0,0]
 - `rotation` (vec3) — Rotation — default [0,0,0]
 
@@ -402,7 +402,7 @@ Repeats a shape N times along an offset — a Cube fed in becomes a row of cubes
 
 **Inputs:**
 - `geometry` (geometry) — Geometry
-- `count` (number) — Count — default 3
+- `count` (number) — Count — default 3, min 1, max 100, step 1
 - `offset` (vec3) — Offset — default [1.5,0,0]
 
 **Outputs:**
@@ -476,12 +476,12 @@ A column — Radius and Height come from wires, standing in for a pillar or a dr
 
 **Inputs:**
 - `color` (color) — Colour — default "#5fa8ff"
-- `radius` (number) — Radius — default 0.5
-- `height` (number) — Height — default 1.5
-- `roughness` (number) — Roughness — default 1
-- `metalness` (number) — Metalness — default 0
+- `radius` (number) — Radius — default 0.5, min 0.01, max 50, step 0.01
+- `height` (number) — Height — default 1.5, min 0.01, max 50, step 0.01
+- `roughness` (number) — Roughness — default 1, min 0, max 1, step 0.01
+- `metalness` (number) — Metalness — default 0, min 0, max 1, step 0.01
 - `emissive` (color) — Emission — default "#000000"
-- `opacity` (number) — Opacity — default 1
+- `opacity` (number) — Opacity — default 1, min 0, max 1, step 0.01
 - `position` (vec3) — Position — default [0,0.75,0]
 - `rotation` (vec3) — Rotation — default [0,0,0]
 
@@ -565,12 +565,12 @@ A spike — Radius comes from a wire, so widening the Number widens the cone's b
 
 **Inputs:**
 - `color` (color) — Colour — default "#5fa8ff"
-- `radius` (number) — Radius — default 0.5
-- `height` (number) — Height — default 1.5
-- `roughness` (number) — Roughness — default 1
-- `metalness` (number) — Metalness — default 0
+- `radius` (number) — Radius — default 0.5, min 0.01, max 50, step 0.01
+- `height` (number) — Height — default 1.5, min 0.01, max 50, step 0.01
+- `roughness` (number) — Roughness — default 1, min 0, max 1, step 0.01
+- `metalness` (number) — Metalness — default 0, min 0, max 1, step 0.01
 - `emissive` (color) — Emission — default "#000000"
-- `opacity` (number) — Opacity — default 1
+- `opacity` (number) — Opacity — default 1, min 0, max 1, step 0.01
 - `position` (vec3) — Position — default [0,0.75,0]
 - `rotation` (vec3) — Rotation — default [0,0,0]
 
@@ -637,12 +637,12 @@ A ring — its Tube thickness is wired, so a thin Number makes a delicate hoop a
 
 **Inputs:**
 - `color` (color) — Colour — default "#5fa8ff"
-- `radius` (number) — Radius — default 0.5
-- `tube` (number) — Tube — default 0.18
-- `roughness` (number) — Roughness — default 1
-- `metalness` (number) — Metalness — default 0
+- `radius` (number) — Radius — default 0.5, min 0.01, max 50, step 0.01
+- `tube` (number) — Tube — default 0.18, min 0.01, max 10, step 0.01
+- `roughness` (number) — Roughness — default 1, min 0, max 1, step 0.01
+- `metalness` (number) — Metalness — default 0, min 0, max 1, step 0.01
 - `emissive` (color) — Emission — default "#000000"
-- `opacity` (number) — Opacity — default 1
+- `opacity` (number) — Opacity — default 1, min 0, max 1, step 0.01
 - `position` (vec3) — Position — default [0,0.5,0]
 - `rotation` (vec3) — Rotation — default [0,0,0]
 
@@ -710,10 +710,10 @@ A stroke between two points — its far end is wired to a Vector, so moving the 
 **Inputs:**
 - `from` (vec3) — From — default [0,0,0]
 - `to` (vec3) — To — default [0,1.5,0]
-- `thickness` (number) — Thickness — default 0.02
+- `thickness` (number) — Thickness — default 0.02, min 0.001, max 5, step 0.001
 - `color` (color) — Colour — default "#5fa8ff"
 - `emissive` (color) — Emission — default "#000000"
-- `opacity` (number) — Opacity — default 1
+- `opacity` (number) — Opacity — default 1, min 0, max 1, step 0.01
 
 **Outputs:**
 - `geometry` (geometry) — Geometry
@@ -801,11 +801,11 @@ A flat disc — its Radius is wired, growing and shrinking the mark on the floor
 
 **Inputs:**
 - `color` (color) — Colour — default "#5fa8ff"
-- `radius` (number) — Radius — default 0.5
-- `roughness` (number) — Roughness — default 1
-- `metalness` (number) — Metalness — default 0
+- `radius` (number) — Radius — default 0.5, min 0.01, max 50, step 0.01
+- `roughness` (number) — Roughness — default 1, min 0, max 1, step 0.01
+- `metalness` (number) — Metalness — default 0, min 0, max 1, step 0.01
 - `emissive` (color) — Emission — default "#000000"
-- `opacity` (number) — Opacity — default 1
+- `opacity` (number) — Opacity — default 1, min 0, max 1, step 0.01
 - `position` (vec3) — Position — default [0,0.5,0]
 - `rotation` (vec3) — Rotation — default [0,0,0]
 
