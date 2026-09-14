@@ -13,6 +13,7 @@ import { createEdge,
     getNodeType
 } from '../../nodeRegistry.js'
 import { createNodeGraphContext, evaluateNodeInputs, evaluateNodeOutput } from '../nodeGraphRuntime.js'
+import { getCardBox } from '../../../raw/utils/cardGeometry.js'
 
 const example = () => buildAllNodesExample({ workspaceTop: 64 })
 
@@ -263,6 +264,93 @@ describe('all-nodes example graph', () => {
             expect(panel.values.frame).toBeTruthy()
             expect(typeof panel.values.frame.width).toBe('number')
             expect(panel.values.frame.visible).toBe(false)
+        }
+    })
+
+    // The 2026-09-14 audit's item 12: Hold.sample and Text.content each
+    // carried two wires into the same input, and only the first counted —
+    // wrong twice over, since it drew as if BOTH wires worked. Generalised
+    // so a future duplicate fails here instead of waiting for a reader to
+    // notice a card with two wires landing on one dot.
+    it('never wires two edges into the same input', () => {
+        const { edges } = example()
+        const seen = new Map()
+        const duplicates = []
+        for (const edge of edges) {
+            const key = `${edge.toNodeId}:${edge.toPort}`
+            if (seen.has(key)) duplicates.push(key)
+            seen.set(key, true)
+        }
+        expect(duplicates).toEqual([])
+    })
+
+    // The other half of item 12: Numbers C and ½ shared one exact (col, row),
+    // and so did Work Status/Monitor and Agent Run/the Desk panel — the same
+    // grid cell, copy-paste style, not a near-miss. This file's grid (COL
+    // 300, ROW 130) is deliberately tight — 95+ cards on one screen — and
+    // several of them run taller than one ROW once a live preview is added
+    // (cardGeometry.js's TOP_PICTURE_HEIGHT), so a full geometric
+    // non-overlap sweep would demand relaying out cards this fix wave never
+    // touched, unrelated to item 12. This test holds the narrower, precise
+    // claim item 12 actually makes: no two cards in the same scope stand on
+    // the exact same spot.
+    it('never places two cards at the exact same spot in one scope', () => {
+        const { nodes } = example()
+        const bySpot = new Map()
+        const collisions = []
+        for (const node of nodes) {
+            const key = `${node.parentId || 'root'}:${node.graphX}:${node.graphY}`
+            const earlier = bySpot.get(key)
+            if (earlier) collisions.push(`${earlier.id} (${earlier.typeId}) and ${node.id} (${node.typeId}) both at ${key}`)
+            else bySpot.set(key, node)
+        }
+        expect(collisions).toEqual([])
+    })
+
+    // A real geometric overlap check DOES hold for the two pairs item 12
+    // named directly — proof the fix (moving Number ½ and Work Status/Agent
+    // Run to free rows) actually cleared them, with the same box math the
+    // graph surface draws from.
+    it('clears the two named overlaps with real card geometry, not just position', () => {
+        const { nodes } = example()
+        const byType = new Map()
+        for (const node of nodes) {
+            if (!byType.has(node.typeId)) byType.set(node.typeId, [])
+            byType.get(node.typeId).push(node)
+        }
+        const noOverlap = (a, b) => {
+            const boxA = getCardBox(a, nodes)
+            const boxB = getCardBox(b, nodes)
+            return !(boxA.x < boxB.x + boxB.width && boxB.x < boxA.x + boxA.width
+                && boxA.y < boxB.y + boxB.height && boxB.y < boxA.y + boxA.height)
+        }
+        const [numC, numHalf] = byType.get('value.number').filter((n) => n.label?.startsWith('Number C') || n.label?.startsWith('Number ½'))
+        expect(noOverlap(numC, numHalf)).toBe(true)
+        const [workStatus] = byType.get('work.status')
+        const [monitor] = byType.get('stream.monitor')
+        expect(noOverlap(workStatus, monitor)).toBe(true)
+        const [agentRun] = byType.get('work.agent')
+        const [desk] = byType.get('view.desk')
+        expect(noOverlap(agentRun, desk)).toBe(true)
+    })
+
+    // Item 12's dropped-wire class, at the source rather than the symptom:
+    // wire() used to answer null for a key this file never made, and the
+    // trailing `.filter(Boolean)` made that invisible to every test that
+    // only ever looked at the SURVIVING edges — six wires vanished with no
+    // test noticing. wire() now throws instead (see its own comment in
+    // allNodesExample.js), so every `it()` in this file that calls
+    // `example()` already re-proves the fix on every run: a bad key would
+    // throw building the fixture, not disappear into `.filter(Boolean)`.
+    // This test states that contract explicitly rather than leaving it
+    // implicit in "the file happened not to throw".
+    it('resolves every edge to two real nodes (a bad key would have thrown building the fixture)', () => {
+        const { edges, nodes } = example()
+        const ids = new Set(nodes.map((node) => node.id))
+        expect(edges.length).toBeGreaterThan(50)
+        for (const edge of edges) {
+            expect(ids.has(edge.fromNodeId), `${edge.fromNodeId} (from) is a real node`).toBe(true)
+            expect(ids.has(edge.toNodeId), `${edge.toNodeId} (to) is a real node`).toBe(true)
         }
     })
 })

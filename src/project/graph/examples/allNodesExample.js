@@ -27,6 +27,20 @@
 // builds nine nodes that are all in UNIMPLEMENTED_NODE_TYPES, bypassing the
 // palette gate by calling createNode directly, and the panel-2d ones open as
 // generic text boxes that read as a working feature.
+//
+// 2026-09-14 fix wave (docs/ai/audits/2026-09-14-raw-nodes.md, item 12): six
+// wires named a key this file never made ('light', 'desk') and were silently
+// dropped by wire()'s own `from && to` guard; Hold.sample and Text.content
+// each carried two wires into the same input, with only the first counting;
+// Cube.size was wired to a position vector whose x/z were both 0, drawing a
+// 0.001-thin sliver; Numbers C and ½ shared one (col, row), as did Work
+// Status/Monitor and Agent Run/the Desk panel. wire() now THROWS on a
+// missing key instead of returning null (see its own comment), and
+// allNodesExample.test.js checks for duplicate input wires and overlapping
+// cards directly. A worked example of each INDIVIDUAL node's own real use —
+// this file is coverage, not a walkthrough — lives in
+// src/project/graph/examples/nodes/ (docs/ai/audits/2026-09-14-raw-fix-
+// plan.md, item 6).
 
 import { createEdge, createNode, listNodeTypes } from '../../nodeRegistry.js'
 import { buildNodeValues } from '../nodeGraphAuthoring.js'
@@ -135,7 +149,10 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('numA', 'value.number', { label: 'Number A · 1.5', col: 0, row: 0, values: { value: 1.5 } })
     add('numB', 'value.number', { label: 'Number B · 0.5', col: 0, row: 1, values: { value: 0.5 } })
     add('numC', 'value.number', { label: 'Number C · 1.0', col: 0, row: 8, values: { value: 1 } })
-    add('numHalf', 'value.number', { label: 'Number ½', col: 0, row: 8, values: { value: 0.5 } })
+    // Was col 0 row 8, exactly on top of Number C — the 2026-09-14 audit's
+    // "Numbers C and ½ overlap at col 0 row 8" finding. Row 18 is the first
+    // free row in this column (Toggle, the last of the state wave, is 17).
+    add('numHalf', 'value.number', { label: 'Number ½', col: 0, row: 18, values: { value: 0.5 } })
     add('colorA', 'value.color', { label: 'Color A · cyan', col: 0, row: 2, values: { value: '#4df9ff' } })
     add('colorB', 'value.color', { label: 'Color B · magenta', col: 0, row: 3, values: { value: '#ff4dd8' } })
     add('vec', 'value.vec3', { label: 'Vector · position', col: 0, row: 4, values: { value: [0, 1, 0] } })
@@ -197,6 +214,13 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('midiOut', 'device.midi.out', { label: 'MIDI Out', col: 4, row: 2 })
     add('dmxOut', 'device.dmx.out', { label: 'DMX Out', col: 4, row: 15 })
     add('noise', 'value.noise', { label: 'Noise', col: 0, row: 9 })
+    // A dedicated size vector — NOT 'vec' (col 0 row 4, value [0, 1, 0]).
+    // 'vec' reads as an authored position/direction elsewhere in this file
+    // (Dot, Cross, Direction, Aim, Line's far end); reused for Cube.size it
+    // gave a cube 0 wide and 0 deep, a 0.001-thin sliver (2026-09-14 audit,
+    // "Cube size gets a zero-axis vector"). Col 6, row 2: free, below Webcam
+    // and Microphone.
+    add('cubeSize', 'value.vec3', { label: 'Vector · cube size', col: 6, row: 2, values: { value: [0.8, 0.8, 0.8] } })
     add('array', 'geom.array', { label: 'Array', col: 2, row: 9, values: { count: 3, offset: [1.5, 0, 0] } })
 
     // --- column 2: scene settings ---------------------------------------------
@@ -222,11 +246,28 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('sound', 'media.audio', { label: 'Sound', col: 3, row: 5 })
 
     // --- column 4: universe containers and panels ------------------------------
-    add('world', 'universe.world', { label: 'Scene', col: 4, row: 0 })
-    add('space', 'universe.space', { label: 'Kiosk', col: 4, row: 1 })
+    // Rows 16/17, not 0/1 — those already carry Go and Keyboard in this same
+    // column, an exact-position collision the 2026-09-14 fix wave's stricter
+    // test caught (allNodesExample.test.js, "never places two cards at the
+    // exact same spot").
+    add('world', 'universe.world', { label: 'Scene', col: 4, row: 16 })
+    add('space', 'universe.space', { label: 'Kiosk', col: 4, row: 17 })
     // universe.desk.3d retired from the palette with the container story —
     // Geo is THE place that renders its children; the example shows what the
     // palette offers.
+
+    // The Geo: the plain place. It gets a resident — the example's job is
+    // showing what a thing IS, and an empty geo is a footprint tile, which is
+    // true but teaches less than a geo with something standing in it.
+    //
+    // Created BEFORE anything that names it as an insideKey — add()'s
+    // `made.get(insideKey)?.id || parentId` falls back SILENTLY to the outer
+    // scope when the key does not exist yet, and the doorways used to be
+    // declared here, above this line: they were never actually inside the
+    // Geo at all, just two more root-scope cards that happened to share the
+    // Geo's column (2026-09-14 audit fix wave — found by nodeExamples.test.js's
+    // overlap check landing both on the same spot as an unrelated card).
+    add('geo', 'geom.geo', { label: 'Geo', col: 5, row: 7, values: { position: [-2.5, 0, 0] } })
 
     // The doorways. They sit INSIDE the Geo, which is what makes them mean
     // anything: each one puts a socket on that geo's outer face, so a wire can
@@ -238,10 +279,6 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('doorIn', 'port.in', { label: 'In · a way through the wall', col: 3, row: 6, insideKey: 'geo', values: { label: 'Tint', portType: 'color' } })
     add('doorOut', 'port.out', { label: 'Out · a way back through', col: 3, row: 7, insideKey: 'geo', values: { label: 'Size', portType: 'vec3' } })
 
-    // The Geo: the plain place. It gets a resident — the example's job is
-    // showing what a thing IS, and an empty geo is a footprint tile, which is
-    // true but teaches less than a geo with something standing in it.
-    add('geo', 'geom.geo', { label: 'Geo', col: 5, row: 7, values: { position: [-2.5, 0, 0] } })
     // The authored eye, standing in the example Geo so the census shows it
     // carried by a container like anything else.
     add('camera', 'world.camera', { label: 'Camera', col: 5, row: 8, insideKey: 'geo', values: { position: [2, 1.4, 2] } })
@@ -265,7 +302,9 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // with no network, where an iframe of di-studio.xyz is a dead panel.
     add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: '/wiki' } })
     add('image', 'view.image', { label: 'Image panel', col: 4, row: 5 })
-    add('publish', 'view.publish', { label: 'Public page panel', col: 4, row: 6, values: { title: 'The example project' } })
+    // Row 18, not 6 — Constructor already stands there in this column, the
+    // same exact-position collision class as world/space above.
+    add('publish', 'view.publish', { label: 'Public page panel', col: 4, row: 18, values: { title: 'The example project' } })
     add('list', 'view.list', { label: 'List panel', col: 4, row: 7, values: {
         groups: ['Core', 'Would be good'],
         items: [
@@ -314,8 +353,12 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // --- column 7: workflow nodes + the keeper -----------------------------
     // All live, same mechanism as the capture sources above: their panels push
     // through handleLiveOutputChange, not computeNodeOutput.
-    add('workStatus', 'work.status', { label: 'Work Status', col: 7, row: 0 })
-    add('agentRun', 'work.agent', { label: 'Agent Run', col: 7, row: 1 })
+    // Rows 4/5, not 0/1 — Monitor and the Desk panel already stand there
+    // (both col 7), an exact-position collision the 2026-09-14 fix wave's
+    // stricter overlap test caught: Work Status/Monitor and Agent Run/Desk
+    // were drawing on top of each other.
+    add('workStatus', 'work.status', { label: 'Work Status', col: 7, row: 4 })
+    add('agentRun', 'work.agent', { label: 'Agent Run', col: 7, row: 5 })
 
     // The keeper is left unconfigured on purpose — an endpoint is a property
     // of the room you are in, not of the example.
@@ -327,10 +370,21 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('midiIn', 'device.midi.in', { label: 'MIDI In', col: 7, row: 3, values: { channel: 0 } })
 
     const id = (key) => made.get(key)?.id || ''
+    // A wire() call naming a key `add()` never made used to answer null and
+    // vanish behind the `.filter(Boolean)` below — six of them did exactly
+    // that (2026-09-14 audit, "6 wires to missing keys are silently filtered
+    // out"), and this file's own coverage tests only ever checked the
+    // SURVIVING edges, so a typo'd key was invisible everywhere. Throwing
+    // here turns that same mistake into a build-time failure instead — both
+    // in nodeExamples.test.js's "documents only ports that really exist"-style
+    // runs and the moment a person opens the preset in the app.
     const wire = (fromKey, fromPort, toKey, toPort) => {
         const from = id(fromKey)
         const to = id(toKey)
-        return from && to ? createEdge(from, fromPort, to, toPort) : null
+        if (!from || !to) {
+            throw new Error(`allNodesExample: wire() named a node this file never made ("${!from ? fromKey : toKey}")`)
+        }
+        return createEdge(from, fromPort, to, toPort)
     }
 
     const edges = [
@@ -446,14 +500,19 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('colorB', 'out', 'circle', 'color'),
 
         // Array repeats the cube's own geometry value — the proving fixture
-        // for its pass-through out (bare, an Array carries nothing).
+        // for its pass-through out (bare, an Array carries nothing). Offset
+        // follows the cube's own Bounds, so widening the cube widens the row.
         wire('cube', 'geometry', 'array', 'geometry'),
+        wire('cube', 'bounds', 'array', 'offset'),
         wire('torus', 'geometry', 'transform', 'geometry'),
 
         // The operator's hands fire the state wave: Go presses count, the
-        // chosen key samples the sine.
+        // chosen key resets it. Hold's own sample edge is Compare's verdict
+        // (below) and ONLY that — Hold.sample used to carry both this wire
+        // and Compare's, and "only the first counts" (2026-09-14 audit,
+        // "duplicate input"); Counter.reset was undeclared and free.
         wire('go', 'presses', 'counter', 'step'),
-        wire('keys', 'pressed', 'hold', 'sample'),
+        wire('keys', 'pressed', 'counter', 'reset'),
 
         // The desk's hand on a cable: the comparator's verdict holds the
         // note; the sine rides out as CC. The wiring shows the lanes without
@@ -471,19 +530,28 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // edge that crosses a scope boundary remains unauthorable.
         wire('world', 'title', 'text', 'content'),
 
-        // Static world settings.
+        // Static world settings. The sun (directionalPosition/Color) lives on
+        // Environment, not on Light/'lamp' — the OLD wires named a key
+        // ('light') this file never made, and even a made key would have
+        // been wrong: those two ports do not exist on light.point either
+        // (2026-09-14 audit). 'lamp' gets its OWN real ports instead: a
+        // colour and an intensity, the two light.point actually declares.
         wire('colorA', 'out', 'environment', 'ambientColor'),
         wire('numB', 'out', 'environment', 'ambientIntensity'),
-        wire('vec', 'out', 'light', 'directionalPosition'),
-        wire('colorB', 'out', 'light', 'directionalColor'),
+        wire('vec', 'out', 'environment', 'directionalPosition'),
+        wire('colorB', 'out', 'environment', 'directionalColor'),
+        wire('colorA', 'out', 'lamp', 'color'),
+        wire('numA', 'out', 'lamp', 'intensity'),
         wire('colorB', 'out', 'background', 'color'),
         wire('bool', 'out', 'grid', 'visible'),
         wire('numA', 'out', 'grid', 'size'),
         wire('colorA', 'out', 'grid', 'color'),
 
-        // Geometry inputs.
+        // Geometry inputs. Size is 'cubeSize' ([0.8, 0.8, 0.8]), NOT 'vec'
+        // ([0, 1, 0]) — see cubeSize's own comment for why reusing the
+        // position vector made an invisible, 0.001-thin cube.
         wire('vec', 'out', 'cube', 'position'),
-        wire('vec', 'out', 'cube', 'size'),
+        wire('cubeSize', 'out', 'cube', 'size'),
         wire('colorB', 'out', 'sphere', 'color'),
         wire('colorA', 'out', 'plane', 'color'),
         wire('numA', 'out', 'plane', 'width'),
@@ -505,24 +573,25 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('topEdge', 'out', 'topBlend', 'b'),
         wire('topBlend', 'out', 'topOut', 'a'),
         wire('topLevel', 'out', 'topAnalyze', 'a'),
-        // geom.cube.bounds — likewise documented as dead, in fact a real vec3
-        // of the cube's size. Wired to the desk's scale so the marker box grows
-        // with the cube it is measuring.
-        wire('cube', 'bounds', 'desk', 'scale'),
-
         // Containers and panels.
+        //
+        // No 'desk' wires here: universe.desk.3d (the only type with
+        // position/bgColor/gridVisible/scale ports) retired from the palette
+        // with the container pass, and this example rightly never places it.
+        // Four wires used to target a key ('desk') this file never made —
+        // 'light' died the same way, two paragraphs up — silently dropped by
+        // the id()/wire() guard (2026-09-14 audit, "6 wires to missing
+        // keys"). cube.bounds now proves itself against Array's Offset
+        // instead (above); Vector/Colour/Boolean keep their many other jobs
+        // in this file.
         wire('str', 'out', 'world', 'title'),
         wire('colorB', 'out', 'world', 'bgColor'),
         wire('bool', 'out', 'space', 'showChrome'),
-        wire('vec', 'out', 'desk', 'position'),
-        wire('colorA', 'out', 'desk', 'bgColor'),
-        wire('bool', 'out', 'desk', 'gridVisible'),
-        wire('str', 'out', 'text', 'content'),
         wire('str', 'out', 'studio', 'title'),
         // Work Status's summary feeds Agent Run's prompt — not its trigger,
         // so placing the example never launches a real process.
         wire('workStatus', 'summary', 'agentRun', 'prompt')
-    ].filter(Boolean)
+    ]
 
     return { nodes: [...made.values()], edges }
 }
