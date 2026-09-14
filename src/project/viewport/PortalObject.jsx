@@ -12,7 +12,7 @@ import { normalizeProjectDocument } from '../../shared/projectSchema.js'
 import { resolveAnimation, applyAnimation } from './entityAnimation.js'
 import { resolveProximity, applyProximity } from './entityProximity.js'
 import { enterDestination } from '../../components/entryTransition/entryTransition.js'
-import EntryGlideCamera, { captureRendererFrame, projectObjectRect, projectRingCircle } from '../../components/entryTransition/EntryGlide.jsx'
+import EntryGlideCamera, { captureRendererFrame } from '../../components/entryTransition/EntryGlide.jsx'
 
 const MAX_EMBED_DEPTH = 3
 
@@ -270,8 +270,6 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
         enterDestination(href, {
             source: {
                 color,
-                rect: projectObjectRect(target, camera, gl.domElement),
-                circle: ringRef.current ? projectRingCircle(ringRef.current, camera, gl.domElement) : null,
                 capture: () => captureRendererFrame({ gl, scene, camera }),
                 glide: (ms, { reach }) => new Promise((resolve) => setGlide({ ms, reach, target, resolve }))
             }

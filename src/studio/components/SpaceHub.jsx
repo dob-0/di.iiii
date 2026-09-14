@@ -379,17 +379,15 @@ export default function SpaceHub() {
         || space.kind === 'sandbox'
         || (Array.isArray(sessionScopes) && sessionScopes.includes(space.id))
 
-    // Both routes out of a card go through the entry transition: the card is
-    // the thing that opens out (or that the page pushes toward), and the page
-    // holds until the destination has painted instead of cutting to black.
+    // Both routes out of a card go through the entry transition: the page
+    // pushes toward the card, and it holds until the destination has painted
+    // instead of cutting to black.
     const openCard = (space, element = null) => {
         const href = !canEnter(space) && space.isPublic
             ? buildSpaceDoorPath(space)
             : buildStudioHubPath(space.id)
-        const coverAssetId = brokenCovers.has(space.id) ? null : space.previewImageAssetId
         enterFromElement(null, href, {
-            element: element?.querySelector?.('.ssh-card-preview') || element,
-            image: coverAssetId ? getServerSpaceAssetUrl(space.id, coverAssetId, { width: 480 }) : null
+            element: element?.querySelector?.('.ssh-card-preview') || element
         })
     }
 

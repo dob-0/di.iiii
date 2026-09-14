@@ -108,13 +108,13 @@ export const WIKI_ARTICLES = [
                 '/?room=1 \u2014 the room on its own, without the page. For anyone who wants the space and not the door.',
                 '/main \u2014 the old address of that same room. It still resolves and always will, and it still opens the room; the name just never reaches the address bar.'
             ] },
-            'Going through a door \u2014 a door in the room, one of the featured exhibitions, or a card on the Spaces page \u2014 is one move too. The room you are leaving stays on screen until the place you are going to has drawn its first frame, and then that place comes up in its stead. There is no black screen with a spinner in between.',
+            'Going anywhere else from here is one move too \u2014 a door in the room, one of the featured exhibitions, The Spaces, Open Jam, or a card on the Spaces page. What you are looking at stays on screen and the view pushes slowly in toward what you pressed, until the place you are going to has drawn its first frame; then that place comes up in its stead. There is no black screen with a spinner in between, and no effect laid over it \u2014 it is the same quiet move every time, only its timing breathes a little from one visit to the next.',
             'If your system asks for reduced motion, the door does not fly you anywhere: you arrive at the same place immediately, and nothing falls. Going through a door is a short plain fade. The destination is never different, only the journey.',
             'On a phone the room is not loaded until you ask for it \u2014 a passive visit should not pay for a 3D engine it is not going to show \u2014 so the first press waits a moment for it to arrive before the flight begins.',
             'Everything on the page can be reached with the tab key, and whatever you are on is ringed in cyan. While the door is opening, what falls past you is a picture of the page you were reading, drawn as flat pieces in the room itself \u2014 not a second set of its controls, so nothing in the flight can be tabbed to or read twice by a screen reader.'
         ],
         tags: ['landing', 'basics', 'navigation', 'room', 'walk'],
-        updated: '2026-09-14'
+        updated: '2026-09-15'
     },
     {
         id: 'shelves-and-the-trash',
