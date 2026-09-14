@@ -338,6 +338,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // Camera → Difference → Level → Blur → Feedback, laid over the Edge of the
     // same camera, out to the projector; Analyze turns the motion into numbers.
     add('topCamera', 'top.camera', { label: 'Camera In', col: 8, row: 0 })
+    add('topClip', 'top.clip', { label: 'Clip In', col: 9, row: 0 })
     add('topDifference', 'top.difference', { label: 'Difference', col: 8, row: 1 })
     add('topLevel', 'top.level', { label: 'Level', col: 8, row: 2, values: { threshold: 0.05, gain: 5 } })
     add('topBlur', 'top.blur', { label: 'Blur', col: 8, row: 3 })
