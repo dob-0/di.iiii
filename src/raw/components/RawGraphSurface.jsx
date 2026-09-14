@@ -4,6 +4,8 @@ import { createTapTracker } from '../utils/useDoubleTap.js'
 import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, cardHeight } from '../utils/cardGeometry.js'
 import { isTopType } from '../../project/tops/topOperators.js'
 import TopThumbnail from './TopThumbnail.jsx'
+import CardPreview from './cardPreview/CardPreview.jsx'
+import { hasCardPreview } from './cardPreview/previewTypes.js'
 import {
     arePortsCompatible,
     getNodeCardSummary,
@@ -1456,6 +1458,18 @@ export default function RawGraphSurface({
                                     {showPorts && isTopType(node.typeId) ? (
                                         <TopThumbnail
                                             nodeId={node.id}
+                                            top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
+                                        />
+                                    ) : null}
+                                    {/* The cube itself, on the Cube's card — the same slot and
+                                        size as a picture operator's picture, below the ports, so
+                                        no port or wire moves. Unmounted below the port tier,
+                                        which is what keeps a zoomed-out desk free. */}
+                                    {showPorts && hasCardPreview(node.typeId) ? (
+                                        <CardPreview
+                                            node={node}
+                                            nodes={portScopeNodes || nodes}
+                                            edges={edges}
                                             top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
                                         />
                                     ) : null}

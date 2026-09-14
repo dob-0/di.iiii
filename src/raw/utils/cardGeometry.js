@@ -1,5 +1,6 @@
 import { getNodeInputs, getNodeOutputs } from '../../project/nodeRegistry.js'
 import { isTopType } from '../../project/tops/topOperators.js'
+import { hasCardPreview } from '../components/cardPreview/previewTypes.js'
 
 // A graph card's box, in graph units. Shared between the surface that draws
 // the cards (and lands wires on them — see graphGeometry.test.jsx for why
@@ -16,13 +17,19 @@ export const TOP_PICTURE_WIDTH = CARD_WIDTH - 16
 export const TOP_PICTURE_HEIGHT = Math.round(TOP_PICTURE_WIDTH * 9 / 16)
 const TOP_PICTURE_GAP = 4
 
+// Whether a card carries a picture under its ports: a picture operator's live
+// output, or the live preview of a node that makes something visible (a cube,
+// a light — see cardPreview/previewTypes.js). One size for both, so every
+// picture on the desk lines up; grown BELOW the ports for the same reason.
+export const hasCardPicture = (typeId) => isTopType(typeId) || hasCardPreview(typeId)
+
 // scopeNodes is threaded through every geometry helper because a container's
 // ports are DERIVED from the doorway nodes inside it — see getNodeInputs. Miss
 // one of these call sites and the container grows a socket the card does not
 // draw, or draws one the wires do not land on.
 export const cardHeight = (node, scopeNodes = null) => {
     const rows = Math.max(getNodeInputs(node, scopeNodes).length, getNodeOutputs(node, scopeNodes).length, 1)
-    const picture = isTopType(node?.typeId) ? TOP_PICTURE_HEIGHT + TOP_PICTURE_GAP : 0
+    const picture = hasCardPicture(node?.typeId) ? TOP_PICTURE_HEIGHT + TOP_PICTURE_GAP : 0
     return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + picture + CARD_FOOT
 }
 
