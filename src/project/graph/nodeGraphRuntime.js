@@ -1,5 +1,6 @@
-import { DOORWAY_OUT_TYPE_ID, getNodeInputs, getNodeType } from '../nodeRegistry.js'
+import { DOORWAY_OUT_TYPE_ID, getNodeInputs, getNodeOutputs, getNodeType } from '../nodeRegistry.js'
 import { isGeometryDescriptor, mergeGeometry } from './geometryDescriptor.js'
+import { coerceWireValue, parseTypedValue, readSignalPulse } from './wireCoercion.js'
 import { NODE_RUNTIMES } from '../nodes/index.js'
 
 const asNumber = (value, fallback = 0) => {
@@ -42,7 +43,10 @@ const hexToRgb = (value) => {
 const rgbToHex = (rgb) =>
     `#${rgb.map((channel) => Math.round(Math.min(255, Math.max(0, channel))).toString(16).padStart(2, '0')).join('')}`
 
-const mixValues = (a, b, t) => {
+const mixValues = (rawA, rawB, t) => {
+    // Typed into Mix's free fields, "0" and "1" are numbers — they lerp.
+    const a = parseTypedValue(rawA)
+    const b = parseTypedValue(rawB)
     if (typeof a === 'number' || typeof b === 'number') {
         return mixNumbers(asNumber(a), asNumber(b), t)
     }
@@ -190,6 +194,9 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
             asNumber,
             asVec3,
             mix: mixValues,
+            // Did this input's signal wire fire this pass? An edge-reading
+            // runtime (Counter, Toggle…) counts every fire, even two in a row.
+            pulsed: (id) => Boolean(context?.pulses?.has(`${node.id}:${id}`)),
             context
         })
     }
@@ -395,12 +402,50 @@ export const evaluateNodeInput = (node, portId, context, stack = new Set()) => {
             const nextStack = new Set(stack)
             nextStack.add(key)
             const resolved = evaluateNodeOutput(source, edge.fromPort, context, nextStack)
-            if (resolved !== undefined) return resolved
+            if (resolved !== undefined) return coerceWired(resolved, source, edge.fromPort, node, portId, context)
         }
     }
 
-    if (node.values?.[portId] !== undefined) return node.values[portId]
+    if (node.values?.[portId] !== undefined) {
+        const stored = node.values[portId]
+        // Free text typed into an `any` field: "3" is a number, "false" is off.
+        return typeof stored === 'string' && portTypeOf(context, node, 'in', portId) === 'any'
+            ? parseTypedValue(stored)
+            : stored
+    }
     return getNodeInputDefault(node, portId)
+}
+
+// A port's declared type, looked up once per pass per node — the lookup walks
+// the registry, and evaluateNodeInput sits on the hottest path there is.
+const portTypeOf = (context, node, direction, portId) => {
+    if (!node) return undefined
+    const cache = context ? (context.portTypes ||= new Map()) : null
+    const cacheKey = `${node.id}:${direction}:${portId}`
+    if (cache?.has(cacheKey)) return cache.get(cacheKey)
+    const ports = direction === 'in' ? getNodeInputs(node) : getNodeOutputs(node)
+    const type = ports.find((port) => port.id === portId)?.type
+    cache?.set(cacheKey, type)
+    return type
+}
+
+// What a wire hands over across two types — see wireCoercion.js.
+const coerceWired = (value, source, fromPort, node, portId, context) => {
+    const toType = portTypeOf(context, node, 'in', portId)
+    if (!toType || toType === 'any') return value
+    const fromType = portTypeOf(context, source, 'out', fromPort)
+    if (!fromType || fromType === toType) return value
+    if (fromType === 'signal' && toType === 'boolean') {
+        const pulse = readSignalPulse({
+            memory: context?.frameMemory,
+            passCache: context ? (context.signalReads ||= new Map()) : null,
+            key: `${node.id}:in:${portId}:signal`,
+            count: value
+        })
+        if (pulse.pulsed && context) (context.pulses ||= new Set()).add(`${node.id}:${portId}`)
+        return pulse.value
+    }
+    return coerceWireValue(value, fromType, toType)
 }
 
 export const evaluateNodeInputs = (node, context) => {

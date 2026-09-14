@@ -2827,11 +2827,15 @@ export const getPortType = (typeId) => PORT_TYPES[typeId] || PORT_TYPES.any
 
 // Two ports are compatible if their types can be connected.
 // 'any' connects to anything. color <-> vec3 are interchangeable.
+// A number or a signal switches a boolean — Time's beat and MIDI's trigger
+// fire a Counter, an LFO opens a Gate. What the wire then carries (above 0.5
+// is on; a signal is on in the pass its count moves) is wireCoercion.js.
 export const arePortsCompatible = (fromType, toType) => {
     if (fromType === 'any' || toType === 'any') return true
     if (fromType === toType) return true
     const colorVec = (fromType === 'color' && toType === 'vec3') || (fromType === 'vec3' && toType === 'color')
-    return colorVec
+    const switches = toType === 'boolean' && (fromType === 'number' || fromType === 'signal')
+    return colorVec || switches
 }
 
 // Create a node instance from a type ID.
