@@ -1366,6 +1366,22 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'ui', 'colour', 'families', 'windows', 'nodes', 'reading', 'design', 'canvas'],
         updated: '2026-08-19'
+    },
+    {
+        id: 'raw-live-wires',
+        category: 'Editing',
+        title: 'Live wires: pictures, devices and switches that keep going',
+        summary: 'A camera keeps feeding when its window closes, a picture operator can show on a Monitor or a Plane, and a beat can fire a Counter.',
+        body: [
+            'Pictures cross between the picture operators and the rest of the canvas, both ways. Wire a Webcam\'s or a Video\'s Frame into Blur, Level or any operator\'s input, and the operator works on it. Wire an operator\'s Picture out to a Monitor, an Image or a Plane\'s texture, and it shows there, live. Only operators wired out pay for that copy, and it is a small one, so an older laptop keeps up.',
+            'A device belongs to its node, not to its window. Webcam, Mic, MIDI In, DMX Out and the Keeper keep running when you close their window, open the room fullscreen or walk into another node. The window is just a way of looking at the device: its status, its picker, its meter. Delete the node and the device stops. Because of this, a canvas with a Webcam or a Mic asks for permission as soon as it opens, not when you open the window.',
+            'Numbers and beats switch things on. A number above one half counts as on, so an Oscillator can open a Gate or flip a Toggle. A beat is a count that goes up, so Time\'s Beat or MIDI In\'s Trigger fires a Counter, a Toggle, a Trigger or a Timer once each time the count moves, even when two notes arrive right after each other.',
+            'What you type means what it says. In a free field, 3 is a number and false is off. Mix blends 0 and 1 smoothly, and typing 0 or false into DMX Blackout or MIDI Out Trigger no longer counts as on.',
+            'Wires that used to do nothing now work. A key wired into Keyboard\'s Key is the key it listens for. A switch wired into a Kiosk\'s Show toolbar hides the toolbar. A Button press is a cue, not an edit, so undo takes back your work and leaves the presses alone. A Video\'s Frame wire no longer plays the sound a second time or restarts when the volume moves.',
+            'The output page and a published room get live data too. /out runs every listening device, like the webcam, mic, MIDI In and picture operators, but never the senders. The editor already drives DMX and MIDI Out, and a second page sending would repeat every cue. A visitor to a published room gets only what needs no permission, like video frames and sound levels, and is never asked for a camera, a microphone or MIDI.'
+        ],
+        tags: ['raw', 'nodes', 'wires', 'pictures', 'picture operators', 'webcam', 'midi', 'dmx', 'devices', 'out', 'performance'],
+        updated: '2026-09-14'
     }
 ]
 
