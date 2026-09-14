@@ -1,6 +1,7 @@
 import { getNodeInputs, getNodeOutputs } from '../../project/nodeRegistry.js'
 import { isTopType } from '../../project/tops/topOperators.js'
 import { hasCardPreview } from '../components/cardPreview/previewTypes.js'
+import { hasCardViewer } from '../components/cardViewers/viewerKind.js'
 
 // A graph card's box, in graph units. Shared between the surface that draws
 // the cards (and lands wires on them — see graphGeometry.test.jsx for why
@@ -16,12 +17,23 @@ const CARD_FOOT = 8
 export const TOP_PICTURE_WIDTH = CARD_WIDTH - 16
 export const TOP_PICTURE_HEIGHT = Math.round(TOP_PICTURE_WIDTH * 9 / 16)
 const TOP_PICTURE_GAP = 4
+// A card's live-value viewer (CardValueViewer — the number/lamp/swatch/
+// sparkline strip) is text, not a picture, so it needs far less room. Grown
+// BELOW the ports for the same reason the picture is: no port moves.
+export const VALUE_VIEWER_HEIGHT = 34
+const VALUE_VIEWER_GAP = 4
 
 // Whether a card carries a picture under its ports: a picture operator's live
 // output, or the live preview of a node that makes something visible (a cube,
 // a light — see cardPreview/previewTypes.js). One size for both, so every
 // picture on the desk lines up; grown BELOW the ports for the same reason.
 export const hasCardPicture = (typeId) => isTopType(typeId) || hasCardPreview(typeId)
+
+// A card gets AT MOST one bottom slot (owner, 2026-09-14: "one viewer per
+// card"). A picture always wins the slot when the type has one; the value
+// viewer only ever fills the slot a picture left empty.
+export const hasCardViewerSlot = (node, scopeNodes = null) =>
+    !hasCardPicture(node?.typeId) && hasCardViewer(node, scopeNodes)
 
 // scopeNodes is threaded through every geometry helper because a container's
 // ports are DERIVED from the doorway nodes inside it — see getNodeInputs. Miss
@@ -30,7 +42,8 @@ export const hasCardPicture = (typeId) => isTopType(typeId) || hasCardPreview(ty
 export const cardHeight = (node, scopeNodes = null) => {
     const rows = Math.max(getNodeInputs(node, scopeNodes).length, getNodeOutputs(node, scopeNodes).length, 1)
     const picture = hasCardPicture(node?.typeId) ? TOP_PICTURE_HEIGHT + TOP_PICTURE_GAP : 0
-    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + picture + CARD_FOOT
+    const viewer = hasCardViewerSlot(node, scopeNodes) ? VALUE_VIEWER_HEIGHT + VALUE_VIEWER_GAP : 0
+    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + picture + viewer + CARD_FOOT
 }
 
 export const getCardBox = (node, scopeNodes = null) => ({

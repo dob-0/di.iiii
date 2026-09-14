@@ -45,7 +45,7 @@ import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode, operationLabelPatch } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { readNode } from '../../project/graph/nodeReading.js'
-import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs, evaluateNodeOutput } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode } from '../../project/graph/useGraphClock.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
@@ -1541,6 +1541,20 @@ export default function RawEditor({
         [document, clockNow, liveOutputs, frameMemory]
     )
 
+    // The one door RawGraphSurface's cards get into a live value — a node id
+    // and a port id in, this frame's real answer out, read through the SAME
+    // graphContext the room itself draws with (real clock, real liveOutputs).
+    // Cards workstream (2026-09-14 raw fix wave): feeds CardValueViewer (the
+    // number/lamp/swatch strip on a numbers-family or device card) and
+    // CardPreview's live overlay (a wired colour/size previews live instead
+    // of frozen at t=0). authoredNodes, not graphCardNodes: a wired source
+    // can live outside the current scope's own card list.
+    const readOutput = useCallback((nodeId, portId) => {
+        const sourceNode = authoredNodes.find((candidate) => candidate.id === nodeId)
+        if (!sourceNode) return undefined
+        return evaluateNodeOutput(sourceNode, portId, graphContext)
+    }, [authoredNodes, graphContext])
+
     // The sheet's own context, built from the SAME three inputs as the one the
     // room draws with — evaluation is pure, so same document + same clock +
     // same liveOutputs is the same answer, and the sheet cannot hold a second
@@ -2344,6 +2358,7 @@ export default function RawEditor({
                     activeMarkerTypeIds={activeMarkerTypeIds}
                     onViewportChange={handleViewportChange}
                     extraBounds={worldWindowBounds}
+                    readOutput={readOutput}
                 />
                 {/* Inside a picture operator: what it is made of, live and
                     changeable — the camera, the shader, the script. */}

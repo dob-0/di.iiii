@@ -1366,6 +1366,21 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'ui', 'colour', 'families', 'windows', 'nodes', 'reading', 'design', 'canvas'],
         updated: '2026-08-19'
+    },
+    {
+        id: 'cards-show-themselves',
+        category: 'Editing',
+        title: 'Cards show themselves',
+        summary: 'A number card shows its number and its last ten seconds; a colour, a switch, a device all show what they are carrying, live. A card with nothing wired to it folds that out of the way.',
+        body: [
+            'Every card in the numbers family — the value, math, logic, vector and colour nodes — now shows its own live answer under its ports, the way a TouchDesigner CHOP does: a number with a small ten-second graph beside it, an on/off lamp for a switch, a pulse for a trigger, a swatch for a colour, three numbers for a vector, two lines of text for a string. A device — MIDI, DMX, OSC, the keeper, a webcam or a microphone — shows a one-line status instead. It reads at up to ten times a second, so it never costs more than that even with dozens of cards open.',
+            'A card that already shows a picture — a Cube, a lit sphere, a picture operator\'s live frame — keeps that picture; a card only ever gets one thing to watch, never two.',
+            'That live picture is genuinely live now too: it used to freeze the instant you placed the node, as if the clock had stopped. A colour wired to a pulsing light, or a size wired to a counter, now animates on the card exactly as it does in the room.',
+            'A card with unwired inputs no longer lists every one of them — an ADD node with nothing plugged into A or B used to look exactly as busy as one carrying four live wires. The unwired ones fold behind a small "+N", which opens on a tap; wiring a card straight from the palette still shows every socket while you are dragging, so dropping a wire never gets harder.',
+            'The family word is gone from card headers — "numbers", "the scene" and so on used to sit next to the icon that already carries the same colour, saying the same thing twice. And a card is one stop on the keyboard now, not two: Tab reaches the card itself, the arrow keys move between cards, and Enter opens the one the door used to need a second stop for.'
+        ],
+        tags: ['raw', 'cards', 'touchdesigner', 'live values', 'sparkline', 'accessibility', 'keyboard', 'fold', 'preview', 'design'],
+        updated: '2026-09-14'
     }
 ]
 
