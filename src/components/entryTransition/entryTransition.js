@@ -3,39 +3,44 @@ import {
     ENTRY_GROUND,
     entryTone,
     isDestinationPainted,
+    isShowing,
     PAINT_BACKSTOP_MS,
     PAINT_STABLE_FRAMES,
     planEntry,
     prefersReducedMotion,
     QUIET_PAINT_MS,
-    resolveEntrySlowdown,
-    resolveEntryVariant
+    resolveEntrySlowdown
 } from './entryPlan.js'
 
 // Going THROUGH a door, drawn. The decisions are in entryPlan.js; this file
 // only carries them out.
 //
-// The one idea every variant shares: the view being left is never replaced by
+// The one idea every door shares: the view being left is never replaced by
 // black. A curtain is laid over the page on document.body — outside React's
 // root, so it survives the route change that unmounts everything beneath it —
 // and it holds the old view (or the move out of it) until the destination has
 // actually painted underneath. Only then does it let go.
 
 const CURTAIN_Z = 2147483000
-const EASE_IN_OUT = 'cubic-bezier(0.65, 0, 0.35, 1)'
 const EASE_OUT = 'cubic-bezier(0.22, 0.61, 0.36, 1)'
 const EASE_IN = 'cubic-bezier(0.55, 0, 0.75, 0.25)'
 // The held frame keeps travelling after the camera stops. It starts at about
 // the speed the glide ended on and runs out gently, so there is no seam
 // between the room's last frame and the picture of it.
 const DRIFT_EASE = 'cubic-bezier(0.3, 0.55, 0.4, 1)'
-const DRIFT_MS = 2600
+// A page held still has no speed to pick up: its push starts from rest,
+// gathers slowly and is still travelling when the destination comes up.
+const PUSH_EASE = 'cubic-bezier(0.42, 0, 0.3, 1)'
+// How far a held page darkens under the push — enough that the destination
+// coming up reads as arriving, never so far that the frame reads as black.
+const PUSH_DIM = 0.22
 
 let active = null
 
 export const isEntryInProgress = () => Boolean(active)
 
 const nextFrame = (win) => new Promise((resolve) => win.requestAnimationFrame(() => resolve()))
+const wait = (win, ms) => new Promise((resolve) => (ms > 0 ? win.setTimeout(resolve, ms) : resolve()))
 
 const animate = (el, keyframes, options) => {
     if (!el || typeof el.animate !== 'function') return { finished: Promise.resolve(), cancel: () => {} }
@@ -104,7 +109,8 @@ const waitForDestination = (win, { before, curtain }) => new Promise((resolve) =
         } else {
             stable = 0
         }
-        const loading = doc.querySelector('.loading-screen, .live-scene-loading')
+        const loading = Array.from(doc.querySelectorAll('.loading-screen, .live-scene-loading'))
+            .some((el) => !curtain.contains(el) && isShowing(el))
         if (loading) {
             quietSince = null
         } else if (quietSince === null) {
@@ -119,6 +125,16 @@ const waitForDestination = (win, { before, curtain }) => new Promise((resolve) =
 })
 
 const appRoot = (doc) => doc.getElementById('root')
+
+// The colour behind the page being held, so its copy sits on its own ground.
+const pageGround = (win, root) => {
+    try {
+        const bg = root ? win.getComputedStyle(root).backgroundColor : ''
+        return isVisibleColour(bg) ? bg : ENTRY_GROUND
+    } catch {
+        return ENTRY_GROUND
+    }
+}
 
 // The destination arriving: a slow settle of the whole app from a hair off its
 // final scale. Applied to #root, which base.css pins to the viewport, so fixed
@@ -141,37 +157,119 @@ const rectOrigin = (rect, win) => {
     return `${x.toFixed(2)}% ${y.toFixed(2)}%`
 }
 
-const insetFor = (rect, win) => {
-    if (!rect) return 'inset(50% 50% 50% 50%)'
-    const top = Math.max(0, rect.top)
-    const left = Math.max(0, rect.left)
-    const right = Math.max(0, win.innerWidth - (rect.left + rect.width))
-    const bottom = Math.max(0, win.innerHeight - (rect.top + rect.height))
-    return `inset(${top}px ${right}px ${bottom}px ${left}px)`
-}
-
-// The shape the expanding panel starts from and ends at. A door is round, so
-// its opening grows as a circle until it covers the farthest corner; a card
-// is square-cornered, so it grows as its own rectangle.
-export const expandClips = (source, win) => {
-    const w = Math.max(1, win.innerWidth)
-    const h = Math.max(1, win.innerHeight)
-    const c = source?.circle
-    if (c && Number.isFinite(c.x) && Number.isFinite(c.y) && c.r > 0) {
-        const far = Math.max(
-            Math.hypot(c.x, c.y), Math.hypot(w - c.x, c.y),
-            Math.hypot(c.x, h - c.y), Math.hypot(w - c.x, h - c.y)
-        )
-        return { from: `circle(${c.r.toFixed(1)}px at ${c.x.toFixed(1)}px ${c.y.toFixed(1)}px)`, to: `circle(${Math.ceil(far + 2)}px at ${c.x.toFixed(1)}px ${c.y.toFixed(1)}px)` }
-    }
-    return { from: insetFor(source?.rect || null, win), to: 'inset(0px 0px 0px 0px)' }
-}
-
-const snapshotLayer = (doc, canvas) => {
-    const holder = layer(doc, { background: ENTRY_GROUND })
-    Object.assign(canvas.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', display: 'block' })
-    holder.appendChild(canvas)
+const snapshotLayer = (doc, picture, background = ENTRY_GROUND) => {
+    const holder = layer(doc, { background })
+    Object.assign(picture.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', display: 'block' })
+    holder.appendChild(picture)
     return holder
+}
+
+// ─── A picture of the page, for a door that has no room behind it ──────────
+//
+// A button on the front page is a door with nothing 3D to travel through, and
+// the router is about to unmount everything under it. The page cannot be
+// rasterised, but it can be COPIED: the app's DOM is cloned into the curtain,
+// where it keeps every class and so every style, and stays exactly where it
+// was on screen while the real one is torn down beneath it. What a copy of
+// the DOM cannot carry is what the page DRAWS — a WebGL canvas copies blank,
+// and a cloned iframe or video would start loading all over again — so each
+// canvas is swapped for its current frame and each frame for an empty box.
+
+// A live WebGL canvas cannot be read after its frame was presented; the scene
+// that owns it can re-render and copy in the same task (captureRendererFrame).
+// A scene registers that ability against its canvas here.
+const frameSources = new Map()
+
+export const registerFrameSource = (canvas, capture) => {
+    if (!canvas || typeof capture !== 'function') return () => {}
+    frameSources.set(canvas, capture)
+    return () => { if (frameSources.get(canvas) === capture) frameSources.delete(canvas) }
+}
+
+const frameOfCanvas = (canvas) => {
+    const doc = canvas.ownerDocument
+    try {
+        const registered = frameSources.get(canvas)
+        if (registered) return registered() || null
+        if (!canvas.width || !canvas.height) return null
+        const copy = doc.createElement('canvas')
+        copy.width = canvas.width
+        copy.height = canvas.height
+        copy.getContext('2d')?.drawImage(canvas, 0, 0)
+        return copy
+    } catch {
+        return null
+    }
+}
+
+const HELD_CLASS = 'dii-entry-held'
+const HELD_STYLE_ID = 'dii-entry-held-style'
+
+// A copied element starts its CSS animations again from the beginning — a hero
+// that faded in on arrival would fade in a second time. Every animation in the
+// copy is set to have long since finished, and nothing in it transitions.
+const ensureHeldStyle = (doc) => {
+    if (doc.getElementById(HELD_STYLE_ID)) return
+    const style = doc.createElement('style')
+    style.id = HELD_STYLE_ID
+    style.textContent = `.${HELD_CLASS}, .${HELD_CLASS} *, .${HELD_CLASS} *::before, .${HELD_CLASS} *::after { animation-delay: -600s !important; transition: none !important; scroll-behavior: auto !important; }`
+    doc.head.appendChild(style)
+}
+
+/**
+ * The page as it is on screen now, as a detached element ready to lay into
+ * the curtain. `from` is the element to copy (the app root by default).
+ * Scroll positions are applied once the copy is in the document — see
+ * `placeHeldPage`.
+ */
+export const pictureOfPage = (doc, from = doc?.getElementById?.('root')) => {
+    if (!doc || !from) return null
+    ensureHeldStyle(doc)
+    const copy = from.cloneNode(true)
+    copy.removeAttribute('id')
+    copy.classList.add(HELD_CLASS)
+    copy.setAttribute('inert', '')
+    const originals = from.querySelectorAll('*')
+    const copies = copy.querySelectorAll('*')
+    const scrolls = []
+    if (from.scrollTop || from.scrollLeft) scrolls.push([copy, from.scrollTop, from.scrollLeft])
+    const swaps = []
+    for (let i = 0; i < originals.length && i < copies.length; i += 1) {
+        const original = originals[i]
+        const copied = copies[i]
+        if (copied.id) copied.removeAttribute('id')
+        if (original.scrollTop || original.scrollLeft) scrolls.push([copied, original.scrollTop, original.scrollLeft])
+        const tag = original.tagName
+        if (tag === 'CANVAS' || tag === 'IFRAME' || tag === 'VIDEO') {
+            const replacement = (tag === 'CANVAS' && frameOfCanvas(original)) || doc.createElement('div')
+            replacement.className = original.getAttribute('class') || ''
+            replacement.style.cssText = original.style.cssText
+            // Whatever the element's box was, the picture keeps it.
+            const box = original.getBoundingClientRect?.()
+            if (box && box.width && box.height && tag === 'CANVAS') {
+                replacement.style.width = `${box.width}px`
+                replacement.style.height = `${box.height}px`
+            }
+            swaps.push([copied, replacement])
+        }
+    }
+    // A pressed MUI button is mid-ripple; the copy would keep the ripple lit.
+    copy.querySelectorAll('.MuiTouchRipple-root').forEach((el) => el.replaceChildren())
+    swaps.forEach(([copied, replacement]) => copied.replaceWith(replacement))
+    Object.assign(copy.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', overflow: 'hidden', transform: 'none' })
+    copy.__diiScrolls = scrolls
+    return copy
+}
+
+// Scroll offsets only take once the copy is laid out in the document.
+const placeHeldPage = (holder, picture) => {
+    holder.appendChild(picture)
+    const scrolls = picture.__diiScrolls || []
+    scrolls.forEach(([el, top, left]) => {
+        el.scrollTop = top
+        el.scrollLeft = left
+    })
+    delete picture.__diiScrolls
 }
 
 /**
@@ -182,16 +280,17 @@ const snapshotLayer = (doc, canvas) => {
  * @param {object} [options.source]
  *   colour   the door's colour (a card passes nothing)
  *   rect     the pressed thing's box on screen, CSS px
- *   image    a picture of the destination the card already shows (url)
  *   ground   the destination's own ground colour, when the card can tell
  *   glide    (ms, { reach }) => Promise<HTMLCanvasElement|null>  — a room
  *            travels its camera toward the door and hands back its last frame
  *   capture  () => HTMLCanvasElement|null — the room's current frame, now
+ *   hold     () => HTMLElement|null — a picture of the whole page as it is
+ *            (pictureOfPage), for a door with no room behind it
  * @param {Function} [options.navigate]
  * @param {Window}   [options.win]
  * @returns {Promise<string>} how it ended
  */
-export async function enterDestination(href, { source = {}, navigate = appNavigate, win = typeof window === 'undefined' ? null : window, variant = null, reducedMotion = null } = {}) {
+export async function enterDestination(href, { source = {}, navigate = appNavigate, win = typeof window === 'undefined' ? null : window, reducedMotion = null } = {}) {
     if (!href) return 'no-destination'
     if (!win || !win.document?.body) {
         navigate(href)
@@ -202,29 +301,37 @@ export async function enterDestination(href, { source = {}, navigate = appNaviga
     const search = win.location?.search || ''
     const hasScene = typeof source.glide === 'function'
     const plan = planEntry({
-        variant: variant || resolveEntryVariant(search),
         reducedMotion: reducedMotion ?? prefersReducedMotion(win),
         hasScene,
         slow: resolveEntrySlowdown(search)
     })
-    // The variant travels with the visit, so a reviewer comparing b against a
-    // can walk from door to door without re-typing it on every address.
+    // The review slowdown travels with the visit, so a reviewer can walk from
+    // door to door without re-typing it on every address.
     const target = carryReviewParams(href, search)
 
     const curtain = makeCurtain(doc)
     hideChrome(doc)
-    const tone = entryTone(source.color, plan.kind === 'dissolve' ? 0.34 : 0.26)
+    const tone = entryTone(source.color, 0.26)
     active = { curtain, plan }
     if (import.meta.env?.DEV) win.__diiEntry = { plan, phase: 'cover', target }
     const phase = (name) => { if (import.meta.env?.DEV && win.__diiEntry) win.__diiEntry.phase = name }
     let reveal = null
     let settleOrigin = '50% 50%'
+    // Resolves once the move has run long enough for the destination to come
+    // up over it. Only a held page sets it: every other move is complete
+    // before the route changes.
+    let lead = Promise.resolve()
     const root = appRoot(doc)
 
     try {
         if (plan.kind === 'fade') {
-            const still = source.capture?.()
-            if (still) {
+            const held = source.hold?.()
+            const still = held ? null : source.capture?.()
+            if (held) {
+                reveal = layer(doc, { background: pageGround(win, root) })
+                curtain.appendChild(reveal)
+                placeHeldPage(reveal, held)
+            } else if (still) {
                 reveal = snapshotLayer(doc, still)
                 curtain.appendChild(reveal)
             } else {
@@ -232,8 +339,29 @@ export async function enterDestination(href, { source = {}, navigate = appNaviga
                 curtain.appendChild(reveal)
                 await animate(reveal, [{ opacity: 0 }, { opacity: 1 }], { duration: plan.coverMs, easing: 'linear' }).finished
             }
-        } else if (plan.kind === 'glide') {
-            if (hasScene || source.capture) {
+        } else {
+            const held = hasScene ? null : source.hold?.()
+            if (held) {
+                // A front-page button: the page itself stays up, copied into
+                // the curtain in this same task so no frame goes without it,
+                // and the view pushes slowly in toward the thing pressed. The
+                // route changes underneath straight away — the push is still
+                // travelling when the destination is ready to come up.
+                const origin = rectOrigin(source.rect, win)
+                settleOrigin = origin
+                reveal = layer(doc, { background: pageGround(win, root) })
+                curtain.appendChild(reveal)
+                placeHeldPage(reveal, held)
+                held.style.transformOrigin = origin
+                animate(held, [
+                    { transform: 'scale(1)' },
+                    { transform: `scale(${plan.driftScale})` }
+                ], { duration: plan.driftMs, easing: PUSH_EASE })
+                const dim = layer(doc, { background: ENTRY_GROUND, opacity: '0', pointerEvents: 'none' })
+                reveal.appendChild(dim)
+                animate(dim, [{ opacity: 0 }, { opacity: PUSH_DIM }], { duration: plan.driftMs, easing: 'linear' })
+                lead = wait(win, plan.leadMs)
+            } else if (hasScene || source.capture) {
                 // The curtain stays empty and click-blocking while the room
                 // travels; the room's own last frame becomes the curtain. A
                 // room that cannot travel (the visitor walked into the ring)
@@ -246,7 +374,7 @@ export async function enterDestination(href, { source = {}, navigate = appNaviga
                 animate(reveal, [
                     { transform: 'scale(1)' },
                     { transform: `scale(${plan.driftScale})` }
-                ], { duration: DRIFT_MS * resolveEntrySlowdown(search), easing: DRIFT_EASE })
+                ], { duration: plan.driftMs, easing: DRIFT_EASE })
             } else {
                 settleOrigin = rectOrigin(source.rect, win)
                 reveal = layer(doc, { background: source.ground || ENTRY_GROUND, opacity: '0' })
@@ -259,41 +387,6 @@ export async function enterDestination(href, { source = {}, navigate = appNaviga
                 await animate(reveal, [{ opacity: 0 }, { opacity: 1 }], { duration: plan.coverMs, easing: EASE_IN }).finished
                 push.cancel()
             }
-        } else if (plan.kind === 'dissolve') {
-            reveal = layer(doc, { background: source.ground || tone, opacity: '0' })
-            curtain.appendChild(reveal)
-            if (hasScene) source.glide(plan.glideMs, { reach: plan.glideReach })
-            await animate(reveal, [{ opacity: 0 }, { opacity: 1 }], { duration: plan.coverMs, easing: EASE_IN_OUT }).finished
-        } else {
-            // expand
-            const rect = source.rect || null
-            const clips = expandClips(source, win)
-            settleOrigin = source.circle ? `${source.circle.x}px ${source.circle.y}px` : rectOrigin(rect, win)
-            const dim = layer(doc, { background: ENTRY_GROUND, opacity: '0' })
-            curtain.appendChild(dim)
-            // The panel is the door's own colour, deepest at its rim, so the
-            // opening has depth rather than reading as a flat box.
-            const centre = source.circle ? `${source.circle.x}px ${source.circle.y}px` : '50% 50%'
-            reveal = layer(doc, {
-                background: source.ground || source.image
-                    ? (source.ground || ENTRY_GROUND)
-                    : `radial-gradient(circle at ${centre}, ${entryTone(source.color, 0.42)} 0%, ${tone} 45%, ${ENTRY_GROUND} 120%)`,
-                clipPath: clips.from
-            })
-            if (source.image && !source.ground) {
-                const img = doc.createElement('img')
-                img.alt = ''
-                img.src = source.image
-                Object.assign(img.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', objectFit: 'cover', opacity: '0.9' })
-                reveal.appendChild(img)
-            }
-            curtain.appendChild(reveal)
-            animate(dim, [{ opacity: 0 }, { opacity: 0.5 }], { duration: plan.coverMs, easing: EASE_IN_OUT })
-            await animate(reveal, [
-                { clipPath: clips.from },
-                { clipPath: clips.to }
-            ], { duration: plan.coverMs, easing: EASE_IN_OUT }).finished
-            dim.remove()
         }
 
         phase('hold')
@@ -305,7 +398,7 @@ export async function enterDestination(href, { source = {}, navigate = appNaviga
         navigate(target)
         // One frame for the router to commit before anything is measured.
         await nextFrame(win)
-        await waitForDestination(win, { before, curtain })
+        await Promise.all([waitForDestination(win, { before, curtain }), lead])
         phase('reveal')
         doc.body.classList.remove('dii-entering')
 
@@ -329,12 +422,11 @@ export async function enterDestination(href, { source = {}, navigate = appNaviga
     }
 }
 
-// `?entry` and `?entryslow` are review knobs. They follow the visitor through
-// the door so the variant being judged is the one that plays at the next door
-// too — and nothing else of the page's query does.
+// `?entryslow` is a review knob. It follows the visitor through the door so
+// the next door plays slowed too — and nothing else of the page's query does.
 export const carryReviewParams = (href, search) => {
     const from = new URLSearchParams(search || '')
-    const carried = ['entry', 'entryslow'].filter((key) => from.has(key))
+    const carried = ['entryslow'].filter((key) => from.has(key))
     if (!carried.length) return href
     const [path, query = ''] = String(href).split('?')
     const to = new URLSearchParams(query)
@@ -433,15 +525,23 @@ const averageCanvasFromImage = (img) => {
     }
 }
 
-// Shorthand for the DOM doors: a card on /spaces, a featured-exhibition button.
-// A modified click still behaves like the link it is.
-export const enterFromElement = (event, href, { color = null, image = null, element = null } = {}) => {
+// Shorthand for the DOM doors: a card on /spaces, a button on the front page.
+// A modified click still behaves like the link it is. `holdPage` keeps the
+// page itself on screen through the move (see pictureOfPage) — for a page
+// with nothing live in it that a copy would lose, which a card grid full of
+// live previews is not.
+export const enterFromElement = (event, href, { color = null, element = null, holdPage = false } = {}) => {
     if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || (typeof event.button === 'number' && event.button !== 0))) return false
     event?.preventDefault?.()
     const el = element || event?.currentTarget || null
     const rect = el?.getBoundingClientRect ? el.getBoundingClientRect() : null
-    enterDestination(href, { source: { rect, color, image, ground: sampleSurfaceColour(el) } })
+    const doc = el?.ownerDocument || (typeof document === 'undefined' ? null : document)
+    const hold = holdPage && doc ? () => pictureOfPage(doc) : null
+    enterDestination(href, { source: { rect, color, hold, ground: hold ? null : sampleSurfaceColour(el) } })
     return true
 }
 
-export const __resetEntryForTests = () => { active = null }
+export const __resetEntryForTests = () => {
+    active = null
+    frameSources.clear()
+}

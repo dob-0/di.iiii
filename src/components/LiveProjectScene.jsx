@@ -54,7 +54,8 @@ import { createPortalWalkThrough } from './portalWalkThrough.js'
 import { doorsOf, fitArrivalToDoors as fitArrivalToDoors_ } from './arrivalFraming.js'
 import { getViewportAspect } from '../utils/cameraFraming.js'
 import { enterDestination, isEntryInProgress } from './entryTransition/entryTransition.js'
-import { captureRendererFrame } from './entryTransition/EntryGlide.jsx'
+import { ENTRY_PENDING_ATTR } from './entryTransition/entryPlan.js'
+import { captureRendererFrame, FrameSource } from './entryTransition/EntryGlide.jsx'
 import { markArriveWalking } from './arriveWalking.js'
 import './liveProjectScene.css'
 
@@ -1792,6 +1793,10 @@ export default function LiveProjectScene({
             <Canvas
                 key={canvasKey}
                 className="live-scene-canvas"
+                // Until the document is here the canvas draws an empty dark
+                // room; a door being gone through must not count that as the
+                // destination's first frame (entryPlan.isDestinationPainted).
+                {...(!doc && !loadError ? { [ENTRY_PENDING_ATTR]: 'document' } : {})}
                 camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: cameraFar }}
                 dpr={[renderSettings.dprMin ?? 1, Math.min(renderSettings.dprMax ?? 2, WALK_DPR_CEILING)]}
                 shadows={renderSettings.shadows !== false}
@@ -1801,6 +1806,9 @@ export default function LiveProjectScene({
             >
                 <XR store={xr.xrStore}>
                 <RenderSettingsEffect renderSettings={renderSettings} />
+                {/* The landing holds its page through a front-page button; this
+                    is how the copy of the page gets this room's frame. */}
+                <FrameSource />
                 <color attach="background" args={[backgroundColor]} />
                 {fogEnabled ? <fog attach="fog" args={[fogColor, fogNear, fogFar]} /> : null}
                 {walking && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
