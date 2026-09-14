@@ -309,6 +309,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('topAnalyze', 'top.analyze', { label: 'Analyze', col: 9, row: 2 })
     add('monitor', 'stream.monitor', { label: 'Monitor', col: 7, row: 0 })
     add('machinesDesk', 'view.desk', { label: 'Desk', col: 7, row: 1 })
+    // The VJ deck plays the camera as a clip on its bottom layer (in1).
+    add('vjDeck', 'vj.deck', { label: 'VJ Deck', col: 10, row: 4 })
     add('mic', 'source.mic', { label: 'Microphone', col: 6, row: 1 })
 
     // --- column 7: workflow nodes + the keeper -----------------------------
@@ -504,6 +506,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('topFeedback', 'out', 'topBlend', 'a'),
         wire('topEdge', 'out', 'topBlend', 'b'),
         wire('topBlend', 'out', 'topOut', 'a'),
+        wire('topCamera', 'out', 'vjDeck', 'in1'),
         wire('topLevel', 'out', 'topAnalyze', 'a'),
         // geom.cube.bounds — likewise documented as dead, in fact a real vec3
         // of the cube's size. Wired to the desk's scale so the marker box grows
