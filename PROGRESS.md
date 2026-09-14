@@ -5,6 +5,45 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-15 — Every front-page button enters with the one pro move; the crack and variants b/c are gone
+
+- Owner: "it feels too cracky and DIY — can we make it all pro?", then, having tried `?entry=a|b|c` on dev: "they are the same". Decision relayed: the glide (a) is THE entering move.
+- Verified on live dev before: the four Featured exhibitions buttons held ~1 s (3.6 s under swiftshader) at mean brightness 7/255 before the space; Open Jam was a full reload (0-1/255); The Spaces played `crackTransition.js` then a full reload (0/255).
+- Cause: a DOM door has no room frame to hold, so the curtain faded up the brand ground and waited on it.
+- Now: `pictureOfPage` (entryTransition.js) clones `#root` into the curtain in the click's own task — every class and so every style kept, scroll offsets carried, iframes/videos replaced by empty boxes, each canvas replaced by its current frame through `registerFrameSource` (`<FrameSource />` in `LiveProjectScene`, so the front room behind the page is in the copy). The copy pushes slowly in toward the button pressed (from rest, ≤1.10, dims ≤22%), the route changes underneath at once, and the destination fades up and settles once it has painted and `leadMs` (~560 ms) has passed. Reduced motion: the page holds still, then a 240 ms plain fade.
+- Wired: WCC Exhibition, br_id_ge, Beyond Form, algovrithm, The Spaces, both Open Jam buttons — `enterFromElement(event, href, { holdPage: true })`, all SPA now. `crackTransition.js` and `.lp-crack-*` CSS deleted.
+- Removed: variants b and c, `?entry=`, `expandClips`, `projectObjectRect`/`projectRingCircle`, the card `image` option. `?entryslow` kept.
+- Paint check: `LiveProjectScene` marks its canvas `data-entry-pending` until its document arrives (Open Jam's white room came up out of a dark empty frame); a loading veil faded to opacity 0 no longer counts as loading.
+- Looked at: vite build + preview proxied to dev.diiii.xyz, headless swiftshader, brightness every ~100 ms and a contact sheet per route, desktop 1440x900 and phone 390x844 (plus WCC at DPR 2, two routes with reduced motion). Desktop min after the click: WCC 31, br_id_ge 26, Beyond Form 16 (its own dark title card), algovrithm 18 (its own ground), The Spaces 7 (the /spaces grid itself, dark before thumbnails), Open Jam 32.
+- Not done: /spaces cards still fade to the sampled ground / brand ground rather than holding the grid (a copy would reload every live preview iframe). Doors in the room unchanged.
+
+## 2026-09-15 — Facade wave 2: one name per space on cards, list rows, headings and tabs
+
+- Applied the owner's 2026-09-14 rule in di.iiii's own furniture: a space's label is the one
+  name a visitor sees for it; a project's title shows only where the URL names the project.
+- /spaces grid: the card header no longer prints the space id above the name (the map already
+  dropped it); a visitor's card has no project line at all; an owner's card says
+  "Opens on: …" only when the door's title differs from the space's name. Pure rule in
+  `src/studio/utils/spaceNames.js` (names compared by their letters and digits, so
+  `br_id_ge` = `br-id-ge`).
+- /spaces list: name once, no id under it; "what opens" follows the same rule and says
+  "the space itself" otherwise.
+- `PublicProjectViewer`: `viewerTitle` (room heading for readers and crawlers, walk-mode header,
+  page frame's accessible name) is the space's name on a space's own door, the project's title
+  only on `/{space}/p/{project}`. Seen headless: /dilijan walk header "Dilijan · ԱՇԽԱՐՀՆԵՐ",
+  /network heading "The network", /br-id-ge/p/landing still "the landing — the door".
+- `SpaceContentsPage` now names its tab `{space} — di.iiii` (was the site default).
+- Rule written into docs/ai/vocabulary.md ("One name per space"); wiki article
+  `spaces-map-view` updated.
+- Verified against dev's real data through a local GET-only proxy (every POST and websocket
+  refused, nothing written to any tier); before shots from dev itself.
+- NOT done, owner's call (data, listed in the PR body): `main` labelled "di.iiii", wcc's door
+  titled "Main", "Open Space" vs "Open Jam", `br_id_ge` spelling, the look-*/front-room QA
+  scenes and "i dont know"/"mini" in /open, codenames printed inside the network page.
+- Still open in code: algovrithm (a code work) shows "nothing published / no door" in the list
+  and counts under "Needs a door" although it opens; the WCC landing's own heading
+  "WCC: Women Creating Change" is the work's content and was left alone.
+
 ## 2026-09-14 — Going through a door is one move now: three pro entry variants for review, the fallen page leaves, the phone sees the doors
 
 - Owner: "there are no animation where we go inside" and "it feels too cracky and DIY — can we make it all pro?". Clicking a door in the front room, a featured-exhibition button or a /spaces card gave ~450 ms of black + spinner, then a hard cut.

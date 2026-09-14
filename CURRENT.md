@@ -13,10 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Going through a door is one move now: three pro entry variants for review, the fallen page leaves, the phone sees the doors
-- the not-found card names the right thing and stops asking you to sign in
-- /open and /open_jam/scene are now the same room
-- every page names itself, in the tab and in a link preview
+- Every front-page button enters with the one pro move; the crack and variants b/c are gone
+- Facade wave 2: one name per space on cards, list rows, headings and tabs
 
 Full detail: `PROGRESS.md`.
 
