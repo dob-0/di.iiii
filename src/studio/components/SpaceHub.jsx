@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import useAuthSession from '../../hooks/useAuthSession.js'
+import useDocumentTitle from '../../hooks/useDocumentTitle.js'
 import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
 import { telegramSignInUrl } from '../../utils/telegramSignIn.js'
 import {
@@ -245,6 +246,8 @@ const OPEN_SPACE_HINT = 'everyone builds here, together'
 const SANDBOX_HINT = 'private scratch — only you see it'
 
 export default function SpaceHub() {
+    // /spaces — the reserved address itself, not any one space's name.
+    useDocumentTitle('Spaces — di.iiii')
     const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit, spaces: sessionScopes, openSpaceId, sandboxSpaceId } = useAuthSession()
     const [spaces, setSpaces] = useState([])
     const [sandboxSummary, setSandboxSummary] = useState(null)

@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import MadeWithBadge from '../../components/MadeWithBadge.jsx'
 import SpaceContentsBadge from '../../components/SpaceContentsBadge.jsx'
 import SurfaceBar from '../../components/SurfaceBar.jsx'
+import useDocumentTitle from '../../hooks/useDocumentTitle.js'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
 import useSpaceContentsCount from '../../hooks/useSpaceContentsCount.js'
 import useRoomSound, { useVisitorSoundGate } from '../../hooks/useRoomSound.js'
@@ -47,7 +48,7 @@ const loadingOverlay = <LoadingScreen label="Loading live experience" />
 // page has a real security origin — getUserMedia is impossible in an opaque one
 const PAGE_SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals'
 
-export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', initialCameraView = null, showProjectSwitcher = false }) {
+export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', initialCameraView = null, showProjectSwitcher = false, showProjectInTitle = false }) {
     const [state, setState] = useState({
         status: 'loading',
         document: null,
@@ -331,6 +332,22 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         if (!document?.projectMeta?.title) return spaceLabel || resolvedRouteSpaceId
         return document.projectMeta.title
     }, [document?.projectMeta?.title, resolvedRouteSpaceId, spaceLabel])
+
+    // The tab title. Naming rule (docs/ai/vocabulary.md): a space's own name
+    // is what a visitor sees for it; a project's name shows only when the URL
+    // named that project. 'main' is skipped — it is the platform's own space,
+    // named di.iiii, so index.html's default title already says the right
+    // thing (the same 'own' fossil ogRoutes.js carries for the preview card).
+    // Held back until the document is ready so a loading project never
+    // flashes an empty or stale title, and skipped for a thumbnail/embed —
+    // neither is a destination whose tab this page owns.
+    useDocumentTitle(
+        resolvedRouteSpaceId === 'main' || isPreview || isEmbed || state.status !== 'ready'
+            ? null
+            : (showProjectInTitle && document?.projectMeta?.title
+                ? `${document.projectMeta.title} — ${spaceLabel || resolvedRouteSpaceId} — di.iiii`
+                : `${spaceLabel || resolvedRouteSpaceId} — di.iiii`)
+    )
 
     return (
         <main

@@ -122,6 +122,15 @@ describe('SpaceHub', () => {
         }
     })
 
+    // /spaces used to carry the platform's own tab title, same as every
+    // other route — docs/ai/vocabulary.md's naming rule names this address.
+    it('names /spaces itself in the tab, not the platform', async () => {
+        listServerSpaces.mockResolvedValue([])
+        render(<SpaceHub />)
+        await screen.findByText('Spaces')
+        expect(document.title).toBe('Spaces — di.iiii')
+    })
+
     it('leads to the lighting desk only when a desk on this machine answers', async () => {
         listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
         probeLightingDesk.mockResolvedValue(true)

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import AuthGate from './AuthGate.jsx'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import AuthGate, { SignInSurface } from './AuthGate.jsx'
 
 const mockUseAuthSession = vi.fn()
 
@@ -134,6 +134,27 @@ describe('AuthGate restricted card doors', () => {
         // the same doors are still on the card
         expect(screen.getByRole('button', { name: 'Open Space' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Your private sandbox' })).toBeInTheDocument()
+    })
+
+    // Every address that fell through to a space lookup and found nothing —
+    // /login before it got a route, a mistyped space, a 404 — used to carry
+    // the same tab title as every other page. The card that says "nothing
+    // lives here" is the one honest 404 this SPA has; it must say so in the
+    // tab too. The scoped-but-real card next to it must NOT: the space is not
+    // missing, only out of reach.
+    it('titles the tab "Not found", but only for the card that means it', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open', 'sandbox-guestfa58']))
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+        await screen.findByText(/Nothing lives at/)
+        expect(document.title).toBe('Not found — di.iiii')
+    })
+
+    it('leaves the tab title alone for a real space out of scope', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['main']))
+        document.title = 'di.iiii — public spaces on the open web'
+        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
+        await screen.findByText(/Access restricted/)
+        expect(document.title).toBe('di.iiii — public spaces on the open web')
     })
 })
 
@@ -375,5 +396,20 @@ describe('AuthGate Telegram sign-in', () => {
 
         expect(await screen.findByRole('button', { name: /Continue with GitHub/ })).toBeInTheDocument()
         expect(screen.queryByRole('link', { name: /Continue with Telegram/ })).not.toBeInTheDocument()
+    })
+})
+
+// /login — a place, not a mistyped space (see RootApp.jsx's isSignInPath).
+// It carried the platform's own tab title until now, same as every other
+// route with no title of its own.
+describe('/login', () => {
+    beforeEach(() => {
+        document.title = 'di.iiii — public spaces on the open web'
+    })
+
+    it('names itself in the tab', () => {
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<SignInSurface />)
+        expect(document.title).toBe('Sign in — di.iiii')
     })
 })

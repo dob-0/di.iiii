@@ -1,6 +1,6 @@
 import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import WikiPage from './WikiPage.jsx'
 import { WIKI_ARTICLES, WIKI_HIGHLIGHTS, WIKI_CATEGORIES } from './wikiContent.js'
 
@@ -40,5 +40,31 @@ describe('WikiPage', () => {
         // sandbox article survives the filter; an unrelated one is gone
         expect(screen.getAllByText('The Open Space, your sandbox & guest mode').length).toBeGreaterThan(0)
         expect(screen.queryByText('Keyboard shortcuts')).toBeNull()
+    })
+
+    // /wiki names the wiki in the tab; /wiki#{id} names the article that
+    // deep-linked in — docs/ai/vocabulary.md's naming rule.
+    describe('tab title', () => {
+        afterEach(() => {
+            window.history.replaceState({}, '', '/wiki')
+        })
+
+        it('is "Wiki — di.iiii" with no article named', () => {
+            render(<WikiPage />)
+            expect(document.title).toBe('Wiki — di.iiii')
+        })
+
+        it('names the article that opened it', () => {
+            const article = WIKI_ARTICLES[0]
+            window.history.replaceState({}, '', `/wiki#${article.id}`)
+            render(<WikiPage />)
+            expect(document.title).toBe(`${article.title} — Wiki — di.iiii`)
+        })
+
+        it('falls back to the plain wiki title for an unknown hash', () => {
+            window.history.replaceState({}, '', '/wiki#not-a-real-article')
+            render(<WikiPage />)
+            expect(document.title).toBe('Wiki — di.iiii')
+        })
     })
 })

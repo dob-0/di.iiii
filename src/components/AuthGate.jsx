@@ -2,6 +2,7 @@ import { Box, Button, CircularProgress, Divider, Link, Stack, TextField, ThemePr
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { diFontTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import useSpacePublicFlag from '../hooks/useSpacePublicFlag.js'
 import { getApiAuthProviders, getOAuthUrl, hasServerApi } from '../services/apiClient.js'
 import { redeemSpaceInvite } from '../services/serverSpaces.js'
@@ -186,7 +187,12 @@ const ClosedDoorCard = ({
     providers,
     refresh,
     sessionControls = true
-}) => (
+}) => {
+    // Only the "nothing lives here" branch is a 404 — the other card is a real
+    // space a session merely isn't scoped to, which is not the same thing and
+    // must not say "Not found" over content that exists.
+    useDocumentTitle(!exists ? 'Not found — di.iiii' : null)
+    return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
         <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
             <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
@@ -245,7 +251,8 @@ const ClosedDoorCard = ({
             {sessionControls && <AccountButton authState={authSession} onLogout={refresh} />}
         </Stack>
     </Box>
-)
+    )
+}
 
 const stripInviteFromUrl = () => {
     try {
@@ -597,6 +604,7 @@ function SignInSurfaceInner() {
     const authSession = useAuthSession()
     const { refresh, loading, type } = authSession
     const [providers, setProviders] = useState(null)
+    useDocumentTitle('Sign in — di.iiii')
 
     useEffect(() => {
         getApiAuthProviders()
