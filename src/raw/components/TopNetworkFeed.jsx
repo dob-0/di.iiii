@@ -19,7 +19,9 @@ import { toTopNetwork, useTopNetwork } from '../../project/tops/useTopNetwork.js
 // whole editor, and a still room would otherwise do that ten times a second.
 const MOVED = 0.004
 
-export default function TopNetworkFeed({ document, spaceId = '', liveOutputs = null, cameras = true, onLiveOutputChange }) {
+// A Clip In (and every clip a VJ deck plays) finds its footage among the
+// PROJECT's files — `assets` and `projectId`, the same ones a Video node reads.
+export default function TopNetworkFeed({ document, spaceId = '', projectId = null, liveOutputs = null, cameras = true, onLiveOutputChange }) {
     const network = useMemo(() => toTopNetwork(document), [document])
     const published = useRef(new Map())
     const onMeasure = useCallback((nodeId, numbers) => {
@@ -65,6 +67,10 @@ export default function TopNetworkFeed({ document, spaceId = '', liveOutputs = n
         }
     }, [])
 
-    useTopNetwork({ network, spaceId, thumbnails: true, onMeasure, feedMedia, onPicture, onPicturesDrawn, cameras })
+    useTopNetwork({
+        network, spaceId, thumbnails: true, onMeasure, feedMedia, onPicture, onPicturesDrawn, cameras,
+        assets: document?.assets || null,
+        projectId: projectId || document?.projectMeta?.id || null
+    })
     return null
 }

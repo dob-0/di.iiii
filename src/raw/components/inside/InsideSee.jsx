@@ -60,7 +60,9 @@ export default function InsideSee({ kind, node, allNodes = [], edges = [], inRow
     if (kind === 'picture') return <PictureSee node={node} />
     if (kind === 'object3d') return <ShapeSee node={node} allNodes={allNodes} edges={edges} />
     if (kind === 'window') {
-        const content = renderWindow ? renderWindow(node) : null
+        // Inside, a window's content has the room of the frame, not a card's
+        // (the VJ deck lays its grid out denser for 'inside').
+        const content = renderWindow ? renderWindow(node, { placement: 'inside' }) : null
         return content ? <div className="raw-inside-see-window">{content}</div> : <Line>Its window opens here.</Line>
     }
     if (kind === 'texture') {

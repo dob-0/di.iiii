@@ -1,5 +1,5 @@
 import { getNodeInputs, getNodeOutputs } from '../../project/nodeRegistry.js'
-import { isTopType } from '../../project/tops/topOperators.js'
+import { isPictureType } from '../../project/tops/vjDeck.js'
 import { hasCardPreview } from '../components/cardPreview/previewTypes.js'
 import { hasCardViewer } from '../components/cardViewers/viewerKind.js'
 
@@ -24,10 +24,10 @@ export const VALUE_VIEWER_HEIGHT = 34
 const VALUE_VIEWER_GAP = 4
 
 // Whether a card carries a picture under its ports: a picture operator's live
-// output, or the live preview of a node that makes something visible (a cube,
+// output (a VJ deck's is its master), or the live preview of a node that makes something visible (a cube,
 // a light — see cardPreview/previewTypes.js). One size for both, so every
 // picture on the desk lines up; grown BELOW the ports for the same reason.
-export const hasCardPicture = (typeId) => isTopType(typeId) || hasCardPreview(typeId)
+export const hasCardPicture = (typeId) => isPictureType(typeId) || hasCardPreview(typeId)
 
 // A card gets AT MOST one bottom slot (owner, 2026-09-14: "one viewer per
 // card"). A picture always wins the slot when the type has one; the value

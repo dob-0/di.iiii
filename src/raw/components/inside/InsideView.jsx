@@ -63,13 +63,19 @@ export const insideLayoutFor = (width) => (width < INSIDE_PHONE ? 'phone' : widt
  * the screen the frame leaves free. Pure; the component uses the same numbers
  * for its own CSS variables, so the two cannot drift.
  */
-export function insideGeometry({ width, height, top = 0, seeOpen = true, madeOfOpen = false, phonePanel = 'canvas' }) {
+// A node whose window IS the thing you play (the VJ deck's clip grid) gets
+// most of the frame for SEE; the canvas under it keeps a strip.
+export const SEE_FILLS_TYPES = new Set(['vj.deck'])
+
+export function insideGeometry({ width, height, top = 0, seeOpen = true, madeOfOpen = false, phonePanel = 'canvas', seeFills = false }) {
     const layout = insideLayoutFor(width)
     const left = layout === 'wide' ? IN_WIDTH : layout === 'folded' ? FOLDED_WIDTH : 0
     const right = layout === 'wide' ? OUT_WIDTH : 0
     const centre = Math.max(0, width - left - right)
     const available = Math.max(0, height - top - INSIDE_HEAD_HEIGHT)
-    const seePicture = Math.round(Math.min(available * (layout === 'phone' ? 0.3 : 0.36), (centre * 9) / 16))
+    const seePicture = seeFills
+        ? Math.round(available * (layout === 'phone' ? 0.5 : 0.62))
+        : Math.round(Math.min(available * (layout === 'phone' ? 0.3 : 0.36), (centre * 9) / 16))
     const see = BAR_HEIGHT + (seeOpen ? seePicture : 0)
     const madeOf = layout === 'phone' ? 0 : (madeOfOpen ? Math.round(available * 0.42) : BAR_HEIGHT)
     const bottom = layout === 'phone' ? PHONE_STRIP : madeOf
@@ -160,7 +166,7 @@ export default function InsideView({
         return () => window.removeEventListener('resize', onResize)
     }, [])
 
-    const geometry = insideGeometry({ ...viewport, top, seeOpen, madeOfOpen, phonePanel })
+    const geometry = insideGeometry({ ...viewport, top, seeOpen, madeOfOpen, phonePanel, seeFills: SEE_FILLS_TYPES.has(node?.typeId) })
     const insetsKey = JSON.stringify(geometry.insets)
     useEffect(() => {
         onInsetsChange?.(JSON.parse(insetsKey))

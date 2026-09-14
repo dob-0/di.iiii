@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
-import { isTopType } from '../../project/tops/topOperators.js'
+import { isPictureType } from '../../project/tops/vjDeck.js'
 import TopNetworkFeed from './TopNetworkFeed.jsx'
 import VideoFrameFeed from './VideoFrameFeed.jsx'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
@@ -46,6 +46,7 @@ export default function LiveFeeds({
     liveOutputs = null,
     assetMap = null,
     spaceId = '',
+    projectId = null,
     onLiveOutputChange,
     allow = EDITOR_FEEDS
 }) {
@@ -97,10 +98,11 @@ export default function LiveFeeds({
     return (
         <>
             {/* The picture operators run while any exist — see TopNetworkFeed. */}
-            {allow.pictures && nodes.some((node) => isTopType(node.typeId)) ? (
+            {allow.pictures && nodes.some((node) => isPictureType(node.typeId)) ? (
                 <TopNetworkFeed
                     document={document}
                     spaceId={spaceId}
+                    projectId={projectId}
                     liveOutputs={liveOutputs}
                     cameras={allow.cameras}
                     onLiveOutputChange={publish}

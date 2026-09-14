@@ -20,7 +20,7 @@ import { useLiveOutputs } from '../utils/useLiveOutputs.js'
 import DeskPanelWindow from './DeskPanelWindow.jsx'
 import InsideView from './inside/InsideView.jsx'
 import { withMachineOptions } from './inside/topMachineOptions.js'
-import { isTopType } from '../../project/tops/topOperators.js'
+import { isPictureType } from '../../project/tops/vjDeck.js'
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import ButtonPanelWindow from './ButtonPanelWindow.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
@@ -963,7 +963,7 @@ export default function RawEditor({
     // A picture operator's Runs on lists the machines this space can see right
     // now; the registry only knows "where the page is open".
     // Presence only on a desk that uses it: picture operators or a Desk panel.
-    const usesDesk = nodes.some((node) => isTopType(node.typeId) || node.typeId === 'view.desk')
+    const usesDesk = nodes.some((node) => isPictureType(node.typeId) || node.typeId === 'view.desk')
     const { machines: knownMachines } = useMachinePresence(usesDesk ? resolvedSpaceId : '')
     const withMachines = (sections) => withMachineOptions(scopedSelectedNode, sections, knownMachines)
     const inspectorSections = scopedSelectedNode
@@ -1626,7 +1626,9 @@ export default function RawEditor({
         payload: { nodeId, patch: { label } }
     }, { activityMessage: `Renamed a node to “${label}”.` }), [applyLocalOps])
 
-    const renderViewNodeContent = (node) => {
+    // `placement` is where the window's content stands: 'window' on the patch,
+    // 'inside' in the inside view's SEE. Only the VJ deck reads it today.
+    const renderViewNodeContent = (node, { placement = 'window' } = {}) => {
         const resolvedValues = evaluateNodeInputs(node, graphContext)
         if (node.typeId === 'universe.world') {
             return (
@@ -1754,12 +1756,12 @@ export default function RawEditor({
             )
         }
         if (node.typeId === 'vj.deck') {
-            // The deck as a window on the patch. Its inside and perform
-            // placements mount the same view; the state is node.values.deck.
+            // The deck as a window on the patch, or inside the node (SEE hands
+            // placement 'inside'). One view, one state: node.values.deck.
             return (
                 <VjDeckView
                     node={node}
-                    placement="window"
+                    placement={placement}
                     assets={document.assets || []}
                     onPatchValues={(patch) => applyLocalOps({
                         type: 'updateNode',
@@ -2728,6 +2730,7 @@ export default function RawEditor({
                 liveOutputs={liveOutputs}
                 assetMap={assetMap}
                 spaceId={resolvedSpaceId}
+                projectId={projectId || null}
                 onLiveOutputChange={handleLiveOutputChange}
             />
 

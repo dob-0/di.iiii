@@ -70,7 +70,7 @@ describe('InsideView — one frame for every node', () => {
         const renderWindow = vi.fn(() => <div data-testid="the-window" />)
         mount(cam, { renderWindow })
         expect(screen.getAllByTestId('the-window')).toHaveLength(1)
-        expect(renderWindow).toHaveBeenCalledWith(expect.objectContaining({ id: cam.id }))
+        expect(renderWindow).toHaveBeenCalledWith(expect.objectContaining({ id: cam.id }), { placement: 'inside' })
     })
 
     it('frames a Geo like any other node, holding its children', () => {
