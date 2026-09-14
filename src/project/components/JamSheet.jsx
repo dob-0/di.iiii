@@ -24,6 +24,13 @@ export const JAM_COLOURS = [
     '#c084fc'
 ]
 
+// A first-timer reaches for what they arrived with — their own picture, their
+// own words — long before a primitive shape. The tiles below are ordered
+// photo, text, then the shapes, so the thing most people actually came to add
+// is the first tile a thumb lands on, not the fourth.
+const JAM_TEXT_PRIMITIVE = JAM_PRIMITIVES.find(({ key }) => key === 'text') || null
+const JAM_SHAPE_PRIMITIVES = JAM_PRIMITIVES.filter(({ key }) => key !== 'text')
+
 function AddFace({ onAddShape, onPickFile, busy }) {
     return (
         <>
@@ -31,18 +38,6 @@ function AddFace({ onAddShape, onPickFile, busy }) {
                 <span className="jam-sheet-title">What are you adding?</span>
             </div>
             <div className="jam-shapes">
-                {JAM_PRIMITIVES.map(({ key, label, icon }) => (
-                    <button
-                        key={key}
-                        type="button"
-                        className="jam-shape"
-                        onClick={() => onAddShape(key)}
-                        disabled={busy}
-                    >
-                        <span className="jam-shape-icon" aria-hidden="true">{icon}</span>
-                        <span>{label}</span>
-                    </button>
-                ))}
                 <label className="jam-file">
                     <span className="jam-shape-icon" aria-hidden="true">▣</span>
                     <span>{busy ? 'sending…' : 'photo'}</span>
@@ -57,6 +52,29 @@ function AddFace({ onAddShape, onPickFile, busy }) {
                         }}
                     />
                 </label>
+                {JAM_TEXT_PRIMITIVE ? (
+                    <button
+                        type="button"
+                        className="jam-shape"
+                        onClick={() => onAddShape(JAM_TEXT_PRIMITIVE.key)}
+                        disabled={busy}
+                    >
+                        <span className="jam-shape-icon" aria-hidden="true">{JAM_TEXT_PRIMITIVE.icon}</span>
+                        <span>{JAM_TEXT_PRIMITIVE.label}</span>
+                    </button>
+                ) : null}
+                {JAM_SHAPE_PRIMITIVES.map(({ key, label, icon }) => (
+                    <button
+                        key={key}
+                        type="button"
+                        className="jam-shape"
+                        onClick={() => onAddShape(key)}
+                        disabled={busy}
+                    >
+                        <span className="jam-shape-icon" aria-hidden="true">{icon}</span>
+                        <span>{label}</span>
+                    </button>
+                ))}
             </div>
             <p className="jam-note">It lands on the ground in front of you, where you are looking.</p>
         </>

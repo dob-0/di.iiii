@@ -195,7 +195,7 @@ export const WIKI_ARTICLES = [
             'Telegram is the third way in, for anyone who holds no GitHub or Google account: “Continue with Telegram” opens the di.iiii bot, you say /login to it, and the bot sends back a single-use link that expires in ten minutes — tapping it signs you in here, with everything you built as a guest carried onto the new account like any other sign-in.',
             'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google) — everything comes with you: your whole sandbox, its projects and its files, moves onto your account automatically — or Export the project as a file you can import into any space later. The sign-in confirmation says when your sandbox came along. Existing account work is never overwritten by a later guest session.',
             'For a live jam — an event, a workshop, a projected wall — share the short link di-studio.xyz/open_jam (or turn it into a QR code). It opens the shared Open Jam directly, and a one-line welcome shows first-timers how to add their visual. Anyone who scans can drop in an image, video or 3D model on the spot, no account needed.',
-            'There are two ways in, and they are the same jam. di-studio.xyz/open_jam/scene puts you inside the scene — you stand in it, walk around, and add things where you are looking; it is the one to put on a flyer or a QR code for a phone. See "Standing in the jam" for what it does.',
+            'There are two ways in, and they are the same jam. di-studio.xyz/open_jam/scene puts you inside the scene — you stand in it, walk around, and add things where you are looking; it is the one to put on a flyer or a QR code for a phone. So does the bare di-studio.xyz/open, which used to open a different, read-only picture of the same room — the two addresses now always land in the identical live scene. See "Standing in the jam" for what it does.',
             'The Open Jam opens in a simple mode: one Create window with file upload and a few basic shapes — the full editor’s other windows and import options stay out of the way. Tapping an object opens a small Edit window (change your text, pick a colour, or remove it). Anyone who wants the complete toolset can press “⚒ All tools” in the toolbar (and “◱ Simple” switches back); the choice is remembered on that device.',
             'For admins: Ops Graph → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
             'A room carries its own text for anything that reads instead of looking. A space drawn on a canvas used to be an empty page to a screen reader, a search engine, or a browser whose 3D failed; every published room now also carries its name, its lines and its doors as ordinary links, out of sight but reachable — tab through a room and each door becomes a visible link you can follow without a mouse.',
@@ -204,7 +204,7 @@ export const WIKI_ARTICLES = [
             'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page. Where no Main space is set at all, the landing offers “Look around” instead — a decorative walkable preview of its own hero, not a real space.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr', 'telegram', 'sign in'],
-        updated: '2026-09-06'
+        updated: '2026-09-14'
     },
     {
         id: 'jam-surface',
@@ -213,15 +213,16 @@ export const WIKI_ARTICLES = [
         summary: 'Scan the code and you are inside the scene: walk around, add something where you are looking, and see everyone else who is there.',
         body: [
             'di-studio.xyz/open_jam/scene opens the shared Open Jam as a place you are in, rather than as an editor with most of it switched off. You arrive standing at eye height. Drag a thumb across the right of the screen to look around, and the left to walk.',
-            'One large ＋ sits at the bottom, in reach of a thumb. Tap it and a sheet comes up with five shapes — box, sphere, cone, torus, text — and a photo from your camera or your camera roll. Nothing else: at an event the whole point is that somebody who has never seen di.iiii can put something in before the moment passes.',
+            'One large ＋ sits at the bottom, in reach of a thumb. Tap it and a sheet comes up led by a photo from your camera or your camera roll and a piece of text, then four shapes — box, sphere, cone, torus — after them. Nothing else: at an event the whole point is that somebody who has never seen di.iiii can put something in before the moment passes, and what they came with — their own picture, their own words — is the first thing their thumb lands on, not the fourth.',
             'What you add lands on the ground about two metres in front of you, where you are looking. That is the real difference from the editor. Everyone who opens the editor starts from the same saved view, so everyone drops their work into the same handful of spots; here, twenty people standing in twenty places make twenty places.',
             'While something is yours, the sheet lets you change it: retype the words if it is text, pick a different colour, push it further away or pull it nearer, or remove it. A chip above the ＋ counts what you added so you can find it again. That list lives on your own device and is a convenience, not a lock — the Open Jam is shared, and anyone in it can still change anything in it, exactly as before.',
             'A line at the top says how many people are here, and each of them stands in the scene as a soft marker on the floor with their name above it, turned whichever way they are facing. Until now everybody in the jam was invisible to everybody else on a phone, because the old marker followed a mouse and a phone has none.',
+            'Share, next to the ＋, hands the room to somebody else: on a phone it opens your own share sheet, so a text or a message app is one tap away; everywhere else it copies the plain di-studio.xyz/open link to the clipboard. Getting a second person in takes one tap, not spelling out a URL.',
             '“Full editor →” at the top right opens the same jam in Studio with every tool in it. A phone had no way through to that at all before: the switch lived in a toolbar that only appears on a wide screen.',
             'The editor is unchanged and still lives at di-studio.xyz/open_jam. The two are the same jam — whatever is made in one shows up in the other, live — so a laptop can be doing the careful work while the phones in the space keep adding.'
         ],
-        tags: ['jam', 'open space', 'qr', 'event', 'walk', 'phone', 'presence', 'scene', 'mobile'],
-        updated: '2026-08-23'
+        tags: ['jam', 'open space', 'qr', 'event', 'walk', 'phone', 'presence', 'scene', 'mobile', 'share'],
+        updated: '2026-09-14'
     },
     {
         id: 'lighting-desk',
