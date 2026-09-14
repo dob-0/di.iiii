@@ -1500,7 +1500,7 @@ describe('RawEditor — the inside of a node', () => {
         const inRail = document.querySelector('.raw-inside-in')
         expect(inRail).toBeTruthy()
         expect(inRail.textContent).toContain('9, 9, 9')
-        expect(inRail.textContent).toContain('from Source · Beat')
+        expect(inRail.textContent).toContain('← Source · Beat')
         expect(inRail.textContent).not.toContain(FAR_DOOR_ID)
         expect(inRail.textContent).toContain('the door \u201cCamera\u201d standing inside it')
     })
@@ -1543,7 +1543,7 @@ describe('RawEditor — the inside of a node', () => {
                 { id: 'big', typeId: 'value.vec3', label: 'Big', parentId: 'cube', values: { value: [3, 3, 3] } }
             ]
         })
-        fireEvent.click(screen.getByRole('button', { name: 'Wire a node inside Cube into Size' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Socket: Vector input — wire a node inside Cube into Size' }))
         fireEvent.click(screen.getByRole('button', { name: 'Big · Vector' }))
         const edge = opsOfType('createEdge').at(-1)?.payload.edge
         expect(edge).toMatchObject({ fromNodeId: 'big', fromPort: 'out', toNodeId: 'cube', toPort: 'size' })

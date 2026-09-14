@@ -27,9 +27,14 @@ export function withMachineOptions(node, sections, machines = []) {
     }))
 }
 
-/** Where a node runs, in words. */
+/**
+ * Where a node runs, in words — only when that is a real fact worth a chip
+ * (a picture operator pinned to a machine). Everything else runs wherever
+ * the page is open, which is not worth a sentence; the header shows a quiet
+ * "here" instead of repeating "runs on where the page is open" on every node.
+ */
 export function runsOnLabel(node, machines = []) {
-    if (!isTopType(node?.typeId)) return 'where the page is open'
+    if (!isTopType(node?.typeId)) return null
     const owner = machines.find((machine) => machine.id === node.values?.machine)
-    return owner ? owner.name : 'where the page is open'
+    return owner ? owner.name : null
 }

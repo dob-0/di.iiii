@@ -99,6 +99,44 @@
     bottom: calc(16px + var(--raw-inside-canvas-bottom, 0px));
 }
 
+/* The empty-canvas message, inside a node: a short row under the frame's own
+   chrome, not a big centred block claiming the middle of the screen — the
+   canvas grows to fill that space itself the moment a node lands on it (its
+   own emptiness is the reason it looks empty, not a layout that insists on
+   it). raw.css (design's file) owns .raw-empty-state's base rules; these are
+   additive overrides scoped to is-inside-node, kept here rather than there. */
+.raw-surface-shell.is-inside-node .raw-empty-state {
+    position: absolute;
+    top: calc(12px + var(--raw-inside-canvas-top, 0px));
+    bottom: auto;
+    left: calc(12px + var(--raw-inside-canvas-left, 0px));
+    right: 12px;
+    transform: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--di-space-2);
+    width: auto;
+    max-width: none;
+    padding: var(--di-space-2) var(--di-space-3);
+    text-align: left;
+    background: var(--di-surface-2);
+    border: 1px solid var(--di-line);
+}
+
+.raw-surface-shell.is-inside-node .raw-empty-state p { font-size: var(--di-text-3); }
+
+.raw-surface-shell.is-inside-node .raw-empty-state-actions { gap: var(--di-space-2); }
+
+.raw-surface-shell.is-inside-node .raw-empty-state button {
+    min-height: var(--di-space-7);
+    padding: 0 var(--di-space-3);
+    font-size: var(--di-text-3);
+}
+
+.raw-empty-add { font-weight: 500; }
+
 /* ── head ───────────────────────────────────────────────────────────────── */
 
 .raw-inside-dot {
@@ -149,16 +187,26 @@
     padding: var(--di-space-1) var(--di-space-2);
 }
 
-.raw-inside-kind,
-.raw-inside-where {
+.raw-inside-kind {
     color: var(--di-text-muted);
     white-space: nowrap;
 }
 
-.raw-inside-where {
+/* A quiet chip, not a sentence: "here" or a machine's name, never the old
+   "runs on where the page is open" — a fact so often true it was chrome. */
+.raw-inside-chip {
+    flex: 0 0 auto;
     margin-left: auto;
+    padding: 2px var(--di-space-2);
+    border-radius: var(--di-radius-pill);
+    background: var(--di-surface-3);
+    color: var(--di-text-muted);
+    font-size: var(--di-text-2);
+    line-height: 1.6;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 30vw;
 }
 
 .raw-inside-where strong { color: var(--di-text); font-weight: 500; }
@@ -197,11 +245,26 @@
 
 .raw-inside-socket {
     margin-left: auto;
-    color: var(--di-text-muted);
-    font-size: var(--di-text-3);
 }
 
-.raw-inside-socket[aria-expanded="true"] { color: var(--di-cyan); }
+/* The only place a port's TYPE shows: a small dot, coloured by
+   PORT_TYPES[type].color (InsideRails.jsx), hollow when nothing is wired and
+   filled when something is. Its accessible name says the type in words
+   ("Socket: Colour input"), so this is never the only way to know it. */
+.raw-inside-socket-dot {
+    display: block;
+    width: 9px;
+    height: 9px;
+    border-radius: var(--di-radius-pill);
+    border: 2px solid var(--raw-inside-socket-color, var(--di-text-muted));
+    background: transparent;
+}
+
+.raw-inside-socket.is-wired .raw-inside-socket-dot {
+    background: var(--raw-inside-socket-color, var(--di-cyan));
+}
+
+.raw-inside-socket[aria-expanded="true"] .raw-inside-socket-dot { border-color: var(--di-cyan); }
 
 .raw-inside-link {
     all: unset;
@@ -287,11 +350,17 @@
     flex-direction: column;
 }
 
+/* Tighter than a card row on purpose: this is a list of settings, not a list
+   of things to click into. Desktop rows land at ~36-40px (one line, the
+   target's own height plus a hairline of breathing room); a coarse pointer
+   raises the target to 44px per row through --raw-inside-target alone — the
+   row itself adds no extra padding to compensate, so nothing here quietly
+   grows to a card-sized ~110px. */
 .raw-inside-row {
     display: flex;
     flex-direction: column;
-    gap: var(--di-space-1);
-    padding-block: var(--di-space-2);
+    gap: 2px;
+    padding-block: 2px;
     border-top: 1px solid var(--di-line);
 }
 
@@ -299,26 +368,58 @@
 
 .raw-inside-row-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: var(--di-space-2);
+    gap: var(--di-space-1);
+    row-gap: 2px;
     min-height: var(--raw-inside-target);
 }
 
-.raw-inside-row-label { font-weight: 500; }
-.raw-inside-row-type { font-style: normal; color: var(--di-text-muted); }
+.raw-inside-row-label {
+    flex: 0 0 auto;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 .raw-inside-value {
+    flex: 0 1 auto;
+    min-width: 0;
     font-family: var(--di-mono);
     overflow-wrap: anywhere;
 }
 
 .raw-inside-value.is-empty { color: var(--di-text-muted); }
 
-.raw-inside-origin {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--di-space-1) var(--di-space-2);
+/* A wired row's "from"/"to" link and its × sit on the SAME line as the
+   label and the live value — never a second stacked line for one setting.
+   A long value (a container's shape summary, a string output) truncates
+   with an ellipsis rather than pushing the socket onto a line of its own:
+   the row stays one line even when the text does not fit it. */
+.raw-inside-row-head .raw-inside-value,
+.raw-inside-row-head .raw-inside-link,
+.raw-inside-row-head .raw-inside-dim {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--di-text-3);
+}
+
+.raw-inside-unplug { min-width: var(--raw-inside-target); min-height: var(--raw-inside-target); }
+
+.raw-inside-subline { padding-block: 2px; }
+
+/* The control for an unwired setting, inline with its label: a scrub number,
+   a colour swatch, a checkbox — compact by nature, so it does not have to
+   claim the whole rail's width the way a menu or an asset picker does. */
+.raw-inside-field-inline {
+    flex: 1 1 64px;
+    min-width: 48px;
+    max-width: 120px;
 }
 
 .raw-inside-field input:not([type="checkbox"]):not([type="color"]):not([type="range"]),

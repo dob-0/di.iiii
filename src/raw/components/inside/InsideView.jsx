@@ -4,7 +4,7 @@ import { createFrameMemory, createNodeGraphContext, evaluateNodeOutput } from '.
 import { readInside } from '../../../project/graph/insideReading.js'
 import { isTopType, TOP_OPERATORS } from '../../../project/tops/topOperators.js'
 import { useTopReport } from '../../../project/tops/topReports.js'
-import { SCOPE_KINDS, insidePreviewKind } from './insidePreviewKind.js'
+import { RICH_SEE_KINDS, SCOPE_KINDS, insidePreviewKind } from './insidePreviewKind.js'
 import InsideSee from './InsideSee.jsx'
 import InsideMadeOf from './InsideMadeOf.jsx'
 import { InsideIn, InsideOut } from './InsideRails.jsx'
@@ -63,13 +63,19 @@ export const insideLayoutFor = (width) => (width < INSIDE_PHONE ? 'phone' : widt
  * the screen the frame leaves free. Pure; the component uses the same numbers
  * for its own CSS variables, so the two cannot drift.
  */
-export function insideGeometry({ width, height, top = 0, seeOpen = true, madeOfOpen = false, phonePanel = 'canvas' }) {
+export function insideGeometry({ width, height, top = 0, seeOpen = true, madeOfOpen = false, phonePanel = 'canvas', compact = false }) {
     const layout = insideLayoutFor(width)
     const left = layout === 'wide' ? IN_WIDTH : layout === 'folded' ? FOLDED_WIDTH : 0
     const right = layout === 'wide' ? OUT_WIDTH : 0
     const centre = Math.max(0, width - left - right)
     const available = Math.max(0, height - top - INSIDE_HEAD_HEIGHT)
-    const seePicture = Math.round(Math.min(available * (layout === 'phone' ? 0.3 : 0.36), (centre * 9) / 16))
+    // A picture/shape/window earns the big 16:9 band (capped well under the
+    // 40% ceiling the owner asked for). A number, a swatch, a line of text
+    // does not — SEE shrinks to a short strip so the setting it belongs to
+    // is not pushed off a phone screen by a preview with nothing to show.
+    const richPicture = Math.round(Math.min(available * (layout === 'phone' ? 0.3 : 0.36), (centre * 9) / 16))
+    const compactPicture = Math.round(Math.min(96, available * 0.16))
+    const seePicture = compact ? compactPicture : richPicture
     const see = BAR_HEIGHT + (seeOpen ? seePicture : 0)
     const madeOf = layout === 'phone' ? 0 : (madeOfOpen ? Math.round(available * 0.42) : BAR_HEIGHT)
     const bottom = layout === 'phone' ? PHONE_STRIP : madeOf
@@ -160,7 +166,9 @@ export default function InsideView({
         return () => window.removeEventListener('resize', onResize)
     }, [])
 
-    const geometry = insideGeometry({ ...viewport, top, seeOpen, madeOfOpen, phonePanel })
+    const kind = insidePreviewKind(node)
+    const compact = !RICH_SEE_KINDS.has(kind)
+    const geometry = insideGeometry({ ...viewport, top, seeOpen, madeOfOpen, phonePanel, compact })
     const insetsKey = JSON.stringify(geometry.insets)
     useEffect(() => {
         onInsetsChange?.(JSON.parse(insetsKey))
@@ -187,7 +195,6 @@ export default function InsideView({
         })
     }, [node, allNodes, document, readNow, liveOutputs, readMemory, childCount, machinesKey])
 
-    const kind = insidePreviewKind(node)
     const seeRows = useMemo(() => {
         if (!SCOPE_KINDS.has(kind) || !node) return reading.outRows
         const context = createNodeGraphContext(document || { nodes: allNodes, edges: [] }, { now: clockNow, liveOutputs, frameMemory: scopeMemory })
@@ -201,6 +208,7 @@ export default function InsideView({
     const family = getNodeFamily(node.typeId)
     const accent = family ? getFamilyColorForType(node.typeId) : null
     const isContainer = CONTAINER_TYPE_IDS.has(node.typeId)
+    const kindWord = type?.label && type.label !== label ? type.label : null
     const where = runsOnLabel(node, machines)
     const { layout } = geometry
     const patch = (values) => onPatchValues?.(node.id, values)
@@ -254,11 +262,20 @@ export default function InsideView({
                 </button>
                 <i className="raw-inside-dot" aria-hidden="true" />
                 <HeadName label={label} onRename={onRename ? (next) => onRename(node.id, next) : null} />
-                <span className="raw-inside-kind">
-                    {type?.label || 'unknown node'}
-                    {isContainer ? ` · holds ${childCount}` : ''}
-                </span>
-                <span className="raw-inside-where">runs on <strong>{where}</strong></span>
+                {/* The type word only earns its place when it says something the
+                    name does not — an unrenamed "Cube" node reading "Cube Cube"
+                    was the exact duplicate the owner flagged. */}
+                {kindWord || isContainer ? (
+                    <span className="raw-inside-kind">
+                        {kindWord}
+                        {isContainer ? `${kindWord ? ' · ' : ''}holds ${childCount}` : ''}
+                    </span>
+                ) : null}
+                {where ? (
+                    <span className="raw-inside-where raw-inside-chip">runs on <strong>{where}</strong></span>
+                ) : (
+                    <span className="raw-inside-where raw-inside-chip" title="Runs wherever this window is open">here</span>
+                )}
                 {depth > 2 && onLeaveAll ? (
                     <button type="button" className="raw-inside-icon" onClick={onLeaveAll} aria-label="All the way out" title="All the way out">
                         <span aria-hidden="true">◈</span>

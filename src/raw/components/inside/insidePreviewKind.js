@@ -19,6 +19,12 @@ import { cardPreviewKind } from '../cardPreview/previewTypes.js'
 
 export const SCOPE_KINDS = new Set(['number', 'signal', 'colour', 'vec3'])
 
+// Kinds worth the big 16:9 band: there is a picture, a shape, or a window to
+// actually look at. Everything else (a number, a swatch, a line of text, a
+// device status, an empty container) gets a short strip instead — sized to
+// what it shows, not a fixed slot every node pays for whether it uses it.
+export const RICH_SEE_KINDS = new Set(['picture', 'object3d', 'texture', 'window'])
+
 const byOutputType = {
     number: 'number',
     boolean: 'signal',

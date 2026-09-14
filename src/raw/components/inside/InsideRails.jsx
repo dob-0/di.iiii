@@ -14,8 +14,22 @@ import { PropertyField } from '../PropertyInspector.jsx'
 //
 // OUT is what the node gives, live, and where every wire from it goes. Its
 // socket feeds a card inside, so an inner node can read its parent.
+//
+// One line per row where the control fits one (a number, a colour, a
+// checkbox, a short value): label · control · socket. A wired row reads
+// label · value · source · socket, also one line. The port's TYPE is never
+// spelled out twice next to a label that often already says it ("Colour",
+// "Size") — it lives only in the socket's colour and its accessible name.
 
 const typeLabel = (type) => PORT_TYPES[type]?.label || 'Any'
+const socketColor = (type) => PORT_TYPES[type]?.color || PORT_TYPES.any.color
+
+// Field types whose control is compact enough to sit on the same line as its
+// label without crowding a 280px rail. Everything else (three scrub boxes for
+// a vector, a menu, a text area, a file picker) keeps its own line below —
+// "one line per setting where possible", not a promise every row can be one.
+const INLINE_FIELD_TYPES = new Set(['number', 'color', 'checkbox', 'connection', 'text'])
+const isInlineField = (field) => !field || INLINE_FIELD_TYPES.has(field.type || 'text')
 
 function Value({ value, type }) {
     const { text, swatch, empty } = formatPortValue(value, type)
@@ -45,33 +59,88 @@ function Picker({ id, candidates, emptyText, onPick, onClose }) {
     )
 }
 
+// The one visual cue for a port's type: a small dot, coloured by
+// PORT_TYPES[type].color, filled when wired and hollow when not. Its
+// accessible name says the type in words ("Socket: Colour input") so the
+// colour is never the only way to know it — sighted or not.
+function Socket({ type, wired, direction, node, portId, expanded, controls, extraLabel, onClick }) {
+    const word = `Socket: ${typeLabel(type)} ${direction === 'in' ? 'input' : 'output'}`
+    return (
+        <button
+            type="button"
+            className={`raw-inside-socket${wired ? ' is-wired' : ''}`}
+            style={{ '--raw-inside-socket-color': socketColor(type) }}
+            data-wire-drop-node={direction === 'in' ? node.id : undefined}
+            data-wire-drop-port={direction === 'in' ? portId : undefined}
+            data-wire-drop-type={direction === 'in' ? type : undefined}
+            aria-label={extraLabel ? `${word} — ${extraLabel}` : word}
+            aria-expanded={expanded}
+            aria-controls={expanded ? controls : undefined}
+            title={word}
+            onClick={onClick}
+        >
+            <span className="raw-inside-socket-dot" aria-hidden="true" />
+        </button>
+    )
+}
+
 function InRow({ node, row, allNodes, assetOptions, onPickAssetFile, onChangeValue, onGoToNode, onWire, onUnplug }) {
     const [picking, setPicking] = useState(false)
     const pickerId = `raw-inside-in-${node.id}-${row.id}`
     const candidates = picking ? innerSourcesFor(node, row.type, allNodes) : []
+    const inline = row.field && !row.wired && isInlineField(row.field)
+    const block = row.field && !row.wired && !isInlineField(row.field)
+    // "from Colour · Colour ›" (a value node whose only output shares its
+    // node's name) said the same word twice. Only add the port name when it
+    // tells you something the node's own name did not.
+    const showFromPort = row.fromPortLabel && row.fromPortLabel !== row.fromLabel && row.fromPortLabel !== row.label
     return (
         <li className={`raw-inside-row${row.wired ? ' is-wired' : ''}`}>
             <div className="raw-inside-row-head">
                 <span className="raw-inside-row-label">{row.label}</span>
-                {row.isPort ? <em className="raw-inside-row-type">{typeLabel(row.type)}</em> : null}
+                {row.wired ? (
+                    <>
+                        <Value value={row.value} type={row.type} />
+                        {row.fromNode ? (
+                            <button type="button" className="raw-inside-link" onClick={() => onGoToNode?.(row.fromNode.id)} aria-label={`Go to ${row.fromLabel}, which feeds ${row.label}`}>
+                                ← {row.fromLabel}{showFromPort ? ` · ${row.fromPortLabel}` : ''}
+                            </button>
+                        ) : <span className="raw-inside-dim">a card that is gone</span>}
+                        {row.edge ? (
+                            <button type="button" className="raw-inside-icon raw-inside-unplug" aria-label={`Unplug ${row.label}`} title="Unplug" onClick={() => onUnplug?.(row.edge.id)}>
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        ) : null}
+                    </>
+                ) : inline ? (
+                    <label className="raw-inside-field raw-inside-field-inline">
+                        <span className="raw-visually-hidden">{row.label}</span>
+                        <PropertyField
+                            field={row.field}
+                            value={row.value}
+                            assetOptions={assetOptions}
+                            onPickAssetFile={onPickAssetFile}
+                            onChange={(next) => onChangeValue?.(row.id, next)}
+                        />
+                    </label>
+                ) : !row.field ? (
+                    <Value value={row.value} type={row.type} />
+                ) : null}
                 {row.isPort ? (
-                    <button
-                        type="button"
-                        className="raw-inside-socket"
-                        data-wire-drop-node={node.id}
-                        data-wire-drop-port={row.id}
-                        data-wire-drop-type={row.type}
-                        aria-label={`Wire a node inside ${node.label} into ${row.label}`}
-                        aria-expanded={picking}
-                        aria-controls={picking ? pickerId : undefined}
-                        title="Drop a wire here from a card inside, or press to pick one"
+                    <Socket
+                        type={row.type}
+                        wired={row.wired}
+                        direction="in"
+                        node={node}
+                        portId={row.id}
+                        expanded={picking}
+                        controls={pickerId}
+                        extraLabel={`wire a node inside ${node.label} into ${row.label}`}
                         onClick={() => setPicking((open) => !open)}
-                    >
-                        <span aria-hidden="true">●</span>
-                    </button>
+                    />
                 ) : null}
             </div>
-            {row.field && !row.wired ? (
+            {block ? (
                 <label className="raw-inside-field">
                     <span className="raw-visually-hidden">{row.label}</span>
                     <PropertyField
@@ -82,25 +151,9 @@ function InRow({ node, row, allNodes, assetOptions, onPickAssetFile, onChangeVal
                         onChange={(next) => onChangeValue?.(row.id, next)}
                     />
                 </label>
-            ) : (
-                <Value value={row.value} type={row.type} />
-            )}
-            {row.wired ? (
-                <div className="raw-inside-origin">
-                    {row.fromNode ? (
-                        <button type="button" className="raw-inside-link" onClick={() => onGoToNode?.(row.fromNode.id)} aria-label={`Go to ${row.fromLabel}, which feeds ${row.label}`}>
-                            from {row.fromLabel} · {row.fromPortLabel || 'out'} ›
-                        </button>
-                    ) : <span>from a card that is gone</span>}
-                    {row.origin === 'wire-empty' ? <span className="raw-inside-dim">nothing is coming through, so this is its own value</span> : null}
-                    {row.edge ? (
-                        <button type="button" className="raw-inside-icon" aria-label={`Unplug ${row.label}`} title="Unplug" onClick={() => onUnplug?.(row.edge.id)}>
-                            <span aria-hidden="true">×</span>
-                        </button>
-                    ) : null}
-                </div>
             ) : null}
-            {row.isDoor ? <p className="raw-inside-dim">the door “{row.doorLabel}” standing inside it</p> : null}
+            {row.origin === 'wire-empty' ? <p className="raw-inside-dim raw-inside-subline">nothing is coming through, so this is its own value</p> : null}
+            {row.isDoor ? <p className="raw-inside-dim raw-inside-subline">the door “{row.doorLabel}” standing inside it</p> : null}
             {picking ? (
                 <Picker
                     id={pickerId}
@@ -149,31 +202,45 @@ const sourceWord = (row) => {
 
 function OutRow({ node, row, allNodes, onGoToNode, onWire }) {
     const [picking, setPicking] = useState(false)
+    const [feedsOpen, setFeedsOpen] = useState(false)
     const pickerId = `raw-inside-out-${node.id}-${row.id}`
     const candidates = picking ? innerTargetsFor(node, row.type, allNodes) : []
     const word = sourceWord(row)
+    const feeds = row.feeds
+    const firstFeed = feeds[0]
+    const firstFeedPortDiffers = firstFeed && firstFeed.toPortLabel && firstFeed.toPortLabel !== firstFeed.toLabel
     return (
         <li className="raw-inside-row">
             <div className="raw-inside-row-head">
                 <span className="raw-inside-row-label">{row.label}</span>
-                <em className="raw-inside-row-type">{typeLabel(row.type)}</em>
-                <button
-                    type="button"
-                    className="raw-inside-socket"
-                    aria-label={`Feed ${row.label} into a node inside ${node.label}`}
-                    aria-expanded={picking}
-                    aria-controls={picking ? pickerId : undefined}
-                    title="Press to feed a card inside"
+                <Value value={row.value} type={row.type} />
+                {feeds.length === 0 ? (
+                    <span className="raw-inside-dim">unwired</span>
+                ) : feeds.length === 1 ? (
+                    <button type="button" className="raw-inside-link" onClick={() => onGoToNode?.(firstFeed.toNode.id)} aria-label={`Go to ${firstFeed.toLabel}, fed by ${row.label}`}>
+                        → {firstFeed.toLabel}{firstFeedPortDiffers ? ` · ${firstFeed.toPortLabel}` : ''}
+                    </button>
+                ) : (
+                    <button type="button" className="raw-inside-link" aria-expanded={feedsOpen} onClick={() => setFeedsOpen((open) => !open)}>
+                        → {feeds.length} places
+                    </button>
+                )}
+                <Socket
+                    type={row.type}
+                    wired={feeds.length > 0}
+                    direction="out"
+                    node={node}
+                    portId={row.id}
+                    expanded={picking}
+                    controls={pickerId}
+                    extraLabel={`feed ${row.label} into a node inside ${node.label}`}
                     onClick={() => setPicking((open) => !open)}
-                >
-                    <span aria-hidden="true">●</span>
-                </button>
+                />
             </div>
-            <Value value={row.value} type={row.type} />
-            {word ? <p className="raw-inside-dim">{word}</p> : null}
-            {row.feeds.length ? (
+            {word ? <p className="raw-inside-dim raw-inside-subline">{word}</p> : null}
+            {feeds.length > 1 && feedsOpen ? (
                 <ul className="raw-inside-feeds">
-                    {row.feeds.map((feed) => (
+                    {feeds.map((feed) => (
                         <li key={feed.edge.id}>
                             <button type="button" className="raw-inside-link" onClick={() => onGoToNode?.(feed.toNode.id)} aria-label={`Go to ${feed.toLabel}, fed by ${row.label}`}>
                                 → {feed.toLabel} · {feed.toPortLabel} ›
@@ -181,7 +248,7 @@ function OutRow({ node, row, allNodes, onGoToNode, onWire }) {
                         </li>
                     ))}
                 </ul>
-            ) : <p className="raw-inside-dim">goes nowhere yet</p>}
+            ) : null}
             {picking ? (
                 <Picker
                     id={pickerId}

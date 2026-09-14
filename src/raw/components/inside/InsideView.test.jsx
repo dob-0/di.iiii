@@ -48,6 +48,54 @@ describe('InsideView — one frame for every node', () => {
         expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['computes', 'draws', 'script'])
     })
 
+    // 2026-09-14 polish: the owner's screenshots showed "Cube Cube" in the
+    // head and "Colour Colour" / "Size Vector" on every row — the type word
+    // repeated a label that already said it. Neither is text any more; the
+    // type lives only in the socket dot's colour and its accessible name.
+    it('never repeats a node or port\'s own type as a second word next to a label that already says it', () => {
+        const cube = createNode('geom.cube', { label: 'Cube' })
+        mount(cube)
+        expect(document.querySelector('.raw-inside-kind')).toBeNull()
+        expect(document.querySelector('.raw-inside-row-type')).toBeNull()
+        // The row's own visually-hidden <label> text (for screen readers, on
+        // the field control) is not the bug — only VISIBLE text repeating
+        // the word is. Strip visually-hidden nodes before comparing.
+        const visibleText = (el) => {
+            const clone = el.cloneNode(true)
+            clone.querySelectorAll('.raw-visually-hidden').forEach((node) => node.remove())
+            return clone.textContent
+        }
+        const colourRow = document.querySelector('.raw-inside-row-label').closest('li')
+        expect(visibleText(colourRow)).not.toMatch(/Colour.*Colour/)
+        const sizeRow = [...document.querySelectorAll('.raw-inside-row-label')]
+            .find((el) => el.textContent === 'Size').closest('li')
+        expect(sizeRow.textContent).not.toMatch(/Vector/)
+    })
+
+    it('gives every socket an accessible name that says the port\'s type in words, never only its colour', () => {
+        const cube = createNode('geom.cube', { label: 'Box' })
+        mount(cube)
+        const socket = screen.getByRole('button', { name: 'Socket: Vector input — wire a node inside Box into Size' })
+        expect(socket).toBeTruthy()
+        expect(socket.querySelector('.raw-inside-socket-dot')).toBeTruthy()
+    })
+
+    it('says where a node runs as a quiet chip — a machine\'s name, or "here" — never the long "runs on where the page is open" sentence', () => {
+        const cube = createNode('geom.cube', { label: 'Box' })
+        mount(cube)
+        expect(document.querySelector('.raw-inside-where').textContent).toBe('here')
+        expect(document.body.textContent).not.toContain('where the page is open')
+    })
+
+    it('drops a wired row\'s port name when it only repeats the source node\'s own name', () => {
+        const colour = createNode('value.color', { label: 'Colour' })
+        const cube = createNode('geom.cube', { label: 'Box' })
+        mount(cube, { nodes: [cube, colour], edges: [createEdge(colour.id, 'out', cube.id, 'color')] })
+        const row = document.querySelector('.raw-inside-in .raw-inside-row.is-wired')
+        expect(row).toBeTruthy()
+        expect(row.textContent).toMatch(/← Colour(?!\s*·)/)
+    })
+
     it('dispatches a change from an In field with the value', () => {
         const cube = createNode('geom.cube', { label: 'Box' })
         const { onChangeValue } = mount(cube)
@@ -63,6 +111,19 @@ describe('InsideView — one frame for every node', () => {
         expect(document.querySelector('.raw-inside-scope-readout').textContent).toContain('Sine')
         fireEvent.click(screen.getByRole('button', { name: 'Go to Box, fed by Sine' }))
         expect(onGoToNode).toHaveBeenCalledWith(cube.id)
+    })
+
+    it('gives an Oscillator (a scope, not a picture) the short SEE strip, not the picture-sized band', () => {
+        const seeHeight = (utils) => Number(
+            utils.container.querySelector('.raw-inside').style.getPropertyValue('--raw-inside-see').replace('px', '')
+        )
+        const lfo = mount(createNode('signal.lfo', { label: 'Wave' }))
+        const lfoSee = seeHeight(lfo)
+        lfo.unmount()
+        const cube = mount(createNode('geom.cube', { label: 'Box' }))
+        const cubeSee = seeHeight(cube)
+        cube.unmount()
+        expect(lfoSee).toBeLessThan(cubeSee)
     })
 
     it('shows a Webcam its own window in SEE, handed in by the editor', () => {
@@ -176,5 +237,16 @@ describe('insideGeometry — the frame and the canvas agree on what is covered',
         const open = insideGeometry({ width: 1440, height: 900, seeOpen: true })
         const folded = insideGeometry({ width: 1440, height: 900, seeOpen: false })
         expect(folded.insets.top).toBeLessThan(open.insets.top)
+    })
+
+    // 2026-09-14 polish: SEE used to claim the same picture-sized band for
+    // every node, so a Number or a Colour (which show a short scope, not a
+    // picture) pushed the first setting off a phone screen. `compact` is how
+    // InsideView tells geometry there is no picture to show.
+    it('shrinks SEE to a short strip for a compact kind (a number, a swatch), never more than a picture\'s band', () => {
+        const rich = insideGeometry({ width: 1440, height: 900, compact: false })
+        const compact = insideGeometry({ width: 1440, height: 900, compact: true })
+        expect(compact.seePicture).toBeLessThan(rich.seePicture)
+        expect(compact.seePicture).toBeLessThanOrEqual(96)
     })
 })
