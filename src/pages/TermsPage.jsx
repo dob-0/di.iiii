@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import './legal.css'
 
 const CONTACT_EMAIL = 'info@thedi.studio'
@@ -8,11 +9,9 @@ export default function TermsPage() {
     const rootRef = useRef(null)
     useKeyboardPageScroll(rootRef)
 
-    useEffect(() => {
-        const previous = document.title
-        document.title = 'terms — di.iiii'
-        return () => { document.title = previous }
-    }, [])
+    // Sentence case for the page word, not the lowercase the page used to
+    // carry — see docs/ai/vocabulary.md's naming rule.
+    useDocumentTitle('Terms — di.iiii')
 
     return (
         <div className="legal-root" data-page="terms" ref={rootRef}>

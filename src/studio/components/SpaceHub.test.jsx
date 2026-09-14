@@ -68,6 +68,13 @@ vi.mock('../utils/studioRouting.js', () => ({
 }))
 
 const mockAppNavigate = vi.fn()
+// A card goes through the entry transition (components/entryTransition), which
+// navigates once the cover is up. What these tests hold is WHERE a card goes —
+// the editor or the live view — so the transition is reduced to its href.
+const mockEnter = vi.fn()
+vi.mock('../../components/entryTransition/entryTransition.js', () => ({
+    enterFromElement: (event, href) => mockEnter(href)
+}))
 
 vi.mock('../../utils/appNavigate.js', () => ({
     appNavigate: (...args) => mockAppNavigate(...args)
@@ -105,6 +112,7 @@ describe('SpaceHub', () => {
         getServerConfig.mockResolvedValue({})
         getApiAuthProviders.mockReset()
         mockAppNavigate.mockReset()
+        mockEnter.mockReset()
         updateServerSpace.mockReset()
         uploadServerAsset.mockReset()
         purgeStaleSandboxes.mockReset()
@@ -120,6 +128,15 @@ describe('SpaceHub', () => {
             ownedSpaceCount: 1,
             spaceLimit: 3
         }
+    })
+
+    // /spaces used to carry the platform's own tab title, same as every
+    // other route — docs/ai/vocabulary.md's naming rule names this address.
+    it('names /spaces itself in the tab, not the platform', async () => {
+        listServerSpaces.mockResolvedValue([])
+        render(<SpaceHub />)
+        await screen.findByText('Spaces')
+        expect(document.title).toBe('Spaces — di.iiii')
     })
 
     it('leads to the lighting desk only when a desk on this machine answers', async () => {
@@ -164,7 +181,6 @@ describe('SpaceHub', () => {
     })
 
     it('clicking a public space you cannot enter goes to its live view, scoped spaces open the editor', async () => {
-        const { navigateToStudioPath } = await import('../utils/studioRouting.js')
         authState = { ...authState, type: 'guest', canCreateSpace: false, spaces: ['main'] }
         listServerSpaces.mockResolvedValue([
             { id: 'main', label: 'Main Space', isOwner: false, isPublic: true },
@@ -175,12 +191,12 @@ describe('SpaceHub', () => {
 
         // Guest is scoped into main (open jam) — the card still opens the editor.
         fireEvent.click(await screen.findByText('Main Space'))
-        expect(navigateToStudioPath).toHaveBeenCalledWith('/main/studio')
-        expect(mockAppNavigate).not.toHaveBeenCalled()
+        expect(mockEnter).toHaveBeenCalledWith('/main/studio')
+        expect(mockEnter).not.toHaveBeenCalledWith('/main')
 
         // A public space outside the session scope goes straight to the live view.
         fireEvent.click(screen.getByText('Beyond Form'))
-        expect(mockAppNavigate).toHaveBeenCalledWith('/beyond-form')
+        expect(mockEnter).toHaveBeenCalledWith('/beyond-form')
     })
 
     it('shows the live public link with a copy action on public spaces', async () => {
@@ -490,7 +506,6 @@ describe('SpaceHub', () => {
     })
 
     it('groups the directory into Open Space / sandbox / spaces shelves and opens the open space in the editor', async () => {
-        const { navigateToStudioPath } = await import('../utils/studioRouting.js')
         authState = { ...authState, openSpaceId: 'open', sandboxSpaceId: 'sandbox-me' }
         listServerSpaces.mockResolvedValue([
             { id: 'open', label: 'Open Space', kind: 'global', isPublic: true, isOwner: false },
@@ -509,8 +524,8 @@ describe('SpaceHub', () => {
         // The open space is public but everyone can enter it — the card opens
         // the editor, never the read-only live view.
         fireEvent.click(screen.getByText('open'))
-        expect(navigateToStudioPath).toHaveBeenCalledWith('/open/studio')
-        expect(mockAppNavigate).not.toHaveBeenCalled()
+        expect(mockEnter).toHaveBeenCalledWith('/open/studio')
+        expect(mockEnter).toHaveBeenCalledTimes(1)
     })
 
     const visitorSpaces = () => [
@@ -566,7 +581,6 @@ describe('SpaceHub', () => {
     })
 
     it('gives a visitor the sandbox as one secondary line, not a hero card', async () => {
-        const { navigateToStudioPath } = await import('../utils/studioRouting.js')
         asGuest()
         listServerSpaces.mockResolvedValue(visitorSpaces())
 
@@ -579,7 +593,7 @@ describe('SpaceHub', () => {
         // Still reachable in one click.
         const link = screen.getByRole('button', { name: 'Your private sandbox' })
         fireEvent.click(link)
-        expect(navigateToStudioPath).toHaveBeenCalledWith('/sandbox-me/studio')
+        expect(mockEnter).toHaveBeenCalledWith('/sandbox-me/studio')
     })
 
     it('never collapses a signed-in account\'s own spaces', async () => {

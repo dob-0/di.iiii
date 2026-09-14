@@ -5,6 +5,201 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-14 — Going through a door is one move now: three pro entry variants for review, the fallen page leaves, the phone sees the doors
+
+- Owner: "there are no animation where we go inside" and "it feels too cracky and DIY — can we make it all pro?". Clicking a door in the front room, a featured-exhibition button or a /spaces card gave ~450 ms of black + spinner, then a hard cut.
+- New `src/components/entryTransition/`: `entryPlan.js` (pure decisions: `?entry=a|b|c`, default a; reduced motion → short plain fade; subtle per-visit timing variation; `?entryslow=<n>` review knob), `entryTransition.js` (the curtain on document.body that holds the old view until the destination paints), `EntryGlide.jsx` (priority-1 camera glide inside whatever Canvas the door is in, so walker/OrbitControls need no changes; copies the last frame).
+  - a: the camera travels into the door; the last frame keeps drifting forward while the destination loads, then the destination fades up and settles.
+  - b: the whole field dissolves through the door's colour (a short lean toward it first), then the destination settles in slowly.
+  - c: the door's opening grows as a circle to fill the screen (a card grows as its own rectangle), and the destination fades up inside it.
+- Wired: `PortalObject` click, walk-through (`handlePortalReached`, no glide — held frame), landing featured buttons (now SPA), SpaceHub cards (grid, list, sandbox line). Room controls step out for the length of the move (`body.dii-entering`). The variant and slowdown carry through the door.
+- Fallen page: `flyInside` → `onPageLeaves` at 62% of the flight; `PageDebris` fades and sinks the pieces, then the landing drops them and frees their textures.
+- Phone: `fitArrivalToDoors` steps a portrait arrival back along its own view until the doors fit (front room: z 15 → ~43 on 390x844, all four doors in frame). Landing only.
+- Looked at: filmstrip contact sheets for door (desktop 1440x900@2x, phone 390x844@3x) and /spaces card, variants a/b/c, headless swiftshader against dev.diiii.xyz APIs.
+- Not done / for the owner: pick a, b or c. A card's destination colour is unknown when its preview is a sandboxed published page, so card entries hold on the brand ground for the load time. "The Spaces" button still plays the old crack (`crackTransition.js`) — out of this branch's scope, and it is exactly the effect called DIY. On a phone the "Step inside" flight now pulls back to the wider arrival rather than pushing in.
+
+## 2026-09-14 — the not-found card names the right thing and stops asking you to sign in
+
+- `/spaces/nope` on a hosted tier used to answer "Nothing lives at "spaces"" — the
+  first path segment, which is a real reserved address (`RESERVED_APP_SEGMENTS`),
+  not the part the visitor actually got wrong — inside the same card as a full
+  sign-in form (`PasswordSignIn` + GitHub/Google). A guest session lands on this
+  path (`AuthGate.jsx`'s authenticated-and-out-of-scope branch) any time the first
+  segment of an unknown address is itself a reserved word with no multi-segment
+  route of its own: `/spaces` and `/projects` are the two live examples (`spaces`
+  claims only the bare hub, `projects` only has a `ReservedAddressCard` for the
+  bare form), so routing falls through the generic `/{space}/{slug}` parser and
+  hands the reserved word to the gate as if it were the space id.
+- Third time this exact message has named the wrong thing (`/login` and `/make`
+  were the first two — see the comment in `RootApp.test.jsx`'s "RootApp bare
+  reserved addresses" describe). This time the fix is in `AuthGate.jsx`, not the
+  router: `ClosedDoorCard` now reads the real address bar (`missingAddressFromUrl`)
+  only when `requiredSpaceId` is itself a reserved segment, and shows the segment
+  that actually followed it — "nope" for `/spaces/nope` — instead of the reserved
+  word. An ordinary mistyped space id (`/ghost`) is untouched: it was already
+  named correctly.
+- The sign-in form (`ProviderSignInButtons`, which wraps `PasswordSignIn` and the
+  OAuth buttons) no longer renders on the not-found card at all — no account can
+  make a space that never existed exist, so offering to sign in there was the
+  wrong door. It still shows on the real "Access restricted" card, where signing
+  in with a different account is the actual fix. The floating account chip
+  (`AccountButton`) is unchanged either way — it is not a sign-in prompt, and stays
+  reachable on both cards, same as before.
+- Doors onward (Open Space / your private sandbox) are unchanged on both cards —
+  they were already the "one or two clear ways on" this screen needed; nothing
+  about them was the reported gap.
+- Tests: `AuthGate.test.jsx` gained a new "AuthGate not-found card" describe block
+  (reserved-word naming, ordinary mistyped-id naming, sign-in form absent on
+  not-found, sign-in form still present on real out-of-scope). `RootApp.test.jsx`
+  gained one routing-level regression test pinning that `/spaces/nope` reaches the
+  generic space gate (not the spaces hub) with `requiredSpaceId="spaces"` — the
+  name correction itself is proven in `AuthGate.test.jsx`, since `RootApp.test.jsx`
+  mocks `AuthGate.jsx` entirely.
+- Left open: the same fallthrough exists for any reserved word with no
+  multi-segment route of its own that also has a tail (`/projects/x`, `/login/x`),
+  not only `/spaces/x` — not fixed here, out of scope for this one reported gap.
+  Also open: the space lookup for the reserved word (`GET /api/spaces/spaces`) still
+  fires and 404s before the not-found card can render — wasteful but not
+  incorrect, matching the existing mistyped-id path; `/make` and `/light` avoid
+  the round trip entirely via `ReservedAddressCard`, and the same could be done
+  for `/spaces` and `/projects` tails in a follow-up.
+
+## 2026-09-14 — /open and /open_jam/scene are now the same room
+
+Fixed three gaps in Open Jam's public facade (branch `fix/open-jam-one-room`).
+
+**(a) Two experiences, one room.** `/open` — the address a visitor is actually
+handed — rendered a completely different surface than the front page's own
+"Open Jam" button (`/open_jam/scene`): a read-only Walk/Fly viewer with no
+presence and no way to add anything, instead of the live, interactive jam.
+Not a data problem — both addresses already resolved to spaceId `open` /
+projectId `open-jam` (the 2026-09-03 `publishedProjectId` fix). It was a
+routing gap: `jamRouting.js`'s `getJamLocationState` matched only the exact
+`/open_jam/scene` alias, so the bare space address fell through `RootApp.jsx`
+to the generic `SpaceSurfaceApp` → `PublicProjectViewer` path instead of the
+`JamSurface` the alias renders.
+
+Fix: `getJamLocationState` now also matches bare `/open`, carved out for
+`?preview=1` (the space card's own thumbnail embed in `SpaceHub.jsx`, which
+wants the static published picture, not a live surface with open presence
+sockets rendered at thumbnail size — the card's "make it live" button
+re-embeds `/open` with no `?preview` and correctly gets the real jam). No
+tier data was touched, and none needs to be — the existing
+`publishedProjectId` pointer on space `open` was already correct on the tier
+checked (dev); this was purely a client routing decision.
+
+**(b) No way to share it.** Added a Share control next to the ＋, in the same
+thumb-reach band at the bottom of the screen (not the topbar, which a
+one-handed phone at an event does not comfortably reach). On a device with
+`navigator.share` it opens the native share sheet; everywhere else it copies
+the plain `/open` link to the clipboard (same pattern as
+`StudioChatSurface.jsx`'s `shareRoom`). The link handed out is the bare
+`/open` address, not the `/open_jam/scene` alias — shorter, and as of (a) it
+opens the identical room.
+
+**(c) The add sheet.** `.jam-sheet` used `--di-scrim-strong` (0.9-alpha veil),
+which let the room's own wall text and photos show through — the one place in
+the jam where someone is reading a form rather than looking through a window
+onto the scene. Moved to `--di-surface` (opaque, matching every other
+floating panel) with a `--di-cyan-line` top border. Reordered `JamSheet.jsx`'s
+`AddFace`: photo and text first, the four shapes (box/sphere/cone/torus)
+after — a stranger came with their own picture or their own words, not a
+torus.
+
+### Changed
+
+- `src/project/routing/jamRouting.js` — bare `/open` match, `?preview=1` carve-out
+- `src/project/routing/jamRouting.test.js` — updated + new coverage
+- `src/project/components/JamSurface.jsx` — share control
+- `src/project/components/JamSheet.jsx` — add-sheet tile order
+- `src/project/components/jamSurface.css` — opaque sheet, share button styling
+- `src/project/components/JamSurface.test.jsx` — share (native + clipboard fallback), tile order
+- `src/wiki/wikiContent.js` — `guest-and-sandbox-modes` and `jam-surface` articles updated
+- `docs/ai/known-fixes.md` — two entries
+
+### Verified
+
+Headless Playwright against a local `serverXR` on a throwaway `DATA_ROOT`
+(never the real local install data), desktop 1440x900@2x and phone
+390x844@3x. Screenshots in
+`/tmp/claude-1000/-home-dob/9ac84bd1-9ba0-4f1c-8ba6-e016a7b34415/scratchpad/wave1/jam/`.
+`npm run lint` clean (0 errors, only pre-existing warnings elsewhere).
+`npx vitest run` green across `src/project`, `src/wiki`, `src/copyVocabulary.test.js`,
+`src/RootApp.test.jsx`, `src/SpaceSurfaceApp.test.jsx`, `src/studio/components/SpaceHub.test.jsx`.
+
+### Still owed (not done here)
+
+Nothing per-tier. The routing fix works off the existing `publishedProjectId`
+pointer, which was already correct on every tier per
+`project_dii_open_space_cleanup.md` (`/open` has pointed at `open-jam` on
+local + staging since 2026-09-03, and prod got the same PATCH the same day).
+If any tier's `publishedProjectId` for space `open` is ever repointed away
+from `open-jam`, `/open` will correctly stop being the jam and show whatever
+IS published there — that is the generic viewer's job, unchanged.
+
+## 2026-09-14 — every page names itself, in the tab and in a link preview
+
+Every route's browser tab used to say "di.iiii — public spaces on the open web" —
+/wcc, /network, /open, /login, a 404, all of it — and a crawler's link preview
+(`curl -A Twitterbot`) of /login, /terms, /for-apps, /spaces, a real space or a
+project inside one all returned the homepage's og:title/og:description. Sharing a
+space showed nothing about the space. Fixed both surfaces, applying the naming rule
+already in `docs/ai/vocabulary.md`: a space's own name is what a visitor sees for it
+(tab, card, preview); a project's name shows only when the URL itself named that
+project.
+
+- New `src/hooks/useDocumentTitle.js` — the one place `document.title` is set, with
+  cleanup that restores whatever the title was before. A falsy title means "leave it
+  alone", used deliberately for the platform's own space (`main`) and for a
+  still-loading project, so neither ever overwrites or flashes over the index.html
+  default.
+- Wired into: `SpaceSurfaceApp.jsx` + `PublicProjectViewer.jsx` (a space names
+  itself; a project names itself only via `showProjectInTitle`, set only on the
+  explicit `/{space}/p/{project}` route — not on a bare space whose front page
+  happens to be a published project), `RootApp.jsx`'s `WorkSurfaceRoute` (`/wcc`,
+  `/algovrithm` — a work is a real space), `AuthGate.jsx` (`/login` → "Sign in — di.iiii";
+  the "Nothing lives at…" card, and only that one, → "Not found — di.iiii"),
+  `SpaceHub.jsx` (`/spaces`), `WikiPage.jsx` (the article named by the hash the page
+  was opened on, read once — the page is one long scroller, not per-article routes).
+- `TermsPage.jsx` / `PrivacyPage.jsx` / `ForAppsPage.jsx` moved onto the same hook and
+  corrected to Sentence case ("Terms — di.iiii", not "terms — di.iiii").
+- `serverXR/src/routes/ogRoutes.js`: a `STATIC_PAGES` table gives `/login`, `/terms`,
+  `/privacy`, `/for-apps`, `/spaces`, `/wiki` their own card instead of falling
+  through to the front door (none of these words can ever be a space — checked
+  before any space lookup runs at all). And the route now resolves a project the URL
+  itself names — the explicit `/{space}/p/{project}` shape and the vanity
+  `/{space}/{projectSlug}` form — via a new `resolveProject` hook wired in
+  `index.js` the same slug-then-id way `/api/resolve/...` already does; only a
+  `state: 'live'` project ever previews as itself, matching the same "drafts and
+  archived work never reach a visitor" rule the space's own contents listing keeps.
+  A reserved second segment (`/raw`, `/studio`, …) is never misread as a project slug
+  — `shared/reservedSegments.cjs`'s `RESERVED_PROJECT_SLUGS`, the same set the client
+  router already uses.
+
+Tests: `useDocumentTitle.test.jsx` (new); title assertions added to
+`ForAppsPage.test.jsx`, `TermsPage.test.jsx` / `PrivacyPage.test.jsx` (new, small),
+`AuthGate.test.jsx` (login + the not-found/restricted distinction), `SpaceHub.test.jsx`,
+`WikiPage.test.jsx`, `SpaceSurfaceApp.test.jsx`, `PublicProjectViewer.test.jsx`,
+`RootApp.test.jsx` (/wcc, /algovrithm). `ogRoutes.test.js` gained a
+`reserved top-level pages` describe (6 static routes) and `a project the URL itself
+names` describe (explicit + vanity shape, draft rejection, reserved-segment
+rejection, unknown-slug fallback) — 28 tests total there, up from 16. `npm run lint`
+clean (0 errors); `npm run test:server-contracts` (131 tests) and every touched
+vitest file green.
+
+Verified locally against a throwaway `DATA_ROOT`: headless Chromium (Playwright,
+`--disable-gpu`) read `document.title` on `/`, `/login`, `/wiki`, `/spaces`, `/wcc`,
+and a private-space 404, and `curl -A Twitterbot` against `/serverXR/og/...` for
+`/login`, `/terms`, a seeded public space and a project inside it.
+
+Left open: the admin console (`/admin`) and the in-space authoring surfaces
+(`/{space}/studio`, `/raw`, …) were deliberately left untitled by this change — they
+are authenticated tool surfaces the task's naming rule does not name, and touching
+`App.jsx`'s preferences branch was out of scope. `/tools` likewise keeps the
+platform's default title. The og card's per-project description is a generic
+sentence (`"<title> — a project in <space> on di.iiii."`) since project rows carry no
+`ogDescription` field yet — same shape a space without one already falls back to.
+
 ## 2026-09-11 — the studio signs di.i, the platform ships di.iiii, and a production is a word we did not have
 
 Copy only. No behaviour, no routes, no UI strings changed.

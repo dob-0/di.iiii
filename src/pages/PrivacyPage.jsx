@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import './legal.css'
 
 // Written from docs/ai/privacy-data-inventory.md — a code audit, every claim
@@ -10,11 +11,9 @@ export default function PrivacyPage() {
     const rootRef = useRef(null)
     useKeyboardPageScroll(rootRef)
 
-    useEffect(() => {
-        const previous = document.title
-        document.title = 'privacy — di.iiii'
-        return () => { document.title = previous }
-    }, [])
+    // Sentence case for the page word, not the lowercase the page used to
+    // carry — see docs/ai/vocabulary.md's naming rule.
+    useDocumentTitle('Privacy — di.iiii')
 
     return (
         <div className="legal-root" data-page="privacy" ref={rootRef}>

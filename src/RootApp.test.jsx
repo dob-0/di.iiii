@@ -206,29 +206,35 @@ describe('RootApp', () => {
         expect(await screen.findByText('studio-app:project:gallery')).toBeInTheDocument()
     })
 
-    it('routes /wcc and /wcc/scene to the WCC experience', async () => {
+    it('routes /wcc and /wcc/scene to the WCC experience, named in the tab', async () => {
         window.history.pushState({}, '', '/wcc')
         const { unmount } = render(<RootApp />)
         expect(await screen.findByText('wcc-experience:landing')).toBeInTheDocument()
+        // A work is a real space (works.js) and names itself the same way one
+        // does — the naming rule in docs/ai/vocabulary.md.
+        expect(document.title).toBe('WCC Exhibition — di.iiii')
         unmount()
 
         window.history.pushState({}, '', '/wcc/scene')
         render(<RootApp />)
         expect(await screen.findByText('wcc-experience:scene')).toBeInTheDocument()
+        expect(document.title).toBe('WCC Exhibition — di.iiii')
     })
 
-    it('routes /algovrithm to the landing page and /algovrithm/scene to the piece', async () => {
+    it('routes /algovrithm to the landing page and /algovrithm/scene to the piece, named in the tab', async () => {
         // The split is load-bearing: entering costs three.js and a strobing
         // piece, so the bare URL must never mount the experience.
         window.history.pushState({}, '', '/algovrithm')
         const { unmount } = render(<RootApp />)
         expect(await screen.findByText('algovrithm-landing')).toBeInTheDocument()
         expect(screen.queryByText('algovrithm-experience')).not.toBeInTheDocument()
+        expect(document.title).toBe('algovrithm — di.iiii')
         unmount()
 
         window.history.pushState({}, '', '/algovrithm/scene')
         render(<RootApp />)
         expect(await screen.findByText('algovrithm-experience')).toBeInTheDocument()
+        expect(document.title).toBe('algovrithm — di.iiii')
     })
 
     it('keeps legacy routes intact, and retired Beta URLs fall through like any unclaimed space', async () => {
@@ -263,6 +269,17 @@ describe('RootApp bare reserved addresses', () => {
         window.history.pushState({}, '', '/')
         mockServerConfig.value = { local: true }
         mockSpaceLookups.length = 0
+        // The /spaces/nope case below overrides the session mock to get an
+        // authenticated, scoped-elsewhere session — restore the module's
+        // own default so it does not leak into every test after it.
+        mockUseAuthSession.mockReturnValue({
+            requireAuth: false,
+            authenticated: true,
+            loading: false,
+            login: vi.fn(),
+            logout: vi.fn(),
+            refresh: vi.fn()
+        })
     })
 
     it('explains the toybox at /make instead of hunting for a space called make', async () => {
@@ -295,6 +312,34 @@ describe('RootApp bare reserved addresses', () => {
         window.history.pushState({}, '', '/raw')
         render(<RootApp />)
         expect(await screen.findByText(/raw-app:/)).toBeInTheDocument()
+    })
+
+    // 'spaces' only claims the BARE address above — a tail after it (a
+    // mistyped one, most commonly) names no page of Studio's spaces hub, so
+    // routing falls through to the generic space gate with 'spaces' itself
+    // read as the required id. This is the third time that fallthrough has
+    // handed a reserved word to the gate as if it were a real space (see
+    // /login and /make in the comment above); this time it is AuthGate.jsx
+    // that turns it back into the honest missing name using the real
+    // address bar, since a reserved word can never itself be one (see
+    // AuthGate.test.jsx's 'AuthGate not-found card' — the 404 and the
+    // "nope" in /spaces/nope are pinned there, not here).
+    it('hands /spaces/nope to the generic space gate rather than the spaces hub', async () => {
+        mockUseAuthSession.mockReturnValue({
+            requireAuth: true,
+            authenticated: true,
+            loading: false,
+            spaces: ['open'],
+            login: vi.fn(),
+            logout: vi.fn(),
+            refresh: vi.fn()
+        })
+        window.history.pushState({}, '', '/spaces/nope')
+        render(<RootApp />)
+
+        const restricted = await screen.findByText(/Access restricted/)
+        expect(restricted).toHaveTextContent('spaces')
+        expect(screen.queryByText('studio-app:spaces:')).toBeNull()
     })
 })
 

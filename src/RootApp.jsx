@@ -16,6 +16,7 @@ import ModeMark from './components/ModeMark.jsx'
 import LaneDefaultSpace from './components/LaneDefaultSpace.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
+import useDocumentTitle from './hooks/useDocumentTitle.js'
 import useLocalInstall from './hooks/useLocalInstall.js'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
@@ -288,6 +289,12 @@ function ProjectToolDoorway({ appState }) {
 // real space like any other, so the public/private decision comes from the
 // server here too, never from an assumption in the router.
 function WorkSurfaceRoute({ work, mode }) {
+    // A work is a real space like any other (see the comment above this
+    // function) so it names itself the same way one does — the naming rule
+    // in docs/ai/vocabulary.md. Unlike a generic space this one is code, not
+    // a fetched record, so the label is already known: no "ready" gate to
+    // wait on.
+    useDocumentTitle(`${work.label} — di.iiii`)
     const { isPublic, loading } = useSpacePublicFlag(work.id)
     const render = workSurface(work.id)
 

@@ -29,6 +29,13 @@ describe('/for-apps — the door sign for programs', () => {
         expect(read('public/llms.txt')).toContain(`get ${server.ANONYMOUS_READS_PER_MINUTE}.`)
     })
 
+    // Sentence case, not the lowercase the tab used to carry —
+    // docs/ai/vocabulary.md's naming rule.
+    it('names itself in the tab, Sentence case', () => {
+        render(<ForAppsPage />)
+        expect(document.title).toBe('For apps — di.iiii')
+    })
+
     it('shows how to identify, the limits, and what is off-limits', () => {
         render(<ForAppsPage />)
         expect(screen.getByText(/SpaceMirror\/1\.4 \( ops@example\.org \)/)).toBeTruthy()

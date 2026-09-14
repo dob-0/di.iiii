@@ -205,3 +205,122 @@ describe('the origin a card advertises', () => {
     expect(r.body).toContain('content="https://di-studio.xyz/suite/og-image.png"')
   })
 })
+
+// 2026-09-14: /login, /terms, /privacy, /for-apps, /spaces and /wiki are
+// reserved words — none of them can ever be a space (shared/reservedSegments.cjs
+// APP_SEGMENTS) — so `loadSpaceMeta` found nothing for any of them and every
+// one previewed as the FRONT_DOOR card, same as a genuinely unknown address.
+describe('reserved top-level pages get their own card', () => {
+  const express = createRequire(import.meta.url)('express')
+  const { registerOgRoutes } = createRequire(import.meta.url)('./ogRoutes')
+
+  const app = (() => {
+    const a = express()
+    const router = express.Router()
+    registerOgRoutes(router, {
+      // None of these words can be a space — if this is ever reached for one
+      // of them, the static-page check ran too late (or not at all).
+      loadSpaceMeta: async () => { throw new Error('loadSpaceMeta must not be asked about a reserved page') },
+      siteOrigin: 'https://di-studio.xyz',
+    })
+    a.use('/serverXR', router)
+    return a
+  })()
+
+  const hit = (path) => new Promise((resolve) => {
+    const server = app.listen(0, async () => {
+      const r = await fetch(`http://127.0.0.1:${server.address().port}${path}`)
+      const body = await r.text()
+      server.close(() => resolve({ status: r.status, body }))
+    })
+  })
+
+  it.each([
+    ['/serverXR/og/login', 'Sign in — di.iiii'],
+    ['/serverXR/og/terms', 'Terms — di.iiii'],
+    ['/serverXR/og/privacy', 'Privacy — di.iiii'],
+    ['/serverXR/og/for-apps', 'For apps — di.iiii'],
+    ['/serverXR/og/spaces', 'Spaces — di.iiii'],
+    ['/serverXR/og/wiki', 'Wiki — di.iiii'],
+  ])('%s carries its own card, not the front door', async (path, title) => {
+    const r = await hit(path)
+    expect(r.status).toBe(200)
+    expect(r.body).toContain(`<meta property="og:title" content="${title}">`)
+    expect(r.body).not.toContain('browser-native XR authoring')
+    // the front door's OWN title, distinct from any one page's — must not leak
+    expect(r.body).not.toContain('public spaces on the open web')
+  })
+
+  it('still names di.iiii as the site and points the url at the real page', async () => {
+    const r = await hit('/serverXR/og/login')
+    expect(r.body).toContain('<meta property="og:site_name" content="di.iiii">')
+    expect(r.body).toContain('content="https://di-studio.xyz/login"')
+  })
+})
+
+// 2026-09-14: a link naming a PROJECT explicitly — /{space}/p/{project} or the
+// vanity /{space}/{projectSlug} form — used to be read only as far as the
+// space: sharing one artist's project previewed as the whole exhibition, the
+// same card as the bare /{space} link.
+describe('a project the URL itself names', () => {
+  const express = createRequire(import.meta.url)('express')
+  const { registerOgRoutes } = createRequire(import.meta.url)('./ogRoutes')
+
+  const PROJECTS = {
+    'wcc:mery-petrosyan': { title: 'Mery Petrosyan', spaceId: 'wcc', state: 'live' },
+    'wcc:draft-work': { title: 'Draft Work', spaceId: 'wcc', state: 'draft' },
+  }
+
+  const build = () => {
+    const a = express()
+    const router = express.Router()
+    registerOgRoutes(router, {
+      loadSpaceMeta: async (h) => (h === 'wcc' ? { id: 'wcc', label: 'WCC Exhibition', isPublic: true } : null),
+      // Mirrors index.js's real resolveProject: only a 'live' project ever
+      // previews as itself — drafts and archived work never reach a visitor
+      // (RootApp.jsx's SlugProjectRoute, SpaceContentsPage's own listing).
+      resolveProject: async (spaceId, segment) => {
+        const project = PROJECTS[`${spaceId}:${segment}`]
+        return (project && project.state === 'live') ? project : null
+      },
+      siteOrigin: 'https://di-studio.xyz',
+    })
+    a.use('/serverXR', router)
+    return a
+  }
+
+  const hit = (path) => new Promise((resolve) => {
+    const server = build().listen(0, async () => {
+      const r = await fetch(`http://127.0.0.1:${server.address().port}${path}`)
+      const body = await r.text()
+      server.close(() => resolve({ status: r.status, body }))
+    })
+  })
+
+  it('names the project, then the space, on the explicit /p/ shape', async () => {
+    const r = await hit('/serverXR/og/wcc/p/mery-petrosyan')
+    expect(r.body).toContain('<meta property="og:title" content="Mery Petrosyan — WCC Exhibition">')
+    expect(r.body).toContain('content="https://di-studio.xyz/wcc/p/mery-petrosyan"')
+  })
+
+  it('names the project on the vanity /{space}/{projectSlug} shape too', async () => {
+    const r = await hit('/serverXR/og/wcc/mery-petrosyan')
+    expect(r.body).toContain('<meta property="og:title" content="Mery Petrosyan — WCC Exhibition">')
+  })
+
+  it('never previews a draft — falls back to the space card instead', async () => {
+    const r = await hit('/serverXR/og/wcc/p/draft-work')
+    expect(r.body).toContain('<meta property="og:title" content="WCC Exhibition">')
+    expect(r.body).not.toContain('Draft Work')
+  })
+
+  it('does not read a reserved second segment (/raw, /studio, …) as a project slug', async () => {
+    const r = await hit('/serverXR/og/wcc/raw')
+    expect(r.body).toContain('<meta property="og:title" content="WCC Exhibition">')
+  })
+
+  it('falls back to the space card when nothing has that project slug', async () => {
+    const r = await hit('/serverXR/og/wcc/not-a-real-project')
+    expect(r.body).toContain('<meta property="og:title" content="WCC Exhibition">')
+  })
+})
