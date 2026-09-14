@@ -1,3 +1,5 @@
+import { TOP_TYPE_IDS } from '../tops/topOperators.js'
+import { computeTopOutput } from '../tops/topRuntime.js'
 import { computeOutput as colourCombine } from './colour.combine/runtime.js'
 import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
@@ -54,6 +56,8 @@ import { computeOutput as vectorSplit } from './vector.split/runtime.js'
 // { input, asNumber, context }) — and import nothing from the graph runtime,
 // which keeps the dependency one-way.
 export const NODE_RUNTIMES = new Map([
+    // Every picture operator shares one runtime: its picture stays on the GPU.
+    ...TOP_TYPE_IDS.map((typeId) => [typeId, computeTopOutput]),
     ['colour.combine', colourCombine],
     ['colour.ramp', colourRamp],
     ['colour.split', colourSplit],

@@ -16,6 +16,7 @@ export default function MapStage({
     height,
     live = true,
     soloSurfaceId = null,
+    network = null,
     className = ''
 }) {
     const surfaces = useMemo(() => {
@@ -61,7 +62,7 @@ export default function MapStage({
                             mixBlendMode: surface.blend === 'add' ? 'plus-lighter' : surface.blend
                         }}
                     >
-                        <MapSourceView surface={surface} spaceId={spaceId} live={live} label={surface.name || surface.id} />
+                        <MapSourceView surface={surface} spaceId={spaceId} live={live} network={network} label={surface.name || surface.id} />
                     </div>
                 )
             })}

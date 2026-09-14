@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import MapTestPattern from './mapTestPattern.jsx'
 import { startMotionGlow } from './motionGlow.js'
+import { useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
 import { PREVIEW_READY_MESSAGE } from '../utils/previewMode.js'
@@ -38,13 +39,21 @@ const requestSurfaceBoot = createPreviewBootQueue()
 // way; a slow page keeps loading, it just stops blocking its neighbours.
 const BOOT_SLOT_TIMEOUT_MS = 15000
 
-export default function MapSourceView({ surface, spaceId = '', live = true, label = '' }) {
+export default function MapSourceView({ surface, spaceId = '', live = true, network = null, label = '' }) {
     const [width, height] = surface.resolution
     const kind = surface.source?.kind || 'test'
     const ref = surface.source?.ref || ''
 
     if (kind === 'colour') {
         return <div className="map-source-fill" style={{ background: ref || '#ffffff' }} />
+    }
+
+    if (kind === 'network') {
+        if (!ref) return <MapSourcePlaceholder label={label} detail="no Picture Out chosen" width={width} height={height} />
+        // Off the output, a network runs only when Live is on — the desk and
+        // the wall would otherwise each open the camera and run every operator.
+        if (!live) return <MapSourcePlaceholder label={label} detail="pictures — turn Live on to run them here" width={width} height={height} />
+        return <MapNetworkSource network={network} spaceId={spaceId} outNodeId={ref} label={label} width={width} height={height} />
     }
 
     if (kind === 'camera') {
@@ -193,6 +202,24 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
             ) : null}
         </>
     )
+}
+
+// The project's picture operators, run on this page and drawn from one Picture
+// Out. Processed at up to 640 wide like the camera glow; the corner-pin scales
+// the result onto the wall.
+const NO_NETWORK = { nodes: [], wires: [] }
+
+function MapNetworkSource({ network, spaceId, outNodeId, label, width, height }) {
+    const [canvas, setCanvas] = useState(null)
+    const scale = Math.min(1, 640 / width)
+    const w = Math.max(1, Math.round(width * scale))
+    const h = Math.max(1, Math.round(height * scale))
+    const present = Boolean(network?.nodes?.some((node) => node.id === outNodeId))
+    // Nothing to show → nothing to run; an empty network starts no engine.
+    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, canvas, show: outNodeId, width: w, height: h })
+    if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out is gone" width={width} height={height} />
+    if (error) return <MapSourcePlaceholder label={label} detail={error} width={width} height={height} />
+    return <canvas className="map-source-media" ref={setCanvas} width={w} height={h} />
 }
 
 // One page surface: waits for a boot slot, then mounts its iframe.
