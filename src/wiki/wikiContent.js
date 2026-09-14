@@ -1390,6 +1390,9 @@ export const WIKI_ARTICLES = [
             'The output page and a published room get live data too. /out runs every listening device, like the webcam, mic, MIDI In and picture operators, but never the senders. The editor already drives DMX and MIDI Out, and a second page sending would repeat every cue. A visitor to a published room gets only what needs no permission, like video frames and sound levels, and is never asked for a camera, a microphone or MIDI.'
         ],
         tags: ['raw', 'nodes', 'wires', 'pictures', 'picture operators', 'webcam', 'midi', 'dmx', 'devices', 'out', 'performance'],
+        updated: '2026-09-14'
+    },
+    {
         id: 'scripts-in-every-node',
         category: 'Editing',
         title: 'A script in any node, that can never freeze the show',
@@ -1402,6 +1405,9 @@ export const WIKI_ARTICLES = [
             'PICTURE OPERATORS. Their frame() scripts still run on the page, as before, but a frame() that takes longer than 20 ms is now stopped until the code changes, so a slow script cannot drag the picture down.'
         ],
         tags: ['raw', 'nodes', 'script', 'javascript', 'compute', 'worker', 'safety', 'projector', 'DI_DESK_SCRIPTS'],
+        updated: '2026-09-14'
+    },
+    {
         id: 'inside-a-node',
         category: 'Editing',
         title: 'Inside a node: one workshop for every node',
@@ -1419,6 +1425,9 @@ export const WIKI_ARTICLES = [
             'Going inside a panel node whose window you had closed opens the window again as well, so it is there when you come back out. The old “Code — stored, not run” box is gone: nothing ever ran it. A script that really runs lives in Made of.'
         ],
         tags: ['raw', 'nodes', 'inside', 'workshop', 'see', 'in', 'out', 'made-of', 'code', 'shader', 'script', 'custom cube', 'wires', 'touchdesigner'],
+        updated: '2026-09-14'
+    },
+    {
         id: 'cards-show-themselves',
         category: 'Editing',
         title: 'Cards show themselves',
@@ -1431,6 +1440,9 @@ export const WIKI_ARTICLES = [
             'The family word is gone from card headers — "numbers", "the scene" and so on used to sit next to the icon that already carries the same colour, saying the same thing twice. And a card is one stop on the keyboard now, not two: Tab reaches the card itself, the arrow keys move between cards, and Enter opens the one the door used to need a second stop for.'
         ],
         tags: ['raw', 'cards', 'touchdesigner', 'live values', 'sparkline', 'accessibility', 'keyboard', 'fold', 'preview', 'design'],
+        updated: '2026-09-14'
+    },
+    {
         id: 'node-examples',
         category: 'For developers',
         title: 'A worked example for every node',
@@ -1443,6 +1455,9 @@ export const WIKI_ARTICLES = [
             'The registry\'s own worked portrait of the WHOLE node set — one graph touching every type at once — lives separately as the "All nodes" preset in the node editor\'s ⋯ menu. It exists to be looked at on one screen, not to teach one node\'s use; for that, read the per-node examples above.'
         ],
         tags: ['nodes', 'examples', 'registry', 'reference', 'ai', 'graph', 'ports', 'wires', 'developers'],
+        updated: '2026-09-14'
+    },
+    {
         id: 'raw-topbar-and-window-cleanup',
         category: 'Editing',
         title: 'The top bar on a phone, and a window that says one thing',
