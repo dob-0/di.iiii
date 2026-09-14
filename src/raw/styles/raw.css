@@ -6069,10 +6069,15 @@
 /* The one line a portless card can afford. Clipped rather than wrapped: the
    body is a single 22px row and its height is the geometry the wires are
    drawn from, so this must never push it taller. */
-/* A picture operator's live picture, under its port rows (TopThumbnail). */
+/* A picture operator's live picture, under its port rows (TopThumbnail).
+   Flush left/right (workstream 2 card-compaction pass, 2026-09-14 — minimal
+   cross-boundary touch, the rest of this file is workstream 5's): matches
+   cardPreview.css's .raw-card-preview, which TOP_PICTURE_WIDTH/HEIGHT is
+   shared with — both now fill the card edge to edge instead of leaving an
+   8px gutter that made a small live picture read as a mostly-empty card. */
 .raw-top-picture {
     position: absolute;
-    left: 8px;
+    left: 0;
     box-sizing: border-box;
     background: var(--di-black);
     border: 1px solid rgba(255, 255, 255, 0.08);

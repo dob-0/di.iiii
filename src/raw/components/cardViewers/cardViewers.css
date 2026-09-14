@@ -139,11 +139,3 @@
 .raw-graph-port-fold-toggle--collapse {
     margin-left: var(--di-space-2);
 }
-
-/* The dot itself stays in the DOM when its row is folded (RawGraphSurface.jsx
-   explains why) — this only hides it from sight and touch so the "+N" badge
-   drawn beside it reads as the row's one control. */
-.raw-graph-port-row--folded .raw-graph-port-dot {
-    opacity: 0;
-    pointer-events: none;
-}

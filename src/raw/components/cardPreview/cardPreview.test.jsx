@@ -68,7 +68,7 @@ describe('card geometry with previews', () => {
         }
     })
 
-    it('keeps every port anchor where it was: the wire into a Cube lands on the same row', () => {
+    it('lands a wire on the row its input is ACTUALLY drawn at — compacted when the card is folded', () => {
         const color = makeNode('value.color', { id: 'c', graphX: 0, graphY: 0 })
         const cube = makeNode('geom.cube', { id: 'k', graphX: 320, graphY: 40 })
         const sphere = makeNode('geom.sphere', { id: 's', graphX: 640, graphY: 300 })
@@ -78,28 +78,43 @@ describe('card geometry with previews', () => {
         ]
         const { container } = render(<RawGraphSurface nodes={[color, cube, sphere]} edges={edges} initialZoom={1} />)
         const paths = [...container.querySelectorAll('svg path')].map((path) => path.getAttribute('d'))
-        const inputIndex = NODE_TYPES['geom.cube'].inputs.findIndex((port) => port.id === 'roughness')
+        // Roughness is geom.cube's ONLY wired input (declared 3rd of 8) — folded
+        // (design audit B4 / cardGeometry.getInputRows), it is compacted to
+        // row 0, not left at its declared index with seven empty rows above a
+        // gap. Outputs never fold: Geometry keeps its declared row (1).
         const outputIndex = NODE_TYPES['geom.cube'].outputs.findIndex((port) => port.id === 'geometry')
-        const intoCube = `${cube.graphX} ${cube.graphY + HEADER_HEIGHT + inputIndex * PORT_ROW_HEIGHT + PORT_ROW_HEIGHT / 2}`
+        const intoCube = `${cube.graphX} ${cube.graphY + HEADER_HEIGHT + 0 * PORT_ROW_HEIGHT + PORT_ROW_HEIGHT / 2}`
         const outOfCube = `M ${cube.graphX + CARD_WIDTH} ${cube.graphY + HEADER_HEIGHT + outputIndex * PORT_ROW_HEIGHT + PORT_ROW_HEIGHT / 2}`
         expect(paths.some((d) => d?.endsWith(intoCube))).toBe(true)
         expect(paths.some((d) => d?.startsWith(outOfCube))).toBe(true)
     })
 
-    it('puts the preview below the last port row, only on previewed cards, only at port tiers', () => {
+    it('puts the preview below the last DRAWN port row, only on previewed cards, down to the header tier', () => {
         const cube = makeNode('geom.cube', { id: 'k' })
         const op = makeNode('math.op', { id: 'm', graphX: 400 })
         const full = render(<RawGraphSurface nodes={[cube, op]} edges={[]} initialZoom={1} />)
         const previews = full.container.querySelectorAll('.raw-card-preview')
         expect(previews.length).toBe(1)
-        const rows = Math.max(NODE_TYPES['geom.cube'].inputs.length, NODE_TYPES['geom.cube'].outputs.length)
-        expect(previews[0].style.top).toBe(`${rows * PORT_ROW_HEIGHT + 4}px`)
+        // No edges: every one of geom.cube's 8 inputs is unwired, so the card
+        // is folded — one input row, not eight (cardGeometry.getInputRows,
+        // design audit B4). Outputs never fold (2). The preview sits below
+        // whichever side is taller: max(1, 2) = 2 rows, not 8.
+        expect(previews[0].style.top).toBe(`${2 * PORT_ROW_HEIGHT + 4}px`)
         expect(previews[0].getAttribute('data-preview-kind')).toBe('body')
         full.unmount()
 
-        const far = render(<RawGraphSurface nodes={[cube, op]} edges={[]} initialZoom={0.25} />)
-        expect(far.container.querySelectorAll('.raw-card-preview').length).toBe(0)
-        far.unmount()
+        // Goal (2026-09-14 card compaction): at low zoom the card is header +
+        // preview only — port ROWS drop (ticks mark where a wire lands
+        // instead) but the picture stays, because it is what reads from
+        // across a zoomed-out desk. Only the block tier (no text at all)
+        // drops it too.
+        const header = render(<RawGraphSurface nodes={[cube, op]} edges={[]} initialZoom={0.25} />)
+        expect(header.container.querySelectorAll('.raw-card-preview').length).toBe(1)
+        header.unmount()
+
+        const block = render(<RawGraphSurface nodes={[cube, op]} edges={[]} initialZoom={0.1} />)
+        expect(block.container.querySelectorAll('.raw-card-preview').length).toBe(0)
+        block.unmount()
     })
 })
 

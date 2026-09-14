@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
-import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, cardHeight } from '../utils/cardGeometry.js'
+import {
+    CARD_WIDTH,
+    HEADER_HEIGHT,
+    PORT_ROW_HEIGHT,
+    cardHeight,
+    getInputRows,
+    portRowCount
+} from '../utils/cardGeometry.js'
 import { isTopType } from '../../project/tops/topOperators.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
@@ -92,14 +99,26 @@ const DOOR_WIDTH_PX = 34
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
 // The card box itself (CARD_WIDTH, cardHeight) lives in cardGeometry.js: the
-// editor places a panel node's window against it and must not guess.
-const inputPortCenter = (node, portId, scopeNodes = null) => {
+// editor places a panel node's window against it and must not guess. Same
+// for a port's row: cardGeometry.getInputRows is the one place that decides
+// whether an input's row is its declared index or a compacted one (folding,
+// design audit B4) — isWired/folded default to "nothing is folded" so every
+// call site that does not pass them (a drag in flight, where every card is
+// already unfolded) gets the plain declared-index behaviour unchanged.
+const inputPortCenter = (node, portId, scopeNodes = null, isWired = null, folded = false) => {
     const inputs = getNodeInputs(node, scopeNodes)
-    const idx = inputs.findIndex((p) => p.id === portId)
-    if (idx < 0) return { x: node.graphX, y: node.graphY + HEADER_HEIGHT }
+    const rows = getInputRows(node, scopeNodes, isWired, folded)
+    const row = rows.find((entry) => entry.port?.id === portId)?.row
+    if (row === undefined) {
+        // Not found at all (bad port id) — fall back to the old declared-index
+        // arithmetic rather than drawing nothing.
+        const idx = inputs.findIndex((p) => p.id === portId)
+        if (idx < 0) return { x: node.graphX, y: node.graphY + HEADER_HEIGHT }
+        return { x: node.graphX, y: node.graphY + HEADER_HEIGHT + idx * PORT_ROW_HEIGHT + PORT_ROW_HEIGHT / 2 }
+    }
     return {
         x: node.graphX,
-        y: node.graphY + HEADER_HEIGHT + idx * PORT_ROW_HEIGHT + PORT_ROW_HEIGHT / 2
+        y: node.graphY + HEADER_HEIGHT + row * PORT_ROW_HEIGHT + PORT_ROW_HEIGHT / 2
     }
 }
 
@@ -1100,21 +1119,6 @@ export default function RawGraphSurface({
         }
     }, [isPanning])
 
-    const wires = useMemo(() => {
-        const out = []
-        for (const edge of edges) {
-            const fromNode = nodeById.get(edge.fromNodeId)
-            const toNode = nodeById.get(edge.toNodeId)
-            if (!fromNode || !toNode) continue
-            const from = outputPortCenter(fromNode, edge.fromPort, portScopeNodes)
-            const to = inputPortCenter(toNode, edge.toPort, portScopeNodes)
-            const fromPort = getNodeOutputs(fromNode, portScopeNodes).find((p) => p.id === edge.fromPort)
-            const color = fromPort ? getPortType(fromPort.type).color : '#999'
-            out.push({ id: edge.id, from, to, color })
-        }
-        return out
-    }, [edges, nodeById])
-
     // Which input ports carry a wire — `${nodeId}:${portId}`. Build task 3's
     // fold: a card shows its wired inputs, and collapses the rest into one
     // "+N" row. Keyed the same way edgesByTarget is in nodeGraphRuntime.js.
@@ -1123,6 +1127,42 @@ export default function RawGraphSurface({
         for (const edge of edges) set.add(`${edge.toNodeId}:${edge.toPort}`)
         return set
     }, [edges])
+
+    // A card folds (compacts its rows — see cardGeometry.getInputRows)
+    // whenever it has an unwired input, UNLESS it has been expanded by its
+    // own toggle, or a wire is being dragged anywhere in the graph — during a
+    // drag every card unfolds so a folded target still shows as a drop
+    // target (RawGraphSurface.test.jsx "unfolds every input while a wire is
+    // being dragged").
+    const isPortWiredOn = (node) => (portId) => wiredInputKeys.has(`${node.id}:${portId}`)
+    const isNodeFolded = (node) => {
+        if (isDraggingWire || expandedFoldNodeIds.has(node.id)) return false
+        return getNodeInputs(node, portScopeNodes).some((port) => !wiredInputKeys.has(`${node.id}:${port.id}`))
+    }
+
+    const wires = useMemo(() => {
+        const out = []
+        for (const edge of edges) {
+            const fromNode = nodeById.get(edge.fromNodeId)
+            const toNode = nodeById.get(edge.toNodeId)
+            if (!fromNode || !toNode) continue
+            const from = outputPortCenter(fromNode, edge.fromPort, portScopeNodes)
+            // A wire always targets a WIRED port, so it always has its own row
+            // whether or not the card is folded (cardGeometry.getInputRows
+            // never folds a wired port away) — pass the real fold state so the
+            // endpoint matches whatever the card is actually drawing right now.
+            const to = inputPortCenter(toNode, edge.toPort, portScopeNodes, isPortWiredOn(toNode), isNodeFolded(toNode))
+            const fromPort = getNodeOutputs(fromNode, portScopeNodes).find((p) => p.id === edge.fromPort)
+            const color = fromPort ? getPortType(fromPort.type).color : '#999'
+            out.push({ id: edge.id, from, to, color })
+        }
+        return out
+        // isPortWiredOn/isNodeFolded are plain closures over the three state
+        // values already listed below (wiredInputKeys, isDraggingWire,
+        // expandedFoldNodeIds) — a fresh function identity every render, not
+        // a fourth dependency.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [edges, nodeById, portScopeNodes, wiredInputKeys, isDraggingWire, expandedFoldNodeIds])
 
     const pendingFromPos = pendingWire ? outputPortCenter(nodeById.get(pendingWire.fromNodeId) || {}, pendingWire.fromPort, portScopeNodes) : null
 
@@ -1407,29 +1447,44 @@ export default function RawGraphSurface({
                         const inputs = getNodeInputs(node, portScopeNodes)
                         const outputs = getNodeOutputs(node, portScopeNodes)
                         const childCount = childCounts?.get(node.id) || 0
+                        const isPortWired = isPortWiredOn(node)
+                        const isNodeExpanded = expandedFoldNodeIds.has(node.id)
+                        const folded = isNodeFolded(node)
                         // `h` and the card's left/top/width come from the same
-                        // geometry the wires use, at EVERY tier. The tier below
-                        // only decides what is drawn inside this box.
-                        const h = cardHeight(node, portScopeNodes)
+                        // geometry the wires use, at EVERY tier — folding only
+                        // changes what is drawn INSIDE the box, never the box
+                        // itself (graphGeometryIsTierInvariant covers that; this
+                        // is the same invariant applied to folding).
+                        const h = cardHeight(node, portScopeNodes, isPortWired, folded)
                         const isSelected = node.id === selectedNodeId
                         const showPorts = tier === 'full' || tier === 'compact'
                         const showPortLabels = tier === 'full'
+                        // Goal (2026-09-14 card compaction): at low zoom the
+                        // card is header + preview only — the port ROWS drop
+                        // (marked by ticks instead, below) but a picture/value
+                        // viewer still reads from across a zoomed-out desk.
+                        // Only the block tier (a plain rectangle, no text at
+                        // all) drops the preview too.
+                        const showPreview = tier !== 'block'
                         // TouchDesigner-style value viewer (build task 1): at
                         // most one per card, and only on a card with no picture
                         // of its own (cardViewerKind already refuses top types
                         // and hasCardPreview types — see cardViewers/viewerKind.js).
                         const viewerKind = cardViewerKind(node, portScopeNodes)
                         const viewerPort = viewerKind ? cardViewerPort(node, portScopeNodes) : null
-                        // Fold unwired inputs (build task 3): which of this
-                        // card's declared inputs actually carry a wire. While a
-                        // wire is being dragged every input has to show, wired
-                        // or not, so the drop target stays visible to aim at.
-                        const unwiredInputs = inputs.filter((port) => !wiredInputKeys.has(`${node.id}:${port.id}`))
-                        const isNodeExpanded = expandedFoldNodeIds.has(node.id)
-                        const isFolded = unwiredInputs.length > 0 && !isDraggingWire && !isNodeExpanded
-                        const firstUnwiredIndex = unwiredInputs.length
-                            ? inputs.findIndex((port) => unwiredInputs.includes(port))
-                            : -1
+                        // Fold unwired inputs (build task 3 / design audit B4):
+                        // the row layout every port, tick and toggle below reads
+                        // from — cardGeometry.getInputRows is the single source
+                        // for both where a row draws and where a wire lands.
+                        const inputRows = getInputRows(node, portScopeNodes, isPortWired, folded)
+                        const rowCount = portRowCount(node, portScopeNodes, isPortWired, folded)
+                        // The first UNWIRED row, only meaningful while expanded
+                        // (folded=false because of isNodeExpanded, not because
+                        // there was nothing to fold) — that is where the "hide"
+                        // control that started the expansion lives.
+                        const firstUnwiredEntry = isNodeExpanded
+                            ? inputRows.find((entry) => !entry.folded && !isPortWired(entry.port.id))
+                            : null
                         // Build task 4 / design audit C5: "<label>, <n> inputs,
                         // <m> outputs" — the accessible name replaces reading the
                         // header's text nodes run together ("›ColournumbersColour").
@@ -1591,22 +1646,25 @@ export default function RawGraphSurface({
                                     {showPorts && !inputs.length && !outputs.length && getNodeCardSummary(node) ? (
                                         <span className="raw-graph-node-summary">{getNodeCardSummary(node)}</span>
                                     ) : null}
-                                    {showPorts && isTopType(node.typeId) ? (
+                                    {showPreview && isTopType(node.typeId) ? (
                                         <TopThumbnail
                                             nodeId={node.id}
-                                            top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
+                                            top={rowCount * PORT_ROW_HEIGHT + 4}
                                         />
                                     ) : null}
                                     {/* The cube itself, on the Cube's card — the same slot and
                                         size as a picture operator's picture, below the ports, so
-                                        no port or wire moves. Unmounted below the port tier,
-                                        which is what keeps a zoomed-out desk free. */}
-                                    {showPorts && hasCardPreview(node.typeId) ? (
+                                        no port or wire moves. Unmounted below the header tier
+                                        (design goal, 2026-09-14: "at low zoom the card becomes
+                                        header + preview only" — a solid block below that has no
+                                        text to read anyway), which is what keeps a zoomed-out
+                                        desk free. */}
+                                    {showPreview && hasCardPreview(node.typeId) ? (
                                         <CardPreview
                                             node={node}
                                             nodes={portScopeNodes || nodes}
                                             edges={edges}
-                                            top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
+                                            top={rowCount * PORT_ROW_HEIGHT + 4}
                                             readOutput={readOutput}
                                         />
                                     ) : null}
@@ -1614,50 +1672,83 @@ export default function RawGraphSurface({
                                         geometry rule as the picture above: below the ports, so no
                                         port or wire moves. "Cards show no values" was cross-cutting
                                         defect #1 in the 2026-09-14 node audit. */}
-                                    {showPorts && viewerKind ? (
+                                    {showPreview && viewerKind ? (
                                         <CardValueViewer
                                             node={node}
                                             port={viewerPort}
                                             kind={viewerKind}
-                                            top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
+                                            top={rowCount * PORT_ROW_HEIGHT + 4}
                                             readOutput={readOutput}
                                         />
                                     ) : null}
                                     {tier === 'header' ? (
                                         // Too small for ports, but the wires still land here,
-                                        // so mark where. Ticks sit at the exact port centres.
-                                        [...inputs.map((port, idx) => ({ port, idx, side: 'in' })),
-                                            ...outputs.map((port, idx) => ({ port, idx, side: 'out' }))]
-                                            .map(({ port, idx, side }) => (
+                                        // so mark where — at the SAME compacted row cardGeometry
+                                        // just laid the real rows out at, folded or not, so a tick
+                                        // never points at a spot the real port tier would not.
+                                        [...inputRows.map((entry) => ({
+                                            key: entry.folded ? 'tick-in-fold' : `tick-in-${entry.port.id}`,
+                                            row: entry.row,
+                                            side: 'in',
+                                            color: entry.folded ? '#999' : getPortType(entry.port.type).color
+                                        })),
+                                            ...outputs.map((port, idx) => ({
+                                                key: `tick-out-${port.id}`,
+                                                row: idx,
+                                                side: 'out',
+                                                color: getPortType(port.type).color
+                                            }))]
+                                            .map(({ key, row, side, color }) => (
                                                 <span
-                                                    key={`tick-${side}-${port.id}`}
+                                                    key={key}
                                                     className={`raw-graph-port-tick raw-graph-port-tick--${side}`}
                                                     style={{
-                                                        top: idx * PORT_ROW_HEIGHT + PORT_ROW_HEIGHT / 2 - 1,
-                                                        background: getPortType(port.type).color
+                                                        top: row * PORT_ROW_HEIGHT + PORT_ROW_HEIGHT / 2 - 1,
+                                                        background: color
                                                     }}
                                                 />
                                             ))
                                     ) : null}
                                     {/* Fold unwired inputs (build task 3 / design audit B4:
-                                        "every unwired port listed on cards"). Every declared
-                                        port keeps its row, its dot and its title — CSS visually
-                                        folds the unwired ones (raw-graph-port-row--folded), it
-                                        never removes them from the DOM. Three things depend on
-                                        that: a port's row never moves (cardGeometry stays the
-                                        single source of truth for anchors — graphGeometry.test.jsx),
-                                        a wire drop is resolved purely in graph space
-                                        (resolveWireDrop) so a folded target still takes a wire,
-                                        and every existing port-by-title/data-port-id query in this
-                                        codebase's tests keeps finding what it always found. */}
-                                    {showPorts ? inputs.map((port, idx) => {
-                                        const isWired = wiredInputKeys.has(`${node.id}:${port.id}`)
-                                        const folded = isFolded && !isWired
+                                        "every unwired port listed on cards" — a Cube with one
+                                        wired input out of eight was 319px tall). A wired input
+                                        always draws its own row, compacted to sit directly under
+                                        the last one above it (cardGeometry.getInputRows); every
+                                        unwired input collapses into exactly one extra row instead
+                                        of each reserving its own — the "+N" toggle. cardGeometry
+                                        stays the single source of truth for a row's position: a
+                                        wire drop is resolved purely in graph space (resolveWireDrop)
+                                        so this only decides what a row shows, never where it is. */}
+                                    {showPorts ? inputRows.map((entry) => {
+                                        if (entry.folded) {
+                                            return (
+                                                <div
+                                                    key="in-fold"
+                                                    className="raw-graph-port-row raw-graph-port-row--in raw-graph-port-row--folded"
+                                                    style={{ top: entry.row * PORT_ROW_HEIGHT }}
+                                                >
+                                                    {showPortLabels ? (
+                                                        <button
+                                                            type="button"
+                                                            className="raw-graph-port-fold-toggle"
+                                                            tabIndex={-1}
+                                                            aria-expanded="false"
+                                                            aria-label={`Show ${entry.ports.length} more input${entry.ports.length === 1 ? '' : 's'}`}
+                                                            onPointerDown={(event) => event.stopPropagation()}
+                                                            onClick={(event) => { event.stopPropagation(); toggleFold(node.id) }}
+                                                        >
+                                                            +{entry.ports.length}
+                                                        </button>
+                                                    ) : null}
+                                                </div>
+                                            )
+                                        }
+                                        const port = entry.port
                                         return (
                                             <div
                                                 key={`in-${port.id}`}
-                                                className={`raw-graph-port-row raw-graph-port-row--in${folded ? ' raw-graph-port-row--folded' : ''}`}
-                                                style={{ top: idx * PORT_ROW_HEIGHT }}
+                                                className="raw-graph-port-row raw-graph-port-row--in"
+                                                style={{ top: entry.row * PORT_ROW_HEIGHT }}
                                             >
                                                 <span
                                                     // While a wire is being dragged, every input dot
@@ -1677,26 +1768,15 @@ export default function RawGraphSurface({
                                                     style={{ background: getPortType(port.type).color, left: -PORT_DOT_RADIUS }}
                                                     title={`${port.label || port.id} (${port.type})${onPromotePort ? ' — hold to expose on the container' : ''}`}
                                                 />
-                                                {showPortLabels && !folded ? (
+                                                {showPortLabels ? (
                                                     <span className="raw-graph-port-label">{port.label || port.id}</span>
                                                 ) : null}
-                                                {/* One "+N" badge, drawn OVER the first folded row —
-                                                    a sibling, not a replacement, so the dot underneath
-                                                    stays exactly where cardGeometry says it is. */}
-                                                {isFolded && idx === firstUnwiredIndex && showPortLabels ? (
-                                                    <button
-                                                        type="button"
-                                                        className="raw-graph-port-fold-toggle"
-                                                        tabIndex={-1}
-                                                        aria-expanded="false"
-                                                        aria-label={`Show ${unwiredInputs.length} more input${unwiredInputs.length === 1 ? '' : 's'}`}
-                                                        onPointerDown={(event) => event.stopPropagation()}
-                                                        onClick={(event) => { event.stopPropagation(); toggleFold(node.id) }}
-                                                    >
-                                                        +{unwiredInputs.length}
-                                                    </button>
-                                                ) : null}
-                                                {!isFolded && !isWired && idx === firstUnwiredIndex && isNodeExpanded && showPortLabels ? (
+                                                {/* The "hide unwired inputs" control, only while
+                                                    expanded (folded=false because of the toggle, not
+                                                    because there was nothing to fold) — lives beside
+                                                    the first unwired port, the same spot the "+N"
+                                                    toggle it replaces sat before expansion. */}
+                                                {firstUnwiredEntry?.port.id === port.id && showPortLabels ? (
                                                     <button
                                                         type="button"
                                                         className="raw-graph-port-fold-toggle raw-graph-port-fold-toggle--collapse"

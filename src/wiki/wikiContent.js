@@ -1470,6 +1470,19 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'topbar', 'phone', 'mobile', 'menu', 'windows', 'accessibility', 'design'],
         updated: '2026-09-14'
+    },
+    {
+        id: 'cards-are-compact-now',
+        category: 'Editing',
+        title: 'A card is only as tall as what it draws',
+        summary: 'Folding unwired inputs used to hide them without shrinking the card — a Cube with one wire out of eight was still 336px tall, almost all of it empty. A card is now exactly as tall as the rows it actually draws.',
+        body: [
+            'The "+N" fold (see "Cards show themselves") hid unwired ports from view, but every card still reserved the same height as if all of them were showing — a Cube with only its Colour wired stayed 336px tall, the seven hidden ports leaving a wide black gap between the header and the live picture at the bottom.',
+            'A wired input now moves up to sit directly under the last one above it, and every unwired input collapses into exactly one extra row — the "+N" toggle — instead of each reserving a row of its own. A Cube goes from 336px to 213px. Wires still land exactly on the dot they are drawn from; nothing moves that a wire is not also moving with.',
+            'The live picture or number/colour/vector strip under the ports now reaches the card\'s own edges left and right — it used to sit in an 8px frame that made a small preview look lost inside a mostly empty card. It also keeps showing at the middle zoom tier, where the port rows themselves shrink to tick marks: a card at that distance reads as its header and its picture, which is what is worth reading from across a zoomed-out desk.'
+        ],
+        tags: ['raw', 'cards', 'compact', 'fold', 'preview', 'layout', 'design'],
+        updated: '2026-09-14'
     }
 ]
 

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 // The floor the auto-fit will not go below; the door must survive it.
 const FIT_MIN_USEFUL_ZOOM_FOR_TEST = 0.34
 import RawGraphSurface from './RawGraphSurface.jsx'
-import { createNode } from '../../project/nodeRegistry.js'
+import { createNode, getNodeType } from '../../project/nodeRegistry.js'
 
 const makeNode = (typeId, overrides = {}) => ({
     ...createNode(typeId, { graphX: overrides.graphX ?? 0, graphY: overrides.graphY ?? 0 }),
@@ -51,14 +51,19 @@ describe('RawGraphSurface', () => {
         expect(cubeCard).toBeTruthy()
 
         const outputDot = colorCard.querySelector('span[title*="(color)"]')
-        const cubeColorDot = cubeCard.querySelector('span[title="Colour (color)"]')
         expect(outputDot).toBeTruthy()
-        expect(cubeColorDot).toBeTruthy()
 
-        // Release over the cube's Color port (its first input).
+        // Release over the cube's Color port (its first input). Before the
+        // drag starts, Colour is unwired and the card is folded (design
+        // audit B4 — no dot renders for a folded port); starting the drag
+        // unfolds every card in the graph so a folded target stays a
+        // reachable drop target, which is why the dot is looked up only
+        // after pointerdown, not before.
         const port = inputPortGraphPoint(cubeNode, 0)
         const drop = clientForGraphPoint(container, port.x, port.y)
         fireEvent.pointerDown(outputDot, { button: 0, clientX: 200, clientY: 50 })
+        const cubeColorDot = cubeCard.querySelector('span[title="Colour (color)"]')
+        expect(cubeColorDot).toBeTruthy()
         fireEvent.pointerUp(cubeColorDot, drop)
 
         expect(onCreateEdge).toHaveBeenCalledWith(expect.objectContaining({
@@ -969,9 +974,13 @@ describe('card accessibility', () => {
         const cube = makeNode('geom.cube', { id: 'cube-1', label: 'Cube' })
         const { container } = render(<RawGraphSurface nodes={[cube]} edges={[]} initialZoom={1} />)
         const card = container.querySelector('.raw-graph-node-card')
-        const inputs = card.querySelectorAll('.raw-graph-port-row--in').length
-        const outputs = card.querySelectorAll('.raw-graph-port-row--out').length
-        expect(card.getAttribute('aria-label')).toBe(`Cube, ${inputs} inputs, ${outputs} outputs`)
+        // The DECLARED count, not a DOM row count: with no edges every input
+        // is unwired, so the card folds and draws only one row for all eight
+        // (cardGeometry.getInputRows) — the accessible name still has to say
+        // "8 inputs", because that is the true shape of the node, not how
+        // many rows happen to be on screen right now.
+        const type = getNodeType('geom.cube')
+        expect(card.getAttribute('aria-label')).toBe(`Cube, ${type.inputs.length} inputs, ${type.outputs.length} outputs`)
     })
 
     it('singularises "0 inputs, 1 output"', () => {
@@ -1025,37 +1034,48 @@ describe('card accessibility', () => {
     })
 })
 
-// Build task 3: fold unwired inputs into a "+N" row that expands on
-// click/tap; every port stays in the DOM at its declared row (cardGeometry
-// stays the single source of truth for anchors) — folding only changes
-// what is visible, never a port's position.
+// Build task 3 / design audit B4 ("every unwired port listed on cards" made
+// a Cube with one wired input 319px tall): unwired inputs fold into ONE
+// "+N" row, and every WIRED input is compacted to sit directly under the
+// last one above it — cardGeometry.getInputRows is the single source for
+// both, so a row never draws somewhere a wire could not also land. Expanding
+// (the "+N" toggle) restores every input to its own row at its declared
+// index — the same arithmetic that predates folding.
 describe('folding unwired inputs', () => {
     it('folds every unwired input behind one "+N" row, and expands it on click', () => {
         const op = makeNode('math.op', { id: 'op-1', graphX: 0, graphY: 0 })
         const { container } = render(<RawGraphSurface nodes={[op]} edges={[]} initialZoom={1} />)
         const rows = () => [...container.querySelectorAll('.raw-graph-port-row--in')]
-        // Both of math.op's inputs (A, B) are unwired.
-        expect(rows().filter((row) => row.classList.contains('raw-graph-port-row--folded'))).toHaveLength(2)
+        // Both of math.op's inputs (A, B) are unwired — folded, they share
+        // ONE row, not one each: the card draws exactly one input row.
+        expect(rows()).toHaveLength(1)
+        expect(rows().filter((row) => row.classList.contains('raw-graph-port-row--folded'))).toHaveLength(1)
         const toggle = container.querySelector('.raw-graph-port-fold-toggle')
         expect(toggle.textContent).toBe('+2')
         expect(toggle.getAttribute('aria-expanded')).toBe('false')
         fireEvent.click(toggle)
+        // Expanded: A and B each get their own row again, neither folded.
+        expect(rows()).toHaveLength(2)
         expect(rows().filter((row) => row.classList.contains('raw-graph-port-row--folded'))).toHaveLength(0)
     })
 
-    it('never folds a wired input, and folding never moves any port row', () => {
+    it('compacts a wired input to row 0 and puts the rest behind one folded row right after it', () => {
         const color = makeNode('value.color', { id: 'color-1', graphX: 0, graphY: 0 })
         const cube = makeNode('geom.cube', { id: 'cube-1', graphX: 320, graphY: 0 })
         const edges = [{ id: 'e1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'cube-1', toPort: 'color' }]
         const { container } = render(<RawGraphSurface nodes={[color, cube]} edges={edges} initialZoom={1} />)
         const cubeCard = container.querySelector('.raw-graph-node-card:nth-of-type(2)')
-        const colorRow = cubeCard.querySelector('.raw-graph-port-row--in')
-        // The wired Colour input (declared first on geom.cube) is never folded…
-        expect(colorRow.classList.contains('raw-graph-port-row--folded')).toBe(false)
-        // …and every input row, folded or not, still sits at its declared
-        // index * PORT_ROW_HEIGHT — the same arithmetic wires are drawn from.
         const rows = [...cubeCard.querySelectorAll('.raw-graph-port-row--in')]
-        rows.forEach((row, idx) => expect(row.style.top).toBe(`${idx * 22}px`))
+        // geom.cube declares 8 inputs; only Colour is wired here. Folded, that
+        // is exactly TWO rows — the wired one and one "+7" row — not eight,
+        // and not a gap between them: this is the bug the design audit named
+        // ("Cube card is 319px tall with 8 inputs, 1 wired").
+        expect(rows).toHaveLength(2)
+        expect(rows[0].classList.contains('raw-graph-port-row--folded')).toBe(false)
+        expect(rows[0].style.top).toBe('0px')
+        expect(rows[1].classList.contains('raw-graph-port-row--folded')).toBe(true)
+        expect(rows[1].style.top).toBe('22px')
+        expect(rows[1].querySelector('.raw-graph-port-fold-toggle').textContent).toBe('+7')
     })
 
     it('unfolds every input while a wire is being dragged, so a folded target still shows as a drop target', () => {

@@ -1,9 +1,12 @@
 /* The preview on a node card. Same box as a picture operator's picture
    (.raw-top-picture) so every preview on the desk is one size and one frame;
-   kept here rather than borrowed so the two can evolve independently. */
+   kept here rather than borrowed so the two can evolve independently. Flush
+   left/right (card compaction, 2026-09-14): an 8px gutter each side made a
+   184px picture read as a small preview lost in a big empty card — TOP_PICTURE_WIDTH
+   is now the full CARD_WIDTH, so this only has to sit at the card's own edge. */
 .raw-card-preview {
     position: absolute;
-    left: 8px;
+    left: 0;
     box-sizing: border-box;
     background: #000;
     border: 1px solid rgba(255, 255, 255, 0.08);
