@@ -34,6 +34,7 @@ import KeeperPanelWindow from './KeeperPanelWindow.jsx'
 import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
+import VjDeckView from './vjDeck/VjDeckView.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -1716,6 +1717,26 @@ export default function RawEditor({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
                     })}
+                />
+            )
+        }
+        if (node.typeId === 'vj.deck') {
+            // The deck as a window on the patch. Its inside and perform
+            // placements mount the same view; the state is node.values.deck.
+            return (
+                <VjDeckView
+                    node={node}
+                    placement="window"
+                    assets={document.assets || []}
+                    onPatchValues={(patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId: node.id, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                    onUploadFile={async (file) => {
+                        const asset = projectId ? await uploadProjectAsset(projectId, file) : await saveAssetFromFile(file)
+                        if (asset?.id) applyLocalOps({ type: 'upsertAsset', payload: { asset } }, { activityMessage: `Brought in ${file.name}.` })
+                        return asset
+                    }}
                 />
             )
         }
