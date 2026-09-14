@@ -190,7 +190,70 @@ const COLOCATED_RE = /(^|\/)src\/project\/nodes\/[^/]+\/runtime\.js$/
  */
 export const isMeasuredFile = (filePath) => {
     const normalized = filePath.split('\\').join('/')
-    return MEASURED_FILES.some((file) => normalized.endsWith(file)) || COLOCATED_RE.test(normalized)
+    return MEASURED_FILES.some((file) => normalized.endsWith(file))
+        || COLOCATED_RE.test(normalized)
+        || normalized.endsWith(TOP_RUNTIME_FILE)
+}
+
+// Every picture operator is answered by ONE shared runtime (NODE_RUNTIMES
+// spreads computeTopOutput over the operator ids instead of a folder per type),
+// so a colocated-runtime scan finds nothing for them and the manifest used to
+// say `computes: null` for every picture. Named here, whole file.
+export const TOP_RUNTIME_FILE = 'src/project/tops/topRuntime.js'
+// The component that runs every picture operator on this page — the GPU half
+// the shader tab edits. A window-less feed, like the two below.
+export const TOP_FEED_FILE = 'src/raw/components/TopNetworkFeed.jsx'
+
+// Types whose live half is an invisible FEED the editor mounts beside the
+// graph rather than a window — no extractor sees these, because the feed is
+// chosen by a `.filter(node => node.typeId === …)` in the editor's JSX, not by
+// a branch in renderViewNodeContent. Hand-kept like EXTRA_PLACES, and guarded
+// the same way: a test asserts each file exists and the editor still mounts
+// the named symbol.
+export const FEED_PLACES = {
+    'device.keyboard': { file: 'src/raw/components/KeyboardFeed.jsx', symbol: 'KeyboardFeed' },
+    'device.midi.out': { file: 'src/raw/components/MidiOutFeed.jsx', symbol: 'MidiOutFeed' },
+    'media.video': { file: 'src/raw/components/VideoFrameFeed.jsx', symbol: 'VideoFrameFeed' },
+    'media.audio': { file: 'src/raw/components/SoundAnalysisFeed.jsx', symbol: 'SoundAnalysisFeed' }
+}
+
+/**
+ * Which component file each renderViewNodeContent branch renders: the first
+ * JSX element in the branch whose name is imported from a relative module (or
+ * declared in the editor itself — BrowserPanelWindow lives there). Resolved
+ * through the file's own ImportDeclarations, never by guessing from the type
+ * id, so a panel renamed tomorrow is found by the import that names it.
+ */
+export function resolveBranchComponents(source, branches, { fromFile = EDITOR_FILE } = {}) {
+    const ast = parse(source)
+    const imports = new Map()
+    const local = new Set()
+    for (const statement of ast.body) {
+        if (statement.type === 'ImportDeclaration' && typeof statement.source.value === 'string'
+            && statement.source.value.startsWith('.')) {
+            for (const specifier of statement.specifiers) {
+                imports.set(specifier.local.name, statement.source.value)
+            }
+        }
+        if (statement.type === 'FunctionDeclaration' && statement.id?.name) local.add(statement.id.name)
+    }
+    const dir = path.posix.dirname(fromFile)
+    const elements = []
+    walk(ast, (node) => {
+        if (node.type !== 'JSXOpeningElement' || node.name?.type !== 'JSXIdentifier') return
+        elements.push({ name: node.name.name, line: node.loc.start.line })
+    })
+    return branches.map((branch) => {
+        const inBranch = elements.filter((el) => el.line >= branch.fromLine && el.line <= branch.toLine)
+        for (const el of inBranch) {
+            if (imports.has(el.name)) {
+                const file = path.posix.normalize(path.posix.join(dir, imports.get(el.name)))
+                return { ...branch, component: { file, symbol: el.name } }
+            }
+            if (local.has(el.name)) return { ...branch, component: { file: fromFile, symbol: el.name, local: true } }
+        }
+        return { ...branch, component: null }
+    })
 }
 
 // The one hand-kept entry. `time` is the single type whose reality includes a
@@ -217,7 +280,7 @@ export async function buildManifest() {
 
     const anatomy = {}
     for (const id of Object.keys(NODE_TYPES)) {
-        anatomy[id] = { computes: null, draws: null, panel: null, alsoNeeds: EXTRA_PLACES[id] || null }
+        anatomy[id] = { computes: null, draws: null, panel: null, feed: null, alsoNeeds: EXTRA_PLACES[id] || null }
     }
     const place = (slot, file) => (group) => {
         for (const id of group.typeIds) {
@@ -233,7 +296,16 @@ export async function buildManifest() {
     }
     extractSwitchCases(runtimeSource, 'computeNodeOutput').forEach(place('computes', RUNTIME_FILE))
     extractSwitchCases(viewportSource, 'renderNodeBody').forEach(place('draws', VIEWPORT_FILE))
-    extractIfChain(editorSource, 'renderViewNodeContent').forEach(place('panel', EDITOR_FILE))
+    const branches = resolveBranchComponents(editorSource, extractIfChain(editorSource, 'renderViewNodeContent'))
+    branches.forEach(place('panel', EDITOR_FILE))
+    for (const branch of branches) {
+        for (const id of branch.typeIds) {
+            if (anatomy[id]?.panel) anatomy[id].panel.component = branch.component
+        }
+    }
+    for (const [id, feed] of Object.entries(FEED_PLACES)) {
+        if (anatomy[id]) anatomy[id].feed = { file: feed.file, symbol: feed.symbol }
+    }
 
     const fingerprints = {
         [RUNTIME_FILE]: fingerprintSource(runtimeSource),
@@ -259,6 +331,21 @@ export async function buildManifest() {
         }
     }
 
+    // Picture operators: the one shared runtime, whole file, shared by all.
+    const topIds = Object.keys(anatomy).filter((id) => id.startsWith('top.'))
+    if (topIds.length && fs.existsSync(path.join(ROOT, TOP_RUNTIME_FILE))) {
+        const topSource = read(TOP_RUNTIME_FILE)
+        for (const id of topIds) {
+            anatomy[id].computes = {
+                file: TOP_RUNTIME_FILE,
+                ...extractModuleAnswers(topSource),
+                sharedWith: topIds.filter((other) => other !== id)
+            }
+            anatomy[id].feed = { file: TOP_FEED_FILE, symbol: 'TopNetworkFeed' }
+        }
+        fingerprints[TOP_RUNTIME_FILE] = fingerprintSource(topSource)
+    }
+
     return {
         anatomy,
         doorway: { file: RUNTIME_FILE, ...extractDoorwaySpan(runtimeSource, 'computeNodeOutput') },
@@ -281,5 +368,72 @@ export const NODE_ANATOMY = ${JSON.stringify(anatomy)}
 export const DOORWAY_PLACE = ${JSON.stringify(doorway)}
 
 export const SOURCE_FINGERPRINTS = ${JSON.stringify(fingerprints)}
+`
+}
+
+/**
+ * The source of `virtual:node-source` — the REAL text behind every place the
+ * manifest names, for the inside's MADE OF drawer. Imported only lazily
+ * (`import('virtual:node-source')` on the first open), so the main bundle
+ * carries the small manifest and nobody pays for the text until they look.
+ *
+ * Slices (a switch case, a draw case, an editor branch, the doorway block, a
+ * colocated runtime) are embedded as strings, de-duplicated — ten value types
+ * share one case. Whole component files (a panel, a feed) are NOT embedded:
+ * each is a loader for its own `?raw` chunk, fetched only when that tab opens.
+ * Text and line numbers come from the same read of the same file in the same
+ * build, so no fingerprint check is needed between them.
+ */
+export async function buildSourceBundle(manifest = null) {
+    const { anatomy, doorway } = manifest || await buildManifest()
+    const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8')
+    const cache = new Map()
+    const lines = (file) => {
+        if (!cache.has(file)) cache.set(file, read(file).split('\n'))
+        return cache.get(file)
+    }
+    const texts = []
+    const textIndex = new Map()
+    const slice = (place) => {
+        if (!place) return null
+        const key = `${place.file}:${place.fromLine}-${place.toLine}`
+        if (!textIndex.has(key)) {
+            textIndex.set(key, texts.length)
+            texts.push(lines(place.file).slice(place.fromLine - 1, place.toLine).join('\n'))
+        }
+        return { file: place.file, fromLine: place.fromLine, toLine: place.toLine, text: textIndex.get(key) }
+    }
+    const files = new Set()
+    const sources = {}
+    for (const [id, entry] of Object.entries(anatomy)) {
+        const component = entry.panel?.component && !entry.panel.component.local ? entry.panel.component.file : null
+        if (component) files.add(component)
+        if (entry.feed?.file) files.add(entry.feed.file)
+        sources[id] = {
+            computes: slice(entry.computes),
+            draws: slice(entry.draws),
+            branch: slice(entry.panel),
+            component,
+            feed: entry.feed?.file || null,
+            alsoNeeds: entry.alsoNeeds?.file || null
+        }
+    }
+    return { sources, texts, doorway: slice(doorway), files: [...files].filter((file) => fs.existsSync(path.join(ROOT, file))).sort() }
+}
+
+export function renderSourceModule({ sources, texts, doorway, files }) {
+    const loaders = files
+        // An absolute filesystem path: the app's Vite root is src/, so a
+        // root-relative `/src/…` does not resolve, and a module with no real
+        // importer location has no relative base either.
+        .map((file) => `    ${JSON.stringify(file)}: () => import(${JSON.stringify(`${path.join(ROOT, file)}?raw`)})`)
+        .join(',\n')
+    return `// MEASURED AT BUILD TIME — see scripts/node-anatomy-lib.mjs (buildSourceBundle).
+export const SOURCE_TEXTS = ${JSON.stringify(texts)}
+export const NODE_SOURCE = ${JSON.stringify(sources)}
+export const DOORWAY_SOURCE = ${JSON.stringify(doorway)}
+export const FILE_LOADERS = {
+${loaders}
+}
 `
 }

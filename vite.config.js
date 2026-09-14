@@ -257,20 +257,28 @@ const localProfilePlugin = () => ({
 //
 // The measurement is still acorn, still in scripts/node-anatomy-lib.mjs, and
 // still never a pattern-match in the browser — only WHEN it runs has moved.
+// `virtual:node-source` is the second module from the same measurement: the
+// real TEXT behind each place, for the inside's MADE OF drawer. It is only
+// ever imported dynamically, so it is its own lazy chunk.
 const nodeAnatomyPlugin = () => {
     const VIRTUAL_ID = 'virtual:node-anatomy'
     const RESOLVED_ID = `\0${VIRTUAL_ID}`
+    const SOURCE_ID = 'virtual:node-source'
+    const RESOLVED_SOURCE_ID = `\0${SOURCE_ID}`
     return {
         name: 'node-anatomy-manifest',
         resolveId(id) {
-            return id === VIRTUAL_ID ? RESOLVED_ID : null
+            if (id === VIRTUAL_ID) return RESOLVED_ID
+            if (id === SOURCE_ID) return RESOLVED_SOURCE_ID
+            return null
         },
         async load(id) {
-            if (id !== RESOLVED_ID) return null
+            if (id !== RESOLVED_ID && id !== RESOLVED_SOURCE_ID) return null
             // Imported here rather than at the top of the config: buildManifest
             // pulls in the node registry, and the config must stay loadable
             // without evaluating app code.
-            const { buildManifest, renderManifestModule } = await import('./scripts/node-anatomy-lib.mjs')
+            const { buildManifest, renderManifestModule, buildSourceBundle, renderSourceModule } = await import('./scripts/node-anatomy-lib.mjs')
+            if (id === RESOLVED_SOURCE_ID) return renderSourceModule(await buildSourceBundle())
             return renderManifestModule(await buildManifest())
         },
         configureServer(server) {
@@ -282,8 +290,10 @@ const nodeAnatomyPlugin = () => {
             // seeing without a restart.
             const reMeasure = (file) => {
                 if (!isMeasuredFile(file)) return
-                const module = server.moduleGraph.getModuleById(RESOLVED_ID)
-                if (module) server.moduleGraph.invalidateModule(module)
+                for (const resolved of [RESOLVED_ID, RESOLVED_SOURCE_ID]) {
+                    const module = server.moduleGraph.getModuleById(resolved)
+                    if (module) server.moduleGraph.invalidateModule(module)
+                }
             }
             server.watcher.on('change', reMeasure)
             server.watcher.on('add', reMeasure)

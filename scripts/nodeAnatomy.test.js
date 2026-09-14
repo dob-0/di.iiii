@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { EXTRA_PLACES, isMeasuredFile } from './node-anatomy-lib.mjs'
+import { EXTRA_PLACES, FEED_PLACES, TOP_RUNTIME_FILE, isMeasuredFile } from './node-anatomy-lib.mjs'
+import { DOORWAY_SOURCE, FILE_LOADERS, NODE_SOURCE, SOURCE_TEXTS } from 'virtual:node-source'
 import { NODE_ANATOMY, DOORWAY_PLACE, SOURCE_FINGERPRINTS } from 'virtual:node-anatomy'
 import { NODE_TYPES, createNode } from '../src/project/nodeRegistry.js'
 import { isLiveFedOutput } from '../src/project/graph/nodeReading.js'
@@ -95,6 +96,11 @@ describe('the node anatomy manifest', () => {
     // live case is added without the sheet learning of it, this goes red.
     it('agrees with the substitution probe about which types are live-fed', () => {
         for (const [id, entry] of Object.entries(NODE_ANATOMY)) {
+            // The shared picture runtime is outside this probe's reach: it
+            // coerces the live value through Number.isFinite, so a Symbol
+            // probe reads as 0 and the substitution cannot see the channel.
+            // Its live ports are Analyze's measurements, read by the runner.
+            if (entry.computes?.file === TOP_RUNTIME_FILE) continue
             const sliceSaysLive = Boolean(entry.computes) && slice(entry.computes).join('\n').includes('liveOutputs')
             const node = createNode(id)
             if (!node) continue
@@ -124,5 +130,60 @@ describe('the node anatomy manifest', () => {
             expect(NODE_TYPES[id], id).toBeTruthy()
             expect(read(extra.file), `${extra.file} should define ${extra.symbol}`).toContain(extra.symbol)
         }
+    })
+
+    it('gives every picture operator the shared runtime it really runs on', () => {
+        const tops = Object.keys(NODE_TYPES).filter((id) => id.startsWith('top.'))
+        expect(tops.length).toBeGreaterThan(0)
+        for (const id of tops) {
+            expect(NODE_ANATOMY[id].computes?.file, id).toBe(TOP_RUNTIME_FILE)
+            expect(NODE_ANATOMY[id].feed?.file, id).toBe('src/raw/components/TopNetworkFeed.jsx')
+        }
+    })
+
+    it('names the real component file behind every window branch, and it exists and defines that component', () => {
+        for (const [id, entry] of Object.entries(NODE_ANATOMY)) {
+            if (!entry.panel) continue
+            expect(entry.panel.component, `${id} has a window branch with no component`).toBeTruthy()
+            const { file, symbol } = entry.panel.component
+            expect(fs.existsSync(path.join(ROOT, file)), `${id} → ${file}`).toBe(true)
+            expect(read(file), `${file} should define ${symbol}`).toMatch(new RegExp(`function ${symbol}\\b`))
+        }
+        expect(NODE_ANATOMY['source.webcam'].panel.component.file).toBe('src/raw/components/WebcamSourcePanel.jsx')
+    })
+
+    it('keeps the hand-kept feed places true — the file exists and the editor still mounts it', () => {
+        const editor = read('src/raw/components/RawEditor.jsx')
+        for (const [id, feed] of Object.entries(FEED_PLACES)) {
+            expect(NODE_TYPES[id], id).toBeTruthy()
+            expect(read(feed.file), feed.file).toContain(feed.symbol)
+            expect(editor, `RawEditor should mount <${feed.symbol}`).toContain(`<${feed.symbol}`)
+        }
+    })
+})
+
+describe('the node source module (MADE OF)', () => {
+    it('serves every slice as exactly the file lines its range names', () => {
+        for (const [id, entry] of Object.entries(NODE_SOURCE)) {
+            for (const place of [entry.computes, entry.draws, entry.branch].filter(Boolean)) {
+                expect(SOURCE_TEXTS[place.text], `${id} → ${place.file}:${place.fromLine}`).toBe(slice(place).join('\n'))
+            }
+        }
+        expect(SOURCE_TEXTS[DOORWAY_SOURCE.text]).toContain('doorwayOutByParent')
+    })
+
+    it('shares one text between types that share one case', () => {
+        expect(NODE_SOURCE['value.number'].computes.text).toBe(NODE_SOURCE['value.string'].computes.text)
+    })
+
+    it('has a loader for every whole file it names, and a loader returns the real file', async () => {
+        for (const entry of Object.values(NODE_SOURCE)) {
+            for (const file of [entry.component, entry.feed].filter(Boolean)) {
+                expect(FILE_LOADERS[file], file).toBeTypeOf('function')
+            }
+        }
+        const file = NODE_SOURCE['source.webcam'].component
+        const loaded = await FILE_LOADERS[file]()
+        expect(loaded.default).toBe(read(file))
     })
 })
