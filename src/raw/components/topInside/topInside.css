@@ -1,10 +1,14 @@
 /* Inside a picture operator (TopInsidePanel). */
 .raw-top-inside {
     position: absolute;
-    inset: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
     overflow: auto;
     box-sizing: border-box;
     padding: var(--di-space-4);
+    /* Clear the "inside <node>" pill that sits at the top-left of the canvas. */
+    padding-top: calc(var(--di-space-4) + 56px);
     background: rgba(8, 8, 10, 0.96);
     color: var(--di-text, #e8e6ef);
     z-index: 5;
@@ -134,6 +138,6 @@
 }
 
 @media (max-width: 600px) {
-    .raw-top-inside { padding: var(--di-space-2); }
+    .raw-top-inside { padding: var(--di-space-2); padding-top: calc(var(--di-space-2) + 56px); }
     .raw-top-inside-field, .raw-top-inside-range { grid-template-columns: minmax(0, 1fr); }
 }

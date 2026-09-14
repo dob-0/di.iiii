@@ -17,7 +17,7 @@ import './topInside.css'
 const PICTURE_W = 640
 const PICTURE_H = 360
 
-export default function TopInsidePanel({ node, machines = [], onPatchValues }) {
+export default function TopInsidePanel({ node, machines = [], top = 0, onPatchValues }) {
     const operator = TOP_OPERATORS[node.typeId]
     const report = useTopReport(node.id)
     const canvasRef = useRef(null)
@@ -38,7 +38,7 @@ export default function TopInsidePanel({ node, machines = [], onPatchValues }) {
     if (!operator) return null
 
     return (
-        <div className="raw-top-inside">
+        <div className="raw-top-inside" style={{ top }}>
             <header className="raw-top-inside-head">
                 <div>
                     <p className="raw-top-inside-kicker">inside · {node.typeId}</p>

@@ -269,9 +269,16 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
     }, [split, hasNodes])
 
     // --- a parameter drag or a new wire changes the network, not the engine
+    // An operator someone is looking inside, running elsewhere, arrives as video
+    // too — it needs a slot to land in even though nothing here is wired to it.
+    const remoteIds = useMemo(() => {
+        const ids = new Set(split.remote)
+        if (inspected && split.byMachine && [...split.byMachine.values()].some((list) => list.includes(inspected))) ids.add(inspected)
+        return [...ids]
+    }, [split, inspected])
     useEffect(() => {
-        engineRef.current?.setNetwork({ nodes: split.local, wires: network.wires, remote: split.remote })
-    }, [split, network, hasNodes, canvas])
+        engineRef.current?.setNetwork({ nodes: split.local, wires: network.wires, remote: remoteIds })
+    }, [split, network, hasNodes, canvas, remoteIds])
 
     // --- one camera stream per Camera In that runs HERE
     const cameraKey = useMemo(

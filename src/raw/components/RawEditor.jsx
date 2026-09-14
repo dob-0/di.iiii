@@ -2351,6 +2351,7 @@ export default function RawEditor({
                     <TopInsidePanel
                         node={scopeNode}
                         machines={knownMachines}
+                        top={chromeVisible ? workspaceTop : 0}
                         onPatchValues={(values) => applyLocalOps({ type: 'updateNode', payload: { nodeId: scopeNode.id, patch: { values } } })}
                     />
                 ) : null}
