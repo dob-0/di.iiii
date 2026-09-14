@@ -493,3 +493,82 @@ describe('device.dmx.out', () => {
         expect(listNodeTypes({ query: 'vizzz' }).map((type) => type.id)).toContain('device.dmx.out')
     })
 })
+
+// Design audit B5, fix #3: "geom.cube" and "view.text" shown to a person as
+// if they were words, and nowhere did a node say what it does. This is the
+// guard that stops a new palette entry from shipping silent — it fails the
+// build the day a type is added without one, rather than waiting for the
+// next audit to notice.
+describe('every palette node type carries a plain-word summary', () => {
+    const palette = listNodeTypes()
+
+    it('has types to check at all', () => {
+        // A change to listNodeTypes' filters that quietly emptied the palette
+        // would otherwise turn every test below into a vacuous pass.
+        expect(palette.length).toBeGreaterThan(50)
+    })
+
+    it('gives every one a summary, one line, under 90 characters', () => {
+        const offenders = palette
+            .filter((type) => typeof type.summary !== 'string' || !type.summary.trim() || type.summary.length > 90)
+            .map((type) => `${type.id}: ${JSON.stringify(type.summary)}`)
+        expect(offenders).toEqual([])
+    })
+
+    it('never repeats the type id\'s code form inside its own summary', () => {
+        // The whole point is to replace "geom.cube" with a plain sentence —
+        // a summary that still contains the DOTTED id has not done that. A
+        // bare single-word id ("agent", "studio", "time") is also an ordinary
+        // English word and is fine to use in its own right.
+        const offenders = palette
+            .filter((type) => type.id.includes('.') && type.summary?.includes(type.id))
+            .map((type) => type.id)
+        expect(offenders).toEqual([])
+    })
+})
+
+// Design audit item 9 / fix #4: "Bounds are almost never declared." A range
+// is only worth declaring if it is honest — this checks every one that IS
+// declared makes sense, not that every number port has one (many genuinely
+// don't: an operator's raw A/B operands, a Clamp's own min/max parameters).
+describe('declared number ranges are sane', () => {
+    const numberPortsWithRange = []
+    for (const type of Object.values(NODE_TYPES)) {
+        const ports = [...(type.inputs || []), ...(type.configInputs || [])]
+        for (const port of ports) {
+            if (port.type !== 'number') continue
+            if (port.min === undefined && port.max === undefined && port.step === undefined) continue
+            numberPortsWithRange.push({ typeId: type.id, port })
+        }
+    }
+
+    it('has ranges to check at all', () => {
+        // A registry-wide refactor that stopped declaring min/max/step
+        // anywhere would otherwise pass this file vacuously.
+        expect(numberPortsWithRange.length).toBeGreaterThan(20)
+    })
+
+    it('keeps min below max wherever both are declared', () => {
+        const offenders = numberPortsWithRange
+            .filter(({ port }) => port.min !== undefined && port.max !== undefined && !(port.min < port.max))
+            .map(({ typeId, port }) => `${typeId}.${port.id}: min ${port.min} >= max ${port.max}`)
+        expect(offenders).toEqual([])
+    })
+
+    it('keeps step positive wherever declared', () => {
+        const offenders = numberPortsWithRange
+            .filter(({ port }) => port.step !== undefined && !(port.step > 0))
+            .map(({ typeId, port }) => `${typeId}.${port.id}: step ${port.step}`)
+        expect(offenders).toEqual([])
+    })
+
+    it('keeps the declared default inside its own min/max', () => {
+        const offenders = numberPortsWithRange
+            .filter(({ port }) => {
+                if (port.default === undefined || port.min === undefined || port.max === undefined) return false
+                return port.default < port.min || port.default > port.max
+            })
+            .map(({ typeId, port }) => `${typeId}.${port.id}: default ${port.default} outside [${port.min}, ${port.max}]`)
+        expect(offenders).toEqual([])
+    })
+})

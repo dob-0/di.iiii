@@ -341,6 +341,7 @@ export const NODE_TYPES = {
     'value.number': {
         id: 'value.number',
         label: 'Number',
+        summary: 'A single number you can type in or wire from elsewhere.',
         category: 'source',
         runtime: 'any',
         singleton: false,
@@ -355,6 +356,7 @@ export const NODE_TYPES = {
     'value.color': {
         id: 'value.color',
         label: 'Colour',
+        summary: 'A colour swatch you pick, ready to wire anywhere colour is needed.',
         category: 'source',
         runtime: 'any',
         singleton: false,
@@ -369,6 +371,7 @@ export const NODE_TYPES = {
     'value.vec3': {
         id: 'value.vec3',
         label: 'Vector',
+        summary: 'Three numbers together — a position, size or direction.',
         category: 'source',
         runtime: 'any',
         singleton: false,
@@ -383,6 +386,7 @@ export const NODE_TYPES = {
     'value.boolean': {
         id: 'value.boolean',
         label: 'Boolean',
+        summary: 'An on/off switch you can wire into anything that reads yes or no.',
         category: 'source',
         runtime: 'any',
         singleton: false,
@@ -397,6 +401,7 @@ export const NODE_TYPES = {
     'value.string': {
         id: 'value.string',
         label: 'String',
+        summary: 'A line of text you can type in or wire from elsewhere.',
         category: 'source',
         runtime: 'any',
         singleton: false,
@@ -411,10 +416,11 @@ export const NODE_TYPES = {
     'time': {
         id: 'time',
         label: 'Time',
+        summary: 'The clock: elapsed seconds, a beat pulse, and a wave to drive motion.',
         category: 'source',
         runtime: 'any',
         inputs: [
-            { id: 'bpm', type: 'number', label: 'BPM', default: 120 },
+            { id: 'bpm', type: 'number', label: 'BPM', default: 120, min: 20, max: 300, step: 1 },
         ],
         outputs: [
             { id: 'elapsed', type: 'number', label: 'Elapsed (s)' },
@@ -429,6 +435,7 @@ export const NODE_TYPES = {
     'source.ar': {
         id: 'source.ar',
         label: 'AR Camera',
+        summary: 'The live picture, position and anchors from an AR-capable camera.',
         category: 'source',
         runtime: 'web',
         authoringOnly: true,
@@ -445,6 +452,7 @@ export const NODE_TYPES = {
     'source.webcam': {
         id: 'source.webcam',
         label: 'Webcam',
+        summary: 'The live picture from a camera on this device.',
         category: 'source',
         runtime: 'web',
         singleton: false,
@@ -463,6 +471,7 @@ export const NODE_TYPES = {
     'source.mic': {
         id: 'source.mic',
         label: 'Microphone',
+        summary: 'The live volume and pitch picked up by a microphone.',
         category: 'source',
         runtime: 'web',
         singleton: false,
@@ -481,6 +490,7 @@ export const NODE_TYPES = {
     'work.status': {
         id: 'work.status',
         label: 'Work Status',
+        summary: 'Live counts from the build: running sessions, unsaved work, open pull requests.',
         category: 'source',
         runtime: 'web',
         // serverXR serves its routes only to loopback on a non-production
@@ -505,6 +515,7 @@ export const NODE_TYPES = {
     'work.agent': {
         id: 'work.agent',
         label: 'Agent Run',
+        summary: 'Sends a prompt to an agent and reports back its status and result.',
         category: 'custom',
         runtime: 'web',
         // Same loopback-only gate as work.status (agentRunRoutes).
@@ -530,6 +541,7 @@ export const NODE_TYPES = {
     'source.insta360': {
         id: 'source.insta360',
         label: 'Insta360 Camera',
+        summary: 'The live 360° picture from an Insta360 camera.',
         category: 'source',
         runtime: 'any',
         authoringOnly: true,
@@ -547,6 +559,7 @@ export const NODE_TYPES = {
     'source.stereo': {
         id: 'source.stereo',
         label: 'Stereo Camera',
+        summary: 'The live left, right and depth picture from a stereo camera.',
         category: 'source',
         runtime: 'local',
         authoringOnly: true,
@@ -566,6 +579,7 @@ export const NODE_TYPES = {
     'source.realsense.d405': {
         id: 'source.realsense.d405',
         label: 'RealSense D405',
+        summary: 'The live colour and depth picture from a RealSense D405 camera.',
         category: 'source',
         runtime: 'local',
         authoringOnly: true,
@@ -589,14 +603,15 @@ export const NODE_TYPES = {
     'device.ptz.osc': {
         id: 'device.ptz.osc',
         label: 'PTZ Camera (OSC)',
+        summary: 'A camera you can pan, tilt and zoom over the network.',
         category: 'device',
         runtime: 'local',
         authoringOnly: true,
         singleton: false,
         inputs: [
-            { id: 'pan',  type: 'number', label: 'Pan',  default: 0 },
-            { id: 'tilt', type: 'number', label: 'Tilt', default: 0 },
-            { id: 'zoom', type: 'number', label: 'Zoom', default: 1 },
+            { id: 'pan',  type: 'number', label: 'Pan',  default: 0, min: -180, max: 180, step: 1 },
+            { id: 'tilt', type: 'number', label: 'Tilt', default: 0, min: -90, max: 90, step: 1 },
+            { id: 'zoom', type: 'number', label: 'Zoom', default: 1, min: 1, max: 10, step: 0.1 },
         ],
         outputs: [
             { id: 'frame', type: 'texture', label: 'Frame' },
@@ -617,6 +632,7 @@ export const NODE_TYPES = {
     'device.osc.in': {
         id: 'device.osc.in',
         label: 'OSC In',
+        summary: 'Listens for a value arriving over OSC from the network.',
         category: 'device',
         runtime: 'local',
         authoringOnly: true,
@@ -632,7 +648,7 @@ export const NODE_TYPES = {
             port: 8000,
         },
         configInputs: [
-            { id: 'port', type: 'number', label: 'Listen Port' },
+            { id: 'port', type: 'number', label: 'Listen Port', min: 1, max: 65535, step: 1 },
         ],
         render: 'hidden',
     },
@@ -640,6 +656,7 @@ export const NODE_TYPES = {
     'device.osc.out': {
         id: 'device.osc.out',
         label: 'OSC Out',
+        summary: 'Sends a value out over OSC to the network.',
         category: 'device',
         runtime: 'local',
         authoringOnly: true,
@@ -659,7 +676,7 @@ export const NODE_TYPES = {
         },
         configInputs: [
             { id: 'targetHost', type: 'string', label: 'Target Host' },
-            { id: 'targetPort', type: 'number', label: 'Target Port' },
+            { id: 'targetPort', type: 'number', label: 'Target Port', min: 1, max: 65535, step: 1 },
         ],
         render: 'hidden',
     },
@@ -667,6 +684,7 @@ export const NODE_TYPES = {
     'device.midi.in': {
         id: 'device.midi.in',
         label: 'MIDI In',
+        summary: 'The notes and controls arriving from a MIDI device.',
         category: 'device',
         // Web MIDI, not the local runtime: this is the one device family a page
         // can already reach, which makes it the cheapest proof of the provider
@@ -686,7 +704,7 @@ export const NODE_TYPES = {
         // message from a controller set to any other channel.
         defaultValues: { deviceId: '', channel: 0 },
         configInputs: [
-            { id: 'channel', type: 'number', label: 'Channel' },
+            { id: 'channel', type: 'number', label: 'Channel', min: 0, max: 16, step: 1 },
         ],
         // panel-2d for the same reason as the capture family: denied permission,
         // no browser support and nothing-plugged-in are all ordinary outcomes
@@ -702,6 +720,7 @@ export const NODE_TYPES = {
     'device.dmx.out': {
         id: 'device.dmx.out',
         label: 'DMX Out',
+        summary: 'Sends a lighting channel\'s value out to the DMX rig.',
         category: 'device',
         runtime: 'web',
         singleton: false,
@@ -710,9 +729,9 @@ export const NODE_TYPES = {
             // Wires carry 0..1, the LFO/Range convention; the panel turns them
             // into DMX bytes. Value without a Channel is meaningless, so both
             // travel together.
-            { id: 'master',   type: 'number', label: 'Master' },
-            { id: 'channel',  type: 'number', label: 'Channel', default: 1 },
-            { id: 'value',    type: 'number', label: 'Value' },
+            { id: 'master',   type: 'number', label: 'Master', min: 0, max: 1, step: 0.01 },
+            { id: 'channel',  type: 'number', label: 'Channel', default: 1, min: 1, max: 512, step: 1 },
+            { id: 'value',    type: 'number', label: 'Value', min: 0, max: 1, step: 0.01 },
             // `any`, the MIDI Out idiom: a Button, a Compare, a Toggle are
             // exactly what should kill the lights.
             { id: 'blackout', type: 'any',    label: 'Blackout' },
@@ -755,26 +774,34 @@ export const NODE_TYPES = {
     'device.midi.out': {
         id: 'device.midi.out',
         label: 'MIDI Out',
+        summary: 'Sends a note or control change out to a MIDI device.',
         category: 'device',
         runtime: 'web',
         singleton: false,
         keywords: ['midi', 'out', 'send', 'note', 'cc', 'controller', 'synth', 'lighting'],
         inputs: [
-            { id: 'note',     type: 'number', label: 'Note',     default: 60 },
-            { id: 'velocity', type: 'number', label: 'Velocity', default: 100 },
-            { id: 'cc',       type: 'number', label: 'CC',       default: 1 },
-            { id: 'value',    type: 'number', label: 'Value',    default: 0 },
+            { id: 'note',     type: 'number', label: 'Note',     default: 60, min: 0, max: 127, step: 1 },
+            { id: 'velocity', type: 'number', label: 'Velocity', default: 100, min: 0, max: 127, step: 1 },
+            { id: 'cc',       type: 'number', label: 'CC',       default: 1, min: 0, max: 127, step: 1 },
+            { id: 'value',    type: 'number', label: 'Value',    default: 0, min: 0, max: 127, step: 1 },
             // `any`, not `signal`: a Button, a Compare, a Toggle are exactly
             // what should hold a note — and MIDI In's rising count re-strikes.
             { id: 'trigger',  type: 'any',    label: 'Trigger' },
-            { id: 'channel',  type: 'number', label: 'Channel',  default: 1 },
+            { id: 'channel',  type: 'number', label: 'Channel',  default: 1, min: 1, max: 16, step: 1 },
         ],
         outputs: [
             { id: 'status', type: 'string', label: 'Status' },
         ],
         defaultValues: {
             channel: 1,
+            deviceId: '',
         },
+        // Config, not a port: which physical output this sends to. Empty
+        // means every connected device, same convention useMidiOutput's send
+        // already uses.
+        configInputs: [
+            { id: 'deviceId', type: 'string', label: 'Device' },
+        ],
         render: 'hidden',
     },
 
@@ -785,6 +812,7 @@ export const NODE_TYPES = {
     'stream.compositor': {
         id: 'stream.compositor',
         label: 'Stream Compositor',
+        summary: 'Combines several pictures into one output.',
         category: 'stream',
         runtime: 'any',
         authoringOnly: true,
@@ -808,6 +836,7 @@ export const NODE_TYPES = {
     'stream.switcher': {
         id: 'stream.switcher',
         label: 'Stream Switcher',
+        summary: 'Switches between several pictures, one live at a time.',
         category: 'stream',
         runtime: 'any',
         authoringOnly: true,
@@ -817,7 +846,7 @@ export const NODE_TYPES = {
             { id: 'b',      type: 'texture', label: 'B'                   },
             { id: 'c',      type: 'texture', label: 'C'                   },
             { id: 'd',      type: 'texture', label: 'D'                   },
-            { id: 'select', type: 'number',  label: 'Select (0-3)', default: 0 },
+            { id: 'select', type: 'number',  label: 'Select (0-3)', default: 0, min: 0, max: 3, step: 1 },
         ],
         outputs: [
             { id: 'out', type: 'texture', label: 'Program' },
@@ -831,6 +860,7 @@ export const NODE_TYPES = {
     'stream.output': {
         id: 'stream.output',
         label: 'Stream Output',
+        summary: 'Sends the finished picture out to a stream.',
         category: 'stream',
         runtime: 'local',
         authoringOnly: true,
@@ -855,6 +885,7 @@ export const NODE_TYPES = {
     'stream.recorder': {
         id: 'stream.recorder',
         label: 'Stream Recorder',
+        summary: 'Records the picture to a file.',
         category: 'stream',
         runtime: 'local',
         authoringOnly: true,
@@ -882,6 +913,7 @@ export const NODE_TYPES = {
     'view.desk': {
         id: 'view.desk',
         label: 'Desk',
+        summary: 'A flat panel of controls, floating as its own window.',
         category: 'view',
         runtime: 'web',
         singleton: false,
@@ -898,6 +930,7 @@ export const NODE_TYPES = {
     'stream.monitor': {
         id: 'stream.monitor',
         label: 'Monitor',
+        summary: 'Shows the live picture arriving on its input.',
         category: 'stream',
         runtime: 'any',
         singleton: false,
@@ -918,6 +951,7 @@ export const NODE_TYPES = {
     'stream.controller': {
         id: 'stream.controller',
         label: 'Operator Controller',
+        summary: 'Controls for a connected picture-making device.',
         category: 'stream',
         runtime: 'any',
         authoringOnly: true,
@@ -925,8 +959,8 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'title',    type: 'string', label: 'Title',    default: 'Operator Desk' },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 1.5, 0]      },
-            { id: 'width',    type: 'number', label: 'Width',    default: 420               },
-            { id: 'height',   type: 'number', label: 'Height',   default: 300               },
+            { id: 'width',    type: 'number', label: 'Width',    default: 420, min: 100, max: 2000, step: 1 },
+            { id: 'height',   type: 'number', label: 'Height',   default: 300, min: 100, max: 2000, step: 1 },
         ],
         outputs: [
             { id: 'mix',  type: 'number', label: 'Mix'  },
@@ -947,6 +981,7 @@ export const NODE_TYPES = {
     'universe.node0': {
         id: 'universe.node0',
         label: 'Node 0',
+        summary: 'The document\'s own starting point.',
         category: 'universe',
         runtime: 'any',
         authoringOnly: true,
@@ -974,6 +1009,7 @@ export const NODE_TYPES = {
     'universe.world': {
         id: 'universe.world',
         label: 'Scene',
+        summary: 'The 3D place you can walk into and fill with things.',
         category: 'universe',
         runtime: 'any',
         // Free-form, not a singleton (product decision 2026-07-19) — any number
@@ -1019,6 +1055,7 @@ export const NODE_TYPES = {
     'universe.space': {
         id: 'universe.space',
         label: 'Kiosk',
+        summary: 'A container whose one setting hides the toolbar for everything inside it.',
         category: 'universe',
         runtime: 'any',
         // Not authoringOnly: showChrome is consumed for real (RawEditor's
@@ -1051,6 +1088,7 @@ export const NODE_TYPES = {
     'universe.desk.2d': {
         id: 'universe.desk.2d',
         label: '2D Desk',
+        summary: 'A flat panel of controls, standing in the scene.',
         category: 'universe',
         runtime: 'any',
         authoringOnly: true,
@@ -1059,8 +1097,8 @@ export const NODE_TYPES = {
             { id: 'title',    type: 'string', label: 'Title', default: '2D Desk'   },
             { id: 'theme',    type: 'string', label: 'Theme', default: 'dark-grid'  },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 1.5, 0] },
-            { id: 'width',    type: 'number', label: 'Width', default: 520          },
-            { id: 'height',   type: 'number', label: 'Height', default: 340         },
+            { id: 'width',    type: 'number', label: 'Width', default: 520, min: 100, max: 2000, step: 1 },
+            { id: 'height',   type: 'number', label: 'Height', default: 340, min: 100, max: 2000, step: 1 },
         ],
         outputs: [
             { id: 'state',   type: 'any',    label: 'Desk State' },
@@ -1082,6 +1120,7 @@ export const NODE_TYPES = {
     'universe.desk.3d': {
         id: 'universe.desk.3d',
         label: '3D Desk',
+        summary: 'A panel of controls, standing in the scene as a 3D object.',
         category: 'universe',
         runtime: 'any',
         paletteHidden: true,
@@ -1118,6 +1157,7 @@ export const NODE_TYPES = {
     'universe.activate': {
         id: 'universe.activate',
         label: 'Activate Node',
+        summary: 'Marks which of several nodes of the same kind is the active one.',
         category: 'universe',
         runtime: 'any',
         authoringOnly: true,
@@ -1139,6 +1179,7 @@ export const NODE_TYPES = {
     'universe.link': {
         id: 'universe.link',
         label: 'Kiosk Link',
+        summary: 'A link that takes you into a Kiosk.',
         category: 'universe',
         runtime: 'any',
         authoringOnly: true,
@@ -1164,6 +1205,7 @@ export const NODE_TYPES = {
     'geom.cube': {
         id: 'geom.cube',
         label: 'Cube',
+        summary: 'A box you can colour, size and move.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
@@ -1173,10 +1215,10 @@ export const NODE_TYPES = {
             // Appearance (2026-08-20, material pass 1). Defaults mirror a bare
             // meshStandardMaterial, so documents that predate these ports
             // render pixel-identical.
-            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
-            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1, min: 0, max: 1, step: 0.01 },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0, min: 0, max: 1, step: 0.01 },
             { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
-            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1, min: 0, max: 1, step: 0.01 },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
         ],
@@ -1195,19 +1237,20 @@ export const NODE_TYPES = {
     'geom.sphere': {
         id: 'geom.sphere',
         label: 'Sphere',
+        summary: 'A ball you can colour, size and move.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
         inputs: [
             { id: 'color',    type: 'color',  label: 'Colour',    default: '#5fa8ff'   },
-            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5         },
+            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5, min: 0.01, max: 50, step: 0.01 },
             // Appearance (2026-08-20, material pass 1). Defaults mirror a bare
             // meshStandardMaterial, so documents that predate these ports
             // render pixel-identical.
-            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
-            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1, min: 0, max: 1, step: 0.01 },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0, min: 0, max: 1, step: 0.01 },
             { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
-            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1, min: 0, max: 1, step: 0.01 },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
         ],
@@ -1221,13 +1264,14 @@ export const NODE_TYPES = {
     'geom.plane': {
         id: 'geom.plane',
         label: 'Plane',
+        summary: 'A flat rectangle you can colour, size and move.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
         inputs: [
             { id: 'color',      type: 'color',   label: 'Colour',       default: '#ffffff' },
-            { id: 'width',      type: 'number',  label: 'Width',       default: 2         },
-            { id: 'height',     type: 'number',  label: 'Height',      default: 2         },
+            { id: 'width',      type: 'number',  label: 'Width',       default: 2, min: 0.01, max: 50, step: 0.01 },
+            { id: 'height',     type: 'number',  label: 'Height',      default: 2, min: 0.01, max: 50, step: 0.01 },
             { id: 'textureUrl', type: 'string',  label: 'Texture URL', default: ''        },
             // A live texture (e.g. source.webcam.frame) wired in here wins over
             // textureUrl — see renderNodeBody's geom.plane case. Distinct from
@@ -1237,10 +1281,10 @@ export const NODE_TYPES = {
             // Appearance (2026-08-20, material pass 1). Defaults mirror a bare
             // meshStandardMaterial, so documents that predate these ports
             // render pixel-identical.
-            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
-            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1, min: 0, max: 1, step: 0.01 },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0, min: 0, max: 1, step: 0.01 },
             { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
-            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1, min: 0, max: 1, step: 0.01 },
             { id: 'position',   type: 'vec3',    label: 'Position',    default: [0, 0, 0] },
             { id: 'rotation',   type: 'vec3',    label: 'Rotation',    default: [0, 0, 0] },
         ],
@@ -1273,6 +1317,7 @@ export const NODE_TYPES = {
     'shape.merge': {
         id: 'shape.merge',
         label: 'Merge',
+        summary: 'Joins several shapes into one.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
@@ -1305,6 +1350,7 @@ export const NODE_TYPES = {
     'geom.geo': {
         id: 'geom.geo',
         label: 'Geo',
+        summary: 'A plain container standing in the scene, ready to hold anything.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
@@ -1329,6 +1375,7 @@ export const NODE_TYPES = {
     'geom.constructor': {
         id: 'geom.constructor',
         label: 'Constructor',
+        summary: 'Builds a shape from whatever geometry wires into it.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
@@ -1363,6 +1410,7 @@ export const NODE_TYPES = {
     'port.in': {
         id: 'port.in',
         label: 'In',
+        summary: 'A door that brings a wire in from outside this node.',
         category: 'universe',
         runtime: 'any',
         singleton: false,
@@ -1394,6 +1442,7 @@ export const NODE_TYPES = {
     'port.out': {
         id: 'port.out',
         label: 'Out',
+        summary: 'A door that sends a wire out of this node.',
         category: 'universe',
         runtime: 'any',
         singleton: false,
@@ -1424,6 +1473,7 @@ export const NODE_TYPES = {
     'geom.model': {
         id: 'geom.model',
         label: 'Model',
+        summary: 'A 3D model file, brought in and standing in the scene.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
@@ -1436,7 +1486,7 @@ export const NODE_TYPES = {
             { id: 'rotation',       type: 'vec3',    label: 'Rotation',   default: [0, 0, 0] },
             { id: 'scale',          type: 'vec3',    label: 'Scale',      default: [1, 1, 1] },
             { id: 'playAnimations', type: 'boolean', label: 'Play',       default: true      },
-            { id: 'animationSpeed', type: 'number',  label: 'Speed',      default: 1, step: 0.1 },
+            { id: 'animationSpeed', type: 'number',  label: 'Speed',      default: 1, min: 0, max: 5, step: 0.1 },
             { id: 'animationClip',  type: 'string',  label: 'Clip',       default: ''        },
         ],
         // No `bounds` output on purpose: a model's size is unknown until the
@@ -1450,6 +1500,7 @@ export const NODE_TYPES = {
     'media.video': {
         id: 'media.video',
         label: 'Video',
+        summary: 'A video file, playing as a picture and a sound.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
@@ -1476,6 +1527,7 @@ export const NODE_TYPES = {
     'media.audio': {
         id: 'media.audio',
         label: 'Sound',
+        summary: 'A sound file, standing in the scene and playing.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
@@ -1508,6 +1560,7 @@ export const NODE_TYPES = {
     'view.text': {
         id: 'view.text',
         label: 'Text',
+        summary: 'A panel of text, floating as its own window.',
         category: 'view',
         runtime: 'any',
         singleton: false,
@@ -1522,6 +1575,7 @@ export const NODE_TYPES = {
     'view.browser': {
         id: 'view.browser',
         label: 'Browser',
+        summary: 'A web page, floating as its own window.',
         category: 'view',
         runtime: 'any',
         singleton: false,
@@ -1536,6 +1590,7 @@ export const NODE_TYPES = {
     'view.director': {
         id: 'view.director',
         label: 'Director',
+        summary: 'Plays a timeline of camera and light cues.',
         category: 'view',
         runtime: 'any',
         singleton: false,
@@ -1555,6 +1610,7 @@ export const NODE_TYPES = {
     'view.timeline': {
         id: 'view.timeline',
         label: 'Timeline',
+        summary: 'A row of cues you can step through and trigger.',
         category: 'view',
         runtime: 'any',
         singleton: false,
@@ -1587,6 +1643,7 @@ export const NODE_TYPES = {
     'view.list': {
         id: 'view.list',
         label: 'List',
+        summary: 'A panel listing items, floating as its own window.',
         category: 'view',
         runtime: 'any',
         singleton: false,
@@ -1610,6 +1667,7 @@ export const NODE_TYPES = {
     'view.image': {
         id: 'view.image',
         label: 'Image',
+        summary: 'A picture, floating as its own window.',
         category: 'view',
         runtime: 'any',
         singleton: false,
@@ -1636,6 +1694,7 @@ export const NODE_TYPES = {
     'view.outliner': {
         id: 'view.outliner',
         label: 'Outliner',
+        summary: 'A list of every node and object, for finding and selecting.',
         category: 'view',
         runtime: 'any',
         singleton: false,
@@ -1656,6 +1715,7 @@ export const NODE_TYPES = {
     'view.library': {
         id: 'view.library',
         label: 'Create',
+        summary: 'Places a ready-made object into the scene.',
         category: 'view',
         keywords: ['create', 'add', 'library', 'shape', 'primitive', 'light', 'cube', 'box'],
         runtime: 'any',
@@ -1685,6 +1745,7 @@ export const NODE_TYPES = {
     'view.publish': {
         id: 'view.publish',
         label: 'Public page',
+        summary: 'The page this space publishes to the web.',
         category: 'view',
         keywords: ['publish', 'public', 'share', 'live', 'visitor', 'audience', 'link', 'page'],
         runtime: 'any',
@@ -1700,6 +1761,7 @@ export const NODE_TYPES = {
     'view.inspector': {
         id: 'view.inspector',
         label: 'Inspector',
+        summary: 'Shows the settings and wires of whatever is selected.',
         category: 'view',
         runtime: 'any',
         singleton: false,
@@ -1720,6 +1782,7 @@ export const NODE_TYPES = {
     'agent': {
         id: 'agent',
         label: 'Agent',
+        summary: 'Talks with an agent and shows its last message.',
         // Moved out of 'view' when the Agent category arrived with agent.keeper:
         // a node called Agent filed under View reads as a filing mistake, and
         // the two belong side by side — this one talks to a hosted model through
@@ -1755,6 +1818,7 @@ export const NODE_TYPES = {
     'studio': {
         id: 'studio',
         label: 'Studio',
+        summary: 'The four-panel editor, as a node you can enter.',
         category: 'universe',
         runtime: 'any',
         singleton: false,
@@ -1794,6 +1858,7 @@ export const NODE_TYPES = {
     'math.op': {
         id: 'math.op',
         label: 'Math',
+        summary: 'Does arithmetic on two numbers — add, multiply and more.',
         category: 'math',
         runtime: 'any',
         singleton: false,
@@ -1816,6 +1881,7 @@ export const NODE_TYPES = {
     'math.mix': {
         id: 'math.mix',
         label: 'Mix',
+        summary: 'Blends between two values by an amount.',
         category: 'math',
         runtime: 'any',
         singleton: false,
@@ -1825,7 +1891,7 @@ export const NODE_TYPES = {
             // registry that produced nothing at rest (2026-08-18 port audit).
             { id: 'a', type: 'any',    label: 'A',      default: 0   },
             { id: 'b', type: 'any',    label: 'B',      default: 0   },
-            { id: 't', type: 'number', label: 'Factor', default: 0.5 },
+            { id: 't', type: 'number', label: 'Factor', default: 0.5, min: 0, max: 1, step: 0.01 },
         ],
         outputs: [
             { id: 'out', type: 'any', label: 'Result' },
@@ -1837,6 +1903,7 @@ export const NODE_TYPES = {
     'math.clamp': {
         id: 'math.clamp',
         label: 'Clamp',
+        summary: 'Keeps a number inside a range.',
         category: 'math',
         runtime: 'any',
         singleton: false,
@@ -1858,6 +1925,7 @@ export const NODE_TYPES = {
     'logic.compare': {
         id: 'logic.compare',
         label: 'Compare',
+        summary: 'Compares two values and answers equal, greater or less.',
         category: 'logic',
         runtime: 'any',
         singleton: false,
@@ -1885,6 +1953,7 @@ export const NODE_TYPES = {
     'logic.route': {
         id: 'logic.route',
         label: 'Route',
+        summary: 'Opens or picks between values by a switch.',
         category: 'logic',
         runtime: 'any',
         singleton: false,
@@ -1907,12 +1976,13 @@ export const NODE_TYPES = {
     'signal.lag': {
         id: 'signal.lag',
         label: 'Lag',
+        summary: 'Smooths a value\'s changes over time.',
         category: 'signal',
         runtime: 'any',
         singleton: false,
         inputs: [
             { id: 'in',  type: 'number', label: 'Value',   default: 0   },
-            { id: 'lag', type: 'number', label: 'Lag (s)', default: 0.5 },
+            { id: 'lag', type: 'number', label: 'Lag (s)', default: 0.5, min: 0, max: 10, step: 0.05 },
         ],
         outputs: [
             { id: 'out', type: 'number', label: 'Result' },
@@ -1924,11 +1994,12 @@ export const NODE_TYPES = {
     'value.noise': {
         id: 'value.noise',
         label: 'Noise',
+        summary: 'A number that wanders smoothly on its own.',
         category: 'value',
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'speed',   type: 'number', label: 'Speed',   default: 1 },
+            { id: 'speed',   type: 'number', label: 'Speed',   default: 1, min: 0, max: 20, step: 0.01 },
             { id: 'variant', type: 'number', label: 'Variant', default: 0 },
         ],
         outputs: [
@@ -1941,6 +2012,7 @@ export const NODE_TYPES = {
     'value.random': {
         id: 'value.random',
         label: 'Random',
+        summary: 'A random number, redrawn each time its Variant changes.',
         category: 'value',
         runtime: 'any',
         singleton: false,
@@ -1960,6 +2032,7 @@ export const NODE_TYPES = {
     'geom.array': {
         id: 'geom.array',
         label: 'Array',
+        summary: 'Repeats a shape a number of times with an offset.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
@@ -1968,7 +2041,7 @@ export const NODE_TYPES = {
             // No default on geometry: an Array repeats what arrives, and a
             // bare Array honestly carries nothing (PASS_THROUGH_PORTS).
             { id: 'geometry', type: 'geometry', label: 'Geometry'                    },
-            { id: 'count',    type: 'number',   label: 'Count',  default: 3          },
+            { id: 'count',    type: 'number',   label: 'Count',  default: 3, min: 1, max: 100, step: 1 },
             { id: 'offset',   type: 'vec3',     label: 'Offset', default: [1.5, 0, 0] },
         ],
         outputs: [
@@ -1983,6 +2056,7 @@ export const NODE_TYPES = {
     'math.range': {
         id: 'math.range',
         label: 'Range',
+        summary: 'Rescales a number from one range into another.',
         category: 'math',
         runtime: 'any',
         singleton: false,
@@ -2004,13 +2078,14 @@ export const NODE_TYPES = {
     'signal.lfo': {
         id: 'signal.lfo',
         label: 'Oscillator',
+        summary: 'A wave that rises and falls on its own — sine, square, triangle or saw.',
         category: 'signal',
         runtime: 'any',
         singleton: false,
         keywords: ['lfo', 'oscillator', 'wave', 'sine', 'square', 'triangle', 'saw', 'pulse', 'cycle'],
         inputs: [
-            { id: 'frequency', type: 'number', label: 'Frequency', default: 1 },
-            { id: 'phase',     type: 'number', label: 'Phase',     default: 0 },
+            { id: 'frequency', type: 'number', label: 'Frequency', default: 1, min: 0.01, max: 20, step: 0.01 },
+            { id: 'phase',     type: 'number', label: 'Phase',     default: 0, min: 0, max: 1, step: 0.01 },
         ],
         outputs: [
             { id: 'sine',     type: 'number', label: 'Sine'     },
@@ -2025,6 +2100,7 @@ export const NODE_TYPES = {
     'logic.combine': {
         id: 'logic.combine',
         label: 'Logic',
+        summary: 'Combines several yes/no signals by both, either, one or neither.',
         category: 'logic',
         runtime: 'any',
         singleton: false,
@@ -2046,6 +2122,7 @@ export const NODE_TYPES = {
     'math.extremes': {
         id: 'math.extremes',
         label: 'Extremes',
+        summary: 'Finds the largest or smallest of two numbers.',
         category: 'math',
         runtime: 'any',
         singleton: false,
@@ -2065,6 +2142,7 @@ export const NODE_TYPES = {
     'math.round': {
         id: 'math.round',
         label: 'Round',
+        summary: 'Rounds a number up, down or to the nearest whole.',
         category: 'math',
         runtime: 'any',
         singleton: false,
@@ -2084,6 +2162,7 @@ export const NODE_TYPES = {
     'signal.ease': {
         id: 'signal.ease',
         label: 'Ease',
+        summary: 'Shapes a value\'s motion — smooth, ease in, ease out or bounce.',
         category: 'signal',
         runtime: 'any',
         singleton: false,
@@ -2107,6 +2186,7 @@ export const NODE_TYPES = {
     'signal.counter': {
         id: 'signal.counter',
         label: 'Counter',
+        summary: 'Counts up each time it is triggered.',
         category: 'signal',
         runtime: 'any',
         singleton: false,
@@ -2126,6 +2206,7 @@ export const NODE_TYPES = {
     'signal.hold': {
         id: 'signal.hold',
         label: 'Hold',
+        summary: 'Freezes a value until told to sample again.',
         category: 'signal',
         runtime: 'any',
         singleton: false,
@@ -2144,13 +2225,14 @@ export const NODE_TYPES = {
     'signal.delay': {
         id: 'signal.delay',
         label: 'Delay',
+        summary: 'Delays a value by a set time.',
         category: 'signal',
         runtime: 'any',
         singleton: false,
         keywords: ['delay', 'echo', 'lateness', 'shift', 'time', 'offset'],
         inputs: [
             { id: 'value', type: 'number', label: 'Value',     default: 0   },
-            { id: 'delay', type: 'number', label: 'Delay (s)', default: 0.5 },
+            { id: 'delay', type: 'number', label: 'Delay (s)', default: 0.5, min: 0, max: 60, step: 0.05 },
         ],
         outputs: [
             { id: 'out', type: 'number', label: 'Later' },
@@ -2162,13 +2244,14 @@ export const NODE_TYPES = {
     'signal.timer': {
         id: 'signal.timer',
         label: 'Timer',
+        summary: 'Counts down and signals when it reaches zero.',
         category: 'signal',
         runtime: 'any',
         singleton: false,
         keywords: ['timer', 'stopwatch', 'countdown', 'cue', 'duration', 'progress'],
         inputs: [
             { id: 'start',  type: 'boolean', label: 'Start',      default: false },
-            { id: 'length', type: 'number',  label: 'Length (s)', default: 5     },
+            { id: 'length', type: 'number',  label: 'Length (s)', default: 5, min: 0, max: 600, step: 0.5 },
         ],
         outputs: [
             { id: 'elapsed',  type: 'number',  label: 'Elapsed (s)' },
@@ -2182,15 +2265,16 @@ export const NODE_TYPES = {
     'signal.trigger': {
         id: 'signal.trigger',
         label: 'Trigger',
+        summary: 'Fires a one-off signal when its input changes.',
         category: 'signal',
         runtime: 'any',
         singleton: false,
         keywords: ['trigger', 'envelope', 'pulse', 'attack', 'release', 'fire', 'bang', 'hit'],
         inputs: [
             { id: 'fire',    type: 'boolean', label: 'Fire',        default: false },
-            { id: 'attack',  type: 'number',  label: 'Attack (s)',  default: 0.1   },
-            { id: 'hold',    type: 'number',  label: 'Hold (s)',    default: 0.2   },
-            { id: 'release', type: 'number',  label: 'Release (s)', default: 0.5   },
+            { id: 'attack',  type: 'number',  label: 'Attack (s)',  default: 0.1, min: 0, max: 10, step: 0.01 },
+            { id: 'hold',    type: 'number',  label: 'Hold (s)',    default: 0.2, min: 0, max: 10, step: 0.01 },
+            { id: 'release', type: 'number',  label: 'Release (s)', default: 0.5, min: 0, max: 10, step: 0.01 },
         ],
         outputs: [
             { id: 'out', type: 'number', label: 'Envelope' },
@@ -2202,6 +2286,7 @@ export const NODE_TYPES = {
     'signal.speed': {
         id: 'signal.speed',
         label: 'Speed',
+        summary: 'Reports how fast a value is changing.',
         category: 'signal',
         runtime: 'any',
         singleton: false,
@@ -2220,6 +2305,7 @@ export const NODE_TYPES = {
     'logic.toggle': {
         id: 'logic.toggle',
         label: 'Toggle',
+        summary: 'Flips between on and off each time it\'s triggered.',
         category: 'logic',
         runtime: 'any',
         singleton: false,
@@ -2240,6 +2326,7 @@ export const NODE_TYPES = {
     'vector.split': {
         id: 'vector.split',
         label: 'Split',
+        summary: 'Splits a vector into its three numbers.',
         category: 'vector',
         runtime: 'any',
         singleton: false,
@@ -2259,6 +2346,7 @@ export const NODE_TYPES = {
     'vector.combine': {
         id: 'vector.combine',
         label: 'Combine',
+        summary: 'Joins three numbers into a vector.',
         category: 'vector',
         runtime: 'any',
         singleton: false,
@@ -2278,6 +2366,7 @@ export const NODE_TYPES = {
     'colour.split': {
         id: 'colour.split',
         label: 'Channels',
+        summary: 'Splits a colour into its channels.',
         category: 'colour',
         runtime: 'any',
         singleton: false,
@@ -2300,6 +2389,7 @@ export const NODE_TYPES = {
     'colour.combine': {
         id: 'colour.combine',
         label: 'Compose',
+        summary: 'Joins channels into a colour.',
         category: 'colour',
         runtime: 'any',
         singleton: false,
@@ -2319,6 +2409,7 @@ export const NODE_TYPES = {
     'vector.distance': {
         id: 'vector.distance',
         label: 'Distance',
+        summary: 'The distance between two positions.',
         category: 'vector',
         runtime: 'any',
         singleton: false,
@@ -2338,6 +2429,7 @@ export const NODE_TYPES = {
     'vector.dot': {
         id: 'vector.dot',
         label: 'Dot',
+        summary: 'How aligned two vectors are.',
         category: 'vector',
         runtime: 'any',
         singleton: false,
@@ -2357,6 +2449,7 @@ export const NODE_TYPES = {
     'vector.cross': {
         id: 'vector.cross',
         label: 'Cross',
+        summary: 'A vector at right angles to two others.',
         category: 'vector',
         runtime: 'any',
         singleton: false,
@@ -2375,6 +2468,7 @@ export const NODE_TYPES = {
     'vector.direction': {
         id: 'vector.direction',
         label: 'Direction',
+        summary: 'The direction from one position to another.',
         category: 'vector',
         runtime: 'any',
         singleton: false,
@@ -2392,6 +2486,7 @@ export const NODE_TYPES = {
     'vector.rotation': {
         id: 'vector.rotation',
         label: 'Rotation',
+        summary: 'Turns an angle into a rotation.',
         category: 'vector',
         runtime: 'any',
         singleton: false,
@@ -2399,7 +2494,7 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'vector', type: 'vec3',   label: 'Vector', default: [0, 0, 0] },
             { id: 'axis',   type: 'vec3',   label: 'Axis',   default: [0, 1, 0] },
-            { id: 'angle',  type: 'number', label: 'Angle',  default: 0 },
+            { id: 'angle',  type: 'number', label: 'Angle',  default: 0, min: -360, max: 360, step: 1 },
         ],
         outputs: [
             { id: 'out', type: 'vec3', label: 'Result' },
@@ -2411,6 +2506,7 @@ export const NODE_TYPES = {
     'vector.aim': {
         id: 'vector.aim',
         label: 'Aim',
+        summary: 'A rotation that points one thing at another.',
         category: 'vector',
         runtime: 'any',
         singleton: false,
@@ -2429,12 +2525,13 @@ export const NODE_TYPES = {
     'colour.ramp': {
         id: 'colour.ramp',
         label: 'Ramp',
+        summary: 'Blends smoothly between two colours.',
         category: 'colour',
         runtime: 'any',
         singleton: false,
         keywords: ['ramp', 'gradient', 'palette', 'lookup', 'journey', 'blend', 'stops'],
         inputs: [
-            { id: 'position', type: 'number', label: 'Position', default: 0         },
+            { id: 'position', type: 'number', label: 'Position', default: 0, min: 0, max: 1, step: 0.01 },
             { id: 'a',        type: 'color',  label: 'A',        default: '#000000' },
             { id: 'b',        type: 'color',  label: 'B',        default: '#5fa8ff' },
             { id: 'c',        type: 'color',  label: 'C',        default: '#ffffff' },
@@ -2452,18 +2549,19 @@ export const NODE_TYPES = {
     'geom.cylinder': {
         id: 'geom.cylinder',
         label: 'Cylinder',
+        summary: 'A cylinder you can colour, size and move.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
         keywords: ['cylinder', 'tube', 'column', 'pillar', 'drum'],
         inputs: [
             { id: 'color',    type: 'color',  label: 'Colour',   default: '#5fa8ff'   },
-            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5         },
-            { id: 'height',   type: 'number', label: 'Height',   default: 1.5         },
-            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
-            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5, min: 0.01, max: 50, step: 0.01 },
+            { id: 'height',   type: 'number', label: 'Height',   default: 1.5, min: 0.01, max: 50, step: 0.01 },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1, min: 0, max: 1, step: 0.01 },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0, min: 0, max: 1, step: 0.01 },
             { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
-            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1, min: 0, max: 1, step: 0.01 },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.75, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
         ],
@@ -2477,18 +2575,19 @@ export const NODE_TYPES = {
     'geom.cone': {
         id: 'geom.cone',
         label: 'Cone',
+        summary: 'A cone you can colour, size and move.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
         keywords: ['cone', 'spike', 'funnel', 'point'],
         inputs: [
             { id: 'color',    type: 'color',  label: 'Colour',   default: '#5fa8ff'   },
-            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5         },
-            { id: 'height',   type: 'number', label: 'Height',   default: 1.5         },
-            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
-            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5, min: 0.01, max: 50, step: 0.01 },
+            { id: 'height',   type: 'number', label: 'Height',   default: 1.5, min: 0.01, max: 50, step: 0.01 },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1, min: 0, max: 1, step: 0.01 },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0, min: 0, max: 1, step: 0.01 },
             { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
-            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1, min: 0, max: 1, step: 0.01 },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.75, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
         ],
@@ -2502,18 +2601,19 @@ export const NODE_TYPES = {
     'geom.torus': {
         id: 'geom.torus',
         label: 'Torus',
+        summary: 'A ring you can colour, size and move.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
         keywords: ['torus', 'ring', 'donut', 'hoop', 'loop'],
         inputs: [
             { id: 'color',    type: 'color',  label: 'Colour',   default: '#5fa8ff'  },
-            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5        },
-            { id: 'tube',     type: 'number', label: 'Tube',     default: 0.18       },
-            { id: 'roughness', type: 'number', label: 'Roughness', default: 1         },
-            { id: 'metalness', type: 'number', label: 'Metalness', default: 0         },
+            { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5, min: 0.01, max: 50, step: 0.01 },
+            { id: 'tube',     type: 'number', label: 'Tube',     default: 0.18, min: 0.01, max: 10, step: 0.01 },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1, min: 0, max: 1, step: 0.01 },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0, min: 0, max: 1, step: 0.01 },
             { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
-            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1         },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1, min: 0, max: 1, step: 0.01 },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
         ],
@@ -2527,6 +2627,7 @@ export const NODE_TYPES = {
     'geom.line': {
         id: 'geom.line',
         label: 'Line',
+        summary: 'A straight stroke between two points.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
@@ -2534,10 +2635,10 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'from',      type: 'vec3',   label: 'From',      default: [0, 0, 0] },
             { id: 'to',        type: 'vec3',   label: 'To',        default: [0, 1.5, 0] },
-            { id: 'thickness', type: 'number', label: 'Thickness', default: 0.02 },
+            { id: 'thickness', type: 'number', label: 'Thickness', default: 0.02, min: 0.001, max: 5, step: 0.001 },
             { id: 'color',     type: 'color',  label: 'Colour',    default: '#5fa8ff' },
             { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
-            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1 },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1, min: 0, max: 1, step: 0.01 },
         ],
         outputs: [
             { id: 'geometry', type: 'geometry', label: 'Geometry' },
@@ -2549,17 +2650,18 @@ export const NODE_TYPES = {
     'geom.circle': {
         id: 'geom.circle',
         label: 'Circle',
+        summary: 'A flat disc you can colour, size and move.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
         keywords: ['circle', 'disc', 'round', 'ring', 'mark', 'spot'],
         inputs: [
             { id: 'color',     type: 'color',  label: 'Colour',    default: '#5fa8ff' },
-            { id: 'radius',    type: 'number', label: 'Radius',    default: 0.5 },
-            { id: 'roughness', type: 'number', label: 'Roughness', default: 1 },
-            { id: 'metalness', type: 'number', label: 'Metalness', default: 0 },
+            { id: 'radius',    type: 'number', label: 'Radius',    default: 0.5, min: 0.01, max: 50, step: 0.01 },
+            { id: 'roughness', type: 'number', label: 'Roughness', default: 1, min: 0, max: 1, step: 0.01 },
+            { id: 'metalness', type: 'number', label: 'Metalness', default: 0, min: 0, max: 1, step: 0.01 },
             { id: 'emissive',  type: 'color',  label: 'Emission',  default: '#000000' },
-            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1 },
+            { id: 'opacity',   type: 'number', label: 'Opacity',   default: 1, min: 0, max: 1, step: 0.01 },
             { id: 'position',  type: 'vec3',   label: 'Position',  default: [0, 0.5, 0] },
             { id: 'rotation',  type: 'vec3',   label: 'Rotation',  default: [0, 0, 0] },
         ],
@@ -2573,6 +2675,7 @@ export const NODE_TYPES = {
     'geom.transform': {
         id: 'geom.transform',
         label: 'Transform',
+        summary: 'Re-positions, rotates or resizes a shape that wires in.',
         category: 'geometry',
         runtime: 'any',
         singleton: false,
@@ -2598,6 +2701,7 @@ export const NODE_TYPES = {
     'view.button': {
         id: 'view.button',
         label: 'Button',
+        summary: 'A button you can press, on screen or on the rig.',
         category: 'view',
         runtime: 'any',
         singleton: false,
@@ -2619,6 +2723,7 @@ export const NODE_TYPES = {
     'device.keyboard': {
         id: 'device.keyboard',
         label: 'Keyboard',
+        summary: 'Reports whether a chosen key is held down.',
         category: 'device',
         runtime: 'any',
         singleton: false,
@@ -2647,6 +2752,7 @@ export const NODE_TYPES = {
     'world.light': {
         id: 'world.light',
         label: 'Light',
+        summary: 'A lamp lighting the scene.',
         category: 'world',
         runtime: 'any',
         paletteHidden: true,
@@ -2671,14 +2777,15 @@ export const NODE_TYPES = {
     'world.environment': {
         id: 'world.environment',
         label: 'Environment',
+        summary: 'The scene\'s ambient light and mood.',
         category: 'world',
         runtime: 'any',
         keywords: ['environment', 'lighting', 'ambient', 'sun', 'mood', 'wash', 'daylight'],
         inputs: [
             { id: 'ambientColor',        type: 'color',  label: 'Ambient Colour',    default: '#ffffff'  },
-            { id: 'ambientIntensity',    type: 'number', label: 'Ambient Intensity', default: 0.8        },
+            { id: 'ambientIntensity',    type: 'number', label: 'Ambient Intensity', default: 0.8, min: 0, max: 5, step: 0.01 },
             { id: 'directionalColor',    type: 'color',  label: 'Sun Colour',        default: '#fff7ea'  },
-            { id: 'directionalIntensity', type: 'number', label: 'Sun Intensity',     default: 1.05       },
+            { id: 'directionalIntensity', type: 'number', label: 'Sun Intensity',     default: 1.05, min: 0, max: 5, step: 0.01 },
             { id: 'directionalPosition', type: 'vec3',   label: 'Sun Position',      default: [8, 12, 4] },
         ],
         outputs: [],
@@ -2691,12 +2798,13 @@ export const NODE_TYPES = {
     'light.point': {
         id: 'light.point',
         label: 'Light',
+        summary: 'A lamp you place in the scene.',
         category: 'world',
         runtime: 'any',
         keywords: ['light', 'lamp', 'point', 'glow', 'practical'],
         inputs: [
             { id: 'color',     type: 'color',  label: 'Colour',    default: '#ffe9c4'   },
-            { id: 'intensity', type: 'number', label: 'Intensity', default: 6           },
+            { id: 'intensity', type: 'number', label: 'Intensity', default: 6, min: 0, max: 50, step: 0.1 },
             { id: 'position',  type: 'vec3',   label: 'Position',  default: [0, 1.6, 0] },
         ],
         outputs: [],
@@ -2707,6 +2815,7 @@ export const NODE_TYPES = {
     'world.camera': {
         id: 'world.camera',
         label: 'Camera',
+        summary: 'A camera you can place and look through.',
         category: 'world',
         runtime: 'any',
         inputs: [
@@ -2715,7 +2824,7 @@ export const NODE_TYPES = {
             // room already had.
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 2.4, 6.5] },
             { id: 'lookAt',   type: 'vec3',   label: 'Look At',  default: [0, 0.75, 0]  },
-            { id: 'fov',      type: 'number', label: 'FOV',      default: 50            },
+            { id: 'fov',      type: 'number', label: 'FOV',      default: 50, min: 10, max: 170, step: 1 },
         ],
         outputs: [],
         defaultValues: {},
@@ -2731,6 +2840,7 @@ export const NODE_TYPES = {
     'world.background': {
         id: 'world.background',
         label: 'Background',
+        summary: 'The scene\'s backdrop colour or image.',
         category: 'world',
         runtime: 'any',
         inputs: [
@@ -2744,11 +2854,12 @@ export const NODE_TYPES = {
     'world.grid': {
         id: 'world.grid',
         label: 'Grid',
+        summary: 'The floor grid\'s visibility and size.',
         category: 'world',
         runtime: 'any',
         inputs: [
             { id: 'visible', type: 'boolean', label: 'Visible', default: true     },
-            { id: 'size',    type: 'number',  label: 'Size',    default: 24       },
+            { id: 'size',    type: 'number',  label: 'Size',    default: 24, min: 1, max: 200, step: 1 },
             { id: 'color',   type: 'color',   label: 'Colour',   default: '#333333'},
         ],
         outputs: [],
@@ -2761,6 +2872,7 @@ export const NODE_TYPES = {
     'agent.keeper': {
         id: 'agent.keeper',
         label: 'Keeper',
+        summary: 'Talks with the keeper model and shows whether it\'s busy.',
         category: 'agent',
         runtime: 'web',
         singleton: false,
@@ -2805,6 +2917,7 @@ export const NODE_TYPES = {
     'node.null': {
         id: 'node.null',
         label: 'Null',
+        summary: 'A blank node whose ports you define yourself.',
         category: 'custom',
         runtime: 'any',
         singleton: false,

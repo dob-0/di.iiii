@@ -78,6 +78,48 @@ export const resolveKeeperEndpoints = (endpoint) => {
     }
 }
 
+// Every models-listing URL a bare host or a chat URL could mean, mirroring
+// resolveKeeperEndpoints' guesswork but for "what can I ask for" rather than
+// "ask it something": Ollama's /api/tags, then the OpenAI-compatible
+// /v1/models every llama.cpp/LM Studio box answers instead.
+export const resolveKeeperModelListEndpoints = (endpoint) => {
+    const trimmed = String(endpoint || '').trim().replace(/\/+$/, '')
+    if (!trimmed) return []
+    try {
+        const url = new URL(trimmed)
+        const base = `${url.protocol}//${url.host}`
+        return [`${base}/api/tags`, `${base}/v1/models`]
+    } catch {
+        return []
+    }
+}
+
+// Ollama answers { models: [{ name }] }; OpenAI-compatible servers answer
+// { data: [{ id }] }. Read whichever shape actually came back.
+const namesFromModelList = (payload) => (
+    (payload?.models || []).map((m) => m?.name).filter(Boolean)
+        .concat((payload?.data || []).map((m) => m?.id).filter(Boolean))
+)
+
+// For the inspector's Model menu (design audit B8/fix #4): a real list when
+// the endpoint answers, an empty one — falling back to a typed box — when it
+// doesn't. Never throws: a keeper that isn't there yet is an ordinary state,
+// not an error the caller has to catch.
+export const listKeeperModels = async (endpoint, { signal, fetchImpl = typeof fetch === 'function' ? fetch : null } = {}) => {
+    if (!fetchImpl) return []
+    for (const url of resolveKeeperModelListEndpoints(endpoint)) {
+        try {
+            const response = await fetchImpl(url, { signal })
+            if (!response.ok) continue
+            const names = namesFromModelList(await response.json())
+            if (names.length) return names
+        } catch {
+            // Try the next shape; a wrong guess here is ordinary, not an error.
+        }
+    }
+    return []
+}
+
 export const askKeeper = async ({
     endpoint,
     model,

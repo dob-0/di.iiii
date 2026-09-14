@@ -77,6 +77,11 @@ vi.mock('./WebcamSourcePanel.jsx', () => ({
 
 import RawEditor, { WINDOW_DEFAULT_POSITIONS } from './RawEditor.jsx'
 import { getNodeType } from '../../project/nodeRegistry.js'
+// Selection is per viewer, not shared-document state (fix #5) — a fixture
+// that wants a node pre-selected seeds sessionStorage exactly the way a real
+// browser tab would, keyed the same way RawEditor keys it: projectId, or
+// (as in every fixture below, which has none) the localStorageKey.
+import { readSelectedNodeId, writeSelectedNodeId } from '../utils/rawSelectionStorage.js'
 
 const OUTLINER_STORAGE_KEY = 'test-outliner-ws'
 const makeWorkspaceDoc = (nodes = []) => JSON.stringify({
@@ -151,6 +156,41 @@ describe('RawEditor outliner toggle', () => {
         expect(screen.getByRole('dialog', { name: 'Outliner' })).toBeTruthy()
         fireEvent.click(btn)
         expect(screen.queryByRole('dialog', { name: 'Outliner' })).toBeNull()
+    })
+})
+
+// Fix #5 / design audit A4: selecting a node used to be a setWorkspaceState
+// op, so whoever last clicked chose what every OTHER viewer's editor opened
+// with. Own storage key, never shared with another describe block: the
+// local-workspace autosave is debounced, and a write that lands after this
+// test's own afterEach would otherwise leak "2 nodes" into an unrelated test.
+describe('RawEditor selection stays local (never a document op)', () => {
+    const SELECTION_KEY = 'test-selection-local'
+    afterEach(() => {
+        window.localStorage.removeItem(SELECTION_KEY)
+        writeSelectedNodeId(SELECTION_KEY, null)
+    })
+
+    it('selecting a node through the Outliner never sends a document op, and stays in this tab only', () => {
+        window.localStorage.setItem(
+            SELECTION_KEY,
+            makeWorkspaceDoc([
+                makeNodeZero(),
+                { id: 'c1', typeId: 'geom.cube', label: 'Test Cube', values: {} }
+            ])
+        )
+        mockApplyLocalOps.mockClear()
+        render(<RawEditor localStorageKey={SELECTION_KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: /2 nodes/i }))
+
+        fireEvent.click(within(screen.getByRole('dialog', { name: 'Outliner' })).getByText('Test Cube'))
+
+        const selectionOps = mockApplyLocalOps.mock.calls
+            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+            .flat()
+            .filter((op) => op.type === 'setWorkspaceState' && 'selectedNodeId' in (op.payload?.patch || {}))
+        expect(selectionOps).toEqual([])
+        expect(readSelectedNodeId(SELECTION_KEY)).toBe('c1')
     })
 })
 
@@ -259,6 +299,7 @@ describe('RawEditor delete/reset confirmations', () => {
 
     afterEach(() => {
         window.localStorage.removeItem(GUARD_STORAGE_KEY)
+        writeSelectedNodeId(GUARD_STORAGE_KEY, null)
         vi.restoreAllMocks()
     })
 
@@ -267,10 +308,11 @@ describe('RawEditor delete/reset confirmations', () => {
             GUARD_STORAGE_KEY,
             JSON.stringify({
                 nodes: [makeNodeZero()],
-                edges: [],
-                workspaceState: { selectedNodeId: 'node-0' }
+                edges: []
             })
         )
+        // Per-viewer, not document state — see the import above.
+        writeSelectedNodeId(GUARD_STORAGE_KEY, 'node-0')
     }
 
     it('deletes Node 0 via the Delete FAB through the same confirm as any other node', () => {
@@ -376,10 +418,10 @@ describe('RawEditor delete/reset confirmations', () => {
             GUARD_STORAGE_KEY,
             JSON.stringify({
                 nodes: [makeNodeZero(), { id: 'c1', typeId: 'geom.cube', label: 'Test Cube', values: {} }],
-                edges: [],
-                workspaceState: { selectedNodeId: 'c1' }
+                edges: []
             })
         )
+        writeSelectedNodeId(GUARD_STORAGE_KEY, 'c1')
         const confirmSpy = vi.spyOn(window, 'confirm')
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
@@ -502,6 +544,7 @@ describe('RawEditor scope-clamped selection (the surface axis is retired)', () =
     const KEY = 'test-scope-selection'
     afterEach(() => {
         window.localStorage.removeItem(KEY)
+        writeSelectedNodeId(KEY, null)
     })
 
     it('a selected PANEL node gets the inspector and the Delete FAB', () => {
@@ -509,9 +552,9 @@ describe('RawEditor scope-clamped selection (the surface axis is retired)', () =
         // 'world'), so Text/Image/Monitor selections showed nothing at all.
         window.localStorage.setItem(KEY, JSON.stringify({
             nodes: [{ id: 't1', typeId: 'view.text', label: 'Note', values: { frame: { visible: true, x: 40, y: 120, width: 200, height: 120 } } }],
-            edges: [],
-            workspaceState: { selectedNodeId: 't1' }
+            edges: []
         }))
+        writeSelectedNodeId(KEY, 't1')
         render(<RawEditor localStorageKey={KEY} />)
         expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
     })
@@ -522,27 +565,29 @@ describe('RawEditor scope-clamped selection (the surface axis is retired)', () =
                 { id: 'geo', typeId: 'geom.geo', label: 'Geo', values: {} },
                 { id: 'c1', typeId: 'geom.cube', label: 'Cube', parentId: 'geo', values: {} }
             ],
-            edges: [],
-            workspaceState: { selectedNodeId: 'c1' }
+            edges: []
         }))
+        writeSelectedNodeId(KEY, 'c1')
         render(<RawEditor localStorageKey={KEY} />)
         expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
     })
 
+    // Selection lives in this tab's own state now, never a document op (fix
+    // #5) — so "cleared" is proved by the Delete FAB disappearing and the
+    // per-viewer store forgetting it, not by an op nobody sends any more.
     it('walking through a door clears the selection instead of carrying it', () => {
         window.localStorage.setItem(KEY, JSON.stringify({
             nodes: [{ id: 'geo', typeId: 'geom.geo', label: 'Geo', values: {} }],
-            edges: [],
-            workspaceState: { selectedNodeId: 'geo' }
+            edges: []
         }))
-        mockApplyLocalOps.mockClear()
+        writeSelectedNodeId(KEY, 'geo')
         render(<RawEditor localStorageKey={KEY} />)
+        expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
+
         fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
-        const clearedSelection = mockApplyLocalOps.mock.calls
-            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
-            .flat()
-            .some((op) => op.type === 'setWorkspaceState' && op.payload?.patch?.selectedNodeId === null)
-        expect(clearedSelection).toBe(true)
+
+        expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+        expect(readSelectedNodeId(KEY)).toBeNull()
     })
 })
 

@@ -1067,6 +1067,24 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'raw-inspector-truth',
+        category: 'Editing',
+        title: 'The inspector: what it says now',
+        summary: 'A selected node\'s sheet shows what is actually arriving on each wire, with a live Out section and a plain sentence under the title instead of a code id — and each screen keeps its own selection.',
+        body: [
+            'A field fed by a wire used to show the number typed into it long ago, not what the wire actually carries — a Roughness box could read 1 while the Number wired into it held 0.4. Wired fields are read-only now and show the live value, with a small "from <name>" underneath: click it to jump straight to the node that is feeding it. A texture or shape port that is wired says "picture from <name>" or "shape from <name>" instead of a bare dash.',
+            'Below the settings, an Out section lists every output the node has, live — the same formatting as the wired fields above, updating as the graph runs. Before this, the sheet only ever showed what a node took in; what it sent out was invisible unless you followed the wire by eye.',
+            'The line under the node\'s name used to be its raw type id — "geom.cube", "top.camera" — a word meant for the file tree, not for a person reading the screen. Every node in the palette now carries a one-line plain-word description, shown both in the palette and under the title here.',
+            { list: [
+                'Sizes, 0–1 amounts, angles, frequencies and counts now come with sane ranges wherever the number has one — a slider-shaped field instead of a box that would take anything.',
+                'Keyboard\'s Key is a menu of common keys plus "Any"; a Model\'s animation Clip offers the real clip names once the file has loaded; MIDI Out\'s Device lists the instruments the browser can actually see; the keeper\'s Model asks its own endpoint what it can serve.',
+                'A selection is yours alone now: it lives on this screen, not in the shared project. Open the same space on your phone and it opens on nothing in particular, not on whatever the last person on a laptop happened to click.'
+            ] }
+        ],
+        tags: ['raw', 'nodes', 'inspector', 'ports', 'wires', 'selection', 'editor'],
+        updated: '2026-09-14'
+    },
+    {
         id: 'br-id-ge',
         category: 'Spaces & access',
         title: 'br_id_ge (կամուրջ): an Armenian XR rite — shown at Notations #2',

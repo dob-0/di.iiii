@@ -26,6 +26,7 @@ const choice = (name, label, options, value = 0) => ({ name, label, value, min: 
 export const TOP_OPERATORS = {
     'top.camera': {
         label: 'Camera In',
+        summary: 'The live picture from this machine\'s camera, ready to process.',
         family: 'in',
         inputs: [],
         // `source` operators are fed by the engine from a <video>; the shader
@@ -48,6 +49,7 @@ void main() {
 
     'top.difference': {
         label: 'Difference',
+        summary: 'Highlights what changed since the last frame.',
         family: 'analyse',
         inputs: ['a'],
         // Needs its input from the frame BEFORE: the engine keeps it as `history`.
@@ -76,6 +78,7 @@ void main() {
 
     'top.level': {
         label: 'Level',
+        summary: 'Adjusts a picture\'s brightness, contrast and gamma.',
         family: 'adjust',
         inputs: ['a'],
         params: [
@@ -104,6 +107,7 @@ void main() {
 
     'top.blur': {
         label: 'Blur',
+        summary: 'Softens a picture.',
         family: 'adjust',
         inputs: ['a'],
         params: [param('size', 'Size', 2, 0, 12, 0.1)],
@@ -132,6 +136,7 @@ void main() {
 
     'top.edge': {
         label: 'Edge',
+        summary: 'Draws the edges found in a picture.',
         family: 'analyse',
         inputs: ['a'],
         params: [param('strength', 'Strength', 2, 0, 10, 0.1)],
@@ -150,6 +155,7 @@ void main() {
 
     'top.feedback': {
         label: 'Feedback',
+        summary: 'Trails a picture into its own past frames.',
         family: 'time',
         inputs: ['a'],
         params: [
@@ -174,6 +180,7 @@ void main() {
 
     'top.blend': {
         label: 'Blend',
+        summary: 'Mixes two pictures together.',
         family: 'combine',
         inputs: ['a', 'b'],
         params: [
@@ -197,6 +204,7 @@ void main() {
 
     'top.out': {
         label: 'Picture Out',
+        summary: 'The picture that reaches the projector or stream.',
         family: 'out',
         inputs: ['a'],
         params: [],
@@ -208,6 +216,7 @@ void main() { gl_FragColor = vec4(texture2D(a, uv).rgb, 1.0); }`
 
     'top.analyze': {
         label: 'Analyze',
+        summary: 'Reads a picture\'s brightness and lit area as numbers.',
         family: 'analyse',
         inputs: ['a'],
         // Picture → numbers (TOP → CHOP). The engine reads a 32x18 copy of the
@@ -261,6 +270,7 @@ const MEASURE_LABELS = { brightness: 'Brightness', amount: 'Amount', x: 'Centre 
 export const buildTopNodeTypes = () => Object.fromEntries(Object.entries(TOP_OPERATORS).map(([id, operator]) => [id, {
     id,
     label: operator.label,
+    summary: operator.summary,
     category: 'picture',
     runtime: 'web',
     singleton: false,

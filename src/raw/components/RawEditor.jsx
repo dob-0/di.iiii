@@ -42,10 +42,10 @@ import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { currentAuthor } from '../../project/authorship.js'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
-import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode, operationLabelPatch } from '../../project/nodeRegistry.js'
-import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
+import { createEdge, createNode, getNodeFamily, getNodeOutputs, getNodeType, isNodeMadeOfCode, operationLabelPatch } from '../../project/nodeRegistry.js'
+import { buildOutputsSection, deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { readNode } from '../../project/graph/nodeReading.js'
-import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs, evaluateNodeOutput } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode } from '../../project/graph/useGraphClock.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
@@ -85,6 +85,7 @@ import {
 import useWorkspaceLayout from '../utils/useWorkspaceLayout.js'
 import { cycleFocus, isMaximised, maximiseFrame, restoreFrame } from '../utils/workspaceLayout.js'
 import { peekRawEnterNode, clearRawEnterNode } from '../utils/rawEnterNodeHandoff.js'
+import { readSelectedNodeId, writeSelectedNodeId } from '../utils/rawSelectionStorage.js'
 import {
     detectDeviceType,
     getDefaultNodeScale,
@@ -321,9 +322,25 @@ export default function RawEditor({
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const entities = document.entities || []
     const nodes = useMemo(() => document.nodes || [], [document.nodes])
-    const workspaceState = document.workspaceState || {}
+    // Selection is per viewer (fix #5 / design audit A4) — React state,
+    // mirrored into sessionStorage per CANVAS rather than written into the
+    // shared document. See rawSelectionStorage.js for why: a setWorkspaceState
+    // op here used to broadcast whoever last clicked to every other device.
+    // Keyed by zenWorkspaceKey (not bare projectId) for the same reason zen
+    // already is: a local/canvas-mode workspace has no projectId at all, and
+    // two different local canvases in one browser must not share a selection.
+    const [localSelectedNodeId, setLocalSelectedNodeIdState] = useState(() => readSelectedNodeId(zenWorkspaceKey))
+    const setLocalSelectedNodeId = useCallback((nodeId) => {
+        setLocalSelectedNodeIdState(nodeId || null)
+        writeSelectedNodeId(zenWorkspaceKey, nodeId || null)
+    }, [zenWorkspaceKey])
+    // Covers switching projects/canvases without a remount — a fresh one's
+    // selection must not inherit the previous one's.
+    useEffect(() => {
+        setLocalSelectedNodeIdState(readSelectedNodeId(zenWorkspaceKey))
+    }, [zenWorkspaceKey])
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
-    const selectedNode = nodes.find((node) => node.id === workspaceState.selectedNodeId) || null
+    const selectedNode = nodes.find((node) => node.id === localSelectedNodeId) || null
     const authoredNodes = nodes
     // Node-graph scope has no forced root type — the true document root
     // (currentScopeId === null) is a plain, always-available scope you can
@@ -586,25 +603,20 @@ export default function RawEditor({
         // this the workspace keeps the old inset and the scope pill lands on the toolbar.
     }, [presence.users.length, state.pendingSyncError])
 
+    // `patch` is a leftover extension point for OTHER workspaceState fields a
+    // caller might want to set in the same gesture (none do today) — it still
+    // goes to the shared document; selection itself never does any more.
     const selectNode = (nodeId, patch = {}) => {
         dispatch({ type: 'select-entity', entityId: null })
-        applyLocalOps({
-            type: 'setWorkspaceState',
-            payload: {
-                patch: {
-                    selectedNodeId: nodeId || null,
-                    ...patch
-                }
-            }
-        })
+        setLocalSelectedNodeId(nodeId || null)
+        if (Object.keys(patch).length) {
+            applyLocalOps({ type: 'setWorkspaceState', payload: { patch } })
+        }
     }
 
     const selectEntity = (entityId) => {
         dispatch({ type: 'select-entity', entityId })
-        applyLocalOps({
-            type: 'setWorkspaceState',
-            payload: { patch: { selectedNodeId: null } }
-        })
+        setLocalSelectedNodeId(null)
     }
 
     // universe.world is not a singleton, and the fullscreen/overlay renders
@@ -620,11 +632,8 @@ export default function RawEditor({
 
     const clearSelection = useCallback(() => {
         dispatch({ type: 'select-entity', entityId: null })
-        applyLocalOps({
-            type: 'setWorkspaceState',
-            payload: { patch: { selectedNodeId: null } }
-        })
-    }, [applyLocalOps, dispatch])
+        setLocalSelectedNodeId(null)
+    }, [dispatch, setLocalSelectedNodeId])
 
     const handleEnterNode = useCallback((nodeId) => {
         const node = authoredNodes.find((n) => n.id === nodeId)
@@ -641,19 +650,20 @@ export default function RawEditor({
         // Selection dies at the door. It used to survive every scope walk,
         // keeping a red Delete armed for a node no longer on screen — the
         // scope clamp above hides it, and this stops the stale id from
-        // travelling in the shared workspace state at all.
-        if (workspaceState.selectedNodeId || selectedEntity) clearSelection()
+        // lingering (now purely local; it never travelled in the shared
+        // workspace state to begin with — fix #5).
+        if (localSelectedNodeId || selectedEntity) clearSelection()
         scopeEnterNode(nodeId)
-    }, [authoredNodes, scopeEnterNode, frameOf, setLocalFrame, workspaceState.selectedNodeId, selectedEntity, clearSelection])
+    }, [authoredNodes, scopeEnterNode, frameOf, setLocalFrame, localSelectedNodeId, selectedEntity, clearSelection])
 
     const handleNavigateToScope = useCallback((targetIndex) => {
         // Fullscreen SURVIVES scope navigation now: walking through a door
         // swaps which room fills the screen, which is the TouchDesigner
         // go-inside/come-out feel. It used to cancel on every step — the
         // render and the graph could never both be part of one journey.
-        if (workspaceState.selectedNodeId || selectedEntity) clearSelection()
+        if (localSelectedNodeId || selectedEntity) clearSelection()
         scopeNavigateToScope(targetIndex)
-    }, [scopeNavigateToScope, workspaceState.selectedNodeId, selectedEntity, clearSelection])
+    }, [scopeNavigateToScope, localSelectedNodeId, selectedEntity, clearSelection])
 
     // Browser/hardware BACK pops one scope level. This is the only exit on a
     // phone when a space hides the chrome (showChrome:false removes the back
@@ -774,16 +784,13 @@ export default function RawEditor({
         if (scopedSelectedNode) {
             requestDelete(
                 { id: scopedSelectedNode.id, name: scopedSelectedNode.label, author: scopedSelectedNode.createdBy },
-                () => applyLocalOps([
-                    {
-                        type: 'deleteNode',
-                        payload: { nodeId: scopedSelectedNode.id }
-                    },
-                    {
-                        type: 'setWorkspaceState',
-                        payload: { patch: { selectedNodeId: null } }
-                    }
-                ], { activityMessage: `Deleted ${scopedSelectedNode.label}.`, activityLevel: 'warning' })
+                () => {
+                    applyLocalOps(
+                        { type: 'deleteNode', payload: { nodeId: scopedSelectedNode.id } },
+                        { activityMessage: `Deleted ${scopedSelectedNode.label}.`, activityLevel: 'warning' }
+                    )
+                    setLocalSelectedNodeId(null)
+                }
             )
             return
         }
@@ -798,7 +805,7 @@ export default function RawEditor({
                 dispatch({ type: 'select-entity', entityId: null })
             }
         )
-    }, [applyLocalOps, dispatch, requestDelete, scopedSelectedEntity, scopedSelectedNode])
+    }, [applyLocalOps, dispatch, requestDelete, scopedSelectedEntity, scopedSelectedNode, setLocalSelectedNodeId])
 
     const handleResetLocalWorkspace = () => {
         if (!isLocalWorkspace) return
@@ -858,6 +865,18 @@ export default function RawEditor({
         }
     }, [dispatch, document, isLocalWorkspace, isSavingToSpace, resolvedSpaceId])
 
+    // Hoisted ahead of the inspector's own graph read just below (fix #1/#2
+    // needs both before hostInspector is built, further down this
+    // component) — everything else that uses them (the show-clock stamp, the
+    // live-capture handlers) still reads them by closure from here, hook
+    // order unaffected since these are unconditional calls either way.
+    // Rebuilt every frame while a Time node exists — the per-pass outputCache
+    // must not survive a tick or the clock would freeze at its first sample.
+    const clockNow = useDocumentClock(document)
+    // Live, non-serializable node outputs (a captured webcam's VideoTexture)
+    // that can't live in node.values — see createNodeGraphContext's liveOutputs.
+    const [liveOutputs, setLiveOutputs] = useState(() => new Map())
+
     // An input port with a wire into it takes its value from the wire; a typed
     // value there was accepted and silently ignored. The sheet marks it.
     const wiredPortIds = scopedSelectedNode
@@ -865,6 +884,52 @@ export default function RawEditor({
             .filter((edge) => edge.toNodeId === scopedSelectedNode.id)
             .map((edge) => edge.toPort)
         : []
+    // "from <source node label>" (design audit A3/B8, fix #1): a wire only
+    // ever runs between two cards in the SAME scope (graphCardEdges' own
+    // rule), so the source is always right here on screen — no scope walk
+    // needed to find it.
+    const wiredSources = useMemo(() => {
+        if (!scopedSelectedNode) return {}
+        const map = {}
+        for (const edge of document.edges || []) {
+            if (edge.toNodeId !== scopedSelectedNode.id) continue
+            const source = authoredNodes.find((candidate) => candidate.id === edge.fromNodeId)
+            map[edge.toPort] = { nodeId: edge.fromNodeId, label: source?.label || 'a node' }
+        }
+        return map
+    }, [scopedSelectedNode, document.edges, authoredNodes])
+    // The inspector sheet's own read of the graph (fix #1/#2) — same
+    // quantised-clock, own-frameMemory convention the "what it's made of"
+    // reading uses further down: a Lag's state must not be written twice per
+    // frame at two different clocks, so the sheet never shares the room's
+    // frameMemory, and a sine read at 60 Hz would be an unreadable blur on
+    // text someone is reading rather than a frame being drawn.
+    const inspectorNow = Math.floor((clockNow || 0) / 125) * 125
+    const [inspectorMemory] = useState(() => createFrameMemory())
+    const inspectorGraphContext = useMemo(
+        () => createNodeGraphContext(document, { now: inspectorNow, liveOutputs, frameMemory: inspectorMemory }),
+        [document, inspectorNow, liveOutputs, inspectorMemory]
+    )
+    // The evaluated value every input actually carries right now — wired or
+    // not (evaluateNodeInputs falls back to the stored value/default exactly
+    // like the room does), so the sheet can never show a number that
+    // disagrees with what is really arriving (design audit A3: "Roughness
+    // WIRED shows 1; the Number wired into it holds 0.4").
+    const resolvedNodeInputValues = useMemo(
+        () => (scopedSelectedNode ? evaluateNodeInputs(scopedSelectedNode, inspectorGraphContext) : null),
+        [scopedSelectedNode, inspectorGraphContext]
+    )
+    // The "Out" section's live values (fix #2) — every output this node
+    // actually has, doorway-promoted sockets included (getNodeOutputs' own
+    // contract), read the same way the room reads them.
+    const resolvedNodeOutputValues = useMemo(() => {
+        if (!scopedSelectedNode) return null
+        const values = {}
+        for (const port of getNodeOutputs(scopedSelectedNode, authoredNodes)) {
+            values[port.id] = evaluateNodeOutput(scopedSelectedNode, port.id, inspectorGraphContext)
+        }
+        return values
+    }, [scopedSelectedNode, authoredNodes, inspectorGraphContext])
     // A picture operator's Runs on lists the machines this space can see right
     // now; the registry only knows "where the page is open".
     // Presence only on a desk that uses it: picture operators or a Desk panel.
@@ -889,7 +954,14 @@ export default function RawEditor({
         }))
         : sections)
     const inspectorSections = scopedSelectedNode
-        ? withMachines(deriveNodeInspectorSections(scopedSelectedNode, { wiredPortIds }))
+        ? (() => {
+            const sections = withMachines(deriveNodeInspectorSections(scopedSelectedNode, { wiredPortIds, wiredSources }))
+            // "Out", with live values (fix #2 / design audit B8) — appended
+            // after Settings/Ports so a person reads what goes IN before what
+            // comes OUT, same order the card itself is wired left to right.
+            const outputsSection = buildOutputsSection(scopedSelectedNode, authoredNodes)
+            return outputsSection ? [...sections, outputsSection] : sections
+        })()
         : (scopedSelectedEntity
             ? getInspectorSections(scopedSelectedEntity)
             : [
@@ -907,19 +979,32 @@ export default function RawEditor({
     // Renaming exists only for nodes — entities and the world keep their
     // own naming stories. Empty names are refused upstream in TitleField.
     const handleRenameSelected = useCallback((label) => {
-        const nodeId = workspaceState.selectedNodeId
+        const nodeId = localSelectedNodeId
         if (!nodeId) return
         applyLocalOps({
             type: 'updateNode',
             payload: { nodeId, patch: { label } }
         }, { activityMessage: `Renamed a node to “${label}”.` })
-    }, [applyLocalOps, workspaceState.selectedNodeId])
+    }, [applyLocalOps, localSelectedNodeId])
 
+    // `values.values` carries the resolved input values, not the raw stored
+    // ones — a wired port displays what the wire brings (fix #1), and an
+    // unwired one shows exactly what it always showed (evaluateNodeInputs
+    // falls back to node.values then the port default, so nothing else
+    // changes). `values.outputs` feeds the new Out section the same way
+    // every other section reads its own slot.
     const inspectorValues = scopedSelectedNode
-        ? { values: { ...(scopedSelectedNode.values || {}) } }
+        ? { values: resolvedNodeInputValues || { ...(scopedSelectedNode.values || {}) }, outputs: resolvedNodeOutputValues || {} }
         : (scopedSelectedEntity ? scopedSelectedEntity.components : { worldState: document.worldState })
     const inspectorTitle = scopedSelectedNode ? scopedSelectedNode.label : (scopedSelectedEntity ? scopedSelectedEntity.name : 'World')
-    const inspectorSubtitle = scopedSelectedNode ? scopedSelectedNode.typeId : (scopedSelectedEntity ? scopedSelectedEntity.type : 'Scene defaults')
+    // Plain words, never a typeId (fix #3 / design audit B5: "geom.cube" in
+    // the subtitle, contrast 3.32-3.77:1, and nowhere did a node say what it
+    // does). The registry's one-line `summary` first; the family word if a
+    // type somehow has none; never the id itself.
+    const selectedNodeType = scopedSelectedNode ? getNodeType(scopedSelectedNode.typeId) : null
+    const inspectorSubtitle = scopedSelectedNode
+        ? (selectedNodeType?.summary || getNodeFamily(scopedSelectedNode.typeId)?.label || '')
+        : (scopedSelectedEntity ? scopedSelectedEntity.type : 'Scene defaults')
 
     // Entering the fullscreen room with a node selected kept the inspector
     // sheet over 38% of it — with an armed Delete floating over the stage
@@ -1112,7 +1197,6 @@ export default function RawEditor({
             createdBy: currentAuthor(displayName)
         })
         if (!nextNode) return
-        const workspacePatch = { selectedNodeId: nextNode.id }
         // A container arrives with its contents. `studio` is one palette entry;
         // entering it has to reveal the subgraph it is made of, so the interior
         // is created in the SAME op batch — otherwise a single undo would leave
@@ -1124,13 +1208,13 @@ export default function RawEditor({
         dispatch({ type: 'select-entity', entityId: null })
         applyLocalOps([
             { type: 'createNode', payload: { node: nextNode } },
-            ...interior.map((node) => ({ type: 'createNode', payload: { node } })),
-            { type: 'setWorkspaceState', payload: { patch: workspacePatch } }
+            ...interior.map((node) => ({ type: 'createNode', payload: { node } }))
         ], {
             activityMessage: interior.length
                 ? `Created ${definition.label} with ${interior.length} panels inside.`
                 : `Created ${definition.label}.`
         })
+        setLocalSelectedNodeId(nextNode.id)
         setPaletteState({ open: false, placement: null })
     }
 
@@ -1201,17 +1285,17 @@ export default function RawEditor({
 
         if (ops.length) {
             const last = created[created.length - 1]
-            // Only follow the selection when the node landed in the scope the
-            // graph is showing — otherwise the inspector would describe a node
-            // that isn't on screen.
-            if (targetScopeId === currentScopeId) {
-                ops.push({ type: 'setWorkspaceState', payload: { patch: { selectedNodeId: last.node.id } } })
-            }
             applyLocalOps(ops, {
                 activityMessage: created.length === 1
                     ? `Brought in ${created[0].file.name}.`
                     : `Brought in ${created.length} files.`
             })
+            // Only follow the selection when the node landed in the scope the
+            // graph is showing — otherwise the inspector would describe a node
+            // that isn't on screen.
+            if (targetScopeId === currentScopeId) {
+                setLocalSelectedNodeId(last.node.id)
+            }
         }
 
         const failureNotice = failed.length
@@ -1222,7 +1306,7 @@ export default function RawEditor({
             busy: false,
             notice: [failureNotice, rejectedNotice].filter(Boolean).join(' ')
         })
-    }, [applyLocalOps, currentScopeId, placeFrameForNewNode, projectId, topZIndex, workspaceTop])
+    }, [applyLocalOps, currentScopeId, placeFrameForNewNode, projectId, setLocalSelectedNodeId, topZIndex, workspaceTop])
 
     // The inspector's "＋" on an asset port: same storage as a drop, but the
     // node already exists, so this only fills that port in.
@@ -1296,13 +1380,10 @@ export default function RawEditor({
         if (!exampleNodes.length) return
 
         dispatch({ type: 'select-entity', entityId: null })
+        setLocalSelectedNodeId(null)
         applyLocalOps([
             ...exampleNodes.map((node) => ({ type: 'createNode', payload: { node } })),
-            ...exampleEdges.map((edge) => ({ type: 'createEdge', payload: { edge } })),
-            {
-                type: 'setWorkspaceState',
-                payload: { patch: { selectedNodeId: null } }
-            }
+            ...exampleEdges.map((edge) => ({ type: 'createEdge', payload: { edge } }))
         ], {
             activityMessage: `Created the all-nodes example (${exampleNodes.length} nodes, ${exampleEdges.length} edges).`
         })
@@ -1324,13 +1405,10 @@ export default function RawEditor({
         if (!sceneNodes.length) return
 
         dispatch({ type: 'select-entity', entityId: null })
+        setLocalSelectedNodeId(null)
         applyLocalOps([
             ...sceneNodes.map((node) => ({ type: 'createNode', payload: { node } })),
-            ...sceneEdges.map((edge) => ({ type: 'createEdge', payload: { edge } })),
-            {
-                type: 'setWorkspaceState',
-                payload: { patch: { selectedNodeId: null } }
-            }
+            ...sceneEdges.map((edge) => ({ type: 'createEdge', payload: { edge } }))
         ], { activityMessage: 'Made a scene: a room, a light, a cube and a place for your own model.' })
     }
 
@@ -1351,15 +1429,13 @@ export default function RawEditor({
                 assetOptions={document.assets || []}
                 onSectionChange={handleInspectorChange}
                 onPickAssetFile={handlePickAssetFile}
+                onSelectSource={selectNode}
                 emptyMessage="Double-click the world or the view to start authoring."
             />
         </aside>
     )
 
     const assetMap = useMemo(() => new Map((document.assets || []).map((asset) => [asset.id, asset])), [document.assets])
-    // Rebuilt every frame while a Time node exists — the per-pass outputCache
-    // must not survive a tick or the clock would freeze at its first sample.
-    const clockNow = useDocumentClock(document)
     // Stamp the show clock ONCE, the first time a Time node lands in the
     // document. From then on every window — editor, second tab, /out —
     // derives the same elapsed time from the document instead of its own
@@ -1370,9 +1446,6 @@ export default function RawEditor({
         if (!hasShowClock || showClockEpoch > 0) return
         applyLocalOps({ type: 'setShowState', payload: { patch: { clockEpoch: Date.now() } } })
     }, [hasShowClock, showClockEpoch, applyLocalOps])
-    // Live, non-serializable node outputs (a captured webcam's VideoTexture)
-    // that can't live in node.values — see createNodeGraphContext's liveOutputs.
-    const [liveOutputs, setLiveOutputs] = useState(() => new Map())
     const handleLiveOutputChange = useCallback((nodeId, portId, value) => {
         setLiveOutputs((prev) => {
             const key = `${nodeId}:${portId}`
@@ -1473,9 +1546,9 @@ export default function RawEditor({
             : createEdge(door.id, 'value', node.id, port.id)
         applyLocalOps([
             { type: 'createNode', payload: { node: door } },
-            { type: 'createEdge', payload: { edge } },
-            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: door.id } } }
+            { type: 'createEdge', payload: { edge } }
         ], { activityMessage: `Exposed ${port.label || port.id} on ${container.label}.` })
+        setLocalSelectedNodeId(door.id)
         // The new socket is one level up, off-screen from here — say so, or the
         // gesture appears to have done nothing.
         setPromotedNotice({
@@ -1483,18 +1556,16 @@ export default function RawEditor({
             containerLabel: container.label,
             portLabel: port.label || port.id
         })
-    }, [applyLocalOps, authoredNodes, currentScopeId])
+    }, [applyLocalOps, authoredNodes, currentScopeId, setLocalSelectedNodeId])
 
     const handleDeleteEdge = useCallback((edgeId) => applyLocalOps({
         type: 'deleteEdge',
         payload: { edgeId }
     }), [applyLocalOps])
     const handleDeleteNode = useCallback((nodeId) => {
-        applyLocalOps([
-            { type: 'deleteNode', payload: { nodeId } },
-            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
-        ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })
-    }, [applyLocalOps])
+        applyLocalOps({ type: 'deleteNode', payload: { nodeId } }, { activityMessage: 'Deleted node.', activityLevel: 'warning' })
+        setLocalSelectedNodeId(null)
+    }, [applyLocalOps, setLocalSelectedNodeId])
     const handleMoveNode = useCallback((nodeId, nextX, nextY) => applyLocalOps({
         type: 'updateNode',
         payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
@@ -1507,8 +1578,8 @@ export default function RawEditor({
     // its own change), stepped aside in both spaces so the copy never lands
     // exactly on the original.
     const handleDuplicateSelected = useCallback(() => {
-        const source = workspaceState.selectedNodeId
-            ? authoredNodes.find((node) => node.id === workspaceState.selectedNodeId)
+        const source = localSelectedNodeId
+            ? authoredNodes.find((node) => node.id === localSelectedNodeId)
             : null
         if (!source) return
         const values = JSON.parse(JSON.stringify(source.values || {}))
@@ -1531,7 +1602,7 @@ export default function RawEditor({
             { activityMessage: `Duplicated ${source.label || 'a node'}.` }
         )
         selectNode(copy.id)
-    }, [applyLocalOps, authoredNodes, selectNode, workspaceState.selectedNodeId])
+    }, [applyLocalOps, authoredNodes, selectNode, localSelectedNodeId])
     // Between-pass node state (a Lag's last answer) — this window's own,
     // never React state, dropped whole when the document changes.
     const [frameMemory] = useState(() => createFrameMemory())
@@ -1760,7 +1831,7 @@ export default function RawEditor({
             return (
                 <OutlinerPanelWindow
                     nodes={authoredNodes}
-                    selectedNodeId={workspaceState.selectedNodeId || null}
+                    selectedNodeId={localSelectedNodeId || null}
                     onSelectNode={(nodeId) => selectNode(nodeId)}
                 />
             )
@@ -1791,6 +1862,7 @@ export default function RawEditor({
                     assetOptions={document.assets || []}
                     onSectionChange={handleInspectorChange}
                     onPickAssetFile={handlePickAssetFile}
+                    onSelectSource={selectNode}
                     emptyMessage="Select a node to inspect it."
                 />
             )
@@ -1919,7 +1991,7 @@ export default function RawEditor({
                     .filter((node) => frameOf(node).minimized !== true)
                     .sort((a, b) => (frameOf(b).zIndex || 6) - (frameOf(a).zIndex || 6))
                     .map((node) => node.id)
-                const nextId = cycleFocus(order, workspaceState.selectedNodeId, event.shiftKey ? -1 : 1)
+                const nextId = cycleFocus(order, localSelectedNodeId, event.shiftKey ? -1 : 1)
                 if (!nextId) return
                 event.preventDefault()
                 selectNode(nextId)
@@ -1949,7 +2021,7 @@ export default function RawEditor({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo, isWorldFullscreen, visibleViewNodes, frameOf, setLocalFrame, selectNode, topZIndex, workspaceState.selectedNodeId])
+    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo, isWorldFullscreen, visibleViewNodes, frameOf, setLocalFrame, selectNode, topZIndex, localSelectedNodeId])
 
     const handleMoveWorldNode = (nodeId, nextPosition) => {
         applyLocalOps({
@@ -2328,7 +2400,7 @@ export default function RawEditor({
                     onExplainScope={currentScopeId && isNodeMadeOfCode(scopeNode?.typeId) ? openAnatomy : null}
                     emptyHint={scopeEmptyHint}
                     edges={graphCardEdges}
-                    selectedNodeId={workspaceState.selectedNodeId}
+                    selectedNodeId={localSelectedNodeId}
                     onEnterNode={handleEnterNode}
                     onSelectNode={selectNode}
                     onCreateEdge={handleCreateEdge}
@@ -2655,7 +2727,7 @@ export default function RawEditor({
                 >
                     <OutlinerPanelWindow
                         nodes={authoredNodes}
-                        selectedNodeId={workspaceState.selectedNodeId || null}
+                        selectedNodeId={localSelectedNodeId || null}
                         onSelectNode={(nodeId) => selectNode(nodeId)}
                     />
                 </DesktopWindow>

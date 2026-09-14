@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { cloneValue } from '../../shared/projectSchema.js'
 import { detectAssetMediaKind } from '../../utils/mediaAssetTypes.js'
 import ScrubNumberInput from './ScrubNumberInput.jsx'
+import { getModelClips, subscribeModelClips } from '../../project/viewport/modelClipRegistry.js'
+import { MIDI_STATUS, useMidiOutput } from '../utils/midiCapture.js'
+import { listKeeperModels } from '../utils/keeperClient.js'
 
 const setNestedValue = (value, path, nextValue) => {
     const draft = cloneValue(value)
@@ -30,10 +33,81 @@ const getAssetOptionsForField = (field, assetOptions = []) => {
     return assetOptions.filter((asset) => detectAssetMediaKind(asset) === field.assetKind)
 }
 
+// A menu of clip names once a viewport has actually loaded the model file
+// (src/project/viewport/modelClipRegistry.js — the same live registry
+// Studio's own Clip field reads). Before that, or for a model with no
+// animations, there is nothing to choose from — a text box still lets a
+// name be typed by hand rather than the field going dead.
+function ModelClipField({ field, value, disabled, onChange }) {
+    const clips = useSyncExternalStore(subscribeModelClips, () => getModelClips(field.assetId))
+    if (!clips.length) {
+        return <input type="text" value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+    }
+    return (
+        <select value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value || '')}>
+            <option value="">All clips</option>
+            {clips.map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+    )
+}
+
+// Real device names once Web MIDI answers (a permission prompt on first ask);
+// a text box otherwise, so a device id can still be typed while waiting or on
+// a browser with no Web MIDI at all.
+function MidiOutDeviceField({ value, disabled, onChange }) {
+    const { status, devices } = useMidiOutput({ deviceId: value || '' })
+    if (status !== MIDI_STATUS.ACTIVE || !devices.length) {
+        return <input type="text" value={value || ''} disabled={disabled} placeholder="Every device" onChange={(event) => onChange(event.target.value)} />
+    }
+    return (
+        <select value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value || '')}>
+            <option value="">Every device</option>
+            {devices.map((device) => <option key={device.id} value={device.id}>{device.name}</option>)}
+        </select>
+    )
+}
+
+// Asks the keeper's own endpoint what it can serve (Ollama's /api/tags, then
+// an OpenAI-compatible /v1/models) and offers those as a menu; a text box
+// when nothing answers, because the endpoint is arbitrary — a festival GPU
+// box, a laptop, nothing plugged in yet — and a name must still be settable
+// by hand before anything is reachable.
+function KeeperModelField({ field, value, disabled, onChange }) {
+    const [models, setModels] = useState([])
+    useEffect(() => {
+        let alive = true
+        setModels([])
+        if (!field.endpoint) return undefined
+        const controller = new AbortController()
+        listKeeperModels(field.endpoint, { signal: controller.signal })
+            .then((names) => { if (alive) setModels(names) })
+            .catch(() => {})
+        return () => { alive = false; controller.abort() }
+    }, [field.endpoint])
+    if (!models.length) {
+        return <input type="text" value={value || ''} disabled={disabled} placeholder="Model name" onChange={(event) => onChange(event.target.value)} />
+    }
+    return (
+        <select value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
+            <option value="">Choose a model</option>
+            {models.map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+    )
+}
+
 // `disabled` is the wired case: the port reads its wire, so the box shows the
 // stored value but takes nothing — the input is disabled rather than hidden,
 // because a field that vanishes when a wire lands reads as a bug.
 function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetFile = null, disabled = false }) {
+    if (field.type === 'modelClip') {
+        return <ModelClipField field={field} value={value} disabled={disabled} onChange={onChange} />
+    }
+    if (field.type === 'midiOutDevice') {
+        return <MidiOutDeviceField value={value} disabled={disabled} onChange={onChange} />
+    }
+    if (field.type === 'keeperModel') {
+        return <KeeperModelField field={field} value={value} disabled={disabled} onChange={onChange} />
+    }
     if (field.type === 'textarea') {
         return <textarea value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} rows={4} />
     }
@@ -140,9 +214,19 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
         return null
     }
     if (field.type === 'connection') {
+        // The word names what actually travels on this wire (design audit
+        // A1/B8): a texture carries a picture, a geometry carries a shape.
+        // Inputs additionally say where it came from; outputs (readOnly)
+        // just say what is leaving, since "from X" would only repeat the
+        // node you are already looking at.
+        const WORD_BY_PORT_TYPE = { texture: 'picture', geometry: 'shape', signal: 'signal' }
+        const word = WORD_BY_PORT_TYPE[field.portType] || 'value'
+        if (value == null) {
+            return <span className="raw-property-connection-empty">—</span>
+        }
         return (
-            <span style={{ opacity: 0.6, fontSize: '0.8em' }}>
-                {value == null ? '—' : 'connected'}
+            <span className="raw-property-connection-value">
+                {field.fromLabel ? `${word} from ${field.fromLabel}` : word}
             </span>
         )
     }
@@ -202,6 +286,7 @@ export default function PropertyInspector({
     values = {},
     onSectionChange,
     onPickAssetFile = null,
+    onSelectSource = null,
     emptyMessage = 'Nothing selected yet.'
 }) {
     if (!sections.length) {
@@ -224,23 +309,49 @@ export default function PropertyInspector({
                                 {section.fields.map((field) => {
                                     const value = readNestedValue(sectionValue, field.path)
                                     const isFullWidth = field.type === 'textarea' || field.type === 'select' || field.type === 'asset'
+                                        || field.type === 'modelClip' || field.type === 'midiOutDevice' || field.type === 'keeperModel'
                                     const wired = field.wired === true
+                                    const readOnly = field.readOnly === true
+                                    // Wired, with a resolved source: "from <label>" is the whole
+                                    // point of A3/B8 — say what it is AND go there. Wired with no
+                                    // resolvable source (the source node vanished, or this render
+                                    // ran before RawEditor could resolve it) falls back to the old
+                                    // plain "wired" word rather than a broken-looking blank.
+                                    const wiredTag = wired ? (
+                                        field.fromNodeId && onSelectSource ? (
+                                            <button
+                                                type="button"
+                                                className="raw-property-wired raw-property-wired-button"
+                                                title={`Go to ${field.fromLabel || 'the source node'}`}
+                                                onClick={(event) => {
+                                                    event.preventDefault()
+                                                    onSelectSource(field.fromNodeId)
+                                                }}
+                                            >
+                                                {`from ${field.fromLabel || 'a node'}`}
+                                            </button>
+                                        ) : (
+                                            <em className="raw-property-wired">{field.fromLabel ? `from ${field.fromLabel}` : 'wired'}</em>
+                                        )
+                                    ) : null
                                     return (
                                         <label
                                             key={`${section.id}-${field.label}`}
-                                            className={`raw-property-field${field.type === 'checkbox' ? ' raw-checkbox-field' : ''}${isFullWidth ? ' raw-full-width-field' : ''}${wired ? ' is-wired' : ''}`}
-                                            title={wired ? 'This port takes its value from the wire into it. Unplug the wire to type one.' : undefined}
+                                            className={`raw-property-field${field.type === 'checkbox' ? ' raw-checkbox-field' : ''}${isFullWidth ? ' raw-full-width-field' : ''}${wired ? ' is-wired' : ''}${readOnly ? ' is-readonly' : ''}`}
+                                            title={wired
+                                                ? 'This port takes its value from the wire into it. Unplug the wire to type one.'
+                                                : (readOnly ? 'This is a live output — wire from it to use the value elsewhere.' : undefined)}
                                         >
                                             <span>
                                                 {field.label}
-                                                {wired ? <em className="raw-property-wired">wired</em> : null}
+                                                {wiredTag}
                                             </span>
                                             <PropertyField
                                                 field={field}
                                                 value={value}
                                                 assetOptions={assetOptions}
                                                 onPickAssetFile={onPickAssetFile}
-                                                disabled={wired}
+                                                disabled={wired || readOnly}
                                                 onChange={(nextValue) => {
                                                     const nextSectionValue = setNestedValue(sectionValue, field.path, nextValue)
                                                     onSectionChange?.(field.component || section.id, nextSectionValue)

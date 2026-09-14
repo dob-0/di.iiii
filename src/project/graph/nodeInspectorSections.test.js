@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createNode } from '../nodeRegistry.js'
-import { deriveNodeInspectorSections } from './nodeInspectorSections.js'
+import { buildOutputsSection, deriveNodeInspectorSections } from './nodeInspectorSections.js'
 
 describe('deriveNodeInspectorSections', () => {
     it('includes the node.null body textarea before dynamic input ports', () => {
@@ -193,5 +193,54 @@ it('keeps the Code section\'s values.__code distinct from node.null\'s own value
         const codeSection = sections.find((section) => section.id === 'code')
         expect(bodySection.fields[0].path).toEqual(['body'])
         expect(codeSection.fields[0].path).toEqual(['__code'])
+    })
+
+    // Design audit A3/B8, fix #1: "wired" alone used to be the whole story —
+    // the sheet never said whose wire it was, so a reader could not go find
+    // the actual source of a value that looked wrong.
+    it('attaches the wire\'s source node to a wired field, for "from <label>"', () => {
+        const fields = deriveNodeInspectorSections(createNode('geom.cube'), {
+            wiredPortIds: ['color'],
+            wiredSources: { color: { nodeId: 'n-1', label: 'Warm Colour' } }
+        }).find((section) => section.id === 'values')?.fields || []
+        const color = fields.find((field) => field.path[0] === 'color')
+        expect(color.wired).toBe(true)
+        expect(color.fromNodeId).toBe('n-1')
+        expect(color.fromLabel).toBe('Warm Colour')
+    })
+
+    // A wired field with no resolvable source (the wire's other end vanished,
+    // or the caller never passed wiredSources) must still read as "wired"
+    // rather than silently drop the flag.
+    it('still marks a field wired when no source label is available', () => {
+        const fields = deriveNodeInspectorSections(createNode('geom.cube'), { wiredPortIds: ['color'] })
+            .find((section) => section.id === 'values')?.fields || []
+        const color = fields.find((field) => field.path[0] === 'color')
+        expect(color.wired).toBe(true)
+        expect(color.fromNodeId).toBeNull()
+        expect(color.fromLabel).toBeNull()
+    })
+})
+
+// Design audit B8, fix #2: "one flat Ports list: inputs only, no outputs, no
+// live values" — buildOutputsSection is the structure half (RawEditor fills
+// in the live values every frame); this only has to prove every real output
+// gets a read-only field of the right shape.
+describe('buildOutputsSection', () => {
+    it('lists every output port, read-only, formatted like an input of the same port type', () => {
+        const section = buildOutputsSection(createNode('geom.cube'))
+        expect(section.id).toBe('outputs')
+        const geometry = section.fields.find((field) => field.path[0] === 'geometry')
+        expect(geometry).toMatchObject({ type: 'connection', portType: 'geometry', readOnly: true })
+        const bounds = section.fields.find((field) => field.path[0] === 'bounds')
+        expect(bounds).toMatchObject({ type: 'vec3', readOnly: true })
+    })
+
+    it('answers null for a node with no outputs, so the sheet adds no empty section', () => {
+        expect(buildOutputsSection(createNode('universe.space'))).toBeNull()
+    })
+
+    it('answers null for no node at all', () => {
+        expect(buildOutputsSection(null)).toBeNull()
     })
 })
