@@ -7,7 +7,11 @@ const normaliseKey = (value) => {
     return raw.length === 1 ? raw.toUpperCase() : raw
 }
 
+// "Any" is the inspector's wildcard option (fix #4, minimal cross-boundary
+// hunk from workstream 3 — the Key menu now offers it, so the feed has to
+// honour it): every key fires the cue instead of one specific key.
 const eventMatches = (event, wanted) => {
+    if (wanted.toUpperCase() === 'ANY') return true
     if (event.code === wanted) return true
     const key = event.key === ' ' ? 'Space' : event.key
     return key.toUpperCase() === wanted.toUpperCase()

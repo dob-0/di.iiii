@@ -1,4 +1,28 @@
-import { PORT_TYPES, getNodeOperation, getNodeOperations, getNodeType } from '../nodeRegistry.js'
+import { PORT_TYPES, getNodeOperation, getNodeOperations, getNodeOutputs, getNodeType } from '../nodeRegistry.js'
+
+// Common cue keys a show actually uses, plus a wildcard — the audit's fix #4:
+// a free-text Key invited a typo no one would notice until the cue missed.
+// "Any" is a real runtime option (KeyboardFeed treats it as a wildcard), not
+// a stand-in for "type one instead".
+export const KEYBOARD_KEY_OPTIONS = [
+    'Space', 'Enter', 'Escape', 'Tab', 'Backspace',
+    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    'Any'
+].map((key) => ({ value: key, label: key }))
+
+// Ports whose declared type is the honest `any` (the wire coerces to
+// whatever is plugged in — that is workstream 4's territory) but whose
+// UNWIRED, typed-by-hand box has one obvious shape. Widening the box's type
+// beyond what the port itself promises would be the same dishonesty the
+// audit found elsewhere; this only ever narrows an `any` field that a person
+// types into directly.
+const TYPED_ANY_FIELDS = {
+    'device.dmx.out': { blackout: 'boolean' },
+    'device.midi.out': { trigger: 'boolean' }
+}
 
 const portToInspectorField = (port, node = null) => {
     const label = port.label || port.id
@@ -11,6 +35,33 @@ const portToInspectorField = (port, node = null) => {
     const ASSET_PICKERS = { 'geom.model': 'model', 'media.video': 'video', 'media.audio': 'audio' }
     if (port.id === 'src' && ASSET_PICKERS[node?.typeId]) {
         return { label, path, type: 'asset', portType: 'string', assetKind: ASSET_PICKERS[node.typeId] }
+    }
+    // A menu of the cues a show actually presses, not a box that accepts any
+    // typo (design audit B8/fix #4).
+    if (node?.typeId === 'device.keyboard' && port.id === 'key') {
+        return { label, path, type: 'select', portType: 'string', options: KEYBOARD_KEY_OPTIONS }
+    }
+    // Clip names only exist once a viewport has loaded the model file
+    // (src/project/viewport/modelClipRegistry.js) — the same live registry
+    // Studio's inspector already reads. Empty registry falls back to a plain
+    // text box so an id can still be typed by hand before anything has loaded.
+    if (node?.typeId === 'geom.model' && port.id === 'animationClip') {
+        return { label, path, type: 'modelClip', portType: 'string', assetId: node.values?.src || null }
+    }
+    // Web MIDI can enumerate real device names once permission is granted;
+    // PropertyInspector falls back to a text box when it can't.
+    if (node?.typeId === 'device.midi.out' && port.id === 'deviceId') {
+        return { label, path, type: 'midiOutDevice', portType: 'string' }
+    }
+    // The keeper's endpoint is arbitrary (a festival GPU box, a laptop), so
+    // its model list can only ever come from asking that endpoint — falls
+    // back to text when nothing answers.
+    if (node?.typeId === 'agent.keeper' && port.id === 'model') {
+        return { label, path, type: 'keeperModel', portType: 'string', endpoint: node.values?.endpoint || '' }
+    }
+    const typedAny = TYPED_ANY_FIELDS[node?.typeId]?.[port.id]
+    if (typedAny === 'boolean') {
+        return { label, path, type: 'checkbox', portType: 'boolean' }
     }
     // A doorway's `portType` decides what its socket on the container will
     // carry, so it must be CHOSEN from the real list rather than typed — a typo
@@ -67,13 +118,30 @@ const portToInspectorField = (port, node = null) => {
 // ignored (festival-machine inventory 2026-09-06). `wired` lets the inspector
 // show the field read-only and say why. A field's first path segment is the
 // port id, and the edge's toPort is the same id.
-const markWiredFields = (fields, wiredPortIds = []) => {
+//
+// `wiredSources` (portId -> {nodeId, label}) is the fix for design audit A3:
+// before, "wired" was the only thing said — the box still showed the STORED
+// value, which could disagree with what the wire actually carries. RawEditor
+// resolves the live value through evaluateNodeInputs and hands the source
+// node's own label back here so the field can say "from <label>" and, in
+// PropertyInspector, go there on a click.
+const markWiredFields = (fields, wiredPortIds = [], wiredSources = {}) => {
     if (!wiredPortIds.length) return fields
     const wired = new Set(wiredPortIds)
-    return fields.map((field) => (wired.has(field.path?.[0]) ? { ...field, wired: true } : field))
+    return fields.map((field) => {
+        const portId = field.path?.[0]
+        if (!wired.has(portId)) return field
+        const source = wiredSources[portId]
+        return {
+            ...field,
+            wired: true,
+            fromNodeId: source?.nodeId || null,
+            fromLabel: source?.label || null
+        }
+    })
 }
 
-export const deriveNodeInspectorSections = (node, { wiredPortIds = [] } = {}) => {
+export const deriveNodeInspectorSections = (node, { wiredPortIds = [], wiredSources = {} } = {}) => {
     if (!node) return []
     const typeId = node.typeId || node.definitionId
     const type = getNodeType(typeId)
@@ -92,7 +160,7 @@ export const deriveNodeInspectorSections = (node, { wiredPortIds = [] } = {}) =>
                 fields: markWiredFields([
                     { label: 'Body', path: ['body'], type: 'textarea', portType: 'string' },
                     ...dynamicPorts
-                ], wiredPortIds)
+                ], wiredPortIds, wiredSources)
             }
         ]
     }
@@ -147,7 +215,42 @@ export const deriveNodeInspectorSections = (node, { wiredPortIds = [] } = {}) =>
     // the first thing in it and is not a port, and `port` has exactly one
     // meaning here (docs/ai/vocabulary.md): where a wire attaches.
     const sections = fields.length
-        ? [{ id: 'values', label: operations ? 'Operation and ports' : 'Ports', fields: markWiredFields(fields, wiredPortIds) }]
+        ? [{ id: 'values', label: operations ? 'Operation and ports' : 'Ports', fields: markWiredFields(fields, wiredPortIds, wiredSources) }]
         : []
     return sections
+}
+
+// The field type an OUTPUT port's live value renders as — same shapes the
+// input side already uses, so a number reads as a number whichever rail it
+// is on (design audit B8: "Out" with live values, same formatting as inputs).
+const outputFieldType = (portType) => {
+    if (portType === 'color') return 'color'
+    if (portType === 'boolean') return 'checkbox'
+    if (portType === 'number') return 'number'
+    if (portType === 'vec3') return 'vec3'
+    if (portType === 'geometry' || portType === 'texture' || portType === 'signal') return 'connection'
+    return 'text'
+}
+
+// The inspector's "Out" section (fix #2 / design audit B8): every output
+// port this node has, shaped the same way an input field is, but read-only —
+// PropertyInspector fills in the live values (RawEditor evaluates them
+// through evaluateNodeOutput) the same way it fills in wired inputs.
+// `scopeNodes` is only needed so a container's doorway-promoted output
+// sockets show up here too (getNodeOutputs' own contract).
+export const buildOutputsSection = (node, scopeNodes = null) => {
+    if (!node) return null
+    const outputs = getNodeOutputs(node, scopeNodes)
+    if (!outputs.length) return null
+    return {
+        id: 'outputs',
+        label: 'Out',
+        fields: outputs.map((port) => ({
+            label: port.label || port.id,
+            path: [port.id],
+            type: outputFieldType(port.type),
+            portType: port.type,
+            readOnly: true
+        }))
+    }
 }
