@@ -1,5 +1,6 @@
 import { generateId } from '../shared/projectSchema.js'
 import { TOP_TYPE_IDS, buildTopNodeTypes } from './tops/topOperators.js'
+import { VJ_DECK_TYPE, buildVjDeckNodeTypes } from './tops/vjDeck.js'
 
 // --- Port Types ---
 // Every connection wire carries one of these types.
@@ -187,6 +188,7 @@ export const FAMILY_BY_TYPE = {
     'work.status': 'agents',
     // pictures — image operators on the GPU (src/project/tops), TouchDesigner's TOPs
     ...Object.fromEntries(TOP_TYPE_IDS.map((typeId) => [typeId, 'picture'])),
+    [VJ_DECK_TYPE]: 'picture',
 }
 
 // What a card says about itself when it has no ports to draw.
@@ -332,6 +334,8 @@ export const getFamilyColorForType = (typeId) => getNodeFamily(typeId)?.color ||
 export const NODE_TYPES = {
     // Image operators, built from their own table — see src/project/tops.
     ...buildTopNodeTypes(),
+    // The VJ deck: clip layers that expand into picture operators — tops/vjDeck.js.
+    ...buildVjDeckNodeTypes(),
 
 
     // -----------------------------------------------------------------------

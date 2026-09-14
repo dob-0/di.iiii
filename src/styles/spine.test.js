@@ -73,6 +73,7 @@ const SPINE_FILES = [
     'components/confirmDeleteDialog.css',
     'raw/styles/raw.css',
     'pages/spaceContents.css',
+    'raw/components/vjDeck/vjDeck.css',
 ]
 
 // Not yet converted, and honest about it. Each line is a debt, not an
