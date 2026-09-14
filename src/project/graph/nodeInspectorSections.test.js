@@ -92,34 +92,17 @@ describe('deriveNodeInspectorSections', () => {
         expect(field).toMatchObject({ label: 'File Pattern', type: 'text' })
     })
 
-    // Universal code panel (product decision 2026-07-19): every node type,
-    // not just node.null, gets an inert "view as code" section. It's stored
-    // under values.__code — a distinct key from node.null's real values.body
-    // — and routes through the shared 'values' component so it reads/writes
-    // the same node.values object the Ports/Node section uses, even though
-    // its own section id ('code') differs for React-key/labeling purposes.
-    // The section used to ship on EVERY node — a dead textarea under every
-    // Cube, the UX audit's one systemic clutter generator. Now it appears
-    // exactly where it is true: a node.null (code is its identity), or any
-    // node actually carrying stored code. A fresh Cube shows nothing.
-    it('shows the Code section only where there is code', () => {
-        for (const typeId of ['geom.cube', 'value.color', 'view.image', 'device.ptz.osc']) {
-            const bare = createNode(typeId)
-            expect(
-                deriveNodeInspectorSections(bare).find((section) => section.id === 'code'),
-                `${typeId} fresh should carry no Code section`
-            ).toBeUndefined()
+    // The retired "Code — stored, not run" box (2026-09-14): nothing ever
+    // ran it, so no node shows it — not a fresh one, not one whose old
+    // document still carries values.__code, not a node.null.
+    it('shows no stored-not-run Code section on any node', () => {
+        for (const typeId of ['geom.cube', 'value.color', 'view.image', 'device.ptz.osc', 'node.null']) {
             const carrying = createNode(typeId)
             carrying.values = { ...carrying.values, __code: 'return 1' }
-            const codeSection = deriveNodeInspectorSections(carrying).find((section) => section.id === 'code')
-            expect(codeSection, `${typeId} with stored code should show it`).toBeDefined()
-            expect(codeSection.fields).toEqual([
-                { label: 'Body', path: ['__code'], type: 'textarea', portType: 'string', component: 'values' }
-            ])
+            const sections = deriveNodeInspectorSections(carrying)
+            expect(sections.find((section) => section.id === 'code'), typeId).toBeUndefined()
+            expect(sections.flatMap((section) => section.fields).some((field) => field.path?.[0] === '__code'), typeId).toBe(false)
         }
-        // node.null keeps it unconditionally — code is that type's identity.
-        const nullNode = createNode('node.null')
-        expect(deriveNodeInspectorSections(nullNode).find((section) => section.id === 'code')).toBeDefined()
     })
 
     // Without this the `src` port falls through to a plain text field and the
@@ -186,12 +169,10 @@ describe('deriveNodeInspectorSections', () => {
         expect(fields.find((field) => field.path[0] === 'body')?.wired).toBeUndefined()
     })
 
-it('keeps the Code section\'s values.__code distinct from node.null\'s own values.body', () => {
+it('keeps node.null\'s own values.body as its real field', () => {
         const node = createNode('node.null', { values: { body: 'the null node body', portDefs: [] } })
         const sections = deriveNodeInspectorSections(node)
-        const bodySection = sections.find((section) => section.id === 'values')
-        const codeSection = sections.find((section) => section.id === 'code')
-        expect(bodySection.fields[0].path).toEqual(['body'])
-        expect(codeSection.fields[0].path).toEqual(['__code'])
+        expect(sections.map((section) => section.id)).toEqual(['values'])
+        expect(sections[0].fields[0].path).toEqual(['body'])
     })
 })

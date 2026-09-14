@@ -251,4 +251,23 @@ describe('readNode', () => {
         expect(reading.known).toBe(true)
         expect(reading.implemented).toBe(false)
     })
+
+    it('lists every wire leaving an output, with the port it lands on, and marks the ones into its own inside', () => {
+        const lfo = createNode('signal.lfo')
+        const cube = createNode('geom.cube')
+        const inner = createNode('value.number', { parentId: lfo.id })
+        const document = docOf([lfo, cube, inner], [
+            createEdge(lfo.id, 'sine', cube.id, 'size'),
+            createEdge(lfo.id, 'sine', inner.id, 'value'),
+            createEdge(lfo.id, 'square', 'gone', 'size')
+        ])
+        const reading = readNode(lfo, { allNodes: document.nodes, context: ctxOf(document), document })
+        const sine = reading.gives.find((row) => row.port.id === 'sine')
+        expect(sine.feeds.map((feed) => [feed.toNode.id, feed.toPortLabel, feed.inside])).toEqual([
+            [cube.id, 'Size', false],
+            [inner.id, 'value', true]
+        ])
+        // A wire to a card that no longer exists leads nowhere.
+        expect(reading.gives.find((row) => row.port.id === 'square').feeds).toEqual([])
+    })
 })

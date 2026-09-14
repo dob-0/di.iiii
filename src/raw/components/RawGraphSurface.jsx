@@ -770,6 +770,22 @@ export default function RawGraphSurface({
         return best
     }
 
+    // A socket OUTSIDE the canvas that takes a wire: the inside frame's IN rail,
+    // where a card standing inside a node is wired into that node's own input
+    // (InsideRails.jsx, data-wire-drop-*). Found by what is under the pointer,
+    // and held to the same compatibility rule as a dot on a card.
+    const resolveSocketDrop = (clientX, clientY) => {
+        const wire = pendingWireRef.current
+        if (!wire || typeof window === 'undefined' || !window.document?.elementFromPoint) return null
+        const socket = window.document.elementFromPoint(clientX, clientY)?.closest?.('[data-wire-drop-node]')
+        if (!socket) return null
+        const toNodeId = socket.getAttribute('data-wire-drop-node')
+        const toPort = socket.getAttribute('data-wire-drop-port')
+        if (!toNodeId || !toPort || toNodeId === wire.fromNodeId) return null
+        if (!arePortsCompatible(wire.fromPortType, socket.getAttribute('data-wire-drop-type') || 'any')) return null
+        return { toNodeId, toPort, socket: true }
+    }
+
     // A transient, positioned one-liner for a wire that died on release —
     // names the incompatible pair when one was under the finger, otherwise
     // says the plain thing. Self-clears; a new notice replaces the old.
@@ -910,6 +926,7 @@ export default function RawGraphSurface({
             const wire = pendingWireRef.current
             const touch = event.pointerType !== 'mouse'
             const target = resolveWireDrop(event.clientX, event.clientY, { touch })
+                || resolveSocketDrop(event.clientX, event.clientY)
             pendingWireRef.current = null
             setPendingWire(null)
             if (!wire) return
@@ -925,6 +942,7 @@ export default function RawGraphSurface({
                 toNodeId: target.toNodeId,
                 toPort: target.toPort
             })
+            if (target.socket) return
             // The drop may have LANDED somewhere other than where it was
             // aimed: the nearest port under the finger can be incompatible,
             // and the snap quietly walks to the nearest compatible one (a

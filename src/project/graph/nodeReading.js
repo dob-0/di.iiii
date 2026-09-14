@@ -179,11 +179,38 @@ export function readNode(node, { allNodes = [], context = null, document = null,
         }
     })
 
+    // Where each output goes: every edge leaving this port, named by the card
+    // and port at the far end. Edges are read off the context (the document the
+    // room drew with), and a wire to a card that is gone is not a destination.
+    const edges = context?.edges || document?.edges || []
+    const feedsFor = (portId) => edges
+        .filter((edge) => edge && edge.fromNodeId === node?.id && edge.fromPort === portId)
+        .map((edge) => {
+            const toNode = byId.get(edge.toNodeId) || null
+            if (!toNode) return null
+            const toPort = getNodeInputs(toNode, allNodes).find((p) => p.id === edge.toPort) || null
+            return {
+                edge,
+                toNode,
+                toPortLabel: toPort?.label || edge.toPort,
+                // The wire leads INTO this node's own inside — a card standing
+                // in it — rather than out to a sibling.
+                inside: (toNode.parentId || null) === (node?.id || null)
+            }
+        })
+        .filter(Boolean)
+
     const gives = outputs.map((port) => {
         const isDoor = !declaredOut.has(port.id)
         const row = resolveOutputRow(node, port, context, { document, isDoor })
         const door = isDoor ? doorFor(port.id) : null
-        return { port, ...row, isDoor, doorLabel: door ? (door.values?.label || door.label || 'Door') : null }
+        return {
+            port,
+            ...row,
+            isDoor,
+            doorLabel: door ? (door.values?.label || door.label || 'Door') : null,
+            feeds: feedsFor(port.id)
+        }
     })
 
     // Slot 2 is a SUMMARY of facts already established per port, never a claim

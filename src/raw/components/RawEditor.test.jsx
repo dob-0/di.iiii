@@ -29,13 +29,6 @@ vi.mock('./RawGraphSurface.jsx', () => ({
                     enter-first-node
                 </button>
             )}
-            {/* The real surface offers this beside "Make me a scene" whenever
-                the scope you are standing in is empty. Same reason as the hint
-                above: without it here, the empty-state route to the sheet is
-                untested while the marker route passes. */}
-            {props.onExplainScope && (
-                <button type="button" onClick={() => props.onExplainScope()}>explain-scope</button>
-            )}
             {props.onMakeScene && (
                 <button type="button" onClick={() => props.onMakeScene()}>make-me-a-scene</button>
             )}
@@ -732,9 +725,9 @@ describe('RawEditor hardware Back (mobile finding #3)', () => {
         }))
         render(<RawEditor localStorageKey={KEY} />)
         fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
-        expect(screen.getByText(/inside/)).toBeTruthy()
+        expect(screen.getByRole('button', { name: 'Leave Geo' })).toBeTruthy()
         act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
-        expect(screen.queryByText(/inside/)).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Leave Geo' })).toBeNull()
     })
 })
 
@@ -1339,9 +1332,10 @@ describe('RawEditor wire-drop edge creation carries a stable id', () => {
     })
 })
 
-describe('RawEditor — what a node is made of', () => {
+describe('RawEditor — the inside of a node', () => {
     afterEach(() => {
         window.localStorage.removeItem(ANATOMY_STORAGE_KEY)
+        mockApplyLocalOps.mockClear()
     })
 
     const enterTheContainer = () => {
@@ -1349,63 +1343,82 @@ describe('RawEditor — what a node is made of', () => {
         render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
         fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
     }
-
-    it('is not offered at the top level — there is no node you are standing in', () => {
-        window.localStorage.setItem(ANATOMY_STORAGE_KEY, makeDoorwayDoc())
-        render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
-        expect(screen.queryByRole('button', { name: /made of/i })).toBeNull()
-        expect(screen.queryByRole('button', { name: 'explain-scope' })).toBeNull()
-    })
-
-    // THE wiring assertion. NodeAnatomyPanel can be perfect while the editor
-    // hands it the wrong node list or a context it built itself, and only a
-    // value that has travelled the whole way — a card two scopes out, through
-    // that container's own door, down a wire, onto this container's face — can
-    // tell the difference.
-    //
-    // Watched red: swapping `allNodes: authoredNodes` for the scoped card list
-    // renders "wired from Source · door-out-of-source" and fails here, while
-    // every other test in this file stays green.
-    it('reads a socket fed from outside, through a door, with the app own graph', () => {
-        enterTheContainer()
-        fireEvent.click(screen.getByRole('button', { name: /what is it made of/i }))
-        const sheet = document.querySelector('.raw-anatomy')
-        expect(sheet).toBeTruthy()
-        expect(sheet.textContent).toContain('9, 9, 9')
-        expect(sheet.textContent).toContain('wired from Source · Beat')
-        expect(sheet.textContent).not.toContain(FAR_DOOR_ID)
-        expect(sheet.textContent).toContain('this socket is the door \u201cCamera\u201d standing inside it')
-    })
-
-    // The empty-canvas entry point exists only inside CODE-made nodes, where
-    // the empty canvas IS the question; a container's reading stays one tap
-    // away on the marker's ? — two resident buttons for one answer was the
-    // clutter the audit counted.
-    it('offers the empty-canvas way in only inside a code-made node', () => {
-        enterTheContainer()
-        expect(screen.queryByRole('button', { name: 'explain-scope' })).toBeNull()
-        cleanup()
-        window.localStorage.setItem(ANATOMY_STORAGE_KEY, JSON.stringify({
-            nodes: [{ id: 'cube', typeId: 'geom.cube', label: 'A cube', values: {} }],
-            edges: [],
-            workspaceState: {}
-        }))
+    const enterDoc = (doc) => {
+        window.localStorage.setItem(ANATOMY_STORAGE_KEY, JSON.stringify({ edges: [], workspaceState: {}, ...doc }))
         render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
         fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
-        fireEvent.click(screen.getByRole('button', { name: 'explain-scope' }))
-        expect(document.querySelector('.raw-anatomy')).toBeTruthy()
+    }
+    const opsOfType = (type) => mockApplyLocalOps.mock.calls.map(([ops]) => ops).flat().filter((op) => op?.type === type)
+
+    it('is not there at the top level — there is no node you are standing in', () => {
+        window.localStorage.setItem(ANATOMY_STORAGE_KEY, makeDoorwayDoc())
+        render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
+        expect(document.querySelector('.raw-inside-head')).toBeNull()
+        expect(document.querySelector('.raw-scope-marker')).toBeNull()
     })
 
-    // A sheet describing the node you have walked out of looks current and is
-    // not, which is worse than no sheet.
-    it('closes itself when you leave the node', () => {
+    // THE wiring assertion, kept from the anatomy sheet it replaces: only a
+    // value that travelled the whole way — a card two scopes out, through that
+    // container's own door, down a wire, onto this container's face — proves
+    // the frame reads the whole document with the app's own graph.
+    it('reads a socket fed from outside, through a door, with the app own graph', () => {
         enterTheContainer()
-        fireEvent.click(screen.getByRole('button', { name: /what is it made of/i }))
-        expect(document.querySelector('.raw-anatomy')).toBeTruthy()
-        // By class, not by name: the way out is labelled with a chevron and
-        // carries "Leave" only as a title, so its accessible name is the glyph.
-        fireEvent.click(document.querySelector('.raw-scope-marker-out'))
-        expect(document.querySelector('.raw-anatomy')).toBeNull()
+        const inRail = document.querySelector('.raw-inside-in')
+        expect(inRail).toBeTruthy()
+        expect(inRail.textContent).toContain('9, 9, 9')
+        expect(inRail.textContent).toContain('from Source · Beat')
+        expect(inRail.textContent).not.toContain(FAR_DOOR_ID)
+        expect(inRail.textContent).toContain('the door \u201cCamera\u201d standing inside it')
+    })
+
+    it('says where you are once, and leaving takes the frame with it', () => {
+        enterTheContainer()
+        expect(document.querySelectorAll('.raw-inside-head')).toHaveLength(1)
+        expect(document.querySelector('.raw-scope-marker')).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: 'Leave A container' }))
+        expect(document.querySelector('.raw-inside-head')).toBeNull()
+    })
+
+    it('walks to the card that feeds an input and selects it', () => {
+        enterTheContainer()
+        fireEvent.click(screen.getByRole('button', { name: /Go to Source, which feeds Camera/ }))
+        expect(document.querySelector('.raw-inside-head')).toBeNull()
+        expect(opsOfType('setWorkspaceState').some((op) => op.payload.patch.selectedNodeId === 'source')).toBe(true)
+    })
+
+    it('changes the node you stand in from its IN side, and says Cube, not geom.cube', () => {
+        enterDoc({ nodes: [{ id: 'cube', typeId: 'geom.cube', label: 'Cube', values: { color: '#5fa8ff' } }] })
+        const head = document.querySelector('.raw-inside-head')
+        expect(head.textContent).toContain('Cube')
+        expect(head.textContent).not.toContain('geom.cube')
+        const colour = document.querySelector('.raw-inside-in input[type="color"]')
+        fireEvent.change(colour, { target: { value: '#ff0000' } })
+        const update = opsOfType('updateNode').at(-1)
+        expect(update.payload).toMatchObject({ nodeId: 'cube', patch: { values: { color: '#ff0000' } } })
+    })
+
+    // The owner's custom Cube: a node placed INSIDE the Cube, wired into the
+    // Cube's own Size from the IN side.
+    it('wires a card standing inside into the node you stand in', () => {
+        enterDoc({
+            nodes: [
+                { id: 'cube', typeId: 'geom.cube', label: 'Cube', values: {} },
+                { id: 'big', typeId: 'value.vec3', label: 'Big', parentId: 'cube', values: { value: [3, 3, 3] } }
+            ]
+        })
+        fireEvent.click(screen.getByRole('button', { name: 'Wire a node inside Cube into Size' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Big · Vector' }))
+        const edge = opsOfType('createEdge').at(-1)?.payload.edge
+        expect(edge).toMatchObject({ fromNodeId: 'big', fromPort: 'out', toNodeId: 'cube', toPort: 'size' })
+        expect(typeof edge.id).toBe('string')
+    })
+
+    // Risk 4 of the design: a window with side effects must never mount twice.
+    // Inside a Webcam, its window lives in SEE — and only there.
+    it('shows a panel node its own window inside, exactly once', () => {
+        enterDoc({ nodes: [{ id: 'cam', typeId: 'source.webcam', label: 'Webcam', values: { frame: { visible: true } } }] })
+        expect(document.querySelectorAll('[data-testid="mock-webcam-panel"]')).toHaveLength(1)
+        expect(document.querySelector('.raw-inside-see [data-testid="mock-webcam-panel"]')).toBeTruthy()
     })
 })
 

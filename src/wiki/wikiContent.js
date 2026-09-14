@@ -954,7 +954,7 @@ export const WIKI_ARTICLES = [
                 'The canvas is clear — always. Cards on flat paper, nothing behind them. The scene is a view you open: the Scene window (drag its corner glyph to size it), the Scene button or the palette\'s Scene command for fullscreen, and /out for a whole display. Fullscreen survives walking through doors: each door swaps which scene fills the screen.',
                 'One rule for every place: a container shows only what stands IN it. A Geo draws its contents in the scene; a Scene is its own stage, seen through its window or by entering it; a Constructor shows only what reaches its doors. The 3D Desk is no longer offered — Geo is the place that does that job (old desks keep working exactly as they were).',
                 'A container has a wall, and you make holes in it. Enter a Scene, a Geo or a Studio, place an In node inside it, and a port with that name appears on the container’s outer face — wire something into it from outside and the In node hands that value to whatever it feeds inside. An Out node does the same in reverse. This is how TouchDesigner, Blender, Max and Unreal all do it, and it is the answer to “I can’t connect anything to a Scene”. Renaming a doorway never breaks its wire: the port is identified by the node itself, not by its name. Two limits worth knowing — a doorway only makes a port on the container it is INSIDE, and a Code node (node.null) cannot grow one, because its ports are already fully hand-declared.',
-                'Standing inside any node, “what is it made of” — beside the “inside X” label, and on the canvas itself when there is nothing in there — opens a reading of that node: what it takes and gives with the values going through it at that moment, where each of those values came from, what works them out, what puts the node on screen, and what is inside it. Every node answers the same four, so reading one teaches you how to read all of them. It is the honest answer to “why can’t I see what a cube is”: a cube has no inside because it is made of code rather than of other nodes, and this says what it has instead.',
+                'Standing inside any node shows the same frame around its canvas: See (the node working), In (its settings and inputs), Out (what it gives and where it goes) and Made of (its real code). See “Inside a node: one workshop for every node”.',
                 'A container also gives out its own settings, and only those: a Scene offers its Title and Sky, a Geo its Position, Rotation and Scale, a Studio its Title. Nothing about what is inside a container leaks through its wall by itself — that is what the doorways are for, and it is deliberate. Assuming otherwise is the most common mistake people make with containers in every tool that has them.',
                 'Your own files come in through three “bring in” nodes: Model (.glb/.gltf incl. Draco and Meshopt, .obj, .stl, .fbx — with its animations, which Play/Speed/Clip control), Video and Sound. Drag a file straight onto the canvas and the node arrives holding it; drop it onto a scene and it lands in that scene, already visible. On a phone, where there is nothing to drag, the ＋ beside the node’s file picker opens the same door. In a project on the server the file uploads and your collaborators get it; on a local canvas it stays in this browser.',
                 'Webcam is the first real capture node: it asks for camera permission, shows a live preview on the node itself (with a visible message if access is denied or no camera is found), and its Frame output can be wired into a Plane’s Texture input to project the live feed onto geometry.',
@@ -992,22 +992,13 @@ export const WIKI_ARTICLES = [
         id: 'what-a-node-is-made-of',
         category: 'Editing',
         title: 'What a node is made of',
-        summary: 'Walk into any node and read the same four things: what it takes and gives with the values going through it right now, what works those out, what puts the node on screen, and what is inside it.',
+        summary: 'The “what is it made of” sheet became the inside of every node on 2026-09-14 — the same reading, live, around the node’s own canvas, with the code in view.',
         body: [
-            'Walking into a Cube used to show a blank canvas. Then it showed one sentence saying a Cube has no inside. Both answer “is there anything in here”, and neither answers the question people were actually asking, which is what the Cube IS. “what is it made of” — the control beside the “inside X” label, and a button on the canvas when the node you are in is empty — answers that one.',
-            'It asks the same four questions of every node there is. Three are answered differently from node to node; the fourth is the only structural difference between a Cube and a container.',
-            { list: [
-                'What it takes and gives — every port, its type, and the value on it at this moment, taken from the same reading the scene is drawing with. Under each value is where it came from: down a wire (and from which card, with a control that takes you to it), typed on this node, or left at the port’s default.',
-                'What works it out — whether its answers come from code, from its own window while that window is open, or from an Out door standing inside it. A container usually answers two ways at once, and the sheet names both.',
-                'What puts it on screen — whether it stands in the scene, opens as a window over the canvas, or is drawn nowhere at all and exists only to feed other nodes.',
-                'What is inside it — nothing, for anything made of code; or the count of what it holds, for a container you are standing in.'
-            ] },
-            'Two things it will tell you that nothing else does. A wire that is connected but carrying nothing reads as exactly that, rather than as a live wire — the node quietly falls back to its own value in that case, and now you can see it happen. And a doorway you placed but never wired reads “nothing wired in”, so you can tell at a glance which of a container’s doors are actually connected to anything.',
-            'It only reads. Nothing on it changes the document, and there is no field to type in — changing a value is still the Inspector’s job. A value shown as “nothing” means the port is genuinely carrying nothing, which is a different fact from carrying zero or an empty word, and the sheet keeps those apart on purpose.',
-            'And it can show you the code. Where a node is worked out or drawn, the sheet names the file and the exact lines — “Show the lines” opens them, real and unedited, fetched only when you ask. The pointing can never rot: a build step measures the real files and CI fails the moment an edit moves them, and if a running page and its code ever disagree the sheet refuses to show anything rather than show the wrong lines. Where one piece of code answers for several nodes at once — the five value nodes share one — it says so, so reading it once is reading all of them.'
+            'This used to be a separate sheet you opened with a “?” beside the “inside X” label. Its four answers — what a node takes and gives, what works those out, what puts it on screen, what is inside it — now live in the frame you see whenever you stand inside any node: In, Out, See and Made of.',
+            'Everything it promised still holds: values are the ones the scene is drawing with, a wire that carries nothing reads as nothing, a door never wired reads as unwired, and the code shown is the real code, measured by the build that shipped it. Read “Inside a node: one workshop for every node”.'
         ],
         tags: ['raw', 'nodes', 'anatomy', 'ports', 'doorways', 'containers', 'made-of', 'learning', 'constructor', 'code', 'source', 'lines'],
-        updated: '2026-08-19'
+        updated: '2026-09-14'
     },
     {
         id: 'the-constructor',
@@ -1393,6 +1384,23 @@ export const WIKI_ARTICLES = [
             'PICTURE OPERATORS. Their frame() scripts still run on the page, as before, but a frame() that takes longer than 20 ms is now stopped until the code changes, so a slow script cannot drag the picture down.'
         ],
         tags: ['raw', 'nodes', 'script', 'javascript', 'compute', 'worker', 'safety', 'projector', 'DI_DESK_SCRIPTS'],
+        id: 'inside-a-node',
+        category: 'Editing',
+        title: 'Inside a node: one workshop for every node',
+        summary: 'Go inside any node — a Cube, an Oscillator, a Webcam, Camera In — and you get the same frame: see it working, change its settings, follow its wires, read its code, and build inside it.',
+        body: [
+            'Going inside used to mean different things. Camera In showed its picture and its shader; a Cube showed an empty canvas; a Webcam\'s window vanished the moment you entered it. Now every node is the same see-through case, like a Game Boy with a clear shell.',
+            { list: [
+                'In the middle is the node\'s own canvas. Place nodes there and wire them INTO the node you are standing in — that is how you make a custom Cube: put a Vector or an Oscillator inside the Cube and wire it into the Cube\'s own Size or Roughness.',
+                'See, at the top, shows the node working, by what it makes: a picture operator\'s picture, the Cube itself, a Webcam\'s own window, a ten-second trace of an Oscillator, a colour\'s history, the words a text node gives. Fold it away with its arrow when you want the room.',
+                'In, on the left, is every setting and every input in one list, with the same fields as the Inspector. A wired input shows the value arriving and “from” the card it comes from — press it to go there, or × to unplug. The dot beside each input takes a wire: drag one from a card inside and drop it on the dot, or press the dot and pick from what stands inside.',
+                'Out, on the right, is what the node gives right now and where every wire from it goes — press one to walk to that card, wherever it is. Its dot feeds a card inside, so what you build inside can read the node too.',
+                'Made of, underneath, is the real code by where it lives: computes, draws, window, door. Built-in code is read-only and says so. A picture operator also has its shader and its script there, which you can change, because they run where the operator runs.'
+            ] },
+            'The head says where you are, once: back, the node\'s name (press it to rename), what kind of node it is, and where it runs. Below 1100 pixels Out folds under In; on a phone the frame is one column, See stays at the top while you scroll, and In · Out · Made of · Canvas sit at the bottom under your thumb.',
+            'Going inside a panel node whose window you had closed opens the window again as well, so it is there when you come back out. The old “Code — stored, not run” box is gone: nothing ever ran it. A script that really runs lives in Made of.'
+        ],
+        tags: ['raw', 'nodes', 'inside', 'workshop', 'see', 'in', 'out', 'made-of', 'code', 'shader', 'script', 'custom cube', 'wires', 'touchdesigner'],
         updated: '2026-09-14'
     }
 ]
