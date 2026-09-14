@@ -180,6 +180,9 @@ export const MEASURED_FILES = [RUNTIME_FILE, VIEWPORT_FILE, EDITOR_FILE]
 
 // One directory per type, whole file is that type's compute code.
 export const NODES_DIR = 'src/project/nodes'
+// Every picture operator shares ONE runtime (its picture, or the canvas
+// texture the runner publishes when it is wired out, and Analyze's numbers).
+export const TOPS_RUNTIME_FILE = 'src/project/tops/topRuntime.js'
 const COLOCATED_RE = /(^|\/)src\/project\/nodes\/[^/]+\/runtime\.js$/
 
 /**
@@ -190,7 +193,9 @@ const COLOCATED_RE = /(^|\/)src\/project\/nodes\/[^/]+\/runtime\.js$/
  */
 export const isMeasuredFile = (filePath) => {
     const normalized = filePath.split('\\').join('/')
-    return MEASURED_FILES.some((file) => normalized.endsWith(file)) || COLOCATED_RE.test(normalized)
+    return MEASURED_FILES.some((file) => normalized.endsWith(file))
+        || normalized.endsWith(TOPS_RUNTIME_FILE)
+        || COLOCATED_RE.test(normalized)
 }
 
 // The one hand-kept entry. `time` is the single type whose reality includes a
@@ -257,6 +262,19 @@ export async function buildManifest() {
             anatomy[typeId].computes = { file, ...extractModuleAnswers(moduleSource), sharedWith: [] }
             fingerprints[file] = fingerprintSource(moduleSource)
         }
+    }
+
+    // The picture operators: one shared runtime, registered for all of them in
+    // nodes/index.js rather than one folder each.
+    const { TOP_TYPE_IDS } = await import('../src/project/tops/topOperators.js')
+    if (fs.existsSync(path.join(ROOT, TOPS_RUNTIME_FILE))) {
+        const topSource = read(TOPS_RUNTIME_FILE)
+        const measured = extractModuleAnswers(topSource)
+        for (const typeId of TOP_TYPE_IDS) {
+            if (!anatomy[typeId]) continue
+            anatomy[typeId].computes = { file: TOPS_RUNTIME_FILE, ...measured, sharedWith: TOP_TYPE_IDS.filter((other) => other !== typeId) }
+        }
+        fingerprints[TOPS_RUNTIME_FILE] = fingerprintSource(topSource)
     }
 
     return {
