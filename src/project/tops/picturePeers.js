@@ -55,6 +55,7 @@ export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbe
             try {
                 c.makingOffer = true
                 await pc.setLocalDescription()
+                c.offeredAt = Date.now()
                 link.send(peerId, { kind: 'description', description: pc.localDescription })
             } catch { /* the next negotiationneeded retries */ } finally {
                 c.makingOffer = false
@@ -138,6 +139,13 @@ export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbe
             } else if (payload.kind === 'ice') {
                 try { await pc.addIceCandidate(payload.candidate) } catch (error) { if (!c.ignoreOffer) throw error }
             } else if (payload.kind === 'want') {
+                // Still waiting on an answer after a while: the offer was lost
+                // on the way. Say it again — by now the description carries
+                // every gathered candidate, so nothing else needs re-sending.
+                if (pc.signalingState === 'have-local-offer' && Date.now() - (c.offeredAt || 0) > 4000 && pc.localDescription) {
+                    c.offeredAt = Date.now()
+                    link.send(from, { kind: 'description', description: pc.localDescription })
+                }
                 c.theirVideo = new Set(payload.video || [])
                 c.theirPreview = new Set(payload.preview || [])
                 syncOutgoing(c)
@@ -220,16 +228,30 @@ export const createPicturePeers = ({ link, drawNode, onVideo, onPreview, onNumbe
 
     // --- wants go out on a beat, which is also how a connection starts: the
     // page that wants something opens it, the page that has it answers.
+    const told = new Map()
     const announceWants = () => {
+        // A page that has left the desk (closed tab, reload) is closed here too.
+        // Without this a kiosk kept a connection per page it had ever met and
+        // messaged every one of them every few seconds, forever.
+        const present = new Set((link.peers || []).map((peer) => peer.peerId))
+        for (const peerId of [...connections.keys()]) {
+            if (!present.has(peerId)) { close(peerId); told.delete(peerId) }
+        }
         for (const [peerId, want] of wants) {
-            if (!want.video.length && !want.preview.length && !connections.has(peerId)) continue
+            const empty = !want.video.length && !want.preview.length
+            if (empty && !connections.has(peerId)) continue
             connectionFor(peerId)
+            // A non-empty want is repeated: it is also the keep-alive that
+            // re-opens a connection the other side dropped. An empty one is said once.
+            const text = JSON.stringify(want)
+            if (empty && told.get(peerId) === text) continue
+            told.set(peerId, text)
             link.send(peerId, { kind: 'want', video: want.video, preview: want.preview })
         }
-        // A peer we no longer want anything from is told so, once, and its
-        // connection is left to close from the other side's 'bye' or failure.
         for (const peerId of connections.keys()) {
-            if (!wants.has(peerId)) link.send(peerId, { kind: 'want', video: [], preview: [] })
+            if (wants.has(peerId) || told.get(peerId) === 'none') continue
+            told.set(peerId, 'none')
+            link.send(peerId, { kind: 'want', video: [], preview: [] })
         }
     }
     const wantTimer = setInterval(announceWants, WANT_EVERY_MS)

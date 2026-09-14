@@ -71,6 +71,25 @@ export const createMachineLink = ({ spaceId, role = 'runner' }) => {
         }
     }
 
+    // A page that just opened on the other machine is not known here until its
+    // server's next sync (every few seconds), and the answer to its first
+    // message is usually faster than that. Found 2026-09-14: asuz answered a
+    // new page's first request in 0.1s with its WebRTC offer, got "no such
+    // peer", and the offer was never sent again — the picture stayed dark
+    // forever while every later, smaller message arrived. So a 404 waits and
+    // tries again; anything else is final.
+    const RETRY_404_MS = [800, 1600, 2400, 3200]
+    const sendWithRetry = async (to, payload) => {
+        for (let attempt = 0; ; attempt += 1) {
+            try {
+                return await apiFetch(`${base}/signal`, { method: 'POST', body: { from: peerId, to, payload } })
+            } catch (error) {
+                if (stopped || error?.status !== 404 || attempt >= RETRY_404_MS.length) return null
+                await new Promise((resolve) => setTimeout(resolve, RETRY_404_MS[attempt]))
+            }
+        }
+    }
+
     hello().then(() => { if (!stopped) listen() })
     helloTimer = setInterval(hello, HELLO_EVERY_MS)
 
@@ -78,7 +97,7 @@ export const createMachineLink = ({ spaceId, role = 'runner' }) => {
         peerId,
         get machine() { return machine },
         get peers() { return peers },
-        send: (to, payload) => apiFetch(`${base}/signal`, { method: 'POST', body: { from: peerId, to, payload } }).catch(() => null),
+        send: (to, payload) => sendWithRetry(to, payload),
         onMessage: (listener) => { listeners.add(listener); return () => listeners.delete(listener) },
         onPeers: (listener) => { peerListeners.add(listener); listener(peers, machine); return () => peerListeners.delete(listener) },
         /** What this machine has; told to the others on the next hello, which is now. */
