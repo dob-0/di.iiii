@@ -20,6 +20,20 @@ describe('createSessionDbSync', () => {
     expect(result).toEqual({ dbRole: 'admin', dbSpaces: ['a', 'b'], dbUnrestricted: false })
   })
 
+  // A grant (creating or opening a space) re-issued the cookie, but the cached
+  // pre-grant scope overrode it for up to a minute: the owner was refused the
+  // space they had just made.
+  it('reads the DB again at once after a scope write forgets the subject', () => {
+    let spaces = []
+    const findUserById = vi.fn(() => ({ role: 'editor', spaces, isUnrestricted: false }))
+    const { getFreshDbIdentity, forgetDbIdentity } = createSessionDbSync({ findUserById, normalizeAuthRole, now: () => 0 })
+
+    expect(getFreshDbIdentity('user-1').dbSpaces).toEqual([])
+    spaces = ['imported']
+    forgetDbIdentity('user-1')
+    expect(getFreshDbIdentity('user-1').dbSpaces).toEqual(['imported'])
+  })
+
   it('serves subsequent lookups from cache within recheckMs, without re-querying', () => {
     const findUserById = vi.fn(() => ({ role: 'editor', spaces: [], isUnrestricted: false }))
     let clock = 0

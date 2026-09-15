@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Container } from '@mui/material'
-import useAuthSession from '../../hooks/useAuthSession.js'
+import useAuthSession, { announceSessionChanged } from '../../hooks/useAuthSession.js'
 import useDocumentTitle from '../../hooks/useDocumentTitle.js'
 import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
 import { telegramSignInUrl } from '../../utils/telegramSignIn.js'
@@ -399,6 +399,7 @@ export default function SpaceHub() {
         setStatus('creating...')
         try {
             const space = await createServerSpace({ label: name, isPermanent: true })
+            announceSessionChanged()
             await loadSpaces()
             navigateToStudioPath(buildStudioHubPath(space.id))
         } catch (e) {
@@ -468,6 +469,8 @@ export default function SpaceHub() {
                 if (!as) { setStatus(''); return }
                 result = await openSpaceFromFile(file, { as })
             }
+            // The server just put the opened space in this session's scope.
+            announceSessionChanged()
             await loadSpaces()
             // loadSpaces clears status on success, so this goes after it.
             if (result?.spaceId) setStatus(`opened ${result.spaceId}`)

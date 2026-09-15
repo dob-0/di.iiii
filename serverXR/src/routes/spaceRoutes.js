@@ -572,13 +572,21 @@ function registerSpaceRoutes(router, {
         return res.status(400).json({ error: said || 'That file could not be opened.' })
       }
 
-      const opened = as || /imported .*?as ([a-z0-9-]+)/i.exec(output)?.[1] || null
+      // The tool says `imported "src" as "target"` — quoted. The pattern used
+      // to expect a bare id, so without `as` (which is how the Spaces page
+      // opens a file) it matched nothing: the space was made, the answer said
+      // spaceId null, and nobody was granted it.
+      const opened = as || /imported "?[^"\s]*"? as "?([a-z0-9-]+)"?/i.exec(output)?.[1] || null
       const meta = opened ? await loadSpaceMeta(opened) : null
       if (opened && meta && sessionUserId && grantSpaceToSessionUser) {
         // Whoever opened it can reach it. A space nobody is scoped to is a
         // space that vanishes from its own owner's list — the exact trap
         // ownership does not solve, since scope is what grants access.
-        await grantSpaceToSessionUser(req, opened)
+        // (req, res, userId, spaceId) — the same call the create route makes.
+        // It was called as (req, opened), so userId arrived undefined and the
+        // grant returned before doing anything: the importer was locked out of
+        // the space they had just made.
+        grantSpaceToSessionUser(req, res, sessionUserId, opened)
       }
       res.status(201).json({ spaceId: opened, space: meta })
     } catch (error) {

@@ -8,6 +8,8 @@ import { getApiAuthProviders, getOAuthUrl, hasServerApi } from '../services/apiC
 import { redeemSpaceInvite } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { startOAuth } from '../utils/oauthNavigate.js'
+import { carriedSandboxPath } from '../utils/carriedSandbox.js'
+import { isSpaceInSessionScope } from '../utils/sessionScope.js'
 import { buildAppSpacePath, buildWikiPath, isReservedAppSegment } from '../utils/spaceRouting.js'
 import { telegramSignInUrl } from '../utils/telegramSignIn.js'
 import PasswordSignIn from './PasswordSignIn.jsx'
@@ -292,12 +294,12 @@ function AuthGateInner({
 
     // Out-of-scope sessions get sent to the space's public live view instead of
     // a dead end — but only when the space is actually public (flag fails closed).
-    const sessionSpaces = authSession.spaces
+    // Scope is the server's rule, read the server's way — the cookie list plus
+    // the open space and the session's own sandbox (see sessionScope.js).
     const outOfScope = Boolean(
         requiredSpaceId
         && authenticated
-        && Array.isArray(sessionSpaces)
-        && !sessionSpaces.includes(requiredSpaceId)
+        && !isSpaceInSessionScope(authSession, requiredSpaceId)
     )
     // A local install (`di up`) has no scope to check, so the gate used to
     // wave every address through — and one that names no space (/make, a
@@ -309,6 +311,11 @@ function AuthGateInner({
     const localLookupId = (hasServerApi && !loading && !error && !requireAuth && requiredSpaceId) ? requiredSpaceId : null
     const { isPublic: liveIsPublic, exists: liveExists, loading: liveLoading } = useSpacePublicFlag(outOfScope ? requiredSpaceId : localLookupId)
     const invitePending = inviteStatus === 'pending'
+    // Signed in from a guest sandbox page: the sandbox moved onto the account,
+    // so the old address is gone — follow the work instead of saying so.
+    const carriedTo = outOfScope && !liveLoading && !liveExists && typeof window !== 'undefined'
+        ? carriedSandboxPath(authSession, requiredSpaceId, window.location)
+        : null
 
     useEffect(() => {
         getApiAuthProviders()
@@ -337,6 +344,10 @@ function AuthGateInner({
             })
         return () => { cancelled = true }
     }, [inviteToken, inviteStatus, authenticated, outOfScope, refresh])
+
+    useEffect(() => {
+        if (carriedTo) appNavigate(carriedTo, { replace: true })
+    }, [carriedTo])
 
     const explainOutOfScope = outOfScope && liveIsPublic && !invitePending
         && outOfScopeBehavior === OUT_OF_SCOPE_EXPLAIN
@@ -415,9 +426,7 @@ function AuthGateInner({
     }
 
     if (authenticated) {
-        const { spaces } = authSession
-        const inScope = !requiredSpaceId || !Array.isArray(spaces) || spaces.includes(requiredSpaceId)
-        if (!inScope) {
+        if (outOfScope) {
             // Editor lanes stop here and say why. The redirect below is right for
             // a visitor following a shared link, but on an editor it fires as a
             // replace() before anything paints — the surface simply becomes a
@@ -450,7 +459,7 @@ function AuthGateInner({
                     </Box>
                 )
             }
-            if (invitePending || liveLoading || liveIsPublic) {
+            if (invitePending || liveLoading || liveIsPublic || carriedTo) {
                 return <LoadingScreen label="Loading" detail="Checking access to this space" />
             }
             return (

@@ -3153,6 +3153,68 @@ describe('saving and opening a space as a file', () => {
         expect((await response.json()).error).toMatch(/Not a di\.iiii file/)
     })
 
+    // The import route called grantSpaceToSessionUser(req, opened) against a
+    // (req, res, userId, spaceId) signature, so userId was undefined and the
+    // grant returned at once: every signed-in account that opened a file got a
+    // 201 and a space it could not open. Auth ON here — with auth off every
+    // request is an admin and the missing grant never shows.
+    it('lets the signed-in account that opened a file into the space it made', async () => {
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' }
+        })
+        const made = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'carried file', permanent: true })
+        })
+        expect(made.status).toBe(201)
+        const saved = await fetch(`${server.baseUrl}/api/spaces/carried-file/bundle`, { headers: withAuth(server.apiToken) })
+        expect(saved.status).toBe(200)
+        const bytes = Buffer.from(await saved.arrayBuffer())
+        // Gone from this server, so the file opens under its own name — the
+        // way the Spaces page sends it, with no `as`.
+        const removed = await fetch(`${server.baseUrl}/api/spaces/carried-file`, { method: 'DELETE', headers: withAuth(server.apiToken) })
+        expect(removed.status).toBe(200)
+
+        const register = await fetch(`${server.baseUrl}/api/auth/password/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'importer', password: 'importer-passphrase-9x' })
+        })
+        expect(register.status).toBeLessThan(300)
+        const accountCookie = (register.headers.get('set-cookie') || '').split(';')[0]
+        expect(accountCookie).toBeTruthy()
+
+        const form = new FormData()
+        form.append('bundle', new Blob([bytes]), 'carried-file.diiii')
+        const opened = await fetch(`${server.baseUrl}/api/spaces/bundle`, {
+            method: 'POST',
+            headers: { Cookie: accountCookie },
+            body: form
+        })
+        const openedBody = await opened.json()
+        expect({ status: opened.status, body: openedBody }).toMatchObject({ status: 201, body: { spaceId: 'carried-file' } })
+        // The grant re-issues the cookie so the space is in scope at once.
+        const refreshedCookie = (opened.headers.get('set-cookie') || '').split(';')[0]
+        expect(refreshedCookie).toBeTruthy()
+
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: refreshedCookie } })).json()
+        expect(session.spaces).toContain('carried-file')
+        const scene = await fetch(`${server.baseUrl}/api/spaces/carried-file/scene`, { headers: { Cookie: refreshedCookie } })
+        expect({ status: scene.status, body: scene.status === 200 ? null : await scene.json() }).toEqual({ status: 200, body: null })
+
+        // …and only that one: a second account gets nothing from it.
+        const stranger = await fetch(`${server.baseUrl}/api/auth/password/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'stranger', password: 'stranger-passphrase-9x' })
+        })
+        const strangerCookie = (stranger.headers.get('set-cookie') || '').split(';')[0]
+        const refused = await fetch(`${server.baseUrl}/api/spaces/carried-file/scene`, { headers: { Cookie: strangerCookie } })
+        expect(refused.status).toBe(403)
+    })
+
     it('keeps node\'s own warnings out of what the browser is shown', async () => {
         // node prints an ExperimentalWarning the first time node:sqlite loads.
         // In a terminal it is noise; in a dialog it is the first thing read.
