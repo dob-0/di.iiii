@@ -667,16 +667,27 @@ export default function SpaceHub() {
     // The chips count the whole set, not the filtered one — a count that changed
     // when you clicked it could never tell you what is behind the other chips.
     const stateCounts = countStates(arrangeable)
-    const passesFilter = (space) => filterMode === 'all' || spaceState(space) === filterMode
+    // "Only you" (private) means a visitor meets a login wall — a state about
+    // spaces belonging to an owner. The server only ever lists PUBLIC spaces
+    // to a signed-out visitor (spaceRoutes.js), so that count is always 0 for
+    // them: the chip could never do anything but read "Only you 0", an
+    // owner-only concept surfaced to someone who owns nothing here. Hide the
+    // chip for a visitor, and if their browser kept an old "private" pick from
+    // a session where they were signed in, treat it as "all" rather than
+    // silently filtering their whole page down to a filter that no longer
+    // exists on screen.
+    const visibleFilterModes = isVisitor ? FILTER_MODES.filter(mode => mode.key !== 'private') : FILTER_MODES
+    const activeFilterMode = isVisitor && filterMode === 'private' ? 'all' : filterMode
+    const passesFilter = (space) => activeFilterMode === 'all' || spaceState(space) === activeFilterMode
 
-    const visitorSpaces = applyView(arrangeable, { arrange, filter: filterMode })
-    const arrangedRest = applyView(restSpaces, { arrange, filter: filterMode })
+    const visitorSpaces = applyView(arrangeable, { arrange, filter: activeFilterMode })
+    const arrangedRest = applyView(restSpaces, { arrange, filter: activeFilterMode })
     // The two pinned shelves obey the filter as well: leaving Open Space on
     // screen under "needs a door" would make the filter a suggestion.
     const openShelfCard = openSpaceCard && passesFilter(openSpaceCard) ? openSpaceCard : null
     const sandboxShelfCard = sandboxCard && passesFilter(sandboxCard) ? sandboxCard : null
     // The list is one flat run of rows, in the arranged order, pinned shelves included.
-    const listSpaces = applyView(arrangeable, { arrange, filter: filterMode })
+    const listSpaces = applyView(arrangeable, { arrange, filter: activeFilterMode })
 
     // The two featured shelves are a PAIR — the room everyone shares beside the one
     // that is yours — and only earn their own row when both are there. Alone, a
@@ -824,12 +835,12 @@ export default function SpaceHub() {
                             ))}
                         </div>
                         <div className="ssh-filter" role="group" aria-label="Show which spaces">
-                            {FILTER_MODES.map(mode => (
+                            {visibleFilterModes.map(mode => (
                                 <button
                                     key={mode.key}
                                     type="button"
-                                    className={filterMode === mode.key ? 'on' : ''}
-                                    aria-pressed={filterMode === mode.key}
+                                    className={activeFilterMode === mode.key ? 'on' : ''}
+                                    aria-pressed={activeFilterMode === mode.key}
                                     disabled={stateCounts[mode.key] === 0 && mode.key !== 'all'}
                                     onClick={() => selectFilter(mode.key)}
                                 >{mode.label}<span className="ssh-filter-count">{stateCounts[mode.key]}</span></button>
@@ -845,9 +856,15 @@ export default function SpaceHub() {
                     </p>
                 )}
 
-                {viewMode === 'map' && spaces.length > 0 && (
+                {/* Same set the grid counts and lists — `arrangeable`, not the
+                    raw `spaces` state. A visitor's own private sandbox is
+                    excluded from the grid ("not one of the spaces to visit",
+                    above); the map drew straight from `spaces` and so held one
+                    more node than the grid showed cards, the same page
+                    reporting two different totals for what should be one set. */}
+                {viewMode === 'map' && arrangeable.length > 0 && (
                     <SpaceConstellation
-                        spaces={spaces}
+                        spaces={arrangeable}
                         defaultSpaceId={defaultSpaceId}
                         openSpaceId={openSpaceId}
                         canManage={canManage}

@@ -2,13 +2,24 @@
 //
 // Kept out of SpaceHub so the ordering can be tested on plain objects, and so a
 // second surface (the list view) arranges identically to the grid.
+import { isWorkSegment } from '../../works/segments.js'
 
 // What a space is, from a visitor's side of the door.
 //   open    — public, and something is published in it
 //   nodoor  — public, but nothing published: a visitor walks into an empty room
 //   private — a visitor meets a login wall
-export const spaceState = (space) =>
-    space.isPublic ? (space.publishedProjectId ? 'open' : 'nodoor') : 'private'
+//
+// A work (algovrithm, wcc's bare microsite — see src/works/works.js) owns its
+// segment before any space lookup runs, so its door always opens onto the
+// piece regardless of publishedProjectId — that field describes a project
+// published INTO the space, which a work never uses to answer its own bare
+// URL. Counting algovrithm as "needs a door" said a door was missing when it
+// was never the one being asked for; a space no work shadows is unaffected.
+export const spaceState = (space) => {
+    if (!space.isPublic) return 'private'
+    if (isWorkSegment(space.id)) return 'open'
+    return space.publishedProjectId ? 'open' : 'nodoor'
+}
 
 export const ARRANGE_MODES = [
     { key: 'recent', label: 'Recent' },
