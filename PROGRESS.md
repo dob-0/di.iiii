@@ -5,6 +5,315 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-15 — Facade audit wave 3: the 2D page faults
+
+Five faults from the 2026-09-14 facade audit's "wave 3, DIY look" list — the
+functional ones, not the button-style/header unification (those go to sketches
+for the owner, untouched here).
+
+- **Space card thumbnails stuck at "INITIALIZING 0%":** not a boot-queue bug —
+  a code-mode published project (`entryView: 'code'`) renders its own iframe
+  in `PublicProjectViewer.jsx` unconditionally of `isPreview`, so a card's
+  thumbnail booted the SAME heavy runtime the real page does. **First version
+  of this fix (below, reworked 2026-09-16) replaced EVERY code-mode card's
+  picture with a static placeholder — a regression, caught only by loading
+  dev.diiii.xyz's real `/spaces` grid: br_id_ge, network and platform-recordar
+  all painted their real content in 2-5s, and even `azd` (the piece the
+  original finding named) painted fine when loaded directly — the original
+  claim was reproduced against fabricated local test data ("Heavy Piece"),
+  never against the real space.** Reworked: the card keeps mounting the real
+  iframe immediately; only a piece that genuinely never shows a sign of life
+  falls back, after a 10s window (`CODE_PREVIEW_PAINT_TIMEOUT_MS`), to a quiet
+  stand-in (the space's name, square corners, no glow, no instructional
+  copy — not the old "Custom page — open to view." text chip). "Sign of life"
+  is real, not a guess: `presentationPreviewDocument.js`'s bootstrap script
+  (already injected into every `srcDoc` code page) posts
+  `PREVIEW_PAINT_CONFIRMED_KIND` the moment either (a) the page has no
+  `<canvas>` at all — ordinary DOM/CSS content, first paint IS the whole page
+  — or (b) a `MutationObserver` sees the DOM around a canvas change even
+  once — a loading indicator ticking or being removed. Silence forever is
+  genuinely ambiguous (finished-and-static reads identically to hung-forever
+  from outside), which is why the timer stays as the backstop rather than a
+  real "done" signal. This only works for `rawHtml` (an `<iframe srcDoc>` this
+  app wraps itself); a `codeUrl` page (`src=`, someone else's whole site,
+  truly cross-origin) can never be instrumented and is never timed out —
+  `allow-same-origin` would answer the "did it paint" question but also hands
+  the arbitrary page this origin's real storage and DOM reach, a trade only an
+  author's own `deviceAccess` opt-in makes, and one that changes nothing for a
+  different origin anyway. Not fixable further without widening the sandbox.
+  Verified against real content: fetched br-id-ge/network/platform-recordar/
+  azd's actual published `srcDoc` HTML from dev.diiii.xyz (read-only GET, `di`
+  install untouched) and republished it into throwaway local spaces — all four
+  kept their live picture; a synthetic space carrying a genuinely-frozen boot
+  screen (canvas painted once, never touched again) correctly fell back after
+  10s. Screenshots desktop 1440×900@2x + phone 390×844@3x, Chromium
+  (`--disable-gpu --use-angle=swiftshader`) and Firefox.
+- **Visitor sees "Only you 0":** the server only ever lists PUBLIC spaces to a
+  signed-out visitor (`spaceRoutes.js`'s `visible` filter), so the "private"
+  filter count can never be anything but 0 for them — an owner-only concept
+  with no possible use, shown anyway. `SpaceHub.jsx` now hides that filter
+  chip for a visitor, and treats a stale `private` pick left in localStorage
+  from an earlier signed-in session as `all` rather than silently filtering
+  the whole page down to a filter that no longer exists on screen.
+- **Map shows 14, grid shows 13:** the map (`SpaceConstellation`) was handed
+  the raw `spaces` state; the grid counts `arrangeable`, which drops a
+  visitor's own private guest sandbox ("not one of the spaces to visit").
+  Map now gets `arrangeable` too — same set, same count, everywhere on the
+  page. Grid was already right; map was the one out of step.
+- **Login copy "This copy cannot send mail":** "copy" as in "this installation
+  of the software" reads as internal jargon to a visitor. Reworded to say
+  what's actually true for them: "Email sign-in isn't available on this
+  install — if you forget your password, ask an admin to reset it."
+- **`algovrithm` counted under "Needs a door":** `src/algoVrithm/` (a
+  registered *work*, `src/works/works.js`) owns its bare URL segment before
+  any space lookup runs, so its door always opens onto the piece regardless of
+  the space's own `publishedProjectId` — that field describes a project
+  published INTO a space, which a work never uses to answer its own route.
+  `spaceState()` in `spaceArrange.js` now treats any work-shadowed space as
+  `open`, never `nodoor`, whether or not it has a published project. The space
+  row itself is untouched — this was a display-classification fix only, not a
+  data change, and the owner hasn't decided anything about the row itself.
+
+Verified signed-out, desktop 1440×900@2x and phone 390×844@3x, Chromium
+(`--disable-gpu --use-angle=swiftshader`) and Firefox via Playwright, against
+a local dev build on this branch. Screenshots (before/after) in
+`/tmp/claude-1000/-home-dob/b69f5f5e-f9bb-4a70-9940-5c2a0a65dac0/scratchpad/pages/`.
+
+Tests: `src/studio/utils/spaceArrange.test.js` (work-segment state, updated
+`nodoor` fixture off the real `algovrithm` id), `src/studio/components/SpaceHub.test.jsx`
+(visitor filter chip hidden, map/grid set parity — the old Map test asserted the
+bug as intended behavior and is corrected), `src/project/components/PublicProjectViewer.test.jsx`
+(a code preview shows the live iframe immediately; a stuck one swaps to the
+quiet stand-in only after the paint window; a confirmed one never swaps out
+no matter how long the window runs — the regression guard for the first
+version's bug), `src/utils/presentationPreviewDocument.test.js` (the injected
+paint-watcher: immediate for no-canvas content, silent for a canvas page whose
+DOM never changes, confirmed on the first DOM change, never runs outside
+`?preview=1`).
+
+Nothing else from the wave-3 list (room bevel title, red ring, leftover white
+planes, four button styles, three headers) was touched — those are design
+choices the task explicitly routes to sketches for the owner, not faults.
+
+## 2026-09-16 — Wave 3 facade audit: front-room faults (red ring, white planes, camera freeze)
+
+Fixed the three front-room defects from the wave-3 facade audit (`main` space at `/`,
+and door entry). Explicitly out of scope: the room title bevel (owner is picking that
+in a sketch) and the other four wave-3 items (button styles, headers, thumbnails,
+"Only you 0") — not touched.
+
+### 1. Red glowing ring — SCENE DATA, fixed on local + dev
+The WCC door (`e-flagship-door-1`) was authored `appearance.color: "#ff2a2a"`.
+`PortalObject.jsx`'s `PortalGateway` renders the ring's material as
+`emissive={color}` straight from that field — so it was a genuine glowing red
+ring, off-brand ("one cyan accent, no glow, no bevel"). The code's own default
+(`color = '#4df9ff'`, `PortalObject.jsx:243`) is already the brand cyan the
+algovrithm door uses — only this one entity's stored color was wrong. Brought
+it to `#4df9ff` via an `updateEntity` op. No code change needed for this half.
+
+### 2. Leftover white photo planes — SCENE DATA, fixed on local + dev
+76 leftover `image` entities sat in a dense grid (x: 0..57, z: 0..54, all at
+y=0.01 — nearly coplanar with the floor, hence the z-fighting) spanning far
+outside the room's real footprint (documented subject span is x ±12.8,
+`reference-dii-front-room`). Downloaded one of the referenced assets
+(`1.webp`) and confirmed by pixel histogram it is ~98% pure white — so the
+"white plane" look is the actual image content, not a fallback/placeholder
+render (`ImageObject.jsx`'s failure fallback is dark teal `#12292b`, never
+white, and `EntityContent.jsx`'s `case 'image'` doesn't even read
+`appearance.color`, so the `#ff0000` stored on all 76 was always irrelevant
+to what renders). This is debris from an unrelated import/test batch, not
+room content — deleted via 76 `deleteEntity` ops.
+
+Both fixes applied with `node <scratchpad>/fix-front-room-data.mjs --base
+<tier> --token <token>` (script + full JSON backups of both tiers' documents
+pre-fix live in the session scratchpad, not the repo). **Prod was not
+touched** — replay command recorded below for the owner.
+
+### 3. Camera freezes on arrival — CODE, fixed here
+`src/project/viewport/PortalObject.jsx`: `enter()` starts a door glide via
+`setGlide({ ms, reach, target, resolve })`, and `EntryGlideCamera`
+(`src/components/entryTransition/EntryGlide.jsx`) stays mounted — with a
+priority-1 `useFrame` that pins the camera to the glide's end pose and calls
+`gl.render` itself every frame — for as long as `glide` state is non-null.
+Nothing ever set it back to `null` after `request.resolve(...)` fired, so
+if that `PortalObject` instance survived the route change (confirmed live:
+clicking a door then browser Back sometimes lands back in the room with the
+camera still locked at the glide's stop position, pixel-identical
+before/after an orbit drag), the camera was frozen for good — unresponsive
+to the walker/orbit controls running underneath it.
+
+Fix: added `withGlideCleanup(resolve, clear)` (a tiny exported pure wrapper)
+and used it in `enter()` so resolving the glide promise and clearing the
+`glide` state that keeps `EntryGlideCamera` mounted happen together,
+inseparably. Regression test: `PortalObject.glideCleanup.test.js`.
+
+### Verification
+- Signed-out visitor, desktop 1440×900 @2× and phone 390×844 @3×, headless
+  Chromium with `--disable-gpu --use-angle=swiftshader` (GPU headless froze
+  this machine on 09-14 — see `project-dii-facade-audit-2026-09-14`).
+- Live repro of the freeze on `staging.di-studio.xyz/main` pre-fix: click the
+  WCC door → `/wcc` → Back → `/?room=1`, camera stuck close inside the ring,
+  drag-to-orbit produced byte-identical screenshots. A second attempt did NOT
+  reproduce (browser Back sometimes fully remounts, sometimes doesn't) —
+  consistent with a race, not a deterministic repro every time, which matches
+  the audit calling it intermittent ("freezes on arrival") rather than always.
+- Data fix verified before/after on both local and dev tiers: red ring gone
+  (all four doors cyan), 76 white planes gone, same orbit framing.
+- Could not stand up a second local dev stack to re-run the live freeze repro
+  against the FIXED code (`vite.config.js` hardcodes port 5173 + `strictPort`,
+  and another agent's stack already holds 5173/4000 on this machine — see
+  `docs/ai/parallel-agents.md`, no shared working dir). Fix is verified by:
+  exact root-cause code citation, a passing regression unit test for the new
+  cleanup wrapper, the full test suite green, and `npm run build` green.
+- `npm run lint`, `npm run test` (434 files / 4500 tests, all green after
+  `npm ci` in both `/` and `serverXR/` — this worktree had neither installed),
+  `npm run build` all pass.
+
+### Prod replay (owner's call, not run this session)
+```bash
+node fix-front-room-data.mjs --base https://di-studio.xyz/serverXR --token $PROD_API_TOKEN
+```
+Idempotent (re-running after the fix is a no-op — no red door, no `#ff0000`
+image entities left to match). Script + before-JSON backups of local/dev in
+this session's scratchpad; ask for a copy if it wasn't carried over.
+
+## 2026-09-16 — signing in keeps your guest work openable; opening a file grants the opener
+
+- Fixes the two pure bugs from the use-without-an-account audit (docs/use-without-an-account, PR #461), plus the page-you-signed-in-from gap.
+- **Gate vs server.** `AuthGate` (and `LaneDefaultSpace`, `SpaceContentsPage`) now read scope through `src/utils/sessionScope.js`, which mirrors `serverXR/src/authAccess.js` `canAccessSpace`: the cookie list plus the Open Space and the session's own sandbox. A contract test runs the client helper against the server function over seven session shapes; it failed on the old rule. Nothing is wider than the server — a fresh account still gets "Access restricted" on anyone else's sandbox and on the guest sandbox it came from.
+- **The page you signed in from.** The browser remembers the guest sandbox id it held (`localStorage dii.guestSandboxSpaceId`); when a signed-in account asks for exactly that id and the server 404s it, the gate replaces the path segment with the account's sandbox. A gone guest sandbox this browser never held still says "Nothing lives at".
+- **`.diiii` import (`POST /api/spaces/bundle`).** Was unusable for any non-admin account, four ways deep: scope middleware read `bundle` as a space id (403); grant called with the wrong arguments; spaceId parsed from quoted tool output (null without `--as`, which is what the Spaces page sends); the 60 s DB-identity cache overrode the new scope (also hit "create a space, open it"). Plus a mounted gate kept its pre-import session — `announceSessionChanged()` now makes every `useAuthSession` re-fetch after create/open.
+- **Not changed (owner decisions from the audit):** two-device merge, guest lifetime, `--lan/--guests`, what an install carries, import not counting toward the space quota, and that both create and import accept a `sandbox-*` id (pre-existing: someone could pre-claim an archived account sandbox id by making a space with it). No sign-in wording touched.
+- **Verified** on a local isolated stack (server :4617 with its own DATA_ROOT, vite :5617), headless Chromium `--disable-gpu --use-angle=swiftshader`: guest → sandbox → project "carried piece" + image → register on /login → old guest URL forwards to `/sandbox-<account>/studio/projects/carried-piece` with the image, no wall; account sandbox hub and Open Space editor open; Spaces → Open a file → card → Studio opens the imported space and its project. Desktop + phone screenshots in the session scratchpad `signin/`.
+- Still open from the audit, untouched: `/spaces` describes the carried sandbox as "nothing in it yet".
+
+## 2026-09-15 — one name for /open and /wcc, matching the stored space label
+
+Owner settled the wave-2 naming decisions: `main` stays "di.iiii" (no change),
+`br_id_ge` keeps its underscores (no change), dev test scenes stay listed in
+`/open` (no change), `open` is "Open Space" everywhere, and `/wcc`'s page
+heading should match its card/list name.
+
+- Checked stored data first: `spaces.label` for `open` ("Open Space"), `wcc`
+  ("WCC Exhibition") and `main` ("di.iiii") already matches the decision on
+  local, dev.diiii.xyz and prod — the "/open shows three names" symptom from
+  the 2026-09-14 audit was hardcoded UI copy, not stale data. No data write
+  was needed on any tier.
+- `src/landing/LandingPage.jsx`: front-page CTA button linking to `/open` said
+  "Open Jam" — now "Open Space" (updated its test in
+  `src/landing/LandingPage.test.jsx` and `src/landing/landingRoutesEnter.test.jsx`).
+- `src/project/components/JamSurface.jsx`: the native share-sheet title for
+  `/open`'s Share button said `'Open Jam'` — now `'Open Space'`. `JamSurface`
+  is only ever mounted for the `open` space (`JAM_SPACE_ID` is fixed to
+  `OPEN_JAM_SPACE_ID`), so the literal is safe.
+- `src/wccSite/landing/LandingPage.jsx`: the `/wcc` landing hero `<h1>` read
+  "WCC: Women Creating Change" — now "WCC Exhibition", matching the card/list
+  name (`src/works/works.js`'s `label: 'WCC Exhibition'`). Chose the card's
+  name over the fuller exhibition title because this heading is exactly the
+  class of thing the wave-2 naming rule already fixed for `/network` and
+  `/dilijan` (a bespoke pre-rule heading duplicating what the space's own
+  chrome name says) — the fuller name ("WCC: Women Creating Change") is real
+  and correct, but belongs inside the work as body copy (kept, untouched in
+  `landingContent.subtitle`), not as the outer heading.
+- `src/wccSite/WccExperience.jsx`: the in-scene room title (shown while
+  walking `/wcc/scene` with no artist selected) said "WCC · Women Creating
+  Change" — now "WCC Exhibition", for the same reason; the per-artist case
+  (`ARTIST_TITLES[activeProjectId]`) is untouched, since that is "inside a
+  project" per the naming rule.
+- `Open Jam` is still the correct name for the actual jam *project*
+  (`OPEN_JAM_PROJECT_ID`'s `title`) inside Studio/Raw — untouched, since a
+  project's own name is only supposed to show inside that project, never in
+  the space's outer chrome.
+- Not touched (out of scope, judged as body/marketing copy rather than
+  chrome naming the space): the front landing page's "Open Jam room" example
+  caption under "One that's live", and `src/wiki/wikiContent.js`'s prose
+  about the Open Jam.
+
+serverXR's `node_modules` was missing in this fresh worktree (`npm ci` only
+ran at the repo root) — installed it there too before trusting
+`npm run test`'s server-contract results.
+
+## 2026-09-15 — suite page gaps: assets, uppercase labels, og-image, literal echoes
+
+- Added `wordmark-on-white.png` and `wordmark-transparent.png`, both derived from the
+  repo's own correct `wordmark-on-black.png` (4 i's, dot-only cyan) by an exact
+  premultiplied-alpha recovery against its pure-black background, then a recolour for
+  the on-white variant — not hand-traced, not invented. `di-brand/logo/wordmark-on-*`
+  turned out to carry the *retired* 3-`i` typo with a cyan letter (the one NAMING.md
+  already flags as fixed) so those were not used as a source.
+  - **No vector wordmark source exists anywhere** (di-brand or this repo) — `mark.svg`
+    is the square mark only, not the wordmark lockup. Did not fabricate one.
+  - **No di.i (studio) wordmark file exists anywhere** — di-brand's own manifest
+    (`README.md`) never lists one. Reported, not designed.
+- `.eyebrow` and the studio section's `.role` labels were forcing "di.iiii — suite"
+  and "di.i" to uppercase via `text-transform`, despite correct lowercase markup —
+  the naming rule is lowercase always. Removed the transform from `.eyebrow`; added a
+  `.role.brand{text-transform:none}` modifier for the three studio-credit `di.i` labels
+  and left the transform on for the generic English section labels.
+- Regenerated `og-image.png` via a headless Playwright render (self-hosted Inter/
+  JetBrains Mono, same house look) — tagline was ~24px pale grey, illegible once a
+  link preview shrinks the image to ~600px. New tagline is 34px at higher contrast;
+  confirmed legible after downscaling to 600×315.
+- Added `di-iiii-suite.zip` (all served suite files) and one "Download all files"
+  link in the files section.
+- Literal-echo copy fixed in `public/suite/index.html` (subline, meta description,
+  og:description, footer) and mirrored in `~/work/di-spaces spaces/main/projects/suite.json`
+  (same three strings) — full old→new list in the PR description.
+- `di-studio.xyz` → `diiii.xyz` in the suite page (platform card, credit line, footer
+  link, stamp, og:image host) — 5 occurrences, per the 2026-09-15 owner rule to hand
+  out diiii.xyz in new copy.
+- `src/wiki/wikiContent.js`: "Motion you asked for" → "Authored motion" (~line 556).
+- `src/project/graph/examples/sceneExample.js` and its test: removed the owner's
+  quoted chat lines from the header/test comment, replaced with a plain description
+  of what the example demonstrates.
+- `src/landing/crackTransition.js` (the third file named in the request) no longer
+  exists — removed upstream in `1bd1d548` ("the crack and variants b/c are gone").
+  Nothing to fix there.
+- `di-spaces` is a separate repo; its `suite.json` fix is committed locally there
+  (`dc1bf31`) and pushed live to the second tier via
+  `node scripts/push-project.mjs main suite --env staging` (uses `LIVE_API_TOKEN`,
+  never `PROD_API_TOKEN`). The `git push origin master` for that commit was blocked
+  by the sandbox's own permission classifier (flagged "Production Deploy") — the repo
+  owner needs to push that one commit by hand or grant the permission.
+
+## 2026-09-16 — Land facade-page-faults (#464) as a follow-up batch, resolving the SpaceHub overlap with #465
+
+#464 (`fix/facade-page-faults`) was approved after the four-PR batch (#466, land onto
+`dev` via `land/facade-wave3-2026-09-16`) had already merged and gone green
+(#461 #462 #463 #465). #464 was BEHIND that new `dev` and overlapped #465 on
+`src/studio/components/SpaceHub.jsx` and its test.
+
+Rebuilt on the fresh `origin/dev` in a fresh sibling worktree, `git merge --no-ff
+origin/fix/facade-page-faults`: the auto-merge (git `ort` strategy) resolved
+`SpaceHub.jsx`/`SpaceHub.test.jsx` cleanly with no conflict markers, keeping both
+intents — #465's `useAuthSession` session-scope refresh (`sessionScopes`,
+`openSpaceId`, `sandboxSpaceId`) and #464's visitor-filter hide (`isVisitor` /
+`sandboxCard`) built on the new `arrangeable` derived list. Verified both sets of
+identifiers are present post-merge; `npm run lint` and `npm run test` both green
+on the merged tree.
+
+This branch does not touch `CURRENT.md`/`PROGRESS.md` — the fold happens at merge
+time via `npm run land` on `dev`, per the standing session-notes protocol.
+
+## 2026-09-16 — Facade wave 3 batch: names, front room, sign-in carries guest work, no-account audit
+
+Batch-landed four reviewed, CI-green PRs onto `dev` as one motion (per
+`feedback-batch-land-behind-prs`, "Proven again 2026-09-14" recipe), avoiding a
+sequential-BEHIND-invalidation race: #461 `docs/use-without-an-account`,
+#462 `fix/space-names-open-wcc`, #463 `fix/front-room-faults`,
+#465 `fix/signin-carries-guest-work`. #464 was left alone — still being reworked.
+
+`git fetch origin`, then `gh pr diff <n> --name-only` for all four: no two touch
+the same file, so all four merged with `git merge --no-ff` into this branch with
+zero conflicts. `npm ci` run in both `/` and `serverXR/` (both were missing here).
+
+This branch does **not** touch `CURRENT.md`/`PROGRESS.md` itself — the four
+originals' own session notes are left in place; the fold into `PROGRESS.md` and
+`CURRENT.md`'s "Last session" happens at merge time via `npm run land` /
+the `deploy-vps-staging.yml` `land` job on `dev`, never on a feature branch
+(the docs gate refuses a feature branch whose `CURRENT.md` differs from
+`origin/dev`).
+
 ## 2026-09-15 — Every front-page button enters with the one pro move; the crack and variants b/c are gone
 
 - Owner: "it feels too cracky and DIY — can we make it all pro?", then, having tried `?entry=a|b|c` on dev: "they are the same". Decision relayed: the glide (a) is THE entering move.
