@@ -148,7 +148,7 @@ export default function WccExperience({ initialMode = 'landing' }) {
                             interactive
                             showChrome
                             onExit={exitExhibition}
-                            title={activeProjectId ? (ARTIST_TITLES[activeProjectId] || activeProjectId) : 'WCC · Women Creating Change'}
+                            title={activeProjectId ? (ARTIST_TITLES[activeProjectId] || activeProjectId) : 'WCC Exhibition'}
                         />
                     </Suspense>
                 </div>

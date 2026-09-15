@@ -159,7 +159,7 @@ export default function JamSurface({ projectId, spaceId }) {
     const handleShare = useCallback(async () => {
         if (navigator.share) {
             try {
-                await navigator.share({ title: 'Open Jam', url: shareUrl })
+                await navigator.share({ title: 'Open Space', url: shareUrl })
             } catch {
                 // A cancelled share sheet throws — not a failure, nothing to say.
             }
