@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AuthGate, { SignInSurface } from './AuthGate.jsx'
+import { OUT_OF_SCOPE_EXPLAIN } from './authGateScope.js'
 
 const mockUseAuthSession = vi.fn()
 
@@ -23,7 +24,9 @@ vi.mock('../services/serverSpaces.js', () => ({
     // 'spaces' plays a RESERVED word (RESERVED_APP_SEGMENTS) that fell
     // through routing as if it were a space id — no real space can ever be
     // named 'spaces', so the server 404s it too, same as 'ghost'.
-    getServerSpace: (spaceId) => (spaceId === 'ghost' || spaceId === 'spaces'
+    // 'sandbox-guestgone' plays a guest sandbox the server has just carried
+    // onto the account at sign-in: its old id no longer exists.
+    getServerSpace: (spaceId) => (spaceId === 'ghost' || spaceId === 'spaces' || spaceId === 'sandbox-guestgone'
         ? Promise.reject(Object.assign(new Error('Space not found.'), { status: 404 }))
         : Promise.resolve({ id: spaceId, isPublic: spaceId === 'pub' }))
 }))
@@ -411,5 +414,73 @@ describe('/login', () => {
         mockUseAuthSession.mockReturnValue(signedOutSession())
         render(<SignInSurface />)
         expect(document.title).toBe('Sign in — di.iiii')
+    })
+})
+
+// A brand-new account is scoped to nothing (spaces: []). The server still lets
+// it into two places — the communal open space and its own sandbox, which is
+// where its guest work was carried at sign-in — and reports them as
+// openSpaceId / sandboxSpaceId. The gate used to read only the list, so the
+// owner got "Access restricted" on their own sandbox and "Sign in to open the
+// editor" on the Open Space, while the API answered 200 to both.
+describe('AuthGate for a brand-new account', () => {
+    const freshAccount = (overrides = {}) => ({
+        ...scopedElsewhereSession([]),
+        type: 'session',
+        role: 'editor',
+        subject: '22b50e95-3822-40d7-99c2-3535f92123be',
+        sandboxSpaceId: 'sandbox-22b50e95382240d7',
+        ...overrides
+    })
+
+    afterEach(() => {
+        mockAppNavigate.mockClear()
+        try { window.localStorage.clear() } catch { /* jsdom always has it */ }
+        window.history.replaceState(null, '', '/')
+    })
+
+    it('opens its own sandbox, where the guest work was carried', () => {
+        mockUseAuthSession.mockReturnValue(freshAccount())
+        render(<AuthGate requiredSpaceId="sandbox-22b50e95382240d7">editor</AuthGate>)
+
+        expect(screen.getByText('editor')).toBeInTheDocument()
+        expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
+    })
+
+    it('opens the Open Space editor', () => {
+        mockUseAuthSession.mockReturnValue(freshAccount())
+        render(<AuthGate requiredSpaceId="open" outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>editor</AuthGate>)
+
+        expect(screen.getByText('editor')).toBeInTheDocument()
+        expect(screen.queryByText(/Sign in to open the editor/)).not.toBeInTheDocument()
+    })
+
+    it('still keeps it out of somebody else\'s sandbox', async () => {
+        mockUseAuthSession.mockReturnValue(freshAccount())
+        render(<AuthGate requiredSpaceId="sandbox-someoneelse0000">editor</AuthGate>)
+
+        expect(await screen.findByText(/Access restricted/)).toBeInTheDocument()
+        expect(screen.queryByText('editor')).not.toBeInTheDocument()
+    })
+
+    it('follows the carried work from the page it signed in on', async () => {
+        window.localStorage.setItem('dii.guestSandboxSpaceId', 'sandbox-guestgone')
+        window.history.replaceState(null, '', '/sandbox-guestgone/studio?auth=ok#here')
+        mockUseAuthSession.mockReturnValue(freshAccount())
+        render(<AuthGate requiredSpaceId="sandbox-guestgone">editor</AuthGate>)
+
+        await waitFor(() => {
+            expect(mockAppNavigate).toHaveBeenCalledWith('/sandbox-22b50e95382240d7/studio?auth=ok#here', { replace: true })
+        })
+        expect(screen.queryByText(/Nothing lives at/)).not.toBeInTheDocument()
+    })
+
+    it('says nothing lives at a gone guest sandbox this browser never held', async () => {
+        window.history.replaceState(null, '', '/sandbox-guestgone/studio')
+        mockUseAuthSession.mockReturnValue(freshAccount())
+        render(<AuthGate requiredSpaceId="sandbox-guestgone">editor</AuthGate>)
+
+        expect(await screen.findByText(/Nothing lives at/)).toBeInTheDocument()
+        expect(mockAppNavigate).not.toHaveBeenCalled()
     })
 })

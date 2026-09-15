@@ -11,6 +11,7 @@ import { appNavigate } from '../utils/appNavigate.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } from '../utils/spaceRouting.js'
 import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
 import { getCodeSpace } from '../studio/utils/codeSpaces.js'
+import { isSpaceInSessionScope } from '../utils/sessionScope.js'
 import './spaceContents.css'
 
 /**
@@ -76,7 +77,8 @@ export const contentsHref = (spaceId, project) => (project.slug
     : buildPublicProjectPath(spaceId, project.id))
 
 export default function SpaceContentsPage({ spaceId }) {
-    const { role, spaces: sessionScopes, openSpaceId, sandboxSpaceId, requireAuth } = useAuthSession()
+    const session = useAuthSession()
+    const { role, requireAuth } = session
     const localInstall = useLocalInstall()
     const isEmbed = isEmbedRequest()
     const [state, setState] = useState({ status: 'loading', projects: [], space: null, error: null })
@@ -150,9 +152,10 @@ export default function SpaceContentsPage({ spaceId }) {
     const canEdit = useMemo(() => {
         if (!requireAuth) return true
         if (role === 'admin') return true
-        if (spaceId === openSpaceId || spaceId === sandboxSpaceId) return true
-        return Array.isArray(sessionScopes) && sessionScopes.includes(spaceId)
-    }, [requireAuth, role, spaceId, openSpaceId, sandboxSpaceId, sessionScopes])
+        // Scope alone is not a key — the server checks the session is signed in
+        // before it ever reads scope, and so does this.
+        return Boolean(session.authenticated) && isSpaceInSessionScope(session, spaceId)
+    }, [requireAuth, role, spaceId, session])
 
     if (state.status === 'loading' || isOnlyTheDoor) {
         return <RouteSurfaceFallback label="Loading" detail="" />

@@ -531,7 +531,16 @@ const readAuthToken = (req) => {
 
 const normalizeAuthToken = (value = '') => String(value || '').trim().replace(/^bearer\s+/i, '')
 
-const { getFreshDbIdentity } = createSessionDbSync({ findUserById, normalizeAuthRole })
+const { getFreshDbIdentity, forgetDbIdentity } = createSessionDbSync({ findUserById, normalizeAuthRole })
+// Every scope write goes through here, so the next request reads the new scope
+// rather than the cached one (see forgetDbIdentity).
+const setUserSpacesNow = (id, spaces) => {
+  try {
+    return setUserSpaces(id, spaces)
+  } finally {
+    forgetDbIdentity(id)
+  }
+}
 
 // Guest subjects never have a user row, so skip the query for them entirely —
 // this runs on every request that carries a session cookie.
@@ -733,7 +742,7 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
   try { user = findUserById(userId) } catch { return }
   if (!user || !Array.isArray(user.spaces) || user.spaces.includes(spaceId)) return
   const nextSpaces = [...user.spaces, spaceId]
-  try { setUserSpaces(userId, nextSpaces) } catch { return }
+  try { setUserSpacesNow(userId, nextSpaces) } catch { return }
   if (req.authState?.type === 'session' && config.auth.sessionSecret) {
     try {
       const session = createAuthSessionValue({
@@ -1574,6 +1583,16 @@ router.param('spaceId', createSpaceIdParam({ normalizeSpaceId, spaceExists, find
 // *management* (PATCH/DELETE below) is owner-or-admin, enforced by
 // requireSpaceOwnerOrAdminWrite on the routes themselves.
 router.use('/api/spaces/:spaceId', async (req, res, next) => {
+  // POST /api/spaces/bundle is "open a file", which CREATES a space — it names
+  // no existing one, exactly like POST /api/spaces. Read as a space id,
+  // "bundle" was a space no account is scoped to, so every signed-in account
+  // got "Space access denied" and only admins could ever open a file. The
+  // route checks who may create for itself. Only this one method and exact
+  // path: GET/PATCH/DELETE on a space that happens to be called "bundle" keep
+  // their scope check.
+  if (req.method === 'POST' && req.params.spaceId === 'bundle' && (req.path === '/' || req.path === '')) {
+    return next()
+  }
   req.requiredSpaceId = normalizeSpaceId(req.params.spaceId) || null
   try {
     // Sandboxes are provisioned here, on first real space access, instead of
@@ -1794,7 +1813,7 @@ registerUserRoutes(router, {
   requireAdminAlways,
   listUsers,
   findUserById,
-  setUserSpaces,
+  setUserSpaces: setUserSpacesNow,
   setUserUnrestricted,
   setUserRole,
   approvalGate
@@ -1866,7 +1885,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   restoreSpaceProjectDocuments,
   saveSpaceMeta,
   serveAsset,
-  setUserSpaces,
+  setUserSpaces: setUserSpacesNow,
   spacesDir: SPACES_DIR,
   spaceExists,
   upsertSpaceMeta,

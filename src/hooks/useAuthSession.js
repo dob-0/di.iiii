@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getApiSession, hasServerApi, loginApiSession, logoutApiSession } from '../services/apiClient.js'
+import { rememberGuestSandbox } from '../utils/carriedSandbox.js'
 
 const DEFAULT_STATE = {
     requireAuth: false,
@@ -39,6 +40,9 @@ export default function useAuthSession() {
         const tid = setTimeout(() => controller.abort(), 8000)
         try {
             const data = await getApiSession({ signal: controller.signal })
+            // Remembered even if this component has gone: the sandbox id a guest
+            // held is what finds their work again after they sign in.
+            rememberGuestSandbox(data)
             if (!mountedRef.current) return
             setState({ ...DEFAULT_STATE, ...data })
             setError(null)
