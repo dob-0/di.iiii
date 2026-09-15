@@ -1582,6 +1582,10 @@ router.param('spaceId', createSpaceIdParam({ normalizeSpaceId, spaceExists, find
 // route handler enforces the free-tier quota (and blocks guests/tokens). Space
 // *management* (PATCH/DELETE below) is owner-or-admin, enforced by
 // requireSpaceOwnerOrAdminWrite on the routes themselves.
+// The one route under /api/spaces/:spaceId whose segment is not a space: the
+// import route in routes/spaceRoutes.js. Matched on the whole path, ending
+// there, so /api/spaces/bundle/scene (a space called "bundle") never matches.
+const OPEN_A_FILE_PATH = /\/api\/spaces\/bundle\/?(?:\?|$)/
 router.use('/api/spaces/:spaceId', async (req, res, next) => {
   // POST /api/spaces/bundle is "open a file", which CREATES a space — it names
   // no existing one, exactly like POST /api/spaces. Read as a space id,
@@ -1590,7 +1594,7 @@ router.use('/api/spaces/:spaceId', async (req, res, next) => {
   // route checks who may create for itself. Only this one method and exact
   // path: GET/PATCH/DELETE on a space that happens to be called "bundle" keep
   // their scope check.
-  if (req.method === 'POST' && req.params.spaceId === 'bundle' && (req.path === '/' || req.path === '')) {
+  if (req.method === 'POST' && OPEN_A_FILE_PATH.test(req.originalUrl || '')) {
     return next()
   }
   req.requiredSpaceId = normalizeSpaceId(req.params.spaceId) || null
