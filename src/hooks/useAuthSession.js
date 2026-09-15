@@ -2,6 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getApiSession, hasServerApi, loginApiSession, logoutApiSession } from '../services/apiClient.js'
 import { rememberGuestSandbox } from '../utils/carriedSandbox.js'
 
+// Every component holds its own copy of the session, fetched when it mounts.
+// A write that changes this session's scope (opening a file, making a space)
+// re-issues the cookie on the server, but a gate that mounted before it kept
+// the old list: open a file on /spaces, click its card, and the gate — same
+// instance, new address — said "Access restricted" about the space just made.
+// Whoever makes such a write announces it; every mounted copy asks again.
+const SESSION_CHANGED_EVENT = 'dii:auth-session-changed'
+
+export const announceSessionChanged = () => {
+    try { window.dispatchEvent(new Event(SESSION_CHANGED_EVENT)) } catch { /* no window — nothing mounted to tell */ }
+}
+
 const DEFAULT_STATE = {
     requireAuth: false,
     // True when this server is a `di up` install on the visitor's own machine
@@ -59,8 +71,10 @@ export default function useAuthSession() {
     useEffect(() => {
         mountedRef.current = true
         refresh()
+        window.addEventListener(SESSION_CHANGED_EVENT, refresh)
         return () => {
             mountedRef.current = false
+            window.removeEventListener(SESSION_CHANGED_EVENT, refresh)
             abortRef.current?.abort()
         }
     }, [refresh])

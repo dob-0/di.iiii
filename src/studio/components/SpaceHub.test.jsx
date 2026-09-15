@@ -17,7 +17,8 @@ let authState
 let sandboxSummary = null
 
 vi.mock('../../hooks/useAuthSession.js', () => ({
-    default: () => authState
+    default: () => authState,
+    announceSessionChanged: () => {}
 }))
 
 vi.mock('../../services/serverSpaces.js', () => ({

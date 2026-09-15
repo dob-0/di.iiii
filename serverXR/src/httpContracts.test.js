@@ -3172,6 +3172,10 @@ describe('saving and opening a space as a file', () => {
         const saved = await fetch(`${server.baseUrl}/api/spaces/carried-file/bundle`, { headers: withAuth(server.apiToken) })
         expect(saved.status).toBe(200)
         const bytes = Buffer.from(await saved.arrayBuffer())
+        // Gone from this server, so the file opens under its own name — the
+        // way the Spaces page sends it, with no `as`.
+        const removed = await fetch(`${server.baseUrl}/api/spaces/carried-file`, { method: 'DELETE', headers: withAuth(server.apiToken) })
+        expect(removed.status).toBe(200)
 
         const register = await fetch(`${server.baseUrl}/api/auth/password/register`, {
             method: 'POST',
@@ -3184,21 +3188,20 @@ describe('saving and opening a space as a file', () => {
 
         const form = new FormData()
         form.append('bundle', new Blob([bytes]), 'carried-file.diiii')
-        form.append('as', 'imported-by-me')
         const opened = await fetch(`${server.baseUrl}/api/spaces/bundle`, {
             method: 'POST',
             headers: { Cookie: accountCookie },
             body: form
         })
         const openedBody = await opened.json()
-        expect({ status: opened.status, body: openedBody }).toMatchObject({ status: 201, body: { spaceId: 'imported-by-me' } })
+        expect({ status: opened.status, body: openedBody }).toMatchObject({ status: 201, body: { spaceId: 'carried-file' } })
         // The grant re-issues the cookie so the space is in scope at once.
         const refreshedCookie = (opened.headers.get('set-cookie') || '').split(';')[0]
         expect(refreshedCookie).toBeTruthy()
 
         const session = await (await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: refreshedCookie } })).json()
-        expect(session.spaces).toContain('imported-by-me')
-        const scene = await fetch(`${server.baseUrl}/api/spaces/imported-by-me/scene`, { headers: { Cookie: refreshedCookie } })
+        expect(session.spaces).toContain('carried-file')
+        const scene = await fetch(`${server.baseUrl}/api/spaces/carried-file/scene`, { headers: { Cookie: refreshedCookie } })
         expect({ status: scene.status, body: scene.status === 200 ? null : await scene.json() }).toEqual({ status: 200, body: null })
 
         // …and only that one: a second account gets nothing from it.
@@ -3208,7 +3211,7 @@ describe('saving and opening a space as a file', () => {
             body: JSON.stringify({ username: 'stranger', password: 'stranger-passphrase-9x' })
         })
         const strangerCookie = (stranger.headers.get('set-cookie') || '').split(';')[0]
-        const refused = await fetch(`${server.baseUrl}/api/spaces/imported-by-me/scene`, { headers: { Cookie: strangerCookie } })
+        const refused = await fetch(`${server.baseUrl}/api/spaces/carried-file/scene`, { headers: { Cookie: strangerCookie } })
         expect(refused.status).toBe(403)
     })
 
