@@ -23,13 +23,14 @@ import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectS
 import {
     buildPresentationPreviewDocument,
     PREVIEW_ENTER_EXHIBITION_KIND,
-    PREVIEW_HOST_MESSAGE_TYPE
+    PREVIEW_HOST_MESSAGE_TYPE,
+    PREVIEW_PAINT_CONFIRMED_KIND
 } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
-import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
+import { overlayButtonStyle, overlayCardStyle, quietPreviewFallbackStyle } from './publicViewerStyles.js'
 import { consumeArriveWalking } from '../../components/arriveWalking.js'
 import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
-import { isEmbedRequest, signalPreviewReady } from '../../utils/previewMode.js'
+import { isEmbedRequest } from '../../utils/previewMode.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -47,6 +48,12 @@ const loadingOverlay = <LoadingScreen label="Loading live experience" />
 // deviceAccess (owner opt-in in presentationState) adds allow-same-origin so the
 // page has a real security origin — getUserMedia is impossible in an opaque one
 const PAGE_SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals'
+
+// How long a code-mode preview thumbnail waits for a sign of life before
+// falling back to a quiet stand-in, if it never gets even that — see the
+// comment at `canConfirmPaint` below for what counts as one and why it can
+// only ever be a backstop, not a real "finished loading" signal.
+const CODE_PREVIEW_PAINT_TIMEOUT_MS = 10000
 
 export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', initialCameraView = null, showProjectSwitcher = false, showProjectInTitle = false }) {
     const [state, setState] = useState({
@@ -229,33 +236,40 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     )
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
     const codeUrl = presentationState.codeSourceType === 'url' ? presentationState.codeUrl?.trim() : ''
-    // A code-mode page is arbitrary author content — often a heavy 3D piece
-    // with its own model loads, physics and boot sequence, or someone else's
-    // whole website. The scene/graph renderers below already treat `isPreview`
-    // as "a picture, not the real thing" (lowPower, no navigation, no
-    // timelines); this branch had no such gate and booted the SAME heavy
-    // runtime a click would open, live inside a thumbnail scaled to a few
-    // hundred pixels wide. On `/spaces` that showed a piece's OWN boot text
-    // frozen mid-load ("INITIALIZING SPACE... 0%", one project's GLTF/Draco
-    // loader stalling behind the sandboxed iframe's opaque origin) —
-    // indistinguishable from a broken card, because nothing about being a
-    // preview told the page to hold still. A click still opens the real thing
-    // (SpaceCardLive, no ?preview=1) exactly as the scene/graph cards do.
-    const showCodePreviewPlaceholder = showCodeView && isPreview && Boolean(codeUrl || rawHtml)
+    // Most published code-mode pages are ordinary DOM/CSS content, or a scene
+    // that paints in a couple of seconds — measured against real spaces
+    // (br_id_ge, network, platform-recordar, azd) every one painted inside
+    // 2-5s even under software rendering. A card thumbnail should keep
+    // showing that live picture, not a stand-in. See CODE_PREVIEW_PAINT_TIMEOUT_MS
+    // below for the rare piece that never gets there.
+    //
+    // Only `rawHtml` (an `<iframe srcDoc>` this app itself wraps via
+    // buildPresentationPreviewDocument) can ever tell us it is alive — its
+    // bootstrap script posts PREVIEW_PAINT_CONFIRMED_KIND the first time the
+    // page shows any sign of life (see that file for what "sign of life"
+    // means and why silence is not proof either way). A `codeUrl` page is
+    // someone else's whole site at `src=`, truly cross-origin: nothing can be
+    // injected into it, so there is no confirmation to wait for and no honest
+    // way to time it out either — it stays live unconditionally, exactly as
+    // it did before this fix existed.
+    const canConfirmPaint = showCodeView && Boolean(rawHtml)
+    const codePreviewPaintedRef = useRef(false)
+    const [codePreviewStalled, setCodePreviewStalled] = useState(false)
 
     useEffect(() => {
         setViewMode(null)
         setNavMode('orbit')
     }, [presentationState.entryView])
 
-    // The placeholder replaces the iframe outright, so nothing here will ever
-    // post the app-wide paint watcher's canvas/iframe signal — say "ready"
-    // directly, the moment there is something (a URL or HTML) to show a
-    // picture of, so the card's boot queue is not left waiting on a frame that
-    // was never going to arrive.
     useEffect(() => {
-        if (showCodePreviewPlaceholder) signalPreviewReady(resolvedRouteSpaceId)
-    }, [showCodePreviewPlaceholder, resolvedRouteSpaceId])
+        if (!isPreview || !canConfirmPaint) return undefined
+        codePreviewPaintedRef.current = false
+        setCodePreviewStalled(false)
+        const timer = window.setTimeout(() => {
+            if (!codePreviewPaintedRef.current) setCodePreviewStalled(true)
+        }, CODE_PREVIEW_PAINT_TIMEOUT_MS)
+        return () => window.clearTimeout(timer)
+    }, [isPreview, canConfirmPaint, rawHtml])
 
     // A visitor who WALKED through a portal arrives walking — the flag is set
     // by the walker's portal jump (see arriveWalking.js) and honoured only when
@@ -276,6 +290,16 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         const handleMessage = (event) => {
             if (event.source !== iframeRef.current?.contentWindow) return
             if (event.data?.type !== PREVIEW_HOST_MESSAGE_TYPE) return
+            if (event.data?.kind === PREVIEW_PAINT_CONFIRMED_KIND) {
+                // Cancel, don't just ignore: this can arrive AFTER the
+                // timeout already flipped codePreviewStalled (a slow but
+                // real load) — a late sign of life should still put the
+                // live picture back, not leave the quiet stand-in up as if
+                // nothing changed.
+                codePreviewPaintedRef.current = true
+                setCodePreviewStalled(false)
+                return
+            }
             if (event.data?.kind !== PREVIEW_ENTER_EXHIBITION_KIND) return
             setViewMode('scene')
         }
@@ -395,11 +419,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             }}
         >
             {showCodeView && document ? (
-                showCodePreviewPlaceholder ? (
+                isPreview && canConfirmPaint && codePreviewStalled ? (
                     <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: '2rem' }}>
-                        <div style={overlayCardStyle}>
-                            <strong>Custom page — open to view.</strong>
-                        </div>
+                        <div style={quietPreviewFallbackStyle}>{viewerTitle || 'Custom page'}</div>
                     </div>
                 ) : codeUrl ? (
                     <iframe

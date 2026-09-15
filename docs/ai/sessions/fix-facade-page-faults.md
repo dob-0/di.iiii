@@ -7,17 +7,40 @@ for the owner, untouched here).
 - **Space card thumbnails stuck at "INITIALIZING 0%":** not a boot-queue bug —
   a code-mode published project (`entryView: 'code'`) renders its own iframe
   in `PublicProjectViewer.jsx` unconditionally of `isPreview`, so a card's
-  thumbnail booted the SAME heavy runtime the real page does (found `azd`'s
-  piece, whose own THREE.js GLTFLoader boot screen literally reads
-  "INITIALIZING SPACE... 0%" and never advances behind the sandboxed iframe's
-  opaque origin). The scene/graph renderers already get a `lowPower`/no-nav/
-  no-timelines preview mode; code view had no such gate. Fix: a code-mode page
-  in `?preview=1` now renders a static "Custom page — open to view." placeholder
-  instead of mounting the iframe at all, and signals `dii:preview-ready`
-  directly. Clicking the card still opens the real thing (`SpaceCardLive`, no
-  `?preview=1`), unchanged. Reproduced the exact frozen text locally by
-  publishing a throwaway space with a copy of the stuck boot HTML, confirmed
-  the placeholder replaces it, confirmed a live (non-preview) load is untouched.
+  thumbnail booted the SAME heavy runtime the real page does. **First version
+  of this fix (below, reworked 2026-09-16) replaced EVERY code-mode card's
+  picture with a static placeholder — a regression, caught only by loading
+  dev.diiii.xyz's real `/spaces` grid: br_id_ge, network and platform-recordar
+  all painted their real content in 2-5s, and even `azd` (the piece the
+  original finding named) painted fine when loaded directly — the original
+  claim was reproduced against fabricated local test data ("Heavy Piece"),
+  never against the real space.** Reworked: the card keeps mounting the real
+  iframe immediately; only a piece that genuinely never shows a sign of life
+  falls back, after a 10s window (`CODE_PREVIEW_PAINT_TIMEOUT_MS`), to a quiet
+  stand-in (the space's name, square corners, no glow, no instructional
+  copy — not the old "Custom page — open to view." text chip). "Sign of life"
+  is real, not a guess: `presentationPreviewDocument.js`'s bootstrap script
+  (already injected into every `srcDoc` code page) posts
+  `PREVIEW_PAINT_CONFIRMED_KIND` the moment either (a) the page has no
+  `<canvas>` at all — ordinary DOM/CSS content, first paint IS the whole page
+  — or (b) a `MutationObserver` sees the DOM around a canvas change even
+  once — a loading indicator ticking or being removed. Silence forever is
+  genuinely ambiguous (finished-and-static reads identically to hung-forever
+  from outside), which is why the timer stays as the backstop rather than a
+  real "done" signal. This only works for `rawHtml` (an `<iframe srcDoc>` this
+  app wraps itself); a `codeUrl` page (`src=`, someone else's whole site,
+  truly cross-origin) can never be instrumented and is never timed out —
+  `allow-same-origin` would answer the "did it paint" question but also hands
+  the arbitrary page this origin's real storage and DOM reach, a trade only an
+  author's own `deviceAccess` opt-in makes, and one that changes nothing for a
+  different origin anyway. Not fixable further without widening the sandbox.
+  Verified against real content: fetched br-id-ge/network/platform-recordar/
+  azd's actual published `srcDoc` HTML from dev.diiii.xyz (read-only GET, `di`
+  install untouched) and republished it into throwaway local spaces — all four
+  kept their live picture; a synthetic space carrying a genuinely-frozen boot
+  screen (canvas painted once, never touched again) correctly fell back after
+  10s. Screenshots desktop 1440×900@2x + phone 390×844@3x, Chromium
+  (`--disable-gpu --use-angle=swiftshader`) and Firefox.
 - **Visitor sees "Only you 0":** the server only ever lists PUBLIC spaces to a
   signed-out visitor (`spaceRoutes.js`'s `visible` filter), so the "private"
   filter count can never be anything but 0 for them — an owner-only concept
@@ -53,7 +76,13 @@ Tests: `src/studio/utils/spaceArrange.test.js` (work-segment state, updated
 `nodoor` fixture off the real `algovrithm` id), `src/studio/components/SpaceHub.test.jsx`
 (visitor filter chip hidden, map/grid set parity — the old Map test asserted the
 bug as intended behavior and is corrected), `src/project/components/PublicProjectViewer.test.jsx`
-(code-preview placeholder, and that a live/non-preview code page is unaffected).
+(a code preview shows the live iframe immediately; a stuck one swaps to the
+quiet stand-in only after the paint window; a confirmed one never swaps out
+no matter how long the window runs — the regression guard for the first
+version's bug), `src/utils/presentationPreviewDocument.test.js` (the injected
+paint-watcher: immediate for no-canvas content, silent for a canvas page whose
+DOM never changes, confirmed on the first DOM change, never runs outside
+`?preview=1`).
 
 Nothing else from the wave-3 list (room bevel title, red ring, leftover white
 planes, four button styles, three headers) was touched — those are design

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PublicProjectViewer from './PublicProjectViewer.jsx'
-import { PREVIEW_ENTER_EXHIBITION_KIND, PREVIEW_HOST_MESSAGE_TYPE } from '../../utils/presentationPreviewDocument.js'
+import { PREVIEW_ENTER_EXHIBITION_KIND, PREVIEW_HOST_MESSAGE_TYPE, PREVIEW_PAINT_CONFIRMED_KIND } from '../../utils/presentationPreviewDocument.js'
 
 const {
     syncState,
@@ -334,14 +334,43 @@ describe('PublicProjectViewer', () => {
         }
     })
 
-    // Facade audit wave 3 (2026-09-14): a card thumbnail on /spaces embeds a
-    // code-mode project's SAME heavy iframe as the real live page, so an
-    // author's own boot text ("INITIALIZING SPACE... 0%") sat frozen inside
-    // the tiny picture, indistinguishable from a broken card, because the
-    // scene/graph renderers get a lowPower/no-navigation preview mode and this
-    // branch got none at all. A preview must show a still placeholder, never
-    // the piece's own runtime.
-    it('never mounts a code page\'s own iframe in ?preview=1 mode — a picture, not a second copy of the piece', async () => {
+    // Facade audit wave 3 (2026-09-14) first tried replacing every code-mode
+    // preview with a static placeholder outright — which also hid the LIVE
+    // picture for a piece that renders fine (br_id_ge, network,
+    // platform-recordar all measured painting in 2-5s against real content).
+    // Reworked: the card keeps showing the real iframe immediately, and only
+    // a piece that genuinely never gets anywhere (the "INITIALIZING SPACE...
+    // 0%" case) times out into a quiet stand-in.
+    it('shows the live code page immediately in ?preview=1 mode — no placeholder while it might still paint', async () => {
+        window.history.replaceState(null, '', '/main?preview=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>the piece</main>' },
+                    entities: []
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { container } = render(
+                <PublicProjectViewer spaceId="main" projectId="heavy-piece" spaceLabel="Main Space" />
+            )
+
+            await waitFor(() => {
+                const iframe = container.querySelector('iframe')
+                expect(iframe).not.toBeNull()
+                expect(iframe.getAttribute('srcdoc')).toContain('the piece')
+            })
+            expect(screen.queryByText('Heavy Piece')).toBeNull()
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    it('swaps a stuck code preview for a quiet named stand-in once its paint window runs out', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
         window.history.replaceState(null, '', '/main?preview=1')
         try {
             getProjectDocumentMock.mockResolvedValue({
@@ -358,9 +387,93 @@ describe('PublicProjectViewer', () => {
                 <PublicProjectViewer spaceId="main" projectId="heavy-piece" spaceLabel="Main Space" />
             )
 
-            await screen.findByText('Custom page — open to view.')
+            await waitFor(() => {
+                expect(container.querySelector('iframe')).not.toBeNull()
+            })
+
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(10000)
+            })
+
             expect(container.querySelector('iframe')).toBeNull()
+            // The space's own name, never instructional copy ("open to view.",
+            // "custom page") — a quiet stand-in, not a call to action.
+            expect(screen.getAllByText('Main Space').length).toBeGreaterThan(0)
+            expect(screen.queryByText(/open to view/i)).toBeNull()
         } finally {
+            vi.useRealTimers()
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    // The regression this guards: a first version of the paint window applied
+    // to EVERY code preview with no way to cancel it, so a piece that painted
+    // perfectly well in 2s still got swapped out once the clock ran past its
+    // window regardless — caught by screenshotting real content, not by a
+    // unit test, which is exactly why this one exists now. The srcdoc's own
+    // bootstrap script (presentationPreviewDocument.js) posts
+    // PREVIEW_PAINT_CONFIRMED_KIND the moment it sees any sign of life; that
+    // must cancel the timer for good, even long after it would otherwise fire.
+    it('never swaps out a code preview that reported a sign of life, no matter how long the window runs', async () => {
+        // Fake timers with NO real-time coupling on purpose: shouldAdvanceTime
+        // ties the fake clock to actual wall-clock time so testing-library's
+        // waitFor can keep polling, but that makes this exact test race a
+        // loaded CI box — real setup time (resolving a mocked promise,
+        // re-rendering) eats into the 10s window before the confirmation
+        // message ever gets dispatched, and a big enough stall makes the
+        // component's OWN timer fire for a test-harness reason that has
+        // nothing to do with the behaviour under test. Every step below is
+        // either synchronous or a plain microtask flush (`Promise.resolve()`,
+        // which runs at native speed regardless of fake timers) — never a
+        // real timer tick — so no real time can pass at all.
+        vi.useFakeTimers()
+        window.history.replaceState(null, '', '/main?preview=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'br-id-ge', title: 'br_id_ge' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<h1>a bridge between worlds</h1>' },
+                    entities: []
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { container } = render(
+                <PublicProjectViewer spaceId="main" projectId="br-id-ge" spaceLabel="br_id_ge" />
+            )
+
+            // Let the mocked getProjectDocument promise settle and the
+            // component re-render with its document loaded. A plain
+            // microtask flush, not a timer of either kind.
+            await act(async () => {
+                await Promise.resolve()
+                await Promise.resolve()
+                await Promise.resolve()
+            })
+
+            const iframe = container.querySelector('iframe')
+            expect(iframe).not.toBeNull()
+            Object.defineProperty(iframe, 'contentWindow', { configurable: true, value: window })
+
+            await act(async () => {
+                const event = new MessageEvent('message', {
+                    data: { type: PREVIEW_HOST_MESSAGE_TYPE, kind: PREVIEW_PAINT_CONFIRMED_KIND }
+                })
+                Object.defineProperty(event, 'source', { configurable: true, value: window })
+                window.dispatchEvent(event)
+            })
+
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(30000)
+            })
+
+            expect(container.querySelector('iframe')).not.toBeNull()
+            // Just the room heading (RoomTextLayer) — not doubled by the
+            // fallback card, which would also read the space's name.
+            expect(screen.getAllByText('br_id_ge')).toHaveLength(1)
+        } finally {
+            vi.useRealTimers()
             window.history.replaceState(null, '', '/')
         }
     })
