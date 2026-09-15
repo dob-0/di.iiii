@@ -830,20 +830,53 @@ describe('SpaceHub', () => {
         expect(rowOf('algo').querySelector('.ssh-list-project').textContent).toBe('nothing published')
     })
 
-    it('the Grid/Map toggle still works — Map is given every space, the sandbox included', async () => {
+    it('the Grid/Map toggle still works — Map counts the same set the grid does, sandbox excluded for a visitor', async () => {
         asGuest()
         listServerSpaces.mockResolvedValue(visitorSpaces())
 
         render(<SpaceHub />)
         await findCard('open')
 
-        // Map is handed the full spaces list — the same list SpaceHub loaded,
-        // not the visitor grid's list (which leaves the sandbox out).
+        // Facade audit wave 3 (2026-09-14): the map used to be handed the raw
+        // `spaces` list while the grid counted `arrangeable` (sandbox left out
+        // for a visitor — "not one of the spaces to visit"), so the same page
+        // reported two different totals for what should be one set (14 on the
+        // map, 13 in the grid, on the real audit). Map now gets `arrangeable`
+        // too: same four cards the grid shows, sandbox not among them.
         fireEvent.click(screen.getByRole('button', { name: 'Map' }))
         const constellation = await screen.findByTestId('mock-constellation')
         expect(constellation.textContent).toContain('open')
-        expect(constellation.textContent).toContain('sandbox-me')
         expect(constellation.textContent).toContain('net')
         expect(constellation.textContent).toContain('azd')
+        expect(constellation.textContent).toContain('bare')
+        expect(constellation.textContent).not.toContain('sandbox-me')
+    })
+
+    it('never shows a visitor the "Only you" filter — the server lists only public spaces to them, so the count is always a dead 0', async () => {
+        asGuest()
+        // Five spaces (more than the 3-space threshold that shows the bar) so
+        // the arrange/filter bar renders at all.
+        listServerSpaces.mockResolvedValue(visitorSpaces())
+
+        render(<SpaceHub />)
+        await findCard('open')
+
+        expect(screen.getByRole('button', { name: /^Open to anyone/ })).toBeTruthy()
+        expect(screen.getByRole('button', { name: /^Needs a door/ })).toBeTruthy()
+        expect(screen.queryByRole('button', { name: /^Only you/ })).toBeNull()
+    })
+
+    it('an account (not a visitor) still gets the "Only you" filter — it is a real, usable state for an owner', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'mine', label: 'Mine', isOwner: true },
+            { id: 'secret', label: 'Secret', isOwner: true, isPublic: false },
+            { id: 'pub', label: 'Pub', isOwner: true, isPublic: true, publishedProjectId: 'p' },
+            { id: 'empty-door', label: 'Empty Door', isOwner: true, isPublic: true }
+        ])
+
+        render(<SpaceHub />)
+        await findCard('mine')
+
+        expect(screen.getByRole('button', { name: /^Only you/ })).toBeTruthy()
     })
 })

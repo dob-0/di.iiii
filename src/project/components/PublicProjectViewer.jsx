@@ -29,7 +29,7 @@ import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 import { consumeArriveWalking } from '../../components/arriveWalking.js'
 import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
-import { isEmbedRequest } from '../../utils/previewMode.js'
+import { isEmbedRequest, signalPreviewReady } from '../../utils/previewMode.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -228,11 +228,34 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         typeof window !== 'undefined' ? window.location.origin : ''
     )
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
+    const codeUrl = presentationState.codeSourceType === 'url' ? presentationState.codeUrl?.trim() : ''
+    // A code-mode page is arbitrary author content — often a heavy 3D piece
+    // with its own model loads, physics and boot sequence, or someone else's
+    // whole website. The scene/graph renderers below already treat `isPreview`
+    // as "a picture, not the real thing" (lowPower, no navigation, no
+    // timelines); this branch had no such gate and booted the SAME heavy
+    // runtime a click would open, live inside a thumbnail scaled to a few
+    // hundred pixels wide. On `/spaces` that showed a piece's OWN boot text
+    // frozen mid-load ("INITIALIZING SPACE... 0%", one project's GLTF/Draco
+    // loader stalling behind the sandboxed iframe's opaque origin) —
+    // indistinguishable from a broken card, because nothing about being a
+    // preview told the page to hold still. A click still opens the real thing
+    // (SpaceCardLive, no ?preview=1) exactly as the scene/graph cards do.
+    const showCodePreviewPlaceholder = showCodeView && isPreview && Boolean(codeUrl || rawHtml)
 
     useEffect(() => {
         setViewMode(null)
         setNavMode('orbit')
     }, [presentationState.entryView])
+
+    // The placeholder replaces the iframe outright, so nothing here will ever
+    // post the app-wide paint watcher's canvas/iframe signal — say "ready"
+    // directly, the moment there is something (a URL or HTML) to show a
+    // picture of, so the card's boot queue is not left waiting on a frame that
+    // was never going to arrive.
+    useEffect(() => {
+        if (showCodePreviewPlaceholder) signalPreviewReady(resolvedRouteSpaceId)
+    }, [showCodePreviewPlaceholder, resolvedRouteSpaceId])
 
     // A visitor who WALKED through a portal arrives walking — the flag is set
     // by the walker's portal jump (see arriveWalking.js) and honoured only when
@@ -372,10 +395,16 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             }}
         >
             {showCodeView && document ? (
-                presentationState.codeSourceType === 'url' && presentationState.codeUrl?.trim() ? (
+                showCodePreviewPlaceholder ? (
+                    <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: '2rem' }}>
+                        <div style={overlayCardStyle}>
+                            <strong>Custom page — open to view.</strong>
+                        </div>
+                    </div>
+                ) : codeUrl ? (
                     <iframe
                         title={viewerTitle}
-                        src={presentationState.codeUrl.trim()}
+                        src={codeUrl}
                         loading="lazy"
                         sandbox={presentationState.deviceAccess ? `${PAGE_SANDBOX} allow-same-origin` : PAGE_SANDBOX}
                         allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"

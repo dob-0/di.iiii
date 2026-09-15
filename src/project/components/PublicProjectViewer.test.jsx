@@ -334,6 +334,60 @@ describe('PublicProjectViewer', () => {
         }
     })
 
+    // Facade audit wave 3 (2026-09-14): a card thumbnail on /spaces embeds a
+    // code-mode project's SAME heavy iframe as the real live page, so an
+    // author's own boot text ("INITIALIZING SPACE... 0%") sat frozen inside
+    // the tiny picture, indistinguishable from a broken card, because the
+    // scene/graph renderers get a lowPower/no-navigation preview mode and this
+    // branch got none at all. A preview must show a still placeholder, never
+    // the piece's own runtime.
+    it('never mounts a code page\'s own iframe in ?preview=1 mode — a picture, not a second copy of the piece', async () => {
+        window.history.replaceState(null, '', '/main?preview=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>INITIALIZING SPACE... 0%</main>' },
+                    entities: []
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { container } = render(
+                <PublicProjectViewer spaceId="main" projectId="heavy-piece" spaceLabel="Main Space" />
+            )
+
+            await screen.findByText('Custom page — open to view.')
+            expect(container.querySelector('iframe')).toBeNull()
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    it('still opens the real code page — no ?preview=1 — once a visitor clicks the card into "live"', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
+                presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>the piece</main>' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        const { container } = render(
+            <PublicProjectViewer spaceId="main" projectId="heavy-piece" spaceLabel="Main Space" />
+        )
+
+        await waitFor(() => {
+            const iframe = container.querySelector('iframe')
+            expect(iframe).not.toBeNull()
+            expect(iframe.getAttribute('srcdoc')).toContain('the piece')
+        })
+        expect(screen.queryByText('Custom page — open to view.')).toBeNull()
+    })
+
     // ?embed=1 is what br_id_ge's ending has been asking for since it started
     // opening the field inside itself. Without it the viewer paints #05070a and
     // the embedded page can only answer with opaque paper of its own, which is

@@ -199,7 +199,7 @@ export default function PasswordSignIn({ onSignedIn, resetToken = null, canMail 
                     )}
                     {mode === 'signIn' && !canMail && (
                         <Typography variant="caption" sx={{ color: 'var(--ui-text-muted)' }}>
-                            This copy cannot send mail, so a forgotten password has to be reset by an admin.
+                            Email sign-in isn&apos;t available on this install — if you forget your password, ask an admin to reset it.
                         </Typography>
                     )}
                 </Box>
