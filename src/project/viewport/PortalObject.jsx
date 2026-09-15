@@ -240,6 +240,19 @@ export const portalLabelHeight = (style) => (
 const FRAME_FILL_IDLE = 0.1
 const FRAME_FILL_HOVER = 0.18
 
+// EntryGlideCamera keeps a priority-1 useFrame alive and, every frame, pins the
+// camera back to its stop position and renders itself — that is how it holds
+// the final frame steady for the curtain to capture. It only stops doing that
+// when `glide` (the state that keeps it mounted) goes back to null; nothing
+// upstream ever did that after `resolve` fired, so once one door was entered
+// the camera stayed locked at the glide's end pose forever, unresponsive to
+// the walker/orbit controls that resumed underneath it. Wrap the resolver so
+// clearing `glide` is inseparable from resolving it.
+export const withGlideCleanup = (resolve, clear) => (frame) => {
+    resolve(frame)
+    clear()
+}
+
 function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate = true, style = 'gateway' }) {
     const isFrame = style === 'frame'
     const inEditor = typeof window !== 'undefined' && isStudioEditorPath(window.location.pathname)
@@ -271,7 +284,9 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
             source: {
                 color,
                 capture: () => captureRendererFrame({ gl, scene, camera }),
-                glide: (ms, { reach }) => new Promise((resolve) => setGlide({ ms, reach, target, resolve }))
+                glide: (ms, { reach }) => new Promise((resolve) => {
+                    setGlide({ ms, reach, target, resolve: withGlideCleanup(resolve, () => setGlide(null)) })
+                })
             }
         })
     }
