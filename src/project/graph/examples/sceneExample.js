@@ -1,11 +1,9 @@
 // A scene, made the way a person would make one: a room, a light, a shape, and
 // a place to put your own file.
 //
-// This exists because the owner said, twice, "i still cannot connect and
-// understand how work" and then "i want to create scene with the objects i mean
-// cube light or i want upload mine". Every piece of it was already possible and
-// none of it was legible. A worked example you can open, look at and copy is the
-// answer to that — not another feature.
+// A worked example: open it, look at it, copy it. The room, the light, the
+// shape and the upload slot were all already possible on their own; this puts
+// them together in one legible scene instead of adding a new feature.
 //
 // It is built to be READ. The note says the three moves in plain words, the
 // nodes are labelled by what they ARE rather than by their type, and the Model
