@@ -490,7 +490,7 @@ function LandingPageInner() {
                             The Spaces
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildJamScenePath()} onClick={goThrough(buildJamScenePath())}>
-                            Open Jam
+                            Open Space
                         </Button>
                     </Stack>
 
