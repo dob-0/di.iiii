@@ -55,9 +55,9 @@ describe('the front page routes', () => {
         expect(document.querySelector('.lp-crack-overlay, .lp-crack-shard')).toBeNull()
     })
 
-    it('Open Jam goes through the entering move instead of reloading the site', () => {
+    it('Open Space goes through the entering move instead of reloading the site', () => {
         render(<LandingPage />)
-        const call = pressed(/^Open Jam$/)
+        const call = pressed(/^Open Space$/)
         expect(call.href).toMatch(/open_jam\/scene$/)
         expect(call.options).toEqual({ holdPage: true })
     })

@@ -30,7 +30,14 @@ function createSessionDbSync({ findUserById, normalizeAuthRole, recheckMs = 60_0
     return fresh
   }
 
-  return { getFreshDbIdentity }
+  // A write to a user's role or scope must not wait out the window: a grant
+  // (creating or opening a space) left its own owner refused for up to a
+  // minute, because the cached pre-grant scope overrode the freshly re-issued
+  // cookie. Forgetting is never wider than the DB — it only makes the DB the
+  // answer sooner, which also makes a revocation land at once.
+  const forgetDbIdentity = (subject) => { cache.delete(subject) }
+
+  return { getFreshDbIdentity, forgetDbIdentity }
 }
 
 module.exports = { createSessionDbSync }

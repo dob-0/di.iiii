@@ -335,6 +335,17 @@ function AppRouter() {
     const appState = getAppLocationState(location)
     const bareReserved = getBareReservedSegment(location)
 
+    // `/open` and its `/open_jam(/scene)` aliases are one space, named the
+    // same way everywhere per the naming rule (docs/ai/vocabulary.md) — but
+    // this route renders JamSurface, a live editable surface, not the
+    // generic read-only PublicProjectViewer that SpaceSurfaceApp already
+    // titles from the fetched space label. Without this the tab kept
+    // whatever the previous page had left in it, usually index.html's
+    // generic default. JAM_SPACE_ID is fixed to the 'open' space (see
+    // jamRouting.js), so the name is safe to hardcode instead of waiting on
+    // a fetch just for a tab title.
+    useDocumentTitle(isJamLocation(jamState) ? 'Open Space — di.iiii' : null)
+
     // The Raw lane was called Seed until 2026-07-30. Old /seed links still
     // resolve; rewrite them to /raw so the address bar heals instead of keeping
     // the retired name in circulation. replace() so Back skips the dead URL

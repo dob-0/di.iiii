@@ -263,8 +263,8 @@ function LandingHero({ onEnter = null, lang = 'en' }) {
         <section className="wcc-hero" aria-labelledby="wcc-title">
             <p className="wcc-hero__kicker">Creative Lab • Mentorship • Exhibition</p>
             <h1 id="wcc-title">
-                <span>WCC:</span>
-                <span>Women Creating Change</span>
+                <span>WCC</span>
+                <span>Exhibition</span>
             </h1>
             {isHy
                 ? landingContent.subtitleHy && <p className="wcc-hero__subtitle" lang="hy">{landingContent.subtitleHy}</p>
