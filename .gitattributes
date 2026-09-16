@@ -1,2 +1,10 @@
 *.cmd text eol=crlf
 *.bat text eol=crlf
+
+# The legacy artist-works-land page boots React from self-hosted copies and
+# pins them with SRI hashes in support.js. Any line-ending translation changes
+# the bytes, so the digest no longer matches and the browser refuses to run the
+# script: the panel renders an empty iframe, with no failed request and no 404
+# to point at. Check these out verbatim on every platform.
+public/wcc/artist-works-land/support.js -text
+public/wcc/artist-works-land/vendor/*.js -text
