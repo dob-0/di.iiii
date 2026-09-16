@@ -51,9 +51,12 @@
  *   2. otherwise both documents are fetched (concurrency-limited, one overall
  *      budget) and compared by tier-sync's own normalized `shape` — volatile
  *      fields stripped, assets addressed by name. Identical → same.
- *   3. content that truly differs gets a direction: from the baseline when it
- *      has one, else from `updatedAt` (said so in the line). Only "dev is
- *      ahead" or "both moved" makes the headline NOT LATEST.
+ *   3. content that truly differs gets a direction only from the baseline
+ *      (dev moved / local moved / both). With no baseline entry it is
+ *      "differs — look before pulling or pushing": never guessed from
+ *      timestamps, never NOT LATEST by itself. The headline is NOT LATEST
+ *      only for a baseline-backed "dev moved" / "both moved", or a project
+ *      that exists on dev and not here (and is not in this box's trash).
  * A pair the budget did not reach is counted as "not confirmed: N" — never
  * NOT LATEST, never "same". A project only on the dev tier that sits in THIS
  * box's trash (`GET /api/trash`) was deleted here on purpose and is never
@@ -272,10 +275,10 @@ export const classifyProjectDrift = ({ local, dev, baseline, baselineShape: lega
     if (devMoved) return { kind: 'dev-ahead', confirmed: true }
     if (localMoved) return { kind: 'local-ahead', confirmed: true }
   }
-  // Content differs; nothing recorded says who moved, so the clock does.
-  if (dev.updatedAt > local.updatedAt) return { kind: 'dev-ahead', confirmed: false }
-  if (local.updatedAt > dev.updatedAt) return { kind: 'local-ahead', confirmed: false }
-  return { kind: 'differs-undetermined' }
+  // Content differs and nothing recorded says who moved. The clock is not an
+  // answer: it called what-we-have/map "newer on dev" while local's copy held
+  // the work. A person looks at both before anything is pulled or pushed.
+  return { kind: 'differs' }
 }
 
 // Network-level failure only (host down, DNS, timeout) — an auth error means
@@ -437,21 +440,21 @@ export const checkSpaces = async ({ spaceFilter, budgetMs = SPACE_CHECK_BUDGET_M
   return { status: 'checked', notLatest, totalSpaces: spaceIds.length, projects: results, triedBases }
 }
 
-const projectDriftLine = ({ spaceId, projectId, kind, confirmed }) => {
-  const basis = confirmed === false ? ' (content differs; direction by timestamp)' : ''
+const projectDriftLine = ({ spaceId, projectId, kind }) => {
   switch (kind) {
     case 'dev-ahead':
-      return `  NOT LATEST  ${DEV_TIER_LABEL} has newer work in \`${spaceId}/${projectId}\`${basis} — pull first: ` +
+      return `  NOT LATEST  ${DEV_TIER_LABEL} has newer work in \`${spaceId}/${projectId}\` — pull first: ` +
         `node scripts/project-pull.mjs ${projectId} --space ${spaceId} --from ${TIERS.staging.base} --force`
     case 'both-moved':
       return `  NOT LATEST  \`${spaceId}/${projectId}\` changed on this box AND on the ${DEV_TIER_LABEL} since the last sync — ` +
-        `ask before pushing; compare by hand: node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --audit`
+        `ask before pushing; compare by hand: node scripts/tier-sync.mjs --from local --to dev --space ${spaceId} --audit`
     case 'local-ahead':
-      return `  ·  \`${spaceId}/${projectId}\` has local changes not yet on the ${DEV_TIER_LABEL}${basis} — ` +
-        `push when ready: node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --changed`
-    case 'differs-undetermined':
-      return `  ?  \`${spaceId}/${projectId}\` differs and there is no signal for who moved — ` +
-        `node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --audit`
+      return `  ·  \`${spaceId}/${projectId}\` has local changes not yet on the ${DEV_TIER_LABEL} — ` +
+        `push when ready: node scripts/tier-sync.mjs --from local --to dev --space ${spaceId} --changed`
+    case 'differs':
+      return `  ?  \`${spaceId}/${projectId}\` differs — look before pulling or pushing: ` +
+        `compare: node scripts/tier-sync.mjs --from local --to dev --space ${spaceId} --audit · ` +
+        `pull dev's copy: node scripts/project-pull.mjs ${projectId} --space ${spaceId} --from ${TIERS.staging.base} --force`
     default:
       return `  ?  ${spaceId}/${projectId}: ${kind}`
   }
@@ -471,7 +474,7 @@ const spaceOnlyLine = (row) => row.kind === 'space-local-only'
 const SUMMARY_PRIORITY = [
   ['dev-ahead', 'newer on dev'],
   ['both-moved', 'changed on both'],
-  ['differs-undetermined', 'differs (undetermined)'],
+  ['differs', 'differs — look before pulling or pushing'],
   ['local-ahead', 'local ahead'],
   ['space-dev-only', 'only on dev'],
   ['space-local-only', 'local-only']
@@ -574,7 +577,7 @@ export const formatReport = ({ code, spaces, strict, spacesDetail }) => {
     // One capped list, most urgent first: the rows with an action, then the
     // spaces that exist on one tier only. Trashed-here and not-confirmed rows
     // live in the summary lines above and never get a detail line.
-    const ORDER = ['dev-ahead', 'both-moved', 'differs-undetermined', 'local-ahead', 'space-dev-only', 'space-local-only']
+    const ORDER = ['dev-ahead', 'both-moved', 'differs', 'local-ahead', 'space-dev-only', 'space-local-only']
     const detailRows = spaces.projects
       .filter((r) => ORDER.includes(r.kind))
       .sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind))

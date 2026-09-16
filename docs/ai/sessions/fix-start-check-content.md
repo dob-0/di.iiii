@@ -9,8 +9,10 @@ Found by the spaces audit (`docs/research/2026-09-16-spaces-audit.md`, PR from `
   - Now: versions equal (or equal to a content-confirmed baseline entry's versions) → same,
     no fetch. Otherwise both documents are fetched (8 pairs at once, dev-later first, one
     15 s budget) and compared by `documentSignature().shape` (volatile fields stripped,
-    assets by name). Content differs → direction from the baseline, else by timestamp
-    (said so). Unread in budget → `not confirmed: N`, never NOT LATEST.
+    assets by name). Content differs → direction from the baseline only; with no
+    baseline entry it is "differs — look before pulling or pushing" (compare + pull
+    commands), never guessed from timestamps and never NOT LATEST by itself.
+    Unread in budget → `not confirmed: N`, never NOT LATEST.
   - `GET /api/trash` on local: a dev-only project in local's trash is "deleted here on
     purpose", no detail line, no pull.
   - Output: summary line, optional `not confirmed` line, ≤5 details (dev-ahead first).
@@ -27,6 +29,11 @@ Found by the spaces audit (`docs/research/2026-09-16-spaces-audit.md`, PR from `
     — 10 dev-ahead, 2 both, ~11 s, 0 not confirmed.
   - `--rebuild-baseline --dry-run`: 198 identical · 17 differing · 31 one tier only (24 s).
     Same 17 as start-check's content-differing rows. Not run for real (owner's data tier).
-- Open: direction for content that differs with no baseline is still the clock —
-  `what-we-have/map` reads "newer on dev" though the audit found local's copy fuller.
-  `--changed --dry-run` still writes the baseline (pre-existing, by design comment).
+- Review round: the timestamp direction called `what-we-have/map` "newer on dev" while
+  local's copy was fuller — removed (bucket `differs`). `--changed --dry-run` used to
+  write the baseline; every `--dry-run` now writes nothing (test drives the real
+  `main()` against fake tiers for `--changed`, `--rebuild-baseline`, plain).
+  - re-run: `15 same · 2 changed on both: open, br-id-ge · 6 differs — look before
+    pulling or pushing · 1 local ahead · 8 local-only · 4 deleted here on purpose`, 12.3 s.
+    The two "changed on both" come from the stale 09-06 baseline; after a real
+    `--rebuild-baseline` they fall into `differs`.

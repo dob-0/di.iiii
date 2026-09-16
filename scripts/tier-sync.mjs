@@ -493,7 +493,7 @@ export const readSignatures = async (tier, only) => {
 // write to a tier's baseline — only a real sync run earns that).
 export { readBaseline }
 
-const main = async () => {
+export const main = async () => {
     const args = parseArgs(process.argv.slice(2))
     if (args.rebuildBaseline) {
         args.from ||= 'local'
@@ -585,13 +585,14 @@ const main = async () => {
         console.log('reading every document on both tiers to find what differs — this takes a minute')
         const signatures = { source: await readSignatures(from, args.space), destination: await readSignatures(to, args.space) }
         const audit = planAudit(signatures)
-        // What the tiers agree on today is the baseline for tomorrow. Written
-        // even on a dry run: it records an observation, not a change to any
-        // tier, and it is what lets the NEXT run tell "I edited this" from
-        // "we both did".
+        // What the tiers agree on today is the baseline for tomorrow — it is
+        // what lets the NEXT run tell "I edited this" from "we both did". A
+        // dry run uses it for this plan but never writes it: a dry run writes
+        // nothing, anywhere (it used to write this file, and a rebuilt
+        // baseline could be clobbered by someone "just looking").
         const agreed = baselineFromAgreement({ ...signatures, sourceTier: args.from, destinationTier: args.to })
         baseline[args.to] = { ...(baseline[args.to] || {}), ...agreed }
-        writeBaseline(baseline)
+        if (!args.dryRun) writeBaseline(baseline)
         const { push, refuse } = planChanged({ audit, baseline: baseline[args.to] })
         if (refuse.length) {
             console.log(`\nREFUSED (${refuse.length}) — will not overwrite work on ${tierLabel(args.to)}:`)
@@ -714,7 +715,7 @@ const main = async () => {
         }
     }
 
-    if (copied) writeBaseline(baseline)
+    if (copied && !args.dryRun) writeBaseline(baseline)
     console.log(`\ncopied ${copied}, failed ${failed}`)
     if (failed) process.exitCode = 1
 }

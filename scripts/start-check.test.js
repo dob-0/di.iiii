@@ -77,11 +77,12 @@ describe('classifyProjectDrift', () => {
     expect(classifyProjectDrift({ local: meta(6, 100), dev: meta(1, 900), baseline })).toEqual({ kind: 'same' })
   })
 
-  it('uses the updatedAt only for direction, once content is known to differ', () => {
-    expect(classifyProjectDrift({ local: meta(3, 100), dev: meta(4, 500), localShape: 'a', devShape: 'b' })).toEqual({ kind: 'dev-ahead', confirmed: false })
-    expect(classifyProjectDrift({ local: meta(4, 500), dev: meta(3, 100), localShape: 'a', devShape: 'b' })).toEqual({ kind: 'local-ahead', confirmed: false })
-    expect(classifyProjectDrift({ local: meta(3, 100), dev: meta(4, 100), localShape: 'a', devShape: 'b' })).toEqual({ kind: 'differs-undetermined' })
+  // what-we-have/map: dev's clock was later, local's copy held the work.
+  it('never guesses direction from timestamps when content differs with no baseline', () => {
+    expect(classifyProjectDrift({ local: meta(3, 100), dev: meta(4, 500), localShape: 'a', devShape: 'b' })).toEqual({ kind: 'differs' })
+    expect(classifyProjectDrift({ local: meta(4, 500), dev: meta(3, 100), localShape: 'a', devShape: 'b' })).toEqual({ kind: 'differs' })
   })
+
 
   it('reads a versioned baseline entry for direction too', () => {
     const baseline = { shape: 'base', versions: { local: meta(1), staging: meta(1) } }
@@ -197,14 +198,19 @@ describe('checkSpaces', () => {
   // The bug this whole rework exists to fix: a project ALREADY drifted
   // before this ever ran must still be caught on the very first run —
   // nothing here is allowed to treat "first time seeing it" as "fine".
-  it('flags dev-ahead on the very first run — no cache to have missed it', async () => {
+  it('catches drift on the very first run — no cache to have missed it — as "differs" without a baseline', async () => {
     listSpaces.mockImplementation(async (tier) => tier.base.includes('dev.diiii') ? ['br-id-ge'] : ['br-id-ge'])
     listProjectMetas.mockImplementation(async (tier) =>
       tier.base.includes('dev.diiii') ? [{ id: 'landing', documentVersion: 96, updatedAt: 2000 }] : [{ id: 'landing', documentVersion: 40, updatedAt: 1000 }])
     call.mockImplementation(async (tier) => okDoc(onDev(tier) ? 'dev-work' : 'old-work'))
-    const result = await checkSpaces({ spaceFilter: 'br-id-ge' })
-    expect(result.notLatest).toBe(true)
-    expect(result.projects).toEqual([{ spaceId: 'br-id-ge', projectId: 'landing', kind: 'dev-ahead', confirmed: false }])
+    const spaces = await checkSpaces({ spaceFilter: 'br-id-ge' })
+    expect(spaces.notLatest).toBe(false)
+    expect(spaces.projects).toEqual([{ spaceId: 'br-id-ge', projectId: 'landing', kind: 'differs' }])
+    const report = formatReport({ code: { fetchedOrigin: true, currentBranch: 'dev', notLatest: false }, spaces, strict: false })
+    expect(report.split('\n')[0]).toBe('  LATEST')
+    expect(report).toContain('1 differs — look before pulling or pushing: br-id-ge')
+    expect(report).toContain('tier-sync.mjs --from local --to dev --space br-id-ge --audit')
+    expect(report).toContain('project-pull.mjs landing --space br-id-ge')
   })
 
   const versionsDiffer = async (tier) => onDev(tier)

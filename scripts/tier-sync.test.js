@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest'
-import { TIERS, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, tierLabel, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite } from './tier-sync.mjs'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, tierLabel, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite } from './tier-sync.mjs'
 
 describe('localBase', () => {
     // The documented convention is LOCAL_API_URL with no /serverXR suffix
@@ -333,4 +336,54 @@ describe('--rebuild-baseline', () => {
         expect(push.map((r) => r.projectId)).toEqual(['p'])
         expect(refuse).toEqual([])
     })
+})
+
+// A dry run writes nothing, anywhere. `--changed --dry-run` used to write
+// tier-sync-baseline.json on every run — so "just looking" could clobber a
+// freshly rebuilt baseline. Drives the real main() against two fake tiers.
+describe('--dry-run never writes the baseline', () => {
+    const originalArgv = process.argv
+    const originalDataRoot = process.env.DATA_ROOT
+    afterEach(() => {
+        process.argv = originalArgv
+        if (originalDataRoot === undefined) delete process.env.DATA_ROOT
+        else process.env.DATA_ROOT = originalDataRoot
+        process.exitCode = undefined
+        vi.unstubAllGlobals()
+        vi.restoreAllMocks()
+    })
+
+    const fakeTiers = () => {
+        const writes = []
+        vi.stubGlobal('fetch', vi.fn(async (url, options = {}) => {
+            if (options.method && options.method !== 'GET') writes.push(`${options.method} ${url}`)
+            const onDev = String(url).includes('dev.diiii.xyz')
+            const json = (body) => ({ ok: true, status: 200, json: async () => body })
+            if (/\/api\/spaces$/.test(url)) return json({ spaces: [{ id: 'main' }] })
+            if (/\/api\/spaces\/main\/projects$/.test(url)) {
+                return json({ projects: [{ id: 'same', documentVersion: onDev ? 1 : 6, updatedAt: 5 }, { id: 'edited', documentVersion: 2, updatedAt: 5 }] })
+            }
+            if (url.includes('/api/projects/same/document')) return json({ document: { entities: [{ id: 'e' }] } })
+            if (url.includes('/api/projects/edited/document')) return json({ document: { entities: [{ id: onDev ? 'old' : 'new' }] } })
+            return { ok: false, status: 404, json: async () => ({}) }
+        }))
+        return writes
+    }
+
+    for (const flags of [['--changed', '--dry-run'], ['--rebuild-baseline', '--dry-run'], ['--dry-run']]) {
+        it(`${flags.join(' ')} leaves tier-sync-baseline.json and every tier untouched`, async () => {
+            const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tier-sync-dry-'))
+            const file = path.join(dir, 'tier-sync-baseline.json')
+            const before = JSON.stringify({ staging: { 'main/edited': 'rebuilt-by-hand' } })
+            fs.writeFileSync(file, before)
+            process.env.DATA_ROOT = dir
+            process.argv = ['node', 'tier-sync.mjs', '--from', 'local', '--to', 'dev', ...flags]
+            vi.spyOn(console, 'log').mockImplementation(() => {})
+            const writes = fakeTiers()
+            await main()
+            expect(fs.readFileSync(file, 'utf8')).toBe(before)
+            expect(writes).toEqual([])
+            fs.rmSync(dir, { recursive: true, force: true })
+        })
+    }
 })
