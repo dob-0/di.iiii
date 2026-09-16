@@ -7,7 +7,8 @@ until the cPanel hosting term expires.
 
 > "staging" in this file is the cPanel-era name for the second tier, kept as it was said. Today
 > that tier is the dev tier at `https://dev.diiii.xyz` on the VPS (branch `dev`); the old
-> `staging.di-studio.xyz` name now points at the VPS too, not at cPanel. See
+> `staging.di-studio.xyz` name was retired 2026-09-16 and answers nowhere. Addresses below
+> say `dev.diiii.xyz` where the cPanel era said the old name. See
 > [LIVE_DEPLOY.md](LIVE_DEPLOY.md).
 
 It was a GitHub-to-cPanel Git flow:
@@ -26,7 +27,7 @@ It was a GitHub-to-cPanel Git flow:
 
 Branch and environment mapping:
 
-- `dev` -> `cpanel-staging` -> staging.di-studio.xyz
+- `dev` -> `cpanel-staging` -> dev.diiii.xyz
 - `main` -> `cpanel-production` -> di-studio.xyz
 
 That means:
@@ -80,7 +81,7 @@ If GitHub already published the correct `cpanel-*` branch but the site is stale,
 
 ## Easy Staging Deploy
 
-Use this for `https://staging.di-studio.xyz`.
+Use this for `https://dev.diiii.xyz`.
 
 1. Push `dev` (staging deploys automatically from `dev`):
 
@@ -107,8 +108,8 @@ git push origin dev
 8. Verify the source commit reported by the live backend:
 
 ```bash
-curl -s https://staging.di-studio.xyz/serverXR/api/health
-npm run smoke -- --base-url https://staging.di-studio.xyz
+curl -s https://dev.diiii.xyz/serverXR/api/health
+npm run smoke -- --base-url https://dev.diiii.xyz
 ```
 
 The health response should include:
@@ -208,7 +209,7 @@ In other words, the canonical human flow is:
 
 1. work and integrate on `dev`
 2. push `dev` → GitHub publishes `cpanel-staging` automatically
-3. verify staging at `https://staging.di-studio.xyz`
+3. verify the dev tier at `https://dev.diiii.xyz`
 4. merge `dev` into `main` and push `main` → GitHub publishes `cpanel-production`
 5. in cPanel `Git Version Control`, update and deploy `HEAD` if it did not apply automatically
 

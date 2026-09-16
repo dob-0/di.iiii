@@ -272,9 +272,11 @@ The owner, plainly: "we have not staging anymore." The word leaves our language 
 text, copy. Say **the dev tier** or **dev.diiii.xyz** wherever a reader could mistake "dev" for the
 branch, `npm run dev`, or a local dev server.
 
-**`staging.di-studio.xyz` still answers.** It is the same server under its old name, kept only so
-links already handed out do not break. Host matchers and allowlists keep accepting it. It is never
-named in new copy, a new link, or a doc that tells someone where to go.
+**`staging.di-studio.xyz` is gone** (owner's rule, 2026-09-16, same day as the word): dropped
+from Caddy's `STAGING_DOMAIN`, its DNS A record deleted. Every live address is
+`https://dev.diiii.xyz` — the serverXR API at `https://dev.diiii.xyz/serverXR`, the mesh at
+`wss://dev.diiii.xyz/serverXR/mesh`. It is never named in new copy, a new link, or a doc that
+tells someone where to go; where a dated note or a test still spells it, it is history.
 
 **Identifiers that still say `staging` are deliberate survivors.** This file never governed
 identifiers, and these are read by CI, the server, secrets or saved data — renaming one breaks a
@@ -294,6 +296,17 @@ deploy, not a sentence. Do not "fix" them:
   `staging` keeps working)
 
 Where one of these sits in a doc, say once nearby "the dev tier (identifier still `staging`)".
+
+**The host retirement is the other half of this.** What stays after `staging.di-studio.xyz`
+went: the file names `docker-compose.staging.yml` and `deploy-vps-staging.yml`, the container
+`dii-staging-server-1`, the env var NAME `STAGING_DOMAIN` (its value is now `dev.diiii.xyz`),
+the manifest key `tiers.staging`, the CLI flag `--tier staging`, the image tag `:staging`, and
+GitHub secret/variable names — all identifiers, each read by CI, the server or saved data.
+What also stays untouched is append-only history: `PROGRESS.md` entries, `docs/checkpoints/*`,
+`docs/research/mirrors/*`, `docs/ai/audit-*.md`, `legacy/*`. Host matchers that still accept a
+`staging.*` first label (`deployMode.js`, nginx's noindex map, `data-cleanup.mjs`) are kept as
+harmless: a self-hosted install may call its second tier that, and the alternative — reading
+such a host as the live site — is the confusion the mark exists to prevent.
 
 The line in "Amended 2026-08-19, same day" — "Stage collided with the deploy tier" — is history and stays as it was said.
 It explains a 2026-08-19 decision; the tier it collided with is now called dev.

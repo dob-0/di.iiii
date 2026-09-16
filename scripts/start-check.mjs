@@ -231,10 +231,9 @@ const readEnv = () => ({
   ...Object.fromEntries(['API_TOKEN', 'LIVE_API_TOKEN', 'LOCAL_API_URL'].filter((k) => process.env[k]).map((k) => [k, process.env[k]]))
 })
 
-// dev.diiii.xyz is the settled name for the tier `tier-sync.mjs` still calls
-// `staging` (its base URL, staging.di-studio.xyz, is the old name and still
-// answers — see CONTRIBUTING.md). Kept as one constant here so a future
-// rename only has to change one line.
+// dev.diiii.xyz is the only name for the tier `tier-sync.mjs` still keys
+// `staging` (see the deliberate survivors in docs/ai/vocabulary.md). Kept as
+// one constant here so a future rename only has to change one line.
 const DEV_TIER_LABEL = 'dev tier'
 
 /**

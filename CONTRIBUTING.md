@@ -10,12 +10,12 @@ di.iiii has two lines of work, and they live in different places:
 Almost every real task touches both at once: you change some code AND some content
 while testing it. Treat them as two things you sync separately, not one.
 
-**The addresses today:** `dev.diiii.xyz` is the settled name for the rehearsal tier;
-`staging.di-studio.xyz` is the old name — it still answers, and some scripts in this
-repo (`tier-sync.mjs`, `AGENTS.md`'s own validation commands) still say `staging` or
-`staging.di-studio.xyz` because renaming every reference is its own piece of work, not
-done yet. `diiii.xyz` is the only host for anything you write down as a new link;
-`di-studio.xyz` is the old production name and still answers the same way.
+**The addresses today:** `dev.diiii.xyz` is the only name for the rehearsal tier — its old
+`staging.di-studio.xyz` name was retired on 2026-09-16 (DNS record deleted; nothing answers
+there). Some identifiers in this repo (`--tier staging`, `docker-compose.staging.yml`,
+`STAGING_*` env vars) still say `staging` on purpose; see the deliberate survivors in
+`docs/ai/vocabulary.md`. `diiii.xyz` is the only host for anything you write down as a new
+link; `di-studio.xyz` is the old production name and still answers the same way.
 
 ## The start check
 

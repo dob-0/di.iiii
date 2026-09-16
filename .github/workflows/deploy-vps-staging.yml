@@ -1,7 +1,7 @@
 name: Deploy VPS Staging (GHCR + SSH)
 
-# The dev tier's deploy path: `dev` -> https://dev.diiii.xyz (legacy name
-# staging.di-studio.xyz, same server). Identifier still `staging` -- this file
+# The dev tier's deploy path: `dev` -> https://dev.diiii.xyz (its old
+# staging.di-studio.xyz name was retired 2026-09-16). Identifier still `staging` -- this file
 # name, the workflow name, the `staging` environment, the :staging image tags,
 # DEPLOY_ENV=staging and the VPS_STAGING_* variables all stay, because CI,
 # the server and `gh run list --workflow` read them.

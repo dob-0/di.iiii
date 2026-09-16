@@ -57,8 +57,8 @@ list --workflow=deploy-vps.yml` and the run's `head_sha` if in doubt.
   pull && up -d`, reloads Caddy.
 - **Dev tier** (identifiers still `staging`): push to `dev` → `deploy-vps-staging.yml` — same VPS, a separate low-resource
   Compose project (`docker-compose.staging.yml`) in its own checkout dir (`/opt/di.iiii-staging`),
-  fronted by production's Caddy via a second site block at `dev.diiii.xyz` (the legacy name
-  `staging.di-studio.xyz` still answers so old links keep working — never use it in new copy).
+  fronted by production's Caddy via a second site block at `dev.diiii.xyz` (its old name
+  `staging.di-studio.xyz` was retired 2026-09-16: out of `STAGING_DOMAIN`, DNS record deleted).
 - **Data:** a mounted `/data` volume — SQLite DB + `spaces/` directory with binary assets.
 - **Config:** `docker-compose.yml` (base) + `docker-compose.prod.yml` (pull-from-GHCR override) +
   `docker-compose.caddy-hardened.yml` (production only — resets the client's published port so

@@ -44,9 +44,8 @@ jobs:
 
           target="${STAGING_API_URL:-https://dev.diiii.xyz/serverXR}"
           case "${target}" in
-            # dev.diiii.xyz is the dev tier; staging.di-studio.xyz is its legacy name (same server).
+            # dev.diiii.xyz is the dev tier's only name (staging.di-studio.xyz retired 2026-09-16).
             https://dev.diiii.xyz|https://dev.diiii.xyz/*) ;;
-            *staging.di-studio.xyz*) ;;
             *) echo "::error::target ${target} is not the dev-tier origin (dev.diiii.xyz); dev never deploys to production."; exit 1 ;;
           esac
 

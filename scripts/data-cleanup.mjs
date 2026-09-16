@@ -59,8 +59,8 @@ catch { console.error(`env "${plan.env}" resolved to an unparseable base URL: ${
 // The confirmation gate keys off the URL that was actually resolved, not the
 // plan's label — a plan saying "dev" reads a key that another script
 // treats as production, so the label alone is not evidence of the target.
-// Anything that is neither localhost nor a dev-tier host (dev.diiii.xyz, or
-// the legacy staging.* name) counts as production and has to be typed for.
+// Anything that is neither localhost nor a dev-tier host (dev.diiii.xyz, or a
+// self-hosted staging.* name) counts as production and has to be typed for.
 const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
 const isDevTierHost = host === 'dev.diiii.xyz' || host.startsWith('staging.');
 const targetsProduction = !isLocalHost && !isDevTierHost;

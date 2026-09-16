@@ -14,7 +14,7 @@ term expires. Do not delete it as part of adopting this path.
   — triggers on push to `main` (production).
 - [.github/workflows/deploy-vps-staging.yml](../../.github/workflows/deploy-vps-staging.yml)
   — triggers on push to `dev` and deploys the dev tier, `https://dev.diiii.xyz`
-  (legacy name `staging.di-studio.xyz`, same server; the identifier is still
+  (its old name `staging.di-studio.xyz` was retired 2026-09-16; the identifier is still
   `staging` in file, environment, compose-project and `STAGING_*` var names).
   Decided against a second VPS: at
   2 vCPU/4GB (see `docs/ai/roles/infrastructure-engineer.md`), the dev tier runs
@@ -95,8 +95,8 @@ term expires. Do not delete it as part of adopting this path.
 3. In `/opt/dii` (production)'s `.env`: set `STAGING_DOMAIN` (a subdomain
    DNS already points at this same host, e.g. `dev.your-domain`; it takes a
    comma-separated list — the live VPS has
-   `STAGING_DOMAIN=staging.di-studio.xyz, dev.diiii.xyz`, keeping the legacy
-   name alive for links already handed out) and
+   `STAGING_DOMAIN=dev.diiii.xyz`; the old `staging.di-studio.xyz` entry and its
+   DNS record were removed 2026-09-16) and
    `STAGING_PORT` to match step 2's port. Restart production's `caddy`
    service (`docker compose --profile https up -d caddy`) to pick up the
    new site block.
@@ -359,7 +359,7 @@ healthcheck incident was caught.
 - Both production and the dev tier have been exercised for real (2026-07-16):
   GitHub secrets/variables set, real deploy runs verified end-to-end for
   each. The dev tier is live at `/opt/di.iiii-staging`, served as
-  `dev.diiii.xyz` (and the legacy `staging.di-studio.xyz`).
+  `dev.diiii.xyz`.
 - Consider adding a rollback note (`IMAGE_TAG=<previous-sha>` + re-run
   `pull && up -d`) — not yet needed in practice, but worth having on hand.
 - No `release.json`/git-commit stamp in the build yet, so `/api/health`

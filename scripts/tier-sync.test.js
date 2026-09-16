@@ -33,7 +33,6 @@ describe('isProductionTarget', () => {
         expect(isProductionTarget('https://diiii.xyz/serverXR')).toBe(true)
         expect(isProductionTarget(TIERS.staging.base)).toBe(false)
         expect(isProductionTarget('https://dev.diiii.xyz/serverXR')).toBe(false)
-        expect(isProductionTarget('https://staging.di-studio.xyz/serverXR')).toBe(false)
         expect(isProductionTarget(TIERS.local.base)).toBe(false)
         expect(isProductionTarget('not a url')).toBe(false)
     })

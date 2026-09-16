@@ -7,8 +7,8 @@
 // IMAGE_TAG inside its SSH session without ever writing it to the staging
 // checkout's .env — so any manual compose op in that directory (reboot
 // recovery, restart after an OOM, exactly what the file's header documents)
-// ran production code at staging.di-studio.xyz while everyone believed they
-// were verifying dev.
+// ran production code at the dev tier (then named staging.di-studio.xyz)
+// while everyone believed they were verifying dev.
 
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -357,7 +357,7 @@ describe('the server container can actually receive the tunnel secret', () => {
 // nginx is always http — the Caddy→nginx hop is plaintext on the compose
 // network. Setting X-Forwarded-Proto to $scheme therefore REPLACED Caddy's
 // truthful `https` with `http`, and the link-preview card shipped
-// http://staging.di-studio.xyz in og:url, og:image and the canonical link.
+// http://dev.diiii.xyz in og:url, og:image and the canonical link.
 // Nothing about `proxy_set_header X-Forwarded-Proto $scheme;` looks wrong; it
 // is the standard line, and it is wrong specifically behind another proxy.
 describe('the scheme a card advertises survives the Caddy hop', () => {

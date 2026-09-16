@@ -81,9 +81,9 @@ describe('deployModeMark', () => {
         expect(deployModeMark(MODE_HOSTED)).toBeNull()
     })
 
-    // One tier, two names: the chip reads DEV under either, so the retired
-    // word never reaches the screen.
-    it('prints DEV at dev.diiii.xyz and at the old staging.di-studio.xyz alike', () => {
+    // One tier, one label: the chip reads DEV at its name and at the retired
+    // one alike, so the retired word never reaches the screen.
+    it('prints DEV at dev.diiii.xyz and at the retired staging.di-studio.xyz alike', () => {
         for (const hostname of ['dev.diiii.xyz', 'staging.di-studio.xyz', 'staging-2.di-studio.xyz']) {
             expect(deployModeMark(resolveDeployMode({ hostname }))).toMatchObject({ label: 'DEV', color: '#ffb347' })
         }

@@ -25,8 +25,8 @@ services:
     # IMAGE_TAG=<sha> inside its SSH session only -- it never writes it to this
     # checkout's .env. So any manual compose op here (the very usage this
     # file's header documents: reboot recovery, restart after an OOM) pulled
-    # production code and ran it at the dev tier (then staging.di-studio.xyz,
-    # now dev.diiii.xyz), silently breaking the local->dev->prod verify
+    # production code and ran it at the dev tier (then at the retired
+    # staging.di-studio.xyz name, now dev.diiii.xyz), silently breaking the local->dev->prod verify
     # contract. `:staging` is what the dev-tier workflow already pushes.
     image: ghcr.io/${REGISTRY_USER:-youruser}/dii-server:${IMAGE_TAG:-staging}
     environment:

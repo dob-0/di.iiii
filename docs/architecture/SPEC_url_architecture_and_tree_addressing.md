@@ -162,8 +162,9 @@ resolver shape.
 
 Infrastructure only, no user-visible change. `studio.di-studio.xyz` serves the same
 bundle as `di-studio.xyz`; both hosts accept every current route. Nothing redirects
-yet. Verifiable on the dev tier as `studio.staging.di-studio.xyz` (a host name drafted before the
-dev tier moved to `dev.diiii.xyz` — re-pick it with this stage).
+yet. Verifiable on the dev tier under a `studio.` host name to be picked with this stage (the
+draft said `studio.staging.di-studio.xyz`; the dev tier is `dev.diiii.xyz` now and the old
+name is retired).
 
 ### Stage 1 — move the creator surfaces, flat paths only
 
@@ -253,7 +254,7 @@ Notes:
   `serializeAuthSessionCookie` and `serializeExpiredAuthSessionCookie`.
 - `serverXR/src/config.js` — new `AUTH_SESSION_COOKIE_DOMAIN` env. **Unset means
   host-only, i.e. exactly today's behaviour** — dev and self-host installs are
-  unaffected. Set to `.di-studio.xyz` in prod, `.staging.di-studio.xyz` on the dev tier.
+  unaffected. Set to `.diiii.xyz` in prod, `.dev.diiii.xyz` on the dev tier.
 - `CORS_ORIGINS` gains the creator origin for both lanes.
 - `/api/resolve/:spaceSegment/:projectSegment` → `*path` (Stage 2 only).
 

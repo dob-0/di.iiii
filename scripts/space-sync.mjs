@@ -403,8 +403,7 @@ async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, ti
   if (liveHost !== PROD_HOST) {
     const before = entryHtml
     // Production answers to both names. The lookbehind means a subdomain
-    // ("dev.diiii.xyz", the legacy "staging.di-studio.xyz") is never
-    // re-prefixed into itself.
+    // ("dev.diiii.xyz") is never re-prefixed into itself.
     entryHtml = entryHtml.replace(/(?<![\w.-])(di-studio|diiii)\.xyz/g, liveHost)
     if (before !== entryHtml) console.log(`  ⇄ retargeted ${PROD_HOST} → ${liveHost}`)
   }

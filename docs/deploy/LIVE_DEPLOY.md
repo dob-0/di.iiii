@@ -9,8 +9,8 @@ If you only remember one thing, remember this:
 - normal promotion path: local → dev → prod (`dev -> main`)
 - the dev tier is a deploy target, not a branch. Its machine identifier is still
   `staging` (workflow `deploy-vps-staging.yml`, GitHub environment `staging`,
-  `docker-compose.staging.yml`, `/opt/di.iiii-staging`); `staging.di-studio.xyz`
-  is its old name and still answers, same server
+  `docker-compose.staging.yml`, `/opt/di.iiii-staging`); its old name
+  `staging.di-studio.xyz` was retired 2026-09-16 and answers nowhere
 
 ## Golden Path (VPS, current)
 
@@ -22,7 +22,7 @@ end-to-end (both environments, real runs) on 2026-07-16.
   builds images, pushes to GHCR, SSHes into the VPS, restarts the dev-tier
   Compose project (`docker-compose.staging.yml`) — small, isolated, shares
   the box with production but not its resources or secrets; served at
-  `dev.diiii.xyz` (and the legacy `staging.di-studio.xyz`) via production's Caddy. Its first job, `land`, runs
+  `dev.diiii.xyz` via production's Caddy. Its first job, `land`, runs
   `npm run land` on `dev` and pushes the fold commit (`github-actions[bot]`) —
   the merge commit's own deploy used to fail the docs gate on the note every PR
   brings with it, and the dev tier only moved once someone folded by hand. The

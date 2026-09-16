@@ -11,9 +11,9 @@
 # The dev tier (identifier still `staging`): a separate low-resource Compose
 # project on this same host (see docker-compose.staging.yml +
 # docs/deploy/VPS_DOCKER_DEPLOY.md). STAGING_DOMAIN may list several names,
-# comma-separated -- on the VPS it is `staging.di-studio.xyz, dev.diiii.xyz`:
-# dev.diiii.xyz is the address we hand out, staging.di-studio.xyz the legacy
-# name kept so links already given out still open.
+# comma-separated -- on the VPS it is `dev.diiii.xyz` (the old
+# staging.di-studio.xyz name was retired 2026-09-16: dropped from this
+# variable and its DNS record deleted; the variable name stays).
 # Inert until STAGING_DOMAIN is set in .env and its DNS record exists --
 # with no DNS pointing at it, Caddy just logs a harmless cert-issuance
 # failure for this one block; the SITE_DOMAIN block above is unaffected.

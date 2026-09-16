@@ -41,9 +41,10 @@ describe('ModeMark', () => {
         expect(container.querySelector('.mode-mark').getAttribute('style')).toContain('#ffb347')
     })
 
-    // The same tier under its old name: links handed out before 2026-09-16
-    // still point there, and the chip must not bring the retired word back.
-    it('marks the old staging.di-studio.xyz address DEV too', async () => {
+    // The retired name (staging.di-studio.xyz, DNS gone 2026-09-16) and any
+    // self-hosted staging.* host: still DEV, and the chip must not bring the
+    // retired word back.
+    it('marks the retired staging.di-studio.xyz address DEV too', async () => {
         atHost('staging.di-studio.xyz')
         render(<ModeMark />)
         expect(await screen.findByText('DEV')).toBeInTheDocument()

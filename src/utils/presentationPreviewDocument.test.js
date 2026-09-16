@@ -200,13 +200,13 @@ describe('presentationPreviewDocument', () => {
     describe('stripSameOriginAssetHosts (via buildPresentationPreviewDocument)', () => {
         it('strips a same-tier absolute host from a project asset src', () => {
             const result = buildPresentationPreviewDocument(
-                '<img src="https://staging.di-studio.xyz/serverXR/api/projects/p1/assets/abc123.png">'
+                '<img src="https://diiii.xyz/serverXR/api/projects/p1/assets/abc123.png">'
             )
             expect(result).toContain('src="/serverXR/api/projects/p1/assets/abc123.png"')
-            expect(result).not.toContain('staging.di-studio.xyz')
+            expect(result).not.toContain('diiii.xyz')
         })
 
-        it('strips the dev tier\'s own host the same way as its old name', () => {
+        it('strips the dev tier\'s host the same way', () => {
             const result = buildPresentationPreviewDocument(
                 '<img src="https://dev.diiii.xyz/serverXR/api/projects/p1/assets/abc123.png">'
             )
@@ -224,7 +224,7 @@ describe('presentationPreviewDocument', () => {
 
         it('strips a host from a CSS url() reference to a space asset', () => {
             const result = buildPresentationPreviewDocument(
-                '<style>body{background:url(https://staging.di-studio.xyz/serverXR/api/spaces/main/assets/xyz.jpg)}</style>'
+                '<style>body{background:url(https://dev.diiii.xyz/serverXR/api/spaces/main/assets/xyz.jpg)}</style>'
             )
             expect(result).toContain('url(/serverXR/api/spaces/main/assets/xyz.jpg)')
         })
