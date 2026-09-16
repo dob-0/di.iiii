@@ -10,7 +10,7 @@
  *          sets presentationState.codeFiles, .mode = 'code' and .entryView = 'code',
  *          plus publishState.shareEnabled — the same shape spaceSyncPlan.js writes.
  *
- * Requires a target (--to, or LIVE_API_URL / STAGING_API_URL — the dev tier — in
+ * Requires a target (--to, or LIVE_API_URL / DEV_API_URL — the dev tier — in
  * serverXR/.env.local) and LIVE_API_TOKEN. There is no default target.
  */
 
@@ -103,9 +103,9 @@ const main = async () => {
     // No default target. `DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'`
     // meant a push with no --to and no LIVE_API_URL wrote code straight to the
     // live site — the same silent-fallback bug already fixed in space-sync.mjs.
-    const target = args.to || getEnv('STAGING_API_URL') || getEnv('LIVE_API_URL')
+    const target = args.to || getEnv('DEV_API_URL') || getEnv('LIVE_API_URL')
     if (!target) {
-        console.error('Error: no target. Pass --to <url> or set LIVE_API_URL / STAGING_API_URL.')
+        console.error('Error: no target. Pass --to <url> or set LIVE_API_URL / DEV_API_URL.')
         console.error('  dev:     https://dev.diiii.xyz/serverXR')
         console.error('  prod:    https://di-studio.xyz/serverXR')
         process.exitCode = 1

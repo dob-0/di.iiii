@@ -28,20 +28,21 @@ describe('data-cleanup keys its production gate off the resolved host', () => {
 
     it('treats anything that is not localhost or a dev-tier host as production', () => {
         // Fail closed: an unrecognised host is production, not "probably fine".
-        // The dev tier is dev.diiii.xyz exactly (not any dev.* host); the
-        // legacy staging.* name keeps working.
+        // The dev tier is dev.diiii.xyz exactly (not any dev.* host, and no
+        // staging.* host — that name is switched off).
         expect(source).toMatch(/host === 'dev\.diiii\.xyz'/)
-        expect(source).toMatch(/startsWith\('staging\.'\)/)
+        expect(source).not.toMatch(/startsWith\('staging\.'\)/)
         expect(source).toMatch(/!isLocalHost\s*&&\s*!isDevTierHost/)
     })
 
-    it('accepts "dev" as the plan env for the dev tier and keeps "staging"', () => {
-        expect(source).toMatch(/TARGETS\.dev = TARGETS\.staging/)
-        expect(source).toMatch(/^\s*staging: \{/m)
+    it('keys the dev tier "dev" and refuses the old "staging" plan env', () => {
+        expect(source).toMatch(/^\s*dev: \{/m)
+        expect(source).not.toMatch(/^\s*staging: \{/m)
+        expect(source).toMatch(/plan\.env === 'staging'.*"staging" is now "dev"/)
     })
 
-    it('prefers STAGING_* over the ambiguous LIVE_* alias', () => {
-        expect(source).toMatch(/env\.STAGING_API_URL\s*\|\|\s*env\.LIVE_API_URL/)
-        expect(source).toMatch(/env\.STAGING_API_TOKEN\s*\|\|\s*env\.LIVE_API_TOKEN/)
+    it('prefers DEV_* over the ambiguous LIVE_* alias', () => {
+        expect(source).toMatch(/env\.DEV_API_URL\s*\|\|\s*env\.LIVE_API_URL/)
+        expect(source).toMatch(/env\.DEV_API_TOKEN\s*\|\|\s*env\.LIVE_API_TOKEN/)
     })
 })

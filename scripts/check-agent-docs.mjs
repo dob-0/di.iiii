@@ -125,7 +125,7 @@ const rotPatterns = [
 // appear (they document the legacy path on purpose); anywhere else is a
 // stale citation.
 const legacyDeployPatterns = [
-  { re: /publish-cpanel-prebuilt-v2\.yml/g, why: 'legacy cPanel workflow — current deploy is deploy-vps.yml/deploy-vps-staging.yml' },
+  { re: /publish-cpanel-prebuilt-v2\.yml/g, why: 'legacy cPanel workflow — current deploy is deploy-vps.yml/deploy-vps-dev.yml' },
   { re: /cpanel-staging\b/g, why: 'legacy cPanel artifact branch — current deploy target is the Hetzner VPS' },
   { re: /cpanel-production\b/g, why: 'legacy cPanel artifact branch — current deploy target is the Hetzner VPS' }
 ]

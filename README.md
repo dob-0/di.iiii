@@ -185,7 +185,7 @@ Normal promotion path:
 Deploys are driven by pushes, via GitHub Actions (GHCR build + SSH to the Hetzner VPS):
 
 ```bash
-git push origin dev    # deploys the dev tier (dev.diiii.xyz) — workflow file still named deploy-vps-staging.yml
+git push origin dev    # deploys the dev tier (dev.diiii.xyz) — see .github/workflows/deploy-vps-dev.yml
 git push origin main   # deploys to VPS production — see .github/workflows/deploy-vps.yml
 ```
 
@@ -213,9 +213,9 @@ flowchart LR
     work["Daily work"] --> dev["dob-0/di.iiii<br/>primary public repo"]
     dev --> branchDev["dev branch"]
     dev --> branchMain["main branch"]
-    branchDev --> ghcrStaging["GHCR build<br/>deploy-vps-staging.yml"]
+    branchDev --> ghcrDev["GHCR build<br/>deploy-vps-dev.yml"]
     branchMain --> ghcrProd["GHCR build<br/>deploy-vps.yml"]
-    ghcrStaging --> vpsStaging["Hetzner VPS<br/>dev tier Compose project<br/>→ dev.diiii.xyz"]
+    ghcrDev --> vpsDev["Hetzner VPS<br/>dev tier Compose project<br/>→ dev.diiii.xyz"]
     ghcrProd --> vpsProd["Hetzner VPS<br/>production Compose project<br/>→ di-studio.xyz"]
     branchMain -.disabled fallback.-> release["cpanel-* release branches"]
     release -.-> hosting["cPanel hosting<br/>(legacy, workflow_dispatch-only)"]
