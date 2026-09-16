@@ -203,6 +203,27 @@ describe('wireLighting', () => {
     fs.rmSync(emptyDir, { recursive: true, force: true })
   })
 
+  it('mirrors blackout onto a desk a browser already opened, even with no saved show', () => {
+    const sinks = createSinks()
+    const desk = fakeDesk()
+    const getDesk = vi.fn(() => desk)
+    const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rig-sinks-open-'))
+    wireLighting(sinks, { getDesk, hasDesk: () => true }, { dataDir: emptyDir })
+    sinks.setBlackout(true)
+    expect(desk.state.blackout).toBe(true)
+    fs.rmSync(emptyDir, { recursive: true, force: true })
+  })
+
+  it('does not build a desk when hasDesk() says none exists and no show is saved', () => {
+    const sinks = createSinks()
+    const getDesk = vi.fn(() => fakeDesk())
+    const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rig-sinks-none-'))
+    wireLighting(sinks, { getDesk, hasDesk: () => false }, { dataDir: emptyDir })
+    sinks.setBlackout(true)
+    expect(getDesk).not.toHaveBeenCalled()
+    fs.rmSync(emptyDir, { recursive: true, force: true })
+  })
+
   it('mirrors blackout onto the desk once a saved show exists on disk', () => {
     const sinks = createSinks()
     const desk = fakeDesk()

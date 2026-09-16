@@ -189,7 +189,10 @@ function wireLighting(sinks, lighting, { dataDir } = {}) {
   let weCreatedDesk = false
 
   const applyToDesk = (on) => {
-    if (!weCreatedDesk && !savedShowExists(resolvedDataDir)) return
+    // lightingRoutes exposes hasDesk() (added at integration, 2026-09-16), which closes
+    // the gap described above; the weCreatedDesk fallback stays for an older lighting shape
+    const deskExists = typeof lighting.hasDesk === 'function' ? lighting.hasDesk() : weCreatedDesk
+    if (!deskExists && !weCreatedDesk && !savedShowExists(resolvedDataDir)) return
     let desk
     try {
       desk = lighting.getDesk()

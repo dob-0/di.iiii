@@ -90,12 +90,13 @@ function createRig({
 
   const { createCardSource } = require('./card')
   const { createMembers } = require('./members')
-  const { createSinks, wireLighting } = require('./sinks')
+  const { createSinks, registerBuiltinCues, wireLighting } = require('./sinks')
   const { registerRigEvents } = require('./events')
 
   const cardSource = createCardSource({ env })
   const members = createMembers({ selfId: identity.id })
   const sinks = createSinks({ logger })
+  registerBuiltinCues(sinks)
   if (lighting) wireLighting(sinks, lighting)
 
   // DI_PART wins; otherwise the card's own reading of the hardware, once it
