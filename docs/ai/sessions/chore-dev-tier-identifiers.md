@@ -16,3 +16,9 @@
   dev→main promotion updates prod's Caddyfile/compose; then the `STAGING_*` lines are removed.
 - Left for the owner: the legacy cPanel pipeline (dead since 2026-07-15) and the Android
   package id `xyz.distudio.chat.staging`.
+- Folds PR #476 (`chore/no-staging-host`, another session's pass on the same host retirement): its
+  cPanel-only host defaults and docs come across as files; everything it shared with this branch
+  is superseded by the renames here. #476 closes as superseded.
+- `scripts/space-sync.mjs` (engine v7) reads a manifest's old `tiers.staging` key as `dev`, so
+  br_id_ge, beyond_form, platform_recordar and space-starter keep syncing until their manifests are
+  edited; only the CLI value `--tier staging` is refused. One `npm run space:sync:release` after merge.

@@ -7,9 +7,9 @@
 // them unless the response says otherwise.
 //
 // Measured on staging 2026-09-03, from a real code page:
-//   Access to script at 'https://staging.di-studio.xyz/vendor/three.module.min.js'
+//   Access to script at 'https://dev.diiii.xyz/vendor/three.module.min.js'
 //   from origin 'null' has been blocked by CORS policy
-//   Access to font at 'https://staging.di-studio.xyz/fonts/inter-regular.woff'
+//   Access to font at 'https://dev.diiii.xyz/fonts/inter-regular.woff'
 //   from origin 'null' has been blocked by CORS policy
 //
 // The font one had been true since code pages existed — every page asking for the
