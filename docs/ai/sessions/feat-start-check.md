@@ -121,3 +121,49 @@ these as "coming in later PRs" without promising their shape.
   `localBase` coverage). `tier-sync.mjs` gained `listProjectMetas` (the cheap
   list read, exported for reuse — the same reuse-not-copy rule the rest of
   this file follows).
+
+## 2026-09-16 (later still) — the cache was the bug: real false LATEST, found live on br-id-ge
+
+- The coordinator ran the previous version against the real box and caught a
+  **false LATEST**: br-id-ge's `newww`/`landing`/`br-id-ge-field` had all
+  changed on the dev tier that afternoon, local's copy was behind, and the
+  tool said LATEST anyway. Cause: the version-cache seeded itself FROM
+  whatever state existed on its first run — if drift already existed before
+  that first run, nothing ever looked like it had "moved" relative to a
+  baseline that was itself already wrong. Also flagged: that cache
+  (`start-check-cache.json`) had been written into the owner's shared data
+  tier (`~/.local/share/di.iiii/data/`), which a read-only check must never
+  touch — deleted.
+- Fixed: dropped the cache entirely. Every run now compares the two tiers
+  DIRECTLY: cheap `documentVersion`+`updatedAt` (already fetched, no new
+  request) settle a project as "same" only on an EXACT match; when they
+  differ, `tier-sync-baseline.json` — a real, content-verified reference
+  point written by actual tier-sync runs, never guessed — says who moved,
+  confirmed with one live document-fetch pair (budgeted,
+  `CONFIRM_FETCH_BUDGET = 30`, to keep the whole run bounded); with no
+  baseline, the side with the later `updatedAt` is reported as ahead
+  (unconfirmed, labeled as such), and only "dev is later" flips the headline
+  — a genuine tie with no baseline is surfaced as "differs (undetermined)",
+  never silently called "same".
+- Also fixed: each space now lands in exactly ONE summary bucket
+  (`SUMMARY_PRIORITY`, highest-severity kind wins) — `main`/`what-we-have`
+  previously appeared under BOTH "local-only" and "dev-only" because
+  separate PROJECT rows inside the same shared space picked separate space
+  IDs for each bucket independently. A project missing entirely on one side,
+  inside a space BOTH tiers hold, is now a definitive `dev-ahead`/
+  `local-ahead` (not a neutral "only exists" note); a SPACE missing entirely
+  from one tier is its own one-line, non-drift bucket.
+- Verified for real, read-only, against the owner's actual env
+  (`local.thedi.studio` + `staging.di-studio.xyz`): `--space br-id-ge
+  --strict` → **NOT LATEST**, exit 1, `br-id-ge-field`/`landing`/`newww`
+  confirmed via baseline as "changed on both" — cross-checked against
+  `node scripts/tier-sync.mjs --from local --to staging --space br-id-ge
+  --audit` (the independently-trusted comparison), which reports the exact
+  same 4 projects as "same slug, DIFFERENT work". An unfiltered full-box run
+  (~31 spaces) puts `br-id-ge` under "newer on dev" in the summary line, per
+  the coordinator's literal ask, in 4.4s wall clock. Known remaining
+  imprecision: which LABEL a borderline project gets (confirmed vs.
+  timestamp-heuristic) can vary with the shared `CONFIRM_FETCH_BUDGET`
+  running out earlier in a big unfiltered run than in a `--space`-filtered
+  one — never changes the LATEST/NOT LATEST verdict itself, only which of
+  "changed on both" vs. "newer on dev (by timestamp)" a given project shows.

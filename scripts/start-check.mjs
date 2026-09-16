@@ -35,14 +35,24 @@
  * own line — the default keeps the space section to one summary line plus a
  * handful of details, however many spaces this box holds.
  *
- * The space check is CHEAP by design: two requests per held space (a
- * project list from each tier — id + documentVersion + updatedAt, not the
- * document itself), so a box with ~30 spaces / ~100 projects finishes in a
- * couple of seconds. It compares each side's documentVersion against what
- * this box last cached for that project (serverXR/data/start-check-cache.json)
- * rather than fetching and hashing full documents — a version bumps on
- * every write, so "unchanged since I last looked" is exactly as reliable as
- * a content hash for detecting MOTION, without the cost of reading content.
+ * The space check compares the two tiers DIRECTLY, every run — no cache
+ * ever decides an answer. (An earlier version cached "the version I last
+ * saw" and used THAT as the reference point; a project already drifted
+ * before its first run became invisible forever, because the cache seeded
+ * itself FROM the already-drifted state and nothing ever looked like it had
+ * "moved" relative to that — a real false LATEST, found live against
+ * br-id-ge. See docs/ai/sessions/feat-start-check.md.) For each project
+ * present on both tiers: cheap `documentVersion`+`updatedAt` (one
+ * project-list request per tier per space, not per project) settle it
+ * outright ONLY when they match exactly; when they differ,
+ * `tier-sync-baseline.json` — real, content-verified agreement points
+ * written by actual tier-sync runs, never by this script — says who moved,
+ * confirmed with one live document fetch per side; with no baseline (or the
+ * fetch budget for those confirms is spent), the side with the later
+ * `updatedAt` is reported as ahead — a real signal (both tiers are real
+ * servers with real clocks), not a guess — and only "dev is later" moves
+ * the headline to NOT LATEST. A genuinely undetermined pair (no baseline,
+ * equal timestamps) is surfaced, never silently folded into "same".
  */
 
 import { execFileSync } from 'node:child_process'
@@ -51,7 +61,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getState } from './repo-state.mjs'
-import { TIERS, localBase, listSpaces, listProjectMetas } from './tier-sync.mjs'
+import { TIERS, localBase, listSpaces, listProjectMetas, readBaseline, documentSignature, call } from './tier-sync.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -62,17 +72,22 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 // dead tier.
 export const NETWORK_TIMEOUT_MS = 10_000
 
-// The space-check section fans out to 2 requests per held space (a cheap
-// project list from each tier — see checkSpaces) — this is the OVERALL
-// budget for that whole section, not per-request, so a box holding a lot of
-// spaces degrades to "not fully checked" rather than turning start-check
-// into a multi-minute hang.
+// The space-check section's OVERALL budget — not per-request. A box holding
+// a lot of spaces degrades to "not fully checked" for whatever's left rather
+// than turning start-check into a multi-minute hang.
 export const SPACE_CHECK_BUDGET_MS = 10_000
 
 // How many spaces are checked at once. The owner's box holds ~30 spaces;
 // 6-at-a-time keeps the whole pass well under the budget above without
 // opening so many sockets at once that a slow tier looks like a dead one.
 export const SPACE_CONCURRENCY = 6
+
+// How many projects this run may spend a live document-fetch pair on to
+// CONFIRM a direction from tier-sync's baseline (see classifyProjectDrift).
+// Bounded so a box with many baselined-but-genuinely-differing projects
+// still finishes inside the budget — the rest fall back to the updatedAt
+// heuristic, which costs nothing extra.
+export const CONFIRM_FETCH_BUDGET = 30
 
 // LOCAL_API_URL is sometimes a domain that is not always up (a `di` install
 // that isn't running right now) — when the CONFIGURED local tier can't be
@@ -222,48 +237,48 @@ const readEnv = () => ({
 // rename only has to change one line.
 const DEV_TIER_LABEL = 'dev tier'
 
-// A small cache of the last version this box saw on each side of each
-// project — NOT a copy of any tier's data, just "what did documentVersion
-// read, last time we looked". Lives next to tier-sync's own baseline file
-// (same DATA_ROOT resolution) but is start-check's alone; tier-sync never
-// reads or writes it. Read-only for everything except this file.
-const cachePath = () => {
-  const dataRoot = process.env.DATA_ROOT
-  const root = dataRoot ? path.resolve(ROOT_DIR, 'serverXR', dataRoot) : path.join(ROOT_DIR, 'serverXR', 'data')
-  return path.join(root, 'start-check-cache.json')
-}
-const readVersionCache = () => {
-  try { return JSON.parse(fs.readFileSync(cachePath(), 'utf8')) } catch { return {} }
-}
-const writeVersionCache = (cache) => {
-  try {
-    fs.mkdirSync(path.dirname(cachePath()), { recursive: true })
-    fs.writeFileSync(cachePath(), JSON.stringify(cache, null, 1))
-  } catch { /* advisory only — a failed write just means next run bootstraps again */ }
-}
-
 /**
- * One project's verdict from CHEAP data alone — `documentVersion` off each
- * side's project list (see `listProjectMetas`), never a document fetch.
- * `documentVersion` bumps on every write to that tier's own copy
- * (serverXR/src/routes/projectRoutes.js), so "the version I last cached for
- * this side hasn't moved" is proof nothing changed there — no hash needed.
+ * One project's verdict. `local`/`dev` are `{documentVersion, updatedAt}` or
+ * undefined (missing entirely on that side). `baselineShape` is what
+ * `tier-sync-baseline.json` last recorded both tiers agreeing this project
+ * looked like — real, because it is only ever written by an actual
+ * tier-sync run that either copied successfully or confirmed a
+ * content-hash match, never guessed. `localShape`/`devShape`, when present,
+ * are THIS run's live document-hash confirmation (see checkSpaces) — the
+ * only way to know for certain which side moved off that baseline.
  *
- * `cached` is what THIS box last observed on both sides together, from a
- * previous run of this same check (see `readVersionCache`). No entry yet
- * (first time this project has been seen) can't be compared at all — 'new'.
+ * Priority: exact cheap match → confirmed content match/mismatch (if we
+ * fetched) → the updatedAt heuristic (a real signal — both tiers are real
+ * servers with real clocks — but never confirmed, and only ever used when
+ * nothing better is available or affordable).
  */
-export const classifyVersionDrift = ({ local, dev, cached }) => {
+export const classifyProjectDrift = ({ local, dev, baselineShape, localShape, devShape }) => {
   if (!local && !dev) return null
-  if (local && !dev) return { kind: 'local-only' }
-  if (!local && dev) return { kind: 'dev-only' }
-  if (!cached) return { kind: 'new' }
-  const localMoved = local.documentVersion !== cached.localVersion
-  const devMoved = dev.documentVersion !== cached.devVersion
-  if (!localMoved && !devMoved) return { kind: 'same' }
-  if (localMoved && devMoved) return { kind: 'both-moved' }
-  if (devMoved) return { kind: 'dev-ahead' }
-  return { kind: 'local-ahead' }
+  // Missing entirely on one side, within a space both tiers hold, is the
+  // clearest possible verdict — no heuristic needed.
+  if (local && !dev) return { kind: 'local-ahead', confirmed: true }
+  if (!local && dev) return { kind: 'dev-ahead', confirmed: true }
+
+  if (local.documentVersion === dev.documentVersion && local.updatedAt === dev.updatedAt) return { kind: 'same' }
+
+  if (localShape !== undefined && devShape !== undefined) {
+    if (localShape === devShape) return { kind: 'same' }
+    if (baselineShape) {
+      const localMoved = localShape !== baselineShape
+      const devMoved = devShape !== baselineShape
+      if (localMoved && devMoved) return { kind: 'both-moved', confirmed: true }
+      if (devMoved) return { kind: 'dev-ahead', confirmed: true }
+      if (localMoved) return { kind: 'local-ahead', confirmed: true }
+      // Shapes differ but neither moved off the baseline shape — a stale
+      // baseline referencing a state neither side is at any more. Fall
+      // through to the timestamp heuristic below rather than claim "same"
+      // for documents we just confirmed are NOT byte-identical.
+    }
+  }
+
+  if (dev.updatedAt > local.updatedAt) return { kind: 'dev-ahead', confirmed: false }
+  if (local.updatedAt > dev.updatedAt) return { kind: 'local-ahead', confirmed: false }
+  return { kind: 'differs-undetermined' }
 }
 
 // Network-level failure only (host down, DNS, timeout) — an auth error means
@@ -276,12 +291,12 @@ const isNetworkFailure = (error) => {
 }
 
 /**
- * The SPACES half of the check. Two requests per held space — a project
- * list from each tier, run SPACE_CONCURRENCY at a time — never a document
- * fetch. Verified against a real box (~30 spaces, ~100 projects): the old
- * per-project document-hash approach either 404'd on a misconfigured local
- * base or blew its own time budget and printed ~60 "not checked" lines; this
- * one finishes in a couple of seconds either way (see session notes).
+ * The SPACES half of the check. Lists both tiers' spaces (2 requests total),
+ * then for every space either tier holds: a space missing from one side
+ * entirely is one informational line (not drift); a space both hold gets a
+ * cheap project-list comparison (2 more requests), confirmed with a live
+ * document fetch only for the subset that both differs AND has a
+ * tier-sync-verified baseline to compare against (see classifyProjectDrift).
  */
 export const checkSpaces = async ({ spaceFilter }) => {
   const env = readEnv()
@@ -293,12 +308,15 @@ export const checkSpaces = async ({ spaceFilter }) => {
   if (!local.token && !dev.token) {
     return { status: 'not-checked', reason: 'no API_TOKEN or LIVE_API_TOKEN configured', projects: [] }
   }
+  if (!dev.token) {
+    return { status: 'not-checked', reason: `no LIVE_API_TOKEN for the ${DEV_TIER_LABEL}`, projects: [] }
+  }
 
   const deadline = Date.now() + SPACE_CHECK_BUDGET_MS
 
-  let heldSpaceIds
+  let localSpaceIds
   try {
-    heldSpaceIds = spaceFilter ? [spaceFilter] : await listSpaces(local)
+    localSpaceIds = await listSpaces(local)
   } catch (error) {
     // The configured local tier didn't answer at all — try the plain
     // dev-stack address before giving up, and say both things that were tried.
@@ -306,7 +324,7 @@ export const checkSpaces = async ({ spaceFilter }) => {
       local = { ...local, base: LOCALHOST_FALLBACK }
       triedBases.push(LOCALHOST_FALLBACK)
       try {
-        heldSpaceIds = spaceFilter ? [spaceFilter] : await listSpaces(local)
+        localSpaceIds = await listSpaces(local)
       } catch (fallbackError) {
         return { status: 'not-checked', reason: `local tier unreachable — tried ${triedBases.join(' and ')}: ${fallbackError.message}`, projects: [] }
       }
@@ -315,22 +333,42 @@ export const checkSpaces = async ({ spaceFilter }) => {
     }
   }
 
-  if (!heldSpaceIds.length) {
+  let devSpaceIds
+  try {
+    devSpaceIds = await listSpaces(dev)
+  } catch (error) {
+    return { status: 'not-checked', reason: `${DEV_TIER_LABEL} unreachable: ${error.message}`, projects: [] }
+  }
+
+  const localSet = new Set(localSpaceIds)
+  const devSet = new Set(devSpaceIds)
+  const spaceIds = spaceFilter ? [spaceFilter] : [...new Set([...localSpaceIds, ...devSpaceIds])]
+
+  if (!spaceIds.length) {
     return { status: 'ok', reason: 'this box holds no spaces yet', projects: [] }
   }
-  if (!dev.token) {
-    return { status: 'not-checked', reason: `no LIVE_API_TOKEN for the ${DEV_TIER_LABEL}`, projects: [] }
-  }
 
-  const cache = readVersionCache()
+  const baseline = readBaseline().staging || {}
   const results = []
-  let devUnreachable = null
+  let tierUnreachableMidRun = null
+  let confirmFetchesLeft = CONFIRM_FETCH_BUDGET
 
-  await mapWithConcurrency(heldSpaceIds, SPACE_CONCURRENCY, async (spaceId) => {
-    if (Date.now() > deadline || devUnreachable) {
-      results.push({ spaceId, kind: 'not-checked', reason: devUnreachable || 'time budget exceeded' })
+  await mapWithConcurrency(spaceIds, SPACE_CONCURRENCY, async (spaceId) => {
+    if (Date.now() > deadline) {
+      results.push({ spaceId, kind: 'not-checked', reason: 'time budget exceeded' })
       return
     }
+
+    const onLocal = spaceFilter ? true : localSet.has(spaceId)
+    const onDev = spaceFilter ? true : devSet.has(spaceId)
+    if (onLocal && !onDev) { results.push({ spaceId, kind: 'space-local-only' }); return }
+    if (!onLocal && onDev) { results.push({ spaceId, kind: 'space-dev-only' }); return }
+
+    if (tierUnreachableMidRun) {
+      results.push({ spaceId, kind: 'not-checked', reason: tierUnreachableMidRun })
+      return
+    }
+
     let localMetas
     let devMetas
     try {
@@ -339,83 +377,119 @@ export const checkSpaces = async ({ spaceFilter }) => {
         listProjectMetas(dev, spaceId)
       ])
     } catch (error) {
-      if (!devUnreachable) devUnreachable = `${DEV_TIER_LABEL} or local unreachable: ${error.message}`
-      results.push({ spaceId, kind: 'not-checked', reason: devUnreachable })
+      if (!tierUnreachableMidRun) tierUnreachableMidRun = `a tier stopped answering mid-run: ${error.message}`
+      results.push({ spaceId, kind: 'not-checked', reason: tierUnreachableMidRun })
       return
     }
 
     const localById = Object.fromEntries(localMetas.map((p) => [p.id, p]))
     const devById = Object.fromEntries(devMetas.map((p) => [p.id, p]))
-    const spaceCache = (cache[spaceId] ||= {})
+
     for (const projectId of new Set([...Object.keys(localById), ...Object.keys(devById)])) {
       const local_ = localById[projectId]
       const dev_ = devById[projectId]
-      const drift = classifyVersionDrift({ local: local_, dev: dev_, cached: spaceCache[projectId] })
-      if (local_ && dev_) {
-        spaceCache[projectId] = { localVersion: local_.documentVersion, devVersion: dev_.documentVersion }
+
+      if (!local_ || !dev_) {
+        const drift = classifyProjectDrift({ local: local_, dev: dev_ })
+        if (drift) results.push({ spaceId, projectId, ...drift })
+        continue
       }
+
+      const exactMatch = local_.documentVersion === dev_.documentVersion && local_.updatedAt === dev_.updatedAt
+      if (exactMatch) continue // 'same' — no row needed
+
+      const key = `${spaceId}/${projectId}`
+      const baselineShape = baseline[key]
+      let localShape
+      let devShape
+      if (baselineShape && confirmFetchesLeft > 0 && Date.now() < deadline) {
+        confirmFetchesLeft--
+        try {
+          const [localRes, devRes] = await Promise.all([
+            call(local, `/api/projects/${projectId}/document`, {}, NETWORK_TIMEOUT_MS),
+            call(dev, `/api/projects/${projectId}/document`, {}, NETWORK_TIMEOUT_MS)
+          ])
+          if (localRes.ok && devRes.ok) {
+            const [localBody, devBody] = await Promise.all([localRes.json(), devRes.json()])
+            localShape = documentSignature(localBody.document || localBody).shape
+            devShape = documentSignature(devBody.document || devBody).shape
+          }
+        } catch { /* confirm fetch failed — classifyProjectDrift falls back to the updatedAt heuristic */ }
+      }
+
+      const drift = classifyProjectDrift({ local: local_, dev: dev_, baselineShape, localShape, devShape })
       if (drift && drift.kind !== 'same') results.push({ spaceId, projectId, ...drift })
     }
   })
 
-  writeVersionCache(cache)
-
   const notLatest = results.some((r) => r.kind === 'dev-ahead' || r.kind === 'both-moved')
-  return { status: 'checked', notLatest, totalSpaces: heldSpaceIds.length, projects: results, triedBases }
+  return { status: 'checked', notLatest, totalSpaces: spaceIds.length, projects: results, triedBases }
 }
 
-const projectDriftLine = ({ spaceId, projectId, kind }) => {
+const projectDriftLine = ({ spaceId, projectId, kind, confirmed }) => {
+  const basis = confirmed === false ? ' (by timestamp, not content-confirmed)' : ''
   switch (kind) {
     case 'dev-ahead':
-      return `  NOT LATEST  ${DEV_TIER_LABEL} has newer work in \`${spaceId}/${projectId}\` — pull first: ` +
+      return `  NOT LATEST  ${DEV_TIER_LABEL} has newer work in \`${spaceId}/${projectId}\`${basis} — pull first: ` +
         `node scripts/project-pull.mjs ${projectId} --space ${spaceId} --from ${TIERS.staging.base} --force`
     case 'both-moved':
-      return `  NOT LATEST  \`${spaceId}/${projectId}\` changed on this box AND on the ${DEV_TIER_LABEL} since the last check — ` +
-        `compare by hand: node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --audit`
+      return `  NOT LATEST  \`${spaceId}/${projectId}\` changed on this box AND on the ${DEV_TIER_LABEL} since the last sync — ` +
+        `ask before pushing; compare by hand: node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --audit`
     case 'local-ahead':
-      return `  ·  \`${spaceId}/${projectId}\` has local changes not yet on the ${DEV_TIER_LABEL} — ` +
+      return `  ·  \`${spaceId}/${projectId}\` has local changes not yet on the ${DEV_TIER_LABEL}${basis} — ` +
         `push when ready: node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --changed`
-    case 'local-only':
-      return `  ·  \`${spaceId}/${projectId}\` exists only on this box`
-    case 'dev-only':
-      return `  ·  \`${spaceId}/${projectId}\` exists on the ${DEV_TIER_LABEL}, not yet pulled here`
+    case 'differs-undetermined':
+      return `  ?  \`${spaceId}/${projectId}\` differs and there is no signal for who moved — ` +
+        `node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --audit`
     default:
       return `  ?  ${spaceId}/${projectId}: ${kind}`
   }
 }
 
-// Space-level grouping for the summary line: "31 same · 2 newer on dev: wcc,
-// br-id-ge · 1 changed on both: main". Counts and names SPACES, not
-// projects — a space with three drifted projects is still one name in this
-// line; the detail lines below say which projects.
-const SUMMARY_KINDS = [
+// One line per space that exists on only one tier — an availability fact,
+// never drift (there is nothing on the other side to compare against).
+const spaceOnlyLine = (row) => row.kind === 'space-local-only'
+  ? `  ·  \`${row.spaceId}\` — only on this box`
+  : `  ·  \`${row.spaceId}\` — only on the ${DEV_TIER_LABEL}`
+
+// Space-level grouping for the summary line: "19 same · 2 newer on dev: wcc,
+// br-id-ge · 1 changed on both: main". Each space lands in EXACTLY ONE
+// bucket — priority order below — so a space can never appear in two lists
+// at once (main/what-we-have doing exactly that, from separate local-only
+// and dev-only PROJECT rows inside the same space, was the reported bug).
+const SUMMARY_PRIORITY = [
   ['dev-ahead', 'newer on dev'],
   ['both-moved', 'changed on both'],
+  ['differs-undetermined', 'differs (undetermined)'],
   ['local-ahead', 'local ahead'],
-  ['new', 'new (uncompared)'],
-  ['local-only', 'local-only'],
-  ['dev-only', 'dev-only']
+  ['space-dev-only', 'only on dev'],
+  ['space-local-only', 'local-only']
 ]
 
 // checkSpaces only ever pushes a row for a space that is NOT fully "same" —
 // a clean space never appears in `spaces.projects` at all. So "same" has to
-// be derived as totalSpaces minus the spaces that DO appear (each space
-// contributes either exactly one 'not-checked' row, or one-or-more drift
-// rows — never both; a space's whole fetch fails together, see checkSpaces).
+// be derived as totalSpaces minus the spaces that DO appear.
 const summarizeSpaces = (spaces) => {
-  const bySpace = new Map()
+  const kindsBySpace = new Map()
   const notCheckedSpaceIds = new Set()
   for (const row of spaces.projects) {
     if (row.kind === 'not-checked') { notCheckedSpaceIds.add(row.spaceId); continue }
-    if (!bySpace.has(row.spaceId)) bySpace.set(row.spaceId, new Set())
-    bySpace.get(row.spaceId).add(row.kind)
+    if (!kindsBySpace.has(row.spaceId)) kindsBySpace.set(row.spaceId, new Set())
+    kindsBySpace.get(row.spaceId).add(row.kind)
   }
+
+  const bucketOf = new Map() // spaceId -> the ONE summary kind it lands in
+  for (const [spaceId, kinds] of kindsBySpace) {
+    const winner = SUMMARY_PRIORITY.find(([kind]) => kinds.has(kind))
+    if (winner) bucketOf.set(spaceId, winner[0])
+  }
+
   const parts = []
-  for (const [kind, label] of SUMMARY_KINDS) {
-    const ids = [...bySpace.entries()].filter(([, kinds]) => kinds.has(kind)).map(([id]) => id)
+  for (const [kind, label] of SUMMARY_PRIORITY) {
+    const ids = [...bucketOf.entries()].filter(([, k]) => k === kind).map(([id]) => id)
     if (ids.length) parts.push(`${ids.length} ${label}: ${ids.join(', ')}`)
   }
-  const sameCount = (spaces.totalSpaces ?? 0) - bySpace.size - notCheckedSpaceIds.size
+  const sameCount = (spaces.totalSpaces ?? 0) - bucketOf.size - notCheckedSpaceIds.size
 
   const notChecked = spaces.projects.filter((r) => r.kind === 'not-checked')
   const notCheckedByReason = new Map()
@@ -428,8 +502,8 @@ const summarizeSpaces = (spaces) => {
 }
 
 // Detail lines are capped so a fully-populated box (~30 spaces) can never
-// turn the headline into a scroll of "not checked" — the failure mode a real
-// run against ~30 spaces hit before this cap existed (see session notes).
+// turn the headline into a scroll of lines — the failure mode a real run
+// against ~30 spaces hit before this cap existed (see session notes).
 const DETAIL_LINE_CAP = 5
 
 export const formatReport = ({ code, spaces, strict, spacesDetail }) => {
@@ -474,16 +548,20 @@ export const formatReport = ({ code, spaces, strict, spacesDetail }) => {
     lines.push(`  spaces: ${spaces.totalSpaces ?? 0} same — this box's spaces match the ${DEV_TIER_LABEL}`)
   } else {
     lines.push(`  spaces: ${summarizeSpaces(spaces).line}`)
-    // Only the kinds with an actual command to run — the summary line above
-    // already names which spaces are local-only/dev-only/new, and repeating
-    // every one of those per-project here is exactly the noise this cap
-    // exists to cut.
-    const ACTIONABLE = new Set(['dev-ahead', 'both-moved', 'local-ahead'])
+    // Only rows with an actual command/action — space-only-on-one-tier rows
+    // get their own short line (never "drift"), and not-checked is already
+    // collapsed into the summary above.
+    const ACTIONABLE = new Set(['dev-ahead', 'both-moved', 'local-ahead', 'differs-undetermined'])
     const detailRows = spaces.projects.filter((r) => ACTIONABLE.has(r.kind))
+    const onlyRows = spaces.projects.filter((r) => r.kind === 'space-local-only' || r.kind === 'space-dev-only')
     const shown = spacesDetail ? detailRows : detailRows.slice(0, DETAIL_LINE_CAP)
     for (const row of shown) lines.push(projectDriftLine(row))
     const remaining = detailRows.length - shown.length
     if (remaining > 0) lines.push(`  +${remaining} more — npm run start-check -- --spaces-detail`)
+    const shownOnly = spacesDetail ? onlyRows : onlyRows.slice(0, DETAIL_LINE_CAP)
+    for (const row of shownOnly) lines.push(spaceOnlyLine(row))
+    const remainingOnly = onlyRows.length - shownOnly.length
+    if (remainingOnly > 0) lines.push(`  +${remainingOnly} more only-on-one-tier — npm run start-check -- --spaces-detail`)
   }
 
   if (notLatest && strict) lines.push('\n  (--strict: exiting 1)')
