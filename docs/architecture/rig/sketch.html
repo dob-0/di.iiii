@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>di.iiii — the rig (mesh, jam + show)</title>
+<style>
+*{box-sizing:border-box;border-radius:0!important}
+:root{
+  --ground:#04060e; --panel:#0a0d18; --line:rgba(255,255,255,.12); --line2:rgba(255,255,255,.22);
+  --text:#e8ecf4; --dim:#8a93a6; --faint:#586074;
+  --accent:#4df9ff; --afill:rgba(77,249,255,.06); --aline:rgba(77,249,255,.30);
+  --warn:#ffb347; --danger:#f25f5c; --ok:#4df9c0;
+  --mono:ui-monospace,"JetBrains Mono","SFMono-Regular",Menlo,Consolas,monospace;
+  --sans:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+html,body{margin:0;background:var(--ground);color:var(--text);font:15px/1.55 var(--sans)}
+main{max-width:1080px;margin:0 auto;padding:72px 16px 96px}
+.eyebrow{font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+h1{font:700 40px/1.05 var(--sans);letter-spacing:-.03em;margin:10px 0 12px}
+h1 b{color:var(--accent);font-weight:700}
+h2{font:700 22px/1.2 var(--sans);letter-spacing:-.02em;margin:0 0 6px}
+.lede{color:var(--dim);max-width:680px;margin:0}
+section{border-top:1px solid var(--line);padding:36px 0 8px;margin-top:36px;scroll-margin-top:56px}
+.sub{color:var(--dim);margin:0 0 20px;max-width:720px}
+.tag{display:inline-block;font:500 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:5px 7px;border:1px solid var(--line2);color:var(--dim)}
+.tag.a{border-color:var(--aline);color:var(--accent);background:var(--afill)}
+.tag.w{border-color:rgba(255,179,71,.4);color:var(--warn)}
+.tag.d{border-color:rgba(242,95,92,.4);color:var(--danger)}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--mono)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.opt{border:1px solid var(--line);background:var(--panel);padding:18px}
+.opt.pick{box-shadow:inset 2px 0 0 var(--accent)}
+.opt h3{font:700 16px/1.2 var(--sans);margin:10px 0 6px}
+.opt p{color:var(--dim);margin:8px 0 0;font-size:14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.card{border:1px solid var(--line);background:var(--panel);padding:14px 14px 12px;font:12px/1.5 var(--mono)}
+.card .name{font:700 17px/1.1 var(--sans);letter-spacing:-.01em;margin:8px 0 10px}
+.row{display:grid;grid-template-columns:78px 1fr;gap:8px;border-top:1px solid var(--line);padding:5px 0}
+.row span:first-child{color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-size:10px;padding-top:2px}
+.w{color:var(--warn)} .d{color:var(--danger)} .ok{color:var(--ok)} .ac{color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font:500 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);text-align:left;padding:10px 10px 8px;border-bottom:1px solid var(--line2)}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+td:first-child{font:500 12px/1.5 var(--mono);color:var(--text);white-space:nowrap}
+td code,.mono{font:12px/1.5 var(--mono);color:var(--accent)}
+.scroll{overflow-x:auto}
+ol.rules{list-style:none;counter-reset:r;padding:0;margin:0;display:grid;gap:10px}
+ol.rules li{counter-increment:r;display:grid;grid-template-columns:36px 1fr;border:1px solid var(--line);background:var(--panel);padding:12px 14px}
+ol.rules li::before{content:counter(r,decimal-leading-zero);font:500 12px/1.6 var(--mono);color:var(--accent)}
+ol.rules b{font-weight:700}
+ol.rules p{margin:2px 0 0;color:var(--dim);font-size:14px}
+.note{font:12px/1.5 var(--mono);color:var(--faint);margin-top:10px}
+.ask{border:1px solid var(--aline);background:var(--afill);padding:18px;margin-top:8px}
+.ask p{margin:6px 0 0}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px}
+.st{display:inline-block;font:11px/1.2 var(--mono);padding:4px 7px;border:1px solid var(--line2);color:var(--dim)}
+.st.ok{border-color:rgba(77,249,192,.5);color:var(--ok);background:rgba(77,249,192,.10)}
+.st.part{border-color:rgba(255,179,71,.45);color:var(--warn)}
+.st.br{border-color:rgba(77,249,255,.6);border-style:dashed;color:var(--accent)}
+.st.no{border-color:rgba(242,95,92,.45);color:var(--danger)}
+h3.grp{font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:28px 0 12px;padding-top:14px;border-top:1px solid var(--line)}
+.cases{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.case{border:1px solid var(--line);background:var(--panel);padding:14px;display:grid;gap:6px;align-content:start}
+.case .ch{display:flex;gap:6px;align-items:center}
+.case .num{font:500 12px var(--mono);color:var(--accent);margin-right:4px}
+.case .ready{margin-left:auto;font:11px var(--mono);color:var(--faint)}
+.case b{font:700 16px/1.25 var(--sans)}
+.case .who{font:12px/1.4 var(--mono);color:var(--accent)}
+.case p{margin:0;color:var(--dim);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+table.pieces small{color:var(--faint);font:11px/1.4 var(--mono)}
+table.pieces td:nth-child(2){font:12px var(--mono);white-space:nowrap;min-width:110px}
+.bar{display:inline-block;height:6px;width:var(--w);max-width:70px;background:var(--aline);margin-right:8px;vertical-align:middle}
+nav.jump{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+nav.jump a{font:11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);border:1px solid var(--aline);padding:8px 10px;text-decoration:none}
+.rows{margin-top:10px;font:12px/1.5 var(--mono)}
+.flow{display:grid;grid-template-columns:1fr auto 1.4fr auto 1fr auto 1fr;gap:8px;align-items:stretch;margin-top:16px}
+.step{border:1px solid var(--line);background:var(--panel);padding:10px 12px;display:grid;gap:4px;font:12px/1.45 var(--mono);color:var(--dim)}
+.step b{font:700 14px/1.2 var(--sans);color:var(--text)}
+.step.on{border-color:var(--accent);background:var(--afill)}
+.arr{align-self:center;color:var(--accent);font:14px var(--mono)}
+.flow6{grid-template-columns:1fr auto 1fr auto 1fr auto 1fr auto 1fr auto 1fr}
+@media (max-width:720px){ .flow6{grid-template-columns:1fr} .flow{grid-template-columns:1fr} .arr{transform:rotate(90deg);justify-self:start;padding-left:14px} }
+.wire{display:grid;grid-template-columns:1fr 1.1fr 1fr;gap:16px;align-items:start}
+.col{display:grid;gap:10px}
+.colhead{font:500 10px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.box{border:1px solid var(--line2);background:var(--panel);padding:12px 14px;display:grid;gap:2px;font:12px/1.5 var(--mono);color:var(--dim)}
+.box b{font:700 14px/1.3 var(--sans);color:var(--text)}
+.box em{font-style:normal;color:var(--faint)}
+.box.dash{border-style:dashed}
+.box.cond{border-color:var(--accent);background:var(--afill)}
+.box.cond b{font:500 12px/1.3 var(--mono);color:var(--accent);letter-spacing:.06em}
+.tree{white-space:pre;overflow-x:auto;color:var(--dim)}
+.drivers{display:grid;gap:8px;border-left:1px solid var(--aline);padding-left:14px;margin-left:14px}
+.chip{font:12px/1.3 var(--mono);color:var(--accent);border:1px solid var(--accent);padding:7px 10px;background:var(--panel)}
+.chip.owed{border-style:dashed;color:var(--dim);border-color:var(--aline)}
+.link{font:12px/1.5 var(--mono);color:var(--accent)}
+.link small{color:var(--faint);font-size:11px}
+@media (max-width:720px){ .wire{grid-template-columns:1fr} .mid{order:-1} .mid .colhead{display:none} }
+@media (max-width:720px){ h1{font-size:30px} .two{grid-template-columns:1fr} td:first-child{white-space:normal} }
+</style>
+</head>
+<body>
+<main>
+
+<div class="eyebrow">sketch v4 · 2026-09-16 · mesh + jam/show · all cases · any version with any version · not built</div>
+<h1>di.iiii everywhere: <b>the rig</b></h1>
+<p class="lede">Every di.iiii is equal, and any version works with any other. Machines either <b>run di.iiii</b> or <b>speak</b> to it with their own software. In <b>jam mode</b> anyone can cue anyone. Press <b>show</b> and one machine calls the show while everything else locks.</p>
+<nav class="jump"><a href="#cases">all cases</a><a href="#modes">jam + show</a><a href="#connect">connect</a><a href="#versions">versions</a><a href="#workflow">workflow</a></nav>
+
+<!-- ============================================================ cases -->
+<section id="cases">
+  <div class="eyebrow">00 · all cases</div>
+  <h2>Every situation, and what it needs</h2>
+  <p class="sub">20 situations in five groups. Each lists the pieces it needs; the colour says whether that piece exists today (checked in the code on 2026-09-16).</p>
+  <div class="legend"><span class="st ok">exists</span><span class="st part">partial</span><span class="st br">on a branch</span><span class="st no">missing</span></div>
+  <h3 class="grp">Alone</h3>
+  <div class="cases">
+    <div class="case"><div class="ch"><span class="num">01</span><span class="tag a">jam</span><span class="ready">2/5 ready</span></div>
+      <b>Build at home</b><div class="who">you · aylmo</div><p>You make a piece on your own: patch, clips, map. No room, no one else.</p><div class="chips"><span class="st br" title="PR #447, open">picture engine</span><span class="st br" title="PR #450 + #451, open">clips + VJ deck</span><span class="st part" title="BPM + tap only in the light desk">sound-reactive</span><span class="st ok" title="in dev: festival machine work">no internet</span><span class="st ok" title="in dev: .diiii, backup, bundles, publish">share + take home</span></div></div>
+    <div class="case"><div class="ch"><span class="num">02</span><span class="tag d">show</span><span class="ready">2/8 ready</span></div>
+      <b>Solo gig with a stage box</b><div class="who">you · aylmo + asuz on a projector</div><p>You play from the laptop; asuz sits by the projector and shows what you send.</p><div class="chips"><span class="st ok" title="in dev: #445 two installs, one space">own install joins</span><span class="st br" title="PR #447, open">picture engine</span><span class="st no" title="nothing">show mode</span><span class="st part" title="light desk only">blackout from anyone</span><span class="st no" title="nothing">light parts</span><span class="st part" title="hand-made on asuz today, not in the product">appliance</span><span class="st ok" title="in dev: festival machine work">no internet</span><span class="st part" title="update --from, no downgrade; no check between machines">version check</span></div></div>
+  </div>
+  <h3 class="grp">Jam</h3>
+  <div class="cases">
+    <div class="case"><div class="ch"><span class="num">03</span><span class="tag a">jam</span><span class="ready">4/11 ready</span></div>
+      <b>Two artists, one room</b><div class="who">you + Emilya · two laptops · local network</div><p>You both open the same patch. Each plays on your own machine and you mix the result to the wall.</p><div class="chips"><span class="st ok" title="in dev: di up --lan, --guests">room + door</span><span class="st ok" title="in dev: #445 two installs, one space">own install joins</span><span class="st br" title="machine links on #447 (one-way); no discovery">members see each other</span><span class="st ok" title="in dev: live project events">live co-editing</span><span class="st part" title="in dev: jam markers, authorship; not in Raw">who&#x27;s here</span><span class="st no" title="nothing">holding</span><span class="st part" title="https server in dev; certificate on feat/local-name-by-default">phone camera + mic</span><span class="st br" title="PR #447, open">picture engine</span><span class="st br" title="PR #450 + #451, open">clips + VJ deck</span><span class="st ok" title="in dev: festival machine work">no internet</span><span class="st part" title="update --from, no downgrade; no check between machines">version check</span></div></div>
+    <div class="case"><div class="ch"><span class="num">04</span><span class="tag a">jam</span><span class="ready">4/12 ready</span></div>
+      <b>Band jam: visuals + light + sound</b><div class="who">3–5 people · laptops, vizzz DMX, a sound source</div><p>One person plays visuals, one plays lights, one plays sound, and all of it listens to the same beat.</p><div class="chips"><span class="st ok" title="in dev: di up --lan, --guests">room + door</span><span class="st ok" title="in dev: #445 two installs, one space">own install joins</span><span class="st br" title="machine links on #447 (one-way); no discovery">members see each other</span><span class="st ok" title="in dev: live project events">live co-editing</span><span class="st part" title="in dev: jam markers, authorship; not in Raw">who&#x27;s here</span><span class="st no" title="nothing">holding</span><span class="st br" title="PR #447, open">picture engine</span><span class="st br" title="PR #450 + #451, open">clips + VJ deck</span><span class="st part" title="BPM + tap only in the light desk">sound-reactive</span><span class="st part" title="DMX/Art-Net + MIDI in dev; OSC declared; robot on a branch; no PJLink">device drivers</span><span class="st part" title="light desk only">blackout from anyone</span><span class="st ok" title="in dev: festival machine work">no internet</span></div></div>
+    <div class="case"><div class="ch"><span class="num">05</span><span class="tag a">jam</span><span class="ready">4/10 ready</span></div>
+      <b>Workshop / class</b><div class="who">10–30 people · phones and laptops · a teacher</div><p>Everyone gets their own lane on the big screen; the teacher approves who joins and can mute.</p><div class="chips"><span class="st ok" title="in dev: di up --lan, --guests">room + door</span><span class="st part" title="in dev: jam markers, authorship; not in Raw">who&#x27;s here</span><span class="st no" title="nothing">holding</span><span class="st no" title="nothing">lanes / turns</span><span class="st part" title="https server in dev; certificate on feat/local-name-by-default">phone camera + mic</span><span class="st br" title="PR #447, open">picture engine</span><span class="st ok" title="in dev: live project events">live co-editing</span><span class="st part" title="light desk only">blackout from anyone</span><span class="st ok" title="in dev: festival machine work">no internet</span><span class="st ok" title="in dev: .diiii, backup, bundles, publish">share + take home</span></div></div>
+    <div class="case"><div class="ch"><span class="num">06</span><span class="tag a">jam</span><span class="ready">2/9 ready</span></div>
+      <b>Open crowd / exhibition</b><div class="who">visitors on phones · many, unknown</div><p>People walk in, scan the QR, and take a turn playing the wall; everyone else watches.</p><div class="chips"><span class="st ok" title="in dev: di up --lan, --guests">room + door</span><span class="st no" title="nothing">lanes / turns</span><span class="st no" title="nothing">holding</span><span class="st part" title="https server in dev; certificate on feat/local-name-by-default">phone camera + mic</span><span class="st part" title="in dev: jam markers, authorship; not in Raw">who&#x27;s here</span><span class="st no" title="nothing">light parts</span><span class="st part" title="hand-made on asuz today, not in the product">appliance</span><span class="st part" title="light desk only">blackout from anyone</span><span class="st ok" title="in dev: festival machine work">no internet</span></div></div>
+    <div class="case"><div class="ch"><span class="num">07</span><span class="tag a">jam</span><span class="ready">2/8 ready</span></div>
+      <b>Jam between two cities</b><div class="who">you in Yerevan + someone far away</div><p>Two rooms jam over the internet. Allowed for a jam; the rule stays that a show never depends on the internet.</p><div class="chips"><span class="st part" title="sync through hosted exists; no live jam over it">over the internet</span><span class="st br" title="machine links on #447 (one-way); no discovery">members see each other</span><span class="st ok" title="in dev: live project events">live co-editing</span><span class="st part" title="in dev: jam markers, authorship; not in Raw">who&#x27;s here</span><span class="st no" title="nothing">holding</span><span class="st br" title="PR #447, open">picture engine</span><span class="st part" title="update --from, no downgrade; no check between machines">version check</span><span class="st ok" title="in dev: .diiii, backup, bundles, publish">share + take home</span></div></div>
+  </div>
+  <h3 class="grp">Show</h3>
+  <div class="cases">
+    <div class="case"><div class="ch"><span class="num">08</span><span class="tag d">show</span><span class="ready">2/11 ready</span></div>
+      <b>Your show</b><div class="who">you calling · asuz + vizzz nodes</div><p>Rehearse in jam, run pre-flight, press show: one caller, everything else locked.</p><div class="chips"><span class="st ok" title="in dev: #445 two installs, one space">own install joins</span><span class="st br" title="machine links on #447 (one-way); no discovery">members see each other</span><span class="st br" title="PR #447, open">picture engine</span><span class="st br" title="PR #450 + #451, open">clips + VJ deck</span><span class="st part" title="DMX/Art-Net + MIDI in dev; OSC declared; robot on a branch; no PJLink">device drivers</span><span class="st part" title="map cue list in dev; no show-wide GO">cue list · GO</span><span class="st no" title="nothing">show mode</span><span class="st part" title="light desk only">blackout from anyone</span><span class="st part" title="update --from, no downgrade; no check between machines">version check</span><span class="st part" title="hand-made on asuz today, not in the product">appliance</span><span class="st ok" title="in dev: festival machine work">no internet</span></div></div>
+    <div class="case"><div class="ch"><span class="num">09</span><span class="tag d">show</span><span class="ready">1/9 ready</span></div>
+      <b>Theatre show with a cue list</b><div class="who">an operator · lights, projection, sound</div><p>The operator presses GO through numbered cues, the way a stage manager calls a play.</p><div class="chips"><span class="st part" title="map cue list in dev; no show-wide GO">cue list · GO</span><span class="st no" title="nothing">show mode</span><span class="st part" title="light desk only">blackout from anyone</span><span class="st no" title="nothing">handover</span><span class="st part" title="DMX/Art-Net + MIDI in dev; OSC declared; robot on a branch; no PJLink">device drivers</span><span class="st br" title="PR #447, open">picture engine</span><span class="st part" title="update --from, no downgrade; no check between machines">version check</span><span class="st part" title="hand-made on asuz today, not in the product">appliance</span><span class="st ok" title="in dev: festival machine work">no internet</span></div></div>
+    <div class="case"><div class="ch"><span class="num">10</span><span class="tag d">show</span><span class="ready">2/9 ready</span></div>
+      <b>Festival: many artists, one stage</b><div class="who">artist A, then artist B, then C · shared projector + lights</div><p>Each set is a handover: A passes the call to B, the room keeps its boxes, nobody reboots between sets.</p><div class="chips"><span class="st ok" title="in dev: #445 two installs, one space">own install joins</span><span class="st br" title="machine links on #447 (one-way); no discovery">members see each other</span><span class="st no" title="nothing">show mode</span><span class="st no" title="nothing">handover</span><span class="st part" title="light desk only">blackout from anyone</span><span class="st part" title="update --from, no downgrade; no check between machines">version check</span><span class="st no" title="nothing">light parts</span><span class="st part" title="hand-made on asuz today, not in the product">appliance</span><span class="st ok" title="in dev: festival machine work">no internet</span></div></div>
+    <div class="case"><div class="ch"><span class="num">11</span><span class="tag d">show</span><span class="ready">1/7 ready</span></div>
+      <b>Installation for weeks</b><div class="who">no one there · boxes in a gallery</div><p>It boots into the show every morning, recovers by itself, and you check its health from home.</p><div class="chips"><span class="st no" title="nothing">show mode</span><span class="st part" title="hand-made on asuz today, not in the product">appliance</span><span class="st no" title="nothing">light parts</span><span class="st ok" title="in dev: festival machine work">no internet</span><span class="st part" title="update --from, no downgrade; no check between machines">version check</span><span class="st part" title="light desk only">blackout from anyone</span><span class="st part" title="sync through hosted exists; no live jam over it">over the internet</span></div></div>
+  </div>
+  <h3 class="grp">Devices</h3>
+  <div class="cases">
+    <div class="case"><div class="ch"><span class="num">12</span><span class="tag a">jam</span> <span class="tag d">show</span><span class="ready">0/5 ready</span></div>
+      <b>Robot as a performer</b><div class="who">di.jet · someone holding the arm switch</div><p>The robot moves in the patch like any other node; arming stays a human switch on the robot.</p><div class="chips"><span class="st part" title="DMX/Art-Net + MIDI in dev; OSC declared; robot on a branch; no PJLink">device drivers</span><span class="st no" title="nothing">holding</span><span class="st part" title="light desk only">blackout from anyone</span><span class="st no" title="nothing">show mode</span><span class="st part" title="in dev: jam markers, authorship; not in Raw">who&#x27;s here</span></div></div>
+    <div class="case"><div class="ch"><span class="num">13</span><span class="tag a">jam</span> <span class="tag d">show</span><span class="ready">0/5 ready</span></div>
+      <b>Sensors and buttons trigger cues</b><div class="who">r-di Pi with buttons, a door sensor</div><p>Pressing a physical button or opening a door fires a cue, with no screen on that box.</p><div class="chips"><span class="st no" title="nothing">light parts</span><span class="st part" title="DMX/Art-Net + MIDI in dev; OSC declared; robot on a branch; no PJLink">device drivers</span><span class="st part" title="map cue list in dev; no show-wide GO">cue list · GO</span><span class="st br" title="machine links on #447 (one-way); no discovery">members see each other</span><span class="st part" title="hand-made on asuz today, not in the product">appliance</span></div></div>
+    <div class="case"><div class="ch"><span class="num">14</span><span class="tag a">jam</span> <span class="tag d">show</span><span class="ready">0/4 ready</span></div>
+      <b>Talk to other software</b><div class="who">TouchDesigner, Resolume, QLab, Ableton</div><p>They keep their software; di.iiii sends and receives OSC, MIDI or a picture.</p><div class="chips"><span class="st part" title="DMX/Art-Net + MIDI in dev; OSC declared; robot on a branch; no PJLink">device drivers</span><span class="st br" title="PR #447, open">picture engine</span><span class="st part" title="BPM + tap only in the light desk">sound-reactive</span><span class="st part" title="map cue list in dev; no show-wide GO">cue list · GO</span></div></div>
+    <div class="case"><div class="ch"><span class="num">15</span><span class="tag d">show</span><span class="ready">2/6 ready</span></div>
+      <b>Phones as screens</b><div class="who">50 phones held up in a crowd</div><p>Every phone is a pixel of one big picture, or shows its own part of it.</p><div class="chips"><span class="st ok" title="in dev: di up --lan, --guests">room + door</span><span class="st part" title="https server in dev; certificate on feat/local-name-by-default">phone camera + mic</span><span class="st no" title="nothing">light parts</span><span class="st no" title="nothing">lanes / turns</span><span class="st br" title="PR #447, open">picture engine</span><span class="st ok" title="in dev: festival machine work">no internet</span></div></div>
+  </div>
+  <h3 class="grp">When things go wrong</h3>
+  <div class="cases">
+    <div class="case"><div class="ch"><span class="num">16</span><span class="tag a">jam</span> <span class="tag d">show</span><span class="ready">1/4 ready</span></div>
+      <b>No internet at all</b><div class="who">a field, a basement, a festival</div><p>Everything above keeps working on the room network alone.</p><div class="chips"><span class="st ok" title="in dev: festival machine work">no internet</span><span class="st br" title="machine links on #447 (one-way); no discovery">members see each other</span><span class="st part" title="https server in dev; certificate on feat/local-name-by-default">phone camera + mic</span><span class="st part" title="update --from, no downgrade; no check between machines">version check</span></div></div>
+    <div class="case"><div class="ch"><span class="num">17</span><span class="tag d">show</span><span class="ready">0/5 ready</span></div>
+      <b>A machine dies mid-show</b><div class="who">the caller&#x27;s laptop crashes</div><p>The wall holds its last picture or goes to black, and the standby machine takes the call.</p><div class="chips"><span class="st no" title="nothing">handover</span><span class="st part" title="light desk only">blackout from anyone</span><span class="st part" title="hand-made on asuz today, not in the product">appliance</span><span class="st no" title="nothing">show mode</span><span class="st br" title="machine links on #447 (one-way); no discovery">members see each other</span></div></div>
+    <div class="case"><div class="ch"><span class="num">18</span><span class="tag a">jam</span> <span class="tag d">show</span><span class="ready">0/3 ready</span></div>
+      <b>Someone hasn&#x27;t updated</b><div class="who">Emilya is one release behind</div><p>Jam and show both run on what the two versions share; pre-flight only refuses if the show uses a feature Emilya's version lacks.</p><div class="chips"><span class="st part" title="update --from, no downgrade; no check between machines">version check</span><span class="st br" title="machine links on #447 (one-way); no discovery">members see each other</span><span class="st no" title="nothing">show mode</span></div></div>
+    <div class="case"><div class="ch"><span class="num">19</span><span class="tag a">jam</span> <span class="tag d">show</span><span class="ready">0/4 ready</span></div>
+      <b>Old or weak machine</b><div class="who">Pi 3, old laptop, the Jetson&#x27;s old system</div><p>The machine takes a light part, or speaks through a driver instead of running di.iiii.</p><div class="chips"><span class="st no" title="nothing">light parts</span><span class="st part" title="hand-made on asuz today, not in the product">appliance</span><span class="st part" title="DMX/Art-Net + MIDI in dev; OSC declared; robot on a branch; no PJLink">device drivers</span><span class="st part" title="update --from, no downgrade; no check between machines">version check</span></div></div>
+    <div class="case"><div class="ch"><span class="num">20</span><span class="tag a">jam</span> <span class="tag d">show</span><span class="ready">2/3 ready</span></div>
+      <b>After: keep and share</b><div class="who">everyone who played</div><p>The jam or the show snapshot is saved, taken home as a file, or published to diiii.xyz.</p><div class="chips"><span class="st ok" title="in dev: .diiii, backup, bundles, publish">share + take home</span><span class="st part" title="update --from, no downgrade; no check between machines">version check</span><span class="st ok" title="in dev: festival machine work">no internet</span></div></div>
+  </div>
+  <h3 class="grp">The pieces, by how many cases need them</h3>
+  <div class="scroll"><table class="pieces"><tr><th>piece</th><th>cases</th><th>state today</th></tr>
+<tr><td>no internet<br><small>everything on the room network</small></td><td><span class="bar" style="--w:65%"></span>13</td><td><span class="st ok">exists</span> <small>in dev: festival machine work</small></td></tr>
+<tr><td>version check<br><small>same release, hand-out, never break silently</small></td><td><span class="bar" style="--w:55%"></span>11</td><td><span class="st part">partial</span> <small>update --from, no downgrade; no check between machines</small></td></tr>
+<tr><td>picture engine<br><small>operators + pictures between machines</small></td><td><span class="bar" style="--w:50%"></span>10</td><td><span class="st br">on a branch</span> <small>PR #447, open</small></td></tr>
+<tr><td>blackout from anyone<br><small>safety call, never locked</small></td><td><span class="bar" style="--w:50%"></span>10</td><td><span class="st part">partial</span> <small>light desk only</small></td></tr>
+<tr><td>appliance<br><small>boots into its job, restarts, health</small></td><td><span class="bar" style="--w:45%"></span>9</td><td><span class="st part">partial</span> <small>hand-made on asuz today, not in the product</small></td></tr>
+<tr><td>members see each other<br><small>both-way links + finding each other on the network</small></td><td><span class="bar" style="--w:45%"></span>9</td><td><span class="st br">on a branch</span> <small>machine links on #447 (one-way); no discovery</small></td></tr>
+<tr><td>show mode<br><small>caller, pre-flight, lock, snapshot</small></td><td><span class="bar" style="--w:40%"></span>8</td><td><span class="st no">missing</span> <small>nothing</small></td></tr>
+<tr><td>light parts<br><small>Stage / Hands for weak machines</small></td><td><span class="bar" style="--w:35%"></span>7</td><td><span class="st no">missing</span> <small>nothing</small></td></tr>
+<tr><td>device drivers<br><small>DMX, MIDI, OSC, robot, projector</small></td><td><span class="bar" style="--w:35%"></span>7</td><td><span class="st part">partial</span> <small>DMX/Art-Net + MIDI in dev; OSC declared; robot on a branch; no PJLink</small></td></tr>
+<tr><td>who&#x27;s here<br><small>names, colours, who touched what</small></td><td><span class="bar" style="--w:30%"></span>6</td><td><span class="st part">partial</span> <small>in dev: jam markers, authorship; not in Raw</small></td></tr>
+<tr><td>holding<br><small>your hand on it, others pick something else</small></td><td><span class="bar" style="--w:30%"></span>6</td><td><span class="st no">missing</span> <small>nothing</small></td></tr>
+<tr><td>own install joins<br><small>a second di.iiii follows the space</small></td><td><span class="bar" style="--w:25%"></span>5</td><td><span class="st ok">exists</span> <small>in dev: #445 two installs, one space</small></td></tr>
+<tr><td>room + door<br><small>di up --lan, a QR, visitors come in</small></td><td><span class="bar" style="--w:25%"></span>5</td><td><span class="st ok">exists</span> <small>in dev: di up --lan, --guests</small></td></tr>
+<tr><td>phone camera + mic<br><small>a certificate so the local address is secure</small></td><td><span class="bar" style="--w:25%"></span>5</td><td><span class="st part">partial</span> <small>https server in dev; certificate on feat/local-name-by-default</small></td></tr>
+<tr><td>clips + VJ deck<br><small>footage layers, blend, BPM</small></td><td><span class="bar" style="--w:20%"></span>4</td><td><span class="st br">on a branch</span> <small>PR #450 + #451, open</small></td></tr>
+<tr><td>share + take home<br><small>publish, .diiii, backup</small></td><td><span class="bar" style="--w:20%"></span>4</td><td><span class="st ok">exists</span> <small>in dev: .diiii, backup, bundles, publish</small></td></tr>
+<tr><td>live co-editing<br><small>a patch edit shows on every screen</small></td><td><span class="bar" style="--w:20%"></span>4</td><td><span class="st ok">exists</span> <small>in dev: live project events</small></td></tr>
+<tr><td>cue list · GO<br><small>ordered cues, one button</small></td><td><span class="bar" style="--w:20%"></span>4</td><td><span class="st part">partial</span> <small>map cue list in dev; no show-wide GO</small></td></tr>
+<tr><td>sound-reactive<br><small>BPM, tap, audio analysis in the patch</small></td><td><span class="bar" style="--w:15%"></span>3</td><td><span class="st part">partial</span> <small>BPM + tap only in the light desk</small></td></tr>
+<tr><td>lanes / turns<br><small>big groups: own part, or wait your turn</small></td><td><span class="bar" style="--w:15%"></span>3</td><td><span class="st no">missing</span> <small>nothing</small></td></tr>
+<tr><td>handover<br><small>pass the call on</small></td><td><span class="bar" style="--w:15%"></span>3</td><td><span class="st no">missing</span> <small>nothing</small></td></tr>
+<tr><td>over the internet<br><small>jam between two cities</small></td><td><span class="bar" style="--w:10%"></span>2</td><td><span class="st part">partial</span> <small>sync through hosted exists; no live jam over it</small></td></tr>
+</table></div>
+  <h3 class="grp">Build order that comes out of it</h3>
+  <ol class="rules">
+    <li><div><b>Machines know each other, in any version.</b><p>Protocol 1: the frozen core (hello, card, cue, blackout, picture) plus the feature hello, the machine card, finding each other on the network, both-way links, and the compatibility grid in CI. Everything after this is a feature on top, so it has to come first.</p></div></li>
+    <li><div><b>Land the picture work.</b><p>Merge #447, then #450 and #451, and rehearse you + Emilya for real. 10 cases play pictures.</p></div></li>
+    <li><div><b>Jam rules.</b><p>Holding, presence in Raw, the local certificate so phones get camera and mic. The two-artist jam is fully covered after this.</p></div></li>
+    <li><div><b>Show mode.</b><p>Pre-flight, caller, lock, snapshot, blackout from anyone (10 cases), handover, and a show-wide cue list with GO.</p></div></li>
+    <li><div><b>Weak machines and appliances.</b><p>Stage and Hands parts, boot into the job, restart, health from afar. Puts the kiosk work done by hand on asuz today into the product.</p></div></li>
+    <li><div><b>More devices.</b><p>OSC made real, the robot merged, projector control, sound-reactive nodes in the patch.</p></div></li>
+    <li><div><b>Big groups and distance.</b><p>Lanes and turns for workshops and crowds; a jam between two cities.</p></div></li>
+  </ol>
+</section>
+
+<!-- ============================================================ 1 -->
+<section id="modes">
+  <div class="eyebrow">01 · picked: the mesh, with two modes</div>
+  <h2>Jam mode and show mode</h2>
+  <p class="sub">Same machines, same connections. The mode only changes who may call a cue and what's allowed to change. It's the difference between a rehearsal room and a running show.</p>
+  <div class="two">
+    <div class="opt">
+      <span class="tag a">jam · default</span>
+      <h3>Everyone plays</h3>
+      <svg viewBox="0 0 360 230" role="img" aria-label="Five equal machines, every one linked to every other">
+        <g stroke="rgba(77,249,255,.35)" stroke-width="1">
+          <line x1="80" y1="45" x2="280" y2="45"/><line x1="80" y1="45" x2="50" y2="165"/><line x1="80" y1="45" x2="180" y2="195"/><line x1="80" y1="45" x2="310" y2="165"/>
+          <line x1="280" y1="45" x2="50" y2="165"/><line x1="280" y1="45" x2="180" y2="195"/><line x1="280" y1="45" x2="310" y2="165"/>
+          <line x1="50" y1="165" x2="180" y2="195"/><line x1="180" y1="195" x2="310" y2="165"/><line x1="50" y1="165" x2="310" y2="165"/>
+        </g>
+        <g text-anchor="middle" font-size="13">
+          <rect x="36" y="25" width="88" height="40" fill="#0a0d18" stroke="rgba(77,249,255,.6)"/><text x="80" y="50" fill="#e8ecf4">aylmo</text>
+          <rect x="236" y="25" width="88" height="40" fill="#0a0d18" stroke="rgba(77,249,255,.6)"/><text x="280" y="50" fill="#e8ecf4">mac</text>
+          <rect x="6" y="145" width="88" height="40" fill="#0a0d18" stroke="rgba(77,249,255,.6)"/><text x="50" y="170" fill="#e8ecf4">asuz</text>
+          <rect x="136" y="175" width="88" height="40" fill="#0a0d18" stroke="rgba(77,249,255,.6)"/><text x="180" y="200" fill="#e8ecf4">r-di</text>
+          <rect x="266" y="145" width="88" height="40" fill="#0a0d18" stroke="rgba(77,249,255,.6)" stroke-dasharray="4 3"/><text x="310" y="170" fill="#e8ecf4">di.jet</text>
+        </g>
+      </svg>
+      <div class="rows">
+        <div class="row"><span>cues</span><span>any machine → any machine. Every cue shows who sent it; the last one wins</span></div>
+        <div class="row"><span>patch</span><span>edit live, from any machine</span></div>
+        <div class="row"><span>join</span><span>machines come and go freely</span></div>
+        <div class="row"><span>versions</span><span>updates allowed; behind = amber but still plays</span></div>
+        <div class="row"><span>for</span><span>rehearsal, workshops, a jam with other artists</span></div>
+      </div>
+    </div>
+    <div class="opt pick">
+      <span class="tag d">show · pressed</span>
+      <h3>One machine calls it, everything locks</h3>
+      <svg viewBox="0 0 360 230" role="img" aria-label="The same five machines; one is the caller with solid lines to the rest, other links are faint">
+        <g stroke="rgba(255,255,255,.08)" stroke-width="1">
+          <line x1="280" y1="45" x2="50" y2="165"/><line x1="280" y1="45" x2="180" y2="195"/><line x1="280" y1="45" x2="310" y2="165"/>
+          <line x1="50" y1="165" x2="180" y2="195"/><line x1="180" y1="195" x2="310" y2="165"/><line x1="50" y1="165" x2="310" y2="165"/>
+        </g>
+        <g stroke="#4df9ff" stroke-width="1.4">
+          <line x1="70" y1="70" x2="50" y2="145"/><line x1="90" y1="70" x2="180" y2="175"/><line x1="120" y1="70" x2="310" y2="145"/>
+        </g>
+        <line x1="124" y1="45" x2="236" y2="45" stroke="rgba(255,255,255,.4)" stroke-dasharray="3 4"/>
+        <text x="180" y="38" fill="#8a93a6" font-size="11" text-anchor="middle">handover</text>
+        <g text-anchor="middle" font-size="13">
+          <rect x="30" y="20" width="100" height="50" fill="#0b2129" stroke="#4df9ff" stroke-width="1.5"/><text x="80" y="42" fill="#4df9ff" font-size="11">CALLER</text><text x="80" y="60" fill="#e8ecf4">aylmo</text>
+          <rect x="236" y="25" width="88" height="40" fill="#0a0d18" stroke="rgba(255,255,255,.3)" stroke-dasharray="3 3"/><text x="280" y="44" fill="#e8ecf4">mac</text><text x="280" y="58" fill="#8a93a6" font-size="10">standby</text>
+          <rect x="6" y="145" width="88" height="40" fill="#0a0d18" stroke="rgba(255,255,255,.3)"/><text x="50" y="170" fill="#e8ecf4">asuz</text>
+          <rect x="136" y="175" width="88" height="40" fill="#0a0d18" stroke="rgba(255,255,255,.3)"/><text x="180" y="200" fill="#e8ecf4">r-di</text>
+          <rect x="266" y="145" width="88" height="40" fill="#0a0d18" stroke="rgba(255,255,255,.3)" stroke-dasharray="4 3"/><text x="310" y="170" fill="#e8ecf4">di.jet</text>
+        </g>
+      </svg>
+      <div class="rows">
+        <div class="row"><span>cues</span><span>only the caller. Others watch; their cues are held</span></div>
+        <div class="row"><span>blackout</span><span class="d">any machine, always. A safety call is never locked</span></div>
+        <div class="row"><span>patch</span><span>frozen as a snapshot: the show version</span></div>
+        <div class="row"><span>join</span><span>a new machine waits until the caller lets it in</span></div>
+        <div class="row"><span>versions</span><span>locked: no di.iiii and no system updates</span></div>
+        <div class="row"><span>handover</span><span>the caller passes the call on (e.g. to mac) with one press</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="step"><b>1 · jam</b><span>build and rehearse together</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b>2 · pre-flight</b><span>before "show" is allowed: same release, same connection version, health OK. Amber items listed, you confirm</span></div>
+    <div class="arr">→</div>
+    <div class="step on"><b>3 · show</b><span>snapshot taken, lock on, one caller</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b>4 · back to jam</b><span>lock off; the show snapshot stays and can be replayed</span></div>
+  </div>
+</section>
+
+<!-- ============================================================ 2 -->
+<section id="connect">
+  <div class="eyebrow">02 · how they connect</div>
+  <h2>Two ways in: run it or speak to it</h2>
+  <p class="sub">A machine that <b>runs di.iiii</b> joins the mesh itself, so it works on any wifi with no address to type. A device that <b>keeps its own software</b> is reached by a driver node, on whichever di.iiii it is plugged into, that speaks its language. Nothing gets installed on that device.</p>
+  <div class="wire">
+    <div class="col">
+      <div class="colhead">runs di.iiii · a mesh member</div>
+      <div class="box"><b>asuz · STAGE</b><span>screens · sound · mic · camera</span><span>its kiosk shows the page it's told to</span><em>di 0.4.14</em></div>
+      <div class="box"><b>r-di · HANDS</b><span>no screen · pins · sound · serial</span><span>its ports appear as nodes</span><em>di: not installed yet</em></div>
+      <div class="link a">↔ each machine joins the mesh<br><small>built on follow + machine links · exists one-way today</small></div>
+    </div>
+    <div class="col mid">
+      <div class="colhead">&nbsp;</div>
+      <div class="box cond"><b>THE MESH · shared show space</b><span class="tree">the show space
+├ rig list   every machine card
+├ cue list   what to do, when
+├ patch      Raw: ports = nodes
+├ release    the version to run
+└ mode       jam | show (+ caller)</span></div>
+      <div class="drivers">
+        <div class="chip">driver · device.dijet</div>
+        <div class="chip">driver · DMX Out → Art-Net</div>
+        <div class="chip owed">driver · PJLink / OSC · owed</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="colhead">speaks · keeps its own software</div>
+      <div class="box dash"><b>di.jet · ROS</b><span>rosbridge websocket</span></div>
+      <div class="box dash"><b>vizzz ESP32 · firmware</b><span>Art-Net / UDP</span></div>
+      <div class="box dash"><b>projector · TD · Resolume</b><span>PJLink · OSC · MIDI</span></div>
+      <div class="link a">← a driver node on any di.iiii speaks the device's language<br><small>nothing installed on the device</small></div>
+    </div>
+  </div>
+  <p class="note">Dashed driver = owed · dashed device box = keeps its own software · safety stays on the device: the robot's dead-man switch and "arm" button never move into the patch.</p>
+</section>
+
+<!-- ============================================================ 3 -->
+<section>
+  <div class="eyebrow">03 · what every machine sees</div>
+  <h2>One card per machine</h2>
+  <p class="sub">Every member shares its card with the mesh every few seconds, so any machine can see the whole rig. For a device that speaks, its driver node fills in the card. The figures below are the real ones measured today.</p>
+  <div class="cards">
+    <div class="card">
+      <span class="tag a">stage · member</span>
+      <div class="name">asuz</div>
+      <div class="row"><span>version</span><span>di 0.4.14-wave.1</span></div>
+      <div class="row"><span>showing</span><span class="ac">test-desk/map/wall/out</span></div>
+      <div class="row"><span>ports</span><span>HDMI 1080p · panel 1366 · spk · mic · cam 720p</span></div>
+      <div class="row"><span>health</span><span class="w">77 °C · cpu 1% · ram 0.8/3.7 GB</span></div>
+      <div class="row"><span>net</span><span class="w">wifi only — plug ethernet</span></div>
+    </div>
+    <div class="card">
+      <span class="tag">hands · member</span>
+      <div class="name">r-di</div>
+      <div class="row"><span>version</span><span class="d">not installed</span></div>
+      <div class="row"><span>showing</span><span>— no screen</span></div>
+      <div class="row"><span>ports</span><span>GPIO · USB · sound · wifi</span></div>
+      <div class="row"><span>health</span><span class="d">under-volt 0x50005 · 600 MHz</span></div>
+      <div class="row"><span>ram</span><span>0.9 GB — no browser here</span></div>
+    </div>
+    <div class="card">
+      <span class="tag w">robot · speaks</span>
+      <div class="name">di.jet</div>
+      <div class="row"><span>version</span><span>ROS Melodic · di-jet repo</span></div>
+      <div class="row"><span>driver</span><span class="ac">device.dijet (rosbridge)</span></div>
+      <div class="row"><span>ports</span><span>drive · lamps · lidar · camera</span></div>
+      <div class="row"><span>safety</span><span>arm = human switch · dead-man 10 Hz</span></div>
+      <div class="row"><span>di here?</span><span class="w">Ubuntu 18.04 too old — speaks for now</span></div>
+    </div>
+    <div class="card">
+      <span class="tag">light · speaks</span>
+      <div class="name">vizzz ×n</div>
+      <div class="row"><span>version</span><span>firmware (per node)</span></div>
+      <div class="row"><span>driver</span><span class="ac">DMX Out → Art-Net</span></div>
+      <div class="row"><span>ports</span><span>DMX512 universe</span></div>
+      <div class="row"><span>safety</span><span>blackout reaches every node</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 4 -->
+<section>
+  <div class="eyebrow">04 · control</div>
+  <h2>Cues, not remote control</h2>
+  <p class="sub">No machine logs into another. A machine sends a <b>cue</b> by name, and the receiver runs it only if the cue is on its own short list <b>and</b> the mode allows the sender (jam: anyone · show: the caller, plus blackout from anyone). It's a lighting desk sending "go", not someone reaching into the dimmer.</p>
+  <div class="scroll"><table>
+    <tr><th>part</th><th>cues it accepts</th><th>what it refuses</th></tr>
+    <tr><td>STAGE</td><td>show page · blackout · screens: projector / both · volume · mic on/off · reload</td><td>anything else: no shell, no installs, no file edits</td></tr>
+    <tr><td>HANDS</td><td>pin on/off · sound route · serial send · reload</td><td>same</td></tr>
+    <tr><td>SPEAKS</td><td>whatever its driver exposes: drive, lamps, DMX values</td><td>arming and safety: those stay a human switch on the device</td></tr>
+    <tr><td>EVERY MACHINE</td><td>offer an update · jam/show · handover · send health</td><td>updates during show · cues from anyone but the caller during show (except blackout)</td></tr>
+  </table></div>
+</section>
+
+<!-- ============================================================ 5 -->
+<section id="versions">
+  <div class="eyebrow">05 · versions · every one works with every other</div>
+  <h2>Any version meets any version</h2>
+  <p class="sub">No one has to be on the same release. When two machines meet they agree on what they have in common, the way two musicians find a key they both know.</p>
+  <div class="two">
+    <div class="opt pick">
+      <span class="tag a">the core · frozen forever</span>
+      <h3>Five things every release speaks the same way</h3>
+      <div class="rows">
+        <div class="row"><span>hello</span><span>"I am here, release X, protocol 1"</span></div>
+        <div class="row"><span>card</span><span>part, ports, health, what it shows</span></div>
+        <div class="row"><span>cue</span><span>run a cue by name</span></div>
+        <div class="row"><span>blackout</span><span class="d">always, from anyone</span></div>
+        <div class="row"><span>picture</span><span>receive a picture (H.264, which everything can play)</span></div>
+      </div>
+      <p>Never renamed, never removed. This is the promise that makes every version work with every other.</p>
+    </div>
+    <div class="opt">
+      <span class="tag">extras · agreed per pair</span>
+      <h3>Everything else is a feature, checked on hello</h3>
+      <svg viewBox="0 0 360 200" role="img" aria-label="A newer machine and an older machine share only the features both have">
+        <g font-size="12">
+          <rect x="6" y="10" width="150" height="160" fill="#0a0d18" stroke="rgba(255,255,255,.3)"/>
+          <text x="18" y="32" fill="#e8ecf4" font-size="13">aylmo · newer</text>
+          <text x="18" y="58" fill="#4df9c0">✓ core</text><text x="18" y="80" fill="#4df9c0">✓ pictures</text><text x="18" y="102" fill="#4df9c0">✓ holding</text><text x="18" y="124" fill="#8a93a6">✓ vj deck</text><text x="18" y="146" fill="#8a93a6">✓ lanes</text>
+          <rect x="204" y="10" width="150" height="160" fill="#0a0d18" stroke="rgba(255,255,255,.3)"/>
+          <text x="216" y="32" fill="#e8ecf4" font-size="13">asuz · older</text>
+          <text x="216" y="58" fill="#4df9c0">✓ core</text><text x="216" y="80" fill="#4df9c0">✓ pictures</text><text x="216" y="102" fill="#4df9c0">✓ holding</text><text x="216" y="124" fill="#586074">— vj deck</text><text x="216" y="146" fill="#586074">— lanes</text>
+        </g>
+        <g stroke="#4df9c0" stroke-width="1.2"><line x1="84" y1="54" x2="210" y2="54"/><line x1="108" y1="76" x2="210" y2="76"/><line x1="100" y1="98" x2="210" y2="98"/></g>
+        <text x="180" y="192" fill="#8a93a6" font-size="11" text-anchor="middle">they use the green, ignore the rest</text>
+      </svg>
+      <p>An older stage box still shows the picture, even if it doesn't have the VJ deck.</p>
+    </div>
+  </div>
+  <ol class="rules" style="margin-top:16px">
+    <li><div><b>Machines ignore what they don't understand, and never delete it.</b><p>A patch from a newer version opens on an older one with the new nodes as grey placeholders ("made in a newer di.iiii"). Saving keeps them untouched, so going back to the newer machine loses nothing.</p></div></li>
+    <li><div><b>Documents move forward, never backwards by force.</b><p>A newer machine reads every older format. An older machine keeps what it can't read. Nothing gets rewritten into a shape the other side can't open.</p></div></li>
+    <li><div><b>Pre-flight checks features, not numbers.</b><p>"Can every machine in the show do what the show uses?" If asuz only shows the result, it doesn't need the VJ deck.</p></div></li>
+    <li><div><b>Updating is an offer, never a condition.</b><p>In jam, a machine with a newer release offers it and you can say no; in show, nothing updates. Being behind is never a reason to be locked out.</p></div></li>
+    <li><div><b>Speaking devices negotiate in their driver.</b><p>Each driver states which firmware or ROS versions it knows; an unknown one connects read-only and says so.</p></div></li>
+    <li><div><b>Tested as a grid, every release.</b><p>Each new release is played automatically against the older releases (hello, cue, blackout, picture, a patch opened back and forth). A red square in the grid blocks the release.</p></div></li>
+    <li><div><b>The honest limit.</b><p>Protocol 1 starts with the first release that has it. Today's 0.4 installs predate it, so newer releases talk to them through a small adapter for the old follow-and-sync route.</p></div></li>
+  </ol>
+</section>
+
+<!-- ============================================================ workflow -->
+<section id="workflow">
+  <div class="eyebrow">05b · the local workflow</div>
+  <h2>How a piece travels</h2>
+  <p class="sub">Everything starts and runs on your own machine. The internet is only for sharing afterwards.</p>
+  <div class="flow flow6">
+    <div class="step"><b>1 · install once</b><span>di on any machine; works with no internet from then on</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b>2 · make</b><span>at home; snapshots taken automatically, named saves when you want</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b>3 · jam</b><span>open the room; everyone who joins keeps their own full copy</span></div>
+    <div class="arr">→</div>
+    <div class="step on"><b>4 · show</b><span>pre-flight, then a frozen snapshot is the show version</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b>5 · go home</b><span>everyone leaves with a copy; changes merge when machines meet again</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b>6 · share</b><span>publish to diiii.xyz, send a .diiii file, or keep it private</span></div>
+  </div>
+  <div class="scroll" style="margin-top:16px"><table>
+    <tr><th>question</th><th>answer</th></tr>
+    <tr><td>where is the work?</td><td>on every machine that played it, as full copies. There's no single master copy to lose.</td></tr>
+    <tr><td>two people changed the same thing apart</td><td>when the machines meet, both changes are kept and shown side by side. You pick one; nothing is silently overwritten.</td></tr>
+    <tr><td>go back in time</td><td>snapshots: automatic, named, and every show version</td></tr>
+    <tr><td>a machine that's been off for a month</td><td>catches up when it joins again, whatever version it runs (see 05)</td></tr>
+    <tr><td>exists today</td><td><span class="mono">di up</span>, snapshots before an update, <span class="mono">di save</span> / <span class="mono">di open</span> .diiii, <span class="mono">di backup</span>, follow a space, publish</td></tr>
+    <tr><td>owed</td><td>full copies syncing both ways between equals, keeping both sides of a conflict, the show snapshot as a named version</td></tr>
+  </table></div>
+</section>
+
+<!-- ============================================================ 6 -->
+<section>
+  <div class="eyebrow">06 · what exists, what is owed</div>
+  <h2>How much is new</h2>
+  <div class="scroll"><table>
+    <tr><th></th><th>already in di.iiii</th><th>to build</th></tr>
+    <tr><td>connect</td><td>follow a space · machine links (one-way: follower → host, every 3 s) · device.dijet · DMX Out</td><td>both-way links (every member reaches every member) · discovery on the room network · PJLink / OSC drivers</td></tr>
+    <tr><td>see</td><td><span class="mono">/api/config</span> reports LAN reach · <span class="mono">di status</span></td><td>the machine card: part, ports, health, what it shows</td></tr>
+    <tr><td>control</td><td>projector kiosk on asuz (boots, restarts)</td><td>cue list + each machine's short list</td></tr>
+    <tr><td>versions</td><td><span class="mono">di update --from FILE</span> · refuses downgrade</td><td>protocol 1 core · feature hello · placeholders for unknown nodes · compatibility grid in CI · adapter for 0.4</td></tr>
+    <tr><td>parts</td><td><span class="mono">di up --lan</span></td><td><span class="mono">di up --part stage|hands</span> · code split per part · runtime for old systems</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <div class="ask">
+    <div class="eyebrow">next</div>
+    <p><b>Build order:</b> 1 · the machine card (every member shows part, version, ports, health, what it shows) → 2 · machines seeing each other on the room network → 3 · cues with jam rules → 4 · show mode: pre-flight, caller, lock, blackout-from-anyone, handover.</p>
+  </div>
+</section>
+
+</main>
+</body>
+</html>
