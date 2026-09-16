@@ -122,6 +122,21 @@ export const mintSpaceInvite = async (spaceId, label = 'invite') => {
     return data
 }
 
+// A space's restore points, newest first: { id, takenAt, reason, actor, objects,
+// projects }. Owner-or-admin. See serverXR/src/spaceStore.js.
+export const listSpaceSnapshots = async (spaceId) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/snapshots`)
+    return Array.isArray(data?.snapshots) ? data.snapshots : []
+}
+
+// Put one back. The server takes a restore point of what is there now first,
+// so a restore is itself undoable.
+export const restoreSpaceSnapshot = async (spaceId, snapshotId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/restore-snapshot`, {
+        method: 'POST',
+        body: { snapshotId }
+    })
+
 export const redeemSpaceInvite = async (token) =>
     apiFetch('/api/invites/redeem', { method: 'POST', body: { token } })
 
