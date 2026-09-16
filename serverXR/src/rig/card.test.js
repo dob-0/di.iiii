@@ -64,6 +64,10 @@ function buildAsuzFixture() {
 
     write('/sys/class/net/wlp2s0f0/wireless', '')
     write('/sys/class/net/wlp2s0f0/operstate', 'up\n')
+    write('/sys/class/net/wlp2s0f0/device', '')
+    write('/sys/class/net/enp3s0/device', '')
+    write('/sys/class/net/enp3s0/operstate', 'down\n')
+    write('/sys/class/net/tailscale0/operstate', 'unknown\n')
 }
 
 describe('createCardSource — asuz (ASUS X502CA, real measured fixture)', () => {
@@ -75,7 +79,11 @@ describe('createCardSource — asuz (ASUS X502CA, real measured fixture)', () =>
             exec: rejectingExec(),
             os: fakeOs({
                 cores: 2,
-                interfaces: { wlp2s0f0: [{ address: '192.168.88.179', internal: false, family: 'IPv4' }] }
+                interfaces: {
+                    wlp2s0f0: [{ address: '192.168.88.179', internal: false, family: 'IPv4' }],
+                    enp3s0: [],
+                    tailscale0: [{ address: '100.72.53.77', internal: false, family: 'IPv4' }]
+                }
             })
         })
 
@@ -101,7 +109,11 @@ describe('createCardSource — asuz (ASUS X502CA, real measured fixture)', () =>
         expect(card.ports.cameras).toEqual([{ name: 'USB2.0 HD UVC WebCam', path: '/dev/video0' }])
         expect(card.ports.serial).toEqual([])
         expect(card.ports.midi).toEqual([])
-        expect(card.ports.net).toEqual([{ iface: 'wlp2s0f0', kind: 'wifi', up: true, addresses: ['192.168.88.179'] }])
+        expect(card.ports.net).toEqual([
+            { iface: 'enp3s0', kind: 'ethernet', up: false, addresses: [] },
+            { iface: 'tailscale0', kind: 'other', up: true, addresses: ['100.72.53.77'] },
+            { iface: 'wlp2s0f0', kind: 'wifi', up: true, addresses: ['192.168.88.179'] }
+        ])
 
         expect(card.health.tempC).toBe(77)
         expect(card.health.memTotalMb).toBe(Math.round(3898928 / 1024))
