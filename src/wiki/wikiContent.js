@@ -209,6 +209,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-14'
     },
     {
+        id: 'space-history',
+        category: 'Spaces & access',
+        title: 'History: who changed a space, and undo',
+        summary: 'Every change to a space is signed with who made it, and a restore point is kept before it — so any change can be put back.',
+        body: [
+            'Every change that reaches a space — from Studio, a script, an agent, a phone — is recorded with the name of the account that made it. The name comes from the sign-in the server checked, never from what the sender claims, so it cannot be faked.',
+            'A restore point is kept before each change that matters: the first change someone makes after somebody else (or after a pause of about a quarter of an hour), and every time a whole scene or project is replaced, pulled from another copy, or restored. The newest 30 are kept, plus one per day for the last 30 days. The images a restore point names are kept too, so putting one back never brings back broken pictures.',
+            'To see them: Spaces → your space → Manage → History. Each row says when, and whose change it was taken before. Restore puts the whole space — scene and projects — back to that moment, after asking. What is there at that moment is kept as a restore point of its own, so a restore is undoable too.',
+            'Only the space’s owner or an admin can see a space’s history or restore it.',
+            'When someone who does not own a space changes it, the studio’s inner bot can be told once per burst of edits — what changed, by whom, with an Undo button. That notice is off unless the server turns it on.'
+        ],
+        tags: ['history', 'undo', 'restore', 'snapshot', 'author', 'safety'],
+        updated: '2026-09-16'
+    },
+    {
         id: 'jam-surface',
         category: 'Spaces & access',
         title: 'Standing in the jam',

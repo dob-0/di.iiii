@@ -26,6 +26,7 @@
 const crypto = require('node:crypto')
 const { createKeyedLock } = require('../asyncLock')
 const { mintTunnelToken, tunnelUrl } = require('../tunnelToken')
+const { actorFromAuthState } = require('../opActor')
 
 const NAME_MAX = 40
 const WORD_MAX = 60
@@ -160,7 +161,7 @@ function registerInscriptionRoutes(router, {
         const versionedOp = { ...op, version: currentVersion + 1, timestamp: Date.now() }
         const updatedScene = applySceneOps(scene, [versionedOp])
         await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs)
+        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs, actorFromAuthState(req.authState))
         await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: versionedOp.version })
         broadcastLiveEvent(spaceId, 'scene-op', { version: versionedOp.version, ops: [versionedOp] })
 
@@ -221,7 +222,7 @@ function registerInscriptionRoutes(router, {
         const versionedOp = { ...op, version: currentVersion + 1, timestamp: Date.now() }
         const updatedScene = applySceneOps(scene, [versionedOp])
         await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs)
+        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs, actorFromAuthState(req.authState))
         await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: versionedOp.version })
         broadcastLiveEvent(spaceId, 'scene-op', { version: versionedOp.version, ops: [versionedOp] })
         return { id }
@@ -277,7 +278,7 @@ function registerInscriptionRoutes(router, {
         const versionedOp = { ...op, version: currentVersion + 1, timestamp: Date.now() }
         const updatedScene = applySceneOps(scene, [versionedOp])
         await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs)
+        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs, actorFromAuthState(req.authState))
         await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: versionedOp.version })
         broadcastLiveEvent(spaceId, 'scene-op', { version: versionedOp.version, ops: [versionedOp] })
 

@@ -85,6 +85,8 @@ const githubApp = require('./githubApp')
 const spaceSyncPlan = require('./spaceSyncPlan')
 const spaceLinkStore = require('./spaceLinkStore')
 const { httpRequest } = require('./httpClient')
+const { createSpaceHistory } = require('./spaceHistory')
+const { serverActor } = require('./opActor')
 const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
@@ -213,7 +215,9 @@ const {
   normalizeSpaceSlug,
   pruneSpaces,
   pruneStaleSandboxes,
+  listSpaceSnapshots,
   readLatestSpaceSnapshot,
+  readSpaceSnapshot,
   readOpsHistory,
   readOpsHistorySince,
   removeAssetThumbnails,
@@ -222,6 +226,7 @@ const {
   serveAsset,
   snapshotSpaceScene,
   spaceExists,
+  takeRestorePoint,
   upsertSpaceMeta,
   writeOpsHistory
 } = createSpaceStore({
@@ -232,6 +237,29 @@ const {
   accountSandboxTtlMs: config.accountSandboxTtlMs,
   blankScene: BLANK_SCENE
 })
+
+// Every change has an author and a way back (spaceHistory.js): restore points
+// before whole replaces and before each new burst of edits, change summaries,
+// and the signed notice to the inner bot when a non-owner edits a space.
+const spaceHistory = createSpaceHistory({
+  getDb,
+  takeRestorePoint,
+  loadSpaceMeta,
+  config,
+  httpRequest,
+  logger,
+  burstGapMs: config.approval.burstGapMs
+})
+
+// The space-bundle tool writes op rows from its own process, so they arrive
+// with no author. Only rows still without one are stamped.
+const stampImportedOpsActor = (spaceId, actor) => {
+  const db = getDb()
+  db.prepare('UPDATE space_ops SET actor = ?, actor_type = ?, actor_label = ? WHERE space_id = ? AND actor IS NULL')
+    .run(actor.actor, actor.type, actor.label, spaceId)
+  db.prepare('UPDATE project_ops SET actor = ?, actor_type = ?, actor_label = ? WHERE actor IS NULL AND project_id IN (SELECT id FROM projects WHERE space_id = ?)')
+    .run(actor.actor, actor.type, actor.label, spaceId)
+}
 
 const isAllowedUpload = (file) => {
   const mime = (file?.mimetype || '').toLowerCase()
@@ -1571,6 +1599,36 @@ router.post('/api/approvals/decision', async (req, res) => {
   res.status(outcome.status).json(outcome.body)
 })
 
+// The Undo button under a change notice (spaceHistory.js). The inner bot
+// posts here, signed with the same shared secret as an approval decision, and
+// the space goes back to the restore point the notice named. Same reasons to
+// sit pre-gate: the bot has no di.iiii account. The restore takes its own
+// restore point first, so an Undo pressed by mistake is itself undoable.
+// Off exactly when notices are: no secret, no route that does anything.
+router.post('/api/content-changes/undo', async (req, res, next) => {
+  try {
+    if (!spaceHistory.noticesEnabled()) {
+      return res.status(404).json({ error: 'Change notices are not enabled on this server.' })
+    }
+    if (!verifyInboundSignature(req)) {
+      return res.status(401).json({ error: 'Invalid or missing signature.' })
+    }
+    const spaceId = normalizeSpaceId(String(req.body?.spaceId || ''))
+    const snapshotId = String(req.body?.snapshotId || '')
+    if (!spaceId || !snapshotId) {
+      return res.status(400).json({ error: 'spaceId and snapshotId are required.' })
+    }
+    if (!(await spaceExists(spaceId))) return res.status(404).json({ error: 'Space not found.' })
+    const by = String(req.body?.decidedBy || '').replace(/\s+/g, ' ').trim().slice(0, 80)
+    const actor = serverActor('undo', by ? `Undo from the inner bot (${by})` : 'Undo from the inner bot')
+    const outcome = await restoreSnapshotAndBroadcast(spaceId, snapshotId, actor)
+    if (!outcome) return res.status(404).json({ error: 'That restore point is not here (it may have aged out).' })
+    res.json(outcome)
+  } catch (error) {
+    next(error)
+  }
+})
+
 // A space's public slug resolves to its real id here, once, for every route
 // on this router matching `:spaceId` (spaceRoutes, projectRoutes, syncRoutes,
 // inscriptionRoutes) — an id always wins, so a slug can never shadow another
@@ -1827,7 +1885,7 @@ registerUserRoutes(router, {
 router.use('/api/spaces/:spaceId/assets', (req, res, next) =>
   req.method === 'POST' ? uploadLimiter(req, res, next) : next())
 
-const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
+const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceRoutes(router, {
   appendOpsHistory,
   applySceneOps,
   blankScene: BLANK_SCENE,
@@ -1883,6 +1941,10 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   requireSpaceOwnerOrAdminWrite,
   readJson,
   readLatestSpaceSnapshot,
+  readSpaceSnapshot,
+  listSpaceSnapshots,
+  spaceHistory,
+  stampImportedOpsActor,
   readOpsHistory,
   readOpsHistorySince,
   removeAssetThumbnails,
@@ -2187,7 +2249,8 @@ registerProjectRoutes(router, {
   upload,
   upsertProjectMeta,
   writeJson,
-  writeProjectDocument
+  writeProjectDocument,
+  spaceHistory
 })
 
 router.use('/api/sync/spaces/:spaceId', syncLimiter)
@@ -2356,7 +2419,7 @@ const PORT = config.port
 const snapshotOpenSpace = async () => {
   const openId = getCommunalSpaceId()
   if (!openId || !(await spaceExists(openId))) return
-  await snapshotSpaceScene(openId)
+  await takeRestorePoint(openId, { reason: 'daily', actor: serverActor('daily') })
 }
 
 initStorage()

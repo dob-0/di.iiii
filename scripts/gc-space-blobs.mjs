@@ -4,8 +4,14 @@
 // that space holds assets/<sha256>.json (or a legacy assets/<sha256> binary),
 // while any project document mentions it in an /assets/<sha256> URL (markup
 // refs appear in no asset list, and may name a project that no longer exists),
-// OR while any retained op in di.db still mentions it.
+// while any retained op in di.db still mentions it, OR while any kept restore
+// point (<data root>/snapshots/<space>/*.json) mentions it.
 // Asset routes never delete blobs; this script is the only remover.
+//
+// Restore points matter for the same reason the op-log does: a restore puts
+// back documents that name their images by hash, and an undo that brings back
+// a page of broken pictures is not an undo. Snapshots keep JSON only, never
+// bytes — so the blobs they name have to survive here.
 //
 // The op-log matters: it scanned the filesystem alone until 2026-08-08, and on
 // production that made 21 of its 33 candidates (145 MB) look collectable while
@@ -21,6 +27,7 @@
 //   node scripts/gc-space-blobs.mjs --apply         # actually delete
 //   node scripts/gc-space-blobs.mjs --spaces-dir /path/to/data/spaces
 //   node scripts/gc-space-blobs.mjs --db /path/to/di.db
+//   node scripts/gc-space-blobs.mjs --snapshots-dir /path/to/data/snapshots
 //   node scripts/gc-space-blobs.mjs --ignore-db     # filesystem only (unsafe)
 
 import fs from 'node:fs/promises'
@@ -32,7 +39,7 @@ const DEFAULT_SPACES_DIR = path.join(ROOT_DIR, 'serverXR', 'data', 'spaces')
 const SHA256_HEX_REGEX = /^[a-f0-9]{64}$/i
 
 const parseArgs = (argv = []) => {
-    const args = { spacesDir: DEFAULT_SPACES_DIR, space: '', apply: false, db: '', ignoreDb: false }
+    const args = { spacesDir: DEFAULT_SPACES_DIR, space: '', apply: false, db: '', ignoreDb: false, snapshotsDir: '' }
     for (let index = 0; index < argv.length; index += 1) {
         const arg = argv[index]
         if (arg === '--apply') args.apply = true
@@ -40,6 +47,7 @@ const parseArgs = (argv = []) => {
         else if (arg === '--space') args.space = String(argv[++index] || '').trim()
         else if (arg === '--db') args.db = path.resolve(argv[++index] || '')
         else if (arg === '--spaces-dir') args.spacesDir = path.resolve(argv[++index] || DEFAULT_SPACES_DIR)
+        else if (arg === '--snapshots-dir') args.snapshotsDir = path.resolve(argv[++index] || '')
         else {
             console.error(`Unknown argument: ${arg}`)
             process.exit(2)
@@ -47,6 +55,8 @@ const parseArgs = (argv = []) => {
     }
     // The db sits beside the spaces dir: <data root>/di.db, <data root>/spaces.
     if (!args.db) args.db = path.join(path.dirname(args.spacesDir), 'di.db')
+    // Same for restore points: <data root>/snapshots (spaceStore.js).
+    if (!args.snapshotsDir) args.snapshotsDir = path.join(path.dirname(args.spacesDir), 'snapshots')
     return args
 }
 
@@ -140,18 +150,39 @@ const collectReferencedHashes = async (spaceDir) => {
     return referenced
 }
 
-const gcSpace = async (spacesDir, spaceId, apply, opLogHashes) => {
+// Every 64-hex run in a space's kept restore points. A snapshot names an image
+// wherever the document does — asset lists, markup, manifests — so, as with
+// the op-log, any hash anywhere in the file counts.
+const collectSnapshotHashes = async (snapshotsDir, spaceId) => {
+    const hashes = new Set()
+    const dir = path.join(snapshotsDir, spaceId)
+    for (const name of await listFileNames(dir)) {
+        if (!name.endsWith('.json')) continue
+        const raw = await fs.readFile(path.join(dir, name), 'utf8').catch(() => '')
+        for (const match of raw.matchAll(/[a-f0-9]{64}/gi)) hashes.add(match[0].toLowerCase())
+    }
+    return hashes
+}
+
+const gcSpace = async (spacesDir, spaceId, apply, opLogHashes, snapshotsDir) => {
     const spaceDir = path.join(spacesDir, spaceId)
     const blobsDir = path.join(spaceDir, 'blobs')
     const blobs = (await listFileNames(blobsDir)).filter((name) => SHA256_HEX_REGEX.test(name))
-    if (!blobs.length) return { spaceId, blobs: 0, removed: 0, freedBytes: 0, heldByOps: 0 }
+    if (!blobs.length) return { spaceId, blobs: 0, removed: 0, freedBytes: 0, heldByOps: 0, heldBySnapshots: 0 }
 
     const referenced = await collectReferencedHashes(spaceDir)
+    const snapshotHashes = await collectSnapshotHashes(snapshotsDir, spaceId)
     let removed = 0
     let freedBytes = 0
     let heldByOps = 0
+    let heldBySnapshots = 0
     for (const blob of blobs) {
         if (referenced.has(blob.toLowerCase())) continue
+        if (snapshotHashes.has(blob.toLowerCase())) {
+            heldBySnapshots += 1
+            console.log(`held by a restore point ${spaceId}/blobs/${blob}`)
+            continue
+        }
         if (opLogHashes.has(blob.toLowerCase())) {
             heldByOps += 1
             console.log(`held by op-log ${spaceId}/blobs/${blob}`)
@@ -164,7 +195,7 @@ const gcSpace = async (spacesDir, spaceId, apply, opLogHashes) => {
         removed += 1
         freedBytes += size
     }
-    return { spaceId, blobs: blobs.length, removed, freedBytes, heldByOps }
+    return { spaceId, blobs: blobs.length, removed, freedBytes, heldByOps, heldBySnapshots }
 }
 
 const main = async () => {
@@ -191,13 +222,16 @@ const main = async () => {
     let totalRemoved = 0
     let totalFreed = 0
     let totalHeld = 0
+    let totalHeldBySnapshots = 0
     for (const spaceId of spaceIds) {
-        const result = await gcSpace(args.spacesDir, spaceId, args.apply, opLogHashes)
+        const result = await gcSpace(args.spacesDir, spaceId, args.apply, opLogHashes, args.snapshotsDir)
         totalRemoved += result.removed
         totalFreed += result.freedBytes
         totalHeld += result.heldByOps
+        totalHeldBySnapshots += result.heldBySnapshots
     }
     if (totalHeld) console.log(`${totalHeld} blob(s) unreferenced on disk but held by the op-log — left in place.`)
+    if (totalHeldBySnapshots) console.log(`${totalHeldBySnapshots} blob(s) held only by a restore point — left in place.`)
     console.log(`${args.apply ? 'Removed' : 'Would remove'} ${totalRemoved} blob(s), ${totalFreed} bytes${args.apply ? '' : ' (dry run — pass --apply to delete)'}`)
 }
 

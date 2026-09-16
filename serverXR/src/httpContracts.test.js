@@ -3526,3 +3526,317 @@ describe('a space\'s contents', () => {
         expect(authoredIds).toEqual([archived.id, draft.id, legacy.id, live.id].sort())
     })
 })
+
+// The safety net (2026-09-16): every change has an author the SERVER stamped,
+// every space keeps restore points, and a non-owner's burst of edits reaches
+// the inner bot as one signed notice with an Undo. See spaceHistory.js.
+describe('space history: authors, restore points, notices', () => {
+    const OWNER = 'hist-owner'
+    const EDITOR = 'hist-emilya'
+
+    const setupSpace = async (server, spaceId = 'hist-space') => {
+        await createSpaceWithScene(server, { spaceId, scene: { objects: [{ id: 'floor' }], assets: [] } })
+        seedAccount(server, OWNER)
+        seedAccount(server, EDITOR)
+        const db = new DatabaseSync(path.join(server.dataRoot, 'di.db'))
+        db.prepare('UPDATE spaces SET owner_user_id = ? WHERE id = ?').run(OWNER, spaceId)
+        db.prepare('UPDATE users SET spaces = ? WHERE id IN (?, ?)').run(JSON.stringify([spaceId]), OWNER, EDITOR)
+        db.close()
+        return { spaceId, owner: mintSessionCookie(OWNER), editor: mintSessionCookie(EDITOR) }
+    }
+
+    const readRows = (server, sql, ...params) => {
+        const db = new DatabaseSync(path.join(server.dataRoot, 'di.db'), { readOnly: true })
+        try { return db.prepare(sql).all(...params) } finally { db.close() }
+    }
+
+    const sceneVersion = async (server, spaceId, cookie) => {
+        const res = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/scene`, { headers: { Cookie: cookie } })
+        return (await res.json())
+    }
+
+    const postOps = async (server, spaceId, cookie, ops) => {
+        const current = await sceneVersion(server, spaceId, cookie)
+        const res = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ baseVersion: current.version, ops, actor: { subject: 'forged-body' } })
+        })
+        expect(res.status).toBe(200)
+        return res.json()
+    }
+
+    const listSnapshots = async (server, spaceId, cookie) => {
+        const res = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/snapshots`, { headers: { Cookie: cookie } })
+        expect(res.status).toBe(200)
+        return (await res.json()).snapshots
+    }
+
+    it('stamps the author from the session on every write path and ignores one the client sends', async () => {
+        const server = await startServer({ requireAuth: true })
+        const { spaceId, owner, editor } = await setupSpace(server)
+
+        await postOps(server, spaceId, editor, [{
+            opId: 'forged-1',
+            type: 'addObject',
+            actor: { subject: 'someone-else', label: 'Not me' },
+            payload: { object: { id: 'emilya-cube' } }
+        }])
+        const spaceRows = readRows(server, "SELECT actor, actor_type, actor_label, data FROM space_ops WHERE space_id = ? AND data LIKE '%forged-1%'", spaceId)
+        expect(spaceRows).toHaveLength(1)
+        expect(spaceRows[0]).toMatchObject({ actor: EDITOR, actor_type: 'session', actor_label: EDITOR })
+        // The op a client reads back is the shape it always was: no actor in it.
+        expect(JSON.parse(spaceRows[0].data).actor).toBeUndefined()
+
+        const put = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/scene`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Cookie: owner },
+            body: JSON.stringify({ objects: [{ id: 'floor' }], assets: [], actor: 'forged' })
+        })
+        expect(put.status).toBe(200)
+        const replaceRow = readRows(server, "SELECT actor FROM space_ops WHERE space_id = ? AND data LIKE '%replaceScene%' ORDER BY seq DESC LIMIT 1", spaceId)
+        expect(replaceRow[0].actor).toBe(OWNER)
+
+        const project = await createServerProject(server, spaceId, { title: 'Page', slug: 'hist-page' })
+        const opsRes = await fetch(`${server.baseUrl}/api/projects/${project.id}/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: editor },
+            body: JSON.stringify({ baseVersion: project.documentVersion || 0, ops: [{ opId: 'p-forged', type: 'setProjectMeta', actor: 'x', payload: { patch: { title: 'Renamed' } } }] })
+        })
+        expect(opsRes.status).toBe(200)
+        const docRes = await fetch(`${server.baseUrl}/api/projects/${project.id}/document`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Cookie: owner },
+            body: JSON.stringify({ projectMeta: { title: 'Replaced' }, entities: [], actor: 'forged' })
+        })
+        expect(docRes.status).toBe(200)
+        const projectRows = readRows(server, 'SELECT actor, data FROM project_ops WHERE project_id = ? ORDER BY seq ASC', project.id)
+        expect(projectRows.map((r) => [JSON.parse(r.data).type, r.actor])).toEqual([
+            ['setProjectMeta', EDITOR],
+            ['replaceDocument', OWNER]
+        ])
+    })
+
+    it('takes restore points before whole replaces and before a new author’s first change', async () => {
+        const server = await startServer({ requireAuth: true })
+        const { spaceId, owner, editor } = await setupSpace(server)
+
+        await postOps(server, spaceId, owner, [{ type: 'addObject', payload: { object: { id: 'owner-1' } } }])
+        await postOps(server, spaceId, owner, [{ type: 'addObject', payload: { object: { id: 'owner-2' } } }])
+        await postOps(server, spaceId, editor, [{ type: 'addObject', payload: { object: { id: 'emilya-1' } } }])
+        await postOps(server, spaceId, editor, [{ type: 'addObject', payload: { object: { id: 'emilya-2' } } }])
+
+        let snapshots = await listSnapshots(server, spaceId, owner)
+        // Newest first: Emilya's first change, then the owner's first (the API
+        // token's PUT at setup is a third author, and a whole replace).
+        expect(snapshots.slice(0, 2).map((s) => [s.reason, s.actor?.subject])).toEqual([
+            ['before-change', EDITOR],
+            ['before-change', OWNER]
+        ])
+        expect(snapshots.some((s) => s.reason === 'before-scene-replace')).toBe(true)
+        // Emilya's point is the room before her: the owner's two objects, not hers.
+        expect(snapshots[0].objects).toBe(3)
+
+        const project = await createServerProject(server, spaceId, { title: 'Doc', slug: 'hist-doc' })
+        await fetch(`${server.baseUrl}/api/projects/${project.id}/document`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Cookie: owner },
+            body: JSON.stringify({ projectMeta: { title: 'Doc' }, entities: [] })
+        })
+        snapshots = await listSnapshots(server, spaceId, owner)
+        expect(snapshots[0]).toMatchObject({ reason: 'before-document-replace', actor: { subject: OWNER } })
+
+        // A person who does not own the space does not read its history.
+        const denied = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/snapshots`, { headers: { Cookie: editor } })
+        expect(denied.status).toBe(403)
+    })
+
+    it('restores a restore point by id, and the restore takes its own point first', async () => {
+        const server = await startServer({ requireAuth: true })
+        const { spaceId, owner, editor } = await setupSpace(server)
+
+        await postOps(server, spaceId, editor, [{ type: 'addObject', payload: { object: { id: 'emilya-1' } } }])
+        await postOps(server, spaceId, owner, [{ type: 'addObject', payload: { object: { id: 'owner-after' } } }])
+        const beforeEmilya = (await listSnapshots(server, spaceId, owner))
+            .find((s) => s.reason === 'before-change' && s.actor?.subject === EDITOR)
+        expect(beforeEmilya).toBeTruthy()
+
+        const missing = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/restore-snapshot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: owner },
+            body: JSON.stringify({ snapshotId: '2001-01-01T00-00-00-000Z' })
+        })
+        expect(missing.status).toBe(404)
+        const byEditor = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/restore-snapshot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: editor },
+            body: JSON.stringify({ snapshotId: beforeEmilya.id })
+        })
+        expect(byEditor.status).toBe(403)
+
+        const restore = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/restore-snapshot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: owner },
+            body: JSON.stringify({ snapshotId: beforeEmilya.id })
+        })
+        expect(restore.status).toBe(200)
+        const restored = await restore.json()
+        expect(restored).toMatchObject({ ok: true, snapshotId: beforeEmilya.id })
+        expect(restored.restorePoint).toBeTruthy()
+
+        const scene = await sceneVersion(server, spaceId, owner)
+        const ids = scene.scene.objects.map((o) => o.id)
+        expect(ids).toContain('floor')
+        expect(ids).not.toContain('emilya-1')
+        expect(ids).not.toContain('owner-after')
+
+        const after = await listSnapshots(server, spaceId, owner)
+        expect(after[0]).toMatchObject({ id: restored.restorePoint, reason: 'before-restore', actor: { subject: OWNER } })
+        // …which is a way back from the restore itself.
+        expect(after[0].objects).toBe(3)
+        const replaceRow = readRows(server, "SELECT actor FROM space_ops WHERE space_id = ? AND data LIKE '%replaceScene%' ORDER BY seq DESC LIMIT 1", spaceId)
+        expect(replaceRow[0].actor).toBe(OWNER)
+    })
+
+    it('summarizes changes by author and burst', async () => {
+        const server = await startServer({ requireAuth: true })
+        const { spaceId, owner, editor } = await setupSpace(server)
+        const since = Date.now()
+        await postOps(server, spaceId, owner, [{ type: 'addObject', payload: { object: { id: 'o1' } } }])
+        await postOps(server, spaceId, editor, [
+            { type: 'addObject', payload: { object: { id: 'e1', type: 'image' } } },
+            { type: 'deleteObject', payload: { objectId: 'o1' } }
+        ])
+        const res = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/changes?since=${since - 1}`, { headers: { Cookie: owner } })
+        expect(res.status).toBe(200)
+        const { changes } = await res.json()
+        expect(changes.map((c) => c.actor.subject)).toEqual([OWNER, EDITOR])
+        expect(changes[1].text).toBe(`${EDITOR} · ${spaceId} (scene) · +1 image, 1 object removed`)
+        const bad = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/changes?since=yesterday-ish`, { headers: { Cookie: owner } })
+        expect(bad.status).toBe(400)
+    })
+
+    const startFakeBot = async () => {
+        const { createServer } = await import('node:http')
+        const received = []
+        const bot = createServer((req, res) => {
+            let body = ''
+            req.on('data', (chunk) => { body += chunk })
+            req.on('end', () => {
+                received.push({ path: req.url, headers: req.headers, body })
+                res.writeHead(200, { 'Content-Type': 'application/json' })
+                res.end('{"ok":true}')
+            })
+        })
+        await new Promise((resolve) => bot.listen(0, '127.0.0.1', resolve))
+        const url = `http://127.0.0.1:${bot.address().port}`
+        return { url, received, close: () => new Promise((resolve) => bot.close(resolve)) }
+    }
+
+    const sign = async (secret, body) => {
+        const crypto = await import('node:crypto')
+        const ts = String(Date.now())
+        return { ts, sig: crypto.createHmac('sha256', secret).update(`${ts}.${body}`).digest('hex') }
+    }
+
+    it('sends one signed notice for a non-owner burst, and the signed Undo restores', async () => {
+        const secret = 'history-notice-secret'
+        const bot = await startFakeBot()
+        try {
+            const server = await startServer({
+                requireAuth: true,
+                extraEnv: {
+                    CONTENT_CHANGE_NOTICES_ENABLED: 'true',
+                    APPROVAL_BOT_URL: bot.url,
+                    APPROVAL_SHARED_SECRET: secret,
+                    // Long, so timing never splits the burst on a loaded machine
+                    // (600ms did, under the full suite). The burst is closed below
+                    // by the owner starting to edit — the other way one ends.
+                    CONTENT_BURST_GAP_MS: '60000',
+                    SITE_ORIGIN: 'https://diiii.test'
+                }
+            })
+            const { spaceId, owner, editor } = await setupSpace(server)
+            await postOps(server, spaceId, owner, [{ type: 'addObject', payload: { object: { id: 'owner-1' } } }])
+            await postOps(server, spaceId, editor, [{ type: 'addObject', payload: { object: { id: 'e1', type: 'image' } } }])
+            await postOps(server, spaceId, editor, [{ type: 'addObject', payload: { object: { id: 'e2', type: 'image' } } }])
+            // Someone else starts: Emilya's burst is over, and its notice goes.
+            await postOps(server, spaceId, owner, [{ type: 'updateObject', payload: { objectId: 'owner-1', patch: {} } }])
+
+            const deadline = Date.now() + 10000
+            while (!bot.received.some((r) => r.body.includes(EDITOR)) && Date.now() < deadline) await wait(100)
+            await wait(500) // room for a second (wrong) notice to show up
+            // Only Emilya's: the API token that seeded the scene is another
+            // non-owner author, and may get a notice of its own.
+            const notices = bot.received.filter((r) => r.path === '/content-changed' && JSON.parse(r.body).actor?.subject === EDITOR)
+            expect(notices).toHaveLength(1)
+            const [notice] = notices
+            const expected = (await import('node:crypto')).createHmac('sha256', secret)
+                .update(`${notice.headers['x-dii-timestamp']}.${notice.body}`).digest('hex')
+            expect(notice.headers['x-dii-signature']).toBe(`sha256=${expected}`)
+            const payload = JSON.parse(notice.body)
+            expect(payload).toMatchObject({
+                kind: 'content.changed',
+                space: { id: spaceId, ownerUserId: OWNER },
+                actor: { subject: EDITOR, type: 'session' },
+                summary: { text: `${EDITOR} · Asset Space (scene) · +2 images` },
+                link: `https://diiii.test/${spaceId}`,
+                undo: { method: 'POST', path: '/api/content-changes/undo' }
+            })
+
+            const undoBody = JSON.stringify({ ...payload.undo.body, decidedBy: 'dob' })
+            const unsigned = await fetch(`${server.baseUrl}/api/content-changes/undo`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: undoBody
+            })
+            expect(unsigned.status).toBe(401)
+            const forged = await sign('not-the-secret', undoBody)
+            const wrongKey = await fetch(`${server.baseUrl}/api/content-changes/undo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-DII-Timestamp': forged.ts, 'X-DII-Signature': `sha256=${forged.sig}` },
+                body: undoBody
+            })
+            expect(wrongKey.status).toBe(401)
+
+            const { ts, sig } = await sign(secret, undoBody)
+            const undo = await fetch(`${server.baseUrl}/api/content-changes/undo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-DII-Timestamp': ts, 'X-DII-Signature': `sha256=${sig}` },
+                body: undoBody
+            })
+            expect(undo.status).toBe(200)
+            const ids = (await sceneVersion(server, spaceId, owner)).scene.objects.map((o) => o.id)
+            expect(ids).toContain('owner-1')
+            expect(ids).not.toContain('e1')
+            expect(ids).not.toContain('e2')
+            const undoRow = readRows(server, "SELECT actor, actor_type FROM space_ops WHERE space_id = ? AND data LIKE '%replaceScene%' ORDER BY seq DESC LIMIT 1", spaceId)
+            expect(undoRow[0]).toEqual({ actor: 'server:undo', actor_type: 'server' })
+        } finally {
+            await bot.close()
+        }
+    })
+
+    it('sends nothing and answers no Undo unless notices are turned on', async () => {
+        const secret = 'history-off-secret'
+        const bot = await startFakeBot()
+        try {
+            const server = await startServer({
+                requireAuth: true,
+                extraEnv: { APPROVAL_BOT_URL: bot.url, APPROVAL_SHARED_SECRET: secret, CONTENT_BURST_GAP_MS: '300' }
+            })
+            const { spaceId, editor } = await setupSpace(server)
+            await postOps(server, spaceId, editor, [{ type: 'addObject', payload: { object: { id: 'e1' } } }])
+            await wait(1000)
+            expect(bot.received).toHaveLength(0)
+            const body = JSON.stringify({ spaceId, snapshotId: '2026-09-16T10-00-00-000Z' })
+            const { ts, sig } = await sign(secret, body)
+            const undo = await fetch(`${server.baseUrl}/api/content-changes/undo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-DII-Timestamp': ts, 'X-DII-Signature': `sha256=${sig}` },
+                body
+            })
+            expect(undo.status).toBe(404)
+        } finally {
+            await bot.close()
+        }
+    })
+})

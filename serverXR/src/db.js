@@ -551,6 +551,20 @@ function initDb(dbPath) {
   ensureColumn(db, 'space_chat_lines', 'reply_to_id', 'TEXT')
   ensureColumn(db, 'space_chat_lines', 'reply_to_name', 'TEXT')
   ensureColumn(db, 'space_chat_lines', 'reply_to_text', 'TEXT')
+  // Who made each change, stamped by the server from the session that sent
+  // it — never read from the op a client sent. `actor` is the subject (or
+  // `server:<reason>` for a change the server made itself), `actor_type` the
+  // kind of identity, `actor_label` the name a person reads. NULL on every
+  // row written before 2026-09-16: that history has no author, and saying so
+  // is more honest than guessing one. No SCHEMA_VERSION bump: three nullable
+  // columns are invisible to an older build (see the note on SCHEMA_VERSION).
+  for (const table of ['space_ops', 'project_ops']) {
+    ensureColumn(db, table, 'actor', 'TEXT')
+    ensureColumn(db, table, 'actor_type', 'TEXT')
+    ensureColumn(db, table, 'actor_label', 'TEXT')
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_space_ops_created ON space_ops(space_id, created_at)')
+  db.exec('CREATE INDEX IF NOT EXISTS idx_project_ops_created ON project_ops(project_id, created_at)')
   backfillUserUnrestricted(db)
   backfillArchivedTitles(db)
   backfillGlobalSpace(db)

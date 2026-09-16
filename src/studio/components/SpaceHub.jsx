@@ -15,7 +15,9 @@ import {
     getServerSpaceAssetUrl,
     mintSpaceInvite,
     saveSpaceToFile,
-    openSpaceFromFile
+    openSpaceFromFile,
+    listSpaceSnapshots,
+    restoreSpaceSnapshot
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
@@ -62,6 +64,28 @@ const requestPreviewBoot = createPreviewBootQueue(SPACE_CARD_BOOT_SLOTS)
 // The backstop is what `load` should have been: a card that never reports is
 // eventually let go so a broken page cannot starve everyone behind it.
 const PREVIEW_PAINT_BACKSTOP_MS = 12000
+
+// History rows. A restore point is taken BEFORE somebody's change, so the name
+// on it is whose change it guards against: "before Emilya's change".
+const formatRestorePointTime = (iso) => {
+    const date = iso ? new Date(iso) : null
+    if (!date || Number.isNaN(date.getTime())) return 'at an unknown time'
+    return date.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+const describeRestorePoint = (point) => {
+    const who = point?.actor?.type === 'server' ? null : (point?.actor?.label || null)
+    switch (point?.reason) {
+        case 'before-change': return who ? `before ${who}'s change` : 'before a change'
+        case 'before-scene-replace': return who ? `before ${who} replaced the scene` : 'before the scene was replaced'
+        case 'before-document-replace': return who ? `before ${who} replaced a project` : 'before a project was replaced'
+        case 'before-restore': return who ? `before ${who} restored an earlier point` : 'before an undo'
+        case 'before-sync-pull': return who ? `before ${who} pulled from another copy` : 'before a pull from another copy'
+        case 'before-bundle-import': return 'before a file was opened over it'
+        case 'daily': return 'daily'
+        default: return who ? `saved (${who})` : 'saved'
+    }
+}
 
 // Preview iframes lay out at this virtual desktop viewport and are scaled
 // down with a CSS transform to fit the card — an iframe laid out at the
@@ -266,6 +290,8 @@ export default function SpaceHub() {
     const [github, setGithub] = useState(null)
     // card-preview manager panel state: { spaceId, busy, error }
     const [previewMgr, setPreviewMgr] = useState(null)
+    // History: the space's restore points, opened from Manage.
+    const [history, setHistory] = useState(null)
     const [providers, setProviders] = useState(null) // null until sign-in requested
     const [copiedLiveId, setCopiedLiveId] = useState(null)
     // Spaces whose cover image failed to load — see the card preview below.
@@ -601,6 +627,37 @@ export default function SpaceHub() {
         e.stopPropagation()
         setPreviewMgr(prev => prev?.spaceId === space.id ? null : { spaceId: space.id, busy: false, error: '' })
     }, [])
+
+    const loadHistory = useCallback(async (spaceId) => {
+        setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: true, error: '' } : prev)
+        try {
+            const items = await listSpaceSnapshots(spaceId)
+            setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, items } : prev)
+        } catch (err) {
+            setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, error: err.message || 'Could not load the history.' } : prev)
+        }
+    }, [])
+
+    const handleToggleHistory = useCallback((space, e) => {
+        e.stopPropagation()
+        if (history?.spaceId === space.id) { setHistory(null); return }
+        setHistory({ spaceId: space.id, loading: true, error: '', items: [], busyId: null, notice: '' })
+        loadHistory(space.id)
+    }, [history, loadHistory])
+
+    const handleRestoreSnapshot = useCallback(async (space, point) => {
+        const when = formatRestorePointTime(point.takenAt)
+        if (!window.confirm(`Put "${space.label || space.id}" back to how it was ${when}?\n\nWhat is there now is kept as a restore point, so this can be undone too.`)) return
+        setHistory(prev => prev ? { ...prev, busyId: point.id, error: '', notice: '' } : prev)
+        try {
+            await restoreSpaceSnapshot(space.id, point.id)
+            setHistory(prev => prev ? { ...prev, busyId: null, notice: `Restored to ${when}.` } : prev)
+            await loadHistory(space.id)
+            await loadSpaces()
+        } catch (err) {
+            setHistory(prev => prev ? { ...prev, busyId: null, error: err.message || 'Could not restore.' } : prev)
+        }
+    }, [loadHistory, loadSpaces])
 
     const handleUseLivePreview = useCallback(async (space) => {
         setPreviewMgr(prev => prev ? { ...prev, busy: true, error: '' } : prev)
@@ -1163,6 +1220,13 @@ export default function SpaceHub() {
                                                 GitHub sync
                                             </button>
                                             <button
+                                                className={`ssh-card-btn${history?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                                onClick={e => handleToggleHistory(space, e)}
+                                                title="Restore points: who changed this space, and a way back to before"
+                                            >
+                                                History
+                                            </button>
+                                            <button
                                                 className="ssh-card-btn"
                                                 onClick={e => handleSaveToFile(space, e)}
                                                 title="One file holding this space, its history and its assets — open it on any di.iiii"
@@ -1213,6 +1277,47 @@ export default function SpaceHub() {
                                                     </button>
                                                 )}
                                                 <button className="ssh-card-btn" onClick={() => setPreviewMgr(null)}>
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {history?.spaceId === space.id && (
+                                        <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                            {history.loading && <p className="ssh-linker-status">Loading history…</p>}
+                                            {history.error && <p className="ssh-linker-status ssh-linker-error">{history.error}</p>}
+                                            {history.notice && <p className="ssh-linker-status">{history.notice}</p>}
+                                            {!history.loading && !history.error && history.items.length === 0 && (
+                                                <p className="ssh-linker-status">No restore points yet — one is kept before every change someone makes here.</p>
+                                            )}
+                                            {!history.loading && history.items.length > 0 && (
+                                                <div className="ssh-linker-list">
+                                                    {history.items.map(point => {
+                                                        const when = formatRestorePointTime(point.takenAt)
+                                                        const what = describeRestorePoint(point)
+                                                        // Two lines, not one ellipsis: on a card this narrow a
+                                                        // single line cut off the one thing a row is for — whose.
+                                                        return (
+                                                            <div key={point.id} className="ssh-linker-item">
+                                                                <span className="ssh-linker-select" title={`${when} · ${what}`}>
+                                                                    <span>{when}<br />{what}</span>
+                                                                </span>
+                                                                <button
+                                                                    className="ssh-linker-rename-btn"
+                                                                    disabled={Boolean(history.busyId)}
+                                                                    onClick={() => handleRestoreSnapshot(space, point)}
+                                                                    title="Put the space back to this point"
+                                                                >
+                                                                    {history.busyId === point.id ? 'Restoring…' : 'Restore'}
+                                                                </button>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                            <div className="ssh-linker-footer">
+                                                <button className="ssh-card-btn" onClick={() => setHistory(null)}>
                                                     Close
                                                 </button>
                                             </div>

@@ -19,6 +19,7 @@
  * the STATUS read — is fine for a read. It is never acceptable on a write path.
  */
 const { httpRequest: defaultHttpRequest } = require('../httpClient')
+const { actorFromAuthState } = require('../opActor')
 
 function registerSyncRoutes(router, {
   config,
@@ -178,11 +179,13 @@ function registerSyncRoutes(router, {
       // Before, not after: if anything below is wrong, the artist still has
       // the scene they had, and this response says where it is.
       let snapshot = null
+      const actor = actorFromAuthState(req.authState)
       if (typeof snapshotSpaceScene === 'function') {
         try {
           // Returns the path of the file it wrote, or null if there was no
-          // local scene to snapshot yet.
-          snapshot = await snapshotSpaceScene(spaceId, { keep: 7 })
+          // local scene to snapshot yet. A restore point like any other —
+          // listed in the space's history, kept by the same retention.
+          snapshot = await snapshotSpaceScene(spaceId, { reason: 'before-sync-pull', actor })
         } catch {
           return res.status(500).json({ error: 'Could not snapshot the local scene before pulling; nothing was written.' })
         }
@@ -195,7 +198,7 @@ function registerSyncRoutes(router, {
       // the local counter, with no op-log entry and no SSE broadcast --
       // connected clients silently stopped seeing pulled scenes live and
       // could hit spurious version mismatches afterward (audit 2026-07-17).
-      const result = await replaceSceneAndBroadcast(spaceId, remote.scene, { expectedVersion })
+      const result = await replaceSceneAndBroadcast(spaceId, remote.scene, { expectedVersion, actor, restoreReason: null })
       if (result.conflict) {
         return res.status(409).json({
           error: 'The local scene moved since you looked. Nothing was written.',

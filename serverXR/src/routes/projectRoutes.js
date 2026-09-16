@@ -8,6 +8,7 @@ const { createKeyedLock } = require('../asyncLock')
 const { applyAssetSafetyHeaders } = require('../spaceStore')
 const { findIdlessCreateOp } = require('../opValidation')
 const { placeOps } = require('../../../shared/placement.cjs')
+const { actorFromAuthState } = require('../opActor')
 
 const withProjectLock = createKeyedLock()
 
@@ -56,7 +57,9 @@ function registerProjectRoutes(router, {
   upsertProjectMeta,
   writeJson,
   writeProjectDocument,
-  blankProjectDocument
+  blankProjectDocument,
+  // spaceHistory.js — restore points before changes. Absent means none.
+  spaceHistory = null
 }) {
   router.get('/api/spaces/:spaceId/projects', async (req, res, next) => {
     try {
@@ -426,6 +429,7 @@ function registerProjectRoutes(router, {
         return res.status(404).json({ error: 'Project not found.' })
       }
       await ensureSpaceWritable(project.spaceId)
+      const actor = actorFromAuthState(req.authState)
       // Serialized per project: without this, a full-document PUT racing a
       // concurrent POST /ops (or another PUT) can interleave its read-modify-
       // write with theirs and silently clobber the other's change — the lock
@@ -437,6 +441,8 @@ function registerProjectRoutes(router, {
         // acquired it and may already be stale.
         const fresh = await resolveProjectContext(project.projectId)
         if (!fresh) return null
+        // A whole replace always keeps a way back to what it replaces.
+        if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor, { reason: 'before-document-replace' })
         const document = normalizeProjectDocument(req.body || blankProjectDocument)
         const currentVersion = Number(fresh.meta?.documentVersion) || 0
         const nextVersion = currentVersion + 1
@@ -456,7 +462,7 @@ function registerProjectRoutes(router, {
           version: nextVersion,
           timestamp: Date.now()
         }
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory, maxOpAgeMs)
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory, maxOpAgeMs, actor)
         const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
           title: document.projectMeta.title,
           documentVersion: nextVersion
@@ -552,6 +558,11 @@ function registerProjectRoutes(router, {
         })
       }
 
+      // The author, from the session — never from the ops — and, at the first
+      // change of a new burst in this space, a restore point before it lands.
+      const actor = actorFromAuthState(req.authState)
+      if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor)
+
       // Serialized per project: the version check and the read-modify-write
       // it guards must be one atomic step, or two concurrent requests at the
       // same baseVersion both pass the check and both write, one silently
@@ -614,7 +625,7 @@ function registerProjectRoutes(router, {
           updatedAt: Date.now()
         }
         await writeProjectDocument(spacesDir, project.spaceId, project.projectId, nextDocument)
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory, maxOpAgeMs)
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory, maxOpAgeMs, actor)
         const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
           title: nextDocument.projectMeta.title,
           documentVersion: nextVersion
