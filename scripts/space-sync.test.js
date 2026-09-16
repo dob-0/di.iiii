@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { ENGINE_VERSION, globToRe, matchGlobs, parseArgs, tierKey, tierOf, SPACE_FIELDS, TIER_FIELDS } from './space-sync.mjs'
+import { ENGINE_VERSION, globToRe, matchGlobs, normalizeTiers, parseArgs, tierKey, tierOf, SPACE_FIELDS, TIER_FIELDS } from './space-sync.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const ENGINE = path.join(ROOT_DIR, 'scripts', 'space-sync.mjs')
@@ -114,6 +114,14 @@ describe('space-sync engine', () => {
         expect(tierKey('prod')).toBe('prod')
         expect(tierKey('nope')).toBe('nope')
         expect(() => tierKey('staging')).toThrow('"staging" is now "dev"')
+    })
+
+    it('reads a pre-v7 manifest key tiers.staging as dev, so linked repos keep syncing', () => {
+        const url = 'https://dev.diiii.xyz/serverXR'
+        expect(normalizeTiers({ prod: { url: 'p' }, staging: { url } })).toEqual({ prod: { url: 'p' }, dev: { url } })
+        expect(normalizeTiers({ dev: { url }, staging: { url: 'old' } })).toEqual({ dev: { url }, staging: { url: 'old' } })
+        expect(normalizeTiers({ prod: { url: 'p' } })).toEqual({ prod: { url: 'p' } })
+        expect(normalizeTiers(undefined)).toBeUndefined()
     })
 
     it('treats an empty page list as a space-only declaration, not an error', async () => {

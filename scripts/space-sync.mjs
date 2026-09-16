@@ -97,8 +97,9 @@ const parseArgs = (argv) => {
  * drift). Anything else that differs is a fault the audit reports. A tier with
  * `governed:false` — the dev box — is shown and never enforced or failed on.
  *
- * The dev tier (dev.diiii.xyz) is keyed `dev` in every manifest (v7 — it was
- * `staging` before; a v6 copy reading a v7 manifest refuses on minEngine).
+ * The dev tier (dev.diiii.xyz) is keyed `dev` (v7 — it was `staging` before).
+ * A manifest that still says `tiers.staging` is read as `dev`, so the linked
+ * repos keep syncing until their manifests are edited; the CLI value
  * `--tier staging` is refused with a pointer, never mapped.
  */
 const SPACE_MANIFEST = 'di-space.space.json'
@@ -111,10 +112,17 @@ const tierOf = (liveUrl, tiers) => {
   return host || 'unknown'
 }
 
-// A tier name is its manifest key. The dev tier's old key is refused outright.
+// A tier name is its manifest key. The dev tier's old name is refused on the CLI.
 const tierKey = (name) => {
   if (name === 'staging') throw new Error('"staging" is now "dev"')
   return name
+}
+
+// A manifest written before v7 keys the dev tier `staging`: read it as `dev`.
+const normalizeTiers = (tiers) => {
+  if (!tiers || !tiers.staging || tiers.dev) return tiers
+  const { staging, ...rest } = tiers
+  return { ...rest, dev: staging }
 }
 
 // Fields the repo is master for. Kept in one list so the reconcile, the audit
@@ -648,7 +656,10 @@ async function main() {
 
   const spaceManifestPath = path.resolve(args.space || path.join(repoDir, SPACE_MANIFEST))
   let spaceDecl = null
-  try { spaceDecl = JSON.parse(await fs.readFile(spaceManifestPath, 'utf8')) }
+  try {
+    spaceDecl = JSON.parse(await fs.readFile(spaceManifestPath, 'utf8'))
+    if (spaceDecl?.tiers) spaceDecl.tiers = normalizeTiers(spaceDecl.tiers)
+  }
   catch (e) {
     if (args.all || args.audit || args.space) {
       console.error(`Cannot read space manifest at ${spaceManifestPath}: ${e.message}`)
@@ -728,7 +739,7 @@ async function main() {
   }
 }
 
-export { referencesAsset, rewriteAssetRefs, matchGlobs, globToRe, tierOf, tierKey, parseArgs, SPACE_FIELDS, TIER_FIELDS, SPACE_MANIFEST }
+export { referencesAsset, rewriteAssetRefs, matchGlobs, globToRe, tierOf, tierKey, normalizeTiers, parseArgs, SPACE_FIELDS, TIER_FIELDS, SPACE_MANIFEST }
 
 // Only run when invoked as a script, so the helpers above can be unit-tested.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
