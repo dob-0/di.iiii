@@ -1,0 +1,77 @@
+/* henry — the only DOM in the piece.
+ *
+ * There is exactly one interface element and it removes itself after seven
+ * seconds. Everything else the visitor needs to know is in the world: the ring
+ * on the ground says "here", the camera says "look up", and nothing else is
+ * asked of them. A persistent HUD over these references would be the loudest
+ * object on screen. */
+
+.henry-root {
+    position: fixed;
+    inset: 0;
+    background: #f9c2d4;
+    overflow: hidden;
+    /* The canvas takes drag for camera yaw, so the browser must not also
+       interpret it as a page gesture on touch. */
+    touch-action: none;
+}
+
+.henry-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+.henry-canvas:active {
+    cursor: grabbing;
+}
+
+.henry-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 8vh;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1.5rem;
+    text-align: center;
+    color: #f7f0e4;
+    /* Never intercepts the drag that turns the camera. */
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 1.8s ease;
+}
+
+.henry-hint--gone {
+    opacity: 0;
+}
+
+.henry-hint__title {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.5rem, 4vw, 2.4rem);
+    font-weight: 400;
+    letter-spacing: 0.32em;
+    /* Lowercase, spaced, unemphatic — the title is a label on the piece, not
+       a logo in front of it. */
+    text-transform: lowercase;
+    text-shadow: 0 1px 12px rgba(46, 107, 107, 0.45);
+}
+
+.henry-hint__line {
+    margin: 0;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: clamp(0.7rem, 1.6vw, 0.85rem);
+    letter-spacing: 0.14em;
+    opacity: 0.78;
+    text-shadow: 0 1px 10px rgba(46, 107, 107, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .henry-hint {
+        transition: none;
+    }
+}

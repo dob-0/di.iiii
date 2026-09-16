@@ -1,0 +1,493 @@
+/*
+ * Poster, not product page. Paper ground, one ink, no shadows, no rounded
+ * corners, no gradients. Anything that looks "designed by software" fights the
+ * hand-drawn lettering, so the only decoration allowed here is a rule and a
+ * slight tilt.
+ */
+
+.garage {
+    --paper: #f1efe9;
+    --ink: #111111;
+    --ink-soft: #6d6a63;
+    --tape: #e2dfd6;
+
+    /* The second marker. Kept in sync with PALETTE in content.js by hand —
+       there are five values and they change roughly never. */
+    --red: #dc3c28;
+    --blue: #2b55d4;
+    --amber: #e8a11c;
+    --green: #2f9163;
+
+    /* Every coloured thing on the page reads --cat, which the data-cat rules
+       below set. One rule per colour instead of one rule per (colour × use). */
+    --cat: var(--ink);
+
+    /* base.css pins html, body and #root to `position: fixed; height: 100%`,
+       so a document page has to be its own scroll container — the same shape
+       src/pages/legal.css and the landing page use. `min-height: 100vh` here
+       silently produces a page that renders correctly and cannot be scrolled. */
+    position: relative;
+    height: 100%;
+    margin: 0;
+    /* No top padding on the scroll container itself: the filter bar sticks to
+       top:0 of the scrollport, and anything the container pads above that line
+       stays visible as a sliver of the card scrolling past behind it. The hero
+       carries the top space instead. */
+    padding: 0 clamp(1rem, 4vw, 3.5rem);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.garage :is(h1, h2, h3, p, dl, dd, figure) { margin: 0; }
+
+[data-cat='clothes'] { --cat: var(--red); }
+[data-cat='electronics'] { --cat: var(--blue); }
+[data-cat='souvenirs'] { --cat: var(--amber); }
+[data-cat='other'] { --cat: var(--green); }
+
+/* "Everything" is not a category and must not own a colour — four coloured
+   labels and a fifth that is just black is the correct hierarchy. But ink at
+   16% behind the text is a grey smudge, not a highlighter, so the swipe alone
+   borrows the yellow every real highlighter is. */
+[data-cat='all'] {
+    --cat: var(--ink);
+    --swipe: var(--amber);
+}
+
+.marker-text {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    color: inherit;
+    overflow: visible;
+}
+
+/* The scroll container is this element, not the body, so the detail sheet
+   locks the page here. */
+.garage.is-locked { overflow: hidden; }
+
+/* ---------- hero ---------- */
+
+.garage-hero { padding-top: clamp(1rem, 3vw, 2.5rem); }
+
+.garage-hero__stage {
+    position: relative;
+    height: clamp(220px, 42vh, 420px);
+    display: grid;
+    place-items: center;
+}
+
+.garage-hero-canvas { position: absolute; inset: 0; }
+
+.garage-hero__flat {
+    display: grid;
+    justify-items: center;
+    gap: 0.2rem;
+}
+
+.garage-hero__intro {
+    display: flex;
+    align-items: flex-end;
+    gap: clamp(1rem, 4vw, 3rem);
+    max-width: 62rem;
+    margin: clamp(0.5rem, 2vw, 1.5rem) auto clamp(1.5rem, 4vw, 3rem);
+    padding-bottom: clamp(1.5rem, 4vw, 3rem);
+    border-bottom: 2px solid var(--ink);
+}
+
+.garage-hero__words {
+    max-width: 44ch;
+    font-size: clamp(1rem, 1.1vw + 0.85rem, 1.35rem);
+    line-height: 1.42;
+}
+
+.garage-hero__intro p + p { margin-top: 0.55em; }
+
+.garage-hero__crew {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0;
+}
+
+.garage-crew {
+    width: clamp(210px, 30vw, 380px);
+    max-width: 100%;
+    height: auto;
+    color: var(--ink);
+}
+
+.garage-hero__crew figcaption {
+    max-width: 26ch;
+    margin-top: 0.6rem;
+    color: var(--ink-soft);
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.5;
+}
+
+/* `currentColor` on the fills means the eyes and the antenna tip follow the
+   stroke without being listed here. */
+.garage-crew__pom { color: var(--red); }
+
+/* The free arms wave, slowly and badly. The linked ones cannot move — the
+   whole point of the drawing is that those hands are held. */
+.garage-crew__arm {
+    transform-origin: 60px 80px;
+    animation: garage-wave 4.5s ease-in-out infinite;
+}
+
+.garage-crew__arm--pom {
+    transform-origin: 313px 146px;
+    animation-delay: -2.4s;
+}
+
+@keyframes garage-wave {
+    0%, 100% { transform: rotate(-3deg); }
+    50% { transform: rotate(4deg); }
+}
+
+/* ---------- filters ---------- */
+
+.garage-filters {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: clamp(0.75rem, 2.5vw, 2rem);
+    padding: 0.85rem 0;
+    background: var(--paper);
+    border-bottom: 2px solid var(--ink);
+}
+
+.garage-filter {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: color 120ms linear;
+}
+
+.garage-filter:hover { color: var(--cat); }
+
+.garage-filter.is-active {
+    color: var(--cat);
+    /* The reference underlines its labels by hand — a border does the same job
+       without pretending to be part of the lettering. */
+    box-shadow: 0 3px 0 -1px var(--cat);
+}
+
+/* A highlighter swipe behind the active label: overshooting the text on one
+   side and stopping short on the other is what makes it look swiped rather
+   than filled. Behind the ink, never over it. */
+.garage-filter.is-active::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 12% -0.45rem 18% -0.3rem;
+    background: var(--swipe, var(--cat));
+    opacity: 0.22;
+    transform: rotate(-0.7deg);
+}
+
+.garage-filter__count {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+}
+
+/* ---------- grid ---------- */
+
+.garage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+    gap: clamp(1.25rem, 3vw, 2.5rem);
+    margin: clamp(1.5rem, 4vw, 3rem) 0;
+    padding: 0;
+    list-style: none;
+}
+
+.garage-card { position: relative; }
+
+/* Nothing on a table is straight. */
+.garage-card:nth-child(3n) { transform: rotate(-0.5deg); }
+.garage-card:nth-child(3n + 1) { transform: rotate(0.4deg); }
+.garage-card:nth-child(5n) { transform: rotate(0.8deg); }
+
+.garage-card__hit {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.garage-card__hit:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+
+.garage-card__photo {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border: 2px solid var(--ink);
+    background: var(--tape);
+    overflow: hidden;
+    transition: transform 160ms ease;
+}
+
+.garage-card__hit:hover .garage-card__photo { transform: translate(-2px, -3px); }
+
+.garage-card__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.garage-card__photo--empty {
+    display: grid;
+    place-items: center;
+    color: var(--ink-soft);
+}
+
+.garage-card__photo--empty svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.garage-card__photo--empty span {
+    position: relative;
+    padding: 0.2rem 0.5rem;
+    background: var(--tape);
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.garage-card__count {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    padding: 0.15rem 0.4rem;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+}
+
+.garage-card__body { display: block; padding-top: 0.6rem; }
+
+.garage-card__title {
+    display: block;
+    font-size: 1.02rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+/* The price is the one thing on a card everybody looks for, so it is the one
+   thing that gets the colour. */
+.garage-card__price {
+    margin: 0.3rem 0 0.25rem;
+    color: var(--cat);
+}
+
+.garage-card__meta {
+    display: block;
+    color: var(--ink-soft);
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1.35;
+}
+
+.garage-stamp {
+    position: absolute;
+    top: 12%;
+    left: 6%;
+    padding: 0.2rem 0.6rem;
+    border: 2px solid currentColor;
+    background: var(--paper);
+    transform: rotate(-9deg);
+    pointer-events: none;
+}
+
+/* Status outranks category here: "on hold" and "gone" mean the same thing on
+   every shelf, so they keep their own colours rather than the category's. */
+.garage-stamp--reserved { color: var(--amber); }
+.garage-stamp--sold { color: var(--red); }
+
+/* Faded, but not so faded the red stamp turns pink and stops reading as a
+   stamp — 0.42 was past that line. */
+.garage-card--sold { opacity: 0.55; }
+.garage-card--sold .garage-card__photo img { filter: grayscale(1); }
+
+/* ---------- detail ---------- */
+
+.garage-detail { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; }
+
+.garage-detail__scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border: 0;
+    background: rgba(17, 17, 17, 0.55);
+    cursor: pointer;
+}
+
+.garage-detail__sheet {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: clamp(1rem, 3vw, 2.5rem);
+    width: min(60rem, calc(100vw - 2rem));
+    max-height: min(86vh, 50rem);
+    overflow-y: auto;
+    padding: clamp(1.25rem, 3vw, 2.25rem);
+    border: 2px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.garage-detail__close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.85rem;
+    padding: 0.25rem;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.garage-detail__photos { display: grid; gap: 0.75rem; align-content: start; }
+
+.garage-detail__photos img {
+    width: 100%;
+    border: 2px solid var(--ink);
+    display: block;
+}
+
+.garage-detail__text h2 { font-size: clamp(1.3rem, 2vw, 1.8rem); line-height: 1.15; }
+
+.garage-detail__text dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.2rem 0.9rem;
+    margin: 0.9rem 0;
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.garage-detail__text dt { color: var(--ink-soft); }
+
+.garage-detail__note { max-width: 34ch; line-height: 1.45; }
+
+.garage-detail__price { color: var(--cat); }
+
+.garage-claim {
+    display: inline-block;
+    margin-top: 1.4rem;
+    padding: 0.55rem 1.1rem;
+    border: 2px solid var(--cat);
+    color: var(--cat);
+    text-decoration: none;
+    transition: background 120ms linear, color 120ms linear;
+}
+
+.garage-claim:hover { background: var(--cat); color: var(--paper); }
+
+.garage-claim--dead {
+    border-style: dashed;
+    color: var(--ink-soft);
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
+
+.garage-detail__pickup {
+    margin-top: 0.8rem;
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+/* ---------- foot ---------- */
+
+.garage-empty {
+    padding: 3rem 0;
+    text-align: center;
+    color: var(--ink-soft);
+}
+
+.garage-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: clamp(1.5rem, 4vw, 3rem) 0;
+    border-top: 2px solid var(--ink);
+}
+
+.garage-foot p {
+    max-width: 62ch;
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.6;
+}
+
+@media (max-width: 52rem) {
+    /* Three figures beside a paragraph shrinks both below usable. Stack. */
+    .garage-hero__intro {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.25rem;
+    }
+
+    .garage-crew { width: min(100%, 26rem); }
+    .garage-hero__crew figcaption { max-width: none; }
+}
+
+@media (max-width: 46rem) {
+    .garage-detail__sheet { grid-template-columns: minmax(0, 1fr); }
+
+    /* Wrapped, five categories cost four lines of a phone screen — and this bar
+       is sticky, so those lines are gone for the whole scroll. One swipeable
+       row instead. */
+    .garage-filters {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        scroll-snap-type: x proximity;
+        margin: 0 calc(-1 * clamp(1rem, 4vw, 3.5rem));
+        padding-inline: clamp(1rem, 4vw, 3.5rem);
+    }
+
+    .garage-filters::-webkit-scrollbar { display: none; }
+    .garage-filter { flex: 0 0 auto; scroll-snap-align: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .garage-crew__arm { animation: none; }
+    .garage-card__hit:hover .garage-card__photo { transform: none; }
+}
