@@ -5643,7 +5643,7 @@
 }
 
 .raw-desk-machine.is-self {
-    border-color: rgba(80, 250, 123, 0.45);
+    border-color: rgba(var(--di-live-rgb), 0.45);
 }
 
 .raw-desk-machine header {
@@ -5705,7 +5705,7 @@
     padding: 0 var(--di-space-2);
     background: transparent;
     color: inherit;
-    border: 1px solid rgba(80, 250, 123, 0.5);
+    border: 1px solid rgba(var(--di-live-rgb), 0.5);
     cursor: pointer;
 }
 
@@ -5966,7 +5966,7 @@
     position: absolute;
     left: 8px;
     box-sizing: border-box;
-    background: #000;
+    background: var(--di-black);
     border: 1px solid rgba(255, 255, 255, 0.08);
     pointer-events: none;
 }
