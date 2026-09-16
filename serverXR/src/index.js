@@ -465,6 +465,24 @@ app.use((req, res, next) => {
   next()
 })
 
+// The rig (serverXR/src/rig, docs/architecture/rig/PROTOCOL-1.md): members of a
+// room know each other in any version. After express.json because the room key
+// signs req.rawBody; after lighting because blackout reaches the desk. A rig that
+// fails to load is logged and left out — it must never cost the server its boot.
+try {
+  require('./rig').createRig({
+    app,
+    dataRoot: config.directories.dataDir,
+    port: config.port,
+    base: '/serverXR',
+    mountPaths: [...new Set([config.mountPath, '/serverXR'])],
+    logger,
+    lighting
+  })
+} catch (error) {
+  logger.warn('[rig] not started', error?.message || error)
+}
+
 // A published code page runs in a sandboxed srcdoc iframe with no
 // allow-same-origin, so its origin is the literal string "null". An ES-module
 // import and a webfont fetch are both CORS-mode requests, and a null origin
