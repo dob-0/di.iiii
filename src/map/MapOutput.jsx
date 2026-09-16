@@ -3,6 +3,7 @@ import MapStage from './MapStage.jsx'
 import { useMapDocument, useMapChannelListener } from './useMapDocument.js'
 import { toTopNetwork, useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
+import RigBlackout from '../rig/RigBlackout.jsx'
 import './mapSurface.css'
 
 // THE SIGNAL.
@@ -86,6 +87,7 @@ export default function MapOutput({ projectId, spaceId }) {
                 <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} live />
             ) : null}
             <MapOutputControls />
+            <RigBlackout />
         </div>
     )
 }

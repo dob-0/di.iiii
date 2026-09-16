@@ -1,0 +1,7 @@
+## 2026-09-16 — The rig, step 1: machines on one network find each other, in any version
+
+- Design agreed with the owner step by step: `docs/architecture/RIG.md` (mesh, jam/show, any version with any version, local workflow, 20 cases) and the build contract `docs/architecture/rig/PROTOCOL-1.md`. Compatibility starts with protocol 1 (owner: "from this version can all works"); 0.4.x gets no adapter.
+- Built in five parallel lanes, merged here: `serverXR/src/rig/` — frozen core (hello, card, cue, blackout, picture reserved), per-pair features, tolerant readers, room + HMAC key, identity, machine card probes (screens, audio, cameras, serial, MIDI, net, temp, CPU, mem, Pi throttling, part Studio/Stage/Hands), members + UDP discovery on :47600 (LAN only), sinks (built-in cues, blackout → lighting desk + SSE `/api/rig/events`), `RigBlackout` in the map output; `scripts/rig/` conformance + compat grid, `.github/workflows/rig-compat.yml`.
+- Proven on real machines: aylmo + asuz discovered each other both ways across different releases; conformance 17/17 on each; unsigned cue 403; a signed blackout from aylmo blacked asuz's projector (white 253 → 0 → 253).
+- Also: `registerLightingRoutes` returns `hasDesk()`; wiki entry "The rig".
+- Next (RIG.md build order): land #447/#450/#451 and rehearse the two-artist jam; then jam rules (holding, presence in Raw, certificate), show mode, parts/appliance, drivers.
