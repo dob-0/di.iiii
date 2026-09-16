@@ -62,7 +62,7 @@ const MIME = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quickt
 
 const parseArgs = (argv) => {
   const args = { repo: null, manifest: null, space: null, tier: null, to: null, token: null,
-    dryRun: false, all: false, audit: false }
+    dryRun: false, all: false, audit: false, force: false }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--repo') { args.repo = argv[++i]; continue }
@@ -74,6 +74,9 @@ const parseArgs = (argv) => {
     if (a === '--dry-run') { args.dryRun = true; continue }
     if (a === '--all') { args.all = true; continue }
     if (a === '--audit') { args.audit = true; continue }
+    // Overrides the document staleness refusal below (step 5) — write anyway
+    // even if the project changed moments before this ran.
+    if (a === '--force') { args.force = true; continue }
   }
   return args
 }
@@ -443,9 +446,31 @@ async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, ti
 
   if (args.dryRun) { console.log('  dry-run complete — no document written'); return }
 
-  // 5. write document presentation (the /document route is PUT, not PATCH)
+  // 5. write document presentation (the /document route is PUT, not PATCH,
+  // and — unlike /api/spaces/:id/scene — it has no If-Match precondition of
+  // its own to lean on). This is a merge, not a blind overwrite: only
+  // presentationState/publishState below are ours to set, everything else in
+  // `doc` is passed through as read moments earlier. The remaining risk is
+  // someone else's write landing in the gap between that read and this PUT —
+  // re-reading the version right before writing narrows that gap to as small
+  // as this script can make it, and refuses rather than silently reverting
+  // whatever they just changed. `--force` is the explicit override.
   const docUrl = `${live}/api/projects/${canonicalProject}/document`
-  const doc = (await apiOrThrow(docUrl, { headers: buildHeaders(token) })).document
+  const initialRead = await apiOrThrow(docUrl, { headers: buildHeaders(token) })
+  const doc = initialRead.document
+  const baseVersion = Number.isInteger(initialRead.version) ? initialRead.version : null
+
+  if (!args.force && baseVersion !== null) {
+    const recheck = await api(docUrl, { headers: buildHeaders(token) })
+    const currentVersion = Number.isInteger(recheck.body?.version) ? recheck.body.version : null
+    if (recheck.ok && currentVersion !== null && currentVersion !== baseVersion) {
+      throw new Error(
+        `refusing to write ${canonicalProject}'s document: it changed (v${baseVersion} → v${currentVersion}) ` +
+        `moments ago — someone else is editing it right now. Re-run once they're done, or --force to overwrite anyway.`
+      )
+    }
+  }
+
   await apiOrThrow(docUrl, {
     method: 'PUT', headers: buildHeaders(token),
     body: JSON.stringify({

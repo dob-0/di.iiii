@@ -7,6 +7,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 import { getProductionPromotionPlan } from './deploy-lib.mjs'
 import {
@@ -205,7 +206,7 @@ const getEnrichedWorktrees = () => {
   return worktrees
 }
 
-const getState = () => {
+export const getState = () => {
   const currentBranch = getCurrentBranch()
   const worktrees = getEnrichedWorktrees()
   return {
@@ -293,4 +294,9 @@ const main = () => {
   }
 }
 
-main()
+// Only run when invoked as a script — start-check.mjs imports getState() to
+// reuse the same git-fact gathering after doing its own `git fetch` (this
+// module deliberately never fetches on its own, see the header comment).
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main()
+}

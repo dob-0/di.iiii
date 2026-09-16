@@ -1,5 +1,28 @@
 import { describe, it, expect } from 'vitest'
-import { TIERS, baselineFromAgreement, resolveTier, tierLabel, documentSignature, isProductionTarget, planAudit, planChanged, planSync } from './tier-sync.mjs'
+import { TIERS, baselineFromAgreement, resolveTier, tierLabel, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite } from './tier-sync.mjs'
+
+describe('localBase', () => {
+    // The documented convention is LOCAL_API_URL with no /serverXR suffix
+    // (`https://local.thedi.studio`), but a value that already carries it must
+    // not get a second one appended — found live 2026-09-16 testing against a
+    // real box: LOCAL_API_URL=http://localhost:4000/serverXR produced
+    // `.../serverXR/serverXR/api/spaces` → 404.
+    it('appends /serverXR once when the configured URL lacks it', () => {
+        expect(localBase({ LOCAL_API_URL: 'https://local.thedi.studio' })).toBe('https://local.thedi.studio/serverXR')
+    })
+
+    it('does not double the suffix when the configured URL already has it', () => {
+        expect(localBase({ LOCAL_API_URL: 'http://localhost:4000/serverXR' })).toBe('http://localhost:4000/serverXR')
+    })
+
+    it('strips a trailing slash before checking for the suffix', () => {
+        expect(localBase({ LOCAL_API_URL: 'http://localhost:4000/serverXR/' })).toBe('http://localhost:4000/serverXR')
+    })
+
+    it('falls back to localhost:4000 when nothing is configured', () => {
+        expect(localBase({})).toBe('http://localhost:4000/serverXR')
+    })
+})
 
 describe('isProductionTarget', () => {
     // The whole reason this guard exists: a tool that can write to a tier must
@@ -238,6 +261,32 @@ describe('planChanged', () => {
         })
         expect(push).toEqual([])
         expect(refuse).toEqual([])
+    })
+})
+
+describe('shouldRefuseOverwrite', () => {
+    // The plain (non---changed) `--force` write path used to overwrite every
+    // matching project unconditionally, ignoring the baseline entirely — the
+    // one write path in tier-sync.mjs that did not honour it.
+
+    it('never refuses a pure create — nothing there yet to be stale relative to', () => {
+        expect(shouldRefuseOverwrite({ isOverwrite: false, knownShape: 'x', destinationShape: 'y' })).toBe(false)
+    })
+
+    it('refuses an overwrite when the destination moved off the known baseline', () => {
+        expect(shouldRefuseOverwrite({ isOverwrite: true, knownShape: 'base', destinationShape: 'moved' })).toBe(true)
+    })
+
+    it('allows the overwrite when the destination still matches the baseline', () => {
+        expect(shouldRefuseOverwrite({ isOverwrite: true, knownShape: 'base', destinationShape: 'base' })).toBe(false)
+    })
+
+    it('allows the overwrite when there is no baseline to compare against — first-ever sync', () => {
+        expect(shouldRefuseOverwrite({ isOverwrite: true, knownShape: undefined, destinationShape: 'anything' })).toBe(false)
+    })
+
+    it('--force-stale overrides the refusal even when the destination moved', () => {
+        expect(shouldRefuseOverwrite({ isOverwrite: true, forceStale: true, knownShape: 'base', destinationShape: 'moved' })).toBe(false)
     })
 })
 

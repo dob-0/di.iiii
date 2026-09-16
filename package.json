@@ -20,6 +20,8 @@
         "docs:paths": "node scripts/check-doc-paths.mjs",
         "state": "node scripts/repo-state.mjs",
         "state:brief": "node scripts/repo-state.mjs --brief",
+        "start-check": "node scripts/start-check.mjs",
+        "start-check:strict": "node scripts/start-check.mjs --strict",
         "state:sweep": "node scripts/repo-state.mjs --sweep",
         "state:prune": "node scripts/repo-state.mjs --prune",
         "land": "node scripts/session-land.mjs",

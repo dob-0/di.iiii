@@ -28,6 +28,19 @@ run_gate() {
 # that actually fails; this is the sentence that arrives in time to matter.
 node scripts/works-boundary.mjs || true
 
+# Warn, never block: a branch behind origin/dev can still push a perfectly
+# good change (a stacked PR, a deliberate rebase later) — the start check
+# exists to make the fact visible before it becomes a surprise merge
+# conflict, not to stop the push. --code-only skips the (slower) space check;
+# this gate only cares about the branch position, and every second here is a
+# second added to every push. Never let a network hiccup here block a push —
+# start-check itself degrades to "not checked" rather than throwing, so this
+# can only warn or stay silent.
+BEHIND_JSON=$(node scripts/start-check.mjs --code-only --json 2>/dev/null) && \
+    BEHIND=$(printf '%s' "$BEHIND_JSON" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{try{const r=JSON.parse(s);console.log(r.code?.behindOriginDev||"")}catch{console.log("")}})' 2>/dev/null) && \
+    [[ -n "$BEHIND" ]] && \
+    printf '\n  \xe2\x9a\xa0 this branch is %s commits behind origin/dev — pushing anyway. git pull (or rebase) to catch up first.\n\n' "$BEHIND" >&2
+
 run_gate "lint" npm run lint
 run_gate "schema-sync tests" npm run test:schema-sync
 run_gate "wiki/user-facing docs check" npm run docs:wiki:check

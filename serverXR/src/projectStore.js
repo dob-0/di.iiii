@@ -143,7 +143,7 @@ const s = () => {
     opsSelect:        db.prepare('SELECT data FROM project_ops WHERE project_id = ? ORDER BY version ASC, seq ASC'),
     opsSelectSince:   db.prepare('SELECT data FROM project_ops WHERE project_id = ? AND version > ? ORDER BY version ASC, seq ASC'),
     opsDeleteAll:     db.prepare('DELETE FROM project_ops WHERE project_id = ?'),
-    opsInsert:        db.prepare('INSERT INTO project_ops (project_id, version, data, created_at) VALUES (?, ?, ?, ?)'),
+    opsInsert:        db.prepare('INSERT INTO project_ops (project_id, version, data, created_at, actor, actor_type, actor_label) VALUES (?, ?, ?, ?, ?, ?, ?)'),
     opsCount:         db.prepare('SELECT COUNT(*) as cnt FROM project_ops WHERE project_id = ?'),
     opsTrim:          db.prepare('DELETE FROM project_ops WHERE project_id = ? AND seq IN (SELECT seq FROM project_ops WHERE project_id = ? ORDER BY seq ASC LIMIT ?)'),
     opsTrimAged:      db.prepare('DELETE FROM project_ops WHERE project_id = ? AND created_at < ?'),
@@ -264,7 +264,7 @@ const writeProjectOps = async (spacesDir, spaceId, projectId, ops) => {
   getDb().transaction(() => {
     opsDeleteAll.run(projectId)
     for (const op of (Array.isArray(ops) ? ops : [])) {
-      opsInsert.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now)
+      opsInsert.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now, null, null, null)
     }
   })()
 }
@@ -284,13 +284,16 @@ const writeProjectOps = async (spacesDir, spaceId, projectId, ops) => {
 // is the retry/idempotency guard in POST .../ops, which matches opIds to spot a
 // resent batch — so the bound has to stay far longer than any retry. Days, not
 // minutes.
-const appendProjectOps = async (spacesDir, spaceId, projectId, ops, maxHistory = 500, maxAgeMs = 0) => {
+//
+// `actor` (opActor.js) is stamped into its own columns, not into the op.
+const appendProjectOps = async (spacesDir, spaceId, projectId, ops, maxHistory = 500, maxAgeMs = 0, actor = null) => {
   if (!Array.isArray(ops) || ops.length === 0) return
   const { opsInsert, opsCount, opsTrim, opsTrimAged } = s()
   const now = Date.now()
   getDb().transaction(() => {
     for (const op of ops) {
-      opsInsert.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now)
+      opsInsert.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now,
+        actor?.actor ?? null, actor?.type ?? null, actor?.label ?? null)
     }
     const { cnt } = opsCount.get(projectId)
     if (cnt > maxHistory) opsTrim.run(projectId, projectId, cnt - maxHistory)

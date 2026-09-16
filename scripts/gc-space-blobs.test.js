@@ -81,3 +81,50 @@ describe('gc-space-blobs sees references that live only in markup', () => {
         expect(out).toMatch(/Would remove 1 blob\(s\)/)
     })
 })
+
+// A restore point keeps JSON, never bytes. An undo puts back a document that
+// names its images by hash — so a blob only a kept snapshot mentions is still
+// needed, or the undo brings back a page of broken pictures.
+describe('gc-space-blobs keeps what a restore point still needs', () => {
+    const HELD_BY_SNAPSHOT = 'd'.repeat(64)
+
+    const makeWithSnapshot = () => {
+        const spaces = makeSpaces()
+        const root = path.dirname(spaces)
+        fs.writeFileSync(path.join(spaces, 'a-space', 'blobs', HELD_BY_SNAPSHOT), 'bytes')
+        const snapshots = path.join(root, 'snapshots', 'a-space')
+        fs.mkdirSync(snapshots, { recursive: true })
+        fs.writeFileSync(path.join(snapshots, '2026-09-16T10-00-00-000Z.json'), JSON.stringify({
+            snapshotVersion: 2,
+            reason: 'before-change',
+            scene: null,
+            projects: [{
+                id: 'gone-now',
+                document: { assets: [{ id: HELD_BY_SNAPSHOT, name: 'photo.jpg' }] },
+                assets: { [HELD_BY_SNAPSHOT]: { id: HELD_BY_SNAPSHOT, mimeType: 'image/jpeg' } },
+            }],
+        }))
+        return spaces
+    }
+
+    it('keeps a blob only a kept snapshot references (snapshots beside spaces/)', () => {
+        const out = runGc(makeWithSnapshot())
+        expect(out).toContain(`held by a restore point a-space/blobs/${HELD_BY_SNAPSHOT}`)
+        expect(out).not.toContain(`would remove a-space/blobs/${HELD_BY_SNAPSHOT}`)
+        expect(out).toMatch(/Would remove 1 blob\(s\)/)
+    })
+
+    it('deletes it with --apply once the restore point has aged out', () => {
+        const spaces = makeWithSnapshot()
+        fs.rmSync(path.join(path.dirname(spaces), 'snapshots'), { recursive: true, force: true })
+        execFileSync(process.execPath, [SCRIPT, '--spaces-dir', spaces, '--ignore-db', '--apply'], { encoding: 'utf8' })
+        expect(fs.existsSync(path.join(spaces, 'a-space', 'blobs', HELD_BY_SNAPSHOT))).toBe(false)
+    })
+
+    it('never deletes a snapshot-held blob with --apply', () => {
+        const spaces = makeWithSnapshot()
+        execFileSync(process.execPath, [SCRIPT, '--spaces-dir', spaces, '--ignore-db', '--apply'], { encoding: 'utf8' })
+        expect(fs.existsSync(path.join(spaces, 'a-space', 'blobs', HELD_BY_SNAPSHOT))).toBe(true)
+        expect(fs.existsSync(path.join(spaces, 'a-space', 'blobs', TRULY_UNREFERENCED))).toBe(false)
+    })
+})
