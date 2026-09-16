@@ -263,3 +263,42 @@ registerRigEvents(app, sinks)   // GET /api/rig/events : SSE of blackout / reloa
 - No Playwright and no headless GPU browsers (a GPU crash hard-reset aylmo on
   2026-09-14).
 - Report: files, test output, and anything in this contract that was wrong.
+
+## Amendments
+
+### 2026-09-16: integration of lanes A to E (additive only; nothing frozen changed)
+
+1. **`hello.http.scheme` + `hello.http.tls`**: `scheme` is `"http"` (default) or
+   `"https"`. `tls` is the certificate's DNS name or `null`. The discovery
+   packet carries the same two fields. A peer dials the LAN address with that
+   name as TLS `servername`. The name comes from the first non-wildcard DNS SAN
+   of `TLS_CERT`.
+2. **"Known" member (§6)** means a confirmed hello round trip (`via: "hello"`).
+   A member heard only through discovery gets a hello every 10 s until one
+   lands. A single lost first hello therefore never strands a pairing.
+3. **Card `ports.net[].kind`** is `"wifi"` (a wireless dir), `"ethernet"` (a
+   real `device` behind it), or `"other"` (tailscale, docker, veth, tun). An
+   interface with operstate `unknown` is `up` when it has an address.
+   Disconnected screens are listed with `connected: false`.
+4. **Error bodies**: a malformed or refused hello, cue or blackout gets 400
+   `{ rig: 1, error: "malformed" }`. Handler failures get 500 `cue-failed` or
+   `blackout-failed`. A blackout without `on` means `on: true`; a non-boolean
+   `on` gets 400. Precedence: 413 (size) before 403 (key) before 409 (room).
+5. **Cue reasons**: a handler throwing an error marked `badArgs` (or
+   `code: "BAD_ARGS"`) gives `bad-args`. Any other throw gives `not-allowed` and
+   is logged. `show-page` accepts only a same-origin path.
+6. **Events**: `GET /api/rig/events` sits behind the same local-runtime guard
+   and sends the current blackout on connect (`from: null`).
+   `registerLightingRoutes` returns `hasDesk()`, so blackout reaches a desk a
+   browser already opened without ever creating one.
+7. **Identity**: a corrupt `machine.json` is renamed `.broken-<ts>` and a new id
+   is made. That is the only case where the id changes.
+8. **Features** with non-integer values (nested objects) are dropped when read.
+9. **Grid tools**: `conformance.mjs --room R` speaks from that room; a `card`
+   fixture is only parsed, never posted.
+
+Verified on real machines 2026-09-16: aylmo (release 0.4.0 checkout) and asuz
+(`0.5.0-rig.1`) in room `rigtest` with a key found each other by discovery,
+both ways. Conformance passed 17/17 against each. `compat-grid --refs HEAD,HEAD`
+went green. An unsigned cue got 403. A signed blackout from aylmo turned asuz's
+projector output from a white test page (mean 253) to black (0) and back.

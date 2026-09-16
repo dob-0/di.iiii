@@ -265,6 +265,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-10'
     },
     {
+        id: 'the-rig',
+        category: 'Spaces & access',
+        title: 'The rig: machines in one room find each other',
+        summary: 'Every di.iiii on the same network finds the others by itself, shows what each machine has, and takes a cue or a blackout from any of them — whatever version each one runs.',
+        body: [
+            'Start di.iiii on two or more machines in the same room with di up --lan — a laptop, the old machine by the projector, a Raspberry Pi — and within a few seconds each one knows the others are there. Nothing to type: a machine announces itself on the local network, and the first hello makes both sides know each other.',
+            'Every machine carries a card: what it is (Studio, Stage or Hands — a full workstation, a box by a screen, a box with no screen), which screens are plugged in, sound in and out, cameras, serial and MIDI ports, its network, how hot it is running and how busy. A Pi that is short of power says so on its card before the show, not during it.',
+            'A cue is a named thing to do, sent to a machine: ping, reload the output, show a page. A machine only runs cues it knows; anything else is politely refused, never half-done.',
+            'Blackout works from any machine in the room, always. The machine receiving it turns its projection output black at once, and its lighting desk too if one is running — and it says who called it.',
+            'Versions do not have to match. From this release on, two machines meet by agreeing on what they both know and simply not using the rest, so an older stage box still takes a cue and a blackout from a newer laptop. Updating is an offer, never a condition.',
+            'A room can have a name and a key. With DI_RIG_ROOM set, machines only pair inside the same room; with DI_RIG_KEY set, every cue and blackout must be signed with that key, so a stranger on the same wifi cannot black out your show. Set DI_RIG=0 to switch the whole thing off.',
+            'The rig lives on a local di.iiii only — a hosted di-studio.xyz answers none of it. The design, including jam and show modes still to come, is in docs/architecture/RIG.md.'
+        ],
+        tags: ['rig', 'lan', 'network', 'machines', 'discovery', 'blackout', 'cue', 'stage', 'projector', 'pi', 'versions', 'local', 'di up', 'show', 'jam'],
+        updated: '2026-09-16'
+    },
+    {
         id: 'projection-mapping',
         category: 'Spaces & access',
         title: 'Putting a space on a wall',
