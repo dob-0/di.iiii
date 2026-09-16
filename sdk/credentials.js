@@ -15,26 +15,19 @@ import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-// The dev tier lives at dev.diiii.xyz. Its identifier used to be `staging`,
-// and that name keeps working as an alias — same server, and the same token:
-// DI_TOKEN_DEV, or the older DI_TOKEN_STAGING, or a credentials.json entry
-// under either key.
-const DEV_TIER = {
-    base: 'https://dev.diiii.xyz/serverXR',
-    env: 'DI_TOKEN_DEV',
-    legacyEnv: 'DI_TOKEN_STAGING',
-    storeKeys: ['dev', 'staging'],
-    site: 'https://dev.diiii.xyz'
-}
-
 export const TIERS = {
     local: { base: 'http://localhost:4000/serverXR', env: 'DI_TOKEN_LOCAL', site: 'http://localhost:4000' },
-    dev: DEV_TIER,
-    staging: DEV_TIER,
+    dev: { base: 'https://dev.diiii.xyz/serverXR', env: 'DI_TOKEN_DEV', site: 'https://dev.diiii.xyz' },
     prod: { base: 'https://di-studio.xyz/serverXR', env: 'DI_TOKEN_PROD', site: 'https://di-studio.xyz' }
 }
 
 export const credentialsPath = (home = homedir()) => join(home, '.config', 'di', 'credentials.json')
+
+// The dev tier was once called `staging`. The old name is refused with a
+// pointer rather than mapped, so nothing keeps writing it.
+const refuseOldTier = (tier) => {
+    if (tier === 'staging') throw new Error('"staging" is now "dev"')
+}
 
 const readStore = (path) => {
     try { return JSON.parse(readFileSync(path, 'utf8')) } catch { return {} }
@@ -45,19 +38,17 @@ const readStore = (path) => {
  * Nothing here reads a repository, ever.
  */
 export const resolveToken = ({ tier, token = null, env = process.env, home = homedir() } = {}) => {
+    refuseOldTier(tier)
     if (token) return token
     if (env.DI_TOKEN) return env.DI_TOKEN
     const known = TIERS[tier]
     if (known && env[known.env]) return env[known.env]
-    if (known?.legacyEnv && env[known.legacyEnv]) return env[known.legacyEnv]
     const store = readStore(credentialsPath(home))
-    for (const key of known?.storeKeys || [tier]) {
-        if (store[key]?.token) return store[key].token
-    }
-    return null
+    return store[tier]?.token || null
 }
 
 export const resolveBase = ({ tier = null, base = null } = {}) => {
+    refuseOldTier(tier)
     if (base) return String(base).replace(/\/+$/, '')
     if (tier && TIERS[tier]) return TIERS[tier].base
     if (tier) throw new Error(`unknown tier "${tier}" — one of ${Object.keys(TIERS).join(', ')}, or pass base`)

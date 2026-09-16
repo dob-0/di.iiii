@@ -52,7 +52,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const ENGINE_VERSION = 6
+export const ENGINE_VERSION = 7
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CODE_EXTENSIONS = new Set(['.html', '.htm', '.css', '.js', '.mjs', '.txt', '.svg', '.json', '.md'])
@@ -97,8 +97,10 @@ const parseArgs = (argv) => {
  * drift). Anything else that differs is a fault the audit reports. A tier with
  * `governed:false` — the dev box — is shown and never enforced or failed on.
  *
- * The dev tier (dev.diiii.xyz) is keyed `staging` in every manifest; `--tier dev`
- * resolves to that key, and `--tier staging` keeps working.
+ * The dev tier (dev.diiii.xyz) is keyed `dev` (v7 — it was `staging` before).
+ * A manifest that still says `tiers.staging` is read as `dev`, so the linked
+ * repos keep syncing until their manifests are edited; the CLI value
+ * `--tier staging` is refused with a pointer, never mapped.
  */
 const SPACE_MANIFEST = 'di-space.space.json'
 
@@ -110,12 +112,17 @@ const tierOf = (liveUrl, tiers) => {
   return host || 'unknown'
 }
 
-// `dev` is the dev tier's name; manifests still key it `staging`. A manifest
-// that declares a real `dev` key wins.
-const tierKey = (name, tiers) => {
-  if (!name || Object.hasOwn(tiers || {}, name)) return name
-  if (name === 'dev' && Object.hasOwn(tiers || {}, 'staging')) return 'staging'
+// A tier name is its manifest key. The dev tier's old name is refused on the CLI.
+const tierKey = (name) => {
+  if (name === 'staging') throw new Error('"staging" is now "dev"')
   return name
+}
+
+// A manifest written before v7 keys the dev tier `staging`: read it as `dev`.
+const normalizeTiers = (tiers) => {
+  if (!tiers || !tiers.staging || tiers.dev) return tiers
+  const { staging, ...rest } = tiers
+  return { ...rest, dev: staging }
 }
 
 // Fields the repo is master for. Kept in one list so the reconcile, the audit
@@ -403,7 +410,7 @@ async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, ti
   if (liveHost !== PROD_HOST) {
     const before = entryHtml
     // Production answers to both names. The lookbehind means a subdomain
-    // ("dev.diiii.xyz", the legacy "staging.di-studio.xyz") is never
+    // ("dev.diiii.xyz") is never
     // re-prefixed into itself.
     entryHtml = entryHtml.replace(/(?<![\w.-])(di-studio|diiii)\.xyz/g, liveHost)
     if (before !== entryHtml) console.log(`  ⇄ retargeted ${PROD_HOST} → ${liveHost}`)
@@ -521,7 +528,7 @@ async function audit({ repoDir, spaceDecl, spaceManifestPath, getEnv, args }) {
   }
   const spaceId = spaceDecl.spaceId
   const tiers = Object.entries(spaceDecl.tiers || {})
-    .filter(([name]) => !args.tier || tierKey(args.tier, spaceDecl.tiers) === name)
+    .filter(([name]) => !args.tier || tierKey(args.tier) === name)
   if (!tiers.length) { console.error('Error: no tiers to audit.'); process.exitCode = 1; return }
 
   console.log(`[space-audit] ${spaceId} ← ${repoDir}\n`)
@@ -649,7 +656,10 @@ async function main() {
 
   const spaceManifestPath = path.resolve(args.space || path.join(repoDir, SPACE_MANIFEST))
   let spaceDecl = null
-  try { spaceDecl = JSON.parse(await fs.readFile(spaceManifestPath, 'utf8')) }
+  try {
+    spaceDecl = JSON.parse(await fs.readFile(spaceManifestPath, 'utf8'))
+    if (spaceDecl?.tiers) spaceDecl.tiers = normalizeTiers(spaceDecl.tiers)
+  }
   catch (e) {
     if (args.all || args.audit || args.space) {
       console.error(`Cannot read space manifest at ${spaceManifestPath}: ${e.message}`)
@@ -667,7 +677,7 @@ async function main() {
 
   // A tier can be named instead of spelled out, once the space manifest knows
   // the map: --tier dev beats pasting a serverXR URL from memory.
-  const named = args.tier ? spaceDecl?.tiers?.[tierKey(args.tier, spaceDecl?.tiers)] : null
+  const named = args.tier ? spaceDecl?.tiers?.[tierKey(args.tier)] : null
   if (args.tier && !named) {
     console.error(`Error: unknown tier "${args.tier}". Known: ${Object.keys(spaceDecl?.tiers || {}).join(', ') || '(none)'}`)
     process.exitCode = 1; return
@@ -729,7 +739,7 @@ async function main() {
   }
 }
 
-export { referencesAsset, rewriteAssetRefs, matchGlobs, globToRe, tierOf, tierKey, parseArgs, SPACE_FIELDS, TIER_FIELDS, SPACE_MANIFEST }
+export { referencesAsset, rewriteAssetRefs, matchGlobs, globToRe, tierOf, tierKey, normalizeTiers, parseArgs, SPACE_FIELDS, TIER_FIELDS, SPACE_MANIFEST }
 
 // Only run when invoked as a script, so the helpers above can be unit-tested.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

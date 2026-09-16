@@ -18,7 +18,7 @@ Found by the spaces audit (`docs/research/2026-09-16-spaces-audit.md`, PR from `
   - Output: summary line, optional `not confirmed` line, ≤5 details (dev-ahead first).
 - **tier-sync `--rebuild-baseline [--dry-run]`** (defaults `--from local --to dev`): reads
   both tiers, records every project whose shape is identical as
-  `{ shape, versions: { local, staging } }`, lists the differing ones, replaces the
+  `{ shape, versions: { local, dev } }`, lists the differing ones, replaces the
   destination's key only, writes nothing to a tier. `--changed` now writes the same
   versioned entries; every reader goes through `baselineShape()` so old bare-string
   entries still work.

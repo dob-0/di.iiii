@@ -3,14 +3,14 @@
   "spaceId": "open",
   "label": "Open Space",
   "isPublic": true,
-  "minEngine": 6,
+  "minEngine": 7,
   "note": "The communal room every visitor can build in, and the target of the Open Jam link. Authored live by whoever is in it.",
   "tiers": {
     "prod": {
       "url": "https://di-studio.xyz/serverXR",
       "tokenEnv": "PROD_API_TOKEN"
     },
-    "staging": {
+    "dev": {
       "url": "https://dev.diiii.xyz/serverXR",
       "tokenEnv": "LIVE_API_TOKEN"
     },

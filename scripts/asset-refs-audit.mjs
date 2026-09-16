@@ -21,7 +21,7 @@
  *
  * Options:
  *   --tier <local|dev|prod|all>   Which tier to check (default: local).
- *                     `dev` is dev.diiii.xyz, keyed `staging` below; `staging` still works.
+ *                     `dev` is dev.diiii.xyz.
  *   --base  <url>     API base — overrides --tier
  *   --token <token>   Bearer token (default: the tier's own, from the env or
  *                     serverXR/.env.local). Without one only public spaces are
@@ -44,13 +44,15 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 
 export const TIERS = {
     local: { url: 'http://localhost:4000/serverXR', tokenEnv: 'API_TOKEN' },
-    staging: { url: 'https://dev.diiii.xyz/serverXR', tokenEnv: 'LIVE_API_TOKEN' },
+    dev: { url: 'https://dev.diiii.xyz/serverXR', tokenEnv: 'LIVE_API_TOKEN' },
     prod: { url: 'https://di-studio.xyz/serverXR', tokenEnv: 'PROD_API_TOKEN' },
 }
 
-// `dev` names the dev tier, whose key above is still `staging`.
-export const resolveTier = (name) => (name === 'dev' ? 'staging' : name)
-const tierLabel = (name) => (name === 'staging' ? 'dev' : name)
+// The dev tier's old key is refused outright, not mapped: one name per tier.
+export const resolveTier = (name) => {
+    if (name === 'staging') throw new Error('"staging" is now "dev"')
+    return name
+}
 
 export const parseArgs = (argv) => {
     const args = { tier: 'local', base: null, token: null, spaces: [], projects: [], json: false, quiet: false }
@@ -164,13 +166,13 @@ const main = async () => {
     for (const name of tierNames) {
         const tier = TIERS[name]
         if (!args.base && !tier) {
-            console.error(`Unknown tier "${name}" — one of ${Object.keys(TIERS).map(tierLabel).join(', ')}, or --base <url>.`)
+            console.error(`Unknown tier "${name}" — one of ${Object.keys(TIERS).join(', ')}, or --base <url>.`)
             process.exitCode = 2
             return
         }
         const base = (args.base || tier.url).replace(/\/+$/, '')
         const token = args.token || (tier ? env[tier.tokenEnv] : null) || env.API_TOKEN || null
-        if (!args.json) console.log(`\n${tierLabel(name)} · ${base}${token ? '' : ' (no token — public spaces only)'}`)
+        if (!args.json) console.log(`\n${name} · ${base}${token ? '' : ' (no token — public spaces only)'}`)
         try {
             reports.push(...(await auditTier({ name, base, token, spaces: args.spaces, projects: args.projects })))
         } catch (error) {
@@ -201,5 +203,5 @@ const main = async () => {
 }
 
 if (process.argv[1] && import.meta.url === `file://${path.resolve(process.argv[1])}`) {
-    main().catch((error) => { console.error(error); process.exit(2) })
+    main().catch((error) => { console.error(error?.message || error); process.exit(2) })
 }

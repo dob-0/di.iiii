@@ -236,9 +236,8 @@ const readEnv = () => ({
   ...Object.fromEntries(['API_TOKEN', 'LIVE_API_TOKEN', 'LOCAL_API_URL'].filter((k) => process.env[k]).map((k) => [k, process.env[k]]))
 })
 
-// dev.diiii.xyz is the tier `tier-sync.mjs` still keys as `staging` (its base
-// URL is dev.diiii.xyz; the old staging.di-studio.xyz name is gone). Kept as
-// one constant here so a future rename only has to change one line.
+// dev.diiii.xyz — `dev` in tier-sync.mjs's TIERS and baseline. Kept as one
+// constant here so a future rename only has to change one line.
 const DEV_TIER_LABEL = 'dev tier'
 
 const sameVersion = (a, b) => Boolean(a && b) && a.documentVersion === b.documentVersion && a.updatedAt === b.updatedAt
@@ -247,7 +246,7 @@ const sameVersion = (a, b) => Boolean(a && b) && a.documentVersion === b.documen
  * One project's verdict. `local`/`dev` are `{documentVersion, updatedAt}` or
  * undefined (missing on that side). `baseline` is the tier-sync-baseline.json
  * entry — a bare shape string (older runs) or `{ shape, versions: { local,
- * staging } }` recorded when both contents were confirmed identical.
+ * dev } }` recorded when both contents were confirmed identical.
  * `localShape`/`devShape` are THIS run's normalized document shapes, present
  * only when the documents were fetched. `trashedHere` = the project sits in
  * this box's trash.
@@ -262,7 +261,7 @@ export const classifyProjectDrift = ({ local, dev, baseline, baselineShape: lega
 
   if (sameVersion(local, dev)) return { kind: 'same' }
   const versions = typeof baseline === 'object' ? baseline?.versions : undefined
-  if (sameVersion(local, versions?.local) && sameVersion(dev, versions?.staging)) return { kind: 'same' }
+  if (sameVersion(local, versions?.local) && sameVersion(dev, versions?.dev)) return { kind: 'same' }
 
   if (localShape === undefined || devShape === undefined) return { kind: 'not-confirmed' }
   if (localShape === devShape) return { kind: 'same' }
@@ -321,7 +320,7 @@ export const checkSpaces = async ({ spaceFilter, budgetMs = SPACE_CHECK_BUDGET_M
   const env = readEnv()
   const configuredLocalBase = localBase(env)
   let local = { ...TIERS.local, base: configuredLocalBase, token: env.API_TOKEN }
-  const dev = { ...TIERS.staging, token: env.LIVE_API_TOKEN }
+  const dev = { ...TIERS.dev, token: env.LIVE_API_TOKEN }
   const triedBases = [configuredLocalBase]
 
   if (!local.token && !dev.token) {
@@ -367,7 +366,7 @@ export const checkSpaces = async ({ spaceFilter, budgetMs = SPACE_CHECK_BUDGET_M
     return { status: 'ok', reason: 'this box holds no spaces yet', projects: [] }
   }
 
-  const baseline = readBaseline().staging || {}
+  const baseline = readBaseline().dev || {}
   const trash = await readLocalTrash(local)
   const results = []
   const toConfirm = [] // pairs whose content has to be read to know
@@ -444,7 +443,7 @@ const projectDriftLine = ({ spaceId, projectId, kind }) => {
   switch (kind) {
     case 'dev-ahead':
       return `  NOT LATEST  ${DEV_TIER_LABEL} has newer work in \`${spaceId}/${projectId}\` — pull first: ` +
-        `node scripts/project-pull.mjs ${projectId} --space ${spaceId} --from ${TIERS.staging.base} --force`
+        `node scripts/project-pull.mjs ${projectId} --space ${spaceId} --from ${TIERS.dev.base} --force`
     case 'both-moved':
       return `  NOT LATEST  \`${spaceId}/${projectId}\` changed on this box AND on the ${DEV_TIER_LABEL} since the last sync — ` +
         `ask before pushing; compare by hand: node scripts/tier-sync.mjs --from local --to dev --space ${spaceId} --audit`
@@ -454,7 +453,7 @@ const projectDriftLine = ({ spaceId, projectId, kind }) => {
     case 'differs':
       return `  ?  \`${spaceId}/${projectId}\` differs — look before pulling or pushing: ` +
         `compare: node scripts/tier-sync.mjs --from local --to dev --space ${spaceId} --audit · ` +
-        `pull dev's copy: node scripts/project-pull.mjs ${projectId} --space ${spaceId} --from ${TIERS.staging.base} --force`
+        `pull dev's copy: node scripts/project-pull.mjs ${projectId} --space ${spaceId} --from ${TIERS.dev.base} --force`
     default:
       return `  ?  ${spaceId}/${projectId}: ${kind}`
   }

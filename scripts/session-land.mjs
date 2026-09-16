@@ -9,7 +9,7 @@
 // files, sweeps worktrees (repo-state.mjs --sweep -- the enforced cleanup moment,
 // not "whenever someone remembers"), and commits. Does not push.
 //
-// Since 2026-09-02 the fold itself normally happens in CI: deploy-vps-staging.yml's
+// Since 2026-09-02 the fold itself normally happens in CI: deploy-vps-dev.yml's
 // `land` job runs this script on every push to dev and pushes the commit (and ci.yml
 // folds in place so the docs gate sees the landed tree). What CI cannot do is sweep
 // YOUR worktrees, so with nothing to fold this still runs the sweep -- otherwise the
@@ -61,7 +61,7 @@ const main = () => {
     : []
 
   if (!noteFiles.length) {
-    console.log('Nothing to fold — docs/ai/sessions/ has no notes beyond README.md (CI lands them on merge; see deploy-vps-staging.yml).')
+    console.log('Nothing to fold — docs/ai/sessions/ has no notes beyond README.md (CI lands them on merge; see deploy-vps-dev.yml).')
     if (!dryRun) sweepWorktrees()
     return
   }

@@ -44,7 +44,7 @@ serverXR (port 4000 in dev, /serverXR proxy in prod)
     ↕ file system (serverXR/data/spaces/)
     ↕ op-log (append-only CRDT)
 GitHub Actions → Hetzner VPS (Docker Compose behind Caddy)
-    dev  → dev.diiii.xyz           (the dev tier; deploy-vps-staging.yml)
+    dev  → dev.diiii.xyz           (the dev tier; deploy-vps-dev.yml)
     main → diiii.xyz               (prod; deploy-vps.yml)
 ```
 

@@ -183,17 +183,6 @@ describe('the origin a card advertises', () => {
     expect(r.body).toContain('content="https://dev.diiii.xyz/br_id_ge"')
   })
 
-  // The dev tier's old name still reaches the same server; a card shared
-  // from it must name the address it was opened on.
-  it('uses the forwarded host under the dev tier\'s old name too', async () => {
-    const r = await hit(build(), '/serverXR/og/br_id_ge', {
-      host: 'server:4000',
-      'x-forwarded-host': 'staging.di-studio.xyz',
-      'x-forwarded-proto': 'https',
-    })
-    expect(r.body).toContain('content="https://staging.di-studio.xyz/br_id_ge"')
-  })
-
   it('an explicit SITE_ORIGIN wins over anything the request claims', async () => {
     const r = await hit(build('https://di-studio.xyz'), '/serverXR/og/br_id_ge', {
       host: 'evil.example',

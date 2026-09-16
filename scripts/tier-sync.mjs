@@ -46,8 +46,7 @@
  *                       Defaults to --from local --to dev. Honors --dry-run.
  *   --allow-production  Required before anything may be written to di-studio.xyz
  *
- * Tiers: local, dev (dev.diiii.xyz), prod. The dev tier's identifier is still
- * `staging` — the TIERS key and the baseline key — and `--to staging` keeps working.
+ * Tiers: local, dev (dev.diiii.xyz), prod — the same names key TIERS and the baseline.
  *
  * Tokens come from serverXR/.env.local: API_TOKEN (local), LIVE_API_TOKEN
  * (the dev tier), PROD_API_TOKEN (production).
@@ -79,13 +78,15 @@ export const localBase = (env = {}) => {
 
 export const TIERS = {
     local: { base: localBase(), tokenKey: 'API_TOKEN' },
-    staging: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
+    dev: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
     prod: { base: 'https://di-studio.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
 }
 
-// `dev` names the dev tier, whose key above is still `staging`.
-export const resolveTier = (name) => (name === 'dev' ? 'staging' : name)
-export const tierLabel = (name) => (name === 'staging' ? 'dev' : name)
+// The dev tier's old key is refused outright, not mapped: one name per tier.
+export const resolveTier = (name) => {
+    if (name === 'staging') throw new Error('"staging" is now "dev"')
+    return name
+}
 
 // Production is the one host this script must never reach by inheritance.
 export const isProductionTarget = (url) => {
@@ -497,7 +498,7 @@ export const main = async () => {
     const args = parseArgs(process.argv.slice(2))
     if (args.rebuildBaseline) {
         args.from ||= 'local'
-        args.to ||= 'staging'
+        args.to ||= 'dev'
     }
     if (!TIERS[args.from] || !TIERS[args.to] || args.from === args.to) {
         console.error('usage: node scripts/tier-sync.mjs --from <local|dev|prod> --to <local|dev|prod>')
@@ -515,7 +516,7 @@ export const main = async () => {
     }
 
     if (args.rebuildBaseline) {
-        const pair = `${tierLabel(args.from)} ↔ ${tierLabel(args.to)}`
+        const pair = `${args.from} ↔ ${args.to}`
         console.log(`tier-sync --rebuild-baseline  ${pair}${args.dryRun ? '  (dry run)' : ''}  (reading every document on both tiers — this takes a minute)`)
         const [source, destination] = await Promise.all([readSignatures(from, args.space), readSignatures(to, args.space)])
         const { agreed, differs, onlyOneSide } = planRebuildBaseline({ source, destination, sourceTier: args.from, destinationTier: args.to })
@@ -543,7 +544,7 @@ export const main = async () => {
     }
 
     if (args.audit) {
-        console.log(`tier-sync audit  ${tierLabel(args.from)} ↔ ${tierLabel(args.to)}  (reading every document — this takes a minute)`)
+        console.log(`tier-sync audit  ${args.from} ↔ ${args.to}  (reading every document — this takes a minute)`)
         const [a, b] = [await readSignatures(from, args.space), await readSignatures(to, args.space)]
         const { missing, extra, differs, readdressed } = planAudit({ source: a, destination: b })
 
@@ -553,10 +554,10 @@ export const main = async () => {
             console.log(`\n${title}`)
             rows.forEach((row) => console.log(`   ${`${row.spaceId}/${row.projectId}`.padEnd(48)}${render(row)}`))
         }
-        report(`only on ${tierLabel(args.from)} (${missing.length})`, missing, (r) => shape(r.source))
-        report(`only on ${tierLabel(args.to)} (${extra.length})`, extra, (r) => shape(r.destination))
+        report(`only on ${args.from} (${missing.length})`, missing, (r) => shape(r.source))
+        report(`only on ${args.to} (${extra.length})`, extra, (r) => shape(r.destination))
         report(`same slug, DIFFERENT work (${differs.length})`, differs,
-            (r) => `${tierLabel(args.from)}: ${shape(r.source).padEnd(22)}${tierLabel(args.to)}: ${shape(r.destination)}`)
+            (r) => `${args.from}: ${shape(r.source).padEnd(22)}${args.to}: ${shape(r.destination)}`)
         report(`same work, assets re-addressed on arrival (${readdressed.length}) — not drift to fix`,
             readdressed, (r) => shape(r.source))
 
@@ -571,7 +572,7 @@ export const main = async () => {
         return
     }
 
-    console.log(`tier-sync  ${tierLabel(args.from)} → ${tierLabel(args.to)}${args.changed ? '  --changed' : ''}${args.dryRun ? '  (dry run)' : ''}`)
+    console.log(`tier-sync  ${args.from} → ${args.to}${args.changed ? '  --changed' : ''}${args.dryRun ? '  (dry run)' : ''}`)
     let plan
     // Only set on the plain (non---changed) path — which project ids the
     // destination already held, before anything was copied. Used below to
@@ -595,8 +596,8 @@ export const main = async () => {
         if (!args.dryRun) writeBaseline(baseline)
         const { push, refuse } = planChanged({ audit, baseline: baseline[args.to] })
         if (refuse.length) {
-            console.log(`\nREFUSED (${refuse.length}) — will not overwrite work on ${tierLabel(args.to)}:`)
-            refuse.forEach((r) => console.log(`   ${`${r.spaceId}/${r.projectId}`.padEnd(48)}${r.why}\n      ${tierLabel(args.from)}: ${r.source.entities}e ${r.source.assets}a ${r.source.page}p   ${tierLabel(args.to)}: ${r.destination.entities}e ${r.destination.assets}a ${r.destination.page}p`))
+            console.log(`\nREFUSED (${refuse.length}) — will not overwrite work on ${args.to}:`)
+            refuse.forEach((r) => console.log(`   ${`${r.spaceId}/${r.projectId}`.padEnd(48)}${r.why}\n      ${args.from}: ${r.source.entities}e ${r.source.assets}a ${r.source.page}p   ${args.to}: ${r.destination.entities}e ${r.destination.assets}a ${r.destination.page}p`))
             console.log('   look at both, decide which is right, then copy that one by hand: --space <s> --force, or pull it down.')
             process.exitCode = 1
         }

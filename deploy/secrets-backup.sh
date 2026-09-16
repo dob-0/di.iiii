@@ -39,10 +39,10 @@ CHECK=0
 # anyone should be answering then.
 FILES=(
   "/opt/di.iiii/.env:opt-di.iiii--.env"
-  "/opt/di.iiii-staging/.env:opt-di.iiii-staging--.env"
+  "/opt/di.iiii-dev/.env:opt-di.iiii-dev--.env"
   "/opt/di-bo/.env:opt-di-bo--.env"
   "/opt/di.iiii/docker-compose.yml:opt-di.iiii--docker-compose.yml"
-  "/opt/di.iiii-staging/docker-compose.staging.yml:opt-di.iiii-staging--docker-compose.staging.yml"
+  "/opt/di.iiii-dev/docker-compose.dev.yml:opt-di.iiii-dev--docker-compose.dev.yml"
   "/opt/di.iiii/Caddyfile:opt-di.iiii--Caddyfile"
 )
 

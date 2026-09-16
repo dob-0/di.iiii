@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, tierLabel, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite } from './tier-sync.mjs'
+import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite } from './tier-sync.mjs'
 
 describe('localBase', () => {
     // The documented convention is LOCAL_API_URL with no /serverXR suffix
@@ -34,23 +34,21 @@ describe('isProductionTarget', () => {
         expect(isProductionTarget(TIERS.prod.base)).toBe(true)
         expect(isProductionTarget('https://www.di-studio.xyz/serverXR')).toBe(true)
         expect(isProductionTarget('https://diiii.xyz/serverXR')).toBe(true)
-        expect(isProductionTarget(TIERS.staging.base)).toBe(false)
+        expect(isProductionTarget(TIERS.dev.base)).toBe(false)
         expect(isProductionTarget('https://dev.diiii.xyz/serverXR')).toBe(false)
-        expect(isProductionTarget('https://staging.di-studio.xyz/serverXR')).toBe(false)
         expect(isProductionTarget(TIERS.local.base)).toBe(false)
         expect(isProductionTarget('not a url')).toBe(false)
     })
 })
 
 describe('tier names', () => {
-    // The second tier is called dev now; its key (and every saved baseline) is
-    // still `staging`, so both spellings must land on the same entry.
-    it('accepts dev as the dev tier and keeps staging working', () => {
-        expect(resolveTier('dev')).toBe('staging')
-        expect(resolveTier('staging')).toBe('staging')
+    // The second tier is called dev — its TIERS key and its baseline key.
+    // The old `staging` key is refused with a pointer, never silently mapped.
+    it('names the dev tier dev and refuses staging', () => {
+        expect(resolveTier('dev')).toBe('dev')
         expect(resolveTier('prod')).toBe('prod')
         expect(TIERS[resolveTier('dev')].base).toBe('https://dev.diiii.xyz/serverXR')
-        expect(tierLabel('staging')).toBe('dev')
+        expect(() => resolveTier('staging')).toThrow('"staging" is now "dev"')
     })
 })
 
@@ -314,11 +312,11 @@ describe('--rebuild-baseline', () => {
     it('records only projects identical on both tiers, with both tiers\' versions', () => {
         const source = { network: { same: at(doc(1), 6, 100), readdressed: at(doc(2, 'local-id'), 3, 10), differs: at(doc(3), 9, 9) }, lab: { only: at(doc(1), 1, 1) } }
         const destination = { network: { same: at(doc(1), 1, 900), readdressed: at(doc(2, 'dev-id'), 1, 20), differs: at(doc(4), 9, 9) } }
-        const { agreed, differs, onlyOneSide } = planRebuildBaseline({ source, destination, sourceTier: 'local', destinationTier: 'staging' })
+        const { agreed, differs, onlyOneSide } = planRebuildBaseline({ source, destination, sourceTier: 'local', destinationTier: 'dev' })
         expect(Object.keys(agreed).sort()).toEqual(['network/readdressed', 'network/same'])
         expect(agreed['network/same']).toEqual({
             shape: doc(1).shape,
-            versions: { local: { documentVersion: 6, updatedAt: 100 }, staging: { documentVersion: 1, updatedAt: 900 } }
+            versions: { local: { documentVersion: 6, updatedAt: 100 }, dev: { documentVersion: 1, updatedAt: 900 } }
         })
         expect(differs.map((r) => r.projectId)).toEqual(['differs'])
         expect(onlyOneSide).toBe(1)
@@ -374,7 +372,7 @@ describe('--dry-run never writes the baseline', () => {
         it(`${flags.join(' ')} leaves tier-sync-baseline.json and every tier untouched`, async () => {
             const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tier-sync-dry-'))
             const file = path.join(dir, 'tier-sync-baseline.json')
-            const before = JSON.stringify({ staging: { 'main/edited': 'rebuilt-by-hand' } })
+            const before = JSON.stringify({ dev: { 'main/edited': 'rebuilt-by-hand' } })
             fs.writeFileSync(file, before)
             process.env.DATA_ROOT = dir
             process.argv = ['node', 'tier-sync.mjs', '--from', 'local', '--to', 'dev', ...flags]

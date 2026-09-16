@@ -11,7 +11,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 // "dev has newer work" here.
 vi.mock('./repo-state.mjs', () => ({ getState: vi.fn() }))
 vi.mock('./tier-sync.mjs', () => ({
-  TIERS: { local: { base: 'http://localhost:4000/serverXR', tokenKey: 'API_TOKEN' }, staging: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' } },
+  TIERS: { local: { base: 'http://localhost:4000/serverXR', tokenKey: 'API_TOKEN' }, dev: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' } },
   localBase: (env) => env?.LOCAL_API_URL ? `${env.LOCAL_API_URL.replace(/\/+$/, '')}/serverXR` : 'http://localhost:4000/serverXR',
   listSpaces: vi.fn(),
   listProjectMetas: vi.fn(),
@@ -73,7 +73,7 @@ describe('classifyProjectDrift', () => {
   })
 
   it('is the same without a fetch when both versions still equal a confirmed baseline', () => {
-    const baseline = { shape: 's', versions: { local: meta(6, 100), staging: meta(1, 900) } }
+    const baseline = { shape: 's', versions: { local: meta(6, 100), dev: meta(1, 900) } }
     expect(classifyProjectDrift({ local: meta(6, 100), dev: meta(1, 900), baseline })).toEqual({ kind: 'same' })
   })
 
@@ -85,7 +85,7 @@ describe('classifyProjectDrift', () => {
 
 
   it('reads a versioned baseline entry for direction too', () => {
-    const baseline = { shape: 'base', versions: { local: meta(1), staging: meta(1) } }
+    const baseline = { shape: 'base', versions: { local: meta(1), dev: meta(1) } }
     expect(classifyProjectDrift({ local: meta(3, 100), dev: meta(4, 50), baseline, localShape: 'base', devShape: 'new' })).toEqual({ kind: 'dev-ahead', confirmed: true })
   })
 
@@ -269,7 +269,7 @@ describe('checkSpaces', () => {
   it('skips the fetch when both versions still equal a content-confirmed baseline', async () => {
     listSpaces.mockResolvedValue(['network'])
     listProjectMetas.mockImplementation(versionsDiffer)
-    readBaseline.mockReturnValue({ staging: { 'network/room': { shape: 's', versions: { local: { documentVersion: 6, updatedAt: 100 }, staging: { documentVersion: 1, updatedAt: 900 } } } } })
+    readBaseline.mockReturnValue({ dev: { 'network/room': { shape: 's', versions: { local: { documentVersion: 6, updatedAt: 100 }, dev: { documentVersion: 1, updatedAt: 900 } } } } })
     const result = await checkSpaces({ spaceFilter: 'network' })
     expect(result.projects).toEqual([])
     expect(call.mock.calls.filter(([, pathname]) => pathname.includes('/document'))).toHaveLength(0)
@@ -292,7 +292,7 @@ describe('checkSpaces', () => {
     listSpaces.mockResolvedValue(['wcc'])
     listProjectMetas.mockImplementation(async (tier) =>
       tier.base.includes('dev.diiii') ? [{ id: 'home', documentVersion: 4, updatedAt: 200 }] : [{ id: 'home', documentVersion: 3, updatedAt: 100 }])
-    readBaseline.mockReturnValue({ staging: { 'wcc/home': 'base' } })
+    readBaseline.mockReturnValue({ dev: { 'wcc/home': 'base' } })
     call.mockImplementation(async (tier) => onDev(tier) ? okDoc('new') : okDoc('base'))
     const result = await checkSpaces({ spaceFilter: 'wcc' })
     expect(result.notLatest).toBe(true)

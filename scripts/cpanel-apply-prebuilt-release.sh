@@ -48,12 +48,14 @@ fi
 
 case "${DEPLOY_ENV}" in
   staging)
-    DEFAULT_WEB_ROOT="${HOME}/staging.di-studio.xyz"
+    # The dev tier. cPanel names a document root after its domain; the old
+    # staging.di-studio.xyz domain was retired 2026-09-16.
+    DEFAULT_WEB_ROOT="${HOME}/dev.diiii.xyz"
     DEFAULT_SERVERXR_ROOT="${HOME}/serverXR-staging"
     DEFAULT_SHARED_ROOT="${HOME}/shared-staging"
-    DEFAULT_BASE_URL="https://staging.di-studio.xyz"
+    DEFAULT_BASE_URL="https://dev.diiii.xyz"
     DEFAULT_PORT="4001"
-    DEFAULT_CORS="https://staging.di-studio.xyz"
+    DEFAULT_CORS="https://dev.diiii.xyz"
     ;;
   production)
     DEFAULT_WEB_ROOT="${HOME}/public_html"

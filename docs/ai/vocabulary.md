@@ -272,28 +272,27 @@ The owner, plainly: "we have not staging anymore." The word leaves our language 
 text, copy. Say **the dev tier** or **dev.diiii.xyz** wherever a reader could mistake "dev" for the
 branch, `npm run dev`, or a local dev server.
 
-**`staging.di-studio.xyz` still answers.** It is the same server under its old name, kept only so
-links already handed out do not break. Host matchers and allowlists keep accepting it. It is never
-named in new copy, a new link, or a doc that tells someone where to go.
+**`staging.di-studio.xyz` is switched off** (2026-09-16: removed from Caddy, DNS record
+deleted). The dev tier answers only at `https://dev.diiii.xyz`. No host matcher or allowlist
+accepts the old name.
 
-**Identifiers that still say `staging` are deliberate survivors.** This file never governed
-identifiers, and these are read by CI, the server, secrets or saved data — renaming one breaks a
-deploy, not a sentence. Do not "fix" them:
+**The identifiers were renamed too**, the same day:
 
-- env vars and secrets: `STAGING_DOMAIN`, `STAGING_API_URL`, `STAGING_API_TOKEN`,
-  `STAGING_CONTAINER`, `STAGING_PORT`, the rest of the `STAGING_*` family, `VPS_STAGING_*`,
-  `DI_TOKEN_STAGING`
-- the compose file `docker-compose.staging.yml` and the container `dii-staging-server-1`
-- the workflow file `.github/workflows/deploy-vps-staging.yml` and its `name:`
-  (`gh run list --workflow` reads both)
-- npm scripts `deploy:staging`, `deploy:host:staging`, `deploy:remote:staging`
-- the git branch `cpanel-staging`
-- the space manifest key `tiers.staging`, and the `deployEnv` value `staging` the dev server
-  reports in `/serverXR/api/health`
-- CLI tier values `--tier staging` (where a CLI also accepts `dev`, prefer `dev` in docs;
-  `staging` keeps working)
+| was | is |
+| --- | --- |
+| `docker-compose.staging.yml`, project `dii-staging` | `docker-compose.dev.yml`, `dii-dev` (`dii-dev-server-1`) |
+| `.github/workflows/deploy-vps-staging.yml` | `deploy-vps-dev.yml` |
+| env `STAGING_*`, `VPS_STAGING_*` | `DEV_*`, `VPS_DEV_*` |
+| `/opt/di.iiii-staging` | `/opt/di.iiii-dev` |
+| image tags `staging`, `staging-<sha>` | `dev`, `dev-<sha>` |
+| manifest `tiers.staging`, `deployEnv` `staging`, `--tier staging` | `tiers.dev`, `dev`, `--tier dev` |
+| `DI_TOKEN_STAGING` | `DI_TOKEN_DEV` |
 
-Where one of these sits in a doc, say once nearby "the dev tier (identifier still `staging`)".
+A CLI handed `staging` fails with `"staging" is now "dev"` — no silent alias.
+
+Two survivors, both left for the owner to decide: the legacy cPanel pipeline (dead since
+2026-07-15 — `publish-cpanel-prebuilt-v2.yml`, `scripts/cpanel-*`, branch `cpanel-staging`) and the
+Android package id `xyz.distudio.chat.staging` (changing it makes a new app).
 
 The line in "Amended 2026-08-19, same day" — "Stage collided with the deploy tier" — is history and stays as it was said.
 It explains a 2026-08-19 decision; the tier it collided with is now called dev.

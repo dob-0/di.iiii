@@ -73,10 +73,9 @@ const BANNED = [
     // which is right. Read new copy for the sense; the guard catches the noun.
     { word: 'Room', pattern: /\bRooms?\b/, use: 'Scene (the 3D place) · space (the place that is yours)' },
     // Retired 2026-09-16: "we have not staging anymore." The second tier is the
-    // dev tier, at dev.diiii.xyz. Word-bounded, so `restaging` is not a hit, and
-    // identifiers that still carry it (`docker-compose.staging.yml`,
-    // `tiers.staging`) are separator-joined and dropped as code before this runs.
-    // An address inside a sentence ("open staging.di-studio.xyz") is a hit, on
+    // dev tier, at dev.diiii.xyz; its identifiers were renamed `dev` too.
+    // Word-bounded, so `restaging` is not a hit, and a separator-joined token
+    // (`cpanel-staging`) is dropped as code before this runs. An address inside a sentence ("open staging.di-studio.xyz") is a hit, on
     // purpose: copy names dev.diiii.xyz. A string that is ONLY the address reads
     // as code and is dropped, like any other dotted token.
     { word: 'staging', pattern: /\bstaging\b/i, use: 'the dev tier (dev.diiii.xyz)' }
