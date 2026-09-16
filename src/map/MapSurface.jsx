@@ -4,6 +4,7 @@ import MapEditorOverlay from './MapEditorOverlay.jsx'
 import MapInspector from './MapInspector.jsx'
 import MapCueList from './MapCueList.jsx'
 import { useMapDocument } from './useMapDocument.js'
+import { toTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildMapOutputPath } from './mapRouting.js'
 import { listProjects } from '../project/services/projectsApi.js'
 import { transportWarning } from './transportCeiling.js'
@@ -88,6 +89,13 @@ export default function MapSurface({ projectId, spaceId }) {
     const [liveCueId, setLiveCueId] = useState(null)
     const [clipboard, setClipboard] = useState(null)
     const [projectOptions, setProjectOptions] = useState([])
+    // The project's picture operators: what a Pictures surface runs, and the
+    // Picture Out nodes the inspector offers to show.
+    const network = useMemo(() => toTopNetwork(doc), [doc])
+    const pictureOutOptions = useMemo(
+        () => (doc?.nodes || []).filter((node) => node.typeId === 'top.out').map((node) => ({ id: node.id, label: node.label || 'Picture Out' })),
+        [doc]
+    )
     const [localReference, setLocalReference] = useState('')
     const [transferText, setTransferText] = useState(null)
     const [lightingHere, setLightingHere] = useState(false)
@@ -428,6 +436,7 @@ export default function MapSurface({ projectId, spaceId }) {
                                 height={stage.height}
                                 live={live}
                                 soloSurfaceId={soloId}
+                                network={network}
                             />
                             {reference.visible && referenceUrl ? (
                                 <img className="map-reference" src={referenceUrl} alt="" style={{ opacity: reference.opacity }} />
@@ -457,6 +466,7 @@ export default function MapSurface({ projectId, spaceId }) {
                     <MapInspector
                         surface={selected}
                         projectOptions={projectOptions}
+                        pictureOutOptions={pictureOutOptions}
                         clipboard={clipboard}
                         onUpdate={updateSurface}
                         onDelete={(surfaceId) => { deleteSurface(surfaceId); setSelectedId(null) }}

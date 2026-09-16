@@ -5613,6 +5613,102 @@
 
 /* The Monitor: a window that watches a texture wire. The canvas letterboxes
    inside whatever frame the window is dragged to. */
+/* The desk: machines and their devices (DeskPanelWindow). */
+.raw-desk-panel {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+    padding: var(--di-space-3);
+    display: grid;
+    gap: var(--di-space-3);
+    align-content: start;
+    /* One column that may shrink: a long device name must ellipsise, not
+       widen the grid past its window and push the buttons out of sight. */
+    grid-template-columns: minmax(0, 1fr);
+    background: var(--di-surface);
+    box-sizing: border-box;
+}
+
+.raw-desk-panel.is-empty,
+.raw-desk-hint {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: var(--di-text-3);
+}
+
+.raw-desk-machine {
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: var(--di-space-2) var(--di-space-3);
+}
+
+.raw-desk-machine.is-self {
+    border-color: rgba(var(--di-live-rgb), 0.45);
+}
+
+.raw-desk-machine header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--di-space-2);
+}
+
+.raw-desk-machine header strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.raw-desk-machine header span {
+    flex: 0 0 auto;
+}
+
+.raw-desk-machine header span,
+.raw-desk-group h4 {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: var(--di-text-2);
+    font-weight: normal;
+    margin: 0;
+}
+
+.raw-desk-group {
+    margin-top: var(--di-space-2);
+}
+
+.raw-desk-group ul {
+    list-style: none;
+    margin: var(--di-space-1) 0 0;
+    padding: 0;
+    display: grid;
+    gap: var(--di-space-1);
+}
+
+.raw-desk-group li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--di-space-2);
+    font-size: var(--di-text-3);
+}
+
+.raw-desk-group li span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.raw-desk-group button {
+    flex: 0 0 auto;
+    min-height: 32px;
+    padding: 0 var(--di-space-2);
+    background: transparent;
+    color: inherit;
+    border: 1px solid rgba(var(--di-live-rgb), 0.5);
+    cursor: pointer;
+}
+
 .raw-monitor-panel {
     position: absolute;
     inset: 0;
@@ -5865,6 +5961,16 @@
 /* The one line a portless card can afford. Clipped rather than wrapped: the
    body is a single 22px row and its height is the geometry the wires are
    drawn from, so this must never push it taller. */
+/* A picture operator's live picture, under its port rows (TopThumbnail). */
+.raw-top-picture {
+    position: absolute;
+    left: 8px;
+    box-sizing: border-box;
+    background: var(--di-black);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+}
+
 .raw-graph-node-summary {
     position: absolute;
     inset: 0 10px auto 10px;

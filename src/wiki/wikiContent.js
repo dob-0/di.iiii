@@ -132,6 +132,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-10'
     },
     {
+        id: 'picture-operators-and-the-desk',
+        category: 'Editing',
+        title: 'Picture operators, and one desk across machines',
+        summary: 'Image operators you wire like TouchDesigner, a Desk that shows every linked machine and its cameras and screens, and Runs on — which machine computes each operator.',
+        body: [
+            'PICTURE OPERATORS are nodes in the pictures family: Camera In, Difference, Level, Blur, Edge, Feedback, Blend, Analyze and Picture Out. Wire a Picture output into an In; every card shows its live picture under its ports, and a setting changes the picture as you drag it. They run on the graphics card, so an old laptop driving a projector keeps up.',
+            'ANALYZE turns a picture into numbers — brightness, how much of it is lit, and the centre of what is lit — which any number node can use: a light, a sound, a timer.',
+            'PICTURE OUT is what a screen shows. On a projection map, set a surface\'s source to Pictures and choose a Picture Out; the output page runs the same operators. A projector page with nothing mapped shows its own machine\'s Picture Out whole.',
+            'ONE DESK ACROSS MACHINES. Two di.iiii installs linked with `di invite` / `di follow` share a space. Place a DESK node: it lists every machine that has a page of that space open, with its cameras, microphones, speakers and screens. "+ Camera In" and "+ Picture Out" place the operator already set to that machine and device.',
+            'RUNS ON is the first setting of every picture operator. "Where the page is open" means every machine runs its own copy — your webcam in your browser, the kiosk\'s on the kiosk. Choose a machine and only that machine computes it. A wire between operators on two machines carries the picture across the network by itself (browser to browser, no internet needed on one network); cards of operators computed elsewhere show small previews, and Analyze numbers travel both ways.',
+            'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.'
+        ],
+        tags: ['operators', 'touchdesigner', 'tops', 'camera', 'projector', 'desk', 'machines', 'devices', 'follow', 'webrtc', 'analyze'],
+        updated: '2026-09-14'
+    },
+    {
         id: 'sound-in-a-room',
         category: 'Spaces & access',
         title: 'Sound in a room, and the switch that starts off',
@@ -1373,7 +1389,7 @@ export const WIKI_ARTICLES = [
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['glossary', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['glossary', 'picture-operators-and-the-desk', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

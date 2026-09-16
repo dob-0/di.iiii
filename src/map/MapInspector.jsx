@@ -8,6 +8,7 @@ const SOURCE_KINDS = [
     { id: 'video', label: 'Video' },
     { id: 'image', label: 'Image' },
     { id: 'camera', label: 'Camera' },
+    { id: 'network', label: 'Pictures' },
     { id: 'colour', label: 'Colour' }
 ]
 
@@ -18,6 +19,7 @@ const BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
 export default function MapInspector({
     surface,
     projectOptions,
+    pictureOutOptions = [],
     clipboard,
     onUpdate,
     onDelete,
@@ -68,6 +70,16 @@ export default function MapInspector({
                         {projectOptions.map((project) => (
                             <option key={project.id} value={project.id}>{project.title || project.id}</option>
                         ))}
+                    </select>
+                </label>
+            ) : null}
+
+            {surface.source.kind === 'network' ? (
+                <label className="map-field">
+                    <span>Picture Out</span>
+                    <select value={surface.source.ref} onChange={(event) => setSource('network', event.target.value)}>
+                        <option value="">{pictureOutOptions.length ? 'Choose a Picture Out' : 'No Picture Out in this project yet'}</option>
+                        {pictureOutOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
                     </select>
                 </label>
             ) : null}
