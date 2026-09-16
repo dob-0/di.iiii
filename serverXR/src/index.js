@@ -1613,9 +1613,11 @@ router.post('/api/content-changes/undo', async (req, res, next) => {
     if (!verifyInboundSignature(req)) {
       return res.status(401).json({ error: 'Invalid or missing signature.' })
     }
-    const spaceId = normalizeSpaceId(String(req.body?.spaceId || ''))
-    const snapshotId = String(req.body?.snapshotId || '')
-    if (!spaceId || !snapshotId) {
+    // Both named, both strings — an Undo that names nothing is refused, never
+    // defaulted to "the latest" of anything.
+    const { spaceId: rawSpaceId, snapshotId } = req.body || {}
+    const spaceId = typeof rawSpaceId === 'string' ? normalizeSpaceId(rawSpaceId) : null
+    if (!spaceId || typeof snapshotId !== 'string' || !snapshotId) {
       return res.status(400).json({ error: 'spaceId and snapshotId are required.' })
     }
     if (!(await spaceExists(spaceId))) return res.status(404).json({ error: 'Space not found.' })
