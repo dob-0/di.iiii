@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import MapStage from './MapStage.jsx'
 import { useMapDocument, useMapChannelListener } from './useMapDocument.js'
+import RigBlackout from '../rig/RigBlackout.jsx'
 import './mapSurface.css'
 
 // THE SIGNAL.
@@ -63,6 +64,7 @@ export default function MapOutput({ projectId, spaceId }) {
                 <MapStage mapping={mapping} spaceId={spaceId} width={stage.width} height={stage.height} live />
             ) : null}
             <MapOutputControls />
+            <RigBlackout />
         </div>
     )
 }
