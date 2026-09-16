@@ -70,3 +70,54 @@ Not done here (out of scope for this PR, section B of the plan): actor stamping 
 `space_ops`/`project_ops`, restore points beyond Open Space, the snapshots/history
 API, the inner-bot notice+Undo, Studio's History panel. `CONTRIBUTING.md` names
 these as "coming in later PRs" without promising their shape.
+
+## 2026-09-16 (later) — rebased onto the "staging" retirement; the space check rebuilt after real-box testing
+
+- Rebased onto `origin/dev` after `chore: retire "staging" — the tiers are local ·
+  dev · prod` landed (PR #471) — `TIERS.staging.base` is now `dev.diiii.xyz`,
+  `resolveTier`/`tierLabel` exist, `isProductionTarget` also covers `diiii.xyz`.
+  One textual conflict (an import line in `tier-sync.test.js`); everything else
+  auto-merged clean and was re-verified by hand against the new file shapes.
+- Ran the space check against the owner's real env for the first time
+  (`local.thedi.studio` + `staging.di-studio.xyz`, ~31 held spaces, ~100
+  projects) and it did not hold up:
+  1. `localBase()` in `tier-sync.mjs` appended `/serverXR` unconditionally —
+     `LOCAL_API_URL=http://localhost:4000/serverXR` produced
+     `.../serverXR/serverXR/api/spaces` → 404. Fixed to be idempotent about the
+     suffix. `checkSpaces` also now retries a configured-but-unreachable local
+     tier against plain `http://localhost:4000/serverXR` once (network
+     failures only, never on an auth error) and names every base it tried in
+     the "not checked" reason.
+  2. The original design fetched and hashed every project's full document on
+     both tiers — against ~100 real projects it either blew its own 10s
+     budget or, once, printed ~60 "not checked (time budget exceeded)" lines.
+     Replaced with a cheap comparison: one `GET /api/spaces/:id/projects` per
+     tier per space (documentVersion + updatedAt for every project in that
+     space, no per-project request), compared against what THIS box last saw
+     for that project (`serverXR/data/start-check-cache.json`, resolved the
+     same way `tier-sync-baseline.json` is — DATA_ROOT-relative — but a
+     separate file; tier-sync never reads or writes it). A version bumps on
+     every write (`projectRoutes.js`), so "unchanged since I last looked" is
+     as reliable as a content hash for detecting motion, without reading
+     content. Spaces run `SPACE_CONCURRENCY` (6) at a time.
+  3. Output redesigned to one summary line grouped by SPACE, not project
+     ("19 same · 2 newer on dev: wcc, br-id-ge"), then up to 5 detail lines
+     with the exact pull command, then "+N more — npm run start-check --
+     --spaces-detail" for the rest. `not-checked` rows collapse into one line
+     grouped by reason with a count, never one line each.
+- Verified for real, read-only, against the owner's actual local install and
+  the actual dev tier (`local.thedi.studio` + `staging.di-studio.xyz`, sourced
+  from `di.iiii/serverXR/.env.local`): first run (cold cache) 31 spaces in a
+  few seconds, all reported "new (uncompared)" since nothing was cached yet;
+  second run 2.35s wall clock, correct "same"/"local-only"/"dev-only" split,
+  no drift (nothing changed between the two runs, as expected). The
+  `SessionStart` hook command itself (CURRENT.md print + `timeout 25 node
+  start-check.mjs`) ran in 2.21s total — well inside its 25s/30s budgets.
+  `serverXR/data/start-check-cache.json` now exists for real on this box,
+  alongside the existing `tier-sync-baseline.json`.
+- `classifyProjectDrift`/shape-baseline comparison removed in favor of
+  `classifyVersionDrift`; tests rewritten to match
+  (`scripts/start-check.test.js`, `scripts/tier-sync.test.js` gained
+  `localBase` coverage). `tier-sync.mjs` gained `listProjectMetas` (the cheap
+  list read, exported for reuse — the same reuse-not-copy rule the rest of
+  this file follows).

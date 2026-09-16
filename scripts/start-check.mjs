@@ -25,11 +25,24 @@
  * from local refs, with the fetch step itself named as skipped.
  *
  * Usage:
- *   node scripts/start-check.mjs [--strict] [--space <id>] [--json]
+ *   node scripts/start-check.mjs [--strict] [--space <id>] [--json] [--code-only] [--spaces-detail]
  *
  * Exit code: 0 always, unless --strict AND the verdict is NOT LATEST (exit 1).
  * `--json` prints the full result object instead of the formatted report —
  * for another script or CI step to consume without re-parsing text.
+ * `--code-only` skips the space check entirely (pre-push-gate.sh uses this).
+ * `--spaces-detail` removes the cap on how many drifted projects get their
+ * own line — the default keeps the space section to one summary line plus a
+ * handful of details, however many spaces this box holds.
+ *
+ * The space check is CHEAP by design: two requests per held space (a
+ * project list from each tier — id + documentVersion + updatedAt, not the
+ * document itself), so a box with ~30 spaces / ~100 projects finishes in a
+ * couple of seconds. It compares each side's documentVersion against what
+ * this box last cached for that project (serverXR/data/start-check-cache.json)
+ * rather than fetching and hashing full documents — a version bumps on
+ * every write, so "unchanged since I last looked" is exactly as reliable as
+ * a content hash for detecting MOTION, without the cost of reading content.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -38,7 +51,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getState } from './repo-state.mjs'
-import { TIERS, localBase, listSpaces, readSignatures, readBaseline } from './tier-sync.mjs'
+import { TIERS, localBase, listSpaces, listProjectMetas } from './tier-sync.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -49,11 +62,40 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 // dead tier.
 export const NETWORK_TIMEOUT_MS = 10_000
 
-// The space-check section can fan out into many HTTP round trips (one GET
-// per project per tier) — this is the OVERALL budget for that whole section,
-// not per-request, so a box holding a lot of spaces degrades to "not fully
-// checked" rather than turning start-check into a multi-minute hang.
+// The space-check section fans out to 2 requests per held space (a cheap
+// project list from each tier — see checkSpaces) — this is the OVERALL
+// budget for that whole section, not per-request, so a box holding a lot of
+// spaces degrades to "not fully checked" rather than turning start-check
+// into a multi-minute hang.
 export const SPACE_CHECK_BUDGET_MS = 10_000
+
+// How many spaces are checked at once. The owner's box holds ~30 spaces;
+// 6-at-a-time keeps the whole pass well under the budget above without
+// opening so many sockets at once that a slow tier looks like a dead one.
+export const SPACE_CONCURRENCY = 6
+
+// LOCAL_API_URL is sometimes a domain that is not always up (a `di` install
+// that isn't running right now) — when the CONFIGURED local tier can't be
+// reached at all, try the plain dev-stack address before giving up, and name
+// both attempts. Only for network-level failures — a reachable server that
+// answers 401 is not "try somewhere else", it is "the token is wrong".
+const LOCALHOST_FALLBACK = 'http://localhost:4000/serverXR'
+
+// Run `items` through `fn`, at most `limit` in flight at once. No dependency
+// needed for this — the space check is the only thing here fanning out
+// enough to matter.
+const mapWithConcurrency = async (items, limit, fn) => {
+  const results = new Array(items.length)
+  let next = 0
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++
+      results[i] = await fn(items[i], i)
+    }
+  })
+  await Promise.all(workers)
+  return results
+}
 
 const git = (args, options = {}) => {
   try {
@@ -180,39 +222,73 @@ const readEnv = () => ({
 // rename only has to change one line.
 const DEV_TIER_LABEL = 'dev tier'
 
-/**
- * One project's verdict, using the SAME baseline file tier-sync.mjs writes
- * (`serverXR/data/tier-sync-baseline.json`, keyed by destination tier). The
- * baseline is "what did local and dev last agree this project looked like" —
- * so a shape that still matches it means THIS side hasn't moved since, and a
- * shape that no longer matches means THIS side is the one that changed.
- * Comparing both sides against the same baseline is what turns "these
- * differ" into a direction ("dev has newer work", not just "they disagree").
- */
-export const classifyProjectDrift = ({ localSig, devSig, baselineShape }) => {
-  if (!localSig && !devSig) return null
-  if (localSig && !devSig) return { kind: 'local-only' }
-  if (!localSig && devSig) return { kind: 'dev-only' }
-  if (localSig.hash === devSig.hash) return { kind: 'same' }
-  if (!baselineShape) return { kind: 'differs-no-baseline' }
-  const localMoved = localSig.shape !== baselineShape
-  const devMoved = devSig.shape !== baselineShape
-  if (localMoved && devMoved) return { kind: 'both-moved' }
-  if (devMoved) return { kind: 'dev-ahead' } // local matches the baseline — only dev moved
-  if (localMoved) return { kind: 'local-ahead' } // dev matches the baseline — only local moved
-  return { kind: 'differs-no-baseline' } // neither moved from baseline yet they differ — shouldn't happen, treat cautiously
+// A small cache of the last version this box saw on each side of each
+// project — NOT a copy of any tier's data, just "what did documentVersion
+// read, last time we looked". Lives next to tier-sync's own baseline file
+// (same DATA_ROOT resolution) but is start-check's alone; tier-sync never
+// reads or writes it. Read-only for everything except this file.
+const cachePath = () => {
+  const dataRoot = process.env.DATA_ROOT
+  const root = dataRoot ? path.resolve(ROOT_DIR, 'serverXR', dataRoot) : path.join(ROOT_DIR, 'serverXR', 'data')
+  return path.join(root, 'start-check-cache.json')
+}
+const readVersionCache = () => {
+  try { return JSON.parse(fs.readFileSync(cachePath(), 'utf8')) } catch { return {} }
+}
+const writeVersionCache = (cache) => {
+  try {
+    fs.mkdirSync(path.dirname(cachePath()), { recursive: true })
+    fs.writeFileSync(cachePath(), JSON.stringify(cache, null, 1))
+  } catch { /* advisory only — a failed write just means next run bootstraps again */ }
 }
 
 /**
- * The SPACES half of the check. Reuses tier-sync.mjs's own document
- * comparison (`readSignatures`, built on `documentSignature`) rather than
- * re-implementing it — see that file's header for why a byte/id comparison
- * alone is not enough (asset re-addressing, volatile timestamp fields).
+ * One project's verdict from CHEAP data alone — `documentVersion` off each
+ * side's project list (see `listProjectMetas`), never a document fetch.
+ * `documentVersion` bumps on every write to that tier's own copy
+ * (serverXR/src/routes/projectRoutes.js), so "the version I last cached for
+ * this side hasn't moved" is proof nothing changed there — no hash needed.
+ *
+ * `cached` is what THIS box last observed on both sides together, from a
+ * previous run of this same check (see `readVersionCache`). No entry yet
+ * (first time this project has been seen) can't be compared at all — 'new'.
+ */
+export const classifyVersionDrift = ({ local, dev, cached }) => {
+  if (!local && !dev) return null
+  if (local && !dev) return { kind: 'local-only' }
+  if (!local && dev) return { kind: 'dev-only' }
+  if (!cached) return { kind: 'new' }
+  const localMoved = local.documentVersion !== cached.localVersion
+  const devMoved = dev.documentVersion !== cached.devVersion
+  if (!localMoved && !devMoved) return { kind: 'same' }
+  if (localMoved && devMoved) return { kind: 'both-moved' }
+  if (devMoved) return { kind: 'dev-ahead' }
+  return { kind: 'local-ahead' }
+}
+
+// Network-level failure only (host down, DNS, timeout) — an auth error means
+// the server IS there and answering, so trying somewhere else would not help.
+const isNetworkFailure = (error) => {
+  const code = error?.cause?.code || error?.code
+  return error?.name === 'AbortError' || error?.name === 'TimeoutError' ||
+    ['ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', 'EAI_AGAIN'].includes(code) ||
+    /fetch failed/i.test(error?.message || '')
+}
+
+/**
+ * The SPACES half of the check. Two requests per held space — a project
+ * list from each tier, run SPACE_CONCURRENCY at a time — never a document
+ * fetch. Verified against a real box (~30 spaces, ~100 projects): the old
+ * per-project document-hash approach either 404'd on a misconfigured local
+ * base or blew its own time budget and printed ~60 "not checked" lines; this
+ * one finishes in a couple of seconds either way (see session notes).
  */
 export const checkSpaces = async ({ spaceFilter }) => {
   const env = readEnv()
-  const local = { ...TIERS.local, base: localBase(env), token: env.API_TOKEN }
+  const configuredLocalBase = localBase(env)
+  let local = { ...TIERS.local, base: configuredLocalBase, token: env.API_TOKEN }
   const dev = { ...TIERS.staging, token: env.LIVE_API_TOKEN }
+  const triedBases = [configuredLocalBase]
 
   if (!local.token && !dev.token) {
     return { status: 'not-checked', reason: 'no API_TOKEN or LIVE_API_TOKEN configured', projects: [] }
@@ -224,90 +300,139 @@ export const checkSpaces = async ({ spaceFilter }) => {
   try {
     heldSpaceIds = spaceFilter ? [spaceFilter] : await listSpaces(local)
   } catch (error) {
-    return { status: 'not-checked', reason: `local tier unreachable: ${error.message}`, projects: [] }
+    // The configured local tier didn't answer at all — try the plain
+    // dev-stack address before giving up, and say both things that were tried.
+    if (isNetworkFailure(error) && configuredLocalBase !== LOCALHOST_FALLBACK) {
+      local = { ...local, base: LOCALHOST_FALLBACK }
+      triedBases.push(LOCALHOST_FALLBACK)
+      try {
+        heldSpaceIds = spaceFilter ? [spaceFilter] : await listSpaces(local)
+      } catch (fallbackError) {
+        return { status: 'not-checked', reason: `local tier unreachable — tried ${triedBases.join(' and ')}: ${fallbackError.message}`, projects: [] }
+      }
+    } else {
+      return { status: 'not-checked', reason: `local tier unreachable (${configuredLocalBase}): ${error.message}`, projects: [] }
+    }
   }
 
   if (!heldSpaceIds.length) {
     return { status: 'ok', reason: 'this box holds no spaces yet', projects: [] }
   }
-
-  const baseline = readBaseline()
-  const devBaseline = baseline.staging || {}
-
-  const results = []
-  let devUnreachable = null
-  for (const spaceId of heldSpaceIds) {
-    if (Date.now() > deadline) {
-      results.push({ spaceId, kind: 'not-checked', reason: 'time budget exceeded' })
-      continue
-    }
-    if (devUnreachable) {
-      results.push({ spaceId, kind: 'not-checked', reason: devUnreachable })
-      continue
-    }
-    let localSigs
-    let devSigs
-    try {
-      localSigs = await readSignatures(local, spaceId)
-    } catch (error) {
-      results.push({ spaceId, kind: 'not-checked', reason: `local: ${error.message}` })
-      continue
-    }
-    if (!dev.token) {
-      results.push({ spaceId, kind: 'not-checked', reason: `no LIVE_API_TOKEN for the ${DEV_TIER_LABEL}` })
-      continue
-    }
-    try {
-      devSigs = await readSignatures(dev, spaceId)
-    } catch (error) {
-      devUnreachable = `${DEV_TIER_LABEL} unreachable: ${error.message}`
-      results.push({ spaceId, kind: 'not-checked', reason: devUnreachable })
-      continue
-    }
-
-    const projectIds = new Set([...Object.keys(localSigs[spaceId] || {}), ...Object.keys(devSigs[spaceId] || {})])
-    for (const projectId of projectIds) {
-      if (Date.now() > deadline) {
-        results.push({ spaceId, projectId, kind: 'not-checked', reason: 'time budget exceeded' })
-        continue
-      }
-      const localSig = localSigs[spaceId]?.[projectId]
-      const devSig = devSigs[spaceId]?.[projectId]
-      const drift = classifyProjectDrift({ localSig, devSig, baselineShape: devBaseline[`${spaceId}/${projectId}`] })
-      if (drift && drift.kind !== 'same') results.push({ spaceId, projectId, ...drift })
-    }
+  if (!dev.token) {
+    return { status: 'not-checked', reason: `no LIVE_API_TOKEN for the ${DEV_TIER_LABEL}`, projects: [] }
   }
 
+  const cache = readVersionCache()
+  const results = []
+  let devUnreachable = null
+
+  await mapWithConcurrency(heldSpaceIds, SPACE_CONCURRENCY, async (spaceId) => {
+    if (Date.now() > deadline || devUnreachable) {
+      results.push({ spaceId, kind: 'not-checked', reason: devUnreachable || 'time budget exceeded' })
+      return
+    }
+    let localMetas
+    let devMetas
+    try {
+      [localMetas, devMetas] = await Promise.all([
+        listProjectMetas(local, spaceId),
+        listProjectMetas(dev, spaceId)
+      ])
+    } catch (error) {
+      if (!devUnreachable) devUnreachable = `${DEV_TIER_LABEL} or local unreachable: ${error.message}`
+      results.push({ spaceId, kind: 'not-checked', reason: devUnreachable })
+      return
+    }
+
+    const localById = Object.fromEntries(localMetas.map((p) => [p.id, p]))
+    const devById = Object.fromEntries(devMetas.map((p) => [p.id, p]))
+    const spaceCache = (cache[spaceId] ||= {})
+    for (const projectId of new Set([...Object.keys(localById), ...Object.keys(devById)])) {
+      const local_ = localById[projectId]
+      const dev_ = devById[projectId]
+      const drift = classifyVersionDrift({ local: local_, dev: dev_, cached: spaceCache[projectId] })
+      if (local_ && dev_) {
+        spaceCache[projectId] = { localVersion: local_.documentVersion, devVersion: dev_.documentVersion }
+      }
+      if (drift && drift.kind !== 'same') results.push({ spaceId, projectId, ...drift })
+    }
+  })
+
+  writeVersionCache(cache)
+
   const notLatest = results.some((r) => r.kind === 'dev-ahead' || r.kind === 'both-moved')
-  return { status: 'checked', notLatest, projects: results }
+  return { status: 'checked', notLatest, totalSpaces: heldSpaceIds.length, projects: results, triedBases }
 }
 
-const projectDriftLine = ({ spaceId, projectId, kind, reason }) => {
+const projectDriftLine = ({ spaceId, projectId, kind }) => {
   switch (kind) {
     case 'dev-ahead':
       return `  NOT LATEST  ${DEV_TIER_LABEL} has newer work in \`${spaceId}/${projectId}\` — pull first: ` +
         `node scripts/project-pull.mjs ${projectId} --space ${spaceId} --from ${TIERS.staging.base} --force`
     case 'both-moved':
-      return `  NOT LATEST  \`${spaceId}/${projectId}\` changed on this box AND on the ${DEV_TIER_LABEL} since the last sync — ` +
+      return `  NOT LATEST  \`${spaceId}/${projectId}\` changed on this box AND on the ${DEV_TIER_LABEL} since the last check — ` +
         `compare by hand: node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --audit`
     case 'local-ahead':
       return `  ·  \`${spaceId}/${projectId}\` has local changes not yet on the ${DEV_TIER_LABEL} — ` +
         `push when ready: node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --changed`
-    case 'differs-no-baseline':
-      return `  ?  \`${spaceId}/${projectId}\` differs from the ${DEV_TIER_LABEL} and there is no baseline to say who moved — ` +
-        `node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --audit`
     case 'local-only':
       return `  ·  \`${spaceId}/${projectId}\` exists only on this box`
     case 'dev-only':
       return `  ·  \`${spaceId}/${projectId}\` exists on the ${DEV_TIER_LABEL}, not yet pulled here`
-    case 'not-checked':
-      return `  ?  \`${spaceId}${projectId ? `/${projectId}` : ''}\` not checked (${reason})`
     default:
-      return `  ?  ${spaceId}${projectId ? `/${projectId}` : ''}: ${kind}`
+      return `  ?  ${spaceId}/${projectId}: ${kind}`
   }
 }
 
-export const formatReport = ({ code, spaces, strict }) => {
+// Space-level grouping for the summary line: "31 same · 2 newer on dev: wcc,
+// br-id-ge · 1 changed on both: main". Counts and names SPACES, not
+// projects — a space with three drifted projects is still one name in this
+// line; the detail lines below say which projects.
+const SUMMARY_KINDS = [
+  ['dev-ahead', 'newer on dev'],
+  ['both-moved', 'changed on both'],
+  ['local-ahead', 'local ahead'],
+  ['new', 'new (uncompared)'],
+  ['local-only', 'local-only'],
+  ['dev-only', 'dev-only']
+]
+
+// checkSpaces only ever pushes a row for a space that is NOT fully "same" —
+// a clean space never appears in `spaces.projects` at all. So "same" has to
+// be derived as totalSpaces minus the spaces that DO appear (each space
+// contributes either exactly one 'not-checked' row, or one-or-more drift
+// rows — never both; a space's whole fetch fails together, see checkSpaces).
+const summarizeSpaces = (spaces) => {
+  const bySpace = new Map()
+  const notCheckedSpaceIds = new Set()
+  for (const row of spaces.projects) {
+    if (row.kind === 'not-checked') { notCheckedSpaceIds.add(row.spaceId); continue }
+    if (!bySpace.has(row.spaceId)) bySpace.set(row.spaceId, new Set())
+    bySpace.get(row.spaceId).add(row.kind)
+  }
+  const parts = []
+  for (const [kind, label] of SUMMARY_KINDS) {
+    const ids = [...bySpace.entries()].filter(([, kinds]) => kinds.has(kind)).map(([id]) => id)
+    if (ids.length) parts.push(`${ids.length} ${label}: ${ids.join(', ')}`)
+  }
+  const sameCount = (spaces.totalSpaces ?? 0) - bySpace.size - notCheckedSpaceIds.size
+
+  const notChecked = spaces.projects.filter((r) => r.kind === 'not-checked')
+  const notCheckedByReason = new Map()
+  for (const row of notChecked) notCheckedByReason.set(row.reason, (notCheckedByReason.get(row.reason) || 0) + 1)
+  const notCheckedPart = notChecked.length
+    ? `${notChecked.length} not checked (${[...notCheckedByReason.entries()].map(([reason, n]) => `${n}× ${reason}`).join('; ')})`
+    : null
+
+  return { line: [`${sameCount} same`, ...parts, notCheckedPart].filter(Boolean).join(' · ') }
+}
+
+// Detail lines are capped so a fully-populated box (~30 spaces) can never
+// turn the headline into a scroll of "not checked" — the failure mode a real
+// run against ~30 spaces hit before this cap existed (see session notes).
+const DETAIL_LINE_CAP = 5
+
+export const formatReport = ({ code, spaces, strict, spacesDetail }) => {
   const lines = []
   const notLatest = code.notLatest || spaces.notLatest
 
@@ -339,17 +464,26 @@ export const formatReport = ({ code, spaces, strict }) => {
   if (code.dirty) lines.push('    note: uncommitted changes in this checkout (not itself "behind")')
 
   lines.push('')
-  lines.push('  spaces:')
   if (spaces.status === 'skipped') {
-    lines.push(`    (${spaces.reason} — not checked)`)
+    lines.push(`  spaces: (${spaces.reason} — not checked)`)
   } else if (spaces.status === 'not-checked') {
-    lines.push(`    ? not checked (${spaces.reason})`)
+    lines.push(`  spaces: not checked (${spaces.reason})`)
   } else if (spaces.status === 'ok') {
-    lines.push(`    ok — ${spaces.reason}`)
+    lines.push(`  spaces: ${spaces.reason}`)
   } else if (!spaces.projects.length) {
-    lines.push(`    ok — this box's spaces match the ${DEV_TIER_LABEL}`)
+    lines.push(`  spaces: ${spaces.totalSpaces ?? 0} same — this box's spaces match the ${DEV_TIER_LABEL}`)
   } else {
-    for (const row of spaces.projects) lines.push(projectDriftLine(row))
+    lines.push(`  spaces: ${summarizeSpaces(spaces).line}`)
+    // Only the kinds with an actual command to run — the summary line above
+    // already names which spaces are local-only/dev-only/new, and repeating
+    // every one of those per-project here is exactly the noise this cap
+    // exists to cut.
+    const ACTIONABLE = new Set(['dev-ahead', 'both-moved', 'local-ahead'])
+    const detailRows = spaces.projects.filter((r) => ACTIONABLE.has(r.kind))
+    const shown = spacesDetail ? detailRows : detailRows.slice(0, DETAIL_LINE_CAP)
+    for (const row of shown) lines.push(projectDriftLine(row))
+    const remaining = detailRows.length - shown.length
+    if (remaining > 0) lines.push(`  +${remaining} more — npm run start-check -- --spaces-detail`)
   }
 
   if (notLatest && strict) lines.push('\n  (--strict: exiting 1)')
@@ -357,7 +491,7 @@ export const formatReport = ({ code, spaces, strict }) => {
 }
 
 const parseArgs = (argv) => {
-  const args = { strict: false, space: null, json: false, codeOnly: false }
+  const args = { strict: false, space: null, json: false, codeOnly: false, spacesDetail: false }
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--strict') args.strict = true
     else if (argv[i] === '--space') args.space = argv[++i]
@@ -366,6 +500,8 @@ const parseArgs = (argv) => {
     // (slower, network-fanout) space check entirely — pre-push-gate.sh uses
     // this so a push isn't held up waiting on tier reads it doesn't need.
     else if (argv[i] === '--code-only') args.codeOnly = true
+    // Removes the ~5-line cap on space drift detail lines.
+    else if (argv[i] === '--spaces-detail') args.spacesDetail = true
   }
   return args
 }
@@ -381,7 +517,7 @@ export const main = async () => {
   if (args.json) {
     console.log(JSON.stringify({ notLatest, code, spaces }, null, 2))
   } else {
-    console.log(formatReport({ code, spaces, strict: args.strict }))
+    console.log(formatReport({ code, spaces, strict: args.strict, spacesDetail: args.spacesDetail }))
   }
 
   if (notLatest && args.strict) process.exitCode = 1

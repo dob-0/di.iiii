@@ -59,8 +59,16 @@ const TRANSFER_TIMEOUT_MS = 120000
 // The local tier is not always a dev server on 4000: a `di` install serves the same
 // database over https on its own name (LOCAL_API_URL in serverXR/.env.local, or the
 // environment). Without this the script cannot see the machine it is running on.
-export const localBase = (env = {}) =>
-    (process.env.LOCAL_API_URL || env.LOCAL_API_URL || 'http://localhost:4000').replace(/\/+$/, '') + '/serverXR'
+//
+// Idempotent about the `/serverXR` suffix: the documented convention is to set
+// LOCAL_API_URL WITHOUT it (`https://local.thedi.studio`), but a value that
+// already carries it (`http://localhost:4000/serverXR`, e.g. copy-pasted from
+// this function's own output) must not get a second one appended — found live
+// 2026-09-16, `.../serverXR/serverXR/api/spaces` → 404.
+export const localBase = (env = {}) => {
+    const raw = (process.env.LOCAL_API_URL || env.LOCAL_API_URL || 'http://localhost:4000').replace(/\/+$/, '')
+    return /\/serverXR$/i.test(raw) ? raw : `${raw}/serverXR`
+}
 
 export const TIERS = {
     local: { base: localBase(), tokenKey: 'API_TOKEN' },
@@ -392,6 +400,25 @@ export const listProjects = async (tier, spaceId) => {
     if (!res.ok) return []
     const body = await res.json()
     return (body.projects || body || []).map((p) => p.id)
+}
+
+// The cheap half of a comparison: `documentVersion`/`updatedAt` from the SAME
+// list response `listProjects` already reads, without a second request per
+// project. A document's PUT/ops routes bump `documentVersion` on every write
+// (serverXR/src/routes/projectRoutes.js), so "the version I last saw here
+// hasn't moved" is proof nothing changed — no need to fetch and hash the
+// document itself to know that. start-check.mjs's space check uses this as
+// its everyday path and only reaches for `readSignatures` (below) when it
+// truly needs to compare content, not just detect motion.
+export const listProjectMetas = async (tier, spaceId) => {
+    const res = await call(tier, `/api/spaces/${spaceId}/projects`)
+    if (!res.ok) return []
+    const body = await res.json()
+    return (body.projects || body || []).map((p) => ({
+        id: p.id,
+        documentVersion: Number.isFinite(Number(p.documentVersion)) ? Number(p.documentVersion) : 0,
+        updatedAt: Number.isFinite(Number(p.updatedAt)) ? Number(p.updatedAt) : 0
+    }))
 }
 
 export const readInventory = async (tier, only) => {
