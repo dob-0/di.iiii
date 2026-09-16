@@ -3,14 +3,14 @@
   "spaceId": "main",
   "label": "di.iiii",
   "isPublic": true,
-  "minEngine": 6,
+  "minEngine": 7,
   "note": "The platform's own space — what di-studio.xyz opens on. The front room (main-dii-project) is authored in Studio and stays undeclared; the platform's own pages are declared below and pushed from this repo.",
   "tiers": {
     "prod": {
       "url": "https://di-studio.xyz/serverXR",
       "tokenEnv": "PROD_API_TOKEN"
     },
-    "staging": {
+    "dev": {
       "url": "https://dev.diiii.xyz/serverXR",
       "tokenEnv": "LIVE_API_TOKEN"
     },

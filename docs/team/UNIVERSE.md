@@ -25,7 +25,7 @@ Owns the promotion path from local to the dev tier to production, cPanel prebuil
 
 - Home: `scripts/`, `deploy/`, `.github/workflows/`
 - Skills: `dii-deploy-workflow`, `dii-ai-doc-maintenance`
-- Runs: `npm run deploy:staging`, `npm run smoke staging`
+- Runs: `npm run deploy:dev`, `npm run smoke dev`
 
 ---
 

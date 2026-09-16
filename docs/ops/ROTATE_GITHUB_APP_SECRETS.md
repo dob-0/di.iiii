@@ -7,12 +7,12 @@ may have leaked (e.g. passed through chat), or on a routine schedule.
 - **App:** `dii-space-sync` — App ID `4178187` — settings at
   `https://github.com/settings/apps/dii-space-sync`
 - **Source of truth (per environment):** the `.env` next to the compose files on
-  the VPS — `/opt/di.iiii/.env` (production) and `/opt/di.iiii-staging/.env`
-  (the dev tier, dev.diiii.xyz — directory and var prefix still say `staging`). Deploy never rewrites `.env`; it only `git checkout`s the tracked
+  the VPS — `/opt/di.iiii/.env` (production) and `/opt/di.iiii-dev/.env`
+  (the dev tier, dev.diiii.xyz). Deploy never rewrites `.env`; it only `git checkout`s the tracked
   compose files, so values set here survive every deploy.
 - **Reaching the container:** `docker-compose.yml` passes `GITHUB_APP_ID`,
   `GITHUB_APP_PRIVATE_KEY_B64` and `GITHUB_APP_WEBHOOK_SECRET` into the `server`
-  service; the dev-tier override (`docker-compose.staging.yml`) reads the `STAGING_`-prefixed twins. A var that
+  service; the dev-tier override (`docker-compose.dev.yml`) reads the `DEV_`-prefixed twins. A var that
   isn't listed there never reaches the process, whatever `.env` says.
 - **Key loading:** `serverXR/src/githubApp.js#getPrivateKey` reads, in order:
   `GITHUB_APP_PRIVATE_KEY_PATH` → `GITHUB_APP_PRIVATE_KEY_B64` → `GITHUB_APP_PRIVATE_KEY`.
@@ -51,7 +51,7 @@ PEM=~/dii-space-sync.NEW.private-key.pem
 B64=$(base64 -w0 "$PEM")
 
 CFG=/opt/di.iiii/.env ; PREFIX=""                    # production
-# CFG=/opt/di.iiii-staging/.env ; PREFIX="STAGING_"  # dev tier (second pass)
+# CFG=/opt/di.iiii-dev/.env ; PREFIX="DEV_"          # dev tier (second pass)
 
 set_env () {  # set_env KEY VALUE — replace in place or append
   grep -q "^${PREFIX}$1=" "$CFG" \
@@ -76,9 +76,9 @@ cd /opt/di.iiii          # production
 docker compose --profile https -f docker-compose.yml -f docker-compose.prod.yml \
   -f docker-compose.caddy-hardened.yml up -d server
 
-cd /opt/di.iiii-staging  # dev tier
+cd /opt/di.iiii-dev      # dev tier
 docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-  -f docker-compose.staging.yml up -d server
+  -f docker-compose.dev.yml up -d server
 ```
 
 A redeploy (`git push origin main` / `dev`) also picks them up — restarting is

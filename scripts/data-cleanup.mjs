@@ -5,8 +5,8 @@
 //   node scripts/data-cleanup.mjs <plan.json> --apply    # actually delete
 //
 // Targets resolve from serverXR/.env.local: local -> API_TOKEN,
-// dev (the dev tier, dev.diiii.xyz; "staging" still accepted) ->
-// STAGING_API_URL/STAGING_API_TOKEN (LIVE_* accepted as the legacy alias),
+// dev (the dev tier, dev.diiii.xyz) ->
+// DEV_API_URL/DEV_API_TOKEN (LIVE_* accepted as the legacy alias),
 // prod -> PROD_API_URL/PROD_API_TOKEN. Whatever the label says, a base URL that
 // is neither localhost nor a dev-tier host is treated as production.
 //
@@ -36,19 +36,18 @@ function loadEnv() {
   return env;
 }
 const env = loadEnv();
-// STAGING_* first: LIVE_* means the dev tier in serverXR/.env.local but PRODUCTION
+// DEV_* first: LIVE_* means the dev tier in serverXR/.env.local but PRODUCTION
 // to scripts/space-code-push.mjs and space-sync.mjs, and this script deletes.
 // LIVE_* stays as the legacy alias so existing .env.local files keep working.
 const TARGETS = {
   local: { base: 'http://localhost:4000/serverXR', token: env.API_TOKEN },
-  staging: {
-    base: env.STAGING_API_URL || env.LIVE_API_URL,
-    token: env.STAGING_API_TOKEN || env.LIVE_API_TOKEN
+  dev: {
+    base: env.DEV_API_URL || env.LIVE_API_URL,
+    token: env.DEV_API_TOKEN || env.LIVE_API_TOKEN
   },
   prod: { base: env.PROD_API_URL, token: env.PROD_API_TOKEN }
 };
-// `dev` is the dev tier's name; its target key is still `staging`.
-TARGETS.dev = TARGETS.staging;
+if (plan.env === 'staging') { console.error('"staging" is now "dev"'); process.exit(1); }
 const tgt = TARGETS[plan.env];
 if (!tgt || !tgt.base || !tgt.token) { console.error(`Bad/unknown env "${plan.env}" or missing token.`); process.exit(1); }
 
@@ -59,10 +58,10 @@ catch { console.error(`env "${plan.env}" resolved to an unparseable base URL: ${
 // The confirmation gate keys off the URL that was actually resolved, not the
 // plan's label — a plan saying "dev" reads a key that another script
 // treats as production, so the label alone is not evidence of the target.
-// Anything that is neither localhost nor a dev-tier host (dev.diiii.xyz, or
-// the legacy staging.* name) counts as production and has to be typed for.
+// Anything that is neither localhost nor the dev-tier host (dev.diiii.xyz)
+// counts as production and has to be typed for.
 const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
-const isDevTierHost = host === 'dev.diiii.xyz' || host.startsWith('staging.');
+const isDevTierHost = host === 'dev.diiii.xyz';
 const targetsProduction = !isLocalHost && !isDevTierHost;
 
 const mode = apply ? 'APPLY' : 'DRY-RUN';

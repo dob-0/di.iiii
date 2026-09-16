@@ -20,7 +20,9 @@ done >> "$keep"
 
 # The N newest of each family.
 for repo in ghcr.io/dob-0/dii-client ghcr.io/dob-0/dii-server; do
-  for env in prod staging; do  # staging-* = the dev tier's image tags (identifier still `staging`)
+  # dev-* = the dev tier's image tags. The pre-rename staging-* family (renamed
+  # 2026-09-16) is deliberately NOT listed: nothing keeps it, so its leftovers go.
+  for env in prod dev; do
     docker images "$repo" --format '{{.ID}}\t{{.Tag}}\t{{.CreatedAt}}' \
       | grep -P "\t${env}-" | sort -k3 -r | head -n "$KEEP_PER_FAMILY" | cut -f1 \
       | while read -r id; do docker image inspect "$id" --format '{{.Id}}' 2>/dev/null; done

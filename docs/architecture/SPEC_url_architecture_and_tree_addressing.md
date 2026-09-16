@@ -162,8 +162,8 @@ resolver shape.
 
 Infrastructure only, no user-visible change. `studio.di-studio.xyz` serves the same
 bundle as `di-studio.xyz`; both hosts accept every current route. Nothing redirects
-yet. Verifiable on the dev tier as `studio.staging.di-studio.xyz` (a host name drafted before the
-dev tier moved to `dev.diiii.xyz` — re-pick it with this stage).
+yet. Verifiable on the dev tier as `<dev-tier host, to be picked>` (the owner picks the name with
+this stage).
 
 ### Stage 1 — move the creator surfaces, flat paths only
 
@@ -253,7 +253,7 @@ Notes:
   `serializeAuthSessionCookie` and `serializeExpiredAuthSessionCookie`.
 - `serverXR/src/config.js` — new `AUTH_SESSION_COOKIE_DOMAIN` env. **Unset means
   host-only, i.e. exactly today's behaviour** — dev and self-host installs are
-  unaffected. Set to `.di-studio.xyz` in prod, `.staging.di-studio.xyz` on the dev tier.
+  unaffected. Set to `.di-studio.xyz` in prod, `<dev-tier host, to be picked>` on the dev tier.
 - `CORS_ORIGINS` gains the creator origin for both lanes.
 - `/api/resolve/:spaceSegment/:projectSegment` → `*path` (Stage 2 only).
 
@@ -276,9 +276,9 @@ Assign Security Auditor. Three specific items:
 
 ### 5.4 Infrastructure
 
-- `Caddyfile` — today two blocks, `{$SITE_DOMAIN}` and `{$STAGING_DOMAIN}`, both
+- `Caddyfile` — today two blocks, `{$SITE_DOMAIN}` and `{$DEV_DOMAIN}`, both
   `reverse_proxy` to the same client. Add `{$STUDIO_DOMAIN}` and
-  `{$STAGING_STUDIO_DOMAIN}` blocks. Follow the existing pattern where an unset
+  `{$DEV_STUDIO_DOMAIN}` blocks. Follow the existing pattern where an unset
   domain var leaves the block inert (a harmless cert-issuance log line) so the
   change is safe to merge before DNS exists.
 - DNS: two new A records to the Hetzner box.

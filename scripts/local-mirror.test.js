@@ -50,14 +50,14 @@ describe('local-mirror', () => {
         // mirror leaves it out and nothing reports the miss — the space simply
         // is not there, which reads as "the tool worked".
         expect(parseArgs([]).tier).toBe('all')
-        expect(Object.keys(TIERS)).toEqual(['prod', 'staging'])
+        expect(Object.keys(TIERS)).toEqual(['prod', 'dev'])
     })
 
-    it('accepts --tier dev for the dev tier and keeps --tier staging working', () => {
-        expect(parseArgs(['--tier', 'dev']).tier).toBe('staging')
-        expect(parseArgs(['--tier', 'staging']).tier).toBe('staging')
+    it('names the dev tier dev and refuses the old staging key', () => {
+        expect(parseArgs(['--tier', 'dev']).tier).toBe('dev')
+        expect(() => parseArgs(['--tier', 'staging'])).toThrow('"staging" is now "dev"')
         expect(parseArgs(['--tier', 'prod']).tier).toBe('prod')
-        expect(TIERS.staging.fallbackUrl).toBe('https://dev.diiii.xyz/serverXR')
+        expect(TIERS.dev.fallbackUrl).toBe('https://dev.diiii.xyz/serverXR')
     })
 
     it('ignores empty env assignments so a placeholder cannot blank a real token', () => {

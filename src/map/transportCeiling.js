@@ -8,7 +8,7 @@
 // stuck on "Loading live experience". Over HTTP/2 the same streams multiplex
 // onto one connection and all five come up in seconds.
 //
-// di-studio.xyz and dev.diiii.xyz (old name staging.di-studio.xyz) both answer h2, so this does not
+// di-studio.xyz and dev.diiii.xyz both answer h2, so this does not
 // bite a deployed wall. `npm run dev` is plain HTTP/1.1, and a show driven
 // from a laptop running the dev server is exactly where it would.
 const HTTP1_PERSISTENT_CONNECTIONS = 6

@@ -1571,7 +1571,7 @@ describe('server write contracts', () => {
 
     it('reports release metadata from the runtime manifest', async () => {
         const releaseManifest = {
-            deployEnv: 'staging',
+            deployEnv: 'dev',
             sourceRef: 'dev',
             gitCommit: 'abcdef1234567890',
             releaseId: 'cpanel-20260412-120000',

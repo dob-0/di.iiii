@@ -43,7 +43,7 @@ published project at 200 while the address bar said otherwise. See `docs/ai/know
   first in `RootApp.jsx`'s dispatch order before the new generic mechanism is ever reached.
 
 > Prompted 2026-07-18 by a direct product ask: today's Studio project links are long and
-> internal (`https://staging.di-studio.xyz/open/studio/projects/open-jam`), and the product
+> internal (`https://dev.diiii.xyz/open/studio/projects/open-jam`, as the dev tier is named today), and the product
 > direction wants each space to feel like its own clean address (`di-studio.xyz/NPAK`),
 > eventually ownable enough that an artist could take their space to their own domain/hosting.
 > Written after a full audit of current routing + export code — several pieces of this already

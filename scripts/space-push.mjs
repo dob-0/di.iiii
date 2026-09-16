@@ -39,7 +39,7 @@ const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
 // Production is the one host this script must never reach by inheritance.
 // Matches the live site under both its names (di-studio.xyz, diiii.xyz); the dev
-// tier (dev.diiii.xyz, legacy staging.di-studio.xyz) is a different hostname and
+// tier (dev.diiii.xyz) is a different hostname and
 // is unaffected.
 export const isProductionTarget = (url) => {
     try {

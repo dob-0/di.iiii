@@ -113,11 +113,15 @@ Keep it brief and actionable. Capture the path that worked, not a long narrative
 
 ### Shortcut: Smart Dev-Tier Deploy (No Guesswork)
 
+> Legacy cPanel-era path, dead since 2026-07-15 — kept as a record, not a route (its `:staging`
+> npm scripts are gone). The dev tier
+> (`dev.diiii.xyz`, its only address) deploys by pushing `dev` (`deploy-vps-dev.yml`).
+
 - Problem: Deploy request arrives while the branch has uncommitted or mixed-scope changes.
 - Short way:
 	1. Never deploy from a dirty worktree unless explicitly approved.
 	2. Commit only the intended deploy scope (or clearly approved full scope), then deploy from that commit.
-	3. Run `npm run deploy:staging` from `dev` only (the dev tier; identifier still `staging`).
+	3. Run `npm run deploy:staging` from `dev` only (the cPanel-era command).
 	4. Verify publish pipeline status, then run dev-tier smoke checks.
 - Verification:
 	- `git status --short --branch` shows clean worktree before deploy.
@@ -131,6 +135,8 @@ Keep it brief and actionable. Capture the path that worked, not a long narrative
 	- `npm run deploy -- smoke staging`
 
 ### Shortcut: Dev Tier Not Fresh After Push
+
+> Legacy cPanel-era path, dead since 2026-07-15 — kept as a record, not a route.
 
 - Problem: the dev tier still serves an old build or throws runtime errors after it was updated.
 - Short way:

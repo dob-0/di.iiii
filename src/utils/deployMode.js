@@ -51,20 +51,14 @@ export function resolveDeployMode({ hostname = '', local = null } = {}) {
     // told "hosted" would be a lie.
     if (local === true) return MODE_LOCAL
     if (isPrivateHost(host)) return MODE_LOCAL
-    // First label. The dev tier answers to dev.diiii.xyz, and to its old name
-    // staging.di-studio.xyz (links already handed out still point there) — so
-    // any `staging*` first label counts (staging-2.di-studio.xyz too) and
-    // my-staging-notes.example.com does not. `dev` is an exact match, not a
-    // prefix — `developers.example.com` is a website. Either name wore no mark
-    // at all once, and a tier that renders pixel-identical to the live site is
-    // the tier you will eventually confuse with it.
+    // First label. The dev tier answers at dev.diiii.xyz. `dev` is an exact
+    // match, not a prefix — `developers.example.com` is a website. The tier
+    // once wore no mark at all, and a tier that renders pixel-identical to the
+    // live site is the tier you will eventually confuse with it.
     const first = host.split('.')[0]
-    if (first.startsWith('staging')) return MODE_DEV
     if (first === 'dev') return MODE_DEV
     return MODE_HOSTED
 }
 
-// One tier, two names, one label: the chip reads DEV under either address. The
-// word "staging" left the product's language on 2026-09-16; the host beside
-// the label still shows the address actually typed.
+// One label per mode; the host beside the label shows the address actually typed.
 export const deployModeMark = (mode) => MODE_MARKS[mode] || null

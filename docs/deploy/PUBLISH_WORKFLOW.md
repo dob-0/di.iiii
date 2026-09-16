@@ -23,7 +23,7 @@ git fetch --prune origin
 git checkout cpanel-staging
 git pull --ff-only origin cpanel-staging
 bash scripts/cpanel-apply-prebuilt-release.sh staging
-curl -sS -i --max-time 20 https://staging.di-studio.xyz/serverXR/api/health | head -n 30
+curl -sS -i --max-time 20 https://dev.diiii.xyz/serverXR/api/health | head -n 30
 ```
 
 Notes:

@@ -7,10 +7,8 @@ If you only remember one thing, remember this:
 - `dev` = active development → deploys to the dev tier, `https://dev.diiii.xyz`
 - `main` = production → deploys to the Hetzner VPS (Docker/Caddy)
 - normal promotion path: local → dev → prod (`dev -> main`)
-- the dev tier is a deploy target, not a branch. Its machine identifier is still
-  `staging` (workflow `deploy-vps-staging.yml`, GitHub environment `staging`,
-  `docker-compose.staging.yml`, `/opt/di.iiii-staging`); `staging.di-studio.xyz`
-  is its old name and still answers, same server
+- the dev tier is a deploy target, not a branch: workflow `deploy-vps-dev.yml`,
+  GitHub environment `dev`, `docker-compose.dev.yml`, `/opt/di.iiii-dev`
 
 ## Golden Path (VPS, current)
 
@@ -18,11 +16,11 @@ Production DNS was cut over from cPanel to the Hetzner VPS on 2026-07-15
 (manual deploy); the automated pipeline below was wired up and verified
 end-to-end (both environments, real runs) on 2026-07-16.
 
-- push `dev` → [deploy-vps-staging.yml](../../.github/workflows/deploy-vps-staging.yml)
+- push `dev` → [deploy-vps-dev.yml](../../.github/workflows/deploy-vps-dev.yml)
   builds images, pushes to GHCR, SSHes into the VPS, restarts the dev-tier
-  Compose project (`docker-compose.staging.yml`) — small, isolated, shares
+  Compose project (`docker-compose.dev.yml`) — small, isolated, shares
   the box with production but not its resources or secrets; served at
-  `dev.diiii.xyz` (and the legacy `staging.di-studio.xyz`) via production's Caddy. Its first job, `land`, runs
+  `dev.diiii.xyz` via production's Caddy. Its first job, `land`, runs
   `npm run land` on `dev` and pushes the fold commit (`github-actions[bot]`) —
   the merge commit's own deploy used to fail the docs gate on the note every PR
   brings with it, and the dev tier only moved once someone folded by hand. The
@@ -41,7 +39,7 @@ The build stamps the deployed commit into `/serverXR/api/health`'s
 `release.gitCommit` field — `curl -s <host>/serverXR/api/health` is the
 fastest way to verify exactly what's running (verified live on both
 environments 2026-07-19). `gh run list --workflow=deploy-vps.yml` (or
-`-staging`) remains the cross-check for run status.
+`deploy-vps-dev.yml`) remains the cross-check for run status.
 
 Do not start routine feature work on `main`.
 Use `main` as a starting point only for an emergency production hotfix.
@@ -62,7 +60,7 @@ npm run dev
 git push origin dev
 ```
 
-Wait for the `Deploy VPS Staging` GitHub Action (the dev tier's workflow) to finish, then verify:
+Wait for the `Deploy VPS Dev` GitHub Action (the dev tier's workflow) to finish, then verify:
 
 ```bash
 curl -s https://dev.diiii.xyz/serverXR/api/health
@@ -129,6 +127,6 @@ Canonical pieces (unchanged, kept for that fallback):
   [CPANEL_PREBUILT_DEPLOY.md](CPANEL_PREBUILT_DEPLOY.md) and
   [legacy/README.md](legacy/README.md)
 
-`npm run deploy:dev` (same as `deploy:staging`) / `deploy:production` (via `scripts/deploy.mjs`)
+`npm run deploy:dev` / `deploy:production` (via `scripts/deploy.mjs`)
 still just push `dev` / merge-and-push `main` — same git operations as
 above, regardless of which workflow is currently wired to that branch.
