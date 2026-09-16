@@ -11,8 +11,8 @@
  *   node scripts/push-space-projects.mjs [options]
  *
  * Options:
- *   --to     <url>    Server API base (default: $LIVE_API_URL, else STAGING —
- *                     https://staging.di-studio.xyz/serverXR. Production pushes
+ *   --to     <url>    Server API base (default: $LIVE_API_URL, else the dev tier —
+ *                     https://dev.diiii.xyz/serverXR. Production pushes
  *                     must be explicit: --to https://di-studio.xyz/serverXR)
  *   --token  <token>  Bearer token (default: $LIVE_API_TOKEN)
  *   --space  <id>     Space ID (REQUIRED — there is no default)
@@ -28,10 +28,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-// Staging is the deliberate default — pushing to production requires an
+// The dev tier is the deliberate default — pushing to production requires an
 // explicit --to or LIVE_API_URL. (An unused production default here once made
 // the docstring promise the opposite of what the script did.)
-const DEFAULT_STAGING_URL = 'https://staging.di-studio.xyz/serverXR'
+const DEFAULT_DEV_URL = 'https://dev.diiii.xyz/serverXR'
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2)
@@ -65,7 +65,7 @@ const localEnv = {
 }
 const getEnv = (k) => process.env[k] || localEnv[k] || ''
 
-const BASE_URL = (opt('to') || getEnv('LIVE_API_URL') || DEFAULT_STAGING_URL).replace(/\/+$/, '')
+const BASE_URL = (opt('to') || getEnv('LIVE_API_URL') || DEFAULT_DEV_URL).replace(/\/+$/, '')
 const TOKEN = opt('token') || getEnv('LIVE_API_TOKEN') || ''
 
 const PROJECTS_DIR = path.join(ROOT_DIR, 'serverXR', 'data', 'spaces', SPACE_ID, 'projects')

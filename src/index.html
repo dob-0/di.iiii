@@ -14,7 +14,7 @@
     <!-- Every page of this site rendered BLACK on any Chrome older than 122,
          and had done since pdf.js was upgraded to 5. Measured on a Pixel 6 with
          Chrome 113: `ReferenceError: Iterator is not defined`, `#root` empty, on
-         `/`, `/spaces` and the live site as well as staging.
+         `/`, `/spaces` and the live site as well as the dev tier.
 
          pdf.js ships its own polyfill for `Iterator.prototype.join` and writes
          it as `typeof Iterator.prototype.join !== 'function' && (…)` — which

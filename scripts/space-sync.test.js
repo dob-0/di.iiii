@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { ENGINE_VERSION, globToRe, matchGlobs, parseArgs, tierOf, SPACE_FIELDS, TIER_FIELDS } from './space-sync.mjs'
+import { ENGINE_VERSION, globToRe, matchGlobs, parseArgs, tierKey, tierOf, SPACE_FIELDS, TIER_FIELDS } from './space-sync.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const ENGINE = path.join(ROOT_DIR, 'scripts', 'space-sync.mjs')
@@ -100,13 +100,23 @@ describe('space-sync engine', () => {
     it('maps a tier name to its url so nobody pastes one from memory', () => {
         const tiers = {
             prod: { url: 'https://di-studio.xyz/serverXR' },
-            staging: { url: 'https://staging.di-studio.xyz/serverXR' },
+            staging: { url: 'https://dev.diiii.xyz/serverXR' },
         }
-        expect(tierOf('https://staging.di-studio.xyz/serverXR', tiers)).toBe('staging')
+        expect(tierOf('https://dev.diiii.xyz/serverXR', tiers)).toBe('staging')
         expect(tierOf('https://di-studio.xyz/serverXR', tiers)).toBe('prod')
         // an unknown host must NOT silently answer "prod"
         expect(tierOf('http://localhost:4000/serverXR', tiers)).toBe('localhost:4000')
         expect(parseArgs(['--all']).all).toBe(true)
+    })
+
+    it('accepts --tier dev for the dev tier, still keyed staging in manifests', () => {
+        const tiers = { prod: { url: 'https://di-studio.xyz/serverXR' }, staging: { url: 'https://dev.diiii.xyz/serverXR' } }
+        expect(tierKey('dev', tiers)).toBe('staging')
+        expect(tierKey('staging', tiers)).toBe('staging')
+        expect(tierKey('prod', tiers)).toBe('prod')
+        // a manifest that declares a real `dev` key is taken at its word
+        expect(tierKey('dev', { ...tiers, dev: { url: 'http://localhost:4000/serverXR' } })).toBe('dev')
+        expect(tierKey('nope', tiers)).toBe('nope')
     })
 
     it('treats an empty page list as a space-only declaration, not an error', async () => {

@@ -21,7 +21,7 @@ Owns shared project sync, schema, op delivery, and the project document model us
 - Runs: `npm run test`
 
 ### Infra / Deploy Engineer
-Owns the promotion path from dev to staging to production, cPanel prebuilt releases, cron-based auto-deploy, and smoke verification. Gatekeeps what reaches users.
+Owns the promotion path from local to the dev tier to production, cPanel prebuilt releases, cron-based auto-deploy, and smoke verification. Gatekeeps what reaches users.
 
 - Home: `scripts/`, `deploy/`, `.github/workflows/`
 - Skills: `dii-deploy-workflow`, `dii-ai-doc-maintenance`

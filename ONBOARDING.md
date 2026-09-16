@@ -180,7 +180,7 @@ Skip `gh pr create` entirely by letting a push open the PR for you:
 
 Branch rules (see `README.md` / `CURRENT.md`):
 
-- Normal work happens on **`dev`** → deploys to staging.
+- Normal work happens on **`dev`** → deploys to the dev tier, dev.diiii.xyz.
 - Promote **`dev` → `main`** for production. Don't start feature work on `main`.
 
 ## 8. Working with Claude Code (the team's AI workflow)

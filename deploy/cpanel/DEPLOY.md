@@ -65,6 +65,9 @@ cPanel environments are sensitive to native Node modules (binary addons).
 
 ## Update Checklist (Staging)
 
+> Retired cPanel fallback. "Staging" here is the cPanel name for the second tier; the live one is
+> the dev tier at `https://dev.diiii.xyz` on the VPS (see docs/deploy/LIVE_DEPLOY.md).
+
 ```bash
 cd ~/repositories/di.iiii-staging
 git fetch --prune origin

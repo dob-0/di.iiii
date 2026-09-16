@@ -20,7 +20,7 @@ on:
       # dev brings its docs/ai/sessions note with it (the docs gate REQUIRES one
       # per PR branch), so the merge commit itself always fails this suite's
       # "sessions dir must be empty on dev" check until someone runs `npm run
-      # land` -- 60% of staging deploys failed exactly there in the two weeks
+      # land` -- 60% of dev-tier deploys failed exactly there in the two weeks
       # before 2026-09-02. With this on, the checkout is folded in place before
       # anything is checked, so the tree under test is the one the fold
       # produces. Default off: PRs stay strict, deploy-vps.yml is unchanged.

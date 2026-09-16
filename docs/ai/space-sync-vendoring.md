@@ -1,7 +1,7 @@
 # Space-sync engine vendoring
 
 `scripts/space-sync.mjs` is the one engine that syncs a repo's local pages into a
-di.iiii space (Studio, staging, prod). Linked-space repos that aren't di.iiii itself —
+di.iiii space (Studio, the dev tier, prod). Linked-space repos that aren't di.iiii itself —
 `br_id_ge`, `beyond_form`, `platform_recordar` — each vendor a copy of it as
 `scripts/sync-space.mjs`, so their own CI can run without checking out di.iiii.
 
@@ -72,7 +72,7 @@ weekly (the real failure mode is an idle repo nobody pushes to for weeks while d
 engine moves on).
 
 `br_id_ge`'s own `sync-space.yml` (the workflow that actually pushes content to
-staging/prod) gates on `vendor-check` — a drifted engine must not be allowed to sync
+the dev tier/prod) gates on `vendor-check` — a drifted engine must not be allowed to sync
 production.
 
 ## Known exceptions

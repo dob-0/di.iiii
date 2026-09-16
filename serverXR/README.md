@@ -192,7 +192,7 @@ Behavior rules:
 | `CORS_ORIGINS` | Comma-separated allowlist of origins. | _none_ |
 | `MAX_UPLOAD_MB` | Max asset upload size in MB. | `100` |
 | `MIN_FREE_DISK_MB` | Free-disk floor below which POST/PUT/PATCH get a `507` instead of writing toward ENOSPC (`0` disables). | `512` |
-| `SHARED_ROOT` | Override for shared schema loading. Use this when staging and production keep separate shared folders outside the repo. | repo-local `shared/` fallback |
+| `SHARED_ROOT` | Override for shared schema loading. Use this when the dev tier and production keep separate shared folders outside the repo. | repo-local `shared/` fallback |
 
 Security notes:
 
@@ -208,10 +208,10 @@ Security notes:
 
 These values matter more than older deploy folklore:
 
-- Docker (production + staging, see Deploy Notes): `DATA_ROOT=/data` (a mounted volume;
+- Docker (production + the dev tier, see Deploy Notes): `DATA_ROOT=/data` (a mounted volume;
   set in `docker-compose.yml`/`Dockerfile`), no `SHARED_ROOT` — `shared/` is baked into
   the image at `/shared` at build time and `sharedRuntime.js` resolves it there by default
-- cPanel fallback only: staging `DATA_ROOT=/home/distudio/serverXR-staging/data` +
+- cPanel fallback only: the dev tier (paths still named `-staging`) `DATA_ROOT=/home/distudio/serverXR-staging/data` +
   `SHARED_ROOT=/home/distudio/shared-staging`; production `DATA_ROOT=/home/distudio/serverXR/data`
   + `SHARED_ROOT=/home/distudio/shared`
 - `API_TOKEN` stays server-only for normal builds; browser editors create an http-only auth session when a protected write needs it
@@ -234,7 +234,7 @@ Primary path — Docker on the VPS, behind Caddy; full detail in
 [docs/deploy/VPS_DOCKER_DEPLOY.md](../docs/deploy/VPS_DOCKER_DEPLOY.md) and
 [docs/deploy/LIVE_DEPLOY.md](../docs/deploy/LIVE_DEPLOY.md):
 
-- `git push origin dev` deploys to VPS staging, `git push origin main` deploys to VPS production
+- `git push origin dev` deploys to the dev tier (https://dev.diiii.xyz), `git push origin main` deploys to VPS production
 - built from `serverXR/Dockerfile` (`node:22-alpine`), run via `docker-compose.yml` + `docker-compose.prod.yml`
 - application root inside the image: `/app`; startup: `node src/index.js`; mount: `/serverXR`
 
@@ -257,7 +257,7 @@ npm install --omit=dev
 cloudlinux-selector restart --json --interpreter nodejs --user "$USER" --app-root serverXR
 ```
 
-For staging, use `~/serverXR-staging` and `--app-root serverXR-staging`.
+For the dev tier, use `~/serverXR-staging` and `--app-root serverXR-staging`.
 
 Canonical deploy path:
 

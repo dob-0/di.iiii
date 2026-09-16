@@ -119,7 +119,7 @@ same command.
 `--base` points it at any tier, and then no local stack is needed at all:
 
 ```bash
-node .claude/skills/run-di-iiii/driver.mjs look /login --base https://staging.di-studio.xyz
+node .claude/skills/run-di-iiii/driver.mjs look /login --base https://dev.diiii.xyz
 ```
 
 Without `--as` that is a plain signed-out visitor, which is the session worth

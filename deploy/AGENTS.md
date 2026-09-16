@@ -16,7 +16,8 @@ Short routing guide for AI agents working in `deploy/`.
   [deploy-vps-staging.yml](../.github/workflows/deploy-vps-staging.yml) build/push
   `dii-server`/`dii-client` images to GHCR on push to `main`/`dev`, then SSH into the VPS to
   `docker compose -f docker-compose.yml -f docker-compose.prod.yml pull && up -d`.
-- Required secrets/variables are configured on both prod and staging as of 2026-07-16 — this is
+- Required secrets/variables are configured on both prod and the dev tier (dev.diiii.xyz; GitHub
+  environment still named `staging`) as of 2026-07-16 — this is
   the live path, not a future/additive one.
 - cPanel (`publish-cpanel-prebuilt-v2.yml`, `cpanel-staging`/`cpanel-production`) is untouched and
   remains the documented fallback until its hosting term expires.

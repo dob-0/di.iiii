@@ -15,9 +15,22 @@ import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
+// The dev tier lives at dev.diiii.xyz. Its identifier used to be `staging`,
+// and that name keeps working as an alias — same server, and the same token:
+// DI_TOKEN_DEV, or the older DI_TOKEN_STAGING, or a credentials.json entry
+// under either key.
+const DEV_TIER = {
+    base: 'https://dev.diiii.xyz/serverXR',
+    env: 'DI_TOKEN_DEV',
+    legacyEnv: 'DI_TOKEN_STAGING',
+    storeKeys: ['dev', 'staging'],
+    site: 'https://dev.diiii.xyz'
+}
+
 export const TIERS = {
     local: { base: 'http://localhost:4000/serverXR', env: 'DI_TOKEN_LOCAL', site: 'http://localhost:4000' },
-    staging: { base: 'https://staging.di-studio.xyz/serverXR', env: 'DI_TOKEN_STAGING', site: 'https://staging.di-studio.xyz' },
+    dev: DEV_TIER,
+    staging: DEV_TIER,
     prod: { base: 'https://di-studio.xyz/serverXR', env: 'DI_TOKEN_PROD', site: 'https://di-studio.xyz' }
 }
 
@@ -36,8 +49,11 @@ export const resolveToken = ({ tier, token = null, env = process.env, home = hom
     if (env.DI_TOKEN) return env.DI_TOKEN
     const known = TIERS[tier]
     if (known && env[known.env]) return env[known.env]
+    if (known?.legacyEnv && env[known.legacyEnv]) return env[known.legacyEnv]
     const store = readStore(credentialsPath(home))
-    if (store[tier]?.token) return store[tier].token
+    for (const key of known?.storeKeys || [tier]) {
+        if (store[key]?.token) return store[key].token
+    }
     return null
 }
 

@@ -6,10 +6,10 @@
 // artist's words, did the reel atlas and the typeface ship, and does the piece
 // route load.
 //
-// Run: node scripts/verify-algovrithm-remote.mjs https://staging.di-studio.xyz
+// Run: node scripts/verify-algovrithm-remote.mjs https://dev.diiii.xyz
 import { chromium } from 'playwright'
 
-const base = process.argv[2] || 'https://staging.di-studio.xyz'
+const base = process.argv[2] || 'https://dev.diiii.xyz'
 const out = []
 const ok = (n, p, d = '') => { out.push([n, p, d]); console.log(`${p ? 'PASS' : 'FAIL'}  ${n}${d ? ` — ${d}` : ''}`) }
 

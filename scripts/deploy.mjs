@@ -39,30 +39,29 @@ const printHelp = () => {
 Usage:
   npm run deploy -- status
   npm run deploy -- dev
-  npm run deploy -- staging
   npm run deploy -- production
-  npm run deploy -- host staging
+  npm run deploy -- host dev
   npm run deploy -- host production
-  npm run deploy -- remote staging
+  npm run deploy -- remote dev
   npm run deploy -- remote production
-  npm run deploy -- smoke staging
+  npm run deploy -- smoke dev
   npm run deploy -- smoke production
-  npm run deploy -- build staging
+  npm run deploy -- build dev
   npm run deploy -- build production
 
 Shortcuts:
   npm run deploy:status
   npm run deploy:dev
-  npm run deploy:staging
   npm run deploy:production
-  npm run deploy:host:staging
+  npm run deploy:host:staging      (the dev tier; npm script name still says staging)
   npm run deploy:host:production
-  npm run deploy:remote:staging
+  npm run deploy:remote:staging    (the dev tier; npm script name still says staging)
   npm run deploy:remote:production
 
 Rules:
-  - dev does not deploy to hosting directly
-  - run dev/staging promotion commands from a clean dev branch
+  - tiers: local -> dev (https://dev.diiii.xyz, branch dev) -> production (branch main)
+  - 'staging' is still accepted wherever a tier is named; it means the dev tier
+  - run the dev promotion command from a clean dev branch
   - production promotion fast-forwards main when possible, or merges origin/dev into main with dev-preferred conflict resolution if the branches diverged
   - host commands are for the cPanel clone or server repo, not your laptop
   - remote commands SSH from your laptop into the cPanel host and run the host apply there
@@ -257,6 +256,8 @@ const normalizeEnv = (value) => {
         case 'prod':
             return 'production'
         case 'stage':
+        case 'dev':
+            // The dev tier (dev.diiii.xyz); its internal identifier is still `staging`.
             return 'staging'
         default:
             return (value || '').toLowerCase()
@@ -281,6 +282,7 @@ const normalizeAction = (values) => {
             return 'status'
         case 'dev':
         case 'staging':
+            return 'dev'
         case 'production':
             return first
         case 'host':
@@ -314,10 +316,9 @@ const printStatus = async () => {
     console.log(`Commit: ${commit}`)
     console.log(`Worktree: ${worktree ? 'dirty' : 'clean'}`)
     console.log('Deploy lanes:')
-    console.log('  dev -> integration only')
-    console.log('  staging -> https://staging.di-studio.xyz')
+    console.log('  dev -> https://dev.diiii.xyz (the dev tier, identifier still `staging`)')
     console.log('  production -> https://di-studio.xyz')
-    console.log(`Remote staging host: ${remoteDefaults.sshTarget}:${remoteDefaults.stagingRepo}`)
+    console.log(`Remote dev-tier host: ${remoteDefaults.sshTarget}:${remoteDefaults.stagingRepo}`)
     console.log(`Remote production host: ${remoteDefaults.sshTarget}:${remoteDefaults.productionRepo}`)
 }
 
@@ -347,25 +348,13 @@ const handlers = {
         await runMaybe('git', ['push', 'origin', 'HEAD:dev'])
         if (options.dryRun) {
             console.log('Would promote current dev HEAD to origin/dev.')
-            console.log('Dev is the integration lane only; it does not deploy to hosting directly.')
-            return
-        }
-        console.log('Promoted current dev HEAD to origin/dev.')
-        console.log('Dev is the integration lane only; it does not deploy to hosting directly.')
-    },
-    staging: async () => {
-        await ensureCleanWorktree()
-        await ensureBranch('dev', 'deploy staging')
-        await runMaybe('git', ['push', 'origin', 'HEAD:dev'])
-        if (options.dryRun) {
-            console.log('Would promote current dev HEAD to origin/dev.')
             console.log('GitHub would then publish cpanel-staging automatically (push to dev triggers it).')
-            console.log('Next on the host: npm run deploy -- host staging')
+            console.log('Next on the host: npm run deploy -- host dev')
             return
         }
         console.log('Promoted current dev HEAD to origin/dev.')
-        console.log('GitHub should now publish cpanel-staging automatically.')
-        console.log('Next: run `npm run deploy -- host staging` on the staging host, or click cPanel Deploy HEAD Commit.')
+        console.log('GitHub should now publish cpanel-staging (the dev tier release branch) automatically.')
+        console.log('Next: run `npm run deploy -- host dev` on the dev-tier host, or click cPanel Deploy HEAD Commit.')
     },
     production: async () => {
         await ensureCleanWorktree()
@@ -468,10 +457,10 @@ const handlers = {
     'host:staging': async () => {
         await runMaybe('bash', ['scripts/cpanel-apply-prebuilt-release.sh', 'staging'])
         if (options.dryRun) {
-            console.log('Would apply the staging prebuilt release on this host.')
+            console.log('Would apply the dev-tier prebuilt release on this host.')
             return
         }
-        console.log('Applied the staging prebuilt release on this host.')
+        console.log('Applied the dev-tier prebuilt release on this host.')
     },
     'host:production': async () => {
         await runMaybe('bash', ['scripts/cpanel-apply-prebuilt-release.sh', 'production'])
@@ -485,10 +474,10 @@ const handlers = {
         const [command, ...args] = buildRemoteDeployCommand('staging')
         await runMaybe(command, args)
         if (options.dryRun) {
-            console.log('Would SSH to the cPanel host and apply the staging prebuilt release there.')
+            console.log('Would SSH to the cPanel host and apply the dev-tier prebuilt release there.')
             return
         }
-        console.log('Triggered the staging prebuilt release on the remote cPanel host.')
+        console.log('Triggered the dev-tier prebuilt release on the remote cPanel host.')
     },
     'remote:production': async () => {
         const [command, ...args] = buildRemoteDeployCommand('production')
@@ -500,7 +489,7 @@ const handlers = {
         console.log('Triggered the production prebuilt release on the remote cPanel host.')
     },
     'smoke:staging': async () => {
-        await runMaybe(nodeCommand, ['scripts/smoke-check.mjs', '--base-url', 'https://staging.di-studio.xyz'])
+        await runMaybe(nodeCommand, ['scripts/smoke-check.mjs', '--base-url', 'https://dev.diiii.xyz'])
     },
     'smoke:production': async () => {
         await runMaybe(nodeCommand, ['scripts/smoke-check.mjs', '--base-url', 'https://di-studio.xyz'])
@@ -513,10 +502,10 @@ const handlers = {
             }
         })
         if (options.dryRun) {
-            console.log('Would build the local staging cPanel bundle in .deploy/cpanel/.')
+            console.log('Would build the local dev-tier cPanel bundle in .deploy/cpanel/.')
             return
         }
-        console.log('Built the local staging cPanel bundle in .deploy/cpanel/.')
+        console.log('Built the local dev-tier cPanel bundle in .deploy/cpanel/.')
     },
     'build:production': async () => {
         await runMaybe(nodeCommand, ['scripts/stage-cpanel-nodeapp-release.mjs'], {

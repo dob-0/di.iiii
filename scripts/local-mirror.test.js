@@ -53,6 +53,13 @@ describe('local-mirror', () => {
         expect(Object.keys(TIERS)).toEqual(['prod', 'staging'])
     })
 
+    it('accepts --tier dev for the dev tier and keeps --tier staging working', () => {
+        expect(parseArgs(['--tier', 'dev']).tier).toBe('staging')
+        expect(parseArgs(['--tier', 'staging']).tier).toBe('staging')
+        expect(parseArgs(['--tier', 'prod']).tier).toBe('prod')
+        expect(TIERS.staging.fallbackUrl).toBe('https://dev.diiii.xyz/serverXR')
+    })
+
     it('ignores empty env assignments so a placeholder cannot blank a real token', () => {
         // The root .env carries `LIVE_API_TOKEN=` with nothing after it and is
         // merged last. Honouring it wiped the real token from

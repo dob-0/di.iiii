@@ -5,7 +5,7 @@
 //
 // Usage:
 //   node scripts/responsive-check.mjs <url> [--scroll] [--out <dir>]
-//   node scripts/responsive-check.mjs https://staging.di-studio.xyz/wcc/ --scroll
+//   node scripts/responsive-check.mjs https://dev.diiii.xyz/wcc/ --scroll
 //
 // Exit code is non-zero if any viewport logged a console/page error.
 import { chromium, devices } from 'playwright'

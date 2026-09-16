@@ -21,7 +21,7 @@
  *
  * USAGE
  *   node scripts/verify-capture.mjs                                  # localhost:5173
- *   node scripts/verify-capture.mjs --base https://staging.di-studio.xyz --token <API_TOKEN>
+ *   node scripts/verify-capture.mjs --base https://dev.diiii.xyz --token <API_TOKEN>
  *
  * WebGL canvas readback is always black here (preserveDrawingBuffer:false, see
  * docs/ai/testing-tools.md) — screenshots are the only honest look at the

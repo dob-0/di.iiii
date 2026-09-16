@@ -32,20 +32,21 @@
  *
  * Usage:
  *   node scripts/page-vendor-cdn.mjs --space azd                    # local, dry-run
- *   node scripts/page-vendor-cdn.mjs --tier staging --space dilijan  # staging, dry-run
+ *   node scripts/page-vendor-cdn.mjs --tier dev --space dilijan      # the dev tier, dry-run
  *   node scripts/page-vendor-cdn.mjs --space azd --apply
  *   node scripts/page-vendor-cdn.mjs --space azd --restore --apply   # put the originals back
  *   node scripts/page-vendor-cdn.mjs --tier prod --allow-production --space azd --apply
  *
  * Options:
- *   --tier <local|staging|prod>
- *                            default local. Production data moves on the owner's
+ *   --tier <local|dev|prod>
+ *                            default local. `dev` is dev.diiii.xyz (keyed
+ *                            `staging` below and in --originals; `staging` still works). Production data moves on the owner's
  *                            word, so prod is asked for twice: the tier AND
  *                            --allow-production. A dry-run against prod needs the
  *                            flag too — reading is free, but the printed diff is
  *                            what someone acts on.
  *   --allow-production       say it out loud. Without it, --tier prod and an
- *                            --api on di-studio.xyz are both refused.
+ *                            --api on di-studio.xyz / diiii.xyz are both refused.
  *   --space <id>             every project in this space (repeatable)
  *   --project <space/id>     one project (repeatable)
  *   --drop-fonts             also remove Google Fonts <link>s. Off by default:
@@ -65,10 +66,10 @@
  *                            lists them; --apply writes. No vendor check — the
  *                            originals are the CDN pages that work online
  *   --api <url>              a scratch stack instead of the tier's API (a test
- *                            serverXR on a spare port). Refused for di-studio.xyz.
+ *                            serverXR on a spare port). Refused for production.
  *
  * Tokens come from serverXR/.env.local (API_TOKEN for local, LIVE_API_TOKEN for
- * staging), never printed. Never deletes a project, an asset or a space.
+ * the dev tier), never printed. Never deletes a project, an asset or a space.
  */
 
 import fs from 'node:fs'
@@ -76,18 +77,18 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { readEnv } from './normalise-page-asset-urls.mjs'
-import { isProductionTarget } from './tier-sync.mjs'
+import { isProductionTarget, resolveTier } from './tier-sync.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 export const VENDOR_DIR = path.join(ROOT_DIR, 'public', 'vendor')
 const TIMEOUT_MS = 30000
 
-// Local and staging are ordinary targets. Production is a tier you have to ask
+// Local and the dev tier are ordinary targets. Production is a tier you have to ask
 // for twice — `--tier prod --allow-production` — the same shape tier-sync uses,
 // because a page rewritten on prod is what a visitor sees a second later.
 export const TIERS = {
     local: { base: 'http://localhost:4000/serverXR', tokenKey: 'API_TOKEN' },
-    staging: { base: 'https://staging.di-studio.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
+    staging: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
     prod: { base: 'https://di-studio.xyz/serverXR', tokenKey: 'PROD_API_TOKEN', production: true }
 }
 
@@ -318,7 +319,7 @@ export const parseArgs = (argv) => {
     const args = { tier: 'local', spaces: [], projects: [], apply: false, dropFonts: false, restore: false, originals: null, api: null, allowProduction: false }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
-        if (arg === '--tier') args.tier = argv[++i]
+        if (arg === '--tier') args.tier = resolveTier(argv[++i])
         else if (arg === '--space') args.spaces.push(argv[++i])
         else if (arg === '--project') args.projects.push(argv[++i])
         else if (arg === '--apply') args.apply = true
@@ -343,7 +344,8 @@ export const resolveApi = ({ tier, api, allowProduction = false }) => {
         if (isProductionTarget(api) && !allowProduction) throw new Error('refused: --api points at production — add --allow-production')
         return api.replace(/\/+$/, '')
     }
-    if (!TIERS[tier]) throw new Error(`refused: --tier must be local, staging or prod, got ${tier}`)
+    tier = resolveTier(tier)
+    if (!TIERS[tier]) throw new Error(`refused: --tier must be local, dev or prod, got ${tier}`)
     if (TIERS[tier].production && !allowProduction) throw new Error('refused: --tier prod needs --allow-production')
     return TIERS[tier].base
 }
@@ -377,7 +379,7 @@ const printChanges = (changes) => {
 const main = async () => {
     const args = parseArgs(process.argv.slice(2))
     if (!args.spaces.length && !args.projects.length) {
-        console.error('usage: node scripts/page-vendor-cdn.mjs [--tier local|staging|prod] (--space <id> | --project <space/id>)... [--apply] [--drop-fonts] [--originals <dir>] [--api <url>] [--allow-production]')
+        console.error('usage: node scripts/page-vendor-cdn.mjs [--tier local|dev|prod] (--space <id> | --project <space/id>)... [--apply] [--drop-fonts] [--originals <dir>] [--api <url>] [--allow-production]')
         process.exit(1)
     }
     const base = resolveApi(args)

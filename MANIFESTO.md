@@ -111,28 +111,28 @@ Minimum note format:
 
 Keep it brief and actionable. Capture the path that worked, not a long narrative.
 
-### Shortcut: Smart Staging Deploy (No Guesswork)
+### Shortcut: Smart Dev-Tier Deploy (No Guesswork)
 
 - Problem: Deploy request arrives while the branch has uncommitted or mixed-scope changes.
 - Short way:
 	1. Never deploy from a dirty worktree unless explicitly approved.
 	2. Commit only the intended deploy scope (or clearly approved full scope), then deploy from that commit.
-	3. Run `npm run deploy:staging` from `dev` only.
-	4. Verify publish pipeline status, then run staging smoke checks.
+	3. Run `npm run deploy:staging` from `dev` only (the dev tier; identifier still `staging`).
+	4. Verify publish pipeline status, then run dev-tier smoke checks.
 - Verification:
 	- `git status --short --branch` shows clean worktree before deploy.
-	- `gh run list --workflow publish-cpanel-prebuilt-v2.yml` shows the latest staging publish succeeded.
+	- `gh run list --workflow publish-cpanel-prebuilt-v2.yml` shows the latest dev-tier publish succeeded.
 	- `npm run deploy -- smoke staging` passes.
-	- `https://staging.di-studio.xyz` and `https://staging.di-studio.xyz/serverXR/api/health` respond correctly.
+	- `https://dev.diiii.xyz` and `https://dev.diiii.xyz/serverXR/api/health` respond correctly.
 - Source files or commands used:
 	- `scripts/deploy.mjs`
 	- `CURRENT.md` deploy commands
 	- `npm run deploy:staging`
 	- `npm run deploy -- smoke staging`
 
-### Shortcut: Staging Not Fresh After Push
+### Shortcut: Dev Tier Not Fresh After Push
 
-- Problem: staging site still serves an old build or throws runtime errors after staging was updated.
+- Problem: the dev tier still serves an old build or throws runtime errors after it was updated.
 - Short way:
 	1. Check publish workflow result for `publish-cpanel-prebuilt-v2.yml`.
 	2. If `Publish target branch` fails with missing `deploy/cpanel/cpanel.prebuilt.yml`, restore that file.
@@ -141,7 +141,7 @@ Keep it brief and actionable. Capture the path that worked, not a long narrative
 - Verification:
 	- Workflow conclusion is `success`.
 	- `git ls-remote --heads origin staging cpanel-staging` shows updated prebuilt branch head.
-	- Staging browser path loads node palette and node inspector without the prior runtime error.
+	- The dev tier (dev.diiii.xyz) loads node palette and node inspector without the prior runtime error.
 - Source files or commands used:
 	- `deploy/cpanel/cpanel.prebuilt.yml`
 	- `.github/workflows/publish-cpanel-prebuilt-v2.yml`
@@ -158,7 +158,7 @@ Keep it brief and actionable. Capture the path that worked, not a long narrative
 	1. Open `vite.config.js`.
 	2. In `manualChunks`, confirm ALL of the following are in the `three-vendor` group: `three`, `three-mesh-bvh`, `three-stdlib`, `@react-three/*`, `@react-spring/*`, `troika-*`, `camera-controls`, `detect-gpu`, `maath`, `@monogrid/gainmap-js`, `meshoptimizer`, `meshline`.
 	3. Run `npx vite build` — output must show **no** `circular dependency` warning.
-- Verification: `npx vite build` clean, white screen gone on staging.
+- Verification: `npx vite build` clean, white screen gone on the dev tier.
 - Source files: `vite.config.js`
 
 ---

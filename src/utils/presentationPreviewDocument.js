@@ -53,7 +53,7 @@ const buildBootstrapScript = (pageQuery, pageOrigin) => `(() => {
     // …and for the same reason it cannot read its own host. A page that links
     // to a sibling page had no choice but to hardcode one, which is why
     // br_id_ge's rite embedded PRODUCTION's field even when the rite itself
-    // was running on staging — the tier could never rehearse itself. Read
+    // was running on the dev tier — the tier could never rehearse itself. Read
     // this instead of writing a hostname down.
     window.diiPageOrigin = ${inlineJson(pageOrigin)};
 

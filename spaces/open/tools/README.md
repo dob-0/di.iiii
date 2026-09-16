@@ -4,7 +4,7 @@ The Open Jam room (`open/open-jam`) is what visitors left behind at the 2026-07-
 phone photos, a QR, four written texts — and the default cones, spheres, lights and
 "New Text" they dropped while finding the editor. These two scripts turn that into a
 room, through the op log (never a bare document write), one tier at a time:
-local → staging → prod, on the owner's word.
+local → dev (dev.diiii.xyz) → prod, on the owner's word.
 
     node spaces/open/tools/curate-open-jam.mjs  <api> <token> [--apply]           # keep the real things, drop the leftovers
     node spaces/open/tools/shrink-photos.mjs    <api> <token> [--apply]           # 1280px web copies, swapped in through the op log

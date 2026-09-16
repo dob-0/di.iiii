@@ -314,7 +314,7 @@ const config = {
   liveSync: {
     // No implicit default: an unset LIVE_API_URL must surface as "not
     // configured" (syncRoutes 503s), never silently target production —
-    // a dev/staging server with the old prod fallback would push there.
+    // a local or dev-tier server with the old prod fallback would push there.
     url: (process.env.LIVE_API_URL || '').replace(/\/+$/, ''),
     token: (process.env.LIVE_API_TOKEN || '').trim()
   },
