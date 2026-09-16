@@ -1,0 +1,453 @@
+/* The VJ deck (VjDeckView.jsx). One component for the window, the inside view
+   and the perform split: the placement modifiers below change density only.
+   On the spine — tokens from base.css, no colour literals (spine.test.js). */
+
+.vj-deck {
+    --vj-head: 156px;
+    --vj-tile: 64px;
+    --vj-tile-height: 48px;
+    --vj-control: 26px;
+    container-type: inline-size;
+    container-name: vjdeck;
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: var(--di-space-2);
+    background: var(--di-bg);
+    color: var(--di-ink);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+}
+
+.vj-deck--inside {
+    --vj-head: 184px;
+    --vj-tile: 112px;
+    --vj-tile-height: 72px;
+    --vj-control: 32px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-4);
+    font-size: var(--di-text-4);
+}
+
+.vj-deck--perform {
+    --vj-head: 164px;
+    --vj-tile: 96px;
+    --vj-tile-height: 64px;
+    --vj-control: 30px;
+    gap: var(--di-space-3);
+    padding: var(--di-space-3);
+}
+
+.vj-deck-label {
+    color: var(--di-dim);
+    font-size: var(--di-text-2);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+}
+
+.vj-deck-dim {
+    color: var(--di-dim);
+}
+
+.vj-deck-number {
+    min-width: 3ch;
+    color: var(--di-dim);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+/* --- the top bar ---------------------------------------------------------- */
+
+.vj-deck-top {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-2) var(--di-space-4);
+}
+
+.vj-deck-tempo,
+.vj-deck-master,
+.vj-deck-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+}
+
+.vj-deck-bpm {
+    min-width: 5ch;
+    font-size: var(--di-text-5);
+    font-variant-numeric: tabular-nums;
+}
+
+.vj-deck-master input {
+    width: 110px;
+}
+
+.vj-deck-out {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    margin-left: auto;
+}
+
+.vj-deck-out-picture {
+    display: block;
+    width: 80px;
+    height: 45px;
+    background: var(--di-black);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.vj-deck--inside .vj-deck-out-picture,
+.vj-deck--perform .vj-deck-out-picture {
+    width: 160px;
+    height: 90px;
+}
+
+/* --- controls ------------------------------------------------------------- */
+
+.vj-deck-button,
+.vj-deck-chip {
+    box-sizing: border-box;
+    min-height: var(--vj-control);
+    padding: 0 var(--di-space-2);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--di-radius);
+    color: var(--di-ink);
+    font-family: inherit;
+    font-size: var(--di-text-2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.vj-deck-chip {
+    background: var(--di-surface-2);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.vj-deck-button:hover:not(:disabled),
+.vj-deck-chip:hover:not(:disabled) {
+    border-color: var(--di-ink);
+}
+
+.vj-deck-button:disabled,
+.vj-deck-chip:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.vj-deck-button.is-on {
+    background: var(--di-ink);
+    border-color: var(--di-ink);
+    color: var(--di-bg);
+}
+
+.vj-deck-button--quiet {
+    border-color: transparent;
+    color: var(--di-dim);
+}
+
+.vj-deck input[type='range'] {
+    min-width: 0;
+    height: var(--vj-control);
+    margin: 0;
+    accent-color: var(--di-ink);
+}
+
+/* --- the grid ------------------------------------------------------------- */
+
+.vj-deck-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+.vj-deck-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    min-width: min-content;
+}
+
+.vj-deck-row {
+    display: grid;
+    grid-template-columns: var(--vj-head) repeat(var(--vj-columns), minmax(var(--vj-tile), 1fr));
+    gap: var(--di-space-1);
+}
+
+.vj-deck-layer {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--di-space-1);
+    min-width: 0;
+    padding: var(--di-space-1) var(--di-space-2);
+    background: var(--di-surface-2);
+    border-left: 2px solid transparent;
+}
+
+.vj-deck-row[data-active='true'] .vj-deck-layer {
+    border-left-color: var(--di-ink);
+}
+
+.vj-deck-layer-line {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-1);
+    min-width: 0;
+}
+
+.vj-deck-layer-line .vj-deck-chip {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.vj-deck-layer-line input[type='range'] {
+    flex: 1 1 auto;
+}
+
+.vj-deck-layer-name {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.vj-deck-tile {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    box-sizing: border-box;
+    min-height: var(--vj-tile-height);
+    padding: 0;
+    overflow: hidden;
+    background: var(--di-surface-3);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--di-radius);
+    color: var(--di-ink);
+    font-family: inherit;
+    font-size: var(--di-text-2);
+    text-align: left;
+    cursor: pointer;
+}
+
+.vj-deck-tile:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.vj-deck-tile--empty {
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border-style: dashed;
+    color: var(--di-faint);
+    font-size: var(--di-text-4);
+}
+
+.vj-deck-tile.is-selected {
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+.vj-deck-tile.is-playing {
+    border-color: var(--di-ink);
+    box-shadow: inset 0 0 0 1px var(--di-ink);
+}
+
+.vj-deck-tile-picture {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vj-deck-tile-name {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: var(--di-space-1) var(--di-space-2);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.vj-deck-tile--empty .vj-deck-tile-name {
+    width: auto;
+    background: transparent;
+}
+
+.vj-deck-tile.is-playing .vj-deck-tile-name {
+    background: var(--di-ink);
+    color: var(--di-bg);
+}
+
+.vj-deck-columns {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--di-bg);
+}
+
+.vj-deck-columns-head {
+    align-self: center;
+    padding: 0 var(--di-space-2);
+}
+
+.vj-deck-column {
+    text-align: center;
+}
+
+/* --- add a clip, clip settings -------------------------------------------- */
+
+.vj-deck-panel {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    max-height: 45%;
+    overflow: auto;
+    padding: var(--di-space-2) var(--di-space-3);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.vj-deck-panel-head,
+.vj-deck-panel-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-2);
+}
+
+.vj-deck-panel-head .vj-deck-button--quiet {
+    margin-left: auto;
+}
+
+.vj-deck-clip-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.vj-deck-pick {
+    display: grid;
+    grid-template-columns: 90px minmax(0, 1fr);
+    align-items: start;
+    gap: var(--di-space-2);
+}
+
+.vj-deck-pick .vj-deck-label {
+    padding-top: var(--di-space-2);
+}
+
+.vj-deck-pick-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-1);
+}
+
+.vj-deck-asset {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.vj-deck-upload {
+    display: inline-flex;
+    align-items: center;
+}
+
+.vj-deck-upload input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.vj-deck-settings {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--di-space-2) var(--di-space-4);
+}
+
+.vj-deck-setting {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--di-space-2);
+}
+
+.vj-deck-modes {
+    display: flex;
+    grid-column: span 2;
+    gap: var(--di-space-1);
+}
+
+.vj-deck-modes .vj-deck-button {
+    flex: 1 1 0;
+}
+
+.vj-deck-hint {
+    flex: none;
+    margin: 0;
+    color: var(--di-dim);
+    font-size: var(--di-text-2);
+}
+
+/* --- a narrow deck: a phone, or a small window ---------------------------- */
+
+@container vjdeck (max-width: 560px) {
+    .vj-deck-grid {
+        --vj-head: 128px;
+        --vj-tile: 60px;
+        --vj-tile-height: 52px;
+    }
+
+    .vj-deck-out {
+        margin-left: 0;
+    }
+
+    .vj-deck-pick {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .vj-deck-pick .vj-deck-label {
+        padding-top: 0;
+    }
+}
+
+/* A finger needs 44px, wherever the deck is shown. */
+@media (pointer: coarse), (max-width: 600px) {
+    .vj-deck {
+        --vj-control: 44px;
+        --vj-tile-height: 56px;
+    }
+
+    .vj-deck-grid {
+        --vj-tile: 64px;
+    }
+
+    .vj-deck-tile,
+    .vj-deck-column,
+    .vj-deck-button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .vj-deck-chip {
+        padding: 0 var(--di-space-1);
+    }
+}
