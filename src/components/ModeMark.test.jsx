@@ -34,11 +34,21 @@ describe('ModeMark', () => {
         expect(container.querySelector('.mode-mark').getAttribute('style')).toContain('#4df9c0')
     })
 
-    it('marks staging amber', async () => {
-        atHost('staging.di-studio.xyz')
+    it('marks the dev tier amber as DEV', async () => {
+        atHost('dev.diiii.xyz')
         const { container } = render(<ModeMark />)
-        expect(await screen.findByText('STAGING')).toBeInTheDocument()
+        expect(await screen.findByText('DEV')).toBeInTheDocument()
         expect(container.querySelector('.mode-mark').getAttribute('style')).toContain('#ffb347')
+    })
+
+    // The same tier under its old name: links handed out before 2026-09-16
+    // still point there, and the chip must not bring the retired word back.
+    it('marks the old staging.di-studio.xyz address DEV too', async () => {
+        atHost('staging.di-studio.xyz')
+        render(<ModeMark />)
+        expect(await screen.findByText('DEV')).toBeInTheDocument()
+        expect(screen.queryByText('STAGING')).toBeNull()
+        expect(screen.getByText('staging.di-studio.xyz')).toBeInTheDocument()
     })
 
     // The whole point of the hosted branch: an audience on di-studio.xyz sees
@@ -102,13 +112,13 @@ describe('ModeMark', () => {
         afterEach(() => vi.useRealTimers())
 
         it('shows the label and hostname at mount, then collapses into the frame after 4s', async () => {
-            atHost('staging.di-studio.xyz')
+            atHost('dev.diiii.xyz')
             const { container } = render(<ModeMark />)
             // flush the getServerConfig microtask without advancing the collapse timer
             await act(async () => { await vi.advanceTimersByTimeAsync(0) })
 
-            expect(screen.getByText('STAGING')).toBeInTheDocument()
-            expect(screen.getByText('staging.di-studio.xyz')).toBeInTheDocument()
+            expect(screen.getByText('DEV')).toBeInTheDocument()
+            expect(screen.getByText('dev.diiii.xyz')).toBeInTheDocument()
             expect(container.querySelector('.mode-mark').getAttribute('data-collapsed')).toBe('false')
 
             await act(async () => { await vi.advanceTimersByTimeAsync(4000) })
@@ -116,11 +126,11 @@ describe('ModeMark', () => {
             expect(container.querySelector('.mode-mark').getAttribute('data-collapsed')).toBe('true')
             // The label is still in the DOM (CSS hides it) — assert on the
             // attribute the CSS actually keys off, not on text removal.
-            expect(screen.getByText('STAGING')).toBeInTheDocument()
+            expect(screen.getByText('DEV')).toBeInTheDocument()
         })
 
         it('does not collapse early', async () => {
-            atHost('staging.di-studio.xyz')
+            atHost('dev.diiii.xyz')
             const { container } = render(<ModeMark />)
             await act(async () => { await vi.advanceTimersByTimeAsync(3999) })
             expect(container.querySelector('.mode-mark').getAttribute('data-collapsed')).toBe('false')

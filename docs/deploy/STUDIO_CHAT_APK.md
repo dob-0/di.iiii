@@ -98,14 +98,18 @@ scp android-twa/app-release-signed.apk dii-vps:/var/lib/di-inner/di-studio-chat.
 The manifest and icons under `public/chat-app/` stay public, because installing
 from the browser needs them and neither is the app.
 
-### The staging twin
+### The dev-tier twin
 
-`assetlinks.json` lists a second package, `xyz.distudio.chat.staging`, signed with
-the same key. It exists because an APK is host-locked: the only way to see the
-finished thing — no address bar, the real room, a real phone — before it reaches
-the live site is to build the same app against `staging.di-studio.xyz` and run
-that. Its project is `android-twa-staging/` (git-ignored whole; it is the prod
-manifest with four fields changed). Delete the entry if the twin is ever retired.
+`assetlinks.json` lists a second package, `xyz.distudio.chat.staging` (package id and
+project folder keep the old `staging` name), signed with the same key. It exists
+because an APK is host-locked: the only way to see the finished thing — no address
+bar, the real room, a real phone — before it reaches the live site is to build the
+same app against the dev tier and run that. The dev tier's address is
+`dev.diiii.xyz`; the twin built so far is locked to its legacy name
+`staging.di-studio.xyz` (same server, still served), so a rebuild should set `host`
+to `dev.diiii.xyz`. Its project is `android-twa-staging/` (git-ignored whole; it is
+the prod manifest with four fields changed). Delete the entry if the twin is ever
+retired.
 
 ### Traps
 
@@ -113,7 +117,7 @@ manifest with four fields changed). Delete the entry if the twin is ever retired
   `webManifestUrl` in `twa-manifest.json` point at a local server serving `dist/`
   (`http://localhost:4010/...`) so a build does not depend on the artwork already
   being deployed. `host` and `fullScopeUrl` are what decide where the app goes.
-- **The app is host-locked.** One APK opens one origin. A build for staging is a
+- **The app is host-locked.** One APK opens one origin. A build for the dev tier is a
   different app from the build for the live site, and they cannot be swapped by
   changing a setting on the phone.
 - **Without `assetlinks.json` deployed to that host** the app still runs, but

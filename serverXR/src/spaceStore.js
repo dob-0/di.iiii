@@ -8,6 +8,7 @@ const { getDb } = require('./db')
 const commonsStore = require('./commonsStore')
 const logger = require('./logger')
 const { isValidAssetId } = require('./assetHash')
+const { serverActor } = require('./opActor')
 const {
   appendProjectOps,
   ensureProject,
@@ -188,7 +189,7 @@ function createSpaceStore({
       opsSelect:     db.prepare('SELECT data FROM space_ops WHERE space_id = ? ORDER BY version ASC, seq ASC'),
       opsSelectSince: db.prepare('SELECT data FROM space_ops WHERE space_id = ? AND version > ? ORDER BY version ASC, seq ASC'),
       opsDeleteAll:  db.prepare('DELETE FROM space_ops WHERE space_id = ?'),
-      opsInsert:     db.prepare('INSERT INTO space_ops (space_id, version, data, created_at) VALUES (?, ?, ?, ?)'),
+      opsInsert:     db.prepare('INSERT INTO space_ops (space_id, version, data, created_at, actor, actor_type, actor_label) VALUES (?, ?, ?, ?, ?, ?, ?)'),
       opsCount:      db.prepare('SELECT COUNT(*) as cnt FROM space_ops WHERE space_id = ?'),
       opsTrim:       db.prepare('DELETE FROM space_ops WHERE space_id = ? AND seq IN (SELECT seq FROM space_ops WHERE space_id = ? ORDER BY seq ASC LIMIT ?)'),
       opsTrimAged:   db.prepare('DELETE FROM space_ops WHERE space_id = ? AND created_at < ?'),
@@ -367,37 +368,115 @@ function createSpaceStore({
     const archived = []
     for (const row of rows) {
       if ((s().countProjectsInSpace.get(row.id)?.cnt || 0) > 0) continue
-      if ((row.scene_version || 0) > 0) await snapshotSpaceScene(row.id, { keep: 1 })
+      if ((row.scene_version || 0) > 0) await takeRestorePoint(row.id, { reason: 'sandbox-archived', actor: serverActor('sandbox-archive'), keep: 1 })
       await deleteSpace(row.id)
       archived.push(row.id)
     }
     return archived
   }
 
-  // Snapshots — vandalism insurance for the communal open space. A snapshot
-  // holds the scene AND every project document in the space: what people make
-  // in the Open Jam (photos, text, placed objects) lives in a PROJECT
-  // document, not in scene.json, so a scene-only snapshot restored an empty
-  // room. Any guest holds editor on the open space, which is exactly why one
-  // accidental mass-delete has to be recoverable.
+  // Snapshots — restore points for every space. They began as vandalism
+  // insurance for the communal open space; since 2026-09-16 every space gets
+  // one before each whole replace (PUT scene/document, sync pull, restore)
+  // and before the first change of each new burst of editing (spaceHistory.js),
+  // so any change anyone makes can be undone.
   //
-  // Assets stay OUT on purpose: they are content-addressed files in the
+  // A snapshot holds the scene AND every project document in the space: what
+  // people make (photos, text, placed objects) lives in a PROJECT document,
+  // not in scene.json, so a scene-only snapshot restored an empty room.
+  //
+  // Asset BYTES stay out on purpose: they are content-addressed files in the
   // space's own store, and copying them into every snapshot would multiply
-  // the heaviest bytes on disk by `keep`. Restored JSON still names the same
-  // asset ids, and those files were never the thing a vandal could rewrite.
+  // the heaviest bytes on disk. Restored JSON names the same asset ids, and
+  // scripts/gc-space-blobs.mjs keeps every blob a kept snapshot mentions. The
+  // small per-project asset manifests (assets/<sha>.json) DO go in: a project
+  // asset is only served while its manifest exists, so an image whose
+  // manifest was deleted would come back as a broken picture.
   //
   // Growth: a scene snapshot is a few KB, a project document runs to ~30 KB,
-  // and a space can hold several — so a five-project space costs ~150 KB per
-  // snapshot and roughly 1 MB across the default keep=7 rotation. Per space
-  // (only the open space is snapshotted daily), not per visitor.
+  // so a five-project space costs ~150 KB per snapshot; retention (below)
+  // caps a space at ~60 of them.
   //
   // The files live outside spacesDir so they never look like spaces.
   const snapshotsDir = path.resolve(spacesDir, '..', 'snapshots')
 
-  // v2 snapshot files are an envelope: { snapshotVersion, takenAt, scene,
-  // projects: [{ id, meta, document }] }. Everything written before this is a
-  // bare scene object — readLatestSpaceSnapshot still reads those (v1).
+  // v2 snapshot files are an envelope: { snapshotVersion, id, takenAt, reason,
+  // actor, counts, scene, projects: [{ id, meta, document, assets }] }.
+  // Everything written before v2 is a bare scene object — still readable (v1).
+  // `id`, `reason`, `actor`, `counts` and `assets` are additions an older
+  // build simply ignores, so the envelope version did not move.
   const SNAPSHOT_VERSION = 2
+
+  // The id is the file name: an ISO time with the separators a file name
+  // cannot hold swapped for '-', plus a short suffix when two land in one
+  // millisecond. Checked before it is ever joined into a path.
+  const SNAPSHOT_ID_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z(?:-[a-z0-9]{1,12})?$/
+  const isValidSnapshotId = (value) => typeof value === 'string' && SNAPSHOT_ID_REGEX.test(value)
+  const snapshotIdToMs = (id) => {
+    const match = /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/.exec(String(id || ''))
+    if (!match) return null
+    const ms = Date.parse(`${match[1]}T${match[2]}:${match[3]}:${match[4]}.${match[5]}Z`)
+    return Number.isFinite(ms) ? ms : null
+  }
+
+  // Retention: the newest 30, plus the newest of each UTC day for the last 30
+  // days. A busy afternoon cannot push yesterday out, and a quiet month still
+  // keeps a point per day it was touched. An explicit `keep` (the idle-sandbox
+  // archive, keep: 1) is a plain count instead.
+  const SNAPSHOT_KEEP_RECENT = 30
+  const SNAPSHOT_KEEP_DAYS = 30
+  const DAY_MS = 24 * 60 * 60 * 1000
+  const selectSnapshotsToKeep = (ids, { keep = null, now = Date.now() } = {}) => {
+    const sorted = [...ids].sort()
+    if (Number.isInteger(keep) && keep >= 0) return new Set(sorted.slice(Math.max(0, sorted.length - keep)))
+    const kept = new Set(sorted.slice(Math.max(0, sorted.length - SNAPSHOT_KEEP_RECENT)))
+    const newestPerDay = new Map()
+    for (const id of sorted) {
+      const ms = snapshotIdToMs(id)
+      // An unreadable name is not ours to judge — keep it rather than guess.
+      if (ms === null) { kept.add(id); continue }
+      if (now - ms > SNAPSHOT_KEEP_DAYS * DAY_MS) continue
+      newestPerDay.set(id.slice(0, 10), id)
+    }
+    for (const id of newestPerDay.values()) kept.add(id)
+    return kept
+  }
+
+  const listSnapshotFileIds = async (spaceId) => {
+    try {
+      return (await fsp.readdir(path.join(snapshotsDir, spaceId)))
+        .filter(name => name.endsWith('.json'))
+        .map(name => name.slice(0, -5))
+        .sort()
+    } catch {
+      return []
+    }
+  }
+
+  const pruneSpaceSnapshots = async (spaceId, { keep = null, now = Date.now() } = {}) => {
+    const ids = await listSnapshotFileIds(spaceId)
+    const kept = selectSnapshotsToKeep(ids, { keep, now })
+    const removed = ids.filter(id => !kept.has(id))
+    await Promise.all(removed.map(id => fsp.rm(path.join(snapshotsDir, spaceId, `${id}.json`), { force: true })))
+    for (const id of removed) snapshotSummaryCache.delete(`${spaceId}/${id}`)
+    return removed
+  }
+
+  // The per-project asset manifests, keyed by asset id. Small JSON, read raw.
+  const readProjectAssetManifests = async (spaceId, projectId) => {
+    const { assetsDir } = getProjectPaths(spacesDir, spaceId, projectId)
+    const manifests = {}
+    let names = []
+    try { names = await fsp.readdir(assetsDir) } catch { return manifests }
+    for (const name of names) {
+      if (!name.endsWith('.json')) continue
+      const assetId = name.slice(0, -5)
+      if (!isValidAssetId(assetId)) continue
+      const meta = await readJson(path.join(assetsDir, name), null)
+      if (meta && typeof meta === 'object') manifests[assetId] = meta
+    }
+    return manifests
+  }
 
   // Read the documents RAW, never through readProjectDocument: that one
   // normalizes and writes the normalized form back, and a backup path must
@@ -408,45 +487,149 @@ function createSpaceStore({
       const { documentPath } = getProjectPaths(spacesDir, spaceId, meta.id)
       const document = await readJson(documentPath, null)
       if (!document) continue
-      entries.push({ id: meta.id, meta, document })
+      const assets = await readProjectAssetManifests(spaceId, meta.id)
+      entries.push({ id: meta.id, meta, document, ...(Object.keys(assets).length ? { assets } : {}) })
     }
     return entries
   }
 
-  const snapshotSpaceScene = async (spaceId, { keep = 7 } = {}) => {
+  const countDocumentItems = (document) => {
+    const size = (value) => Array.isArray(value) ? value.length : (value && typeof value === 'object' ? Object.keys(value).length : 0)
+    return size(document?.entities) + size(document?.nodes)
+  }
+
+  const summarizeSnapshotPayload = (id, payload) => {
+    const v2 = payload?.snapshotVersion === SNAPSHOT_VERSION
+    const scene = v2 ? payload.scene : payload
+    const projects = v2 && Array.isArray(payload.projects) ? payload.projects : []
+    const ms = snapshotIdToMs(id)
+    return {
+      id,
+      takenAt: ms !== null ? new Date(ms).toISOString() : null,
+      reason: (v2 && payload.reason) || (v2 ? 'snapshot' : 'snapshot (old format)'),
+      actor: (v2 && payload.actor) || null,
+      objects: Array.isArray(scene?.objects) ? scene.objects.length : 0,
+      projects: projects.map(entry => ({
+        id: entry?.id || entry?.meta?.id || null,
+        title: entry?.meta?.title || entry?.document?.projectMeta?.title || null,
+        items: countDocumentItems(entry?.document)
+      }))
+    }
+  }
+
+  // Snapshot files never change once written, so a list request parses each
+  // one once per process. Bounded, because a long-running server sees many.
+  const SNAPSHOT_SUMMARY_CACHE_MAX = 2000
+  const snapshotSummaryCache = new Map()
+
+  // Take a restore point. `reason` says why (before-scene-replace,
+  // before-change, daily, …) and `actor` who caused it (opActor.js shape).
+  // Returns the summary — id, takenAt, reason, actor, counts — plus `file`,
+  // or null when the space holds nothing to save yet.
+  const takeRestorePoint = async (spaceId, { reason = 'snapshot', actor = null, keep = null, now = Date.now() } = {}) => {
     const { scenePath } = getSpacePaths(spaceId)
     const scene = await readJson(scenePath, null)
     const projects = await readSpaceProjectDocuments(spaceId)
     if (!scene && !projects.length) return null
     const dir = path.join(snapshotsDir, spaceId)
     await ensureDir(dir)
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
-    const file = path.join(dir, `${stamp}.json`)
-    await writeJson(file, { snapshotVersion: SNAPSHOT_VERSION, takenAt: stamp, scene, projects })
-    const entries = (await fsp.readdir(dir)).filter(name => name.endsWith('.json')).sort()
-    const excess = entries.slice(0, Math.max(0, entries.length - keep))
-    await Promise.all(excess.map(name => fsp.rm(path.join(dir, name), { force: true })))
-    return file
+    const stamp = new Date(now).toISOString().replace(/[:.]/g, '-')
+    let id = stamp
+    if (fs.existsSync(path.join(dir, `${id}.json`))) id = `${stamp}-${crypto.randomBytes(3).toString('hex')}`
+    const file = path.join(dir, `${id}.json`)
+    const publicActor = actor ? { subject: actor.actor || actor.subject || null, type: actor.type || null, label: actor.label || null } : null
+    const payload = {
+      snapshotVersion: SNAPSHOT_VERSION,
+      id,
+      takenAt: stamp,
+      reason: String(reason || 'snapshot').slice(0, 80),
+      actor: publicActor,
+      scene,
+      projects
+    }
+    await writeJson(file, payload)
+    await pruneSpaceSnapshots(spaceId, { keep, now })
+    const summary = summarizeSnapshotPayload(id, payload)
+    return { ...summary, file }
+  }
+
+  // Kept for its callers: returns the file path it wrote, or null.
+  const snapshotSpaceScene = async (spaceId, options = {}) => {
+    const point = await takeRestorePoint(spaceId, { reason: 'snapshot', ...options })
+    return point ? point.file : null
+  }
+
+  // Newest first — the order a person reads a history in.
+  const listSpaceSnapshots = async (spaceId) => {
+    const ids = await listSnapshotFileIds(spaceId)
+    const out = []
+    for (const id of ids.reverse()) {
+      const key = `${spaceId}/${id}`
+      let summary = snapshotSummaryCache.get(key)
+      if (!summary) {
+        const payload = await readJson(path.join(snapshotsDir, spaceId, `${id}.json`), null)
+        if (!payload) continue
+        summary = summarizeSnapshotPayload(id, payload)
+        if (snapshotSummaryCache.size >= SNAPSHOT_SUMMARY_CACHE_MAX) {
+          snapshotSummaryCache.delete(snapshotSummaryCache.keys().next().value)
+        }
+        snapshotSummaryCache.set(key, summary)
+      }
+      out.push(summary)
+    }
+    return out
+  }
+
+  const readSnapshotFile = async (spaceId, id) => {
+    const payload = await readJson(path.join(snapshotsDir, spaceId, `${id}.json`), null)
+    if (!payload) return null
+    // A v1 file IS the scene; it never carried projects.
+    if (payload.snapshotVersion !== SNAPSHOT_VERSION) {
+      return { id, scene: payload, projects: [], takenAt: id, reason: null, actor: null }
+    }
+    const projects = Array.isArray(payload.projects) ? payload.projects : []
+    if (!payload.scene && !projects.length) return null
+    return {
+      id,
+      scene: payload.scene || null,
+      projects,
+      takenAt: id,
+      reason: payload.reason || null,
+      actor: payload.actor || null
+    }
+  }
+
+  // One restore point by id, or null. An id that is not the shape we write is
+  // refused before it is joined into a path.
+  const readSpaceSnapshot = async (spaceId, snapshotId) => {
+    if (!isValidSnapshotId(snapshotId)) return null
+    return readSnapshotFile(spaceId, snapshotId)
   }
 
   const readLatestSpaceSnapshot = async (spaceId) => {
-    const dir = path.join(snapshotsDir, spaceId)
-    let entries = []
-    try {
-      entries = (await fsp.readdir(dir)).filter(name => name.endsWith('.json')).sort()
-    } catch {
-      return null
-    }
-    const latest = entries[entries.length - 1]
+    const ids = await listSnapshotFileIds(spaceId)
+    const latest = ids[ids.length - 1]
     if (!latest) return null
-    const payload = await readJson(path.join(dir, latest), null)
-    if (!payload) return null
-    const takenAt = latest.replace(/\.json$/, '')
-    // A v1 file IS the scene; it never carried projects.
-    if (payload.snapshotVersion !== SNAPSHOT_VERSION) return { scene: payload, projects: [], takenAt }
-    const projects = Array.isArray(payload.projects) ? payload.projects : []
-    if (!payload.scene && !projects.length) return null
-    return { scene: payload.scene || null, projects, takenAt }
+    return readSnapshotFile(spaceId, latest)
+  }
+
+  // A manifest comes back only when its bytes are still here — a manifest
+  // naming a missing blob would turn a clean 404 into a broken read.
+  const restoreProjectAssetManifests = async (spaceId, projectId, assets) => {
+    if (!assets || typeof assets !== 'object') return 0
+    const { assetsDir } = getProjectPaths(spacesDir, spaceId, projectId)
+    const blobsDir = path.join(spacesDir, spaceId, 'blobs')
+    let restored = 0
+    for (const [assetId, meta] of Object.entries(assets)) {
+      if (!isValidAssetId(assetId) || !meta || typeof meta !== 'object') continue
+      const manifestPath = path.join(assetsDir, `${assetId}.json`)
+      if (fs.existsSync(manifestPath)) continue
+      if (!fs.existsSync(path.join(blobsDir, assetId)) && !fs.existsSync(path.join(assetsDir, assetId))) continue
+      await ensureDir(assetsDir)
+      await writeJson(manifestPath, meta)
+      restored += 1
+    }
+    return restored
   }
 
   // The restore half, symmetric with replaceSceneAndBroadcast and shaped like
@@ -455,7 +638,7 @@ function createSpaceStore({
   // client that is still holding the wiped copy resyncs instead of believing
   // it is current. Returns what the caller needs to broadcast — the SSE emit
   // belongs to the route (spaceRoutes' restore-snapshot), not to the store.
-  const restoreSpaceProjectDocuments = async (spaceId, projects = [], { maxOpHistory = 500, maxOpAgeMs = 0 } = {}) => {
+  const restoreSpaceProjectDocuments = async (spaceId, projects = [], { maxOpHistory = 500, maxOpAgeMs = 0, actor = null } = {}) => {
     const restored = []
     for (const entry of (Array.isArray(projects) ? projects : [])) {
       const projectId = normalizeProjectId(entry?.id || entry?.meta?.id || '')
@@ -470,6 +653,7 @@ function createSpaceStore({
       const current = await loadProjectMeta(spacesDir, spaceId, projectId)
       const version = (Number(current?.documentVersion) || 0) + 1
       await writeProjectDocument(spacesDir, spaceId, projectId, document)
+      await restoreProjectAssetManifests(spaceId, projectId, entry.assets)
       const resetOp = {
         opId: crypto.randomUUID?.() || `project-op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
         clientId: 'server',
@@ -478,7 +662,7 @@ function createSpaceStore({
         version,
         timestamp: Date.now()
       }
-      await appendProjectOps(spacesDir, spaceId, projectId, [resetOp], maxOpHistory, maxOpAgeMs)
+      await appendProjectOps(spacesDir, spaceId, projectId, [resetOp], maxOpHistory, maxOpAgeMs, actor)
       await upsertProjectMeta(spacesDir, spaceId, projectId, { documentVersion: version })
       restored.push({ projectId, version, ops: [resetOp] })
     }
@@ -501,7 +685,7 @@ function createSpaceStore({
     getDb().transaction(() => {
       opsDeleteAll.run(spaceId)
       for (const op of (Array.isArray(ops) ? ops : [])) {
-        opsInsert.run(spaceId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now)
+        opsInsert.run(spaceId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now, null, null, null)
       }
     })()
   }
@@ -510,13 +694,17 @@ function createSpaceStore({
   // reasoning as appendProjectOps in projectStore.js — counting alone ties how
   // long history (and every asset it mentions) survives to how busy the space
   // is, so a dormant space keeps its last ops forever.
-  const appendOpsHistory = async (spaceId, newOps = [], maxHistory = 500, maxAgeMs = 0) => {
+  // `actor` is who the server says made these ops (opActor.js) — a column
+  // beside the op, never a field inside it, so what a client reads back from
+  // GET /ops is exactly the shape it always was.
+  const appendOpsHistory = async (spaceId, newOps = [], maxHistory = 500, maxAgeMs = 0, actor = null) => {
     if (!Array.isArray(newOps) || newOps.length === 0) return
     const { opsInsert, opsCount, opsTrim, opsTrimAged } = s()
     const now = Date.now()
     getDb().transaction(() => {
       for (const op of newOps) {
-        opsInsert.run(spaceId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now)
+        opsInsert.run(spaceId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now,
+          actor?.actor ?? null, actor?.type ?? null, actor?.label ?? null)
       }
       const { cnt } = opsCount.get(spaceId)
       if (cnt > maxHistory) opsTrim.run(spaceId, spaceId, cnt - maxHistory)
@@ -661,13 +849,18 @@ function createSpaceStore({
     normalizeSpaceSlug,
     pruneSpaces,
     pruneStaleSandboxes,
+    isValidSnapshotId,
+    listSpaceSnapshots,
+    pruneSpaceSnapshots,
     readLatestSpaceSnapshot,
+    readSpaceSnapshot,
     readOpsHistory,
     readOpsHistorySince,
     readSpaceProjectDocuments,
     removeAssetThumbnails,
     restoreSpaceProjectDocuments,
     snapshotSpaceScene,
+    takeRestorePoint,
     saveSpaceMeta,
     serveAsset,
     spaceExists,

@@ -2,7 +2,7 @@
  * The ledger is the origin field the ops do not have — lose it and every
  * future audit downgrades to "unknown — refuse". These tests pin the three
  * properties that protect it: it lives under data/ (what `di backup` carries
- * and `di update` may not touch), one file per (remote, space) so staging and
+ * and `di update` may not touch), one file per (remote, space) so dev-tier and
  * prod cursors can never share state, and installId is minted exactly once.
  */
 import fs from 'node:fs'
@@ -29,18 +29,18 @@ describe('ensureInstallId', () => {
 
 describe('ledger files', () => {
     it('lives under data/sync/<remote>/<space>.json — the backup-carried, update-proof directory', () => {
-        const file = ledgerPath(home, 'https://staging.di-studio.xyz/serverXR', 'open')
-        expect(file).toBe(path.join(home, 'data', 'sync', 'staging.di-studio.xyz_serverxr', 'open.json'))
+        const file = ledgerPath(home, 'https://dev.diiii.xyz/serverXR', 'open')
+        expect(file).toBe(path.join(home, 'data', 'sync', 'dev.diiii.xyz_serverxr', 'open.json'))
     })
 
     it('two remotes for the same space never share a file', () => {
-        const a = ledgerPath(home, 'https://staging.di-studio.xyz/serverXR', 'open')
+        const a = ledgerPath(home, 'https://dev.diiii.xyz/serverXR', 'open')
         const b = ledgerPath(home, 'https://di-studio.xyz/serverXR', 'open')
         expect(a).not.toBe(b)
     })
 
     it('round-trips, and a fresh ledger has null cursors so an audit answers unknown', () => {
-        const remote = 'https://staging.di-studio.xyz/serverXR'
+        const remote = 'https://dev.diiii.xyz/serverXR'
         const ledger = createLedger({ installId: 'i-1', remote, spaceId: 'open' })
         expect(ledger.cursors).toBe(null)
         writeLedger(home, remote, 'open', ledger)

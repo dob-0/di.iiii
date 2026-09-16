@@ -13,6 +13,7 @@ const commonsStore = require('../commonsStore')
 const logger = require('../logger')
 const { createKeyedLock } = require('../asyncLock')
 const { SENSITIVE_SPACE_PATCH_FIELDS } = require('../approvalGate')
+const { actorFromAuthState } = require('../opActor')
 
 const defaultWithSpaceOpsLock = createKeyedLock()
 
@@ -60,6 +61,13 @@ function registerSpaceRoutes(router, {
   requireSpaceOwnerOrAdminWrite = (req, res, next) => next(),
   readJson,
   readLatestSpaceSnapshot = null,
+  readSpaceSnapshot = null,
+  listSpaceSnapshots = null,
+  // spaceHistory.js — restore points before changes, change summaries, the
+  // inner-bot notice. Absent (older wiring, unit tests) means none of those.
+  spaceHistory = null,
+  // Stamps the author on op rows an out-of-process tool wrote (bundle import).
+  stampImportedOpsActor = null,
   readOpsHistory,
   readOpsHistorySince,
   removeAssetThumbnails,
@@ -541,6 +549,12 @@ function registerSpaceRoutes(router, {
       const args = ['import', uploaded]
       const as = normalizeSpaceId(String(req.body?.as || '').trim())
       if (as) args.push('--as', as)
+      // This route never passes --force, so the tool refuses an id that is
+      // already here and nothing is replaced. Should that ever change, the
+      // space it lands on keeps a way back.
+      if (as && spaceHistory && (await spaceExists(as))) {
+        await spaceHistory.beforeChange(as, actorFromAuthState(state), { reason: 'before-bundle-import' })
+      }
 
       const { code, output } = await runBundleTool(args)
       if (code !== 0) {
@@ -572,13 +586,26 @@ function registerSpaceRoutes(router, {
         return res.status(400).json({ error: said || 'That file could not be opened.' })
       }
 
-      const opened = as || /imported .*?as ([a-z0-9-]+)/i.exec(output)?.[1] || null
+      // The tool says `imported "src" as "target"` — quoted. The pattern used
+      // to expect a bare id, so without `as` (which is how the Spaces page
+      // opens a file) it matched nothing: the space was made, the answer said
+      // spaceId null, and nobody was granted it.
+      const opened = as || /imported "?[^"\s]*"? as "?([a-z0-9-]+)"?/i.exec(output)?.[1] || null
       const meta = opened ? await loadSpaceMeta(opened) : null
+      // The tool wrote the op rows from another process, with no author. The
+      // person who opened the file is the author of what arrived here.
+      if (opened && meta && typeof stampImportedOpsActor === 'function') {
+        try { stampImportedOpsActor(opened, actorFromAuthState(state)) } catch (error) { logger.warn(`[bundle] could not stamp the importer on "${opened}": ${error.message}`) }
+      }
       if (opened && meta && sessionUserId && grantSpaceToSessionUser) {
         // Whoever opened it can reach it. A space nobody is scoped to is a
         // space that vanishes from its own owner's list — the exact trap
         // ownership does not solve, since scope is what grants access.
-        await grantSpaceToSessionUser(req, opened)
+        // (req, res, userId, spaceId) — the same call the create route makes.
+        // It was called as (req, opened), so userId arrived undefined and the
+        // grant returned before doing anything: the importer was locked out of
+        // the space they had just made.
+        grantSpaceToSessionUser(req, res, sessionUserId, opened)
       }
       res.status(201).json({ spaceId: opened, space: meta })
     } catch (error) {
@@ -766,6 +793,12 @@ function registerSpaceRoutes(router, {
 
       await ensureSpaceScene(spaceId)
 
+      // Who is doing this, as the server knows it. The op body cannot say:
+      // normalizeIncomingOps keeps only opId/clientId/type/payload.
+      const actor = actorFromAuthState(req.authState)
+      // The first change of a new burst takes a restore point first.
+      if (spaceHistory) await spaceHistory.beforeChange(spaceId, actor)
+
       // Serialized per space: the version check and the read-modify-write it
       // guards must be one atomic step, or two concurrent requests at the
       // same baseVersion both pass the check and both write, one silently
@@ -805,7 +838,7 @@ function registerSpaceRoutes(router, {
         }))
         const updatedScene = applySceneOps(scene, opsWithVersion)
         await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, opsWithVersion, maxOpHistory, maxOpAgeMs)
+        await appendOpsHistory(spaceId, opsWithVersion, maxOpHistory, maxOpAgeMs, actor)
         await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: nextVersion })
         return { nextVersion, opsWithVersion }
       })
@@ -847,7 +880,15 @@ function registerSpaceRoutes(router, {
   // it based this scene on, and a mismatch refuses rather than overwrites.
   // Without it this is still last-write-wins, which is why a `di` install
   // turns config.sceneReplace.requirePrecondition on (see PUT /scene).
-  const replaceSceneAndBroadcast = async (spaceId, sceneData, { expectedVersion = null } = {}) => withSpaceOpsLock(spaceId, async () => {
+  //
+  // `actor` is who asked (opActor.js). `restoreReason` names the restore point
+  // taken just before the replace; null skips it, for a caller that already
+  // took its own (sync pull, restore-snapshot).
+  const replaceSceneAndBroadcast = async (spaceId, sceneData, {
+    expectedVersion = null,
+    actor = null,
+    restoreReason = 'before-scene-replace'
+  } = {}) => withSpaceOpsLock(spaceId, async () => {
     await ensureSpaceWritable(spaceId)
     const meta = await loadSpaceMeta(spaceId)
     const currentVersion = meta?.sceneVersion || 0
@@ -860,6 +901,11 @@ function registerSpaceRoutes(router, {
       const pendingOps = history.filter(entry => (entry.version || 0) > expectedVersion)
       return { conflict: true, latestVersion: currentVersion, pendingOps }
     }
+
+    // After the version check, so a refused replace leaves no restore point.
+    const restorePoint = restoreReason && spaceHistory
+      ? await spaceHistory.beforeChange(spaceId, actor, { reason: restoreReason })
+      : null
 
     const { spaceDir, scenePath, assetsDir } = getSpacePaths(spaceId)
     await fsp.mkdir(spaceDir, { recursive: true })
@@ -883,13 +929,14 @@ function registerSpaceRoutes(router, {
     // referenced, so wiping it strands both. applySceneOps already treats a
     // replaceScene op mid-log as a full reset, so replay from any earlier
     // version still converges on the same scene.
-    await appendOpsHistory(spaceId, [resetOp], maxOpHistory, maxOpAgeMs)
+    await appendOpsHistory(spaceId, [resetOp], maxOpHistory, maxOpAgeMs, actor)
     await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: nextVersion })
     broadcastLiveEvent(spaceId, 'scene-op', {
       version: nextVersion,
       ops: [resetOp]
     })
     return {
+      ...(restorePoint ? { restorePoint: restorePoint.id } : {}),
       newVersion: nextVersion,
       previousVersion: currentVersion,
       // So a caller can SEE that it just replaced 40 objects with 3, rather
@@ -1005,7 +1052,10 @@ function registerSpaceRoutes(router, {
         })
       }
 
-      const result = await replaceSceneAndBroadcast(spaceId, sceneData, { expectedVersion })
+      const result = await replaceSceneAndBroadcast(spaceId, sceneData, {
+        expectedVersion,
+        actor: actorFromAuthState(req.authState)
+      })
       if (result.conflict) {
         return res.status(409).json({ latestVersion: result.latestVersion, pendingOps: result.pendingOps })
       }
@@ -1026,40 +1076,110 @@ function registerSpaceRoutes(router, {
     }
   })
 
-  // Vandalism insurance for the open space (works for any snapshotted space):
-  // put the latest snapshot back — the scene AND the project documents it
-  // carries, since the Open Jam's contributions live in a project document.
+  // Put a restore point back — the scene AND the project documents it
+  // carries, since most of a room's work lives in a project document.
+  // `snapshotId` picks one from GET /snapshots; without it, the newest.
+  //
+  // Deliberately unconditional: restoring IS the act of discarding what is
+  // there now — which is why it takes a restore point of its own first, so a
+  // restore to the wrong point is one more restore away from undone. Reports
+  // the deltas so an accidental restore is visible rather than silent.
+  //
+  // Shared by the owner's route below and the inner bot's signed Undo
+  // (index.js, /api/content-changes/undo). Returns null when there is no such
+  // snapshot, and throws a 501-shaped error when snapshots are not wired.
+  const restoreSnapshotAndBroadcast = async (spaceId, snapshotId, actor) => {
+    if (typeof readLatestSpaceSnapshot !== 'function') {
+      const error = new Error('Snapshots are not available.')
+      error.status = 501
+      throw error
+    }
+    // Read BEFORE the new restore point is taken, or "latest" would be it.
+    const snapshot = snapshotId
+      ? (typeof readSpaceSnapshot === 'function' ? await readSpaceSnapshot(spaceId, snapshotId) : null)
+      : await readLatestSpaceSnapshot(spaceId)
+    if (!snapshot) return null
+    await ensureSpaceWritable(spaceId)
+    const restorePoint = spaceHistory
+      ? await spaceHistory.beforeChange(spaceId, actor, { reason: 'before-restore' })
+      : null
+    const result = snapshot.scene
+      ? await replaceSceneAndBroadcast(spaceId, snapshot.scene, { actor, restoreReason: null })
+      : {}
+    // The other half of the room. Each restored document is announced to
+    // its own project channel the same way PUT .../document announces a
+    // full replace, so an editor holding the wiped copy resyncs live.
+    let projects = []
+    if (snapshot.projects?.length && typeof restoreSpaceProjectDocuments === 'function') {
+      const restored = await restoreSpaceProjectDocuments(spaceId, snapshot.projects, { maxOpHistory, maxOpAgeMs, actor })
+      for (const entry of restored) {
+        if (typeof broadcastProjectLiveEvent === 'function') {
+          await broadcastProjectLiveEvent(entry.projectId, 'project-op', { version: entry.version, ops: entry.ops })
+        }
+      }
+      projects = restored.map(entry => ({ id: entry.projectId, version: entry.version }))
+    }
+    return {
+      ok: true,
+      restoredFrom: snapshot.takenAt,
+      snapshotId: snapshot.id || snapshot.takenAt,
+      projects,
+      ...result,
+      restorePoint: restorePoint?.id || null
+    }
+  }
+
   // Owner-or-admin; the open space has no owner, so there it is effectively
   // admin-only.
   router.post('/api/spaces/:spaceId/restore-snapshot', requireSpaceOwnerOrAdminWrite, async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
       if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
-      if (typeof readLatestSpaceSnapshot !== 'function') {
-        return res.status(501).json({ error: 'Snapshots are not available.' })
+      const raw = req.body?.snapshotId
+      const snapshotId = raw === undefined || raw === null || raw === '' ? null : String(raw)
+      const outcome = await restoreSnapshotAndBroadcast(spaceId, snapshotId, actorFromAuthState(req.authState))
+      if (!outcome) {
+        return res.status(404).json({
+          error: snapshotId ? 'That restore point is not here (it may have aged out).' : 'No snapshot available for this space.'
+        })
       }
-      const snapshot = await readLatestSpaceSnapshot(spaceId)
-      if (!snapshot) {
-        return res.status(404).json({ error: 'No snapshot available for this space.' })
+      res.json(outcome)
+    } catch (error) {
+      if (error?.status === 501) return res.status(501).json({ error: error.message })
+      next(error)
+    }
+  })
+
+  // The history a space's owner sees: every restore point kept, newest
+  // first, with why it was taken and whose change caused it.
+  router.get('/api/spaces/:spaceId/snapshots', requireSpaceOwnerOrAdminWrite, async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      if (!(await spaceExists(spaceId))) return res.status(404).json({ error: 'Space not found.' })
+      if (typeof listSpaceSnapshots !== 'function') return res.json({ snapshots: [] })
+      res.json({ snapshots: await listSpaceSnapshots(spaceId) })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // Who changed what since `since` (ms since epoch; default the last 7 days),
+  // grouped by author and burst into plain summaries.
+  router.get('/api/spaces/:spaceId/changes', requireSpaceOwnerOrAdminWrite, async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      if (!(await spaceExists(spaceId))) return res.status(404).json({ error: 'Space not found.' })
+      let since = null
+      if (req.query?.since !== undefined && req.query.since !== '') {
+        const parsed = Number(req.query.since)
+        const ms = Number.isFinite(parsed) ? parsed : Date.parse(String(req.query.since))
+        if (!Number.isFinite(ms)) return res.status(400).json({ error: 'since must be a time (ms since epoch or an ISO date).' })
+        since = ms
       }
-      // Deliberately unconditional: restoring a snapshot IS the act of
-      // discarding what is there now. It reports the deltas so an accidental
-      // restore is visible rather than silent.
-      const result = snapshot.scene ? await replaceSceneAndBroadcast(spaceId, snapshot.scene) : {}
-      // The other half of the room. Each restored document is announced to
-      // its own project channel the same way PUT .../document announces a
-      // full replace, so an editor holding the wiped copy resyncs live.
-      let projects = []
-      if (snapshot.projects?.length && typeof restoreSpaceProjectDocuments === 'function') {
-        const restored = await restoreSpaceProjectDocuments(spaceId, snapshot.projects, { maxOpHistory, maxOpAgeMs })
-        for (const entry of restored) {
-          if (typeof broadcastProjectLiveEvent === 'function') {
-            await broadcastProjectLiveEvent(entry.projectId, 'project-op', { version: entry.version, ops: entry.ops })
-          }
-        }
-        projects = restored.map(entry => ({ id: entry.projectId, version: entry.version }))
-      }
-      res.json({ ok: true, restoredFrom: snapshot.takenAt, projects, ...result })
+      if (!spaceHistory) return res.json({ changes: [] })
+      res.json({ changes: spaceHistory.summarizeChanges(spaceId, { since }) })
     } catch (error) {
       next(error)
     }
@@ -1642,7 +1762,7 @@ function registerSpaceRoutes(router, {
   // whole scene) go through the same locked, versioned, broadcast write path
   // instead of hand-rolling their own version bump that can desync from the
   // real op-log (see docs/ai/known-fixes.md, audit #2026-07-17).
-  return { replaceSceneAndBroadcast }
+  return { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast }
 }
 
 module.exports = {

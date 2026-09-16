@@ -4,10 +4,13 @@ This is the shortest practical runbook for normal future work.
 
 If you only remember one thing, remember this:
 
-- `dev` = active development → deploys to VPS staging
+- `dev` = active development → deploys to the dev tier, `https://dev.diiii.xyz`
 - `main` = production → deploys to the Hetzner VPS (Docker/Caddy)
-- normal promotion path: `dev -> main`
-- there is no `staging` source branch — staging is a deploy target, not a branch
+- normal promotion path: local → dev → prod (`dev -> main`)
+- the dev tier is a deploy target, not a branch. Its machine identifier is still
+  `staging` (workflow `deploy-vps-staging.yml`, GitHub environment `staging`,
+  `docker-compose.staging.yml`, `/opt/di.iiii-staging`); `staging.di-studio.xyz`
+  is its old name and still answers, same server
 
 ## Golden Path (VPS, current)
 
@@ -16,16 +19,16 @@ Production DNS was cut over from cPanel to the Hetzner VPS on 2026-07-15
 end-to-end (both environments, real runs) on 2026-07-16.
 
 - push `dev` → [deploy-vps-staging.yml](../../.github/workflows/deploy-vps-staging.yml)
-  builds images, pushes to GHCR, SSHes into the VPS, restarts the staging
+  builds images, pushes to GHCR, SSHes into the VPS, restarts the dev-tier
   Compose project (`docker-compose.staging.yml`) — small, isolated, shares
   the box with production but not its resources or secrets; served at
-  `staging.di-studio.xyz` via production's Caddy. Its first job, `land`, runs
+  `dev.diiii.xyz` (and the legacy `staging.di-studio.xyz`) via production's Caddy. Its first job, `land`, runs
   `npm run land` on `dev` and pushes the fold commit (`github-actions[bot]`) —
   the merge commit's own deploy used to fail the docs gate on the note every PR
-  brings with it, and staging only moved once someone folded by hand. The
+  brings with it, and the dev tier only moved once someone folded by hand. The
   deployed image is the merge commit (the fold touches docs only), so
   `release.gitCommit` reads one commit behind `dev`'s tip after a merge. If the
-  job warns that branch protection rejected its push, staging deployed anyway;
+  job warns that branch protection rejected its push, the dev tier deployed anyway;
   only the bookkeeping commit is missing — `npm run land` by hand still does it
 - push `main` → [deploy-vps.yml](../../.github/workflows/deploy-vps.yml) does
   the same for the production Compose project
@@ -53,17 +56,17 @@ git pull --ff-only origin dev
 npm run dev
 ```
 
-### To update staging (once the one-time VPS setup is done)
+### To update the dev tier (once the one-time VPS setup is done)
 
 ```bash
 git push origin dev
 ```
 
-Wait for the `Deploy VPS Staging` GitHub Action to finish, then verify:
+Wait for the `Deploy VPS Staging` GitHub Action (the dev tier's workflow) to finish, then verify:
 
 ```bash
-curl -s https://<staging-domain>/serverXR/api/health
-node scripts/smoke-check.mjs --base-url https://<staging-domain>
+curl -s https://dev.diiii.xyz/serverXR/api/health
+node scripts/smoke-check.mjs --base-url https://dev.diiii.xyz
 ```
 
 ### To update production
@@ -126,6 +129,6 @@ Canonical pieces (unchanged, kept for that fallback):
   [CPANEL_PREBUILT_DEPLOY.md](CPANEL_PREBUILT_DEPLOY.md) and
   [legacy/README.md](legacy/README.md)
 
-`npm run deploy:staging` / `deploy:production` (via `scripts/deploy.mjs`)
+`npm run deploy:dev` (same as `deploy:staging`) / `deploy:production` (via `scripts/deploy.mjs`)
 still just push `dev` / merge-and-push `main` — same git operations as
 above, regardless of which workflow is currently wired to that branch.

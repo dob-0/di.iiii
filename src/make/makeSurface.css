@@ -539,7 +539,7 @@ body.is-make .account-btn-wrapper {
 
 /* Raw's two room tabs, lit for paper. `--di-cyan` on a cream sheet is a bright
    line for the active tab and a nearly invisible one for the inactive tab —
-   seen on staging: a child could not tell there was a second room to tap. Ink
+   seen on the dev tier: a child could not tell there was a second room to tap. Ink
    for the one you are in, soft ink for the other, and both keep Raw's 40px+
    target because a mis-tap here sends a private line to the wrong four people. */
 .make-chat .raw-chat-tabs {

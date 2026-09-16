@@ -3,7 +3,8 @@ import {
     buildPresentationPreviewDocument,
     getPreviewIssueMessage,
     PREVIEW_HOST_MESSAGE_TYPE,
-    PREVIEW_ISSUE_CODES
+    PREVIEW_ISSUE_CODES,
+    PREVIEW_PAINT_CONFIRMED_KIND
 } from './presentationPreviewDocument.js'
 
 describe('presentationPreviewDocument', () => {
@@ -40,12 +41,12 @@ describe('presentationPreviewDocument', () => {
     })
 
     // A srcdoc page cannot read its own host any more than it can read its own
-    // query, so every page that links to a sibling hardcoded one — and staging
-    // embedded production's copy, which means the tier could never rehearse
+    // query, so every page that links to a sibling hardcoded one — and the dev
+    // tier embedded production's copy, which means the tier could never rehearse
     // itself.
     it('hands the page the origin it is actually running on', () => {
-        const result = buildPresentationPreviewDocument('<main>Rite</main>', '', 'https://staging.di-studio.xyz')
-        expect(result).toContain('window.diiPageOrigin = "https://staging.di-studio.xyz"')
+        const result = buildPresentationPreviewDocument('<main>Rite</main>', '', 'https://dev.diiii.xyz')
+        expect(result).toContain('window.diiPageOrigin = "https://dev.diiii.xyz"')
     })
 
     it('leaves diiPageOrigin an empty string when no origin is given', () => {
@@ -121,6 +122,77 @@ describe('presentationPreviewDocument', () => {
         expect(getPreviewIssueMessage(PREVIEW_ISSUE_CODES.sandboxApiDenied)).toContain('sandboxed browser API')
     })
 
+    // PublicProjectViewer's code-preview timeout is a backstop, not the real
+    // signal — this is the real signal. First version of the fix had none at
+    // all (a plain clock, no way to cancel it), which swapped out EVERY code
+    // preview, including one that painted fine in 2s, the moment enough real
+    // time passed — caught by screenshotting real content, not by a test, so
+    // this one pins the actual bootstrap behaviour rather than the component's
+    // side of the contract alone.
+    describe('the preview paint-watcher (?preview=1 only)', () => {
+        const runPaintWatcher = (bodyHtml, pageQuery = '?preview=1') => {
+            const container = window.document.createElement('div')
+            container.innerHTML = bodyHtml
+            const fakeDocument = {
+                readyState: 'complete',
+                addEventListener: () => {},
+                querySelector: (selector) => container.querySelector(selector),
+                documentElement: container
+            }
+            const posted = []
+            const fakeWindow = {
+                addEventListener: () => {},
+                parent: { postMessage: (message) => posted.push(message) }
+            }
+            const result = buildPresentationPreviewDocument('<main>Field</main>', pageQuery)
+            const script = /<script>([\s\S]*?)<\/script>/.exec(result)[1]
+            // eslint-disable-next-line no-new-func
+            new Function('window', 'document', 'console', script)(fakeWindow, fakeDocument, { error: () => {}, warn: () => {} })
+            return { container, posted }
+        }
+
+        // The bootstrap always posts its own unrelated 'issues' message
+        // (sandbox storage/API probing, unconditional) — every assertion here
+        // is scoped to PAINT_CONFIRMED_KIND specifically, not "nothing at all
+        // was posted".
+        const paintConfirmations = (posted) => posted.filter((message) => message.kind === PREVIEW_PAINT_CONFIRMED_KIND)
+
+        it('reports a sign of life immediately for a page with no canvas — first paint IS the whole page', () => {
+            const { posted } = runPaintWatcher('<h1>a bridge between worlds</h1>')
+            expect(paintConfirmations(posted)).toEqual([{
+                source: PREVIEW_HOST_MESSAGE_TYPE,
+                type: PREVIEW_HOST_MESSAGE_TYPE,
+                kind: PREVIEW_PAINT_CONFIRMED_KIND
+            }])
+        })
+
+        it('does not run at all outside ?preview=1 — a live visitor is never asked to prove anything', () => {
+            const { posted } = runPaintWatcher('<h1>a bridge between worlds</h1>', '')
+            expect(paintConfirmations(posted)).toHaveLength(0)
+        })
+
+        it('stays silent for a canvas-based page whose DOM never changes — indistinguishable from finished-and-static, so it says nothing rather than guess', async () => {
+            const { posted } = runPaintWatcher('<canvas></canvas><div id="pct">INITIALIZING SPACE... 0%</div>')
+            await new Promise((resolve) => setTimeout(resolve, 0))
+            expect(paintConfirmations(posted)).toHaveLength(0)
+        })
+
+        it('reports a sign of life the first time a canvas-based page changes its own DOM', async () => {
+            const { container, posted } = runPaintWatcher('<canvas></canvas><div id="pct">0%</div>')
+            await new Promise((resolve) => setTimeout(resolve, 0))
+            expect(paintConfirmations(posted)).toHaveLength(0)
+
+            container.querySelector('#pct').textContent = '34%'
+            await new Promise((resolve) => setTimeout(resolve, 0))
+
+            expect(paintConfirmations(posted)).toEqual([{
+                source: PREVIEW_HOST_MESSAGE_TYPE,
+                type: PREVIEW_HOST_MESSAGE_TYPE,
+                kind: PREVIEW_PAINT_CONFIRMED_KIND
+            }])
+        })
+    })
+
     // A page copied between tiers (or hand-authored with a pasted absolute
     // URL) keeps pointing at the tier it was saved on — the asset id may not
     // even exist on the tier now serving the page. srcdoc inherits the
@@ -132,6 +204,14 @@ describe('presentationPreviewDocument', () => {
             )
             expect(result).toContain('src="/serverXR/api/projects/p1/assets/abc123.png"')
             expect(result).not.toContain('staging.di-studio.xyz')
+        })
+
+        it('strips the dev tier\'s own host the same way as its old name', () => {
+            const result = buildPresentationPreviewDocument(
+                '<img src="https://dev.diiii.xyz/serverXR/api/projects/p1/assets/abc123.png">'
+            )
+            expect(result).toContain('src="/serverXR/api/projects/p1/assets/abc123.png"')
+            expect(result).not.toContain('dev.diiii.xyz')
         })
 
         it('strips a prod host baked into a document served on any tier', () => {

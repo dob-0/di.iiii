@@ -3,6 +3,7 @@ import { getServerSpace, supportsServerSpaces } from './services/serverSpaces.js
 import { APP_PAGE_PREFERENCES } from './utils/spaceRouting.js'
 import lazyWithReload from './utils/lazyWithReload.js'
 import LoadingScreen from './components/LoadingScreen.jsx'
+import useDocumentTitle from './hooks/useDocumentTitle.js'
 import { isPreviewRequest } from './utils/previewMode.js'
 
 const App = lazyWithReload(() => import('./App.jsx'), 'app')
@@ -89,6 +90,21 @@ export default function SpaceSurfaceApp({ routeState }) {
     const publishedProjectId = surfaceState.space?.publishedProjectId || null
     const routeProjectId = routeState?.projectId || null
 
+    // The naming rule (docs/ai/vocabulary.md): a space's own name is what a
+    // visitor sees for it — tab included. Skipped for 'main', the platform's
+    // own space: its name IS di.iiii, so index.html's default tab title
+    // already says the right thing — the same fossil ogRoutes.js's `own`
+    // check carries for the link-preview card. Only set here for the bare
+    // <App/> surface below; both PublicProjectViewer branches set their own
+    // title once they know whether they are showing a project too.
+    useDocumentTitle(
+        shouldResolvePublishedSurface && spaceId !== DEFAULT_SPACE_ID
+            && !routeProjectId && !publishedProjectId && page !== APP_PAGE_PREFERENCES
+            && surfaceState.status === 'ready'
+            ? `${surfaceState.space?.label || spaceId} — di.iiii`
+            : null
+    )
+
     if (isLocalRootWorkspace) {
         return (
             <Suspense fallback={<LoadingScreen label="Loading the node editor" />}>
@@ -115,6 +131,12 @@ export default function SpaceSurfaceApp({ routeState }) {
                     spaceId={spaceId}
                     projectId={routeProjectId}
                     spaceLabel={surfaceState.space?.label || spaceId}
+                    // The URL itself names this project (/{space}/p/{project} or
+                    // its vanity-slug form) — the naming rule's "inside a
+                    // project" case. The bare-space branch below is the other
+                    // one: a project happening to be published as the space's
+                    // own front page, which stays named after the SPACE.
+                    showProjectInTitle
                 />
             </Suspense>
         )

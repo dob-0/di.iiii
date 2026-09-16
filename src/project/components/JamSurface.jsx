@@ -7,6 +7,7 @@ import { useProjectDocumentSync } from '../hooks/useProjectDocumentSync.js'
 import { useProjectPresence } from '../hooks/useProjectPresence.js'
 import { uploadProjectAsset } from '../services/projectsApi.js'
 import { buildJamEditorPath } from '../routing/jamRouting.js'
+import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildJamObject, detectJamObjectType } from '../jam/jamObject.js'
 import { JAM_NUDGE_STEP, nudgeFromViewer, poseToRay } from '../jam/jamPlacement.js'
 import { forgetMineId, isMine, loadMineIds, rememberMineId } from '../jam/jamOwnership.js'
@@ -142,6 +143,35 @@ export default function JamSurface({ projectId, spaceId }) {
         setStatus(message)
         window.setTimeout(() => setStatus((current) => (current === message ? '' : current)), 2600)
     }, [])
+
+    // --- getting someone else in ------------------------------------------
+    //
+    // There was no way to hand this room to anyone: no copy-link, no share
+    // sheet. The bare address is the one to hand out — `/open`, not the
+    // `/open_jam/scene` alias — because as of this branch it opens the exact
+    // same live room (see jamRouting.js), and it is the shorter, plainer one
+    // to read off a screen or say out loud.
+    const shareUrl = useMemo(() => {
+        const path = buildAppSpacePath(spaceId || 'open')
+        return typeof window === 'undefined' ? path : `${window.location.origin}${path}`
+    }, [spaceId])
+
+    const handleShare = useCallback(async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: 'Open Space', url: shareUrl })
+            } catch {
+                // A cancelled share sheet throws — not a failure, nothing to say.
+            }
+            return
+        }
+        try {
+            await navigator.clipboard.writeText(shareUrl)
+            say('Link copied')
+        } catch {
+            say(shareUrl)
+        }
+    }, [shareUrl, say])
 
     // --- adding ----------------------------------------------------------
 
@@ -308,14 +338,24 @@ export default function JamSurface({ projectId, spaceId }) {
                                 {mineObjects.length === 1 ? '1 of yours' : `${mineObjects.length} of yours`}
                             </button>
                         ) : null}
-                        <button
-                            type="button"
-                            className="jam-add"
-                            aria-label="Add something"
-                            onClick={() => setSheet({ face: 'add' })}
-                        >
-                            +
-                        </button>
+                        <div className="jam-bottom-row">
+                            <button
+                                type="button"
+                                className="jam-share"
+                                aria-label="Share this jam"
+                                onClick={handleShare}
+                            >
+                                Share
+                            </button>
+                            <button
+                                type="button"
+                                className="jam-add"
+                                aria-label="Add something"
+                                onClick={() => setSheet({ face: 'add' })}
+                            >
+                                +
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

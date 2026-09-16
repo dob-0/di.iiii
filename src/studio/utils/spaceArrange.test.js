@@ -8,7 +8,10 @@ const space = (id, over = {}) => ({ id, label: id, isPublic: false, publishedPro
 
 const open1 = space('dilijan', { label: 'Dilijan', isPublic: true, publishedProjectId: 'welcome', lastTouchedAt: 300 })
 const open2 = space('azd', { label: 'azd', isPublic: true, publishedProjectId: 'azd', lastTouchedAt: 100 })
-const noDoor = space('algovrithm', { isPublic: true, lastTouchedAt: 400 })
+// A public space nothing is published into, and no work owns its segment —
+// the one case that genuinely needs a door. Deliberately not named
+// "algovrithm": that id IS a work (src/works/works.js) and is covered below.
+const noDoor = space('unfinished-room', { isPublic: true, lastTouchedAt: 400 })
 const mine = space('library', { label: 'Library', lastTouchedAt: 200, publishedProjectId: 'di-library' })
 const blank = space('festival-test', { label: 'Festival test', lastTouchedAt: 500 })
 const all = [open2, blank, noDoor, mine, open1]
@@ -19,17 +22,26 @@ describe('spaceState', () => {
         expect(spaceState(noDoor)).toBe('nodoor')
         expect(spaceState(mine)).toBe('private')
     })
+
+    it('never counts a work-shadowed space as needing a door — its bare segment always opens onto the piece, published project or not', () => {
+        expect(spaceState(space('algovrithm', { isPublic: true }))).toBe('open')
+        expect(spaceState(space('wcc', { isPublic: true }))).toBe('open')
+    })
+
+    it('a work-shadowed space that is not public still meets a login wall', () => {
+        expect(spaceState(space('algovrithm', { isPublic: false }))).toBe('private')
+    })
 })
 
 describe('arrangeSpaces', () => {
     it('recent puts what there is something to look at first, then the newest touch', () => {
         expect(arrangeSpaces(all, 'recent').map(s => s.id))
-            .toEqual(['dilijan', 'library', 'azd', 'festival-test', 'algovrithm'])
+            .toEqual(['dilijan', 'library', 'azd', 'festival-test', 'unfinished-room'])
     })
 
     it('name sorts by the label a person reads, not the id', () => {
         expect(arrangeSpaces(all, 'name').map(s => s.id))
-            .toEqual(['algovrithm', 'azd', 'dilijan', 'festival-test', 'library'])
+            .toEqual(['azd', 'dilijan', 'festival-test', 'library', 'unfinished-room'])
     })
 
     it('state leads with what a visitor can actually open', () => {
@@ -63,7 +75,7 @@ describe('filterSpaces', () => {
 
     it('each filter keeps only its own state', () => {
         expect(filterSpaces(all, 'open').map(s => s.id).sort()).toEqual(['azd', 'dilijan'])
-        expect(filterSpaces(all, 'nodoor').map(s => s.id)).toEqual(['algovrithm'])
+        expect(filterSpaces(all, 'nodoor').map(s => s.id)).toEqual(['unfinished-room'])
         expect(filterSpaces(all, 'private').map(s => s.id).sort()).toEqual(['festival-test', 'library'])
     })
 

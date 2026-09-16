@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PublicProjectViewer from './PublicProjectViewer.jsx'
-import { PREVIEW_ENTER_EXHIBITION_KIND, PREVIEW_HOST_MESSAGE_TYPE } from '../../utils/presentationPreviewDocument.js'
+import { PREVIEW_ENTER_EXHIBITION_KIND, PREVIEW_HOST_MESSAGE_TYPE, PREVIEW_PAINT_CONFIRMED_KIND } from '../../utils/presentationPreviewDocument.js'
 
 const {
     syncState,
@@ -176,6 +176,46 @@ describe('PublicProjectViewer', () => {
         expect(screen.queryByText(/^viewer-scene:/)).toBeNull()
     })
 
+    // One name per space (owner, 2026-09-14). /dilijan announced itself as
+    // "Welcome", /network as "who makes di.iiii", /br-id-ge as "the landing —
+    // the door": the door project's title, in the heading a screen reader and a
+    // crawler read and in the page frame's accessible name, while the tab, the
+    // card and the list all said the space's name.
+    describe('names itself after the space unless the URL named the project', () => {
+        const codeDoor = () => {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'landing', title: 'the landing — the door' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>door</main>' },
+                    entities: []
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+        }
+
+        it('the space\'s own door carries the space\'s name', async () => {
+            codeDoor()
+            const { container } = render(
+                <PublicProjectViewer spaceId="br-id-ge" projectId="landing" spaceLabel="br_id_ge" />
+            )
+            await waitFor(() => expect(container.querySelector('.room-text-layer h1')).not.toBeNull())
+            expect(container.querySelector('.room-text-layer h1').textContent).toBe('br_id_ge')
+            expect(container.querySelector('iframe').getAttribute('title')).toBe('br_id_ge')
+            expect(container.textContent).not.toContain('the landing — the door')
+        })
+
+        it('a project link keeps the project\'s own title', async () => {
+            codeDoor()
+            const { container } = render(
+                <PublicProjectViewer spaceId="br-id-ge" projectId="landing" spaceLabel="br_id_ge" showProjectInTitle />
+            )
+            await waitFor(() => expect(container.querySelector('.room-text-layer h1')).not.toBeNull())
+            expect(container.querySelector('.room-text-layer h1').textContent).toBe('the landing — the door')
+            expect(container.querySelector('iframe').getAttribute('title')).toBe('the landing — the door')
+        })
+    })
+
     it('grants a real origin (allow-same-origin) only when the owner opts into deviceAccess', async () => {
         getProjectDocumentMock.mockResolvedValue({
             version: 1,
@@ -294,6 +334,173 @@ describe('PublicProjectViewer', () => {
         }
     })
 
+    // Facade audit wave 3 (2026-09-14) first tried replacing every code-mode
+    // preview with a static placeholder outright — which also hid the LIVE
+    // picture for a piece that renders fine (br_id_ge, network,
+    // platform-recordar all measured painting in 2-5s against real content).
+    // Reworked: the card keeps showing the real iframe immediately, and only
+    // a piece that genuinely never gets anywhere (the "INITIALIZING SPACE...
+    // 0%" case) times out into a quiet stand-in.
+    it('shows the live code page immediately in ?preview=1 mode — no placeholder while it might still paint', async () => {
+        window.history.replaceState(null, '', '/main?preview=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>the piece</main>' },
+                    entities: []
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { container } = render(
+                <PublicProjectViewer spaceId="main" projectId="heavy-piece" spaceLabel="Main Space" />
+            )
+
+            await waitFor(() => {
+                const iframe = container.querySelector('iframe')
+                expect(iframe).not.toBeNull()
+                expect(iframe.getAttribute('srcdoc')).toContain('the piece')
+            })
+            expect(screen.queryByText('Heavy Piece')).toBeNull()
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    it('swaps a stuck code preview for a quiet named stand-in once its paint window runs out', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        window.history.replaceState(null, '', '/main?preview=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>INITIALIZING SPACE... 0%</main>' },
+                    entities: []
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { container } = render(
+                <PublicProjectViewer spaceId="main" projectId="heavy-piece" spaceLabel="Main Space" />
+            )
+
+            await waitFor(() => {
+                expect(container.querySelector('iframe')).not.toBeNull()
+            })
+
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(10000)
+            })
+
+            expect(container.querySelector('iframe')).toBeNull()
+            // The space's own name, never instructional copy ("open to view.",
+            // "custom page") — a quiet stand-in, not a call to action.
+            expect(screen.getAllByText('Main Space').length).toBeGreaterThan(0)
+            expect(screen.queryByText(/open to view/i)).toBeNull()
+        } finally {
+            vi.useRealTimers()
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    // The regression this guards: a first version of the paint window applied
+    // to EVERY code preview with no way to cancel it, so a piece that painted
+    // perfectly well in 2s still got swapped out once the clock ran past its
+    // window regardless — caught by screenshotting real content, not by a
+    // unit test, which is exactly why this one exists now. The srcdoc's own
+    // bootstrap script (presentationPreviewDocument.js) posts
+    // PREVIEW_PAINT_CONFIRMED_KIND the moment it sees any sign of life; that
+    // must cancel the timer for good, even long after it would otherwise fire.
+    it('never swaps out a code preview that reported a sign of life, no matter how long the window runs', async () => {
+        // Fake timers with NO real-time coupling on purpose: shouldAdvanceTime
+        // ties the fake clock to actual wall-clock time so testing-library's
+        // waitFor can keep polling, but that makes this exact test race a
+        // loaded CI box — real setup time (resolving a mocked promise,
+        // re-rendering) eats into the 10s window before the confirmation
+        // message ever gets dispatched, and a big enough stall makes the
+        // component's OWN timer fire for a test-harness reason that has
+        // nothing to do with the behaviour under test. Every step below is
+        // either synchronous or a plain microtask flush (`Promise.resolve()`,
+        // which runs at native speed regardless of fake timers) — never a
+        // real timer tick — so no real time can pass at all.
+        vi.useFakeTimers()
+        window.history.replaceState(null, '', '/main?preview=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'br-id-ge', title: 'br_id_ge' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<h1>a bridge between worlds</h1>' },
+                    entities: []
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { container } = render(
+                <PublicProjectViewer spaceId="main" projectId="br-id-ge" spaceLabel="br_id_ge" />
+            )
+
+            // Let the mocked getProjectDocument promise settle and the
+            // component re-render with its document loaded. A plain
+            // microtask flush, not a timer of either kind.
+            await act(async () => {
+                await Promise.resolve()
+                await Promise.resolve()
+                await Promise.resolve()
+            })
+
+            const iframe = container.querySelector('iframe')
+            expect(iframe).not.toBeNull()
+            Object.defineProperty(iframe, 'contentWindow', { configurable: true, value: window })
+
+            await act(async () => {
+                const event = new MessageEvent('message', {
+                    data: { type: PREVIEW_HOST_MESSAGE_TYPE, kind: PREVIEW_PAINT_CONFIRMED_KIND }
+                })
+                Object.defineProperty(event, 'source', { configurable: true, value: window })
+                window.dispatchEvent(event)
+            })
+
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(30000)
+            })
+
+            expect(container.querySelector('iframe')).not.toBeNull()
+            // Just the room heading (RoomTextLayer) — not doubled by the
+            // fallback card, which would also read the space's name.
+            expect(screen.getAllByText('br_id_ge')).toHaveLength(1)
+        } finally {
+            vi.useRealTimers()
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    it('still opens the real code page — no ?preview=1 — once a visitor clicks the card into "live"', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'heavy-piece', title: 'Heavy Piece' },
+                presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>the piece</main>' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        const { container } = render(
+            <PublicProjectViewer spaceId="main" projectId="heavy-piece" spaceLabel="Main Space" />
+        )
+
+        await waitFor(() => {
+            const iframe = container.querySelector('iframe')
+            expect(iframe).not.toBeNull()
+            expect(iframe.getAttribute('srcdoc')).toContain('the piece')
+        })
+        expect(screen.queryByText('Custom page — open to view.')).toBeNull()
+    })
+
     // ?embed=1 is what br_id_ge's ending has been asking for since it started
     // opening the field inside itself. Without it the viewer paints #05070a and
     // the embedded page can only answer with opaque paper of its own, which is
@@ -332,7 +539,9 @@ describe('PublicProjectViewer', () => {
 
             const { container } = render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
 
-            const frame = await screen.findByTitle('Live Project')
+            // Named after the SPACE: this is the space's own door, not a URL
+            // that named the project (docs/ai/vocabulary.md, one name per space).
+            const frame = await screen.findByTitle('Main Space')
             expect(frame.style.background).toBe('transparent')
             expect(container.querySelector('main').style.background).toBe('transparent')
         } finally {
@@ -691,5 +900,77 @@ describe('arrive walking', () => {
             expect(screen.getByText('← View mode')).toBeInTheDocument()
         })
         expect(window.sessionStorage.getItem('dii:arrive-walking')).toBe(null)
+    })
+})
+
+// The naming rule (docs/ai/vocabulary.md): a space's own name is what a
+// visitor sees for it; a project's name shows only when the URL named that
+// project. This page renders both shapes — the bare space's published front
+// page, and the explicit /{space}/p/{project} link — and only the caller
+// (SpaceSurfaceApp.jsx) knows which one a given render is.
+describe('document title', () => {
+    beforeEach(() => {
+        document.title = 'di.iiii — public spaces on the open web'
+    })
+    afterEach(() => {
+        document.title = 'di.iiii — public spaces on the open web'
+    })
+
+    it('names the space when the URL did not name a project', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'front-page', title: 'Front Page' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="dilijan" projectId="front-page" spaceLabel="Dilijan Camp" />)
+
+        await waitFor(() => expect(document.title).toBe('Dilijan Camp — di.iiii'))
+        // the project's own title never leaks into the tab on this branch
+        expect(document.title).not.toContain('Front Page')
+    })
+
+    it('names the project, then the space, when the URL named the project', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'mery-petrosyan', title: 'Mery Petrosyan' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(
+            <PublicProjectViewer
+                spaceId="wcc"
+                projectId="mery-petrosyan"
+                spaceLabel="WCC Exhibition"
+                showProjectInTitle
+            />
+        )
+
+        await waitFor(() => expect(document.title).toBe('Mery Petrosyan — WCC Exhibition — di.iiii'))
+    })
+
+    it('leaves the tab title alone for the platform’s own space', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'room', title: 'The Room' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="main" projectId="room" spaceLabel="di.iiii" showProjectInTitle />)
+
+        await screen.findByText('viewer-scene:scene')
+        expect(document.title).toBe('di.iiii — public spaces on the open web')
     })
 })

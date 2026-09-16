@@ -1,10 +1,15 @@
 name: Deploy VPS Staging (GHCR + SSH)
 
-# Staging deploy path: same VPS as production, a separate low-resource
-# Compose project (docker-compose.staging.yml) in its own checkout
-# directory so it never inherits production's COMPOSE_PROFILES=https or
-# secrets. See docs/deploy/VPS_DOCKER_DEPLOY.md for the one-time host setup
-# (second checkout dir, its own .env, Caddyfile's staging site block).
+# The dev tier's deploy path: `dev` -> https://dev.diiii.xyz (legacy name
+# staging.di-studio.xyz, same server). Identifier still `staging` -- this file
+# name, the workflow name, the `staging` environment, the :staging image tags,
+# DEPLOY_ENV=staging and the VPS_STAGING_* variables all stay, because CI,
+# the server and `gh run list --workflow` read them.
+# Same VPS as production, a separate low-resource Compose project
+# (docker-compose.staging.yml) in its own checkout directory so it never
+# inherits production's COMPOSE_PROFILES=https or secrets. See
+# docs/deploy/VPS_DOCKER_DEPLOY.md for the one-time host setup (second
+# checkout dir, its own .env, Caddyfile's dev-tier site block).
 
 on:
   push:
@@ -27,12 +32,12 @@ jobs:
   # step a human used to have to remember) and push the result back, so dev
   # ends every merge in the landed state its own docs gate demands. Before
   # this, 82 of the last 111 merges (14 days to 2026-09-02) needed a hand-run
-  # fold commit before staging would update.
+  # fold commit before the dev tier would update.
   #
   # Why this cannot loop or double-deploy: a push made with GITHUB_TOKEN never
   # triggers another workflow run (GitHub's own rule against workflows
   # retriggering each other -- the same one tag-on-promotion.yml works
-  # around). So the fold commit does NOT start a second staging deploy, and
+  # around). So the fold commit does NOT start a second dev-tier deploy, and
   # THIS run has to be the one that deploys. It deploys github.sha, the merge
   # commit: the fold only ever touches PROGRESS.md, CURRENT.md and
   # docs/ai/sessions/, so the image built from the merge commit is the image
@@ -44,7 +49,7 @@ jobs:
   # Actions. A fresh fold commit can't carry those checks, so the push may be
   # rejected (GH006). That is a warning here, not a failure -- `test` folds
   # its own checkout in place (ci.yml's land_in_place) so the docs check
-  # passes and staging deploys either way; the only thing lost is the
+  # passes and the dev tier deploys either way; the only thing lost is the
   # bookkeeping commit, which `npm run land` still does by hand.
   # continue-on-error keeps a crash in this job from blocking the deploy too.
   #
@@ -98,7 +103,7 @@ jobs:
             echo "$out"
 
             if grep -qiE 'GH006|protected branch' <<<"$out"; then
-              echo "::warning::dev's branch protection rejected the fold commit (required status checks, no bypass for GitHub Actions). Staging still deploys -- the test job folds in place -- but the bookkeeping commit did not land: run 'npm run land' on dev by hand, or give the github-actions app a bypass on dev's rules so this job can do it."
+              echo "::warning::dev's branch protection rejected the fold commit (required status checks, no bypass for GitHub Actions). The dev tier still deploys -- the test job folds in place -- but the bookkeeping commit did not land: run 'npm run land' on dev by hand, or give the github-actions app a bypass on dev's rules so this job can do it."
               exit 0
             fi
             echo "push rejected on attempt ${attempt} -- dev moved; re-folding from its new tip."
@@ -109,7 +114,7 @@ jobs:
 
   # Gate on the same test/lint/build/contract suite CI runs on every push —
   # previously this workflow and ci.yml were independent, so a failing test
-  # suite did not block a staging deploy either (audit 2026-07-17).
+  # suite did not block a dev-tier deploy either (audit 2026-07-17).
   # After `land`, not alongside it: one writer on dev at a time, and the
   # fold's outcome (notice or warning) is on the run before anything deploys.
   # The checks themselves run on github.sha, the merge commit, folded in place
@@ -202,7 +207,7 @@ jobs:
             fi
           done
           if [ -z "${VPS_STAGING_DEPLOY_PATH:-}" ]; then
-            echo "::error::Missing required repository variable: VPS_STAGING_DEPLOY_PATH (path to the SEPARATE staging docker-compose checkout on the VPS -- not the production one, see docs/deploy/VPS_DOCKER_DEPLOY.md)"
+            echo "::error::Missing required repository variable: VPS_STAGING_DEPLOY_PATH (path to the SEPARATE dev-tier docker-compose checkout on the VPS -- not the production one, see docs/deploy/VPS_DOCKER_DEPLOY.md)"
             missing=1
           fi
           exit "${missing}"
@@ -228,7 +233,7 @@ jobs:
             ssh-keyscan -p "${VPS_SSH_PORT:-22}" "${VPS_HOST}" >> ~/.ssh/known_hosts
           fi
 
-      - name: Pull and restart the staging stack on the VPS
+      - name: Pull and restart the dev-tier stack on the VPS
         run: |
           set -euo pipefail
           SSH_PORT="${VPS_SSH_PORT:-22}"
@@ -237,7 +242,7 @@ jobs:
 
           # IMAGE_TAG is the ENVIRONMENT-NAMESPACED image tag; GIT_SHA is the
           # plain commit and is what `git checkout` below needs. They used to be
-          # the same value, which meant staging and production overwrote each
+          # the same value, which meant the dev tier and production overwrote each
           # other's :<sha> tag with images carrying different baked-in
           # DEPLOY_ENV — a host could then run an image whose release.json
           # (and /api/health) claimed the wrong environment.

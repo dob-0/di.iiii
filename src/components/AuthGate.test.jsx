@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import AuthGate from './AuthGate.jsx'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import AuthGate, { SignInSurface } from './AuthGate.jsx'
+import { OUT_OF_SCOPE_EXPLAIN } from './authGateScope.js'
 
 const mockUseAuthSession = vi.fn()
 
@@ -20,7 +21,12 @@ vi.mock('../services/serverSpaces.js', () => ({
     supportsServerSpaces: true,
     // 'ghost' plays the mistyped id: the server 404s for a space that was
     // never created, and the card must say so instead of talking scope.
-    getServerSpace: (spaceId) => (spaceId === 'ghost'
+    // 'spaces' plays a RESERVED word (RESERVED_APP_SEGMENTS) that fell
+    // through routing as if it were a space id — no real space can ever be
+    // named 'spaces', so the server 404s it too, same as 'ghost'.
+    // 'sandbox-guestgone' plays a guest sandbox the server has just carried
+    // onto the account at sign-in: its old id no longer exists.
+    getServerSpace: (spaceId) => (spaceId === 'ghost' || spaceId === 'spaces' || spaceId === 'sandbox-guestgone'
         ? Promise.reject(Object.assign(new Error('Space not found.'), { status: 404 }))
         : Promise.resolve({ id: spaceId, isPublic: spaceId === 'pub' }))
 }))
@@ -131,6 +137,82 @@ describe('AuthGate restricted card doors', () => {
         // the same doors are still on the card
         expect(screen.getByRole('button', { name: 'Open Space' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Your private sandbox' })).toBeInTheDocument()
+    })
+
+    // Every address that fell through to a space lookup and found nothing —
+    // /login before it got a route, a mistyped space, a 404 — used to carry
+    // the same tab title as every other page. The card that says "nothing
+    // lives here" is the one honest 404 this SPA has; it must say so in the
+    // tab too. The scoped-but-real card next to it must NOT: the space is not
+    // missing, only out of reach.
+    it('titles the tab "Not found", but only for the card that means it', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open', 'sandbox-guestfa58']))
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+        await screen.findByText(/Nothing lives at/)
+        expect(document.title).toBe('Not found — di.iiii')
+    })
+
+    it('leaves the tab title alone for a real space out of scope', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['main']))
+        document.title = 'di.iiii — public spaces on the open web'
+        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
+        await screen.findByText(/Access restricted/)
+        expect(document.title).toBe('di.iiii — public spaces on the open web')
+    })
+})
+
+// visiting /spaces/nope used to answer "Nothing lives at 'spaces'" — the
+// FIRST path segment, which is a real reserved address (RESERVED_APP_SEGMENTS),
+// not the part the visitor actually got wrong — inside the same card as a
+// full sign-in form (PasswordSignIn + OAuth). Neither is right: a reserved
+// word can never be the missing thing, and nobody can sign into an address
+// that never existed. This is the third time this exact message has named
+// the wrong thing (see RootApp.test.jsx's 'RootApp bare reserved addresses'
+// comment for the first two, /login and /make).
+describe('AuthGate not-found card', () => {
+    afterEach(() => {
+        window.history.replaceState({}, '', '/')
+        providersState.current = { github: false, google: false }
+    })
+
+    it('names the part of the address that is actually missing when the required id is itself reserved', async () => {
+        window.history.pushState({}, '', '/spaces/nope')
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
+        render(<AuthGate requiredSpaceId="spaces">editor</AuthGate>)
+
+        expect(await screen.findByText(/Nothing lives at “nope”/)).toBeInTheDocument()
+        expect(screen.queryByText(/Nothing lives at “spaces”/)).not.toBeInTheDocument()
+    })
+
+    it('leaves an ordinary mistyped space id named exactly as typed', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+
+        expect(await screen.findByText(/Nothing lives at “ghost”/)).toBeInTheDocument()
+    })
+
+    it('shows no sign-in form on the not-found card, even with OAuth providers on', async () => {
+        providersState.current = { github: true, google: true }
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+
+        await screen.findByText(/Nothing lives at/)
+        expect(screen.queryByRole('button', { name: /Continue with GitHub/ })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /Continue with Google/ })).not.toBeInTheDocument()
+        expect(screen.queryByPlaceholderText('Password')).not.toBeInTheDocument()
+        expect(screen.queryByText('Create one')).not.toBeInTheDocument()
+        // The doors onward are still on the card — a not-found address is
+        // not a dead end, only signing in to it is nonsense.
+        expect(screen.getByRole('button', { name: 'Open Space' })).toBeInTheDocument()
+    })
+
+    it('keeps the sign-in form when the space is real and merely out of reach', async () => {
+        providersState.current = { github: true, google: true }
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
+        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
+
+        expect(await screen.findByText(/Access restricted/)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /Continue with GitHub/ })).toBeInTheDocument()
     })
 })
 
@@ -317,5 +399,88 @@ describe('AuthGate Telegram sign-in', () => {
 
         expect(await screen.findByRole('button', { name: /Continue with GitHub/ })).toBeInTheDocument()
         expect(screen.queryByRole('link', { name: /Continue with Telegram/ })).not.toBeInTheDocument()
+    })
+})
+
+// /login — a place, not a mistyped space (see RootApp.jsx's isSignInPath).
+// It carried the platform's own tab title until now, same as every other
+// route with no title of its own.
+describe('/login', () => {
+    beforeEach(() => {
+        document.title = 'di.iiii — public spaces on the open web'
+    })
+
+    it('names itself in the tab', () => {
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<SignInSurface />)
+        expect(document.title).toBe('Sign in — di.iiii')
+    })
+})
+
+// A brand-new account is scoped to nothing (spaces: []). The server still lets
+// it into two places — the communal open space and its own sandbox, which is
+// where its guest work was carried at sign-in — and reports them as
+// openSpaceId / sandboxSpaceId. The gate used to read only the list, so the
+// owner got "Access restricted" on their own sandbox and "Sign in to open the
+// editor" on the Open Space, while the API answered 200 to both.
+describe('AuthGate for a brand-new account', () => {
+    const freshAccount = (overrides = {}) => ({
+        ...scopedElsewhereSession([]),
+        type: 'session',
+        role: 'editor',
+        subject: '22b50e95-3822-40d7-99c2-3535f92123be',
+        sandboxSpaceId: 'sandbox-22b50e95382240d7',
+        ...overrides
+    })
+
+    afterEach(() => {
+        mockAppNavigate.mockClear()
+        try { window.localStorage.clear() } catch { /* jsdom always has it */ }
+        window.history.replaceState(null, '', '/')
+    })
+
+    it('opens its own sandbox, where the guest work was carried', () => {
+        mockUseAuthSession.mockReturnValue(freshAccount())
+        render(<AuthGate requiredSpaceId="sandbox-22b50e95382240d7">editor</AuthGate>)
+
+        expect(screen.getByText('editor')).toBeInTheDocument()
+        expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
+    })
+
+    it('opens the Open Space editor', () => {
+        mockUseAuthSession.mockReturnValue(freshAccount())
+        render(<AuthGate requiredSpaceId="open" outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>editor</AuthGate>)
+
+        expect(screen.getByText('editor')).toBeInTheDocument()
+        expect(screen.queryByText(/Sign in to open the editor/)).not.toBeInTheDocument()
+    })
+
+    it('still keeps it out of somebody else\'s sandbox', async () => {
+        mockUseAuthSession.mockReturnValue(freshAccount())
+        render(<AuthGate requiredSpaceId="sandbox-someoneelse0000">editor</AuthGate>)
+
+        expect(await screen.findByText(/Access restricted/)).toBeInTheDocument()
+        expect(screen.queryByText('editor')).not.toBeInTheDocument()
+    })
+
+    it('follows the carried work from the page it signed in on', async () => {
+        window.localStorage.setItem('dii.guestSandboxSpaceId', 'sandbox-guestgone')
+        window.history.replaceState(null, '', '/sandbox-guestgone/studio?auth=ok#here')
+        mockUseAuthSession.mockReturnValue(freshAccount())
+        render(<AuthGate requiredSpaceId="sandbox-guestgone">editor</AuthGate>)
+
+        await waitFor(() => {
+            expect(mockAppNavigate).toHaveBeenCalledWith('/sandbox-22b50e95382240d7/studio?auth=ok#here', { replace: true })
+        })
+        expect(screen.queryByText(/Nothing lives at/)).not.toBeInTheDocument()
+    })
+
+    it('says nothing lives at a gone guest sandbox this browser never held', async () => {
+        window.history.replaceState(null, '', '/sandbox-guestgone/studio')
+        mockUseAuthSession.mockReturnValue(freshAccount())
+        render(<AuthGate requiredSpaceId="sandbox-guestgone">editor</AuthGate>)
+
+        expect(await screen.findByText(/Nothing lives at/)).toBeInTheDocument()
+        expect(mockAppNavigate).not.toHaveBeenCalled()
     })
 })

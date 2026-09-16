@@ -314,7 +314,7 @@ const config = {
   liveSync: {
     // No implicit default: an unset LIVE_API_URL must surface as "not
     // configured" (syncRoutes 503s), never silently target production —
-    // a dev/staging server with the old prod fallback would push there.
+    // a local or dev-tier server with the old prod fallback would push there.
     url: (process.env.LIVE_API_URL || '').replace(/\/+$/, ''),
     token: (process.env.LIVE_API_TOKEN || '').trim()
   },
@@ -375,7 +375,15 @@ const config = {
     enabled: parseBool(process.env.APPROVAL_GATE_ENABLED, false),
     botUrl: (process.env.APPROVAL_BOT_URL || '').replace(/\/+$/, ''),
     secret: (process.env.APPROVAL_SHARED_SECRET || '').trim(),
-    ttlMs: Number(process.env.APPROVAL_TTL_MS || 1000 * 60 * 60)
+    ttlMs: Number(process.env.APPROVAL_TTL_MS || 1000 * 60 * 60),
+    // Change notices (spaceHistory.js): when someone who does not own a space
+    // finishes a burst of edits, one signed message goes to the same bot at
+    // <botUrl>/content-changed, with an Undo. Off unless turned on here AND
+    // botUrl + secret are set; independent of `enabled`, which gates admin
+    // writes rather than reporting content edits.
+    contentNotices: parseBool(process.env.CONTENT_CHANGE_NOTICES_ENABLED, false),
+    // How long a person may pause and still be in the same burst of edits.
+    burstGapMs: Number(process.env.CONTENT_BURST_GAP_MS || 15 * 60 * 1000)
   }
 }
 

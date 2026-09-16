@@ -112,8 +112,8 @@ lifecycle (`space-new/pull/push/sync/bundle`), `self-host.mjs`, doc-sync
 
 ```
 Daily work ─▶ dob-0/di.iiii (primary public repo)
-                 ├─ dev branch  ─▶ staging.di-studio.xyz
-                 └─ main branch ─▶ di-studio.xyz (prod)
+                 ├─ dev branch  ─▶ dev.diiii.xyz (the dev tier)
+                 └─ main branch ─▶ diiii.xyz (prod)
                         └─ cpanel-* release branches ─▶ cPanel hosting
 ```
 

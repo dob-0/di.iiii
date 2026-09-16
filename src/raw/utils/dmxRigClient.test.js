@@ -184,7 +184,7 @@ describe('readDeskSummary', () => {
         const fetchImpl = vi.fn().mockRejectedValue(new TypeError('down'))
         expect(await readDeskSummary('http://x/light/api', { fetchImpl })).toEqual({ ok: false, status: DESK_STATUS.UNREACHABLE })
     })
-    // Seen on staging: the edge served index.html for /light/api/summary, the panel read
+    // Seen on the dev tier: the edge served index.html for /light/api/summary, the panel read
     // it as a desk that would not answer, and told the operator a desk existed.
     it('reads a page of HTML as no desk here, not as a desk that will not answer', async () => {
         const fetchImpl = vi.fn().mockResolvedValue(htmlResponse())

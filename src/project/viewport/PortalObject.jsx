@@ -1,6 +1,6 @@
 import { portalHref } from './portalHref.js'
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Billboard, Text } from '@react-three/drei'
 import { TROIKA_FONT_URL } from './troikaFont.js'
@@ -11,7 +11,8 @@ import { getProjectDocument } from '../services/projectsApi.js'
 import { normalizeProjectDocument } from '../../shared/projectSchema.js'
 import { resolveAnimation, applyAnimation } from './entityAnimation.js'
 import { resolveProximity, applyProximity } from './entityProximity.js'
-import { appNavigate } from '../../utils/appNavigate.js'
+import { enterDestination } from '../../components/entryTransition/entryTransition.js'
+import EntryGlideCamera, { captureRendererFrame } from '../../components/entryTransition/EntryGlide.jsx'
 
 const MAX_EMBED_DEPTH = 3
 
@@ -239,6 +240,19 @@ export const portalLabelHeight = (style) => (
 const FRAME_FILL_IDLE = 0.1
 const FRAME_FILL_HOVER = 0.18
 
+// EntryGlideCamera keeps a priority-1 useFrame alive and, every frame, pins the
+// camera back to its stop position and renders itself — that is how it holds
+// the final frame steady for the curtain to capture. It only stops doing that
+// when `glide` (the state that keeps it mounted) goes back to null; nothing
+// upstream ever did that after `resolve` fired, so once one door was entered
+// the camera stayed locked at the glide's end pose forever, unresponsive to
+// the walker/orbit controls that resumed underneath it. Wrap the resolver so
+// clearing `glide` is inseparable from resolving it.
+export const withGlideCleanup = (resolve, clear) => (frame) => {
+    resolve(frame)
+    clear()
+}
+
 function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate = true, style = 'gateway' }) {
     const isFrame = style === 'frame'
     const inEditor = typeof window !== 'undefined' && isStudioEditorPath(window.location.pathname)
@@ -249,17 +263,32 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
     const fillMatRef = useRef(null)
     const revealRef = useRef(inEditor ? 1 : 0)
     const [hovered, setHovered] = useState(false)
+    const { gl, scene, camera } = useThree()
+    // Set for the length of one entry: the camera glide that carries the
+    // visitor into this door (entryTransition/EntryGlide.jsx).
+    const [glide, setGlide] = useState(null)
     const enter = (event) => {
         event.stopPropagation()
-        // appNavigate keeps this an SPA route change (back/forward stay sane);
-        // window.location.assign here forced a full app reload per portal jump.
+        // Still an SPA route change (back/forward stay sane) — it now goes
+        // through the entry transition, which holds this room on screen until
+        // the destination has painted instead of cutting to a black spinner.
         // The reference has always carried a projectId — the label even falls back
         // to it — but the jump ignored it and landed on the space's published
         // project instead. A hub whose doors all point at rooms INSIDE one space
         // therefore went nowhere: every door re-opened the room you were standing
         // in. Route to the project when one is named.
         const href = portalHref(spaceId, projectId)
-        if (href) appNavigate(href)
+        if (!href) return
+        const target = ringRef.current || groupRef.current
+        enterDestination(href, {
+            source: {
+                color,
+                capture: () => captureRendererFrame({ gl, scene, camera }),
+                glide: (ms, { reach }) => new Promise((resolve) => {
+                    setGlide({ ms, reach, target, resolve: withGlideCleanup(resolve, () => setGlide(null)) })
+                })
+            }
+        })
     }
     const hoverOn = (event) => {
         event.stopPropagation()
@@ -304,6 +333,7 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
     if (isFrame) {
         return (
             <group ref={groupRef}>
+                {glide ? <EntryGlideCamera request={glide} /> : null}
                 {portalFrameBars().map((bar) => (
                     <mesh
                         key={bar.key}
@@ -348,6 +378,7 @@ function PortalGateway({ spaceId, projectId, label, color = '#4df9ff', showPlate
 
     return (
         <group ref={groupRef}>
+            {glide ? <EntryGlideCamera request={glide} /> : null}
             <mesh
                 ref={ringRef}
                 rotation={[Math.PI / 2, 0, 0]}

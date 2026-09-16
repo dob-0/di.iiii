@@ -493,7 +493,7 @@ export default {
         host: true, // Open to local network and display URL
         // Published pages render inside srcdoc iframes, whose origin is `null`, so
         // their @font-face requests to /fonts/* are cross-origin. Caddy answers
-        // them with `access-control-allow-origin: *` on staging and prod; without
+        // them with `access-control-allow-origin: *` on the dev tier and prod; without
         // the same header here, every thumbnail on a local /spaces fell back to a
         // system font and the console filled with CORS errors (seen 2026-09-06).
         headers: { 'Access-Control-Allow-Origin': '*' },

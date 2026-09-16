@@ -24,7 +24,7 @@ npm run test:schema-sync             # guards shared/*.cjs vs src/shared/*.js dr
 npm run space:pull -- <spaceId>      # pull a space from the live server (local-write only, safe)
 npm run space:push -- <spaceId> --dry-run   # ALWAYS dry-run first; real push writes to production
 npm run local:mirror:check           # what the live tiers have that this dev box doesn't (read-only)
-npm run local:mirror                 # bring every live space (prod, then staging) down to the local DB
+npm run local:mirror                 # bring every live space (prod, then the dev tier) down to the local DB
 ```
 
 The local DB is its own SQLite file and nothing keeps it in step with the live tiers —
@@ -33,8 +33,8 @@ declared `governed: false`. If a space is missing from `localhost:5173/spaces`,
 that is the reason: run `local:mirror`. It never deletes, and it leaves projects
 that already exist locally untouched unless you pass `--force`.
 
-It reads **production first, then staging for whatever production does not have** —
-a space can be built on staging and not yet promoted (`dilijan` was), and a
+It reads **production first, then the dev tier for whatever production does not have** —
+a space can be built on the dev tier and not yet promoted (`dilijan` was), and a
 prod-only read reports the estate complete while quietly lacking it.
 
 ## Before you start working
@@ -53,4 +53,4 @@ prod-only read reports the estate complete while quietly lacking it.
 
 - Never run `space:push` without `--dry-run` first — it can write to production (`di-studio.xyz`).
 - Never commit `.env`/`.env.local` files or print their values.
-- `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production). Don't start routine work on `main`.
+- `dev` → the dev tier, dev.diiii.xyz · `main` → diiii.xyz (prod). Don't start routine work on `main`.

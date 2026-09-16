@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # sync-space-to-staging.sh — copy one or more spaces from the production
-# server to the staging server on the VPS, using scripts/space-bundle.mjs
+# server to the dev-tier server (dev.diiii.xyz) on the VPS, using scripts/space-bundle.mjs
 # (export/import) under the hood. Run this ON THE VPS (or via
 # `ssh dii-vps 'bash -s' < scripts/sync-space-to-staging.sh -- <ids...>`).
 #
-# Why this exists: staging's database starts empty and is never
+# The file name and the container name still say `staging` — that is the dev
+# tier's old identifier, kept because the VPS and CI still use it.
+#
+# Why this exists: the dev tier's database starts empty and is never
 # automatically kept in sync with prod's real content — see the
 # "Access restricted" entry in docs/ai/known-fixes.md (2026-07-16) for the
 # full story. This wraps the manual docker cp / docker exec dance from that
@@ -13,7 +16,7 @@
 #
 # Usage:
 #   ./sync-space-to-staging.sh wcc br-id-ge beyond-form
-#   ./sync-space-to-staging.sh --force wcc      # overwrite if already on staging
+#   ./sync-space-to-staging.sh --force wcc      # overwrite if already on the dev tier
 #
 # Space ids use hyphens, not underscores (br-id-ge, not br_id_ge — that's
 # the display name, not the space id — see GET /api/spaces to confirm).
@@ -58,11 +61,11 @@ for id in "$@"; do
   echo "== exporting '$id' from prod (read-only) =="
   docker exec "$PROD_CONTAINER" node /tmp/space-bundle.mjs export "$id" --data-root /data --out "/tmp/$id.space-bundle.tar.gz"
 
-  echo "== copying bundle to staging =="
+  echo "== copying bundle to the dev tier =="
   docker cp "$PROD_CONTAINER":"/tmp/$id.space-bundle.tar.gz" "$TMP/$id.space-bundle.tar.gz"
   docker cp "$TMP/$id.space-bundle.tar.gz" "$STAGING_CONTAINER":"/tmp/$id.space-bundle.tar.gz"
 
-  echo "== importing '$id' into staging =="
+  echo "== importing '$id' into the dev tier =="
   docker exec -u root "$STAGING_CONTAINER" node /app/scripts/space-bundle.mjs import "/tmp/$id.space-bundle.tar.gz" --data-root /data $FORCE
 
   # The import runs as root (it needs to write into /app), so everything it
@@ -83,4 +86,4 @@ echo "== cleanup =="
 docker exec -u root "$PROD_CONTAINER" rm -f /tmp/space-bundle.mjs
 docker exec -u root "$STAGING_CONTAINER" sh -c 'rm -f /app/scripts/space-bundle.mjs /app/serverXR /tmp/space-bundle.mjs'
 
-echo "done: synced $* to staging"
+echo "done: synced $* to the dev tier (dev.diiii.xyz)"

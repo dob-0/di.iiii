@@ -831,7 +831,7 @@ const cmdLink = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
     const spaceId = args._[1]
-    if (!spaceId) { fail(`which space? — ${CMD} link my-space --remote https://staging.di-studio.xyz`); process.exitCode = 1; return }
+    if (!spaceId) { fail(`which space? — ${CMD} link my-space --remote https://dev.diiii.xyz`); process.exitCode = 1; return }
     const remote = args.flags.remote
     if (!remote) { fail(`where is it online? — add --remote <url>`); process.exitCode = 1; return }
     const key = args.flags.key || await promptSecret(ui.askForKey())

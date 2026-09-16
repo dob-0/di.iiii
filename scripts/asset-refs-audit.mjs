@@ -20,7 +20,8 @@
  *   node scripts/asset-refs-audit.mjs [options]
  *
  * Options:
- *   --tier <local|staging|prod|all>   Which tier to check (default: local)
+ *   --tier <local|dev|prod|all>   Which tier to check (default: local).
+ *                     `dev` is dev.diiii.xyz, keyed `staging` below; `staging` still works.
  *   --base  <url>     API base — overrides --tier
  *   --token <token>   Bearer token (default: the tier's own, from the env or
  *                     serverXR/.env.local). Without one only public spaces are
@@ -31,7 +32,7 @@
  *   --quiet           Print only the projects that are missing something
  *
  * Example — the check that would have caught it:
- *   node scripts/asset-refs-audit.mjs --tier staging --space beyond-form
+ *   node scripts/asset-refs-audit.mjs --tier dev --space beyond-form
  */
 
 import fs from 'node:fs/promises'
@@ -43,15 +44,19 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 
 export const TIERS = {
     local: { url: 'http://localhost:4000/serverXR', tokenEnv: 'API_TOKEN' },
-    staging: { url: 'https://staging.di-studio.xyz/serverXR', tokenEnv: 'LIVE_API_TOKEN' },
+    staging: { url: 'https://dev.diiii.xyz/serverXR', tokenEnv: 'LIVE_API_TOKEN' },
     prod: { url: 'https://di-studio.xyz/serverXR', tokenEnv: 'PROD_API_TOKEN' },
 }
+
+// `dev` names the dev tier, whose key above is still `staging`.
+export const resolveTier = (name) => (name === 'dev' ? 'staging' : name)
+const tierLabel = (name) => (name === 'staging' ? 'dev' : name)
 
 export const parseArgs = (argv) => {
     const args = { tier: 'local', base: null, token: null, spaces: [], projects: [], json: false, quiet: false }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
-        if (arg === '--tier') { args.tier = argv[++i]; continue }
+        if (arg === '--tier') { args.tier = resolveTier(argv[++i]); continue }
         if (arg === '--base' || arg === '--to' || arg === '--from') { args.base = argv[++i]; continue }
         if (arg === '--token') { args.token = argv[++i]; continue }
         if (arg === '--space') { args.spaces.push(argv[++i]); continue }
@@ -159,13 +164,13 @@ const main = async () => {
     for (const name of tierNames) {
         const tier = TIERS[name]
         if (!args.base && !tier) {
-            console.error(`Unknown tier "${name}" — one of ${Object.keys(TIERS).join(', ')}, or --base <url>.`)
+            console.error(`Unknown tier "${name}" — one of ${Object.keys(TIERS).map(tierLabel).join(', ')}, or --base <url>.`)
             process.exitCode = 2
             return
         }
         const base = (args.base || tier.url).replace(/\/+$/, '')
         const token = args.token || (tier ? env[tier.tokenEnv] : null) || env.API_TOKEN || null
-        if (!args.json) console.log(`\n${name} · ${base}${token ? '' : ' (no token — public spaces only)'}`)
+        if (!args.json) console.log(`\n${tierLabel(name)} · ${base}${token ? '' : ' (no token — public spaces only)'}`)
         try {
             reports.push(...(await auditTier({ name, base, token, spaces: args.spaces, projects: args.projects })))
         } catch (error) {

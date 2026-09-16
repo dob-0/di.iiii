@@ -86,7 +86,7 @@ describe('asking the desk what it has', () => {
         await expect(probeLightingDesk({ fetchImpl: async () => notFound() })).resolves.toBe(false)
         await expect(probeLightingDesk({ fetchImpl: async () => { throw new Error('offline') } })).resolves.toBe(false)
         await expect(probeLightingDesk({ fetchImpl: async () => ok({ activeScene: null }) })).resolves.toBe(true)
-        // The staging case: a 200 that is a web page is not a desk, and the map desk
+        // The dev-tier case: a 200 that is a web page is not a desk, and the map desk
         // must not grow a Light link to one.
         await expect(probeLightingDesk({ fetchImpl: async () => htmlPage() })).resolves.toBe(false)
     })

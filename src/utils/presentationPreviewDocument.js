@@ -1,5 +1,13 @@
 export const PREVIEW_HOST_MESSAGE_TYPE = 'dii-preview'
 export const PREVIEW_ENTER_EXHIBITION_KIND = 'enter-exhibition'
+// Sent once, the first time a `?preview=1` code-mode page has SOME evidence
+// it is alive: no <canvas> at all (ordinary DOM/CSS content paints on
+// arrival, nothing to wait for), or a <canvas> whose surrounding DOM has
+// changed at least once since load (a loading indicator ticking or being
+// removed, new content appearing) — see PublicProjectViewer's
+// CODE_PREVIEW_PAINT_TIMEOUT_MS for why this exists and why "the DOM never
+// changes again" is not itself proof of anything either way.
+export const PREVIEW_PAINT_CONFIRMED_KIND = 'preview-paint-confirmed'
 
 export const PREVIEW_ISSUE_CODES = {
     storageUnavailable: 'storage_unavailable',
@@ -28,6 +36,7 @@ const inlineJson = (value) => JSON.stringify(value ?? '').replace(/</g, '\\u003c
 const buildBootstrapScript = (pageQuery, pageOrigin) => `(() => {
     const MESSAGE_TYPE = ${JSON.stringify(PREVIEW_HOST_MESSAGE_TYPE)};
     const ENTER_EXHIBITION_KIND = ${JSON.stringify(PREVIEW_ENTER_EXHIBITION_KIND)};
+    const PAINT_CONFIRMED_KIND = ${JSON.stringify(PREVIEW_PAINT_CONFIRMED_KIND)};
     const ISSUE_CODES = ${JSON.stringify(PREVIEW_ISSUE_CODES)};
     const issueState = new Set();
 
@@ -44,9 +53,59 @@ const buildBootstrapScript = (pageQuery, pageOrigin) => `(() => {
     // …and for the same reason it cannot read its own host. A page that links
     // to a sibling page had no choice but to hardcode one, which is why
     // br_id_ge's rite embedded PRODUCTION's field even when the rite itself
-    // was running on staging — the tier could never rehearse itself. Read
+    // was running on the dev tier — the tier could never rehearse itself. Read
     // this instead of writing a hostname down.
     window.diiPageOrigin = ${inlineJson(pageOrigin)};
+
+    // A ?preview=1 card thumbnail cannot ask this page "are you done loading"
+    // — an author's own runtime is arbitrary code, unaware it is being asked.
+    // What it CAN tell, from outside, without touching anything the author's
+    // script owns (no canvas context grabbed, no storage read): whether the
+    // DOM around a <canvas> is doing anything at all. Ordinary DOM/CSS
+    // content (no canvas) is done the moment it exists — first paint IS the
+    // whole page. A canvas-based piece (three.js and similar) usually shows
+    // its own loading UI updating or disappearing as assets land; ONE such
+    // change is enough evidence it is not dead. Silence forever either means
+    // "finished, static, nothing left to redraw" or "hung mid-load" — those
+    // two are indistinguishable from here, which is exactly why
+    // PublicProjectViewer keeps a time limit as the backstop for this case.
+    if (window.diiPageParams.get('preview') === '1') {
+        let reported = false;
+        const reportPainted = () => {
+            if (reported) return;
+            reported = true;
+            try {
+                window.parent?.postMessage({
+                    source: MESSAGE_TYPE,
+                    type: MESSAGE_TYPE,
+                    kind: PAINT_CONFIRMED_KIND
+                }, '*');
+            } catch {
+                // Ignore cross-context messaging failures in preview bootstrap.
+            }
+        };
+        const watchForLife = () => {
+            if (!document.querySelector('canvas')) {
+                reportPainted();
+                return;
+            }
+            try {
+                const observer = new MutationObserver(() => {
+                    observer.disconnect();
+                    reportPainted();
+                });
+                observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true });
+            } catch {
+                // No MutationObserver (very old engine) — leave it to the
+                // host's own time limit rather than guess.
+            }
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', watchForLife, { once: true });
+        } else {
+            watchForLife();
+        }
+    }
 
     window.diiEnterExhibition = () => {
         try {

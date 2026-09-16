@@ -181,7 +181,8 @@ describe('registerSyncRoutes pull delegates the write to replaceSceneAndBroadcas
     // the local version -- that's exactly the bug. replaceSceneAndBroadcast
     // owns version bumping entirely from the local counter, and now also
     // carries the precondition the caller stated.
-    expect(replaceSceneAndBroadcast).toHaveBeenCalledWith('open-space', pulledScene, { expectedVersion: 3 })
+    // restoreReason: null — the pull took its own restore point just before.
+    expect(replaceSceneAndBroadcast).toHaveBeenCalledWith('open-space', pulledScene, expect.objectContaining({ expectedVersion: 3, restoreReason: null }))
     expect(json).toHaveBeenCalledWith(expect.objectContaining({ ok: true, objects: 1, assets: 0 }))
 
     await fsp.rm(tmpRoot, { recursive: true, force: true })
@@ -284,7 +285,7 @@ describe('registerSyncRoutes refuses rather than destroys', () => {
 
     const { json } = await call(handler, { params: { spaceId: 'open-space' }, body: { expectedVersion: 5 } })
 
-    expect(snapshotSpaceScene).toHaveBeenCalledWith('open-space', { keep: 7 })
+    expect(snapshotSpaceScene).toHaveBeenCalledWith('open-space', expect.objectContaining({ reason: 'before-sync-pull' }))
     expect(snapshotSpaceScene.mock.invocationCallOrder[0])
       .toBeLessThan(replaceSceneAndBroadcast.mock.invocationCallOrder[0])
     // And the response says where it went, so it is recoverable by a person.

@@ -15,8 +15,8 @@ describe('scene example', () => {
         }
     })
 
-    // The three things the owner asked for by name: "cube light or i want
-    // upload mine".
+    // The four building blocks the example demonstrates: a room, a light, a
+    // shape, and a place to upload your own file.
     it('contains a room, a light, a shape and a place for your own file', () => {
         const types = build().nodes.map((node) => node.typeId)
         expect(types).toContain('universe.world')

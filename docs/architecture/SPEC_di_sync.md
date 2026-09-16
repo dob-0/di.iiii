@@ -18,7 +18,7 @@ PR #119 (`?verbatim=1`, `If-Match` on `PUT /scene`, sync routes that refuse).
 
 `~/.di/data/sync/<remote-slug>/<space>.json` — under `data/` so `di backup`
 carries it and `di update` cannot touch it. One file per (remote, space), so a
-space linked to staging and prod can never share cursors. It records:
+space linked to the dev tier and prod can never share cursors. It records:
 
 - `installId` — minted once into `~/.di/state.json` on first link
 - `cursors` — `{ localVersion, remoteVersion }` at the last successful sync;

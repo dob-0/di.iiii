@@ -3,7 +3,7 @@
  *
  * Written because the answer was being read off `lastTouchedAt`, which is not
  * an answer: three prod spaces carry one identical batch timestamp while
- * staging holds forty-six more scene edits. By the clock prod looked newer
+ * the dev tier holds forty-six more scene edits. By the clock prod looked newer
  * everywhere. It was not.
  *
  * Nothing here writes. It reports; a person decides.

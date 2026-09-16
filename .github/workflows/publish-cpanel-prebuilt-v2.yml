@@ -14,7 +14,7 @@ on:
         required: false
         default: ''
       deploy_env:
-        description: Target environment
+        description: Target environment (staging = the dev tier)
         required: true
         type: choice
         options: [staging, production]
@@ -26,7 +26,7 @@ permissions:
 jobs:
   # Deploys wait for the behavioral browser checks (input-device contracts,
   # responsive sweep) — the suite unit tests can't cover. A red check means
-  # nothing reaches staging or production.
+  # nothing reaches the dev tier or production.
   checks:
     uses: ./.github/workflows/browser-checks.yml
 
@@ -133,7 +133,7 @@ jobs:
     if: needs.publish.outputs.published == 'true'
     runs-on: ubuntu-latest
     env:
-      BASE_URL: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'https://di-studio.xyz' || 'https://staging.di-studio.xyz' }}
+      BASE_URL: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'https://di-studio.xyz' || 'https://dev.diiii.xyz' }}
       EXPECTED_SHA: ${{ needs.publish.outputs.source_sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

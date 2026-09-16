@@ -93,7 +93,7 @@ filter you remember to update.
 
 ### Checking things as a human is allowed and expected — any environment, any engine
 
-**Rule:** Agents are explicitly authorized to verify like a human user — launch real browsers, click, scroll, fill forms, screenshot, read the console — not only against local dev, but against staging and production URLs and sibling-project deployments (br_id_ge, beyond_form, …). When a user reports browser-specific breakage, reproduce it in a clean engine before touching code.
+**Rule:** Agents are explicitly authorized to verify like a human user — launch real browsers, click, scroll, fill forms, screenshot, read the console — not only against local dev, but against the dev tier (dev.diiii.xyz) and production URLs and sibling-project deployments (br_id_ge, beyond_form, …). When a user reports browser-specific breakage, reproduce it in a clean engine before touching code.
 
 **Why:** 2026-07-09, beyond_form staging: the user hit CORS errors that blanked the page, but code review and `curl` headers showed nothing wrong. Driving the live URL in clean Chromium *and* a freshly installed Playwright Firefox proved the deployment healthy in both engines, isolating the cause to the reporting browser's profile/extensions — no code change needed, no wild goose chase. The verdict was only reachable by testing exactly like a human visitor instead of reasoning from code.
 
@@ -236,7 +236,7 @@ field?"*
    confirm `slug` and `publishedProjectId` are unchanged, then `curl -o /dev/null -w
    "%{http_code}"` every public URL — spaces, and `/{space}/p/{project}` deep links.
    A 200 on each is the evidence; the intent is not.
-3. Staging first, always. The rehearsal tier is where a mistake costs nothing,
+3. The dev tier first, always. The rehearsal tier is where a mistake costs nothing,
    because nobody has shared its links.
 4. If a public address genuinely must move, that is an owner decision with a
    redirect plan, never a side effect of a naming pass.
@@ -287,6 +287,40 @@ Resume the next window from CURRENT.md, not from memory.
 ---
 
 ## Core Solutions — Discovered in This Repo
+
+### Two lines, one start check — code and space content go stale independently
+
+**Rule:** Before starting any task, and before pushing, run `npm run start-check`.
+It checks BOTH lines this repo has — code (branch vs `origin/dev`, a fork's `dev` vs
+`upstream/dev`) and space content (this box's held spaces vs the dev tier) — and
+prints one headline, LATEST or NOT LATEST, naming the exact pull command when it
+isn't. See `CONTRIBUTING.md` for the full "two lines" guide and what each of the five
+doors (Studio, script, LLM/agent, Telegram, fork-on-Windows) needs to know.
+
+**Why:** `scripts/repo-state.mjs` (the old SessionStart check) never fetched, so its
+"behind" count was measured against a `origin/dev` ref that could be hours or days
+stale — the exact shape of the 2026-08-10 incident where a checkout served code 115
+commits behind for two days with nothing saying so. And nothing at all checked space
+content: every tier (local / dev.diiii.xyz / diiii.xyz) is its own database, so a
+space edited on the dev tier while a box's local copy sat untouched produced zero
+signal from any existing tool.
+
+**How:** `scripts/start-check.mjs` fetches first (repo-state.mjs deliberately doesn't,
+by design — see its own header), reuses `repo-state-lib.mjs`'s branch-position facts
+for the code half, and reuses `tier-sync.mjs`'s own document comparison
+(`readSignatures`, built on `documentSignature`) for the space half rather than
+re-implementing either. Every network step degrades to "not checked" inside its own
+budget rather than ever reporting a false LATEST — a tokenless or unreachable tier is
+"not checked", never silently read as "no drift". `--strict` exits 1 for scripts/CI;
+the default stays exit 0 for a human glance. The write-side scripts
+(`space-push.mjs`, `space-sync.mjs`, `tier-sync.mjs`, `space-bundle.mjs import`) each
+refuse a stale destination the same way, printing the pull command instead of
+silently overwriting.
+
+**Files:** `scripts/start-check.mjs`, `scripts/repo-state-lib.mjs`,
+`scripts/tier-sync.mjs`, `CONTRIBUTING.md`.
+
+---
 
 ### Verify as a human — desktop and phone — or it is not done
 
@@ -741,7 +775,7 @@ It loads the URL at desktop aspect ratios (16:9, 16:10, 4:3, 1:1, ultrawide, sma
 
 **Why:** A WCC-landing scroll bug shipped because it only reproduced in the **production build** (not the dev server, which masks effect-timing via StrictMode remount) — the horizontal ScrollTrigger bound to `window` instead of the custom scroller and the panel track froze. It looked fine in a single dev-server screenshot. Driving real scroll in a built page across viewports is the only way to catch behavior + responsive bugs: production-build-only timing issues, aspect-ratio math (travel/overflow), and the mobile `(min-width: 801px)` breakpoint switching layouts. Static screenshots and dev-server checks are not sufficient.
 
-**Also:** when a bug "works locally but not on staging", test the **production build** (`npm run build && npx vite preview`) — the dev server is not representative.
+**Also:** when a bug "works locally but not on the dev tier", test the **production build** (`npm run build && npx vite preview`) — the dev server is not representative.
 
 **Files:** `scripts/responsive-check.mjs`, `package.json` (`check:responsive`)
 
@@ -875,13 +909,13 @@ This does **not** fully solve node-to-node label collision (two labels can still
 
 **Files:** `serverXR/src/routes/authRoutes.js` (the two `/api/auth/{github,google}` authorize routes), `serverXR/src/routes/authRoutes.test.js` ("signs a fresh state on every request" — calls the handler twice), `docs/ai/known-fixes.md` (full incident writeup, including the wrong first theory and how it was corrected).
 
-### Staging's compose override reads `STAGING_`-prefixed host env vars, not the bare names — editing the bare line in `.env` is a silent no-op
+### The dev tier's compose override reads `STAGING_`-prefixed host env vars, not the bare names — editing the bare line in `.env` is a silent no-op
 
-**Rule:** On the VPS, `docker-compose.staging.yml` maps container env vars from `STAGING_`-prefixed host variables (`GITHUB_CLIENT_ID: ${STAGING_GITHUB_CLIENT_ID:-}`, same for `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`OAUTH_CALLBACK_BASE_URL`/`AUTH_SESSION_SECRET`) — not the bare-named variables that also happen to exist in `/opt/di.iiii-staging/.env` (left over from the shared `.env.example` template both prod and staging are copied from). Before editing any credential/config var in that file, `grep` the actual compose files for which host variable name the *staging* override reads — don't assume the bare name is live just because it's present and non-empty-looking in the file.
+**Rule:** On the VPS, `docker-compose.staging.yml` maps container env vars from `STAGING_`-prefixed host variables (`GITHUB_CLIENT_ID: ${STAGING_GITHUB_CLIENT_ID:-}`, same for `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`OAUTH_CALLBACK_BASE_URL`/`AUTH_SESSION_SECRET`) — not the bare-named variables that also happen to exist in `/opt/di.iiii-staging/.env` (left over from the shared `.env.example` template both prod and the dev tier are copied from). Before editing any credential/config var in that file, `grep` the actual compose files for which host variable name the *dev-tier* override reads — don't assume the bare name is live just because it's present and non-empty-looking in the file.
 
 **Why:** 2026-07-16, wiring up staging OAuth credentials: set `GITHUB_CLIENT_ID`/`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` directly in `/opt/di.iiii-staging/.env`, restarted the container, and `GET /api/auth/providers` still reported `{github:false,google:false}` — the edit had silently done nothing. `docker exec`-ing into the container and echoing the actual env var confirmed it was empty despite the `.env` file showing a value on the bare-named line. `grep`-ing `docker-compose.staging.yml` immediately explained it: that override reads `STAGING_GITHUB_CLIENT_ID` etc., a completely different host variable, and *that* one was still empty. (`OAUTH_CALLBACK_BASE_URL` looked like it "worked" on the first attempt purely by coincidence — its `STAGING_OAUTH_CALLBACK_BASE_URL` counterpart had already been set correctly by an earlier staging-setup session.)
 
-**How:** Before setting any env var on the VPS for the staging stack specifically, run `grep -n '<VAR_NAME>' docker-compose.staging.yml` in the repo first to see which host variable name it actually consumes for that key — prod's plain name, or a `STAGING_`-prefixed one. Verify a change took effect with `docker exec <container> sh -c 'echo $VARNAME'` after recreating, not just by re-reading the `.env` file (the file being correct proves nothing about what the container actually received).
+**How:** Before setting any env var on the VPS for the dev-tier stack specifically (compose file still `docker-compose.staging.yml`), run `grep -n '<VAR_NAME>' docker-compose.staging.yml` in the repo first to see which host variable name it actually consumes for that key — prod's plain name, or a `STAGING_`-prefixed one. Verify a change took effect with `docker exec <container> sh -c 'echo $VARNAME'` after recreating, not just by re-reading the `.env` file (the file being correct proves nothing about what the container actually received).
 
 **Files:** `docker-compose.staging.yml` (the `STAGING_*` mappings), `/opt/di.iiii-staging/.env` (the host file, not in git), `docs/ai/known-fixes.md` (the OAuth-wiring incident this was caught during).
 
@@ -907,7 +941,7 @@ This does **not** fully solve node-to-node label collision (two labels can still
 
 ### A field that is only written when something is created is a field that will drift — declare the space, not just its pages
 
-**Rule:** For any repo-linked di.iiii space, the repo declares the space itself in `di-space.space.json` — `label`, visibility, the tier map, and the list of project manifests that are supposed to exist — and `scripts/space-sync.mjs` reconciles those fields on *every* run, not at creation. Per-tier differences (staging's `openInscriptions:false`) are declared in that manifest's `tiers` block, so the intended difference can be told apart from drift; a tier marked `governed:false` (the dev box) is shown by the audit and never enforced. `--all` syncs every declared page in one command, `--audit` reads every tier and exits non-zero on any undeclared difference, and neither the sync nor the audit ever deletes: extras are reported, and removing one stays a deliberate `--prune` a person types.
+**Rule:** For any repo-linked di.iiii space, the repo declares the space itself in `di-space.space.json` — `label`, visibility, the tier map, and the list of project manifests that are supposed to exist — and `scripts/space-sync.mjs` reconciles those fields on *every* run, not at creation. Per-tier differences (the dev tier's `openInscriptions:false`, under the key `tiers.staging`) are declared in that manifest's `tiers` block, so the intended difference can be told apart from drift; a tier marked `governed:false` (the dev box) is shown by the audit and never enforced. `--all` syncs every declared page in one command, `--audit` reads every tier and exits non-zero on any undeclared difference, and neither the sync nor the audit ever deletes: extras are reported, and removing one stays a deliberate `--prune` a person types.
 
 **Why:** This is the same bug three times, each caught only by accident. v3 fixed the project **slug** — sent in the CREATE POST and nowhere else, so a tier that got its projects any other way had null slugs and answered 404 at the door the landing page linked to, with perfectly synced content behind it. v4 fixed the project **title** — same shape, so `di-space.field.json` said "the field — every crossing, together" while all three tiers went on saying "the field". Then on 2026-08-05 the user opened prod, staging and `localhost:5173` side by side and saw the space *itself* named three different things: `br_id_ge`, `br_id_ge`, and `br_id_ge XR_ Notations:vi.ritual`. The space label was still create-only, and worse, it was taken from whichever *page* manifest ran first — provisioning a fresh tier from `di-space.landing.json` would have named the whole space "the landing — the door". The audit that came out of it immediately found more than the label: the dev tier had null slugs on `rite` and `field`, the old `the field` title, `br-id-ge-needs` missing entirely, and 70 projects the repo does not declare. **The real defect was never any single field — it was that drift could only be discovered by a human with three browser windows open, which only ever checks the surfaces someone happens to look at.**
 
@@ -1029,7 +1063,7 @@ this file; product truth → the wiki; running state → session notes folded by
 MIRRORS only: the in-repo file is the source of truth and records the mirror's
 URL. A session may run local servers for its own verification, but they die
 with the session and are never handed to a person as a deliverable — if
-someone must see it live, it goes to staging or into the product itself.
+someone must see it live, it goes to the dev tier or into the product itself.
 Anything meant to outlive the session that listens on a port is an infra fact
 and gets recorded in di-atlas before it starts.
 

@@ -26,8 +26,8 @@ cd serverXR && docker build .
 - Never push to `main` automatically without a manual approval step
 - Branch flow: `dev → main` (routine), `main` direct (emergency hotfix only)
 
-**Current deploy:** push `dev` → `deploy-vps-staging.yml` → staging.di-studio.xyz; push `main` →
-`deploy-vps.yml` → di-studio.xyz (GHCR build + SSH into the Hetzner VPS, Docker Compose restart).
+**Current deploy:** push `dev` → `deploy-vps-staging.yml` → the dev tier, dev.diiii.xyz; push `main` →
+`deploy-vps.yml` → prod, diiii.xyz (GHCR build + SSH into the Hetzner VPS, Docker Compose restart).
 cPanel is legacy/fallback only — see `docs/deploy/LIVE_DEPLOY.md` for current deploy truth.
 
 ## Done criteria

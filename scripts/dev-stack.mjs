@@ -323,7 +323,7 @@ const noteSpaceDrift = async () => {
     const tiers = []
     for (const [tier, base, token] of [
         ['prod', env.PROD_API_URL || 'https://di-studio.xyz/serverXR', env.PROD_API_TOKEN],
-        ['staging', env.LIVE_API_URL || 'https://staging.di-studio.xyz/serverXR', env.LIVE_API_TOKEN],
+        ['dev', env.LIVE_API_URL || 'https://dev.diiii.xyz/serverXR', env.LIVE_API_TOKEN],
     ]) {
         tiers.push({ tier, ids: await listSpaces(base, token) })
     }

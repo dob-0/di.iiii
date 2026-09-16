@@ -238,6 +238,66 @@ Guard: `src/nodeLabelVocabulary.test.js` — labels must carry no banned word, n
 parenthetical, no leading article, and stay within two words. The prose guard
 (`src/copyVocabulary.test.js`) already covers every string a person reads.
 
+## One name per space (owner, 2026-09-14)
+
+A **space's** own name — its label, set with Rename — is the one name a visitor sees for that
+space anywhere in di.iiii's own furniture: the `/spaces` card, the list row, the map star, the
+`/{space}/projects` heading, the surface bar, the browser tab, the link preview, and the room's
+heading for screen readers and crawlers. A **project's** title shows only where the URL names
+that project (`/{space}/p/{project}` or its vanity form). A space that opens straight into one
+piece shows no "Project: …" line on its card; an account's own card says "Opens on: …" only when
+the door's title differs from the space's name.
+
+What this does not reach: a published page's own content is the artist's. The WCC landing's
+"WCC: Women Creating Change" heading and anything inside a page's iframe are the work, not the
+furniture. Where a stored name is simply wrong (a space labelled "di.iiii", a door project titled
+"Main"), the fix is data, not a code carve-out.
+
+Code: `src/studio/utils/spaceNames.js` (the card rule), `src/hooks/useDocumentTitle.js` (tabs),
+`PublicProjectViewer`'s `viewerTitle` (headings). Guards: `spaceNames.test.js`,
+`SpaceHub.test.jsx`, `PublicProjectViewer.test.jsx`.
+
+## Amended 2026-09-16 — the tiers are local · dev · prod
+
+The owner, plainly: "we have not staging anymore." The word leaves our language the same way
+`Beta` did: the thing it named is still there, under its true name.
+
+| Tier | Is | Address |
+| --- | --- | --- |
+| **local** | your machine | `localhost` (the router: `dii.localhost:8088`) |
+| **dev** | the rehearsal server, built from branch `dev` | `https://dev.diiii.xyz` |
+| **prod** | the live site, built from branch `main` | `https://diiii.xyz` |
+
+**`staging` is retired from our own words** — prose, docs, comments, log and CLI messages, help
+text, copy. Say **the dev tier** or **dev.diiii.xyz** wherever a reader could mistake "dev" for the
+branch, `npm run dev`, or a local dev server.
+
+**`staging.di-studio.xyz` still answers.** It is the same server under its old name, kept only so
+links already handed out do not break. Host matchers and allowlists keep accepting it. It is never
+named in new copy, a new link, or a doc that tells someone where to go.
+
+**Identifiers that still say `staging` are deliberate survivors.** This file never governed
+identifiers, and these are read by CI, the server, secrets or saved data — renaming one breaks a
+deploy, not a sentence. Do not "fix" them:
+
+- env vars and secrets: `STAGING_DOMAIN`, `STAGING_API_URL`, `STAGING_API_TOKEN`,
+  `STAGING_CONTAINER`, `STAGING_PORT`, the rest of the `STAGING_*` family, `VPS_STAGING_*`,
+  `DI_TOKEN_STAGING`
+- the compose file `docker-compose.staging.yml` and the container `dii-staging-server-1`
+- the workflow file `.github/workflows/deploy-vps-staging.yml` and its `name:`
+  (`gh run list --workflow` reads both)
+- npm scripts `deploy:staging`, `deploy:host:staging`, `deploy:remote:staging`
+- the git branch `cpanel-staging`
+- the space manifest key `tiers.staging`, and the `deployEnv` value `staging` the dev server
+  reports in `/serverXR/api/health`
+- CLI tier values `--tier staging` (where a CLI also accepts `dev`, prefer `dev` in docs;
+  `staging` keeps working)
+
+Where one of these sits in a doc, say once nearby "the dev tier (identifier still `staging`)".
+
+The line in "Amended 2026-08-19, same day" — "Stage collided with the deploy tier" — is history and stays as it was said.
+It explains a 2026-08-19 decision; the tier it collided with is now called dev.
+
 ## The rule for anything new
 
 Before adding a word to the product, check it here. If it is not in the dictionary and not

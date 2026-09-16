@@ -11,7 +11,7 @@
  * Re-runnable: the first run creates, every later run updates.
  *
  * Usage:
- *   node scripts/space-sync.mjs --all --tier staging     # every page the space declares
+ *   node scripts/space-sync.mjs --all --tier dev         # every page the space declares
  *   node scripts/space-sync.mjs --audit                  # compare all tiers, exit 1 on drift
  *   node scripts/space-sync.mjs --repo <dir> [--manifest <path>] [--to <url>] [--token <tok>] [--dry-run]
  *   (defaults: --repo = manifest dir or cwd; --manifest = <repo>/di-space.json)
@@ -37,7 +37,7 @@
  * platform_recordar) vendor it as scripts/sync-space.mjs so their CI can run
  * without checking out di.iiii. They drifted once — three of the four copies
  * were a version behind, and the stale one wrote deviceAccess:false (killing
- * the rite's camera) and skipped the staging host rewrite (writing every
+ * the rite's camera) and skipped the dev-tier host rewrite (writing every
  * rehearsal crossing into the live field). Re-vendor with:
  *
  *   node scripts/space-sync-vendor.mjs          # check every copy
@@ -62,7 +62,7 @@ const MIME = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quickt
 
 const parseArgs = (argv) => {
   const args = { repo: null, manifest: null, space: null, tier: null, to: null, token: null,
-    dryRun: false, all: false, audit: false }
+    dryRun: false, all: false, audit: false, force: false }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--repo') { args.repo = argv[++i]; continue }
@@ -74,6 +74,9 @@ const parseArgs = (argv) => {
     if (a === '--dry-run') { args.dryRun = true; continue }
     if (a === '--all') { args.all = true; continue }
     if (a === '--audit') { args.audit = true; continue }
+    // Overrides the document staleness refusal below (step 5) — write anyway
+    // even if the project changed moments before this ran.
+    if (a === '--force') { args.force = true; continue }
   }
   return args
 }
@@ -90,9 +93,12 @@ const parseArgs = (argv) => {
  * thing that ever noticed was a human with three browser windows open.
  *
  * `tiers` is the other half. A tier is allowed to differ from its siblings only
- * where this file says so (staging's `openInscriptions:false` is intent, not
+ * where this file says so (the dev tier's `openInscriptions:false` is intent, not
  * drift). Anything else that differs is a fault the audit reports. A tier with
  * `governed:false` — the dev box — is shown and never enforced or failed on.
+ *
+ * The dev tier (dev.diiii.xyz) is keyed `staging` in every manifest; `--tier dev`
+ * resolves to that key, and `--tier staging` keeps working.
  */
 const SPACE_MANIFEST = 'di-space.space.json'
 
@@ -102,6 +108,14 @@ const tierOf = (liveUrl, tiers) => {
     try { if (new URL(t.url).host === host) return name } catch { /* unparseable tier url */ }
   }
   return host || 'unknown'
+}
+
+// `dev` is the dev tier's name; manifests still key it `staging`. A manifest
+// that declares a real `dev` key wins.
+const tierKey = (name, tiers) => {
+  if (!name || Object.hasOwn(tiers || {}, name)) return name
+  if (name === 'dev' && Object.hasOwn(tiers || {}, 'staging')) return 'staging'
+  return name
 }
 
 // Fields the repo is master for. Kept in one list so the reconcile, the audit
@@ -266,7 +280,7 @@ async function reconcileSpace({ spaceId, live, token, args, spaceDecl, tierName 
   if (space && spaceDecl) {
     const want = {}
     for (const f of SPACE_FIELDS) if (spaceDecl[f] !== undefined) want[f] = spaceDecl[f]
-    // Per-tier intent is declared, never remembered: staging keeps
+    // Per-tier intent is declared, never remembered: the dev tier keeps
     // openInscriptions:false so a rehearsal crossing leaves no permanent stone.
     const tierDecl = spaceDecl.tiers?.[tierName] || {}
     for (const f of TIER_FIELDS) if (tierDecl[f] !== undefined) want[f] = tierDecl[f]
@@ -382,14 +396,16 @@ async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, ti
   // 3b. Point the page at the tier it is being synced INTO. The surfaces name
   // their own back end in the markup (mesh-url, field-url, the field link),
   // because inside a published page location.origin is the srcdoc frame's and
-  // tells you nothing. Left alone, a staging copy would look like a rehearsal
+  // tells you nothing. Left alone, a dev-tier copy would look like a rehearsal
   // while writing every crossing to the live field.
   const liveHost = new URL(live).host
   const PROD_HOST = 'di-studio.xyz'
   if (liveHost !== PROD_HOST) {
     const before = entryHtml
-    // lookbehind so "staging.di-studio.xyz" is never re-prefixed into itself
-    entryHtml = entryHtml.replace(/(?<![\w.-])di-studio\.xyz/g, liveHost)
+    // Production answers to both names. The lookbehind means a subdomain
+    // ("dev.diiii.xyz", the legacy "staging.di-studio.xyz") is never
+    // re-prefixed into itself.
+    entryHtml = entryHtml.replace(/(?<![\w.-])(di-studio|diiii)\.xyz/g, liveHost)
     if (before !== entryHtml) console.log(`  ⇄ retargeted ${PROD_HOST} → ${liveHost}`)
   }
 
@@ -430,9 +446,31 @@ async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, ti
 
   if (args.dryRun) { console.log('  dry-run complete — no document written'); return }
 
-  // 5. write document presentation (the /document route is PUT, not PATCH)
+  // 5. write document presentation (the /document route is PUT, not PATCH,
+  // and — unlike /api/spaces/:id/scene — it has no If-Match precondition of
+  // its own to lean on). This is a merge, not a blind overwrite: only
+  // presentationState/publishState below are ours to set, everything else in
+  // `doc` is passed through as read moments earlier. The remaining risk is
+  // someone else's write landing in the gap between that read and this PUT —
+  // re-reading the version right before writing narrows that gap to as small
+  // as this script can make it, and refuses rather than silently reverting
+  // whatever they just changed. `--force` is the explicit override.
   const docUrl = `${live}/api/projects/${canonicalProject}/document`
-  const doc = (await apiOrThrow(docUrl, { headers: buildHeaders(token) })).document
+  const initialRead = await apiOrThrow(docUrl, { headers: buildHeaders(token) })
+  const doc = initialRead.document
+  const baseVersion = Number.isInteger(initialRead.version) ? initialRead.version : null
+
+  if (!args.force && baseVersion !== null) {
+    const recheck = await api(docUrl, { headers: buildHeaders(token) })
+    const currentVersion = Number.isInteger(recheck.body?.version) ? recheck.body.version : null
+    if (recheck.ok && currentVersion !== null && currentVersion !== baseVersion) {
+      throw new Error(
+        `refusing to write ${canonicalProject}'s document: it changed (v${baseVersion} → v${currentVersion}) ` +
+        `moments ago — someone else is editing it right now. Re-run once they're done, or --force to overwrite anyway.`
+      )
+    }
+  }
+
   await apiOrThrow(docUrl, {
     method: 'PUT', headers: buildHeaders(token),
     body: JSON.stringify({
@@ -468,7 +506,7 @@ async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, ti
  * --audit — read every tier and print one table.
  *
  * This is the mode the whole v5 change exists for. Every drift the engine has
- * ever grown a fix for was found the same way: a person opened prod, staging
+ * ever grown a fix for was found the same way: a person opened prod, the dev tier
  * and localhost side by side and noticed the names disagreed. That is not a
  * process, it is luck, and it only works for the surfaces someone happens to
  * look at. Reads only — it never writes, so it is safe to run against prod.
@@ -483,7 +521,7 @@ async function audit({ repoDir, spaceDecl, spaceManifestPath, getEnv, args }) {
   }
   const spaceId = spaceDecl.spaceId
   const tiers = Object.entries(spaceDecl.tiers || {})
-    .filter(([name]) => !args.tier || args.tier === name)
+    .filter(([name]) => !args.tier || tierKey(args.tier, spaceDecl.tiers) === name)
   if (!tiers.length) { console.error('Error: no tiers to audit.'); process.exitCode = 1; return }
 
   console.log(`[space-audit] ${spaceId} ← ${repoDir}\n`)
@@ -628,8 +666,8 @@ async function main() {
   if (args.audit) return audit({ repoDir, spaceDecl, spaceManifestPath, getEnv, args })
 
   // A tier can be named instead of spelled out, once the space manifest knows
-  // the map: --tier staging beats pasting a serverXR URL from memory.
-  const named = args.tier ? spaceDecl?.tiers?.[args.tier] : null
+  // the map: --tier dev beats pasting a serverXR URL from memory.
+  const named = args.tier ? spaceDecl?.tiers?.[tierKey(args.tier, spaceDecl?.tiers)] : null
   if (args.tier && !named) {
     console.error(`Error: unknown tier "${args.tier}". Known: ${Object.keys(spaceDecl?.tiers || {}).join(', ') || '(none)'}`)
     process.exitCode = 1; return
@@ -661,7 +699,7 @@ async function main() {
   const target = args.to || named?.url || pinned || getEnv('LIVE_API_URL')
   if (!target) {
     console.error('Error: no target. Pass --to <url> or --tier <name>, or set LIVE_API_URL.')
-    console.error('  staging: https://staging.di-studio.xyz/serverXR')
+    console.error('  dev:     https://dev.diiii.xyz/serverXR')
     console.error('  prod:    https://di-studio.xyz/serverXR')
     process.exitCode = 1; return
   }
@@ -691,7 +729,7 @@ async function main() {
   }
 }
 
-export { referencesAsset, rewriteAssetRefs, matchGlobs, globToRe, tierOf, parseArgs, SPACE_FIELDS, TIER_FIELDS, SPACE_MANIFEST }
+export { referencesAsset, rewriteAssetRefs, matchGlobs, globToRe, tierOf, tierKey, parseArgs, SPACE_FIELDS, TIER_FIELDS, SPACE_MANIFEST }
 
 // Only run when invoked as a script, so the helpers above can be unit-tested.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

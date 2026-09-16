@@ -149,7 +149,12 @@ independently, is in [docs/ai/local-workflow.md](docs/ai/local-workflow.md).
 
 ## 7. Daily workflow
 
+di.iiii has **two lines of work** — code (this repo) and space content (each tier's
+own database) — and they go stale independently. **[CONTRIBUTING.md](CONTRIBUTING.md)**
+is the short guide to both; read it once. The short version:
+
 ```bash
+npm run start-check                # LATEST or NOT LATEST, on both lines — run this first
 git switch dev
 git pull --ff-only origin dev     # or: git pull --ff-only upstream dev
 # ...make changes...
@@ -180,7 +185,7 @@ Skip `gh pr create` entirely by letting a push open the PR for you:
 
 Branch rules (see `README.md` / `CURRENT.md`):
 
-- Normal work happens on **`dev`** → deploys to staging.
+- Normal work happens on **`dev`** → deploys to the dev tier, dev.diiii.xyz.
 - Promote **`dev` → `main`** for production. Don't start feature work on `main`.
 
 ## 8. Working with Claude Code (the team's AI workflow)

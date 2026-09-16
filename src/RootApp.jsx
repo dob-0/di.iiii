@@ -16,6 +16,7 @@ import ModeMark from './components/ModeMark.jsx'
 import LaneDefaultSpace from './components/LaneDefaultSpace.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
+import useDocumentTitle from './hooks/useDocumentTitle.js'
 import useLocalInstall from './hooks/useLocalInstall.js'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
@@ -288,6 +289,12 @@ function ProjectToolDoorway({ appState }) {
 // real space like any other, so the public/private decision comes from the
 // server here too, never from an assumption in the router.
 function WorkSurfaceRoute({ work, mode }) {
+    // A work is a real space like any other (see the comment above this
+    // function) so it names itself the same way one does — the naming rule
+    // in docs/ai/vocabulary.md. Unlike a generic space this one is code, not
+    // a fetched record, so the label is already known: no "ready" gate to
+    // wait on.
+    useDocumentTitle(`${work.label} — di.iiii`)
     const { isPublic, loading } = useSpacePublicFlag(work.id)
     const render = workSurface(work.id)
 
@@ -327,6 +334,17 @@ function AppRouter() {
     const privateChatWith = getPrivateChatTarget(location)
     const appState = getAppLocationState(location)
     const bareReserved = getBareReservedSegment(location)
+
+    // `/open` and its `/open_jam(/scene)` aliases are one space, named the
+    // same way everywhere per the naming rule (docs/ai/vocabulary.md) — but
+    // this route renders JamSurface, a live editable surface, not the
+    // generic read-only PublicProjectViewer that SpaceSurfaceApp already
+    // titles from the fetched space label. Without this the tab kept
+    // whatever the previous page had left in it, usually index.html's
+    // generic default. JAM_SPACE_ID is fixed to the 'open' space (see
+    // jamRouting.js), so the name is safe to hardcode instead of waiting on
+    // a fetch just for a tab title.
+    useDocumentTitle(isJamLocation(jamState) ? 'Open Space — di.iiii' : null)
 
     // The Raw lane was called Seed until 2026-07-30. Old /seed links still
     // resolve; rewrite them to /raw so the address bar heals instead of keeping

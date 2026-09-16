@@ -83,7 +83,7 @@ describe('a code page can read /vendor/ and /fonts/ from its null origin', () =>
     // fetch class as the Draco decoder above. Node-only on purpose — the
     // `local`/offline `di` install is what this session needed fixed, and
     // is what serverXR/src/index.js:CODE_PAGE_READABLE actually governs;
-    // nginx.conf carries the equivalent allowance for staging/prod and does
+    // nginx.conf carries the equivalent allowance for the dev tier and prod and does
     // NOT yet include wcc, so the same gap still applies there until someone
     // adds it (see the session note).
     it('also covers wcc\'s own public assets, on the node path', () => {

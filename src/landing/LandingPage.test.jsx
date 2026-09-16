@@ -136,7 +136,7 @@ describe('LandingPage three routes', () => {
 
         const stepInside = screen.getAllByRole('link', { name: 'Step inside' })[0]
         const spaces = screen.getByRole('link', { name: 'The Spaces' })
-        const jam = screen.getByRole('link', { name: 'Open Jam' })
+        const jam = screen.getByRole('link', { name: 'Open Space' })
         expect(stepInside.getAttribute('href')).toBe('/spaces')
         expect(spaces.getAttribute('href')).toBe('/spaces')
         expect(jam.getAttribute('href')).toMatch(/jam/i)

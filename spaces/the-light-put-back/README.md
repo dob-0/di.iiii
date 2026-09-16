@@ -20,7 +20,7 @@ To re-publish it, drop the built file at `spaces/the-light-put-back/code/index.h
 and run:
 
 ```bash
-node scripts/space-code-push.mjs the-light-put-back --to https://staging.di-studio.xyz/serverXR
+node scripts/space-code-push.mjs the-light-put-back --to https://dev.diiii.xyz/serverXR
 ```
 
 ## Two things that are NOT automatic

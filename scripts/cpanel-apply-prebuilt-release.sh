@@ -12,6 +12,11 @@ CURRENT_BRANCH="${CPANEL_DEPLOY_BRANCH:-$(git rev-parse --abbrev-ref HEAD 2>/dev
 DEPLOY_ENV="${1:-${CPANEL_DEPLOY_ENV:-}}"
 DEPLOY_ENV_META_FILE="${CPANEL_DEPLOY_ENV_FILE:-.cpanel-deploy-env}"
 
+# `dev` names the dev tier; its deploy-env identifier is still `staging`.
+if [[ "${DEPLOY_ENV}" == "dev" ]]; then
+  DEPLOY_ENV="staging"
+fi
+
 if [[ -z "${DEPLOY_ENV}" ]]; then
   if [[ -f "${DEPLOY_ENV_META_FILE}" ]]; then
     META_DEPLOY_ENV="$(head -n 1 "${DEPLOY_ENV_META_FILE}" | tr -d '\r' | xargs)"
@@ -35,7 +40,7 @@ if [[ -z "${DEPLOY_ENV}" ]]; then
       ;;
     *)
       echo "[cpanel-prebuilt] Unable to infer deploy environment from branch '${CURRENT_BRANCH}'." >&2
-      echo "[cpanel-prebuilt] Pass 'staging' or 'production' as the first argument, or set CPANEL_DEPLOY_ENV." >&2
+      echo "[cpanel-prebuilt] Pass 'dev' (or 'staging') or 'production' as the first argument, or set CPANEL_DEPLOY_ENV." >&2
       exit 1
       ;;
   esac

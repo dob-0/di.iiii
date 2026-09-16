@@ -10,7 +10,7 @@ import {
 import { getStudioLocationState } from '../../studio/utils/studioRouting.js'
 import { RESERVED_APP_SEGMENTS } from '../../utils/spaceRouting.js'
 
-const at = (pathname) => getJamLocationState({ pathname })
+const at = (pathname, search = '') => getJamLocationState({ pathname, search })
 
 describe('the jam surface address', () => {
     it('answers at /open_jam/scene', () => {
@@ -36,12 +36,39 @@ describe('the jam surface address', () => {
         })
     })
 
+    // The other address the same room is handed out on — the space card's
+    // "Live" button, and what a stranger is actually given. Before this branch
+    // it fell through to the generic published-space viewer: same document, a
+    // read-only shell with no presence and no way to add anything. See
+    // the "/open" row in docs/ai/known-fixes.md.
+    it('answers at bare /open too — the same room, not a second one', () => {
+        const state = at('/open')
+        expect(isJamLocation(state)).toBe(true)
+        expect(state.spaceId).toBe(JAM_SPACE_ID)
+        expect(state.projectId).toBe(JAM_PROJECT_ID)
+    })
+
+    it('tolerates a trailing slash on the bare address', () => {
+        expect(isJamLocation(at('/open/'))).toBe(true)
+    })
+
+    // ?preview=1 is the space card's own thumbnail embed (SpaceHub.jsx), which
+    // wants the static published view scaled into a card, not a live surface
+    // with open presence sockets. The card's "make it live" button re-embeds
+    // the same /open with no ?preview and correctly gets the real jam.
+    it('leaves the space card thumbnail alone', () => {
+        expect(isJamLocation(at('/open', '?preview=1'))).toBe(false)
+    })
+
     it('claims nothing else', () => {
         for (const path of [
             '/',
-            '/open',
             '/open_jam/scene/extra',
             '/open/studio/projects/open-jam',
+            '/open/studio',
+            '/open/projects',
+            '/open/preferences',
+            '/open/mini',
             '/wcc/scene',
             '/scene',
             '/studio'

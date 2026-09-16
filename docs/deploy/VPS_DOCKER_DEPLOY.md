@@ -13,8 +13,11 @@ term expires. Do not delete it as part of adopting this path.
 - [.github/workflows/deploy-vps.yml](../../.github/workflows/deploy-vps.yml)
   — triggers on push to `main` (production).
 - [.github/workflows/deploy-vps-staging.yml](../../.github/workflows/deploy-vps-staging.yml)
-  — triggers on push to `dev` (staging). Decided against a second VPS: at
-  2 vCPU/4GB (see `docs/ai/roles/infrastructure-engineer.md`), staging runs
+  — triggers on push to `dev` and deploys the dev tier, `https://dev.diiii.xyz`
+  (legacy name `staging.di-studio.xyz`, same server; the identifier is still
+  `staging` in file, environment, compose-project and `STAGING_*` var names).
+  Decided against a second VPS: at
+  2 vCPU/4GB (see `docs/ai/roles/infrastructure-engineer.md`), the dev tier runs
   as a separate, deliberately small Compose project
   (`docker-compose.staging.yml`, 0.2 CPU/384M server + 0.1 CPU/64M client —
   small enough that it can't meaningfully starve production's 0.9 CPU/1G
@@ -24,24 +27,25 @@ term expires. Do not delete it as part of adopting this path.
   `docs/ai/known-fixes.md`)
   on the **same** VPS, in a **separate checkout directory** with its own
   `.env` so it never inherits production's `COMPOSE_PROFILES=https` or
-  secrets. Production's Caddy (the only Caddy instance; staging has none)
-  reverse-proxies `STAGING_DOMAIN` to staging's host-published client port
+  secrets. Production's Caddy (the only Caddy instance; the dev tier has none)
+  reverse-proxies `STAGING_DOMAIN` to the dev tier's host-published client port
   — see the second site block in `Caddyfile`.
 
-### One-time VPS setup for staging
+### One-time VPS setup for the dev tier
 
 1. Clone this repo (or copy the compose files + `Caddyfile`) into a second
    directory, sibling to the production checkout, e.g.
-   `/opt/dii` (prod) and `/opt/dii-staging` (staging).
+   `/opt/dii` (prod) and `/opt/dii-staging` (the dev tier). On the live VPS
+   these are `/opt/di.iiii` and `/opt/di.iiii-staging`.
 2. In `/opt/dii-staging/.env`: set `PORT` to a free host port (e.g. `8081`)
    and fill in the `STAGING_*` vars documented in `.env.example`
    (`STAGING_AUTH_SESSION_SECRET` especially — generate a fresh one, do not
    reuse production's).
 
-   **`STAGING_BIND_ADDR`** — optional, defaults to `172.17.0.1`. Staging's
+   **`STAGING_BIND_ADDR`** — optional, defaults to `172.17.0.1`. The dev tier's
    client port is published to *this address only*, never `0.0.0.0`. It must be
    the address `host.docker.internal` resolves to from inside production's
-   `caddy` container, because that is how Caddy reaches staging. On this VPS
+   `caddy` container, because that is how Caddy reaches the dev tier. On this VPS
    that is `docker0` = `172.17.0.1`; check yours with:
 
    ```bash
@@ -58,7 +62,7 @@ term expires. Do not delete it as part of adopting this path.
    the mapping in `docker-compose.staging.yml` uses `!override` — a plain
    `ports:` there would ADD a binding and leave the wide one live).
 
-   **`MESH_ROOM_SECRET`** (staging: `STAGING_MESH_ROOM_SECRET`) — optional,
+   **`MESH_ROOM_SECRET`** (dev tier: `STAGING_MESH_ROOM_SECRET`) — optional,
    unset by default. The live co-presence relay at `/serverXR/mesh` is
    deliberately **open**: visitors' browsers are mesh clients (the public
    `br_id_ge` `index.html`/`field.html` embed the relay URL), so a blanket
@@ -70,7 +74,7 @@ term expires. Do not delete it as part of adopting this path.
    makes the keeper's own reconnect work.
 
    Generate with `openssl rand -hex 32`, and use a **different value per
-   tier** — one shared value would let a staging client claim the keeper
+   tier** — one shared value would let a dev-tier client claim the keeper
    identity on production. Every keeper client must then send it as the
    `secret=` query parameter: `di-jet/deploy/scripts/keeper_agent.py`,
    `di-bo/keeper.mjs`, and `br_id_ge/scripts/keeper-presence.mjs`. Leaving it
@@ -89,7 +93,10 @@ term expires. Do not delete it as part of adopting this path.
    An ordinary visitor id on the same URL must still return `101`. Never probe
    this over HTTP/2 — that reports false 404s for websocket paths.
 3. In `/opt/dii` (production)'s `.env`: set `STAGING_DOMAIN` (a subdomain
-   DNS already points at this same host, e.g. `staging.your-domain`) and
+   DNS already points at this same host, e.g. `dev.your-domain`; it takes a
+   comma-separated list — the live VPS has
+   `STAGING_DOMAIN=staging.di-studio.xyz, dev.diiii.xyz`, keeping the legacy
+   name alive for links already handed out) and
    `STAGING_PORT` to match step 2's port. Restart production's `caddy`
    service (`docker compose --profile https up -d caddy`) to pick up the
    new site block.
@@ -150,7 +157,7 @@ every subdomain, including ones added later).
      that fails) — its Caddyfile is a read-only bind mount, so a content-only
      change doesn't trigger a container recreate on its own.
 
-   (Staging's workflow does the same three steps against
+   (The dev tier's workflow does the same three steps against
    `docker-compose.staging.yml` instead of `.prod.yml`/`caddy-hardened.yml`,
    and has no Caddy of its own to reload.)
 3. Runs a smoke check against `/serverXR/api/health` (and the other routes in
@@ -182,21 +189,21 @@ Variables (repo or `production` Environment):
   workflow warns and falls back to running `ssh-keyscan` on the runner, which
   is trust-on-first-use repeated on every deploy — it blesses whatever host
   answers and makes `StrictHostKeyChecking=yes` decorative. Shared by both the
-  production and staging workflows.
+  production and dev-tier workflows.
 
 None of these are committed anywhere in this repo — configure them in the
 GitHub repo/environment settings before the workflow can run.
 
-Staging (`deploy-vps-staging.yml`) reuses the same `VPS_HOST`/`VPS_SSH_USER`/
+The dev tier (`deploy-vps-staging.yml`) reuses the same `VPS_HOST`/`VPS_SSH_USER`/
 `VPS_SSH_PORT`/`VPS_SSH_KEY` secrets (same VPS) plus its own `staging`
 Environment variables:
 
-- `VPS_STAGING_DEPLOY_PATH` — the **separate** staging checkout directory
+- `VPS_STAGING_DEPLOY_PATH` — the **separate** dev-tier checkout directory
   from step 1 above (not `VPS_DEPLOY_PATH`)
 - `VPS_STAGING_BASE_URL` — base URL to smoke-check (e.g.
-  `https://staging.your-domain`); skipped with a warning if unset
+  `https://dev.diiii.xyz`); skipped with a warning if unset
 
-Image tags are namespaced per environment — staging pushes
+Image tags are namespaced per environment — the dev tier pushes
 `dii-*:staging-<sha>` (plus the moving `:staging`), production pushes
 `dii-*:prod-<sha>` (plus `:latest`). They used to share a plain `:<sha>` tag,
 which the dev→main promote overwrote with a differently-built image: the
@@ -222,7 +229,7 @@ package permissions as of this writing) was used to `docker login ghcr.io`
 as `root` on the VPS, once. This persists in `/root/.docker/config.json`
 (unencrypted, per Docker's own credential-store warning — acceptable here
 since it's `read:packages`-only, not a repo/account-wide token) and covers
-both the production and staging deploy paths, since they share one Docker
+both the production and dev-tier deploy paths, since they share one Docker
 daemon on the box. Nothing in this repo or in CI holds that token; it
 lives only on the VPS. To rotate it: generate a new classic PAT the same
 way, `docker login ghcr.io -u dob-0 --password-stdin` on the VPS with it,
@@ -332,7 +339,7 @@ port only** — every host-facing port stays the same:
   to `http://client:8080`.
 - `Caddyfile`: `reverse_proxy client:8080` (production's Caddy talks to the
   client over the internal Docker network, so it has to know the new port —
-  staging is unaffected, it's reached via `host.docker.internal:$STAGING_PORT`,
+  the dev tier is unaffected, it's reached via `host.docker.internal:$STAGING_PORT`,
   a host-published port that never changed).
 - `nginx.conf`: `listen 8080;` instead of `listen 80;`.
 
@@ -344,14 +351,15 @@ specific image was **not** independently verified before shipping (no local
 Docker daemon available to test). If it turns out not to, the healthcheck
 fails loudly (container never reports healthy, `depends_on: service_healthy`
 blocks `caddy`/`tunnel` from starting) rather than silently breaking — watch
-the very first staging deploy after this change lands, the same way the
+the very first dev-tier deploy after this change lands, the same way the
 healthcheck incident was caught.
 
 ## Follow-Ups
 
-- Both production and staging have been exercised for real (2026-07-16):
+- Both production and the dev tier have been exercised for real (2026-07-16):
   GitHub secrets/variables set, real deploy runs verified end-to-end for
-  each. `staging.di-studio.xyz` is live at `/opt/di.iiii-staging`.
+  each. The dev tier is live at `/opt/di.iiii-staging`, served as
+  `dev.diiii.xyz` (and the legacy `staging.di-studio.xyz`).
 - Consider adding a rollback note (`IMAGE_TAG=<previous-sha>` + re-run
   `pull && up -d`) — not yet needed in practice, but worth having on hand.
 - No `release.json`/git-commit stamp in the build yet, so `/api/health`

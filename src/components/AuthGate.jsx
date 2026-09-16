@@ -2,12 +2,15 @@ import { Box, Button, CircularProgress, Divider, Link, Stack, TextField, ThemePr
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { diFontTheme } from '../styles/muiTheme.js'
 import useAuthSession from '../hooks/useAuthSession.js'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import useSpacePublicFlag from '../hooks/useSpacePublicFlag.js'
 import { getApiAuthProviders, getOAuthUrl, hasServerApi } from '../services/apiClient.js'
 import { redeemSpaceInvite } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { startOAuth } from '../utils/oauthNavigate.js'
-import { buildAppSpacePath, buildWikiPath } from '../utils/spaceRouting.js'
+import { carriedSandboxPath } from '../utils/carriedSandbox.js'
+import { isSpaceInSessionScope } from '../utils/sessionScope.js'
+import { buildAppSpacePath, buildWikiPath, isReservedAppSegment } from '../utils/spaceRouting.js'
 import { telegramSignInUrl } from '../utils/telegramSignIn.js'
 import PasswordSignIn from './PasswordSignIn.jsx'
 import AccountButton from './AccountButton.jsx'
@@ -149,6 +152,34 @@ const ProviderSignInButtons = ({ providers, refresh }) => {
 // branch and the local install's not-found branch, so the two can never
 // drift apart in wording or doors; `sessionControls` is off on a local
 // install, where there is nothing to sign in to.
+//
+// A reserved word (`spaces`, `projects`, …) can never itself be a space —
+// each one already names a working address (RESERVED_APP_SEGMENTS) — so when
+// `requiredSpaceId` IS one, the routing that landed here fell through the
+// generic /{space}/{slug} parser with the reserved word read as the space.
+// "Nothing lives at spaces" would then be telling a visitor the platform
+// lied about its own front door, and hide the part that actually went
+// missing: /spaces/nope names no address because "nope" isn't one, not
+// because "spaces" isn't. `missingAddressFromUrl` reads the real bar for
+// that case, the same direct way readInviteTokenFromUrl does a few lines up
+// — nothing upstream resolves a reserved word's own tail any further than
+// this.
+//
+// A visitor cannot sign into a space that never existed — no account would
+// make "nope" exist — so the sign-in door only shows when the space is real
+// and merely out of reach (`exists`), never on the not-found card.
+const missingAddressFromUrl = (requiredSpaceId) => {
+    if (typeof window === 'undefined' || !isReservedAppSegment(requiredSpaceId)) return requiredSpaceId
+    try {
+        const segments = window.location.pathname.replace(/^\/+|\/+$/g, '').split('/')
+        return segments[0]?.toLowerCase() === requiredSpaceId.toLowerCase() && segments[1]
+            ? segments[1]
+            : requiredSpaceId
+    } catch {
+        return requiredSpaceId
+    }
+}
+
 const ClosedDoorCard = ({
     requiredSpaceId,
     exists,
@@ -158,7 +189,12 @@ const ClosedDoorCard = ({
     providers,
     refresh,
     sessionControls = true
-}) => (
+}) => {
+    // Only the "nothing lives here" branch is a 404 — the other card is a real
+    // space a session merely isn't scoped to, which is not the same thing and
+    // must not say "Not found" over content that exists.
+    useDocumentTitle(!exists ? 'Not found — di.iiii' : null)
+    return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
         <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
             <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
@@ -171,8 +207,8 @@ const ClosedDoorCard = ({
                 </Typography>
             ) : (
                 <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
-                    Nothing lives at &ldquo;{requiredSpaceId}&rdquo; — there is no space with that
-                    address. Check the spelling, or step through one of your own doors.
+                    Nothing lives at &ldquo;{missingAddressFromUrl(requiredSpaceId)}&rdquo; — there is no
+                    space with that address. Check the spelling, or step through one of your own doors.
                 </Typography>
             )}
             {inviteStatus === 'failed' && (
@@ -213,11 +249,12 @@ const ClosedDoorCard = ({
                     Your private sandbox
                 </Button>
             )}
-            {sessionControls && <ProviderSignInButtons providers={providers} refresh={refresh} />}
+            {sessionControls && exists && <ProviderSignInButtons providers={providers} refresh={refresh} />}
             {sessionControls && <AccountButton authState={authSession} onLogout={refresh} />}
         </Stack>
     </Box>
-)
+    )
+}
 
 const stripInviteFromUrl = () => {
     try {
@@ -257,12 +294,12 @@ function AuthGateInner({
 
     // Out-of-scope sessions get sent to the space's public live view instead of
     // a dead end — but only when the space is actually public (flag fails closed).
-    const sessionSpaces = authSession.spaces
+    // Scope is the server's rule, read the server's way — the cookie list plus
+    // the open space and the session's own sandbox (see sessionScope.js).
     const outOfScope = Boolean(
         requiredSpaceId
         && authenticated
-        && Array.isArray(sessionSpaces)
-        && !sessionSpaces.includes(requiredSpaceId)
+        && !isSpaceInSessionScope(authSession, requiredSpaceId)
     )
     // A local install (`di up`) has no scope to check, so the gate used to
     // wave every address through — and one that names no space (/make, a
@@ -274,6 +311,11 @@ function AuthGateInner({
     const localLookupId = (hasServerApi && !loading && !error && !requireAuth && requiredSpaceId) ? requiredSpaceId : null
     const { isPublic: liveIsPublic, exists: liveExists, loading: liveLoading } = useSpacePublicFlag(outOfScope ? requiredSpaceId : localLookupId)
     const invitePending = inviteStatus === 'pending'
+    // Signed in from a guest sandbox page: the sandbox moved onto the account,
+    // so the old address is gone — follow the work instead of saying so.
+    const carriedTo = outOfScope && !liveLoading && !liveExists && typeof window !== 'undefined'
+        ? carriedSandboxPath(authSession, requiredSpaceId, window.location)
+        : null
 
     useEffect(() => {
         getApiAuthProviders()
@@ -302,6 +344,10 @@ function AuthGateInner({
             })
         return () => { cancelled = true }
     }, [inviteToken, inviteStatus, authenticated, outOfScope, refresh])
+
+    useEffect(() => {
+        if (carriedTo) appNavigate(carriedTo, { replace: true })
+    }, [carriedTo])
 
     const explainOutOfScope = outOfScope && liveIsPublic && !invitePending
         && outOfScopeBehavior === OUT_OF_SCOPE_EXPLAIN
@@ -380,9 +426,7 @@ function AuthGateInner({
     }
 
     if (authenticated) {
-        const { spaces } = authSession
-        const inScope = !requiredSpaceId || !Array.isArray(spaces) || spaces.includes(requiredSpaceId)
-        if (!inScope) {
+        if (outOfScope) {
             // Editor lanes stop here and say why. The redirect below is right for
             // a visitor following a shared link, but on an editor it fires as a
             // replace() before anything paints — the surface simply becomes a
@@ -415,7 +459,7 @@ function AuthGateInner({
                     </Box>
                 )
             }
-            if (invitePending || liveLoading || liveIsPublic) {
+            if (invitePending || liveLoading || liveIsPublic || carriedTo) {
                 return <LoadingScreen label="Loading" detail="Checking access to this space" />
             }
             return (
@@ -569,6 +613,7 @@ function SignInSurfaceInner() {
     const authSession = useAuthSession()
     const { refresh, loading, type } = authSession
     const [providers, setProviders] = useState(null)
+    useDocumentTitle('Sign in — di.iiii')
 
     useEffect(() => {
         getApiAuthProviders()

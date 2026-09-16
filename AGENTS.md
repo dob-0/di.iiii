@@ -5,6 +5,10 @@ Full process contract: **[docs/ai/agent-operating-contract.md](docs/ai/agent-ope
 
 ## Start Here
 
+- **Step 0 — [CONTRIBUTING.md](CONTRIBUTING.md)**: two lines of work here, code and
+  space content, each with its own copies (git; local/dev.diiii.xyz/diiii.xyz
+  databases). Run `npm run start-check` before starting and before pushing — it tells
+  you LATEST or NOT LATEST on both lines and names the pull command when you're not.
 - **[CURRENT.md](CURRENT.md)** — read FIRST, every session. ≤50 lines: what works, what's broken, open calls, and a pointer to the known-fixes table ([docs/ai/known-fixes.md](docs/ai/known-fixes.md)) that prevents re-investigating solved problems. No commit SHAs or branch positions — those are derived; run `npm run state`.
 - **[PROGRESS.md](PROGRESS.md)** — full session history. Read only if CURRENT.md isn't enough. Update before stopping.
 - **[MANIFESTO.md](MANIFESTO.md)** — vision and non-negotiables. Read before any architectural/product decision.
@@ -86,7 +90,7 @@ what a person sees or does must also be verified in a real browser, on desktop
 AND on a phone, by looking at it:
 
 ```bash
-npm run verify:surfaces -- --base https://staging.di-studio.xyz   # desktop + 5 devices
+npm run verify:surfaces -- --base https://dev.diiii.xyz          # desktop + 5 devices
 npm run verify:surfaces:mobile -- --base https://di-studio.xyz    # phones/tablet only
 ```
 
@@ -97,8 +101,8 @@ unit test. Full standard, and the techniques that do NOT work here:
 
 ## Release & Fork Sync
 
-- Two lanes, four names: `dev` branch → staging.di-studio.xyz (rehearsal) · `main` branch → di-studio.xyz (live). Staging/prod are deploy targets, not branches.
-- Branch flow `dev -> main`, promote only after staging verify. Don't start routine work on `main`; use `main` directly only for emergency hotfixes.
+- Three tiers: local · dev · prod. `dev` branch → the dev tier, dev.diiii.xyz (rehearsal) · `main` branch → prod, diiii.xyz (live). The tier and the branch share the name `dev`; say "the dev tier" when you mean the server. Identifiers that still say `staging` (workflow, compose, env vars) are deliberate — see [docs/ai/vocabulary.md](docs/ai/vocabulary.md).
+- Branch flow `dev -> main`, promote only after the dev tier is verified. Don't start routine work on `main`; use `main` directly only for emergency hotfixes.
 - Fork work lands on a task branch (`feat/…`, `fix/…`, `chore/…`), never the fork's `main`/`dev`. Pushing a task branch triggers `.github/workflows/auto-pr.yml`, which opens/updates a PR to `dob-0/di.iiii`'s `dev`. A push to the fork's `main`/`dev` does NOT notify upstream. A fresh fork must enable Actions once (GitHub disables fork workflows by default) and set an `UPSTREAM_PR_TOKEN` secret before auto-PR can run.
 - Upstream (dob-side) agents: review incoming fork PRs against `dev` (`gh pr checkout <n>`, validate, merge to `dev`); promote `dev -> main` only when asked.
 - Full contract: [docs/ai/parallel-agents.md](docs/ai/parallel-agents.md).

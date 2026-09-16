@@ -110,7 +110,7 @@ export const getStudioLocationState = (
     // mistaken for a space called "spaces" or a project called "projects". Both
     // words are reserved (RESERVED_APP_SEGMENTS here, RESERVED_SPACE_SLUGS and
     // PROJECT_RESERVED_SLUGS on the server), and neither was in use on any tier
-    // when they were reserved — checked against production and staging first.
+    // when they were reserved — checked against production and the dev tier first.
     if (segments[0] === SPACES_SEGMENT && segments.length === 1) {
         return { isStudio: true, page: STUDIO_PAGE_SPACES, projectId: null, spaceId: null }
     }
