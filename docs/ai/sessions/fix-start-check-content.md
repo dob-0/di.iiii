@@ -37,3 +37,7 @@ Found by the spaces audit (`docs/research/2026-09-16-spaces-audit.md`, PR from `
     pulling or pushing · 1 local ahead · 8 local-only · 4 deleted here on purpose`, 12.3 s.
     The two "changed on both" come from the stale 09-06 baseline; after a real
     `--rebuild-baseline` they fall into `differs`.
+  - after merging dev's tier rename (#475: TIERS/baseline key `staging` → `dev`):
+    `LATEST · 15 same · 8 differs — look before pulling or pushing · 1 local ahead ·
+    8 local-only · 4 deleted here on purpose`, 10.2 s. The owner's 09-06 baseline is
+    keyed `staging`, so it is no longer read; `--rebuild-baseline` writes under `dev`.
