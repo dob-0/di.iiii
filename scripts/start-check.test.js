@@ -11,7 +11,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 // "dev has newer work" here.
 vi.mock('./repo-state.mjs', () => ({ getState: vi.fn() }))
 vi.mock('./tier-sync.mjs', () => ({
-  TIERS: { local: { base: 'http://localhost:4000/serverXR', tokenKey: 'API_TOKEN' }, staging: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' } },
+  TIERS: { local: { base: 'http://localhost:4000/serverXR', tokenKey: 'API_TOKEN' }, dev: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' } },
   localBase: (env) => env?.LOCAL_API_URL ? `${env.LOCAL_API_URL.replace(/\/+$/, '')}/serverXR` : 'http://localhost:4000/serverXR',
   listSpaces: vi.fn(),
   listProjectMetas: vi.fn(),
@@ -192,7 +192,7 @@ describe('checkSpaces', () => {
     listSpaces.mockResolvedValue(['wcc'])
     listProjectMetas.mockImplementation(async (tier) =>
       tier.base.includes('dev.diiii') ? [{ id: 'home', documentVersion: 4, updatedAt: 200 }] : [{ id: 'home', documentVersion: 3, updatedAt: 100 }])
-    readBaseline.mockReturnValue({ staging: { 'wcc/home': 'base' } })
+    readBaseline.mockReturnValue({ dev: { 'wcc/home': 'base' } })
     call.mockImplementation(async (tier) => tier.base.includes('dev.diiii') ? okDoc('new') : okDoc('base'))
     const result = await checkSpaces({ spaceFilter: 'wcc' })
     expect(result.notLatest).toBe(true)

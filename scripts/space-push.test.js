@@ -50,7 +50,6 @@ describe('space-push production guard', () => {
         expect(isProductionTarget('https://www.di-studio.xyz/serverXR')).toBe(true)
         expect(isProductionTarget('https://diiii.xyz/serverXR')).toBe(true)
         expect(isProductionTarget('https://dev.diiii.xyz/serverXR')).toBe(false)
-        expect(isProductionTarget('https://staging.di-studio.xyz/serverXR')).toBe(false)
         expect(isProductionTarget('http://localhost:4000/serverXR')).toBe(false)
         expect(isProductionTarget('not-a-url')).toBe(false)
     })

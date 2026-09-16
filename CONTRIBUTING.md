@@ -10,11 +10,9 @@ di.iiii has two lines of work, and they live in different places:
 Almost every real task touches both at once: you change some code AND some content
 while testing it. Treat them as two things you sync separately, not one.
 
-**The addresses today:** `dev.diiii.xyz` is the settled name for the rehearsal tier;
-`staging.di-studio.xyz` is the old name — it still answers, and some scripts in this
-repo (`tier-sync.mjs`, `AGENTS.md`'s own validation commands) still say `staging` or
-`staging.di-studio.xyz` because renaming every reference is its own piece of work, not
-done yet. `diiii.xyz` is the only host for anything you write down as a new link;
+**The addresses today:** `dev.diiii.xyz` is the rehearsal tier, and its only address —
+the old name `staging.di-studio.xyz` was switched off on 2026-09-16, and the scripts say
+`dev` (`--tier dev`). `diiii.xyz` is the only host for anything you write down as a new link;
 `di-studio.xyz` is the old production name and still answers the same way.
 
 ## The start check

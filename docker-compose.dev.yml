@@ -1,6 +1,4 @@
-# The dev tier (dev.diiii.xyz; identifier still `staging` — this file name, the
-# `dii-staging` project, STAGING_* vars and the :staging image tag all stay)
-# override — same VPS as production, deliberately small footprint.
+# The dev tier (dev.diiii.xyz) override — same VPS as production, deliberately small footprint.
 #
 # Intended usage: a SEPARATE checkout directory on the VPS from the
 # production one (see docs/deploy/VPS_DOCKER_DEPLOY.md), each with its own
@@ -9,14 +7,14 @@
 # directory) reaches this stack via the host-published client port --
 # see the second site block in Caddyfile.
 #
-# Usage on the VPS, from the dev-tier checkout directory (/opt/di.iiii-staging):
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.staging.yml pull
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.staging.yml up -d
+# Usage on the VPS, from the dev-tier checkout directory (/opt/di.iiii-dev):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.dev.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.dev.yml up -d
 #
 # Do NOT pass --profile https or --profile tunnel here -- this project has
 # no Caddy/tunnel service of its own; production's Caddy fronts it instead.
 
-name: dii-staging
+name: dii-dev
 
 services:
   server:
@@ -25,49 +23,48 @@ services:
     # IMAGE_TAG=<sha> inside its SSH session only -- it never writes it to this
     # checkout's .env. So any manual compose op here (the very usage this
     # file's header documents: reboot recovery, restart after an OOM) pulled
-    # production code and ran it at the dev tier (then staging.di-studio.xyz,
-    # now dev.diiii.xyz), silently breaking the local->dev->prod verify
-    # contract. `:staging` is what the dev-tier workflow already pushes.
-    image: ghcr.io/${REGISTRY_USER:-youruser}/dii-server:${IMAGE_TAG:-staging}
+    # production code and ran it at the dev tier (dev.diiii.xyz), silently breaking the local->dev->prod verify
+    # contract. `:dev` is what the dev-tier workflow already pushes.
+    image: ghcr.io/${REGISTRY_USER:-youruser}/dii-server:${IMAGE_TAG:-dev}
     environment:
       # Deliberately separate from production's secrets -- same signing
       # key across environments would let a dev-tier session cookie be
       # replayed against production if CORS/cookie scoping ever slipped.
-      REQUIRE_AUTH: ${STAGING_REQUIRE_AUTH:-true}
-      ADMIN_API_TOKEN: ${STAGING_ADMIN_API_TOKEN:-}
-      AUTH_SESSION_SECRET: ${STAGING_AUTH_SESSION_SECRET:?set STAGING_AUTH_SESSION_SECRET in the staging .env}
-      AUTH_SESSION_COOKIE_SECURE: ${STAGING_AUTH_SESSION_COOKIE_SECURE:-true}
-      CORS_ORIGINS: ${STAGING_CORS_ORIGINS:-}
-      GOOGLE_API_KEY: ${STAGING_GOOGLE_API_KEY:-}
-      GOOGLE_CLIENT_ID: ${STAGING_GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${STAGING_GOOGLE_CLIENT_SECRET:-}
-      OAUTH_CALLBACK_BASE_URL: ${STAGING_OAUTH_CALLBACK_BASE_URL:-}
-      GITHUB_CLIENT_ID: ${STAGING_GITHUB_CLIENT_ID:-}
-      GITHUB_CLIENT_SECRET: ${STAGING_GITHUB_CLIENT_SECRET:-}
+      REQUIRE_AUTH: ${DEV_REQUIRE_AUTH:-true}
+      ADMIN_API_TOKEN: ${DEV_ADMIN_API_TOKEN:-}
+      AUTH_SESSION_SECRET: ${DEV_AUTH_SESSION_SECRET:?set DEV_AUTH_SESSION_SECRET in the dev .env}
+      AUTH_SESSION_COOKIE_SECURE: ${DEV_AUTH_SESSION_COOKIE_SECURE:-true}
+      CORS_ORIGINS: ${DEV_CORS_ORIGINS:-}
+      GOOGLE_API_KEY: ${DEV_GOOGLE_API_KEY:-}
+      GOOGLE_CLIENT_ID: ${DEV_GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${DEV_GOOGLE_CLIENT_SECRET:-}
+      OAUTH_CALLBACK_BASE_URL: ${DEV_OAUTH_CALLBACK_BASE_URL:-}
+      GITHUB_CLIENT_ID: ${DEV_GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${DEV_GITHUB_CLIENT_SECRET:-}
       # Sign in with Telegram — a DIFFERENT bot and secret than production,
       # or a link minted here would sign someone in on the wrong tier.
-      TELEGRAM_LOGIN_SECRET: ${STAGING_TELEGRAM_LOGIN_SECRET:-}
-      TELEGRAM_BOT_USERNAME: ${STAGING_TELEGRAM_BOT_USERNAME:-}
+      TELEGRAM_LOGIN_SECRET: ${DEV_TELEGRAM_LOGIN_SECRET:-}
+      TELEGRAM_BOT_USERNAME: ${DEV_TELEGRAM_BOT_USERNAME:-}
       # Same App, separate installation/webhook secret per environment -- the
       # webhook only ever reaches prod, so the dev tier uses these for the App JWT
       # (Disconnect/Connect forces a sync there). See docker-compose.yml.
-      GITHUB_APP_ID: ${STAGING_GITHUB_APP_ID:-}
-      GITHUB_APP_PRIVATE_KEY_B64: ${STAGING_GITHUB_APP_PRIVATE_KEY_B64:-}
-      GITHUB_APP_WEBHOOK_SECRET: ${STAGING_GITHUB_APP_WEBHOOK_SECRET:-}
-      MESH_ROOM_SECRET: ${STAGING_MESH_ROOM_SECRET:-}
+      GITHUB_APP_ID: ${DEV_GITHUB_APP_ID:-}
+      GITHUB_APP_PRIVATE_KEY_B64: ${DEV_GITHUB_APP_PRIVATE_KEY_B64:-}
+      GITHUB_APP_WEBHOOK_SECRET: ${DEV_GITHUB_APP_WEBHOOK_SECRET:-}
+      MESH_ROOM_SECRET: ${DEV_MESH_ROOM_SECRET:-}
       # The dev tier mints links for a DIFFERENT bot with a DIFFERENT secret, or a
       # token minted here would open a crossing on production.
-      TUNNEL_SHARED_SECRET: ${STAGING_TUNNEL_SHARED_SECRET:-}
-      TUNNEL_BOT_USERNAME: ${STAGING_TUNNEL_BOT_USERNAME:-}
-      MESH_PROTECTED_NODE_PREFIXES: ${STAGING_MESH_PROTECTED_NODE_PREFIXES:-}
+      TUNNEL_SHARED_SECRET: ${DEV_TUNNEL_SHARED_SECRET:-}
+      TUNNEL_BOT_USERNAME: ${DEV_TUNNEL_BOT_USERNAME:-}
+      MESH_PROTECTED_NODE_PREFIXES: ${DEV_MESH_PROTECTED_NODE_PREFIXES:-}
       # room history switch-on, dev tier (allow-list — see production file)
-      MESH_HISTORY_CHANNELS: ${STAGING_MESH_HISTORY_CHANNELS:-}
+      MESH_HISTORY_CHANNELS: ${DEV_MESH_HISTORY_CHANNELS:-}
       # approvalGate.js — see serverXR/.env.example. Same secret as di-bo's
       # APPROVAL_SHARED_SECRET; unset here (default false/empty) leaves every
       # gated route behaving exactly as before this feature existed.
-      APPROVAL_GATE_ENABLED: ${STAGING_APPROVAL_GATE_ENABLED:-false}
-      APPROVAL_BOT_URL: ${STAGING_APPROVAL_BOT_URL:-}
-      APPROVAL_SHARED_SECRET: ${STAGING_APPROVAL_SHARED_SECRET:-}
+      APPROVAL_GATE_ENABLED: ${DEV_APPROVAL_GATE_ENABLED:-false}
+      APPROVAL_BOT_URL: ${DEV_APPROVAL_BOT_URL:-}
+      APPROVAL_SHARED_SECRET: ${DEV_APPROVAL_SHARED_SECRET:-}
     # Small ceiling: the dev tier only ever serves one person clicking through at
     # a time, it must not be able to meaningfully compete with production
     # for the VPS's 2 vCPU / 3.7GB (confirmed via `nproc`/`free -h` on the
@@ -80,17 +77,17 @@ services:
 
   client:
     # Same reason as the server image above -- never fall back to prod's tag.
-    image: ghcr.io/${REGISTRY_USER:-youruser}/dii-client:${IMAGE_TAG:-staging}
+    image: ghcr.io/${REGISTRY_USER:-youruser}/dii-client:${IMAGE_TAG:-dev}
     # Published to the host-gateway address only, never 0.0.0.0. The base file
     # publishes `${PORT:-80}:8080` on every interface, and nothing here used to
     # narrow it: http://<vps-ip>:8081/ served the whole dev-tier SPA in cleartext,
     # /serverXR/api/health included -- an unauthenticated host fingerprint (node
     # version, kernel, cpu count, uptime), verified answering live 2026-08-05.
     # Production's Caddy still reaches this stack, because it proxies to
-    # host.docker.internal:${STAGING_PORT} and that name resolves to the
+    # host.docker.internal:${DEV_PORT} and that name resolves to the
     # host-gateway address (docker0, 172.17.0.1 on this VPS -- confirmed with
     # `getent hosts host.docker.internal` inside dii-caddy-1). Override
-    # STAGING_BIND_ADDR in the dev tier's .env if this host's docker0 differs; a
+    # DEV_BIND_ADDR in the dev tier's .env if this host's docker0 differs; a
     # wrong value fails loudly at bind time rather than re-exposing the port.
     # `!override` is required: Compose concatenates list-type fields across -f
     # files, so a plain `ports:` here would ADD a binding instead of replacing
@@ -99,6 +96,6 @@ services:
     # `docker compose config` on the VPS, which rendered the client with no
     # ports at all.)
     ports: !override
-      - "${STAGING_BIND_ADDR:-172.17.0.1}:${PORT:-8081}:8080"
+      - "${DEV_BIND_ADDR:-172.17.0.1}:${PORT:-8081}:8080"
     cpus: '0.1'
     mem_limit: 64m

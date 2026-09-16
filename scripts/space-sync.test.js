@@ -100,23 +100,20 @@ describe('space-sync engine', () => {
     it('maps a tier name to its url so nobody pastes one from memory', () => {
         const tiers = {
             prod: { url: 'https://di-studio.xyz/serverXR' },
-            staging: { url: 'https://dev.diiii.xyz/serverXR' },
+            dev: { url: 'https://dev.diiii.xyz/serverXR' },
         }
-        expect(tierOf('https://dev.diiii.xyz/serverXR', tiers)).toBe('staging')
+        expect(tierOf('https://dev.diiii.xyz/serverXR', tiers)).toBe('dev')
         expect(tierOf('https://di-studio.xyz/serverXR', tiers)).toBe('prod')
         // an unknown host must NOT silently answer "prod"
         expect(tierOf('http://localhost:4000/serverXR', tiers)).toBe('localhost:4000')
         expect(parseArgs(['--all']).all).toBe(true)
     })
 
-    it('accepts --tier dev for the dev tier, still keyed staging in manifests', () => {
-        const tiers = { prod: { url: 'https://di-studio.xyz/serverXR' }, staging: { url: 'https://dev.diiii.xyz/serverXR' } }
-        expect(tierKey('dev', tiers)).toBe('staging')
-        expect(tierKey('staging', tiers)).toBe('staging')
-        expect(tierKey('prod', tiers)).toBe('prod')
-        // a manifest that declares a real `dev` key is taken at its word
-        expect(tierKey('dev', { ...tiers, dev: { url: 'http://localhost:4000/serverXR' } })).toBe('dev')
-        expect(tierKey('nope', tiers)).toBe('nope')
+    it('keys the dev tier dev and refuses --tier staging', () => {
+        expect(tierKey('dev')).toBe('dev')
+        expect(tierKey('prod')).toBe('prod')
+        expect(tierKey('nope')).toBe('nope')
+        expect(() => tierKey('staging')).toThrow('"staging" is now "dev"')
     })
 
     it('treats an empty page list as a space-only declaration, not an error', async () => {
@@ -189,7 +186,7 @@ describe('space-sync engine', () => {
             // three hops away.
             expect(Number(decl.minEngine || 0), file).toBe(ENGINE_VERSION)
             // Both deploy tiers, or the audit compares against nothing.
-            expect(Object.keys(decl.tiers || {}), file).toEqual(expect.arrayContaining(['prod', 'staging']))
+            expect(Object.keys(decl.tiers || {}), file).toEqual(expect.arrayContaining(['prod', 'dev']))
             // The dev box is shown and never enforced — it holds 70 undeclared
             // projects and failing on it would make the audit useless.
             expect(decl.tiers.local?.governed, file).toBe(false)

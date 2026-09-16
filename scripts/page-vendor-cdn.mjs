@@ -39,8 +39,7 @@
  *
  * Options:
  *   --tier <local|dev|prod>
- *                            default local. `dev` is dev.diiii.xyz (keyed
- *                            `staging` below and in --originals; `staging` still works). Production data moves on the owner's
+ *                            default local. `dev` is dev.diiii.xyz. Production data moves on the owner's
  *                            word, so prod is asked for twice: the tier AND
  *                            --allow-production. A dry-run against prod needs the
  *                            flag too — reading is free, but the printed diff is
@@ -88,7 +87,7 @@ const TIMEOUT_MS = 30000
 // because a page rewritten on prod is what a visitor sees a second later.
 export const TIERS = {
     local: { base: 'http://localhost:4000/serverXR', tokenKey: 'API_TOKEN' },
-    staging: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
+    dev: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
     prod: { base: 'https://di-studio.xyz/serverXR', tokenKey: 'PROD_API_TOKEN', production: true }
 }
 

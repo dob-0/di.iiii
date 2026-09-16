@@ -12,14 +12,13 @@ term expires. Do not delete it as part of adopting this path.
 
 - [.github/workflows/deploy-vps.yml](../../.github/workflows/deploy-vps.yml)
   — triggers on push to `main` (production).
-- [.github/workflows/deploy-vps-staging.yml](../../.github/workflows/deploy-vps-staging.yml)
+- [.github/workflows/deploy-vps-dev.yml](../../.github/workflows/deploy-vps-dev.yml)
   — triggers on push to `dev` and deploys the dev tier, `https://dev.diiii.xyz`
-  (legacy name `staging.di-studio.xyz`, same server; the identifier is still
-  `staging` in file, environment, compose-project and `STAGING_*` var names).
+  (GitHub environment `dev`, compose project `dii-dev`, `DEV_*` vars).
   Decided against a second VPS: at
   2 vCPU/4GB (see `docs/ai/roles/infrastructure-engineer.md`), the dev tier runs
   as a separate, deliberately small Compose project
-  (`docker-compose.staging.yml`, 0.2 CPU/384M server + 0.1 CPU/64M client —
+  (`docker-compose.dev.yml`, 0.2 CPU/384M server + 0.1 CPU/64M client —
   small enough that it can't meaningfully starve production's 0.9 CPU/1G
   server + 0.3 CPU/128M client + 0.3 CPU/128M Caddy, all five summing to
   1.8 vCPU against the host's real 2 — enforced via top-level `cpus`/
@@ -28,21 +27,21 @@ term expires. Do not delete it as part of adopting this path.
   on the **same** VPS, in a **separate checkout directory** with its own
   `.env` so it never inherits production's `COMPOSE_PROFILES=https` or
   secrets. Production's Caddy (the only Caddy instance; the dev tier has none)
-  reverse-proxies `STAGING_DOMAIN` to the dev tier's host-published client port
+  reverse-proxies `DEV_DOMAIN` to the dev tier's host-published client port
   — see the second site block in `Caddyfile`.
 
 ### One-time VPS setup for the dev tier
 
 1. Clone this repo (or copy the compose files + `Caddyfile`) into a second
    directory, sibling to the production checkout, e.g.
-   `/opt/dii` (prod) and `/opt/dii-staging` (the dev tier). On the live VPS
-   these are `/opt/di.iiii` and `/opt/di.iiii-staging`.
-2. In `/opt/dii-staging/.env`: set `PORT` to a free host port (e.g. `8081`)
-   and fill in the `STAGING_*` vars documented in `.env.example`
-   (`STAGING_AUTH_SESSION_SECRET` especially — generate a fresh one, do not
+   `/opt/dii` (prod) and `/opt/dii-dev` (the dev tier). On the live VPS
+   these are `/opt/di.iiii` and `/opt/di.iiii-dev`.
+2. In `/opt/dii-dev/.env`: set `PORT` to a free host port (e.g. `8081`)
+   and fill in the `DEV_*` vars documented in `.env.example`
+   (`DEV_AUTH_SESSION_SECRET` especially — generate a fresh one, do not
    reuse production's).
 
-   **`STAGING_BIND_ADDR`** — optional, defaults to `172.17.0.1`. The dev tier's
+   **`DEV_BIND_ADDR`** — optional, defaults to `172.17.0.1`. The dev tier's
    client port is published to *this address only*, never `0.0.0.0`. It must be
    the address `host.docker.internal` resolves to from inside production's
    `caddy` container, because that is how Caddy reaches the dev tier. On this VPS
@@ -56,13 +55,13 @@ term expires. Do not delete it as part of adopting this path.
    Until 2026-08-05 there was no bind address and staging answered the public
    internet in cleartext on `http://<vps-ip>:8081/` — the whole SPA plus
    `/serverXR/api/health`, which returns an unauthenticated host fingerprint.
-   A wrong `STAGING_BIND_ADDR` fails at container start rather than silently
+   A wrong `DEV_BIND_ADDR` fails at container start rather than silently
    re-exposing the port, so it is safe to get wrong; it is not safe to omit
    the override entirely (Compose *concatenates* `ports:` across `-f` files, so
-   the mapping in `docker-compose.staging.yml` uses `!override` — a plain
+   the mapping in `docker-compose.dev.yml` uses `!override` — a plain
    `ports:` there would ADD a binding and leave the wide one live).
 
-   **`MESH_ROOM_SECRET`** (dev tier: `STAGING_MESH_ROOM_SECRET`) — optional,
+   **`MESH_ROOM_SECRET`** (dev tier: `DEV_MESH_ROOM_SECRET`) — optional,
    unset by default. The live co-presence relay at `/serverXR/mesh` is
    deliberately **open**: visitors' browsers are mesh clients (the public
    `br_id_ge` `index.html`/`field.html` embed the relay URL), so a blanket
@@ -92,12 +91,10 @@ term expires. Do not delete it as part of adopting this path.
    ```
    An ordinary visitor id on the same URL must still return `101`. Never probe
    this over HTTP/2 — that reports false 404s for websocket paths.
-3. In `/opt/dii` (production)'s `.env`: set `STAGING_DOMAIN` (a subdomain
+3. In `/opt/dii` (production)'s `.env`: set `DEV_DOMAIN` (a subdomain
    DNS already points at this same host, e.g. `dev.your-domain`; it takes a
-   comma-separated list — the live VPS has
-   `STAGING_DOMAIN=staging.di-studio.xyz, dev.diiii.xyz`, keeping the legacy
-   name alive for links already handed out) and
-   `STAGING_PORT` to match step 2's port. Restart production's `caddy`
+   comma-separated list — the live VPS has `DEV_DOMAIN=dev.diiii.xyz`) and
+   `DEV_PORT` to match step 2's port. Restart production's `caddy`
    service (`docker compose --profile https up -d caddy`) to pick up the
    new site block.
 4. Configure the GitHub secrets/variables below, then push to `dev` or run
@@ -158,7 +155,7 @@ every subdomain, including ones added later).
      change doesn't trigger a container recreate on its own.
 
    (The dev tier's workflow does the same three steps against
-   `docker-compose.staging.yml` instead of `.prod.yml`/`caddy-hardened.yml`,
+   `docker-compose.dev.yml` instead of `.prod.yml`/`caddy-hardened.yml`,
    and has no Caddy of its own to reload.)
 3. Runs a smoke check against `/serverXR/api/health` (and the other routes in
    `scripts/smoke-check.mjs`) using `--base-url ${VPS_BASE_URL}`.
@@ -194,17 +191,17 @@ Variables (repo or `production` Environment):
 None of these are committed anywhere in this repo — configure them in the
 GitHub repo/environment settings before the workflow can run.
 
-The dev tier (`deploy-vps-staging.yml`) reuses the same `VPS_HOST`/`VPS_SSH_USER`/
-`VPS_SSH_PORT`/`VPS_SSH_KEY` secrets (same VPS) plus its own `staging`
+The dev tier (`deploy-vps-dev.yml`) reuses the same `VPS_HOST`/`VPS_SSH_USER`/
+`VPS_SSH_PORT`/`VPS_SSH_KEY` secrets (same VPS) plus its own `dev`
 Environment variables:
 
-- `VPS_STAGING_DEPLOY_PATH` — the **separate** dev-tier checkout directory
+- `VPS_DEV_DEPLOY_PATH` — the **separate** dev-tier checkout directory
   from step 1 above (not `VPS_DEPLOY_PATH`)
-- `VPS_STAGING_BASE_URL` — base URL to smoke-check (e.g.
+- `VPS_DEV_BASE_URL` — base URL to smoke-check (e.g.
   `https://dev.diiii.xyz`); skipped with a warning if unset
 
 Image tags are namespaced per environment — the dev tier pushes
-`dii-*:staging-<sha>` (plus the moving `:staging`), production pushes
+`dii-*:dev-<sha>` (plus the moving `:dev`), production pushes
 `dii-*:prod-<sha>` (plus `:latest`). They used to share a plain `:<sha>` tag,
 which the dev→main promote overwrote with a differently-built image: the
 `DEPLOY_ENV` baked into `release.json` (and reported by `/api/health`) could
@@ -216,7 +213,7 @@ then disagree with the host actually running it.
 2026-07-16 (default GHCR visibility, never explicitly set) — anyone with
 the URL could pull the compiled backend/frontend, undermining the repo
 being private. Both are now **private**. The `docker compose ... pull`
-step in `deploy-vps.yml`/`deploy-vps-staging.yml` runs directly on the VPS
+step in `deploy-vps.yml`/`deploy-vps-dev.yml` runs directly on the VPS
 via SSH, separate from the GH-Actions runner that builds/pushes (which
 authenticates with the ephemeral `secrets.GITHUB_TOKEN`, useless for a
 persistent host login) — so the VPS itself needs its own durable
@@ -339,7 +336,7 @@ port only** — every host-facing port stays the same:
   to `http://client:8080`.
 - `Caddyfile`: `reverse_proxy client:8080` (production's Caddy talks to the
   client over the internal Docker network, so it has to know the new port —
-  the dev tier is unaffected, it's reached via `host.docker.internal:$STAGING_PORT`,
+  the dev tier is unaffected, it's reached via `host.docker.internal:$DEV_PORT`,
   a host-published port that never changed).
 - `nginx.conf`: `listen 8080;` instead of `listen 80;`.
 
@@ -358,8 +355,8 @@ healthcheck incident was caught.
 
 - Both production and the dev tier have been exercised for real (2026-07-16):
   GitHub secrets/variables set, real deploy runs verified end-to-end for
-  each. The dev tier is live at `/opt/di.iiii-staging`, served as
-  `dev.diiii.xyz` (and the legacy `staging.di-studio.xyz`).
+  each. The dev tier is live at `/opt/di.iiii-dev`, served as
+  `dev.diiii.xyz`.
 - Consider adding a rollback note (`IMAGE_TAG=<previous-sha>` + re-run
   `pull && up -d`) — not yet needed in practice, but worth having on hand.
 - No `release.json`/git-commit stamp in the build yet, so `/api/health`

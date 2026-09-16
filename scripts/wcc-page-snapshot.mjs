@@ -34,7 +34,7 @@
  * stable public address. That keeps each project a few hundred KB rather than
  * 25 MB, and keeps it tier-independent.
  *
- * Requires a target (--to, or STAGING_API_URL / LIVE_API_URL — the dev tier — from .env,
+ * Requires a target (--to, or DEV_API_URL / LIVE_API_URL — the dev tier — from .env,
  * .env.local, serverXR/.env.local) and a token. There is no default target.
  */
 
@@ -382,10 +382,10 @@ const main = async () => {
 
     // No default target. The same rule space-code-push.mjs was brought under
     // after its DEFAULT_LIVE_URL published to the live site from a bare run.
-    const target = args.to || getEnv('STAGING_API_URL') || getEnv('LIVE_API_URL')
+    const target = args.to || getEnv('DEV_API_URL') || getEnv('LIVE_API_URL')
     if (!target) {
         if (args.out) return
-        console.error('Error: no target. Pass --to <url>, or set STAGING_API_URL / LIVE_API_URL.')
+        console.error('Error: no target. Pass --to <url>, or set DEV_API_URL / LIVE_API_URL.')
         console.error('  local:   https://local.thedi.studio/serverXR')
         console.error('  dev:     https://dev.diiii.xyz/serverXR')
         process.exitCode = 1

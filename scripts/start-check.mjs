@@ -231,10 +231,8 @@ const readEnv = () => ({
   ...Object.fromEntries(['API_TOKEN', 'LIVE_API_TOKEN', 'LOCAL_API_URL'].filter((k) => process.env[k]).map((k) => [k, process.env[k]]))
 })
 
-// dev.diiii.xyz is the settled name for the tier `tier-sync.mjs` still calls
-// `staging` (its base URL, staging.di-studio.xyz, is the old name and still
-// answers — see CONTRIBUTING.md). Kept as one constant here so a future
-// rename only has to change one line.
+// dev.diiii.xyz — `dev` in tier-sync.mjs's TIERS and baseline. Kept as one
+// constant here so a future rename only has to change one line.
 const DEV_TIER_LABEL = 'dev tier'
 
 /**
@@ -302,7 +300,7 @@ export const checkSpaces = async ({ spaceFilter }) => {
   const env = readEnv()
   const configuredLocalBase = localBase(env)
   let local = { ...TIERS.local, base: configuredLocalBase, token: env.API_TOKEN }
-  const dev = { ...TIERS.staging, token: env.LIVE_API_TOKEN }
+  const dev = { ...TIERS.dev, token: env.LIVE_API_TOKEN }
   const triedBases = [configuredLocalBase]
 
   if (!local.token && !dev.token) {
@@ -348,7 +346,7 @@ export const checkSpaces = async ({ spaceFilter }) => {
     return { status: 'ok', reason: 'this box holds no spaces yet', projects: [] }
   }
 
-  const baseline = readBaseline().staging || {}
+  const baseline = readBaseline().dev || {}
   const results = []
   let tierUnreachableMidRun = null
   let confirmFetchesLeft = CONFIRM_FETCH_BUDGET
@@ -431,16 +429,16 @@ const projectDriftLine = ({ spaceId, projectId, kind, confirmed }) => {
   switch (kind) {
     case 'dev-ahead':
       return `  NOT LATEST  ${DEV_TIER_LABEL} has newer work in \`${spaceId}/${projectId}\`${basis} — pull first: ` +
-        `node scripts/project-pull.mjs ${projectId} --space ${spaceId} --from ${TIERS.staging.base} --force`
+        `node scripts/project-pull.mjs ${projectId} --space ${spaceId} --from ${TIERS.dev.base} --force`
     case 'both-moved':
       return `  NOT LATEST  \`${spaceId}/${projectId}\` changed on this box AND on the ${DEV_TIER_LABEL} since the last sync — ` +
-        `ask before pushing; compare by hand: node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --audit`
+        `ask before pushing; compare by hand: node scripts/tier-sync.mjs --from local --to dev --space ${spaceId} --audit`
     case 'local-ahead':
       return `  ·  \`${spaceId}/${projectId}\` has local changes not yet on the ${DEV_TIER_LABEL}${basis} — ` +
-        `push when ready: node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --changed`
+        `push when ready: node scripts/tier-sync.mjs --from local --to dev --space ${spaceId} --changed`
     case 'differs-undetermined':
       return `  ?  \`${spaceId}/${projectId}\` differs and there is no signal for who moved — ` +
-        `node scripts/tier-sync.mjs --from local --to staging --space ${spaceId} --audit`
+        `node scripts/tier-sync.mjs --from local --to dev --space ${spaceId} --audit`
     default:
       return `  ?  ${spaceId}/${projectId}: ${kind}`
   }

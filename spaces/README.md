@@ -50,12 +50,11 @@ npm run spaces:audit                      # every declared space, all tiers, rea
 npm run spaces:audit -- --space wcc       # just one
 
 # apply a declaration (the only mode that writes)
-node scripts/space-sync.mjs --space spaces/wcc/di-space.space.json --all --tier staging --dry-run
+node scripts/space-sync.mjs --space spaces/wcc/di-space.space.json --all --tier dev --dry-run
 ```
 
-The dev tier (https://dev.diiii.xyz) is declared under the key `staging` in
-every manifest's `tiers` map — the identifier stayed when the word left, so
-`--tier staging` means the dev tier.
+The dev tier (https://dev.diiii.xyz) is declared under the key `dev` in every
+manifest's `tiers` map (engine v7; `--tier staging` is refused).
 
 `--audit` is read-only and safe against production. `--all` writes; run it with
 `--dry-run` first and read what it says it would SET.

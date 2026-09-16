@@ -41,16 +41,6 @@ describe('ModeMark', () => {
         expect(container.querySelector('.mode-mark').getAttribute('style')).toContain('#ffb347')
     })
 
-    // The same tier under its old name: links handed out before 2026-09-16
-    // still point there, and the chip must not bring the retired word back.
-    it('marks the old staging.di-studio.xyz address DEV too', async () => {
-        atHost('staging.di-studio.xyz')
-        render(<ModeMark />)
-        expect(await screen.findByText('DEV')).toBeInTheDocument()
-        expect(screen.queryByText('STAGING')).toBeNull()
-        expect(screen.getByText('staging.di-studio.xyz')).toBeInTheDocument()
-    })
-
     // The whole point of the hosted branch: an audience on di-studio.xyz sees
     // precisely what it saw before this component existed.
     it('renders nothing at all on the live site', async () => {

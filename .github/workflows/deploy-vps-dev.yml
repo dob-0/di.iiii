@@ -1,12 +1,8 @@
-name: Deploy VPS Staging (GHCR + SSH)
+name: Deploy VPS Dev (GHCR + SSH)
 
-# The dev tier's deploy path: `dev` -> https://dev.diiii.xyz (legacy name
-# staging.di-studio.xyz, same server). Identifier still `staging` -- this file
-# name, the workflow name, the `staging` environment, the :staging image tags,
-# DEPLOY_ENV=staging and the VPS_STAGING_* variables all stay, because CI,
-# the server and `gh run list --workflow` read them.
+# The dev tier's deploy path: `dev` -> https://dev.diiii.xyz.
 # Same VPS as production, a separate low-resource Compose project
-# (docker-compose.staging.yml) in its own checkout directory so it never
+# (docker-compose.dev.yml) in its own checkout directory so it never
 # inherits production's COMPOSE_PROFILES=https or secrets. See
 # docs/deploy/VPS_DOCKER_DEPLOY.md for the one-time host setup (second
 # checkout dir, its own .env, Caddyfile's dev-tier site block).
@@ -17,7 +13,7 @@ on:
   workflow_dispatch: {}
 
 concurrency:
-  group: deploy-vps-staging
+  group: deploy-vps-dev
   cancel-in-progress: false
 
 permissions:
@@ -168,14 +164,14 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:staging-${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:staging
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:dev-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:dev
           # release.json is baked in by serverXR/Dockerfile only -- the client's Dockerfile
           # doesn't declare these ARGs, so build-push-action just passes them through unused.
           build-args: |
             GIT_COMMIT=${{ github.sha }}
             GIT_REF=${{ github.ref_name }}
-            DEPLOY_ENV=staging
+            DEPLOY_ENV=dev
             BUILD_TIME=${{ steps.time.outputs.utc }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -183,14 +179,14 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     env:
       VPS_HOST: ${{ secrets.VPS_HOST }}
       VPS_SSH_USER: ${{ secrets.VPS_SSH_USER }}
       VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
       VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
       VPS_HOST_KEY: ${{ vars.VPS_HOST_KEY }}
-      VPS_STAGING_DEPLOY_PATH: ${{ vars.VPS_STAGING_DEPLOY_PATH }}
+      VPS_DEV_DEPLOY_PATH: ${{ vars.VPS_DEV_DEPLOY_PATH }}
       REGISTRY_USER: ${{ vars.REGISTRY_USER }}
     steps:
       - name: Checkout
@@ -206,8 +202,8 @@ jobs:
               missing=1
             fi
           done
-          if [ -z "${VPS_STAGING_DEPLOY_PATH:-}" ]; then
-            echo "::error::Missing required repository variable: VPS_STAGING_DEPLOY_PATH (path to the SEPARATE dev-tier docker-compose checkout on the VPS -- not the production one, see docs/deploy/VPS_DOCKER_DEPLOY.md)"
+          if [ -z "${VPS_DEV_DEPLOY_PATH:-}" ]; then
+            echo "::error::Missing required repository variable: VPS_DEV_DEPLOY_PATH (path to the SEPARATE dev-tier docker-compose checkout on the VPS -- not the production one, see docs/deploy/VPS_DOCKER_DEPLOY.md)"
             missing=1
           fi
           exit "${missing}"
@@ -246,7 +242,7 @@ jobs:
           # other's :<sha> tag with images carrying different baked-in
           # DEPLOY_ENV — a host could then run an image whose release.json
           # (and /api/health) claimed the wrong environment.
-          "${SSH[@]}" "REGISTRY_USER=$(printf '%q' "${REGISTRY_USER}") IMAGE_TAG=$(printf '%q' "staging-${GITHUB_SHA}") GIT_SHA=$(printf '%q' "${GITHUB_SHA}") DEPLOY_PATH=$(printf '%q' "${VPS_STAGING_DEPLOY_PATH}") bash -s" <<'REMOTE_SCRIPT'
+          "${SSH[@]}" "REGISTRY_USER=$(printf '%q' "${REGISTRY_USER}") IMAGE_TAG=$(printf '%q' "dev-${GITHUB_SHA}") GIT_SHA=$(printf '%q' "${GITHUB_SHA}") DEPLOY_PATH=$(printf '%q' "${VPS_DEV_DEPLOY_PATH}") bash -s" <<'REMOTE_SCRIPT'
           set -euo pipefail
           cd "${DEPLOY_PATH}"
           export REGISTRY_USER
@@ -256,15 +252,15 @@ jobs:
           # exact commit being deployed. Everything else on this checkout
           # (.env, data volumes, etc.) is untouched.
           git fetch --quiet origin
-          git checkout --quiet "${GIT_SHA}" -- docker-compose.yml docker-compose.prod.yml docker-compose.staging.yml
+          git checkout --quiet "${GIT_SHA}" -- docker-compose.yml docker-compose.prod.yml docker-compose.dev.yml
 
           # No --profile https/tunnel: this project has no Caddy/tunnel
           # service of its own, production's Caddy fronts it instead.
-          docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.staging.yml pull
-          docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.staging.yml up -d
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.dev.yml pull
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.dev.yml up -d
 
           # Persist the tag this deploy actually ran -- see the identical
-          # comment in deploy-vps.yml. The `${IMAGE_TAG:-staging}` default this
+          # comment in deploy-vps.yml. The `${IMAGE_TAG:-dev}` default this
           # file's compose override added is NOT enough on its own: an explicit
           # IMAGE_TAG in the host .env overrides it, and this host's said
           # `latest`, so a manual restart here ran a two-week-old production
@@ -278,11 +274,11 @@ jobs:
 
       - name: Smoke check
         env:
-          SMOKE_BASE_URL: ${{ vars.VPS_STAGING_BASE_URL }}
+          SMOKE_BASE_URL: ${{ vars.VPS_DEV_BASE_URL }}
         run: |
           set -euo pipefail
           if [ -z "${SMOKE_BASE_URL:-}" ]; then
-            echo "::warning::VPS_STAGING_BASE_URL repository variable not set — skipping smoke check."
+            echo "::warning::VPS_DEV_BASE_URL repository variable not set — skipping smoke check."
             exit 0
           fi
           node scripts/smoke-check.mjs --base-url "${SMOKE_BASE_URL}"

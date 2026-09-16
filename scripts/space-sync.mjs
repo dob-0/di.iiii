@@ -52,7 +52,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const ENGINE_VERSION = 6
+export const ENGINE_VERSION = 7
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CODE_EXTENSIONS = new Set(['.html', '.htm', '.css', '.js', '.mjs', '.txt', '.svg', '.json', '.md'])
@@ -97,8 +97,9 @@ const parseArgs = (argv) => {
  * drift). Anything else that differs is a fault the audit reports. A tier with
  * `governed:false` — the dev box — is shown and never enforced or failed on.
  *
- * The dev tier (dev.diiii.xyz) is keyed `staging` in every manifest; `--tier dev`
- * resolves to that key, and `--tier staging` keeps working.
+ * The dev tier (dev.diiii.xyz) is keyed `dev` in every manifest (v7 — it was
+ * `staging` before; a v6 copy reading a v7 manifest refuses on minEngine).
+ * `--tier staging` is refused with a pointer, never mapped.
  */
 const SPACE_MANIFEST = 'di-space.space.json'
 
@@ -110,11 +111,9 @@ const tierOf = (liveUrl, tiers) => {
   return host || 'unknown'
 }
 
-// `dev` is the dev tier's name; manifests still key it `staging`. A manifest
-// that declares a real `dev` key wins.
-const tierKey = (name, tiers) => {
-  if (!name || Object.hasOwn(tiers || {}, name)) return name
-  if (name === 'dev' && Object.hasOwn(tiers || {}, 'staging')) return 'staging'
+// A tier name is its manifest key. The dev tier's old key is refused outright.
+const tierKey = (name) => {
+  if (name === 'staging') throw new Error('"staging" is now "dev"')
   return name
 }
 
@@ -403,7 +402,7 @@ async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, ti
   if (liveHost !== PROD_HOST) {
     const before = entryHtml
     // Production answers to both names. The lookbehind means a subdomain
-    // ("dev.diiii.xyz", the legacy "staging.di-studio.xyz") is never
+    // ("dev.diiii.xyz") is never
     // re-prefixed into itself.
     entryHtml = entryHtml.replace(/(?<![\w.-])(di-studio|diiii)\.xyz/g, liveHost)
     if (before !== entryHtml) console.log(`  ⇄ retargeted ${PROD_HOST} → ${liveHost}`)
@@ -521,7 +520,7 @@ async function audit({ repoDir, spaceDecl, spaceManifestPath, getEnv, args }) {
   }
   const spaceId = spaceDecl.spaceId
   const tiers = Object.entries(spaceDecl.tiers || {})
-    .filter(([name]) => !args.tier || tierKey(args.tier, spaceDecl.tiers) === name)
+    .filter(([name]) => !args.tier || tierKey(args.tier) === name)
   if (!tiers.length) { console.error('Error: no tiers to audit.'); process.exitCode = 1; return }
 
   console.log(`[space-audit] ${spaceId} ← ${repoDir}\n`)
@@ -667,7 +666,7 @@ async function main() {
 
   // A tier can be named instead of spelled out, once the space manifest knows
   // the map: --tier dev beats pasting a serverXR URL from memory.
-  const named = args.tier ? spaceDecl?.tiers?.[tierKey(args.tier, spaceDecl?.tiers)] : null
+  const named = args.tier ? spaceDecl?.tiers?.[tierKey(args.tier)] : null
   if (args.tier && !named) {
     console.error(`Error: unknown tier "${args.tier}". Known: ${Object.keys(spaceDecl?.tiers || {}).join(', ') || '(none)'}`)
     process.exitCode = 1; return

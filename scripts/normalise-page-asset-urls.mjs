@@ -24,7 +24,7 @@
  *
  * Options:
  *   --tier <local|dev|prod>      Required. Which tier's documents to read/write.
- *                                `dev` is dev.diiii.xyz (keyed `staging`; that still works).
+ *                                `dev` is dev.diiii.xyz.
  *   --project <spaceId/slug>     One project, repeatable. Either this or --space.
  *   --space <spaceId>            Every project in this space (repeatable).
  *   --compare-tier <tier>        Before touching a project, also fetch it from
@@ -53,7 +53,7 @@ const TIMEOUT_MS = 30000
 
 export const TIERS = {
     local: { base: 'http://localhost:4000/serverXR', tokenKey: 'API_TOKEN' },
-    staging: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
+    dev: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
     prod: { base: 'https://di-studio.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
 }
 
@@ -244,7 +244,7 @@ const main = async () => {
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (isMain) {
     main().catch((err) => {
-        console.error(err)
+        console.error(err?.message || err)
         process.exit(1)
     })
 }

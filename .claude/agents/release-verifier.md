@@ -26,9 +26,8 @@ the tags collided and nothing checked.
    curl -s https://dev.diiii.xyz/serverXR/api/health | jq .release
    ```
    Assert all three: `gitCommit` matches the branch head, `deployEnv` matches
-   the host (`production` for prod, `staging` for the dev tier — the value it
-   still reports), and
-   `sourceRef` matches the branch. A prod host reporting `staging` means it is
+   the host (`production` for prod, `dev` for the dev tier), and
+   `sourceRef` matches the branch. A prod host reporting `dev` means it is
    running the wrong image even if the code is right.
 
 3. **Is uptime consistent with a fresh deploy?** A large `uptimeSeconds` right

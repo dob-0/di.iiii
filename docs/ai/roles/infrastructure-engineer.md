@@ -39,10 +39,10 @@ Production DNS (`di-studio.xyz`) is fully cut over to a **Hetzner VPS running Do
 cPanel is a disabled, documented fallback only (see below) — do not treat it as the live path.
 
 **The deploy pipeline is wired up and verified (2026-07-16).** Both `deploy-vps.yml` (production,
-push to `main`) and `deploy-vps-staging.yml` (the dev tier, push to `dev`) have had real, successful
+push to `main`) and `deploy-vps-dev.yml` (the dev tier, push to `dev`) have had real, successful
 end-to-end runs — GitHub secrets/variables are set (`VPS_HOST`, `VPS_SSH_USER`, `VPS_SSH_KEY`,
-`VPS_DEPLOY_PATH`, `VPS_STAGING_DEPLOY_PATH`, `REGISTRY_USER`, `VPS_BASE_URL`,
-`VPS_STAGING_BASE_URL`). Both workflows `git checkout <deployed-sha> -- <tracked compose/Caddy
+`VPS_DEPLOY_PATH`, `VPS_DEV_DEPLOY_PATH`, `REGISTRY_USER`, `VPS_BASE_URL`,
+`VPS_DEV_BASE_URL`). Both workflows `git checkout <deployed-sha> -- <tracked compose/Caddy
 files>` before restarting the stack, so config drift on the host is caught automatically, not
 just image updates. There is still no `release.json`/git-commit stamp anywhere in the build, so
 `/api/health` can't confirm what's running purely from that endpoint — cross-check with `gh run
@@ -55,14 +55,14 @@ list --workflow=deploy-vps.yml` and the run's `head_sha` if in doubt.
 - **Deploy trigger:** push to `main` → `.github/workflows/deploy-vps.yml` builds `dii-server`/
   `dii-client` images, pushes to GHCR, SSHes into the VPS, syncs tracked config, `docker compose
   pull && up -d`, reloads Caddy.
-- **Dev tier** (identifiers still `staging`): push to `dev` → `deploy-vps-staging.yml` — same VPS, a separate low-resource
-  Compose project (`docker-compose.staging.yml`) in its own checkout dir (`/opt/di.iiii-staging`),
-  fronted by production's Caddy via a second site block at `dev.diiii.xyz` (the legacy name
-  `staging.di-studio.xyz` still answers so old links keep working — never use it in new copy).
+- **Dev tier:** push to `dev` → `deploy-vps-dev.yml` — same VPS, a separate low-resource
+  Compose project (`docker-compose.dev.yml`, project `dii-dev`) in its own checkout dir (`/opt/di.iiii-dev`),
+  fronted by production's Caddy via a second site block at `dev.diiii.xyz` (its only address;
+  the legacy name `staging.di-studio.xyz` was switched off 2026-09-16).
 - **Data:** a mounted `/data` volume — SQLite DB + `spaces/` directory with binary assets.
 - **Config:** `docker-compose.yml` (base) + `docker-compose.prod.yml` (pull-from-GHCR override) +
   `docker-compose.caddy-hardened.yml` (production only — resets the client's published port so
-  Caddy is the only way in) + `docker-compose.staging.yml` (dev-tier override). CPU/memory `limits`
+  Caddy is the only way in) + `docker-compose.dev.yml` (dev-tier override). CPU/memory `limits`
   are set per-service but oversubscribe the 2 vCPU host once the dev tier is running alongside prod
   (see audit notes) — check actual host specs before raising any service's ceiling.
 
@@ -98,7 +98,7 @@ dev → main
 
 - Routine feature work: start on `dev`
 - Production deploy: merge `dev` into `main` and push — triggers `deploy-vps.yml`
-- Dev-tier deploy: push to `dev` — triggers `deploy-vps-staging.yml`
+- Dev-tier deploy: push to `dev` — triggers `deploy-vps-dev.yml`
 - Emergency hotfix only: work directly on `main`
 - Note: `main` currently has a "changes must go through a PR" branch protection rule that direct
   pushes bypass with an admin warning — a real PR flow for `main` is still an open item, not yet
@@ -110,7 +110,7 @@ dev → main
 
 ### VPS Deploy Workflows (live, verified)
 
-`deploy-vps.yml` (production, push to `main`) and `deploy-vps-staging.yml` (the dev tier, push to
+`deploy-vps.yml` (production, push to `main`) and `deploy-vps-dev.yml` (the dev tier, push to
 `dev`) both: build+push images to GHCR, SSH into the VPS, `docker compose pull && up -d`, then
 run `scripts/smoke-check.mjs` (shared smoke check for both the VPS and cPanel paths, renamed
 from `smoke-check-cpanel.mjs` since it was never cPanel-specific) against the deployed host.
