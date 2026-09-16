@@ -23,6 +23,9 @@
  *   --owner <userId>    Set owner_user_id (default: none — original owner
  *                       ids are dropped; they reference users of the source install)
  *   --force             Overwrite an existing space with the same id
+ *   --force-stale       Also overwrite when the TARGET changed after this
+ *                       bundle was exported (--force alone still refuses
+ *                       that — see the staleness check in importSpace)
  */
 
 import { execFileSync } from 'node:child_process'
@@ -32,7 +35,10 @@ import fsp from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { DatabaseSync } from 'node:sqlite'
+// Dynamic, not static — a static `import … from 'node:sqlite'` makes Vite's
+// test transform try to bundle the built-in and fail outright the moment
+// anything (a test file) imports this module, even without ever calling
+// exportSpace. gc-space-blobs.mjs hit the same thing; same fix.
 
 const require = createRequire(import.meta.url)
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -77,7 +83,7 @@ const die = (msg) => { console.error(`[space-bundle] ERROR: ${msg}`); process.ex
 const log = (msg) => console.log(`[space-bundle] ${msg}`)
 
 const parseArgs = (argv) => {
-    const args = { command: null, target: null, dataRoot: null, out: null, as: null, owner: null, force: false }
+    const args = { command: null, target: null, dataRoot: null, out: null, as: null, owner: null, force: false, forceStale: false }
     const positional = []
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i]
@@ -86,6 +92,10 @@ const parseArgs = (argv) => {
         else if (a === '--as') args.as = argv[++i]
         else if (a === '--owner') args.owner = argv[++i]
         else if (a === '--force') args.force = true
+        // --force alone still refuses when the target changed AFTER this
+        // bundle was exported (see importSpace) — this is the second,
+        // explicit word needed to overwrite that too.
+        else if (a === '--force-stale') args.forceStale = true
         else if (a.startsWith('--')) die(`unknown option ${a}`)
         else positional.push(a)
     }
@@ -129,6 +139,7 @@ async function exportSpace(args) {
     if (!spaceId || !SLUG_REGEX.test(spaceId)) die(`export needs a valid space id, got "${spaceId}"`)
     if (!fs.existsSync(dbPath)) die(`no database at ${dbPath} — wrong --data-root?`)
 
+    const { DatabaseSync } = await import('node:sqlite')
     let db
     try { db = new DatabaseSync(dbPath, { readOnly: true }) }
     catch { db = new DatabaseSync(dbPath) }
@@ -252,8 +263,33 @@ async function importSpace(args) {
         const { initDb, closeDb } = require('../serverXR/src/db.js')
         const db = initDb(dbPath)
 
-        const existing = db.prepare('SELECT 1 FROM spaces WHERE id = ?').get(targetId)
+        const existing = db.prepare('SELECT updated_at FROM spaces WHERE id = ?').get(targetId)
         if (existing && !args.force) die(`space "${targetId}" already exists — use --force to overwrite or --as <newId>`)
+
+        // A whole-replace with no check: --force used to overwrite the target
+        // no matter what happened to it since this bundle was made. If the
+        // target has been touched (by anyone, through any door) since
+        // `bundle.json`'s own `exportedAt`, overwriting it now would discard
+        // that work silently — refuse, and require the second, explicit word.
+        //
+        // `checkStale` is opt-in (only the CLI below sets it): install-bundle.mjs
+        // calls importSpace() internally, once per space, as ONE step of
+        // restoring an entire estate from a single point-in-time snapshot —
+        // there every space's target "changing" milliseconds before its own
+        // import is the expected shape of that restore, not a sign someone's
+        // concurrent edit is about to be lost. The single-space CLI import
+        // this file exposes is the workflow this check exists for.
+        if (args.checkStale && existing && args.force && !args.forceStale) {
+            const exportedAtMs = Date.parse(manifest.exportedAt)
+            const targetUpdatedAtMs = Number(existing.updated_at)
+            if (Number.isFinite(exportedAtMs) && Number.isFinite(targetUpdatedAtMs) && targetUpdatedAtMs > exportedAtMs) {
+                die(`space "${targetId}" changed after this bundle was exported.\n`
+                    + `  bundle exported:      ${manifest.exportedAt}\n`
+                    + `  target last touched:  ${new Date(targetUpdatedAtMs).toISOString()}\n`
+                    + `  Overwriting now would discard that change. Export a fresh bundle from "${targetId}" instead,\n`
+                    + `  or re-run with --force --force-stale to overwrite anyway.`)
+            }
+        }
 
         const collisions = []
         const projectExists = db.prepare('SELECT space_id FROM projects WHERE id = ?')
@@ -356,10 +392,13 @@ const invokedDirectly = (() => {
 if (invokedDirectly) {
     const args = parseArgs(process.argv.slice(2))
     if (args.command === 'export') await exportSpace(args)
-    else if (args.command === 'import') await importSpace(args)
+    // checkStale: true only from this direct-CLI door — see the comment on
+    // the check itself in importSpace for why install-bundle.mjs's internal
+    // calls must NOT opt into it.
+    else if (args.command === 'import') await importSpace({ ...args, checkStale: true })
     else {
         console.log('Usage: node scripts/space-bundle.mjs export <spaceId> [--data-root <dir>] [--out <file>]')
-        console.log('       node scripts/space-bundle.mjs import <bundle.tar.gz> [--data-root <dir>] [--as <id>] [--owner <userId>] [--force]')
+        console.log('       node scripts/space-bundle.mjs import <bundle.tar.gz> [--data-root <dir>] [--as <id>] [--owner <userId>] [--force] [--force-stale]')
         process.exit(args.command ? 1 : 0)
     }
 }

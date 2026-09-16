@@ -11,9 +11,22 @@
  *   --to     <url>    Live server API base (default: $LIVE_API_URL or https://di-studio.xyz/serverXR)
  *   --token  <token>  Bearer token for the live server (default: $LIVE_API_TOKEN) — required
  *   --dry-run         Print what would happen without making changes
+ *   --force           Push even if the destination changed since this scene's
+ *                     own `version` field was last read (see below) — the
+ *                     escape hatch, not the default
  *
  * Set LIVE_API_TOKEN in .env.local (never commit it):
  *   echo 'LIVE_API_TOKEN=your-editor-token' >> .env.local
+ *
+ * Refuses a stale destination. The scene this script pushes carries its own
+ * `version` (what it was BASED ON); before writing, this script reads the
+ * destination's CURRENT version and refuses if it moved — someone else's
+ * edit would otherwise be silently overwritten by a `PUT` that has no
+ * precondition of its own. The write itself also sends `If-Match` (the same
+ * precondition `PUT /api/spaces/:id/scene` already understands server-side —
+ * see serverXR/src/routes/spaceRoutes.js), so a change landing in the gap
+ * between this check and the request still gets caught, as a 409, not a
+ * silent overwrite.
  */
 
 import fs from 'node:fs/promises'
@@ -38,7 +51,7 @@ export const isProductionTarget = (url) => {
 }
 
 const parseArgs = (argv) => {
-    const args = { spaceId: null, from: null, to: null, token: null, dryRun: false, allowProduction: false }
+    const args = { spaceId: null, from: null, to: null, token: null, dryRun: false, allowProduction: false, force: false }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
         if (!arg.startsWith('--')) {
@@ -50,8 +63,29 @@ const parseArgs = (argv) => {
         if (arg === '--token') { args.token = argv[++i]; continue }
         if (arg === '--dry-run') { args.dryRun = true; continue }
         if (arg === '--allow-production') { args.allowProduction = true; continue }
+        if (arg === '--force') { args.force = true; continue }
     }
     return args
+}
+
+// Read-only: what version does the destination hold RIGHT NOW. `verbatim=1`
+// asks for what is actually stored rather than a hydrated/filtered rendering
+// (see the route's own comment) — the only shape it is safe to compare a
+// version number against. Returns null when the space does not exist yet on
+// the destination (nothing to be stale relative to) or the read itself
+// failed — the two cases are distinguished by `notFound`.
+const readDestinationVersion = async (toBase, spaceId, token) => {
+    let response
+    try {
+        response = await fetch(`${toBase}/api/spaces/${spaceId}/scene?verbatim=1`, { headers: buildHeaders(token) })
+    } catch (error) {
+        return { version: null, notFound: false, error: error?.message || String(error) }
+    }
+    if (response.status === 404) return { version: null, notFound: true, error: null }
+    if (!response.ok) return { version: null, notFound: false, error: `HTTP ${response.status}` }
+    const body = await response.json().catch(() => ({}))
+    const version = Number.isInteger(body?.version) ? body.version : null
+    return { version, notFound: false, error: null }
 }
 
 const loadEnvFile = async (filePath) => {
@@ -76,9 +110,10 @@ const loadEnvFile = async (filePath) => {
     }
 }
 
-const buildHeaders = (token) => {
+const buildHeaders = (token, ifMatchVersion) => {
     const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
     if (token) headers['Authorization'] = `Bearer ${token}`
+    if (Number.isInteger(ifMatchVersion)) headers['If-Match'] = `"${ifMatchVersion}"`
     return headers
 }
 
@@ -143,37 +178,83 @@ const main = async () => {
 
     // 1. Read scene — prefer git-tracked file, fall back to local API
     let scene
+    let baseVersion = null // the version this scene was BASED ON, if known
     const trackedScenePath = path.join(ROOT_DIR, 'spaces', spaceId, 'scene.json')
     console.log(`[space-push] ${spaceId}`)
     try {
         const raw = await fs.readFile(trackedScenePath, 'utf8')
         scene = JSON.parse(raw)
+        if (Number.isInteger(scene?.version)) baseVersion = scene.version
         console.log(`  source: spaces/${spaceId}/scene.json  (git-tracked)`)
     } catch {
         console.log(`  spaces/${spaceId}/scene.json not found, fetching from local server`)
         const localSceneUrl = `${fromBase}/api/spaces/${spaceId}/scene`
         const result = await apiFetch(localSceneUrl)
         scene = result.scene
+        if (Number.isInteger(result.version)) baseVersion = result.version
         console.log(`  source: ${localSceneUrl}`)
     }
     const objCount = Array.isArray(scene?.objects) ? scene.objects.length : 0
     const assetCount = Array.isArray(scene?.assets) ? scene.assets.length : 0
     console.log(`  to:     ${toBase}`)
-    console.log(`  scene:  ${objCount} objects, ${assetCount} assets`)
+    console.log(`  scene:  ${objCount} objects, ${assetCount} assets${baseVersion !== null ? ` (based on v${baseVersion})` : ' (no known base version)'}`)
+
+    // 1b. Refuse a stale destination. This is a read, so it happens whether or
+    // not --dry-run was passed — a dry run should say what a real push would
+    // refuse, not stay silent about it.
+    const destination = await readDestinationVersion(toBase, spaceId, token)
+    if (destination.error) {
+        console.error(`Could not confirm the destination hasn't changed (${destination.error}).`)
+        if (!args.force) {
+            console.error('Refusing to push blind. If you have verified it by hand, re-run with --force.')
+            process.exitCode = 1
+            return
+        }
+        console.error('--force: pushing anyway.')
+    } else if (!destination.notFound && baseVersion !== null && destination.version !== null && destination.version !== baseVersion) {
+        console.error(`Refusing to push: the destination is at v${destination.version}, but this scene is based on v${baseVersion}.`)
+        console.error(`Someone else's change would be overwritten. Pull first:`)
+        console.error(`  node scripts/space-pull.mjs ${spaceId} --from ${toBase}`)
+        console.error('Then re-apply your changes on top, or re-run with --force to overwrite anyway.')
+        if (!args.force) {
+            process.exitCode = 1
+            return
+        }
+        console.error('--force: pushing anyway.')
+    } else if (!destination.notFound && baseVersion === null && destination.version !== null && !args.force) {
+        console.error(`This scene carries no version to compare against the destination's current v${destination.version}.`)
+        console.error('Cannot confirm it is not stale. Re-run with --force if you have verified it by hand.')
+        process.exitCode = 1
+        return
+    }
 
     if (dryRun) {
         console.log('dry-run: skipping push')
         return
     }
 
-    // 2. Push scene to live
+    // 2. Push scene to live. If-Match is the same precondition the server
+    // already understands for this route (see the file header) — belt and
+    // braces against a change landing in the gap between the read above and
+    // this request.
     const livePutUrl = `${toBase}/api/spaces/${spaceId}/scene`
     console.log(`Pushing scene to ${livePutUrl}`)
-    await apiFetch(livePutUrl, {
+    const putResponse = await fetch(livePutUrl, {
         method: 'PUT',
-        headers: buildHeaders(token),
+        headers: buildHeaders(token, args.force ? undefined : baseVersion),
         body: JSON.stringify(scene),
     })
+    if (putResponse.status === 409) {
+        const conflict = await putResponse.json().catch(() => ({}))
+        console.error(`Refusing to push: the destination moved to v${conflict.latestVersion ?? '?'} while this ran.`)
+        console.error(`Pull first: node scripts/space-pull.mjs ${spaceId} --from ${toBase}`)
+        process.exitCode = 1
+        return
+    }
+    if (!putResponse.ok) {
+        const text = await putResponse.text().catch(() => '')
+        throw new Error(`HTTP ${putResponse.status} from ${livePutUrl}: ${text.slice(0, 200)}`)
+    }
     console.log(`  ok — scene pushed to live`)
     console.log(`\nLive: https://di-studio.xyz/${spaceId}/`)
 }

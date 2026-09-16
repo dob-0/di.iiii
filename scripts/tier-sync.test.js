@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { TIERS, baselineFromAgreement, resolveTier, tierLabel, documentSignature, isProductionTarget, planAudit, planChanged, planSync } from './tier-sync.mjs'
+import { TIERS, baselineFromAgreement, resolveTier, tierLabel, documentSignature, isProductionTarget, planAudit, planChanged, planSync, shouldRefuseOverwrite } from './tier-sync.mjs'
 
 describe('isProductionTarget', () => {
     // The whole reason this guard exists: a tool that can write to a tier must
@@ -238,6 +238,32 @@ describe('planChanged', () => {
         })
         expect(push).toEqual([])
         expect(refuse).toEqual([])
+    })
+})
+
+describe('shouldRefuseOverwrite', () => {
+    // The plain (non---changed) `--force` write path used to overwrite every
+    // matching project unconditionally, ignoring the baseline entirely — the
+    // one write path in tier-sync.mjs that did not honour it.
+
+    it('never refuses a pure create — nothing there yet to be stale relative to', () => {
+        expect(shouldRefuseOverwrite({ isOverwrite: false, knownShape: 'x', destinationShape: 'y' })).toBe(false)
+    })
+
+    it('refuses an overwrite when the destination moved off the known baseline', () => {
+        expect(shouldRefuseOverwrite({ isOverwrite: true, knownShape: 'base', destinationShape: 'moved' })).toBe(true)
+    })
+
+    it('allows the overwrite when the destination still matches the baseline', () => {
+        expect(shouldRefuseOverwrite({ isOverwrite: true, knownShape: 'base', destinationShape: 'base' })).toBe(false)
+    })
+
+    it('allows the overwrite when there is no baseline to compare against — first-ever sync', () => {
+        expect(shouldRefuseOverwrite({ isOverwrite: true, knownShape: undefined, destinationShape: 'anything' })).toBe(false)
+    })
+
+    it('--force-stale overrides the refusal even when the destination moved', () => {
+        expect(shouldRefuseOverwrite({ isOverwrite: true, forceStale: true, knownShape: 'base', destinationShape: 'moved' })).toBe(false)
     })
 })
 

@@ -288,6 +288,40 @@ Resume the next window from CURRENT.md, not from memory.
 
 ## Core Solutions — Discovered in This Repo
 
+### Two lines, one start check — code and space content go stale independently
+
+**Rule:** Before starting any task, and before pushing, run `npm run start-check`.
+It checks BOTH lines this repo has — code (branch vs `origin/dev`, a fork's `dev` vs
+`upstream/dev`) and space content (this box's held spaces vs the dev tier) — and
+prints one headline, LATEST or NOT LATEST, naming the exact pull command when it
+isn't. See `CONTRIBUTING.md` for the full "two lines" guide and what each of the five
+doors (Studio, script, LLM/agent, Telegram, fork-on-Windows) needs to know.
+
+**Why:** `scripts/repo-state.mjs` (the old SessionStart check) never fetched, so its
+"behind" count was measured against a `origin/dev` ref that could be hours or days
+stale — the exact shape of the 2026-08-10 incident where a checkout served code 115
+commits behind for two days with nothing saying so. And nothing at all checked space
+content: every tier (local / dev.diiii.xyz / diiii.xyz) is its own database, so a
+space edited on the dev tier while a box's local copy sat untouched produced zero
+signal from any existing tool.
+
+**How:** `scripts/start-check.mjs` fetches first (repo-state.mjs deliberately doesn't,
+by design — see its own header), reuses `repo-state-lib.mjs`'s branch-position facts
+for the code half, and reuses `tier-sync.mjs`'s own document comparison
+(`readSignatures`, built on `documentSignature`) for the space half rather than
+re-implementing either. Every network step degrades to "not checked" inside its own
+budget rather than ever reporting a false LATEST — a tokenless or unreachable tier is
+"not checked", never silently read as "no drift". `--strict` exits 1 for scripts/CI;
+the default stays exit 0 for a human glance. The write-side scripts
+(`space-push.mjs`, `space-sync.mjs`, `tier-sync.mjs`, `space-bundle.mjs import`) each
+refuse a stale destination the same way, printing the pull command instead of
+silently overwriting.
+
+**Files:** `scripts/start-check.mjs`, `scripts/repo-state-lib.mjs`,
+`scripts/tier-sync.mjs`, `CONTRIBUTING.md`.
+
+---
+
 ### Verify as a human — desktop and phone — or it is not done
 
 **Rule:** Any change that can alter what a person sees or does is verified in a
