@@ -39,21 +39,28 @@ const { values: args } = parseArgs({
     options: {
         base: { type: 'string' },
         key: { type: 'string' },
+        room: { type: 'string' },
         json: { type: 'boolean', default: false }
     }
 })
 
 if (!args.base) {
-    process.stderr.write('usage: node scripts/rig/conformance.mjs --base http://127.0.0.1:PORT/serverXR [--key K] [--json]\n')
+    process.stderr.write('usage: node scripts/rig/conformance.mjs --base http://127.0.0.1:PORT/serverXR [--key K] [--room R] [--json]\n')
     process.exit(2)
 }
 
 const BASE = String(args.base).replace(/\/+$/, '')
 const KEY = args.key || null
+// A member in a named room answers 409 to a hello from any other room, so
+// every hello this suite sends speaks from --room unless a check names its own.
+const ROOM = args.room || null
 const url = (p) => `${BASE}${p}`
 
 const postSigned = (p, bodyObj) => {
-    const raw = JSON.stringify(bodyObj)
+    const withRoom = ROOM && p.endsWith('/hello') && (bodyObj.room === undefined || bodyObj.room === null)
+        ? { ...bodyObj, room: ROOM }
+        : bodyObj
+    const raw = JSON.stringify(withRoom)
     return request(url(p), { method: 'POST', body: raw, headers: signedHeaders(KEY, raw) })
 }
 
@@ -146,6 +153,8 @@ const run = async () => {
                 continue
             }
             const kind = body.kind
+            // a card is only ever READ (GET), never posted — a future card must parse, which JSON.parse above proved
+            if (kind === 'card') continue
             const routeByKind = { hello: '/api/rig/hello', cue: '/api/rig/cue', blackout: '/api/rig/blackout', picture: '/api/rig/picture' }
             const routePath = routeByKind[kind] || '/api/rig/hello'
             const res = await postSigned(routePath, body)
