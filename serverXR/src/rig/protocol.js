@@ -74,13 +74,20 @@ function readHello(obj, defaults = {}) {
     // only in step 1, and refusing it would lock a newer member out.
     part: text(obj.part, 64) || 'studio',
     room: readRoom(obj.room),
-    http: { port, base: text(http.base) || '/serverXR' },
+    // scheme + tls added 2026-09-16 (additive): a member serving https with a
+    // certificate for a NAME is reached by address with that name as servername
+    http: {
+      port,
+      base: text(http.base) || '/serverXR',
+      scheme: http.scheme === 'https' ? 'https' : 'http',
+      tls: text(http.tls, 253) || null
+    },
     features: readFeatures(obj.features),
     sentAt: finiteNumber(obj.sentAt)
   }
 }
 
-function buildHello({ identity, release, part, room = null, port, base = '/serverXR', features, now = Date.now } = {}) {
+function buildHello({ identity, release, part, room = null, port, base = '/serverXR', scheme = 'http', tls = null, features, now = Date.now } = {}) {
   return {
     rig: PROTOCOL,
     kind: 'hello',
@@ -88,7 +95,7 @@ function buildHello({ identity, release, part, room = null, port, base = '/serve
     machine: { id: identity.id, name: identity.name || identity.id },
     part: part || 'studio',
     room: room || null,
-    http: { port: port ?? null, base },
+    http: { port: port ?? null, base, scheme: scheme === 'https' ? 'https' : 'http', tls: tls || null },
     features: { ...(features || {}) },
     sentAt: typeof now === 'function' ? now() : now
   }

@@ -25,7 +25,7 @@ describe('rig protocol 1 readers', () => {
       machine: { id: 'minimal-0001', name: 'minimal-0001' },
       part: 'studio',
       room: null,
-      http: { port: 4000, base: '/serverXR' },
+      http: { port: 4000, base: '/serverXR', scheme: 'http', tls: null },
       features: {},
       sentAt: null
     })
@@ -54,7 +54,7 @@ describe('rig protocol 1 readers', () => {
     const hello = readHello(fixture('hello.future.json'))
     expect(hello.machine).toEqual({ id: '0b5c2f5e-9d0a-4c61-8f5e-future000001', name: 'future-box' })
     expect(hello.release).toBe('3.2.0')
-    expect(hello.http).toEqual({ port: 4000, base: '/serverXR' })
+    expect(hello.http).toEqual({ port: 4000, base: '/serverXR', scheme: 'http', tls: null })
     expect(hello.features).toMatchObject({ card: 3, pictures: 4, hold: 1, 'drivers.dijet': 2 })
     // a nested object where a version belongs is not kept
     expect(hello.features.showmode).toBeUndefined()
@@ -110,7 +110,7 @@ describe('rig protocol 1 readers', () => {
 
   it('builds a hello that reads back as itself', () => {
     const hello = buildHello({ identity: { id: 'me', name: 'aylmo' }, release: '0.5.0', part: 'stage', room: 'club', port: 4000, base: '/serverXR', features: LOCAL_FEATURES, now: () => 123 })
-    expect(hello).toEqual({ rig: 1, kind: 'hello', release: '0.5.0', machine: { id: 'me', name: 'aylmo' }, part: 'stage', room: 'club', http: { port: 4000, base: '/serverXR' }, features: { ...LOCAL_FEATURES }, sentAt: 123 })
+    expect(hello).toEqual({ rig: 1, kind: 'hello', release: '0.5.0', machine: { id: 'me', name: 'aylmo' }, part: 'stage', room: 'club', http: { port: 4000, base: '/serverXR', scheme: 'http', tls: null }, features: { ...LOCAL_FEATURES }, sentAt: 123 })
     expect(readHello(JSON.parse(JSON.stringify(hello)))).toEqual(hello)
   })
 })
@@ -139,3 +139,14 @@ describe('rig room key (§5)', () => {
     expect(verify('k', undefined, sign('k', ''))).toBe(true)
   })
 })
+
+describe('hello http.scheme / http.tls (additive, 2026-09-16)', () => {
+  it('reads https and a certificate name, and treats anything else as http', () => {
+    const base = { rig: 1, machine: { id: 'a' } }
+    expect(readHello({ ...base, http: { port: 443, scheme: 'https', tls: 'local.thedi.studio' } }).http)
+      .toEqual({ port: 443, base: '/serverXR', scheme: 'https', tls: 'local.thedi.studio' })
+    expect(readHello({ ...base, http: { scheme: 'gopher' } }).http.scheme).toBe('http')
+    expect(readHello(base).http).toMatchObject({ scheme: 'http', tls: null })
+  })
+})
+

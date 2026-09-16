@@ -41,6 +41,23 @@ function resolveRelease(repoRoot = path.resolve(__dirname, '..', '..', '..')) {
     'unknown'
 }
 
+// How other members reach this one. index.js serves https when TLS_CERT and
+// TLS_KEY are set; the certificate names the host, and that name travels in
+// hello so a peer can verify it while dialling our LAN address.
+function resolveReach(env, logger) {
+  if (!env.TLS_CERT || !env.TLS_KEY) return { scheme: 'http', tls: null }
+  try {
+    const { X509Certificate } = require('node:crypto')
+    const cert = new X509Certificate(fs.readFileSync(env.TLS_CERT))
+    const dns = String(cert.subjectAltName || '').split(',').map((s) => s.trim())
+      .find((s) => s.startsWith('DNS:') && !s.includes('*'))
+    return { scheme: 'https', tls: dns ? dns.slice(4) : null }
+  } catch (error) {
+    logger.warn?.('[rig] could not read TLS_CERT for its name', error?.message || error)
+    return { scheme: 'https', tls: null }
+  }
+}
+
 function createRig({
   app,
   dataRoot,
@@ -69,6 +86,7 @@ function createRig({
   const room = String(env.DI_RIG_ROOM || '').trim() || null
   const key = String(env.DI_RIG_KEY || '') || null
   const features = LOCAL_FEATURES
+  const { scheme, tls } = resolveReach(env, logger)
 
   const { createCardSource } = require('./card')
   const { createMembers } = require('./members')
@@ -76,7 +94,7 @@ function createRig({
   const { registerRigEvents } = require('./events')
 
   const cardSource = createCardSource({ env })
-  const members = createMembers({})
+  const members = createMembers({ selfId: identity.id })
   const sinks = createSinks({ logger })
   if (lighting) wireLighting(sinks, lighting)
 
@@ -91,7 +109,9 @@ function createRig({
 
   const router = express.Router()
   registerRigRoutes(router, { identity, release: ownRelease, part, room, key, features, cardSource, members, sinks, port, base })
-  registerRigEvents(router, sinks)
+  // the event stream reaches the same outputs a blackout does, so it sits behind
+  // the same local-runtime guard as every other /api/rig route
+  registerRigEvents(router, sinks, { guard: requireLocalRuntime })
   for (const mount of mounts) app.use(mount || '/', router)
 
   const expireTimer = setInterval(() => {
@@ -101,13 +121,17 @@ function createRig({
 
   // What discovery calls when it hears an unknown member: introduce ourselves,
   // and record whoever answers — the answer IS their hello.
-  const sayHello = async (address, peerPort, peerBase = '/serverXR') => {
-    const body = JSON.stringify(buildHello({ identity, release: ownRelease, part: part(), room, port, base, features }))
+  const sayHello = async (address, peerPort, peerBase = '/serverXR', reach = {}) => {
+    const body = JSON.stringify(buildHello({ identity, release: ownRelease, part: part(), room, port, base, scheme, tls, features }))
     const host = String(address).includes(':') ? `[${address}]` : address
     const headers = { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) }
     if (key) headers['x-di-rig-sig'] = sign(key, body)
-    const res = await httpRequest(`http://${host}:${peerPort}${peerBase}/api/rig/hello`, {
-      method: 'POST', headers, body, timeoutMs: HELLO_TIMEOUT_MS
+    // A member serving https holds a certificate for a NAME, not for its LAN
+    // address: connect to the address, check the certificate against that name.
+    const peerScheme = reach.scheme === 'https' ? 'https' : 'http'
+    const res = await httpRequest(`${peerScheme}://${host}:${peerPort}${peerBase}/api/rig/hello`, {
+      method: 'POST', headers, body, timeoutMs: HELLO_TIMEOUT_MS,
+      ...(peerScheme === 'https' && reach.tls ? { servername: reach.tls } : {})
     })
     if (!res.ok) return null
     const hello = readHello(res.json(), { port: peerPort })
@@ -125,6 +149,8 @@ function createRig({
       room,
       port,
       base,
+      scheme,
+      tls,
       key,
       udpPort: Number(env.DI_RIG_UDP_PORT) || DEFAULT_UDP_PORT,
       members,

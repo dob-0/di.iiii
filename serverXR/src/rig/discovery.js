@@ -19,24 +19,14 @@
 // so a not-yet-mutual pairing keeps nudging sayHello every 10s until the real
 // hello lands; once via is 'hello', discovery only ever refreshes lastSeen.
 
-const crypto = require('node:crypto')
 
 const MAX_PACKET_BYTES = 1024
 const SAY_HELLO_DEBOUNCE_MS = 10000
 
-const sign = (key, rawBody) => crypto.createHmac('sha256', key).update(rawBody).digest('hex')
+// One signer for the whole rig: the HTTP x-di-rig-sig header and this packet's
+// sig are the same HMAC, so they live once, in protocol.js.
+const { sign, verify } = require('./protocol')
 
-const verify = (key, rawBody, sig) => {
-    if (typeof sig !== 'string' || sig.length === 0) return false
-    const expected = sign(key, rawBody)
-    const expectedBuf = Buffer.from(expected, 'hex')
-    const sigBuf = Buffer.from(sig, 'hex')
-    // timingSafeEqual throws on a length mismatch instead of returning
-    // false, and a wrong-length hex string is exactly what a forged or
-    // truncated sig looks like — check length ourselves first.
-    if (expectedBuf.length !== sigBuf.length) return false
-    return crypto.timingSafeEqual(expectedBuf, sigBuf)
-}
 
 // Directed broadcast for one interface: network address with every host bit
 // forced to 1. Computed per-octet from address + netmask alone, which is all
@@ -73,6 +63,8 @@ const createDiscovery = ({
     room = null,
     port,
     base,
+    scheme = 'http',
+    tls = null,
     key,
     udpPort = 47600,
     members,
@@ -109,6 +101,8 @@ const createDiscovery = ({
         room,
         port,
         base,
+        scheme,
+        ...(tls ? { tls } : {}),
         sentAt: now()
     })
 
@@ -143,13 +137,13 @@ const createDiscovery = ({
     // be slow or in flight, so this is time-debounced independent of
     // members.js (which may already show the id as "known" after the first
     // minimal upsert below).
-    const maybeSayHello = (id, address, helloPort, helloBase) => {
+    const maybeSayHello = (id, address, helloPort, helloBase, reach) => {
         const t = now()
         const last = lastHelloSentAt.get(id)
         if (last !== undefined && t - last < SAY_HELLO_DEBOUNCE_MS) return
         lastHelloSentAt.set(id, t)
         Promise.resolve()
-            .then(() => sayHello(address, helloPort, helloBase))
+            .then(() => sayHello(address, helloPort, helloBase, reach))
             .catch((err) => {
                 stats.sayHelloErrors++
                 logger?.warn?.('rig discovery: sayHello failed', err)
@@ -177,6 +171,8 @@ const createDiscovery = ({
         if (packet.id === identity.id) return // our own broadcast, looped back
 
         const packetRoom = packet.room !== undefined ? packet.room : null
+        const packetScheme = packet.scheme === 'https' ? 'https' : 'http'
+        const packetTls = typeof packet.tls === 'string' && packet.tls.length <= 253 ? packet.tls : null
         const ourRoom = room !== undefined ? room : null
         if (packetRoom !== ourRoom) {
             stats.otherRoom++
@@ -207,10 +203,10 @@ const createDiscovery = ({
             machine: { id: packet.id, name: packet.name },
             release: packet.release,
             room: packetRoom,
-            http: { port: packet.port, base: packet.base }
+            http: { port: packet.port, base: packet.base, scheme: packetScheme, tls: packetTls }
         }, { address: rinfo.address, via: 'discovery' })
 
-        maybeSayHello(packet.id, rinfo.address, packet.port, packet.base)
+        maybeSayHello(packet.id, rinfo.address, packet.port, packet.base, { scheme: packetScheme, tls: packetTls })
     }
 
     const tick = () => {
