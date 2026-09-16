@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * promote-space-projects.mjs — copy a space's project documents (+ referenced assets)
- * from one live environment to another, e.g. staging → prod.
+ * from one live environment to another, e.g. the dev tier → prod.
  *
  * Zone/portal positions are authored inside a project's document (entity
  * transforms) — there is no promotion path between environments other than
- * this script, so staging edits stay on staging until this is run.
+ * this script, so dev-tier edits stay on the dev tier until this is run.
  *
  * Usage:
  *   node scripts/promote-space-projects.mjs [options]
@@ -14,7 +14,7 @@
  *   --space   <id>     Space ID (REQUIRED — there is no default; the
  *                      destination defaults to PRODUCTION)
  *   --project <id>     Only promote this one project
- *   --from    <url>    Source API base (default: $LIVE_API_URL — staging)
+ *   --from    <url>    Source API base (default: $LIVE_API_URL — the dev tier)
  *   --to      <url>    Destination API base (default: $PROD_API_URL)
  *   --from-token <tok> Bearer token for --from (default: $LIVE_API_TOKEN)
  *   --to-token   <tok> Bearer token for --to (default: $PROD_API_TOKEN)

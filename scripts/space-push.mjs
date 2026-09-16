@@ -25,12 +25,13 @@ const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
 const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
 // Production is the one host this script must never reach by inheritance.
-// Matches the live site and anything under it; staging is a different hostname
-// and is unaffected.
+// Matches the live site under both its names (di-studio.xyz, diiii.xyz); the dev
+// tier (dev.diiii.xyz, legacy staging.di-studio.xyz) is a different hostname and
+// is unaffected.
 export const isProductionTarget = (url) => {
     try {
         const { hostname } = new URL(url)
-        return hostname === 'di-studio.xyz' || hostname === 'www.di-studio.xyz'
+        return ['di-studio.xyz', 'www.di-studio.xyz', 'diiii.xyz', 'www.diiii.xyz'].includes(hostname)
     } catch {
         return false
     }
@@ -117,16 +118,16 @@ const main = async () => {
 
     // Production has to be named out loud. This script's fallback IS production
     // (DEFAULT_LIVE_URL), and the root .env sets LIVE_API_URL to production
-    // while .env.local overrides it to staging — so deleting or losing one line
+    // while .env.local overrides it to the dev tier — so deleting or losing one line
     // in an untracked file silently turns a routine push into a live one. The
-    // convention everywhere else is LIVE_* = staging, PROD_* = production, so a
+    // convention everywhere else is LIVE_* = the dev tier, PROD_* = production, so a
     // LIVE_API_URL pointing at production is already the anomaly.
     if (isProductionTarget(toBase) && !args.to && !args.allowProduction) {
         console.error(`Refusing to push to PRODUCTION (${toBase}) without being told to.`)
         console.error('Nothing was read or written.\n')
         console.error('This was not asked for on the command line — it came from the environment:')
         console.error(`  LIVE_API_URL = ${getEnv('LIVE_API_URL') || '(unset, so the built-in production default was used)'}`)
-        console.error('\nIf you meant staging:      check .env.local still sets LIVE_API_URL to staging')
+        console.error('\nIf you meant the dev tier: check .env.local still sets LIVE_API_URL to https://dev.diiii.xyz/serverXR')
         console.error('If you really meant production, say so:')
         console.error(`  node scripts/space-push.mjs ${spaceId} --to ${toBase} --dry-run`)
         process.exitCode = 1

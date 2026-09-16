@@ -4,6 +4,11 @@
 `docs/deploy/VPS_DOCKER_DEPLOY.md`. This file describes the disabled cPanel model, kept only as
 a documented fallback until its hosting term expires.
 
+> "staging" in this file is the cPanel-era name for the second tier, kept as it was said. Today
+> that tier is the dev tier at `https://dev.diiii.xyz` on the VPS (branch `dev`); the old
+> `staging.di-studio.xyz` name now points at the VPS too, not at cPanel. See
+> [LIVE_DEPLOY.md](LIVE_DEPLOY.md).
+
 ## Fallback Model
 
 - source branches:

@@ -108,7 +108,7 @@ services:
 
       # approvalGate.js — see serverXR/.env.example. Unset (default
       # false/empty) leaves every gated route behaving exactly as before
-      # this feature existed; staging overrides via STAGING_APPROVAL_*
+      # this feature existed; the dev tier overrides via STAGING_APPROVAL_*
       # (docker-compose.staging.yml) so the two tiers can be enabled
       # independently.
       APPROVAL_GATE_ENABLED: ${APPROVAL_GATE_ENABLED:-false}
@@ -141,7 +141,7 @@ services:
     # Sized against the real 2 vCPU / 3.7GB Hetzner host (confirmed via `nproc`/`free -h`):
     # all five services summed to 3.1 against 2 actual vCPUs, trimmed proportionally to 1.8
     # (10% host headroom), keeping the same relative priority:
-    # server > client ≈ caddy > staging-server > staging-client. Main workload, most headroom.
+    # server > client ≈ caddy > dev-tier server > dev-tier client (compose project dii-staging). Main workload, most headroom.
     cpus: '0.9'
     mem_limit: 1g
 
@@ -172,7 +172,7 @@ services:
       # this was verified for plain nginx:alpine, this check will fail loud
       # (service never reports healthy) rather than silently proxying to a
       # container that isn't actually serving -- watch this on the very
-      # first staging deploy after this change.
+      # first dev-tier deploy after this change.
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
       interval: 20s
       timeout: 5s
@@ -248,7 +248,7 @@ services:
       # /{space}/map/{project}; this only gives it its own name to hand out.
       # Same inert-until-DNS-exists pattern as STAGING_DOMAIN above.
       MAP_DOMAIN: ${MAP_DOMAIN:-map.invalid.internal}
-    # Lets the Caddyfile's staging site block reach the staging Compose
+    # Lets the Caddyfile's dev-tier site block reach the dev tier's Compose
     # project's client container by its host-published port, without
     # joining the two projects to a shared Docker network.
     extra_hosts:

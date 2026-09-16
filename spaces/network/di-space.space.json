@@ -11,7 +11,7 @@
       "tokenEnv": "PROD_API_TOKEN"
     },
     "staging": {
-      "url": "https://staging.di-studio.xyz/serverXR",
+      "url": "https://dev.diiii.xyz/serverXR",
       "tokenEnv": "LIVE_API_TOKEN"
     },
     "local": {

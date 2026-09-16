@@ -1,6 +1,6 @@
 name: Deploy space code files
 
-# Lane contract: `dev` -> staging, `main` -> production, never crossed.
+# Lane contract: `dev` -> the dev tier (https://dev.diiii.xyz), `main` -> production, never crossed.
 # The push script's own default target is PRODUCTION, so the target is always
 # passed explicitly here — an unset secret must not silently deploy to live.
 # Production code pushes stay manual (`npm run space:code-push -- <spaceId>
@@ -26,9 +26,10 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Push changed space code files to staging
+      - name: Push changed space code files to the dev tier
         env:
-          # LIVE_* is the staging pair by repo convention (see scripts/data-inventory.mjs).
+          # LIVE_* is the dev-tier pair by repo convention (see scripts/data-inventory.mjs).
+          # STAGING_API_URL is a local shell name only; the dev tier's identifier is still `staging`.
           # The token goes through the environment, not argv, so it stays out of `ps`.
           STAGING_API_URL: ${{ secrets.LIVE_API_URL }}
           LIVE_API_TOKEN: ${{ secrets.LIVE_API_TOKEN }}
@@ -37,14 +38,16 @@ jobs:
           set -euo pipefail
 
           if [ -z "${LIVE_API_TOKEN}" ]; then
-            echo "::error::LIVE_API_TOKEN (staging) is not configured — refusing to push."
+            echo "::error::LIVE_API_TOKEN (dev tier) is not configured — refusing to push."
             exit 1
           fi
 
-          target="${STAGING_API_URL:-https://staging.di-studio.xyz/serverXR}"
+          target="${STAGING_API_URL:-https://dev.diiii.xyz/serverXR}"
           case "${target}" in
+            # dev.diiii.xyz is the dev tier; staging.di-studio.xyz is its legacy name (same server).
+            https://dev.diiii.xyz|https://dev.diiii.xyz/*) ;;
             *staging.di-studio.xyz*) ;;
-            *) echo "::error::target ${target} is not the staging origin; dev never deploys to production."; exit 1 ;;
+            *) echo "::error::target ${target} is not the dev-tier origin (dev.diiii.xyz); dev never deploys to production."; exit 1 ;;
           esac
 
           # Only the spaces touched by this push, not every space in the repo.

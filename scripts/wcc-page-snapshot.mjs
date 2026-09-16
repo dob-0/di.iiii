@@ -34,7 +34,7 @@
  * stable public address. That keeps each project a few hundred KB rather than
  * 25 MB, and keeps it tier-independent.
  *
- * Requires a target (--to, or STAGING_API_URL / LIVE_API_URL from .env,
+ * Requires a target (--to, or STAGING_API_URL / LIVE_API_URL — the dev tier — from .env,
  * .env.local, serverXR/.env.local) and a token. There is no default target.
  */
 
@@ -387,7 +387,7 @@ const main = async () => {
         if (args.out) return
         console.error('Error: no target. Pass --to <url>, or set STAGING_API_URL / LIVE_API_URL.')
         console.error('  local:   https://local.thedi.studio/serverXR')
-        console.error('  staging: https://staging.di-studio.xyz/serverXR')
+        console.error('  dev:     https://dev.diiii.xyz/serverXR')
         process.exitCode = 1
         return
     }

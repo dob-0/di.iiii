@@ -170,7 +170,7 @@ project event stream open, the output page holds one itself, and a browser
 allows about six persistent connections per origin — past that every remaining
 request queues forever. Measured: five project surfaces over HTTP/1.1 gave one
 scene and four black rectangles; the same five over HTTP/2 all came up. Both
-`di-studio.xyz` and `staging.di-studio.xyz` answer h2, so a deployed wall is
+`di-studio.xyz` and `dev.diiii.xyz` answer h2, so a deployed wall is
 fine. `npm run dev` is plain HTTP/1.1, and a show driven from a laptop running
 the dev server is exactly where this bites. The desk warns when it applies.
 

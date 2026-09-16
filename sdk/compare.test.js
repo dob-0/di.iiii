@@ -12,7 +12,7 @@ const fingerprint = (over = {}) => ({
     projects: [{ id: 'p', body: 'aaa', assets: ['a1', 'a2'], shared: true }],
     ...over
 })
-const cmp = (a, b) => compareSpaces({ name: 'staging', fingerprint: a }, { name: 'prod', fingerprint: b })
+const cmp = (a, b) => compareSpaces({ name: 'dev', fingerprint: a }, { name: 'prod', fingerprint: b })
 
 describe('hash', () => {
     it('ignores key order, so two identical documents look identical', () => {
@@ -32,7 +32,7 @@ describe('comparing two copies of a space', () => {
     })
 
     it('says who is missing rather than inventing a difference', () => {
-        expect(cmp(fingerprint(), null)).toMatchObject({ state: MISSING, onlyOn: 'staging' })
+        expect(cmp(fingerprint(), null)).toMatchObject({ state: MISSING, onlyOn: 'dev' })
         expect(cmp(null, null)).toMatchObject({ state: MISSING })
     })
 
@@ -41,14 +41,14 @@ describe('comparing two copies of a space', () => {
         const out = cmp(fingerprint(), fingerprint({ isPublic: true }))
         expect(out.state).toBe(DIFFERS)
         expect(out.notes[0]).toContain('THE DOOR DIFFERS')
-        expect(out.notes[0]).toContain('staging is private, prod is public')
+        expect(out.notes[0]).toContain('dev is private, prod is public')
     })
 
     // The field everyone reads is lastTouchedAt, and it is bumped by anything
     // that brushes a space. Edits are what count.
     it('decides who is ahead by scene edits, not by any timestamp', () => {
         const out = cmp(fingerprint({ sceneVersion: 167 }), fingerprint({ sceneVersion: 121 }))
-        expect(out.ahead).toBe('staging')
+        expect(out.ahead).toBe('dev')
         expect(out.summary).toContain('46 more scene edit')
     })
 

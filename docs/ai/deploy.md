@@ -5,7 +5,7 @@ This page is the AI-safe deployment map. Keep host-specific or secret material o
 ## Canonical Deployment Model
 
 - normal branch flow is `dev -> main`
-- `dev` push deploys to `staging.di-studio.xyz`; `main` push deploys to `di-studio.xyz`
+- `dev` push deploys the dev tier, `dev.diiii.xyz`; `main` push deploys prod, `diiii.xyz` (the tiers are local · dev · prod; identifiers such as `deploy-vps-staging.yml` keep the old word — see [vocabulary.md](vocabulary.md))
 - prebuilt `cpanel-*` branches are the release artifacts consumed by cPanel Git Version Control
 - prebuilt `cpanel-*` branches are the release artifacts consumed by cPanel Git Version Control
 - `/serverXR` stays owned by the cPanel Node.js App

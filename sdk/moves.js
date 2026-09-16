@@ -116,7 +116,7 @@ export const MOVES = {
         input: { space: 'string' },
         // Deliberately NOT lastTouchedAt. That field is bumped by anything that
         // brushes a space — three prod spaces carry one identical batch
-        // timestamp while staging holds forty-six more scene edits — so read
+        // timestamp while the dev tier holds forty-six more scene edits — so read
         // by the clock, prod looked newer everywhere and was not. sceneVersion
         // counts edits; the document hashes decide the rest.
         run: async (ctx, { space }) => {
@@ -303,7 +303,7 @@ export const MOVES = {
             let cached = 0
             for (const file of files) {
                 // TRAP 2 — ASSET IDS ARE PER-SERVER. A cache keyed on the
-                // project alone let a prod run read the staging run's cache,
+                // project alone let a prod run read the dev tier run's cache,
                 // report every file "cached", upload nothing, and publish a
                 // page that loads perfectly with all 51 PDFs dead. The key
                 // carries the host, so the mistake cannot be made.

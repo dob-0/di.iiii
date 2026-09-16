@@ -88,7 +88,7 @@ const checks = [
     },
     {
         // 401 is a valid outcome here, not just 400/404: with REQUIRE_AUTH=true
-        // (the default in production/staging), serverXR correctly rejects an
+        // (the default on production and the dev tier), serverXR correctly rejects an
         // unauthenticated request before ever checking whether the asset
         // exists -- still proof the proxy routed the request to serverXR.
         name: 'asset route proxy',

@@ -54,14 +54,14 @@ export const RESERVED_APP_SEGMENTS = [
     'light',
     // The layered addresses (studioRouting.js): /spaces and /{space}/projects.
     // Reserved here so a project slug can never shadow the space's own project
-    // list. Checked against production and staging before reserving — no space
+    // list. Checked against production and the dev tier before reserving — no space
     // and no project answered to either word on any tier.
     'spaces',
     'projects',
     // The studio's chat room — /chat, and /{space}/chat for any other space.
     // Reserved so no space or project slug can shadow the address a team
     // installs to its phones. Checked before reserving: /serverXR/api/spaces/chat
-    // answers 404 on prod and on staging, and a PRIVATE space would answer 401,
+    // answers 404 on prod and on the dev tier, and a PRIVATE space would answer 401,
     // so nothing holds the word on either tier.
     'chat',
     // The sign-in page — /login (SignInSurface in AuthGate.jsx). It was not a

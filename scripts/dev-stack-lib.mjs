@@ -33,8 +33,8 @@ export const isSandboxSpaceId = (id) => /^sandbox-/.test(String(id || ''))
  * Which live spaces this box does not have, and the tier each was first seen on.
  *
  * Tier order is significance order, not alphabetical: a space present on both
- * production and staging is reported as production's, and a staging-only space
- * is named as staging's — that difference is the whole reason the check exists
+ * production and the dev tier is reported as production's, and a dev-only space
+ * is named as dev's — that difference is the whole reason the check exists
  * (`dilijan` was built on staging and never promoted, so a production-only
  * comparison called the box complete while it lacked the space).
  *

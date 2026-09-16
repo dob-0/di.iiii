@@ -41,12 +41,12 @@ describe('presentationPreviewDocument', () => {
     })
 
     // A srcdoc page cannot read its own host any more than it can read its own
-    // query, so every page that links to a sibling hardcoded one — and staging
-    // embedded production's copy, which means the tier could never rehearse
+    // query, so every page that links to a sibling hardcoded one — and the dev
+    // tier embedded production's copy, which means the tier could never rehearse
     // itself.
     it('hands the page the origin it is actually running on', () => {
-        const result = buildPresentationPreviewDocument('<main>Rite</main>', '', 'https://staging.di-studio.xyz')
-        expect(result).toContain('window.diiPageOrigin = "https://staging.di-studio.xyz"')
+        const result = buildPresentationPreviewDocument('<main>Rite</main>', '', 'https://dev.diiii.xyz')
+        expect(result).toContain('window.diiPageOrigin = "https://dev.diiii.xyz"')
     })
 
     it('leaves diiPageOrigin an empty string when no origin is given', () => {
@@ -204,6 +204,14 @@ describe('presentationPreviewDocument', () => {
             )
             expect(result).toContain('src="/serverXR/api/projects/p1/assets/abc123.png"')
             expect(result).not.toContain('staging.di-studio.xyz')
+        })
+
+        it('strips the dev tier\'s own host the same way as its old name', () => {
+            const result = buildPresentationPreviewDocument(
+                '<img src="https://dev.diiii.xyz/serverXR/api/projects/p1/assets/abc123.png">'
+            )
+            expect(result).toContain('src="/serverXR/api/projects/p1/assets/abc123.png"')
+            expect(result).not.toContain('dev.diiii.xyz')
         })
 
         it('strips a prod host baked into a document served on any tier', () => {

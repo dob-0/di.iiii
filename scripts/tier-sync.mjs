@@ -13,8 +13,8 @@
  * the same guard `space-push.mjs` carries, for the same reason.
  *
  * Usage:
- *   node scripts/tier-sync.mjs --from local --to staging [options]
- *   node scripts/tier-sync.mjs --from local --to staging --audit
+ *   node scripts/tier-sync.mjs --from local --to dev [options]
+ *   node scripts/tier-sync.mjs --from local --to dev --audit
  *
  * Options:
  *   --audit             Compare DOCUMENTS, write nothing, exit 1 on any drift.
@@ -23,14 +23,14 @@
  *                       with different work inside it. That is the drift that
  *                       actually bites: `local-mirror` fills the dev box from
  *                       PRODUCTION first and never refreshes a project it has
- *                       already seen, so a project edited on staging reads
+ *                       already seen, so a project edited on the dev tier reads
  *                       differently on localhost for as long as both exist.
  *   --changed           Push what DIFFERS, not just what is missing — the audit's
  *                       "same slug, different work" list plus the missing ones.
  *                       Refuses any project that changed on BOTH sides since the
  *                       last sync (see the baseline below), and never touches a
  *                       project whose only difference is re-addressed assets.
- *                       This is the "work local, push to staging" flow; without it
+ *                       This is the "work local, push to dev" flow; without it
  *                       the only way to push an EDIT was --force, which overwrites
  *                       every shared project at once.
  *   --space <id>        Only this space (default: every space the source has)
@@ -39,8 +39,11 @@
  *   --dry-run           Print the plan and write nothing
  *   --allow-production  Required before anything may be written to di-studio.xyz
  *
+ * Tiers: local, dev (dev.diiii.xyz), prod. The dev tier's identifier is still
+ * `staging` — the TIERS key and the baseline key — and `--to staging` keeps working.
+ *
  * Tokens come from serverXR/.env.local: API_TOKEN (local), LIVE_API_TOKEN
- * (staging), PROD_API_TOKEN (production).
+ * (the dev tier), PROD_API_TOKEN (production).
  */
 
 import crypto from 'node:crypto'
@@ -61,15 +64,19 @@ export const localBase = (env = {}) =>
 
 export const TIERS = {
     local: { base: localBase(), tokenKey: 'API_TOKEN' },
-    staging: { base: 'https://staging.di-studio.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
+    staging: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
     prod: { base: 'https://di-studio.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
 }
+
+// `dev` names the dev tier, whose key above is still `staging`.
+export const resolveTier = (name) => (name === 'dev' ? 'staging' : name)
+export const tierLabel = (name) => (name === 'staging' ? 'dev' : name)
 
 // Production is the one host this script must never reach by inheritance.
 export const isProductionTarget = (url) => {
     try {
         const { hostname } = new URL(url)
-        return hostname === 'di-studio.xyz' || hostname === 'www.di-studio.xyz'
+        return ['di-studio.xyz', 'www.di-studio.xyz', 'diiii.xyz', 'www.diiii.xyz'].includes(hostname)
     } catch {
         return false
     }
@@ -119,7 +126,7 @@ export const baselineFromAgreement = ({ source, destination }) => {
 }
 
 // The baseline lives beside the data it describes, keyed by destination so a
-// box that pushes to staging and to prod keeps them apart.
+// box that pushes to the dev tier and to prod keeps them apart.
 const baselinePath = () => {
     // Same precedence as serverXR itself: the process environment wins over
     // .env.local, so a stack started with DATA_ROOT=… inline and this script
@@ -319,8 +326,8 @@ const parseArgs = (argv) => {
     const args = { from: null, to: null, space: null, assets: true, force: false, dryRun: false, allowProduction: false, audit: false, changed: false }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
-        if (arg === '--from') args.from = argv[++i]
-        else if (arg === '--to') args.to = argv[++i]
+        if (arg === '--from') args.from = resolveTier(argv[++i])
+        else if (arg === '--to') args.to = resolveTier(argv[++i])
         else if (arg === '--space') args.space = argv[++i]
         else if (arg === '--no-assets') args.assets = false
         else if (arg === '--force') args.force = true
@@ -337,7 +344,7 @@ const destination_has = (inventory, spaceId) => Object.prototype.hasOwnProperty.
 const main = async () => {
     const args = parseArgs(process.argv.slice(2))
     if (!TIERS[args.from] || !TIERS[args.to] || args.from === args.to) {
-        console.error('usage: node scripts/tier-sync.mjs --from <local|staging|prod> --to <local|staging|prod>')
+        console.error('usage: node scripts/tier-sync.mjs --from <local|dev|prod> --to <local|dev|prod>')
         process.exit(1)
     }
 
@@ -401,7 +408,7 @@ const main = async () => {
     }
 
     if (args.audit) {
-        console.log(`tier-sync audit  ${args.from} ↔ ${args.to}  (reading every document — this takes a minute)`)
+        console.log(`tier-sync audit  ${tierLabel(args.from)} ↔ ${tierLabel(args.to)}  (reading every document — this takes a minute)`)
         const [a, b] = [await readSignatures(from, args.space), await readSignatures(to, args.space)]
         const { missing, extra, differs, readdressed } = planAudit({ source: a, destination: b })
 
@@ -411,10 +418,10 @@ const main = async () => {
             console.log(`\n${title}`)
             rows.forEach((row) => console.log(`   ${`${row.spaceId}/${row.projectId}`.padEnd(48)}${render(row)}`))
         }
-        report(`only on ${args.from} (${missing.length})`, missing, (r) => shape(r.source))
-        report(`only on ${args.to} (${extra.length})`, extra, (r) => shape(r.destination))
+        report(`only on ${tierLabel(args.from)} (${missing.length})`, missing, (r) => shape(r.source))
+        report(`only on ${tierLabel(args.to)} (${extra.length})`, extra, (r) => shape(r.destination))
         report(`same slug, DIFFERENT work (${differs.length})`, differs,
-            (r) => `${args.from}: ${shape(r.source).padEnd(22)}${args.to}: ${shape(r.destination)}`)
+            (r) => `${tierLabel(args.from)}: ${shape(r.source).padEnd(22)}${tierLabel(args.to)}: ${shape(r.destination)}`)
         report(`same work, assets re-addressed on arrival (${readdressed.length}) — not drift to fix`,
             readdressed, (r) => shape(r.source))
 
@@ -429,7 +436,7 @@ const main = async () => {
         return
     }
 
-    console.log(`tier-sync  ${args.from} → ${args.to}${args.changed ? '  --changed' : ''}${args.dryRun ? '  (dry run)' : ''}`)
+    console.log(`tier-sync  ${tierLabel(args.from)} → ${tierLabel(args.to)}${args.changed ? '  --changed' : ''}${args.dryRun ? '  (dry run)' : ''}`)
     let plan
     // Read even on a plain run: every successful copy records a baseline
     // entry, and writing back a file that started empty would erase the rest.
@@ -447,8 +454,8 @@ const main = async () => {
         writeBaseline(baseline)
         const { push, refuse } = planChanged({ audit, baseline: baseline[args.to] })
         if (refuse.length) {
-            console.log(`\nREFUSED (${refuse.length}) — will not overwrite work on ${args.to}:`)
-            refuse.forEach((r) => console.log(`   ${`${r.spaceId}/${r.projectId}`.padEnd(48)}${r.why}\n      ${args.from}: ${r.source.entities}e ${r.source.assets}a ${r.source.page}p   ${args.to}: ${r.destination.entities}e ${r.destination.assets}a ${r.destination.page}p`))
+            console.log(`\nREFUSED (${refuse.length}) — will not overwrite work on ${tierLabel(args.to)}:`)
+            refuse.forEach((r) => console.log(`   ${`${r.spaceId}/${r.projectId}`.padEnd(48)}${r.why}\n      ${tierLabel(args.from)}: ${r.source.entities}e ${r.source.assets}a ${r.source.page}p   ${tierLabel(args.to)}: ${r.destination.entities}e ${r.destination.assets}a ${r.destination.page}p`))
             console.log('   look at both, decide which is right, then copy that one by hand: --space <s> --force, or pull it down.')
             process.exitCode = 1
         }

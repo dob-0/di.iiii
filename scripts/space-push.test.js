@@ -11,13 +11,15 @@ const SCRIPT = path.join(ROOT_DIR, 'scripts', 'space-push.mjs')
 
 describe('space-push production guard', () => {
     // This script's built-in fallback IS production, and the root .env sets
-    // LIVE_API_URL to production while .env.local overrides it to staging. One
+    // LIVE_API_URL to production while .env.local overrides it to the dev tier. One
     // lost line in an untracked file turned a routine push into a live one, and
     // the only thing standing in the way was remembering to pass --dry-run.
 
     it('recognises the production host and nothing else', () => {
         expect(isProductionTarget('https://di-studio.xyz/serverXR')).toBe(true)
         expect(isProductionTarget('https://www.di-studio.xyz/serverXR')).toBe(true)
+        expect(isProductionTarget('https://diiii.xyz/serverXR')).toBe(true)
+        expect(isProductionTarget('https://dev.diiii.xyz/serverXR')).toBe(false)
         expect(isProductionTarget('https://staging.di-studio.xyz/serverXR')).toBe(false)
         expect(isProductionTarget('http://localhost:4000/serverXR')).toBe(false)
         expect(isProductionTarget('not-a-url')).toBe(false)
@@ -46,13 +48,13 @@ describe('space-push production guard', () => {
         expect(stderr || '').not.toContain('Refusing to push to PRODUCTION')
     })
 
-    it('does not refuse staging', async () => {
+    it('does not refuse the dev tier', async () => {
         const { stderr } = await execFileAsync(
             process.execPath,
             [SCRIPT, 'definitely-not-a-real-space', '--dry-run'],
             {
                 cwd: ROOT_DIR,
-                env: { ...process.env, LIVE_API_URL: 'https://staging.di-studio.xyz/serverXR', LIVE_API_TOKEN: 'x' },
+                env: { ...process.env, LIVE_API_URL: 'https://dev.diiii.xyz/serverXR', LIVE_API_TOKEN: 'x' },
             }
         ).catch((e) => e)
         expect(stderr || '').not.toContain('Refusing to push to PRODUCTION')

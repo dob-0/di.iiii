@@ -11,7 +11,7 @@ Today a show lives in two places, split by accident rather than by nature:
 
 | | Lives in | Travels with a space? |
 |---|---|---|
-| Mapping surfaces, cues, and a cue's `lightLook`/`lightScene` | the project document (`document.mappingState`) | **yes** — syncs local → staging → prod, backed up, openable anywhere |
+| Mapping surfaces, cues, and a cue's `lightLook`/`lightScene` | the project document (`document.mappingState`) | **yes** — syncs local → dev → prod, backed up, openable anywhere |
 | Looks, layers, palettes, scenes, patch, output, MIDI map | `<dataDir>/lighting/show.json` on the machine | **no** — never leaves it |
 
 So a space carries the mapping **and the intent** to fire a light cue, but not the light

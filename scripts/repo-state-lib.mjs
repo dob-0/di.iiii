@@ -11,7 +11,7 @@
 export const WORKTREE_BUDGET = 6
 export const UNMERGED_BRANCH_BUDGET = 8
 
-// The branches deploy actually watches (dev → staging, main → prod). When one of
+// The branches deploy actually watches (dev → the dev tier, main → prod). When one of
 // these is checked out anywhere but the primary checkout, "git switch dev" refuses
 // everywhere else — worth a line before anyone hits that wall (2026-08-09 incident).
 export const FLOW_BRANCHES = ['dev', 'main']

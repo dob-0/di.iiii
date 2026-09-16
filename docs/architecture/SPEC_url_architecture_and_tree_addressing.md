@@ -162,7 +162,8 @@ resolver shape.
 
 Infrastructure only, no user-visible change. `studio.di-studio.xyz` serves the same
 bundle as `di-studio.xyz`; both hosts accept every current route. Nothing redirects
-yet. Verifiable on staging as `studio.staging.di-studio.xyz`.
+yet. Verifiable on the dev tier as `studio.staging.di-studio.xyz` (a host name drafted before the
+dev tier moved to `dev.diiii.xyz` — re-pick it with this stage).
 
 ### Stage 1 — move the creator surfaces, flat paths only
 
@@ -252,7 +253,7 @@ Notes:
   `serializeAuthSessionCookie` and `serializeExpiredAuthSessionCookie`.
 - `serverXR/src/config.js` — new `AUTH_SESSION_COOKIE_DOMAIN` env. **Unset means
   host-only, i.e. exactly today's behaviour** — dev and self-host installs are
-  unaffected. Set to `.di-studio.xyz` in prod, `.staging.di-studio.xyz` in staging.
+  unaffected. Set to `.di-studio.xyz` in prod, `.staging.di-studio.xyz` on the dev tier.
 - `CORS_ORIGINS` gains the creator origin for both lanes.
 - `/api/resolve/:spaceSegment/:projectSegment` → `*path` (Stage 2 only).
 
@@ -312,8 +313,8 @@ The most disruptive day-to-day cost, and the one most likely to be discovered la
   Under the split it must move to the creator host while its public URL survives
   (§4).
 - **Existing published spaces** (`br_id_ge`, `wcc`, `beyond_data`, `open`) are the
-  regression surface. Each must be click-verified on staging before promotion, per
-  the standing dev→staging→main rule.
+  regression surface. Each must be click-verified on the dev tier before promotion, per
+  the standing local → dev → prod rule.
 - **`di-spaces` snapshots and any linked-space sync** may embed absolute editor URLs.
   Grep before Stage 1.
 
@@ -408,7 +409,7 @@ striking through the recommendation you reject, not silence.
    > self-hoster with one domain and one cert actually has. The real risk is not the
    > implementation cost but rot: a second scheme nobody exercises is broken by the
    > time it is needed. Running dev on the `/-/` infix means the fallback is
-   > exercised every day and the split-host path is what staging verifies —
+   > exercised every day and the split-host path is what the dev tier verifies —
    > both stay alive, and neither becomes the untested one.
 
 ---
@@ -417,7 +418,7 @@ striking through the recommendation you reject, not silence.
 
 Stage 1 is done when all of the following hold:
 
-- [ ] Every row in §4's redirect map verified live on staging, including the four
+- [ ] Every row in §4's redirect map verified live on the dev tier, including the four
       existing published spaces.
 - [ ] `RESERVED_APP_SEGMENTS` no longer exists as a growing list; the only reserved
       token is `-`, asserted by test.
@@ -449,6 +450,6 @@ Stage 1 is done when all of the following hold:
 | Every §4 redirect returns the stated code and target | server contract |
 | `/{space}/p/{id}` never redirects and never 404s | server contract |
 | Session cookie carries `Domain` only when configured; absent by default | server contract |
-| Cross-host navigation preserves session for owner/guest/logged-out | live, staging |
+| Cross-host navigation preserves session for owner/guest/logged-out | live, dev tier |
 | `/api/resolve` returns 404 on a partial tree path, never a partial resolve | server contract (Stage 2) |
 | Sibling slug collision is rejected at creation with 409 | server contract (Stage 2) |

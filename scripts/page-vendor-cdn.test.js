@@ -261,8 +261,10 @@ describe('production is asked for twice', () => {
         expect(() => resolveApi({ tier: 'prod' })).toThrow(/--allow-production/)
         expect(resolveApi({ tier: 'prod', allowProduction: true })).toBe('https://di-studio.xyz/serverXR')
         expect(resolveApi({ tier: 'local' })).toBe('http://localhost:4000/serverXR')
-        expect(resolveApi({ tier: 'staging' })).toBe('https://staging.di-studio.xyz/serverXR')
-        expect(() => resolveApi({ tier: 'nope' })).toThrow(/local, staging or prod/)
+        expect(resolveApi({ tier: 'dev' })).toBe('https://dev.diiii.xyz/serverXR')
+        expect(resolveApi({ tier: 'staging' })).toBe('https://dev.diiii.xyz/serverXR')
+        expect(parseArgs(['--tier', 'dev']).tier).toBe('staging')
+        expect(() => resolveApi({ tier: 'nope' })).toThrow(/local, dev or prod/)
     })
 
     it('refuses an --api that points at di-studio.xyz by any spelling, with the same flag', () => {

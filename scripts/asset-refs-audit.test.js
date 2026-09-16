@@ -59,6 +59,11 @@ describe('parseArgs', () => {
             .toMatchObject({ tier: 'staging', spaces: ['beyond-form', 'wcc'], json: true })
     })
 
+    it('accepts --tier dev for the dev tier (still keyed staging)', () => {
+        expect(parseArgs(['--tier', 'dev']).tier).toBe('staging')
+        expect(TIERS[parseArgs(['--tier', 'dev']).tier].url).toBe('https://dev.diiii.xyz/serverXR')
+    })
+
     it('knows all three tiers and where their tokens come from', () => {
         expect(Object.keys(TIERS)).toEqual(['local', 'staging', 'prod'])
         expect(TIERS.prod.tokenEnv).toBe('PROD_API_TOKEN')

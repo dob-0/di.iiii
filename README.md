@@ -15,8 +15,8 @@ You sign in, get an address, build a scene in the browser, mark one project live
 - editable document inside a space: `project`
 - live public route for a space: `publishedProjectId`
 - where things run — two lanes, four names, one rule:
-  - `dev` branch → **staging.di-studio.xyz** (rehearsal — work and verify here)
-  - `main` branch → **di-studio.xyz** (live — promote `dev -> main` only after staging is verified)
+  - `dev` branch → **dev.diiii.xyz**, the dev tier (rehearsal — work and verify here)
+  - `main` branch → **diiii.xyz**, prod (live — promote `dev -> main` only after the dev tier is verified)
 - runtime baseline: Node `22.x`, npm `10.x`
 
 Project links:
@@ -114,7 +114,7 @@ Common mistakes to avoid:
 - do not describe the node editor as the main shipped editor — that is `Studio`
 - do not describe physical sync or hardware-linked workflows as fully productized repo capability
 - do not assume older orchestration files are the right long-term home for new canonical behavior
-- do not push private ops material, raw staging details, `.env` files, or host-specific deployment secrets into the public repo
+- do not push private ops material, raw dev-tier details, `.env` files, or host-specific deployment secrets into the public repo
 
 For AI task assignments, use the task request template in [AGENTS.md](AGENTS.md).
 
@@ -178,14 +178,14 @@ Normal promotion path:
 
 1. work on `dev`
 2. validate locally
-3. promote to `staging`
-4. verify staging
+3. push `dev` — it deploys the dev tier (dev.diiii.xyz)
+4. verify on the dev tier
 5. promote to `main`
 
 Deploys are driven by pushes, via GitHub Actions (GHCR build + SSH to the Hetzner VPS):
 
 ```bash
-git push origin dev    # deploys to VPS staging — see .github/workflows/deploy-vps-staging.yml
+git push origin dev    # deploys the dev tier (dev.diiii.xyz) — workflow file still named deploy-vps-staging.yml
 git push origin main   # deploys to VPS production — see .github/workflows/deploy-vps.yml
 ```
 
@@ -215,7 +215,7 @@ flowchart LR
     dev --> branchMain["main branch"]
     branchDev --> ghcrStaging["GHCR build<br/>deploy-vps-staging.yml"]
     branchMain --> ghcrProd["GHCR build<br/>deploy-vps.yml"]
-    ghcrStaging --> vpsStaging["Hetzner VPS<br/>staging Compose project"]
+    ghcrStaging --> vpsStaging["Hetzner VPS<br/>dev tier Compose project<br/>→ dev.diiii.xyz"]
     ghcrProd --> vpsProd["Hetzner VPS<br/>production Compose project<br/>→ di-studio.xyz"]
     branchMain -.disabled fallback.-> release["cpanel-* release branches"]
     release -.-> hosting["cPanel hosting<br/>(legacy, workflow_dispatch-only)"]

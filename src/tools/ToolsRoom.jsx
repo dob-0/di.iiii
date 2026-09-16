@@ -149,7 +149,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
                 <p className="tr-lede">
                     {isLocalInstall
                         // True on an install and false on the hosted tiers, where
-                        // this same screen was telling a visitor to staging that
+                        // this same screen was telling a visitor to the dev tier that
                         // nothing reaches the internet — from a page served over it.
                         ? 'Everything di.iiii can do, in one place. Each opens on this machine — nothing here reaches the internet.'
                         : 'Everything di.iiii can do, in one place. Some of it — the lighting desk, the sessions desk — only exists on a di.iiii running on your own machine.'}

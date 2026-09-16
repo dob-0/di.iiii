@@ -3,7 +3,7 @@ import { connect } from './index.js'
 import { MOVES } from './moves.js'
 import { ApprovalPending, DiError, createHttp } from './http.js'
 import { PUBLIC, PublicMoveRefused, guard, reachOf } from './reach.js'
-import { resolveBase, resolveToken } from './credentials.js'
+import { resolveBase, resolveSite, resolveToken } from './credentials.js'
 import { createHandler, describeTools, detectVersion, inputSchema, moveName, toolName } from './mcp.mjs'
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -158,7 +158,7 @@ describe('the traps, encoded', () => {
     })
 
     // Asset ids are per-server. A cache keyed on the project alone let a prod
-    // run read staging's cache and publish a page whose every file 404s.
+    // run read the dev tier's cache and publish a page whose every file 404s.
     it('keys the asset cache by host, so one tier cannot read another tier\'s', async () => {
         const store = new Map()
         const cache = { get: async (k) => store.get(k) || null, set: async (k, v) => { store.set(k, v) } }
@@ -193,7 +193,12 @@ describe('credentials', () => {
     })
 
     it('knows the three tiers by name and refuses a fourth', () => {
-        expect(resolveBase({ tier: 'staging' })).toBe('https://staging.di-studio.xyz/serverXR')
+        expect(resolveBase({ tier: 'dev' })).toBe('https://dev.diiii.xyz/serverXR')
+        // `staging` is the dev tier's old identifier and must keep working.
+        expect(resolveBase({ tier: 'staging' })).toBe('https://dev.diiii.xyz/serverXR')
+        expect(resolveSite({ tier: 'dev' })).toBe('https://dev.diiii.xyz')
+        expect(resolveToken({ tier: 'dev', env: { DI_TOKEN_STAGING: 's' }, home: '/nonexistent' })).toBe('s')
+        expect(resolveToken({ tier: 'staging', env: { DI_TOKEN_DEV: 'd', DI_TOKEN_STAGING: 's' }, home: '/nonexistent' })).toBe('d')
         expect(() => resolveBase({ tier: 'live' })).toThrow(/unknown tier/)
     })
 

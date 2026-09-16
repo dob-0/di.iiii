@@ -40,8 +40,8 @@ Every command below runs from `~/di-spaces`.
    find out why before touching anything.
 2. **Audit.** `node scripts/audit/audit-spaces.mjs --env prod --deep`. Structural pass plus the
    browser pass. Read the per-surface byte totals before the per-asset ones.
-3. **Mirror to staging.** `bash scripts/push-all.sh staging`, then re-audit staging and confirm
-   it matches prod. Optimize there. Never first on prod.
+3. **Mirror to the dev tier.** `bash scripts/push-all.sh staging` (the dev tier, dev.diiii.xyz;
+   di-spaces' tools still name it `staging`), then re-audit the dev tier and confirm it matches prod. Optimize there. Never first on prod.
 4. **Optimize.** `node scripts/audit/optimize-assets.mjs --env staging --apply`. Works from live
    bytes; recompresses in place; rewrites every reference and the registry entry.
 5. **Verify references.** Every id a live scene or document points at must resolve. A swap that
@@ -120,7 +120,7 @@ codec, keep the pixels.
 
 ## Repo Anchors
 Everything runs from `~/di-spaces`. Tools are in `scripts/audit/`; the token, the base URLs
-and the `LIVE_*` = staging trap are in `scripts/lib/dii.mjs`.
+and the `LIVE_*` = dev tier trap are in `scripts/lib/dii.mjs`.
 
 Two files in `~/di.iiii` explain behaviour the tools cannot change:
 `serverXR/src/routes/spaceRoutes.js` and `projectRoutes.js` (upload, scrub, delete) and

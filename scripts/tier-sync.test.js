@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { TIERS, baselineFromAgreement, documentSignature, isProductionTarget, planAudit, planChanged, planSync } from './tier-sync.mjs'
+import { TIERS, baselineFromAgreement, resolveTier, tierLabel, documentSignature, isProductionTarget, planAudit, planChanged, planSync } from './tier-sync.mjs'
 
 describe('isProductionTarget', () => {
     // The whole reason this guard exists: a tool that can write to a tier must
@@ -7,9 +7,24 @@ describe('isProductionTarget', () => {
     it('knows production from every other tier', () => {
         expect(isProductionTarget(TIERS.prod.base)).toBe(true)
         expect(isProductionTarget('https://www.di-studio.xyz/serverXR')).toBe(true)
+        expect(isProductionTarget('https://diiii.xyz/serverXR')).toBe(true)
         expect(isProductionTarget(TIERS.staging.base)).toBe(false)
+        expect(isProductionTarget('https://dev.diiii.xyz/serverXR')).toBe(false)
+        expect(isProductionTarget('https://staging.di-studio.xyz/serverXR')).toBe(false)
         expect(isProductionTarget(TIERS.local.base)).toBe(false)
         expect(isProductionTarget('not a url')).toBe(false)
+    })
+})
+
+describe('tier names', () => {
+    // The second tier is called dev now; its key (and every saved baseline) is
+    // still `staging`, so both spellings must land on the same entry.
+    it('accepts dev as the dev tier and keeps staging working', () => {
+        expect(resolveTier('dev')).toBe('staging')
+        expect(resolveTier('staging')).toBe('staging')
+        expect(resolveTier('prod')).toBe('prod')
+        expect(TIERS[resolveTier('dev')].base).toBe('https://dev.diiii.xyz/serverXR')
+        expect(tierLabel('staging')).toBe('dev')
     })
 })
 
