@@ -204,3 +204,95 @@ describe('space-sync engine', () => {
         expect(matchGlobs(['a.html', 'b.css'], ['*.html'])).toEqual(['a.html'])
     })
 })
+
+describe('space-sync refuses a document that changed moments before the write', () => {
+    // A fake tier standing in for a live server — never a real dev/prod tier.
+    // GET /document answers with `firstVersion` on the first call (the read
+    // syncOne bases its merge on) and `secondVersion` on every call after
+    // (the re-check right before the PUT) — simulating someone else's edit
+    // landing in between.
+    const startFakeTier = ({ firstVersion, secondVersion }) => {
+        const calls = []
+        let documentReads = 0
+        const server = http.createServer((req, res) => {
+            calls.push(`${req.method} ${req.url}`)
+            let body = ''
+            req.on('data', (c) => { body += c })
+            req.on('end', () => {
+                res.setHeader('Content-Type', 'application/json')
+                if (req.method === 'GET' && req.url === '/api/spaces/probe') {
+                    return res.end(JSON.stringify({ space: { id: 'probe', label: 'probe', isPublic: true } }))
+                }
+                if (req.method === 'GET' && req.url === '/api/spaces/probe/projects') {
+                    return res.end(JSON.stringify({ projects: [{ id: 'probe-page', slug: 'probe-page', title: 'Probe Page' }] }))
+                }
+                if (req.method === 'GET' && req.url === '/api/projects/probe-page/document') {
+                    documentReads += 1
+                    const version = documentReads === 1 ? firstVersion : secondVersion
+                    return res.end(JSON.stringify({ document: { entities: [], presentationState: {} }, version }))
+                }
+                if (req.method === 'PUT' && req.url === '/api/projects/probe-page/document') {
+                    calls.push(`PUT body ${body}`)
+                    return res.end(JSON.stringify({ ok: true }))
+                }
+                res.end(JSON.stringify({ ok: true }))
+            })
+        })
+        return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({
+            server, calls, url: `http://127.0.0.1:${server.address().port}`, close: () => server.close()
+        })))
+    }
+
+    const runEngine = (dir, extraArgs, tier) => new Promise((resolve) => {
+        const child = spawn(process.execPath, [ENGINE, '--repo', dir, '--all', '--to', tier.url, '--token', 'x', ...extraArgs],
+            { cwd: dir, env: process.env })
+        let text = ''
+        child.stdout.on('data', (c) => { text += c })
+        child.stderr.on('data', (c) => { text += c })
+        child.on('close', (code) => resolve({ code, text }))
+    })
+
+    const writeFixture = () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'space-sync-stale-'))
+        fs.writeFileSync(path.join(dir, 'index.html'), '<!doctype html><p>probe</p>')
+        fs.writeFileSync(path.join(dir, 'probe-page.json'), JSON.stringify({
+            spaceId: 'probe', projectId: 'probe-page', entry: 'index.html', label: 'Probe Page', minEngine: ENGINE_VERSION
+        }))
+        fs.writeFileSync(path.join(dir, 'di-space.space.json'), JSON.stringify({
+            spaceId: 'probe', label: 'probe', minEngine: ENGINE_VERSION, projects: ['probe-page.json']
+        }))
+        return dir
+    }
+
+    it('refuses to write when the document changed between the read and the write', async () => {
+        const tier = await startFakeTier({ firstVersion: 1, secondVersion: 2 })
+        const dir = writeFixture()
+        const out = await runEngine(dir, [], tier)
+        tier.close()
+
+        expect(out.code).not.toBe(0)
+        expect(out.text).toContain('refusing to write')
+        expect(out.text).toContain('v1 → v2')
+        expect(tier.calls.some((c) => c.startsWith('PUT'))).toBe(false)
+    })
+
+    it('writes normally when nothing changed in between', async () => {
+        const tier = await startFakeTier({ firstVersion: 1, secondVersion: 1 })
+        const dir = writeFixture()
+        const out = await runEngine(dir, [], tier)
+        tier.close()
+
+        expect(out.code).toBe(0)
+        expect(tier.calls.some((c) => c.startsWith('PUT'))).toBe(true)
+    })
+
+    it('--force writes anyway even if the document changed in between', async () => {
+        const tier = await startFakeTier({ firstVersion: 1, secondVersion: 2 })
+        const dir = writeFixture()
+        const out = await runEngine(dir, ['--force'], tier)
+        tier.close()
+
+        expect(out.code).toBe(0)
+        expect(tier.calls.some((c) => c.startsWith('PUT'))).toBe(true)
+    })
+})
