@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { TIERS, baselineFromAgreement, resolveTier, tierLabel, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite } from './tier-sync.mjs'
+import { TIERS, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, tierLabel, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite } from './tier-sync.mjs'
 
 describe('localBase', () => {
     // The documented convention is LOCAL_API_URL with no /serverXR suffix
@@ -298,5 +298,39 @@ describe('baselineFromAgreement', () => {
         const source = { main: { a: sig(1), b: sig(2) }, open: { c: sig(3) } }
         const destination = { main: { a: sig(1), b: sig(9) } }
         expect(baselineFromAgreement({ source, destination })).toEqual({ 'main/a': sig(1).shape })
+    })
+})
+
+describe('--rebuild-baseline', () => {
+    const doc = (n, assetId = 'aaa') => documentSignature({
+        entities: Array.from({ length: n }, (_, i) => ({ id: `e${i}`, assetRef: assetId })),
+        assets: [{ id: assetId, name: 'photo.jpg', mimeType: 'image/jpeg' }]
+    })
+    const at = (sig, documentVersion, updatedAt) => ({ ...sig, documentVersion, updatedAt })
+
+    it('records only projects identical on both tiers, with both tiers\' versions', () => {
+        const source = { network: { same: at(doc(1), 6, 100), readdressed: at(doc(2, 'local-id'), 3, 10), differs: at(doc(3), 9, 9) }, lab: { only: at(doc(1), 1, 1) } }
+        const destination = { network: { same: at(doc(1), 1, 900), readdressed: at(doc(2, 'dev-id'), 1, 20), differs: at(doc(4), 9, 9) } }
+        const { agreed, differs, onlyOneSide } = planRebuildBaseline({ source, destination, sourceTier: 'local', destinationTier: 'staging' })
+        expect(Object.keys(agreed).sort()).toEqual(['network/readdressed', 'network/same'])
+        expect(agreed['network/same']).toEqual({
+            shape: doc(1).shape,
+            versions: { local: { documentVersion: 6, updatedAt: 100 }, staging: { documentVersion: 1, updatedAt: 900 } }
+        })
+        expect(differs.map((r) => r.projectId)).toEqual(['differs'])
+        expect(onlyOneSide).toBe(1)
+    })
+
+    it('reads both the old bare-shape entries and the new versioned ones', () => {
+        expect(baselineShape('abc')).toBe('abc')
+        expect(baselineShape({ shape: 'abc', versions: {} })).toBe('abc')
+        expect(baselineShape(undefined)).toBeUndefined()
+    })
+
+    it('--changed treats a versioned entry exactly like the bare shape it carries', () => {
+        const row = { spaceId: 'main', projectId: 'p', source: doc(5), destination: doc(1) }
+        const { push, refuse } = planChanged({ audit: { missing: [], differs: [row], readdressed: [] }, baseline: { 'main/p': { shape: doc(1).shape, versions: {} } } })
+        expect(push.map((r) => r.projectId)).toEqual(['p'])
+        expect(refuse).toEqual([])
     })
 })
