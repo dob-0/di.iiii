@@ -119,10 +119,10 @@ no global "compatible release" number anywhere.
    artifacts (`di:pack` tarballs): hello, card, cue, blackout, picture, a patch
    opened back and forth with placeholders surviving. A red square blocks the
    release.
-7. **The honest limit.** Protocol 1 begins with the first release that ships it.
-   0.4.x installs predate it. Newer members reach them through an adapter over
-   the existing follow and sync routes (`/api/sync/spaces/:id/*`, machine
-   links), limited to what those routes can carry.
+7. **Where it starts.** Protocol 1 begins with the release that ships it, and
+   from that release on every version works with every other. Owner, 2026-09-16:
+   *"yes from this version can all works, so its ok"*. The 0.4.x installs
+   predate it and get no adapter; they update once.
 
 ## 4. The local workflow
 
@@ -163,7 +163,7 @@ Checked by grep on `origin/dev` and the open branches that day.
 
 1. **Members know each other, in any version.** Protocol 1 core and feature
    hello, the machine card, discovery on the LAN, both-way member links, the
-   compatibility grid, and the 0.4 adapter. Everything else is a feature on top.
+   compatibility grid. Everything else is a feature on top.
 2. **Land the picture work** (#447, then #450 and #451) and rehearse the
    two-artist jam on real machines.
 3. **Jam rules.** Holding, presence in Raw, the local certificate for phone

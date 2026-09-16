@@ -419,7 +419,7 @@ nav.jump a{font:11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;
     <li><div><b>Updating is an offer, never a condition.</b><p>In jam, a machine with a newer release offers it and you can say no; in show, nothing updates. Being behind is never a reason to be locked out.</p></div></li>
     <li><div><b>Speaking devices negotiate in their driver.</b><p>Each driver states which firmware or ROS versions it knows; an unknown one connects read-only and says so.</p></div></li>
     <li><div><b>Tested as a grid, every release.</b><p>Each new release is played automatically against the older releases (hello, cue, blackout, picture, a patch opened back and forth). A red square in the grid blocks the release.</p></div></li>
-    <li><div><b>The honest limit.</b><p>Protocol 1 starts with the first release that has it. Today's 0.4 installs predate it, so newer releases talk to them through a small adapter for the old follow-and-sync route.</p></div></li>
+    <li><div><b>Where it starts.</b><p>From the first release with protocol 1, every version works with every other. Today's 0.4 installs update once; there is no adapter for them.</p></div></li>
   </ol>
 </section>
 
@@ -461,7 +461,7 @@ nav.jump a{font:11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;
     <tr><td>connect</td><td>follow a space · machine links (one-way: follower → host, every 3 s) · device.dijet · DMX Out</td><td>both-way links (every member reaches every member) · discovery on the room network · PJLink / OSC drivers</td></tr>
     <tr><td>see</td><td><span class="mono">/api/config</span> reports LAN reach · <span class="mono">di status</span></td><td>the machine card: part, ports, health, what it shows</td></tr>
     <tr><td>control</td><td>projector kiosk on asuz (boots, restarts)</td><td>cue list + each machine's short list</td></tr>
-    <tr><td>versions</td><td><span class="mono">di update --from FILE</span> · refuses downgrade</td><td>protocol 1 core · feature hello · placeholders for unknown nodes · compatibility grid in CI · adapter for 0.4</td></tr>
+    <tr><td>versions</td><td><span class="mono">di update --from FILE</span> · refuses downgrade</td><td>protocol 1 core · feature hello · placeholders for unknown nodes · compatibility grid in CI</td></tr>
     <tr><td>parts</td><td><span class="mono">di up --lan</span></td><td><span class="mono">di up --part stage|hands</span> · code split per part · runtime for old systems</td></tr>
   </table></div>
 </section>
