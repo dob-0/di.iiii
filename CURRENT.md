@@ -13,13 +13,15 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Facade audit wave 3: the 2D page faults
-- Wave 3 facade audit: front-room faults (red ring, white planes, camera freeze)
-- signing in keeps your guest work openable; opening a file grants the opener
-- one name for /open and /wcc, matching the stored space label
-- suite page gaps: assets, uppercase labels, og-image, literal echoes
-- Land facade-page-faults (#464) as a follow-up batch, resolving the SpaceHub overlap with #465
-- Facade wave 3 batch: names, front room, sign-in carries guest work, no-account audit
+- dev tier identifiers renamed; staging.di-studio.xyz switched off
+- "staging" retired: the tiers are local · dev · prod
+- picture operators in Raw, and one desk across two machines (asuz + aylmo)
+- The rig, step 1: machines on one network find each other, in any version
+- the safety net: every change has an author and a way back
+- the start check: one LATEST/NOT LATEST answer for code and spaces
+- start-check compares content; tier-sync can rebuild its baseline
+- batch land: space history + start check
+- Land the rig (protocol 1) and Raw picture operators together
 
 Full detail: `PROGRESS.md`.
 

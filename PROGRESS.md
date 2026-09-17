@@ -5,6 +5,410 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-16 — dev tier identifiers renamed; staging.di-studio.xyz switched off
+
+- Renamed the dev tier's machine identifiers from `staging` to `dev`: `docker-compose.dev.yml`
+  (project `dii-dev`, container `dii-dev-server-1`, volume `dii-dev_data`),
+  `.github/workflows/deploy-vps-dev.yml` (environment `dev`, tags `dev`/`dev-<sha>`,
+  `deployEnv` `dev`), env `DEV_*` / `VPS_DEV_*`, `/opt/di.iiii-dev`, `DI_TOKEN_DEV`, manifest
+  `tiers.dev`, `sync-space-to-dev.sh`, `cleanup-plans/dev.json`. The `staging` aliases from #471
+  are gone; a CLI handed `staging` fails with `"staging" is now "dev"`. Map in
+  `docs/ai/vocabulary.md` (amendment 2026-09-16).
+- `staging.di-studio.xyz` is switched off (Caddy block removed, DNS record deleted), done after
+  the dev OAuth callbacks moved to `dev.diiii.xyz` and the owner tested Google + GitHub sign-in
+  there. Host matchers no longer accept `staging*`.
+- The VPS migration (checkout dir, data volume copy to `dii-dev_data`, `.env` names, GitHub
+  vars) is done by hand at merge time, to match these names.
+- Prod's `.env` carries both `STAGING_DOMAIN/PORT` and `DEV_DOMAIN/PORT` until the next
+  dev→main promotion updates prod's Caddyfile/compose; then the `STAGING_*` lines are removed.
+- Left for the owner: the legacy cPanel pipeline (dead since 2026-07-15) and the Android
+  package id `xyz.distudio.chat.staging`.
+- Folds PR #476 (`chore/no-staging-host`, another session's pass on the same host retirement): its
+  cPanel-only host defaults and docs come across as files; everything it shared with this branch
+  is superseded by the renames here. #476 closes as superseded.
+- `scripts/space-sync.mjs` (engine v7) reads a manifest's old `tiers.staging` key as `dev`, so
+  br_id_ge, beyond_form, platform_recordar and space-starter keep syncing until their manifests are
+  edited; only the CLI value `--tier staging` is refused. One `npm run space:sync:release` after merge.
+
+## 2026-09-16 — "staging" retired: the tiers are local · dev · prod
+
+- Owner, 2026-09-16: "we have not staging anymore". The second tier is **dev**, addressed
+  `dev.diiii.xyz`; `staging.di-studio.xyz` is the same server under its old name and still
+  answers only for links already handed out. Lexicon amended in `docs/ai/vocabulary.md`
+  (the tier table and the list of identifiers that deliberately keep `staging`).
+- Words and links changed across docs, comments, help text and copy; dated history left as said.
+  `src/copyVocabulary.test.js` now bans `staging` in user-visible strings.
+- The tier mark reads **DEV** at both names (`MODE_STAGING` → `MODE_DEV`).
+- Tier arguments accept `dev` as an alias and keep `staging` working: `deploy.mjs`,
+  `tier-sync`, `space-sync --tier`, `local-mirror`, `data-cleanup`, `asset-refs-audit`,
+  `page-vendor-cdn`, `normalise-page-asset-urls`, the cPanel scripts, and the SDK
+  (`DI_TOKEN_DEV`, falling back to `DI_TOKEN_STAGING`). Space manifests keep the key
+  `tiers.staging`, now pointing at `https://dev.diiii.xyz/serverXR`.
+- Fixed on the way: nginx sent no `noindex` at `dev.diiii.xyz` (the map matched only `^staging\.`);
+  `isProductionTarget` in tier-sync/space-push did not know `diiii.xyz` was production.
+- Kept on purpose (machine identifiers): `STAGING_*` / `VPS_STAGING_*` env vars,
+  `docker-compose.staging.yml`, `deploy-vps-staging.yml` and its name, container
+  `dii-staging-server-1`, `/opt/di.iiii-staging`, GitHub environment `staging`, image tags,
+  `DEPLOY_ENV=staging`, `cpanel-staging`, npm script names, manifest key `tiers.staging`,
+  the Android package id `xyz.distudio.chat.staging`.
+- For the next land, CURRENT.md's wording should follow: `tiers: local · dev → dev.diiii.xyz
+  (rehearsal) · main → diiii.xyz (live)`; "Dev-tier deploys fold their own notes";
+  `git push origin dev # → dev tier`; the owner item reads "dev-tier Google OAuth secret".
+- Still owed: the `space-sync.mjs` alias needs `node scripts/space-sync-vendor.mjs --write` into
+  the vendored copies; `~/di-spaces` tools refuse a `staging` target whose host isn't `staging.`;
+  the URL spec draft still proposes `studio.staging.di-studio.xyz` (owner's call); the chat APK
+  twin is locked to the old host until rebuilt; `sync-space-to-staging.sh` loops `"$@"` so
+  `--force` is read as a space id (pre-existing).
+
+## 2026-09-14 — picture operators in Raw, and one desk across two machines (asuz + aylmo)
+
+Carries the note for the stacked #445 (di two-installs fixes) and #446 (map motion glow),
+which landed through the batch without their own.
+
+- **Two real installs, one space.** Installed the latest di.iiii on asuz (Debian 13, no node,
+  no curl) and followed its space from aylmo (certificate on 443). Five faults only two real
+  machines showed — vendored npm on update, CLI self-requests to :80 on a 443 install, invite
+  printing localhost, the follower speaking http to its own https server, follows only starting
+  at boot, update/restore leaving a padlocked install down. All fixed with guards; rows in
+  `docs/ai/known-fixes.md`.
+- **Projector box.** asuz drives an Optoma 1080P over HDMI through `cage` + `chromium` +
+  `seatd` (hand-started kiosk, no boot unit — autostart is the owner's call). The mode mark was
+  being projected around the work; `/map/…/out` no longer draws it.
+- **Motion glow** on a camera map surface (#446), then generalised: **picture operators** —
+  Camera In, Difference, Level, Blur, Edge, Feedback, Blend, Analyze, Picture Out — one table in
+  `src/project/tops/topOperators.js`, a WebGL1 engine, live pictures on the cards, Analyze →
+  numbers through liveOutputs, map surface source "Pictures".
+- **One desk across machines** (owner: "di is the join of desks"). `serverXR/src/machines`: a
+  lasting machine id/name, a per-space hub of open pages with their devices, signal relay over
+  the follow link. Browser: Runs on per operator; wires crossing machines are WebRTC video,
+  remote cards get JPEG previews, numbers ride a data channel. The Desk panel node lists every
+  machine and its cameras / mics / speakers / screens and places Camera In / Picture Out for a
+  device. Seen end to end: asuz's camera analysed on aylmo, back on asuz's projector.
+- **Still undone:** Send / Receive operators for SEPARATE desks (owner wants both modes);
+  numbers wired into operator settings; sound operators for the listed mics/speakers; a
+  machine only takes part while a page is open on it; two installs restored from one backup
+  share a machine id.
+
+## 2026-09-16 — The rig, step 1: machines on one network find each other, in any version
+
+- Design agreed with the owner step by step: `docs/architecture/RIG.md` (mesh, jam/show, any version with any version, local workflow, 20 cases) and the build contract `docs/architecture/rig/PROTOCOL-1.md`. Compatibility starts with protocol 1 (owner: "from this version can all works"); 0.4.x gets no adapter.
+- Built in five parallel lanes, merged here: `serverXR/src/rig/` — frozen core (hello, card, cue, blackout, picture reserved), per-pair features, tolerant readers, room + HMAC key, identity, machine card probes (screens, audio, cameras, serial, MIDI, net, temp, CPU, mem, Pi throttling, part Studio/Stage/Hands), members + UDP discovery on :47600 (LAN only), sinks (built-in cues, blackout → lighting desk + SSE `/api/rig/events`), `RigBlackout` in the map output; `scripts/rig/` conformance + compat grid, `.github/workflows/rig-compat.yml`.
+- Proven on real machines: aylmo + asuz discovered each other both ways across different releases; conformance 17/17 on each; unsigned cue 403; a signed blackout from aylmo blacked asuz's projector (white 253 → 0 → 253).
+- Also: `registerLightingRoutes` returns `hasDesk()`; wiki entry "The rig".
+- Next (RIG.md build order): land #447/#450/#451 and rehearse the two-artist jam; then jam rules (holding, presence in Raw, certificate), show mode, parts/appliance, drivers.
+
+## 2026-09-16 — the safety net: every change has an author and a way back
+
+Part B of the plan "Two lines, one safe way in" (B1, B2, B3, B5 and the server half of B4).
+Section A (start-check, CONTRIBUTING, write-script checks) is a separate branch.
+
+- **Authors (B1).** `space_ops` and `project_ops` gain `actor`, `actor_type`, `actor_label`
+  (`db.js`, `ensureColumn`). Stamped server-side from `req.authState` via
+  `serverXR/src/opActor.js` on POST ops (space + project), PUT scene, PUT document,
+  inscriptions, restore, bundle import (rows the tool wrote are stamped with the importer).
+  Server-made changes are `server:<reason>` (`server:undo`, `server:daily`,
+  `server:sandbox-archive`). The actor lives in columns, never inside the op JSON, so
+  `GET /ops` is unchanged; a client-sent `actor` never gets past `normalizeIncomingOps`.
+  **SCHEMA_VERSION was NOT bumped**, deliberately: the rule written on `SCHEMA_VERSION` says
+  bump only when an older build would misread the data, and three nullable columns are
+  invisible to it. A bump would make every older `di` refuse the database and every
+  `.diiii` bundle written by this build (space-bundle compares schemaVersion). Owner can
+  overrule — it is a one-line change.
+- **Restore points (B2).** `spaceStore.takeRestorePoint(spaceId, {reason, actor})` replaces the
+  open-space-only snapshot (`snapshotSpaceScene` stays as a wrapper returning the path).
+  Envelope v2 gains `id`, `reason`, `actor` and per-project asset manifests
+  (`assets/<sha>.json`), restored when the blob is still present — otherwise an undone
+  image delete would 404. Taken: before PUT scene / PUT document / sync pull / restore /
+  bundle import onto an existing id, and before the first change of each **burst**
+  (`serverXR/src/spaceHistory.js`: a burst ends when the author changes or pauses longer
+  than `CONTENT_BURST_GAP_MS`, default 15 min; rebuilt from the op log after a restart).
+  Retention: newest 30 + newest per UTC day for 30 days; explicit `keep` (idle sandbox
+  archive) stays a count. Open Space keeps its daily point (`reason: daily`).
+  `scripts/gc-space-blobs.mjs` now keeps every blob a kept snapshot mentions
+  (`--snapshots-dir`, default `<data root>/snapshots`), tested.
+- **API (B3).** `GET /api/spaces/:id/snapshots`, `POST /api/spaces/:id/restore-snapshot
+  {snapshotId?}` (default latest; takes a `before-restore` point first; returns
+  `restorePoint`), `GET /api/spaces/:id/changes?since=<ms|ISO>` — all owner-or-admin.
+  `spaceHistory.summarizeChanges` is the shared helper (counts added/removed/changed,
+  kinds, assets, title changes, whole replaces, projects touched, one plain `text`).
+- **Studio (B5).** Spaces → card → Manage → **History**: rows "when / before X's change" with
+  Restore + confirm, built from the existing `ssh-project-linker` / `ssh-linker-*` classes.
+  Wiki entry `space-history`.
+- **Live check** on a copy of the local tier (own ports 4610/5610): two accounts edited
+  `wcc`, History showed both, Restore removed Emilya's objects and kept the owner's.
+
+### Notice contract for the bot task (B4, di-bo side still to build)
+
+Off unless `CONTENT_CHANGE_NOTICES_ENABLED=true` AND `APPROVAL_BOT_URL` + `APPROVAL_SHARED_SECRET`.
+Sent once per burst, when the burst closes (gap elapsed, or another person starts), only
+when the author is not the owner (no owner → not an admin), never for `sandbox`/`global`
+spaces or server actors. Failures are logged, never block a write. Timers are in memory:
+a restart drops a notice for a burst still open.
+
+```
+POST {APPROVAL_BOT_URL}/content-changed
+X-DII-Timestamp: <ms>
+X-DII-Signature: sha256=<hex HMAC-SHA256(secret, `${timestamp}.${rawBody}`)>   // same as /approvals
+{
+  "kind": "content.changed",
+  "id": "<24 hex, notice id>",
+  "space":  { "id", "label", "slug"|null, "ownerUserId"|null },
+  "actor":  { "subject", "type", "label" },
+  "burst":  { "startedAt": ms, "endedAt": ms },
+  "summary": { "text": "Emilya · WCC (scene, Page) · +3 images, 1 object removed, title changed",
+               "counts": { added, removed, changed, addedKinds:{kind:n}, assetsAdded, assetsRemoved,
+                           titleChanges, sceneReplaced, projectsReplaced, settings, ops },
+               "scene": bool, "projects": [{ "id", "title" }] },
+  "link": "<SITE_ORIGIN>/<slug|id>",
+  "undo": { "snapshotId", "method": "POST", "path": "/api/content-changes/undo",
+            "body": { "spaceId", "snapshotId" } } | null,
+  "sentAt": ms
+}
+```
+
+Undo (bot → di.iiii): `POST /serverXR/api/content-changes/undo` with `undo.body` plus optional
+`decidedBy`, signed the same way (±5 min window, `verifyInboundSignature`). 200 → restore
+result (`restorePoint` = the point taken before the undo, so Undo is undoable); 401 bad
+signature; 404 notices off / space or snapshot gone. Recorded as `server:undo`.
+
+### Not done
+
+- di-bo side: `/content-changed` handler + Undo button under `BOT_ROLE=inner`, and the check
+  that `approvalKb`/`handleApprovalNotify` are served there.
+- No History in the admin Preferences → Manage surface (owners use the Spaces card; admins
+  can too). Snapshots do not follow a space id rename (`moveSpace`).
+
+## 2026-09-16 — the start check: one LATEST/NOT LATEST answer for code and spaces
+
+- Added `scripts/start-check.mjs` (`npm run start-check`, `--strict` exits 1). It
+  fetches `origin` (and `upstream` when this is a fork) with a hard timeout, then
+  reuses `scripts/repo-state.mjs`'s `getState()` for the code half (branch vs
+  `origin/dev`, fork `dev` vs `upstream/dev`, uncommitted work) and
+  `scripts/tier-sync.mjs`'s `listSpaces`/`readSignatures` (built on
+  `documentSignature`) for the space half — compares this box's held spaces (or
+  `--space <id>`) against the dev tier, using `tier-sync-baseline.json` to tell
+  "dev moved" from "I moved" from "no baseline, can't tell". Every network step
+  degrades to "not checked" inside its own budget rather than ever reporting a
+  false LATEST.
+- To make that reuse possible: `repo-state.mjs` now exports `getState` and guards
+  `main()` behind the standard `invokedDirectly` check (previously ran
+  unconditionally at import time). `tier-sync.mjs` hoisted `call`/`listSpaces`/
+  `listProjects`/`readInventory`/`readSignatures` from closures inside `main()` to
+  module-scope exports, and re-exports `readBaseline` (read-only) — no behavior
+  change, same functions, now importable.
+- `.claude/settings.json`'s `SessionStart` hook now runs `start-check.mjs` (wrapped
+  in `timeout 25`, falling back to the old `repo-state.mjs --brief` if that's
+  somehow exceeded) instead of the fetch-less `repo-state.mjs`. `pre-push-gate.sh`
+  runs `start-check --code-only --json` and prints a warning (never blocks) when
+  the branch is behind `origin/dev`.
+- Every write-path script now refuses a stale destination instead of silently
+  overwriting it:
+  - `space-push.mjs` reads the destination's current scene version
+    (`?verbatim=1`) before writing and sends `If-Match` on the `PUT` — the server
+    already understood this precondition (`spaceRoutes.js`), the script just
+    never used it. `--force` overrides.
+  - `space-sync.mjs` re-reads the project document's version immediately before
+    the `PUT` (that route has no server-side precondition to lean on) and
+    refuses if it moved since the read this run started from. `--force` overrides.
+  - `tier-sync.mjs`'s plain (non-`--changed`) `--force` path — the one write path
+    that ignored `tier-sync-baseline.json` entirely — now checks it too before
+    overwriting a project the destination already holds; a mismatch needs the
+    explicit `--force-stale` on top of `--force`. Pure decision logic pulled out
+    as `shouldRefuseOverwrite` for testability.
+  - `space-bundle.mjs import --force` refuses when the target space's own
+    `updated_at` is newer than the bundle's `exportedAt` — someone touched it
+    since this bundle was made. `--force-stale` overrides. This check is opt-in
+    (`checkStale: true`, set only by this file's own CLI dispatch) because
+    `install-bundle.mjs` calls `importSpace()` internally as one step of
+    restoring an entire estate from one point-in-time snapshot, where "target
+    changed moments before its own import" is the expected shape of that
+    restore, not a sign of a concurrent edit about to be lost — confirmed by two
+    `installBundleContracts.test.js` cases that regressed and were the reason
+    this got scoped down to opt-in rather than always-on.
+- New `CONTRIBUTING.md`: "Two lines: code and spaces" — what lives in git vs each
+  tier's database (local / **dev.diiii.xyz** / **diiii.xyz**), the start check, and
+  one short section per door (Studio by hand, a script, an LLM/agent — any tool,
+  not just Claude — Telegram, a fork on Windows). States plainly that
+  `staging.di-studio.xyz` is the old name for the dev tier and still answers, and
+  that the rest of the safety net (author-on-every-change, restore points, undo)
+  is coming in later PRs with no promises yet on shape. `AGENTS.md`'s "Start Here"
+  now points to it as step 0; `ONBOARDING.md` §7 links it. Golden rule added to
+  `docs/ai/golden_rules.md`. Fixed `.claude/commands/branch.md`'s `feature/<slug>`
+  to this repo's real `feat/`/`fix/`/`chore/` prefixes.
+- Tests: `scripts/start-check.test.js` (mocks `repo-state.mjs`/`tier-sync.mjs`/
+  `node:child_process` — up-to-date, behind, fork-behind, dev-ahead-on-a-space,
+  tier-unreachable, local-tier-unreachable, formatting); new stale-destination
+  cases added to `scripts/space-push.test.js`, `scripts/space-sync.test.js`,
+  `scripts/tier-sync.test.js`; new `scripts/space-bundle.test.js` (didn't exist
+  before this branch). All spawn/mock-based — nothing here writes to a real
+  dev/prod tier.
+- Constraint honored: no writes to any remote tier from this branch's own testing;
+  every write-path test uses either a local `node:http` fake tier or a temp SQLite
+  data root created for the test.
+
+Not done here (out of scope for this PR, section B of the plan): actor stamping on
+`space_ops`/`project_ops`, restore points beyond Open Space, the snapshots/history
+API, the inner-bot notice+Undo, Studio's History panel. `CONTRIBUTING.md` names
+these as "coming in later PRs" without promising their shape.
+
+## 2026-09-16 (later) — rebased onto the "staging" retirement; the space check rebuilt after real-box testing
+
+- Rebased onto `origin/dev` after `chore: retire "staging" — the tiers are local ·
+  dev · prod` landed (PR #471) — `TIERS.staging.base` is now `dev.diiii.xyz`,
+  `resolveTier`/`tierLabel` exist, `isProductionTarget` also covers `diiii.xyz`.
+  One textual conflict (an import line in `tier-sync.test.js`); everything else
+  auto-merged clean and was re-verified by hand against the new file shapes.
+- Ran the space check against the owner's real env for the first time
+  (`local.thedi.studio` + `staging.di-studio.xyz`, ~31 held spaces, ~100
+  projects) and it did not hold up:
+  1. `localBase()` in `tier-sync.mjs` appended `/serverXR` unconditionally —
+     `LOCAL_API_URL=http://localhost:4000/serverXR` produced
+     `.../serverXR/serverXR/api/spaces` → 404. Fixed to be idempotent about the
+     suffix. `checkSpaces` also now retries a configured-but-unreachable local
+     tier against plain `http://localhost:4000/serverXR` once (network
+     failures only, never on an auth error) and names every base it tried in
+     the "not checked" reason.
+  2. The original design fetched and hashed every project's full document on
+     both tiers — against ~100 real projects it either blew its own 10s
+     budget or, once, printed ~60 "not checked (time budget exceeded)" lines.
+     Replaced with a cheap comparison: one `GET /api/spaces/:id/projects` per
+     tier per space (documentVersion + updatedAt for every project in that
+     space, no per-project request), compared against what THIS box last saw
+     for that project (`serverXR/data/start-check-cache.json`, resolved the
+     same way `tier-sync-baseline.json` is — DATA_ROOT-relative — but a
+     separate file; tier-sync never reads or writes it). A version bumps on
+     every write (`projectRoutes.js`), so "unchanged since I last looked" is
+     as reliable as a content hash for detecting motion, without reading
+     content. Spaces run `SPACE_CONCURRENCY` (6) at a time.
+  3. Output redesigned to one summary line grouped by SPACE, not project
+     ("19 same · 2 newer on dev: wcc, br-id-ge"), then up to 5 detail lines
+     with the exact pull command, then "+N more — npm run start-check --
+     --spaces-detail" for the rest. `not-checked` rows collapse into one line
+     grouped by reason with a count, never one line each.
+- Verified for real, read-only, against the owner's actual local install and
+  the actual dev tier (`local.thedi.studio` + `staging.di-studio.xyz`, sourced
+  from `di.iiii/serverXR/.env.local`): first run (cold cache) 31 spaces in a
+  few seconds, all reported "new (uncompared)" since nothing was cached yet;
+  second run 2.35s wall clock, correct "same"/"local-only"/"dev-only" split,
+  no drift (nothing changed between the two runs, as expected). The
+  `SessionStart` hook command itself (CURRENT.md print + `timeout 25 node
+  start-check.mjs`) ran in 2.21s total — well inside its 25s/30s budgets.
+  `serverXR/data/start-check-cache.json` now exists for real on this box,
+  alongside the existing `tier-sync-baseline.json`.
+- `classifyProjectDrift`/shape-baseline comparison removed in favor of
+  `classifyVersionDrift`; tests rewritten to match
+  (`scripts/start-check.test.js`, `scripts/tier-sync.test.js` gained
+  `localBase` coverage). `tier-sync.mjs` gained `listProjectMetas` (the cheap
+  list read, exported for reuse — the same reuse-not-copy rule the rest of
+  this file follows).
+
+## 2026-09-16 (later still) — the cache was the bug: real false LATEST, found live on br-id-ge
+
+- The coordinator ran the previous version against the real box and caught a
+  **false LATEST**: br-id-ge's `newww`/`landing`/`br-id-ge-field` had all
+  changed on the dev tier that afternoon, local's copy was behind, and the
+  tool said LATEST anyway. Cause: the version-cache seeded itself FROM
+  whatever state existed on its first run — if drift already existed before
+  that first run, nothing ever looked like it had "moved" relative to a
+  baseline that was itself already wrong. Also flagged: that cache
+  (`start-check-cache.json`) had been written into the owner's shared data
+  tier (`~/.local/share/di.iiii/data/`), which a read-only check must never
+  touch — deleted.
+- Fixed: dropped the cache entirely. Every run now compares the two tiers
+  DIRECTLY: cheap `documentVersion`+`updatedAt` (already fetched, no new
+  request) settle a project as "same" only on an EXACT match; when they
+  differ, `tier-sync-baseline.json` — a real, content-verified reference
+  point written by actual tier-sync runs, never guessed — says who moved,
+  confirmed with one live document-fetch pair (budgeted,
+  `CONFIRM_FETCH_BUDGET = 30`, to keep the whole run bounded); with no
+  baseline, the side with the later `updatedAt` is reported as ahead
+  (unconfirmed, labeled as such), and only "dev is later" flips the headline
+  — a genuine tie with no baseline is surfaced as "differs (undetermined)",
+  never silently called "same".
+- Also fixed: each space now lands in exactly ONE summary bucket
+  (`SUMMARY_PRIORITY`, highest-severity kind wins) — `main`/`what-we-have`
+  previously appeared under BOTH "local-only" and "dev-only" because
+  separate PROJECT rows inside the same shared space picked separate space
+  IDs for each bucket independently. A project missing entirely on one side,
+  inside a space BOTH tiers hold, is now a definitive `dev-ahead`/
+  `local-ahead` (not a neutral "only exists" note); a SPACE missing entirely
+  from one tier is its own one-line, non-drift bucket.
+- Verified for real, read-only, against the owner's actual env
+  (`local.thedi.studio` + `staging.di-studio.xyz`): `--space br-id-ge
+  --strict` → **NOT LATEST**, exit 1, `br-id-ge-field`/`landing`/`newww`
+  confirmed via baseline as "changed on both" — cross-checked against
+  `node scripts/tier-sync.mjs --from local --to staging --space br-id-ge
+  --audit` (the independently-trusted comparison), which reports the exact
+  same 4 projects as "same slug, DIFFERENT work". An unfiltered full-box run
+  (~31 spaces) puts `br-id-ge` under "newer on dev" in the summary line, per
+  the coordinator's literal ask, in 4.4s wall clock. Known remaining
+  imprecision: which LABEL a borderline project gets (confirmed vs.
+  timestamp-heuristic) can vary with the shared `CONFIRM_FETCH_BUDGET`
+  running out earlier in a big unfiltered run than in a `--space`-filtered
+  one — never changes the LATEST/NOT LATEST verdict itself, only which of
+  "changed on both" vs. "newer on dev (by timestamp)" a given project shows.
+
+## 2026-09-16 — start-check compares content; tier-sync can rebuild its baseline
+
+Found by the spaces audit (`docs/research/2026-09-16-spaces-audit.md`, PR from `docs/spaces-audit`).
+
+- **start-check** judged "newer on dev" from `documentVersion`/`updatedAt`. Every tier bumps
+  those on its own and re-addresses assets on arrival, so the owner's box printed ~94 NOT
+  LATEST lines, mostly identical content. It also offered to pull `open/mini`,
+  `open/i-dont-know`, `main/tools-sketch`, `what-we-have/suite-sketch` — all in local's trash.
+  - Now: versions equal (or equal to a content-confirmed baseline entry's versions) → same,
+    no fetch. Otherwise both documents are fetched (8 pairs at once, dev-later first, one
+    15 s budget) and compared by `documentSignature().shape` (volatile fields stripped,
+    assets by name). Content differs → direction from the baseline only; with no
+    baseline entry it is "differs — look before pulling or pushing" (compare + pull
+    commands), never guessed from timestamps and never NOT LATEST by itself.
+    Unread in budget → `not confirmed: N`, never NOT LATEST.
+  - `GET /api/trash` on local: a dev-only project in local's trash is "deleted here on
+    purpose", no detail line, no pull.
+  - Output: summary line, optional `not confirmed` line, ≤5 details (dev-ahead first).
+- **tier-sync `--rebuild-baseline [--dry-run]`** (defaults `--from local --to dev`): reads
+  both tiers, records every project whose shape is identical as
+  `{ shape, versions: { local, dev } }`, lists the differing ones, replaces the
+  destination's key only, writes nothing to a tier. `--changed` now writes the same
+  versioned entries; every reader goes through `baselineShape()` so old bare-string
+  entries still work.
+- Live, owner's box (LOCAL_API_URL=http://localhost:4000, dev.diiii.xyz):
+  - before: `11 newer on dev … 8 local ahead …` — 84 dev-ahead, 112 local-ahead, 2 both rows, 5.2 s.
+  - after: `15 same · 4 newer on dev: main, what-we-have, the-light-put-back, network ·
+    2 changed on both: open, br-id-ge · 3 local ahead … · 4 project(s) deleted here on purpose`
+    — 10 dev-ahead, 2 both, ~11 s, 0 not confirmed.
+  - `--rebuild-baseline --dry-run`: 198 identical · 17 differing · 31 one tier only (24 s).
+    Same 17 as start-check's content-differing rows. Not run for real (owner's data tier).
+- Review round: the timestamp direction called `what-we-have/map` "newer on dev" while
+  local's copy was fuller — removed (bucket `differs`). `--changed --dry-run` used to
+  write the baseline; every `--dry-run` now writes nothing (test drives the real
+  `main()` against fake tiers for `--changed`, `--rebuild-baseline`, plain).
+  - re-run: `15 same · 2 changed on both: open, br-id-ge · 6 differs — look before
+    pulling or pushing · 1 local ahead · 8 local-only · 4 deleted here on purpose`, 12.3 s.
+    The two "changed on both" come from the stale 09-06 baseline; after a real
+    `--rebuild-baseline` they fall into `differs`.
+  - after merging dev's tier rename (#475: TIERS/baseline key `staging` → `dev`):
+    `LATEST · 15 same · 8 differs — look before pulling or pushing · 1 local ahead ·
+    8 local-only · 4 deleted here on purpose`, 10.2 s. The owner's 09-06 baseline is
+    keyed `staging`, so it is no longer read; `--rebuild-baseline` writes under `dev`.
+
+## 2026-09-16 — batch land: space history + start check
+
+- Batched two independent, non-overlapping reviewed PRs onto `dev` in one CI round:
+  `feat/space-history` (#470, every space change gets an author and a way back) and
+  `feat/start-check` (#472, a start-of-session/pre-push check for code and space
+  content lines). No shared files between them.
+- Merged both with `--no-ff` into `land/history-startcheck-2026-09-16`, cut from
+  `origin/dev`. Their own session notes (`feat-space-history.md`, `feat-start-check.md`)
+  are left in place — folding happens on `dev` via `npm run land` (the staging deploy's
+  `land` job runs it automatically after this lands), not on this branch.
+
+## 2026-09-16 — Land the rig (protocol 1) and Raw picture operators together
+
+- Batch of #447 (Raw picture operators; spine-gate colour literals tokenised, dev merged in) and #478 (the rig, step 1: members find each other in any version).
+- One conflict, `src/map/MapOutput.jsx` imports: kept both (`useTopNetwork`/`useMachinePresence` and `RigBlackout`).
+- Combined checks before push: full vitest 4832 passed, eslint 0 errors, local-profile build ok.
+
 ## 2026-09-15 — Facade audit wave 3: the 2D page faults
 
 Five faults from the 2026-09-14 facade audit's "wave 3, DIY look" list — the
