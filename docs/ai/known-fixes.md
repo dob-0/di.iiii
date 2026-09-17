@@ -21,6 +21,22 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## "Could not save this space to a file." on a hosted tier — the image had no bundle tool
+
+`GET /api/spaces/:id/bundle` and `POST /api/spaces/bundle` spawn `scripts/space-bundle.mjs`
+through `bundleToolPath()`, which looks beside the server and one level up. The server
+image (`serverXR/Dockerfile`) copied only `serverXR/src`, `serverXR/public` and `shared/`,
+so on diiii.xyz and dev.diiii.xyz the tool was simply absent: every save answered 500,
+every open 400, from 2026-08-19 to 2026-09-17, with nothing in the logs but
+`[bundle] export of <id> failed: the bundle tool is not part of this build`.
+
+**Fix (2026-09-17):** the Dockerfile copies the script to `/app/scripts/`, and the script
+resolves the server's source as `./src` when there is no `serverXR/` above it.
+`scripts/space-bundle.test.js` stages that layout and runs export + import through it.
+**Check first** when a file route fails on a tier but passes locally: `docker exec <serverxr>
+ls /app/scripts/space-bundle.mjs`. A tool that is present but crashes prints its own
+sentence in the same log line.
+
 ## A code page's assets are invisible to `document.assets`, so transfers leave them behind
 
 `beyond-form/open-call` ("Beyond Form", the Gyumri exhibition) published a 1.4 MB
