@@ -38,6 +38,12 @@ checked" — it never claims LATEST when it doesn't actually know. A `SessionSta
 hook already runs this for you in Claude Code; `pre-push-gate.sh` warns (never blocks)
 when your branch is behind before a push.
 
+A space is "behind" only when its normalized content differs (versions and asset addresses
+drift by themselves); projects this box put in its trash are never offered as a pull, and
+pairs it couldn't read in time are one "not confirmed: N" line.
+If `tier-sync.mjs --changed` refuses everything, rebuild its baseline:
+`node scripts/tier-sync.mjs --rebuild-baseline --dry-run` (then without `--dry-run`).
+
 If it tells you a space is behind, it names the exact pull command. If it can't reach
 a tier (no token configured, or the tier is unreachable), that space is reported as
 "not checked" — not as "in sync". Don't read silence as safety.
