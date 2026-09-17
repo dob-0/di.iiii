@@ -70,6 +70,38 @@ const applyAssetSafetyHeaders = (res, mimeType) => {
   }
 }
 
+// Parses a `Range` header for a single byte range against a known file size.
+// Returns:
+//   - { start, end } (inclusive) for a satisfiable single range
+//   - 'unsatisfiable' when the requested range doesn't fit the file (-> 416)
+//   - null when the header is absent, malformed, a non-"bytes" unit, or a
+//     multi-range request (`bytes=0-10,20-30`) — callers fall back to a full
+//     200 response in every one of those cases. A `<video>` element only ever
+//     asks for one range at a time, so the multipart/byteranges response a
+//     real multi-range reply would need isn't worth building; this is the
+//     documented, deliberate choice the task asked to record.
+const parseByteRange = (header, size) => {
+  const match = /^bytes=([^,]+)$/.exec(header || '')
+  if (!match) return null
+  const spec = match[1]
+
+  const suffixMatch = /^-(\d+)$/.exec(spec)
+  if (suffixMatch) {
+    const suffixLength = Number(suffixMatch[1])
+    if (suffixLength <= 0) return null
+    if (size <= 0) return 'unsatisfiable'
+    const start = Math.max(size - suffixLength, 0)
+    return { start, end: size - 1 }
+  }
+
+  const rangeMatch = /^(\d+)-(\d*)$/.exec(spec)
+  if (!rangeMatch) return null
+  const start = Number(rangeMatch[1])
+  const end = rangeMatch[2] ? Number(rangeMatch[2]) : size - 1
+  if (start >= size || end < start) return 'unsatisfiable'
+  return { start, end: Math.min(end, size - 1) }
+}
+
 const SPACE_KINDS = ['normal', 'global', 'sandbox']
 const normalizeSpaceKind = (value) => SPACE_KINDS.includes(value) ? value : 'normal'
 
@@ -751,15 +783,73 @@ function createSpaceStore({
     }
   }
 
-  const serveFile = (res, filePath, contentType) => {
+  // `req` is optional (tests exercising thumbnail generation call serveFile
+  // with a bare fake response and never send a Range header) — without it,
+  // this behaves exactly as before: a plain 200 with the full body.
+  const serveFile = (res, filePath, contentType, req) => {
+    let stat
+    try {
+      stat = fs.statSync(filePath)
+    } catch (error) {
+      logger.error(error)
+      res.status(500).end('Failed to read asset')
+      return
+    }
+    const size = stat.size
+    const isHead = req?.method === 'HEAD'
+
     res.setHeader('Content-Type', contentType || 'application/octet-stream')
     applyAssetSafetyHeaders(res, contentType)
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-    const stream = fs.createReadStream(filePath)
-    stream.on('error', (error) => {
+    // Advertised unconditionally — even a HEAD or a plain 200 response tells
+    // the client range requests are supported, which is how a <video>
+    // element decides whether scrubbing/seeking is possible at all.
+    res.setHeader('Accept-Ranges', 'bytes')
+
+    const range = parseByteRange(req?.headers?.range, size)
+
+    if (range === 'unsatisfiable') {
+      res.status(416)
+      res.setHeader('Content-Range', `bytes */${size}`)
+      res.end()
+      return
+    }
+
+    const streamError = (error) => {
       logger.error(error)
-      res.status(500).end('Failed to read asset')
-    })
+      // Headers (and possibly bytes) may already be on the wire once the
+      // stream has started — a 500 written after that point would either
+      // throw or silently corrupt the response, so just tear the connection
+      // down instead.
+      if (res.headersSent) {
+        res.destroy()
+      } else {
+        res.status(500).end('Failed to read asset')
+      }
+    }
+
+    if (range) {
+      const { start, end } = range
+      res.status(206)
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`)
+      res.setHeader('Content-Length', end - start + 1)
+      if (isHead) {
+        res.end()
+        return
+      }
+      const stream = fs.createReadStream(filePath, { start, end })
+      stream.on('error', streamError)
+      stream.pipe(res)
+      return
+    }
+
+    res.setHeader('Content-Length', size)
+    if (isHead) {
+      res.end()
+      return
+    }
+    const stream = fs.createReadStream(filePath)
+    stream.on('error', streamError)
     stream.pipe(res)
   }
 
@@ -780,7 +870,7 @@ function createSpaceStore({
     )
   }
 
-  const serveAsset = async (spaceId, assetId, res, { width } = {}) => {
+  const serveAsset = async (spaceId, assetId, res, { width, req } = {}) => {
     const { assetsDir } = getSpacePaths(spaceId)
     const filePath = path.join(assetsDir, assetId)
     const meta = await readJson(path.join(assetsDir, `${assetId}.json`), null)
@@ -816,14 +906,14 @@ function createSpaceStore({
       }
       const hasThumb = await fsp.access(thumbPath).then(() => true, () => false)
       if (hasThumb) {
-        return serveFile(res, thumbPath, 'image/webp')
+        return serveFile(res, thumbPath, 'image/webp', req)
       }
       // Fall through to the original on any generation failure (corrupt
       // image, unsupported subformat, etc.) — a slow thumbnail is better
       // than a broken preview.
     }
 
-    serveFile(res, filePath, meta?.mimeType)
+    serveFile(res, filePath, meta?.mimeType, req)
   }
 
   return {
@@ -869,4 +959,4 @@ function createSpaceStore({
   }
 }
 
-module.exports = { createSpaceStore, applyAssetSafetyHeaders }
+module.exports = { createSpaceStore, applyAssetSafetyHeaders, parseByteRange }

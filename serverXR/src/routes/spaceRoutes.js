@@ -1530,7 +1530,7 @@ function registerSpaceRoutes(router, {
       if (!isValidAssetId(assetId)) return res.status(400).json({ error: 'Invalid request.' })
       const row = commonsStore.getAsset(assetId)
       if (!row) return res.status(404).json({ error: 'Not a public asset.' })
-      await serveAsset(row.spaceId, assetId, res)
+      await serveAsset(row.spaceId, assetId, res, { req })
     } catch (error) {
       if (error.code === 'ENOENT') {
         return res.status(404).json({ error: 'Asset not found.' })
@@ -1623,7 +1623,7 @@ function registerSpaceRoutes(router, {
       if (!spaceId || !isValidAssetId(assetId)) {
         return res.status(400).json({ error: 'Invalid request.' })
       }
-      await serveAsset(spaceId, assetId, res, { width: req.query.w })
+      await serveAsset(spaceId, assetId, res, { width: req.query.w, req })
     } catch (error) {
       if (error.code === 'ENOENT') {
         return res.status(404).json({ error: 'Asset not found.' })
