@@ -1,0 +1,26 @@
+{
+  "rig": 1,
+  "kind": "card",
+  "release": "3.2.0",
+  "machine": { "id": "0b5c2f5e-9d0a-4c61-8f5e-future000001", "name": "future-box" },
+  "part": "studio",
+  "partReason": "16 cores, 64 GB, three screens",
+  "mode": "show",
+  "caller": { "id": "caller-1", "name": "aylmo", "since": 1789560000000 },
+  "blackout": false,
+  "ports": {
+    "screens": [{ "name": "DP-1", "connected": true, "width": 3840, "height": 2160, "hz": 120, "hdr": { "maxNits": 1000 } }],
+    "audioOut": [{ "name": "RME", "channels": 18 }],
+    "audioIn": [],
+    "cameras": [{ "name": "NDI cam", "path": null, "ndi": { "source": "CAM-1" } }],
+    "serial": [],
+    "midi": [{ "name": "APC40" }],
+    "net": [{ "iface": "eth0", "kind": "wired", "up": true, "addresses": ["10.0.0.5"], "speedMbps": 10000 }],
+    "genlock": [{ "name": "Blackmagic", "locked": true }]
+  },
+  "health": { "tempC": 51, "cpuPct": 12, "memUsedMb": 9000, "memTotalMb": 64000, "throttled": null, "uptimeS": 99, "gpuTempC": 60, "fans": [{ "rpm": 1200 }] },
+  "shows": [{ "output": "DP-1", "url": "/serverXR/space/main", "layer": { "opacity": 1 } }],
+  "holders": [{ "lane": "wall", "by": "aylmo" }],
+  "features": { "card": 3, "cue": 2, "blackout": 1, "members": 1, "discovery": 2, "pictures": 4 },
+  "sentAt": 1789560000000
+}

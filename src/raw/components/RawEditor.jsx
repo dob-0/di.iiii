@@ -17,6 +17,11 @@ import ChatPanelWindow from './ChatPanelWindow.jsx'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import VideoFrameFeed from './VideoFrameFeed.jsx'
+import TopNetworkFeed from './TopNetworkFeed.jsx'
+import DeskPanelWindow from './DeskPanelWindow.jsx'
+import TopInsidePanel from './topInside/TopInsidePanel.jsx'
+import { isTopType } from '../../project/tops/topOperators.js'
+import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
 import MidiOutFeed from './MidiOutFeed.jsx'
@@ -860,8 +865,31 @@ export default function RawEditor({
             .filter((edge) => edge.toNodeId === scopedSelectedNode.id)
             .map((edge) => edge.toPort)
         : []
+    // A picture operator's Runs on lists the machines this space can see right
+    // now; the registry only knows "where the page is open".
+    // Presence only on a desk that uses it: picture operators or a Desk panel.
+    const usesDesk = nodes.some((node) => isTopType(node.typeId) || node.typeId === 'view.desk')
+    const { machines: knownMachines } = useMachinePresence(usesDesk ? resolvedSpaceId : '')
+    const withMachines = (sections) => (isTopType(scopedSelectedNode?.typeId)
+        ? sections.map((section) => ({
+            ...section,
+            fields: section.fields.map((field) => {
+                if (field.path?.[0] === 'machine') {
+                    return { ...field, options: [...field.options, ...knownMachines.map((machine) => ({ value: machine.id, label: machine.self ? `${machine.name} (this one)` : machine.name }))] }
+                }
+                if (field.path?.[0] === 'device') {
+                    // The cameras of the machine this operator runs on.
+                    const owner = knownMachines.find((machine) => machine.id === scopedSelectedNode.values?.machine)
+                        || knownMachines.find((machine) => machine.self)
+                    const cameras = (owner?.devices || []).filter((device) => device.kind === 'camera')
+                    return { ...field, options: [...field.options, ...cameras.map((device) => ({ value: device.id, label: device.label }))] }
+                }
+                return field
+            })
+        }))
+        : sections)
     const inspectorSections = scopedSelectedNode
-        ? deriveNodeInspectorSections(scopedSelectedNode, { wiredPortIds })
+        ? withMachines(deriveNodeInspectorSections(scopedSelectedNode, { wiredPortIds }))
         : (scopedSelectedEntity
             ? getInspectorSections(scopedSelectedEntity)
             : [
@@ -1391,9 +1419,15 @@ export default function RawEditor({
     // Stable graph-surface callbacks: as inline lambdas these re-registered
     // RawGraphSurface's window-level drag/key listeners on every parent
     // render, and a teardown mid-drag dropped the queued final frame.
+    // RawGraphSurface's wire-drop handler reports a bare
+    // {fromNodeId, fromPort, toNodeId, toPort} — it never minted an id, so
+    // this used to forward the payload straight through as the edge and the
+    // server's findIdlessCreateOp (serverXR/src/opValidation.js) rejected
+    // the whole op batch with op_missing_id. Mint the id here, at the one
+    // place a raw wire-drop payload becomes an edge op.
     const handleCreateEdge = useCallback((payload) => applyLocalOps({
         type: 'createEdge',
-        payload: { edge: payload }
+        payload: { edge: createEdge(payload.fromNodeId, payload.fromPort, payload.toNodeId, payload.toPort) }
     }), [applyLocalOps])
     // Put an interior port on the container's face: place the doorway node and
     // its wire in ONE op batch, so a single undo takes both away and no
@@ -1597,6 +1631,18 @@ export default function RawEditor({
         }
         if (node.typeId === 'stream.monitor') {
             return <MonitorPanelWindow node={node} values={resolvedValues} />
+        }
+        if (node.typeId === 'view.desk') {
+            return (
+                <DeskPanelWindow
+                    spaceId={resolvedSpaceId}
+                    onPlace={(typeId, params) => handlePaletteCreate({
+                        definition: getNodeType(typeId),
+                        params,
+                        placement: { graphX: (node.graphX ?? 0) + 320, graphY: (node.graphY ?? 0) + 40 }
+                    })}
+                />
+            )
         }
         if (node.typeId === 'source.webcam') {
             return <WebcamSourcePanel node={node} onFrameChange={handleFrameOutputChange} />
@@ -2299,6 +2345,16 @@ export default function RawEditor({
                     onViewportChange={handleViewportChange}
                     extraBounds={worldWindowBounds}
                 />
+                {/* Inside a picture operator: what it is made of, live and
+                    changeable — the camera, the shader, the script. */}
+                {isTopType(scopeNode?.typeId) ? (
+                    <TopInsidePanel
+                        node={scopeNode}
+                        machines={knownMachines}
+                        top={chromeVisible ? workspaceTop : 0}
+                        onPatchValues={(values) => applyLocalOps({ type: 'updateNode', payload: { nodeId: scopeNode.id, patch: { values } } })}
+                    />
+                ) : null}
                 {/* Zen's three residents are surface, nodes, wordmark — this is
                     the wordmark. Ambient, kept when the toolbar is summoned too.
                     It became the way home in the 2026-08-21 doors audit: the
@@ -2493,6 +2549,11 @@ export default function RawEditor({
                     )}
                 </div>
             )}
+
+            {/* The picture operators run while any exist — see TopNetworkFeed. */}
+            {nodes.some((node) => isTopType(node.typeId)) ? (
+                <TopNetworkFeed document={document} spaceId={resolvedSpaceId} onLiveOutputChange={handleLiveOutputChange} />
+            ) : null}
 
             {/* One invisible feed per playing Video node, so a Frame wire
                 carries the picture even while the room isn't on screen —

@@ -96,6 +96,9 @@ const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { describeListen } = require('./listenInfo')
+const { getMachine } = require('./machineIdentity')
+const { createMachineHub } = require('./machines/hub')
+const { registerMachineRoutes } = require('./machines/routes')
 const { createApprovalGate, createGatedRequestNet, verifyInboundSignature, GATED_ROUTES } = require('./approvalGate')
 const pendingActionStore = require('./pendingActionStore')
 const configStore = require('./configStore')
@@ -464,6 +467,24 @@ app.use((req, res, next) => {
   pushEvent('request', { method: req.method, url: req.url })
   next()
 })
+
+// The rig (serverXR/src/rig, docs/architecture/rig/PROTOCOL-1.md): members of a
+// room know each other in any version. After express.json because the room key
+// signs req.rawBody; after lighting because blackout reaches the desk. A rig that
+// fails to load is logged and left out — it must never cost the server its boot.
+try {
+  require('./rig').createRig({
+    app,
+    dataRoot: config.directories.dataDir,
+    port: config.port,
+    base: '/serverXR',
+    mountPaths: [...new Set([config.mountPath, '/serverXR'])],
+    logger,
+    lighting
+  })
+} catch (error) {
+  logger.warn('[rig] not started', error?.message || error)
+}
 
 // A published code page runs in a sandboxed srcdoc iframe with no
 // allow-same-origin, so its origin is the literal string "null". An ES-module
@@ -1963,6 +1984,24 @@ const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceR
   approvalGate
 })
 
+// Browser tabs on two machines that share a space (serverXR/src/machines):
+// who is here, on which di.iiii, and the signalling messages between them. A
+// tab can only reach its own server, so the servers relay — the follower
+// reaching the host with the follow's own sync key. Editor on the space, GET
+// included; a sync key for the space is exactly that.
+const machineHub = createMachineHub()
+const thisMachine = () => getMachine(config.directories.dataDir)
+registerMachineRoutes(router, {
+  hub: machineHub,
+  machine: thisMachine,
+  requireAuth: () => config.requireAuth,
+  getAuthState: (req) => req.authState || getPublicAuthState(req),
+  hasRequiredAuthRole,
+  canAccessSpace,
+  normalizeSpaceId,
+  spaceExists
+})
+
 // Space sync keys — mint/list/revoke. Management is restricted to the space
 // OWNER (via session) or an ADMIN; editor/viewer/sync-key identities are
 // rejected so a leaked sync key can never mint more keys (no escalation).
@@ -2301,7 +2340,8 @@ registerConfigRoutes(router, {
   onConfigChanged: () => ensureOpenSpace(),
   approvalGate,
   requireAuth: config.requireAuth,
-  listen: describeListenNow
+  listen: describeListenNow,
+  machine: thisMachine
 })
 
 const mountTargets = new Set([config.mountPath])
@@ -2529,6 +2569,15 @@ initStorage()
       } catch (error) {
         // A room that cannot be followed is still a room. Never fatal.
         logger.warn(`[follow] not started: ${error.message || error}`)
+      }
+      // The same follows carry the tabs: who is on the other machine, and the
+      // signals addressed to the tabs here. Its own try — a follow that works
+      // must not stop because this did not.
+      try {
+        const { startMachineLinks } = require('./machines/link')
+        startMachineLinks({ dataDir: config.directories.dataDir, hub: machineHub, machine: thisMachine, log: logger })
+      } catch (error) {
+        logger.warn(`[machines] not started: ${error.message || error}`)
       }
     }
 

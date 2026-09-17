@@ -1,0 +1,10 @@
+{
+  "rig": 1,
+  "kind": "blackout",
+  "on": true,
+  "from": { "id": "0b5c2f5e-9d0a-4c61-8f5e-future000001", "name": "future-box", "part": "studio" },
+  "fadeMs": 250,
+  "scope": { "outputs": ["DP-1"], "lanes": ["wall"] },
+  "reason": "emergency",
+  "sentAt": 1789560000000
+}
