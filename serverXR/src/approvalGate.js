@@ -78,10 +78,22 @@ function createApprovalGate() {
 
   const isEnabled = () => Boolean(config.approval.enabled)
   const isConfigured = () => Boolean(config.approval.enabled && config.approval.botUrl && config.approval.secret)
+  // The bot half alone — URL and secret — without the global switch. A kind
+  // that must ALWAYS wait for a person (content.apply: someone else's file
+  // replacing a space) asks this, because "the admin gate is off" must never
+  // mean "a proposal applies itself".
+  const isBotConfigured = () => Boolean(config.approval.botUrl && config.approval.secret)
 
   async function notifyBot(pending) {
-    if (!isConfigured()) return false
-    const body = JSON.stringify(pending)
+    // The bot half only: a requireApproval kind reaches here with the global
+    // switch off, and gateOrApply has already refused anything unconfigured.
+    if (!isBotConfigured()) return false
+    // `server` says which di.iiii is asking. One console serves every tier, and
+    // without it a decision for the dev tier would be posted to production
+    // (the bot's own DI_SERVER), which answers not_found and applies nothing.
+    // The bot uses it only when the URL is on its own allow-list.
+    const callbackUrl = config.approval.callbackUrl || null
+    const body = JSON.stringify(callbackUrl ? { ...pending, server: callbackUrl } : pending)
     const ts = String(Date.now())
     try {
       const r = await httpRequest(`${config.approval.botUrl}/approvals`, {
@@ -104,17 +116,27 @@ function createApprovalGate() {
   // Route handlers call this in place of the direct store mutation. Returns
   // {applied:true, result} (gate off — unchanged prior behaviour) or
   // {pending:true, id, expiresAt} (gate on — nothing has run yet).
-  async function gateOrApply({ kind, args, actorState, summary, req }) {
+  //
+  // `requireApproval` skips the "gate off → apply" path: the row is always
+  // created and nothing runs until a decision, whatever APPROVAL_GATE_ENABLED
+  // says — and with no bot to ask, it is a 503, never an apply. `ttlMs`
+  // overrides the default expiry for a kind a person needs longer to read.
+  async function gateOrApply({ kind, args, actorState, summary, req, requireApproval = false, ttlMs = null }) {
     if (!executors[kind]) throw new Error(`approvalGate: no executor registered for kind "${kind}"`)
     // Marks the request as having gone through the gate at all — the net
     // (createGatedRequestNet) only cares whether this ran, not what it
     // returned. A 202 "pending" response is the gate working correctly, not
     // a bypass; only a route that skipped calling this entirely should trip it.
     if (req) req.gateCleared = true
-    if (!isEnabled()) {
+    if (requireApproval) {
+      if (!isBotConfigured()) {
+        const err = new Error('This change needs an approval, and no approval bot is configured here (APPROVAL_BOT_URL / APPROVAL_SHARED_SECRET missing).')
+        err.status = 503
+        throw err
+      }
+    } else if (!isEnabled()) {
       return { applied: true, result: await executors[kind](args) }
-    }
-    if (!isConfigured()) {
+    } else if (!isConfigured()) {
       const err = new Error('Approval gate is enabled but not configured (APPROVAL_BOT_URL / APPROVAL_SHARED_SECRET missing).')
       err.status = 503
       throw err
@@ -130,7 +152,7 @@ function createApprovalGate() {
       requestPath: req.originalUrl || req.path,
       requestIp: req.ip,
       decisionToken,
-      ttlMs: config.approval.ttlMs
+      ttlMs: Number(ttlMs) > 0 ? Number(ttlMs) : config.approval.ttlMs
     })
     const ok = await notifyBot({
       id, kind, summary, intentHash,
@@ -214,6 +236,7 @@ function createApprovalGate() {
   return {
     isEnabled,
     isConfigured,
+    isBotConfigured,
     registerExecutor,
     registerReauthorizer,
     gateOrApply,

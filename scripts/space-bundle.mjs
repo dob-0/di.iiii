@@ -11,6 +11,9 @@
  * Usage:
  *   node scripts/space-bundle.mjs export <spaceId> [options]
  *   node scripts/space-bundle.mjs import <bundle.tar.gz> [options]
+ *   node scripts/space-bundle.mjs propose <file.diiii> --tier dev [options]
+ *     — a file for a space that already exists, sent to a tier as a proposal
+ *       (Apply / Reject in the inner bot). Options: scripts/space-proposal.mjs.
  *
  * Options (both):
  *   --data-root <dir>   serverXR data root (default: $DATA_ROOT or serverXR/data)
@@ -389,7 +392,15 @@ const invokedDirectly = (() => {
     try { return fs.realpathSync(process.argv[1] || '') === fs.realpathSync(fileURLToPath(import.meta.url)) } catch { return false }
 })()
 
-if (invokedDirectly) {
+if (invokedDirectly && process.argv[2] === 'propose') {
+    // Talks to a server, never to a data root — its own options, its own file.
+    const { proposeBundle } = await import('./space-proposal.mjs')
+    try {
+        process.exitCode = await proposeBundle(process.argv.slice(3))
+    } catch (error) {
+        die(error.userFacing ? error.message : (error.stack || error.message))
+    }
+} else if (invokedDirectly) {
     const args = parseArgs(process.argv.slice(2))
     if (args.command === 'export') await exportSpace(args)
     // checkStale: true only from this direct-CLI door — see the comment on
@@ -399,6 +410,7 @@ if (invokedDirectly) {
     else {
         console.log('Usage: node scripts/space-bundle.mjs export <spaceId> [--data-root <dir>] [--out <file>]')
         console.log('       node scripts/space-bundle.mjs import <bundle.tar.gz> [--data-root <dir>] [--as <id>] [--owner <userId>] [--force] [--force-stale]')
+        console.log('       node scripts/space-bundle.mjs propose <file.diiii> --tier <local|dev|prod> [--space <id>] [--from <name>] [--dry-run] [--direct] [--overwrite-newer]')
         process.exit(args.command ? 1 : 0)
     }
 }
