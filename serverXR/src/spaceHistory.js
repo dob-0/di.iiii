@@ -258,6 +258,9 @@ function createSpaceHistory({
       undo: burst.restorePointId
         ? { snapshotId: burst.restorePointId, method: 'POST', path: '/api/content-changes/undo', body: { spaceId: meta.id, snapshotId: burst.restorePointId } }
         : null,
+      // Which di.iiii to send the Undo to — one console serves every tier
+      // (APPROVAL_CALLBACK_URL; the bot answers it only if it is on its list).
+      ...(config?.approval?.callbackUrl ? { server: config.approval.callbackUrl } : {}),
       sentAt: now()
     }
   }
@@ -368,4 +371,4 @@ function createSpaceHistory({
   }
 }
 
-module.exports = { createSpaceHistory, describeCounts, signPayload, DEFAULT_BURST_GAP_MS }
+module.exports = { createSpaceHistory, describeCounts, countOp, emptyCounts, signPayload, DEFAULT_BURST_GAP_MS }

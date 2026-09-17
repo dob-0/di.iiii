@@ -10,7 +10,7 @@ const fs = require('node:fs')
 const { isOwnerAtTheMachine } = require('./localOwner')
 const path = require('node:path')
 const crypto = require('node:crypto')
-const { initDb, getDb } = require('./db')
+const { initDb, getDb, SCHEMA_VERSION } = require('./db')
 const { migrateFromFilesystem } = require('./migrate')
 const logger = require('./logger')
 const {
@@ -86,6 +86,7 @@ const spaceSyncPlan = require('./spaceSyncPlan')
 const spaceLinkStore = require('./spaceLinkStore')
 const { httpRequest } = require('./httpClient')
 const { createSpaceHistory } = require('./spaceHistory')
+const { createContentProposals } = require('./contentProposals')
 const { serverActor } = require('./opActor')
 const { createRateLimiter, clientKey } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
@@ -2266,6 +2267,76 @@ registerSyncRoutes(router, {
   replaceSceneAndBroadcast,
   loadSpaceMeta,
   snapshotSpaceScene,
+})
+
+// ── proposals: a file for a space that already exists ────────────────────
+// contentProposals.js. A .diiii for an existing space is read, summarized
+// and either applied (owner, admin, the per-space trusted hook) or held as a
+// `content.apply` approval the inner bot shows with Apply / Reject. Every
+// apply takes a restore point first. The CLI door is
+// `node scripts/space-bundle.mjs propose <file> --tier dev`.
+const contentProposals = createContentProposals({
+  config,
+  dataDir: config.directories.dataDir,
+  spacesDir: SPACES_DIR,
+  approvalGate,
+  spaceHistory,
+  loadSpaceMeta,
+  findProjectById: (projectId) => findProjectById(SPACES_DIR, projectId),
+  listProjectsInSpace: (spaceId) => listProjectsInSpace(SPACES_DIR, spaceId),
+  getSpacePaths,
+  restoreSpaceProjectDocuments,
+  replaceSceneAndBroadcast,
+  latestOpId: (kind, id) => {
+    const row = kind === 'space'
+      ? getDb().prepare('SELECT data FROM space_ops WHERE space_id = ? ORDER BY seq DESC LIMIT 1').get(id)
+      : getDb().prepare('SELECT data FROM project_ops WHERE project_id = ? ORDER BY seq DESC LIMIT 1').get(id)
+    try { return row ? JSON.parse(row.data)?.opId || null : null } catch { return null }
+  },
+  broadcastProjectLiveEvent,
+  ensureSpaceWritable,
+  maxOpHistory: MAX_OP_HISTORY,
+  maxOpAgeMs: MAX_OP_AGE_MS,
+  schemaVersion: SCHEMA_VERSION,
+  logger
+})
+contentProposals.register()
+
+router.post('/api/spaces/:spaceId/proposals', (req, res, next) => bundleUpload.single('bundle')(req, res, (error) => {
+  if (!error) return next()
+  if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'That file is larger than this di.iiii accepts.' })
+  return res.status(400).json({ error: String(error.message || 'That file could not be read.') })
+}), async (req, res, next) => {
+  const uploaded = req.file?.path || null
+  try {
+    const state = req.authState || getPublicAuthState(req)
+    // A proposal names a person. Guests have no name the owner could answer.
+    if (config.requireAuth && !state.isUnrestricted && (!state.authenticated || state.type === 'guest' || isGuestSubject(state.subject))) {
+      return res.status(403).json({ error: 'Sign in with an account to send a file for this space.', code: 'auth_required' })
+    }
+    if (!uploaded) return res.status(400).json({ error: 'No file was sent (field "bundle").' })
+    const spaceId = normalizeSpaceId(req.params.spaceId)
+    const flag = (value) => ['1', 'true', 'yes'].includes(String(value ?? '').toLowerCase())
+    const outcome = await contentProposals.submit({
+      spaceId,
+      uploadPath: uploaded,
+      authState: state,
+      mode: req.body?.mode === 'propose' ? 'propose' : 'auto',
+      from: req.body?.from || null,
+      overwriteNewer: flag(req.body?.overwriteNewer),
+      dryRun: flag(req.body?.dryRun),
+      req
+    })
+    const status = outcome.status === 'pending_approval' ? 202 : 200
+    res.status(status).json(outcome)
+  } catch (error) {
+    if ((error?.status && error.status < 500) || error?.status === 503) {
+      return res.status(error.status).json({ error: error.message, ...(error.code ? { code: error.code } : {}), ...(error.body || {}) })
+    }
+    next(error)
+  } finally {
+    if (uploaded) await fs.promises.rm(uploaded, { force: true }).catch(() => {})
+  }
 })
 
 // Admin sweep for the hub's collapsed sandbox row: remove guest sandboxes the

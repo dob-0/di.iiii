@@ -383,7 +383,15 @@ const config = {
     // writes rather than reporting content edits.
     contentNotices: parseBool(process.env.CONTENT_CHANGE_NOTICES_ENABLED, false),
     // How long a person may pause and still be in the same burst of edits.
-    burstGapMs: Number(process.env.CONTENT_BURST_GAP_MS || 15 * 60 * 1000)
+    burstGapMs: Number(process.env.CONTENT_BURST_GAP_MS || 15 * 60 * 1000),
+    // This server's own public API base (https://dev.diiii.xyz/serverXR), sent
+    // with every approval so the one console knows which tier to answer.
+    // Unset = the bot answers its own DI_SERVER, as before.
+    callbackUrl: (process.env.APPROVAL_CALLBACK_URL || '').trim().replace(/\/+$/, ''),
+    // A space-bundle proposal (contentProposals.js) waits this long for Apply
+    // or Reject — three days by default: someone has to open the file's
+    // summary and think, which an hour does not allow.
+    proposalTtlMs: Number(process.env.CONTENT_PROPOSAL_TTL_MS || 3 * 24 * 60 * 60 * 1000)
   }
 }
 

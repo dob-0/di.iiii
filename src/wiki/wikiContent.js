@@ -218,10 +218,11 @@ export const WIKI_ARTICLES = [
             'A restore point is kept before each change that matters: the first change someone makes after somebody else (or after a pause of about a quarter of an hour), and every time a whole scene or project is replaced, pulled from another copy, or restored. The newest 30 are kept, plus one per day for the last 30 days. The images a restore point names are kept too, so putting one back never brings back broken pictures.',
             'To see them: Spaces → your space → Manage → History. Each row says when, and whose change it was taken before. Restore puts the whole space — scene and projects — back to that moment, after asking. What is there at that moment is kept as a restore point of its own, so a restore is undoable too.',
             'Only the space’s owner or an admin can see a space’s history or restore it.',
-            'When someone who does not own a space changes it, the studio’s inner bot can be told once per burst of edits — what changed, by whom, with an Undo button. That notice is off unless the server turns it on.'
+            'When someone who does not own a space changes it, the studio’s inner bot can be told once per burst of edits — what changed, by whom, with an Undo button. That notice is off unless the server turns it on.',
+            'A di.iiii file (.diiii) sent for a space that already exists is a proposal, not an import. The server reads it and writes a plain summary — which projects change, how many items before and after, how many new files, and anything in the space that is newer than the file and would be overwritten. The owner, an admin, or someone trusted in that space can apply it at once; from anyone else it waits for Apply or Reject in the inner bot. Either way a restore point is taken first, the space keeps its own settings (owner, address, public or not), and nothing that is only in the space is deleted. From a terminal: node scripts/space-bundle.mjs propose <file> --tier dev (add --dry-run to see the summary only).'
         ],
-        tags: ['history', 'undo', 'restore', 'snapshot', 'author', 'safety'],
-        updated: '2026-09-16'
+        tags: ['history', 'undo', 'restore', 'snapshot', 'author', 'safety', 'proposal', 'bundle'],
+        updated: '2026-09-17'
     },
     {
         id: 'jam-surface',
