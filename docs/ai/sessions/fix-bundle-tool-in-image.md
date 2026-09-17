@@ -19,6 +19,10 @@ Found while moving Emilya's WCC export between installs.
 - Not changed: the import route still never passes `--force`, so a `.diiii` for a space
   that already exists on the tier is refused with 409. Replacing a live space in place
   stays a CLI job (or the proposals route from `feat/space-proposals`, PR #486).
-- Still undone: Emilya's newest WCC export is not on any tier. It is 55 MB, which Telegram's
-  Bot API cannot hand to di.bo; she was asked (di.bo DM, 2026-09-17) to publish it as a
-  release on her fork, like `wcc-space-2026-09-16`.
+- Emilya's newest WCC export (her fork's release `wcc-space-2026-09-17`) is on PROD since
+  2026-09-17, put there by hand: the fixed tool copied into the running container, then
+  `import --force --force-stale`. It was meant for dev first and landed on prod because a
+  plain `docker compose` inside `/opt/di.iiii-dev` addresses project `dii` (prod) unless
+  `-f docker-compose.dev.yml` is passed. Prod's before-copy is kept off the VPS. Dev still
+  carries the old lineage; the space's label and owner are re-set by PATCH after an import,
+  since a `.diiii` carries neither.
