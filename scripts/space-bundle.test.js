@@ -137,6 +137,13 @@ describe('space-bundle forced replace keeps what the file does not carry', () =>
         seedSpace(path.join(theirs, 'di.db'), { id: 'gallery', updatedAt: past })
         seedProject(path.join(theirs, 'di.db'), theirs, 'gallery', 'gallery-main', 'theirs')
         const file = path.join(mkTemp('bundle-file-'), 'gallery.diiii')
+        seedProject(path.join(theirs, 'di.db'), theirs, 'gallery', 'gallery-binned', 'binned')
+        {
+            const { initDb, closeDb } = require('../serverXR/src/db.js')
+            const db = initDb(path.join(theirs, 'di.db'))
+            db.prepare('UPDATE projects SET state = ?, deleted_at = ? WHERE id = ?').run('draft', 1789001446736, 'gallery-binned')
+            closeDb()
+        }
         await run(['export', 'gallery', '--data-root', theirs, '--out', file])
         // the tier: same space with a real label, the same project, and one more
         const tier = mkTemp('bundle-tier-')
@@ -156,7 +163,10 @@ describe('space-bundle forced replace keeps what the file does not carry', () =>
         const { stdout } = await run(['import', file, '--data-root', tier, '--force', '--force-stale'])
         expect(stdout).toContain('gallery-history')
         expect(read(tierDb, 'SELECT id FROM projects WHERE space_id = ? ORDER BY id', 'gallery').map((r) => r.id))
-            .toEqual(['gallery-history', 'gallery-main'])
+            .toEqual(['gallery-binned', 'gallery-history', 'gallery-main'])
+        // a trashed draft stays a trashed draft on the way in
+        expect(read(tierDb, 'SELECT state, deleted_at FROM projects WHERE id = ?', 'gallery-binned')[0])
+            .toEqual({ state: 'draft', deleted_at: 1789001446736 })
         expect(read(tierDb, 'SELECT count(*) AS n FROM project_ops WHERE project_id = ?', 'gallery-history')[0].n).toBe(1)
         expect(JSON.parse(fs.readFileSync(path.join(tier, 'spaces', 'gallery', 'projects', 'gallery-history', 'document.json'), 'utf8')).body).toBe('history')
         expect(JSON.parse(fs.readFileSync(path.join(tier, 'spaces', 'gallery', 'projects', 'gallery-main', 'document.json'), 'utf8')).body).toBe('theirs')
@@ -170,7 +180,7 @@ describe('space-bundle forced replace keeps what the file does not carry', () =>
         const { file, tier, tierDb } = await setUp()
         const { stdout } = await run(['import', file, '--data-root', tier, '--force', '--force-stale', '--prune'])
         expect(stdout).toMatch(/gallery-history[\s\S]*DELETED/)
-        expect(read(tierDb, 'SELECT id FROM projects WHERE space_id = ?', 'gallery').map((r) => r.id)).toEqual(['gallery-main'])
+        expect(read(tierDb, 'SELECT id FROM projects WHERE space_id = ?', 'gallery').map((r) => r.id).sort()).toEqual(['gallery-binned', 'gallery-main'])
         expect(fs.existsSync(path.join(tier, 'spaces', 'gallery', 'projects', 'gallery-history'))).toBe(false)
         expect(fs.readdirSync(path.join(tier, '_backups', 'space-replace'))).toHaveLength(1)
     })

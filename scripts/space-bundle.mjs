@@ -337,8 +337,12 @@ async function importSpace(args) {
             ON CONFLICT(id) DO UPDATE SET label = excluded.label, permanent = excluded.permanent, allow_edits = excluded.allow_edits, is_public = excluded.is_public, kind = excluded.kind, published_project_id = excluded.published_project_id, preview_image_asset_id = excluded.preview_image_asset_id, scene_version = excluded.scene_version, updated_at = excluded.updated_at, last_touched_at = excluded.last_touched_at, owner_user_id = excluded.owner_user_id`)
         const deleteSpaceOps = db.prepare('DELETE FROM space_ops WHERE space_id = ?')
         const insertSpaceOp = db.prepare('INSERT INTO space_ops (space_id, version, data, created_at) VALUES (?, ?, ?, ?)')
-        const insertProject = db.prepare(`INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET space_id = excluded.space_id, title = excluded.title, document_version = excluded.document_version, source = excluded.source, updated_at = excluded.updated_at, last_touched_at = excluded.last_touched_at`)
+        // state / deleted_at / slug / position travel too. They did not, so a
+        // trashed draft or an archived snapshot arrived on the next tier as a
+        // LIVE project with a working public address (2026-09-18, WCC).
+        // collection_id does not travel: shelves are not part of the file.
+        const insertProject = db.prepare(`INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at, slug, position, state, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET space_id = excluded.space_id, title = excluded.title, document_version = excluded.document_version, source = excluded.source, updated_at = excluded.updated_at, last_touched_at = excluded.last_touched_at, slug = excluded.slug, position = excluded.position, state = excluded.state, deleted_at = excluded.deleted_at`)
         const deleteProject = db.prepare('DELETE FROM projects WHERE id = ?')
         const deleteProjectOps = db.prepare('DELETE FROM project_ops WHERE project_id = ?')
         const insertProjectOp = db.prepare('INSERT INTO project_ops (project_id, version, data, created_at) VALUES (?, ?, ?, ?)')
@@ -368,7 +372,9 @@ async function importSpace(args) {
             for (const op of spaceOps) insertSpaceOp.run(targetId, op.version, op.data, op.created_at ?? now)
             for (const p of projectMetas) {
                 insertProject.run(p.id, targetId, p.title ?? 'Untitled Project', p.document_version ?? 0,
-                    p.source ?? 'project', p.created_at ?? now, now, now)
+                    p.source ?? 'project', p.created_at ?? now, now, now,
+                    p.slug ?? null, p.position ?? 0,
+                    ['draft', 'live', 'archived'].includes(p.state) ? p.state : 'live', p.deleted_at ?? null)
                 deleteProjectOps.run(p.id)
             }
             if (args.force && args.prune) {
