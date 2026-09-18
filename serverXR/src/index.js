@@ -127,6 +127,7 @@ const {
   ensureProject,
   findProjectById,
   findProjectBySlug,
+  findProjectMove,
   getProjectPaths,
   isReservedProjectSlug,
   isValidAssetId: isValidProjectAssetId,
@@ -1852,7 +1853,18 @@ router.get('/api/resolve/:spaceSegment/:projectSegment', async (req, res, next) 
     if (!space) return res.status(404).json({ error: 'Not found.' })
     const project = (await findProjectBySlug(space.id, projectSegment)) ||
       (await loadProjectMeta(SPACES_DIR, space.id, normalizeProjectId(projectSegment) || projectSegment))
-    if (!project || project.spaceId !== space.id) return res.status(404).json({ error: 'Not found.' })
+    if (!project || project.spaceId !== space.id) {
+      // Not here — but was it moved FROM here? scripts/project-move.mjs
+      // (2026-09-18) writes one project_moves row per move; a project id is
+      // global and keeps its own /api/projects/:id and /{space}/p/:id links
+      // working on its own, but this bare vanity form (/{space}/{slugOrId})
+      // is the one place that explicitly checks "still in this space" and
+      // used to just 404 once a project left. One extra lookup turns that
+      // into a pointer instead of a dead link — see docs/ai/sessions/feat-project-move.md.
+      const moved = findProjectMove(space.id, projectSegment)
+      if (moved) return res.json({ movedTo: { spaceId: moved.toSpace, projectId: moved.projectId } })
+      return res.status(404).json({ error: 'Not found.' })
+    }
     res.json({ space, project })
   } catch (error) {
     next(error)
