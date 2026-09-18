@@ -1860,7 +1860,7 @@ router.get('/api/resolve/:spaceSegment/:projectSegment', async (req, res, next) 
       // working on its own, but this bare vanity form (/{space}/{slugOrId})
       // is the one place that explicitly checks "still in this space" and
       // used to just 404 once a project left. One extra lookup turns that
-      // into a pointer instead of a dead link — see docs/ai/sessions/feat-project-move.md.
+      // into a pointer instead of a dead link — see CONTRIBUTING.md, "Moving one project".
       const moved = findProjectMove(space.id, projectSegment)
       if (moved) return res.json({ movedTo: { spaceId: moved.toSpace, projectId: moved.projectId } })
       return res.status(404).json({ error: 'Not found.' })

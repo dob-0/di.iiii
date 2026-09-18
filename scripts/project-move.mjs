@@ -50,7 +50,7 @@
  * explicitly refuses a project that no longer lives in that space. This tool
  * writes one row to `project_moves` per move; that resolver now consults it
  * and answers with `{ movedTo }` instead of a bare 404 — see
- * docs/ai/sessions/feat-project-move.md for the exact lines.
+ * CONTRIBUTING.md ("Moving one project into a different space") for the rest.
  *
  * Usage:
  *   node scripts/project-move.mjs <projectId> --to <spaceId> [options]
