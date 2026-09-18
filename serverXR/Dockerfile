@@ -17,6 +17,13 @@ RUN npm ci --omit=dev
 COPY serverXR/src/ ./src/
 COPY serverXR/public/ ./public/
 
+# The tool behind "save this space to a file" and "open a file" -- the space
+# routes spawn scripts/space-bundle.mjs, so it has to be in the image, beside
+# the server as in an installed runtime. It finds the server at ./src when
+# there is no serverXR/ above it. Without this line both routes answer 500 on
+# every hosted tier (they did, from the day they shipped to 2026-09-17).
+COPY scripts/space-bundle.mjs ./scripts/space-bundle.mjs
+
 # Bake in shared schema files (sceneSchema.cjs, projectSchema.cjs)
 # sharedRuntime.js resolves these at /shared — no mount needed
 COPY shared/ /shared/

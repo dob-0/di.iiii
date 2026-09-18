@@ -43,6 +43,20 @@ import { fileURLToPath } from 'node:url'
 const require = createRequire(import.meta.url)
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
+// Where the server's source is, seen from this script. Two layouts exist:
+//   - a checkout or an installed runtime: <root>/scripts/ beside <root>/serverXR/src/
+//   - the server image (serverXR/Dockerfile): the server IS the root -- /app/src/,
+//     with this script copied to /app/scripts/ -- and there is no serverXR/ above it.
+// The routes that save a space to a file and open one spawn this script. From
+// the day they shipped (2026-08-19) to 2026-09-17 the image did not carry it, so
+// every hosted tier answered "Could not save this space to a file." -- and once
+// it did, a hardcoded ../serverXR/src would have failed one step later, inside
+// the image. Checked by "runs from the server image's layout" in the test file.
+const SERVER_SRC = ['serverXR/src', 'src']
+    .map((dir) => path.join(ROOT_DIR, dir))
+    .find((dir) => fs.existsSync(path.join(dir, 'db.js')))
+    || path.join(ROOT_DIR, 'serverXR', 'src')
+
 const BUNDLE_FORMAT = 'di.space-bundle'
 const BUNDLE_VERSION = 1
 
@@ -69,7 +83,7 @@ const writerStamp = () => {
     } catch { /* a dev checkout has no release.json */ }
     if (schemaVersion === null) {
         try {
-            const dbSource = fs.readFileSync(path.join(ROOT_DIR, 'serverXR', 'src', 'db.js'), 'utf8')
+            const dbSource = fs.readFileSync(path.join(SERVER_SRC, 'db.js'), 'utf8')
             const match = /const SCHEMA_VERSION = (\d+)/.exec(dbSource)
             if (match) schemaVersion = Number(match[1])
         } catch { /* neither — recorded as unknown, which the reader handles */ }
@@ -260,7 +274,7 @@ async function importSpace(args) {
         // initDb creates the full schema on a fresh data root and is a no-op
         // on an existing one — the import works against both.
         await fsp.mkdir(dataRoot, { recursive: true })
-        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const { initDb, closeDb } = require(path.join(SERVER_SRC, 'db.js'))
         const db = initDb(dbPath)
 
         const existing = db.prepare('SELECT updated_at FROM spaces WHERE id = ?').get(targetId)
