@@ -1053,7 +1053,7 @@ export default function SpaceHub() {
                                     {(space.kind === 'sandbox' || isMain || space.isPublic || showViewOnly) && (
                                         <div className="ssh-card-header">
                                             {space.kind === 'sandbox' && <span className="ssh-space-id">sandbox</span>}
-                                            {isMain && <span className="ssh-badge-main">Main</span>}
+                                            {isMain && <span className="ssh-badge-main" title="This space is what opens at the site’s own address">Front door</span>}
                                             {space.isPublic && <span className="ssh-badge-live">Live</span>}
                                             {/* "View live" tells an account which of the spaces on
                                                 its page it cannot edit. On a visitor's page that is
