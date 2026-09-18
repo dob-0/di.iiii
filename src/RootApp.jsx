@@ -27,7 +27,7 @@ import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
-import { APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildPublicProjectPath, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 import ReservedAddressCard, { hasReservedAddressCard } from './components/ReservedAddressCard.jsx'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
@@ -205,6 +205,12 @@ function SlugProjectRoute({ appState }) {
     const { result, error } = useResolveSlugProject(appState.spaceId, appState.projectSlugSegment)
     const resolvedSpaceId = result?.space?.id || null
     const resolvedProjectId = result?.project?.id || null
+    // scripts/project-move.mjs moved this project out of appState.spaceId —
+    // the server already checked project_moves (serverXR/src/index.js
+    // /api/resolve/:spaceSegment/:projectSegment) and named where it lives
+    // now. buildPublicProjectPath (the /p/ form), not the vanity slug: a move
+    // doesn't carry the OLD slug into the new space, only the id is certain.
+    const movedTo = result?.movedTo || null
     const tool = appState.toolSegment || null
     const hasUnknownTail = Boolean(appState.hasUnknownTail)
 
@@ -231,7 +237,17 @@ function SlugProjectRoute({ appState }) {
     }, [resolvedSpaceId, resolvedProjectId, tool, hasUnknownTail, search, hash,
         appState.spaceId, appState.projectSlugSegment, rrNavigate])
 
+    useEffect(() => {
+        if (!movedTo?.spaceId || !movedTo?.projectId) return
+        const keep = `${search || ''}${hash || ''}`
+        rrNavigate(`${buildPublicProjectPath(movedTo.spaceId, movedTo.projectId)}${keep}`, { replace: true })
+    }, [movedTo?.spaceId, movedTo?.projectId, search, hash, rrNavigate])
+
     if (result === undefined && !error) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+
+    if (movedTo?.spaceId && movedTo?.projectId) {
         return <RouteSurfaceFallback label="Loading" detail="" />
     }
 

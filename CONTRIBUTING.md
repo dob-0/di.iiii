@@ -131,6 +131,26 @@ project's draft/archived/trash state, and writes a before-copy to
 the file was exported unless `--force-stale` — read that refusal as "somebody else worked
 here", not as an obstacle.
 
+## Moving one project into a different space
+
+Folding several one-page spaces into one, or just reorganising, doesn't need a whole
+space export — `node scripts/project-move.mjs <projectId> --to <spaceId> --data-root <dir>`
+moves a single project's row and directory in place, on the SAME tier's data root
+(local, or run it inside a tier's container the same way `space-bundle.mjs` does).
+`--dry-run` first is free, and reports exactly what it would touch. It refuses to
+move a project the source space is currently showing to visitors
+(`published_project_id`) unless you add `--unpublish` — moving a space's front door
+must never happen silently. Any of the project's own asset files, and copies of any
+space-shared assets its document references, move/copy with it; nothing is ever
+deleted from the source space.
+
+Old public links keep answering: `/{space}/p/{projectId}` and `/api/projects/{id}`
+resolve by the project's id alone, unaffected by a move. The short vanity form
+`/{space}/{slugOrId}` is the one address the move tool has to explain itself for — it
+writes a `project_moves` row, and the server's resolver
+(`GET /api/resolve/:spaceSegment/:projectSegment`) answers a project that left with a
+pointer to its new address instead of a 404.
+
 ## Golden rule
 
 See `docs/ai/golden_rules.md` for the one-line version of this file's rule, kept

@@ -132,6 +132,9 @@ const s = () => {
     setPosition:      db.prepare('UPDATE projects SET position = ?, updated_at = ? WHERE id = ?'),
     setState:         db.prepare('UPDATE projects SET state = ?, updated_at = ? WHERE id = ?'),
     selectBySlug:     db.prepare('SELECT * FROM projects WHERE space_id = ? AND slug = ?'),
+    // scripts/project-move.mjs writes one row per move; the resolver below
+    // reads the latest one for a given (old space, old id-or-slug).
+    selectLatestMove: db.prepare('SELECT * FROM project_moves WHERE from_space = ? AND (project_id = ? OR old_slug = ?) ORDER BY moved_at DESC LIMIT 1'),
     // The index is what resolves a project id to its space, so a trashed
     // project must be absent from it — otherwise its url keeps working after it
     // was deleted, which is the opposite of what delete means.
@@ -160,6 +163,15 @@ const loadProjectMeta = async (spacesDir, spaceId, projectId) =>
   rowToMeta(s().selectBySpace.get(projectId, spaceId))
 
 const findProjectBySlug = async (spaceId, slug) => rowToMeta(s().selectBySlug.get(spaceId, slug))
+
+// Was a project that no longer resolves in `fromSpaceId` moved out of it by
+// scripts/project-move.mjs? `segment` is whatever the visitor typed — an id
+// or a slug, either is checked. Returns { projectId, toSpace } or null.
+const findProjectMove = (fromSpaceId, segment) => {
+  if (!fromSpaceId || !segment) return null
+  const row = s().selectLatestMove.get(fromSpaceId, segment, segment)
+  return row ? { projectId: row.project_id, toSpace: row.to_space } : null
+}
 
 const upsertProjectMeta = async (spacesDir, spaceId, projectId, updates = {}) => {
   const db = getDb()
@@ -413,6 +425,7 @@ module.exports = {
   ensureProject,
   findProjectById,
   findProjectBySlug,
+  findProjectMove,
   getProjectPaths,
   isReservedProjectSlug,
   isValidAssetId,
