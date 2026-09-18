@@ -24,6 +24,13 @@ COPY serverXR/public/ ./public/
 # every hosted tier (they did, from the day they shipped to 2026-09-17).
 COPY scripts/space-bundle.mjs ./scripts/space-bundle.mjs
 
+# The tool that moves one project into a different space (CONTRIBUTING.md,
+# "Moving one project into a different space"). Nothing spawns it; it is here
+# so a hosted tier can be reorganised with the image it already runs, e.g.
+#   docker run --rm -v <tier>_data:/data <image> node scripts/project-move.mjs <id> --to <space> --data-root /data
+# with the server container stopped.
+COPY scripts/project-move.mjs ./scripts/project-move.mjs
+
 # Bake in shared schema files (sceneSchema.cjs, projectSchema.cjs)
 # sharedRuntime.js resolves these at /shared — no mount needed
 COPY shared/ /shared/
