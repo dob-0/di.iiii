@@ -11,3 +11,5 @@ Found while putting Emilya's WCC export on all three tiers.
 - `--prune` is the old whole-replace, said out loud.
 - Not changed: the HTTP route `POST /api/spaces/bundle` still never passes `--force`.
 - Ops note: `_backups/space-replace/` lives inside the tier's data volume and is not swept by anything.
+- Project `state` / `deleted_at` / `slug` / `position` now travel (3 trashed + 4 archived WCC projects had arrived LIVE on dev and prod).
+- On a hosted tier (`release.json` → `deployEnv`), a forced replace must pass `--tier dev|prod` and it must match — the 09-17 "meant for dev, landed on prod" guard. `DI_TIER_OVERRIDE` exists for the test only.

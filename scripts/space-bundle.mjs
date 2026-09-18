@@ -23,6 +23,9 @@
  *   --owner <userId>    Set owner_user_id (default: none — original owner
  *                       ids are dropped; they reference users of the source install)
  *   --force             Overwrite an existing space with the same id
+ *   --tier <name>       With --force on a hosted tier: say which tier you mean
+ *                       (dev | prod). Refused when it is not the tier this
+ *                       data belongs to — see tierOfThisInstall().
  *   --prune             With --force: also DELETE the target's projects that
  *                       are not in the bundle. Without it they are kept.
  *   --no-backup         With --force: skip the automatic before-copy
@@ -86,7 +89,7 @@ const die = (msg) => { console.error(`[space-bundle] ERROR: ${msg}`); process.ex
 const log = (msg) => console.log(`[space-bundle] ${msg}`)
 
 const parseArgs = (argv) => {
-    const args = { command: null, target: null, dataRoot: null, out: null, as: null, owner: null, force: false, forceStale: false, prune: false, noBackup: false }
+    const args = { command: null, target: null, dataRoot: null, out: null, as: null, owner: null, force: false, forceStale: false, prune: false, noBackup: false, tier: null }
     const positional = []
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i]
@@ -96,6 +99,7 @@ const parseArgs = (argv) => {
         else if (a === '--owner') args.owner = argv[++i]
         else if (a === '--force') args.force = true
         else if (a === '--prune') args.prune = true
+        else if (a === '--tier') args.tier = argv[++i]
         else if (a === '--no-backup') args.noBackup = true
         // --force alone still refuses when the target changed AFTER this
         // bundle was exported (see importSpace) — this is the second,
@@ -227,6 +231,23 @@ async function exportSpace(args) {
 const remapSpaceUrls = (text, oldId, newId) =>
     oldId === newId ? text : text.split(`/api/spaces/${oldId}/`).join(`/api/spaces/${newId}/`)
 
+// Which tier is this? A hosted server image carries release.json beside the
+// server (`deployEnv`: "production" | "dev"); a checkout or an artist's install
+// carries none and is nobody's tier but its own. On 2026-09-17 a collaborator's
+// space meant for dev replaced PROD's, because `docker compose` run inside
+// /opt/di.iiii-dev quietly addressed the prod containers — and nothing in this
+// tool knew, or said, where it was. Now a forced replace on a hosted tier must
+// name the tier, and the name must be true.
+const tierOfThisInstall = () => {
+    for (const file of [path.join(ROOT_DIR, 'release.json'), path.join(ROOT_DIR, 'serverXR', 'release.json')]) {
+        try {
+            const env = JSON.parse(fs.readFileSync(file, 'utf8')).deployEnv
+            if (typeof env === 'string' && env.trim()) return env.trim() === 'production' ? 'prod' : env.trim()
+        } catch { /* no release file here */ }
+    }
+    return null
+}
+
 async function importSpace(args) {
     const { dataRoot, spacesDir, dbPath } = resolvePaths(args.dataRoot)
     const bundlePath = args.target && path.resolve(args.target)
@@ -307,6 +328,16 @@ async function importSpace(args) {
         const extraProjects = existing
             ? db.prepare('SELECT id, title FROM projects WHERE space_id = ?').all(targetId).filter((p) => !bundleProjectIds.has(p.id))
             : []
+        if (existing && args.force && args.checkStale) {
+            const here = process.env.DI_TIER_OVERRIDE || tierOfThisInstall()
+            const said = args.tier === 'production' ? 'prod' : args.tier
+            if (here && said !== here) {
+                die(`this is the ${here.toUpperCase()} tier, and "${targetId}" already lives here.\n`
+                    + (said ? `  you said --tier ${said}. Nothing was changed.\n` : '')
+                    + `  to replace it on ${here}, say so:  --tier ${here}`)
+            }
+            if (here) log(`replacing "${targetId}" on the ${here.toUpperCase()} tier`)
+        }
         if (existing && args.force) {
             if (extraProjects.length) {
                 log(`"${targetId}" holds ${extraProjects.length} project(s) this file does not carry: ${extraProjects.map((p) => p.id).join(', ')}`)
@@ -460,7 +491,7 @@ if (invokedDirectly) {
     else if (args.command === 'import') await importSpace({ ...args, checkStale: true })
     else {
         console.log('Usage: node scripts/space-bundle.mjs export <spaceId> [--data-root <dir>] [--out <file>]')
-        console.log('       node scripts/space-bundle.mjs import <bundle.tar.gz> [--data-root <dir>] [--as <id>] [--owner <userId>] [--force] [--force-stale] [--prune] [--no-backup]')
+        console.log('       node scripts/space-bundle.mjs import <bundle.tar.gz> [--data-root <dir>] [--as <id>] [--owner <userId>] [--force] [--force-stale] [--tier dev|prod] [--prune] [--no-backup]')
         process.exit(args.command ? 1 : 0)
     }
 }

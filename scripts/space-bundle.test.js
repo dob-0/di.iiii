@@ -184,4 +184,21 @@ describe('space-bundle forced replace keeps what the file does not carry', () =>
         expect(fs.existsSync(path.join(tier, 'spaces', 'gallery', 'projects', 'gallery-history'))).toBe(false)
         expect(fs.readdirSync(path.join(tier, '_backups', 'space-replace'))).toHaveLength(1)
     })
+
+    // 2026-09-17: meant for dev, landed on prod. The tool now has to be told the
+    // tier, and refuses when the tier it is told is not the tier it is on.
+    it('on a hosted tier, a forced replace must name the tier — and name the right one', async () => {
+        const { file, tier, tierDb } = await setUp()
+        const onProd = { ...process.env, DI_TIER_OVERRIDE: 'prod' }
+        const args = ['import', file, '--data-root', tier, '--force', '--force-stale']
+        const spawn = (extra) => execFileAsync(process.execPath, [SCRIPT, ...args, ...extra], { cwd: ROOT_DIR, env: onProd })
+        await expect(spawn([])).rejects.toMatchObject({ stderr: expect.stringContaining('this is the PROD tier') })
+        await expect(spawn(['--tier', 'dev'])).rejects.toMatchObject({ stderr: expect.stringContaining('you said --tier dev') })
+        // refused means untouched: the old document is still there, no before-copy was made
+        expect(JSON.parse(fs.readFileSync(path.join(tier, 'spaces', 'gallery', 'projects', 'gallery-main', 'document.json'), 'utf8')).body).toBe('ours-old')
+        expect(fs.existsSync(path.join(tier, '_backups'))).toBe(false)
+        const { stdout } = await spawn(['--tier', 'prod'])
+        expect(stdout).toContain('on the PROD tier')
+        expect(read(tierDb, 'SELECT label FROM spaces WHERE id = ?', 'gallery')[0].label).toBe('The Gallery')
+    })
 })
