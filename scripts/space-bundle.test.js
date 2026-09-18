@@ -104,3 +104,74 @@ describe('space-bundle import refuses a target that changed after the bundle was
         expect(stdout).toContain('imported "myspace" as "myspace"')
     })
 })
+
+// 2026-09-18: a collaborator's WCC export was imported over a space that held
+// eight projects the file did not carry. `INSERT OR REPLACE INTO spaces`
+// deleted the row first, the cascade took all eight (and their op logs), the
+// space directory was removed whole, and label + owner reset to the file's
+// (id-as-label, no owner). Nothing said so. These guard each half.
+describe('space-bundle forced replace keeps what the file does not carry', () => {
+    const seedProject = (dbPath, dataRoot, spaceId, pid, body) => {
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const db = initDb(dbPath)
+        const now = Date.now() - 60_000
+        db.prepare('INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            .run(pid, spaceId, pid, 1, 'project', now, now, now)
+        db.prepare('INSERT INTO project_ops (project_id, version, data, created_at) VALUES (?, ?, ?, ?)').run(pid, 1, '{}', now)
+        closeDb()
+        const dir = path.join(dataRoot, 'spaces', spaceId, 'projects', pid)
+        fs.mkdirSync(dir, { recursive: true })
+        fs.writeFileSync(path.join(dir, 'document.json'), JSON.stringify({ body }))
+    }
+    const read = (dbPath, sql, ...params) => {
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const db = initDb(dbPath)
+        const rows = db.prepare(sql).all(...params)
+        closeDb()
+        return rows
+    }
+    const setUp = async () => {
+        const past = Date.now() - 120_000
+        // the collaborator's install: space `gallery`, label never set, one project
+        const theirs = mkTemp('bundle-theirs-')
+        seedSpace(path.join(theirs, 'di.db'), { id: 'gallery', updatedAt: past })
+        seedProject(path.join(theirs, 'di.db'), theirs, 'gallery', 'gallery-main', 'theirs')
+        const file = path.join(mkTemp('bundle-file-'), 'gallery.diiii')
+        await run(['export', 'gallery', '--data-root', theirs, '--out', file])
+        // the tier: same space with a real label, the same project, and one more
+        const tier = mkTemp('bundle-tier-')
+        const tierDb = path.join(tier, 'di.db')
+        seedSpace(tierDb, { id: 'gallery', updatedAt: past })
+        seedProject(tierDb, tier, 'gallery', 'gallery-main', 'ours-old')
+        seedProject(tierDb, tier, 'gallery', 'gallery-history', 'history')
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const db = initDb(tierDb)
+        db.prepare('UPDATE spaces SET label = ? WHERE id = ?').run('The Gallery', 'gallery')
+        closeDb()
+        return { file, tier, tierDb }
+    }
+
+    it('keeps the extra project (row, op log, document), the label, and writes a before-copy', async () => {
+        const { file, tier, tierDb } = await setUp()
+        const { stdout } = await run(['import', file, '--data-root', tier, '--force', '--force-stale'])
+        expect(stdout).toContain('gallery-history')
+        expect(read(tierDb, 'SELECT id FROM projects WHERE space_id = ? ORDER BY id', 'gallery').map((r) => r.id))
+            .toEqual(['gallery-history', 'gallery-main'])
+        expect(read(tierDb, 'SELECT count(*) AS n FROM project_ops WHERE project_id = ?', 'gallery-history')[0].n).toBe(1)
+        expect(JSON.parse(fs.readFileSync(path.join(tier, 'spaces', 'gallery', 'projects', 'gallery-history', 'document.json'), 'utf8')).body).toBe('history')
+        expect(JSON.parse(fs.readFileSync(path.join(tier, 'spaces', 'gallery', 'projects', 'gallery-main', 'document.json'), 'utf8')).body).toBe('theirs')
+        expect(read(tierDb, 'SELECT label FROM spaces WHERE id = ?', 'gallery')[0].label).toBe('The Gallery')
+        const backups = fs.readdirSync(path.join(tier, '_backups', 'space-replace'))
+        expect(backups).toHaveLength(1)
+        expect(backups[0]).toMatch(/^gallery-.*\.diiii$/)
+    })
+
+    it('--prune deletes the extra project, and says which', async () => {
+        const { file, tier, tierDb } = await setUp()
+        const { stdout } = await run(['import', file, '--data-root', tier, '--force', '--force-stale', '--prune'])
+        expect(stdout).toMatch(/gallery-history[\s\S]*DELETED/)
+        expect(read(tierDb, 'SELECT id FROM projects WHERE space_id = ?', 'gallery').map((r) => r.id)).toEqual(['gallery-main'])
+        expect(fs.existsSync(path.join(tier, 'spaces', 'gallery', 'projects', 'gallery-history'))).toBe(false)
+        expect(fs.readdirSync(path.join(tier, '_backups', 'space-replace'))).toHaveLength(1)
+    })
+})
