@@ -13,15 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- dev tier identifiers renamed; staging.di-studio.xyz switched off
-- "staging" retired: the tiers are local · dev · prod
-- picture operators in Raw, and one desk across two machines (asuz + aylmo)
-- The rig, step 1: machines on one network find each other, in any version
-- the safety net: every change has an author and a way back
-- the start check: one LATEST/NOT LATEST answer for code and spaces
-- start-check compares content; tier-sync can rebuild its baseline
-- batch land: space history + start check
-- Land the rig (protocol 1) and Raw picture operators together
+- the server image ships the bundle tool, so save-to-file and open-a-file work on hosted tiers
+- a forced space replace no longer deletes what the file does not carry
 
 Full detail: `PROGRESS.md`.
 
