@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSpaceDoorPath, isWorkSegment, workForSegment } from './segments.js'
+import { buildSpaceDoorPath, buildSpaceFacePath, isWorkSegment, workForSegment } from './segments.js'
 import { WORKS } from './works.js'
 
 // The ids come from the registry, never typed here: a work renamed or added
@@ -40,5 +40,21 @@ describe('a space card’s door', () => {
     it('survives a missing space', () => {
         expect(buildSpaceDoorPath(null)).toBe('/')
         expect(buildSpaceDoorPath({})).toBe('/')
+    })
+})
+
+describe('a space card’s face', () => {
+    it('shows the work’s own front page when the work is in this build', () => {
+        expect(buildSpaceFacePath({ id: SHADOWED, publishedProjectId: 'main' }, [SHADOWED]))
+            .toBe(WORKS[0].path)
+    })
+
+    it('keeps the door path in a copy that left the work out', () => {
+        expect(buildSpaceFacePath({ id: SHADOWED, publishedProjectId: 'main' }, []))
+            .toBe(`/${SHADOWED}/p/main`)
+    })
+
+    it('leaves a space no work shadows exactly where it was', () => {
+        expect(buildSpaceFacePath({ id: PLAIN, publishedProjectId: 'p1' }, [SHADOWED])).toBe(`/${PLAIN}`)
     })
 })

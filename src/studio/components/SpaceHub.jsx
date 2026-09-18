@@ -29,7 +29,7 @@ import { doorTitleForCard, spaceName } from '../utils/spaceNames.js'
 // The card's door. A space whose bare segment a work has taken (`/wcc`) is
 // addressed through its published project instead, so the picture, the frame
 // and the links all open the SPACE and not the code sharing its name.
-import { buildSpaceDoorPath } from '../../works/segments.js'
+import { buildSpaceDoorPath, buildSpaceFacePath } from '../../works/segments.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
 import {
@@ -410,7 +410,7 @@ export default function SpaceHub() {
     // instead of cutting to black.
     const openCard = (space, element = null) => {
         const href = !canEnter(space) && space.isPublic
-            ? buildSpaceDoorPath(space)
+            ? buildSpaceFacePath(space)
             : buildStudioHubPath(space.id)
         enterFromElement(null, href, {
             element: element?.querySelector?.('.ssh-card-preview') || element
@@ -963,7 +963,11 @@ export default function SpaceHub() {
                             // One name per space (utils/spaceNames.js): the row
                             // names the space once, and says the door's title only
                             // to an account, only where it differs from the name.
-                            const doorTitle = doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
+                            // A card whose face is a coded work shows that work's front page, so
+                            // naming the published project under it would caption the wrong thing.
+                            const doorTitle = buildSpaceFacePath(space) !== buildSpaceDoorPath(space)
+                                ? null
+                                : doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
                             const stateWord = state === 'open' ? 'open to anyone'
                                 : state === 'nodoor' ? 'no door' : 'only you'
                             return (
@@ -1022,7 +1026,11 @@ export default function SpaceHub() {
                         {items.map((space) => {
                             const isMain = space.id === defaultSpaceId
                             const isLinking = linker?.spaceId === space.id
-                            const doorTitle = doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
+                            // A card whose face is a coded work shows that work's front page, so
+                            // naming the published project under it would caption the wrong thing.
+                            const doorTitle = buildSpaceFacePath(space) !== buildSpaceDoorPath(space)
+                                ? null
+                                : doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
                             const showViewOnly = space.isPublic && !canEnter(space) && !isVisitor
 
                             return (
@@ -1095,7 +1103,7 @@ export default function SpaceHub() {
                                             >
                                                 {isLive ? (
                                                     <SpaceCardLive
-                                                        doorPath={buildSpaceDoorPath(space)}
+                                                        doorPath={buildSpaceFacePath(space)}
                                                         label={space.label || space.id}
                                                         onRelease={() => releaseLive(space.id)}
                                                     />
@@ -1114,7 +1122,7 @@ export default function SpaceHub() {
                                                 ) : isEmptySandbox ? (
                                                     <p className="ssh-card-preview-empty-line">nothing in it yet — open it and put something in</p>
                                                 ) : (
-                                                    <SpaceCardPreview doorPath={buildSpaceDoorPath(space)} label={space.label || space.id} />
+                                                    <SpaceCardPreview doorPath={buildSpaceFacePath(space)} label={space.label || space.id} />
                                                 )}
                                             </div>
                                         )

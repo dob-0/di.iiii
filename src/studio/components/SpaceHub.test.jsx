@@ -659,8 +659,26 @@ describe('SpaceHub', () => {
         publishedProjectId: 'linked-project'
     }
 
-    it('opens the SPACE from a card whose segment a work has taken, not the work', async () => {
+    it('shows the work’s own front page on a card whose work is in this build', async () => {
         everyCardVisible()
+        try {
+            listServerSpaces.mockResolvedValue([shadowedSpace])
+
+            render(<SpaceHub />)
+
+            await findCard(shadowedSpace.id)
+            await waitFor(() => expect(frameIn(shadowedSpace.id)).not.toBeNull())
+            // The card prints /{work}; its picture is what that address shows.
+            expect(frameIn(shadowedSpace.id).getAttribute('src')).toBe(`${WORKS[0].path}?preview=1`)
+        } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('opens the SPACE from a card whose work was left out of this copy, not the stub', async () => {
+        everyCardVisible()
+        // A copy built without the works: the build writes an empty list.
+        vi.stubGlobal('__DI_WORKS__', [])
         try {
             listServerSpaces.mockResolvedValue([
                 shadowedSpace,
