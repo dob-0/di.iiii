@@ -100,6 +100,9 @@
     --di-danger-rgb: 242, 95, 92;
     --di-success-rgb: 77, 249, 192;
     --di-warning-rgb: 255, 179, 71;
+    /* The spring green the Desk uses to mark "this machine is me" and Raw
+       uses for a picture operator's primary action. */
+    --di-live-rgb: 80, 250, 123;
 
     /* A scrim: the dark veil laid over a live room or a 3D background so text
        on top of it stays readable whatever moves underneath. Two weights, and

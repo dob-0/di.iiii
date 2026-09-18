@@ -294,7 +294,21 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // capture (handleLiveOutputChange in RawEditor), bypassing the pure
     // computeNodeOutput gap the rest of this file documents around.
     add('webcam', 'source.webcam', { label: 'Webcam', col: 6, row: 0 })
+
+    // --- column 8: pictures — the image operators, wired as motion glow ---------
+    // Camera → Difference → Level → Blur → Feedback, laid over the Edge of the
+    // same camera, out to the projector; Analyze turns the motion into numbers.
+    add('topCamera', 'top.camera', { label: 'Camera In', col: 8, row: 0 })
+    add('topDifference', 'top.difference', { label: 'Difference', col: 8, row: 1 })
+    add('topLevel', 'top.level', { label: 'Level', col: 8, row: 2, values: { threshold: 0.05, gain: 5 } })
+    add('topBlur', 'top.blur', { label: 'Blur', col: 8, row: 3 })
+    add('topFeedback', 'top.feedback', { label: 'Feedback', col: 8, row: 4 })
+    add('topEdge', 'top.edge', { label: 'Edge', col: 9, row: 1 })
+    add('topBlend', 'top.blend', { label: 'Blend', col: 9, row: 4, values: { mode: '2' } })
+    add('topOut', 'top.out', { label: 'Picture Out', col: 9, row: 5 })
+    add('topAnalyze', 'top.analyze', { label: 'Analyze', col: 9, row: 2 })
     add('monitor', 'stream.monitor', { label: 'Monitor', col: 7, row: 0 })
+    add('machinesDesk', 'view.desk', { label: 'Desk', col: 7, row: 1 })
     add('mic', 'source.mic', { label: 'Microphone', col: 6, row: 1 })
 
     // --- column 7: workflow nodes + the keeper -----------------------------
@@ -482,6 +496,15 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // panel now draws it.
         wire('webcam', 'frame', 'image', 'src'),
         wire('webcam', 'frame', 'monitor', 'src'),
+        wire('topCamera', 'out', 'topDifference', 'a'),
+        wire('topDifference', 'out', 'topLevel', 'a'),
+        wire('topLevel', 'out', 'topBlur', 'a'),
+        wire('topBlur', 'out', 'topFeedback', 'a'),
+        wire('topCamera', 'out', 'topEdge', 'a'),
+        wire('topFeedback', 'out', 'topBlend', 'a'),
+        wire('topEdge', 'out', 'topBlend', 'b'),
+        wire('topBlend', 'out', 'topOut', 'a'),
+        wire('topLevel', 'out', 'topAnalyze', 'a'),
         // geom.cube.bounds — likewise documented as dead, in fact a real vec3
         // of the cube's size. Wired to the desk's scale so the marker box grows
         // with the cube it is measuring.

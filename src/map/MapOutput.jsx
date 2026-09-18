@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import MapStage from './MapStage.jsx'
 import { useMapDocument, useMapChannelListener } from './useMapDocument.js'
+import { toTopNetwork, useTopNetwork } from '../project/tops/useTopNetwork.js'
+import { useMachinePresence } from '../project/tops/useMachinePresence.js'
+import RigBlackout from '../rig/RigBlackout.jsx'
 import './mapSurface.css'
 
 // THE SIGNAL.
@@ -13,9 +16,30 @@ import './mapSurface.css'
 // It renders through the same MapStage the desk previews with, at the window's
 // own size, so what was aligned is what projects.
 const IDLE_CURSOR_MS = 2000
+const NO_NETWORK = { nodes: [], wires: [] }
 
 export default function MapOutput({ projectId, spaceId }) {
-    const { store, mapping } = useMapDocument(projectId, { role: 'out' })
+    const { store, mapping, document: doc } = useMapDocument(projectId, { role: 'out' })
+    // The project's picture operators, for a surface whose source is Pictures.
+    const network = useMemo(() => toTopNetwork(doc), [doc])
+    // This page is its machine on the desk: a kiosk with a camera and a
+    // projector is exactly what the other machines need to see.
+    const { machine } = useMachinePresence(spaceId)
+    // Nothing mapped yet, but a Picture Out runs on this machine: the screen
+    // shows it, whole. Mapping corners is a refinement, not a precondition.
+    const ownOut = useMemo(() => {
+        if (!machine?.id || (mapping?.surfaces || []).length) return null
+        return network.nodes.find((node) => node.type === 'top.out' && node.values?.machine === machine.id)?.id || null
+    }, [machine, mapping, network])
+    const fallbackMapping = useMemo(() => (ownOut
+        ? { ...(mapping || {}), surfaces: [{ id: 'desk-out', name: '', enabled: true, corners: [[0, 0], [1, 0], [1, 1], [0, 1]], mask: [], source: { kind: 'network', ref: ownOut }, resolution: [1280, 720], opacity: 1, brightness: 1, contrast: 1, saturation: 1, hue: 0, blend: 'normal' }] }
+        : mapping), [ownOut, mapping])
+    // A machine on the desk computes its operators whether or not this screen
+    // shows one: a camera here can be analysed on another machine with nothing
+    // projected at all. When a surface draws Pictures it runs them itself, so
+    // this stands down — one engine, one camera open, per page.
+    const drawsPictures = (fallbackMapping?.surfaces || []).some((surface) => surface.enabled !== false && surface.source?.kind === 'network' && surface.source?.ref)
+    useTopNetwork({ network: drawsPictures ? NO_NETWORK : network, spaceId })
     useMapChannelListener(projectId, store)
 
     const [viewport, setViewport] = useState(() => ({
@@ -60,9 +84,10 @@ export default function MapOutput({ projectId, spaceId }) {
     return (
         <div className={`map-output${idle ? ' is-idle' : ''}`}>
             {stage.width > 0 ? (
-                <MapStage mapping={mapping} spaceId={spaceId} width={stage.width} height={stage.height} live />
+                <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} live />
             ) : null}
             <MapOutputControls />
+            <RigBlackout />
         </div>
     )
 }

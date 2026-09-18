@@ -57,6 +57,9 @@ npm run dev                      # 8
   that already exists unless `--force`, and skip each asset by id even under
   `--force`. A space whose content is six months old produces zero signal from
   any tool, and `local:mirror` will report success over it.
+  `npm run start-check` is the one exception: it compares normalized CONTENT with the dev tier.
+  When `tier-sync --changed` refuses everything, rebuild its baseline from today's agreement:
+  `node scripts/tier-sync.mjs --rebuild-baseline --dry-run` (writes only the baseline file, never a tier; drop `--dry-run` to write).
 - **Spaces with no declaration are audited by nothing.** `spaces:audit` covers
   only the five with a `di-space.space.json`, and the local tier is
   `governed: false` so it exits 0 on local drift by design.

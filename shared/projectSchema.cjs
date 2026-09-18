@@ -798,7 +798,7 @@ const normalizeShowState = (show = {}) => {
   }
 }
 
-const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera']
+const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera', 'network']
 const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
 const MAPPING_EFFECT_KINDS = ['none', 'motion']
 

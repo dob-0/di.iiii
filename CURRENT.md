@@ -13,13 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Facade audit wave 3: the 2D page faults
-- Wave 3 facade audit: front-room faults (red ring, white planes, camera freeze)
-- signing in keeps your guest work openable; opening a file grants the opener
-- one name for /open and /wcc, matching the stored space label
-- suite page gaps: assets, uppercase labels, og-image, literal echoes
-- Land facade-page-faults (#464) as a follow-up batch, resolving the SpaceHub overlap with #465
-- Facade wave 3 batch: names, front room, sign-in carries guest work, no-account audit
+- the server image ships the bundle tool, so save-to-file and open-a-file work on hosted tiers
+- a forced space replace no longer deletes what the file does not carry
 
 Full detail: `PROGRESS.md`.
 

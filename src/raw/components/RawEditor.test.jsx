@@ -39,6 +39,21 @@ vi.mock('./RawGraphSurface.jsx', () => ({
             {props.onMakeScene && (
                 <button type="button" onClick={() => props.onMakeScene()}>make-me-a-scene</button>
             )}
+            {/* The real surface's wire-drop handler reports a bare
+                {fromNodeId, fromPort, toNodeId, toPort} — no id (see
+                RawGraphSurface.jsx's pointerup handler). Mirror that shape
+                here so a regression that stops minting the id downstream
+                shows up in this harness too. */}
+            {props.onCreateEdge && (
+                <button
+                    type="button"
+                    onClick={() => props.onCreateEdge({
+                        fromNodeId: 'node-a', fromPort: 'out', toNodeId: 'node-b', toPort: 'in'
+                    })}
+                >
+                    drop-wire
+                </button>
+            )}
         </div>
     )
 }))
@@ -1256,6 +1271,42 @@ const makeDoorwayDoc = () => JSON.stringify({
         { id: 'e1', fromNodeId: 'source', fromPort: FAR_DOOR_ID, toNodeId: 'box', toPort: 'door-in' }
     ],
     workspaceState: {}
+})
+
+// Regression for the 2026-09-14 "Op createEdge is missing a stable id"
+// banner: a wire dropped on the canvas reaches handleCreateEdge as a bare
+// {fromNodeId, fromPort, toNodeId, toPort}, and the server's
+// findIdlessCreateOp (serverXR/src/opValidation.js) refuses any createEdge
+// op whose payload.edge.id is absent — refusing the whole op batch.
+describe('RawEditor wire-drop edge creation carries a stable id', () => {
+    const WIRE_STORAGE_KEY = 'test-wire-drop-ws'
+
+    afterEach(() => {
+        window.localStorage.removeItem(WIRE_STORAGE_KEY)
+    })
+
+    it('mints an id for an edge created from a raw wire-drop payload', () => {
+        window.localStorage.setItem(WIRE_STORAGE_KEY, makeWorkspaceDoc([makeNodeZero()]))
+        mockApplyLocalOps.mockClear()
+        render(<RawEditor localStorageKey={WIRE_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByText('drop-wire'))
+
+        // useOpHistory's applyLocalOpsWithHistory always forwards an array
+        // ([ops] when handleCreateEdge passes a single op object) to the
+        // underlying applyLocalOps, so each mock call's first arg is an array.
+        const createEdgeCall = mockApplyLocalOps.mock.calls
+            .map(([ops]) => ops)
+            .flat()
+            .find((op) => op?.type === 'createEdge')
+        expect(createEdgeCall).toBeTruthy()
+        const op = createEdgeCall
+        expect(typeof op.payload.edge.id).toBe('string')
+        expect(op.payload.edge.id.trim()).not.toBe('')
+        expect(op.payload.edge).toMatchObject({
+            fromNodeId: 'node-a', fromPort: 'out', toNodeId: 'node-b', toPort: 'in'
+        })
+    })
 })
 
 describe('RawEditor — what a node is made of', () => {

@@ -1,0 +1,80 @@
+name: Rig Compatibility Grid
+
+# docs/architecture/RIG.md §3 rule 6: "CI plays each release against the
+# older released artifacts (di:pack tarballs): hello, card, cue, blackout,
+# picture … A red square blocks the release." This workflow is
+# self-contained — it does not modify or call ci.yml — and its job is to run
+# scripts/rig/compat-grid.mjs across HEAD and the recent released tags that
+# already carry the rig protocol, exiting non-zero on any ✗ cell.
+on:
+  pull_request:
+    paths:
+      - 'serverXR/src/rig/**'
+      - 'scripts/rig/**'
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  compat-grid:
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth 0: compat-grid needs `git worktree add <ref>` to work for
+      # any past release tag, and the tag-selection step below needs every
+      # tag's tree reachable to `git cat-file -e <tag>:<path>`.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # Mirrors ci.yml's "Setup Node" step exactly (same action, pin, version).
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # Mirrors ci.yml's two install steps exactly — same commands, same
+      # root+serverXR split — so this workflow's dependency tree matches the
+      # one every other check runs against.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: |
+          if [ -f serverXR/package-lock.json ]; then
+            npm --prefix serverXR ci
+          else
+            npm --prefix serverXR install
+          fi
+
+      # Up to 5 released tags that already carry the rig protocol, newest
+      # first — the "older released artifacts" RIG.md §3 rule 6 asks CI to
+      # play HEAD against. A tag without serverXR/src/rig/protocol.js in its
+      # tree predates protocol 1 entirely and compat-grid.mjs would only ever
+      # report it "pre-protocol", so it is filtered out here rather than
+      # wasting a worktree + server start on a guaranteed skip.
+      - name: Select release tags with the rig protocol
+        id: tags
+        run: |
+          TAGS=""
+          COUNT=0
+          for t in $(git tag --sort=-v:refname); do
+            if git cat-file -e "$t:serverXR/src/rig/protocol.js" 2>/dev/null; then
+              TAGS="${TAGS:+$TAGS,}$t"
+              COUNT=$((COUNT + 1))
+              if [ "$COUNT" -ge 5 ]; then break; fi
+            fi
+          done
+          if [ -z "$TAGS" ]; then
+            echo '::notice::No released tag contains serverXR/src/rig/protocol.js yet — running HEAD×HEAD only.'
+            echo 'refs=HEAD,HEAD' >> "$GITHUB_OUTPUT"
+          else
+            echo "refs=HEAD,${TAGS}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compatibility grid
+        run: node scripts/rig/compat-grid.mjs --refs "${{ steps.tags.outputs.refs }}"
