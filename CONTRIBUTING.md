@@ -107,6 +107,30 @@ above still applies exactly as written — a fork just means your **code** line 
 extra hop (fork → PR → `dev`) before it's caught up; your **space** line (local tier)
 is unaffected by which fork you're on.
 
+## Carrying a whole space to another tier
+
+A space has **one home tier** while it is being worked on — edit it there, and only
+there. It moves up (collaborator's install → `dev` → `diiii.xyz`) as one file, in this
+order, with a look between every step:
+
+1. **Export** on the home tier: `node scripts/space-bundle.mjs export <space> --out <space>.diiii`
+   (a collaborator on a fork publishes the file as a **release** on the fork — Telegram
+   cannot carry it).
+2. **Dev first.** On the dev server: `space-bundle.mjs import <file> --force --tier dev`.
+   On a hosted tier the tool refuses a replace unless `--tier` is given **and is the tier
+   it is actually running on** — the 2026-09-17 accident was a file meant for dev landing
+   on prod because nothing said where it was. Address the container by **name**
+   (`dii-dev-server-1`, `dii-server-1`), never by `cd` + `docker compose`.
+3. **Look at dev** — desktop and phone, the space's own links — before anything else.
+4. **Prod on the owner's word**, same command with `--tier prod`.
+
+What a replace does and does not do: it keeps the projects the file does not carry
+(`--prune` deletes them, and says which), keeps the space's label and owner, carries each
+project's draft/archived/trash state, and writes a before-copy to
+`<data-root>/_backups/space-replace/` first. It still refuses a target that changed after
+the file was exported unless `--force-stale` — read that refusal as "somebody else worked
+here", not as an obstacle.
+
 ## Golden rule
 
 See `docs/ai/golden_rules.md` for the one-line version of this file's rule, kept
