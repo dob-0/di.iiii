@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { TEST_PATTERNS } from './mapTestPattern.jsx'
+import { streamInputOptions, streamInputStatus } from './mapMachines.js'
 
 const SOURCE_KINDS = [
     { id: 'test', label: 'Test pattern' },
@@ -21,6 +22,7 @@ export default function MapInspector({
     surface,
     projectOptions,
     pictureOutOptions = [],
+    machines = [],
     clipboard,
     onUpdate,
     onDelete,
@@ -94,7 +96,7 @@ export default function MapInspector({
 
             {surface.source.kind === 'stream' ? (
                 <>
-                    <MapStreamPicker value={surface.source.ref} onChange={(name) => setSource('stream', name)} />
+                    <MapStreamPicker value={surface.source.ref} machines={machines} onChange={(name) => setSource('stream', name)} />
                     <MapEffectFields effect={surface.effect} onChange={(patch) => onUpdate(surface.id, { effect: { ...surface.effect, ...patch } })} />
                 </>
             ) : null}
@@ -196,22 +198,18 @@ export default function MapInspector({
     )
 }
 
-// A stream is named, not picked: the input lives on whichever machine shows the
-// surface, and that is usually not this one. So this is a text field. The
-// suggestions are THIS machine's inputs — useful when desk and wall are the same
-// computer, and an honest hint of what a name looks like when they are not.
-function MapStreamPicker({ value, onChange }) {
-    const [labels, setLabels] = useState([])
-    useEffect(() => {
-        const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
-        if (!media?.enumerateDevices) return undefined
-        let cancelled = false
-        media.enumerateDevices().then((devices) => {
-            if (cancelled) return
-            setLabels(devices.filter((device) => device.kind === 'videoinput' && device.label).map((device) => device.label))
-        }).catch(() => {})
-        return () => { cancelled = true }
-    }, [])
+// A stream is named, not picked from this machine's cameras: the input lives on
+// whichever machine shows the surface, and that is usually not this one. The
+// suggestions are the inputs of EVERY machine showing this space, each with the
+// machine it is on, and under the field the desk says who can show this name —
+// so a wrong name is read here, not discovered as a black rectangle on the wall.
+function MapStreamPicker({ value, machines = [], onChange }) {
+    const options = streamInputOptions(machines)
+    const status = streamInputStatus(machines, value)
+    let note = 'Found by name on the machine that shows it — part of the name is enough.'
+    let warn = false
+    if (value && status.found.length) note = `On ${status.found.join(', ')}.${status.missing.length ? ` Not on ${status.missing.join(', ')}.` : ''}`
+    else if (value && status.known) { note = `No machine here has an input called “${value}”.`; warn = true }
     return (
         <label className="map-field">
             <span>Input name</span>
@@ -223,9 +221,9 @@ function MapStreamPicker({ value, onChange }) {
                 onChange={(event) => onChange(event.target.value)}
             />
             <datalist id="map-stream-inputs">
-                {['OBS Virtual Camera', ...labels.filter((label) => label !== 'OBS Virtual Camera')].map((label) => <option key={label} value={label} />)}
+                {options.map((option) => <option key={option.label} value={option.label}>{option.on.join(', ')}</option>)}
             </datalist>
-            <p className="map-hint">Found by name on the machine that shows it — part of the name is enough.</p>
+            <p className={`map-hint${warn ? ' is-warning' : ''}`}>{note}</p>
         </label>
     )
 }

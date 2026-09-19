@@ -372,3 +372,8 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
     padding: var(--di-space-2);
     resize: vertical;
 }
+
+/* Machines on the desk: who is showing this space, and what each one has. */
+.map-machine { margin: 0 0 var(--di-space-2); display: flex; flex-direction: column; gap: 2px; font-size: var(--di-text-2); color: var(--ui-text-muted); }
+.map-machine strong { color: var(--ui-text); font-weight: 500; }
+.map-machine.is-warning, .map-hint.is-warning { color: var(--ui-danger); text-align: left; }
