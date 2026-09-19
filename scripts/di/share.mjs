@@ -47,6 +47,16 @@ const pinnedRequest = (url, { method = 'GET', token = null, body = null, address
         const req = lib.request(u, {
             method,
             lookup: pinnedLookup(address),
+            // `agent: false` — no pooling, ever. Node's Agent pools sockets
+            // keyed by host:port and does not include `lookup` in that key, so
+            // a pinned request could otherwise silently ride a keep-alive
+            // socket a PREVIOUS request already opened to the same hostname's
+            // default (or a different pinned) address — caught live: a request
+            // pinned to one address, then a second pinned to a different one,
+            // answering from the first's socket without ever connecting to the
+            // second. These are one-shot pre-checks, not a long-running
+            // follower, so there is nothing worth pooling for.
+            agent: false,
             headers: {
                 Accept: 'application/json',
                 ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {}),

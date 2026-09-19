@@ -8,6 +8,7 @@
 // callback shapes Node calls is decided by Node's own version, not by us —
 // a real request only ever exercises whichever one this Node happens to use.
 import http from 'node:http'
+import net from 'node:net'
 import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -49,6 +50,57 @@ describe('the address pin, end to end', () => {
         const { port } = await startServer()
         const response = await httpRequest(`http://127.0.0.1:${port}/api/health`)
         expect(response.ok).toBe(true)
+    })
+})
+
+/**
+ * Can this machine bind a second loopback address? Linux allows the whole
+ * 127.0.0.0/8 block; some containers and some CI images do not. Where it
+ * cannot, the socket-isolation test below is skipped rather than faked — a
+ * mock could not tell us whether Node's real Agent pooling was actually
+ * fixed.
+ */
+const canBindSecondLoopback = () => new Promise((resolve) => {
+    const probe = net.createServer()
+    probe.once('error', () => resolve(false))
+    probe.listen(0, '127.0.0.2', () => probe.close(() => resolve(true)))
+})
+
+describe('the address pin does not ride a socket pooled for a different address', () => {
+    // Found live: `httpRequest(url, {address: A})` then `httpRequest(url, {address: B})`
+    // for the SAME url answered from A's connection both times — Node's Agent
+    // pools sockets keyed by host:port, and `lookup` (what the address pin
+    // actually changes) is not part of that key, so the second call silently
+    // reused the first call's socket instead of ever connecting to B.
+    //
+    // Two servers on the SAME port, on two different loopback addresses: the
+    // port has to be identical or this would only prove the port is part of
+    // the pooling key, which nobody disputes — the address pin is what is
+    // under test.
+    it('two requests pinned to different addresses each reach their own server', async () => {
+        if (!(await canBindSecondLoopback())) return // environment cannot alias loopback — nothing to prove here
+
+        const serverA = http.createServer((req, res) => res.end(JSON.stringify({ marker: 'A' })))
+        const serverB = http.createServer((req, res) => res.end(JSON.stringify({ marker: 'B' })))
+        await new Promise((resolve) => serverA.listen(0, '127.0.0.1', resolve))
+        const port = serverA.address().port
+        await new Promise((resolve, reject) => {
+            serverB.once('error', reject)
+            serverB.listen(port, '127.0.0.2', resolve)
+        })
+
+        try {
+            const url = `http://caller.invalid:${port}/x`
+            const first = await httpRequest(url, { address: '127.0.0.1' })
+            const second = await httpRequest(url, { address: '127.0.0.2' })
+            expect(first.json()).toEqual({ marker: 'A' })
+            // The bug: without per-address agents, this came back { marker: 'A' }
+            // too — the second request never touched 127.0.0.2's socket.
+            expect(second.json()).toEqual({ marker: 'B' })
+        } finally {
+            await new Promise((resolve) => serverA.close(resolve))
+            await new Promise((resolve) => serverB.close(resolve))
+        }
     })
 })
 
