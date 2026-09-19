@@ -312,6 +312,19 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
     .map-panel { max-height: 30vh; }
     .map-panel-left { border-right: 0; border-bottom: 1px solid var(--ui-divider); }
     .map-panel-right { border-left: 0; border-top: 1px solid var(--ui-divider); }
+
+    /* Nothing here is narrower than a finger below this width, so the toolbar
+       stops trying to fit on one line and wraps instead — every control stays
+       reachable with a tap rather than sliding off the right edge. */
+    .map-bar { flex-wrap: wrap; }
+    .map-bar-controls { flex-wrap: wrap; flex-basis: 100%; }
+
+    /* The last panel in the stacked layout sits flush against the viewport
+       bottom, exactly where ModeMark (src/components/modeMark.css) plants its
+       tier chip. Same offset and safe-area variable it uses for its own
+       position, plus its own footprint, so the panel's last line is never
+       under the badge. */
+    .map-panel-right { padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* The output's only chrome. Present when the pointer moves, gone when it
