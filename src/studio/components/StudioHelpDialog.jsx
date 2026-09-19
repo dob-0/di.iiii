@@ -136,6 +136,14 @@ export default function StudioHelpDialog({ open, onClose, initialMode = 'basics'
                                     </li>
                                 ))}
                             </ol>
+                            {section.note && (
+                                <p className="sh-help-note">
+                                    {section.note}{' '}
+                                    {section.noteLink && (
+                                        <a href={section.noteLink.href} target="_blank" rel="noreferrer">{section.noteLink.label} →</a>
+                                    )}
+                                </p>
+                            )}
                         </div>
                     </>
                 ) : (

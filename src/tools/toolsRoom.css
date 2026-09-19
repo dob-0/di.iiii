@@ -231,6 +231,28 @@
 
 .tr-empty { padding: var(--di-space-4) var(--di-space-5); font-size: var(--di-text-3); color: var(--tr-text-3); }
 
+/* The picker's own "make one" — a space with nothing to open used to be a
+   dead end here. Same row rhythm as .tr-row, an input standing in for it. */
+.tr-new-project {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    padding: var(--di-space-3) var(--di-space-5);
+}
+
+.tr-new-project-input {
+    flex: 1;
+    background: none;
+    border: 1px solid var(--tr-hairline-strong);
+    border-radius: var(--di-radius);
+    padding: var(--di-space-2) var(--di-space-3);
+    color: var(--tr-text);
+    font-family: var(--di-sans);
+    font-size: var(--di-text-3);
+}
+
+.tr-new-project-input:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: -1px; }
+
 .tr-dialog-foot { display: flex; gap: var(--di-space-2); padding: var(--di-space-3) var(--di-space-5); border-top: 1px solid var(--tr-hairline); }
 
 .tr-quiet {

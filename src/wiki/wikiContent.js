@@ -303,7 +303,7 @@ export const WIKI_ARTICLES = [
         title: 'Putting a space on a wall',
         summary: 'Point a projector at a wall, drag each surface onto the shape it belongs to, and the work runs there — no separate mapping software.',
         body: [
-            'di-studio.xyz/{space}/map/{project} opens a mapping. A mapping is a project whose contents are other projects: a list of surfaces, each one a four-cornered shape on the wall with something playing inside it.',
+            'Projection opens a mapping, at di-studio.xyz/{space}/map/{project}. A mapping is a project whose contents are other projects: a list of surfaces, each one a four-cornered shape on the wall with something playing inside it.',
             'A projector never sees a wall straight on, so a rectangle of picture lands on it as a slanted quadrilateral. That is what the corner handles are for. Pick a surface, drag its four corners onto the four corners of the thing you are projecting at — a sheet of paper, a panel, a doorway — and the picture is squeezed to fit it exactly. Arrow keys nudge by one projector pixel, hold shift for ten.',
             'Before any of the work is ready, set a surface to a test pattern. A grid, rings, diagonal bars or corner brackets, in white on black, with the surface\'s name across the middle. You align in a dark room against a pattern, not against a finished piece: a picture gives your eye no edge to judge, and the name tells you which shape is whose.',
             'Shapes are rarely rectangles. Press M for the mask and click round the outline you actually want — a cut corner, a triangle, a doorway — and everything outside it goes black. Drag a point to move it, alt-click to remove it.',

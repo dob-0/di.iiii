@@ -142,6 +142,7 @@ export default function StudioShell({
     onExitXr,
     onBackToHub,
     onOpenNodeEditor,
+    onOpenProjection,
     onCameraViewChange,
     onTransformCommit,
     onToggleSelectEntity,
@@ -607,6 +608,7 @@ export default function StudioShell({
                         onHideUI={() => setUiHidden(true)}
                         onBackToHub={onBackToHub}
                         onOpenNodeEditor={onOpenNodeEditor}
+                        onOpenProjection={onOpenProjection}
                         xrState={xrState}
                         syncState={syncState}
                         presence={presence}
@@ -654,6 +656,17 @@ export default function StudioShell({
                                 title="Open this project in the node editor"
                             >
                                 Nodes
+                            </button>
+                        )}
+                        {!jamMinimal && onOpenProjection && (
+                            <button
+                                type="button"
+                                className="smb-top-btn"
+                                onClick={onOpenProjection}
+                                aria-label="Put this project on a wall"
+                                title="Put this project on a wall"
+                            >
+                                Projection
                             </button>
                         )}
                         <button

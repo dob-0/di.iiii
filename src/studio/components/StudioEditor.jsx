@@ -19,6 +19,7 @@ import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAsse
 import { buildAppSpacePath, buildPublicProjectPath } from '../../utils/spaceRouting.js'
 import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
+import { buildMapPath } from '../../map/mapRouting.js'
 import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
@@ -1136,6 +1137,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onExitXr={xr.handleExitXrSession}
             onBackToHub={() => navigateToStudioPath(buildSpaceProjectsPath(resolvedSpaceId))}
             onOpenNodeEditor={() => navigateToStudioPath(buildRawProjectPath(projectId, resolvedSpaceId))}
+            onOpenProjection={() => navigateToStudioPath(buildMapPath(resolvedSpaceId, projectId))}
             onCameraViewChange={handleCameraViewChange}
             onTransformCommit={handleTransformCommit}
             transformOp={transformOp}
