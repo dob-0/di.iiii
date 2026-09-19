@@ -1,6 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import MapSourceView from './MapSourceView.jsx'
+
+vi.mock('../services/apiClient.js', () => ({
+    apiBaseUrl: 'https://di-studio.xyz/serverXR'
+}))
+
+import MapSourceView, { resolveMapSourceRef } from './MapSourceView.jsx'
 import { normalizeMappingSurface } from '../shared/projectSchema.js'
 
 const surfaceOf = (source, patch = {}) => normalizeMappingSurface({
@@ -60,6 +65,36 @@ describe('what a surface draws', () => {
         // WebGL, which is exactly the machine this sentence is for.
         render(<MapSourceView surface={surfaceOf({ kind: 'camera', ref: '' }, { effect: { kind: 'motion' } })} label="ԳՈՌ" />)
         expect(await screen.findByText('no WebGL on this machine')).toBeTruthy()
+    })
+
+    it('mounts a brought-in file onto an image element', () => {
+        const { container } = render(<MapSourceView surface={surfaceOf({ kind: 'image', ref: '/api/projects/p1/assets/a1' })} />)
+        expect(container.querySelector('img').src).toBe('https://di-studio.xyz/serverXR/api/projects/p1/assets/a1')
+    })
+
+    it('mounts a brought-in file onto a video element', () => {
+        const { container } = render(<MapSourceView surface={surfaceOf({ kind: 'video', ref: '/api/projects/p1/assets/a1' })} />)
+        expect(container.querySelector('video').src).toBe('https://di-studio.xyz/serverXR/api/projects/p1/assets/a1')
+    })
+
+    it('leaves a typed web address untouched', () => {
+        const { container } = render(<MapSourceView surface={surfaceOf({ kind: 'image', ref: 'https://example.test/wall.jpg' })} />)
+        expect(container.querySelector('img').src).toBe('https://example.test/wall.jpg')
+    })
+})
+
+describe('resolveMapSourceRef', () => {
+    it('mounts a project-relative asset path onto the deployed API base', () => {
+        expect(resolveMapSourceRef('/api/projects/p1/assets/a1'))
+            .toBe('https://di-studio.xyz/serverXR/api/projects/p1/assets/a1')
+    })
+
+    it('leaves an absolute address untouched', () => {
+        expect(resolveMapSourceRef('https://example.test/wall.jpg')).toBe('https://example.test/wall.jpg')
+    })
+
+    it('leaves an empty ref alone', () => {
+        expect(resolveMapSourceRef('')).toBe('')
     })
 })
 

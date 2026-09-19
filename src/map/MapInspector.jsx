@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { TEST_PATTERNS } from './mapTestPattern.jsx'
+import { uploadProjectAsset } from '../project/services/projectsApi.js'
 
 const SOURCE_KINDS = [
     { id: 'test', label: 'Test pattern' },
@@ -18,10 +19,13 @@ const BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
 // becoming a file nobody could hold in their head at once.
 export default function MapInspector({
     surface,
+    projectId,
+    assets = [],
     projectOptions,
     pictureOutOptions = [],
     clipboard,
     onUpdate,
+    onUpsertAsset,
     onDelete,
     onDuplicate,
     onCopy,
@@ -91,9 +95,19 @@ export default function MapInspector({
                 </>
             ) : null}
 
+            {['video', 'image'].includes(surface.source.kind) ? (
+                <MapFileSourceField
+                    kind={surface.source.kind}
+                    projectId={projectId}
+                    assets={assets}
+                    onUpsertAsset={onUpsertAsset}
+                    onChangeRef={(ref) => setSource(surface.source.kind, ref)}
+                />
+            ) : null}
+
             {['url', 'video', 'image'].includes(surface.source.kind) ? (
                 <label className="map-field">
-                    <span>{surface.source.kind === 'url' ? 'Address' : 'File URL'}</span>
+                    <span>Address</span>
                     <input
                         type="text"
                         value={surface.source.ref}
@@ -185,6 +199,85 @@ export default function MapInspector({
                 {clipboard ? <p className="map-empty">Holding “{clipboard.name || clipboard.id}”.</p> : null}
             </div>
         </>
+    )
+}
+
+const formatBytes = (bytes) => {
+    if (typeof bytes !== 'number' || Number.isNaN(bytes)) return ''
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+}
+
+// Bringing a file in from this machine, for a video or image surface. Uploads
+// through the same project asset route Studio and the node editor use, then
+// hands the asset back to the caller to both record (upsertAsset, so every
+// other desk and the output window learn about it) and select (the surface's
+// source.ref). Below the picker, a project's own matching assets are listed
+// so a file already brought in can be re-picked without uploading it twice.
+function MapFileSourceField({ kind, projectId, assets, onUpsertAsset, onChangeRef }) {
+    const inputRef = useRef(null)
+    const [state, setState] = useState({ busy: false, notice: '', tone: 'ok' })
+    const accept = kind === 'video' ? 'video/*' : 'image/*'
+    const matches = (assets || []).filter((asset) => String(asset?.mimeType || '').startsWith(`${kind}/`))
+
+    const bringIn = async (file) => {
+        if (!file) return
+        if (!projectId) {
+            setState({ busy: false, notice: 'Save the project before bringing in a file.', tone: 'error' })
+            return
+        }
+        setState({ busy: true, notice: '', tone: 'ok' })
+        try {
+            const asset = await uploadProjectAsset(projectId, file)
+            if (!asset?.id) throw new Error('The upload did not come back with a file.')
+            onUpsertAsset?.(asset)
+            onChangeRef(asset.url || '')
+            setState({ busy: false, notice: `Brought in ${asset.name || file.name}.`, tone: 'ok' })
+        } catch (error) {
+            setState({ busy: false, notice: error?.message || 'Could not bring that file in.', tone: 'error' })
+        }
+    }
+
+    return (
+        <div className="map-field-file">
+            <div className="map-row">
+                <button
+                    type="button"
+                    className="map-mini"
+                    onClick={() => inputRef.current?.click()}
+                    disabled={state.busy}
+                >
+                    {state.busy ? 'Bringing in…' : 'Choose a file'}
+                </button>
+            </div>
+            <input
+                ref={inputRef}
+                type="file"
+                accept={accept}
+                className="map-field-file-input"
+                onChange={(event) => {
+                    const file = event.target.files?.[0] || null
+                    event.target.value = ''
+                    bringIn(file)
+                }}
+            />
+            {state.notice ? (
+                <p className={`map-empty map-field-file-notice${state.tone === 'error' ? ' is-error' : ''}`}>{state.notice}</p>
+            ) : null}
+            {matches.length ? (
+                <ul className="map-field-file-list">
+                    {matches.map((asset) => (
+                        <li key={asset.id}>
+                            <button type="button" className="map-mini" onClick={() => onChangeRef(asset.url || '')}>
+                                {asset.name}{asset.size ? ` · ${formatBytes(asset.size)}` : ''}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            ) : null}
+        </div>
     )
 }
 

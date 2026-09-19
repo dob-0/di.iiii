@@ -372,3 +372,13 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
     padding: var(--di-space-2);
     resize: vertical;
 }
+
+/* Bringing a video/image file in from this machine (MapInspector). Appended
+   at the end on purpose — another branch is editing this file's responsive
+   rules above. */
+.map-field-file { display: flex; flex-direction: column; gap: var(--di-space-1); }
+.map-field-file-input { display: none; }
+.map-field-file-notice { margin: 0; }
+.map-field-file-notice.is-error { color: var(--ui-danger); }
+.map-field-file-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--di-space-1); }
+.map-field-file-list .map-mini { display: block; width: 100%; text-align: left; }

@@ -5,6 +5,15 @@ import { useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
 import { PREVIEW_READY_MESSAGE } from '../utils/previewMode.js'
+import { mountRelativeApiUrl } from '../services/assetSources.js'
+
+// A brought-in file's ref is recorded exactly as the manifest stores it — a
+// project-relative `/api/projects/.../assets/...` path, written once and read
+// on whichever machine opens the mapping next. Each machine mounts it onto
+// its OWN deployed API base at render time; used verbatim, a path written on
+// one host 404s (or hits the SPA fallback) on every other one. A typed web
+// address is already absolute and is returned untouched.
+export const resolveMapSourceRef = (ref = '') => mountRelativeApiUrl(ref) || ref
 
 // One surface's content, unwarped. Everything here draws into a plain
 // width x height box at the surface's own resolution; the corner-pin above it
@@ -70,7 +79,7 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
     }
 
     if (kind === 'image') {
-        return <img className="map-source-media" src={ref} alt="" draggable="false" />
+        return <img className="map-source-media" src={resolveMapSourceRef(ref)} alt="" draggable="false" />
     }
 
     if (kind === 'video') {
@@ -79,7 +88,7 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
         return (
             <video
                 className="map-source-media"
-                src={ref}
+                src={resolveMapSourceRef(ref)}
                 autoPlay
                 loop
                 muted
