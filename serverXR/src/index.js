@@ -2257,7 +2257,27 @@ router.delete('/api/spaces/:spaceId/github-link', async (req, res, next) => {
 router.use('/api/projects/:projectId/assets', (req, res, next) =>
   req.method === 'POST' ? uploadLimiter(req, res, next) : next())
 
+// Who may store a file WITHOUT the EXIF scrubber (the hash-pinned asset PUT —
+// the reasoning lives at the route in routes/projectRoutes.js). Replication
+// only: a per-space sync key, this server's own token, or an install with auth
+// off. The internal token is matched on the header itself rather than on the
+// resolved state, because on a `di up --guests` install a loopback request is
+// already promoted to the local owner before any token is looked at.
+const mayStoreVerbatim = (req) => {
+  if (!config.requireAuth) return true
+  if (req.authState?.authenticated && req.authState.type === 'sync-key') return true
+  const internal = config.internalApiToken || ''
+  if (!internal) return false
+  const presented = Buffer.from(normalizeAuthToken(readAuthToken(req)))
+  const expected = Buffer.from(internal)
+  return presented.length === expected.length && crypto.timingSafeEqual(presented, expected)
+}
+
 registerProjectRoutes(router, {
+  uploadsDir: UPLOADS_DIR,
+  maxUploadBytes: config.maxUploadBytes,
+  isAllowedUpload,
+  mayStoreVerbatim,
   appendProjectOps,
   applyProjectOps,
   blankProjectDocument: BLANK_PROJECT_DOCUMENT,
@@ -2567,6 +2587,10 @@ initStorage()
           basePath: config.basePath || '/serverXR',
           selfToken: config.internalApiToken || null,
           tlsName: tlsFiles ? certificateName(tlsFiles.cert) : null,
+          // The files a follow carries rest beside ordinary uploads on their
+          // way through (same disk as the blob store, never a tmpfs), and are
+          // held to the same size limit an upload is.
+          files: { maxBytes: config.maxUploadBytes, tmpDir: UPLOADS_DIR },
           // A followed space must exist here before anything can land in it.
           // `di follow` makes it when the install is running; a follow written
           // while it was down, or carried in on a backup, arrives without one.
