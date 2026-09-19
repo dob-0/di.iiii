@@ -41,7 +41,9 @@ const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null,
     for (const [spaceId, entry] of Object.entries(follows)) {
         if (running.has(spaceId)) continue
         const local = side({ base: selfBase(port, basePath, tlsName), spaceId, token: selfToken, servername: tlsName })
-        const remote = side({ base: entry.remote, spaceId: entry.spaceId || spaceId, token: entry.token })
+        // entry.address is the ADDRESS PIN written by `di follow --at` — the
+        // name in entry.remote keeps doing its job, the socket goes here.
+        const remote = side({ base: entry.remote, spaceId: entry.spaceId || spaceId, token: entry.token, address: entry.address || null })
         // The space has to exist here or every write lands on nothing. `di
         // follow` makes it when the install is running, but a follow written
         // while it was down — or restored from a backup onto a fresh machine —

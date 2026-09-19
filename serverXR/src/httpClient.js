@@ -5,8 +5,21 @@
 
 const http = require('node:http')
 const https = require('node:https')
+const net = require('node:net')
 
-const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs = 20000, signal = null, servername = null } = {}) =>
+// The ADDRESS PIN's dns.lookup replacement — the name stays (Host header, SNI,
+// certificate check all still use the URL's hostname, untouched), the socket
+// goes to `address`. Must honour both forms Node calls a custom lookup with:
+// the classic `(err, address, family)` callback, and the `{ all: true }` form
+// Node 20+ uses under Happy Eyeballs, which wants `(err, addresses[])`.
+const pinnedLookup = (address) => (hostname, options, callback) => {
+  if (typeof options === 'function') { callback = options; options = {} }
+  const family = net.isIP(address) === 6 ? 6 : 4
+  if (options && options.all) return callback(null, [{ address, family }])
+  return callback(null, address, family)
+}
+
+const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs = 20000, signal = null, servername = null, address = null } = {}) =>
   new Promise((resolve, reject) => {
     let u
     try { u = new URL(url) } catch (e) { return reject(e) }
@@ -14,7 +27,17 @@ const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs
     // `servername`: connect to one address, check the certificate against a
     // name — how a server with a certificate for its own name reaches itself
     // on loopback without trusting whatever DNS says that name is tonight.
-    const req = lib.request(u, { method, headers, ...(servername ? { servername } : {}) }, (res) => {
+    // `address`: the ADDRESS PIN — the same idea from the other direction. The
+    // name stays for the Host header, for SNI (Node defaults servername to the
+    // URL's own hostname) and for the certificate check; only where the socket
+    // actually connects moves, via a `lookup` that ignores DNS and hands back
+    // this one address.
+    const req = lib.request(u, {
+      method,
+      headers,
+      ...(servername ? { servername } : {}),
+      ...(address ? { lookup: pinnedLookup(address) } : {})
+    }, (res) => {
       const chunks = []
       res.on('data', (c) => chunks.push(c))
       res.on('end', () => {
@@ -41,4 +64,7 @@ const httpRequest = (url, { method = 'GET', headers = {}, body = null, timeoutMs
     req.end()
   })
 
-module.exports = { httpRequest }
+// Exported alongside httpRequest so the address pin's Node-version-sensitive
+// contract — the two shapes Node may call a custom `lookup` with — can be
+// tested directly, rather than hoping a real request happens to exercise both.
+module.exports = { httpRequest, pinnedLookup }

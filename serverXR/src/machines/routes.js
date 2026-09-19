@@ -36,6 +36,7 @@ const forwardOverHttp = async (link, body) => {
             method: 'POST',
             timeoutMs: FORWARD_TIMEOUT_MS,
             servername: link.servername || null,
+            address: link.address || null,
             headers: {
                 Accept: 'application/json',
                 'Content-Type': 'application/json',

@@ -20,6 +20,7 @@
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
+import { isIP } from 'node:net'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -975,9 +976,25 @@ const cmdInvite = async (args) => {
     say(ui.invited(spaceId, from, minted.key))
 }
 
+/** The bare hostname out of whatever a person typed for --from, for a message
+ * that wants the NAME rather than the whole URL. Never throws — a value that
+ * does not parse is printed back exactly as typed. */
+const hostnameOf = (value) => {
+    try { return new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`).hostname } catch { return value }
+}
+
 /**
- * `di follow <space> --from <url> --key <key>` — join a space that lives on
- * another di.iiii. Both sides keep the whole work; the edits travel.
+ * `di follow <space> --from <url> --key <key> [--at <address>]` — join a space
+ * that lives on another di.iiii. Both sides keep the whole work; the edits
+ * travel.
+ *
+ * `--at` is the ADDRESS PIN: the name in --from keeps doing its job — Host
+ * header, SNI, the certificate check — but the socket goes to this address
+ * instead of whatever the name resolves to here. It exists for the case found
+ * on a real rig: `--from https://local.thedi.studio` resolved, on the
+ * follower, to an address it could not reach — the host was only reachable at
+ * its Tailscale IP — and the only fix without this was a hand edit of the OS
+ * hosts file, which needs admin.
  */
 const cmdFollow = async (args) => {
     const home = HOME()
@@ -990,6 +1007,14 @@ const cmdFollow = async (args) => {
     const key = args.flags.key === '-' || args.flags.key === true
         ? (await readStdin()).trim()
         : (args.flags.key || String(process.env.DI_FOLLOW_KEY || '').trim() || null)
+
+    const at = args.flags.at !== undefined ? String(args.flags.at).trim() : null
+    if (at !== null && !isIP(at)) {
+        fail(ui.badAddress(at))
+        process.exitCode = 1
+        return
+    }
+
     if (!spaceId || !from) {
         fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
         process.exitCode = 1
@@ -997,11 +1022,20 @@ const cmdFollow = async (args) => {
     }
 
     say(ui.checkingFollow())
-    const base = await resolveBase(from)
-    if (!base) { fail(ui.followRefused('unreachable', from)); process.exitCode = 1; return }
+    const resolved = await resolveBase(from, { address: at })
+    if (!resolved.base) {
+        fail(ui.followRefused(resolved.reason, resolved.reason === 'cert-mismatch' ? hostnameOf(from) : from, at))
+        process.exitCode = 1
+        return
+    }
+    const base = resolved.base
 
-    const check = await checkFollowable({ base, spaceId, key })
-    if (!check.ok) { fail(ui.followRefused(check.reason, from)); process.exitCode = 1; return }
+    const check = await checkFollowable({ base, spaceId, key, address: at })
+    if (!check.ok) {
+        fail(ui.followRefused(check.reason, check.reason === 'cert-mismatch' ? hostnameOf(from) : from, at))
+        process.exitCode = 1
+        return
+    }
 
     const port = resolvePort(home)
     const selfBase = apiBase(home, port)
@@ -1010,8 +1044,8 @@ const cmdFollow = async (args) => {
     // Following yourself is a loop with no second person in it: the same server
     // reading and writing its own log forever.
     if (running) {
-        const [there, here] = await Promise.all([instanceOf(base), instanceOf(selfBase)])
-        if (there && here && there === here) { fail(ui.followRefused('itself', from)); process.exitCode = 1; return }
+        const [there, here] = await Promise.all([instanceOf(base, { address: at }), instanceOf(selfBase)])
+        if (there && here && there === here) { fail(ui.followRefused('itself', from, at)); process.exitCode = 1; return }
     }
 
     // A space of that name already here is somebody's work — `main` is the front
@@ -1027,11 +1061,11 @@ const cmdFollow = async (args) => {
     // install's own route, so it is an ordinary space in every other way.
     if (running) {
         const made = await createLocalSpace({ base: selfBase, spaceId, token: readEnv(home).ADMIN_API_TOKEN || null })
-        if (!made.ok) { fail(ui.followRefused('local-space', from)); process.exitCode = 1; return }
+        if (!made.ok) { fail(ui.followRefused('local-space', from, at)); process.exitCode = 1; return }
     }
 
-    await addFollow(paths(home).data, spaceId, { remote: base, token: key })
-    say(ui.following(spaceId, base, running))
+    await addFollow(paths(home).data, spaceId, { remote: base, token: key, address: at })
+    say(ui.following(spaceId, base, running, at))
 }
 
 /** `di follows` — what this install is following, and whether it is keeping up. */

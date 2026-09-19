@@ -57,7 +57,7 @@ const rememberSeen = (seen, ops = []) => {
 // parser OOMs under the memory limits of the shared hosting the live site runs
 // on, and that bug class has shipped here twice. httpContracts.test.js keeps it
 // at zero, and this file is no exception for being new.
-const request = async (url, { method = 'GET', token = null, body = null, timeoutMs = TIMEOUT_MS, signal = null, servername = null } = {}) => {
+const request = async (url, { method = 'GET', token = null, body = null, timeoutMs = TIMEOUT_MS, signal = null, servername = null, address = null } = {}) => {
     const payloadBody = body ? JSON.stringify(body) : null
     try {
         const response = await httpRequest(url, {
@@ -65,6 +65,7 @@ const request = async (url, { method = 'GET', token = null, body = null, timeout
             timeoutMs,
             signal,
             servername,
+            address,
             headers: {
                 Accept: 'application/json',
                 ...(payloadBody ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payloadBody) } : {}),
@@ -82,11 +83,14 @@ const request = async (url, { method = 'GET', token = null, body = null, timeout
  * One side of a followed space, addressed the same way whether it is across the
  * room or across the internet: a base URL, a space id, and a token.
  */
-const side = ({ base, spaceId, token = null, servername = null }) => ({
+const side = ({ base, spaceId, token = null, servername = null, address = null }) => ({
     base: String(base || '').replace(/\/$/, ''),
     spaceId,
     token,
     servername,
+    // The ADDRESS PIN, from a follow's `address` field (see followStore.js) —
+    // the name in `base` stays, the socket goes here instead.
+    address,
     url(path) { return `${this.base}${path}` },
     opsUrl(stream, since) {
         const url = this.url(stream.opsPath)
@@ -112,6 +116,7 @@ const readOps = async (from, stream, since, { waitSeconds = 0, signal = null } =
     const answer = await request(url, {
         token: from.token,
         servername: from.servername,
+        address: from.address,
         timeoutMs: (waitSeconds ? waitSeconds * 1000 : 0) + TIMEOUT_MS,
         signal
     })
@@ -132,7 +137,7 @@ const carry = async ({ to, stream, ops, seen, targetVersion }) => {
     const plan = planDirection({ ops, seen, targetVersion })
     if (!plan) return { wrote: 0, targetVersion, moved: false }
 
-    const answer = await request(to.writeUrl(stream), { method: 'POST', token: to.token, servername: to.servername, body: plan })
+    const answer = await request(to.writeUrl(stream), { method: 'POST', token: to.token, servername: to.servername, address: to.address, body: plan })
     if (answer.ok) {
         rememberSeen(seen, plan.ops)
         const newVersion = Number.isFinite(answer.payload?.newVersion) ? answer.payload.newVersion : targetVersion
@@ -199,8 +204,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
     const refreshStreams = async () => {
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
         const [here, there] = await Promise.all([
-            request(local.url(path), { token: local.token, servername: local.servername }),
-            request(remote.url(path), { token: remote.token, servername: remote.servername })
+            request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
+            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address })
         ])
         const localProjects = projectIdsFrom(here.payload)
         const remoteProjects = projectIdsFrom(there.payload)
@@ -212,7 +217,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
         for (const projectId of remoteProjects) {
             if (localProjects.includes(projectId)) continue
             const made = await request(local.url(path), {
-                method: 'POST', token: local.token, servername: local.servername, body: { slug: projectId, title: projectId }
+                method: 'POST', token: local.token, servername: local.servername, address: local.address, body: { slug: projectId, title: projectId }
             })
             if (!made.ok && made.status !== 409) {
                 log.warn?.(`[follow] ${local.spaceId}: could not make room for ${projectId} (${made.status})`)
