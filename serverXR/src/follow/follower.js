@@ -21,6 +21,7 @@
 const { httpRequest } = require('../httpClient')
 const { accountedThrough, moreToCarry, unseen, planDirection, planAfterConflict, nextInterval, refusedWholeWork, WHOLE_WORK_OPS } = require('./followPlan')
 const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
+const { createAssetChase } = require('./assets')
 
 const FLOOR_MS = 700
 // Five seconds, not thirty. A followed space is a room with someone else in
@@ -171,8 +172,12 @@ const carry = async ({ to, stream, ops, seen, targetVersion }) => {
  * `onState` is called after every tick with a plain object a person could read:
  * this is what `di follows` prints and what the interface will show.
  */
-const startFollowing = ({ local, remote, log = console, onState = () => {} }) => {
+const startFollowing = ({ local, remote, log = console, onState = () => {}, files = {} }) => {
     const seen = new Set()
+    // The files the projects name (follow/assets.js). Its own task, beside the
+    // op loop and never inside it: the loop hands it what it read and walks on,
+    // so ops keep crossing while a two-gigabyte video is still on its way.
+    const chase = createAssetChase({ local, remote, log, ...files })
     let stopped = false
     let interval = FLOOR_MS
     // One cursor pair per stream — the room's own log and every project in it.
@@ -250,6 +255,9 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
             return { moved: false, failed: 'this install is not answering its own op log' }
         }
 
+        // Any file these ops name is chased separately; this only takes a note.
+        if (stream.kind === 'project') chase.noteOps(stream.projectId, [...theirs.ops, ...ours.ops])
+
         const inbound = await carry({ to: local, stream, ops: theirs.ops, seen, targetVersion: ours.latestVersion })
         const outbound = await carry({ to: remote, stream, ops: ours.ops, seen, targetVersion: theirs.latestVersion })
         // Anything a whole-work op blocked is still accounted for: it was seen,
@@ -314,6 +322,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
             failed = failed || result.failed
         }
 
+        // Every project's document is read once for the files it already
+        // named before this follow began; after that the ops say what is new.
+        // Kicked, not awaited.
+        chase.noteProjects(streams.filter(stream => stream.kind === 'project').map(stream => stream.projectId))
+        chase.run()
+
         state = {
             status: failed ? 'waiting' : (more ? 'catching up' : 'following'),
             carriedIn: state.carriedIn + carriedIn,
@@ -340,7 +354,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
                 state = { ...state, status: 'waiting', lastError: String(error?.message || error) }
                 log.warn?.(`[follow] ${local.spaceId}: ${state.lastError}`)
             }
-            onState({ spaceId: local.spaceId, remote: remote.base, ...state })
+            onState({ spaceId: local.spaceId, remote: remote.base, ...state, files: chase.files })
             // A tick that PARKED has already done its waiting on the other
             // machine, and came back because something moved there — go round
             // again at once rather than sleeping through the thing we were
@@ -356,7 +370,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
 
     loop()
     return {
-        stop() { stopped = true },
+        stop() { stopped = true; chase.stop() },
         wake() {
             interval = FLOOR_MS
             // Both: end the sleep between ticks, AND abandon a read parked on
@@ -366,7 +380,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
             parking?.abort()
             wakeNow?.()
         },
-        get state() { return { spaceId: local.spaceId, remote: remote.base, ...state } }
+        get state() { return { spaceId: local.spaceId, remote: remote.base, ...state, files: chase.files } }
     }
 }
 
