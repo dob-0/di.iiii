@@ -134,6 +134,12 @@ function registerMachineRoutes(router, {
         const peers = (Array.isArray(req.body?.peers) ? req.body.peers : []).map(peer => ({
             peerId: peer?.peerId,
             role: peer?.role ?? null,
+            // What that machine HAS travels with it. It was dropped here, so a
+            // follower's cameras and screens reached its own desk and never the
+            // host's — the host listed the stage machine with nothing on it.
+            // recordRemotePeers runs cleanDevices over it, as hello does.
+            devices: peer?.devices,
+            scripts: peer?.scripts === true,
             machineId: caller.id,
             machineName: callerName
         }))
