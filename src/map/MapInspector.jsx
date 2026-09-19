@@ -8,6 +8,7 @@ const SOURCE_KINDS = [
     { id: 'video', label: 'Video' },
     { id: 'image', label: 'Image' },
     { id: 'camera', label: 'Camera' },
+    { id: 'stream', label: 'Stream (input by name)' },
     { id: 'network', label: 'Pictures' },
     { id: 'colour', label: 'Colour' }
 ]
@@ -87,6 +88,13 @@ export default function MapInspector({
             {surface.source.kind === 'camera' ? (
                 <>
                     <MapCameraPicker value={surface.source.ref} onChange={(deviceId) => setSource('camera', deviceId)} />
+                    <MapEffectFields effect={surface.effect} onChange={(patch) => onUpdate(surface.id, { effect: { ...surface.effect, ...patch } })} />
+                </>
+            ) : null}
+
+            {surface.source.kind === 'stream' ? (
+                <>
+                    <MapStreamPicker value={surface.source.ref} onChange={(name) => setSource('stream', name)} />
                     <MapEffectFields effect={surface.effect} onChange={(patch) => onUpdate(surface.id, { effect: { ...surface.effect, ...patch } })} />
                 </>
             ) : null}
@@ -185,6 +193,40 @@ export default function MapInspector({
                 {clipboard ? <p className="map-empty">Holding “{clipboard.name || clipboard.id}”.</p> : null}
             </div>
         </>
+    )
+}
+
+// A stream is named, not picked: the input lives on whichever machine shows the
+// surface, and that is usually not this one. So this is a text field. The
+// suggestions are THIS machine's inputs — useful when desk and wall are the same
+// computer, and an honest hint of what a name looks like when they are not.
+function MapStreamPicker({ value, onChange }) {
+    const [labels, setLabels] = useState([])
+    useEffect(() => {
+        const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
+        if (!media?.enumerateDevices) return undefined
+        let cancelled = false
+        media.enumerateDevices().then((devices) => {
+            if (cancelled) return
+            setLabels(devices.filter((device) => device.kind === 'videoinput' && device.label).map((device) => device.label))
+        }).catch(() => {})
+        return () => { cancelled = true }
+    }, [])
+    return (
+        <label className="map-field">
+            <span>Input name</span>
+            <input
+                type="text"
+                list="map-stream-inputs"
+                value={value}
+                placeholder="OBS Virtual Camera"
+                onChange={(event) => onChange(event.target.value)}
+            />
+            <datalist id="map-stream-inputs">
+                {['OBS Virtual Camera', ...labels.filter((label) => label !== 'OBS Virtual Camera')].map((label) => <option key={label} value={label} />)}
+            </datalist>
+            <p className="map-hint">Found by name on the machine that shows it — part of the name is enough.</p>
+        </label>
     )
 }
 
