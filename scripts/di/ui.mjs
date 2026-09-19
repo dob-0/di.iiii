@@ -41,6 +41,32 @@ export const say = (message = '') => { process.stdout.write(`${message}\n`) }
 export const warn = (message = '') => { process.stderr.write(`${style.yellow(message)}\n`) }
 export const fail = (message = '') => { process.stderr.write(`${style.red(message)}\n`) }
 
+/**
+ * The files a follow carries, in a person's words. Nothing at all when there is
+ * nothing to say — a follow whose files have all arrived is just a follow. An
+ * install too old to report files sends no `files`, and says nothing either.
+ */
+export const followFileLines = (files) => {
+    if (!files || typeof files !== 'object') return []
+    const lines = []
+    const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
+    if (files.pending > 0) {
+        const mb = files.bytesPending > 0 ? ` (${Math.max(1, Math.round(files.bytesPending / 1024 / 1024))} MB)` : ''
+        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}`))
+    }
+    const failures = Array.isArray(files.failures) ? files.failures : []
+    if (files.failed > 0 || failures.length) {
+        const total = files.failed || failures.length
+        const named = failures.slice(0, 3).map(entry => `${entry.name || 'a file'}: ${entry.why || 'no reason given'}`).join('; ')
+        const more = failures.length > 3 ? `; and ${failures.length - 3} more` : ''
+        lines.push(style.yellow(`${count(total, 'file', 'files')} could not be carried${named ? ` — ${named}${more}` : ''}`))
+    }
+    if (files.notCarried > 0) {
+        lines.push(style.dim(`${count(files.notCarried, 'older file is', 'older files are')} not carried — added before files had checkable names; add ${files.notCarried === 1 ? 'it' : 'them'} again to send ${files.notCarried === 1 ? 'it' : 'them'}`))
+    }
+    return lines
+}
+
 export const ui = {
     // What a start prints. It used to be three lines — the address, six space
     // ids and how to stop — and everything else di.iiii can do was a thing you
@@ -148,10 +174,11 @@ export const ui = {
     following: (spaceId, remote, running) => [
         `following ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}.`,
         style.dim('edits travel both ways — the room and every project in it. your copy stays on your disk.'),
-        // Said plainly rather than discovered: images and models are not carried
-        // yet, so a scene that leans on them will show their absence until they
-        // are. Better a sentence now than a grey wall later.
-        style.dim('images and models are not carried yet — they stay where they were added.'),
+        // Said plainly rather than discovered. Files named by a PROJECT are
+        // carried (serverXR/src/follow/assets.js); files placed straight into
+        // the room's own scene are not — that manifest never travels. Better a
+        // sentence now than a grey wall later.
+        style.dim('files in its projects travel too. files placed straight in the room itself are not carried yet — they stay where they were added.'),
         running ? null : style.dim(`start it to begin: ${CMD} up`)
     ].filter(Boolean).join('\n'),
 
@@ -165,7 +192,8 @@ export const ui = {
             const where = String(entry.remote || '').replace(/\/serverXR$/, '')
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
             const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
-            return `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
+            const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
+            return [line, ...followFileLines(state.files).map(text => `  ${' '.repeat(18)}${text}`)].join('\n')
         }).join('\n')
     },
 
