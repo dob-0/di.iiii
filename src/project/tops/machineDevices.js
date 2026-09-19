@@ -36,13 +36,16 @@ export const readMachineDevices = async () => {
                 kind: 'screen',
                 id: `screen-${index}`,
                 label: screen.label || (screen.isInternal ? 'Built-in screen' : `Screen ${index + 1}`),
-                width: screen.width,
-                height: screen.height
+                // Real pixels, not CSS pixels: a 1920×1080 panel at 150% scaling reports
+                // 1280×720 here, and the desk would size a wall for a screen that does not exist.
+                width: Math.round(screen.width * (screen.devicePixelRatio || 1)),
+                height: Math.round(screen.height * (screen.devicePixelRatio || 1))
             }))
         }
     } catch { /* not a Chromium, or not allowed: fall back to this one */ }
     if (!screens && globalThis.screen) {
-        screens = [{ kind: 'screen', id: 'screen-0', label: 'Screen', width: globalThis.screen.width, height: globalThis.screen.height }]
+        const ratio = globalThis.devicePixelRatio || 1
+        screens = [{ kind: 'screen', id: 'screen-0', label: 'Screen', width: Math.round(globalThis.screen.width * ratio), height: Math.round(globalThis.screen.height * ratio) }]
     }
     return [...tidyDevices(devices), ...(screens || [])]
 }
