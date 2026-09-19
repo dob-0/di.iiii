@@ -142,10 +142,11 @@ export const WIKI_ARTICLES = [
             'PICTURE OUT is what a screen shows. On a projection map, set a surface\'s source to Pictures and choose a Picture Out; the output page runs the same operators. A projector page with nothing mapped shows its own machine\'s Picture Out whole.',
             'ONE DESK ACROSS MACHINES. Two di.iiii installs linked with `di invite` / `di follow` share a space. Place a DESK node: it lists every machine that has a page of that space open, with its cameras, microphones, speakers and screens. "+ Camera In" and "+ Picture Out" place the operator already set to that machine and device.',
             'RUNS ON is the first setting of every picture operator. "Where the page is open" means every machine runs its own copy — your webcam in your browser, the kiosk\'s on the kiosk. Choose a machine and only that machine computes it. A wire between operators on two machines carries the picture across the network by itself (browser to browser, no internet needed on one network); cards of operators computed elsewhere show small previews, and Analyze numbers travel both ways.',
-            'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.'
+            'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.',
+            'FILES TRAVEL WITH THE FOLLOW. A video, picture or model added to a project on one machine is copied to the other, either way round, while edits keep flowing — `di follows` says how many files are still coming and names any that could not be carried. Two things do not travel yet: files placed straight into the room itself rather than into a project, and older files added before files were named by their content (add those again and they go).'
         ],
         tags: ['operators', 'touchdesigner', 'tops', 'camera', 'projector', 'desk', 'machines', 'devices', 'follow', 'webrtc', 'analyze'],
-        updated: '2026-09-14'
+        updated: '2026-09-20'
     },
     {
         id: 'sound-in-a-room',
