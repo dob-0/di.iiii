@@ -4,6 +4,7 @@ import { useMapDocument, useMapChannelListener } from './useMapDocument.js'
 import { toTopNetwork, useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import RigBlackout from '../rig/RigBlackout.jsx'
+import useScreenWakeLock from '../hooks/useScreenWakeLock.js'
 import './mapSurface.css'
 
 // THE SIGNAL.
@@ -41,6 +42,11 @@ export default function MapOutput({ projectId, spaceId }) {
     const drawsPictures = (fallbackMapping?.surfaces || []).some((surface) => surface.enabled !== false && surface.source?.kind === 'network' && surface.source?.ref)
     useTopNetwork({ network: drawsPictures ? NO_NETWORK : network, spaceId })
     useMapChannelListener(projectId, store)
+
+    // A projector output must survive unattended, the same as Raw's (see
+    // src/hooks/useScreenWakeLock.js) — a two-display rig going black 15
+    // minutes in because the OS blanked the screen is the bug this fixes.
+    useScreenWakeLock()
 
     const [viewport, setViewport] = useState(() => ({
         width: typeof window === 'undefined' ? 0 : window.innerWidth,
