@@ -41,6 +41,8 @@ Simple product split:
 | `src/routes/spaceRoutes.js` | space CRUD, publish state, scene endpoints, space assets |
 | `src/routes/projectRoutes.js` | project CRUD, project documents, project ops, project assets |
 | `src/routes/statusRoutes.js` | monitor, health, status, and release endpoints |
+| `src/routes/ndiRoutes.js` | NDI video in at `/ndi` — local runtime only, built on first use |
+| `src/ndi/` | the NDI lane: runtime lookup, koffi binding, forked child, ref-counted receivers |
 | `src/config.js` | env loading, directory config, auth identity config, CORS setup |
 | `src/authAccess.js` | auth roles, labels, and space-scope checks |
 | `src/authSession.js` | signed browser session cookies |
@@ -87,6 +89,21 @@ AI chat (signed-in accounts only, uses the user's connected Claude key server-si
 - `PATCH /api/ai/chats/:chatId`
 - `DELETE /api/ai/chats/:chatId`
 - `POST /api/ai/chats/:chatId/messages` (SSE response: `accepted` / `delta` / `done` / `error`)
+
+Local runtime lanes (a local install only — `DI_LOCAL=1`, or any non-production server;
+a hosted tier answers 404, and a request from another machine 403 unless
+`DI_ALLOW_LAN_DEVICES=1`). Both are built on the first request, never at boot:
+
+- `GET /light/*` — the lighting desk (`src/lighting`, mounted ahead of the JSON parser
+  so it reads its own bodies); output is OFF until switched on.
+- `GET /ndi/api/summary` · `GET /ndi/api/sources` · `GET /ndi/api/stats`
+- `GET /ndi/api/still?name=&w=` — one JPEG from an NDI source (504 if no frame in 3 s)
+- `GET /ndi/in.mjpg?name=&w=&fps=` — `multipart/x-mixed-replace`, for an `<img>`
+
+  NDI needs a runtime the person installed; di.iiii never ships one, and the server runs
+  the same without it (`summary` then answers 200 with `available:false` and how to fix
+  it). See [../docs/architecture/NDI.md](../docs/architecture/NDI.md).
+  NDI® is a registered trademark of Vizrt NDI AB — <https://ndi.video>
 
 Browser auth session:
 
