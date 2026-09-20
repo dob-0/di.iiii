@@ -505,7 +505,121 @@ export const ui = {
         'not the model that writes your show — that is what a Claude key is for.'
     ].join('\n'),
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), follow: () => ui.followUsage() })[name]?.() || null,
+    // ── the stage machine ───────────────────────────────────────────────
+    // A machine under a projector has nobody standing at it. Every line here
+    // is written for someone reading it over ssh, or once, at the venue, before
+    // they walk away from the box for three weeks.
+
+    // What `join` prints. The §5 list — what this does NOT do — is said here,
+    // once, plainly, because every one of those is a thing a person will
+    // otherwise assume happened.
+    stageJoined: ({ spaceId, remote, url, at = null, browser, autostart, autostartWhy = null }) => [
+        `this machine is a stage — ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}`,
+        at ? style.dim(`  the name stays — the socket goes to ${at}.`) : null,
+        '',
+        `  ${style.cyan('server'.padEnd(10))}${url}${style.dim(' — the supervisor starts it, and starts it again if it stops')}`,
+        `  ${style.cyan('screen'.padEnd(10))}black, then the mapping in that space — the kiosk never opens on an error page`,
+        `  ${style.cyan('autostart'.padEnd(10))}${autostart
+            ? `${autostart.kind}${style.dim(` — ${autostart.note}`)}`
+            : style.yellow(`none — ${autostartWhy || 'this machine refused every autostart entry'}`)}`,
+        autostart && !autostart.restartsOnFailure
+            ? style.yellow('             it starts at login and does NOT restart if it dies — di stage status will keep saying so')
+            : null,
+        `  ${style.cyan('awake'.padEnd(10))}held while the supervisor runs${style.dim(' — no power setting on this machine was changed')}`,
+        `  ${style.cyan('browser'.padEnd(10))}${browser}`,
+        '',
+        'it does not:',
+        style.dim('  sign this machine in, or switch it on after a power cut'),
+        style.dim('  replace the desktop, or install a browser, OBS or NDI'),
+        style.dim('  make the network between the machines'),
+        '',
+        style.dim(`  ${CMD} stage status   what each screen is showing, and why not`),
+        style.dim(`  ${CMD} stage leave    put this machine back exactly as it was`)
+    ].filter((line) => line !== null).join('\n'),
+
+    // `--dry-run`: the same join, written down and not done.
+    stagePlanned: (plan) => [
+        `nothing was changed. this is what ${CMD} stage join would do:`,
+        '',
+        `  follow    ${plan.follow.spaceId} from ${plan.follow.from}${plan.follow.at ? ` (socket to ${plan.follow.at})` : ''}`,
+        `  write     ${plan.writes.join('\n            ')}`,
+        `  di.env    ${plan.env.map(([key, value]) => `${key}=${value}`).join(', ')}`,
+        `  autostart ${plan.autostart ? `${plan.autostart.kind}\n            ${plan.autostart.path}` : 'none available on this platform'}`,
+        `  browser   ${plan.browser || style.yellow('none found — name one with --browser')}`,
+        `  run       ${plan.supervisor.join(' ')}`,
+        '',
+        style.dim('  every one of those is written into stage/stage.json, and stage leave removes only those.')
+    ].join('\n'),
+
+    stageNoBrowser: () => [
+        'no Chromium on this machine, and di does not install one.',
+        style.dim(`install Chrome, Chromium or Edge, or name the one you have: ${CMD} stage join … --browser /path/to/chrome`)
+    ].join('\n'),
+
+    stageNotJoined: () => [
+        'this machine is not a stage.',
+        style.dim(`${CMD} stage join <space> --from <url> --key <key>`)
+    ].join('\n'),
+
+    stageLeft: (done, keepSpace) => [
+        'this machine is no longer a stage.',
+        ...done.map((line) => style.dim(`  ${line}`)),
+        style.dim(keepSpace
+            ? '  the space stays, and keeps carrying edits.'
+            : '  your work is where it was — only what join wrote was removed.')
+    ].join('\n'),
+
+    // The one screen an operator reads from somewhere else. Exit code 1 when a
+    // screen is not showing, so it can be a health check rather than a look.
+    stageStatus: (status) => {
+        if (!status.joined) return ui.stageNotJoined()
+        const label = (key) => (key.startsWith('screen:') ? key.slice(7) : key).padEnd(11)
+        return [
+            `${style.bold(status.space)}  ${style.dim(String(status.from || ''))}${status.at ? style.dim(` · ${status.at}`) : ''}`,
+            '',
+            ...status.rows.map((row) => `  ${row.ok ? style.cyan(label(row.key)) : style.yellow(label(row.key))}${row.text}`),
+            status.version && status.version.known && !status.version.same
+                ? `\n${style.yellow('  the version that joined is not the one running now — a mapping edited by an older build loses what that build does not know about.')}`
+                : null
+        ].filter((line) => line !== null).join('\n')
+    },
+
+    // `di down` on a stage machine stops a server the supervisor will put
+    // straight back. Said, rather than left to be discovered by someone
+    // watching a wall come back on by itself.
+    downOnStage: () => [
+        style.yellow('this machine is a stage — the supervisor will start it again within a few seconds.'),
+        style.dim(`to stop for good: ${CMD} stage leave, then ${CMD} down`)
+    ].join('\n'),
+
+    stageUsage: () => [
+        style.bold(`${CMD} stage join SPACE --from URL`) + style.dim(' — make this machine the one under the projector'),
+        '',
+        'one entry at login, one supervisor. it keeps the server up, keeps a black-first',
+        'kiosk on the screen, and holds the machine awake for exactly as long as it runs.',
+        'nothing on this OS is changed permanently, and `stage leave` removes only what',
+        '`stage join` wrote down.',
+        '',
+        `  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio`,
+        `  --key KEY       the per-space sync key (${CMD} invite SPACE on their machine); --key - reads the pipe`,
+        '  --at ADDRESS    the address pin — the name in --from stays, the socket goes here',
+        '  --project ID    which mapping this screen shows. left out, the one mapping in the space',
+        '  --browser PATH  the Chromium to run. di never installs one',
+        '  --name NAME     what this machine calls itself on the rig',
+        '  --lan           answer on this wifi too, for phones in the room',
+        '  --dry-run       print what it would do and change nothing',
+        '',
+        style.dim(`  ${CMD} stage status          the server, the follow, the autostart, the screen`),
+        style.dim(`  ${CMD} stage status --json   the same, for something that is not a person`),
+        style.dim(`  ${CMD} stage restart         put the supervisor back`),
+        style.dim(`  ${CMD} stage leave           undo exactly what join did`),
+        style.dim(`  ${CMD} stage leave --keep-space   …but keep following the space`),
+        '',
+        'one screen, one mapping. which display shows which project is the next piece of',
+        'work, and until it lands a stage machine drives the screen it is given.'
+    ].join('\n'),
+
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
@@ -525,6 +639,9 @@ export const ui = {
         '',
         `  ${CMD} mcp           hand this di.iiii to Claude, or any agent that speaks MCP`,
         `  ${CMD} keeper get    a small model on this machine — works with no internet`,
+        '',
+        `  ${CMD} stage join SPACE --from URL   make this machine the one under the projector`,
+        `  ${CMD} stage status  what it is showing, and why not · ${CMD} stage leave to undo it`,
         '',
         `  ${CMD} link SPACE --remote URL   connect one space to an online di.iiii`,
         `  ${CMD} sync SPACE    compare it with its online copy — writes nothing`,
