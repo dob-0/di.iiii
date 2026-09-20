@@ -95,6 +95,7 @@ const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
+const { registerNdiRoutes } = require('./routes/ndiRoutes')
 const { describeListen } = require('./listenInfo')
 const { getMachine } = require('./machineIdentity')
 const { createMachineHub } = require('./machines/hub')
@@ -466,6 +467,22 @@ const lighting = registerLightingRoutes(app, {
   offline: process.env.ARTNET_OFFLINE === '1',
   listen: describeListenNow
 })
+
+// NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,
+// built on first use, 404 on a hosted server. Nothing native loads here or at boot: the
+// NDI runtime (installed by the person, never shipped) and koffi (an optional
+// dependency) are only ever loaded inside a forked child. See routes/ndiRoutes.js and
+// docs/architecture/NDI.md. Ahead of morgan on purpose — an MJPEG stream is not a request
+// worth a log line per reconnect, and it never has a body to parse.
+const ndi = registerNdiRoutes(app, {
+  mountPaths: [...new Set(['/ndi', `${config.mountPath || ''}/ndi`.replace(/\/+/g, '/')])],
+  log: (line) => logger.info(line)
+})
+// index.js has no shutdown path of its own (a signal simply ends the process), so the
+// lighting desk's close() is not wired anywhere either. The NDI child does not depend
+// on one: it exits by itself when its IPC channel closes — a kill -9 of the server
+// included. This hook only makes an orderly process.exit() prompt about it.
+process.once('exit', () => { try { ndi.close() } catch { /* going down anyway */ } })
 
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
 app.use(morgan('tiny'))
