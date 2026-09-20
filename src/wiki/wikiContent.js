@@ -142,10 +142,11 @@ export const WIKI_ARTICLES = [
             'PICTURE OUT is what a screen shows. On a projection map, set a surface\'s source to Pictures and choose a Picture Out; the output page runs the same operators. A projector page with nothing mapped shows its own machine\'s Picture Out whole.',
             'ONE DESK ACROSS MACHINES. Two di.iiii installs linked with `di invite` / `di follow` share a space. Place a DESK node: it lists every machine that has a page of that space open, with its cameras, microphones, speakers and screens. "+ Camera In" and "+ Picture Out" place the operator already set to that machine and device.',
             'RUNS ON is the first setting of every picture operator. "Where the page is open" means every machine runs its own copy — your webcam in your browser, the kiosk\'s on the kiosk. Choose a machine and only that machine computes it. A wire between operators on two machines carries the picture across the network by itself (browser to browser, no internet needed on one network); cards of operators computed elsewhere show small previews, and Analyze numbers travel both ways.',
-            'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.'
+            'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.',
+            'A NETWORK CAN START WITHOUT A CAMERA. Five generators need no picture wired in at all: CLOUDS is soft animated noise (Scale, Speed, Detail, Contrast, and a Colour switch — off is grey); GRADIENT is a two-colour blend, straight across, up, out from the centre, or swept around it, with an Offset a hand or a script can slide; SHAPE is one soft-edged Circle, Ring, Bar or Grid of dots with its own Spin. TINT maps a picture\'s brightness between a dark colour and a bright one — its own default is black to deep amber, the duotone that keeps a wall warm. REFRAME scales, rotates and moves a picture around its own centre, and wired into a loop with Feedback it is what turns a still Gradient into a tunnel. Every one of them opens dark and warm, never white, with nothing to tune.',
         ],
-        tags: ['operators', 'touchdesigner', 'tops', 'camera', 'projector', 'desk', 'machines', 'devices', 'follow', 'webrtc', 'analyze'],
-        updated: '2026-09-14'
+        tags: ['operators', 'touchdesigner', 'tops', 'camera', 'projector', 'desk', 'machines', 'devices', 'follow', 'webrtc', 'analyze', 'generators', 'noise', 'gradient', 'tint', 'shape', 'clock'],
+        updated: '2026-09-20'
     },
     {
         id: 'sound-in-a-room',

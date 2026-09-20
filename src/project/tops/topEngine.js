@@ -17,7 +17,7 @@
 //
 // Nothing here knows about React, the project document or the network sync.
 
-import { TOP_OPERATORS, isTopType, measurePixels, resolveTopParams } from './topOperators.js'
+import { TOP_OPERATORS, isTopType, measurePixels, resolveTopParams, hexToRgb01 } from './topOperators.js'
 
 const VERTEX = `
 attribute vec2 position;
@@ -27,13 +27,36 @@ void main() {
     gl_Position = vec4(position, 0.0, 1.0);
 }`
 
+// `time` is declared highp, guarded: most of this engine stays mediump on
+// purpose (the oldest GPU that will ever drive a projector), but mediump's
+// ~10-bit mantissa is too coarse for a smoothly-animating value once it has
+// wrapped up near 3600 — the gap between two representable numbers there is
+// over three seconds, which reads as a stutter, not motion. GL_FRAGMENT_-
+// PRECISION_HIGH is defined by the compiler itself whenever highp exists in a
+// fragment shader (GLSL ES 1.0 spec), so this never asks a GPU for a
+// precision it does not have.
 const PREAMBLE = `
 precision mediump float;
 varying vec2 uv;
 uniform sampler2D a;
 uniform sampler2D b;
 uniform vec2 texel;
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+uniform highp float time;
+#else
+uniform mediump float time;
+#endif
 `
+
+// Seconds since the engine's canvas was created, wrapped so the float stays
+// small forever — see the PREAMBLE comment above for why. Exported because
+// it is the whole of "the clock advances": pure, so it is tested without a
+// GPU. wraps at CLOCK_WRAP_SECONDS, not at some GLSL-visible boundary, so an
+// operator reading `time` (Clouds' drift, Shape's Spin) never actually shows
+// the wrap — 3600s is far longer than one revolution of anything driven by a
+// param in a sane range.
+export const CLOCK_WRAP_SECONDS = 3600
+export const clockSecondsFor = (elapsedMs) => (Math.max(0, elapsedMs) / 1000) % CLOCK_WRAP_SECONDS
 
 const PRESENT = `${PREAMBLE}
 void main() { gl_FragColor = vec4(texture2D(a, uv).rgb, 1.0); }`
@@ -163,6 +186,12 @@ const freeTarget = (gl, target) => {
 export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure = null, resolveParams = null } = {}) => {
     const gl = canvas.getContext('webgl', { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, alpha: false })
     if (!gl) throw new Error('no WebGL on this machine')
+
+    // The engine's own clock starts here, not at the first frame() — so a
+    // network that never calls frame() still has a well-defined "elapsed 0",
+    // and every window's Clouds/Shape animate from the moment they mount
+    // rather than from whatever performance.now() happens to read.
+    const createdAt = performance.now()
 
     const quad = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, quad)
@@ -321,8 +350,21 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         }
     }
 
+    // Which of an operator's params are colours (uploaded as vec3, not
+    // float) — computed once per type and cached, not per node per frame.
+    const colourParamNames = new Map()
+    const colourNamesFor = (type) => {
+        if (!colourParamNames.has(type)) {
+            colourParamNames.set(type, new Set(TOP_OPERATORS[type].params.filter((p) => p.colour).map((p) => p.name)))
+        }
+        return colourParamNames.get(type)
+    }
+
     const frame = (now = performance.now()) => {
         pullRemotes()
+        // One clock for the whole frame: every operator that reads `time`
+        // (Clouds, Shape) sees the same instant a wire between them would.
+        const clock = clockSecondsFor(now - createdAt)
         for (let index = 0; index < order.length; index += 1) {
             const node = byId.get(order[index])
             const operator = TOP_OPERATORS[node.type]
@@ -375,11 +417,20 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
 
             gl.useProgram(compiled.program)
             gl.uniform2f(uniform(gl, compiled, 'texel'), 1 / width, 1 / height)
+            const timeLocation = uniform(gl, compiled, 'time')
+            if (timeLocation !== null) gl.uniform1f(timeLocation, clock)
             const shiftLocation = uniform(gl, compiled, 'shift')
             if (shiftLocation !== null) gl.uniform1f(shiftLocation, shift)
+            const colours = colourNamesFor(node.type)
             for (const [name, value] of Object.entries(params)) {
                 const location = uniform(gl, compiled, `p_${name}`)
-                if (location !== null) gl.uniform1f(location, value)
+                if (location === null) continue
+                if (colours.has(name)) {
+                    const [r, g, b] = hexToRgb01(value)
+                    gl.uniform3f(location, r, g, b)
+                } else {
+                    gl.uniform1f(location, value)
+                }
             }
             draw(compiled, slot.now)
 
