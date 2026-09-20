@@ -113,8 +113,14 @@ function registerNdiRoutes(app, { mountPaths = ['/ndi'], log = () => {}, createM
     const minGapMs = q.fps ? 1000 / q.fps : 0
     let lastWriteAt = 0
     let sub = null
+    // Subscribing has to come BEFORE the headers, so a cap can still be answered with
+    // 429 instead of a truncated 200. That leaves a window in which a frame could
+    // arrive and write a part ahead of the headers — express would then flush its own
+    // defaults and the stream would have no boundary. `streaming` closes the window,
+    // so no future edit has to know that nothing may await between the two.
+    let streaming = false
     const write = (frame) => {
-      if (res.destroyed || res.writableEnded) return
+      if (!streaming || res.destroyed || res.writableEnded) return
       const now = Date.now()
       // A little slack so "fps=30" of a 30 fps source does not alias down to 15.
       if (minGapMs && now - lastWriteAt < minGapMs * 0.85) return
@@ -143,6 +149,7 @@ function registerNdiRoutes(app, { mountPaths = ['/ndi'], log = () => {}, createM
       'X-Accel-Buffering': 'no'
     })
     res.flushHeaders()
+    streaming = true
     // A receiver that is already running (a second viewer, a reload inside the linger)
     // has a picture in hand: show it now rather than after the next frame.
     const held = sub.receiver().lastFrame
