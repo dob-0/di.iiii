@@ -26,8 +26,9 @@ const selfBase = (port, basePath = '/serverXR', tlsName = null) => `${tlsName ? 
  * @param {string} options.basePath     this server's mount path
  * @param {string|null} options.selfToken  a token that can write here (guest mode makes one)
  * @param {string|null} options.tlsName    the certificate's name when this server speaks https
+ * @param {object} options.files        { maxBytes, tmpDir } for the files a follow carries (follow/assets.js)
  */
-const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null, tlsName = null, ensureSpace = null, log = console } = {}) => {
+const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null, tlsName = null, ensureSpace = null, files = {}, log = console } = {}) => {
     const follows = readFollows(dataDir)
     // Called again whenever follows.json changes, so `di follow` and `di
     // unfollow` take effect on a running install — they used to wait for the
@@ -52,7 +53,7 @@ const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null,
             log.warn?.(`[follow] ${spaceId}: could not make room for it here (${error?.message || error})`)
         })
         log.info?.(`[follow] ${spaceId} follows ${entry.remote}`)
-        running.set(spaceId, startFollowing({ local, remote, log }))
+        running.set(spaceId, startFollowing({ local, remote, log, files }))
     }
     return running
 }
