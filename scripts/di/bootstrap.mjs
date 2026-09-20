@@ -20,7 +20,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import { decideCommandName, decideMode } from './detect.mjs'
-import { npmInvocation, unlinkLink } from './install.mjs'
+import { npmInvocation, shellSafeSpawnArgs, unlinkLink } from './install.mjs'
 import { isWindows, paths, versionLayout } from './paths.mjs'
 import { probeAll, probeForeignDi } from './probe.mjs'
 import { writeEnv, writeState } from './state.mjs'
@@ -32,7 +32,11 @@ const arg = (name, fallback = null) => {
 }
 
 const run = (command, args, options = {}) => {
-    const result = spawnSync(command, args, { stdio: 'inherit', ...options })
+    // See install.mjs `shellSafeSpawnArgs` — with shell:true (Windows) Node
+    // joins command+args with unquoted spaces, so an unquoted path with a
+    // space (the default C:\Program Files\nodejs\npm.cmd) gets split apart.
+    const safe = shellSafeSpawnArgs(command, args, options)
+    const result = spawnSync(safe.command, safe.args, { stdio: 'inherit', ...options })
     if (result.error) throw new Error(`could not run ${command}: ${result.error.message}`)
     if (result.status !== 0) throw new Error(`${command} ${args.join(' ')} failed (exit ${result.status})`)
 }
