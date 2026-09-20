@@ -34,6 +34,12 @@
     right: 0;
     z-index: 60;
     display: flex;
+    /* Five items (←, title, Nodes, Projection, Edit) no longer all fit a
+       390px phone without crushing the title to a sliver — wrap lets
+       whichever button doesn't fit drop to its own row instead of eating
+       the title's space or squeezing a button's own text. Every button
+       keeps its real size and a clear tap target either way. */
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--di-space-3);
     padding: calc(var(--di-space-2) + env(safe-area-inset-top)) var(--di-space-3) var(--di-space-2);
@@ -47,6 +53,12 @@
 
 .smb-title {
     flex: 1;
+    /* Without a floor, flex-basis:0 (from flex:1) lets this shrink to
+       whatever's left over — as little as 89px once Projection joined the
+       row, truncating almost every real project title. A floor forces the
+       row's own total past the container width first, which is what
+       actually triggers the wrap above. */
+    min-width: 120px;
     text-align: center;
     color: rgba(255, 255, 255, 0.75);
     font-size: var(--di-text-3);

@@ -142,10 +142,12 @@ export const WIKI_ARTICLES = [
             'PICTURE OUT is what a screen shows. On a projection map, set a surface\'s source to Pictures and choose a Picture Out; the output page runs the same operators. A projector page with nothing mapped shows its own machine\'s Picture Out whole.',
             'ONE DESK ACROSS MACHINES. Two di.iiii installs linked with `di invite` / `di follow` share a space. Place a DESK node: it lists every machine that has a page of that space open, with its cameras, microphones, speakers and screens. "+ Camera In" and "+ Picture Out" place the operator already set to that machine and device.',
             'RUNS ON is the first setting of every picture operator. "Where the page is open" means every machine runs its own copy — your webcam in your browser, the kiosk\'s on the kiosk. Choose a machine and only that machine computes it. A wire between operators on two machines carries the picture across the network by itself (browser to browser, no internet needed on one network); cards of operators computed elsewhere show small previews, and Analyze numbers travel both ways.',
-            'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.'
+            'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.',
+            'FILES TRAVEL WITH THE FOLLOW. A video, picture or model added to a project on one machine is copied to the other, either way round, while edits keep flowing — `di follows` says how many files are still coming and names any that could not be carried. Two things do not travel yet: files placed straight into the room itself rather than into a project, and older files added before files were named by their content (add those again and they go).',
+            'A NETWORK CAN START WITHOUT A CAMERA. Five generators need no picture wired in at all: CLOUDS is soft animated noise (Scale, Speed, Detail, Contrast, and a Colour switch — off is grey); GRADIENT is a two-colour blend, straight across, up, out from the centre, or swept around it, with an Offset a hand or a script can slide; SHAPE is one soft-edged Circle, Ring, Bar or Grid of dots with its own Spin. TINT maps a picture\'s brightness between a dark colour and a bright one — its own default is black to deep amber, the duotone that keeps a wall warm. REFRAME scales, rotates and moves a picture around its own centre, and wired into a loop with Feedback it is what turns a still Gradient into a tunnel. Every one of them opens dark and warm, never white, with nothing to tune.',
         ],
-        tags: ['operators', 'touchdesigner', 'tops', 'camera', 'projector', 'desk', 'machines', 'devices', 'follow', 'webrtc', 'analyze'],
-        updated: '2026-09-14'
+        tags: ['operators', 'touchdesigner', 'tops', 'camera', 'projector', 'desk', 'machines', 'devices', 'follow', 'webrtc', 'analyze', 'generators', 'noise', 'gradient', 'tint', 'shape', 'clock'],
+        updated: '2026-09-20'
     },
     {
         id: 'sound-in-a-room',
@@ -275,10 +277,11 @@ export const WIKI_ARTICLES = [
             'One rule that matters more than any other: output is OFF until you switch it on, under OUTPUT. Until then the desk runs, the stage view moves, scenes recall — and nothing leaves the machine. A dev server on a shared wifi can never blast a frame at somebody else\'s rig by accident, and a rig only ever lights when a person decided it should.',
             'The rig is yours. Nothing in the desk is patched to any particular room — you name the fixtures, you set the addresses, you save the looks. Its data lives with your di.iiii install, so the show survives a restart and can be carried to the venue on the same laptop.',
             'A graph can play the desk. Drop a DMX Out node into a canvas, leave it on its default rig, and Master, Channel, Value, Blackout and Scene are wired straight into the desk you just patched — an oscillator on a lamp, a scene name recalled by a button, a whole rig blacked out by a wire. See “DMX Out: the graph lights the room”.',
+            'Studio can show the rig in the room. When a lighting desk is running on the machine you are using, Studio\'s Display row grows a Rig button. Switch it on and every patched fixture appears in the 3D view as a small marker glowing in the colour and at the level that fixture is giving out right now — change a colour on the desk and the marker follows; black the rig out and the markers go dim grey, still there. It only looks: nothing in Studio can move a lamp, the markers are not objects, they are never saved with the project and a visitor never sees them. For now the desk\'s plan is simply laid across a ten-metre square of floor, because a fixture does not yet know how high it hangs.',
             'The desk lives on a local di.iiii only — `di up`, or npm run dev. A hosted di-studio.xyz has no /light in it at all, on purpose: a lighting desk is a thing that reaches hardware in a room, and the room is where you are. Asking a hosted address for /light says exactly that, and offers the install — it used to hand back an ordinary di.iiii page with no explanation at all.'
         ],
-        tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up', 'lan', 'phone'],
-        updated: '2026-09-10'
+        tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up', 'lan', 'phone', 'rig', 'fixture', 'marker', 'studio'],
+        updated: '2026-09-20'
     },
     {
         id: 'the-rig',
@@ -303,7 +306,7 @@ export const WIKI_ARTICLES = [
         title: 'Putting a space on a wall',
         summary: 'Point a projector at a wall, drag each surface onto the shape it belongs to, and the work runs there — no separate mapping software.',
         body: [
-            'di-studio.xyz/{space}/map/{project} opens a mapping. A mapping is a project whose contents are other projects: a list of surfaces, each one a four-cornered shape on the wall with something playing inside it.',
+            'Projection opens a mapping, at di-studio.xyz/{space}/map/{project}. A mapping is a project whose contents are other projects: a list of surfaces, each one a four-cornered shape on the wall with something playing inside it.',
             'A projector never sees a wall straight on, so a rectangle of picture lands on it as a slanted quadrilateral. That is what the corner handles are for. Pick a surface, drag its four corners onto the four corners of the thing you are projecting at — a sheet of paper, a panel, a doorway — and the picture is squeezed to fit it exactly. Arrow keys nudge by one projector pixel, hold shift for ten.',
             'Before any of the work is ready, set a surface to a test pattern. A grid, rings, diagonal bars or corner brackets, in white on black, with the surface\'s name across the middle. You align in a dark room against a pattern, not against a finished piece: a picture gives your eye no edge to judge, and the name tells you which shape is whose.',
             'Shapes are rarely rectangles. Press M for the mask and click round the outline you actually want — a cut corner, a triangle, a doorway — and everything outside it goes black. Drag a point to move it, alt-click to remove it.',

@@ -28,6 +28,7 @@ export default function StudioControlCluster({
     onHideUI,
     onBackToHub,
     onOpenNodeEditor,
+    onOpenProjection,
     xrState,
     syncState,
     presence,
@@ -38,6 +39,10 @@ export default function StudioControlCluster({
     onStackRight,
     onResetLayout,
     onShowHelp,
+    // The real lighting rig mirrored into the room. Null when there is no lighting on
+    // this machine — which is every hosted di.iiii — and then the button is not drawn.
+    rigMirrorOn = false,
+    onToggleRigMirror = null,
     // Jam mode (communal open-jam project): `panelKeys` narrows the Windows
     // row, `minimal` trims power-user chrome (Arrange, Hub, View live), and
     // `onToggleAllTools` renders the escape hatch between Simple ⇄ All tools.
@@ -138,6 +143,12 @@ export default function StudioControlCluster({
                                 )}
                                 {!minimal && onOpenNodeEditor && (
                                     <button className="scc-btn" onClick={onOpenNodeEditor} title="Open this project in the node editor">⇄ Nodes</button>
+                                )}
+                                {!minimal && onOpenProjection && (
+                                    <button className="scc-btn" onClick={onOpenProjection} title="Put this project on a wall">Projection</button>
+                                )}
+                                {!minimal && onToggleRigMirror && (
+                                    <button className={`scc-btn ${rigMirrorOn ? 'active' : ''}`} onClick={onToggleRigMirror} aria-pressed={rigMirrorOn} title="Show the real lighting rig in the room">Lights</button>
                                 )}
                                 {!minimal && canViewLive && (
                                     <button className="scc-btn" onClick={onViewLive} title="Open the public space URL in a new tab">↗ View live</button>
