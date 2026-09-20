@@ -29,7 +29,7 @@ const BACKOFF_CEILING_MS = 30_000
 const WAIT_SECONDS = 20
 const TIMEOUT_MS = 8000
 
-const request = async (url, { method = 'GET', token = null, body = null, timeoutMs = TIMEOUT_MS, signal = null, servername = null } = {}) => {
+const request = async (url, { method = 'GET', token = null, body = null, timeoutMs = TIMEOUT_MS, signal = null, servername = null, address = null } = {}) => {
     const text = body ? JSON.stringify(body) : null
     try {
         const response = await httpRequest(url, {
@@ -37,6 +37,7 @@ const request = async (url, { method = 'GET', token = null, body = null, timeout
             timeoutMs,
             signal,
             servername,
+            address,
             headers: {
                 Accept: 'application/json',
                 ...(text ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(text) } : {}),
@@ -55,7 +56,7 @@ const request = async (url, { method = 'GET', token = null, body = null, timeout
  *
  * @param {object} options
  * @param {string} options.spaceId        the space's id HERE
- * @param {object} options.link           { base, spaceId (on the host), token, servername? }
+ * @param {object} options.link           { base, spaceId (on the host), token, servername?, address? }
  * @param {object} options.hub            this server's machine hub
  * @param {() => {id, name}} options.machine
  */
@@ -78,7 +79,7 @@ const startMachineLink = ({ spaceId, link, hub, machine, log = console, syncEver
         const controller = new AbortController()
         inflight.add(controller)
         try {
-            return await send(`${link.base}${path}`, { token: link.token, servername: link.servername || null, signal: controller.signal, ...options })
+            return await send(`${link.base}${path}`, { token: link.token, servername: link.servername || null, address: link.address || null, signal: controller.signal, ...options })
         } finally {
             inflight.delete(controller)
         }
@@ -174,7 +175,7 @@ const startMachineLink = ({ spaceId, link, hub, machine, log = console, syncEver
 
 const running = new Map()
 
-const sameLink = (a, b) => a.base === b.base && a.spaceId === b.spaceId && a.token === b.token
+const sameLink = (a, b) => a.base === b.base && a.spaceId === b.spaceId && a.token === b.token && a.address === b.address
 
 /**
  * One link per followed space, matched to follows.json each time it is called
@@ -186,7 +187,11 @@ const startMachineLinks = ({ dataDir, hub, machine, log = console, follows = nul
         const link = {
             base: String(entry?.remote || '').replace(/\/$/, ''),
             spaceId: entry?.spaceId || spaceId,
-            token: entry?.token || null
+            token: entry?.token || null,
+            // The ADDRESS PIN written by `di follow --at` — carried onto the
+            // machine-sync link too, so a followed room's tabs reach the host
+            // the same way its op log does.
+            address: entry?.address || null
         }
         const current = running.get(spaceId)
         if (current && sameLink(current.link, link)) continue

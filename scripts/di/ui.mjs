@@ -137,16 +137,32 @@ export const ui = {
 
     checkingFollow: () => style.dim('looking for that di.iiii…'),
 
-    followRefused: (reason, where) => ({
-        unreachable: `nothing answers at ${where} — check the address, and that both machines are on the same wifi.`,
-        missing: 'that di.iiii has no space by that name.',
-        denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
-        'local-space': 'this install could not make room for it — is di.iiii running here?',
-        itself: 'that address is this di.iiii — a space cannot follow itself.'
-    }[reason] || `could not follow ${where}.`),
+    // `at` is the pin: `--at <address>` was given (or not). Its presence
+    // changes two things here — the "how do I fix this" hint on an ordinary
+    // unreachable, and a whole different sentence when the pinned address DID
+    // answer but under the wrong certificate.
+    followRefused: (reason, where, at = null) => {
+        if (reason === 'cert-mismatch') return `something answers at ${at}, but not as ${where} — wrong machine.`
+        const message = {
+            unreachable: `nothing answers at ${where} — check the address, and that both machines are on the same wifi.`,
+            missing: 'that di.iiii has no space by that name.',
+            denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
+            'local-space': 'this install could not make room for it — is di.iiii running here?',
+            itself: 'that address is this di.iiii — a space cannot follow itself.'
+        }[reason] || `could not follow ${where}.`
+        // Only on a plain, un-pinned "unreachable": the address pin is the fix
+        // for the one failure it fixes, and there is no point suggesting it to
+        // someone who already used it.
+        return reason === 'unreachable' && !at
+            ? `${message}\nif that name points somewhere this machine cannot reach, say where it is: --at <address>`
+            : message
+    },
 
-    following: (spaceId, remote, running) => [
+    badAddress: (value) => `${value} is not an address — --at wants an IPv4 or IPv6 literal, like --at 100.87.4.12`,
+
+    following: (spaceId, remote, running, at = null) => [
         `following ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}.`,
+        at ? style.dim(`the name stays — the socket goes to ${at}.`) : null,
         style.dim('edits travel both ways — the room and every project in it. your copy stays on your disk.'),
         // Said plainly rather than discovered: images and models are not carried
         // yet, so a scene that leans on them will show their absence until they
@@ -372,6 +388,24 @@ export const ui = {
         ].filter((line) => line !== null).join('\n')
     },
 
+    // `di follow --help` and `di help follow`.
+    followUsage: () => [
+        style.bold(`${CMD} follow SPACE --from URL --key KEY`) + style.dim(' — join a space that lives on another di.iiii'),
+        '',
+        'both sides keep the whole work; edits travel both ways.',
+        '',
+        '  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio',
+        `  --key KEY       the per-space sync key, minted on their machine with: ${CMD} invite SPACE`,
+        '  --at ADDRESS    the ADDRESS PIN — the name in --from stays, but the socket goes',
+        '                  to this address instead of whatever it resolves to. For when',
+        '                  --from names a machine this one can only reach somewhere else —',
+        '                  a Tailscale IP, say — and there is no hosts-file edit to make.',
+        `  --into SPACE    merge into a space of that name that already exists here`,
+        '',
+        style.dim(`  ${CMD} follows          what this install is following`),
+        style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`)
+    ].join('\n'),
+
     // `di mcp --help` and `di help mcp`. Printed instead of starting the
     // server, which is what --help used to do — silently, on stdin.
     mcpUsage: () => [
@@ -443,7 +477,7 @@ export const ui = {
         'not the model that writes your show — that is what a Claude key is for.'
     ].join('\n'),
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage() })[name]?.() || null,
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), follow: () => ui.followUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
@@ -474,7 +508,7 @@ export const ui = {
         `  ${CMD} where         the three paths that matter`,
         `  ${CMD} uninstall     remove it, keep your work`,
         `  ${CMD} version       which di.iiii this is (also --version, -v)`,
-        `  ${CMD} help mcp      more on one command (also ${CMD} mcp --help, ${CMD} help keeper)`,
+        `  ${CMD} help mcp      more on one command (also ${CMD} mcp --help, ${CMD} help keeper, ${CMD} help follow)`,
         '',
         style.dim('  --port N     run somewhere other than 4000'),
         style.dim('  --lan        answer on this wifi too, for phones in the room — anyone on it can edit'),
