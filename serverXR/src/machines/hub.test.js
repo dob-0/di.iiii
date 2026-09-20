@@ -191,4 +191,37 @@ describe('what a machine has', () => {
         ])
         expect(cleanDevices(Array.from({ length: 50 }, (_, i) => ({ kind: 'mic', id: `m${i}` })))).toHaveLength(32)
     })
+
+    it('caps each KIND on its own, so thirty NDI sources cannot push out the screens', () => {
+        const { cleanDevices } = require('./hub')
+        // A festival LAN advertising thirty NDI sources is an ordinary night.
+        // Under the old single ceiling of 32 they would have pushed out
+        // whatever came after them — and readMachineDevices appends the
+        // screens before the NDI sources, so what went missing would have been
+        // the panel sizes the desk lays a wall out from.
+        const devices = cleanDevices([
+            ...Array.from({ length: 30 }, (_, i) => ({ kind: 'ndi', id: `n${i}`, label: `SENDER ${i}` })),
+            { kind: 'camera', id: 'c', label: 'HD Webcam' },
+            { kind: 'screen', id: 'screen-0', label: 'Screen', width: 1920, height: 1080 },
+            { kind: 'screen', id: 'screen-1', label: 'Projector', width: 1280, height: 800 }
+        ])
+        expect(devices.filter(device => device.kind === 'ndi')).toHaveLength(30)
+        expect(devices.filter(device => device.kind === 'screen').map(device => device.label))
+            .toEqual(['Screen', 'Projector'])
+        expect(devices.filter(device => device.kind === 'camera')).toHaveLength(1)
+    })
+
+    it('still bounds one kind, and the whole message', () => {
+        const { cleanDevices, MAX_DEVICES, MAX_DEVICES_TOTAL } = require('./hub')
+        expect(cleanDevices(Array.from({ length: 200 }, (_, i) => ({ kind: 'ndi', id: `n${i}` })))).toHaveLength(MAX_DEVICES)
+        const everything = ['camera', 'mic', 'speaker', 'screen', 'midi-in', 'midi-out', 'ndi']
+            .flatMap(kind => Array.from({ length: 40 }, (_, i) => ({ kind, id: `${kind}${i}` })))
+        expect(cleanDevices(everything)).toHaveLength(MAX_DEVICES_TOTAL)
+    })
+
+    it('knows an NDI source as a kind of its own', () => {
+        const { cleanDevices } = require('./hub')
+        expect(cleanDevices([{ kind: 'ndi', id: 'AYLMO (td_out_windows)', label: 'AYLMO (td_out_windows)' }]))
+            .toEqual([{ kind: 'ndi', id: 'AYLMO (td_out_windows)', label: 'AYLMO (td_out_windows)' }])
+    })
 })

@@ -37,21 +37,43 @@ const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/
 const isPeerId = (value) => typeof value === 'string' && ID_PATTERN.test(value)
 const cleanText = (value, max) => (typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null)
 
-// What a page says its machine has: cameras, microphones, speakers, screens.
-// Shown to the other machines on the desk, so it is capped and plain — a
-// label and an id, never whatever a browser happened to put in the object.
-const DEVICE_KINDS = new Set(['camera', 'mic', 'speaker', 'screen', 'midi-in', 'midi-out'])
+// What a page says its machine has: cameras, microphones, speakers, screens,
+// and the NDI® sources its own serverXR can see on the network. Shown to the
+// other machines on the desk, so it is capped and plain — a label and an id,
+// never whatever a browser happened to put in the object.
+const DEVICE_KINDS = new Set(['camera', 'mic', 'speaker', 'screen', 'midi-in', 'midi-out', 'ndi'])
+
+// THE CAP IS PER KIND, not for the list as a whole (changed 2026-09-20, when
+// `ndi` arrived). It was one shared ceiling of 32, and NDI breaks that: a
+// festival LAN can advertise thirty sources, which is a perfectly ordinary
+// night and not an attack. Under one shared ceiling those thirty would have
+// pushed out whatever came after them — and readMachineDevices appends the
+// SCREENS before the NDI sources, so what actually went missing would have
+// been the panel sizes the desk lays a wall out from. One kind can no longer
+// crowd out another, and the total is still bounded, twice: 32 of each kind
+// and 96 in the message, which at the 280 bytes a fat entry costs is about
+// 27 KB — small beside the body limit, and a fixed number either way.
 const MAX_DEVICES = 32
-const cleanDevices = (list) => (Array.isArray(list) ? list : [])
-    .filter(device => device && DEVICE_KINDS.has(device.kind))
-    .slice(0, MAX_DEVICES)
-    .map(device => ({
-        kind: device.kind,
-        id: cleanText(device.id, 200) || '',
-        label: cleanText(device.label, 80) || '',
-        ...(Number.isFinite(device.width) ? { width: Math.round(device.width) } : {}),
-        ...(Number.isFinite(device.height) ? { height: Math.round(device.height) } : {})
-    }))
+const MAX_DEVICES_TOTAL = 96
+const cleanDevices = (list) => {
+    const perKind = new Map()
+    const out = []
+    for (const device of Array.isArray(list) ? list : []) {
+        if (!device || !DEVICE_KINDS.has(device.kind)) continue
+        const kept = perKind.get(device.kind) || 0
+        if (kept >= MAX_DEVICES) continue
+        perKind.set(device.kind, kept + 1)
+        out.push({
+            kind: device.kind,
+            id: cleanText(device.id, 200) || '',
+            label: cleanText(device.label, 80) || '',
+            ...(Number.isFinite(device.width) ? { width: Math.round(device.width) } : {}),
+            ...(Number.isFinite(device.height) ? { height: Math.round(device.height) } : {})
+        })
+        if (out.length >= MAX_DEVICES_TOTAL) break
+    }
+    return out
+}
 
 const viaFollower = (machineId) => `${FOLLOWER_VIA}${machineId}`
 const viaLink = (remoteBase) => `${LINK_VIA}${remoteBase}`
@@ -309,5 +331,7 @@ module.exports = {
     PEER_TTL_MS,
     MAX_PEERS,
     MAX_MESSAGES,
-    MAX_PAYLOAD_BYTES
+    MAX_PAYLOAD_BYTES,
+    MAX_DEVICES,
+    MAX_DEVICES_TOTAL
 }
