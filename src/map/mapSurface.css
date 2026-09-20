@@ -324,7 +324,7 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
        tier chip. Same offset and safe-area variable it uses for its own
        position, plus its own footprint, so the panel's last line is never
        under the badge. */
-    .map-panel-right { padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px)); }
+    .map-panel-right { padding-bottom: calc(var(--di-space-7) + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* The output's only chrome. Present when the pointer moves, gone when it
