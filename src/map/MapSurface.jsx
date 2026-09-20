@@ -9,6 +9,8 @@ import { buildMapOutputPath } from './mapRouting.js'
 import { listProjects } from '../project/services/projectsApi.js'
 import { transportWarning } from './transportCeiling.js'
 import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
+import { useMachinePresence } from '../project/tops/useMachinePresence.js'
+import { describeMachine, unresolvedStreams } from './mapMachines.js'
 import './mapSurface.css'
 
 // THE MAPPER'S DESK.
@@ -80,6 +82,8 @@ export default function MapSurface({ projectId, spaceId }) {
         addSurface, updateSurface, deleteSurface, reorderSurfaces, setOutput,
         addCue, updateCue, deleteCue, reorderCues, fireCue
     } = useMapDocument(projectId, { role: 'desk' })
+    // Every machine showing this space, and what each one has: the wall is usually another computer.
+    const { machines } = useMachinePresence(spaceId)
 
     const [selectedId, setSelectedId] = useState(null)
     const [soloId, setSoloId] = useState(null)
@@ -395,6 +399,29 @@ export default function MapSurface({ projectId, spaceId }) {
                     />
 
                     <div className="map-section">
+                        <div className="map-panel-head"><h2>Machines</h2></div>
+                        {machines.length ? machines.map(describeMachine).map((entry) => (
+                            <p key={entry.id} className="map-machine">
+                                <strong>{entry.name}</strong>
+                                <span>{[
+                                    entry.screens.length ? entry.screens.join(' + ') : null,
+                                    entry.inputs.length ? `inputs: ${entry.inputs.join(', ')}` : 'no inputs named yet'
+                                ].filter(Boolean).join(' · ')}</span>
+                            </p>
+                        )) : <p className="map-empty">Finding the machines showing this space…</p>}
+                        {machines.length === 1 ? (
+                            <p className="map-empty">Only this machine so far. Another appears while its output page is open.</p>
+                        ) : null}
+                        {unresolvedStreams(surfaces, machines).map((entry) => (
+                            <p key={entry.id} className="map-machine is-warning" role="status">
+                                {entry.input
+                                    ? `“${entry.name}” wants an input called “${entry.input}” — no machine here has one.`
+                                    : `“${entry.name}” is a stream with no input named.`}
+                            </p>
+                        ))}
+                    </div>
+
+                    <div className="map-section">
                         <div className="map-panel-head"><h2>Wall photo</h2></div>
                         <p className="map-empty">A photo of the wall behind the surfaces, to trace paper edges over. Desk only — never projected.</p>
                         <div className="map-row">
@@ -467,6 +494,7 @@ export default function MapSurface({ projectId, spaceId }) {
                         surface={selected}
                         projectOptions={projectOptions}
                         pictureOutOptions={pictureOutOptions}
+                        machines={machines}
                         clipboard={clipboard}
                         onUpdate={updateSurface}
                         onDelete={(surfaceId) => { deleteSurface(surfaceId); setSelectedId(null) }}
