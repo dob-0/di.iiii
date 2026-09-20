@@ -108,7 +108,10 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
       const r = [...receivers.values()].find((x) => x.id === message.id)
       if (r) {
         r.state = message.state; r.detail = message.detail || ''; r.source = message.source || null
-        for (const sub of r.subs) sub.onState?.({ state: r.state, detail: r.detail, source: r.source })
+        // Which address the runtime was handed. The SENDER chooses it, and on a rig
+        // with more than one network that choice is the whole story — so it travels.
+        r.address = message.address || ''
+        for (const sub of r.subs) sub.onState?.({ state: r.state, detail: r.detail, source: r.source, address: r.address })
       }
     } else if (message.type === 'frame') {
       const r = [...receivers.values()].find((x) => x.id === message.id)
@@ -133,7 +136,7 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
     log(`[ndi] child exited (${signal || code}); restarting in ${backoffMs} ms`)
     for (const r of receivers.values()) {
       r.state = 'restarting'; r.detail = 'the NDI process stopped and is being restarted'
-      for (const sub of r.subs) sub.onState?.({ state: r.state, detail: r.detail, source: r.source })
+      for (const sub of r.subs) sub.onState?.({ state: r.state, detail: r.detail, source: r.source, address: r.address || '' })
     }
     if (restartTimer) clearTimeout(restartTimer)
     restartTimer = setTimeout(() => { restartTimer = null; restarts += 1; ensureChild() }, backoffMs)
@@ -200,7 +203,7 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
     if (subscriberCount() >= opt.maxSubscribers) throw new NdiCapError('cap-subscribers', `this di.iiii already serves ${opt.maxSubscribers} NDI viewers`)
     if (!r) {
       if (receivers.size >= opt.maxReceivers) throw new NdiCapError('cap-receivers', `this di.iiii already receives ${opt.maxReceivers} NDI pictures`)
-      r = { key, id: `r${nextId++}`, name: cleanName, maxWidth: width, bandwidth: bw, subs: new Set(), lingerTimer: null, lastFrame: null, state: 'starting', detail: '', source: null }
+      r = { key, id: `r${nextId++}`, name: cleanName, maxWidth: width, bandwidth: bw, subs: new Set(), lingerTimer: null, lastFrame: null, state: 'starting', detail: '', source: null, address: '' }
       receivers.set(key, r)
       if (idleTimer) { clearTimeout(idleTimer); idleTimer = null }
       if (ensureChild()) openInChild(r)
@@ -212,7 +215,7 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
     let left = false
     return {
       key,
-      receiver: () => ({ state: r.state, detail: r.detail, source: r.source, lastFrame: r.lastFrame }),
+      receiver: () => ({ state: r.state, detail: r.detail, source: r.source, address: r.address || '', lastFrame: r.lastFrame }),
       unsubscribe: () => {
         if (left) return
         left = true
@@ -278,7 +281,7 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
     subscribers: subscriberCount(),
     receivers: [...receivers.values()].map((r) => ({
       id: r.id, name: r.name, maxWidth: r.maxWidth, bandwidth: r.bandwidth, subscribers: r.subs.size,
-      lingering: Boolean(r.lingerTimer), state: r.state, detail: r.detail, source: r.source,
+      lingering: Boolean(r.lingerTimer), state: r.state, detail: r.detail, source: r.source, address: r.address || '',
       lastFrameAgeMs: r.lastFrame ? Date.now() - r.lastFrame.at : null
     })),
     worker: lastStats

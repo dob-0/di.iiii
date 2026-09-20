@@ -38,3 +38,38 @@ Not verified, and saying so plainly: macOS and Linux lookup (written from the he
 never run — this machine has no libndi), NDI between two machines (sender and receiver
 were the same box, so real-network mDNS is untested), TouchDesigner as the source, and
 anything at all in a browser.
+
+## 2026-09-20, later — the two-machine rig: a receiver that never says why
+
+Cross-machine NDI was tried for the first time: TouchDesigner on aylmo (2025, under
+Wine), di.iiii 0.4.14-wstream.8 on `win`. Discovery worked across the network once
+`DI_NDI_EXTRA_IPS=192.168.15.53` was set — without it the finder reported aylmo's
+`10.0.0.122` cable interface, which `win` cannot route to. With it the address was
+reachable (TCP to 5960/5961/5962 succeeded on both the LAN and the tailnet address, and
+node.exe is allowed through the Windows firewall on both profiles) — and
+`/serverXR/ndi/api/still` still answered 504 every time, for both senders, with
+`state: "connecting"`, `detail: ""`, `restarts: 0`.
+
+**The sender was stopped before the cause was found**, so the cross-machine failure is
+not reproduced and no root cause is claimed. What was done instead is the defect that
+made it unfindable: a receiver now says which of the two possible failures it is.
+
+Measured on `win` against the real runtime (NDI 6.3.2.0) while diagnosing, and now in
+docs/architecture/NDI.md:
+
+- **the url is what connects.** A deliberately wrong `p_ndi_name` with the right
+  `p_url_address` gives video in 38 ms; a NULL name with the right url, 30 ms. A wrong
+  or NULL url falls back to resolving the name through the runtime's own discovery and
+  still arrives — at ~4.03 s. So the 5 s threshold, and so a machine name that resolves
+  to an unusable address (MagicDNS pointing `AYLMO` at the tailnet) is not by itself a
+  reason for no picture.
+- **the strings are copied.** A receiver built from koffi-marshalled JS strings and one
+  built from C memory we allocate and hold behave identically (34 ms to first frame,
+  300 frames in 10 s each). There is no pointer-lifetime bug in `recvCreate`.
+- **same-machine still passes** on this build: `devSender` → finder → `recvCreate` →
+  30.1 fps, `no_connections` 1, first frame 53 ms; through the real routes, a 200 JPEG
+  from `/ndi/api/still` and 30 parts in 3 s from `/ndi/in.mjpg?fps=10`.
+- **the unreachable case has a clean signature**: `no_connections` stays 0 and
+  `recv_capture` returns `NDIlib_frame_type_none` for ever. That is exactly what
+  `ndi/diagnose.js` now reports on.
+

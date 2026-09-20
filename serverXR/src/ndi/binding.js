@@ -156,8 +156,17 @@ function bindNdi(koffi, lib, { send = false } = {}) {
     recvDestroy: lib.func('void NDIlib_recv_destroy(void *p_instance)'),
     recvConnect: lib.func('void NDIlib_recv_connect(void *p_instance, const NDIlib_source_t *p_src)'),
     recvCapture: lib.func('int NDIlib_recv_capture_v3(void *p_instance, void *p_video_data, void *p_audio_data, void *p_metadata, uint32_t timeout_in_ms)'),
-    recvFreeVideo: lib.func('void NDIlib_recv_free_video_v2(void *p_instance, void *p_video_data)')
+    recvFreeVideo: lib.func('void NDIlib_recv_free_video_v2(void *p_instance, void *p_video_data)'),
+    // How many sessions this receiver has open to its sender — 0 or 1 in practice. It
+    // is the ONLY way to tell "never reached the sender" from "reached it, no video"
+    // (ndi/diagnose.js), so a receiver that sits silent can say which. Bound leniently:
+    // a runtime old enough to lack the symbol must still receive, just without the
+    // diagnosis — every caller treats a missing function as "cannot say".
+    recvNoConnections: null
   }
+  try {
+    fn.recvNoConnections = lib.func('int NDIlib_recv_get_no_connections(void *p_instance)')
+  } catch { fn.recvNoConnections = null }
   if (send) {
     // Processing.NDI.Send.h
     fn.sendCreate = lib.func('void *NDIlib_send_create(const NDIlib_send_create_t *p_create_settings)')

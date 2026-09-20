@@ -138,9 +138,72 @@ essentially free and is the right default for desk previews. Whether a 1080p60 w
 the H.264/WebCodecs tier (step 5 of the build order) is decided by these numbers, on this
 laptop — a machine with more cores may not need it at all.
 
+## When there is no picture
+
+A receiver that has resolved a source and then sits silent must say which of two
+different things went wrong, because they are different jobs for whoever is at the rig.
+`NDIlib_recv_get_no_connections()` is the number that separates them, and
+`ndi/diagnose.js` turns it into a sentence that lands in `/ndi/api/stats`, in every
+`onState`, and in the body of the 504 from `/ndi/api/still`:
+
+| `no_connections` | What it means | What `detail` says |
+| --- | --- | --- |
+| 0 | the runtime never opened a session — discovery found the name, the media port was never reached | `no connection to "…" at <address> after N s — … firewall … route …` |
+| ≥ 1 | the session is open and nothing showable is coming down it | `connected to "…" at <address> but no picture in N s` |
+| — | this runtime has no such entry point | `… this NDI runtime cannot say whether the connection was opened` |
+
+The **address** travels with the name everywhere, because the SENDER chooses it — it
+advertises whichever of its own interfaces it likes, and on a machine with a cable, a
+wifi and a tailnet that choice is the whole story. `DI_NDI_EXTRA_IPS` (comma-separated,
+an operator's env var) asks those addresses directly when mDNS does not arrive, and it
+is also what decides which address discovery ends up reporting.
+
+`DI_NDI_NO_PICTURE_MS` moves the threshold; the default is 5000 ms and it is measured,
+not guessed — see below.
+
+### How the runtime resolves a source — measured on `win`, NDI 6.3.2.0, 2026-09-20
+
+Four receivers against one `devSender.js`, first-frame latency each time:
+
+| `p_ndi_name` | `p_url_address` | First video |
+| --- | --- | --- |
+| the discovered name | the discovered address | 34–53 ms |
+| **a name nothing advertises** | the discovered address | **38 ms** |
+| `NULL` | the discovered address | 30 ms |
+| the discovered name | `NULL` | 4035 ms |
+| the discovered name | **`127.0.0.1:1`** | **4034 ms** |
+
+Reading: **the url is what connects.** The name is only a fallback, and taking it costs
+~4.0 s while the runtime resolves the source through its own discovery. That is why the
+"no picture" threshold is 5 s: anything shorter would libel a slow-but-healthy fallback.
+It also means a machine whose *name* resolves to an address it cannot use (a tailnet
+entry from MagicDNS, say) is not by itself a reason for no picture — the url is tried
+first.
+
+The same run showed the strings are **copied** by the runtime: a receiver built from
+plain JS strings marshalled by koffi and one built from C memory we allocate and hold
+behave identically (34 ms vs 34 ms, 300 frames each in 10 s). There is no pointer
+lifetime problem in `recvCreate`.
+
 ## Not verified
 
-macOS and Linux library lookup (written from the headers, never run); NDI across two
-machines (sender and receiver were the same box, so mDNS over a real network is
-untested); TouchDesigner as the sender; anything in a browser — no di.iiii surface has
-been pointed at these routes yet.
+macOS and Linux library lookup (written from the headers, never run); anything in a
+browser — no di.iiii surface has been pointed at these routes yet.
+
+**NDI across two machines is still not proven.** On 2026-09-20 di.iiii on `win`
+discovered both of aylmo's TouchDesigner senders across the network (with
+`DI_NDI_EXTRA_IPS=192.168.15.53`, which changed the advertised address from aylmo's
+unroutable `10.0.0.122` cable interface to its wifi one), TCP to 5960/5961/5962 succeeded
+on both the LAN and the tailnet address, the Windows firewall had node.exe allowed on
+both profiles, and `/ndi/api/still` answered 504 every time for both sources with
+`state: "connecting"` and no reason at all. The child never crashed (`restarts: 0`).
+The sender was stopped before the cause could be found, so the cross-machine case was
+never reproduced with the diagnosis in place.
+
+What the next attempt does, in one step: start the sender, ask for a still, then read
+`/ndi/api/stats`. `detail` now says whether the session was ever opened. `no connection
+…` means the media port is not reachable from that machine even though discovery is
+(check the address in `detail` — the sender chose it — and both firewalls). `connected
+… but no picture` means the link is fine and the sender is not producing video this
+receiver can show, which would then point at the sender (TouchDesigner under Wine) or at
+the colour format, and `bw=lowest` / `COLOR_FASTEST` become worth trying.

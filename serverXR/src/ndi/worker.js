@@ -16,11 +16,16 @@
 // koffi worker thread — this process's event loop stays free for IPC and for sharp.
 const { loadNdi } = require('./library')
 const { matchSourceName } = require('./names')
+const { noPictureDetail, stalledDetail, NO_PICTURE_AFTER_MS } = require('./diagnose')
 
 const CAPTURE_TIMEOUT_MS = 100
 const FIND_WAIT_MS = 500
 const FIRST_LIST_MS = 1500
 const STALL_AFTER_MS = 3000
+// How long a receiver may sit on "connecting" before it must say WHY there is no
+// picture. The default is measured — see ndi/diagnose.js — and the env var is there so
+// a rig on a slow link can push it out without a rebuild.
+const NO_PICTURE_MS = Math.max(1000, Number(process.env.DI_NDI_NO_PICTURE_MS) || NO_PICTURE_AFTER_MS)
 const STATS_EVERY_MS = 2000
 const JPEG_QUALITY = 80
 // Encodes in flight per receiver. Measured on the stage machine (i7-8565U): with ONE, a
@@ -95,7 +100,19 @@ function main() {
   const setState = (r, state, detail = '') => {
     if (r.state === state && r.detail === detail) return
     r.state = state; r.detail = detail
-    send({ type: 'state', id: r.id, state, detail, source: r.source ? r.source.name : null })
+    // The address goes with the name: on a two-machine rig "which address did it dial"
+    // is the first question, and the sender chooses that address, not us.
+    send({ type: 'state', id: r.id, state, detail, source: r.source ? r.source.name : null, address: r.source ? r.source.address || '' : '' })
+  }
+
+  // → the receiver's open session count, or null when this runtime has no such entry
+  // point (or the call failed). Cheap, but never called on the hot path.
+  const connectionsOf = (r) => {
+    if (!fn.recvNoConnections || !r.instance) return null
+    try {
+      const n = fn.recvNoConnections(r.instance)
+      return Number.isFinite(n) ? n : null
+    } catch { return null }
   }
 
   const tryConnect = (r) => {
@@ -113,13 +130,19 @@ function main() {
     })
     if (!r.instance) { setState(r, 'waiting', 'the NDI runtime refused to create a receiver'); return }
     r.framePtr = koffi.alloc(types.VideoFrame, 1)
-    setState(r, 'connecting')
+    // Even before anything has gone wrong, the detail names the source AND the address
+    // the runtime was handed — a 504 that says only "no picture" cannot be acted on.
+    setState(r, 'connecting', `connecting to "${match.name}"${match.address ? ` at ${match.address}` : ''}`)
     captureLoop(r)
   }
 
   const captureLoop = async (r) => {
     r.looping = true
-    let lastVideoAt = Date.now()
+    const startedAt = Date.now()
+    let lastVideoAt = startedAt
+    let sawVideo = false
+    let nextDiagnosisAt = startedAt + NO_PICTURE_MS
+    const place = () => ({ source: r.source ? r.source.name : '', address: r.source ? r.source.address || '' : '' })
     while (!stopping && !r.closed) {
       const t0 = process.hrtime.bigint()
       let kind
@@ -133,6 +156,7 @@ function main() {
         r.stats.recvMs.push(Number(process.hrtime.bigint() - t0) / 1e6)
         r.stats.received += 1
         lastVideoAt = gotAt
+        sawVideo = true
         const v = koffi.decode(r.framePtr, types.VideoFrame)
         const rgb = v.FourCC === NDI.FOURCC_RGBA || v.FourCC === NDI.FOURCC_RGBX
         if (r.closed || r.encoding >= MAX_ENCODES || !rgb || !v.p_data || v.xres <= 0 || v.yres <= 0) {
@@ -151,9 +175,20 @@ function main() {
         fn.recvFreeVideo(r.instance, r.framePtr)
         if (r.state !== 'live') setState(r, 'live')
       } else if (kind === NDI.FRAME_ERROR) {
-        setState(r, 'stalled', 'the connection to the source was lost')
+        setState(r, 'stalled', stalledDetail({ connections: connectionsOf(r), silentMs: Date.now() - lastVideoAt, ...place() }))
+      } else if (!sawVideo) {
+        // No picture has EVER arrived. Sitting on "connecting" with an empty detail is
+        // what this lane used to do for ever; after NO_PICTURE_MS it must say which of
+        // the two failures it is, and keep saying it — the answer can still change
+        // (a sender that comes up late, a link that opens).
+        const now = Date.now()
+        if (now >= nextDiagnosisAt) {
+          nextDiagnosisAt = now + NO_PICTURE_MS
+          const detail = noPictureDetail({ connections: connectionsOf(r), waitedMs: now - startedAt, afterMs: NO_PICTURE_MS, ...place() })
+          if (detail) setState(r, 'connecting', detail)
+        }
       } else if (Date.now() - lastVideoAt > STALL_AFTER_MS && r.state === 'live') {
-        setState(r, 'stalled', 'no picture for 3 s')
+        setState(r, 'stalled', stalledDetail({ connections: connectionsOf(r), silentMs: Date.now() - lastVideoAt, ...place() }))
       }
     }
     r.looping = false

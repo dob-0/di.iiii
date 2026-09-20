@@ -62,6 +62,29 @@ describe.skipIf(!koffi)('the NDI struct layouts', () => {
     expect(() => koffi.free(ptr)).not.toThrow()
   })
 
+  // Without this entry point a silent receiver cannot tell "never reached the sender"
+  // from "reached it and got no video" — the whole of ndi/diagnose.js rests on it.
+  // It is bound leniently, so this also pins that a runtime WITHOUT the symbol still
+  // binds and still receives; only the diagnosis goes missing.
+  it('declares recv_get_no_connections, and survives a runtime that lacks it', () => {
+    const { bindNdi } = require('./binding.js')
+    const asked = []
+    const libWith = { func: (signature) => { asked.push(signature); return () => 0 } }
+    const withIt = bindNdi(koffi, libWith)
+    expect(asked.some((sig) => sig.includes('NDIlib_recv_get_no_connections'))).toBe(true)
+    expect(typeof withIt.fn.recvNoConnections).toBe('function')
+
+    const libWithout = {
+      func: (signature) => {
+        if (signature.includes('NDIlib_recv_get_no_connections')) throw new Error('undefined symbol')
+        return () => 0
+      }
+    }
+    const without = bindNdi(koffi, libWithout)
+    expect(without.fn.recvNoConnections).toBeNull()
+    expect(typeof without.fn.recvCapture).toBe('function')
+  })
+
   it('spells the FourCC codes the way the header macro does', () => {
     // NDI_LIB_FOURCC('R','G','B','A') — little-endian packing, so 'R' is the low byte.
     expect(NDI.FOURCC_RGBA).toBe(0x41424752)

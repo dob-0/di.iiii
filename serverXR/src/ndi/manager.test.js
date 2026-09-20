@@ -27,6 +27,7 @@ class FakeChild extends EventEmitter {
   ready(version = 'NDI SDK TEST 6.3.2.0') { this.emit('message', { type: 'ready', version, path: '/fake/libndi.so.6' }) }
   fatal(reason = 'not-installed', how = 'install libndi, then restart di') { this.emit('message', { type: 'fatal', reason, how }) }
   sources(list) { this.emit('message', { type: 'sources', sources: list }) }
+  state(id, state, detail = '', source = null, address = '') { this.emit('message', { type: 'state', id, state, detail, source, address }) }
   frame(id, jpeg = Buffer.from('jpeg-bytes'), seq = 1) { this.emit('message', { type: 'frame', id, jpeg, width: 320, height: 180, seq }) }
   die(signal = 'SIGKILL') { this.connected = false; this.emit('exit', null, signal) }
   opens() { return this.sent.filter((m) => m.type === 'open') }
@@ -56,6 +57,43 @@ const build = (overrides = {}) => {
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 describe('the NDI manager and its child', () => {
+  // The two-machine defect (2026-09-20): `stats` said `state: "connecting", detail: ""`
+  // and nothing else, so nobody could tell WHICH address the runtime had been handed.
+  // Both now travel from the child, into stats, and out to every subscriber.
+  it('carries the reason and the dialled address from the child into stats', async () => {
+    const { manager, last } = build()
+    const seen = []
+    const sub = manager.subscribe({ name: 'td_out', onState: (s) => seen.push(s) })
+    last().ready()
+    const id = last().opens()[0].id
+    last().state(id, 'connecting', 'no connection to "AYLMO (td_out_windows)" at 192.168.15.53:5961 after 5 s', 'AYLMO (td_out_windows)', '192.168.15.53:5961')
+    await wait(10)
+
+    const r = manager.stats().receivers[0]
+    expect(r.state).toBe('connecting')
+    expect(r.detail).toContain('no connection')
+    expect(r.address).toBe('192.168.15.53:5961')
+    expect(r.source).toBe('AYLMO (td_out_windows)')
+    expect(seen.at(-1).address).toBe('192.168.15.53:5961')
+    expect(sub.receiver().address).toBe('192.168.15.53:5961')
+    sub.unsubscribe()
+  })
+
+  // A still that gives up must hand the route the reason, not just "no picture" — the
+  // 504 body is the only place a person standing at the rig ever sees it.
+  it('a timed-out still reports the state and the reason the child gave', async () => {
+    const { manager, last } = build()
+    const pending = manager.still({ name: 'td_out', waitMs: 120 })
+    await wait(10)
+    const id = last().opens()[0].id
+    last().ready()
+    last().state(id, 'connecting', 'no connection to "AYLMO (td_out_windows)" at 192.168.15.53:5961 after 5 s', 'AYLMO (td_out_windows)', '192.168.15.53:5961')
+    const result = await pending
+    expect(result.error).toBe('timeout')
+    expect(result.state).toBe('connecting')
+    expect(result.detail).toContain('192.168.15.53:5961')
+  })
+
   it('forks nothing until something is actually asked of it', async () => {
     const { manager, children } = build()
     expect(children).toHaveLength(0)
