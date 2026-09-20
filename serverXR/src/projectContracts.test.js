@@ -797,6 +797,41 @@ describe('project contracts', () => {
         const opsPayload = await opsResponse.json()
         expect(opsPayload.ops.filter((op) => op.opId === 'retry-op-fixed-id')).toHaveLength(1)
     })
+
+    // Regression test (docs/ai/known-fixes.md): project ids are global by
+    // design (resolveProjectContext / GET /api/projects/:projectId take no
+    // spaceId), so a title/slug that collides with a project in ANOTHER
+    // space — one the caller may not even be able to see — used to answer
+    // with a bare "Project already exists.", naming nothing. This proves the
+    // 409 still fires across spaces and that the body now names what
+    // actually happened.
+    it('names the collision when a project title/slug collides with one in a different space', async () => {
+        const server = await startServer()
+
+        const firstSpace = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Shared Name', slug: 'shared-name', source: 'studio-v3' })
+        })
+        expect(firstSpace.status).toBe(201)
+
+        const createSpaceResponse = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'Second Space', slug: 'second-space' })
+        })
+        expect(createSpaceResponse.status).toBe(201)
+
+        const collision = await fetch(`${server.baseUrl}/api/spaces/second-space/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Shared Name', slug: 'shared-name', source: 'studio-v3' })
+        })
+        expect(collision.status).toBe(409)
+        const collisionBody = await collision.json()
+        expect(collisionBody.error).toBe('that name is taken on this di.iiii — try another')
+        expect(collisionBody.error).not.toBe('Project already exists.')
+    })
 })
 
 // ── Shelves, states and the trash ────────────────────────────────────────────
