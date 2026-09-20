@@ -50,9 +50,28 @@ describe('what a surface draws', () => {
         expect(screen.getByText('ԳՈՌ')).toBeTruthy()
     })
 
-    it('falls back to a pattern only for the kinds that are meaningless without an address', () => {
+    it('falls back to a pattern for a URL kind with no address yet', () => {
         const { container } = render(<MapSourceView surface={surfaceOf({ kind: 'url', ref: '' })} />)
         expect(container.querySelector('.map-source-svg')).toBeTruthy()
+    })
+
+    it('shows the dim placeholder, not the bright test pattern, for a video with no file chosen yet', () => {
+        // The test pattern is a bright grid, meant to be seen and aligned
+        // against — the opposite of what should be on a wall while someone
+        // is mid-way through choosing a file. Regression: this used to fall
+        // into the same `!ref` branch as the empty test pattern.
+        const { container } = render(<MapSourceView surface={surfaceOf({ kind: 'video', ref: '' })} label="ԳՈՌ" />)
+        expect(container.querySelector('.map-source-svg')).toBeNull()
+        expect(container.querySelector('.map-source-placeholder')).toBeTruthy()
+        expect(screen.getByText('ԳՈՌ')).toBeTruthy()
+        expect(screen.getByText('no file yet')).toBeTruthy()
+    })
+
+    it('shows the dim placeholder, not the bright test pattern, for an image with no file chosen yet', () => {
+        const { container } = render(<MapSourceView surface={surfaceOf({ kind: 'image', ref: '' })} label="ԳՈՌ" />)
+        expect(container.querySelector('.map-source-svg')).toBeNull()
+        expect(container.querySelector('.map-source-placeholder')).toBeTruthy()
+        expect(screen.getByText('no file yet')).toBeTruthy()
     })
 
     it('holds a page surface as a card until it is asked to run', () => {

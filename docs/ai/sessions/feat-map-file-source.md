@@ -33,3 +33,27 @@ show machine runs unattended for hours, so nobody is there to reload it.
   fail without the fix (6 of the new tests, all the ones that assert a
   remount actually happens) before adding `useRetryingMedia`.
 - Known-fixes entry added: `docs/ai/known-fixes.md`.
+
+## 2026-09-20 — an empty Video/Image source stopped showing the bright test pattern
+
+A newcomer walk found: switch a surface's Source to Video or Image, and before
+a file is chosen, the surface keeps showing the white/bright test-pattern
+GRID — reads as broken, and puts a bright grid on a projector while someone is
+mid-way through picking a file.
+
+- `MapSourceView.jsx`'s fallback (`kind === 'test' || (!ref && ['url', 'video',
+  'image'].includes(kind))`) treated an empty video/image ref the same as an
+  empty test/url ref and drew the grid pattern. Carved video/image out of
+  that condition: with no ref, they now render the same dim
+  `MapSourcePlaceholder` every other empty source already uses (`no Picture
+  Out chosen`, `no project chosen`) — `label` is the surface's own name
+  (already threaded in from `MapStage.jsx`), `detail` is `no file yet`.
+  `url` keeps the test pattern unchanged — an empty web address is still
+  something to align geometry against, same as before this change.
+- `MapSourcePlaceholder`'s background (`repeating-linear-gradient` of
+  `--di-surface-2`/`--di-surface-4`, both near-black) is dim on the wall,
+  matching the precedent other empty states already set — not a new
+  behaviour, just applied here too.
+- Tests added to `MapSourceView.test.jsx`: empty video and empty image each
+  assert no `.map-source-svg` (the test pattern), a `.map-source-placeholder`
+  is shown, and the `no file yet` text is present.
