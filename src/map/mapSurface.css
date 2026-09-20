@@ -183,6 +183,22 @@
 .map-source-frame { width: 100%; height: 100%; border: 0; background: var(--di-black); }
 .map-source-svg { width: 100%; height: 100%; display: block; }
 
+/* NEVER WHITE ON A PROJECTOR. This is the same rule, and the same palette, as
+   the identification card in mapTestPattern.jsx — deep amber on near-black,
+   nothing above ~38% luminance — and for the same reason: a rig is two
+   machines, so whatever an unfinished surface draws is ALREADY on the wall
+   while somebody is still deciding what it shows.
+
+   It was `--ui-text-primary`, which resolves to pure #ffffff, and measured
+   21,394 near-white pixels on the real /out page at 1440x900 — every state
+   this placeholder has ("no file yet", "no project chosen", "waiting to
+   start", "camera unavailable") put the surface's NAME on the projector in
+   white. The card fix of 2026-09-20 caught the bright alignment GRID and left
+   this, its neighbour, untouched. Found by the zero-near-white measurement on
+   the NDI® surface, which draws the same placeholder.
+
+   The detail line is dimmer than the name, as before — the name is what
+   somebody aiming one of several surfaces reads from a ladder. */
 .map-source-placeholder {
     width: 100%;
     height: 100%;
@@ -191,14 +207,14 @@
     align-items: center;
     justify-content: center;
     gap: var(--di-space-1);
-    background: repeating-linear-gradient(45deg, var(--di-surface-2) 0 18px, var(--di-surface-4) 18px 36px);
-    color: var(--ui-text-primary);
+    background: repeating-linear-gradient(45deg, #0a0704 0 18px, #120c06 18px 36px);
+    color: #8f5a17;
     font-family: var(--di-mono);
     text-align: center;
     padding: var(--di-space-2);
 }
 .map-source-placeholder-label { line-height: 1.1; }
-.map-source-placeholder-detail { color: var(--ui-text-muted); overflow-wrap: anywhere; line-height: 1.3; }
+.map-source-placeholder-detail { color: #5c3a0f; overflow-wrap: anywhere; line-height: 1.3; }
 
 /* --- the handles ----------------------------------------------------- */
 

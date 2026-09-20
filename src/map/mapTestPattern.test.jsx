@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
 
@@ -87,5 +90,57 @@ describe('the alignment grid', () => {
         // never heard of, is better off with a grid than with nothing.
         const { container } = render(<MapTestPattern pattern="not-a-pattern" width={640} height={360} />)
         expect(inksOf(container).some(({ value }) => value.toLowerCase() === '#ffffff')).toBe(true)
+    })
+})
+
+// The placeholder is the card's neighbour and was its blind spot. It is what
+// EVERY unfinished surface draws that is not a test pattern — "no file yet",
+// "no project chosen", "waiting to start", "camera unavailable", and now the
+// NDI® states — and until 2026-09-20 its ink was `--ui-text-primary`, which
+// resolves to pure #ffffff. Measured on the real /out page at 1440x900 it put
+// 21,394 near-white pixels on the projector, printing the surface's NAME in
+// white while somebody was still deciding what it shows. The card fix of the
+// same morning caught the bright alignment grid and walked past this.
+//
+// The colours are read out of the stylesheet as text, because jsdom applies no
+// stylesheet and a computed-style assertion here would be green on an empty
+// string. It is a coarse check and it is the one that would have caught this.
+describe('the dim placeholder every unfinished surface draws', () => {
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'mapSurface.css'), 'utf8')
+    const block = (selector) => {
+        const at = css.indexOf(`${selector} {`) >= 0 ? css.indexOf(`${selector} {`) : css.indexOf(`${selector}{`)
+        expect(at, `${selector} is gone from mapSurface.css`).toBeGreaterThan(-1)
+        return css.slice(at, css.indexOf('}', at))
+    }
+
+    it('names its own colours rather than borrowing the interface’s white', () => {
+        // A token is the failure mode: `--ui-text-primary` reads as a sensible
+        // choice and is #ffffff. The wall's colours are stated here, in hex,
+        // where a person reading this file can see what will be on a projector.
+        const ground = block('.map-source-placeholder')
+        expect(ground).not.toMatch(/--ui-text/)
+        expect(block('.map-source-placeholder-detail')).not.toMatch(/--ui-text/)
+    })
+
+    it('draws nothing above 40% brightness, and nothing near white', () => {
+        const hexes = [
+            ...block('.map-source-placeholder').matchAll(/#[0-9a-f]{6}\b/gi),
+            ...block('.map-source-placeholder-label').matchAll(/#[0-9a-f]{6}\b/gi),
+            ...block('.map-source-placeholder-detail').matchAll(/#[0-9a-f]{6}\b/gi)
+        ].map(([hex]) => hex)
+        expect(hexes.length).toBeGreaterThan(2)
+        hexes.forEach((hex) => {
+            const channels = CHANNELS(hex)
+            expect(luma(channels), `${hex} is too bright for a wall`).toBeLessThan(0.4 * 255)
+            expect(Math.min(...channels), `${hex} reads as near-white`).toBeLessThanOrEqual(200)
+        })
+    })
+
+    it('is warm, like the card — more red in every ink than blue', () => {
+        const hexes = [...css.slice(css.indexOf('.map-source-placeholder {')).slice(0, 900).matchAll(/#[0-9a-f]{6}\b/gi)].map(([hex]) => hex)
+        hexes.forEach((hex) => {
+            const [r, , b] = CHANNELS(hex)
+            expect(r, `${hex} is not a warm colour`).toBeGreaterThanOrEqual(b)
+        })
     })
 })
