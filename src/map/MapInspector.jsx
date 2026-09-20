@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { TEST_PATTERNS } from './mapTestPattern.jsx'
+import { DEFAULT_TEST_PATTERN, TEST_PATTERNS } from './mapTestPattern.jsx'
 import { streamInputOptions, streamInputStatus } from './mapMachines.js'
 import { uploadProjectAsset } from '../project/services/projectsApi.js'
 
@@ -63,7 +63,7 @@ export default function MapInspector({
             {surface.source.kind === 'test' ? (
                 <label className="map-field">
                     <span>Pattern</span>
-                    <select value={surface.source.ref || 'grid'} onChange={(event) => setSource('test', event.target.value)}>
+                    <select value={surface.source.ref || DEFAULT_TEST_PATTERN} onChange={(event) => setSource('test', event.target.value)}>
                         {TEST_PATTERNS.map((pattern) => <option key={pattern.id} value={pattern.id}>{pattern.label}</option>)}
                     </select>
                 </label>

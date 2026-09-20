@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useProjectStore } from '../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
-import { generateId } from '../shared/projectSchema.js'
+import { defaultMappingSurface, generateId } from '../shared/projectSchema.js'
 import { recallCueLighting } from './lightingLink.js'
 
 // Both map routes talk to one project document through the ordinary op layer,
@@ -61,9 +61,17 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         // is copying, `id` included — kept the ORIGINAL id, so
         // createMappingSurface saw an id that already existed and dropped the
         // op on the floor. The button did nothing at all, silently.
+        // The source is written out rather than left to the normalizer's
+        // empty `ref`, so what a new surface shows is a fact in the document
+        // every machine reads the same way — the dim identification card, not
+        // the bright alignment grid. Duplicate passes a whole surface and so
+        // overrides it with the original's own source, which is correct.
         addSurface: (patch = {}) => {
             const id = generateId('srf')
-            applyOps({ type: 'createMappingSurface', payload: { surface: { name: '', ...patch, id } } })
+            applyOps({
+                type: 'createMappingSurface',
+                payload: { surface: { name: '', source: { ...defaultMappingSurface.source }, ...patch, id } }
+            })
             return id
         },
         updateSurface: (surfaceId, patch) => {

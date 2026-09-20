@@ -6,7 +6,7 @@ vi.mock('../services/apiClient.js', () => ({
 }))
 
 import MapSourceView, { resolveMapSourceRef } from './MapSourceView.jsx'
-import { normalizeMappingSurface } from '../shared/projectSchema.js'
+import { applyProjectOps, defaultMappingSurface, normalizeMappingSurface } from '../shared/projectSchema.js'
 
 const surfaceOf = (source, patch = {}) => normalizeMappingSurface({
     id: 's1', name: 'ԳՈՌ', resolution: [640, 360], source, ...patch
@@ -251,3 +251,69 @@ describe('a brought-in file that fails to load retries itself', () => {
     })
 })
 
+// A newly added surface is the LAST place white survived on this rig. The
+// desk and the wall are two machines: the moment somebody presses Add, what
+// the new surface draws is already on the projector, in front of whoever is
+// in the room. The owner's standing rule is that white never goes there.
+//
+// These go through the real creation path — the same op `useMapDocument`'s
+// `addSurface` sends — rather than hand-building a surface, because the
+// default lives in three places that have to agree (the schema's
+// `defaultMappingSurface`, the op's normalizer, and this view's fallback for
+// an empty `ref`).
+describe('what a brand-new surface draws', () => {
+    const createdSurface = (payload) => {
+        const document = applyProjectOps({}, [
+            { type: 'createMappingSurface', payload: { surface: payload } }
+        ])
+        return document.mappingState.surfaces[0]
+    }
+
+    const whiteInk = (container) => Array.from(container.querySelectorAll('svg *'))
+        .flatMap((node) => ['fill', 'stroke'].map((attribute) => node.getAttribute(attribute)))
+        .filter((value) => value && /^#(fff|ffffff)$/i.test(value.trim()))
+
+    it('shows the dim card, not the bright grid, the way the desk creates it', () => {
+        const surface = createdSurface({
+            id: 'srf-1',
+            name: 'ԳՈՌ',
+            resolution: [640, 360],
+            source: { ...defaultMappingSurface.source }
+        })
+        const { container } = render(<MapSourceView surface={surface} label={surface.name} />)
+        expect(container.querySelector('.map-source-svg')).toBeTruthy()
+        expect(whiteInk(container)).toEqual([])
+        expect(screen.getByText('ԳՈՌ')).toBeTruthy()
+    })
+
+    it('shows the dim card for a surface created with no source at all', () => {
+        // Anything that POSTs `createMappingSurface` without naming a source
+        // — the HTTP op route, an import, an older desk — normalizes to an
+        // empty `ref`, and that must mean the card too, not the grid.
+        const surface = createdSurface({ id: 'srf-2', name: 'ԳՈՌ', resolution: [640, 360] })
+        expect(surface.source).toEqual({ kind: 'test', ref: '' })
+        const { container } = render(<MapSourceView surface={surface} label={surface.name} />)
+        expect(whiteInk(container)).toEqual([])
+    })
+
+    it('names itself, so two fresh surfaces can be told apart on the wall', () => {
+        const one = render(<MapSourceView surface={surfaceOf({ kind: 'test', ref: 'card' })} label="ԳՈՌ 1" />)
+        const two = render(<MapSourceView surface={surfaceOf({ kind: 'test', ref: 'card' })} label="ԳՈՌ 2" />)
+        expect(one.container.querySelector('text').textContent).toBe('ԳՈՌ 1')
+        expect(two.container.querySelector('text').textContent).toBe('ԳՈՌ 2')
+    })
+
+    it('still draws the bright grid once somebody chooses it on purpose', () => {
+        // The grid is a real tool — tracing geometry onto paper in a room
+        // that only just goes dark. Dimming it would break the job the
+        // mapper exists for. It stays exactly as it was, one choice away.
+        const surface = createdSurface({
+            id: 'srf-3',
+            name: 'ԳՈՌ',
+            resolution: [640, 360],
+            source: { kind: 'test', ref: 'grid' }
+        })
+        const { container } = render(<MapSourceView surface={surface} label={surface.name} />)
+        expect(whiteInk(container).length).toBeGreaterThan(0)
+    })
+})
