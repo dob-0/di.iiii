@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { DEFAULT_TEST_PATTERN, TEST_PATTERNS } from './mapTestPattern.jsx'
-import { streamInputOptions, streamInputStatus } from './mapMachines.js'
+import { ndiSourceOptions, ndiSourceStatus, streamInputOptions, streamInputStatus } from './mapMachines.js'
 import { uploadProjectAsset } from '../project/services/projectsApi.js'
 
 const SOURCE_KINDS = [
@@ -11,6 +11,7 @@ const SOURCE_KINDS = [
     { id: 'image', label: 'Image' },
     { id: 'camera', label: 'Camera' },
     { id: 'stream', label: 'Stream (input by name)' },
+    { id: 'ndi', label: 'NDI (source by name)' },
     { id: 'network', label: 'Pictures' },
     { id: 'colour', label: 'Colour' }
 ]
@@ -103,6 +104,10 @@ export default function MapInspector({
                     <MapStreamPicker value={surface.source.ref} machines={machines} onChange={(name) => setSource('stream', name)} />
                     <MapEffectFields effect={surface.effect} onChange={(patch) => onUpdate(surface.id, { effect: { ...surface.effect, ...patch } })} />
                 </>
+            ) : null}
+
+            {surface.source.kind === 'ndi' ? (
+                <MapNdiPicker value={surface.source.ref} machines={machines} onChange={(name) => setSource('ndi', name)} />
             ) : null}
 
             {['video', 'image'].includes(surface.source.kind) ? (
@@ -239,6 +244,51 @@ function MapStreamPicker({ value, machines = [], onChange }) {
             </datalist>
             <p className={`map-hint${warn ? ' is-warning' : ''}`}>{note}</p>
         </label>
+    )
+}
+
+// An NDI® source is named, not picked: the receiver runs on whichever machine
+// shows the surface, and an NDI address is chosen by the SENDER — it advertises
+// whichever of its own interfaces it likes, so nothing about an address written
+// down here would still be true on the machine that draws. The suggestions are
+// every source any machine on this desk can see, each with the machines that
+// see it, and under the field the desk says who can show this name — so a wrong
+// name is read here, not discovered as a black rectangle on the wall.
+//
+// THE LINK AND THE LINE ARE NOT DECORATION. di.iiii never ships the NDI
+// runtime: it is proprietary, its licence cannot be passed on under the AGPL,
+// and the person installs it themselves from ndi.video. The attribution and
+// the link are the conditions under which we may name NDI at all — see
+// docs/architecture/NDI.md. Do not remove them, and never put "NDI" in the
+// name of a di.iiii feature: it describes what we speak, not what we are.
+function MapNdiPicker({ value, machines = [], onChange }) {
+    const options = ndiSourceOptions(machines)
+    const status = ndiSourceStatus(machines, value)
+    let note = 'Found by name on the machine that shows it — part of the name is enough.'
+    let warn = false
+    if (value && status.found.length) note = `On ${status.found.join(', ')}.${status.missing.length ? ` Not on ${status.missing.join(', ')}.` : ''}`
+    else if (value && status.known) { note = `No machine here can see a source called “${value}”.`; warn = true }
+    return (
+        <>
+            <label className="map-field">
+                <span>NDI source name</span>
+                <input
+                    type="text"
+                    list="map-ndi-sources"
+                    value={value}
+                    placeholder="AYLMO (td_out_windows)"
+                    onChange={(event) => onChange(event.target.value)}
+                />
+                <datalist id="map-ndi-sources">
+                    {options.map((option) => <option key={option.label} value={option.label}>{option.on.join(', ')}</option>)}
+                </datalist>
+                <p className={`map-hint${warn ? ' is-warning' : ''}`}>{note}</p>
+            </label>
+            <p className="map-hint">
+                Install the NDI runtime from <a href="https://ndi.video" target="_blank" rel="noreferrer">ndi.video</a> on the machine that shows this.
+                {' '}NDI® is a registered trademark of Vizrt NDI AB.
+            </p>
+        </>
     )
 }
 

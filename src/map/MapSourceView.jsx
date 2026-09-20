@@ -7,6 +7,8 @@ import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
 import { PREVIEW_READY_MESSAGE } from '../utils/previewMode.js'
 import { mountRelativeApiUrl } from '../services/assetSources.js'
 import { useRetryingMedia } from './useRetryingMedia.js'
+import { pickByLabel } from '../shared/nameMatch.js'
+import { ndiStreamUrl, ndiTrouble } from './ndiLink.js'
 
 // A brought-in file's ref is recorded exactly as the manifest stores it — a
 // project-relative `/api/projects/.../assets/...` path, written once and read
@@ -72,6 +74,10 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
 
     if (kind === 'stream') {
         return <MapStreamSource name={ref} effect={surface.effect} label={label} width={width} height={height} />
+    }
+
+    if (kind === 'ndi') {
+        return <MapNdiSource name={ref} label={label} width={width} height={height} />
     }
 
     // Only the kinds that are MEANINGLESS without a reference fall back to a
@@ -150,18 +156,15 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
 // at an input on another — which is the whole job of a stage machine.
 //
 // A stream surface stores what the input is CALLED instead — "OBS Virtual
-// Camera" for an NDI/capture/Spout bridge, "Cam Link" for a capture card — and
-// each machine resolves that to its own device when it draws. The match is a
-// case-insensitive "label contains", so "obs" is enough. Labels are only
-// readable after permission, hence the throwaway stream opened first.
-export const matchStreamDevice = (devices = [], name = '') => {
-    const wanted = String(name || '').trim().toLowerCase()
-    if (!wanted) return null
-    const inputs = devices.filter((device) => device.kind === 'videoinput')
-    return inputs.find((device) => String(device.label || '').toLowerCase() === wanted)
-        || inputs.find((device) => String(device.label || '').toLowerCase().includes(wanted))
-        || null
-}
+// Camera" for an NDI®/capture/Spout bridge, "Cam Link" for a capture card —
+// and each machine resolves that to its own device when it draws. The match is
+// src/shared/nameMatch.js, shared with the NDI source and with the desk's own
+// warning, so all three agree by construction. Labels are only readable after
+// permission, hence the throwaway stream opened first.
+export const matchStreamDevice = (devices = [], name = '') => pickByLabel(
+    (Array.isArray(devices) ? devices : []).filter((device) => device.kind === 'videoinput'),
+    name
+)
 
 function MapStreamSource({ name, effect = null, label, width, height }) {
     const [state, setState] = useState({ deviceId: '', problem: '' })
@@ -208,6 +211,86 @@ function MapStreamSource({ name, effect = null, label, width, height }) {
     if (state.problem) return <MapSourcePlaceholder label={label} detail={state.problem} width={width} height={height} />
     if (!state.deviceId) return <MapSourcePlaceholder label={label} detail={`looking for "${name}"…`} width={width} height={height} />
     return <MapCameraSource deviceId={state.deviceId} effect={effect} label={label} width={width} height={height} />
+}
+
+// NDI® in, on the machine that draws. The same problem the `stream` surface
+// solves, one chain shorter.
+//
+// A `stream` surface reaches a TouchDesigner output through OBS + DistroAV +
+// "OBS Virtual Camera": four moving parts and a colour conversion in the
+// middle, all of which have to be running before the wall has a picture. An
+// `ndi` surface names the NDI source itself and the machine's own serverXR
+// receives it (serverXR/src/ndi), hands over JPEG frames as
+// multipart/x-mixed-replace, and this draws them in an <img>.
+//
+// The ref is the source's NAME — "AYLMO (td_out_windows)", or any fragment of
+// it — for exactly the reason the stream surface stores a label: the mapping
+// is made on the desk and resolved on the wall's machine, and an address
+// belongs to whichever interface the SENDER decided to advertise that night.
+//
+// WHY THE PROBE. The receiver only exists on a LOCAL di.iiii; every /ndi route
+// is behind requireLocalRuntime. A hosted tier answers its own index.html to
+// anything it does not know, so a 200 is not an answer — ndiLink.js checks the
+// content type, the same guard the lighting desk needed.
+//
+// NOTHING HERE EVER GOES WHITE. Until a frame has painted the surface shows
+// the dim placeholder every other unfinished source shows, and what it says is
+// the server's own sentence: the `how` from /ndi/api/summary when no runtime
+// is installed, and the receiver's own `detail` — which names the address it
+// dialled and whether the session was ever opened — when a source resolved and
+// then stayed silent.
+const NDI_RECHECK_MS = 4000
+
+function MapNdiSource({ name, label, width, height }) {
+    // A source that appears later — the sender started after the page, a
+    // machine rebooted mid-show — comes back without a reload: the <img> is
+    // remounted on the same schedule every brought-in file uses.
+    const { attempt, onError, onLoaded } = useRetryingMedia(`${name}|${width}`)
+    const [painted, setPainted] = useState(false)
+    const [link, setLink] = useState({ ready: false, detail: 'looking for it…' })
+
+    // A different source is a different question: stop claiming the last one's
+    // picture while the new one is still being found.
+    useEffect(() => { setPainted(false) }, [name])
+
+    useEffect(() => {
+        if (!name || painted) return undefined
+        let cancelled = false
+        let timer = null
+        const ask = () => {
+            ndiTrouble({ name })
+                .then((result) => {
+                    if (cancelled) return
+                    setLink({ ready: result.ready, detail: result.detail })
+                    // A hosted di.iiii will never grow a receiver; everything
+                    // else is worth asking again, because a person installing
+                    // the runtime or starting a sender must not have to reload.
+                    if (!result.settled) timer = setTimeout(ask, NDI_RECHECK_MS)
+                })
+                .catch(() => { if (!cancelled) timer = setTimeout(ask, NDI_RECHECK_MS) })
+        }
+        ask()
+        return () => { cancelled = true; clearTimeout(timer) }
+    }, [name, painted])
+
+    if (!name) return <MapSourcePlaceholder label={label} detail="no NDI source named" width={width} height={height} />
+
+    return (
+        <>
+            {link.ready ? (
+                <img
+                    key={attempt}
+                    className={painted ? 'map-source-media' : 'map-source-hidden-video'}
+                    src={ndiStreamUrl({ name, maxWidth: width })}
+                    alt=""
+                    draggable="false"
+                    onError={() => { setPainted(false); onError() }}
+                    onLoad={() => { setPainted(true); onLoaded() }}
+                />
+            ) : null}
+            {painted ? null : <MapSourcePlaceholder label={label} detail={link.detail} width={width} height={height} />}
+        </>
+    )
 }
 
 // A brought-in image. `key={attempt}` is what actually retries: the src stays

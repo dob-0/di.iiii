@@ -1,9 +1,8 @@
 # NDI in di.iiii
 
-**Status: step 1 of the build order — the server side only.** The routes below work on a
-local install today. Nothing in the editor mentions NDI yet: there is no `ndi` source
-kind, no picker, no schema change. A person can point an `image` surface at the MJPEG
-route by hand (see *Trying it*), and that is the whole user-facing story for now.
+**Status: steps 1–3 of the build order.** The server receives (step 1), a surface can
+name an NDI source and the machines on a desk report the ones they can see (steps 2–3).
+Still to come: one WebSocket for many inputs (step 4), and NDI out (steps 6–8).
 
 Design and build order: `~/work/di-atlas/decisions/2026-09-20-native-ndi.md`.
 
@@ -71,6 +70,86 @@ browser <--MJPEG--> serverXR (parent)  <--IPC: JPEG buffers-->  forked child
   finder itself discovered — exact case-insensitive first, then "contains", the same rule
   as `matchStreamDevice` in `src/map/MapSourceView.jsx`. An address from a request is
   never dialled: without that rule this lane would be a connect-anywhere relay.
+
+## The surface — a source kind named `ndi`
+
+A projection surface's source is `{ kind, ref }`, and for `ndi` the **ref is the source's
+NAME** — `AYLMO (td_out_windows)`, or any fragment of it. Matching is exact
+case-insensitive first, then "contains", so `td_out` is enough.
+
+**Why a name and not an address.** The mapping is made on the desk and resolved on the
+machine that draws the wall, and those are different machines on a rig. An NDI address is
+chosen by the SENDER — it advertises whichever of its own interfaces it likes, and on a
+machine with a cable, a wifi and a tailnet that choice changes between nights. A name
+survives it. This is the same model the `stream` surface already uses for a camera label,
+for the same reason (a device id belongs to one browser profile on one machine).
+
+**One matching rule, three callers.** `src/shared/nameMatch.js` (`pickByName`,
+`pickByLabel`) is the rule; `shared/nameMatch.cjs` is its CJS twin for serverXR, and
+`src/shared/nameMatch.test.js` runs both over one table so they cannot drift. The wall
+(`matchStreamDevice`, `MapNdiSource`), the desk's warning (`inputOnMachine`,
+`ndiOnMachine`) and the server (`serverXR/src/ndi/names.js`) all go through it. It is two
+files rather than one because serverXR is CommonJS and Vite's dev server hands a local
+`.cjs` to the browser untransformed — `vite build` bundles one fine, `vite dev` does not
+(checked 2026-09-20).
+
+### What the surface says when there is no picture
+
+`MapNdiSource` probes `/ndi/api/summary` the way `lightingLink.js` probes the lighting
+desk — **200 AND `content-type: application/json`**, because a hosted tier serves the
+app's own index.html for every address it does not know. Then it draws
+`/ndi/in.mjpg?name=…&w=…` into an `<img>`, through `useRetryingMedia`, so a sender that
+starts after the page is picked up with no reload.
+
+Until a frame paints, the surface shows the same dim placeholder every unfinished source
+shows — never black, never white — and what it says is **the server's own sentence**:
+
+| State | What the surface says |
+| --- | --- |
+| the probe has not answered | `looking for it…` |
+| the /ndi routes 404 (a hosted di.iiii) | `this di.iiii cannot receive NDI` — and it stops asking |
+| the runtime is not installed | `NDI is not installed on this machine` — then a dash and the `how` that `/ndi/api/summary` returns, verbatim |
+| the finder has never seen that name | `no NDI source called “…” on this network` |
+| a source resolved and stayed silent | the receiver's own `detail` — which names the address it dialled and says whether the session was ever opened |
+
+There is deliberately no second vocabulary for any of these. `ndiLink.js` is the one place
+that turns a refusal into a sentence, and it repeats what the server said rather than
+paraphrasing it — a paraphrase would lose the address, and the address is the whole story
+on a machine with three interfaces.
+
+## The machines know their NDI
+
+`readMachineDevices` (`src/project/tops/machineDevices.js`) appends one device of kind
+`ndi` per source the machine's own serverXR can see. The probe has a 1.5 s leash and
+swallows every failure: **a machine with no NDI reports nothing, and nothing is the
+ordinary case.** Those entries travel on the presence message every machine already
+sends, so the desk can answer "can the machine that draws the wall show this?" before it
+is a black rectangle in another room — `ndiSourceOptions` fills the picker's datalist,
+`ndiSourceStatus` writes the line under it, and `unresolvedInputs` puts a warning in the
+Machines section for a name no machine can resolve.
+
+The hub's `DEVICE_KINDS` gained `ndi`, and **the device cap is now per kind**
+(`MAX_DEVICES = 32` each, `MAX_DEVICES_TOTAL = 96`). It was one shared ceiling of 32, and
+a festival LAN advertising thirty sources would have pushed out whatever came after them
+— which, since `readMachineDevices` appends screens before NDI, would have been the panel
+sizes the desk lays a wall out from.
+
+### The mixed-version trap
+
+`MAPPING_SOURCE_KINDS` is a closed list and `normalizeMappingSurface` rewrites a kind it
+does not know back to the default. So on a rig where the desk has `ndi` and the wall does
+not, the first write from the old side turns the surface into a test pattern and keeps
+only the ref. **Both machines have to be on a build that has the kind.** (An unknown
+*ref* survives byte-identical, which is why the dim identification card was added as a ref
+and not a kind.) Asserted in `src/map/mappingState.test.js`.
+
+## Attribution — a licence condition, not decoration
+
+Wherever a person picks NDI in the product, two things appear beside the picker: a link to
+<https://ndi.video> and the line **NDI® is a registered trademark of Vizrt NDI AB**. They
+are the terms on which we may name NDI at all, given that we never ship its runtime.
+`MapInspector.test.jsx` guards both. Never put "NDI" in the name of a di.iiii feature — it
+describes what we speak, not what we are.
 
 ## Routes
 
@@ -187,8 +266,11 @@ lifetime problem in `recvCreate`.
 
 ## Not verified
 
-macOS and Linux library lookup (written from the headers, never run); anything in a
-browser — no di.iiii surface has been pointed at these routes yet.
+macOS and Linux library lookup (written from the headers, never run). **A live NDI
+picture in a browser: still nothing.** Steps 2 and 3 were built and seen on aylmo, which
+has no NDI runtime — so what has actually been looked at is every state in the table
+above EXCEPT a frame arriving. The `<img>` path, the frame rate it can hold, and whether
+`load` fires per part on a multipart stream are all unproven in a real browser.
 
 **NDI across two machines is still not proven.** On 2026-09-20 di.iiii on `win`
 discovered both of aylmo's TouchDesigner senders across the network (with

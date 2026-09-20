@@ -5,8 +5,38 @@
 // machine that never has shows "Camera 1". Screens come from the Window
 // Management API when that permission is ALREADY granted, and otherwise from
 // window.screen: the one this page is on, which on a kiosk is the projector.
+//
+// NDI® sources are the odd one out: they are not this machine's hardware, they
+// are what this machine's own serverXR can SEE on the network. They belong
+// here anyway, because the question the desk asks is the same one — "can the
+// machine that draws the wall show the thing this surface names?" — and the
+// answer travels on the same presence message.
+
+import { fetchNdiSources } from '../../map/ndiLink.js'
 
 const KIND = { videoinput: 'camera', audioinput: 'mic', audiooutput: 'speaker' }
+
+// A machine with no NDI runtime must report NOTHING and take no time doing it.
+// The probe is the last thing a page does before saying hello, it runs on every
+// devicechange, and a hosted tier answers 404 to all of it — so it gets a short
+// leash and every failure is swallowed. Silence here is the ordinary case.
+const NDI_TIMEOUT_MS = 1500
+
+const readNdiSources = async () => {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null
+    const timer = setTimeout(() => controller?.abort(), NDI_TIMEOUT_MS)
+    try {
+        const sources = await fetchNdiSources({ signal: controller?.signal })
+        return sources
+            .map((source) => String(source?.name || '').trim())
+            .filter(Boolean)
+            .map((name) => ({ kind: 'ndi', id: name, label: name }))
+    } catch {
+        return []
+    } finally {
+        clearTimeout(timer)
+    }
+}
 
 export const readMachineDevices = async () => {
     const devices = []
@@ -47,7 +77,7 @@ export const readMachineDevices = async () => {
         const ratio = globalThis.devicePixelRatio || 1
         screens = [{ kind: 'screen', id: 'screen-0', label: 'Screen', width: Math.round(globalThis.screen.width * ratio), height: Math.round(globalThis.screen.height * ratio) }]
     }
-    return [...tidyDevices(devices), ...(screens || [])]
+    return [...tidyDevices(devices), ...(screens || []), ...(await readNdiSources())]
 }
 
 /**

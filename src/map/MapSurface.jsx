@@ -10,7 +10,7 @@ import { listProjects } from '../project/services/projectsApi.js'
 import { transportWarning } from './transportCeiling.js'
 import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
-import { describeMachine, unresolvedStreams } from './mapMachines.js'
+import { describeMachine, unresolvedInputs } from './mapMachines.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import './mapSurface.css'
 
@@ -412,18 +412,27 @@ export default function MapSurface({ projectId, spaceId }) {
                                 <strong>{entry.name}</strong>
                                 <span>{[
                                     entry.screens.length ? entry.screens.join(' + ') : null,
-                                    entry.inputs.length ? `inputs: ${entry.inputs.join(', ')}` : 'no inputs named yet'
+                                    entry.inputs.length ? `inputs: ${entry.inputs.join(', ')}` : 'no inputs named yet',
+                                    // Only when there are some: most machines
+                                    // have no NDI runtime, and a permanent
+                                    // "no NDI" on every line would teach
+                                    // nobody anything.
+                                    entry.ndi.length ? `NDI: ${entry.ndi.join(', ')}` : null
                                 ].filter(Boolean).join(' · ')}</span>
                             </p>
                         )) : <p className="map-empty">Finding the machines showing this space…</p>}
                         {machines.length === 1 ? (
                             <p className="map-empty">Only this machine so far. Another appears while its output page is open.</p>
                         ) : null}
-                        {unresolvedStreams(surfaces, machines).map((entry) => (
+                        {unresolvedInputs(surfaces, machines).map((entry) => (
                             <p key={entry.id} className="map-machine is-warning" role="status">
-                                {entry.input
-                                    ? `“${entry.name}” wants an input called “${entry.input}” — no machine here has one.`
-                                    : `“${entry.name}” is a stream with no input named.`}
+                                {entry.kind === 'ndi'
+                                    ? (entry.input
+                                        ? `“${entry.name}” wants an NDI source called “${entry.input}” — no machine here can see one.`
+                                        : `“${entry.name}” is an NDI source with no name given.`)
+                                    : (entry.input
+                                        ? `“${entry.name}” wants an input called “${entry.input}” — no machine here has one.`
+                                        : `“${entry.name}” is a stream with no input named.`)}
                             </p>
                         ))}
                     </div>

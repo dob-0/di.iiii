@@ -1,18 +1,15 @@
-// Which NDI® source does a name mean? The same rule as `matchStreamDevice` in
-// src/map/MapSourceView.jsx (the `stream` source: a camera label resolved on the
-// machine that draws): exact, case-insensitive, first — then "contains", so
-// "td_out" is enough for "AYLMO (td_out_windows)". Reimplemented here in CJS because
-// the server cannot import the client; keep the two rules the same.
+// Which NDI® source does a name mean?
 //
-// `sources` is ONLY ever the finder's own list: the result is a source the NDI runtime
-// discovered, never a string a client supplied.
-const matchSourceName = (sources = [], name = '') => {
-  const wanted = String(name || '').trim().toLowerCase()
-  if (!wanted) return null
-  const list = Array.isArray(sources) ? sources : []
-  return list.find((source) => String(source?.name || '').toLowerCase() === wanted)
-    || list.find((source) => String(source?.name || '').toLowerCase().includes(wanted))
-    || null
-}
+// The rule itself now lives in shared/nameMatch.cjs, with its ESM twin at
+// src/shared/nameMatch.js — the same rule the `stream` surface uses to find a
+// camera by label, and the one the desk uses to warn that no machine can
+// resolve a name. Before that extraction there were three separate copies of
+// it and a comment in each asking the next person to keep them the same.
+//
+// `sources` is ONLY ever the finder's own list: the result is a source the NDI
+// runtime discovered, never a string a client supplied.
+const { pickByName } = require('../../../shared/nameMatch.cjs')
+
+const matchSourceName = (sources = [], name = '') => pickByName(sources, name, (source) => source && source.name)
 
 module.exports = { matchSourceName }
