@@ -79,7 +79,7 @@ const useMeasuredStage = (aspect) => {
 export default function MapSurface({ projectId, spaceId }) {
     const {
         document: doc, mapping, surfaces, syncState, applyOps,
-        addSurface, updateSurface, deleteSurface, reorderSurfaces, setOutput,
+        addSurface, updateSurface, deleteSurface, reorderSurfaces, setOutput, upsertAsset,
         addCue, updateCue, deleteCue, reorderCues, fireCue
     } = useMapDocument(projectId, { role: 'desk' })
     // Every machine showing this space, and what each one has: the wall is usually another computer.
@@ -492,11 +492,14 @@ export default function MapSurface({ projectId, spaceId }) {
                 <aside className="map-panel map-panel-right">
                     <MapInspector
                         surface={selected}
+                        projectId={projectId}
+                        assets={doc?.assets}
                         projectOptions={projectOptions}
                         pictureOutOptions={pictureOutOptions}
                         machines={machines}
                         clipboard={clipboard}
                         onUpdate={updateSurface}
+                        onUpsertAsset={upsertAsset}
                         onDelete={(surfaceId) => { deleteSurface(surfaceId); setSelectedId(null) }}
                         onDuplicate={onDuplicate}
                         onCopy={(surfaceId) => setClipboard(surfaces.find((surface) => surface.id === surfaceId) || null)}

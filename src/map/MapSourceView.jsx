@@ -5,6 +5,16 @@ import { useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
 import { PREVIEW_READY_MESSAGE } from '../utils/previewMode.js'
+import { mountRelativeApiUrl } from '../services/assetSources.js'
+import { useRetryingMedia } from './useRetryingMedia.js'
+
+// A brought-in file's ref is recorded exactly as the manifest stores it — a
+// project-relative `/api/projects/.../assets/...` path, written once and read
+// on whichever machine opens the mapping next. Each machine mounts it onto
+// its OWN deployed API base at render time; used verbatim, a path written on
+// one host 404s (or hits the SPA fallback) on every other one. A typed web
+// address is already absolute and is returned untouched.
+export const resolveMapSourceRef = (ref = '') => mountRelativeApiUrl(ref) || ref
 
 // One surface's content, unwarped. Everything here draws into a plain
 // width x height box at the surface's own resolution; the corner-pin above it
@@ -74,23 +84,11 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
     }
 
     if (kind === 'image') {
-        return <img className="map-source-media" src={ref} alt="" draggable="false" />
+        return <MapImageSource fileRef={ref} />
     }
 
     if (kind === 'video') {
-        // muted is not a style choice: a wall plays several things at once and
-        // autoplay is refused outright for anything with sound.
-        return (
-            <video
-                className="map-source-media"
-                src={ref}
-                autoPlay
-                loop
-                muted
-                playsInline
-                disablePictureInPicture
-            />
-        )
+        return <MapVideoSource fileRef={ref} />
     }
 
     if (kind === 'project' && !ref) {
@@ -188,6 +186,47 @@ function MapStreamSource({ name, effect = null, label, width, height }) {
     if (state.problem) return <MapSourcePlaceholder label={label} detail={state.problem} width={width} height={height} />
     if (!state.deviceId) return <MapSourcePlaceholder label={label} detail={`looking for "${name}"…`} width={width} height={height} />
     return <MapCameraSource deviceId={state.deviceId} effect={effect} label={label} width={width} height={height} />
+}
+
+// A brought-in image. `key={attempt}` is what actually retries: the src stays
+// the same content address, so only remounting the element makes the browser
+// ask again. Nothing else changes while it is failing — no placeholder, no
+// text — the element itself is what MapSourceView already shows for a source
+// that has not loaded yet, and a wall must never go white or gain new text.
+function MapImageSource({ fileRef }) {
+    const { attempt, onError, onLoaded } = useRetryingMedia(fileRef)
+    return (
+        <img
+            key={attempt}
+            className="map-source-media"
+            src={resolveMapSourceRef(fileRef)}
+            alt=""
+            draggable="false"
+            onError={onError}
+            onLoad={onLoaded}
+        />
+    )
+}
+
+// A brought-in video. Same retry as the image above. muted is not a style
+// choice: a wall plays several things at once and autoplay is refused
+// outright for anything with sound.
+function MapVideoSource({ fileRef }) {
+    const { attempt, onError, onLoaded } = useRetryingMedia(fileRef)
+    return (
+        <video
+            key={attempt}
+            className="map-source-media"
+            src={resolveMapSourceRef(fileRef)}
+            autoPlay
+            loop
+            muted
+            playsInline
+            disablePictureInPicture
+            onError={onError}
+            onLoadedData={onLoaded}
+        />
+    )
 }
 
 // A camera, on the wall. The room beside the work, or the work being made.

@@ -77,6 +77,16 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         reorderSurfaces: (surfaceIds) => applyOps({ type: 'reorderMappingSurfaces', payload: { surfaceIds } }),
         setOutput: (patch) => applyOps({ type: 'setMappingState', payload: { patch } }),
 
+        // A video/image surface can point at a file brought in from this
+        // machine. The bytes are uploaded straight to the project (same route
+        // Studio and the node editor use); this only records the manifest
+        // entry, through the same op layer every other change travels
+        // through, so it reaches every other desk and the output window too.
+        upsertAsset: (asset) => {
+            if (!asset?.id) return
+            applyOps({ type: 'upsertAsset', payload: { asset } })
+        },
+
         addCue: (patch = {}) => {
             const id = generateId('cue')
             applyOps({ type: 'createMappingCue', payload: { cue: { ...patch, id } } })

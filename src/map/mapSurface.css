@@ -308,30 +308,10 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
 .map-output.is-idle { cursor: none; }
 
 @media (max-width: 900px) {
-    /* Three rows, each sized outright, not "auto" read off its own content.
-       The panels' auto-sized track used to drift past their own max-height —
-       one measured 301px against a 253px cap on a 390×844 phone — which
-       squeezed the canvas row thin enough that its own drag-hint text spilled
-       past its box and overprinted the inspector below, while the panel's own
-       overflow spilled the other way, under the canvas (di.iiii known-fixes:
-       phone mapper overprint). A row fixed to the same size its panel clips
-       to leaves nothing to drift, so nothing can overprint a neighbour;
-       .map-panel's own overflow-y:auto (declared above) makes the excess a
-       normal in-place scroll behind that row's own border, never a spill.
-    */
-    .map-body {
-        grid-template-columns: 1fr;
-        grid-template-rows: 30vh minmax(34vh, 1fr) 30vh;
-        min-height: 0;
-    }
-    .map-panel { min-height: 0; }
+    .map-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; }
+    .map-panel { max-height: 30vh; }
     .map-panel-left { border-right: 0; border-bottom: 1px solid var(--ui-divider); }
     .map-panel-right { border-left: 0; border-top: 1px solid var(--ui-divider); }
-    /* The frame keeps the stage centred and letterboxed same as desktop, but
-       on a phone it must also clip its own overflow — the drag-hint sits
-       below the stage in normal flow, and without a hard boundary here it is
-       exactly what spilled into the inspector row before this fix. */
-    .map-frame { overflow: hidden; }
 
     /* Nothing here is narrower than a finger below this width, so the toolbar
        stops trying to fit on one line and wraps instead — every control stays
@@ -410,3 +390,13 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
 .map-machine { margin: 0 0 var(--di-space-2); display: flex; flex-direction: column; gap: var(--di-space-1); font-size: var(--di-text-2); color: var(--ui-text-muted); }
 .map-machine strong { color: var(--ui-text); font-weight: 500; }
 .map-machine.is-warning, .map-hint.is-warning { color: var(--ui-danger); text-align: left; }
+
+/* Bringing a video/image file in from this machine (MapInspector). Appended
+   at the end on purpose — another branch is editing this file's responsive
+   rules above. */
+.map-field-file { display: flex; flex-direction: column; gap: var(--di-space-1); }
+.map-field-file-input { display: none; }
+.map-field-file-notice { margin: 0; }
+.map-field-file-notice.is-error { color: var(--ui-danger); }
+.map-field-file-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--di-space-1); }
+.map-field-file-list .map-mini { display: block; width: 100%; text-align: left; }
