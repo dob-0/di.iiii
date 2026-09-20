@@ -1068,6 +1068,49 @@ describe('verbatim asset PUT (a follow carrying files)', () => {
         expect(await leftovers(server)).toEqual([])
     })
 
+    // The property the whole trust argument rests on: a key is for ONE space.
+    // The route itself never looks at the space — the blanket editor gate does,
+    // from the project's parent space — so this pins that wiring in place.
+    it('with auth on: a sync key for one space is refused on a project in another, and leaves nothing behind', async () => {
+        const admin = { Authorization: 'Bearer test-token' }
+        const server = await startServer({ extraEnv: { REQUIRE_AUTH: 'true' } })
+        const madeSpace = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...admin },
+            body: JSON.stringify({ slug: 'other-room', label: 'other-room', permanent: true })
+        })
+        expect(madeSpace.status).toBe(201)
+        const madeProject = await fetch(`${server.baseUrl}/api/spaces/other-room/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...admin },
+            body: JSON.stringify({ title: 'theirs', slug: 'theirs' })
+        })
+        expect(madeProject.status).toBe(201)
+        expect((await makeProject(server, 'ours', admin)).status).toBe(201)
+
+        const minted = await fetch(`${server.baseUrl}/api/spaces/main/sync-keys`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...admin },
+            body: JSON.stringify({ label: 'follows main only' })
+        })
+        expect(minted.status).toBe(201)
+        const keyForMain = { Authorization: `Bearer ${(await minted.json()).token}` }
+
+        const bytes = 'bytes that hash perfectly well'
+        const id = await sha256(bytes)
+        // the key works where it was minted — so the refusal below is scope, not a dead key
+        expect((await put(server, 'ours', id, bytes, { headers: keyForMain })).status).toBe(200)
+
+        const refused = await put(server, 'theirs', id, bytes, { headers: keyForMain })
+        expect(refused.status).toBe(403)
+
+        expect((await fetch(`${server.baseUrl}/api/projects/theirs/assets/${id}`, { headers: admin })).status).toBe(404)
+        expect((await fetch(`${server.baseUrl}/api/projects/theirs/assets/${id}/meta`, { headers: admin })).status).toBe(404)
+        expect(await readdir(path.join(server.dataRoot, 'spaces', 'other-room', 'blobs')).catch(() => [])).toEqual([])
+        expect(await readdir(path.join(server.dataRoot, 'spaces', 'other-room', 'projects', 'theirs', 'assets')).catch(() => [])).toEqual([])
+        expect(await leftovers(server)).toEqual([])
+    })
+
     it('with auth on: a sync key and the internal token may, an ordinary editor may not', async () => {
         const admin = { Authorization: 'Bearer test-token' }
         const editor = { Authorization: 'Bearer editor-token' }

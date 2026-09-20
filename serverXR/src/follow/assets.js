@@ -250,6 +250,15 @@ const createAssetChase = ({
                 signal: abort.signal,
                 servername: to.servername
             })
+            // No such ROUTE, as opposed to no such project: the install on the
+            // other end predates the verbatim PUT. Asking again will not teach
+            // it, so this is final and said in words a person can act on. (Our
+            // own route's 404 names the project, and that one IS worth a retry —
+            // the project is made on the next pass of the op loop.)
+            const noSuchProject = put.status === 404 && /project not found/i.test(String(put.json?.()?.error || ''))
+            if ((put.status === 404 || put.status === 405) && !noSuchProject) {
+                throw Object.assign(new Error(`${toName} is older and cannot receive files — update it`), { final: true })
+            }
             if (!put.ok) {
                 throw Object.assign(new Error(whyFromStatus(put.status, toName)), { final: FINAL_STATUSES.has(put.status) })
             }

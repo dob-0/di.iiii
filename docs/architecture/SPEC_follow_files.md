@@ -42,6 +42,9 @@ the document no longer names it → dropped silently; still named → reported.
   5 minutes. Answers that will not change (401/403/413/415/422, over the cap) fail at once and
   are not retried. A stubborn file goes to the back of the line.
 - **Stops with the follow** (`stop()` aborts the transfer in flight).
+- **Leftovers.** A process killed mid-transfer leaves `*.verbatim` / `follow-*.part` in the uploads
+  dir. Swept once at server start: only those two names, only that directory, only older than
+  one hour (`sweepStaleTempFiles`, `serverXR/src/verbatimAsset.js`).
 
 ## 4. The hash-pinned store route
 
@@ -78,7 +81,9 @@ Proof alone is not enough: anyone can hash an un-scrubbed photo and PUT it under
 sha256. So the route is for **replication only** (`mayStoreVerbatim`, `serverXR/src/index.js`):
 
 - a **per-space sync key** (`type: 'sync-key'`; editor on that one space — role and space scope
-  are enforced by the same `requireWriteRole('editor')` gate as the upload route), or
+  are enforced by the same `requireWriteRole('editor')` gate as the upload route;
+  a key for space A on a project in space B is 403 with nothing left on disk — pinned by
+  `projectContracts.test.js`), or
 - this server's **internal API token** (the follower writing to its own install; matched on the
   bearer header itself, because a `di up --guests` loopback request is promoted to the local
   owner before tokens are read), or
@@ -110,6 +115,8 @@ the key — the same key already writes ops to the space.
 
 ## 8. Compatibility
 
-An older host has no PUT route: a file added on the follower fails towards it with the host's
-answer (404, retried) and is reported; files from the host still arrive. An older follower
+An older host has no PUT route: a 404/405 on the PUT that is not our own "Project not found."
+is **final** — not retried — and `di follows` says `the other di.iiii is older and cannot receive
+files — update it`. Files from the host still arrive. (Our route's own project-404 IS retried:
+the project is made on the next pass of the op loop.) An older follower
 simply does not chase. An older CLI ignores `files`.

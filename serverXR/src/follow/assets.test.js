@@ -62,7 +62,7 @@ const twoMachines = () => {
             const { u, machine, id } = parse(url)
             calls.uploads.push({ to: u.origin, id, name: u.searchParams.get('name'), mimeType: u.searchParams.get('mimeType'), token: headers.Authorization || null })
             if (machine.down) throw new Error('connect ECONNREFUSED')
-            if (machine.putStatus !== 200) return answer(machine.putStatus)
+            if (machine.putStatus !== 200) return answer(machine.putStatus, machine.putBody || {})
             machine.files.set(id, await readFile(filePath))
             return answer(200, { ok: true })
         }
@@ -243,6 +243,41 @@ describe('the chase', () => {
 
         expect(world.calls.uploads.length).toBe(1)
         expect(chase.files.failures).toEqual([{ id: sha(bytes), name: 'loop.mp4', why: 'this install refused the key' }])
+    })
+
+    it('an older di.iiii that has no such route is final, and said in words — not retried', async () => {
+        for (const status of [404, 405]) {
+            const world = twoMachines()
+            const bytes = Buffer.from(`for an old host ${status}`)
+            world.here.files.set(sha(bytes), bytes)
+            world.there.putStatus = status
+            world.there.putBody = { error: 'Not found' }
+            await make(world)
+
+            chase.noteOps('show', [upsert(sha(bytes), 'loop.mp4')])
+            await drain()
+
+            expect(world.calls.uploads.length).toBe(1)
+            expect(chase.files.failures).toEqual([{ id: sha(bytes), name: 'loop.mp4', why: 'the other di.iiii is older and cannot receive files — update it' }])
+            chase.stop()
+        }
+    })
+
+    it('a project the other side has not made yet is NOT that — it is tried again', async () => {
+        const world = twoMachines()
+        const bytes = Buffer.from('the project arrives on the next pass')
+        world.here.files.set(sha(bytes), bytes)
+        world.there.putStatus = 404
+        world.there.putBody = { error: 'Project not found.' }
+        await make(world, { backoffMs: [20, 20, 20] })
+
+        chase.noteOps('show', [upsert(sha(bytes))])
+        await chase.run()
+        expect(chase.files).toMatchObject({ pending: 1, failed: 0 })
+
+        world.there.putStatus = 200
+        await drain()
+        expect(world.there.files.has(sha(bytes))).toBe(true)
     })
 
     it('refuses a file larger than the limit without storing any of it', async () => {

@@ -69,4 +69,29 @@ const receiveBodyToTempFile = async (req, { dir, maxBytes }) => {
   return { tempPath, sha256: hash.digest('hex'), size }
 }
 
-module.exports = { receiveBodyToTempFile, BodyTooLargeError }
+// A process killed mid-transfer leaves its temp file behind, and a followed
+// space moves videos: a few of those and the disk guard starts refusing writes.
+// Swept once at start. ONLY the two names this codebase writes for a file in
+// flight (here, and follow/assets.js), ONLY in the directory given, and only
+// when older than any transfer still plausibly running — never a directory,
+// never anything else an upload left.
+const STALE_TEMP_PATTERNS = [/\.verbatim$/, /^follow-.*\.part$/]
+const STALE_TEMP_AGE_MS = 60 * 60 * 1000
+
+const sweepStaleTempFiles = async (dir, { maxAgeMs = STALE_TEMP_AGE_MS, now = Date.now() } = {}) => {
+  const removed = []
+  const entries = await fsp.readdir(dir, { withFileTypes: true }).catch(() => [])
+  for (const entry of entries) {
+    if (!entry.isFile() || !STALE_TEMP_PATTERNS.some(pattern => pattern.test(entry.name))) continue
+    const filePath = path.join(dir, entry.name)
+    try {
+      const { mtimeMs } = await fsp.stat(filePath)
+      if (now - mtimeMs <= maxAgeMs) continue
+      await fsp.rm(filePath, { force: true })
+      removed.push(entry.name)
+    } catch { /* gone already, or not ours to remove — either way not fatal */ }
+  }
+  return removed
+}
+
+module.exports = { receiveBodyToTempFile, sweepStaleTempFiles, BodyTooLargeError }

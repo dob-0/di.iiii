@@ -299,6 +299,11 @@ const upload = multer({
 
 async function initStorage() {
   await Promise.all([ensureDir(SPACES_DIR), ensureDir(UPLOADS_DIR)])
+  // Temp files a killed process left mid-transfer (verbatimAsset.js). Never a
+  // reason not to start.
+  require('./verbatimAsset').sweepStaleTempFiles(UPLOADS_DIR)
+    .then((removed) => { if (removed.length) logger.info(`[uploads] removed ${removed.length} stale temp file(s)`) })
+    .catch(() => {})
   initDb(DB_PATH)
   configStore.init(SPACES_DIR)
   await migrateFromFilesystem(SPACES_DIR)
